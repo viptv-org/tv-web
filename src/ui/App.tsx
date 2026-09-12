@@ -1474,7 +1474,15 @@ export function App({
           key={`${item.type}-${item.id}`}
           onFocus={() => setHighlighted(item)}
           onActivate={() => void detail(item)}
-          onHold={() => manage(item)}
+          onHold={() => {
+            // Only the first logical Home row is a queue-management context.
+            // Other Home cards retain their ordinary selection on a held OK;
+            // My List, search and episode-card menus remain contextual.
+            if (screen === "Home") {
+              if (prefix === "queue" && item.type !== "live") manage(item);
+              else void detail(item);
+            } else manage(item);
+          }}
         >
           <div className="art-fallback" aria-hidden="true">
             {item.name}
@@ -1693,12 +1701,29 @@ export function App({
                       onHold={() => {
                         const item =
                           highlighted ?? queue[0] ?? recentLive[0] ?? items[0];
-                        if (item) void discoverSources(item);
+                        if (!item) return;
+                        // Queue management belongs to the hero only when its
+                        // current item came from Home's first logical row.
+                        // A non-queue hero keeps the learned source-choice hold.
+                        if (
+                          item.type !== "live" &&
+                          queue.some(
+                            (queued) =>
+                              queued.id === item.id &&
+                              queued.type === item.type,
+                          )
+                        )
+                          manage(item);
+                        else void discoverSources(item);
                       }}
                     >
-                      {(highlighted ?? queue[0])?.queueStatus === "next"
+                      {(highlighted ?? queue[0] ?? recentLive[0] ?? items[0])
+                        ?.queueStatus === "next"
                         ? "Play next episode"
-                        : (highlighted ?? queue[0])?.position
+                        : (highlighted ??
+                              queue[0] ??
+                              recentLive[0] ??
+                              items[0])?.position
                           ? "Resume"
                           : "Play"}
                     </TvButton>

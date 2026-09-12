@@ -305,6 +305,84 @@ test('held OK opens queue management without also activating the card, then hide
   assertNoPageErrors();
 });
 
+test('held queue hero opens Manage before its primary Resume action', async ({ page }) => {
+  test.skip(test.info().project.name !== 'tizen', 'the shared remote hold is exercised through the AVPlay boundary once');
+  const assertNoPageErrors = await installPlatformRuntime(page);
+  const queued = { ...movie, id: 'tt-hero-queued', name: 'Hero queue movie', title: 'Hero queue movie', position: 42, duration: 120, source_addon_id: 'addon:2', source_fingerprint: 'same-provider-source' };
+  await installBackend(page);
+  await page.route(`${apiOrigin}/api/profiles/1/continue/page**`, route => json(route, { items: [queued], offset: 0, total: 1, next_offset: null }));
+  await page.addInitScript(({ key, token }) => localStorage.setItem(key, JSON.stringify(token)), { key: `viptv-device:${apiOrigin}`, token: { sessionId: 'device-1', accountId: '7', profileId: null, accessToken: 'access', refreshToken: 'refresh', expiresIn: 900 } });
+  await page.goto('/?platform=tizen');
+  await page.getByRole('button', { name: 'Alex' }).press('Enter');
+  const hero = page.getByRole('button', { name: 'Resume', exact: true });
+  await expect(hero).toBeVisible();
+  await page.waitForTimeout(50);
+  await hero.focus();
+  await page.keyboard.down('Enter');
+  await page.waitForTimeout(750);
+  await page.keyboard.up('Enter');
+  await expect(page.locator('.modal').getByRole('heading', { name: 'Hero queue movie' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Hide from Continue Watching' })).toBeVisible();
+  await expect(page.locator('.sources')).toHaveCount(0);
+  assertNoPageErrors();
+});
+
+test('held resumable non-queue hero opens explicit source choice instead of Manage', async ({ page }) => {
+  test.skip(test.info().project.name !== 'tizen', 'the shared remote hold is exercised through the AVPlay boundary once');
+  const assertNoPageErrors = await installPlatformRuntime(page);
+  const resumable = { ...movie, id: 'tt-hero-resume', name: 'Resume hero movie', title: 'Resume hero movie', position: 42, duration: 120, source_addon_id: 'addon:2', source_fingerprint: 'same-provider-source' };
+  await installBackend(page);
+  await page.route(`${apiOrigin}/api/profiles/1/continue/page**`, route => json(route, { items: [], offset: 0, total: 0, next_offset: null }));
+  await page.route(`${apiOrigin}/api/live**`, route => json(route, { channels: [], total: 0 }));
+  await page.route(`${apiOrigin}/api/discover**`, route => json(route, { metas: [resumable], has_more: false, next_skip: null }));
+  await page.addInitScript(({ key, token }) => localStorage.setItem(key, JSON.stringify(token)), { key: `viptv-device:${apiOrigin}`, token: { sessionId: 'device-1', accountId: '7', profileId: null, accessToken: 'access', refreshToken: 'refresh', expiresIn: 900 } });
+  await page.goto('/?platform=tizen');
+  await page.getByRole('button', { name: 'Alex' }).press('Enter');
+  const hero = page.getByRole('button', { name: 'Resume', exact: true });
+  await expect(hero).toBeVisible();
+  await page.waitForTimeout(50);
+  await hero.focus();
+  await page.keyboard.down('Enter');
+  await page.waitForTimeout(750);
+  await page.keyboard.up('Enter');
+  await expect(page.getByRole('heading', { name: 'Resume hero movie' })).toBeVisible();
+  await expect(page.getByText('Moonfall 1080p')).toBeVisible();
+  await expect(page.locator('.modal')).toHaveCount(0);
+  assertNoPageErrors();
+});
+
+test('new-movie hero hold chooses a source while its Home card hold performs ordinary selection', async ({ page }) => {
+  test.skip(test.info().project.name !== 'tizen', 'the shared remote hold is exercised through the AVPlay boundary once');
+  const assertNoPageErrors = await installPlatformRuntime(page);
+  await installBackend(page);
+  await page.route(`${apiOrigin}/api/live**`, route => json(route, { channels: [], total: 0 }));
+  await page.addInitScript(({ key, token }) => localStorage.setItem(key, JSON.stringify(token)), { key: `viptv-device:${apiOrigin}`, token: { sessionId: 'device-1', accountId: '7', profileId: null, accessToken: 'access', refreshToken: 'refresh', expiresIn: 900 } });
+  await page.goto('/?platform=tizen');
+  await page.getByRole('button', { name: 'Alex' }).press('Enter');
+
+  const hero = page.getByRole('button', { name: 'Play', exact: true });
+  await expect(hero).toBeVisible();
+  await page.waitForTimeout(50);
+  await hero.focus();
+  await page.keyboard.down('Enter');
+  await page.waitForTimeout(750);
+  await page.keyboard.up('Enter');
+  await expect(page.getByRole('heading', { name: 'Moonfall' })).toBeVisible();
+  await expect(page.getByText('Moonfall 1080p')).toBeVisible();
+
+  await page.keyboard.press('Escape');
+  const card = page.locator('[data-focus-id="home-0"]');
+  await expect(card).toBeVisible();
+  await page.waitForTimeout(50);
+  await card.focus();
+  await page.keyboard.down('Enter');
+  await page.waitForTimeout(750);
+  await page.keyboard.up('Enter');
+  await expect(page.locator('.detail').getByRole('heading', { name: 'Moonfall' })).toBeVisible();
+  await expect(page.locator('.modal')).toHaveCount(0);
+  assertNoPageErrors();
+});
+
 test('playback preferences persist their snake-case mutation and update the shared settings view', async ({ page }) => {
   test.skip(test.info().project.name !== 'vizio', 'the persisted settings surface is shared by both hosted-TV packages');
   const assertNoPageErrors = await installPlatformRuntime(page);
