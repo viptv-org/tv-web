@@ -1,0 +1,69 @@
+{
+  "categories": [
+    {
+      "style": "disney",
+      "name": "Disney favorites"
+    },
+    {
+      "style": "princesses",
+      "name": "Princesses"
+    },
+    {
+      "style": "animal-friends",
+      "name": "Animal friends"
+    },
+    {
+      "style": "villains",
+      "name": "Villains"
+    },
+    {
+      "style": "critters",
+      "name": "Creatures"
+    },
+    {
+      "style": "pixelbot",
+      "name": "Robots"
+    },
+    {
+      "style": "voxel-bot",
+      "name": "Block bots"
+    },
+    {
+      "style": "pixel-art",
+      "name": "Pixel heroes"
+    },
+    {
+      "style": "pixel-art-neutral",
+      "name": "Pixel pals"
+    },
+    {
+      "style": "sprouts",
+      "name": "Sprouts"
+    },
+    {
+      "style": "planets",
+      "name": "Space"
+    },
+    {
+      "style": "clay",
+      "name": "Clay friends"
+    },
+    {
+      "style": "moods",
+      "name": "Moods"
+    },
+    {
+      "style": "thumbs",
+      "name": "Thumb buddies"
+    },
+    {
+      "style": "lorelei",
+      "name": "People"
+    },
+    {
+      "style": "notionists",
+      "name": "Doodles"
+    }
+  ],
+  "perCategory": 48
+}

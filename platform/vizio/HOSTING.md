@@ -1,0 +1,7 @@
+# Vizio SmartCast hosting and qualification
+
+Vizio uses the same static React bundle and remote/focus UI as Tizen. Its only platform-specific implementation is `VizioHtml5Adapter`, which receives a backend-compatible direct, copy/remux, audio-converted, or fully transcoded URL that has already been selected by the delivery service.
+
+Deploy `dist/` behind HTTPS at the same VIPTV origin under `/tv`. Configure the server to return `index.html` for client routes, serve JavaScript/CSS with immutable content-hashed cache headers, and return correct MIME types for manifest/media resources. `npm run package:tv` also writes a deployable static ZIP under `artifacts/vizio-hosting/`. Playback URLs are short-lived same-origin backend capabilities; the adapter intentionally cannot add request headers, cookies, or an audio-track selection request.
+
+There is no public Vizio capability guarantee in the product contract. Qualify each TV and firmware with the eight fixture groups from `viptv-org/design/PLAYBACK_CAPABILITIES.md`; report direct success first, then copy/remux, audio conversion, and full transcode only when the earlier rung demonstrably fails. Record pass/fail/not-run with model, firmware, URL authorization shape, codec/container, controls, seek, subtitles, source identity, managed recovery, and final-ten-second next/Back behavior. Desktop browser tests verify the shared interface only; they do not establish SmartCast codec or sustained-playback support.

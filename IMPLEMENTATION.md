@@ -1,0 +1,11 @@
+# Shared TV implementation checkpoint
+
+The source candidate implements one React UI for Tizen and Vizio with separate playback adapters. The authoritative design revision is in DESIGN_REF. Roku is unchanged. This checkpoint is ready for joint validation; it is not a device-qualified release.
+
+Implemented flows include pairing with QR/manual code and retry; profile selection/paging/editing/avatars/PIN; Home hero/shelves; Discover/catalog paging; source-labelled Search including live scope; movie/series/season/episode details; source filters and explicit selection; exact provider-plus-fingerprint Resume; My List/queue watched correction/hide/undo; guide time window/channel paging/current/future actions; preferences, add-ons and sign-out; playback controls, accelerated seek preview, native/managed tracks, progress and heartbeat; controlled next-episode preparation with cancellation and bounded provider-scoped retry.
+
+The player controller owns candidate sessions and rollback. Direct seek stays native. Managed seek and tracks prepare the same selected source at an absolute position and retire the old session only after candidate playback succeeds. Stop/newer work invalidates older completions. Transcoding is never forced by the frontend; backend inspection chooses compatible delivery.
+
+Validation after the owner's OOM report is deliberately limited to static review, whitespace checks and a single-process TypeScript check with a 256 MB heap. No emulator, Gradle build, browser suite or playback test has run since the pause. Earlier test/build evidence does not qualify this final source revision. The manual GitHub workflows use hosted runners when the owner is ready; nothing is deployed automatically.
+
+Before calling parity complete, run TESTING.md on both shared frontend configurations and the Android checklist, inspect each screen against the pinned design, then verify actual TVs. In particular, remote-hosted Samsung AVPlay availability, Vizio codec/HLS behavior, output track mapping, focus geometry, source ranking equivalence and same-origin hosting are pending real execution. Any deviation found belongs in the design issue and a regression test; no screenshot becomes a design asset.

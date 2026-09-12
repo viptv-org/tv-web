@@ -1,0 +1,41 @@
+name: TV candidate validation
+on:
+  workflow_dispatch:
+    inputs:
+      browser:
+        description: Run shared TV browser acceptance
+        type: boolean
+        default: false
+permissions:
+  contents: read
+concurrency:
+  group: tv-validation-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      NODE_OPTIONS: --max-old-space-size=1024
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npm test -- --maxWorkers=1 --no-file-parallelism
+      - run: npm run build
+      - run: node scripts/package-tv.mjs
+      - if: inputs.browser
+        run: npx playwright install --with-deps chromium
+      - if: inputs.browser
+        run: npm run test:e2e -- --workers=1
+      - uses: actions/upload-artifact@v4
+        with:
+          name: viptv-tv-candidates
+          path: |
+            artifacts/tizen-candidate/**
+            artifacts/vizio-hosting/**
+          if-no-files-found: error
+          retention-days: 14
