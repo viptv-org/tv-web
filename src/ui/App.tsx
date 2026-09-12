@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import QRCode from "qrcode";
 import {
   TvApi,
@@ -154,24 +154,17 @@ export function App({
     resumeRemainder = useRef(false);
   const seekRepeat = useRef({ key: "", count: 0 }),
     seekValue = useRef<number>();
-  const initialFocusTimer = useRef<ReturnType<typeof setTimeout>>();
   const modalFocus = useRef(""),
     errorFocus = useRef("");
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (modal) {
       if (!modalFocus.current)
-        modalFocus.current =
-          (document.activeElement as HTMLElement)?.dataset.focusId ?? "";
-      const timer = setTimeout(
-        () => focusElement(modal.body ? "source-detail-body" : "modal-0"),
-        30,
-      );
-      return () => clearTimeout(timer);
+        modalFocus.current = (document.activeElement as HTMLElement)?.dataset.focusId ?? "";
+      focusElement(modal.body ? "source-detail-body" : "modal-0");
     } else if (modalFocus.current) {
       const id = modalFocus.current;
       modalFocus.current = "";
-      const timer = setTimeout(() => focusElement(id), 30);
-      return () => clearTimeout(timer);
+      focusElement(id);
     }
   }, [modal]);
   const entryFocus = useRef("");
@@ -509,28 +502,17 @@ export function App({
   useEffect(() => {
     if (screen === "profiles") setTimeout(() => focusElement("profile-0"), 30);
   }, [profilePage]);
-  useEffect(() => {
-    const timer = setTimeout(
-      () =>
-        focusElement(
-          screen === "profiles"
-            ? "profile-0"
-            : screen === "pairing"
-              ? "retry"
-              : screen === "detail"
-                ? "detail-play"
-                : screen === "sources"
-                  ? "source-0"
-                  : screen === "player"
-                    ? selected?.type === "live"
-                      ? "audio"
-                      : "timeline"
-                    : `nav-${screen}`,
-        ),
-      30,
+  // Establish screen focus before paint. A deferred timer can steal focus
+  // between the next remote OK down/up, silently dropping its activation.
+  useLayoutEffect(() => {
+    focusElement(
+      screen === "profiles" ? "profile-0"
+        : screen === "pairing" ? "retry"
+        : screen === "detail" ? "detail-play"
+        : screen === "sources" ? "source-0"
+        : screen === "player" ? selected?.type === "live" ? "audio" : "timeline"
+        : `nav-${screen}`,
     );
-    initialFocusTimer.current = timer;
-    return () => clearTimeout(timer);
   }, [screen]);
   useEffect(() => {
     if (!toast) return;
@@ -1512,7 +1494,6 @@ export function App({
       onMediaKey={mediaKey}
       onMediaKeyUp={mediaKeyUp}
       onNavigate={() => {
-        clearTimeout(initialFocusTimer.current);
         setOverlay(true);
         sourceFocusPending.current = false;
       }}

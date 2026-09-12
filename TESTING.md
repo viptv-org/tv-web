@@ -8,7 +8,7 @@ This checklist is intentionally evidence-based. A Playwright pass is browser sim
 | --- | --- | --- |
 | Typed API boundary | `tests/api/client.test.ts` passed with 17 tests on 2026-09-12 | Current for the typed HTTP boundary; backend integration still required |
 | TypeScript | `NODE_OPTIONS=--max-old-space-size=256 npx tsc --noEmit` passed on 2026-09-12 | Current source type check |
-| Browser UI | Pairing, browse, source selection, guide, search, settings, profiles, held actions, resume mismatch, stale responses and Discover request contracts | 2026-09-12: full two-project suite passed 35 tests with 23 intentional platform exclusions, one worker and 256 MB Node heap; includes five Next/Resume scenarios, three pairing lifecycle scenarios per project, and direct/managed remote player controls |
+| Browser UI | Pairing, browse, source selection, guide, search, settings, profiles, held actions, resume mismatch, stale responses and Discover request contracts | 2026-09-12: full two-project suite passed 37 tests with 25 intentional platform exclusions, one worker and 256 MB Node heap; includes five Next/Resume scenarios, three pairing lifecycle scenarios per project, and direct/managed remote player controls |
 | Vizio browser media | `tests/e2e/media-decode.spec.ts` records a local canvas WebM and drives the real HTML adapter through pause, seek, end and cleanup | Passed in the Vizio browser project; it does not establish playback on a physical Vizio model |
 | Backend `/tv` static routes | Rust route test added with the backend change | Not run here; Runtime tests deferred by owner |
 | Tizen AVPlay | Adapter and hosted-launcher path implemented | Physical TV/emulator evidence pending |
@@ -75,3 +75,5 @@ On Vizio, deploy the bundle at the API’s same HTTPS `/tv/` origin. Verify appl
 For both devices, verify a bad/add-on response never exposes upstream URL, headers, cookies or tokens in UI, logs or persisted browser storage.
 
 The subsequent acceptance pass includes parent-gated profile selection/sign-out, partial search result retention, empty source-filter focus, full source details, and add-on install/enable/remove. Sign-out denial or network failure preserves the stored device grant. Canonical Browse heading/filter/grid positions are asserted at y=54/178/248. CI now runs automatically on main pushes and pull requests; manual dispatch also runs browser acceptance by default.
+
+The queue restart follow-up passed the full suite with retries disabled (37 passed, 25 platform exclusions). Delayed screen/modal focus could steal an OK release or select a different track. Focus now settles before paint; the three player-remote cases passed five consecutive runs (15/15), followed by the full suite without retries. Hosted run 34715561355 at a3ca33c was green but contained one retry; use the later clean evidence when evaluating this fix.
