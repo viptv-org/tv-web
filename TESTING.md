@@ -8,13 +8,13 @@ This checklist is intentionally evidence-based. A Playwright pass is browser sim
 | --- | --- | --- |
 | Typed API boundary | `tests/api/client.test.ts` passed with 17 tests on 2026-09-12 | Current for the typed HTTP boundary; backend integration still required |
 | TypeScript | `NODE_OPTIONS=--max-old-space-size=256 npx tsc --noEmit` passed on 2026-09-12 | Current source type check |
-| Browser UI | Pairing, browse, source selection, guide, search, settings, profiles, held actions, resume mismatch, stale responses and Discover request contracts | 2026-09-12: full two-project suite passed 32 tests with 20 intentional platform exclusions, one worker and 256 MB Node heap; includes five Next/Resume scenarios and three pairing lifecycle scenarios per project |
+| Browser UI | Pairing, browse, source selection, guide, search, settings, profiles, held actions, resume mismatch, stale responses and Discover request contracts | 2026-09-12: full two-project suite passed 35 tests with 23 intentional platform exclusions, one worker and 256 MB Node heap; includes five Next/Resume scenarios, three pairing lifecycle scenarios per project, and direct/managed remote player controls |
 | Vizio browser media | `tests/e2e/media-decode.spec.ts` records a local canvas WebM and drives the real HTML adapter through pause, seek, end and cleanup | Passed in the Vizio browser project; it does not establish playback on a physical Vizio model |
 | Backend `/tv` static routes | Rust route test added with the backend change | Not run here; Runtime tests deferred by owner |
 | Tizen AVPlay | Adapter and hosted-launcher path implemented | Physical TV/emulator evidence pending |
 | Vizio | HTML adapter and same-origin hosting bundle implemented | Physical TV evidence pending |
 
-All 40 unit tests across API, remote input, Guide, text entry and player adapters/controllers passed, along with TypeScript and diff checks. The intermittent initial-focus/OK race was reproduced in the full suite; its fix passed three successive runs of all five Next scenarios (15/15) and the final complete browser suite.
+Hosted run [34714994356](https://github.com/viptv-org/tv-web/actions/runs/34714994356) passed on `a3e0de5`, including build and TV packaging. All 40 unit tests across API, remote input, Guide, text entry and player adapters/controllers passed, along with TypeScript and diff checks. The intermittent initial-focus/OK race was reproduced in the full suite; its fix passed three successive runs of all five Next scenarios (15/15) and the final complete browser suite.
 
 No entry above establishes 100% device coverage. Remaining scenario gaps are tracked in [tests/PARITY_MATRIX.md](tests/PARITY_MATRIX.md).
 
@@ -24,14 +24,14 @@ Run one command at a time after confirming the server is stable. Keep browser wo
 
 ```sh
 # API boundary only
-NODE_OPTIONS=--max-old-space-size=512 npm run test -- --run tests/api/client.test.ts
+NODE_OPTIONS=--max-old-space-size=256 npm run test -- --run tests/api/client.test.ts
 
 # Static type check only
-NODE_OPTIONS=--max-old-space-size=512 npx tsc --noEmit
+NODE_OPTIONS=--max-old-space-size=256 npx tsc --noEmit
 
 # One browser project at a time; this starts a single Vite server and one worker
-NODE_OPTIONS=--max-old-space-size=768 npx playwright test --project=tizen --workers=1
-NODE_OPTIONS=--max-old-space-size=768 npx playwright test --project=vizio --workers=1
+NODE_OPTIONS=--max-old-space-size=256 npx playwright test --project=tizen --workers=1
+NODE_OPTIONS=--max-old-space-size=256 npx playwright test --project=vizio --workers=1
 ```
 
 Run the backend route tests separately in the backend checkout with the configured Rust environment:
@@ -44,7 +44,7 @@ CARGO_BUILD_JOBS=1 cargo test --locked --test dashboard_routes tv_bundle_has_its
 Only then run a production build or package candidate, one at a time:
 
 ```sh
-NODE_OPTIONS=--max-old-space-size=768 npm run build
+NODE_OPTIONS=--max-old-space-size=256 npm run build
 npm run package:tv
 ```
 

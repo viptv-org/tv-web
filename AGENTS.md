@@ -8,4 +8,4 @@ Use GitHub issues in viptv-org/tv-web and design issue #4. Keep user data/secret
 
 ## Current validation constraint
 
-The owner reported server OOM and explicitly deferred joint testing. Until they resume testing, use static review and a single TypeScript check capped at 256 MB; keep emulators, Gradle, browsers and builds stopped. CI workflows are manual on hosted runners. Record each unexecuted test in TESTING.md; preserve current work and never label a candidate as device-qualified.
+The owner resumed testing after the server OOM. Check available memory first; coordinate one browser job at a time, one worker and a 256 MB Node heap. Keep emulators and local Gradle stopped; use hosted Android builds. The TV web workflow runs on pushes, pull requests and manual dispatch. Record current evidence and unexecuted scenarios in TESTING.md; distinguish browser tests from physical TV qualification.

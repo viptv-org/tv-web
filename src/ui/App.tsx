@@ -1037,6 +1037,14 @@ export function App({
               .catch(fail);
           },
         },
+        {
+          label: "Watch from the beginning",
+          action: () => {
+            setModal(undefined);
+            // Source choice is explicit; do not reuse the queue Resume offset.
+            void discoverSources({ ...item, position: 0 });
+          },
+        },
         ...(inQueue
           ? [
               {
