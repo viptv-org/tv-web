@@ -6,14 +6,17 @@ This checklist is intentionally evidence-based. A Playwright pass is browser sim
 
 | Area | Evidence | Status |
 | --- | --- | --- |
-| Typed API boundary | `tests/api/client.test.ts` previously passed (7 tests) | Stale after later API edits; rerun required |
-| TypeScript | Final implementation checked with `node --max-old-space-size=256 node_modules/typescript/bin/tsc --noEmit` | Pass; static evidence only |
-| Browser UI | `tests/e2e/tv-shell.spec.ts` covers pairing, profiles, browse, sources, guide, search, settings, sanitized errors and stale search | Not run |
+| Typed API boundary | `tests/api/client.test.ts` passed with 16 tests on 2026-09-12 | Current for the typed HTTP boundary; backend integration still required |
+| TypeScript | `NODE_OPTIONS=--max-old-space-size=256 npx tsc --noEmit` passed on 2026-09-12 | Current source type check |
+| Browser UI | Pairing, browse, source selection, guide, search, settings, profiles, held actions, resume mismatch, stale responses and Discover request contracts | 2026-09-12: full two-project suite passed 27 tests with 15 intentional platform exclusions, one worker and 256 MB Node heap; includes five Next/Resume scenarios and three pairing lifecycle scenarios per project |
+| Vizio browser media | `tests/e2e/media-decode.spec.ts` records a local canvas WebM and drives the real HTML adapter through pause, seek, end and cleanup | Passed in the Vizio browser project; it does not establish playback on a physical Vizio model |
 | Backend `/tv` static routes | Rust route test added with the backend change | Not run here; Runtime tests deferred by owner |
 | Tizen AVPlay | Adapter and hosted-launcher path implemented | Physical TV/emulator evidence pending |
 | Vizio | HTML adapter and same-origin hosting bundle implemented | Physical TV evidence pending |
 
-No entry above establishes 100% device coverage.
+All 39 unit tests across API, remote input, Guide, text entry and player adapters/controllers passed, along with TypeScript and diff checks. The intermittent initial-focus/OK race was reproduced in the full suite; its fix passed three successive runs of all five Next scenarios (15/15) and the final complete browser suite.
+
+No entry above establishes 100% device coverage. Remaining scenario gaps are tracked in [tests/PARITY_MATRIX.md](tests/PARITY_MATRIX.md).
 
 ## Low-memory order
 

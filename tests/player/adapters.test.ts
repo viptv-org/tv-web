@@ -37,7 +37,9 @@ class FakeMedia {
   paused = true;
   ended = false;
   error: { code: number; message?: string } | null = null;
-  textTracks = [{ kind: 'subtitles', label: 'Spanish', language: 'es', mode: 'disabled' as const }];
+  textTracks: Array<{ kind: string; label: string; language: string; mode: 'disabled' | 'hidden' | 'showing' }> = [
+    { kind: 'subtitles', label: 'Spanish', language: 'es', mode: 'disabled' },
+  ];
   private listeners = new Map<string, Set<() => void>>();
   play = vi.fn(async () => { this.paused = false; this.emit('play'); });
   pause = vi.fn(() => { this.paused = true; this.emit('pause'); });
@@ -128,7 +130,23 @@ describe('TizenAvplayAdapter', () => {
     await player.selectAudioTrack('audio:1');
     await player.selectTextTrack('text:2');
     expect(avplay.selected).toEqual([['AUDIO', 1], ['TEXT', 2]]);
+    expect(avplay.setSilentSubtitle).toHaveBeenLastCalledWith(false);
+    await player.selectTextTrack(null);
+    expect(avplay.setSilentSubtitle).toHaveBeenLastCalledWith(true);
     await expect(player.selectAudioTrack('audio:404')).rejects.toMatchObject({ code: 'unsupported-operation' });
+  });
+
+  it('keeps managed title time absolute when AVPlay cannot read the native clock after seek', async () => {
+    const avplay = new FakeAvplay();
+    const player = new TizenAvplayAdapter(avplay);
+    const opening = player.open({ url: 'https://media.example/managed.mp4', kind: 'vod', timelineOffsetSeconds: 25 });
+    avplay.prepareSuccess!();
+    await opening;
+
+    avplay.getCurrentTime.mockImplementation(() => { throw new Error('clock unavailable'); });
+    await player.seek(55);
+
+    expect(player.snapshot.time.positionSeconds).toBe(55);
   });
 });
 
@@ -174,5 +192,18 @@ describe('VizioHtml5Adapter', () => {
     expect(player.snapshot.sessionId).toBe(2);
     expect(player.snapshot.state).toBe('paused');
     expect(media.listenerCount('loadedmetadata')).toBe(1);
+  });
+
+  it('preserves native text-track indices when non-subtitle tracks precede captions', async () => {
+    const media = new FakeMedia();
+    media.textTracks.unshift({ kind: 'metadata', label: 'Markers', language: '', mode: 'disabled' });
+    const player = new VizioHtml5Adapter(media);
+    const opening = player.open({ url: 'https://backend.example/direct.mp4', kind: 'vod' });
+    media.emit('loadedmetadata');
+    await opening;
+
+    expect(player.snapshot.tracks.text).toEqual([expect.objectContaining({ id: 'text:1', label: 'Spanish' })]);
+    await player.selectTextTrack('text:1');
+    expect(media.textTracks[1].mode).toBe('showing');
   });
 });

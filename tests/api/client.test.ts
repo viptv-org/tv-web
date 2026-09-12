@@ -69,6 +69,82 @@ describe("TvApi device and media boundary", () => {
     expect(detail.episodes).toEqual([expect.objectContaining({ id: "tt-series:1:2", type: "series", seriesId: "tt-series" })]);
   });
 
+  it("uses the requested kind when an actual Stremio meta envelope omits meta.type", async () => {
+    const store = new MemoryDeviceSessionStore();
+    await store.save({ sessionId: "s1", accountId: "1", profileId: "3", accessToken: "access", refreshToken: "refresh", expiresIn: 900 });
+    const fake = scripted(response({ meta: { id: "tt-movie", name: "A Movie", poster: "poster.jpg" } }));
+    const api = new TvApi({ baseUrl: "https://viptv.example", fetch: fake.fetcher, sessionStore: store });
+    await api.restoreSession();
+    await expect(api.detail({ id: "tt-movie", type: "movie" })).resolves.toMatchObject({ item: { id: "tt-movie", type: "movie", name: "A Movie" } });
+  });
+
+  it("preserves the server kids policy field on profiles", async () => {
+    const store = new MemoryDeviceSessionStore();
+    await store.save({ sessionId: "s1", accountId: "1", profileId: "3", accessToken: "access", refreshToken: "refresh", expiresIn: 900 });
+    const fake = scripted(response([{ id: 3, name: "Kids", avatar_style: "moods", avatar_choice: 2, kids: true, max_age: 10, setup_complete: true }]));
+    const api = new TvApi({ baseUrl: "https://viptv.example", fetch: fake.fetcher, sessionStore: store });
+    await api.restoreSession();
+    await expect(api.profiles()).resolves.toEqual([expect.objectContaining({ id: "3", kid: true, setupComplete: true })]);
+  });
+
+  it("decodes declared catalog extras, defaults, genres and bounded option lists", async () => {
+    const store = new MemoryDeviceSessionStore();
+    await store.save({ sessionId: "s1", accountId: "1", profileId: "3", accessToken: "access", refreshToken: "refresh", expiresIn: 900 });
+    const fake = scripted(response([{ id: "calendar", name: "Calendar", type: "movie", addon_id: 2, supports_search: true, supports_skip: true, genres: ["Drama", "Comedy"], extra: [{ name: "year", is_required: true, options: ["2024", "2025"], default: "2024", options_limit: 2 }, { name: "genre", is_required: false, options: ["Drama", "Comedy"], default: null, options_limit: 32 }] }]));
+    const api = new TvApi({ baseUrl: "https://viptv.example", fetch: fake.fetcher, sessionStore: store });
+    await api.restoreSession();
+    await expect(api.catalogs()).resolves.toEqual([expect.objectContaining({ genres: ["Drama", "Comedy"], extras: [
+      { name: "year", required: true, options: ["2024", "2025"], defaultValue: "2024", optionsLimit: 2 },
+      { name: "genre", required: false, options: ["Drama", "Comedy"], defaultValue: undefined, optionsLimit: 32 },
+    ] })]);
+  });
+
+  it("normalizes the backend relative media capability to same-origin HTTPS for AVPlay", async () => {
+    const store = new MemoryDeviceSessionStore();
+    await store.save({ sessionId: "s1", accountId: "1", profileId: "3", accessToken: "access", refreshToken: "refresh", expiresIn: 900 });
+    const fake = scripted(response({ id: "playback-1", url: "/media/playback-1/capability/index.m3u8", format: "hls", mode: "remux", video_mode: "copy", audio_mode: "copy", position: 0, live: false, duration: 120, audio_tracks: [], subtitle_tracks: [], subtitles_supported: false }));
+    const api = new TvApi({ baseUrl: "https://viptv.example", fetch: fake.fetcher, sessionStore: store });
+    await api.restoreSession();
+    await expect(api.startPlayback({ streamId: "stream-1", capabilities: { maxWidth: 1920, maxHeight: 1080, h264: true, hevc: false, aac: true, directPlay: true, hevcSdr: false } })).resolves.toMatchObject({ url: "https://viptv.example/media/playback-1/capability/index.m3u8" });
+  });
+
+  it("keeps a safe playback contract when an older server omits informational fields", async () => {
+    const store = new MemoryDeviceSessionStore();
+    await store.save({ sessionId: "s1", accountId: "1", profileId: "3", accessToken: "access", refreshToken: "refresh", expiresIn: 900 });
+    const fake = scripted(response({ id: "playback-1", url: "/media/playback-1/capability/index.m3u8" }));
+    const api = new TvApi({ baseUrl: "https://viptv.example", fetch: fake.fetcher, sessionStore: store });
+    await api.restoreSession();
+    await expect(api.startPlayback({ streamId: "stream-1", capabilities: { maxWidth: 1920, maxHeight: 1080, h264: true, hevc: false, aac: true, directPlay: true, hevcSdr: false } })).resolves.toMatchObject({ format: "hls", mode: "direct", position: 0, audioTracks: [], subtitleTracks: [] });
+  });
+
+  it("rejects a playback response that attempts to replace the same-origin media capability", async () => {
+    const store = new MemoryDeviceSessionStore();
+    await store.save({ sessionId: "s1", accountId: "1", profileId: "3", accessToken: "access", refreshToken: "refresh", expiresIn: 900 });
+    const fake = scripted(response({ id: "playback-1", url: "https://upstream.invalid/private.m3u8", format: "hls", mode: "remux", video_mode: "copy", audio_mode: "copy", position: 0, live: false, duration: 120, audio_tracks: [], subtitle_tracks: [], subtitles_supported: false }));
+    const api = new TvApi({ baseUrl: "https://viptv.example", fetch: fake.fetcher, sessionStore: store });
+    await api.restoreSession();
+    await expect(api.startPlayback({ streamId: "stream-1", capabilities: { maxWidth: 1920, maxHeight: 1080, h264: true, hevc: false, aac: true, directPlay: true, hevcSdr: false } })).rejects.toMatchObject({ name: "TvApiError", code: "invalid_response" });
+  });
+
+  it("decodes live categories as filters rather than pretending they are playable media", async () => {
+    const store = new MemoryDeviceSessionStore();
+    await store.save({ sessionId: "s1", accountId: "1", profileId: "3", accessToken: "access", refreshToken: "refresh", expiresIn: 900 });
+    const fake = scripted(response({ total: 1, categories: [{ id: "section:News", name: "News", count: 12 }] }));
+    const api = new TvApi({ baseUrl: "https://viptv.example", fetch: fake.fetcher, sessionStore: store });
+    await api.restoreSession();
+    await expect(api.liveCategories("us")).resolves.toEqual({ total: 1, categories: [{ id: "section:News", name: "News", count: 12, raw: { id: "section:News", name: "News", count: 12 } }] });
+  });
+
+  it("retains the backend continuation episode title separately from its series name", async () => {
+    const store = new MemoryDeviceSessionStore();
+    await store.save({ sessionId: "s1", accountId: "1", profileId: "3", accessToken: "access", refreshToken: "refresh", expiresIn: 900 });
+    const fake = scripted(response({ status: "next", item: { id: "tt-series:1:2", type: "series", name: "Fixture Show", episodeTitle: "The Signal", series_id: "tt-series", season: 1, episode: 2 } }));
+    const api = new TvApi({ baseUrl: "https://viptv.example", fetch: fake.fetcher, sessionStore: store });
+    await api.restoreSession();
+    const current = { id: "tt-series:1:1", type: "series", name: "Fixture Show", title: "Fixture Show", genres: [], raw: {} } as const;
+    await expect(api.nextEpisode("3", current)).resolves.toMatchObject({ item: { name: "Fixture Show", episodeTitle: "The Signal" } });
+  });
+
   it("returns a sanitized error instead of a server or upstream error body", async () => {
     const fake = scripted(response({ error: "https://upstream.example/token=leak", error_code: "source_failed" }, 502));
     const api = new TvApi({ baseUrl: "https://viptv.example", fetch: fake.fetcher });
@@ -78,6 +154,25 @@ describe("TvApi device and media boundary", () => {
   it("requires an HTTPS origin rather than accepting an arbitrary path or HTTP URL", () => {
     expect(() => new TvApi({ baseUrl: "http://viptv.example" })).toThrow("HTTPS origin");
     expect(() => new TvApi({ baseUrl: "https://viptv.example/api" })).toThrow("HTTPS origin");
+  });
+
+  it("binds the browser default fetch to its global receiver", async () => {
+    const descriptor = Object.getOwnPropertyDescriptor(globalThis, "fetch");
+    let receiver: unknown;
+    Object.defineProperty(globalThis, "fetch", {
+      configurable: true,
+      value: function (this: typeof globalThis, _input: RequestInfo | URL, _init?: RequestInit) {
+        receiver = this;
+        return Promise.resolve(response([]));
+      },
+    });
+    try {
+      await expect(new TvApi({ baseUrl: "https://viptv.example" }).catalogs()).resolves.toEqual([]);
+      expect(receiver).toBe(globalThis);
+    } finally {
+      if (descriptor) Object.defineProperty(globalThis, "fetch", descriptor);
+      else Reflect.deleteProperty(globalThis, "fetch");
+    }
   });
 
   it("passes a screen scope signal to fetch so a stale screen load can be aborted", async () => {

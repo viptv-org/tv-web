@@ -24,6 +24,7 @@ export function ProfileEditor({
         ? profile.raw.avatar_style
         : "critters",
     ),
+    [previewStyle, setPreviewStyle] = useState(style),
     [choice, setChoice] = useState(
       typeof profile?.raw.avatar_choice === "number"
         ? profile.raw.avatar_choice
@@ -60,9 +61,12 @@ export function ProfileEditor({
           name: name.trim(),
           avatar_style: style,
           avatar_choice: choice,
-          setup_complete: true,
         };
-        if (profile) await api.updateProfile(profile.id, value);
+        if (profile)
+          await api.updateProfile(profile.id, {
+            ...value,
+            ...(!profile.setupComplete ? { setup_complete: true } : {}),
+          });
         else await api.createProfile(value);
       }
       await onDone();
@@ -81,7 +85,12 @@ export function ProfileEditor({
     }
   };
   const key = (e: React.KeyboardEvent) => {
-    if (e.key === "Escape" || e.key === "BrowserBack" || e.keyCode === 10009) {
+    if (
+      e.key === "Escape" ||
+      e.key === "BrowserBack" ||
+      e.keyCode === 10009 ||
+      e.keyCode === 461
+    ) {
       e.preventDefault();
       e.stopPropagation();
       if (mode === "form") onCancel();
@@ -135,7 +144,7 @@ export function ProfileEditor({
                 key={c.style}
                 id={`avatar-category-${c.style}`}
                 onActivate={() => {
-                  setStyle(c.style);
+                  setPreviewStyle(c.style);
                   setPage(0);
                 }}
               >
@@ -152,13 +161,14 @@ export function ProfileEditor({
                 id={`avatar-${i}`}
                 key={n}
                 onActivate={() => {
+                  setStyle(previewStyle);
                   setChoice(n);
                   setMode("form");
                 }}
               >
                 <img
-                  src={`${import.meta.env.BASE_URL}assets/avatar-catalog/${style}-${n}.png`}
-                  alt={`${style} ${n}`}
+                  src={`${import.meta.env.BASE_URL}assets/avatar-catalog/${previewStyle}-${n}.png`}
+                  alt={`${previewStyle} ${n}`}
                 />
               </TvButton>
             ))}
@@ -203,7 +213,14 @@ export function ProfileEditor({
         </>
       ) : (
         <div className="profile-form">
-          <TvButton id="profile-avatar" onActivate={() => setMode("avatar")}>
+          <TvButton
+            id="profile-avatar"
+            onActivate={() => {
+              setPreviewStyle(style);
+              setPage(Math.floor((choice - 1) / 18));
+              setMode("avatar");
+            }}
+          >
             <img
               src={`${import.meta.env.BASE_URL}assets/avatar-catalog/${style}-${choice}.png`}
               alt="Choose avatar"

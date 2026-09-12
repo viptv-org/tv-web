@@ -2,6 +2,7 @@ import {
   createContext,
   useContext,
   useEffect,
+  useLayoutEffect,
   useRef,
   type ButtonHTMLAttributes,
   type ReactNode,
@@ -42,6 +43,7 @@ export function RemoteRoot({
     const down = (event: KeyboardEvent) => {
       const code = event.keyCode;
       const key = normalizeKey(event);
+      handlers.current.onNavigate?.();
       const input =
         event.target instanceof HTMLInputElement ||
         event.target instanceof HTMLTextAreaElement;
@@ -96,7 +98,6 @@ export function RemoteRoot({
       ) {
         event.preventDefault();
         clear();
-        handlers.current.onNavigate?.();
         moveFocus(key, current);
       }
     };
@@ -189,7 +190,7 @@ export function TvButton({
   const registry = useContext(Registry);
   const action = useRef({ activate: onActivate, hold: onHold });
   action.current = { activate: onActivate, hold: onHold };
-  useEffect(() => {
+  useLayoutEffect(() => {
     registry?.set(id, {
       activate: () => action.current.activate(),
       hold: onHold ? () => action.current.hold?.() : undefined,

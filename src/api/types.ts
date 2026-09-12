@@ -65,6 +65,8 @@ export interface MediaItem {
   readonly watched?: boolean;
   readonly season?: number;
   readonly episode?: number;
+  /** Server-resolved episode title for a continuation item; `name` remains its series title. */
+  readonly episodeTitle?: string;
   readonly seriesId?: string;
   readonly queueStatus?: string;
   readonly previousEpisode?: MediaItem;
@@ -98,7 +100,18 @@ export interface Catalog {
   readonly addonId?: number;
   readonly supportsSearch: boolean;
   readonly supportsSkip: boolean;
+  /** Declared server options, including required catalog defaults and genre values. */
+  readonly extras: readonly CatalogExtra[];
+  readonly genres: readonly string[];
   readonly raw: JsonObject;
+}
+
+export interface CatalogExtra {
+  readonly name: string;
+  readonly required: boolean;
+  readonly options: readonly string[];
+  readonly defaultValue?: string;
+  readonly optionsLimit?: number;
 }
 
 export interface DiscoverRequest {
@@ -184,6 +197,9 @@ export interface PlaybackPreferences {
 export interface GuideProgram { readonly title: string; readonly start: number; readonly end: number; readonly description?: string; readonly raw: JsonObject; }
 export interface Guide { readonly programs: readonly GuideProgram[]; readonly timezone: string; }
 export interface LivePage { readonly channels: readonly MediaItem[]; readonly total: number; }
+/** A guide category is a filter, not playable media. */
+export interface LiveCategory { readonly id: string; readonly name: string; readonly count: number; readonly raw: JsonObject; }
+export interface LiveCategories { readonly categories: readonly LiveCategory[]; readonly total: number; }
 export interface ParentStatus { readonly configured: boolean; readonly unlocked: boolean; readonly restricted: boolean; readonly raw: JsonObject; }
 export interface ParentPinChange { readonly pin: string; readonly currentPin?: string; }
 

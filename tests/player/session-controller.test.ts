@@ -114,4 +114,56 @@ describe('PlaybackSessionController', () => {
     expect(player.opened.map((request) => request.url)).toEqual(['https://media/old', 'https://media/next']);
     expect(controller.snapshot).toMatchObject({ state: 'stopped', active: null });
   });
+
+  it('restores the outgoing session when Back cancels after the next candidate opened', async () => {
+    const player = new FakePlayer();
+    const backend = {
+      startPlayback: vi.fn()
+        .mockResolvedValueOnce(session('old', 'https://media/old'))
+        .mockResolvedValueOnce(session('next', 'https://media/next')),
+      stopPlayback: vi.fn().mockResolvedValue(undefined),
+    };
+    const controller = new PlaybackSessionController({ player, backend, capabilities });
+    await controller.start({ item, source });
+
+    let releaseCandidate!: () => void;
+    let markCandidateOpened!: () => void;
+    const candidateOpened = new Promise<void>((resolve) => { releaseCandidate = resolve; });
+    const candidateWasOpened = new Promise<void>((resolve) => { markCandidateOpened = resolve; });
+    vi.spyOn(player, 'open').mockImplementation(async (request) => {
+      player.opened.push(request);
+      if (request.url === 'https://media/next') {
+        markCandidateOpened();
+        await candidateOpened;
+      }
+    });
+
+    const pending = controller.prepareNext(async () => ({ item: { ...item, id: 'episode-2', type: 'series' }, source }));
+    await candidateWasOpened;
+    controller.cancelNext();
+    releaseCandidate();
+    await pending;
+
+    expect(player.opened.map((request) => request.url)).toEqual(['https://media/old', 'https://media/next', 'https://media/old']);
+    expect(controller.snapshot.active?.session.id).toBe('old');
+  });
+
+  it('carries selected managed tracks and paused intent through a later managed seek', async () => {
+    const player = new FakePlayer();
+    const backend = {
+      startPlayback: vi.fn()
+        .mockResolvedValueOnce(session('old', 'https://media/old', 'managed', 25))
+        .mockResolvedValueOnce(session('tracks', 'https://media/tracks', 'managed', 25))
+        .mockResolvedValueOnce(session('seek', 'https://media/seek', 'managed', 55)),
+      stopPlayback: vi.fn().mockResolvedValue(undefined),
+    };
+    const controller = new PlaybackSessionController({ player, backend, capabilities });
+    await controller.start({ item, source, position: 25 });
+    await controller.replaceTracks({ subtitleTrackIndex: 4, subtitlesOff: false });
+    await player.pause();
+    await controller.seek(55);
+
+    expect(backend.startPlayback).toHaveBeenLastCalledWith(expect.objectContaining({ position: 55, subtitleTrackIndex: 4, subtitlesOff: false }));
+    expect(player.opened.at(-1)).toMatchObject({ url: 'https://media/seek', startAtSeconds: 0, timelineOffsetSeconds: 55, paused: true });
+  });
 });

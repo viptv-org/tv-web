@@ -93,11 +93,11 @@ export function Settings({
           onActivate={() =>
             choose("Preferred audio language", "audioLanguage", [
               ["Default", ""],
-              ["English", "eng"],
-              ["Spanish", "spa"],
-              ["French", "fra"],
-              ["German", "deu"],
-              ["Japanese", "jpn"],
+              ["English", "en"],
+              ["Spanish", "es"],
+              ["French", "fr"],
+              ["German", "de"],
+              ["Japanese", "ja"],
             ])
           }
         >
@@ -108,11 +108,11 @@ export function Settings({
           onActivate={() =>
             choose("Preferred subtitle language", "subtitleLanguage", [
               ["Default", ""],
-              ["English", "eng"],
-              ["Spanish", "spa"],
-              ["French", "fra"],
-              ["German", "deu"],
-              ["Japanese", "jpn"],
+              ["English", "en"],
+              ["Spanish", "es"],
+              ["French", "fr"],
+              ["German", "de"],
+              ["Japanese", "ja"],
             ])
           }
         >

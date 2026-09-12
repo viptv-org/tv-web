@@ -25,6 +25,11 @@ import { TextEntry } from "./TextEntry";
 import { ProfileEditor, avatarUrl } from "./ProfileEditor";
 import { Settings } from "./Settings";
 import { resolveNext } from "./continuation";
+import {
+  catalogFilters,
+  catalogDefaults,
+  catalogFilterLabel,
+} from "./catalogFilters";
 import { Guide as LiveGuide } from "./Guide";
 type Screen =
   | "pairing"
@@ -57,10 +62,16 @@ export function App({
   api: TvApi;
   platform?: PlayerPlatform;
 }) {
+  const [compactHome, setCompactHome] = useState(false),
+    [bootingHome, setBootingHome] = useState(false),
+    [recentLive, setRecentLive] = useState<readonly MediaItem[]>([]),
+    [homeRows, setHomeRows] = useState<
+      { name: string; items: readonly MediaItem[] }[]
+    >([]);
   const [editingProfile, setEditingProfile] = useState<{
     profile?: TvProfile;
   }>();
-  const [entry, setEntry] = useState<{
+  const [entry, setEntryState] = useState<{
       title: string;
       initialValue?: string;
       secret?: boolean;
@@ -76,6 +87,10 @@ export function App({
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false),
     [toast, setToast] = useState("");
+  const [searchPartial, setSearchPartial] = useState(false);
+  const [catalogValues, setCatalogValues] = useState<Record<string, string>>(
+    {},
+  );
   const [items, setItems] = useState<readonly MediaItem[]>([]),
     [queue, setQueue] = useState<readonly MediaItem[]>([]),
     [favorites, setFavorites] = useState<readonly MediaItem[]>([]),
@@ -97,7 +112,11 @@ export function App({
     >([]),
     [guides, setGuides] = useState<Record<string, Guide>>({}),
     [prefs, setPrefs] = useState(initialPrefs),
-    [modal, setModal] = useState<{ title: string; choices: Choice[] }>(),
+    [modal, setModal] = useState<{
+      title: string;
+      choices: Choice[];
+      body?: string;
+    }>(),
     [snapshot, setSnapshot] = useState<PlayerSnapshot>(),
     [session, setSession] = useState<PlaybackSession>(),
     [playbackState, setPlaybackState] = useState<PlaybackControllerSnapshot>(),
@@ -126,22 +145,50 @@ export function App({
     seekTimer = useRef<ReturnType<typeof setTimeout>>(),
     pairTimer = useRef<ReturnType<typeof setTimeout>>(),
     pairEpoch = useRef(0);
+  const pairingScope = useRef<ReturnType<TvApi["createScope"]>>();
+  const engineError = useRef<Error>(),
+    autoResume = useRef(false),
+    sourceFocusPending = useRef(false),
+    searchKey = useRef("key-A");
   const advancedSession = useRef(""),
     resumeRemainder = useRef(false);
   const seekRepeat = useRef({ key: "", count: 0 }),
     seekValue = useRef<number>();
+  const initialFocusTimer = useRef<ReturnType<typeof setTimeout>>();
   const modalFocus = useRef(""),
     errorFocus = useRef("");
   useEffect(() => {
     if (modal) {
-      modalFocus.current =
-        (document.activeElement as HTMLElement)?.dataset.focusId ?? "";
+      if (!modalFocus.current)
+        modalFocus.current =
+          (document.activeElement as HTMLElement)?.dataset.focusId ?? "";
+      const timer = setTimeout(
+        () => focusElement(modal.body ? "source-detail-body" : "modal-0"),
+        30,
+      );
+      return () => clearTimeout(timer);
     } else if (modalFocus.current) {
       const id = modalFocus.current;
       modalFocus.current = "";
-      setTimeout(() => focusElement(id), 30);
+      const timer = setTimeout(() => focusElement(id), 30);
+      return () => clearTimeout(timer);
     }
   }, [modal]);
+  const entryFocus = useRef("");
+  const setEntry = (value: typeof entry) => {
+    if (value && !entry)
+      entryFocus.current =
+        (document.activeElement as HTMLElement)?.dataset.focusId ?? "";
+    setEntryState(value);
+  };
+  useEffect(() => {
+    if (!entry && entryFocus.current) {
+      const id = entryFocus.current;
+      entryFocus.current = "";
+      const timer = setTimeout(() => focusElement(id), 30);
+      return () => clearTimeout(timer);
+    }
+  }, [entry]);
   useEffect(() => {
     if (error) {
       errorFocus.current =
@@ -154,6 +201,7 @@ export function App({
   }, [error]);
   const notify = (message: string) => setToast(message);
   const fail = (e: unknown) => {
+    setBootingHome(false);
     if (!(e instanceof DOMException && e.name === "AbortError"))
       setError(
         e instanceof Error ? e.message : "Unable to connect. Try again.",
@@ -194,6 +242,32 @@ export function App({
           })
         : undefined;
       if (ticket === epoch.current) setItems(page?.items ?? home.myList);
+      const [live, rows] = await Promise.all([
+        api
+          .live({ view: "us", collection: "recent", limit: 20 })
+          .catch(() => ({ channels: [] })),
+        Promise.all(
+          cats
+            .filter((c) => c.type !== "live" && c !== first)
+            .slice(0, 2)
+            .map(async (cat) => ({
+              name: cat.name,
+              items: (
+                await api
+                  .discover({
+                    type: cat.type,
+                    catalog: cat.id,
+                    addonId: cat.addonId,
+                  })
+                  .catch(() => ({ items: [] }))
+              ).items,
+            })),
+        ),
+      ]);
+      if (ticket === epoch.current) {
+        setRecentLive(live.channels);
+        setHomeRows(rows);
+      }
     } catch (e) {
       fail(e);
     } finally {
@@ -201,7 +275,9 @@ export function App({
     }
   };
   const chooseProfile = async (id: string) => {
+    if (bootingHome) return;
     epoch.current++;
+    setBootingHome(true);
     setItems([]);
     setQueue([]);
     setFavorites([]);
@@ -211,25 +287,37 @@ export function App({
       await api.selectProfile(id);
       setProfile(id);
       stack.current = [];
-      setScreen("Home");
       await loadHome(id);
+      setScreen("Home");
+      setBootingHome(false);
     } catch (e) {
       fail(e);
     }
   };
   const pairing = async () => {
     clearTimeout(pairTimer.current);
+    pairingScope.current?.abort();
+    const scope = api.createScope();
+    pairingScope.current = scope;
     const generation = ++pairEpoch.current;
     setError("");
     try {
-      const code = await api.beginPairing(`viptv ${platform}`);
+      const code = await api.beginPairing(`viptv ${platform}`, {
+        signal: scope.signal,
+      });
       if (generation !== pairEpoch.current) return;
       setPair(code);
-      setQr(
-        await QRCode.toDataURL(
+      setQr("");
+      try {
+        const data = await QRCode.toDataURL(
           code.verificationUriComplete || code.verificationUri,
-        ),
-      );
+        );
+        if (generation !== pairEpoch.current) return;
+        setQr(data);
+      } catch {
+        /* Manual code remains usable if QR rendering is unavailable. */
+      }
+      if (generation !== pairEpoch.current) return;
       const expires = Date.now() + code.expiresIn * 1000;
       const poll = async () => {
         if (generation !== pairEpoch.current) return;
@@ -238,12 +326,13 @@ export function App({
           return;
         }
         try {
-          await api.claimPairing(code.deviceCode);
-          const identity = await api.me();
+          await api.claimPairing(code.deviceCode, { signal: scope.signal });
+          const identity = await api.me({ signal: scope.signal });
           if (generation !== pairEpoch.current) return;
           setProfiles(identity.profiles);
           setScreen("profiles");
         } catch (e) {
+          if (generation !== pairEpoch.current || scope.signal.aborted) return;
           if (
             (e as { status?: number }).status === 400 ||
             (e as { status?: number }).status === 428
@@ -296,13 +385,24 @@ export function App({
     return () => {
       disposed = true;
       pairEpoch.current++;
+      pairingScope.current?.abort();
       clearTimeout(pairTimer.current);
       epoch.current++;
       void player.current?.dispose();
     };
   }, [api]);
   useEffect(() => {
-    const engine = createPlayer({ platform, video: video.current! });
+    let engine: Player;
+    try {
+      engine = createPlayer({ platform, video: video.current! });
+      engineError.current = undefined;
+    } catch (error) {
+      engineError.current =
+        error instanceof Error
+          ? error
+          : new Error("TV playback engine is unavailable");
+      return;
+    }
     player.current = engine;
     const sessions = new PlaybackSessionController({
       player: engine,
@@ -347,7 +447,11 @@ export function App({
     return () => {
       off();
       offSessions();
-      void sessions.stop().finally(() => engine.dispose());
+      void sessions
+        .stop()
+        .catch(() => undefined)
+        .then(() => engine.dispose())
+        .catch(() => undefined);
     };
   }, [platform, api]);
   useEffect(() => {
@@ -357,26 +461,25 @@ export function App({
     const timer = setTimeout(
       () =>
         focusElement(
-          modal
-            ? "modal-0"
-            : screen === "profiles"
-              ? "profile-0"
-              : screen === "pairing"
-                ? "retry"
-                : screen === "detail"
-                  ? "detail-play"
-                  : screen === "sources"
-                    ? "source-0"
-                    : screen === "player"
-                      ? selected?.type === "live"
-                        ? "audio"
-                        : "timeline"
-                      : `nav-${screen}`,
+          screen === "profiles"
+            ? "profile-0"
+            : screen === "pairing"
+              ? "retry"
+              : screen === "detail"
+                ? "detail-play"
+                : screen === "sources"
+                  ? "source-0"
+                  : screen === "player"
+                    ? selected?.type === "live"
+                      ? "audio"
+                      : "timeline"
+                    : `nav-${screen}`,
         ),
       30,
     );
+    initialFocusTimer.current = timer;
     return () => clearTimeout(timer);
-  }, [screen, modal]);
+  }, [screen]);
   useEffect(() => {
     if (!toast) return;
     const t = setTimeout(() => setToast(""), 5000);
@@ -416,6 +519,16 @@ export function App({
     return () => clearInterval(t);
   }, [session, profile]);
   const back = () => {
+    if (screen === "sources" && autoResume.current) {
+      autoResume.current = false;
+      if (controller.current?.snapshot.state === "opening") {
+        epoch.current++;
+        void controller.current.stop().catch(fail);
+      }
+      setBusy(false);
+      notify("Choose a source to continue.");
+      return;
+    }
     if (error) {
       setError("");
       return;
@@ -506,6 +619,8 @@ export function App({
       return;
     }
     go("sources");
+    autoResume.current = resume;
+    sourceFocusPending.current = true;
     setSelected(item);
     setSources([]);
     setSourceQuality("All");
@@ -525,6 +640,13 @@ export function App({
             if (!all.some((s) => s.id === source.id)) all.push(source);
         }
         setSources([...all]);
+        if (all.length && sourceFocusPending.current) {
+          sourceFocusPending.current = false;
+          setTimeout(() => {
+            if (document.activeElement === document.body)
+              focusElement("source-0");
+          }, 30);
+        }
         if (resume && item.sourceAddonId && item.sourceFingerprint) {
           const exact = all.find(
             (s) =>
@@ -549,10 +671,19 @@ export function App({
       fail(e);
     } finally {
       setBusy(false);
-      setTimeout(() => focusElement("source-0"), 50);
+      if (sourceFocusPending.current) {
+        sourceFocusPending.current = false;
+        setTimeout(() => focusElement("source-0"), 50);
+      }
     }
   };
   const play = async (item: MediaItem, source?: MediaSource, position = 0) => {
+    if (!controller.current) {
+      fail(
+        engineError.current ?? new Error("TV playback engine is unavailable"),
+      );
+      return;
+    }
     resumeRemainder.current = !!(
       position &&
       item.duration &&
@@ -585,7 +716,22 @@ export function App({
           await controller.current.stop();
         return;
       }
-      go("player");
+      if (
+        autoResume.current &&
+        item.type !== "live" &&
+        stack.current.at(-1)?.screen === "Home"
+      ) {
+        stack.current.push({
+          screen: "detail",
+          focus: "detail-play",
+          selected: item,
+          items,
+          episodes: [],
+          sources: [],
+        });
+        setScreen("player");
+      } else go("player");
+      autoResume.current = false;
       setOverlay(true);
     } catch (e) {
       fail(e);
@@ -616,6 +762,22 @@ export function App({
       setEpisodes(old.episodes);
       setSources(old.sources);
       setTimeout(() => focusElement(old.focus), 50);
+      if (old.screen === "detail" && old.selected) {
+        const ticket = epoch.current;
+        void api
+          .detail(old.selected)
+          .then((value) => {
+            if (ticket === epoch.current) {
+              setSelected({ ...old.selected!, ...value.item });
+              setEpisodes(value.episodes);
+              setSeason(
+                value.episodes.find((e) => e.id === old.selected?.id)?.season ??
+                  value.episodes[0]?.season,
+              );
+            }
+          })
+          .catch(fail);
+      }
     }
   };
   const nextEpisode = async (previous = active.current?.item) => {
@@ -625,6 +787,10 @@ export function App({
     setBusy(true);
     setError("");
     const outgoing = active.current;
+    const outgoingPosition =
+      player.current?.snapshot.time.positionSeconds ??
+      outgoing?.item.position ??
+      0;
     const attempted = new Set<string>();
     const deadline = setTimeout(() => scope.abort(), 180000);
     try {
@@ -681,6 +847,38 @@ export function App({
       }
     } catch (e) {
       if (!scope.signal.aborted) fail(e);
+      if (
+        outgoing &&
+        controller.current?.snapshot.state === "error" &&
+        !controller.current.snapshot.active
+      ) {
+        setModal({
+          title: "Playback could not be restored",
+          choices: [
+            {
+              label: "Retry",
+              action: () => {
+                setModal(undefined);
+                void play(outgoing.item, outgoing.source, outgoingPosition);
+              },
+            },
+            {
+              label: "Choose source",
+              action: () => {
+                setModal(undefined);
+                void discoverSources(outgoing.item);
+              },
+            },
+            {
+              label: "Back",
+              action: () => {
+                setModal(undefined);
+                void stop();
+              },
+            },
+          ],
+        });
+      }
     } finally {
       clearTimeout(deadline);
       if (nextScope.current === scope) nextScope.current = undefined;
@@ -722,12 +920,40 @@ export function App({
     try {
       const saved = await api.toggleFavorite(profile, item);
       notify(saved ? "Added to My List" : "Removed from My List");
-      setFavorites(await api.favorites(profile));
+      const list = await api.favorites(profile);
+      setFavorites(list);
+      if (screen === "My List") setItems(list);
     } catch (e) {
       fail(e);
     }
   };
-  const manage = (item: MediaItem) =>
+  const manage = (item: MediaItem) => {
+    if (item.type === "live") {
+      setModal({
+        title: item.name,
+        choices: [
+          {
+            label: "Watch channel",
+            action: () => {
+              setModal(undefined);
+              void play(item);
+            },
+          },
+          {
+            label: favorites.some((f) => f.id === item.id)
+              ? "Remove from My List"
+              : "Add to My List",
+            action: () => {
+              setModal(undefined);
+              void toggle(item);
+            },
+          },
+          { label: "Cancel", action: () => setModal(undefined) },
+        ],
+      });
+      return;
+    }
+    const inQueue = queue.some((q) => q.id === item.id);
     setModal({
       title: item.name,
       choices: [
@@ -759,46 +985,82 @@ export function App({
               .catch(fail);
           },
         },
+        ...(inQueue
+          ? [
+              {
+                label: "Hide from Continue Watching",
+                action: () => {
+                  setModal(undefined);
+                  void api
+                    .setQueueVisibility(profile, item, true)
+                    .then(() => {
+                      setQueue((q) => q.filter((i) => i.id !== item.id));
+                      setModal({
+                        title: "Hidden from Continue Watching",
+                        choices: [
+                          {
+                            label: "Undo",
+                            action: () => {
+                              setModal(undefined);
+                              void api
+                                .setQueueVisibility(profile, item, false)
+                                .then(() => loadHome())
+                                .catch(fail);
+                            },
+                          },
+                          { label: "Done", action: () => setModal(undefined) },
+                        ],
+                      });
+                    })
+                    .catch(fail);
+                },
+              },
+            ]
+          : []),
         {
-          label: "Hide from Continue Watching",
+          label: favorites.some((f) => f.id === item.id)
+            ? "Remove from My List"
+            : "Add to My List",
           action: () => {
             setModal(undefined);
-            void api
-              .setQueueVisibility(profile, item, true)
-              .then(() => {
-                setQueue((q) => q.filter((i) => i.id !== item.id));
-                setModal({
-                  title: "Hidden from Continue Watching",
-                  choices: [
-                    {
-                      label: "Undo",
-                      action: () => {
-                        setModal(undefined);
-                        void api
-                          .setQueueVisibility(profile, item, false)
-                          .then(() => loadHome())
-                          .catch(fail);
-                      },
-                    },
-                    { label: "Done", action: () => setModal(undefined) },
-                  ],
-                });
-              })
-              .catch(fail);
+            void toggle(item);
           },
         },
         { label: "Cancel", action: () => setModal(undefined) },
       ],
     });
-  const loadCatalog = async (cat: Catalog, skip = 0) => {
+  };
+  const loadCatalog = async (
+    cat: Catalog,
+    skip = 0,
+    values = skip ? catalogValues : catalogDefaults(cat),
+  ) => {
     const ticket = ++epoch.current;
     setCatalog(cat);
+    setCatalogValues(values);
+    if (!skip) setNextSkip(undefined);
+    const missing = catalogFilters(cat).find(
+      (f) => f.required && !values[f.name]?.trim(),
+    );
+    if (missing) {
+      setItems([]);
+      setBusy(false);
+      return;
+    }
     setBusy(true);
     try {
       const page = await api.discover({
         type: cat.type,
         catalog: cat.id,
         addonId: cat.addonId,
+        search: values.search || undefined,
+        genre: values.genre || undefined,
+        extras: Object.fromEntries(
+          Object.entries(values).filter(
+            ([key, value]) =>
+              key !== "search" && key !== "genre" && value !== "",
+          ),
+        ),
         skip,
       });
       if (ticket !== epoch.current) return;
@@ -848,7 +1110,11 @@ export function App({
     const scope = api.createScope();
     setItems([]);
     setSearchRows([]);
-    if (!query.trim()) return;
+    setSearchPartial(false);
+    if (!query.trim()) {
+      setBusy(false);
+      return;
+    }
     const t = setTimeout(async () => {
       setBusy(true);
       try {
@@ -875,7 +1141,11 @@ export function App({
                   { signal: scope.signal },
                 )
                 .then((p) => ({ name: c.name, items: p.items }))
-                .catch(() => ({ name: c.name, items: [] })),
+                .catch(() => {
+                  if (ticket === epoch.current && !scope.signal.aborted)
+                    setSearchPartial(true);
+                  return { name: c.name, items: [] };
+                }),
             ),
           );
           if (ticket !== epoch.current) return;
@@ -910,7 +1180,8 @@ export function App({
           setSearchRows([...rows]);
         }
       } catch (e) {
-        if (!scope.signal.aborted) fail(e);
+        if (!scope.signal.aborted && ticket === epoch.current)
+          setSearchPartial(true);
       } finally {
         if (ticket === epoch.current) setBusy(false);
       }
@@ -920,6 +1191,21 @@ export function App({
       scope.abort();
     };
   }, [query, screen, catalogs, searchScope]);
+  useEffect(() => {
+    if (screen !== "sources" || modal || !sources.length) return;
+    if (
+      !sources.some(
+        (s) =>
+          (sourceQuality === "All" ||
+            (s.quality ?? "Unknown") === sourceQuality) &&
+          (sourceProvider === "All" ||
+            (s.sourceName ?? s.name) === sourceProvider),
+      )
+    ) {
+      const timer = setTimeout(() => focusElement("source-provider"), 35);
+      return () => clearTimeout(timer);
+    }
+  }, [screen, modal, sources, sourceQuality, sourceProvider]);
   const commitSeek = async (position: number) => {
     setSeek(undefined);
     if (Math.abs(position - (snapshot?.time.positionSeconds ?? 0)) < 0.5)
@@ -1048,7 +1334,13 @@ export function App({
         ? player.current?.capabilities.canSelectAudioTrack
         : player.current?.capabilities.canSelectTextTrack);
     const choices: Choice[] = [];
-    if (kind === "text" && page === 0)
+    if (
+      kind === "text" &&
+      page === 0 &&
+      (session?.subtitlesSupported ||
+        (session?.mode === "direct" &&
+          player.current?.capabilities.canDisableTextTrack))
+    )
       choices.push({
         label: "Off",
         action: () => {
@@ -1113,14 +1405,26 @@ export function App({
           aria-label={item.name}
           id={`${prefix}-${i}`}
           data-nav-left={
-            screen === "Search" && i === 0 ? "search-field" : undefined
+            screen === "Search" && i === 0 ? searchKey.current : undefined
           }
           key={`${item.type}-${item.id}`}
           onFocus={() => setHighlighted(item)}
           onActivate={() => void detail(item)}
           onHold={() => manage(item)}
         >
-          <img src={item.background ?? item.poster} alt="" />
+          <div className="art-fallback" aria-hidden="true">
+            {item.name}
+          </div>
+          <img
+            src={item.background ?? item.poster}
+            alt=""
+            onLoad={(event) => {
+              event.currentTarget.style.visibility = "visible";
+            }}
+            onError={(event) => {
+              event.currentTarget.style.visibility = "hidden";
+            }}
+          />
           <strong>{item.name}</strong>
           <small>
             {item.season ? `S${item.season} · E${item.episode} · ` : ""}
@@ -1147,31 +1451,36 @@ export function App({
       onBack={back}
       onMediaKey={mediaKey}
       onMediaKeyUp={mediaKeyUp}
-      onNavigate={() => setOverlay(true)}
+      onNavigate={() => {
+        clearTimeout(initialFocusTimer.current);
+        setOverlay(true);
+        sourceFocusPending.current = false;
+      }}
     >
       <div className={`tv-screen ${screen === "player" ? "playing" : ""}`}>
         <video ref={video} className="video" playsInline />
-        <div className="brand">
-          V<span>viptv</span>
+        <div
+          className={`brand ${["profiles", "pairing"].includes(screen) ? "gateway-brand" : ""}`}
+        >
+          <img
+            src={`${import.meta.env.BASE_URL}assets/viptv-mark.png`}
+            alt="viptv"
+          />
         </div>
         {screen === "pairing" ? (
           <section className="pairing">
-            <h1>Link your TV</h1>
-            <p>
-              Open the address below on your phone or computer.
-              <br />
-              Sign in and enter this code.
-            </p>
+            <h1>Sign in to VIPTV</h1>
+            <p>Visit this address, then enter the code shown below.</p>
             <h2>{pair?.verificationUri ?? "Connecting…"}</h2>
             <div className="pair-code">{pair?.userCode ?? "••••••"}</div>
             {qr && <img className="qr" src={qr} alt="Scan to link your TV" />}
             <TvButton id="retry" onActivate={() => void pairing()}>
-              Retry
+              Try again
             </TvButton>
           </section>
         ) : screen === "profiles" ? (
           <section className="profiles">
-            <h1>Who's watching?</h1>
+            <h1>{managing ? "Manage profiles" : "Who's watching?"}</h1>
             <div className="profile-row">
               {profiles
                 .slice(profilePage * 5, profilePage * 5 + 5)
@@ -1233,6 +1542,7 @@ export function App({
                 {navItems.map((n, i) => (
                   <TvButton
                     id={`nav-${n}`}
+                    aria-label={n === "profiles" ? "Profile" : n}
                     key={n}
                     className={n === screen ? "active" : ""}
                     onActivate={() =>
@@ -1243,7 +1553,7 @@ export function App({
                   >
                     <img
                       className="nav-icon"
-                      src={`${import.meta.env.BASE_URL}assets/${["avatar-catalog/critters-1.png", "nav-home.png", "ui-nav-discover.png", "nav-live.png", "nav-list.png", "nav-search.png", "nav-settings.png"][i]}`}
+                      src={`${import.meta.env.BASE_URL}assets/${["avatar-catalog/critters-1.png", "ui-nav-home.png", "ui-nav-discover.png", "ui-nav-tv.png", "ui-nav-list.png", "ui-nav-search.png", "ui-nav-settings.png"][i]}`}
                       alt=""
                     />
                     <em>{n === "profiles" ? "Profile" : n}</em>
@@ -1252,22 +1562,65 @@ export function App({
               </nav>
             )}
             {screen === "Home" && (
-              <main className="home">
+              <main className={`home ${compactHome ? "compact-home" : ""}`}>
+                {(highlighted ?? queue[0] ?? recentLive[0] ?? items[0])
+                  ?.background && (
+                  <div className="hero-art" aria-hidden="true">
+                    <img
+                      src={
+                        (highlighted ?? queue[0] ?? recentLive[0] ?? items[0])
+                          ?.background
+                      }
+                      onLoad={(event) => {
+                        event.currentTarget.style.visibility = "visible";
+                      }}
+                      onError={(event) => {
+                        event.currentTarget.style.visibility = "hidden";
+                      }}
+                      alt=""
+                    />
+                    <img
+                      className="hero-shade-left"
+                      src={`${import.meta.env.BASE_URL}assets/ui-hero-left.png`}
+                      alt=""
+                    />
+                    <img
+                      className="hero-shade-bottom"
+                      src={`${import.meta.env.BASE_URL}assets/ui-hero-bottom.png`}
+                      alt=""
+                    />
+                  </div>
+                )}
                 <div className="hero">
-                  <small>WELCOME TO VIPTV</small>
+                  <small>
+                    {(highlighted ?? queue[0] ?? recentLive[0] ?? items[0])
+                      ?.type === "live"
+                      ? "LIVE NOW"
+                      : (highlighted ?? queue[0])?.position
+                        ? "CONTINUE WATCHING"
+                        : `FEATURED ${(highlighted ?? items[0])?.type?.toUpperCase() ?? "MOVIE"}`}
+                  </small>
                   <h1>
-                    {(highlighted ?? queue[0] ?? items[0])?.name ??
-                      "Your next favorite is here"}
+                    {(highlighted ?? queue[0] ?? recentLive[0] ?? items[0])
+                      ?.name ?? "Your next favorite is here"}
                   </h1>
                   <p>
-                    {(highlighted ?? queue[0] ?? items[0])?.description ??
+                    {(highlighted ?? queue[0] ?? recentLive[0] ?? items[0])
+                      ?.description ??
                       "Browse your movies, series and live television."}
                   </p>
                   <div className="actions">
                     <TvButton
                       id="hero-play"
+                      className={
+                        (highlighted ?? queue[0])?.queueStatus === "next"
+                          ? "wide-action"
+                          : undefined
+                      }
+                      onFocus={() => setCompactHome(false)}
                       onActivate={() => {
-                        const item = highlighted ?? queue[0] ?? items[0];
+                        const item =
+                          highlighted ?? queue[0] ?? recentLive[0] ?? items[0];
                         if (item)
                           void discoverSources(
                             item,
@@ -1275,7 +1628,8 @@ export function App({
                           );
                       }}
                       onHold={() => {
-                        const item = highlighted ?? queue[0] ?? items[0];
+                        const item =
+                          highlighted ?? queue[0] ?? recentLive[0] ?? items[0];
                         if (item) void discoverSources(item);
                       }}
                     >
@@ -1287,8 +1641,10 @@ export function App({
                     </TvButton>
                     <TvButton
                       id="hero-details"
+                      onFocus={() => setCompactHome(false)}
                       onActivate={() => {
-                        const item = highlighted ?? queue[0] ?? items[0];
+                        const item =
+                          highlighted ?? queue[0] ?? recentLive[0] ?? items[0];
                         if (item) void detail(item);
                       }}
                     >
@@ -1296,17 +1652,43 @@ export function App({
                     </TvButton>
                   </div>
                 </div>
-                <div className="shelves">
+                <div
+                  className="shelves"
+                  onFocusCapture={(event) => {
+                    const section = (event.target as HTMLElement).closest(
+                      "section",
+                    );
+                    const first = event.currentTarget.querySelector("section");
+                    setCompactHome(!!section && section !== first);
+                  }}
+                >
                   {queue.length > 0 && (
                     <section>
                       <h2>Continue Watching</h2>
                       {cards(queue, "queue")}
                     </section>
                   )}
+                  {recentLive.length > 0 && (
+                    <section>
+                      <h2>Recently Watched Live TV</h2>
+                      {cards(recentLive, "recent-live")}
+                    </section>
+                  )}
                   <section>
-                    <h2>Discover</h2>
+                    <h2>
+                      {catalogs.find((c) => c.type !== "live")?.name ??
+                        "Discover"}
+                    </h2>
                     {cards(items, "home")}
                   </section>
+                  {homeRows
+                    .filter((row) => row.items.length)
+                    .map((row, i) => (
+                      <section key={`${row.name}-${i}`}>
+                        <h2>{row.name}</h2>
+                        {cards(row.items, `shelf-${i}`)}
+                      </section>
+                    ))}
                   {favorites.length > 0 && (
                     <section>
                       <h2>My List</h2>
@@ -1320,7 +1702,32 @@ export function App({
               <main className={`browse ${screen === "Search" ? "search" : ""}`}>
                 <h1>{screen}</h1>
                 {screen === "Search" && (
-                  <div className="keyboard">
+                  <div
+                    className="keyboard"
+                    onFocusCapture={(event) => {
+                      const id = (event.target as HTMLElement).dataset.focusId;
+                      if (id?.startsWith("key-")) searchKey.current = id;
+                    }}
+                    onKeyDown={(event) => {
+                      const id =
+                        (event.target as HTMLElement).dataset.focusId ?? "";
+                      const index =
+                        "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789".indexOf(
+                          id.replace("key-", ""),
+                        );
+                      if (
+                        items.length &&
+                        (["MediaPlay", "MediaPlayPause"].includes(event.key) ||
+                          (event.key === "ArrowRight" &&
+                            index >= 0 &&
+                            index % 6 === 5))
+                      ) {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        focusElement("result-0");
+                      }
+                    }}
+                  >
                     <TvButton
                       id="search-scope"
                       onActivate={() =>
@@ -1341,7 +1748,8 @@ export function App({
                       Search: {searchScope}
                     </TvButton>
                     <input
-                      data-focus-id="search-field"
+                      tabIndex={-1}
+                      maxLength={256}
                       aria-label="Search titles"
                       onKeyDown={(e) => {
                         if (
@@ -1365,7 +1773,9 @@ export function App({
                           <TvButton
                             id={`key-${c}`}
                             key={c}
-                            onActivate={() => setQuery((q) => q + c)}
+                            onActivate={() =>
+                              setQuery((q) => (q + c).slice(0, 256))
+                            }
                           >
                             {c}
                           </TvButton>
@@ -1373,7 +1783,9 @@ export function App({
                     </div>
                     <TvButton
                       id="space"
-                      onActivate={() => setQuery((q) => q + " ")}
+                      onActivate={() =>
+                        setQuery((q) => (q + " ").slice(0, 256))
+                      }
                     >
                       Space
                     </TvButton>
@@ -1390,15 +1802,96 @@ export function App({
                 )}
                 {screen === "Discover" && (
                   <div className="filters">
-                    {catalogs.map((cat, i) => (
-                      <TvButton
-                        key={`${cat.addonId}-${cat.id}`}
-                        id={`catalog-${i}`}
-                        onActivate={() => void loadCatalog(cat)}
-                      >
-                        {cat.name}
-                      </TvButton>
-                    ))}
+                    <TvButton
+                      id="discover-type"
+                      onActivate={() =>
+                        setModal({
+                          title: "Content type",
+                          choices: Array.from(
+                            new Set(catalogs.map((c) => c.type)),
+                          ).map((type) => ({
+                            label: type,
+                            action: () => {
+                              setModal(undefined);
+                              const cat = catalogs.find((c) => c.type === type);
+                              if (cat) void loadCatalog(cat);
+                            },
+                          })),
+                        })
+                      }
+                    >
+                      {catalog?.type ?? "Content type"}
+                    </TvButton>
+                    <TvButton
+                      id="discover-catalog"
+                      onActivate={() =>
+                        setModal({
+                          title: "Catalog",
+                          choices: catalogs
+                            .filter((c) => !catalog || c.type === catalog.type)
+                            .map((cat) => ({
+                              label: cat.name,
+                              action: () => {
+                                setModal(undefined);
+                                void loadCatalog(cat);
+                              },
+                            })),
+                        })
+                      }
+                    >
+                      {catalog?.name ?? "Catalog"}
+                    </TvButton>
+                    {catalog &&
+                      catalogFilters(catalog).map((filter) => (
+                        <TvButton
+                          key={filter.name}
+                          id={`discover-filter-${filter.name}`}
+                          onActivate={() => {
+                            const apply = (value: string) => {
+                              setModal(undefined);
+                              void loadCatalog(catalog, 0, {
+                                ...catalogValues,
+                                [filter.name]: value,
+                              });
+                            };
+                            if (filter.options.length)
+                              setModal({
+                                title: catalogFilterLabel(filter.name),
+                                choices: [
+                                  ...(!filter.required
+                                    ? [
+                                        {
+                                          label: "Any",
+                                          action: () => apply(""),
+                                        },
+                                      ]
+                                    : []),
+                                  ...filter.options.map((value) => ({
+                                    label: value,
+                                    action: () => apply(value),
+                                  })),
+                                ],
+                              });
+                            else
+                              setEntry({
+                                title: catalogFilterLabel(filter.name),
+                                initialValue: catalogValues[filter.name] ?? "",
+                                save: async (value) => {
+                                  if (filter.required && !value.trim())
+                                    throw new Error(
+                                      "Enter a value for this required filter.",
+                                    );
+                                  setEntry(undefined);
+                                  apply(value.trim());
+                                },
+                              });
+                          }}
+                        >
+                          {catalogFilterLabel(filter.name)}:{" "}
+                          {catalogValues[filter.name] ||
+                            (filter.required ? "Required" : "Any")}
+                        </TvButton>
+                      ))}
                   </div>
                 )}
                 {screen === "My List" && (
@@ -1445,16 +1938,51 @@ export function App({
                       </TvButton>
                     )}
                   {!busy && !items.length && (
-                    <p>{query ? "No matching titles" : "No titles yet"}</p>
+                    <p>
+                      {screen === "Discover" &&
+                      catalog &&
+                      catalogFilters(catalog).some(
+                        (f) => f.required && !catalogValues[f.name]?.trim(),
+                      )
+                        ? "Choose the required filters to browse this catalog."
+                        : query
+                          ? "No matching titles"
+                          : "No titles yet"}
+                    </p>
                   )}
                 </div>
+                {screen === "Search" && (
+                  <p className="search-status" role="status">
+                    {busy
+                      ? "Searching…"
+                      : query.trim()
+                        ? `${items.length} results`
+                        : "Enter a title to search."}
+                    {searchPartial ? " Some sources couldn't load." : ""}
+                  </p>
+                )}
               </main>
             )}
             {screen === "detail" && selected && (
               <main
                 className={`detail ${selected.type === "series" ? "series" : ""}`}
               >
-                <img className="poster" src={selected.poster} alt="" />
+                {selected.background && (
+                  <div className="detail-backdrop" aria-hidden="true">
+                    <img src={selected.background} alt="" />
+                  </div>
+                )}
+                <img
+                  className="poster"
+                  src={selected.poster}
+                  alt=""
+                  onLoad={(event) => {
+                    event.currentTarget.style.visibility = "visible";
+                  }}
+                  onError={(event) => {
+                    event.currentTarget.style.visibility = "hidden";
+                  }}
+                />
                 <div className="detail-copy">
                   <h1>{selected.name}</h1>
                   <p className="muted">
@@ -1466,19 +1994,38 @@ export function App({
                     <TvButton
                       id="detail-play"
                       onActivate={() =>
-                        void (selected.type === "live"
-                          ? play(selected)
-                          : discoverSources(selected, !!selected.position))
+                        selected.type === "series" && !selected.episode
+                          ? setModal({
+                              title: "Season",
+                              choices: Array.from(
+                                new Set(episodes.map((e) => e.season)),
+                              ).map((n) => ({
+                                label: `Season ${n ?? 1}`,
+                                action: () => {
+                                  setSeason(n);
+                                  setModal(undefined);
+                                },
+                              })),
+                            })
+                          : void (selected.type === "live"
+                              ? play(selected)
+                              : discoverSources(selected, !!selected.position))
                       }
                       onHold={() => void discoverSources(selected)}
                     >
-                      {selected.position ? "Resume" : "Play"}
+                      {selected.type === "series" && !selected.episode
+                        ? `Season ${season ?? 1}`
+                        : selected.position
+                          ? "Resume"
+                          : "Play"}
                     </TvButton>
                     <TvButton
                       id="detail-save"
                       onActivate={() => void toggle(selected)}
                     >
-                      My List
+                      {favorites.some((f) => f.id === selected.id)
+                        ? "In My List"
+                        : "My List"}
                     </TvButton>
                     <TvButton
                       id="detail-info"
@@ -1500,19 +2047,6 @@ export function App({
                 </div>
                 {episodes.length > 0 && (
                   <>
-                    <div className="season-filter">
-                      {Array.from(new Set(episodes.map((e) => e.season))).map(
-                        (n) => (
-                          <TvButton
-                            id={`season-${n}`}
-                            key={n}
-                            onActivate={() => setSeason(n)}
-                          >
-                            Season {n ?? 1}
-                          </TvButton>
-                        ),
-                      )}
-                    </div>
                     <div className="episode-grid">
                       {episodes
                         .filter((e) => e.season === season)
@@ -1524,7 +2058,23 @@ export function App({
                             onActivate={() => void discoverSources(e)}
                             onHold={() => manage(e)}
                           >
-                            <img src={e.poster ?? selected.background} alt="" />
+                            <div className="art-fallback" aria-hidden="true">
+                              {e.name}
+                            </div>
+                            <img
+                              src={e.poster ?? selected.background}
+                              alt=""
+                              onLoad={(event) => {
+                                event.currentTarget.style.visibility =
+                                  "visible";
+                              }}
+                              onError={(event) => {
+                                event.currentTarget.style.visibility = "hidden";
+                              }}
+                            />
+                            {e.watched && (
+                              <span className="watched-badge">Watched</span>
+                            )}
                             <small>
                               S{e.season} · E{e.episode}
                             </small>
@@ -1603,6 +2153,20 @@ export function App({
                         id={`source-${i}`}
                         key={s.id}
                         className="source"
+                        onHold={() =>
+                          setModal({
+                            title: "Source details",
+                            body: [s.name, s.title, s.filename, s.sourceName]
+                              .filter(Boolean)
+                              .join("\n\n"),
+                            choices: [
+                              {
+                                label: "Close",
+                                action: () => setModal(undefined),
+                              },
+                            ],
+                          })
+                        }
                         onActivate={() =>
                           selected &&
                           void play(selected, s, selected.position ?? 0)
@@ -1618,6 +2182,18 @@ export function App({
                   {!busy && !sources.length && (
                     <p>No sources available. Check your add-ons in Settings.</p>
                   )}
+                  {sources.length > 0 &&
+                    !sources.some(
+                      (s) =>
+                        (sourceQuality === "All" ||
+                          (s.quality ?? "Unknown") === sourceQuality) &&
+                        (sourceProvider === "All" ||
+                          (s.sourceName ?? s.name) === sourceProvider),
+                    ) && (
+                      <p>
+                        No matching sources. Choose another provider or quality.
+                      </p>
+                    )}
                 </div>
               </main>
             )}
@@ -1680,7 +2256,17 @@ export function App({
               />
             )}
             {screen === "player" && overlay && (
-              <div className="player-overlay">
+              <div
+                className={`player-overlay ${selected?.type === "live" ? "live-overlay" : ""}`}
+              >
+                <div className="player-identity">viptv</div>
+                <div className="player-context">
+                  {selected?.season
+                    ? `S${selected.season} · E${selected.episode ?? 1} · ${selected.episodeTitle ?? ""}`
+                    : selected?.type === "live"
+                      ? "LIVE NOW"
+                      : ""}
+                </div>
                 <h1>{selected?.name}</h1>
                 <div className="playback-bottom">
                   {selected?.type !== "live" && (
@@ -1711,6 +2297,7 @@ export function App({
                       <>
                         <TvButton
                           id="rewind"
+                          aria-label="Rewind 10 seconds"
                           onActivate={() =>
                             void commitSeek(
                               Math.max(
@@ -1720,20 +2307,30 @@ export function App({
                             )
                           }
                         >
-                          ↶
+                          <img
+                            src={`${import.meta.env.BASE_URL}assets/ui-nav-player-rewind.png`}
+                            alt=""
+                          />
                         </TvButton>
                         <TvButton
                           id="pause"
+                          aria-label={
+                            snapshot?.state === "paused" ? "Play" : "Pause"
+                          }
                           onActivate={() =>
                             void (snapshot?.state === "paused"
                               ? player.current?.play()
                               : player.current?.pause())
                           }
                         >
-                          {snapshot?.state === "paused" ? "Play" : "Pause"}
+                          <img
+                            src={`${import.meta.env.BASE_URL}assets/ui-nav-player-${snapshot?.state === "paused" ? "play" : "pause"}.png`}
+                            alt=""
+                          />
                         </TvButton>
                         <TvButton
                           id="forward"
+                          aria-label="Forward 30 seconds"
                           onActivate={() =>
                             void commitSeek(
                               Math.min(
@@ -1743,7 +2340,10 @@ export function App({
                             )
                           }
                         >
-                          ↷
+                          <img
+                            src={`${import.meta.env.BASE_URL}assets/ui-nav-player-forward.png`}
+                            alt=""
+                          />
                         </TvButton>
                         {selected?.type === "series" && (
                           <TvButton
@@ -1757,24 +2357,48 @@ export function App({
                     )}
                     <TvButton
                       id="audio"
+                      aria-label="Audio"
                       onActivate={() => trackChoices("audio")}
                     >
-                      Audio
+                      <img
+                        src={`${import.meta.env.BASE_URL}assets/ui-nav-player-audio.png`}
+                        alt=""
+                      />
                     </TvButton>
                     <TvButton
                       id="subtitles"
+                      aria-label="Subtitles"
                       onActivate={() => trackChoices("text")}
                     >
-                      Subtitles
+                      <img
+                        src={`${import.meta.env.BASE_URL}assets/ui-nav-player-captions.png`}
+                        alt=""
+                      />
                     </TvButton>
-                    <TvButton id="exit" onActivate={() => void stop()}>
-                      Exit
+                    <TvButton
+                      id="exit"
+                      aria-label="Exit"
+                      onActivate={() => void stop()}
+                    >
+                      <img
+                        src={`${import.meta.env.BASE_URL}assets/ui-nav-player-exit.png`}
+                        alt=""
+                      />
                     </TvButton>
                   </div>
                 </div>
               </div>
             )}
           </>
+        )}
+        {bootingHome && (
+          <div className="startup-cover" role="status">
+            <img
+              src={`${import.meta.env.BASE_URL}assets/viptv-mark.png`}
+              alt=""
+            />
+            <p>Starting viptv…</p>
+          </div>
         )}
         {busy && (
           <div
@@ -1822,8 +2446,29 @@ export function App({
         )}
         {modal && (
           <div className="scrim">
-            <div className="modal" data-focus-scope="modal">
+            <div
+              className={modal.body ? "source-detail-panel" : "modal"}
+              data-focus-scope="modal"
+            >
               <h2>{modal.title}</h2>
+              {modal.body && (
+                <div
+                  className="source-detail-body"
+                  tabIndex={0}
+                  data-focus-id="source-detail-body"
+                  onKeyDown={(event) => {
+                    if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      event.currentTarget.scrollBy({
+                        top: event.key === "ArrowDown" ? 100 : -100,
+                      });
+                    }
+                  }}
+                >
+                  {modal.body}
+                </div>
+              )}
               {modal.choices.map((choice, i) => (
                 <TvButton id={`modal-${i}`} key={i} onActivate={choice.action}>
                   {choice.label}

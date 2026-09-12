@@ -39,6 +39,6 @@ For the backend, build the TV distribution first, then set `VIPTV_TV_DIST` to it
 
 ## Validation status
 
-The API boundary test file previously passed with seven tests and final source TypeScript checking passes with a 256 MB heap. Runtime tests have **not** been rerun after the later client, UI, packaging and backend changes because the owner paused memory-intensive work after a server out-of-memory event. No browser suite, package build, Samsung emulator, Tizen hardware or Vizio hardware test has been claimed as complete.
+The focused API boundary suite passed on 2026-09-12 with 16 tests, including real backend-shaped profile, metadata, catalog-extra, continuation, live-category, relative playback-capability, decoder-default and browser-fetch fixtures. TypeScript checking also passed with a bounded heap. Browser, package, Samsung emulator, Tizen hardware and Vizio hardware validation remain incomplete; the local server’s earlier out-of-memory event still rules out concurrent heavy workloads.
 
 Use [TESTING.md](TESTING.md) when the machine is ready. It separates mocked browser coverage, backend contract coverage, hosted smoke checks and real-device evidence.

@@ -31,6 +31,16 @@ jobs:
         run: npx playwright install --with-deps chromium
       - if: inputs.browser
         run: npm run test:e2e -- --workers=1
+      - name: Upload browser evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tv-browser-evidence
+          path: |
+            test-results/**
+            playwright-report/**
+          if-no-files-found: ignore
+          retention-days: 7
       - uses: actions/upload-artifact@v4
         with:
           name: viptv-tv-candidates

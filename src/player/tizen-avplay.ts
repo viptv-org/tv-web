@@ -58,7 +58,7 @@ export const TIZEN_AVPLAY_CAPABILITIES: PlayerCapabilities = {
   limitations: [
     'Codec, DRM, adaptive and subtitle support vary by TV model and firmware; qualify the exact source on device.',
     'AVPlay TEXT selection is unavailable for DASH according to Samsung documentation.',
-    'Only COOKIE and USER_AGENT authorization properties are represented here; do not invent arbitrary-header support.',
+    'COOKIE and USER_AGENT are available only when this runtime exposes setStreamingProperty; arbitrary headers are unsupported.',
   ],
 };
 
@@ -69,12 +69,19 @@ interface PendingOpen {
 }
 
 export class TizenAvplayAdapter extends SessionPlayer {
-  readonly capabilities = TIZEN_AVPLAY_CAPABILITIES;
+  readonly capabilities: PlayerCapabilities;
   private pendingOpen: PendingOpen | null = null;
   private timelineOffsetSeconds = 0;
 
   constructor(private readonly avplay: AvplayManager = resolveAvplay()) {
     super();
+    // Older/model-specific runtimes can expose AVPlay without the authorization
+    // property API. Advertise only what this injected runtime can actually set.
+    this.capabilities = {
+      ...TIZEN_AVPLAY_CAPABILITIES,
+      canUseCookies: Boolean(avplay.setStreamingProperty),
+      canUseUserAgent: Boolean(avplay.setStreamingProperty),
+    };
   }
 
   open(request: OpenPlayerRequest): Promise<void> {
@@ -92,7 +99,9 @@ export class TizenAvplayAdapter extends SessionPlayer {
       // enters IDLE, while prepareAsync() leaves it, so keep this ordering.
       this.applyAuthorization(request);
     } catch (cause) {
-      const error = operationFailure('prepare-failed', 'AVPlay could not open the selected source.', cause);
+      const error = cause instanceof PlayerOperationError
+        ? cause
+        : operationFailure('prepare-failed', 'AVPlay could not open the selected source.', cause);
       this.fail(sessionId, error.toFailure());
       return Promise.reject(error);
     }
@@ -185,14 +194,15 @@ export class TizenAvplayAdapter extends SessionPlayer {
     const sessionId = this.activeSessionOrThrow();
     try {
       if (trackId === null) {
-        this.avplay.setSilentSubtitle(false);
+        // Samsung defines true as hidden and false as shown.
+        this.avplay.setSilentSubtitle(true);
         this.update(sessionId, { tracks: { ...this.snapshot.tracks, selectedTextId: null } });
         return;
       }
       const track = this.findTrack('text', trackId);
       if (!track) throw new PlayerOperationError('unsupported-operation', `Subtitle track ${trackId} is not available.`);
-      this.avplay.setSilentSubtitle(true);
       this.avplay.setSelectTrack('TEXT', parseTrackIndex(trackId));
+      this.avplay.setSilentSubtitle(false);
       this.update(sessionId, { tracks: { ...this.snapshot.tracks, selectedTextId: trackId } });
     } catch (cause) {
       if (cause instanceof PlayerOperationError) throw cause;
@@ -259,9 +269,9 @@ export class TizenAvplayAdapter extends SessionPlayer {
   }
 
   private updateTimeFromEngine(sessionId: number, fallbackPosition: number): void {
-    let positionSeconds = fallbackPosition;
-    try { positionSeconds = this.avplay.getCurrentTime() / 1000; } catch { /* callback value is still useful */ }
-    this.update(sessionId, { time: { positionSeconds: this.timelineOffsetSeconds + positionSeconds, durationSeconds: this.durationSeconds() } });
+    let nativePositionSeconds = Math.max(0, fallbackPosition - this.timelineOffsetSeconds);
+    try { nativePositionSeconds = this.avplay.getCurrentTime() / 1000; } catch { /* requested native position remains useful */ }
+    this.update(sessionId, { time: { positionSeconds: this.timelineOffsetSeconds + nativePositionSeconds, durationSeconds: this.durationSeconds() } });
   }
 
   private durationSeconds(): number | null {

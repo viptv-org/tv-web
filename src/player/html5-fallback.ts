@@ -6,6 +6,11 @@ const HTML5_FALLBACK_CAPABILITIES: PlayerCapabilities = {
   ...VIZIO_HTML5_CAPABILITIES,
   platform: 'html5',
   engine: 'HTMLMediaElement preview',
+  limitations: [
+    'Preview adapter only: it uses browser-native HTML media for a backend-compatible URL.',
+    'Mediabunny/WebCodecs probing, demuxing, and decode are not implemented here.',
+    'Browser codec, DRM, adaptive, seek, and subtitle results remain runtime probes.',
+  ],
 };
 
 /** Browser preview adapter. It has the same explicit direct-URL contract as Vizio. */

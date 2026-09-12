@@ -46,6 +46,7 @@ export const VIZIO_HTML5_CAPABILITIES: PlayerCapabilities = {
   limitations: [
     'No public Vizio playback capability table is assumed; test the exact TV, firmware, source and duration.',
     'This adapter does not set request headers, cookies or audio tracks. Supply a backend-compatible signed/direct URL.',
+    'Mediabunny/WebCodecs demux or decode is not wired into this adapter; it never performs a local fallback.',
     'Adaptive, DRM, seek and subtitle behavior are runtime probes, not platform-wide claims.',
   ],
 };
@@ -204,15 +205,15 @@ export class VizioHtml5Adapter extends SessionPlayer {
 
   async selectTextTrack(trackId: string | null): Promise<void> {
     const sessionId = this.activeSessionOrThrow();
-    const textTracks = listTextTracks(this.media);
+    const tracks = selectableTextTracks(this.media);
     if (trackId === null) {
-      for (const track of textTracks) track.mode = 'disabled';
+      for (const { track } of tracks) track.mode = 'disabled';
       this.update(sessionId, { tracks: { ...this.snapshot.tracks, selectedTextId: null } });
       return;
     }
-    const selected = textTracks.find((_, index) => `text:${index}` === trackId);
+    const selected = tracks.find((entry) => entry.id === trackId);
     if (!selected) throw new PlayerOperationError('unsupported-operation', `Subtitle track ${trackId} is not available.`);
-    for (const track of textTracks) track.mode = track === selected ? 'showing' : 'disabled';
+    for (const { track } of tracks) track.mode = track === selected.track ? 'showing' : 'disabled';
     this.update(sessionId, { tracks: { ...tracksFromMedia(this.media), selectedTextId: trackId } });
   }
 
@@ -268,17 +269,26 @@ function listTextTracks(media: HtmlMediaLike): HtmlTextTrack[] {
   return Array.from({ length: media.textTracks.length }, (_, index) => media.textTracks![index]);
 }
 
+/** Preserve native indices: filtered-array indices cannot select the right cue. */
+function selectableTextTracks(media: HtmlMediaLike): readonly { readonly id: string; readonly track: HtmlTextTrack }[] {
+  return listTextTracks(media).flatMap((track, index) => (
+    track.kind === 'captions' || track.kind === 'subtitles'
+      ? [{ id: `text:${index}`, track }]
+      : []
+  ));
+}
+
 function tracksFromMedia(media: HtmlMediaLike): PlayerTracks {
-  const text = listTextTracks(media)
-    .filter((track) => track.kind === 'captions' || track.kind === 'subtitles')
-    .map((track, index): PlayerTrack => ({
-      id: `text:${index}`,
+  const tracks = selectableTextTracks(media);
+  const text = tracks
+    .map(({ id, track }, index): PlayerTrack => ({
+      id,
       label: track.label || `Subtitle ${index + 1}`,
       language: track.language || undefined,
       available: true,
     }));
-  const selectedTextId = listTextTracks(media).findIndex((track) => track.mode === 'showing');
-  return { audio: [], text, selectedAudioId: null, selectedTextId: selectedTextId < 0 ? null : `text:${selectedTextId}` };
+  const selectedTextId = tracks.find((entry) => entry.track.mode === 'showing')?.id ?? null;
+  return { audio: [], text, selectedAudioId: null, selectedTextId };
 }
 
 function knownDuration(duration: number): number | null {
