@@ -54,6 +54,12 @@ test('Discover applies declared defaults and resets pagination for genre, input 
   await page.getByRole('button', { name: 'Alex' }).press('Enter');
   await page.getByRole('button', { name: 'Discover' }).click();
   await expect(page.getByRole('button', { name: 'Year: 2024' })).toBeVisible();
+  const header=await page.getByRole('heading',{name:'Discover',exact:true}).boundingBox();
+  expect(header?.x).toBe(100);expect(header?.y).toBe(54);
+  const filters=await page.locator('.browse>.filters').boundingBox();
+  expect(filters?.y).toBe(178);
+  const grid=await page.locator('.browse>.result-grid').boundingBox();
+  expect(grid?.y).toBe(248);
   await expect(page.getByRole('button', { name: 'Genre: Any' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Country: Any' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Search catalog: Any' })).toBeVisible();

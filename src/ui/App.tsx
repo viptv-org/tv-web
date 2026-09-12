@@ -175,7 +175,12 @@ export function App({
     }
   }, [modal]);
   const entryFocus = useRef("");
+  const parentScope = useRef<ReturnType<TvApi["createScope"]>>();
   const setEntry = (value: typeof entry) => {
+    if (!value) {
+      parentScope.current?.abort();
+      parentScope.current = undefined;
+    }
     if (value && !entry)
       entryFocus.current =
         (document.activeElement as HTMLElement)?.dataset.focusId ?? "";
@@ -274,6 +279,51 @@ export function App({
       setBusy(false);
     }
   };
+  const authorize = async (
+    title: string,
+    action: (signal?: AbortSignal) => Promise<void>,
+    done: () => Promise<void> | void,
+  ) => {
+    try {
+      await action();
+      await done();
+    } catch (error) {
+      if ((error as { status?: number }).status !== 403) {
+        fail(error);
+        return;
+      }
+      setBootingHome(false);
+      const scope = api.createScope();
+      parentScope.current?.abort();
+      parentScope.current = scope;
+      setEntry({
+        title,
+        secret: true,
+        save: async (pin) => {
+          if (!/^\d{4,8}$/.test(pin))
+            throw new Error("Enter a 4–8 digit parent PIN");
+          try {
+            await api.unlockParent(pin, { signal: scope.signal });
+            if (scope.signal.aborted) return;
+            await action(scope.signal);
+            if (scope.signal.aborted) return;
+            setEntry(undefined);
+            await done();
+          } catch (error) {
+            if (scope.signal.aborted) return;
+            const status = (error as { status?: number }).status;
+            throw new Error(
+              status === 429
+                ? "Too many attempts. Wait before trying again."
+                : status === 403
+                  ? "Incorrect PIN. Try again."
+                  : "Unable to unlock. Try again.",
+            );
+          }
+        },
+      });
+    }
+  };
   const chooseProfile = async (id: string) => {
     if (bootingHome) return;
     epoch.current++;
@@ -283,16 +333,18 @@ export function App({
     setFavorites([]);
     setHighlighted(undefined);
     setSelected(undefined);
-    try {
-      await api.selectProfile(id);
-      setProfile(id);
-      stack.current = [];
-      await loadHome(id);
-      setScreen("Home");
-      setBootingHome(false);
-    } catch (e) {
-      fail(e);
-    }
+    await authorize(
+      "Enter parent PIN",
+      (signal) => api.selectProfile(id, { signal }),
+      async () => {
+        setBootingHome(true);
+        setProfile(id);
+        stack.current = [];
+        await loadHome(id);
+        setScreen("Home");
+        setBootingHome(false);
+      },
+    );
   };
   const pairing = async () => {
     clearTimeout(pairTimer.current);
@@ -2240,13 +2292,16 @@ export function App({
                         label: "Sign out",
                         action: () => {
                           setModal(undefined);
-                          void api
-                            .signOut()
-                            .then(() => {
+                          void authorize(
+                            "Enter parent PIN to sign out",
+                            (signal) => api.signOut({ signal }),
+                            () => {
+                              setProfile("");
+                              setProfiles([]);
                               setScreen("pairing");
                               void pairing();
-                            })
-                            .catch(fail);
+                            },
+                          );
                         },
                       },
                       { label: "Cancel", action: () => setModal(undefined) },

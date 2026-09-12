@@ -46,6 +46,30 @@ describe("TvApi device and media boundary", () => {
     await expect(store.load()).resolves.toMatchObject({ accessToken: "new-access", refreshToken: "new-refresh" });
   });
 
+  it("keeps the device grant when protected sign-out is rejected or cannot reach the server", async () => {
+    const token = { sessionId: "s1", accountId: "1", profileId: "3", accessToken: "access", refreshToken: "refresh", expiresIn: 900 };
+    const forbiddenStore = new MemoryDeviceSessionStore();
+    await forbiddenStore.save(token);
+    const forbidden = scripted(response({ error: "parent PIN required" }, 403));
+    const forbiddenApi = new TvApi({ baseUrl: "https://viptv.example", fetch: forbidden.fetcher, sessionStore: forbiddenStore });
+    await forbiddenApi.restoreSession();
+    await expect(forbiddenApi.signOut()).rejects.toMatchObject({ name: "TvApiError", status: 403 });
+    await expect(forbiddenStore.load()).resolves.toEqual(token);
+    await expect(forbiddenApi.restoreSession()).resolves.toEqual(token);
+
+    const offlineStore = new MemoryDeviceSessionStore();
+    await offlineStore.save(token);
+    const offlineApi = new TvApi({
+      baseUrl: "https://viptv.example",
+      fetch: async () => { throw new TypeError("offline"); },
+      sessionStore: offlineStore,
+    });
+    await offlineApi.restoreSession();
+    await expect(offlineApi.signOut()).rejects.toMatchObject({ name: "TvApiError", status: 0, code: "network" });
+    await expect(offlineStore.load()).resolves.toEqual(token);
+    await expect(offlineApi.restoreSession()).resolves.toEqual(token);
+  });
+
   it("normalizes source cards while removing upstream URLs and authorization headers", async () => {
     const store = new MemoryDeviceSessionStore();
     await store.save({ sessionId: "s1", accountId: "1", profileId: "3", accessToken: "access", refreshToken: "refresh", expiresIn: 900 });

@@ -6,15 +6,15 @@ This checklist is intentionally evidence-based. A Playwright pass is browser sim
 
 | Area | Evidence | Status |
 | --- | --- | --- |
-| Typed API boundary | `tests/api/client.test.ts` passed with 16 tests on 2026-09-12 | Current for the typed HTTP boundary; backend integration still required |
+| Typed API boundary | `tests/api/client.test.ts` passed with 17 tests on 2026-09-12 | Current for the typed HTTP boundary; backend integration still required |
 | TypeScript | `NODE_OPTIONS=--max-old-space-size=256 npx tsc --noEmit` passed on 2026-09-12 | Current source type check |
-| Browser UI | Pairing, browse, source selection, guide, search, settings, profiles, held actions, resume mismatch, stale responses and Discover request contracts | 2026-09-12: full two-project suite passed 27 tests with 15 intentional platform exclusions, one worker and 256 MB Node heap; includes five Next/Resume scenarios and three pairing lifecycle scenarios per project |
+| Browser UI | Pairing, browse, source selection, guide, search, settings, profiles, held actions, resume mismatch, stale responses and Discover request contracts | 2026-09-12: full two-project suite passed 32 tests with 20 intentional platform exclusions, one worker and 256 MB Node heap; includes five Next/Resume scenarios and three pairing lifecycle scenarios per project |
 | Vizio browser media | `tests/e2e/media-decode.spec.ts` records a local canvas WebM and drives the real HTML adapter through pause, seek, end and cleanup | Passed in the Vizio browser project; it does not establish playback on a physical Vizio model |
 | Backend `/tv` static routes | Rust route test added with the backend change | Not run here; Runtime tests deferred by owner |
 | Tizen AVPlay | Adapter and hosted-launcher path implemented | Physical TV/emulator evidence pending |
 | Vizio | HTML adapter and same-origin hosting bundle implemented | Physical TV evidence pending |
 
-All 39 unit tests across API, remote input, Guide, text entry and player adapters/controllers passed, along with TypeScript and diff checks. The intermittent initial-focus/OK race was reproduced in the full suite; its fix passed three successive runs of all five Next scenarios (15/15) and the final complete browser suite.
+All 40 unit tests across API, remote input, Guide, text entry and player adapters/controllers passed, along with TypeScript and diff checks. The intermittent initial-focus/OK race was reproduced in the full suite; its fix passed three successive runs of all five Next scenarios (15/15) and the final complete browser suite.
 
 No entry above establishes 100% device coverage. Remaining scenario gaps are tracked in [tests/PARITY_MATRIX.md](tests/PARITY_MATRIX.md).
 
@@ -73,3 +73,5 @@ On Tizen, verify the signed launcher opens the configured HTTPS `/tv/?platform=t
 On Vizio, deploy the bundle at the API’s same HTTPS `/tv/` origin. Verify application load, remote mapping, media capability fallback, playback of direct and managed sessions, and Back/Exit behavior. Record model, firmware, stream type and result.
 
 For both devices, verify a bad/add-on response never exposes upstream URL, headers, cookies or tokens in UI, logs or persisted browser storage.
+
+The subsequent acceptance pass includes parent-gated profile selection/sign-out, partial search result retention, empty source-filter focus, full source details, and add-on install/enable/remove. Sign-out denial or network failure preserves the stored device grant. Canonical Browse heading/filter/grid positions are asserted at y=54/178/248. CI now runs automatically on main pushes and pull requests; manual dispatch also runs browser acceptance by default.

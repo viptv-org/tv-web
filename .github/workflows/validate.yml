@@ -1,11 +1,14 @@
 name: TV candidate validation
 on:
+  push:
+    branches: [main]
+  pull_request:
   workflow_dispatch:
     inputs:
       browser:
         description: Run shared TV browser acceptance
         type: boolean
-        default: false
+        default: true
 permissions:
   contents: read
 concurrency:
@@ -27,9 +30,9 @@ jobs:
       - run: npm test -- --maxWorkers=1 --no-file-parallelism
       - run: npm run build
       - run: node scripts/package-tv.mjs
-      - if: inputs.browser
+      - if: github.event_name != 'workflow_dispatch' || inputs.browser
         run: npx playwright install --with-deps chromium
-      - if: inputs.browser
+      - if: github.event_name != 'workflow_dispatch' || inputs.browser
         run: npm run test:e2e -- --workers=1
       - name: Upload browser evidence
         if: always()

@@ -1681,3 +1681,47 @@ nav button:focus {
   margin: 0;
   color: #c5c6c7;
 }
+/* Browse and rail geometry share the canonical TV frame. */
+nav button:not(:focus) {
+  background: transparent;
+}
+.browse {
+  top: 54px;
+  height: 654px;
+}
+.browse > h1 {
+  margin: 0;
+  line-height: 54px;
+}
+.browse > .filters {
+  position: absolute;
+  left: 0;
+  top: 124px;
+  width: 1096px;
+  height: 48px;
+  margin: 0;
+}
+.browse > .filters button {
+  flex: 0 0 256px;
+  height: 48px;
+  min-height: 48px;
+  font-size: 22px;
+}
+.browse > .filters {
+  gap: 24px;
+}
+.browse > .result-grid {
+  position: absolute;
+  left: 0;
+  top: 194px;
+  width: 1096px;
+  height: 460px;
+  padding: 0;
+}
+.browse .result-grid > .cards {
+  column-gap: 24px;
+  row-gap: 28px;
+}
+.browse .media-card {
+  height: 192px;
+}

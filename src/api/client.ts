@@ -52,7 +52,17 @@ export class TvApi {
   }
   async claimPairing(deviceCode: string, options?: RequestOptions) { return this.saveTokens(await this.deviceTokens("/api/auth/device/token", deviceCode, options)); }
   async refresh(options?: RequestOptions) { return this.refreshTokens(options); }
-  async signOut(options?: RequestOptions) { try { await this.raw("/api/auth/logout", { method: "POST", body: {} }, true, options); } finally { this.tokens = null; await this.store.clear(); } }
+  /**
+   * Only discard a locally durable grant after the server has accepted its
+   * revocation. A parent-PIN rejection, cancelled scope or transport outage
+   * leaves this TV paired so the UI can authenticate and retry the original
+   * protected action without forcing a new device-link flow.
+   */
+  async signOut(options?: RequestOptions) {
+    await this.raw("/api/auth/logout", { method: "POST", body: {} }, true, options);
+    this.tokens = null;
+    await this.store.clear();
+  }
   async me(options?: RequestOptions): Promise<TvIdentity> { const v = expectObject(await this.raw("/api/auth/me", {}, true, options)); const account = objectAt(v, "account"); return { account: { id: idAt(account, "id"), username: stringAt(account, "username"), name: stringAt(account, "name"), role: stringAt(account, "role") }, profiles: arrayAt(v, "profiles").map(profile), profileId: optionalId(v, "profile_id") ?? null, restricted: boolAt(v, "restricted"), profileSetupRequired: boolAt(v, "profile_setup_required") }; }
   async selectProfile(profileId: string, options?: RequestOptions) { await this.raw("/api/auth/profile", { method: "POST", body: { profile_id: profileId } }, true, options); this.tokens = this.tokens ? { ...this.tokens, profileId } : null; if (this.tokens) await this.store.save(this.tokens); }
   async profiles(options?: RequestOptions) { return arrayValue(await this.raw("/api/profiles", {}, true, options)).map(profile); }
