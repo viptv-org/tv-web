@@ -1704,7 +1704,9 @@ export function App({
                         if (!item) return;
                         // Queue management belongs to the hero only when its
                         // current item came from Home's first logical row.
-                        // A non-queue hero keeps the learned source-choice hold.
+                        // A non-queue hero keeps its normal hold action. For a
+                        // series root discoverSources deliberately opens its
+                        // episode detail rather than a source list.
                         if (
                           item.type !== "live" &&
                           queue.some(

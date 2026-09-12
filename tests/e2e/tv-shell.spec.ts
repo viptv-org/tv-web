@@ -383,6 +383,31 @@ test('new-movie hero hold chooses a source while its Home card hold performs ord
   assertNoPageErrors();
 });
 
+test('held series-root hero opens its episode detail instead of source selection', async ({ page }) => {
+  test.skip(test.info().project.name !== 'tizen', 'the shared remote hold is exercised through the AVPlay boundary once');
+  const assertNoPageErrors = await installPlatformRuntime(page);
+  const show = { id: 'tt-hero-show', type: 'series', name: 'Hero fixture show', title: 'Hero fixture show', background: '/background.jpg', description: 'A series root.' };
+  await installBackend(page);
+  await page.route(`${apiOrigin}/api/live**`, route => json(route, { channels: [], total: 0 }));
+  await page.route(`${apiOrigin}/api/discover**`, route => json(route, { metas: [show], has_more: false, next_skip: null }));
+  await page.route(`${apiOrigin}/api/meta/series/tt-hero-show`, route => json(route, { meta: { ...show, videos: [{ id: 'tt-hero-show:1:1', title: 'Pilot', season: 1, episode: 1, description: 'Episode one.' }] } }));
+  await page.addInitScript(({ key, token }) => localStorage.setItem(key, JSON.stringify(token)), { key: `viptv-device:${apiOrigin}`, token: { sessionId: 'device-1', accountId: '7', profileId: null, accessToken: 'access', refreshToken: 'refresh', expiresIn: 900 } });
+  await page.goto('/?platform=tizen');
+  await page.getByRole('button', { name: 'Alex' }).press('Enter');
+
+  const hero = page.getByRole('button', { name: 'Play', exact: true });
+  await expect(hero).toBeVisible();
+  await page.waitForTimeout(50);
+  await hero.focus();
+  await page.keyboard.down('Enter');
+  await page.waitForTimeout(750);
+  await page.keyboard.up('Enter');
+  await expect(page.locator('.detail').getByRole('heading', { name: 'Hero fixture show' })).toBeVisible();
+  await expect(page.locator('[data-focus-id="episode-0"]')).toContainText('S1 · E1');
+  await expect(page.locator('.sources')).toHaveCount(0);
+  assertNoPageErrors();
+});
+
 test('playback preferences persist their snake-case mutation and update the shared settings view', async ({ page }) => {
   test.skip(test.info().project.name !== 'vizio', 'the persisted settings surface is shared by both hosted-TV packages');
   const assertNoPageErrors = await installPlatformRuntime(page);
