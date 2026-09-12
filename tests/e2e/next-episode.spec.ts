@@ -244,3 +244,56 @@ test('Vizio: Home next-up management resumes the previous episode and Back retur
   await expect(page.getByRole('alert')).toHaveCount(0);
   noPageErrors();
 });
+
+test('Vizio: Next stays with the current IPTV account even when another provider arrives first', async ({ page }) => {
+  test.skip(test.info().project.name !== 'vizio', 'continuation account policy is shared');
+  const noPageErrors = await installVizioMedia(page);
+  const state = await installBackend(page);
+  await page.route(`${apiOrigin}/api/streams/**`, async route => {
+    const path = decodeURIComponent(new URL(route.request().url()).pathname);
+    if (path === `/api/streams/streams-${first.id}`) return json(route, { events: [{ seq: 1, source: 'iptv:7', streams: [
+      { id: 'first-source', name: 'Current 1080p', source_addon_id: 'iptv:7', source_fingerprint: 'first' },
+    ] }], done: true });
+    if (path === `/api/streams/streams-${second.id}`) return json(route, { events: [{ seq: 1, source: 'iptv:8', streams: [
+      { id: 'wrong-account', name: 'Other provider', source_addon_id: 'iptv:8' },
+    ] }, { seq: 2, source: 'iptv:7', streams: [
+      { id: 'same-account', name: 'Current provider', source_addon_id: 'iptv:7' },
+    ] }], done: true });
+    return route.fallback();
+  });
+  await enterFirstEpisode(page, state);
+  await page.getByRole('button', { name: 'Next episode' }).press('Enter');
+  await expect.poll(() => state.playbackRequests).toHaveLength(2);
+  expect(state.playbackRequests[1]).toMatchObject({ stream_id: 'same-account', position: 0 });
+  await expect(page.locator('.player-context')).toContainText('S1 · E2');
+  noPageErrors();
+});
+
+test('Vizio: failed Next tries at most three distinct sources and preserves the outgoing episode', async ({ page }) => {
+  test.skip(test.info().project.name !== 'vizio', 'bounded continuation recovery is shared');
+  const noPageErrors = await installVizioMedia(page);
+  const state = await installBackend(page);
+  await page.route(`${apiOrigin}/api/streams/**`, async route => {
+    const path = decodeURIComponent(new URL(route.request().url()).pathname);
+    if (path !== `/api/streams/streams-${second.id}`) return route.fallback();
+    return json(route, { events: [{ seq: 1, source: 'addon:ranked', streams: [1, 2, 3, 4].map(index => ({
+      id: `failed-next-${index}`, name: '1080p H.264 English', source_addon_id: 'addon:ranked', audioEvidenceScore: 8,
+    })) }], done: true });
+  });
+  await page.route(`${apiOrigin}/api/playback`, async route => {
+    if (route.request().method() !== 'POST') return route.fallback();
+    const body = JSON.parse(route.request().postData() || '{}') as Record<string, unknown>;
+    if (body.stream_id === 'first-source') return route.fallback();
+    state.playbackRequests.push(body);
+    return json(route, { error: 'Source is temporarily unavailable.' }, 503);
+  });
+  await enterFirstEpisode(page, state);
+  await page.getByRole('button', { name: 'Next episode' }).press('Enter');
+  await expect(page.getByRole('alert')).toBeVisible();
+  expect(state.playbackRequests.map(request => request.stream_id)).toEqual([
+    'first-source', 'failed-next-1', 'failed-next-2', 'failed-next-3',
+  ]);
+  await expect(page.locator('.player-context')).toContainText('S1 · E1 · Pilot');
+  await expect(page.getByRole('button', { name: 'Pause' })).toBeVisible();
+  noPageErrors();
+});
