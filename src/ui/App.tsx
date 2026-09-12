@@ -116,6 +116,7 @@ export function App({
       title: string;
       choices: Choice[];
       body?: string;
+      message?: string;
     }>(),
     [snapshot, setSnapshot] = useState<PlayerSnapshot>(),
     [session, setSession] = useState<PlaybackSession>(),
@@ -154,6 +155,8 @@ export function App({
     resumeRemainder = useRef(false);
   const seekRepeat = useRef({ key: "", count: 0 }),
     seekValue = useRef<number>();
+  const currentScreen = useRef(screen);
+  currentScreen.current = screen;
   const modalFocus = useRef(""),
     errorFocus = useRef("");
   useLayoutEffect(() => {
@@ -652,7 +655,8 @@ export function App({
       await detail(item);
       return;
     }
-    go("sources");
+    if (currentScreen.current !== "sources") go("sources");
+    else setError("");
     autoResume.current = resume;
     sourceFocusPending.current = true;
     setSelected(item);
@@ -768,7 +772,19 @@ export function App({
       autoResume.current = false;
       setOverlay(true);
     } catch (e) {
-      fail(e);
+      if (ticket !== epoch.current || (e instanceof DOMException && e.name === "AbortError")) return;
+      setModal({
+        title: "This source could not be played",
+        message: e instanceof Error ? e.message : "Unable to connect. Try again.",
+        choices: [
+          { label: "Retry", action: () => { setModal(undefined); void play(item, source, position); } },
+          { label: "Choose another source", action: () => {
+            setModal(undefined);
+            void discoverSources({ ...item, position });
+          } },
+          { label: "Back", action: () => setModal(undefined) },
+        ],
+      });
     } finally {
       setBusy(false);
     }
@@ -2495,6 +2511,7 @@ export function App({
               data-focus-scope="modal"
             >
               <h2>{modal.title}</h2>
+              {modal.message && <p>{modal.message}</p>}
               {modal.body && (
                 <div
                   className="source-detail-body"

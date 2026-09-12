@@ -297,3 +297,33 @@ test('Vizio: failed Next tries at most three distinct sources and preserves the 
   await expect(page.getByRole('button', { name: 'Pause' })).toBeVisible();
   noPageErrors();
 });
+
+test('Vizio: failed explicit Resume offers exact Retry and manual source choice at the saved position', async ({ page }) => {
+  test.skip(test.info().project.name !== 'vizio', 'source recovery intent is shared');
+  const noPageErrors = await installVizioMedia(page);
+  const state = await installBackend(page, { queue: [{ ...first, position: 42, queue_status: 'resume' }] });
+  await page.route(`${apiOrigin}/api/playback`, async route => {
+    if (route.request().method() !== 'POST') return route.fallback();
+    state.playbackRequests.push(JSON.parse(route.request().postData() || '{}') as Record<string, unknown>);
+    return json(route, { error: 'Source is temporarily unavailable.' }, 503);
+  });
+  await page.addInitScript(({ key, token }) => localStorage.setItem(key, JSON.stringify(token)), { key: `viptv-device:${apiOrigin}`, token: { sessionId: 'device-1', accountId: '7', profileId: null, accessToken: 'access', refreshToken: 'refresh', expiresIn: 900 } });
+  await page.goto('/?platform=vizio');
+  await page.getByRole('button', { name: 'Alex' }).press('Enter');
+  await page.getByRole('button', { name: 'Resume', exact: true }).press('Enter');
+  await expect(page.getByRole('button', { name: 'Retry', exact: true })).toBeVisible();
+  expect(state.playbackRequests).toHaveLength(1);
+  await page.getByRole('button', { name: 'Retry', exact: true }).press('Enter');
+  await expect.poll(() => state.playbackRequests).toHaveLength(2);
+  await expect(page.getByRole('button', { name: 'Choose another source' })).toBeVisible();
+  await page.getByRole('button', { name: 'Choose another source' }).press('Enter');
+  await expect(page.getByRole('button', { name: 'Current 1080p' })).toBeVisible();
+  expect(state.playbackRequests).toHaveLength(2);
+  await page.getByRole('button', { name: 'Current 1080p' }).press('Enter');
+  await expect.poll(() => state.playbackRequests).toHaveLength(3);
+  expect(state.playbackRequests.every(request => request.stream_id === 'first-source' && request.position === 42)).toBe(true);
+  await page.getByRole('button', { name: 'Back', exact: true }).press('Enter');
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('heading', { name: 'Continue Watching', exact: true })).toBeVisible();
+  noPageErrors();
+});
