@@ -8,13 +8,13 @@ This checklist is intentionally evidence-based. A Playwright pass is browser sim
 | --- | --- | --- |
 | Typed API boundary | `tests/api/client.test.ts` passed with 17 tests on 2026-09-12 | Current for the typed HTTP boundary; backend integration still required |
 | TypeScript | `NODE_OPTIONS=--max-old-space-size=256 npx tsc --noEmit` passed on 2026-09-12 | Current source type check |
-| Browser UI | Pairing, browse, source selection, guide, search, settings, profiles, held actions, resume mismatch, stale responses and Discover request contracts | 2026-09-12: full two-project suite passed 37 tests with 25 intentional platform exclusions, one worker and 256 MB Node heap; includes five Next/Resume scenarios, three pairing lifecycle scenarios per project, and direct/managed remote player controls |
+| Browser UI | Pairing, browse, source selection, guide, search, settings, profiles, held actions, resume mismatch, stale responses and Discover request contracts | 2026-09-12: full two-project suite passed 40 tests with 28 intentional platform exclusions, one worker and 256 MB Node heap; includes eight Next/Resume/recovery scenarios, three pairing lifecycle scenarios per project, and direct/managed remote player controls |
 | Vizio browser media | `tests/e2e/media-decode.spec.ts` records a local canvas WebM and drives the real HTML adapter through pause, seek, end and cleanup | Passed in the Vizio browser project; it does not establish playback on a physical Vizio model |
 | Backend `/tv` static routes | Rust route test added with the backend change | Not run here; Runtime tests deferred by owner |
 | Tizen AVPlay | Adapter and hosted-launcher path implemented | Physical TV/emulator evidence pending |
 | Vizio | HTML adapter and same-origin hosting bundle implemented | Physical TV evidence pending |
 
-Hosted run [34714994356](https://github.com/viptv-org/tv-web/actions/runs/34714994356) passed on `a3e0de5`, including build and TV packaging. All 40 unit tests across API, remote input, Guide, text entry and player adapters/controllers passed, along with TypeScript and diff checks. The intermittent initial-focus/OK race was reproduced in the full suite; its fix passed three successive runs of all five Next scenarios (15/15) and the final complete browser suite.
+Hosted run [34717122751](https://github.com/viptv-org/tv-web/actions/runs/34717122751) passed on `0775e4d`, including build and TV packaging. All 40 unit tests across API, remote input, Guide, text entry and player adapters/controllers passed, along with TypeScript and the 40-test browser suite without retries. The initial-focus/OK race was reproduced and corrected before this run; direct/managed player controls also passed five consecutive focused runs (15/15).
 
 No entry above establishes 100% device coverage. Remaining scenario gaps are tracked in [tests/PARITY_MATRIX.md](tests/PARITY_MATRIX.md).
 
