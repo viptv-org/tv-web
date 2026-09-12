@@ -29,6 +29,8 @@ type FixtureOptions = {
   readonly resumeAt?: number;
   /** Direct uses the active HTML adapter; remux requires a managed replacement. */
   readonly playbackMode?: 'direct' | 'remux';
+  /** Server-provided facts for the shared track dialog. */
+  readonly audioTracks?: readonly Record<string, unknown>[];
 };
 type FixtureState = {
   readonly playbackRequests: Array<Record<string, unknown>>;
@@ -132,7 +134,7 @@ async function installBackend(page: Page, options: FixtureOptions = {}): Promise
       state.playbackIntents.push({ stream_id: body.stream_id, position: body.position, audio_track_index: body.audio_track_index, subtitle_track_index: body.subtitle_track_index, subtitles_off: body.subtitles_off });
       const id = `playback-${state.playbackRequests.length}`;
       const position = state.playbackRequests.length === 1 ? options.resumeAt ?? 0 : 0;
-      return json(route, { id, url: `/media/${id}/capability/index.m3u8`, format: 'hls', mode: options.playbackMode ?? 'remux', video_mode: 'copy', audio_mode: 'copy', position, live: false, duration: 120, audio_tracks: [], subtitle_tracks: [], subtitles_supported: false });
+      return json(route, { id, url: `/media/${id}/capability/index.m3u8`, format: 'hls', mode: options.playbackMode ?? 'remux', video_mode: 'copy', audio_mode: 'copy', position, live: false, duration: 120, audio_tracks: options.audioTracks ?? [], subtitle_tracks: [], subtitles_supported: false });
     }
     if (path === '/api/profiles/1/progress' && request.method() === 'PUT') {
       state.progress.push(JSON.parse(request.postData() || '{}') as Record<string, unknown>);
@@ -189,6 +191,44 @@ test.describe('Vizio remote player contract', () => {
       window.dispatchEvent(new KeyboardEvent('keyup', { key: 'ArrowRight', bubbles: true }));
     });
     await expect(page.getByText('2:00 / 2:00')).toBeVisible();
+    noPageErrors();
+  });
+
+  test('overlay timeout pauses for track dialog and Back restores its originating control before hiding chrome', async ({ page }) => {
+    test.skip(test.info().project.name !== 'vizio', 'shared remote UI verified against Vizio HTML5; Tizen requires hardware remote validation');
+    await page.clock.install();
+    const noPageErrors = await installVizioMedia(page);
+    const state = await installBackend(page, {
+      playbackMode: 'direct',
+      audioTracks: [{ input_index: 0, title: 'Stereo', selectable: true, supported: true }],
+    });
+    await enterFirstEpisode(page, state);
+
+    const overlay = page.locator('.player-overlay');
+    await expect(overlay).toBeVisible();
+    await page.clock.fastForward(7000);
+    await expect(overlay).toBeHidden();
+
+    // Any recognized remote input reveals chrome again. Opening Audio makes the
+    // modal own focus and must cancel the overlay timer while it is present.
+    await page.keyboard.press('ArrowUp');
+    await expect(overlay).toBeVisible();
+    const audio = page.getByRole('button', { name: 'Audio' });
+    await audio.press('Enter');
+    await expect(page.getByRole('heading', { name: 'Audio' })).toBeVisible();
+    await expect(page.locator('[data-focus-id="modal-0"]')).toBeFocused();
+    await page.clock.fastForward(8000);
+    await expect(overlay).toBeVisible();
+
+    // First Back dismisses the track dialog and restores its originating player
+    // control. The next Back hides open chrome; it must not exit playback yet.
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('heading', { name: 'Audio' })).toBeHidden();
+    await expect(audio).toBeFocused();
+    await page.keyboard.press('Escape');
+    await expect(overlay).toBeHidden();
+    await expect(page.locator('.tv-screen.playing')).toBeVisible();
+    expect(state.playbackRequests).toHaveLength(1);
     noPageErrors();
   });
 

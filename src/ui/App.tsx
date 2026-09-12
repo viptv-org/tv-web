@@ -607,6 +607,12 @@ export function App({
         controller.current.cancelNext();
         return;
       }
+      // A visible player overlay is its own Back level. Keep the decoder and
+      // session active; a subsequent Back from hidden chrome exits playback.
+      if (overlay) {
+        setOverlay(false);
+        return;
+      }
       void stop();
       return;
     }

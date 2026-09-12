@@ -238,6 +238,10 @@ test('Vizio: Home next-up management resumes the previous episode and Back retur
   await page.getByRole('button', { name: 'Resume previous episode' }).press('Enter');
   await expect(page.getByRole('button', { name: 'Pause' })).toBeVisible();
   expect(state.playbackRequests[0]).toMatchObject({ stream_id: 'first-source' });
+  // Visible player chrome is one Back level; the next Back returns to the
+  // Home Resume title context.
+  await page.keyboard.press('Escape');
+  await expect(page.locator('.tv-screen.playing')).toBeVisible();
   await page.keyboard.press('Escape');
   await expect(page.getByRole('heading', { name: 'Fixture Show' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Season 1' })).toBeVisible();
