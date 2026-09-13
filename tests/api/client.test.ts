@@ -802,3 +802,12 @@ it("loads profile-scoped series history with watched state and stable source int
     "Bearer access",
   );
 });
+
+
+describe("LAN preview origin boundary", () => {
+  it("keeps HTTP forbidden by default and permits only an explicit same-origin development preview", () => {
+    expect(() => new TvApi({ baseUrl: location.origin })).toThrow("HTTPS");
+    expect(new TvApi({ baseUrl: location.origin, allowInsecurePreview: true }).serverOrigin).toBe(location.origin);
+    expect(() => new TvApi({ baseUrl: "http://different-host.example", allowInsecurePreview: true })).toThrow("HTTPS");
+  });
+});

@@ -10,7 +10,8 @@ const platform: PlayerPlatform =
     : params.get("platform") === "vizio"
       ? "vizio"
       : "html5";
-const origin =
+const lanPreview = import.meta.env.DEV && import.meta.env.VITE_LAN_PREVIEW === "1";
+const origin = lanPreview ? location.origin :
   import.meta.env.VITE_API_ORIGIN ||
   (location.protocol === "https:"
     ? location.origin
@@ -18,6 +19,7 @@ const origin =
 const key = `viptv-device:${origin}`;
 const api = new TvApi({
   baseUrl: origin,
+  allowInsecurePreview: lanPreview,
   sessionStore: {
     async load() {
       try {

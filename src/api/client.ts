@@ -57,6 +57,8 @@ export class MemoryDeviceSessionStore implements DeviceSessionStore {
   }
 }
 export interface TvApiOptions {
+  /** Development-only, same-origin HTTP preview on the trusted LAN. */
+  readonly allowInsecurePreview?: boolean;
   readonly baseUrl: string;
   readonly fetch?: typeof fetch;
   readonly sessionStore?: DeviceSessionStore;
@@ -86,8 +88,10 @@ export class TvApi {
 
   constructor(options: TvApiOptions) {
     const url = new URL(options.baseUrl);
+    const localPreview = import.meta.env.DEV && options.allowInsecurePreview === true
+      && url.protocol === "http:" && url.origin === globalThis.location?.origin;
     if (
-      url.protocol !== "https:" ||
+      (url.protocol !== "https:" && !localPreview) ||
       url.pathname !== "/" ||
       url.search ||
       url.hash

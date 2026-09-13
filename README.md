@@ -44,3 +44,11 @@ The canonical UI and UX contract lives in [viptv-org/design](https://github.com/
 ## Validation status
 
 The 2026-09-13 shared Roku presentation rebuild replaces the older candidate layout. Current validation and remaining physical-device qualification are recorded in [TESTING.md](TESTING.md) and the [parity matrix](tests/PARITY_MATRIX.md). Browser evidence does not certify physical Samsung/Vizio decoding or signing.
+
+## Trusted LAN preview
+
+Run `VITE_LAN_PREVIEW=1 NODE_OPTIONS=--max-old-space-size=256 npm run dev -- --port 4173 --strictPort`, then open `http://<server-LAN-IP>:4173/?platform=vizio`. If running inside a container, expose the port on the LAN host too.
+
+This opt-in development mode sends API and media requests to the preview origin. Vite forwards them to the verified HTTPS backend and translates only the preview's matching Origin header; unrelated origins remain rejected. The API allows HTTP only for an explicitly enabled, same-origin development preview. Production builds retain HTTPS requirements. Use this HTTP preview only on the trusted LAN. Pair this browser through the normal device flow; no credentials are embedded in the app.
+
+Validation: real Chromium pairing through the LAN proxy returned200 with no CORS errors; unrelated Origin returned403 and an invalid media capability returned404. API tests21passed and TypeScript passed.
