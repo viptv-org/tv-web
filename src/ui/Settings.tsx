@@ -1,33 +1,58 @@
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { TvApi, type PlaybackPreferences, type JsonObject } from "../api";
 import { TextEntry } from "./TextEntry";
 import { TvButton, focusElement } from "./remote";
+import packageInfo from "../../package.json";
+import "./account-roku.css";
+
 type Choice = { label: string; action: () => void };
+type Row = Choice & { id: string; description: string };
+const languages: readonly [string, string][] = [
+  ["System default", ""],
+  ["English", "en"],
+  ["Spanish", "es"],
+  ["French", "fr"],
+  ["German", "de"],
+  ["Italian", "it"],
+  ["Portuguese", "pt"],
+  ["Japanese", "ja"],
+  ["Korean", "ko"],
+  ["Chinese", "zh"],
+  ["Hindi", "hi"],
+  ["Arabic", "ar"],
+];
+const languageName = (value: string) =>
+  languages.find(([, code]) => code === value)?.[0] ?? value;
 export function Settings({
   api,
   profile,
   prefs,
   onPrefs,
   onProfiles,
+  onManageProfiles = onProfiles,
   onSignOut,
   onError,
   onModal,
+  serverOrigin = "https://viptv.syek.tech",
 }: {
   api: TvApi;
   profile: string;
   prefs: PlaybackPreferences;
   onPrefs: (p: PlaybackPreferences) => void;
   onProfiles: () => void;
+  onManageProfiles?: () => void;
   onSignOut: () => void;
   onError: (e: unknown) => void;
   onModal: (title: string, choices: Choice[]) => void;
+  serverOrigin?: string;
 }) {
-  const [addons, setAddons] = useState<readonly JsonObject[]>([]),
-    [entry, setEntry] = useState<{
-      title: string;
-      secret?: boolean;
-      save: (text: string) => Promise<void>;
-    }>();
+  const [addons, setAddons] = useState<readonly JsonObject[]>([]);
+  const [page, setPage] = useState<
+    "Settings" | "Playback preferences" | "Addons"
+  >("Settings");
+  const [selected, setSelected] = useState(0);
+  const [entry, setEntry] = useState(false);
   useEffect(() => {
     const scope = api.createScope();
     void api
@@ -38,6 +63,10 @@ export function Settings({
       });
     return () => scope.abort();
   }, [api]);
+  const openPage = (next: typeof page) => {
+    setSelected(0);
+    setPage(next);
+  };
   const save = (value: Partial<PlaybackPreferences>) =>
     void api.savePreferences(profile, value).then(onPrefs).catch(onError);
   const choose = (
@@ -55,209 +84,235 @@ export function Settings({
         },
       })),
     );
-  return (
-    <main className="settings">
-      <h1>Settings</h1>
-      <div className="settings-scroll">
-        <TvButton id="settings-profiles" onActivate={onProfiles}>
-          Profiles
-        </TvButton>
-        <h2>Playback</h2>
-        <TvButton
-          id="setting-autoplay"
-          onActivate={() => save({ autoplay: !prefs.autoplay })}
-        >
-          Autoplay next episode: {prefs.autoplay ? "On" : "Off"}
-        </TvButton>
-        <TvButton
-          id="setting-subtitlesEnabled"
-          onActivate={() => save({ subtitlesEnabled: !prefs.subtitlesEnabled })}
-        >
-          Subtitles: {prefs.subtitlesEnabled ? "On" : "Off"}
-        </TvButton>
-        <TvButton
-          id="quality"
-          onActivate={() =>
-            choose("Video quality", "quality", [
-              ["Auto", "auto"],
-              ["1080p", "1080p"],
-              ["720p", "720p"],
-              ["480p", "480p"],
-            ])
-          }
-        >
-          Quality: {prefs.quality}
-        </TvButton>
-        <TvButton
-          id="audio-language"
-          onActivate={() =>
-            choose("Preferred audio language", "audioLanguage", [
-              ["Default", ""],
-              ["English", "en"],
-              ["Spanish", "es"],
-              ["French", "fr"],
-              ["German", "de"],
-              ["Japanese", "ja"],
-            ])
-          }
-        >
-          Audio language: {prefs.audioLanguage || "Default"}
-        </TvButton>
-        <TvButton
-          id="subtitle-language"
-          onActivate={() =>
-            choose("Preferred subtitle language", "subtitleLanguage", [
-              ["Default", ""],
-              ["English", "en"],
-              ["Spanish", "es"],
-              ["French", "fr"],
-              ["German", "de"],
-              ["Japanese", "ja"],
-            ])
-          }
-        >
-          Subtitle language: {prefs.subtitleLanguage || "Default"}
-        </TvButton>
-        <TvButton
-          id="subtitle-size"
-          onActivate={() =>
-            choose("Subtitle size", "subtitleSize", [
-              ["Small", "small"],
-              ["Normal", "normal"],
-              ["Large", "large"],
-            ])
-          }
-        >
-          Subtitle size: {prefs.subtitleSize}
-        </TvButton>
-        <TvButton
-          id="subtitle-style"
-          onActivate={() =>
-            choose("Subtitle style", "subtitleStyle", [
-              ["System", "system"],
-              ["Shadow", "shadow"],
-              ["Opaque", "opaque"],
-            ])
-          }
-        >
-          Subtitle style: {prefs.subtitleStyle}
-        </TvButton>
-        <h2>Add-ons</h2>
-        <TvButton
-          id="addon-add"
-          onActivate={() =>
-            setEntry({
-              title: "Add-on manifest URL",
-              save: async (text) => {
-                const url = new URL(text);
-                if (url.protocol !== "https:")
-                  throw new Error("Enter an HTTPS manifest URL.");
-                await api.addAddon(url.href);
-                setAddons(await api.addons());
-                setEntry(undefined);
-              },
-            })
-          }
-        >
-          Install add-on
-        </TvButton>
-        {addons.map((addon, i) => {
-          const id = String(addon.id ?? "");
-          return (
-            <TvButton
-              id={`addon-${i}`}
-              key={id}
-              onActivate={() =>
-                onModal(String(addon.name ?? "Add-on"), [
-                  {
-                    label: addon.enabled === false ? "Enable" : "Disable",
-                    action: () => {
-                      onModal("", []);
-                      void api
-                        .updateAddon(id, { enabled: addon.enabled === false })
-                        .then(() => api.addons())
-                        .then(setAddons)
-                        .catch(onError);
+  const refreshAddons = (request: Promise<unknown>) =>
+    void request
+      .then(() => api.addons())
+      .then(setAddons)
+      .catch(onError);
+  const rows: Row[] =
+    page === "Settings"
+      ? [
+          {
+            id: "settings-profiles",
+            label: "Switch profile",
+            description: "Choose who's watching.",
+            action: onProfiles,
+          },
+          {
+            id: "settings-playback",
+            label: "Playback preferences",
+            description: "Audio, subtitles and quality for this profile.",
+            action: () => openPage("Playback preferences"),
+          },
+          {
+            id: "settings-manage",
+            label: "Manage profiles",
+            description: "Add, rename, choose avatars or delete profiles.",
+            action: onManageProfiles,
+          },
+          {
+            id: "settings-about",
+            label: "About VIPTV",
+            description: `Version ${packageInfo.version}\n${serverOrigin}`,
+            action: () => {},
+          },
+          {
+            id: "settings-addons",
+            label: "Addons",
+            description: "Manage addons shared by your account.",
+            action: () => openPage("Addons"),
+          },
+          {
+            id: "signout",
+            label: "Sign out",
+            description: "Sign out of VIPTV on this TV.",
+            action: onSignOut,
+          },
+        ]
+      : page === "Playback preferences"
+        ? [
+            {
+              id: "audio-language",
+              label: "Preferred audio",
+              description: languageName(prefs.audioLanguage),
+              action: () =>
+                choose("Preferred audio", "audioLanguage", languages),
+            },
+            {
+              id: "subtitle-language",
+              label: "Preferred subtitles",
+              description: languageName(prefs.subtitleLanguage),
+              action: () =>
+                choose("Preferred subtitles", "subtitleLanguage", languages),
+            },
+            {
+              id: "setting-subtitlesEnabled",
+              label: "Start with subtitles",
+              description: prefs.subtitlesEnabled ? "On" : "Off",
+              action: () =>
+                choose("Start with subtitles", "subtitlesEnabled", [
+                  ["On", true],
+                  ["Off", false],
+                ]),
+            },
+            {
+              id: "subtitle-size",
+              label: "Subtitle size",
+              description:
+                prefs.subtitleSize === "normal"
+                  ? "System default"
+                  : prefs.subtitleSize === "small"
+                    ? "Small"
+                    : "Large",
+              action: () =>
+                choose("Subtitle size", "subtitleSize", [
+                  ["Small", "small"],
+                  ["System default", "normal"],
+                  ["Large", "large"],
+                ]),
+            },
+            {
+              id: "subtitle-style",
+              label: "Subtitle appearance",
+              description:
+                prefs.subtitleStyle === "shadow"
+                  ? "Text with shadow"
+                  : prefs.subtitleStyle === "opaque"
+                    ? "White text on black"
+                    : "System default",
+              action: () =>
+                choose("Subtitle appearance", "subtitleStyle", [
+                  ["System default", "system"],
+                  ["Text with shadow", "shadow"],
+                  ["White text on black", "opaque"],
+                ]),
+            },
+            {
+              id: "quality",
+              label: "Maximum quality",
+              description: prefs.quality === "auto" ? "Auto" : prefs.quality,
+              action: () =>
+                choose("Maximum quality", "quality", [
+                  ["Auto", "auto"],
+                  ["1080p", "1080p"],
+                  ["720p", "720p"],
+                  ["480p", "480p"],
+                ]),
+            },
+          ]
+        : [
+            {
+              id: "addon-add",
+              label: "Install addon",
+              description: "Enter a Stremio manifest URL.",
+              action: () => setEntry(true),
+            },
+            ...addons.map((addon, index): Row => {
+              const id = String(addon.id ?? ""),
+                name = String(addon.name ?? "Addon");
+              return {
+                id: `addon-${index}`,
+                label: name,
+                description: addon.enabled === false ? "Disabled" : "Enabled",
+                action: () =>
+                  onModal(`Manage ${name}`, [
+                    {
+                      label: addon.enabled === false ? "Enable" : "Disable",
+                      action: () => {
+                        onModal("", []);
+                        refreshAddons(
+                          api.updateAddon(id, {
+                            enabled: addon.enabled === false,
+                          }),
+                        );
+                      },
                     },
-                  },
-                  {
-                    label: "Remove",
-                    action: () =>
-                      onModal(
-                        "Remove this add-on? Its sources will no longer be available.",
-                        [
+                    {
+                      label: "Remove addon",
+                      action: () =>
+                        onModal(`Remove ${name}?`, [
                           { label: "Cancel", action: () => onModal("", []) },
                           {
-                            label: "Remove add-on",
+                            label: "Remove",
                             action: () => {
                               onModal("", []);
-                              void api
-                                .deleteAddon(id)
-                                .then(() => api.addons())
-                                .then(setAddons)
-                                .catch(onError);
+                              refreshAddons(api.deleteAddon(id));
                             },
                           },
-                        ],
-                      ),
-                  },
-                  { label: "Cancel", action: () => onModal("", []) },
-                ])
-              }
-            >
-              {String(addon.name ?? "Add-on")} ·{" "}
-              {addon.enabled === false ? "Disabled" : "Enabled"}
-            </TvButton>
-          );
-        })}
-        <h2>Account</h2>
-        <TvButton
-          id="parent-unlock"
-          onActivate={() =>
-            setEntry({
-              title: "Parent PIN",
-              secret: true,
-              save: async (pin) => {
-                if (!/^\d{4,8}$/.test(pin))
-                  throw new Error("Enter a 4–8 digit PIN.");
-                await api.unlockParent(pin);
-                setEntry(undefined);
-              },
-            })
-          }
-        >
-          Unlock parent controls
-        </TvButton>
-        <TvButton id="signout" onActivate={onSignOut}>
-          Sign out
-        </TvButton>
-        <h2>About</h2>
-        <p>viptv 0.1.0 · TV preview</p>
-        <p>One library and the same remote actions across your TVs.</p>
+                        ]),
+                    },
+                    { label: "Cancel", action: () => onModal("", []) },
+                  ]),
+              };
+            }),
+          ];
+  useEffect(() => {
+    focusElement(rows[0].id);
+  }, [page]);
+  const caption =
+    page === "Playback preferences"
+      ? "Applies to your next playback. Manual track choices take priority."
+      : page === "Addons"
+        ? "Shared by all profiles and devices on your account."
+        : "";
+  const closeEntry = () => {
+    setEntry(false);
+    setTimeout(() => focusElement("addon-add"), 0);
+  };
+  return (
+    <main
+      className={`settings roku-settings ${caption ? "has-caption" : ""}`}
+      onKeyDown={(event) => {
+        if (
+          !["Escape", "BrowserBack"].includes(event.key) &&
+          event.keyCode !== 10009 &&
+          event.keyCode !== 461
+        )
+          return;
+        if (page === "Settings") return;
+        event.preventDefault();
+        event.stopPropagation();
+        const restore =
+          page === "Addons" ? "settings-addons" : "settings-playback";
+        openPage("Settings");
+        setTimeout(() => focusElement(restore), 0);
+      }}
+    >
+      <h1>{page}</h1>
+      {caption && <p className="settings-caption">{caption}</p>}
+      <div className="settings-scroll">
+        {rows.map((row, index) => (
+          <TvButton
+            key={row.id}
+            id={row.id}
+            onFocus={() => setSelected(index)}
+            onActivate={row.action}
+          >
+            {row.label}
+          </TvButton>
+        ))}
       </div>
-      {entry && (
-        <div
-          onKeyDown={(e) => {
-            if (
-              e.key === "Escape" ||
-              e.keyCode === 10009 ||
-              e.keyCode === 461
-            ) {
-              e.preventDefault();
-              e.stopPropagation();
-              setEntry(undefined);
-              setTimeout(() => focusElement("addon-add"), 0);
-            }
-          }}
-        >
+      <aside className="settings-description">
+        <h2>{rows[selected]?.label}</h2>
+        <p>{rows[selected]?.description}</p>
+      </aside>
+      {entry &&
+        createPortal(
           <TextEntry
-            title={entry.title}
-            secret={entry.secret}
-            onSubmit={entry.save}
-            onCancel={() => setEntry(undefined)}
-          />
-        </div>
-      )}
+            title="Install addon manifest URL"
+            initialValue="https://"
+            onCancel={closeEntry}
+            onSubmit={async (text) => {
+              const url = new URL(text.trim());
+              if (url.protocol !== "https:")
+                throw new Error("Enter an HTTPS manifest URL.");
+              await api.addAddon(url.href);
+              setAddons(await api.addons());
+              closeEntry();
+            }}
+          />,
+          document.querySelector(".tv-screen") ?? document.body,
+        )}
     </main>
   );
 }

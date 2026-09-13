@@ -28,6 +28,7 @@ async function installBackend(page: Page): Promise<State> {
   await page.route(`${apiOrigin}/api/**`, async route => {
     const request = route.request();
     const path = decodeURIComponent(new URL(request.url()).pathname);
+    if (/^\/api\/profiles\/[^/]+\/progress\/series$/.test(path)) return json(route, []);
     const body = JSON.parse(request.postData() || '{}') as Record<string, unknown>;
     if (request.method() === 'OPTIONS') return route.fulfill({ status: 204, headers: cors });
     if (!['GET', 'OPTIONS'].includes(request.method())) state.calls.push({ path, method: request.method(), body });
@@ -99,7 +100,7 @@ test('Vizio: an empty source filter restores filter focus and source hold expose
   await installBackend(page);
   await enterHome(page);
   await page.getByRole('button', { name: 'Resilient Movie' }).press('Enter');
-  await page.getByRole('button', { name: 'Play' }).press('Enter');
+  await page.getByRole('button', { name: 'Choose source', exact: true }).press('Enter');
   const firstSource = page.getByRole('button', { name: 'Good source' });
   await expect(firstSource).toBeVisible();
   await firstSource.click({ button: 'right' });
@@ -123,26 +124,40 @@ test('Vizio: settings persist an add-on draft, enable/remove an extension, and s
   const state = await installBackend(page);
   await enterHome(page);
   await page.getByRole('button', { name: 'Settings' }).click();
-  const fixtureAddon = page.getByRole('button', { name: 'Fixture add-on · Enabled' });
+  await expect(page.locator('.settings-scroll').getByRole('button')).toHaveText([
+    'Switch profile', 'Playback preferences', 'Manage profiles', 'About VIPTV', 'Addons', 'Sign out',
+  ]);
+  await page.getByRole('button', { name: 'Playback preferences', exact: true }).click();
+  await expect(page.locator('.settings-scroll').getByRole('button')).toHaveText([
+    'Preferred audio', 'Preferred subtitles', 'Start with subtitles', 'Subtitle size', 'Subtitle appearance', 'Maximum quality',
+  ]);
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('button', { name: 'Playback preferences', exact: true })).toBeFocused();
+  await page.getByRole('button', { name: 'Addons', exact: true }).click();
+  const fixtureAddon = page.getByRole('button', { name: 'Fixture add-on', exact: true });
   await expect(fixtureAddon).toBeVisible();
   await fixtureAddon.click();
   await page.getByRole('button', { name: 'Disable' }).click();
-  await expect(page.getByRole('button', { name: 'Fixture add-on · Disabled' })).toBeVisible();
+  await expect.poll(() => state.addons[0]?.enabled).toBe(false);
+  await fixtureAddon.focus();
+  await expect(page.locator('.settings-description')).toContainText('Disabled');
 
-  await page.getByRole('button', { name: 'Install add-on' }).click();
-  await page.getByRole('textbox', { name: 'Add-on manifest URL' }).fill('https://addons.example.test/manifest.json');
-  await page.getByRole('button', { name: 'Save' }).click();
-  await expect(page.getByRole('button', { name: 'Installed add-on · Enabled' })).toBeVisible();
+  await page.getByRole('button', { name: 'Install addon' }).click();
+  await page.getByRole('textbox', { name: 'Install addon manifest URL' }).fill('https://addons.example.test/manifest.json');
+  await page.getByRole('button', { name: 'Done' }).click();
+  await expect(page.getByRole('button', { name: 'Installed add-on', exact: true })).toBeVisible();
 
-  await page.getByRole('button', { name: 'Fixture add-on · Disabled' }).click();
-  await page.getByRole('button', { name: 'Remove' }).click();
-  await expect(page.getByRole('heading', { name: /Remove this add-on/ })).toBeVisible();
-  await page.getByRole('button', { name: 'Remove add-on' }).click();
-  await expect(page.getByRole('button', { name: 'Fixture add-on · Disabled' })).toHaveCount(0);
+  await fixtureAddon.click();
+  await page.getByRole('button', { name: 'Remove addon', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Remove Fixture add-on?' })).toBeVisible();
+  await page.getByRole('button', { name: 'Remove', exact: true }).click();
+  await expect(fixtureAddon).toHaveCount(0);
   expect(state.calls).toContainEqual({ path: '/api/addons/2', method: 'PATCH', body: { enabled: false } });
   expect(state.calls).toContainEqual({ path: '/api/addons', method: 'POST', body: { manifest_url: 'https://addons.example.test/manifest.json' } });
   expect(state.calls).toContainEqual({ path: '/api/addons/2', method: 'DELETE', body: {} });
 
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('button', { name: 'Addons', exact: true })).toBeFocused();
   await page.getByRole('button', { name: 'Sign out' }).click();
   await page.getByRole('button', { name: 'Sign out' }).last().click();
   await expect(page.getByRole('heading', { name: 'Sign in to VIPTV' })).toBeVisible();

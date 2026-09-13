@@ -1,3 +1,27 @@
+# Shared TV visual rebuild parity — 2026-09-13
+
+Design: `3ab29a63cbe6369341ee4376f69a59d4cbb38fc8`. Contract IDs refer to [the pinned acceptance index](../design-contract/TV_WEB_UI_REBUILD.md). Local batch: 43 unit tests, 49 browser passes / 33 deliberate platform skips. Implementation/CI revision is recorded in [execution issue #2](https://github.com/viptv-org/tv-web/issues/2) and TESTING.md. Every surface below is implemented; the evidence columns bound what was actually verified.
+
+| IDs / surface | Browser evidence | Matched Roku visual evidence | Tizen hardware | Vizio hardware |
+| --- | --- | --- | --- | --- |
+| TVW-01 startup/pairing | Pending/approved/expiry/QR failure/manual/retry | Fixture inspected; full matched set pending | Unverified | Unverified |
+| TVW-02/03 profiles/avatar/text/PIN | CRUD/protection/failed draft/unlock/cancel, captured chooser | Matched set pending | Unverified | Unverified |
+| TVW-04/05 rail/Home | Routes/holds, initial shelves and focus; canonical rail geometry | Fixture inspected; real-content Home comparison pending | Unverified | Unverified |
+| TVW-06 Discover/My List | Filters/defaults/paging and queue actions | Matched set pending | Unverified | Unverified |
+| TVW-07 movie | Manual source, saved source intent and Resume failure paths | Matched set pending | Unverified | Unverified |
+| TVW-08 episodes | Real API decoding/history merge, watched/progress, initial focus and Down to complete next row | Fixture inspected; matched artwork/title set pending | Unverified | Unverified |
+| TVW-09 sources | Filter/empty/hold details/exact Resume identity, canonical list geometry | Fixture inspected; retained Quality adaptation | Unverified | Unverified |
+| TVW-10 Search | Debounce/stale/partial results, fixed keyboard and result geometry | Blank first-key state SSIM 0.923059; populated states pending | Unverified | Unverified |
+| TVW-11 Guide | Five rows/gaps/filter/40-channel page/Back/server labels | Fixture inspected; real schedule comparison pending | Unverified | Unverified |
+| TVW-12 Settings/addons | Six actions/nested preferences/return focus/addon mutations/signout; 720p/1080p scaling | Switch-profile state SSIM 0.955989; other states pending | Unverified | Unverified |
+| TVW-13/14 player/Next | Direct decoder fixture, seek/repeat/cancel/track-modal Back, controlled Next/previous Resume | Full matched overlay set pending | Unverified | Unverified |
+| TVW-15 queue menus | Hold release suppression/corrections/hide/Undo | Matched set pending | Unverified | Unverified |
+| TVW-16 lifecycle/shared states | Scoped stale-response errors, fixed-canvas focus/scaling; see scenario gaps below | Complete dialog/error/motion matrix pending | Unverified | Unverified |
+
+No row implies every branch is covered. Per-screen gaps and physical platform limits remain below; superseded old labels/layout assertions were updated to Roku controls rather than preserved as a second design.
+
+## Detailed scenario coverage
+
 # TV behavior parity matrix
 
 Audit target: `design/TV_IMPLEMENTATION.md` required scenario groups and
@@ -19,7 +43,7 @@ Tizen/Vizio behavior, is verified.
 | Next scoped selection/last-ten eligibility/cancel/previous Resume | `tests/player/session-controller.test.ts` — cancellation/restoration boundaries | `next-episode.spec.ts` verifies the three-distinct-attempt bound, same-IPTV-account continuation despite a competing first result, app-level ranked Next, final-ten guards, cancellation, explicit near-end Resume and previous-episode Resume/Back. Remaining: failed native rollback recovery UI. |
 | Queue hide/undo/watched/history | `tv-shell.spec.ts` — held OK opens queue management; Hide then Undo restores visibility | `queue-progress.spec.ts` covers watched/unwatched correction, queue/history refetch, restored focus and manual restart at position zero without premature history writes. Remaining: queue paging and focus when the removed row was the final item. |
 | Live guide future OK versus Play/filters/windows/gaps | `tests/ui/guide.test.tsx` — category filters, five rows, previous page final-row focus, gap/cell cap and remote search trim/bounds/Back | Future-programme OK detail versus transport Play, details key consumption, hour bounds/follow-now, guide search copy and missing-schedule Watch |
-| Settings/source preferences/addons/signout | `tv-shell.spec.ts` — autoplay and quality mutation | Remaining preference options and account-wide add-on copy; add-on install/enable/remove and sign-out are covered in `resilience-settings.spec.ts`; parent-gated select/logout cancellation and approval are covered in `parent-auth.spec.ts` |
+| Settings/source preferences/addons/signout | `tv-shell.spec.ts` — subtitle-start and quality mutation through the six-row nested preferences | Remaining preference options and account-wide add-on copy; add-on install/enable/remove and sign-out are covered in `resilience-settings.spec.ts`; parent-gated select/logout cancellation and approval are covered in `parent-auth.spec.ts` |
 | Stale request/session cancellation | `tv-shell.spec.ts` — obsolete Browse response cannot replace current search; `tests/player/*.test.ts` — stale adapter/controller callbacks | Stale pairing/profile/home/source/guide requests and focus restoration cancellation after directional input |
 | Offline and partial failures | `tv-shell.spec.ts` — sanitized Discover failure and dismissal | Pairing/profile/source/player/guide offline paths and partial cross-catalog search result retention |
 

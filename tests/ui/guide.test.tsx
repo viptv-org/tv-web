@@ -69,9 +69,17 @@ describe('Guide', () => {
   it('loads the previous forty-channel page and restores focus to its final row', async () => {
     const api = apiFixture();
     render(<Guide api={api as unknown as TvApi} onPlay={vi.fn()} onError={vi.fn()} onDetails={vi.fn()} />);
-    const next = await screen.findByRole('button', { name: 'Next channels' });
-    fireEvent.click(next);
-    await screen.findByRole('button', { name: 'Channel 41' });
+    await screen.findByRole('button', { name: 'Channel 1' });
+    // The Roku guide pages when Down crosses its final channel, without a
+    // separate pager button. Exercise the complete remote path through rows.
+    for (let number = 1; number <= 40; number += 1) {
+      const channel = screen.getByRole('button', { name: `Channel ${number}` });
+      channel.focus();
+      fireEvent.keyDown(channel, { key: 'ArrowDown' });
+      await waitFor(() => expect(screen.getByRole('button', { name: `Channel ${number + 1}` })).toHaveFocus());
+    }
+    expect(api.live).toHaveBeenLastCalledWith(expect.objectContaining({ offset: 40 }), expect.anything());
+    expect(screen.getByText('41 / 80')).toBeInTheDocument();
 
     const first = screen.getByRole('button', { name: 'Channel 41' });
     first.focus();
@@ -93,7 +101,7 @@ describe('Guide', () => {
     expect(await screen.findByRole('heading', { name: 'Search Live TV' })).toBeInTheDocument();
     const entered = `  ${'n'.repeat(130)}  `;
     fireEvent.change(screen.getByRole('textbox', { name: 'Search Live TV' }), { target: { value: entered } });
-    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Done' }));
 
     const expected = 'n'.repeat(128);
     await waitFor(() => expect(api.live).toHaveBeenLastCalledWith(expect.objectContaining({ search: expected, offset: 0 }), expect.anything()));
@@ -101,7 +109,7 @@ describe('Guide', () => {
 
     const restoredSearch = screen.getByRole('button', { name: `Search Live TV: ${expected}` });
     fireEvent.click(restoredSearch);
-    const key = await screen.findByRole('button', { name: /^A$/ });
+    const key = await screen.findByRole('button', { name: /^a$/ });
     key.focus();
     fireEvent.keyDown(key, { key: 'Escape' });
 

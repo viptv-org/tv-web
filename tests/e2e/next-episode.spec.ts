@@ -97,6 +97,7 @@ async function installBackend(page: Page, options: FixtureOptions = {}): Promise
     // Stream discovery IDs contain the Stremio-style `series:season:episode`
     // identifier, which the real client correctly percent-encodes in its URL.
     const path = decodeURIComponent(url.pathname);
+    if (/^\/api\/profiles\/[^/]+\/progress\/series$/.test(path)) return json(route, []);
     if (request.method() === 'OPTIONS') return route.fulfill({ status: 204, headers: corsHeaders });
     if (path === '/api/auth/me') return json(route, { account: { id: '7', username: 'alex', name: 'Alex', role: 'member' }, profiles: [{ id: '1', name: 'Alex', setup_complete: true }], profile_id: null, restricted: false, profile_setup_required: false });
     if (path === '/api/auth/profile') return json(route, { profile_id: '1' });
@@ -255,6 +256,7 @@ test('Vizio: Next stays with the current IPTV account even when another provider
   const state = await installBackend(page);
   await page.route(`${apiOrigin}/api/streams/**`, async route => {
     const path = decodeURIComponent(new URL(route.request().url()).pathname);
+    if (/^\/api\/profiles\/[^/]+\/progress\/series$/.test(path)) return json(route, []);
     if (path === `/api/streams/streams-${first.id}`) return json(route, { events: [{ seq: 1, source: 'iptv:7', streams: [
       { id: 'first-source', name: 'Current 1080p', source_addon_id: 'iptv:7', source_fingerprint: 'first' },
     ] }], done: true });
@@ -279,6 +281,7 @@ test('Vizio: failed Next tries at most three distinct sources and preserves the 
   const state = await installBackend(page);
   await page.route(`${apiOrigin}/api/streams/**`, async route => {
     const path = decodeURIComponent(new URL(route.request().url()).pathname);
+    if (/^\/api\/profiles\/[^/]+\/progress\/series$/.test(path)) return json(route, []);
     if (path !== `/api/streams/streams-${second.id}`) return route.fallback();
     return json(route, { events: [{ seq: 1, source: 'addon:ranked', streams: [1, 2, 3, 4].map(index => ({
       id: `failed-next-${index}`, name: '1080p H.264 English', source_addon_id: 'addon:ranked', audioEvidenceScore: 8,

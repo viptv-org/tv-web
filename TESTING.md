@@ -1,3 +1,36 @@
+# Shared Roku presentation rebuild — 2026-09-13
+
+This checkpoint supersedes older presentation evidence below. Design pin: `3ab29a63cbe6369341ee4376f69a59d4cbb38fc8`. The final implementation commit and hosted CI run are recorded in execution issue [#2](https://github.com/viptv-org/tv-web/issues/2).
+
+The shared renderer was rebuilt across all existing screens. Tizen and Vizio use the same components, styles, packaged artwork and controller behavior. Player adapters remain AVPlay and HTML media with direct/copy/remux before transcoding. Roku and production services/data were not deployed or changed by this work.
+
+## Completed evidence
+
+- 43 unit tests passed, including device transport, guide paging, text retry, 700 ms hold/release suppression, player adapters/controller, server guide timezone labels, episode thumbnails and series-history transport.
+- TypeScript and production build passed. Fresh unsigned Tizen launcher and Vizio static candidate paths were generated; earlier artifacts were retained.
+- Full Playwright batch: 49 passed, 33 intentional skips, 82 collected, one worker, no retries. Both platform configurations passed UI routes plus 1280×720 and 1920×1080 proportional layout/focus checks and real controller episode-history merge/row navigation. The history endpoint is mocked at HTTP, not bypassed inside the app.
+- Shared functional coverage includes pairing, profile CRUD/PIN, source choice/exact Resume, subtitle/quality preferences, addons, queue corrections/Undo, bounded Next/cancel, pause/seek/debounce/track-dialog Back and stop cleanup. Chromium decoded the recorded WebM fixture through the Vizio adapter. AVPlay was simulated; this is not native Samsung decoding evidence.
+- Design validates 697 canonical asset files. Imported snapshot integrity and authoritative-local-checkout freshness pass. Build checks verify the snapshot and packaged asset hashes; they do not independently assess visual parity or whether an unfetched checkout matches GitHub.
+
+## Visual evidence
+
+Private captures only; none are committed or embedded. Frozen Roku reference: `viptv-org/roku@a047d9ca5fc80898013eefb66120d20fab5048c0` / installed 1.9.9. Each image was normalized to 1280×720 using bilinear sampling, then compared with ssim.js whole-frame default SSIM, without masks or alignment changes.
+
+| Matched screen/state | Whole-frame SSIM | Inspected differences |
+| --- | --- | --- |
+| Settings, Switch profile focused | 0.955989 (95.6%) | Browser font rasterization and different selected profile avatar; rail spacing, centered actions and description geometry match source. |
+| Search, blank query, first key focused | 0.923059 (92.3%) | Browser fonts/avatar, platform-specific input help and vector/native keyboard symbol rendering. |
+
+Also inspected browser fixture captures of Home, sources, Guide, profiles and episode progress. Their fixture content differs from the physical Roku references, so no matched-content score is claimed. The guide fixture deliberately spans a very long programme duration; its remaining-minute label is fixture data, not a real broadcast schedule. Geometry/functional assertions are not substitutes for matched screenshots across every screen/state. No universal 90% or 100% qualification claim is made.
+
+## Remaining qualification and adaptations
+
+Physical Tizen and Vizio model/OS/remote/decoder tests, Samsung signing, hosted AVPlay bridge availability, HDR/DRM/codec coverage and every detailed failure/return state remain unverified. No emulators or local Android builds were started. This commit prepares candidates; it does not install or deploy them.
+
+The existing source Quality control is retained in the canonical help region, as recorded in the pinned design adaptation. Global Search uses the Roku blank composition; catalog-specific searches remain in Discover. Any further departure must be documented in design before implementation. [The parity matrix](tests/PARITY_MATRIX.md) records screen IDs and remaining evidence rather than treating passing suites as complete TV certification.
+
+## Earlier checkpoints (historical)
+
 # TV validation checklist
 
 This checklist is intentionally evidence-based. A Playwright pass is browser simulation, not proof of AVPlay or Vizio playback. Screenshots are for local inspection only and are not committed.

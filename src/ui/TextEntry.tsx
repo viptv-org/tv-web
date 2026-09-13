@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { TvButton, focusElement } from "./remote";
+import "./account-roku.css";
 export function TextEntry({
   title,
   initialValue = "",
@@ -16,11 +17,14 @@ export function TextEntry({
   const [value, setValue] = useState(initialValue),
     [error, setError] = useState(""),
     [pending, setPending] = useState(false),
-    [lower, setLower] = useState(false);
+    [lower, setLower] = useState(true);
+  const limit = secret ? 8 : title === "Profile name" ? 64 : 2048;
+  const append = (text: string) => setValue((v) => (v + text).slice(0, limit));
   useEffect(() => {
     focusElement("text-key-0");
   }, []);
   const save = async () => {
+    if (pending) return;
     setPending(true);
     setError("");
     try {
@@ -32,40 +36,80 @@ export function TextEntry({
     }
   };
   const keys = secret
-    ? "0123456789"
-    : `${lower ? "abcdefghijklmnopqrstuvwxyz" : "ABCDEFGHIJKLMNOPQRSTUVWXYZ"}0123456789:/.-_@`;
+    ? "1234567890"
+    : `${lower ? "abcdefghijklmnopqrstuvwxyz" : "ABCDEFGHIJKLMNOPQRSTUVWXYZ"}1234567890:/.-_@`;
   return (
-    <div className="text-entry" data-focus-scope="entry">
+    <div
+      className="text-entry roku-text-entry"
+      data-focus-scope="entry"
+      onKeyDown={(event) => {
+        if (
+          ["Escape", "BrowserBack"].includes(event.key) ||
+          event.keyCode === 10009 ||
+          event.keyCode === 461
+        ) {
+          event.preventDefault();
+          event.stopPropagation();
+          onCancel();
+          return;
+        }
+        if (event.target instanceof HTMLInputElement) {
+          if (event.key === "Enter") {
+            event.preventDefault();
+            event.stopPropagation();
+            void save();
+          }
+          return;
+        }
+        if (event.key === "Backspace" || event.key === "Delete") {
+          event.preventDefault();
+          event.stopPropagation();
+          setValue((v) => v.slice(0, -1));
+        } else if (
+          event.key.length === 1 &&
+          !event.ctrlKey &&
+          !event.metaKey &&
+          (!secret || /^\d$/.test(event.key))
+        ) {
+          event.preventDefault();
+          event.stopPropagation();
+          append(event.key);
+        }
+      }}
+    >
+      <img
+        className="account-mark"
+        src={`${import.meta.env.BASE_URL}assets/viptv-mark.png`}
+        alt="VIPTV"
+      />
       <h1>{title}</h1>
+      <p className="entry-instruction">
+        Use your remote or a connected keyboard.
+      </p>
       <input
         aria-label={title}
         type={secret ? "password" : "text"}
         value={value}
-        onChange={(e) => setValue(e.target.value)}
+        onChange={(event) => setValue(event.target.value.slice(0, limit))}
         autoComplete="off"
-        maxLength={secret ? 12 : 2048}
+        maxLength={limit}
       />
-      <div className="entry-keys">
-        {keys.split("").map((c, i) => (
+      <div className={`entry-keys ${secret ? "pin-keys" : ""}`}>
+        {keys.split("").map((c, index) => (
           <TvButton
-            id={`text-key-${i}`}
-            key={i}
-            onActivate={() => setValue((v) => v + c)}
+            id={`text-key-${index}`}
+            key={index}
+            onActivate={() => append(c)}
           >
             {c}
           </TvButton>
         ))}
-      </div>
-      <div className="actions">
         {!secret && (
           <>
             <TvButton id="text-case" onActivate={() => setLower(!lower)}>
               Aa
             </TvButton>
-            <TvButton
-              id="text-space"
-              onActivate={() => setValue((v) => v + " ")}
-            >
+            <TvButton id="text-space" onActivate={() => append(" ")}>
               Space
             </TvButton>
           </>
@@ -77,18 +121,24 @@ export function TextEntry({
         >
           Delete
         </TvButton>
+      </div>
+      <div className="actions">
         <TvButton
           id="text-save"
           disabled={pending}
           onActivate={() => void save()}
         >
-          Save
+          {pending ? "Saving…" : "Done"}
         </TvButton>
         <TvButton id="text-cancel" onActivate={onCancel}>
           Cancel
         </TvButton>
       </div>
-      {error && <p role="alert">{error}</p>}
+      {error && (
+        <p className="entry-error" role="alert">
+          {error}
+        </p>
+      )}
     </div>
   );
 }

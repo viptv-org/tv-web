@@ -21,6 +21,18 @@ import {
 } from "../player";
 import { RemoteRoot, TvButton, focusElement } from "./remote";
 import "./tv.css";
+import { RokuText } from "./RokuText";
+import {
+  enrichDetail,
+  mergeEpisodeProgress,
+  initialEpisode,
+} from "./detailProgress";
+import {
+  HeroArtwork,
+  CardArtwork,
+  ReadyImage,
+  artworkUrl,
+} from "./RokuArtwork";
 import { TextEntry } from "./TextEntry";
 import { ProfileEditor, avatarUrl } from "./ProfileEditor";
 import { Settings } from "./Settings";
@@ -55,6 +67,23 @@ const initialPrefs: PlaybackPreferences = {
 };
 const time = (n: number) =>
   `${Math.floor(n / 60)}:${String(Math.floor(n % 60)).padStart(2, "0")}`;
+function presentationContext(item: MediaItem) {
+  const context =
+    item.season !== undefined
+      ? `S${item.season} · E${item.episode ?? 1}${item.episodeTitle ? ` · ${item.episodeTitle}` : ""}`
+      : "";
+  const status =
+    item.queueStatus === "next"
+      ? "Play next episode"
+      : item.queueStatus === "caught_up"
+        ? "You're caught up"
+        : item.queueStatus === "upcoming"
+          ? "Next episode coming soon"
+          : item.position
+            ? `Resume at ${time(item.position)}`
+            : "";
+  return [context, status].filter(Boolean).join(" · ");
+}
 export function App({
   api,
   platform = "html5",
@@ -106,7 +135,7 @@ export function App({
     [sourceProvider, setSourceProvider] = useState("All"),
     [season, setSeason] = useState<number>(),
     [query, setQuery] = useState(""),
-    [searchScope, setSearchScope] = useState("all"),
+    [searchScope] = useState("all"),
     [searchRows, setSearchRows] = useState<
       { name: string; items: readonly MediaItem[] }[]
     >([]),
@@ -162,7 +191,8 @@ export function App({
   useLayoutEffect(() => {
     if (modal) {
       if (!modalFocus.current)
-        modalFocus.current = (document.activeElement as HTMLElement)?.dataset.focusId ?? "";
+        modalFocus.current =
+          (document.activeElement as HTMLElement)?.dataset.focusId ?? "";
       focusElement(modal.body ? "source-detail-body" : "modal-0");
     } else if (modalFocus.current) {
       const id = modalFocus.current;
@@ -509,12 +539,19 @@ export function App({
   // between the next remote OK down/up, silently dropping its activation.
   useLayoutEffect(() => {
     focusElement(
-      screen === "profiles" ? "profile-0"
-        : screen === "pairing" ? "retry"
-        : screen === "detail" ? "detail-play"
-        : screen === "sources" ? "source-0"
-        : screen === "player" ? selected?.type === "live" ? "audio" : "timeline"
-        : `nav-${screen}`,
+      screen === "profiles"
+        ? "profile-0"
+        : screen === "pairing"
+          ? "retry"
+          : screen === "detail"
+            ? "detail-play"
+            : screen === "sources"
+              ? "source-0"
+              : screen === "player"
+                ? selected?.type === "live"
+                  ? "audio"
+                  : "timeline"
+                : `nav-${screen}`,
     );
   }, [screen]);
   useEffect(() => {
@@ -641,15 +678,47 @@ export function App({
     setBusy(true);
     try {
       const value = await api.detail(item);
+      if (ticket !== epoch.current) return;
+      let enrichedEpisodes = value.episodes;
+      if (item.type === "series") {
+        const history = await api
+          .seriesProgress(profile, value.item.seriesId ?? value.item.id)
+          .catch((error: unknown) => {
+            if (ticket !== epoch.current) return [];
+            // Keep the series usable during a history outage without inventing progress.
+            notify(
+              "Watch history couldn't load. Episode progress may be unavailable.",
+            );
+            if (error instanceof DOMException && error.name === "AbortError")
+              throw error;
+            return [];
+          });
+        if (ticket !== epoch.current) return;
+        enrichedEpisodes = mergeEpisodeProgress(
+          value.episodes,
+          history,
+          value.item.seriesId ?? value.item.id,
+        );
+      }
       if (ticket === epoch.current) {
-        setSelected({ ...item, ...value.item });
-        setEpisodes(value.episodes);
-        setSeason(value.episodes[0]?.season);
+        setSelected(enrichDetail(item, value.item));
+        setEpisodes(enrichedEpisodes);
+        const initial = initialEpisode(enrichedEpisodes, item);
+        setSeason(initial?.season ?? enrichedEpisodes[0]?.season);
+        if (initial)
+          setTimeout(() => {
+            if (ticket !== epoch.current || currentScreen.current !== "detail")
+              return;
+            const index = enrichedEpisodes
+              .filter((episode) => episode.season === initial.season)
+              .findIndex((episode) => episode.id === initial.id);
+            if (index >= 0) focusElement(`episode-${index}`);
+          }, 50);
       }
     } catch (e) {
-      fail(e);
+      if (ticket === epoch.current) fail(e);
     } finally {
-      setBusy(false);
+      if (ticket === epoch.current) setBusy(false);
     }
   };
   const discoverSources = async (item: MediaItem, resume = false) => {
@@ -778,16 +847,30 @@ export function App({
       autoResume.current = false;
       setOverlay(true);
     } catch (e) {
-      if (ticket !== epoch.current || (e instanceof DOMException && e.name === "AbortError")) return;
+      if (
+        ticket !== epoch.current ||
+        (e instanceof DOMException && e.name === "AbortError")
+      )
+        return;
       setModal({
         title: "This source could not be played",
-        message: e instanceof Error ? e.message : "Unable to connect. Try again.",
+        message:
+          e instanceof Error ? e.message : "Unable to connect. Try again.",
         choices: [
-          { label: "Retry", action: () => { setModal(undefined); void play(item, source, position); } },
-          { label: "Choose another source", action: () => {
-            setModal(undefined);
-            void discoverSources({ ...item, position });
-          } },
+          {
+            label: "Retry",
+            action: () => {
+              setModal(undefined);
+              void play(item, source, position);
+            },
+          },
+          {
+            label: "Choose another source",
+            action: () => {
+              setModal(undefined);
+              void discoverSources({ ...item, position });
+            },
+          },
           { label: "Back", action: () => setModal(undefined) },
         ],
       });
@@ -1465,7 +1548,7 @@ export function App({
     <div className="cards">
       {list.map((item, i) => (
         <TvButton
-          className="media-card"
+          className={`media-card ${item.type === "live" ? "logo-card" : ""}`}
           aria-label={item.name}
           id={`${prefix}-${i}`}
           data-nav-left={
@@ -1484,23 +1567,26 @@ export function App({
             } else manage(item);
           }}
         >
-          <div className="art-fallback" aria-hidden="true">
-            {item.name}
-          </div>
-          <img
-            src={item.background ?? item.poster}
-            alt=""
-            onLoad={(event) => {
-              event.currentTarget.style.visibility = "visible";
-            }}
-            onError={(event) => {
-              event.currentTarget.style.visibility = "hidden";
-            }}
+          <CardArtwork
+            src={artworkUrl(
+              item.background ?? item.poster,
+              256,
+              144,
+              false,
+              item.type === "live",
+            )}
+            fallback={item.name}
           />
-          <strong>{item.name}</strong>
+          <strong>
+            <RokuText>{item.name}</RokuText>
+          </strong>
           <small>
-            {item.season ? `S${item.season} · E${item.episode} · ` : ""}
-            {item.year ?? item.type}
+            <RokuText speed={42}>
+              {presentationContext(item) ||
+                [item.year, item.runtime, ...item.genres.slice(0, 2)]
+                  .filter(Boolean)
+                  .join(" · ")}
+            </RokuText>
           </small>
           {!!item.position && (
             <progress value={item.position} max={item.duration ?? 1} />
@@ -1509,6 +1595,8 @@ export function App({
       ))}
     </div>
   );
+  const heroItem = highlighted ?? queue[0] ?? recentLive[0] ?? items[0];
+  const activeProfile = profiles.find((p) => p.id === profile);
   const navItems: Screen[] = [
     "profiles",
     "Home",
@@ -1528,7 +1616,9 @@ export function App({
         sourceFocusPending.current = false;
       }}
     >
-      <div className={`tv-screen ${screen === "player" ? "playing" : ""}`}>
+      <div
+        className={`tv-screen screen-${screen.replace(/ /g, "-").toLowerCase()} ${screen === "player" ? "playing" : ""}`}
+      >
         <video ref={video} className="video" playsInline />
         <div
           className={`brand ${["profiles", "pairing"].includes(screen) ? "gateway-brand" : ""}`}
@@ -1564,8 +1654,13 @@ export function App({
                     }
                     onHold={() => editProfile(p)}
                   >
-                    <img src={avatarUrl(p)} alt="" />
-                    <strong>{p.name}</strong>
+                    <span className="profile-initials">
+                      {p.name.slice(0, 2).toUpperCase()}
+                    </span>
+                    <ReadyImage src={avatarUrl(p)} alt="" />
+                    <strong>
+                      <RokuText>{p.name}</RokuText>
+                    </strong>
                   </TvButton>
                 ))}
             </div>
@@ -1581,7 +1676,7 @@ export function App({
                 id="manage-profiles"
                 onActivate={() => setManaging(!managing)}
               >
-                {managing ? "Done" : "Manage"}
+                {managing ? "Done" : "Manage profiles"}
               </TvButton>
             </div>
             {profiles.length > 5 && (
@@ -1622,10 +1717,22 @@ export function App({
                         : void navigate(n)
                     }
                   >
-                    <img
-                      className="nav-icon"
-                      src={`${import.meta.env.BASE_URL}assets/${["avatar-catalog/critters-1.png", "ui-nav-home.png", "ui-nav-discover.png", "ui-nav-tv.png", "ui-nav-list.png", "ui-nav-search.png", "ui-nav-settings.png"][i]}`}
+                    {i === 0 && (
+                      <span className="nav-initials">
+                        {activeProfile?.name.slice(0, 2).toUpperCase()}
+                      </span>
+                    )}
+                    <ReadyImage
+                      className={`nav-icon ${i === 0 ? "nav-avatar" : ""}`}
+                      src={
+                        i === 0 && activeProfile
+                          ? avatarUrl(activeProfile)
+                          : `${import.meta.env.BASE_URL}assets/${["avatar-catalog/critters-1.png", "ui-nav-home.png", "ui-nav-discover.png", "ui-nav-tv.png", "ui-nav-list.png", "ui-nav-search.png", "ui-nav-settings.png"][i]}`
+                      }
                       alt=""
+                      onError={(e) => {
+                        e.currentTarget.style.visibility = "hidden";
+                      }}
                     />
                     <em>{n === "profiles" ? "Profile" : n}</em>
                   </TvButton>
@@ -1634,33 +1741,18 @@ export function App({
             )}
             {screen === "Home" && (
               <main className={`home ${compactHome ? "compact-home" : ""}`}>
-                {(highlighted ?? queue[0] ?? recentLive[0] ?? items[0])
-                  ?.background && (
-                  <div className="hero-art" aria-hidden="true">
-                    <img
-                      src={
-                        (highlighted ?? queue[0] ?? recentLive[0] ?? items[0])
-                          ?.background
-                      }
-                      onLoad={(event) => {
-                        event.currentTarget.style.visibility = "visible";
-                      }}
-                      onError={(event) => {
-                        event.currentTarget.style.visibility = "hidden";
-                      }}
-                      alt=""
-                    />
-                    <img
-                      className="hero-shade-left"
-                      src={`${import.meta.env.BASE_URL}assets/ui-hero-left.png`}
-                      alt=""
-                    />
-                    <img
-                      className="hero-shade-bottom"
-                      src={`${import.meta.env.BASE_URL}assets/ui-hero-bottom.png`}
-                      alt=""
-                    />
-                  </div>
+                {heroItem?.background && (
+                  <HeroArtwork
+                    key={heroItem.background}
+                    uri={heroItem.background}
+                  />
+                )}
+                {!heroItem?.background && heroItem?.poster && (
+                  <ReadyImage
+                    className="hero-portrait"
+                    src={heroItem.poster}
+                    alt=""
+                  />
                 )}
                 <div className="hero">
                   <small>
@@ -1672,14 +1764,21 @@ export function App({
                         : `FEATURED ${(highlighted ?? items[0])?.type?.toUpperCase() ?? "MOVIE"}`}
                   </small>
                   <h1>
-                    {(highlighted ?? queue[0] ?? recentLive[0] ?? items[0])
-                      ?.name ?? "Your next favorite is here"}
+                    <RokuText>{heroItem?.name ?? "VIPTV"}</RokuText>
                   </h1>
                   <p>
                     {(highlighted ?? queue[0] ?? recentLive[0] ?? items[0])
-                      ?.description ??
-                      "Browse your movies, series and live television."}
+                      ?.description ?? ""}
                   </p>
+                  <div className="hero-facts">
+                    {[
+                      heroItem?.year,
+                      heroItem?.runtime,
+                      ...(heroItem?.genres.slice(0, 2) ?? []),
+                    ]
+                      .filter(Boolean)
+                      .join("  ·  ")}
+                  </div>
                   <div className="actions">
                     <TvButton
                       id="hero-play"
@@ -1722,10 +1821,8 @@ export function App({
                       {(highlighted ?? queue[0] ?? recentLive[0] ?? items[0])
                         ?.queueStatus === "next"
                         ? "Play next episode"
-                        : (highlighted ??
-                              queue[0] ??
-                              recentLive[0] ??
-                              items[0])?.position
+                        : (highlighted ?? queue[0] ?? recentLive[0] ?? items[0])
+                              ?.position
                           ? "Resume"
                           : "Play"}
                     </TvButton>
@@ -1764,13 +1861,15 @@ export function App({
                       {cards(recentLive, "recent-live")}
                     </section>
                   )}
-                  <section>
-                    <h2>
-                      {catalogs.find((c) => c.type !== "live")?.name ??
-                        "Discover"}
-                    </h2>
-                    {cards(items, "home")}
-                  </section>
+                  {items.length > 0 && (
+                    <section>
+                      <h2>
+                        {catalogs.find((c) => c.type !== "live")?.name ??
+                          "Discover"}
+                      </h2>
+                      {cards(items, "home")}
+                    </section>
+                  )}
                   {homeRows
                     .filter((row) => row.items.length)
                     .map((row, i) => (
@@ -1802,7 +1901,7 @@ export function App({
                       const id =
                         (event.target as HTMLElement).dataset.focusId ?? "";
                       const index =
-                        "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789".indexOf(
+                        "ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890".indexOf(
                           id.replace("key-", ""),
                         );
                       if (
@@ -1818,29 +1917,11 @@ export function App({
                       }
                     }}
                   >
-                    <TvButton
-                      id="search-scope"
-                      onActivate={() =>
-                        setModal({
-                          title: "Search in",
-                          choices: ["all", "movie", "series", "live"].map(
-                            (label) => ({
-                              label,
-                              action: () => {
-                                setSearchScope(label);
-                                setModal(undefined);
-                              },
-                            }),
-                          ),
-                        })
-                      }
-                    >
-                      Search: {searchScope}
-                    </TvButton>
                     <input
                       tabIndex={-1}
                       maxLength={256}
                       aria-label="Search titles"
+                      placeholder="Search movies and shows"
                       onKeyDown={(e) => {
                         if (
                           ["Enter", "ArrowRight", "MediaPlay"].includes(
@@ -1857,7 +1938,7 @@ export function App({
                       onChange={(e) => setQuery(e.target.value)}
                     />
                     <div>
-                      {"ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+                      {"ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890"
                         .split("")
                         .map((c) => (
                           <TvButton
@@ -1867,27 +1948,67 @@ export function App({
                               setQuery((q) => (q + c).slice(0, 256))
                             }
                           >
-                            {c}
+                            {c.toLowerCase()}
                           </TvButton>
                         ))}
                     </div>
                     <TvButton
                       id="space"
+                      aria-label="Space"
                       onActivate={() =>
                         setQuery((q) => (q + " ").slice(0, 256))
                       }
                     >
-                      Space
+                      <svg
+                        aria-hidden="true"
+                        width="20"
+                        height="20"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                      >
+                        <path d="M3 12v4h18v-4" />
+                      </svg>
                     </TvButton>
                     <TvButton
                       id="delete"
+                      aria-label="Delete"
                       onActivate={() => setQuery((q) => q.slice(0, -1))}
                     >
-                      Delete
+                      <svg
+                        aria-hidden="true"
+                        width="20"
+                        height="20"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                      >
+                        <path d="M8 6h13v12H8l-6-6zM11 9l6 6m0-6-6 6" />
+                      </svg>
                     </TvButton>
-                    <TvButton id="clear" onActivate={() => setQuery("")}>
-                      Clear
+                    <TvButton
+                      id="clear"
+                      aria-label="Clear"
+                      onActivate={() => setQuery("")}
+                    >
+                      <svg
+                        aria-hidden="true"
+                        width="20"
+                        height="20"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                      >
+                        <path d="M5 6h14M9 6V3h6v3M7 6v15h10V6M10 9v9m4-9v9" />
+                      </svg>
                     </TvButton>
+                    <p className="search-help">
+                      Type here or use your remote app. Play/Pause opens
+                      results.
+                    </p>
                   </div>
                 )}
                 {screen === "Discover" && (
@@ -2027,19 +2148,21 @@ export function App({
                         Load more
                       </TvButton>
                     )}
-                  {!busy && !items.length && (
-                    <p>
-                      {screen === "Discover" &&
-                      catalog &&
-                      catalogFilters(catalog).some(
-                        (f) => f.required && !catalogValues[f.name]?.trim(),
-                      )
-                        ? "Choose the required filters to browse this catalog."
-                        : query
-                          ? "No matching titles"
-                          : "No titles yet"}
-                    </p>
-                  )}
+                  {!busy &&
+                    !items.length &&
+                    (screen !== "Search" || !!query.trim()) && (
+                      <p>
+                        {screen === "Discover" &&
+                        catalog &&
+                        catalogFilters(catalog).some(
+                          (f) => f.required && !catalogValues[f.name]?.trim(),
+                        )
+                          ? "Choose the required filters to browse this catalog."
+                          : query
+                            ? "No matching titles"
+                            : "No titles yet"}
+                      </p>
+                    )}
                 </div>
                 {screen === "Search" && (
                   <p className="search-status" role="status">
@@ -2047,7 +2170,7 @@ export function App({
                       ? "Searching…"
                       : query.trim()
                         ? `${items.length} results`
-                        : "Enter a title to search."}
+                        : "Find your next favorite."}
                     {searchPartial ? " Some sources couldn't load." : ""}
                   </p>
                 )}
@@ -2055,31 +2178,24 @@ export function App({
             )}
             {screen === "detail" && selected && (
               <main
-                className={`detail ${selected.type === "series" ? "series" : ""}`}
+                className={`detail ${selected.type === "series" && !selected.episode ? "series" : "movie"}`}
               >
                 {selected.background && (
                   <div className="detail-backdrop" aria-hidden="true">
-                    <img src={selected.background} alt="" />
+                    <ReadyImage src={selected.background} alt="" />
                   </div>
                 )}
-                <img
-                  className="poster"
-                  src={selected.poster}
-                  alt=""
-                  onLoad={(event) => {
-                    event.currentTarget.style.visibility = "visible";
-                  }}
-                  onError={(event) => {
-                    event.currentTarget.style.visibility = "hidden";
-                  }}
-                />
+                <ReadyImage className="poster" src={selected.poster} alt="" />
                 <div className="detail-copy">
-                  <h1>{selected.name}</h1>
-                  <p className="muted">
-                    {selected.year} · {selected.runtime} ·{" "}
-                    {selected.genres.join(" · ")}
+                  <h1>
+                    <RokuText>{selected.name}</RokuText>
+                  </h1>
+                  <p className="detail-facts">
+                    {[selected.year, selected.runtime, ...selected.genres]
+                      .filter(Boolean)
+                      .join(" · ")}
                   </p>
-                  <p>{selected.description}</p>
+                  <p className="detail-synopsis">{selected.description}</p>
                   <div className="actions">
                     <TvButton
                       id="detail-play"
@@ -2106,22 +2222,50 @@ export function App({
                       {selected.type === "series" && !selected.episode
                         ? `Season ${season ?? 1}`
                         : selected.position
-                          ? "Resume"
-                          : "Play"}
+                          ? `Resume at ${time(selected.position)}`
+                          : "Choose source"}
                     </TvButton>
+                    {!!selected.position &&
+                      !(selected.type === "series" && !selected.episode) && (
+                        <TvButton
+                          id="detail-source"
+                          onActivate={() => void discoverSources(selected)}
+                        >
+                          Choose source
+                        </TvButton>
+                      )}
                     <TvButton
                       id="detail-save"
                       onActivate={() => void toggle(selected)}
                     >
                       {favorites.some((f) => f.id === selected.id)
-                        ? "In My List"
-                        : "My List"}
+                        ? "Remove from My List"
+                        : "+ My List"}
                     </TvButton>
                     <TvButton
                       id="detail-info"
                       onActivate={() =>
                         setModal({
-                          title: selected.description ?? selected.name,
+                          title: selected.name,
+                          body: [
+                            selected.name,
+                            [
+                              selected.year,
+                              selected.runtime,
+                              ...selected.genres,
+                            ]
+                              .filter(Boolean)
+                              .join(" · "),
+                            selected.description,
+                            typeof selected.raw.director === "string"
+                              ? `Director: ${selected.raw.director}`
+                              : "",
+                            Array.isArray(selected.raw.cast)
+                              ? `Cast: ${selected.raw.cast.filter((name) => typeof name === "string").join(", ")}`
+                              : "",
+                          ]
+                            .filter(Boolean)
+                            .join("\n\n"),
                           choices: [
                             {
                               label: "Close",
@@ -2134,9 +2278,22 @@ export function App({
                       More info
                     </TvButton>
                   </div>
+                  <p className="detail-credits">
+                    {[
+                      typeof selected.raw.director === "string"
+                        ? `Director: ${selected.raw.director}`
+                        : "",
+                      Array.isArray(selected.raw.cast)
+                        ? `Cast: ${selected.raw.cast.filter((name) => typeof name === "string").join(", ")}`
+                        : "",
+                    ]
+                      .filter(Boolean)
+                      .join("\n")}
+                  </p>
                 </div>
                 {episodes.length > 0 && (
                   <>
+                    <span className="episode-heading">Episodes</span>
                     <div className="episode-grid">
                       {episodes
                         .filter((e) => e.season === season)
@@ -2148,27 +2305,32 @@ export function App({
                             onActivate={() => void discoverSources(e)}
                             onHold={() => manage(e)}
                           >
-                            <div className="art-fallback" aria-hidden="true">
-                              {e.name}
-                            </div>
-                            <img
-                              src={e.poster ?? selected.background}
-                              alt=""
-                              onLoad={(event) => {
-                                event.currentTarget.style.visibility =
-                                  "visible";
-                              }}
-                              onError={(event) => {
-                                event.currentTarget.style.visibility = "hidden";
-                              }}
+                            <CardArtwork
+                              src={artworkUrl(
+                                e.background ?? e.poster,
+                                256,
+                                144,
+                              )}
+                              fallback={
+                                <>
+                                  <img
+                                    src={`${import.meta.env.BASE_URL}assets/viptv-mark.png`}
+                                    alt=""
+                                  />
+                                  <span>Preview unavailable</span>
+                                </>
+                              }
                             />
                             {e.watched && (
-                              <span className="watched-badge">Watched</span>
+                              <span className="watched-badge">WATCHED</span>
                             )}
-                            <small>
-                              S{e.season} · E{e.episode}
-                            </small>
-                            <h2>{e.name}</h2>
+                            {!e.watched && !!e.position && !!e.duration && (
+                              <progress value={e.position} max={e.duration} />
+                            )}
+                            <small>EPISODE {e.episode ?? "?"}</small>
+                            <h2>
+                              <RokuText>{e.episodeTitle ?? e.name}</RokuText>
+                            </h2>
                             <p>{e.description}</p>
                           </TvButton>
                         ))}
@@ -2179,7 +2341,11 @@ export function App({
             )}
             {screen === "sources" && (
               <main className="sources">
-                <h1>{selected?.name}</h1>
+                <h1>Sources</h1>
+                <p className="source-context">
+                  {selected?.name}
+                  {selected ? `  ${presentationContext(selected)}` : ""}
+                </p>
                 <div className="source-filters">
                   <TvButton
                     id="source-quality"
@@ -2262,15 +2428,31 @@ export function App({
                           void play(selected, s, selected.position ?? 0)
                         }
                       >
-                        <h2>{s.name}</h2>
-                        <p>{s.title ?? s.filename}</p>
+                        <h2>{s.sourceName ?? s.name}</h2>
+                        <p>
+                          {[s.name, s.title ?? s.filename]
+                            .filter(Boolean)
+                            .join("\n")}
+                        </p>
                         <small>
                           {s.quality} {s.audio} {s.sourceName}
                         </small>
                       </TvButton>
                     ))}
-                  {!busy && !sources.length && (
-                    <p>No sources available. Check your add-ons in Settings.</p>
+                  {!sources.length && (
+                    <div
+                      className={`source-empty ${busy ? "finding" : ""}`}
+                      role="status"
+                    >
+                      <h2>
+                        {busy ? "Finding sources" : "No sources available"}
+                      </h2>
+                      <p>
+                        {busy
+                          ? "Sources appear here as they arrive."
+                          : "Check your add-ons in Settings."}
+                      </p>
+                    </div>
                   )}
                   {sources.length > 0 &&
                     !sources.some(
@@ -2314,10 +2496,18 @@ export function App({
             {screen === "Settings" && (
               <Settings
                 api={api}
+                serverOrigin={api.serverOrigin}
                 profile={profile}
                 prefs={prefs}
                 onPrefs={setPrefs}
-                onProfiles={() => go("profiles")}
+                onProfiles={() => {
+                  setManaging(false);
+                  go("profiles");
+                }}
+                onManageProfiles={() => {
+                  setManaging(true);
+                  go("profiles");
+                }}
                 onError={fail}
                 onModal={(title, choices) =>
                   setModal(choices.length ? { title, choices } : undefined)
@@ -2352,7 +2542,31 @@ export function App({
               <div
                 className={`player-overlay ${selected?.type === "live" ? "live-overlay" : ""}`}
               >
-                <div className="player-identity">viptv</div>
+                <div
+                  className={`player-identity ${selected?.type === "live" ? "channel-identity" : ""}`}
+                >
+                  {selected?.type === "live" ? (
+                    selected.poster && (
+                      <ReadyImage src={selected.poster} alt="" />
+                    )
+                  ) : (
+                    <img
+                      src={`${import.meta.env.BASE_URL}assets/viptv-mark.png`}
+                      alt=""
+                    />
+                  )}
+                  <span>{selected?.name}</span>
+                </div>
+                <span className="player-status">
+                  {busy
+                    ? "LOADING"
+                    : snapshot?.state === "paused"
+                      ? "PAUSED"
+                      : "PLAYING"}
+                </span>
+                <span className="player-eyebrow">
+                  {selected?.type === "live" ? "LIVE NOW" : "NOW PLAYING"}
+                </span>
                 <div className="player-context">
                   {selected?.season
                     ? `S${selected.season} · E${selected.episode ?? 1} · ${selected.episodeTitle ?? ""}`
@@ -2360,13 +2574,17 @@ export function App({
                       ? "LIVE NOW"
                       : ""}
                 </div>
-                <h1>{selected?.name}</h1>
+                <h1>
+                  <RokuText>{selected?.name ?? ""}</RokuText>
+                </h1>
                 <div className="playback-bottom">
                   {selected?.type !== "live" && (
                     <>
-                      <p>
-                        {time(seek ?? snapshot?.time.positionSeconds ?? 0)} /{" "}
-                        {time(snapshot?.time.durationSeconds ?? 0)}
+                      <p className="player-time">
+                        <span>
+                          {time(seek ?? snapshot?.time.positionSeconds ?? 0)}
+                        </span>
+                        <span>{time(snapshot?.time.durationSeconds ?? 0)}</span>
                       </p>
                       <TvButton
                         id="timeline"
@@ -2443,7 +2661,10 @@ export function App({
                             id="next"
                             onActivate={() => void nextEpisode()}
                           >
-                            Next episode
+                            <img
+                              src={`${import.meta.env.BASE_URL}assets/ui-nav-player-forward.png`}
+                              alt="Next episode"
+                            />
                           </TvButton>
                         )}
                       </>
@@ -2490,10 +2711,10 @@ export function App({
               src={`${import.meta.env.BASE_URL}assets/viptv-mark.png`}
               alt=""
             />
-            <p>Starting viptv…</p>
+            <p>Starting VIPTV…</p>
           </div>
         )}
-        {busy && (
+        {busy && screen !== "sources" && (
           <div
             className={screen === "player" ? "playback-loading" : "loading"}
             role="status"
@@ -2563,11 +2784,17 @@ export function App({
                   {modal.body}
                 </div>
               )}
-              {modal.choices.map((choice, i) => (
-                <TvButton id={`modal-${i}`} key={i} onActivate={choice.action}>
-                  {choice.label}
-                </TvButton>
-              ))}
+              <div className="modal-choices">
+                {modal.choices.map((choice, i) => (
+                  <TvButton
+                    id={`modal-${i}`}
+                    key={i}
+                    onActivate={choice.action}
+                  >
+                    {choice.label}
+                  </TvButton>
+                ))}
+              </div>
             </div>
           </div>
         )}

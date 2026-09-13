@@ -17,12 +17,12 @@ describe("TV text entry", () => {
         />
       </RemoteRoot>,
     );
-    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    fireEvent.click(screen.getByRole("button", { name: "Done" }));
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "Use at least two characters",
     );
-    fireEvent.click(screen.getByRole("button", { name: /^B$/ }));
-    fireEvent.click(screen.getByRole("button", { name: "Save" }));
-    expect(submit).toHaveBeenLastCalledWith("AB");
+    fireEvent.click(screen.getByRole("button", { name: /^b$/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Done" }));
+    expect(submit).toHaveBeenLastCalledWith("Ab");
   });
 });

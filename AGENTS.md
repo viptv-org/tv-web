@@ -9,3 +9,7 @@ Use GitHub issues in viptv-org/tv-web and design issue #4. Keep user data/secret
 ## Current validation constraint
 
 The owner resumed testing after the server OOM. Check available memory first; coordinate one browser job at a time, one worker and a 256 MB Node heap. Keep emulators and local Gradle stopped; use hosted Android builds. The TV web workflow runs on pushes, pull requests and manual dispatch. Record current evidence and unexecuted scenarios in TESTING.md; distinguish browser tests from physical TV qualification.
+
+## Design synchronization
+
+Before visual, input, navigation or asset changes, read `design-contract/DESIGN_SYNC.md` and `design-contract/TV_WEB_UI_REBUILD.md`. Update the canonical design repository first, then import its immutable commit with `node scripts/design-sync.mjs sync ../design <full-commit>`. Keep `tests/PARITY_MATRIX.md` and `TESTING.md` honest about implemented, browser-reviewed and hardware-qualified states. Build checks enforce snapshot integrity; visual review verifies the rendered implementation.

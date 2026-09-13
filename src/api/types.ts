@@ -1,7 +1,9 @@
 /** JSON accepted from an add-on after the client removes transport credentials. */
 export type JsonPrimitive = string | number | boolean | null;
 export type JsonValue = JsonPrimitive | JsonObject | JsonValue[];
-export interface JsonObject { readonly [key: string]: JsonValue | undefined; }
+export interface JsonObject {
+  readonly [key: string]: JsonValue | undefined;
+}
 
 export type MediaKind = "movie" | "series" | "live";
 
@@ -130,12 +132,30 @@ export interface DiscoverPage {
   readonly nextSkip?: number;
 }
 
-export interface MediaDetail { readonly item: MediaItem; readonly episodes: readonly MediaItem[]; }
-export interface Page<T> { readonly items: readonly T[]; readonly offset: number; readonly total: number; readonly nextOffset: number | null; }
+export interface MediaDetail {
+  readonly item: MediaItem;
+  readonly episodes: readonly MediaItem[];
+}
+export interface Page<T> {
+  readonly items: readonly T[];
+  readonly offset: number;
+  readonly total: number;
+  readonly nextOffset: number | null;
+}
 
-export interface StreamDiscovery { readonly id: string; }
-export interface StreamEvent { readonly sequence: number; readonly source: string; readonly sources: readonly MediaSource[]; readonly error?: string; }
-export interface StreamPoll { readonly events: readonly StreamEvent[]; readonly done: boolean; }
+export interface StreamDiscovery {
+  readonly id: string;
+}
+export interface StreamEvent {
+  readonly sequence: number;
+  readonly source: string;
+  readonly sources: readonly MediaSource[];
+  readonly error?: string;
+}
+export interface StreamPoll {
+  readonly events: readonly StreamEvent[];
+  readonly done: boolean;
+}
 
 export interface PlaybackCapabilities {
   readonly maxWidth: number;
@@ -194,13 +214,49 @@ export interface PlaybackPreferences {
   readonly quality: "auto" | "1080p" | "720p" | "480p";
   readonly autoplay: boolean;
 }
-export interface GuideProgram { readonly title: string; readonly start: number; readonly end: number; readonly description?: string; readonly raw: JsonObject; }
-export interface Guide { readonly programs: readonly GuideProgram[]; readonly timezone: string; }
-export interface LivePage { readonly channels: readonly MediaItem[]; readonly total: number; }
+export interface GuideProgram {
+  readonly title: string;
+  readonly start: number;
+  readonly end: number;
+  readonly description?: string;
+  readonly raw: JsonObject;
+}
+export interface Guide {
+  readonly programs: readonly GuideProgram[];
+  readonly timezone: string;
+  readonly timeline?: readonly {
+    readonly time: number;
+    readonly displayTime: string;
+  }[];
+}
+export interface LivePage {
+  readonly channels: readonly MediaItem[];
+  readonly total: number;
+}
 /** A guide category is a filter, not playable media. */
-export interface LiveCategory { readonly id: string; readonly name: string; readonly count: number; readonly raw: JsonObject; }
-export interface LiveCategories { readonly categories: readonly LiveCategory[]; readonly total: number; }
-export interface ParentStatus { readonly configured: boolean; readonly unlocked: boolean; readonly restricted: boolean; readonly raw: JsonObject; }
-export interface ParentPinChange { readonly pin: string; readonly currentPin?: string; }
+export interface LiveCategory {
+  readonly id: string;
+  readonly name: string;
+  readonly count: number;
+  readonly raw: JsonObject;
+}
+export interface LiveCategories {
+  readonly categories: readonly LiveCategory[];
+  readonly total: number;
+}
+export interface ParentStatus {
+  readonly configured: boolean;
+  readonly unlocked: boolean;
+  readonly restricted: boolean;
+  readonly raw: JsonObject;
+}
+export interface ParentPinChange {
+  readonly pin: string;
+  readonly currentPin?: string;
+}
 
-export interface TvApiErrorShape { readonly status: number; readonly code?: string; readonly message: string; }
+export interface TvApiErrorShape {
+  readonly status: number;
+  readonly code?: string;
+  readonly message: string;
+}

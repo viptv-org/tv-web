@@ -37,8 +37,10 @@ It produces an **unsigned** Tizen launcher candidate and a Vizio static hosting 
 
 For the backend, build the TV distribution first, then set `VIPTV_TV_DIST` to its `dist` directory. See the backend README’s TV hosting section. Deploy the Vizio bundle under `/tv/` at that same HTTPS origin and keep the server-side SPA fallback.
 
+## Design synchronization
+
+The canonical UI and UX contract lives in [viptv-org/design](https://github.com/viptv-org/design). Read the pinned [sync workflow](design-contract/DESIGN_SYNC.md) and [TV rebuild contract](design-contract/TV_WEB_UI_REBUILD.md). `DESIGN_REF` identifies the immutable revision, and the build checks the imported specification and asset hashes. Update design first, then explicitly import its committed revision; visual and behavior evidence remain separate from the mechanical integrity check.
+
 ## Validation status
 
-The focused API boundary suite passed on 2026-09-12 with 16 tests, including real backend-shaped profile, metadata, catalog-extra, continuation, live-category, relative playback-capability, decoder-default and browser-fetch fixtures. TypeScript checking also passed with a bounded heap. Browser, package, Samsung emulator, Tizen hardware and Vizio hardware validation remain incomplete; the local server’s earlier out-of-memory event still rules out concurrent heavy workloads.
-
-Use [TESTING.md](TESTING.md) when the machine is ready. It separates mocked browser coverage, backend contract coverage, hosted smoke checks and real-device evidence.
+The 2026-09-13 shared Roku presentation rebuild replaces the older candidate layout. Current validation and remaining physical-device qualification are recorded in [TESTING.md](TESTING.md) and the [parity matrix](tests/PARITY_MATRIX.md). Browser evidence does not certify physical Samsung/Vizio decoding or signing.

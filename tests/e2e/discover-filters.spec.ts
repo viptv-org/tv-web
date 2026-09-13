@@ -30,6 +30,7 @@ test('Discover applies declared defaults and resets pagination for genre, input 
   await page.route(`${apiOrigin}/api/**`, async route => {
     const url = new URL(route.request().url());
     const path = url.pathname;
+    if (/^\/api\/profiles\/[^/]+\/progress\/series$/.test(path)) return json(route, []);
     if (route.request().method() === 'OPTIONS') return route.fulfill({ status: 204, headers: cors });
     if (path === '/api/auth/me') return json(route, { account: { id: '7', username: 'alex', name: 'Alex', role: 'member' }, profiles: [profile], profile_id: null, restricted: false, profile_setup_required: false });
     if (path === '/api/auth/profile') return json(route, { profile_id: '1' });
@@ -78,7 +79,7 @@ test('Discover applies declared defaults and resets pagination for genre, input 
 
   await page.getByRole('button', { name: 'Country: Any' }).click();
   await page.getByRole('textbox', { name: 'Country' }).fill('US');
-  await page.getByRole('button', { name: 'Save' }).click();
+  await page.getByRole('button', { name: 'Done' }).click();
   await expect(page.getByRole('button', { name: 'Country: US' })).toBeVisible();
   last = discovers.at(-1)!;
   expect(last.searchParams.get('skip')).toBe('0');
@@ -90,7 +91,7 @@ test('Discover applies declared defaults and resets pagination for genre, input 
 
   await page.getByRole('button', { name: 'Search catalog: Any' }).click();
   await page.getByRole('textbox', { name: 'Search catalog' }).fill('moon');
-  await page.getByRole('button', { name: 'Save' }).click();
+  await page.getByRole('button', { name: 'Done' }).click();
   await expect(page.getByRole('button', { name: 'Search catalog: moon' })).toBeVisible();
   last = discovers.at(-1)!;
   expect(last.searchParams.get('skip')).toBe('0');

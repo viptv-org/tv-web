@@ -211,16 +211,56 @@ export function TvButton({
         }
       }}
       onFocus={(event) => {
-        event.currentTarget.scrollIntoView?.({
-          block: "nearest",
-          inline: "nearest",
-        });
         onFocus?.(event);
+        revealFocusedControl(event.currentTarget);
       }}
     >
       {children}
     </button>
   );
+}
+
+/** Reveal inside the TV's scroll viewports without scrolling its fixed canvas. */
+function revealFocusedControl(element: HTMLElement) {
+  requestAnimationFrame(() => {
+    if (!element.isConnected || document.activeElement !== element) return;
+    for (
+      let parent = element.parentElement;
+      parent && !parent.classList.contains("tv-screen");
+      parent = parent.parentElement
+    ) {
+      const style = getComputedStyle(parent);
+      const rect = parent.getBoundingClientRect();
+      if (!rect.width || !rect.height) continue;
+      const target = element.getBoundingClientRect();
+      const scaleX = rect.width / (parent.offsetWidth || rect.width);
+      const scaleY = rect.height / (parent.offsetHeight || rect.height);
+      if (
+        ["auto", "scroll", "hidden"].includes(style.overflowX) &&
+        parent.scrollWidth > parent.clientWidth
+      ) {
+        if (target.left < rect.left)
+          parent.scrollLeft += (target.left - rect.left) / scaleX;
+        else if (target.right > rect.right)
+          parent.scrollLeft += (target.right - rect.right) / scaleX;
+      }
+      if (
+        ["auto", "scroll", "hidden"].includes(style.overflowY) &&
+        parent.scrollHeight > parent.clientHeight
+      ) {
+        const section = element.closest("section");
+        if (
+          parent.classList.contains("shelves") &&
+          section?.parentElement === parent
+        ) {
+          parent.scrollTop = (section as HTMLElement).offsetTop - 8;
+        } else if (target.top < rect.top)
+          parent.scrollTop += (target.top - rect.top) / scaleY;
+        else if (target.bottom > rect.bottom)
+          parent.scrollTop += (target.bottom - rect.bottom) / scaleY;
+      }
+    }
+  });
 }
 
 function normalizeKey(event: KeyboardEvent) {

@@ -44,6 +44,7 @@ async function installFixture(page: Page, watched = false): Promise<FixtureState
   await page.route(`${apiOrigin}/api/**`, async route => {
     const request = route.request();
     const path = new URL(request.url()).pathname;
+    if (/^\/api\/profiles\/[^/]+\/progress\/series$/.test(path)) return json(route, []);
     if (request.method() === 'OPTIONS') return route.fulfill({ status: 204, headers: corsHeaders });
     if (path === '/api/auth/me') return json(route, {
       account: { id: '7', username: 'alex', name: 'Alex', role: 'member' },

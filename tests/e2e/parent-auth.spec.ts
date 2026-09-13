@@ -24,6 +24,7 @@ async function installBackend(page: Page): Promise<State> {
   await page.route(`${apiOrigin}/api/**`, async route => {
     const request = route.request();
     const path = new URL(request.url()).pathname;
+    if (/^\/api\/profiles\/[^/]+\/progress\/series$/.test(path)) return json(route, []);
     const body = JSON.parse(request.postData() || '{}') as { profile_id?: string; pin?: string };
     if (request.method() === 'OPTIONS') return route.fulfill({ status: 204, headers: cors });
     if (path === '/api/auth/me') return json(route, {
@@ -80,8 +81,8 @@ test('Vizio: protected profile selection cancels without losing the grant and re
   expect(state.profileAttempts).toBe(1);
 
   await page.getByRole('button', { name: 'Kids' }).press('Enter');
-  await page.getByRole('textbox', { name: 'Enter parent PIN' }).fill('1234');
-  await page.getByRole('button', { name: 'Save' }).click();
+  await page.getByLabel('Enter parent PIN', { exact: true }).fill('1234');
+  await page.getByRole('button', { name: 'Done' }).click();
   await expect(page.getByRole('button', { name: 'Home' })).toBeVisible();
   expect(state.unlockAttempts).toBe(1);
   expect(state.profileAttempts).toBe(3);
@@ -106,8 +107,8 @@ test('Vizio: protected sign-out preserves the grant on cancel and clears it only
 
   await page.getByRole('button', { name: 'Sign out' }).first().click();
   await page.getByRole('button', { name: 'Sign out' }).last().click();
-  await page.getByRole('textbox', { name: 'Enter parent PIN to sign out' }).fill('1234');
-  await page.getByRole('button', { name: 'Save' }).click();
+  await page.getByLabel('Enter parent PIN to sign out', { exact: true }).fill('1234');
+  await page.getByRole('button', { name: 'Done' }).click();
   await expect(page.getByRole('heading', { name: 'Sign in to VIPTV' })).toBeVisible();
   expect(state.unlockAttempts).toBe(1);
   // First protected request was cancelled; the second is retried after unlock.

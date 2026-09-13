@@ -5,12 +5,13 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
-    "build": "tsc --noEmit && vite build",
+    "build": "npm run design:check && tsc --noEmit && vite build",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "preview": "vite preview --host 0.0.0.0",
-    "package:tv": "npm run build && node scripts/package-tv.mjs"
+    "package:tv": "npm run build && node scripts/package-tv.mjs",
+    "design:check": "node scripts/design-sync.mjs check"
   },
   "dependencies": {
     "react": "18.3.1",

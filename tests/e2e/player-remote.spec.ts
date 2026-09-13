@@ -103,6 +103,7 @@ async function installBackend(page: Page, options: FixtureOptions = {}): Promise
     // Stream discovery IDs contain the Stremio-style `series:season:episode`
     // identifier, which the real client correctly percent-encodes in its URL.
     const path = decodeURIComponent(url.pathname);
+    if (/^\/api\/profiles\/[^/]+\/progress\/series$/.test(path)) return json(route, []);
     if (request.method() === 'OPTIONS') return route.fulfill({ status: 204, headers: corsHeaders });
     if (path === '/api/auth/me') return json(route, { account: { id: '7', username: 'alex', name: 'Alex', role: 'member' }, profiles: [{ id: '1', name: 'Alex', setup_complete: true }], profile_id: null, restricted: false, profile_setup_required: false });
     if (path === '/api/auth/profile') return json(route, { profile_id: '1' });
@@ -174,10 +175,10 @@ test.describe('Vizio remote player contract', () => {
     await page.getByRole('button', { name: 'Pause' }).press('ArrowUp');
     await expect(page.locator('[data-focus-id="timeline"]')).toBeFocused();
     await page.keyboard.press('ArrowRight');
-    await expect(page.getByText('0:10 / 2:00')).toBeVisible();
+    await expect(page.locator('.player-time span').first().filter({ hasText: /^0:10$/ })).toBeVisible();
     expect(state.playbackRequests).toHaveLength(1);
     await page.keyboard.press('Escape');
-    await expect(page.getByText('0:10 / 2:00')).toBeHidden();
+    await expect(page.locator('.player-time span').first().filter({ hasText: /^0:10$/ })).toBeHidden();
     expect(state.playbackRequests).toHaveLength(1);
     await page.keyboard.press('ArrowRight');
     await page.waitForTimeout(760);
@@ -190,7 +191,7 @@ test.describe('Vizio remote player contract', () => {
         window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
       window.dispatchEvent(new KeyboardEvent('keyup', { key: 'ArrowRight', bubbles: true }));
     });
-    await expect(page.getByText('2:00 / 2:00')).toBeVisible();
+    await expect(page.locator('.player-time').filter({ hasText: /^2:002:00$/ })).toBeVisible();
     noPageErrors();
   });
 

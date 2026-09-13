@@ -3,6 +3,7 @@ import { TvApi, type TvProfile } from "../api";
 import { TextEntry } from "./TextEntry";
 import { TvButton, focusElement } from "./remote";
 import catalog from "./avatars.json";
+import "./account-roku.css";
 export const avatarUrl = (profile: TvProfile) =>
   `${import.meta.env.BASE_URL}assets/avatar-catalog/${typeof profile.raw.avatar_style === "string" ? profile.raw.avatar_style : "critters"}-${typeof profile.raw.avatar_choice === "number" ? profile.raw.avatar_choice : 1}.png`;
 export function ProfileEditor({
@@ -42,7 +43,7 @@ export function ProfileEditor({
       mode === "form"
         ? "profile-name"
         : mode === "avatar"
-          ? "avatar-0"
+          ? `avatar-category-${previewStyle}`
           : mode === "delete"
             ? "delete-cancel"
             : "text-key-0",
@@ -130,23 +131,37 @@ export function ProfileEditor({
     );
   return (
     <section
-      className="profile-editor"
+      className={`profile-editor roku-profile-editor mode-${mode}`}
       data-focus-scope="profile-editor"
       onKeyDown={key}
     >
-      <h1>{profile ? "Edit profile" : "Add a profile"}</h1>
+      <img
+        className="account-mark"
+        src={`${import.meta.env.BASE_URL}assets/viptv-mark.png`}
+        alt="VIPTV"
+      />
+      <h1>
+        {mode === "avatar"
+          ? "Find your favorite"
+          : profile
+            ? "Edit profile"
+            : "Add a profile"}
+      </h1>
       {mode === "avatar" ? (
         <>
-          <h2>Choose your avatar</h2>
+          <p className="picker-hint">
+            624 avatars. Pick a world, then pick your character.
+          </p>
           <div className="avatar-categories">
             {catalog.categories.map((c) => (
               <TvButton
                 key={c.style}
                 id={`avatar-category-${c.style}`}
-                onActivate={() => {
+                onFocus={() => {
                   setPreviewStyle(c.style);
                   setPage(0);
                 }}
+                onActivate={() => focusElement("avatar-0")}
               >
                 {c.name}
               </TvButton>
@@ -176,26 +191,31 @@ export function ProfileEditor({
           <div className="avatar-pager">
             <TvButton
               id="avatar-previous"
-              disabled={page === 0}
-              onActivate={() => setPage((p) => p - 1)}
+              onActivate={() => {
+                setPage((p) => (p + 2) % 3);
+                setTimeout(() => focusElement("avatar-0"), 0);
+              }}
             >
               Previous
             </TvButton>
-            <span>{page + 1} / 3</span>
+
             <TvButton
               id="avatar-next"
-              disabled={page === 2}
-              onActivate={() => setPage((p) => p + 1)}
+              onActivate={() => {
+                setPage((p) => (p + 1) % 3);
+                setTimeout(() => focusElement("avatar-0"), 0);
+              }}
             >
               Next
             </TvButton>
-            <TvButton id="avatar-cancel" onActivate={() => setMode("form")}>
-              Back
-            </TvButton>
           </div>
+          <p className="avatar-page-label">
+            {catalog.categories.find((c) => c.style === previewStyle)?.name} ·{" "}
+            {page + 1} / 3
+          </p>
         </>
       ) : mode === "delete" ? (
-        <>
+        <div className="profile-delete-confirmation">
           <p>
             Delete {profile?.name}? This permanently removes this profile's
             watch history, favorites and preferences.
@@ -210,9 +230,17 @@ export function ProfileEditor({
           >
             Delete profile
           </TvButton>
-        </>
+        </div>
       ) : (
         <div className="profile-form">
+          <p className="profile-introduction">
+            A space for their favorites, shows, and discoveries.
+          </p>
+          <p className="profile-avatar-label">Change avatar</p>
+          <p className="profile-name-label">PROFILE NAME</p>
+          <p className="profile-input-help">
+            Select to type with your remote or a connected keyboard.
+          </p>
           <TvButton
             id="profile-avatar"
             onActivate={() => {
@@ -223,7 +251,7 @@ export function ProfileEditor({
           >
             <img
               src={`${import.meta.env.BASE_URL}assets/avatar-catalog/${style}-${choice}.png`}
-              alt="Choose avatar"
+              alt="Change avatar"
             />
           </TvButton>
           <TvButton id="profile-name" onActivate={() => setMode("name")}>

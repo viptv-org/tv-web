@@ -1,0 +1,589 @@
+/* Account and guide coordinates use the native 1280 × 720 Roku canvas. */
+.roku-settings,
+.roku-guide,
+.roku-profile-editor,
+.roku-text-entry {
+  position: absolute;
+  inset: 0;
+  width: 1280px;
+  height: 720px;
+  margin: 0;
+  padding: 0;
+  background: #101112;
+  color: #f5f5f5;
+}
+.roku-settings h1,
+.roku-profile-editor h1,
+.roku-text-entry h1 {
+  position: absolute;
+  margin: 0;
+  font-size: 42px;
+  line-height: 64px;
+  font-weight: 700;
+}
+.roku-settings h1 {
+  left: 100px;
+  top: 54px;
+}
+.roku-settings .settings-scroll {
+  position: absolute;
+  left: 100px;
+  top: 144px;
+  width: 536px;
+  height: 476px;
+  padding: 0;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+.roku-settings.has-caption .settings-scroll {
+  top: 176px;
+}
+.roku-settings .settings-scroll > button {
+  display: block;
+  width: 536px;
+  min-height: 56px;
+  height: 56px;
+  margin: 0 0 12px;
+  padding: 0 20px;
+  border-radius: 8px;
+  text-align: center;
+  font-size: 22px;
+}
+.roku-settings .settings-caption {
+  position: absolute;
+  left: 100px;
+  top: 126px;
+  width: 1096px;
+  margin: 0;
+  font-size: 19px;
+  line-height: 28px;
+  color: #a6a8aa;
+}
+.roku-settings .settings-description {
+  position: absolute;
+  left: 778px;
+  top: 152px;
+  width: 424px;
+}
+.roku-settings.has-caption .settings-description {
+  top: 184px;
+}
+.roku-settings .settings-description h2 {
+  margin: 0;
+  font-size: 28px;
+  line-height: 36px;
+}
+.roku-settings .settings-description p {
+  margin: 8px 0 0;
+  height: 208px;
+  white-space: pre-line;
+  overflow: hidden;
+  font-size: 22px;
+  line-height: 30px;
+  color: #c5c6c7;
+}
+.roku-profile-editor,
+.roku-text-entry {
+  z-index: 25;
+}
+.account-mark {
+  position: absolute;
+  left: 96px;
+  top: 44px;
+  width: 42px;
+  height: 36px;
+  object-fit: contain;
+}
+.roku-profile-editor h1 {
+  left: 256px;
+  top: 148px;
+  width: 850px;
+}
+.roku-profile-editor .profile-form {
+  margin: 0;
+  width: auto;
+}
+.roku-profile-editor .profile-form p {
+  position: absolute;
+  margin: 0;
+  color: #a6a8aa;
+}
+.roku-profile-editor .profile-introduction {
+  left: 256px;
+  top: 222px;
+  width: 850px;
+  font-size: 26px;
+  line-height: 40px;
+}
+.roku-profile-editor .profile-avatar-label {
+  left: 256px;
+  top: 486px;
+  width: 176px;
+  text-align: center;
+  font-size: 19px;
+  line-height: 32px;
+}
+.roku-profile-editor .profile-name-label {
+  left: 464px;
+  top: 292px;
+  font-size: 19px;
+  line-height: 36px;
+}
+.roku-profile-editor .profile-input-help {
+  left: 464px;
+  top: 420px;
+  width: 560px;
+  font-size: 19px;
+  line-height: 27px;
+}
+.roku-profile-editor [data-focus-id="profile-avatar"] {
+  position: absolute;
+  left: 256px;
+  top: 302px;
+  width: 176px;
+  height: 176px;
+  padding: 5px;
+  border-radius: 12px;
+  background: transparent;
+  border: 3px solid transparent;
+}
+.roku-profile-editor [data-focus-id="profile-avatar"]:focus {
+  border-color: #f5f5f5;
+  outline: none;
+}
+.roku-profile-editor [data-focus-id="profile-avatar"] img {
+  width: 160px;
+  height: 160px;
+  object-fit: contain;
+  border-radius: 12px;
+}
+.roku-profile-editor [data-focus-id="profile-name"] {
+  position: absolute;
+  left: 464px;
+  top: 338px;
+  width: 560px;
+  height: 64px;
+  text-align: left;
+  padding: 0 20px;
+}
+.roku-profile-editor .profile-form .actions {
+  position: absolute;
+  left: 256px;
+  top: 574px;
+  display: flex;
+  gap: 16px;
+  margin: 0;
+}
+.roku-profile-editor .actions button {
+  width: 240px;
+  height: 56px;
+}
+.roku-profile-editor > [role="alert"],
+.roku-profile-editor > [role="status"] {
+  position: absolute;
+  left: 464px;
+  top: 484px;
+  width: 560px;
+  font-size: 19px;
+  line-height: 27px;
+  margin: 0;
+}
+.roku-profile-editor.mode-avatar h1 {
+  left: 96px;
+  top: 112px;
+}
+.roku-profile-editor .picker-hint {
+  position: absolute;
+  left: 96px;
+  top: 178px;
+  margin: 0;
+  font-size: 26px;
+  line-height: 36px;
+  color: #a6a8aa;
+}
+.roku-profile-editor .avatar-categories {
+  position: absolute;
+  left: 96px;
+  top: 238px;
+  width: 216px;
+  height: 408px;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+.roku-profile-editor .avatar-categories button {
+  display: block;
+  width: 216px;
+  height: 44px;
+  min-height: 44px;
+  margin: 0 0 8px;
+  padding: 0 12px;
+  font-size: 19px;
+  text-align: left;
+}
+.roku-profile-editor .avatar-grid {
+  position: absolute;
+  left: 360px;
+  top: 238px;
+  display: grid;
+  grid-template-columns: repeat(6, 128px);
+  grid-template-rows: repeat(3, 128px);
+  gap: 12px;
+}
+.roku-profile-editor .avatar-grid button {
+  width: 128px;
+  height: 128px;
+  padding: 5px;
+  border: 3px solid transparent;
+  border-radius: 12px;
+  background: transparent;
+}
+.roku-profile-editor .avatar-grid button:focus {
+  border-color: #f5f5f5;
+  outline: none;
+}
+.roku-profile-editor .avatar-grid img {
+  width: 112px;
+  height: 112px;
+  border-radius: 12px;
+  object-fit: contain;
+}
+.roku-profile-editor .avatar-pager {
+  position: absolute;
+  left: 360px;
+  top: 662px;
+  display: flex;
+  gap: 12px;
+}
+.roku-profile-editor .avatar-pager button {
+  width: 180px;
+  height: 40px;
+  min-height: 40px;
+  font-size: 19px;
+}
+.roku-profile-editor .avatar-page-label {
+  position: absolute;
+  left: 812px;
+  top: 664px;
+  width: 372px;
+  margin: 0;
+  font-size: 19px;
+  line-height: 36px;
+  text-align: right;
+  color: #a6a8aa;
+}
+.roku-profile-editor .profile-delete-confirmation {
+  position: absolute;
+  left: 256px;
+  top: 270px;
+  width: 768px;
+  font-size: 26px;
+  line-height: 38px;
+}
+.roku-profile-editor .profile-delete-confirmation button {
+  width: 240px;
+  margin: 30px 16px 0 0;
+}
+.roku-text-entry h1 {
+  left: 180px;
+  top: 112px;
+  width: 860px;
+}
+.roku-text-entry .entry-instruction {
+  position: absolute;
+  left: 180px;
+  top: 182px;
+  width: 860px;
+  margin: 0;
+  line-height: 40px;
+  font-size: 19px;
+  color: #a6a8aa;
+}
+.roku-text-entry input {
+  position: absolute;
+  left: 180px;
+  top: 242px;
+  width: 860px;
+  height: 44px;
+  padding: 0;
+  margin: 0;
+  color: #f5f5f5;
+  background: transparent;
+  border: none;
+  font-size: 26px;
+  line-height: 44px;
+}
+.roku-text-entry input:focus {
+  outline: 2px solid #f5f5f5;
+  outline-offset: 4px;
+}
+.roku-text-entry .entry-keys {
+  position: absolute;
+  left: 180px;
+  top: 300px;
+  display: grid;
+  grid-template-columns: repeat(10, 64px);
+  grid-auto-rows: 48px;
+  gap: 6px;
+  margin: 0;
+}
+.roku-text-entry .entry-keys button {
+  width: 64px;
+  min-width: 0;
+  height: 48px;
+  min-height: 48px;
+  padding: 0;
+  text-align: center;
+  font-size: 22px;
+  border-radius: 4px;
+  background: #242628;
+}
+.roku-text-entry .entry-keys button:focus {
+  outline: 3px solid #f5f5f5;
+  outline-offset: 2px;
+  color: #f5f5f5;
+  z-index: 1;
+}
+.roku-text-entry .entry-keys [data-focus-id="text-delete"],
+.roku-text-entry .entry-keys [data-focus-id="text-space"] {
+  font-size: 17px;
+}
+.roku-text-entry .entry-keys.pin-keys {
+  grid-template-columns: repeat(5, 64px);
+}
+.roku-text-entry .actions {
+  position: absolute;
+  left: 180px;
+  top: 608px;
+  display: flex;
+  gap: 16px;
+}
+.roku-text-entry .actions button {
+  width: 240px;
+  height: 56px;
+}
+.roku-text-entry .entry-error {
+  position: absolute;
+  left: 180px;
+  top: 674px;
+  width: 1000px;
+  margin: 0;
+  font-size: 19px;
+}
+.roku-guide > h1 {
+  position: absolute;
+  left: 112px;
+  top: 34px;
+  margin: 0;
+  font-size: 26px;
+  line-height: 38px;
+}
+.roku-guide .guide-filters {
+  position: absolute;
+  left: 104px;
+  top: 163px;
+  width: 184px;
+  height: 384px;
+  display: block;
+  overflow-y: auto;
+  scrollbar-width: none;
+  margin: 0;
+}
+.roku-guide .guide-filters button {
+  display: block;
+  width: 184px;
+  height: 42px;
+  min-height: 42px;
+  margin: 0 0 6px;
+  padding: 0 8px;
+  font-size: 19px;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  background: transparent;
+  color: #a6a8aa;
+}
+.roku-guide .guide-filters button[aria-pressed="true"] {
+  color: #f5f5f5;
+}
+.roku-guide .guide-filters button:focus {
+  background: #f5f5f5;
+  color: #101112;
+}
+.roku-guide .guide-header {
+  position: absolute;
+  left: 432px;
+  top: 116px;
+  width: 804px;
+  height: 28px;
+  display: flex;
+  margin: 0;
+  font-size: 19px;
+  line-height: 28px;
+}
+.roku-guide .guide-header span {
+  display: block;
+  width: 201px;
+  flex-shrink: 0;
+}
+.roku-guide::after {
+  content: "";
+  position: absolute;
+  left: 112px;
+  top: 149px;
+  width: 1124px;
+  height: 1px;
+  background: #303234;
+}
+.roku-guide .guide-rows {
+  position: absolute;
+  left: 300px;
+  top: 166px;
+  width: 936px;
+  height: 455px;
+}
+.roku-guide .guide-row {
+  display: flex;
+  gap: 4px;
+  height: 91px;
+}
+.roku-guide .guide-row > button {
+  width: 128px;
+  height: 87px;
+  padding: 7px 8px;
+  border-radius: 0;
+  flex-shrink: 0;
+  background: #202224;
+}
+.roku-guide .guide-row > button:focus {
+  background: #303234;
+  color: #f5f5f5;
+  outline: 2px solid #f5f5f5;
+  outline-offset: -2px;
+}
+.roku-guide .guide-row > button img {
+  display: block;
+  width: 112px;
+  height: 73px;
+  object-fit: contain;
+}
+.roku-guide .guide-row > button span {
+  display: block;
+  font-size: 16px;
+  line-height: 20px;
+  max-height: 60px;
+  overflow: hidden;
+  text-align: center;
+}
+.roku-guide .programs {
+  position: relative;
+  width: 804px;
+  height: 87px;
+  flex-shrink: 0;
+}
+.roku-guide .programs button {
+  padding: 0;
+  border-radius: 0;
+  background: #202224;
+  text-align: left;
+  overflow: hidden;
+}
+.roku-guide .programs button:focus {
+  background: #f5f5f5;
+  color: #101112;
+  outline: none;
+  border-left: 3px solid white;
+}
+.roku-guide .programs small {
+  position: absolute;
+  left: 12px;
+  top: 10px;
+  right: 10px;
+  font-size: 15px;
+  line-height: 20px;
+  white-space: nowrap;
+  overflow: hidden;
+  color: #a6a8aa;
+}
+.roku-guide .programs button:focus small {
+  color: #414548;
+}
+.roku-guide .programs button > span {
+  position: absolute;
+  left: 12px;
+  top: 38px;
+  right: 10px;
+  font-size: 20px;
+  line-height: 24px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.roku-guide .guide-now {
+  position: absolute;
+  top: 150px;
+  width: 2px;
+  height: 470px;
+  background: #ffffff80;
+  pointer-events: none;
+}
+.roku-guide .guide-selection-count {
+  position: absolute;
+  left: 300px;
+  top: 639px;
+  width: 124px;
+  font-size: 18px;
+  color: #a6a8aa;
+}
+.roku-guide .guide-selection-title {
+  position: absolute;
+  left: 432px;
+  top: 635px;
+  width: 804px;
+  height: 38px;
+  margin: 0;
+  font-size: 26px;
+  line-height: 38px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.roku-guide .guide-help {
+  position: absolute;
+  left: 112px;
+  top: 682px;
+  width: 1124px;
+  margin: 0;
+  font-size: 18px;
+  line-height: 28px;
+  color: #a6a8aa;
+  white-space: pre;
+}
+.roku-guide .guide-timezone {
+  position: absolute;
+  right: 44px;
+  top: 78px;
+  font-size: 18px;
+  color: #a6a8aa;
+}
+.roku-guide .guide-empty {
+  position: absolute;
+  left: 450px;
+  top: 292px;
+  width: 770px;
+  margin: 0;
+  font-size: 26px;
+  line-height: 38px;
+}
+
+/* Keep native label boxes while aligning system-font glyph baselines. */
+.roku-settings h1 {
+  line-height: 44px;
+}
+.roku-settings .settings-description h2 {
+  line-height: 28px;
+}
+.roku-settings .settings-description p {
+  margin-top: 16px;
+}
