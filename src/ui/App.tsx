@@ -1,8 +1,10 @@
+import { normalizeCore } from "../core";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import QRCode from "qrcode";
 import {
   TvApi,
   type MediaItem,
+  type MediaPresentation,
   type MediaSource,
   type DevicePairing,
   type TvProfile,
@@ -15,6 +17,7 @@ import {
 import {
   createPlayer,
   PlaybackSessionController,
+  exactResumeSource,
   type PlaybackControllerSnapshot,
   type Player,
   type PlayerPlatform,
@@ -455,34 +458,27 @@ export function App({
   }, []);
   useEffect(() => {
     let disposed = false;
-    const restore = async () => {
-      try {
-        const tokens = await api.restoreSession();
-        if (disposed) return;
-        if (!tokens) {
-          await pairing();
-          return;
-        }
-        const identity = await api.me();
-        if (disposed) return;
-        setProfiles(identity.profiles);
-        setScreen("profiles");
-        const rememberedId = identity.profileId ?? tokens.profileId;
-        const remembered = identity.profiles.find((p) => p.id === rememberedId);
-        if (remembered && remembered.setupComplete !== false && !identity.profileSetupRequired) {
-          await chooseProfile(remembered.id);
-        }
-      } catch (cause) {
-        if (disposed) return;
-        // Connectivity and malformed responses must not discard a paired
-        // device or request another sign-in code. Only expired auth re-pairs.
-        if ((cause as { status?: number }).status === 401) await pairing();
-        else fail(cause);
+    let readyProfile = "";
+    const driver = api.createSessionDriver((view) => {
+      if (disposed) return;
+      if (view.identity) setProfiles(view.identity.profiles);
+      if (view.phase === "Pairing") void pairing();
+      else if (view.phase === "Profiles") setScreen("profiles");
+      else if (view.phase === "Error") fail(new Error(view.error ?? "Unable to connect. Try again."));
+      else if (view.phase === "Ready" && view.selectedProfileId && readyProfile !== view.selectedProfileId) {
+        readyProfile = view.selectedProfileId;
+        setProfile(readyProfile);
+        setBootingHome(true);
+        stack.current = [];
+        void loadHome(readyProfile).then(() => {
+          if (!disposed) { setScreen("Home"); setBootingHome(false); }
+        });
       }
-    };
-    void restore();
+    }, (message) => { if (!disposed) fail(new Error(message)); });
+    void driver.dispatch({ Begin: { origin: api.serverOrigin, allowInsecurePreview: import.meta.env.DEV && api.serverOrigin === globalThis.location?.origin } });
     return () => {
       disposed = true;
+      driver.dispose();
       pairEpoch.current++;
       pairingScope.current?.abort();
       clearTimeout(pairTimer.current);
@@ -785,11 +781,7 @@ export function App({
           }, 30);
         }
         if (resume && item.sourceAddonId && item.sourceFingerprint) {
-          const exact = all.find(
-            (s) =>
-              s.sourceAddonId === item.sourceAddonId &&
-              s.raw.source_fingerprint === item.sourceFingerprint,
-          );
+          const exact = exactResumeSource(item, all);
           if (exact) {
             await play(item, exact, item.position ?? 0);
             return;
@@ -1061,7 +1053,7 @@ export function App({
       (!resumeRemainder.current &&
         snapshot?.state === "playing" &&
         duration > 10 &&
-        position >= duration - 10);
+        normalizeCore<MediaPresentation>("presentation", { ...selected, position, duration }).canAutoNext);
     if (eligible && advancedSession.current !== session.id) {
       advancedSession.current = session.id;
       void nextEpisode();
@@ -1616,6 +1608,20 @@ export function App({
     </div>
   );
   const heroItem = highlighted ?? queue[0] ?? recentLive[0] ?? items[0];
+  const [heroMetadata, setHeroMetadata] = useState<{ key: string; item: MediaItem }>();
+  const heroKey = heroItem ? `${profile}:${heroItem.type}:${heroItem.seriesId ?? heroItem.id}` : "";
+  useEffect(() => {
+    if (!heroItem || heroItem.type === "live") return;
+    const scope = api.createScope();
+    const timer = setTimeout(() => {
+      void api.detail({ id: heroItem.seriesId ?? heroItem.id, type: heroItem.type }, scope.request()).then((detail) => {
+        if (!scope.signal.aborted) setHeroMetadata({ key: heroKey, item: detail.item });
+      }).catch(() => { /* The packaged fallback remains usable during metadata failure. */ });
+    }, 150);
+    return () => { clearTimeout(timer); scope.abort(); };
+  }, [api, heroKey]);
+  const heroPresentation = heroItem ? normalizeCore<MediaPresentation>("presentation",
+    heroMetadata?.key === heroKey ? enrichDetail(heroItem, heroMetadata.item) : heroItem) : undefined;
   const activeProfile = profiles.find((p) => p.id === profile);
   const navItems: Screen[] = [
     "profiles",
@@ -1761,17 +1767,10 @@ export function App({
             )}
             {screen === "Home" && (
               <main className={`home ${compactHome ? "compact-home" : ""}`}>
-                {heroItem?.background && (
+                {heroPresentation?.heroImage && (
                   <HeroArtwork
-                    key={heroItem.background}
-                    uri={heroItem.background}
-                  />
-                )}
-                {!heroItem?.background && heroItem?.poster && (
-                  <ReadyImage
-                    className="hero-portrait"
-                    src={heroItem.poster}
-                    alt=""
+                    key={heroPresentation.heroImage}
+                    uri={heroPresentation.heroImage}
                   />
                 )}
                 <div className="hero">
@@ -1838,13 +1837,7 @@ export function App({
                         else void discoverSources(item);
                       }}
                     >
-                      {(highlighted ?? queue[0] ?? recentLive[0] ?? items[0])
-                        ?.queueStatus === "next"
-                        ? "Play next episode"
-                        : (highlighted ?? queue[0] ?? recentLive[0] ?? items[0])
-                              ?.position
-                          ? "Resume"
-                          : "Play"}
+                      {heroPresentation?.primaryActionLabel ?? "Play"}
                     </TvButton>
                     <TvButton
                       id="hero-details"
@@ -2327,7 +2320,7 @@ export function App({
                           >
                             <CardArtwork
                               src={artworkUrl(
-                                e.background ?? e.poster,
+                                normalizeCore<MediaPresentation>("presentation", e).episodeImage ?? e.background ?? e.poster,
                                 256,
                                 144,
                               )}

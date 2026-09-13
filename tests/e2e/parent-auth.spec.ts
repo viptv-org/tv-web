@@ -21,6 +21,7 @@ async function installSession(page: Page) {
 
 async function installBackend(page: Page): Promise<State> {
   const state: State = { unlocked: false, profileAttempts: 0, logoutAttempts: 0, unlockAttempts: 0 };
+  let selectedProfileId: string | null = null;
   await page.route(`${apiOrigin}/api/**`, async route => {
     const request = route.request();
     const path = new URL(request.url()).pathname;
@@ -30,12 +31,13 @@ async function installBackend(page: Page): Promise<State> {
     if (path === '/api/auth/me') return json(route, {
       account: { id: '7', username: 'alex', name: 'Alex', role: 'member' },
       profiles: [{ id: '1', name: 'Alex', setup_complete: true }, { id: '2', name: 'Kids', kids: true, setup_complete: true }],
-      profile_id: null, restricted: false, profile_setup_required: false,
+      profile_id: selectedProfileId, restricted: false, profile_setup_required: false,
     });
     if (path === '/api/auth/profile') {
       state.profileAttempts += 1;
       if (body.profile_id === '2' && !state.unlocked) return json(route, { error: 'parent PIN required' }, 403);
-      return json(route, { profile_id: body.profile_id });
+      selectedProfileId = body.profile_id ?? null;
+      return json(route, { profile_id: selectedProfileId });
     }
     if (path === '/api/parent/unlock') {
       state.unlockAttempts += 1;

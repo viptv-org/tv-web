@@ -1,3 +1,4 @@
+import { normalizeCore } from "../core";
 import { useState, type ImgHTMLAttributes, type ReactNode } from "react";
 
 /** Same public-host allowlist as Roku ImagePolicy: opaque/provider URLs stay at origin. */
@@ -8,25 +9,7 @@ export function artworkUrl(
   large = false,
   logo = false,
 ) {
-  if (!original) return undefined;
-  let uri = original;
-  try {
-    if (uri.startsWith("https://wsrv.nl/?"))
-      uri = new URL(uri).searchParams.get("url") || uri;
-    if (
-      !/^https:\/\/(image\.tmdb\.org|artworks\.thetvdb\.com|episodes\.metahub\.space|images\.metahub\.space|live\.metahub\.space|assets\.fanart\.tv|i\.imgur\.com)\/[^?#@]+$/.test(
-        uri,
-      )
-    )
-      return original;
-    uri = uri.replace(
-      /^https:\/\/image\.tmdb\.org\/t\/p\/(w[0-9]+|original)\//,
-      `https://image.tmdb.org/t/p/${width > 1280 ? "original" : width > 500 ? "w1280" : "w500"}/`,
-    );
-    return `https://wsrv.nl/?url=${encodeURIComponent(uri)}&w=${width}&h=${height}&fit=${logo ? "inside" : "cover"}&output=${logo ? "png" : "jpg"}&q=${large ? 95 : 85}&we`;
-  } catch {
-    return original;
-  }
+  return normalizeCore<string | null>("artworkUrl", { original, width, height, large, logo }) ?? undefined;
 }
 /** Keep failed and not-yet-decoded bitmaps invisible, preserving their layout. */
 export function ReadyImage({

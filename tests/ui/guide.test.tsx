@@ -11,7 +11,7 @@ const channels = Array.from({ length: 80 }, (_, index): MediaItem => ({
   type: 'live',
   name: `Channel ${index + 1}`,
   title: `Channel ${index + 1}`,
-  genres: [],
+  genres: [], episodes: [],
   raw: {},
 }));
 

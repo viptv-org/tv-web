@@ -5,7 +5,7 @@ type CoreView<T> = T extends readonly (infer Item)[] ? readonly CoreView<Item>[]
 
 /** JSON accepted from an add-on after the client removes transport credentials. */
 export type JsonPrimitive = string | number | boolean | null;
-export type JsonValue = JsonPrimitive | JsonObject | JsonValue[];
+export type JsonValue = JsonPrimitive | JsonObject | readonly JsonValue[];
 export interface JsonObject {
   readonly [key: string]: JsonValue | undefined;
 }
@@ -32,6 +32,7 @@ export type TvIdentity = CoreView<Core.Identity>;
 
 /** Shared card vocabulary used by TV shelves, details, progress and queue. */
 export type MediaItem = CoreView<Core.MediaItem>;
+export type MediaPresentation = CoreView<Core.MediaPresentation>;
 
 export type MediaSource = CoreView<Core.MediaSource>;
 

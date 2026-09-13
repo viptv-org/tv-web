@@ -52,3 +52,9 @@ Run `VITE_LAN_PREVIEW=1 NODE_OPTIONS=--max-old-space-size=256 npm run dev -- --p
 This opt-in development mode sends API and media requests to the preview origin. Vite forwards them to the verified HTTPS backend and translates only the preview's matching Origin header; unrelated origins remain rejected. The API allows HTTP only for an explicitly enabled, same-origin development preview. Production builds retain HTTPS requirements. Use this HTTP preview only on the trusted LAN. Pair this browser through the normal device flow; no credentials are embedded in the app.
 
 Validation: real Chromium pairing through the LAN proxy returned200 with no CORS errors; unrelated Origin returned403 and an invalid media capability returned404. API tests21passed and TypeScript passed.
+
+## Shared application core
+
+Rust in `viptv-org/core` owns response normalization, restoration and shared presentation/source/continuation rules. This app runs its WASM build and shared effect driver; React retains rendering/focus and platform adapters execute network, storage and decoding. A hero uses the core's landscape-only artwork role, with the existing background when no suitable artwork exists.
+
+Update the owning Rust code and generated artifacts, commit core, then run `node scripts/core-sync.mjs sync ../core`. Commit CORE_REF and its hash-checked vendor snapshot together. Android adopts the same revision through its own sync script. Do not patch generated/vendor files independently. Shared rules change once in Rust, but each deployed app still needs to adopt and rebuild from that version.

@@ -96,6 +96,7 @@ async function installBackend(page: Page, options: FixtureOptions = {}): Promise
   const state: FixtureState = { playbackRequests: [], progress: [], nextRequests: 0 };
   const preferences = { audio_language: 'en', subtitle_language: 'en', subtitles_enabled: false, subtitle_size: 'normal', subtitle_style: 'system', quality: 'auto', autoplay: true };
   await page.route('**/fixture.svg', route => route.fulfill({ status: 200, contentType: 'image/svg+xml', body: '<svg xmlns="http://www.w3.org/2000/svg" width="256" height="144" />' }));
+  let selectedProfileId: string | null = null;
   await page.route(`${apiOrigin}/api/**`, async route => {
     const request = route.request();
     const url = new URL(request.url());
@@ -104,8 +105,11 @@ async function installBackend(page: Page, options: FixtureOptions = {}): Promise
     const path = decodeURIComponent(url.pathname);
     if (/^\/api\/profiles\/[^/]+\/progress\/series$/.test(path)) return json(route, []);
     if (request.method() === 'OPTIONS') return route.fulfill({ status: 204, headers: corsHeaders });
-    if (path === '/api/auth/me') return json(route, { account: { id: '7', username: 'alex', name: 'Alex', role: 'member' }, profiles: [{ id: '1', name: 'Alex', setup_complete: true }], profile_id: null, restricted: false, profile_setup_required: false });
-    if (path === '/api/auth/profile') return json(route, { profile_id: '1' });
+    if (path === '/api/auth/me') return json(route, { account: { id: '7', username: 'alex', name: 'Alex', role: 'member' }, profiles: [{ id: '1', name: 'Alex', setup_complete: true }], profile_id: selectedProfileId, restricted: false, profile_setup_required: false });
+    if (path === '/api/auth/profile') {
+      selectedProfileId = String(route.request().postDataJSON().profile_id);
+      return json(route, { profile_id: selectedProfileId });
+    }
     if (path === '/api/profiles/1/continue/page') return json(route, { items: options.queue ?? [], offset: 0, total: options.queue?.length ?? 0, next_offset: null });
     if (path === '/api/profiles/1/progress' && request.method() === 'GET') return json(route, []);
     if (path === '/api/profiles/1/favorites' && request.method() === 'GET') return json(route, []);

@@ -7,7 +7,7 @@ import type { OpenPlayerRequest, Player, PlayerCapabilities, PlayerListener, Pla
 
 const capabilities: PlaybackCapabilities = { maxWidth: 1920, maxHeight: 1080, h264: true, hevc: false, aac: true, directPlay: true, hevcSdr: false };
 const playerCapabilities: PlayerCapabilities = { platform: 'html5', engine: 'fake', directNative: 'supported', adaptiveStreaming: 'probe-required', drm: 'unsupported', canPause: true, canSeek: true, canSelectAudioTrack: false, canSelectTextTrack: false, canDisableTextTrack: false, canUseCookies: false, canUseUserAgent: false, limitations: [] };
-const item: MediaItem = { id: 'movie-1', type: 'movie', name: 'Movie', title: 'Movie', genres: [], raw: {}, sourceAddonId: 'addon-a', sourceFingerprint: 'fingerprint-a' };
+const item: MediaItem = { id: 'movie-1', type: 'movie', name: 'Movie', title: 'Movie', genres: [], episodes: [], raw: {}, sourceAddonId: 'addon-a', sourceFingerprint: 'fingerprint-a' };
 const source: MediaSource = { id: 'stream-a', name: 'Source A', sourceAddonId: 'addon-a', raw: { source_fingerprint: 'fingerprint-a' } };
 
 class FakePlayer implements Player {
@@ -33,7 +33,7 @@ class FakePlayer implements Player {
 }
 
 function session(id: string, url: string, mode = 'managed', position = 0): PlaybackSession {
-  return { id, url, format: 'mp4', mode, videoMode: 'copy', audioMode: 'copy', position, live: false, duration: 100, audioTracks: [], subtitleTracks: [], subtitlesSupported: false };
+  return { id, url, headers: {}, format: 'mp4', mode, videoMode: 'copy', audioMode: 'copy', position, live: false, duration: 100, audioTracks: [], subtitleTracks: [], subtitlesSupported: false };
 }
 
 describe('PlaybackSessionController', () => {
@@ -123,7 +123,7 @@ describe('PlaybackSessionController', () => {
 
     await expect(controller.start({ item })).rejects.toThrow('explicit source');
     expect(backend.startPlayback).not.toHaveBeenCalled();
-    expect(exactResumeSource(item, [source, { ...source, id: 'stream-b', sourceAddonId: 'other' }])).toBe(source);
+    expect(exactResumeSource(item, [source, { ...source, id: 'stream-b', sourceAddonId: 'other' }])).toEqual(source);
     expect(exactResumeSource({ ...item, sourceFingerprint: undefined }, [source])).toBeUndefined();
   });
 

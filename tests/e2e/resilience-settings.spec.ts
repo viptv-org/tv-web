@@ -25,6 +25,7 @@ async function installSession(page: Page) {
 async function installBackend(page: Page): Promise<State> {
   const state: State = { calls: [], addons: [{ id: 2, name: 'Fixture add-on', enabled: true }] };
   await page.route('**/fixture.svg', route => route.fulfill({ status: 200, contentType: 'image/svg+xml', body: '<svg xmlns="http://www.w3.org/2000/svg" width="256" height="144" />' }));
+  let selectedProfileId: string | null = null;
   await page.route(`${apiOrigin}/api/**`, async route => {
     const request = route.request();
     const path = decodeURIComponent(new URL(request.url()).pathname);
@@ -32,8 +33,11 @@ async function installBackend(page: Page): Promise<State> {
     const body = JSON.parse(request.postData() || '{}') as Record<string, unknown>;
     if (request.method() === 'OPTIONS') return route.fulfill({ status: 204, headers: cors });
     if (!['GET', 'OPTIONS'].includes(request.method())) state.calls.push({ path, method: request.method(), body });
-    if (path === '/api/auth/me') return json(route, { account: { id: '7', username: 'alex', name: 'Alex', role: 'member' }, profiles: [profile], profile_id: null, restricted: false, profile_setup_required: false });
-    if (path === '/api/auth/profile') return json(route, { profile_id: '1' });
+    if (path === '/api/auth/me') return json(route, { account: { id: '7', username: 'alex', name: 'Alex', role: 'member' }, profiles: [profile], profile_id: selectedProfileId, restricted: false, profile_setup_required: false });
+    if (path === '/api/auth/profile') {
+      selectedProfileId = String(route.request().postDataJSON().profile_id);
+      return json(route, { profile_id: selectedProfileId });
+    }
     if (path === '/api/auth/logout') return json(route, { ok: true });
     if (path === '/api/auth/device/code') return json(route, { device_code: 'code', user_code: 'AB12CD34EF', verification_uri: 'https://viptv.syek.tech/device', verification_uri_complete: 'https://viptv.syek.tech/device?code=AB12CD34EF', qr_uri: 'https://viptv.syek.tech/api/auth/device/qr?code=AB12CD34EF', expires_in: 600, interval: 60 });
     if (path === '/api/auth/device/token') return json(route, { error: 'authorization_pending' }, 400);

@@ -1,3 +1,4 @@
+import { normalizeCore } from "../core";
 import type {
   MediaItem,
   MediaSource,
@@ -60,23 +61,7 @@ export function bestContinuationSource(
   preferences: PlaybackPreferences,
   capabilities: PlaybackCapabilities = DEFAULT_CONTINUATION_CAPABILITIES,
 ): MediaSource | undefined {
-  const provider = current.sourceAddonId ?? "";
-  if (provider.startsWith("iptv:"))
-    return sources.find((source) => source.sourceAddonId === provider);
-
-  let winner: MediaSource | undefined;
-  let best = Number.POSITIVE_INFINITY;
-  for (const source of sources) {
-    if (!source.sourceAddonId?.startsWith("addon:")) continue;
-    const rank = sourceMatch(source, capabilities, preferences).rank;
-    // Deliberately do not replace an equal-rank source: add-on discovery order
-    // is the stable final tie-breaker in Roku's policy.
-    if (rank < best) {
-      winner = source;
-      best = rank;
-    }
-  }
-  return winner;
+  return normalizeCore<MediaSource | null>("continuationSource", { sources, current, preferences, capabilities }) ?? undefined;
 }
 
 export interface SourceMatch {
@@ -86,7 +71,7 @@ export interface SourceMatch {
 }
 
 /**
- * A direct TypeScript port of the ranking portion of Roku `SourceMatch`.
+ * Rust owns the shared source ranking policy.
  * It is recommendation only: backend inspection, not a release filename,
  * decides whether direct play is actually safe.
  */
@@ -95,36 +80,7 @@ export function sourceMatch(
   capabilities: PlaybackCapabilities,
   preferences: PlaybackPreferences,
 ): SourceMatch {
-  let height = capabilities.maxHeight || 1080;
-  if (preferences.quality === "720p") height = Math.min(height, 720);
-  if (preferences.quality === "1080p") height = Math.min(height, 1080);
-  if (preferences.quality === "480p") height = Math.min(height, 480);
-
-  const text = sourceText(source).toLowerCase();
-  const audioScore = sourceLanguageScore(
-    source,
-    preferences.audioLanguage || "en",
-  );
-  const resolution = resolutionOf(text);
-  const h264 = /(^|[^a-z0-9])(?:h\.?264|x264|avc)([^a-z0-9]|$)/.test(text);
-  const h265 = /(^|[^a-z0-9])(?:h\.?265|x265|hevc)([^a-z0-9]|$)/.test(text);
-  const heavy =
-    /(^|[^a-z0-9])(?:hdr|hdr10|dv|10bit|10-bit|hi10p|av1)([^a-z0-9]|$)/.test(
-      text,
-    );
-  const likely =
-    resolution > 0 &&
-    resolution <= height &&
-    (h264 || (h265 && capabilities.hevcSdr)) &&
-    !heavy;
-  const rank =
-    (9 - audioScore) * 10 +
-    (likely && resolution === height ? 0 : likely ? 1 : 5);
-  return {
-    rank,
-    likely,
-    best: likely && audioScore >= 4 && resolution === height,
-  };
+  return normalizeCore<SourceMatch>("sourceMatch", { source, capabilities, preferences });
 }
 
 async function collectSources(
@@ -155,111 +111,6 @@ async function collectSources(
   return result;
 }
 
-function sourceText(source: MediaSource): string {
-  return [
-    source.name,
-    source.title,
-    source.filename,
-    source.audio,
-    stringRaw(source, "description"),
-  ]
-    .filter(Boolean)
-    .join("\n");
-}
-
-function sourceLanguageScore(source: MediaSource, requested: string): number {
-  const language = languageCode(requested);
-  // Roku trusts the server's precomputed English evidence when it is present.
-  // Preserve that fast path rather than trying to recover it from a label.
-  const evidence = source.raw.audioEvidenceScore;
-  if (
-    language === "en" &&
-    typeof evidence === "number" &&
-    Number.isFinite(evidence)
-  )
-    return Math.max(0, Math.min(9, evidence));
-  const aliases = LANGUAGE_ALIASES[language] ?? LANGUAGE_ALIASES.en;
-  const pattern = aliases.join("|");
-  const exact = new RegExp(`^(?:${pattern})(?:[-_].*)?$`, "i");
-  const word = new RegExp(`(^|[^a-z])(?:${pattern})([^a-z]|$)`, "i");
-  const explicitAudio = new RegExp(
-    `(^|[^a-z])(?:(?:${pattern})[ ._:-]+(?:audio|dubbed|dub)|(?:audio|dubbed|dub)[ ._:-]+(?:${pattern}))([^a-z]|$)`,
-    "i",
-  );
-  const reported = rawStrings(source, "reported_languages").some((value) =>
-    exact.test(value),
-  );
-  const lines = sourceText(source).replace(/[|;]/g, "\n").split("\n");
-  let mentioned = false;
-  let explicit = false;
-  let dubbed = false;
-  let multi = false;
-  for (let line of lines) {
-    const subtitles =
-      /(^|[^a-z])(?:subtitles?|subs?|captions?)([^a-z]|$)/i.test(line);
-    const audio = /(^|[^a-z])(?:audio|dubbed|dub)([^a-z]|$)/i.test(line);
-    if (subtitles && !audio) continue;
-    if (subtitles)
-      line = line.replace(
-        new RegExp(
-          `(?:${pattern})[ ._:-]+(?:subtitles?|subs?|captions?)`,
-          "ig",
-        ),
-        "",
-      );
-    if (word.test(line)) mentioned = true;
-    if (explicitAudio.test(line)) explicit = true;
-    if (language === "en") {
-      if (/(^|[^a-z])(?:dubbed|dub)([^a-z]|$)/i.test(line)) dubbed = true;
-      if (
-        /(^|[^a-z])(?:dual[ ._-]?audio|multi[ ._-]?audio)([^a-z]|$)/i.test(line)
-      )
-        multi = true;
-    }
-  }
-  return Math.min(
-    9,
-    Number(reported) +
-      Number(mentioned) +
-      Number(multi) * 2 +
-      Number(dubbed) * 3 +
-      Number(explicit) * 4,
-  );
-}
-
-function resolutionOf(text: string): number {
-  let result = 0;
-  for (const value of [480, 720, 1080, 2160])
-    if (text.includes(`${value}p`)) result = value;
-  return text.includes("4k") ? 2160 : result;
-}
-
-function rawStrings(source: MediaSource, key: string): readonly string[] {
-  const value = source.raw[key];
-  return Array.isArray(value)
-    ? value.filter((entry): entry is string => typeof entry === "string")
-    : [];
-}
-function stringRaw(source: MediaSource, key: string): string | undefined {
-  const value = source.raw[key];
-  return typeof value === "string" ? value : undefined;
-}
-function languageCode(value: string): string {
-  return (
-    (
-      {
-        eng: "en",
-        spa: "es",
-        fra: "fr",
-        fre: "fr",
-        deu: "de",
-        ger: "de",
-        jpn: "ja",
-        por: "pt",
-      } as Record<string, string>
-    )[value.toLowerCase()] ?? value.toLowerCase()
-  );
-}
 function throwIfAborted(signal?: AbortSignal) {
   if (signal?.aborted)
     throw signal.reason instanceof Error
@@ -285,17 +136,3 @@ function delay(milliseconds: number, signal?: AbortSignal): Promise<void> {
     signal?.addEventListener("abort", abort, { once: true });
   });
 }
-
-const LANGUAGE_ALIASES: Readonly<Record<string, readonly string[]>> = {
-  en: ["english", "eng", "en"],
-  es: ["spanish", "spa", "es"],
-  fr: ["french", "fre", "fra", "fr"],
-  de: ["german", "ger", "deu", "de"],
-  it: ["italian", "ita", "it"],
-  pt: ["portuguese", "por", "pt"],
-  ja: ["japanese", "jpn", "ja"],
-  ko: ["korean", "kor", "ko"],
-  zh: ["chinese", "zho", "chi", "zh"],
-  hi: ["hindi", "hin", "hi"],
-  ar: ["arabic", "ara", "ar"],
-};

@@ -1,3 +1,13 @@
+# Shared application-core integration — 2026-09-13
+
+Core pin: 42413ef1e296a5798f41468f93386664de432f5c. Design pin: e821c297de2e81b47a6a1b22ed8aa0522cdd04e5. The actual app now drives restoration, refresh, profile acceptance and sign-out through Crux; Rust also owns normalized responses, artwork roles and source/continuation/progress/request decisions. React keeps rendering/focus and platform effect execution.
+
+Final validation: 65 unit tests across 10 files passed with the actual WASM artifact. The complete one-worker Chromium suite passed 55 cases with 35 intentional platform exclusions (90 collected), without retries. Native HLS and forced MSE decoding, pause/seek/resume, parent-PIN/profile flows, remembered-profile reload, Home/remote hold/Next and profile geometry checks passed. Build/typecheck, core/design integrity and candidate packaging passed.
+
+The failed first browser pass exposed an unbounded profile-confirmation loop when identity omitted the accepted profile. Core now returns a recoverable error and preserves the grant instead of repeating mutations; native/WASM regressions cover it. Seven fixture backends were corrected to return their accepted profile, matching the real backend contract. Shared hero action labels now match the Roku contract; portrait posters never fill heroImage. Episode thumbnail rendering consumes the separate episode artwork role.
+
+No production backend or household account/history was modified. Physical Android/Tizen/Vizio, owner-provider streams and installed Tauri were not newly qualified by this browser run. Earlier measured checkpoints below remain historical evidence for their named revisions.
+
 # Shared Roku presentation rebuild — 2026-09-13
 
 This checkpoint supersedes older presentation evidence below. Design pin: `3ab29a63cbe6369341ee4376f69a59d4cbb38fc8`. The final implementation commit and hosted CI run are recorded in execution issue [#2](https://github.com/viptv-org/tv-web/issues/2).

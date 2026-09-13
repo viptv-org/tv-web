@@ -583,7 +583,7 @@ describe("TvApi device and media boundary", () => {
       type: "series",
       name: "Fixture Show",
       title: "Fixture Show",
-      genres: [],
+      genres: [], episodes: [],
       raw: {},
     } as const;
     await expect(api.nextEpisode("3", current)).resolves.toMatchObject({
@@ -739,7 +739,7 @@ it("preserves episode thumbnail artwork and season zero from metadata", async ()
   await expect(
     api.detail({ id: "show", type: "series" }),
   ).resolves.toMatchObject({
-    episodes: [{ season: 0, background: "https://images.example/special.jpg" }],
+    episodes: [{ season: 0, thumbnail: "https://images.example/special.jpg" }],
   });
 });
 

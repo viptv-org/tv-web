@@ -41,6 +41,7 @@ async function installFixture(page: Page, watched = false): Promise<FixtureState
     queueReads: 0,
     historyReads: 0,
   };
+  let selectedProfileId: string | null = null;
   await page.route(`${apiOrigin}/api/**`, async route => {
     const request = route.request();
     const path = new URL(request.url()).pathname;
@@ -49,9 +50,12 @@ async function installFixture(page: Page, watched = false): Promise<FixtureState
     if (path === '/api/auth/me') return json(route, {
       account: { id: '7', username: 'alex', name: 'Alex', role: 'member' },
       profiles: [{ id: '1', name: 'Alex', setup_complete: true }],
-      profile_id: null, restricted: false, profile_setup_required: false,
+      profile_id: selectedProfileId, restricted: false, profile_setup_required: false,
     });
-    if (path === '/api/auth/profile') return json(route, { profile_id: '1' });
+    if (path === '/api/auth/profile') {
+      selectedProfileId = String(route.request().postDataJSON().profile_id);
+      return json(route, { profile_id: selectedProfileId });
+    }
     if (path === '/api/profiles/1/continue/page') {
       state.queueReads += 1;
       return json(route, { items: state.queue, offset: 0, total: state.queue.length, next_offset: null });

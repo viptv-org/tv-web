@@ -1,4 +1,8 @@
 import { normalizeCore as normalizeRust } from "../core";
+import { CoreBridge } from "../../vendor/core/wasm/viptv_core";
+import { createCoreDriver } from "../../vendor/core/runtime/driver";
+import { createHttpTransport } from "../../vendor/core/runtime/index";
+import type { Event, ViewModel } from "../../vendor/core/typescript/wire";
 function normalizeCore<T>(kind: string, value: unknown, origin = ""): T {
   try { return normalizeRust<T>(kind, value, origin); }
   catch { throw new TvApiError(200, "Invalid server response", "invalid_response"); }
@@ -90,6 +94,7 @@ export class TvApi {
   private readonly store: DeviceSessionStore;
   private tokens: DeviceTokenSet | null = null;
   private refreshFlight: Promise<DeviceTokenSet> | null = null;
+  private sessionEvent?: (event: Event, options?: RequestOptions) => Promise<ViewModel>;
 
   constructor(options: TvApiOptions) {
     const url = new URL(options.baseUrl);
@@ -110,6 +115,49 @@ export class TvApi {
     // explicit callables and retain their own receiver convention.
     this.requestFetch = options.fetch ?? globalThis.fetch.bind(globalThis);
     this.store = options.sessionStore ?? new MemoryDeviceSessionStore();
+  }
+  /** Rust owns restoration, refresh, and remembered-profile selection. */
+  createSessionDriver(render: (view: ViewModel) => void, onError: (message: string) => void) {
+    const core = new CoreBridge();
+    let imperative = 0;
+    const driver = createCoreDriver({
+      core,
+      storage: {
+        load: async () => {
+          this.tokens = await this.store.load();
+          return this.tokens ? JSON.stringify(this.tokens) : null;
+        },
+        save: async (serialized) => {
+          await this.saveTokens(JSON.parse(serialized) as DeviceTokenSet);
+        },
+        clear: async () => { this.tokens = null; await this.store.clear(); },
+      },
+      http: createHttpTransport({ allowedOrigins: [this.origin], fetch: this.requestFetch, maxResponseBytes: 2 * 1024 * 1024 }),
+      render: (view) => { if (!imperative) render(view); },
+      onError,
+    });
+    const run = async (event: Event, options?: RequestOptions): Promise<ViewModel> => {
+      options?.signal?.throwIfAborted();
+      imperative++;
+      const cancel = () => driver.cancelHttp();
+      options?.signal?.addEventListener("abort", cancel, { once: true });
+      try {
+        await driver.dispatch(event);
+        await driver.idle();
+        options?.signal?.throwIfAborted();
+        const view = JSON.parse(core.view()) as ViewModel;
+        if (view.phase === "Error") throw new TvApiError(view.errorStatus ?? 0, view.error ?? "Unable to connect");
+        return view;
+      } finally {
+        imperative--;
+        options?.signal?.removeEventListener("abort", cancel);
+      }
+    };
+    this.sessionEvent = run;
+    return { ...driver, dispose: () => {
+      if (this.sessionEvent === run) this.sessionEvent = undefined;
+      driver.dispose(); core.free();
+    } };
   }
   get serverOrigin() {
     return this.origin;
@@ -133,20 +181,13 @@ export class TvApi {
         options,
       ),
     );
-    return {
-      deviceCode: stringAt(value, "device_code"),
-      userCode: stringAt(value, "user_code"),
-      verificationUri: stringAt(value, "verification_uri"),
-      verificationUriComplete: stringAt(value, "verification_uri_complete"),
-      qrUri: stringAt(value, "qr_uri"),
-      expiresIn: numberAt(value, "expires_in"),
-      intervalSeconds: numberAt(value, "interval"),
-    };
+    return normalizeCore<DevicePairing>("pairing", value);
   }
   async claimPairing(deviceCode: string, options?: RequestOptions) {
-    return this.saveTokens(
-      await this.deviceTokens("/api/auth/device/token", deviceCode, options),
-    );
+    const tokens = await this.deviceTokens("/api/auth/device/token", deviceCode, options);
+    if (this.sessionEvent) await this.sessionEvent({ AdoptSession: { tokensJson: JSON.stringify(tokens) } }, options);
+    else await this.saveTokens(tokens);
+    return tokens;
   }
   async refresh(options?: RequestOptions) {
     return this.refreshTokens(options);
@@ -158,6 +199,7 @@ export class TvApi {
    * protected action without forcing a new device-link flow.
    */
   async signOut(options?: RequestOptions) {
+    if (this.sessionEvent) { await this.sessionEvent("SignOut", options); return; }
     await this.raw(
       "/api/auth/logout",
       { method: "POST", body: {} },
@@ -171,6 +213,11 @@ export class TvApi {
     return normalizeCore<TvIdentity>("identity", await this.raw("/api/auth/me", {}, true, options));
   }
   async selectProfile(profileId: string, options?: RequestOptions) {
+    if (this.sessionEvent) {
+      const view = await this.sessionEvent({ SelectProfile: { profileId } }, options);
+      if (view.phase !== "Ready" || view.selectedProfileId !== profileId) throw new TvApiError(401, "Pairing required", "unauthorized");
+      return;
+    }
     await this.raw(
       "/api/auth/profile",
       { method: "POST", body: { profile_id: profileId } },
@@ -181,6 +228,11 @@ export class TvApi {
     if (this.tokens) await this.store.save(this.tokens);
   }
   async profiles(options?: RequestOptions) {
+    if (this.sessionEvent) {
+      const view = await this.sessionEvent("Retry", options);
+      if (view.identity) return view.identity.profiles;
+      throw new TvApiError(401, "Pairing required", "unauthorized");
+    }
     return arrayValue(await this.raw("/api/profiles", {}, true, options)).map(
       profile,
     );
@@ -248,11 +300,7 @@ export class TvApi {
     const v = expectObject(
       await this.raw(`/api/discover${query}`, {}, true, options),
     );
-    return {
-      items: arrayAt(v, "metas").map((item) => mediaItem({ ...item, type: optionalString(item, "type") ?? request.type })),
-      hasMore: optionalBool(v, "has_more") ?? false,
-      nextSkip: optionalNumber(v, "next_skip"),
-    };
+    return normalizeCore<DiscoverPage>("discoverResponse", { response: v, type: request.type });
   }
   async detail(
     item: Pick<MediaItem, "id" | "type">,
@@ -267,26 +315,9 @@ export class TvApi {
         options,
       ),
     );
-    const rawMeta = objectAt(envelope, "meta");
-    const meta = mediaItem({
-      ...rawMeta,
-      type: optionalString(rawMeta, "type") ?? item.type,
-    });
-    const episodes = rawArray(rawMeta, "videos")
-      .filter(isObject)
-      .map((episode) =>
-        mediaItem({
-          ...episode,
-          background:
-            optionalString(episode, "thumbnail") ??
-            optionalString(episode, "image") ??
-            optionalString(episode, "background"),
-          type: "series",
-          series_id: optionalString(episode, "series_id") ?? item.id,
-        }),
-      );
-    return { item: meta, episodes };
+    return normalizeCore<MediaDetail>("detailResponse", { response: envelope, item });
   }
+
   async sources(
     item: MediaItem,
     options?: RequestOptions,
@@ -314,29 +345,14 @@ export class TvApi {
         options,
       ),
     );
-    return {
-      events: arrayAt(v, "events").map((event) => ({
-        sequence: numberAt(event, "seq"),
-        source: stringAt(event, "source"),
-        sources: arrayAt(event, "streams").map(mediaSource),
-        error: optionalString(event, "error")
-          ? "Source unavailable"
-          : undefined,
-      })),
-      done: boolAt(v, "done"),
-    };
+    return normalizeCore<StreamPoll>("streamPoll", v);
   }
   async startPlayback(
     request: PlaybackStart,
     options?: RequestOptions,
   ): Promise<PlaybackSession> {
     const v = expectObject(
-      await this.raw(
-        "/api/playback",
-        { method: "POST", body: snakePlayback(request) },
-        true,
-        options,
-      ),
+      await this.domainRequest({ operation: "playback", playback: request }, options),
     );
     return playback(v, this.origin);
   }
@@ -405,12 +421,7 @@ export class TvApi {
     duration: number,
     options?: RequestOptions,
   ) {
-    await this.raw(
-      `/api/profiles/${segment(profileId)}/progress`,
-      { method: "PUT", body: { ...itemRequest(item), position, duration } },
-      true,
-      options,
-    );
+    await this.domainRequest({ operation: "saveProgress", profileId, item, position, duration }, options);
   }
   async correctProgress(
     profileId: string,
@@ -418,19 +429,7 @@ export class TvApi {
     watched: boolean,
     options?: RequestOptions,
   ) {
-    await this.raw(
-      `/api/profiles/${segment(profileId)}/progress/correct`,
-      {
-        method: "PUT",
-        body: {
-          ...itemRequest(item),
-          action: watched ? "watched" : "unwatched",
-          duration: item.duration ?? 0,
-        },
-      },
-      true,
-      options,
-    );
+    await this.domainRequest({ operation: "correctProgress", profileId, item, action: watched ? "watched" : "unwatched", duration: item.duration ?? 0 }, options);
   }
   async queue(
     profileId: string,
@@ -453,12 +452,7 @@ export class TvApi {
     options?: RequestOptions,
   ) {
     const v = expectObject(
-      await this.raw(
-        `/api/profiles/${segment(profileId)}/continue/next`,
-        { method: "POST", body: itemRequest(item) },
-        true,
-        options,
-      ),
+      await this.domainRequest({ operation: "nextEpisode", profileId, item }, options),
     );
     return {
       status: stringAt(v, "status"),
@@ -471,12 +465,7 @@ export class TvApi {
     hidden: boolean,
     options?: RequestOptions,
   ) {
-    await this.raw(
-      `/api/profiles/${segment(profileId)}/continue/visibility`,
-      { method: "PUT", body: { ...itemRequest(item), hidden } },
-      true,
-      options,
-    );
+    await this.domainRequest({ operation: "setQueueVisibility", profileId, item, hidden }, options);
   }
   async queueSettings(profileId: string, options?: RequestOptions) {
     const v = expectObject(
@@ -519,12 +508,7 @@ export class TvApi {
     item: MediaItem,
     options?: RequestOptions,
   ) {
-    await this.raw(
-      `/api/profiles/${segment(profileId)}/favorites`,
-      { method: "PUT", body: itemRequest(item) },
-      true,
-      options,
-    );
+    await this.domainRequest({ operation: "setFavorite", profileId, item }, options);
   }
   async toggleFavorite(
     profileId: string,
@@ -532,12 +516,7 @@ export class TvApi {
     options?: RequestOptions,
   ) {
     const v = expectObject(
-      await this.raw(
-        `/api/profiles/${segment(profileId)}/favorites/toggle`,
-        { method: "POST", body: itemRequest(item) },
-        true,
-        options,
-      ),
+      await this.domainRequest({ operation: "toggleFavorite", profileId, item }, options),
     );
     return boolAt(v, "saved");
   }
@@ -555,10 +534,7 @@ export class TvApi {
     const v = expectObject(
       await this.raw(`/api/live${params(query)}`, {}, true, options),
     );
-    return {
-      channels: arrayAt(v, "channels").map(mediaItem),
-      total: numberAt(v, "total"),
-    };
+    return normalizeCore<LivePage>("live", v);
   }
   async liveCategories(
     view?: "us",
@@ -572,31 +548,13 @@ export class TvApi {
         options,
       ),
     );
-    return {
-      categories: arrayAt(v, "categories").map(liveCategory),
-      total: numberAt(v, "total"),
-    };
+    return normalizeCore<LiveCategories>("liveCategories", v);
   }
   async guide(channelId: string, options?: RequestOptions): Promise<Guide> {
     const v = expectObject(
       await this.raw(`/api/guide/${segment(channelId)}`, {}, true, options),
     );
-    return {
-      timezone: optionalString(v, "timezone") ?? "",
-      timeline: (Array.isArray(v.timeline) ? arrayAt(v, "timeline") : []).map(
-        (t) => ({
-          time: numberAt(t, "start"),
-          displayTime: optionalString(t, "display_time") ?? "",
-        }),
-      ),
-      programs: arrayAt(v, "programs").map((p) => ({
-        title: optionalString(p, "title") ?? "Untitled",
-        start: numberAt(p, "start"),
-        end: numberAt(p, "end"),
-        description: optionalString(p, "description"),
-        raw: clean(p),
-      })),
-    };
+    return normalizeCore<Guide>("guide", v);
   }
   async preferences(profileId: string, options?: RequestOptions) {
     return preferences(
@@ -694,6 +652,11 @@ export class TvApi {
     );
   }
 
+  private async domainRequest(input: unknown, options?: RequestOptions): Promise<JsonValue> {
+    const request = normalizeCore<{ method: string; path: string; body: JsonObject | null }>("request", input);
+    return this.raw(request.path, { method: request.method, body: request.body ?? undefined }, true, options);
+  }
+
   private async deviceTokens(
     path: string,
     token: string,
@@ -724,6 +687,13 @@ export class TvApi {
   ): Promise<DeviceTokenSet> {
     if (!this.tokens)
       throw new TvApiError(401, "Pairing required", "unauthorized");
+    if (this.sessionEvent) {
+      if (!this.refreshFlight) this.refreshFlight = this.sessionEvent("Retry", options).then(() => {
+        if (!this.tokens) throw new TvApiError(401, "Pairing required", "unauthorized");
+        return this.tokens;
+      }).finally(() => { this.refreshFlight = null; });
+      return this.refreshFlight;
+    }
     if (!this.refreshFlight)
       this.refreshFlight = this.deviceTokens(
         "/api/auth/device/refresh",
@@ -837,96 +807,23 @@ function profile(v: JsonObject): TvProfile {
 function mediaItem(v: JsonObject): MediaItem {
   return normalizeCore("media", v);
 }
-function mediaSource(v: JsonObject): MediaSource {
-  return normalizeCore("source", v);
-}
 function page(v: JsonObject): Page<MediaItem> {
-  return {
-    items: arrayAt(v, "items").map(mediaItem),
-    offset: numberAt(v, "offset"),
-    total: numberAt(v, "total"),
-    nextOffset: optionalNumber(v, "next_offset") ?? null,
-  };
+  return normalizeCore("page", v);
 }
 function playback(v: JsonObject, origin: string): PlaybackSession {
   return normalizeCore("playback", v, origin);
 }
-function liveCategory(v: JsonObject) {
-  return {
-    id: idAt(v, "id"),
-    name: stringAt(v, "name"),
-    count: numberAt(v, "count"),
-    raw: clean(v),
-  };
-}
-
 function preferences(v: JsonObject): PlaybackPreferences {
-  return {
-    audioLanguage: stringAt(v, "audio_language"),
-    subtitleLanguage: stringAt(v, "subtitle_language"),
-    subtitlesEnabled: boolAt(v, "subtitles_enabled"),
-    subtitleSize: enumAt(v, "subtitle_size", ["small", "normal", "large"]),
-    subtitleStyle: enumAt(v, "subtitle_style", ["system", "shadow", "opaque"]),
-    quality: enumAt(v, "quality", ["auto", "1080p", "720p", "480p"]),
-    autoplay: boolAt(v, "autoplay"),
-  };
+  return normalizeCore("preferences", v);
 }
 function itemRequest(item: MediaItem): JsonObject {
-  return {
-    id: item.id,
-    type: item.type,
-    name: item.name,
-    poster: item.poster ?? null,
-    year: item.year ?? null,
-    season: item.season ?? null,
-    episode: item.episode ?? null,
-    series_id: item.seriesId ?? null,
-    source_addon_id: item.sourceAddonId ?? null,
-    source_name: item.sourceName ?? null,
-    source_fingerprint: item.sourceFingerprint ?? null,
-    source_binge_group: item.sourceBingeGroup ?? null,
-    source_release_group: item.sourceReleaseGroup ?? null,
-    source_quality: item.sourceQuality ?? null,
-    source_audio: item.sourceAudio ?? null,
-  };
+  return normalizeCore("itemRequest", item);
 }
 /** Server playback URLs are root-relative capabilities. AVPlay requires an absolute HTTPS URL. */
 
-function snakePlayback(v: PlaybackStart): JsonObject {
-  return {
-    stream_id: v.streamId,
-    channel_id: v.channelId,
-    position: v.position,
-    capabilities: {
-      max_width: v.capabilities.maxWidth,
-      max_height: v.capabilities.maxHeight,
-      h264: v.capabilities.h264,
-      hevc: v.capabilities.hevc,
-      aac: v.capabilities.aac,
-      direct_play: v.capabilities.directPlay,
-      direct_mp4: v.capabilities.directMp4,
-      direct_hls: v.capabilities.directHls,
-      hevc_sdr: v.capabilities.hevcSdr,
-    },
-    force_transcode: v.forceTranscode,
-    managed_only: v.managedOnly,
-    audio_track_index: v.audioTrackIndex,
-    audio_language: v.audioLanguage,
-    subtitle_track_index: v.subtitleTrackIndex,
-    subtitles_off: v.subtitlesOff,
-    startup_id: v.startupId,
-  };
-}
+
 function snakePreferences(v: Partial<PlaybackPreferences>): JsonObject {
-  return {
-    audio_language: v.audioLanguage,
-    subtitle_language: v.subtitleLanguage,
-    subtitles_enabled: v.subtitlesEnabled,
-    subtitle_size: v.subtitleSize,
-    subtitle_style: v.subtitleStyle,
-    quality: v.quality,
-    autoplay: v.autoplay,
-  };
+  return normalizeCore("preferencesRequest", v);
 }
 function params(entries: Record<string, string | number | undefined>) {
   const p = new URLSearchParams();
@@ -938,10 +835,6 @@ function params(entries: Record<string, string | number | undefined>) {
 function segment(value: string) {
   return encodeURIComponent(value);
 }
-function mediaKind(value: string): MediaKind {
-  if (value === "movie" || value === "series" || value === "live") return value;
-  throw new TvApiError(200, "Invalid server response", "invalid_response");
-}
 function objectOrEmpty(value: JsonValue): JsonObject {
   return isObject(value) ? value : {};
 }
@@ -951,8 +844,7 @@ function expectObject(value: JsonValue): JsonObject {
 }
 function objectAt(v: JsonObject, key: string) {
   const value = v[key];
-  if (value !== null && typeof value === "object" && !Array.isArray(value))
-    return value;
+  if (value !== undefined && isObject(value)) return value;
   throw new TvApiError(200, "Invalid server response", "invalid_response");
 }
 function hasObject(v: JsonObject, key: string) {
@@ -962,21 +854,6 @@ function hasObject(v: JsonObject, key: string) {
 function arrayValue(value: JsonValue) {
   if (Array.isArray(value)) return value.filter(isObject);
   throw new TvApiError(200, "Invalid server response", "invalid_response");
-}
-function arrayAt(v: JsonObject, key: string) {
-  const value = v[key];
-  if (!Array.isArray(value))
-    throw new TvApiError(200, "Invalid server response", "invalid_response");
-  return value.filter(isObject);
-}
-function rawArray(v: JsonObject, key: string): JsonValue[] {
-  const value = v[key];
-  return Array.isArray(value) ? value : [];
-}
-function strings(v: JsonObject, key: string) {
-  return rawArray(v, key).flatMap((value) =>
-    typeof value === "string" ? [value] : [],
-  );
 }
 function isObject(value: JsonValue): value is JsonObject {
   return value !== null && typeof value === "object" && !Array.isArray(value);
@@ -997,25 +874,6 @@ function idAt(v: JsonObject, key: string) {
     return String(value);
   throw new TvApiError(200, "Invalid server response", "invalid_response");
 }
-function optionalId(v: JsonObject, key: string) {
-  const value = v[key];
-  return typeof value === "string"
-    ? value
-    : typeof value === "number" && Number.isSafeInteger(value)
-      ? String(value)
-      : undefined;
-}
-function numberAt(v: JsonObject, key: string) {
-  const value = v[key];
-  if (typeof value === "number" && Number.isFinite(value)) return value;
-  throw new TvApiError(200, "Invalid server response", "invalid_response");
-}
-function optionalNumber(v: JsonObject, key: string) {
-  const value = v[key];
-  return typeof value === "number" && Number.isFinite(value)
-    ? value
-    : undefined;
-}
 function boolAt(v: JsonObject, key: string) {
   const value = v[key];
   if (typeof value === "boolean") return value;
@@ -1024,15 +882,6 @@ function boolAt(v: JsonObject, key: string) {
 function optionalBool(v: JsonObject, key: string) {
   const value = v[key];
   return typeof value === "boolean" ? value : undefined;
-}
-function enumAt<T extends string>(
-  v: JsonObject,
-  key: string,
-  values: readonly T[],
-): T {
-  const value = stringAt(v, key);
-  if ((values as readonly string[]).includes(value)) return value as T;
-  throw new TvApiError(200, "Invalid server response", "invalid_response");
 }
 function clean(value: JsonObject): JsonObject {
   return normalizeCore("clean", value);
@@ -1044,7 +893,7 @@ function minimalItem(item: Pick<MediaItem, "id" | "type">): MediaItem {
     type: item.type,
     name: "",
     title: "",
-    genres: [],
+    genres: [], episodes: [],
     raw: {},
   };
 }

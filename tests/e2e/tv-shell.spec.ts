@@ -88,13 +88,17 @@ async function installBackend(page: Page, profileFixture?: ProfileFixture) {
     page.route('**/background.jpg', fixtureImage),
     page.route('**/news.png', fixtureImage),
   ]);
+  let selectedProfileId: string | null = null;
   await page.route(`${apiOrigin}/api/**`, async route => {
     const url = new URL(route.request().url());
     const path = url.pathname;
     if (/^\/api\/profiles\/[^/]+\/progress\/series$/.test(path)) return json(route, []);
     if (route.request().method() === 'OPTIONS') return route.fulfill({ status: 204, headers: corsHeaders });
-    if (path === '/api/auth/me') return json(route, { account: { id: '7', username: 'alex', name: 'Alex', role: 'member' }, profiles: profileFixture?.profiles ?? [profile], profile_id: null, restricted: false, profile_setup_required: false });
-    if (path === '/api/auth/profile') return json(route, { profile_id: '1' });
+    if (path === '/api/auth/me') return json(route, { account: { id: '7', username: 'alex', name: 'Alex', role: 'member' }, profiles: profileFixture?.profiles ?? [profile], profile_id: selectedProfileId, restricted: false, profile_setup_required: false });
+    if (path === '/api/auth/profile') {
+      selectedProfileId = String(route.request().postDataJSON().profile_id);
+      return json(route, { profile_id: selectedProfileId });
+    }
     if (path === '/api/auth/device/code') return json(route, { device_code: 'opaque-pairing-code', user_code: 'AB12CD34EF', verification_uri: 'https://viptv.syek.tech/device', verification_uri_complete: 'https://viptv.syek.tech/device?code=AB12CD34EF', qr_uri: 'https://viptv.syek.tech/api/auth/device/qr?code=AB12CD34EF', expires_in: 600, interval: 60 });
     if (path === '/api/auth/device/token') return json(route, { error: 'authorization_pending' }, 400);
     if (path === '/api/profiles/1/continue/page') return json(route, { items: [], offset: 0, total: 0, next_offset: null });
@@ -404,7 +408,7 @@ test('held series-root hero opens its episode detail instead of source selection
   await page.goto('/?platform=tizen');
   await page.getByRole('button', { name: 'Alex' }).press('Enter');
 
-  const hero = page.getByRole('button', { name: 'Play', exact: true });
+  const hero = page.getByRole('button', { name: 'Episodes', exact: true });
   await expect(hero).toBeVisible();
   await page.waitForTimeout(50);
   await hero.focus();

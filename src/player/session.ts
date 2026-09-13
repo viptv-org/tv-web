@@ -1,3 +1,4 @@
+import { normalizeCore } from "../core";
 import type {
   MediaItem,
   MediaSource,
@@ -417,11 +418,7 @@ export class PlaybackSessionController {
 
 /** Resume must never select a similarly named source from another provider. */
 export function exactResumeSource(item: MediaItem, sources: readonly MediaSource[]): MediaSource | undefined {
-  if (!item.sourceAddonId || !item.sourceFingerprint) return undefined;
-  return sources.find((source) =>
-    source.sourceAddonId === item.sourceAddonId
-    && source.raw.source_fingerprint === item.sourceFingerprint,
-  );
+  return normalizeCore<MediaSource | null>("exactResumeSource", { item, sources }) ?? undefined;
 }
 
 function playbackRequest(intent: SessionStartIntent, capabilities: PlaybackCapabilities, position: number): PlaybackStart {

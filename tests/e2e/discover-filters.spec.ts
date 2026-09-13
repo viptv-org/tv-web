@@ -27,13 +27,17 @@ test('Discover applies declared defaults and resets pagination for genre, input 
   test.skip(test.info().project.name !== 'vizio', 'the shared browse controller needs one browser contract run');
   const discovers: URL[] = [];
   const preferences = { audio_language: 'en', subtitle_language: 'en', subtitles_enabled: false, subtitle_size: 'normal', subtitle_style: 'system', quality: 'auto', autoplay: true };
+  let selectedProfileId: string | null = null;
   await page.route(`${apiOrigin}/api/**`, async route => {
     const url = new URL(route.request().url());
     const path = url.pathname;
     if (/^\/api\/profiles\/[^/]+\/progress\/series$/.test(path)) return json(route, []);
     if (route.request().method() === 'OPTIONS') return route.fulfill({ status: 204, headers: cors });
-    if (path === '/api/auth/me') return json(route, { account: { id: '7', username: 'alex', name: 'Alex', role: 'member' }, profiles: [profile], profile_id: null, restricted: false, profile_setup_required: false });
-    if (path === '/api/auth/profile') return json(route, { profile_id: '1' });
+    if (path === '/api/auth/me') return json(route, { account: { id: '7', username: 'alex', name: 'Alex', role: 'member' }, profiles: [profile], profile_id: selectedProfileId, restricted: false, profile_setup_required: false });
+    if (path === '/api/auth/profile') {
+      selectedProfileId = String(route.request().postDataJSON().profile_id);
+      return json(route, { profile_id: selectedProfileId });
+    }
     if (path === '/api/profiles/1/continue/page') return json(route, { items: [], offset: 0, total: 0, next_offset: null });
     if (path === '/api/profiles/1/progress' || path === '/api/profiles/1/favorites') return json(route, []);
     if (path === '/api/profiles/1/preferences') return json(route, preferences);
