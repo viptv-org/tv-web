@@ -6,8 +6,9 @@ import {
   mkdirSync,
   rmSync,
   readdirSync,
+  existsSync,
 } from "node:fs";
-import { dirname, resolve, relative } from "node:path";
+import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -56,16 +57,30 @@ if (command === "sync") {
       p,
     ),
   );
-  rmSync(resolve(root, "design-contract"), { recursive: true, force: true });
+  const previous = existsSync(
+    resolve(root, "design-contract/snapshot-lock.json"),
+  )
+    ? JSON.parse(read("design-contract/snapshot-lock.json")).files
+    : {};
+  const imports = [];
   for (const source of [...docs, "assets/FILES.json", ...data, ...assets]) {
     if (!safe(source)) throw Error(`Unsafe design path: ${source}`);
     const destination = source.startsWith(imagePrefix)
       ? `public/assets/${source.slice(imagePrefix.length)}`
       : `design-contract/${source}`;
     const bytes = git(repo, ["show", `${commit}:${source}`]);
-    write(destination, bytes);
+    imports.push({ destination, bytes });
     files[destination] = { source, sha256: digest(bytes) };
   }
+  // Resolve every source before changing the working tree. Retired artwork is
+  // removed only when the preceding lock identifies it as design-managed.
+  for (const path of Object.keys(previous)) {
+    if (!safe(path)) throw Error(`Invalid preceding snapshot path: ${path}`);
+    if (path.startsWith("public/assets/") && !files[path])
+      rmSync(resolve(root, path), { force: true });
+  }
+  rmSync(resolve(root, "design-contract"), { recursive: true, force: true });
+  for (const { destination, bytes } of imports) write(destination, bytes);
   write("DESIGN_REF", `${commit}\n`);
   write(
     "design-contract/snapshot-lock.json",
@@ -107,6 +122,9 @@ if (command === "sync") {
   for (const path of list("design-contract"))
     if (path !== "design-contract/snapshot-lock.json" && !lock.files[path])
       throw Error(`Untracked design snapshot file: ${path}`);
+  for (const path of list("public/assets"))
+    if (!lock.files[path])
+      throw Error(`App artwork is not in the design pin: ${path}`);
   if (command === "freshness") {
     if (!repo)
       throw Error("Usage: node scripts/design-sync.mjs freshness ../design");
