@@ -21,3 +21,5 @@ Browser fixtures verify real client code against controlled backend responses, n
 ## Preview
 
 Real viewing client: http://192.168.88.180:4173/ using the existing authorized SSH/LAN relay and same-origin verified-TLS upstream proxy. This is a development preview; the older static layout study on port4180 is a separate historical preview. Production backend and account/admin services were not redeployed.
+
+Live LAN smoke check after publishing: a fresh mobile browser loaded the responsive app at port4173, received HTTP200 from the real /api/auth/device/code endpoint, displayed a non-placeholder pairing code and had zero visible alerts. No credentials, pairing code or screenshot is recorded here. This establishes live startup/proxy integration, not signed-in provider playback. Implementation commit: 809f9d9.
