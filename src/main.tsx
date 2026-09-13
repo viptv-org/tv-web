@@ -1,3 +1,4 @@
+import { initializeCore } from "./core";
 import React from "react";
 import { createRoot } from "react-dom/client";
 import { TvApi, type DeviceTokenSet } from "./api";
@@ -38,6 +39,7 @@ const api = new TvApi({
     },
   },
 });
-createRoot(document.getElementById("root")!).render(
-  <App api={api} platform={platform} />,
-);
+const root = createRoot(document.getElementById("root")!);
+initializeCore().then(() => root.render(<App api={api} platform={platform} />)).catch(() => {
+  root.render(<div role="alert">viptv could not load. Please reload the app.</div>);
+});

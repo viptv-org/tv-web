@@ -1,3 +1,8 @@
+import { normalizeCore as normalizeRust } from "../core";
+function normalizeCore<T>(kind: string, value: unknown, origin = ""): T {
+  try { return normalizeRust<T>(kind, value, origin); }
+  catch { throw new TvApiError(200, "Invalid server response", "invalid_response"); }
+}
 import type {
   Catalog,
   DevicePairing,
@@ -163,20 +168,7 @@ export class TvApi {
     await this.store.clear();
   }
   async me(options?: RequestOptions): Promise<TvIdentity> {
-    const v = expectObject(await this.raw("/api/auth/me", {}, true, options));
-    const account = objectAt(v, "account");
-    return {
-      account: {
-        id: idAt(account, "id"),
-        username: stringAt(account, "username"),
-        name: stringAt(account, "name"),
-        role: stringAt(account, "role"),
-      },
-      profiles: arrayAt(v, "profiles").map(profile),
-      profileId: optionalId(v, "profile_id") ?? null,
-      restricted: boolAt(v, "restricted"),
-      profileSetupRequired: boolAt(v, "profile_setup_required"),
-    };
+    return normalizeCore<TvIdentity>("identity", await this.raw("/api/auth/me", {}, true, options));
   }
   async selectProfile(profileId: string, options?: RequestOptions) {
     await this.raw(
@@ -238,9 +230,7 @@ export class TvApi {
     };
   }
   async catalogs(options?: RequestOptions) {
-    return arrayValue(await this.raw("/api/catalogs", {}, true, options)).map(
-      catalog,
-    );
+    return normalizeCore<Catalog[]>("catalogs", await this.raw("/api/catalogs", {}, true, options));
   }
   async discover(
     request: DiscoverRequest,
@@ -259,7 +249,7 @@ export class TvApi {
       await this.raw(`/api/discover${query}`, {}, true, options),
     );
     return {
-      items: arrayAt(v, "metas").map(mediaItem),
+      items: arrayAt(v, "metas").map((item) => mediaItem({ ...item, type: optionalString(item, "type") ?? request.type })),
       hasMore: optionalBool(v, "has_more") ?? false,
       nextSkip: optionalNumber(v, "next_skip"),
     };
@@ -837,110 +827,18 @@ function isAbort(value: unknown): value is DOMException {
   return value instanceof DOMException && value.name === "AbortError";
 }
 function tokenSet(v: JsonObject): DeviceTokenSet {
-  return {
-    sessionId: idAt(v, "session_id"),
-    accountId: idAt(v, "account_id"),
-    profileId: optionalId(v, "profile_id") ?? null,
-    accessToken: stringAt(v, "access_token"),
-    refreshToken: stringAt(v, "refresh_token"),
-    expiresIn: numberAt(v, "expires_in"),
-  };
+  return normalizeCore("tokens", v);
 }
 function profile(v: JsonObject): TvProfile {
-  return {
-    id: idAt(v, "id"),
-    name: stringAt(v, "name"),
-    avatar: optionalString(v, "avatar") ?? optionalString(v, "avatar_url"),
-    kid:
-      optionalBool(v, "kids") ??
-      optionalBool(v, "kid") ??
-      optionalBool(v, "is_kids"),
-    setupComplete:
-      optionalBool(v, "setup_complete") ??
-      optionalBool(v, "presentation_complete"),
-    raw: clean(v),
-  };
+  return normalizeCore("profile", v);
 }
-function catalog(v: JsonObject): Catalog {
-  return {
-    id: stringAt(v, "id"),
-    name: stringAt(v, "name"),
-    type: mediaKind(optionalString(v, "type") ?? "movie"),
-    addonId: optionalNumber(v, "addon_id"),
-    supportsSearch: optionalBool(v, "supports_search") ?? false,
-    supportsSkip: optionalBool(v, "supports_skip") ?? false,
-    extras: rawArray(v, "extra").filter(isObject).flatMap(catalogExtra),
-    genres: strings(v, "genres"),
-    raw: clean(v),
-  };
-}
-function catalogExtra(v: JsonObject) {
-  const name = optionalString(v, "name");
-  return name
-    ? [
-        {
-          name,
-          required: optionalBool(v, "is_required") ?? false,
-          options: strings(v, "options"),
-          defaultValue: optionalString(v, "default"),
-          optionsLimit: optionalNumber(v, "options_limit"),
-        },
-      ]
-    : [];
-}
+
+
 function mediaItem(v: JsonObject): MediaItem {
-  const previous = hasObject(v, "previous_episode")
-    ? mediaItem(objectAt(v, "previous_episode"))
-    : undefined;
-  return {
-    id: stringAt(v, "id"),
-    type: mediaKind(stringAt(v, "type")),
-    name: optionalString(v, "name") ?? optionalString(v, "title") ?? "Untitled",
-    title:
-      optionalString(v, "title") ?? optionalString(v, "name") ?? "Untitled",
-    poster: optionalString(v, "poster"),
-    background:
-      optionalString(v, "background") ?? optionalString(v, "backdrop"),
-    description:
-      optionalString(v, "description") ?? optionalString(v, "overview"),
-    year: optionalNumber(v, "year"),
-    runtime: optionalString(v, "runtime"),
-    genres: rawArray(v, "genres").flatMap((x) =>
-      typeof x === "string" ? [x] : [],
-    ),
-    position: optionalNumber(v, "position"),
-    duration: optionalNumber(v, "duration"),
-    watched: optionalBool(v, "watched"),
-    season: optionalNumber(v, "season"),
-    episode: optionalNumber(v, "episode"),
-    episodeTitle:
-      optionalString(v, "episodeTitle") ?? optionalString(v, "episode_title"),
-    seriesId: optionalString(v, "series_id"),
-    queueStatus: optionalString(v, "queue_status"),
-    previousEpisode: previous,
-    sourceAddonId: optionalString(v, "source_addon_id"),
-    sourceName: optionalString(v, "source_name"),
-    sourceFingerprint: optionalString(v, "source_fingerprint"),
-    sourceBingeGroup: optionalString(v, "source_binge_group"),
-    sourceReleaseGroup: optionalString(v, "source_release_group"),
-    sourceQuality: optionalString(v, "source_quality"),
-    sourceAudio: optionalString(v, "source_audio"),
-    raw: clean(v),
-  };
+  return normalizeCore("media", v);
 }
 function mediaSource(v: JsonObject): MediaSource {
-  return {
-    id: stringAt(v, "id"),
-    name: optionalString(v, "name") ?? optionalString(v, "title") ?? "Source",
-    title: optionalString(v, "title"),
-    filename: optionalString(v, "filename"),
-    sourceAddonId: optionalString(v, "source_addon_id"),
-    sourceName: optionalString(v, "source_name"),
-    quality:
-      optionalString(v, "source_quality") ?? optionalString(v, "quality"),
-    audio: optionalString(v, "source_audio"),
-    raw: clean(v),
-  };
+  return normalizeCore("source", v);
 }
 function page(v: JsonObject): Page<MediaItem> {
   return {
@@ -951,20 +849,7 @@ function page(v: JsonObject): Page<MediaItem> {
   };
 }
 function playback(v: JsonObject, origin: string): PlaybackSession {
-  return {
-    id: stringAt(v, "id"),
-    url: capabilityUrl(stringAt(v, "url"), origin),
-    format: optionalString(v, "format") ?? "hls",
-    mode: optionalString(v, "mode") ?? "direct",
-    videoMode: optionalString(v, "video_mode") ?? "copy",
-    audioMode: optionalString(v, "audio_mode") ?? "copy",
-    position: optionalNumber(v, "position") ?? 0,
-    live: optionalBool(v, "live") ?? false,
-    duration: optionalNumber(v, "duration") ?? 0,
-    audioTracks: rawArray(v, "audio_tracks").filter(isObject).map(track),
-    subtitleTracks: rawArray(v, "subtitle_tracks").filter(isObject).map(track),
-    subtitlesSupported: optionalBool(v, "subtitles_supported") ?? false,
-  };
+  return normalizeCore("playback", v, origin);
 }
 function liveCategory(v: JsonObject) {
   return {
@@ -974,18 +859,7 @@ function liveCategory(v: JsonObject) {
     raw: clean(v),
   };
 }
-function track(v: JsonObject) {
-  return {
-    inputIndex: numberAt(v, "input_index"),
-    codec: optionalString(v, "codec"),
-    language: optionalString(v, "language"),
-    languageStatus: optionalString(v, "language_status") ?? "unknown",
-    title: optionalString(v, "title") ?? "",
-    selected: optionalBool(v, "selected") ?? false,
-    supported: optionalBool(v, "supported") ?? false,
-    selectable: optionalBool(v, "selectable") ?? false,
-  };
-}
+
 function preferences(v: JsonObject): PlaybackPreferences {
   return {
     audioLanguage: stringAt(v, "audio_language"),
@@ -1017,12 +891,7 @@ function itemRequest(item: MediaItem): JsonObject {
   };
 }
 /** Server playback URLs are root-relative capabilities. AVPlay requires an absolute HTTPS URL. */
-function capabilityUrl(value: string, origin: string) {
-  const url = new URL(value, origin);
-  if (url.origin !== origin || !url.pathname.startsWith("/media/"))
-    throw new TvApiError(200, "Invalid server response", "invalid_response");
-  return url.href;
-}
+
 function snakePlayback(v: PlaybackStart): JsonObject {
   return {
     stream_id: v.streamId,
@@ -1165,24 +1034,10 @@ function enumAt<T extends string>(
   if ((values as readonly string[]).includes(value)) return value as T;
   throw new TvApiError(200, "Invalid server response", "invalid_response");
 }
-// Add-ons use both snake_case and camelCase (for example `proxyHeaders` and
-// `externalUrl`), so match sensitive field fragments rather than only exact keys.
-const privateField =
-  /(url|uri|link|headers?|authorization|access.?token|refresh.?token|device.?code|device.?token|cookie|password|credential|proxy|referer|origin)/i;
 function clean(value: JsonObject): JsonObject {
-  const output: Record<string, JsonValue> = {};
-  for (const [key, child] of Object.entries(value)) {
-    if (privateField.test(key)) continue;
-    output[key] = cleanValue(child);
-  }
-  return output;
+  return normalizeCore("clean", value);
 }
-function cleanValue(value: JsonValue | undefined): JsonValue {
-  if (value === undefined) return null;
-  if (Array.isArray(value)) return value.map(cleanValue);
-  if (isObject(value)) return clean(value);
-  return value;
-}
+
 function minimalItem(item: Pick<MediaItem, "id" | "type">): MediaItem {
   return {
     id: item.id,

@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
+import { PlayerOperationError } from '../../src/player/types';
 import { PlaybackSessionController, exactResumeSource } from '../../src/player/session';
 import type { MediaItem, MediaSource, PlaybackCapabilities, PlaybackSession } from '../../src/api';
 import type { OpenPlayerRequest, Player, PlayerCapabilities, PlayerListener, PlayerSnapshot } from '../../src/player';
@@ -36,6 +37,85 @@ function session(id: string, url: string, mode = 'managed', position = 0): Playb
 }
 
 describe('PlaybackSessionController', () => {
+  it('recovers a late direct decoder error at the absolute paused position and ignores stale errors', async () => {
+    const player = new FakePlayer();
+    const backend = {
+      startPlayback: vi.fn().mockResolvedValueOnce(session('direct', '/source.mp4', 'direct'))
+        .mockResolvedValueOnce(session('managed', '/index.m3u8', 'managed', 42)),
+      stopPlayback: vi.fn().mockResolvedValue(undefined),
+    };
+    const controller = new PlaybackSessionController({ player, backend, capabilities });
+    await controller.start({ item, source });
+    player.snapshot = { ...player.snapshot, state: 'paused', time: { positionSeconds: 42, durationSeconds: 100 } };
+    await controller.recoverPlayback(player.snapshot);
+    player.snapshot = { ...player.snapshot, state: 'error', error: { code: 'unsupported-format', message: 'DEMUXER_ERROR_COULD_NOT_PARSE' } };
+    const failedSnapshot = player.snapshot;
+    expect(await controller.recoverPlayback(failedSnapshot)).toBe(true);
+    expect(backend.startPlayback).toHaveBeenNthCalledWith(2, { streamId: source.id, position: 42, capabilities, managedOnly: true });
+    expect(player.opened[1]).toMatchObject({ paused: true, startAtSeconds: 0, timelineOffsetSeconds: 42 });
+    expect(backend.stopPlayback).toHaveBeenCalledWith('direct');
+    expect(await controller.recoverPlayback(failedSnapshot)).toBe(true);
+    expect(backend.startPlayback).toHaveBeenCalledTimes(2);
+    player.snapshot = { ...player.snapshot, state: 'error', error: failedSnapshot.error };
+    expect(await controller.recoverPlayback(player.snapshot)).toBe(false);
+    expect(backend.startPlayback).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not reopen playback after Stop cancels late live recovery', async () => {
+    const player = new FakePlayer();
+    let deliver!: (value: PlaybackSession) => void;
+    const backend = {
+      startPlayback: vi.fn().mockResolvedValueOnce(session('direct', '/source.mp4', 'direct'))
+        .mockImplementationOnce(() => new Promise<PlaybackSession>((resolve) => { deliver = resolve; })),
+      stopPlayback: vi.fn().mockResolvedValue(undefined),
+    };
+    const controller = new PlaybackSessionController({ player, backend, capabilities });
+    await controller.start({ item: { ...item, type: 'live' } });
+    player.snapshot = { ...player.snapshot, state: 'error', error: { code: 'unsupported-format', message: 'Cannot parse' } };
+    const pending = controller.recoverPlayback(player.snapshot);
+    expect(await controller.recoverPlayback(player.snapshot)).toBe(true);
+    await controller.stop();
+    deliver(session('managed', '/index.m3u8'));
+    await expect(pending).rejects.toThrow('cancelled');
+    expect(backend.startPlayback).toHaveBeenCalledTimes(2);
+    expect(backend.stopPlayback).toHaveBeenCalledWith('managed');
+    expect(player.opened).toHaveLength(1);
+    expect(controller.snapshot.state).toBe('stopped');
+  });
+
+  it('retries a rejected direct container once with managed delivery for the exact source and position', async () => {
+    const player = new FakePlayer();
+    vi.spyOn(player, 'open').mockRejectedValueOnce(new PlayerOperationError('unsupported-format', 'Cannot parse media'));
+    const backend = {
+      startPlayback: vi.fn().mockResolvedValueOnce(session('direct', '/direct.mp4', 'direct'))
+        .mockResolvedValueOnce(session('managed', '/index.m3u8', 'managed', 25)),
+      stopPlayback: vi.fn().mockResolvedValue(undefined),
+    };
+    const controller = new PlaybackSessionController({ player, backend, capabilities });
+    const active = await controller.start({ item, source, position: 25 });
+    expect(backend.startPlayback).toHaveBeenNthCalledWith(2, {
+      streamId: source.id, position: 25, capabilities, managedOnly: true,
+    });
+    expect(backend.stopPlayback).toHaveBeenCalledWith('direct');
+    expect(backend.stopPlayback).not.toHaveBeenCalledWith('managed');
+    expect(active.session.id).toBe('managed');
+  });
+
+  it('bounds direct recovery when managed media also fails', async () => {
+    const player = new FakePlayer();
+    vi.spyOn(player, 'open').mockRejectedValue(new PlayerOperationError('unsupported-format', 'Cannot parse media'));
+    const backend = {
+      startPlayback: vi.fn().mockResolvedValueOnce(session('direct', '/direct.mp4', 'direct'))
+        .mockResolvedValueOnce(session('managed', '/index.m3u8')),
+      stopPlayback: vi.fn().mockResolvedValue(undefined),
+    };
+    const controller = new PlaybackSessionController({ player, backend, capabilities });
+    await expect(controller.start({ item: { ...item, type: 'live' } })).rejects.toThrow('Cannot parse media');
+    expect(backend.startPlayback).toHaveBeenCalledTimes(2);
+    expect(backend.startPlayback).toHaveBeenNthCalledWith(2, { channelId: item.id, position: 0, capabilities, managedOnly: true });
+    expect(backend.stopPlayback.mock.calls.map(([id]) => id)).toEqual(['direct', 'managed']);
+  });
+
   it('requires an explicit VOD source and finds Resume only by stable source identity', async () => {
     const player = new FakePlayer();
     const backend = { startPlayback: vi.fn(), stopPlayback: vi.fn() };

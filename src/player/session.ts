@@ -7,6 +7,7 @@ import type {
   TvApi,
 } from '../api';
 import {
+  PlayerOperationError,
   EMPTY_TRACKS,
   IDLE_SNAPSHOT,
   type PlaybackKind,
@@ -149,6 +150,9 @@ export class PlaybackSessionController {
   private current: PlaybackControllerActive | null = null;
   private nextGeneration = 0;
   private operationGeneration = 0;
+  private activePlayerSessionId = 0;
+  private pausedPlayerSessionId = 0;
+  private readonly recoveredSessions = new Set<string>();
   /** The one next-operation Back is allowed to restore after adapter open. */
   private restoreRequestedOperation: number | null = null;
   private currentSnapshot: PlaybackControllerSnapshot = { state: 'idle', active: null, error: null };
@@ -166,6 +170,7 @@ export class PlaybackSessionController {
   }
 
   async start(intent: SessionStartIntent): Promise<PlaybackControllerActive> {
+    this.recoveredSessions.clear();
     this.cancelNext(false);
     const operation = ++this.operationGeneration;
     this.publish({ state: this.current ? 'replacing' : 'opening', active: this.current, error: null });
@@ -180,6 +185,29 @@ export class PlaybackSessionController {
         error: error instanceof Error ? error : new Error(String(error)) });
       throw error;
     }
+  }
+
+  /** Observe the actual adapter snapshot, including decoder failures after open. */
+  async recoverPlayback(snapshot: PlayerSnapshot): Promise<boolean> {
+    if (snapshot.sessionId !== this.options.player.snapshot.sessionId) return true;
+    if (snapshot.state === 'paused') this.pausedPlayerSessionId = snapshot.sessionId;
+    else if (snapshot.state === 'playing') this.pausedPlayerSessionId = 0;
+    if (!snapshot.error) return false;
+    // Preparation already owns adapter failures and the bounded initial retry.
+    if (['opening', 'replacing', 'preparing-next'].includes(this.currentSnapshot.state)) return true;
+    const active = this.current;
+    if (!active || snapshot.sessionId !== this.activePlayerSessionId) return true;
+    if (!canRecoverDirect(active.session, active.request, snapshot.error.code)
+      || this.recoveredSessions.has(active.session.id)) return false;
+    this.recoveredSessions.add(active.session.id);
+    this.cancelNext(false);
+    const operation = ++this.operationGeneration;
+    const position = active.intent.item.type === 'live' ? 0 : snapshot.time.positionSeconds;
+    const paused = this.pausedPlayerSessionId === snapshot.sessionId;
+    const request: PlaybackStart = { ...active.request, position, managedOnly: true };
+    await this.transition({ ...active.intent, position }, request, active,
+      () => operation === this.operationGeneration, () => false, { position, paused });
+    return true;
   }
 
   async seek(position: number): Promise<void> {
@@ -260,6 +288,7 @@ export class PlaybackSessionController {
   }
 
   async stop(): Promise<void> {
+    this.recoveredSessions.clear();
     this.cancelNext(false);
     this.operationGeneration += 1;
     const active = this.current;
@@ -275,9 +304,10 @@ export class PlaybackSessionController {
     previous: PlaybackControllerActive | null,
     stillWanted: () => boolean = () => true,
     restoreOnCancellation: () => boolean = () => false,
+    previousState?: { position: number; paused: boolean },
   ): Promise<PlaybackControllerActive> {
-    const wasPaused = this.options.player.snapshot.state === 'paused';
-    const previousPosition = this.options.player.snapshot.time.positionSeconds;
+    const wasPaused = previousState?.paused ?? this.options.player.snapshot.state === 'paused';
+    const previousPosition = previousState?.position ?? this.options.player.snapshot.time.positionSeconds;
     this.publish({ state: previous ? 'replacing' : 'opening', active: previous, error: null });
     let session: PlaybackSession;
     try {
@@ -292,9 +322,23 @@ export class PlaybackSessionController {
       await this.options.backend.stopPlayback(session.id);
       return this.cancelledResult();
     }
-    const candidate: PlaybackControllerActive = { intent, request, session };
     try {
-      await this.options.player.open(adapterRequest(session, itemKind(intent.item), request.position ?? 0, wasPaused));
+      try {
+        await this.options.player.open(adapterRequest(session, itemKind(intent.item), request.position ?? 0, wasPaused));
+      } catch (cause) {
+        // A codec/container rejection can require managed remuxing even after
+        // a successful capability probe. Retry the exact selected source once;
+        // the backend still chooses copy/remux before any transcoding.
+        if (!stillWanted() || !(cause instanceof PlayerOperationError)
+          || !canRecoverDirect(session, request, cause.code)) throw cause;
+        await this.options.backend.stopPlayback(session.id);
+        if (!stillWanted()) throw new DOMException('Playback operation was cancelled.', 'AbortError');
+        request = { ...request, managedOnly: true };
+        session = await this.options.backend.startPlayback(request);
+        if (!stillWanted()) throw new DOMException('Playback operation was cancelled.', 'AbortError');
+        await this.options.player.open(adapterRequest(session, itemKind(intent.item), request.position ?? 0, wasPaused));
+      }
+      const candidate: PlaybackControllerActive = { intent, request, session };
       if (!stillWanted()) {
         await this.options.backend.stopPlayback(session.id);
         if (restoreOnCancellation()) {
@@ -303,6 +347,7 @@ export class PlaybackSessionController {
         return this.cancelledResult();
       }
       this.current = candidate;
+      this.activePlayerSessionId = this.options.player.snapshot.sessionId;
       // A cleanup failure leaks a backend session but must never undo a
       // candidate already proven playable on the device.
       if (previous) await this.options.backend.stopPlayback(previous.session.id).catch(() => undefined);
@@ -341,6 +386,7 @@ export class PlaybackSessionController {
     await this.options.player.open(adapterRequest(previous.session, itemKind(previous.intent.item), position, paused));
     if (!stillRestore()) return;
     this.current = previous;
+    this.activePlayerSessionId = this.options.player.snapshot.sessionId;
     this.publish({ state: playerState(this.options.player), active: previous, error: null });
   }
 
@@ -406,4 +452,9 @@ function playerState(player: Player): Extract<PlaybackControllerState, 'playing'
 
 function asError(cause: unknown): Error {
   return cause instanceof Error ? cause : new Error('Playback operation failed.');
+}
+
+/** Same-source managed delivery is the sole automatic decoder recovery rung. */
+function canRecoverDirect(session: PlaybackSession, request: PlaybackStart, code: PlayerFailure['code']): boolean {
+  return session.mode === 'direct' && !request.managedOnly && code === 'unsupported-format';
 }

@@ -25,3 +25,5 @@ An implementing agent should be able to build screens and interaction flows from
 TV layouts use the Roku reference canvas and focus model. Phone and desktop layouts may adapt density and pointer/touch navigation while preserving action meaning, queue/source intent, resume position, Back/cancel and next-episode semantics. Hold-only actions need an accessible visible menu/keyboard equivalent. Platform decoder limitations affect the playback adapter, not unrelated product behavior.
 
 Current platform implementation scope and test interfaces: [TV_IMPLEMENTATION.md](TV_IMPLEMENTATION.md).
+
+Shared data/state architecture and startup adoption: [SHARED_CORE.md](SHARED_CORE.md).

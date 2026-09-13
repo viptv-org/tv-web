@@ -582,3 +582,40 @@ test('series progress selects its resumed episode and remote paging reveals one 
   await expectBox(page, '[data-focus-id="episode-5"]', { x: 392, y: 262, width: 256, height: 330 });
   await expectBox(page, '.tv-screen', { x: 0, y: 0, width: 1280, height: 720 });
 });
+
+test('restores a remembered profile without flashing pairing and retains Home after reload', async ({ page }) => {
+  await installBackend(page);
+  await page.addInitScript(({ origin }) => {
+    if (!localStorage.getItem(`viptv-device:${origin}`)) localStorage.setItem(`viptv-device:${origin}`, JSON.stringify({ sessionId:'fixture',accountId:'7',profileId:'1',accessToken:'access',refreshToken:'refresh',expiresIn:900 }));
+    (window as unknown as { pairingFlashed:boolean }).pairingFlashed=false;
+    new MutationObserver(() => {
+      if(document.body?.textContent?.includes('Sign in to VIPTV')) (window as unknown as { pairingFlashed:boolean }).pairingFlashed=true;
+    }).observe(document,{childList:true,subtree:true});
+  }, { origin:apiOrigin });
+  await page.goto('/?platform=vizio');
+  await expect(page.locator('.media-card').first()).toBeVisible();
+  await expect(page.locator('.profiles')).toHaveCount(0);
+  await page.reload();
+  await expect(page.locator('.media-card').first()).toBeVisible();
+  expect(await page.evaluate(() => (window as unknown as {pairingFlashed:boolean}).pairingFlashed)).toBe(false);
+});
+
+test('profile artwork remains concentric with its focus outline at TV and desktop sizes', async ({ page }) => {
+  await installBackend(page);
+  await page.addInitScript(({ origin }) => localStorage.setItem(`viptv-device:${origin}`,JSON.stringify({sessionId:'fixture',accountId:'7',profileId:null,accessToken:'access',refreshToken:'refresh',expiresIn:900})),{origin:apiOrigin});
+  await page.goto('/?platform=vizio');
+  const card=page.locator('[data-focus-id="profile-0"]');
+  await expect(card).toBeVisible();
+  for (const viewport of [{width:1280,height:720},{width:1920,height:1080}]) {
+    await page.setViewportSize(viewport);
+    await card.focus();
+    await expect(async()=> {
+      const delta=await card.evaluate(element=>{
+        const b=element.getBoundingClientRect(); const img=element.querySelector('img')!.getBoundingClientRect();
+        const ring=getComputedStyle(element,'::after'); const scale=b.width/(element as HTMLElement).offsetWidth;
+        return {x:img.x+img.width/2-(b.x+(parseFloat(ring.left)+parseFloat(ring.width)/2)*scale),y:img.y+img.height/2-(b.y+(parseFloat(ring.top)+parseFloat(ring.height)/2)*scale)};
+      });
+      expect(Math.abs(delta.x)).toBeLessThan(1);expect(Math.abs(delta.y)).toBeLessThan(1);
+    }).toPass();
+  }
+});

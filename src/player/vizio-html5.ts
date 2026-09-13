@@ -128,7 +128,8 @@ export class VizioHtml5Adapter extends SessionPlayer {
           () => { if (this.isCurrent(sessionId)) resolve(); },
           (cause) => {
             if (!this.isCurrent(sessionId)) return resolve();
-            const error = new PlayerOperationError('prepare-failed', 'The browser could not start the selected source.', cause);
+            const error = this.media.error ? mediaError(this.media, 'prepare-failed')
+              : new PlayerOperationError('prepare-failed', 'The browser could not start the selected source.', cause);
             this.fail(sessionId, error.toFailure());
             reject(error);
           },
@@ -355,7 +356,7 @@ function nonNegative(value: number): number {
 
 function mediaError(media: HtmlMediaLike, code: 'prepare-failed' | 'connection-failed'): PlayerOperationError {
   const message = media.error?.message ?? `HTML media error ${media.error?.code ?? 'unknown'}.`;
-  return new PlayerOperationError(code, message, media.error);
+  return new PlayerOperationError(media.error?.code === 3 || media.error?.code === 4 ? 'unsupported-format' : code, message, media.error);
 }
 
 /** hls.js fetches only the backend's scoped media capability; it is never a URL proxy. */

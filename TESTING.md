@@ -128,3 +128,15 @@ Design: `fbafe1124fc8d9c2dc8a8c2c3c321b7aa856a937` (`BROWSER_PLAYBACK.md`).
 - Final complete Chromium suite: 51 passed, 35 intentionally skipped across two platform projects (86 collected), one worker. Real synthetic H.264/AAC HLS decoded through both the browser-selected native path and forced hls.js/MSE; decoded frames, pause, seek, resume, cleanup and same-origin playlist/segment requests passed. The MSE test suppresses only that video's native HLS hint; decoding remains real.
 - Synthetic UI fixtures explicitly simulate native HLS and are not codec evidence. Earlier failures were an overlapping Playwright artifact-directory race and a test assumption that Chromium lacked native HLS; the final isolated run passed.
 - No emulator, real Tizen/Vizio TV, HEVC hardware matrix, production deployment, or protected provider stream was exercised. Runtime probes are bounded capability evidence, not a guarantee for every file/profile/firmware.
+
+## Crux adoption and reported TV failures — 2026-09-13
+
+Design pin12e2a3a2a4ac62310c0597f4e08257e7d9c87300; core adoption recorded in CORE_REF. Identity/profile/catalog/media/source/playback normalization uses the real Rust WASM artifact; domain types derive from generated wire.ts.
+
+Final complete Chromium suite55passed/35intentional platform skips (90collected), one worker. Real nativeHLS and forcedMSE decoding/pause/seek/resume pass. New regressions confirm remembered-profile restoration without pairing flash on reload and concentric profile-image/focus-outline geometry at1280×720 and1920×1080. Avatar displacement reported by the owner was not reproduced in these measurements; no speculative CSS patch was applied.
+
+Unit suite62passed against actualWASM; runtime TypeScript tests9passed; core Rust14contracts and3sharednative/WASM startupvectors pass. Fixed failures discovered in final validation: optional catalog errors now retain a sanitized message while other shelves continue; parent series metadata replaces outgoing episode fields on return, retaining season selection.
+
+Playback has one bounded same-source direct-to-managed retry for preparation and later decoder rejection, with stale error checks, position/pause preservation and Stop cancellation. This is not evidence that the owner's exact live stream is qualified. Production backend and household accounts/providers/history were not modified. No emulator, realAndroid/Tizen/Vizio or installedTauri tests performed. Remaining all-platform extraction is recorded in core/README.md.
+
+Final packaging/typecheck and immutable core/design integrity checks passed. Live LAN preview loaded WASM with HTTP200 and completed pairing initiation with HTTP200 and no page errors; no account was approved or selected by this check.

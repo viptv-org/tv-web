@@ -1,3 +1,8 @@
+import type * as Core from '../../vendor/core/typescript/wire';
+/** Immutable UI views of the generated Rust DTOs; raw extensions retain the JSON helper type. */
+type CoreView<T> = T extends readonly (infer Item)[] ? readonly CoreView<Item>[]
+  : T extends object ? { readonly [Key in keyof T]: Key extends 'raw' ? JsonObject : CoreView<T[Key]> } : T;
+
 /** JSON accepted from an add-on after the client removes transport credentials. */
 export type JsonPrimitive = string | number | boolean | null;
 export type JsonValue = JsonPrimitive | JsonObject | JsonValue[];
@@ -5,16 +10,9 @@ export interface JsonObject {
   readonly [key: string]: JsonValue | undefined;
 }
 
-export type MediaKind = "movie" | "series" | "live";
+export type MediaKind = Core.MediaKind;
 
-export interface DeviceTokenSet {
-  readonly sessionId: string;
-  readonly accountId: string;
-  readonly profileId: string | null;
-  readonly accessToken: string;
-  readonly refreshToken: string;
-  readonly expiresIn: number;
-}
+export type DeviceTokenSet = CoreView<Core.Session>;
 
 export interface DevicePairing {
   readonly deviceCode: string;
@@ -26,95 +24,20 @@ export interface DevicePairing {
   readonly intervalSeconds: number;
 }
 
-export interface TvProfile {
-  readonly id: string;
-  readonly name: string;
-  readonly avatar?: string;
-  readonly kid?: boolean;
-  readonly setupComplete?: boolean;
-  readonly raw: JsonObject;
-}
+export type TvProfile = CoreView<Core.Profile>;
 
-export interface TvAccount {
-  readonly id: string;
-  readonly username: string;
-  readonly name: string;
-  readonly role: string;
-}
+export type TvAccount = CoreView<Core.Account>;
 
-export interface TvIdentity {
-  readonly account: TvAccount;
-  readonly profiles: readonly TvProfile[];
-  readonly profileId: string | null;
-  readonly restricted: boolean;
-  readonly profileSetupRequired: boolean;
-}
+export type TvIdentity = CoreView<Core.Identity>;
 
 /** Shared card vocabulary used by TV shelves, details, progress and queue. */
-export interface MediaItem {
-  readonly id: string;
-  readonly type: MediaKind;
-  readonly name: string;
-  readonly title: string;
-  readonly poster?: string;
-  readonly background?: string;
-  readonly description?: string;
-  readonly year?: number;
-  readonly runtime?: string;
-  readonly genres: readonly string[];
-  readonly position?: number;
-  readonly duration?: number;
-  readonly watched?: boolean;
-  readonly season?: number;
-  readonly episode?: number;
-  /** Server-resolved episode title for a continuation item; `name` remains its series title. */
-  readonly episodeTitle?: string;
-  readonly seriesId?: string;
-  readonly queueStatus?: string;
-  readonly previousEpisode?: MediaItem;
-  readonly sourceAddonId?: string;
-  readonly sourceName?: string;
-  readonly sourceFingerprint?: string;
-  readonly sourceBingeGroup?: string;
-  readonly sourceReleaseGroup?: string;
-  readonly sourceQuality?: string;
-  readonly sourceAudio?: string;
-  /** Non-secret add-on metadata. URL, headers and authorization are always removed. */
-  readonly raw: JsonObject;
-}
+export type MediaItem = CoreView<Core.MediaItem>;
 
-export interface MediaSource {
-  readonly id: string;
-  readonly name: string;
-  readonly title?: string;
-  readonly filename?: string;
-  readonly sourceAddonId?: string;
-  readonly sourceName?: string;
-  readonly quality?: string;
-  readonly audio?: string;
-  readonly raw: JsonObject;
-}
+export type MediaSource = CoreView<Core.MediaSource>;
 
-export interface Catalog {
-  readonly id: string;
-  readonly name: string;
-  readonly type: MediaKind;
-  readonly addonId?: number;
-  readonly supportsSearch: boolean;
-  readonly supportsSkip: boolean;
-  /** Declared server options, including required catalog defaults and genre values. */
-  readonly extras: readonly CatalogExtra[];
-  readonly genres: readonly string[];
-  readonly raw: JsonObject;
-}
+export type Catalog = CoreView<Core.Catalog>;
 
-export interface CatalogExtra {
-  readonly name: string;
-  readonly required: boolean;
-  readonly options: readonly string[];
-  readonly defaultValue?: string;
-  readonly optionsLimit?: number;
-}
+export type CatalogExtra = CoreView<Core.CatalogExtra>;
 
 export interface DiscoverRequest {
   readonly type: MediaKind;
@@ -126,11 +49,7 @@ export interface DiscoverRequest {
   readonly extras?: Readonly<Record<string, string>>;
 }
 
-export interface DiscoverPage {
-  readonly items: readonly MediaItem[];
-  readonly hasMore: boolean;
-  readonly nextSkip?: number;
-}
+export type DiscoverPage = CoreView<Core.DiscoverPage>;
 
 export interface MediaDetail {
   readonly item: MediaItem;
@@ -179,20 +98,7 @@ export interface MediaTrack {
   readonly selectable: boolean;
 }
 /** The URL is a short-lived server capability, never an upstream media URL. Do not persist it. */
-export interface PlaybackSession {
-  readonly id: string;
-  readonly url: string;
-  readonly format: string;
-  readonly mode: string;
-  readonly videoMode: string;
-  readonly audioMode: string;
-  readonly position: number;
-  readonly live: boolean;
-  readonly duration: number;
-  readonly audioTracks: readonly MediaTrack[];
-  readonly subtitleTracks: readonly MediaTrack[];
-  readonly subtitlesSupported: boolean;
-}
+export type PlaybackSession = CoreView<Core.PlaybackSession>;
 export interface PlaybackStart {
   readonly streamId?: string;
   readonly channelId?: string;

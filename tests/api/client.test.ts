@@ -811,3 +811,18 @@ describe("LAN preview origin boundary", () => {
     expect(() => new TvApi({ baseUrl: "http://different-host.example", allowInsecurePreview: true })).toThrow("HTTPS");
   });
 });
+
+
+describe("shared Rust catalog normalization", () => {
+  it("retains supported catalogs when an add-on advertises other media kinds", async () => {
+    const fake = scripted(response([
+      { id: "extras", type: "other", name: "Other content" },
+      { id: "movies", type: "movie", name: "Movies", addon_id: 4 },
+      { id: "shows", type: "series", addon_id: 4 },
+    ]));
+    const api = new TvApi({ baseUrl: "https://viptv.example", fetch: fake.fetcher });
+    const catalogs = await api.catalogs();
+    expect(catalogs.map(catalog => catalog.id)).toEqual(["movies", "shows"]);
+    expect(catalogs[1].name).toBe("shows");
+  });
+});

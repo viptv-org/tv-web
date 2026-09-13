@@ -46,6 +46,7 @@ import {
 } from "./catalogFilters";
 import { Guide as LiveGuide } from "./Guide";
 type Screen =
+  | "startup"
   | "pairing"
   | "profiles"
   | "Home"
@@ -110,7 +111,8 @@ export function App({
     }>(),
     [profilePage, setProfilePage] = useState(0),
     [managing, setManaging] = useState(false);
-  const [screen, setScreen] = useState<Screen>("pairing"),
+  const [startupAttempt, setStartupAttempt] = useState(0);
+  const [screen, setScreen] = useState<Screen>("startup"),
     [pair, setPair] = useState<DevicePairing>(),
     [qr, setQr] = useState(""),
     [profiles, setProfiles] = useState<readonly TvProfile[]>([]),
@@ -273,6 +275,9 @@ export function App({
             type: first.type,
             catalog: first.id,
             addonId: first.addonId,
+          }).catch((cause) => {
+            if (ticket === epoch.current) fail(cause);
+            return { items: [] };
           })
         : undefined;
       if (ticket === epoch.current) setItems(page?.items ?? home.myList);
@@ -382,6 +387,7 @@ export function App({
     pairingScope.current = scope;
     const generation = ++pairEpoch.current;
     setError("");
+    setScreen("pairing");
     try {
       const code = await api.beginPairing(`viptv ${platform}`, {
         signal: scope.signal,
@@ -449,29 +455,40 @@ export function App({
   }, []);
   useEffect(() => {
     let disposed = false;
-    api.restoreSession().then(async (tokens) => {
-      if (disposed) return;
-      if (tokens) {
-        try {
-          const me = await api.me();
-          if (!disposed) {
-            setProfiles(me.profiles);
-            setScreen("profiles");
-          }
-        } catch {
+    const restore = async () => {
+      try {
+        const tokens = await api.restoreSession();
+        if (disposed) return;
+        if (!tokens) {
           await pairing();
+          return;
         }
-      } else await pairing();
-    });
+        const identity = await api.me();
+        if (disposed) return;
+        setProfiles(identity.profiles);
+        setScreen("profiles");
+        const rememberedId = identity.profileId ?? tokens.profileId;
+        const remembered = identity.profiles.find((p) => p.id === rememberedId);
+        if (remembered && remembered.setupComplete !== false && !identity.profileSetupRequired) {
+          await chooseProfile(remembered.id);
+        }
+      } catch (cause) {
+        if (disposed) return;
+        // Connectivity and malformed responses must not discard a paired
+        // device or request another sign-in code. Only expired auth re-pairs.
+        if ((cause as { status?: number }).status === 401) await pairing();
+        else fail(cause);
+      }
+    };
+    void restore();
     return () => {
       disposed = true;
       pairEpoch.current++;
       pairingScope.current?.abort();
       clearTimeout(pairTimer.current);
       epoch.current++;
-      void player.current?.dispose();
     };
-  }, [api]);
+  }, [api, startupAttempt]);
   useEffect(() => {
     let engine: Player;
     try {
@@ -497,7 +514,15 @@ export function App({
     playbackCapabilities.current = capabilities;
     const sessions = new PlaybackSessionController({ player: engine, backend: api, capabilities });
     controller.current = sessions;
-    const off = engine.subscribe(setSnapshot);
+    const off = engine.subscribe((snapshot) => {
+      setSnapshot(snapshot);
+      void sessions.recoverPlayback(snapshot).then((handled) => {
+        if (!handled && snapshot.error && engine.snapshot.error === snapshot.error)
+          setError(snapshot.error.message);
+      }).catch((cause) => {
+        if (!(cause instanceof DOMException && cause.name === "AbortError")) fail(cause);
+      });
+    });
     const offSessions = sessions.subscribe((state) => {
       setPlaybackState(state);
       if (state.active) {
@@ -573,9 +598,6 @@ export function App({
     return () => clearTimeout(t);
   }, [screen, overlay, snapshot?.state, modal, seek]);
   useEffect(() => {
-    if (snapshot?.error) setError(snapshot.error.message);
-  }, [snapshot?.error]);
-  useEffect(() => {
     if (!session) return;
     const t = setInterval(() => {
       void api.heartbeat(session.id).catch(fail);
@@ -606,6 +628,7 @@ export function App({
     }
     if (error) {
       setError("");
+      if (screen === "startup") setStartupAttempt((attempt) => attempt + 1);
       return;
     }
     if (editingProfile) {
@@ -908,7 +931,11 @@ export function App({
           .detail(old.selected)
           .then((value) => {
             if (ticket === epoch.current) {
-              setSelected({ ...old.selected!, ...value.item });
+              // A Home episode Resume returns to its parent title. Optional
+              // episode fields omitted by title metadata must not survive a
+              // spread from the outgoing episode and turn Season into Play.
+              setSelected(value.item.type === "series" && value.item.id !== old.selected!.id
+                ? value.item : enrichDetail(old.selected!, value.item));
               setEpisodes(value.episodes);
               setSeason(
                 value.episodes.find((e) => e.id === old.selected?.id)?.season ??
@@ -1621,7 +1648,7 @@ export function App({
             alt="viptv"
           />
         </div>
-        {screen === "pairing" ? (
+        {screen === "startup" ? null : screen === "pairing" ? (
           <section className="pairing">
             <h1>Sign in to VIPTV</h1>
             <p>Visit this address, then enter the code shown below.</p>
@@ -2698,7 +2725,7 @@ export function App({
             )}
           </>
         )}
-        {bootingHome && (
+        {(bootingHome || screen === "startup") && (
           <div className="startup-cover" role="status">
             <img
               src={`${import.meta.env.BASE_URL}assets/viptv-mark.png`}
@@ -2720,8 +2747,11 @@ export function App({
         {error && (
           <div className="error" role="alert" data-focus-scope="error">
             {error}
-            <TvButton id="dismiss-error" onActivate={() => setError("")}>
-              Dismiss
+            <TvButton id="dismiss-error" onActivate={() => {
+              setError("");
+              if (screen === "startup") setStartupAttempt((attempt) => attempt + 1);
+            }}>
+              {screen === "startup" ? "Try again" : "Dismiss"}
             </TvButton>
           </div>
         )}
