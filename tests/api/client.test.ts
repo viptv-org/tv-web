@@ -409,10 +409,15 @@ describe("TvApi device and media boundary", () => {
           aac: true,
           directPlay: true,
           hevcSdr: false,
+          directMp4: false,
+          directHls: true,
         },
       }),
     ).resolves.toMatchObject({
       url: "https://viptv.example/media/playback-1/capability/index.m3u8",
+    });
+    expect(JSON.parse(String(fake.calls[0].init?.body)).capabilities).toMatchObject({
+      direct_mp4: false, direct_hls: true,
     });
   });
 

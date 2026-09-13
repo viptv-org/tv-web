@@ -135,7 +135,7 @@ export type PlaybackControllerListener = (snapshot: PlaybackControllerSnapshot) 
 export interface PlaybackSessionControllerOptions {
   readonly player: Player;
   readonly backend: Pick<TvApi, 'startPlayback' | 'stopPlayback'>;
-  readonly capabilities: PlaybackCapabilities;
+  readonly capabilities: PlaybackCapabilities | (() => Promise<PlaybackCapabilities>);
 }
 
 /**
@@ -168,8 +168,18 @@ export class PlaybackSessionController {
   async start(intent: SessionStartIntent): Promise<PlaybackControllerActive> {
     this.cancelNext(false);
     const operation = ++this.operationGeneration;
-    const request = playbackRequest(intent, this.options.capabilities, intent.position ?? 0);
-    return this.transition(intent, request, this.current, () => operation === this.operationGeneration);
+    this.publish({ state: this.current ? 'replacing' : 'opening', active: this.current, error: null });
+    try {
+      const capabilities = await this.resolveCapabilities();
+      if (operation !== this.operationGeneration) return this.cancelledResult();
+      const request = playbackRequest(intent, capabilities, intent.position ?? 0);
+      return await this.transition(intent, request, this.current, () => operation === this.operationGeneration);
+    } catch (error) {
+      if (operation !== this.operationGeneration) return this.cancelledResult();
+      this.publish({ state: this.current ? 'playing' : 'error', active: this.current,
+        error: error instanceof Error ? error : new Error(String(error)) });
+      throw error;
+    }
   }
 
   async seek(position: number): Promise<void> {
@@ -212,7 +222,9 @@ export class PlaybackSessionController {
         this.publish({ state: playerState(this.options.player), active: this.current, error: null });
         return;
       }
-      const request = playbackRequest(next, this.options.capabilities, next.position ?? 0);
+      const capabilities = await this.resolveCapabilities();
+      if (generation !== this.nextGeneration || operation !== this.operationGeneration) return;
+      const request = playbackRequest(next, capabilities, next.position ?? 0);
       await this.transition(
         next,
         request,
@@ -339,6 +351,11 @@ export class PlaybackSessionController {
       return this.current;
     }
     throw new DOMException('Playback operation was cancelled.', 'AbortError');
+  }
+
+  private async resolveCapabilities(): Promise<PlaybackCapabilities> {
+    return typeof this.options.capabilities === 'function'
+      ? this.options.capabilities() : this.options.capabilities;
   }
 
   private requireActive(): PlaybackControllerActive {

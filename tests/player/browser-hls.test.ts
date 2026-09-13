@@ -1,0 +1,71 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { VizioHtml5Adapter } from '../../src/player/vizio-html5';
+import type { HtmlMediaLike } from '../../src/player/vizio-html5';
+
+const hls = vi.hoisted(() => ({ supported: true, instances: [] as Array<{ config: { xhrSetup: (xhr: unknown, url: string) => void }; destroy: ReturnType<typeof vi.fn>; loadSource: ReturnType<typeof vi.fn>; listeners: Record<string, (event: string, data: { fatal: boolean; type: string }) => void> }> }));
+vi.mock('hls.js', () => ({ default: class {
+  static isSupported = () => hls.supported;
+  static Events = { ERROR: 'error' };
+  static ErrorTypes = { NETWORK_ERROR: 'network' };
+  destroy = vi.fn(); loadSource = vi.fn(); attachMedia = vi.fn();
+  listeners: Record<string, (event: string, data: { fatal: boolean; type: string }) => void> = {};
+  constructor(readonly config: { xhrSetup: (xhr: unknown, url: string) => void }) { hls.instances.push(this); }
+  on(event: string, callback: (event: string, data: { fatal: boolean; type: string }) => void) { this.listeners[event] = callback; }
+} }));
+class Media implements HtmlMediaLike {
+  src = ''; currentTime = 0; duration = 90; paused = true; ended = false; error = null;
+  nativeHls = false;
+  events = new EventTarget();
+  canPlayType = () => this.nativeHls ? 'probably' : '';
+  play = vi.fn(async () => {}); pause = vi.fn(); load = vi.fn();
+  addEventListener(event: string, listener: () => void) { this.events.addEventListener(event, listener); }
+  removeEventListener(event: string, listener: () => void) { this.events.removeEventListener(event, listener); }
+  emit(event: string) { this.events.dispatchEvent(new Event(event)); }
+}
+const url = () => `${window.location.origin}/media/session/cap/index.m3u8`;
+beforeEach(() => { hls.supported = true; hls.instances.length = 0; });
+describe('HTML HLS delivery', () => {
+  it('prefers native HLS even when MSE is available', async () => {
+    const media = new Media(); media.nativeHls = true;
+    const player = new VizioHtml5Adapter(media);
+    const opening = player.open({ url: url(), kind: 'vod', paused: true });
+    media.emit('loadedmetadata'); await opening;
+    expect(media.src).toBe(url()); expect(hls.instances).toHaveLength(0);
+    await player.dispose();
+  });
+  it('uses hls.js when native HLS is unavailable and destroys it on replacement/stop', async () => {
+    const media = new Media(); const player = new VizioHtml5Adapter(media);
+    const first = player.open({ url: url(), kind: 'vod', paused: true });
+    media.emit('loadedmetadata'); await first;
+    expect(hls.instances[0].loadSource).toHaveBeenCalledWith(url());
+    const second = player.open({ url: url(), kind: 'vod', paused: true });
+    expect(hls.instances[0].destroy).toHaveBeenCalledOnce();
+    media.emit('loadedmetadata'); await second;
+    await player.stop(); expect(hls.instances[1].destroy).toHaveBeenCalledOnce();
+  });
+  it('rejects unsupported HLS without loading a URL', async () => {
+    hls.supported = false;
+    const media = new Media(); const player = new VizioHtml5Adapter(media);
+    await expect(player.open({ url: url(), kind: 'vod' })).rejects.toMatchObject({ code: 'unsupported-format' });
+    expect(media.load).not.toHaveBeenCalled();
+  });
+  it('rejects external manifests and external or other-session subresources', async () => {
+    const media = new Media(); const player = new VizioHtml5Adapter(media);
+    await expect(player.open({ url: 'https://upstream.invalid/index.m3u8', kind: 'vod' })).rejects.toMatchObject({ code: 'authorization-unsupported' });
+    const opening = player.open({ url: url(), kind: 'vod', paused: true });
+    const setup = hls.instances[0].config.xhrSetup;
+    expect(() => setup(null, `${window.location.origin}/media/session/cap/seg.ts`)).not.toThrow();
+    expect(() => setup(null, 'https://upstream.invalid/seg.ts')).toThrow();
+    expect(() => setup(null, `${window.location.origin}/media/other/cap/seg.ts`)).toThrow();
+    media.emit('loadedmetadata'); await opening; await player.dispose();
+  });
+  it('surfaces fatal HLS errors and releases resources without unbounded recovery', async () => {
+    const player = new VizioHtml5Adapter(new Media());
+    const opening = player.open({ url: url(), kind: 'vod' });
+    const rejection = expect(opening).rejects.toMatchObject({ code: 'connection-failed' });
+    hls.instances[0].listeners.error('error', { fatal: true, type: 'network' });
+    await rejection;
+    expect(player.snapshot.state).toBe('error');
+    expect(hls.instances[0].destroy).toHaveBeenCalledOnce();
+  });
+});

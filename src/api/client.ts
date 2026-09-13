@@ -1031,6 +1031,8 @@ function snakePlayback(v: PlaybackStart): JsonObject {
       hevc: v.capabilities.hevc,
       aac: v.capabilities.aac,
       direct_play: v.capabilities.directPlay,
+      direct_mp4: v.capabilities.directMp4,
+      direct_hls: v.capabilities.directHls,
       hevc_sdr: v.capabilities.hevcSdr,
     },
     force_transcode: v.forceTranscode,

@@ -7,7 +7,7 @@ const HTML5_FALLBACK_CAPABILITIES: PlayerCapabilities = {
   platform: 'html5',
   engine: 'HTMLMediaElement preview',
   limitations: [
-    'Preview adapter only: it uses browser-native HTML media for a backend-compatible URL.',
+    'Preview adapter only: it uses native HTML media or hls.js/MSE for a backend-compatible URL.',
     'Mediabunny/WebCodecs probing, demuxing, and decode are not implemented here.',
     'Browser codec, DRM, adaptive, seek, and subtitle results remain runtime probes.',
   ],

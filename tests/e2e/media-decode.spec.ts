@@ -140,3 +140,76 @@ test('Vizio HTML adapter drives a browser-decoded WebM through pause, seek, end,
   expect(result.endedState).toBe('disposed');
   expect(result.sourceRemoved).toBe(true);
 });
+
+/** Real H.264/AAC decode through runtime-native HLS and the production MSE adapter. */
+for (const deliveryPath of ['runtime-default', 'forced-mse'] as const) {
+  test(`Vizio HTML adapter decodes same-origin HLS (${deliveryPath}), pauses, seeks, and releases media`, async ({ page }) => {
+    test.skip(test.info().project.name !== 'vizio', 'run the browser decoder boundary once');
+    const { readFile } = await import('node:fs/promises');
+    const { fileURLToPath } = await import('node:url');
+    const fixtureRoot = fileURLToPath(new URL('../fixtures/hls/', import.meta.url));
+    const mediaRequests: string[] = [];
+    await page.route('**/media/browser-fixture/cap/**', async (route) => {
+      const url = new URL(route.request().url());
+      mediaRequests.push(url.pathname);
+      const name = url.pathname.split('/').pop()!;
+      if (!/^(index\.m3u8|segment\d+\.ts)$/.test(name)) {
+        await route.fulfill({ status: 404 });
+        return;
+      }
+      await route.fulfill({ contentType: name.endsWith('.m3u8') ? 'application/vnd.apple.mpegurl' : 'video/mp2t', body: await readFile(`${fixtureRoot}${name.replace(/\.ts$/, '.bin')}`) });
+    });
+    await page.goto('/?platform=vizio');
+    const result = await page.evaluate(async ({ adapterModulePath, deliveryPath }) => {
+      const { VizioHtml5Adapter } = await import(/* @vite-ignore */ adapterModulePath);
+      const probePath = '/src/player/browser-capabilities.ts';
+      const { probeBrowserPlaybackCapabilities } = await import(/* @vite-ignore */ probePath);
+      const report = await probeBrowserPlaybackCapabilities();
+      if (!report.canPlayManagedHls) throw new Error(`H.264/AAC HLS unavailable: ${report.evidence.join(', ')}`);
+      const video = document.createElement('video');
+      // Recent Chromium versions may report native HLS. Select the MSE path by
+      // suppressing only this video's native HLS hint; codecs, demux, buffers,
+      // network requests, audio/video decoding and media events remain real.
+      const nativeCanPlayType = video.canPlayType.bind(video);
+      if (deliveryPath === 'forced-mse') video.canPlayType = (type) => /mpegurl/i.test(type) ? '' : nativeCanPlayType(type);
+      video.muted = true;
+      video.playsInline = true;
+      document.body.append(video);
+      const player = new VizioHtml5Adapter(video);
+      const waitFor = async (predicate: () => boolean, description: string) => {
+        const deadline = performance.now() + 8000;
+        while (!predicate()) {
+          if (performance.now() > deadline) throw new Error(`Timed out waiting for ${description}: ${JSON.stringify(player.snapshot)}`);
+          await new Promise((resolve) => setTimeout(resolve, 25));
+        }
+      };
+      try {
+        await player.open({ url: `${location.origin}/media/browser-fixture/cap/index.m3u8`, kind: 'vod' });
+        await waitFor(() => video.currentTime > 0.25 && video.getVideoPlaybackQuality().totalVideoFrames > 0, 'decoded HLS frames');
+        const frames = video.getVideoPlaybackQuality().totalVideoFrames;
+        const sourceIsMse = video.src.startsWith('blob:');
+        await player.pause();
+        const pausedAt = video.currentTime;
+        await new Promise((resolve) => setTimeout(resolve, 150));
+        const pauseDrift = video.currentTime - pausedAt;
+        await player.seek(2.5);
+        await waitFor(() => !video.seeking && Math.abs(video.currentTime - 2.5) < 0.2, 'HLS seek');
+        const seekPosition = video.currentTime;
+        await player.play();
+        await waitFor(() => video.currentTime > 2.7, 'HLS play after seek');
+        await player.dispose();
+        return { frames, sourceIsMse, expectedMse: deliveryPath === 'forced-mse' || report.protocols.selectedHls === 'mse', pauseDrift, seekPosition, state: player.snapshot.state, sourceRemoved: !video.hasAttribute('src') };
+      } finally { await player.dispose(); video.remove(); }
+    }, { adapterModulePath: VIZIO_ADAPTER_MODULE, deliveryPath });
+    expect(result.frames).toBeGreaterThan(0);
+    expect(result.sourceIsMse).toBe(result.expectedMse);
+    expect(result.pauseDrift).toBeLessThan(0.05);
+    expect(result.seekPosition).toBeCloseTo(2.5, 1);
+    expect(result.state).toBe('disposed');
+    expect(result.sourceRemoved).toBe(true);
+    expect(mediaRequests).toContain('/media/browser-fixture/cap/index.m3u8');
+    expect(mediaRequests.some((path) => /segment\d+\.ts$/.test(path))).toBe(true);
+    expect(mediaRequests.every((path) => path.startsWith('/media/browser-fixture/cap/'))).toBe(true);
+  });
+
+}

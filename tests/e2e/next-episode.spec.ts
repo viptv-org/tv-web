@@ -44,6 +44,11 @@ async function installVizioMedia(page: Page) {
   page.on('pageerror', error => pageErrors.push(error.message));
   await page.addInitScript(() => {
     const media = HTMLMediaElement.prototype;
+    // This fixture simulates native HLS; real MSE decoding has a separate test.
+    const nativeCanPlayType = media.canPlayType;
+    media.canPlayType = function(type: string) {
+      return /mpegurl/i.test(type) ? 'probably' : nativeCanPlayType.call(this, type);
+    };
     const positions = new WeakMap<HTMLMediaElement, number>();
     const playing = new WeakMap<HTMLMediaElement, boolean>();
     const completed = new WeakMap<HTMLMediaElement, boolean>();

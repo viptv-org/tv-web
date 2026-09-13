@@ -63,6 +63,11 @@ async function installPlatformRuntime(page: Page) {
       setSelectTrack() {}, setSilentSubtitle() {}, setStreamingProperty() {},
     } } });
     const media = HTMLMediaElement.prototype;
+    // This fixture simulates native HLS; real MSE decoding has a separate test.
+    const nativeCanPlayType = media.canPlayType;
+    media.canPlayType = function(type: string) {
+      return /mpegurl/i.test(type) ? 'probably' : nativeCanPlayType.call(this, type);
+    };
     const playState = new WeakMap<HTMLMediaElement, boolean>();
     Object.defineProperty(media, 'duration', { configurable: true, get() { return 120; } });
     Object.defineProperty(media, 'paused', { configurable: true, get() { return playState.get(this as HTMLMediaElement) !== true; } });

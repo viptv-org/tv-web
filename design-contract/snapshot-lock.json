@@ -1,7 +1,7 @@
 {
   "version": 1,
   "repository": "viptv-org/design",
-  "commit": "3ab29a63cbe6369341ee4376f69a59d4cbb38fc8",
+  "commit": "fbafe1124fc8d9c2dc8a8c2c3c321b7aa856a937",
   "files": {
     "design-contract/.github/pull_request_template.md": {
       "source": ".github/pull_request_template.md",
@@ -18,6 +18,10 @@
     "design-contract/ANDROID_UI_REBUILD.md": {
       "source": "ANDROID_UI_REBUILD.md",
       "sha256": "f70129ef6f0b9062d533532263c5f6a3f888a3b3f7d0839b49e0b8472a805401"
+    },
+    "design-contract/BROWSER_PLAYBACK.md": {
+      "source": "BROWSER_PLAYBACK.md",
+      "sha256": "cc04b64f3fc99461db5aa4b8ce1a6ce2530defb1858ec7284fff8495424067b4"
     },
     "design-contract/CHANGELOG.md": {
       "source": "CHANGELOG.md",
@@ -49,7 +53,7 @@
     },
     "design-contract/PLAYBACK_CAPABILITIES.md": {
       "source": "PLAYBACK_CAPABILITIES.md",
-      "sha256": "ed383b79c6171b0b2417a3b1e5c6c5e960d205f147464ef492a7a05790154a2e"
+      "sha256": "ecaeab7beb0b0756c45910318aaa07bc5f9b2b5df0ea640cabb1608bcc70d0e7"
     },
     "design-contract/README.md": {
       "source": "README.md",

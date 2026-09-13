@@ -167,3 +167,29 @@ describe('PlaybackSessionController', () => {
     expect(player.opened.at(-1)).toMatchObject({ url: 'https://media/seek', startAtSeconds: 0, timelineOffsetSeconds: 55, paused: true });
   });
 });
+
+
+describe('browser capability preparation', () => {
+  it('refuses unsupported playback before creating a backend session', async () => {
+    const backend = { startPlayback: vi.fn(), stopPlayback: vi.fn() };
+    const controller = new PlaybackSessionController({ player: new FakePlayer(), backend,
+      capabilities: async () => { throw new Error('unsupported codecs'); } });
+    await expect(controller.start({ item, source })).rejects.toThrow('unsupported codecs');
+    expect(backend.startPlayback).not.toHaveBeenCalled();
+    expect(controller.snapshot.state).toBe('error');
+  });
+
+  it('Back cancels a pending probe before any backend request', async () => {
+    let resolve!: (value: PlaybackCapabilities) => void;
+    const probe = new Promise<PlaybackCapabilities>((done) => { resolve = done; });
+    const backend = { startPlayback: vi.fn(), stopPlayback: vi.fn() };
+    const controller = new PlaybackSessionController({ player: new FakePlayer(), backend, capabilities: () => probe });
+    const pending = controller.start({ item, source });
+    const rejected = expect(pending).rejects.toMatchObject({ name: 'AbortError' });
+    await controller.stop();
+    resolve(capabilities);
+    await rejected;
+    expect(backend.startPlayback).not.toHaveBeenCalled();
+    expect(controller.snapshot.state).toBe('stopped');
+  });
+});

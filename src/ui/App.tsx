@@ -10,6 +10,7 @@ import {
   type Guide,
   type PlaybackSession,
   type PlaybackPreferences,
+  type PlaybackCapabilities,
 } from "../api";
 import {
   createPlayer,
@@ -19,6 +20,7 @@ import {
   type PlayerPlatform,
   type PlayerSnapshot,
 } from "../player";
+import { probeBrowserPlaybackCapabilities } from "../player/browser-capabilities";
 import { RemoteRoot, TvButton, focusElement } from "./remote";
 import "./tv.css";
 import { RokuText } from "./RokuText";
@@ -155,6 +157,7 @@ export function App({
   const video = useRef<HTMLVideoElement>(null),
     player = useRef<Player>(),
     controller = useRef<PlaybackSessionController>(),
+    playbackCapabilities = useRef<() => Promise<PlaybackCapabilities>>(),
     nextScope = useRef<ReturnType<TvApi["createScope"]>>(),
     epoch = useRef(0),
     stack = useRef<
@@ -482,19 +485,17 @@ export function App({
       return;
     }
     player.current = engine;
-    const sessions = new PlaybackSessionController({
-      player: engine,
-      backend: api,
-      capabilities: {
-        maxWidth: 1920,
-        maxHeight: 1080,
-        h264: true,
-        hevc: platform === "tizen",
-        aac: true,
-        directPlay: true,
-        hevcSdr: platform === "tizen",
-      },
-    });
+    let browserReport: ReturnType<typeof probeBrowserPlaybackCapabilities> | undefined;
+    const capabilities = async (): Promise<PlaybackCapabilities> => {
+      // AVPlay is a native engine; HTML decoder probes cannot qualify it.
+      if (platform === "tizen") return { maxWidth: 1920, maxHeight: 1080, h264: true, hevc: true, aac: true, directPlay: true, hevcSdr: true };
+      browserReport ??= probeBrowserPlaybackCapabilities();
+      const report = await browserReport;
+      if (!report.canPlayManagedHls) throw new Error("This browser cannot play the supported H.264/AAC streaming output. Use a supported browser or TV player.");
+      return report.capabilities;
+    };
+    playbackCapabilities.current = capabilities;
+    const sessions = new PlaybackSessionController({ player: engine, backend: api, capabilities });
     controller.current = sessions;
     const off = engine.subscribe(setSnapshot);
     const offSessions = sessions.subscribe((state) => {
@@ -940,15 +941,7 @@ export function App({
           previous,
           prefs,
           scope.signal,
-          {
-            maxWidth: 1920,
-            maxHeight: 1080,
-            h264: true,
-            hevc: platform === "tizen",
-            aac: true,
-            directPlay: true,
-            hevcSdr: platform === "tizen",
-          },
+          await playbackCapabilities.current!(),
           attempted,
         );
         if (next?.source) attempted.add(next.source.id);

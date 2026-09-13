@@ -2,6 +2,8 @@
 
 **Status:** proposed adapter plan. This document does not claim a working web, Tizen, Vizio, Desktop, or Android player. The only implementation baseline is Roku at `vynxc/viptv@7d6b413`; its UX contract is [specs/behavior/roku-ux-contract.md](specs/behavior/roku-ux-contract.md). The existing [PLATFORM_PLAN.md](PLATFORM_PLAN.md) is correctly framed as proposed and does not promise an existing web player.
 
+Current browser implementation work is governed by [BROWSER_PLAYBACK.md](BROWSER_PLAYBACK.md); older proposed-platform statements below are historical context, not current delivery status.
+
 ## Decision rule
 
 Transcoding is a last resort. A player adapter must first inspect the selected stream and actual device capability, then use the cheapest path that passes a playback probe. A container suffix alone is not evidence that transcoding is required. A capability probe must account for container/demux support, video codec plus profile/level, audio codec, subtitle representation, DRM, headers/cookies, adaptive protocol, seek/range behavior, hardware/resource budget, and the actual engine/browser/TV model.

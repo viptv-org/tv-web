@@ -108,6 +108,11 @@ async function enterHome(page: Page, watched = false) {
   const state = await installFixture(page, watched);
   await page.addInitScript(() => {
     const media = HTMLMediaElement.prototype;
+    // This fixture simulates native HLS; real MSE decoding has a separate test.
+    const nativeCanPlayType = media.canPlayType;
+    media.canPlayType = function(type: string) {
+      return /mpegurl/i.test(type) ? 'probably' : nativeCanPlayType.call(this, type);
+    };
     const playing = new WeakMap<HTMLMediaElement, boolean>();
     Object.defineProperty(media, 'duration', { configurable: true, get: () => 120 });
     Object.defineProperty(media, 'paused', { configurable: true, get(this: HTMLMediaElement) { return playing.get(this) !== true; } });

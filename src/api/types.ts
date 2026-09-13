@@ -164,6 +164,8 @@ export interface PlaybackCapabilities {
   readonly hevc: boolean;
   readonly aac: boolean;
   readonly directPlay: boolean;
+  readonly directMp4?: boolean;
+  readonly directHls?: boolean;
   readonly hevcSdr: boolean;
 }
 export interface MediaTrack {

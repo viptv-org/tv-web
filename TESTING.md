@@ -118,3 +118,13 @@ The later source-recovery pass passed 40 browser tests (28 platform exclusions) 
 Hosted validation [34721070923](https://github.com/viptv-org/tv-web/actions/runs/34721070923) passed on `09de6a4ad0302246a1b6b28e290795d1821483bd` without retries. It ran 40 unit tests (6 files), TypeScript/build, TV packaging, and the complete one-worker all-platform Playwright collection: 76 cases total, 44 passed and 32 intentional platform skips. This revision adds three held-action scopes: a queue-backed non-live hero opens Manage; a resumable non-queue hero opens explicit source selection; and a held non-queue Home card follows ordinary selection. It remains browser evidence only; physical Tizen and Vizio qualification is still pending.
 
 Hosted validation [34721285708](https://github.com/viptv-org/tv-web/actions/runs/34721285708) passed on `7c9aba69f8e752d0e748f3bc7f70c6584a546edc` without retries. It ran the same build and packaging checks with 40 unit tests and 78 all-platform browser cases: 45 passed and 33 intentional platform skips. The added regression proves a held unselected series hero opens episode detail, never a source list. Physical Tizen and Vizio qualification remains pending.
+
+## Browser codec / proxy checkpoint — 2026-09-13
+
+Design: `fbafe1124fc8d9c2dc8a8c2c3c321b7aa856a937` (`BROWSER_PLAYBACK.md`).
+
+- Unit suite: 56 passed, including runtime MIME/MediaCapabilities evidence, unsupported transports, HLS resource/session isolation, cleanup, and cancellation before a backend session. API transport serialization assertion also passed in the final focused API run (20 tests).
+- Typecheck, design integrity and Tizen/Vizio packaging passed. Vite reports a large bundle warning after adding hls.js; this is not a build failure.
+- Final complete Chromium suite: 51 passed, 35 intentionally skipped across two platform projects (86 collected), one worker. Real synthetic H.264/AAC HLS decoded through both the browser-selected native path and forced hls.js/MSE; decoded frames, pause, seek, resume, cleanup and same-origin playlist/segment requests passed. The MSE test suppresses only that video's native HLS hint; decoding remains real.
+- Synthetic UI fixtures explicitly simulate native HLS and are not codec evidence. Earlier failures were an overlapping Playwright artifact-directory race and a test assumption that Chromium lacked native HLS; the final isolated run passed.
+- No emulator, real Tizen/Vizio TV, HEVC hardware matrix, production deployment, or protected provider stream was exercised. Runtime probes are bounded capability evidence, not a guarantee for every file/profile/firmware.

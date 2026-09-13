@@ -1,3 +1,5 @@
+import Hls from 'hls.js';
+import { supportsNativeHls } from './browser-capabilities';
 import { SessionPlayer } from './session';
 import {
   type OpenPlayerRequest,
@@ -22,6 +24,7 @@ export interface HtmlMediaLike {
   readonly ended: boolean;
   readonly error: { readonly code: number; readonly message?: string } | null;
   readonly textTracks?: ArrayLike<HtmlTextTrack>;
+  canPlayType?(type: string): string;
   play(): Promise<void>;
   pause(): void;
   load(): void;
@@ -46,7 +49,7 @@ export const VIZIO_HTML5_CAPABILITIES: PlayerCapabilities = {
   limitations: [
     'No public Vizio playback capability table is assumed; test the exact TV, firmware, source and duration.',
     'This adapter does not set request headers, cookies or audio tracks. Supply a backend-compatible signed/direct URL.',
-    'Mediabunny/WebCodecs demux or decode is not wired into this adapter; it never performs a local fallback.',
+    'HLS uses native playback first, then hls.js/MSE transmuxing when supported; WebCodecs is not a decoder path.',
     'Adaptive, DRM, seek and subtitle behavior are runtime probes, not platform-wide claims.',
   ],
 };
@@ -59,6 +62,7 @@ export const VIZIO_HTML5_CAPABILITIES: PlayerCapabilities = {
 export class VizioHtml5Adapter extends SessionPlayer {
   readonly capabilities = VIZIO_HTML5_CAPABILITIES;
   private readonly handlers: Record<string, () => void>;
+  private hls: Hls | null = null;
   private activeKind: OpenPlayerRequest['kind'] | null = null;
   private timelineOffsetSeconds = 0;
   private pendingOpen: { readonly sessionId: number; readonly cancel: () => void } | null = null;
@@ -87,15 +91,16 @@ export class VizioHtml5Adapter extends SessionPlayer {
       ));
     }
     this.cancelPendingOpen();
+    this.destroyHls();
     this.invalidateSession();
     const sessionId = this.startSession(request.kind);
     this.activeKind = request.kind;
     this.timelineOffsetSeconds = nonNegative(request.timelineOffsetSeconds ?? 0);
     this.media.pause();
-    this.media.src = request.url;
-    this.media.load();
     return new Promise<void>((resolve, reject) => {
+      let openingTimer: ReturnType<typeof setTimeout> | undefined;
       const cleanup = () => {
+        clearTimeout(openingTimer);
         this.media.removeEventListener('loadedmetadata', onReady);
         this.media.removeEventListener('error', onFailure);
       };
@@ -137,6 +142,7 @@ export class VizioHtml5Adapter extends SessionPlayer {
         }
         cleanup();
         const error = mediaError(this.media, 'prepare-failed');
+        this.destroyHls();
         this.fail(sessionId, error.toFailure());
         this.pendingOpen = null;
         reject(error);
@@ -147,6 +153,43 @@ export class VizioHtml5Adapter extends SessionPlayer {
       this.media.addEventListener('loadedmetadata', onReady);
       this.media.addEventListener('error', onFailure);
       this.pendingOpen = { sessionId, cancel: () => { cleanup(); resolve(); } };
+      const failOpen = (error: PlayerOperationError) => {
+        if (!this.isCurrent(sessionId)) return;
+        cleanup();
+        this.pendingOpen = null;
+        this.destroyHls();
+        this.fail(sessionId, error.toFailure());
+        reject(error);
+      };
+      openingTimer = setTimeout(() => failOpen(new PlayerOperationError('prepare-failed', 'The selected source did not become ready in time.')), 20000);
+      try {
+        if (/\.m3u8(?:[?#]|$)/i.test(request.url) && !supportsNativeHls(this.media)) {
+          if (!Hls.isSupported()) throw new PlayerOperationError('unsupported-format', 'This browser cannot play HLS. Native HLS or MediaSource support is required.');
+          const url = checkedMediaUrl(request.url);
+          const prefix = url.pathname.slice(0, url.pathname.lastIndexOf('/') + 1);
+          const hls = new Hls({
+            maxBufferLength: 20,
+            maxMaxBufferLength: 30,
+            backBufferLength: 10,
+            xhrSetup: (_xhr, resourceUrl) => {
+              const resource = checkedMediaUrl(resourceUrl);
+              if (!resource.pathname.startsWith(prefix)) throw new Error('HLS resource is outside the playback session.');
+            },
+          });
+          this.hls = hls;
+          hls.on(Hls.Events.ERROR, (_event, data) => {
+            if (!data.fatal || !this.isCurrent(sessionId)) return;
+            failOpen(new PlayerOperationError(data.type === Hls.ErrorTypes.NETWORK_ERROR ? 'connection-failed' : 'unsupported-format', 'The selected HLS source could not be played.'));
+          });
+          hls.attachMedia(this.media as HTMLMediaElement);
+          hls.loadSource(url.href);
+        } else {
+          this.media.src = request.url;
+          this.media.load();
+        }
+      } catch (cause) {
+        failOpen(cause instanceof PlayerOperationError ? cause : new PlayerOperationError('prepare-failed', 'The browser could not prepare the selected source.', cause));
+      }
     });
   }
 
@@ -185,6 +228,7 @@ export class VizioHtml5Adapter extends SessionPlayer {
 
   async stop(): Promise<void> {
     this.cancelPendingOpen();
+    this.destroyHls();
     this.invalidateSession();
     this.activeKind = null;
     this.media.pause();
@@ -256,6 +300,11 @@ export class VizioHtml5Adapter extends SessionPlayer {
     return this.snapshot.sessionId;
   }
 
+  private destroyHls(): void {
+    this.hls?.destroy();
+    this.hls = null;
+  }
+
   private cancelPendingOpen(): void {
     if (this.pendingOpen) {
       this.pendingOpen.cancel();
@@ -307,4 +356,13 @@ function nonNegative(value: number): number {
 function mediaError(media: HtmlMediaLike, code: 'prepare-failed' | 'connection-failed'): PlayerOperationError {
   const message = media.error?.message ?? `HTML media error ${media.error?.code ?? 'unknown'}.`;
   return new PlayerOperationError(code, message, media.error);
+}
+
+/** hls.js fetches only the backend's scoped media capability; it is never a URL proxy. */
+function checkedMediaUrl(value: string): URL {
+  const url = new URL(value, window.location.origin);
+  if (url.origin !== window.location.origin || !url.pathname.startsWith('/media/') || url.username || url.password) {
+    throw new PlayerOperationError('authorization-unsupported', 'HLS requires a same-origin backend media session.');
+  }
+  return url;
 }

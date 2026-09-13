@@ -32,3 +32,5 @@ function requireVideo(video: HtmlMediaLike | undefined): HtmlMediaLike {
   if (!video) throw new Error('A video element is required for HTML playback.');
   return video;
 }
+
+export * from './browser-capabilities';
