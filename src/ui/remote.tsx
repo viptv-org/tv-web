@@ -33,6 +33,7 @@ export function RemoteRoot({
   const handlers = useRef({ onBack, onMediaKey, onMediaKeyUp, onNavigate });
   handlers.current = { onBack, onMediaKey, onMediaKeyUp, onNavigate };
   useEffect(() => {
+    let lastRepeatedArrow = { key: "", at: 0 };
     let press:
       | { id: string; held: boolean; timer: ReturnType<typeof setTimeout> }
       | undefined;
@@ -98,6 +99,14 @@ export function RemoteRoot({
       ) {
         event.preventDefault();
         clear();
+        const now = performance.now();
+        if (
+          event.repeat &&
+          lastRepeatedArrow.key === key &&
+          now - lastRepeatedArrow.at < 110
+        )
+          return;
+        lastRepeatedArrow = { key, at: now };
         moveFocus(key, current);
       }
     };
@@ -239,7 +248,22 @@ function revealFocusedControl(element: HTMLElement) {
         ["auto", "scroll", "hidden"].includes(style.overflowX) &&
         parent.scrollWidth > parent.clientWidth
       ) {
-        if (target.left < rect.left)
+        if (parent.classList.contains("cards")) {
+          if (target.left < rect.left || target.right > rect.right) {
+            const anchor = target.left < rect.left ? 0.33 : 0.67;
+            const desired = Math.max(
+              0,
+              element.offsetLeft +
+                element.offsetWidth / 2 -
+                parent.clientWidth * anchor,
+            );
+            try {
+              parent.scrollTo({ left: desired, behavior: "smooth" });
+            } catch {
+              parent.scrollLeft = desired;
+            }
+          }
+        } else if (target.left < rect.left)
           parent.scrollLeft += (target.left - rect.left) / scaleX;
         else if (target.right > rect.right)
           parent.scrollLeft += (target.right - rect.right) / scaleX;
@@ -253,7 +277,14 @@ function revealFocusedControl(element: HTMLElement) {
           parent.classList.contains("shelves") &&
           section?.parentElement === parent
         ) {
-          parent.scrollTop = (section as HTMLElement).offsetTop - 8;
+          try {
+            parent.scrollTo({
+              top: (section as HTMLElement).offsetTop - 8,
+              behavior: "smooth",
+            });
+          } catch {
+            parent.scrollTop = (section as HTMLElement).offsetTop - 8;
+          }
         } else if (target.top < rect.top)
           parent.scrollTop += (target.top - rect.top) / scaleY;
         else if (target.bottom > rect.bottom)

@@ -700,7 +700,7 @@ export function App({
       const value = await api.detail(item);
       if (ticket !== epoch.current) return;
       let enrichedEpisodes = value.episodes;
-      if (item.type === "series") {
+      if (value.item.type === "series") {
         const history = await api
           .seriesProgress(profile, value.item.seriesId ?? value.item.id)
           .catch((error: unknown) => {
@@ -1564,7 +1564,14 @@ export function App({
           aria-label={item.name}
           id={`${prefix}-${i}`}
           data-nav-left={
-            screen === "Search" && i === 0 ? searchKey.current : undefined
+            i > 0
+              ? `${prefix}-${i - 1}`
+              : screen === "Search"
+                ? searchKey.current
+                : undefined
+          }
+          data-nav-right={
+            i + 1 < list.length ? `${prefix}-${i + 1}` : `${prefix}-${i}`
           }
           key={`${item.type}-${item.id}`}
           onFocus={() => setHighlighted(item)}
@@ -2404,7 +2411,13 @@ export function App({
                   >
                     Provider: {sourceProvider}
                   </TvButton>
-                  <span>
+                  <span className={busy ? "finding" : undefined}>
+                    {busy && (
+                      <i
+                        className="source-discovery-spinner"
+                        aria-hidden="true"
+                      />
+                    )}
                     {busy ? "Finding sources…" : `${sources.length} sources`}
                   </span>
                 </div>

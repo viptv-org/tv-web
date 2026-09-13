@@ -623,3 +623,36 @@ test('profile artwork remains concentric with its focus outline at TV and deskto
     }).toPass();
   }
 });
+
+test('reported TV web regressions keep episode details, loading feedback and row focus stable', async ({ page }) => {
+  const bleach = {
+    id: 'bleach:1:3', type: 'episode', series_id: 'bleach', name: 'Bleach', title: 'Episode 3',
+    season: 1, episode: 3, position: 42, duration: 120, poster: '/poster.jpg', background: '/background.jpg',
+  };
+  await installPlatformRuntime(page);
+  await installBackend(page);
+  await page.route(`${apiOrigin}/api/profiles/1/continue/page**`, route => json(route, { items: [bleach], offset: 0, total: 1, next_offset: null }));
+  await page.route(`${apiOrigin}/api/meta/series/bleach`, route => json(route, { meta: {
+    id: 'bleach', type: 'series', name: 'Bleach', poster: '/poster.jpg', background: '/background.jpg',
+    description: 'A Soul Reaper protects the living.', genres: ['Anime', 'Action'],
+    videos: [{ id: 'bleach:1:3', title: 'Episode 3', season: 1, episode: 3, description: 'The story continues.' }],
+  } }));
+  await page.route(`${apiOrigin}/api/streams`, route => json(route, { id: 'bleach-job' }));
+  await page.route(`${apiOrigin}/api/streams/bleach-job**`, async route => {
+    await new Promise(resolve => setTimeout(resolve, 500));
+    return json(route, { events: [{ seq: 1, source: 'addon:2', streams: [{ id: 'bleach-stream', name: 'Bleach 1080p', source_addon_id: 'addon:2' }] }], done: true });
+  });
+  await page.addInitScript(({ key, token }) => localStorage.setItem(key, JSON.stringify(token)), { key: `viptv-device:${apiOrigin}`, token: { sessionId: 'device-1', accountId: '7', profileId: null, accessToken: 'access', refreshToken: 'refresh', expiresIn: 900 } });
+  await page.goto('/?platform=vizio');
+
+  const profileCard = page.locator('[data-focus-id="profile-0"]');
+  await expect(profileCard).toHaveCSS('box-sizing', 'border-box');
+  await page.getByRole('button', { name: 'Alex' }).press('Enter');
+  await page.getByRole('button', { name: 'Bleach' }).press('Enter');
+  await expect(page.locator('.detail-synopsis')).toContainText('Soul Reaper');
+  await expect(page.locator('[data-focus-id="episode-0"]')).toContainText('EPISODE 3');
+  await page.locator('[data-focus-id="episode-0"]').press('Enter');
+  await expect(page.locator('.source-discovery-spinner')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Bleach 1080p' })).toBeVisible();
+  await expect(page.getByRole('alert')).toHaveCount(0);
+});

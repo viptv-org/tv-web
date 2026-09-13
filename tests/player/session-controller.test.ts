@@ -41,7 +41,8 @@ describe('PlaybackSessionController', () => {
     const player = new FakePlayer();
     const backend = {
       startPlayback: vi.fn().mockResolvedValueOnce(session('direct', '/source.mp4', 'direct'))
-        .mockResolvedValueOnce(session('managed', '/index.m3u8', 'managed', 42)),
+        .mockResolvedValueOnce(session('managed', '/index.m3u8', 'managed', 42))
+        .mockResolvedValueOnce({ ...session('transcoded', '/transcoded.m3u8', 'managed', 42), videoMode: 'encode' as const }),
       stopPlayback: vi.fn().mockResolvedValue(undefined),
     };
     const controller = new PlaybackSessionController({ player, backend, capabilities });
@@ -57,8 +58,10 @@ describe('PlaybackSessionController', () => {
     expect(await controller.recoverPlayback(failedSnapshot)).toBe(true);
     expect(backend.startPlayback).toHaveBeenCalledTimes(2);
     player.snapshot = { ...player.snapshot, state: 'error', error: failedSnapshot.error };
-    expect(await controller.recoverPlayback(player.snapshot)).toBe(false);
-    expect(backend.startPlayback).toHaveBeenCalledTimes(2);
+    expect(await controller.recoverPlayback(player.snapshot)).toBe(true);
+    expect(backend.startPlayback).toHaveBeenNthCalledWith(3, {
+      streamId: source.id, position: 42, capabilities, managedOnly: true, forceTranscode: true,
+    });
   });
 
   it('does not reopen playback after Stop cancels late live recovery', async () => {
@@ -101,18 +104,23 @@ describe('PlaybackSessionController', () => {
     expect(active.session.id).toBe('managed');
   });
 
-  it('bounds direct recovery when managed media also fails', async () => {
+  it('uses full transcode only after direct and managed delivery cannot decode', async () => {
     const player = new FakePlayer();
-    vi.spyOn(player, 'open').mockRejectedValue(new PlayerOperationError('unsupported-format', 'Cannot parse media'));
+    vi.spyOn(player, 'open')
+      .mockRejectedValueOnce(new PlayerOperationError('unsupported-format', 'Cannot parse direct media'))
+      .mockRejectedValueOnce(new PlayerOperationError('unsupported-format', 'Cannot parse remuxed media'));
     const backend = {
       startPlayback: vi.fn().mockResolvedValueOnce(session('direct', '/direct.mp4', 'direct'))
-        .mockResolvedValueOnce(session('managed', '/index.m3u8')),
+        .mockResolvedValueOnce(session('managed', '/index.m3u8'))
+        .mockResolvedValueOnce({ ...session('transcoded', '/transcoded.m3u8'), videoMode: 'encode' as const }),
       stopPlayback: vi.fn().mockResolvedValue(undefined),
     };
     const controller = new PlaybackSessionController({ player, backend, capabilities });
-    await expect(controller.start({ item: { ...item, type: 'live' } })).rejects.toThrow('Cannot parse media');
-    expect(backend.startPlayback).toHaveBeenCalledTimes(2);
+    const active = await controller.start({ item: { ...item, type: 'live' } });
+    expect(active.session.id).toBe('transcoded');
+    expect(backend.startPlayback).toHaveBeenCalledTimes(3);
     expect(backend.startPlayback).toHaveBeenNthCalledWith(2, { channelId: item.id, position: 0, capabilities, managedOnly: true });
+    expect(backend.startPlayback).toHaveBeenNthCalledWith(3, { channelId: item.id, position: 0, capabilities, managedOnly: true, forceTranscode: true });
     expect(backend.stopPlayback.mock.calls.map(([id]) => id)).toEqual(['direct', 'managed']);
   });
 

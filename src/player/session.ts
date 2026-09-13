@@ -198,15 +198,14 @@ export class PlaybackSessionController {
     if (['opening', 'replacing', 'preparing-next'].includes(this.currentSnapshot.state)) return true;
     const active = this.current;
     if (!active || snapshot.sessionId !== this.activePlayerSessionId) return true;
-    if (!canRecoverDirect(active.session, active.request, snapshot.error.code)
-      || this.recoveredSessions.has(active.session.id)) return false;
+    const request = recoveryRequest(active.session, active.request, snapshot.error.code);
+    if (!request || this.recoveredSessions.has(active.session.id)) return false;
     this.recoveredSessions.add(active.session.id);
     this.cancelNext(false);
     const operation = ++this.operationGeneration;
     const position = active.intent.item.type === 'live' ? 0 : snapshot.time.positionSeconds;
     const paused = this.pausedPlayerSessionId === snapshot.sessionId;
-    const request: PlaybackStart = { ...active.request, position, managedOnly: true };
-    await this.transition({ ...active.intent, position }, request, active,
+    await this.transition({ ...active.intent, position }, { ...request, position }, active,
       () => operation === this.operationGeneration, () => false, { position, paused });
     return true;
   }
@@ -324,20 +323,21 @@ export class PlaybackSessionController {
       return this.cancelledResult();
     }
     try {
-      try {
-        await this.options.player.open(adapterRequest(session, itemKind(intent.item), request.position ?? 0, wasPaused));
-      } catch (cause) {
-        // A codec/container rejection can require managed remuxing even after
-        // a successful capability probe. Retry the exact selected source once;
-        // the backend still chooses copy/remux before any transcoding.
-        if (!stillWanted() || !(cause instanceof PlayerOperationError)
-          || !canRecoverDirect(session, request, cause.code)) throw cause;
-        await this.options.backend.stopPlayback(session.id);
-        if (!stillWanted()) throw new DOMException('Playback operation was cancelled.', 'AbortError');
-        request = { ...request, managedOnly: true };
-        session = await this.options.backend.startPlayback(request);
-        if (!stillWanted()) throw new DOMException('Playback operation was cancelled.', 'AbortError');
-        await this.options.player.open(adapterRequest(session, itemKind(intent.item), request.position ?? 0, wasPaused));
+      for (;;) {
+        try {
+          await this.options.player.open(adapterRequest(session, itemKind(intent.item), request.position ?? 0, wasPaused));
+          break;
+        } catch (cause) {
+          const recovery = cause instanceof PlayerOperationError
+            ? recoveryRequest(session, request, cause.code)
+            : undefined;
+          if (!stillWanted() || !recovery) throw cause;
+          await this.options.backend.stopPlayback(session.id);
+          if (!stillWanted()) throw new DOMException('Playback operation was cancelled.', 'AbortError');
+          request = recovery;
+          session = await this.options.backend.startPlayback(request);
+          if (!stillWanted()) throw new DOMException('Playback operation was cancelled.', 'AbortError');
+        }
       }
       const candidate: PlaybackControllerActive = { intent, request, session };
       if (!stillWanted()) {
@@ -451,7 +451,16 @@ function asError(cause: unknown): Error {
   return cause instanceof Error ? cause : new Error('Playback operation failed.');
 }
 
-/** Same-source managed delivery is the sole automatic decoder recovery rung. */
-function canRecoverDirect(session: PlaybackSession, request: PlaybackStart, code: PlayerFailure['code']): boolean {
-  return session.mode === 'direct' && !request.managedOnly && code === 'unsupported-format';
+/** Keep the selected source while escalating only after the cheaper rung fails. */
+function recoveryRequest(
+  session: PlaybackSession,
+  request: PlaybackStart,
+  code: PlayerFailure['code'],
+): PlaybackStart | undefined {
+  if (code !== 'unsupported-format') return undefined;
+  if (session.mode === 'direct' && !request.managedOnly)
+    return { ...request, managedOnly: true };
+  if (session.mode !== 'direct' && !request.forceTranscode)
+    return { ...request, managedOnly: true, forceTranscode: true };
+  return undefined;
 }

@@ -303,19 +303,27 @@ export class TvApi {
     return normalizeCore<DiscoverPage>("discoverResponse", { response: v, type: request.type });
   }
   async detail(
-    item: Pick<MediaItem, "id" | "type">,
+    item: Pick<MediaItem, "id" | "type"> &
+      Partial<Pick<MediaItem, "seriesId">>,
     options?: RequestOptions,
   ): Promise<MediaDetail> {
+    const request = normalizeCore<{ path: string }>("request", {
+      operation: "metadata",
+      item,
+    });
     if (item.type === "live") return { item: minimalItem(item), episodes: [] };
     const envelope = expectObject(
       await this.raw(
-        `/api/meta/${item.type}/${segment(item.id)}`,
+        request.path,
         {},
         true,
         options,
       ),
     );
-    return normalizeCore<MediaDetail>("detailResponse", { response: envelope, item });
+    return normalizeCore<MediaDetail>("detailResponse", {
+      response: envelope,
+      item,
+    });
   }
 
   async sources(
