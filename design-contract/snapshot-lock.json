@@ -1,7 +1,7 @@
 {
   "version": 1,
   "repository": "viptv-org/design",
-  "commit": "2411c28a169412fbedd38a293adc1a7482dcc9c0",
+  "commit": "502dcb5a310d73bd48b00e9d0f919f8699cbffa4",
   "files": {
     "design-contract/.github/pull_request_template.md": {
       "source": ".github/pull_request_template.md",
@@ -65,7 +65,7 @@
     },
     "design-contract/RESPONSIVE_PRODUCTION.md": {
       "source": "RESPONSIVE_PRODUCTION.md",
-      "sha256": "60e5789f012cd132959e88f661b8973b19b2af6331d0cc3afeda6bf1642e73eb"
+      "sha256": "81224c47a210b8e34f30cf2b59f33a3a7f88ae0203570748db5259e93c5018a2"
     },
     "design-contract/RESPONSIVE_UI.md": {
       "source": "RESPONSIVE_UI.md",

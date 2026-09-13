@@ -154,3 +154,7 @@ Final packaging/typecheck and immutable core/design integrity checks passed. Liv
 ## Responsive viewing client — 2026-09-13
 
 See RESPONSIVE_VALIDATION.md and issue #3 for current immutable pins and results. Production build, strict application/test type checks, 72-test unit batch, five-test Guide follow-up, 60-scenario browser batch and five-scenario final responsive subset passed. Platform-specific duplicate browser exclusions are recorded separately from executed tests. Default browser now uses real responsive presentation; explicit TV platforms retain their prior renderer. Native Tauri packaging/SmartCast hardware and a public Vizio receiver remain unverified/unconfigured.
+
+## Populated responsive correction — RUI-022
+
+DESIGN_REF now pins502dcb5. The prior sparse layout tests missed internal fixed-root overflow:24 cards produced a5952×3348 phone hero. Current checks measure the application scroller and decoded imagery with full shelves at seven widths. Build,73 unit/controller tests,14 distinct responsive scenarios and4 explicit TV geometry/profile regressions pass across final runs. See RESPONSIVE_VALIDATION.md for detailed evidence, private visual review and live preview checks.

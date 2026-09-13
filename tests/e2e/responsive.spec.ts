@@ -9,12 +9,13 @@ const movie = {
   year: 2026, genres: ['Adventure', 'Drama'],
 };
 
-async function installBackend(page: Page, options: { series?: boolean; invalidLogo?: boolean } = {}) {
+async function installBackend(page: Page, options: { series?: boolean; invalidLogo?: boolean; populated?: boolean } = {}) {
   const title = options.series ? {
     ...movie, id: 'responsive-series', type: 'series', name: 'Beyond the Horizon', title: 'Beyond the Horizon',
     logo: `https://art.example/${options.invalidLogo ? 'invalid-logo' : 'title-logo'}.svg`,
     videos: Array.from({ length: 8 }, (_, index) => ({ id: `responsive-series:1:${index + 1}`, title: `Episode ${index + 1}`, season: 1, episode: index + 1, thumbnail: 'https://art.example/episode.svg', description: `Episode ${index + 1} brings the crew closer to the signal.` })),
-  } : movie;
+  } : options.populated ? { ...movie, logo: 'https://art.example/title-logo.svg', description: `${movie.description} ${movie.description} This extended description exercises real catalog copy wrapping across phones, tablets and wide desktop displays.` } : movie;
+  const profileName = options.populated ? 'Alexandria Montgomery-Jones' : 'Alex';
   let selectedProfileId: string | null = null;
   const requests: { method: string; path: string; body: Record<string, unknown> }[] = [];
   const errors: string[] = [];
@@ -25,10 +26,18 @@ async function installBackend(page: Page, options: { series?: boolean; invalidLo
       accessToken: 'fixture-access', refreshToken: 'fixture-refresh', expiresIn: 900,
     }));
   }, { key: sessionKey });
-  await page.route('https://art.example/**', route => route.request().url().endsWith('/invalid-logo.svg') ? route.fulfill({ status: 404, body: '' }) : route.fulfill({
-    contentType: 'image/svg+xml',
-    body: '<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720"><rect width="1280" height="720" fill="#304150"/></svg>',
-  }));
+  await page.route('https://art.example/**', route => {
+    const path = new URL(route.request().url()).pathname;
+    if (path === '/invalid-logo.svg') return route.fulfill({ status: 404, body: '' });
+    const portrait = path === '/poster.svg';
+    const logo = path === '/title-logo.svg';
+    const width = logo ? 1280 : portrait ? 2000 : path === '/episode.svg' ? 1920 : 3840;
+    const height = logo ? 320 : portrait ? 3000 : path === '/episode.svg' ? 1080 : 2160;
+    const content = logo
+      ? '<path d="M20 40L120 160 20 280H100L200 160 100 40Z" fill="#f5f5f5"/><text x="245" y="195" font-family="sans-serif" font-size="110" fill="#f5f5f5">THE HORIZON</text>'
+      : `<rect width="${width}" height="${height}" fill="#15263a"/><circle cx="${width * .74}" cy="${height * .28}" r="${width * .12}" fill="#dab979"/><path d="M0 ${height}L${width * .32} ${height * .43}L${width * .62} ${height * .76}L${width} ${height * .38}V${height}Z" fill="#42566a"/><path d="M0 ${height}L${width * .47} ${height * .72}L${width} ${height * .88}V${height}Z" fill="#20313b"/>`;
+    return route.fulfill({ contentType: 'image/svg+xml', body: `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">${content}</svg>` });
+  });
   await page.route(`${apiOrigin}/api/**`, async route => {
     const request = route.request();
     const headers = {
@@ -43,7 +52,7 @@ async function installBackend(page: Page, options: { series?: boolean; invalidLo
     requests.push({ method: request.method(), path, body });
     if (path === '/api/auth/me') return json({
       account: { id: '7', username: 'alex', name: 'Alex', role: 'member' },
-      profiles: [{ id: '1', name: 'Alex', setup_complete: true }],
+      profiles: [{ id: '1', name: profileName, setup_complete: true }],
       profile_id: selectedProfileId, restricted: false, profile_setup_required: false,
     });
     if (path === '/api/auth/profile') {
@@ -53,16 +62,17 @@ async function installBackend(page: Page, options: { series?: boolean; invalidLo
     if (path === '/api/profiles/1/continue/page') return json({ items: [], offset: 0, total: 0, next_offset: null });
     if (path === '/api/profiles/1/progress' || path === '/api/profiles/1/favorites') return json([]);
     if (path === '/api/profiles/1/preferences') return json({ audio_language: 'en', subtitle_language: 'en', subtitles_enabled: false, subtitle_size: 'normal', subtitle_style: 'system', quality: 'auto', autoplay: true });
-    if (path === '/api/catalogs') return json([{ id: 'popular', name: 'Popular', type: title.type, addon_id: 2, supports_search: true, supports_skip: true }]);
-    if (path === '/api/discover') return json({ metas: [title], has_more: false, next_skip: null });
+    if (path === '/api/catalogs') return json(Array.from({ length: options.populated ? 4 : 1 }, (_, i) => ({ id: i ? `catalog-${i}` : 'popular', name: options.populated ? `Global Cinema Collection — ${['Popular', 'Recently Added', 'Drama', 'Adventure'][i]} Features and Award-Winning International Television` : 'Popular', type: title.type, addon_id: 2, supports_search: true, supports_skip: true })));
+    if (path === '/api/discover') return json({ metas: options.populated ? Array.from({ length: 24 }, (_, i) => ({ ...title, id: i ? `title-${i}` : title.id, name: i ? `The Long Journey Through the Mountains: Chapter ${i}` : title.name })) : [title], has_more: false, next_skip: null });
     if (path === '/api/live') return json({ channels: [], total: 0 });
     if (path === `/api/meta/${title.type}/${title.id}`) return json({ meta: title });
+    if (options.populated && /^\/api\/meta\/movie\/title-\d+$/.test(path)) return json({ meta: { ...title, id: path.split("/").at(-1), name: "The Long Journey Through the Mountains" } });
     if (path === '/api/profiles/1/progress/series') return json([]);
     if (path === '/api/streams' && request.method() === 'POST') return json({ id: 'responsive-sources' });
-    if (path === '/api/streams/responsive-sources') return json({ events: [{ seq: 1, source: 'addon:2', streams: [{ id: 'responsive-stream', name: 'Responsive source 1080p', title: 'A Different Horizon 1080p', source_addon_id: 'addon:2', source_name: 'Fixture addon' }] }], done: true });
+    if (path === '/api/streams/responsive-sources') return json({ events: [{ seq: 1, source: 'addon:2', streams: [{ id: 'responsive-stream', name: options.populated ? 'International Cinema Archive • High Definition • Original Language and Commentary • Extended Edition' : 'Responsive source 1080p', title: 'A Different Horizon 1080p', source_addon_id: 'addon:2', source_name: options.populated ? 'International Cinema and Television Collection — Premium Archive Provider' : 'Fixture addon' }] }], done: true });
     return json({ error: `Unhandled fixture route ${path}` }, 404);
   });
-  return { requests, errors, title };
+  return { requests, errors, title, profileName };
 }
 
 async function expectResponsiveViewport(page: Page, width: number) {
@@ -74,6 +84,8 @@ async function expectResponsiveViewport(page: Page, width: number) {
       scrollWidth: document.documentElement.scrollWidth,
       bodyWidth: document.body.scrollWidth,
       screenWidth: box.width,
+      internalWidth: screen.clientWidth,
+      internalScrollWidth: screen.scrollWidth,
       screenLeft: box.left,
       transform: getComputedStyle(screen).transform,
       background: getComputedStyle(screen).backgroundColor,
@@ -82,6 +94,7 @@ async function expectResponsiveViewport(page: Page, width: number) {
   expect(dimensions.clientWidth).toBeLessThanOrEqual(width);
   expect(dimensions.scrollWidth).toBeLessThanOrEqual(dimensions.clientWidth + 1);
   expect(dimensions.bodyWidth).toBeLessThanOrEqual(dimensions.clientWidth + 1);
+  expect(dimensions.internalScrollWidth).toBeLessThanOrEqual(dimensions.internalWidth + 1);
   expect(dimensions.screenWidth).toBeCloseTo(dimensions.clientWidth, 0);
   expect(dimensions.screenLeft).toBeCloseTo(0, 0);
   expect(dimensions.transform).toBe('none');
@@ -260,5 +273,115 @@ for (const viewport of [
     expect(fixture.requests.find(request => request.path === '/api/streams')?.body).toMatchObject({ id: 'responsive-series:1:1', series_id: 'responsive-series', season: 1, episode: 1 });
     await expectResponsiveViewport(page, viewport.width);
     expect(fixture.errors).toEqual([]);
+  });
+}
+
+for (const width of [360, 390, 768, 1024, 1280, 1440, 2560]) {
+  test(`populated responsive ${width}: shelves never enlarge the hero or application`, async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== 'vizio');
+    const height = width < 600 ? 844 : 1000;
+    await page.setViewportSize({ width, height });
+    const fixture = await installBackend(page, { populated: true });
+    await page.goto('/');
+    await expect(page.locator('[data-focus-id="profile-0"]')).toContainText(fixture.profileName);
+    await expectResponsiveViewport(page, width);
+    await page.locator('[data-focus-id="profile-0"]').click();
+    await expect(page.locator('.shelves section')).toHaveCount(3);
+    await expect(page.locator('.shelves .media-card')).toHaveCount(72);
+    await expect(page.locator('.responsive-hero-art > img')).toHaveJSProperty('naturalWidth', 3840);
+    await expect(page.locator('.hero .responsive-title')).toHaveClass(/has-logo/);
+    const geometry = await page.evaluate(() => {
+      const root = document.querySelector<HTMLElement>('.responsive-app')!;
+      const art = document.querySelector<HTMLElement>('.responsive-hero-art')!;
+      const image = art.querySelector('img')!;
+      const shelf = document.querySelector<HTMLElement>('.cards')!;
+      const hero = art.getBoundingClientRect();
+      const bitmap = image.getBoundingClientRect();
+      return { rootWidth: root.clientWidth, rootScrollWidth: root.scrollWidth, heroWidth: hero.width, heroHeight: hero.height, heroLeft: hero.left, heroRight: hero.right, imageWidth: bitmap.width, imageHeight: bitmap.height, shelfWidth: shelf.clientWidth, shelfScrollWidth: shelf.scrollWidth };
+    });
+    expect(geometry.rootScrollWidth).toBeLessThanOrEqual(geometry.rootWidth + 1);
+    expect(geometry.heroWidth).toBeLessThanOrEqual(geometry.rootWidth);
+    expect(geometry.heroLeft).toBeGreaterThanOrEqual(0);
+    expect(geometry.heroRight).toBeLessThanOrEqual(width);
+    expect(geometry.heroHeight).toBeLessThanOrEqual(width < 600 ? 240 : 480);
+    expect(geometry.heroWidth / geometry.heroHeight).toBeCloseTo(16 / 9, 1);
+    expect(geometry.imageWidth).toBeLessThanOrEqual(geometry.heroWidth + 1);
+    expect(geometry.imageHeight).toBeLessThanOrEqual(geometry.heroHeight + 1);
+    expect(geometry.shelfWidth).toBeLessThanOrEqual(geometry.rootWidth);
+    expect(geometry.shelfScrollWidth).toBeGreaterThan(geometry.shelfWidth);
+    await expectResponsiveViewport(page, width);
+    await page.screenshot({ path: testInfo.outputPath(`populated-${width}.png`) });
+
+    if (width === 390 || width === 1440) {
+      const navigation = page.getByRole('navigation', { name: 'Main navigation' });
+      await navigation.getByRole('button', { name: 'Search', exact: true }).click();
+      await expect(page.locator('[data-focus-id="browse-discover"]')).toBeVisible();
+      await expectResponsiveViewport(page, width);
+      await page.locator('[data-focus-id="browse-discover"]').click();
+      await expect(page.locator('.browse .media-card')).toHaveCount(24);
+      await expectResponsiveViewport(page, width);
+      const browse = await page.locator('.browse').boundingBox();
+      const results = await page.locator('.browse .result-grid').boundingBox();
+      expect(browse!.height).toBeGreaterThan(results!.height);
+      expect(results!.width).toBeLessThanOrEqual(width);
+      await page.screenshot({ path: testInfo.outputPath(`populated-${width}-discover.png`) });
+      await navigation.getByRole('button', { name: 'Home', exact: true }).click();
+      await page.locator('.shelves .media-card').filter({ hasText: fixture.title.name }).first().click();
+      await expect(page.locator('.detail')).toBeVisible();
+      await expectResponsiveViewport(page, width);
+      const synopsis = await page.locator('.detail-synopsis').boundingBox();
+      const actions = await page.locator('.detail-copy .actions').boundingBox();
+      expect(actions!.y).toBeGreaterThanOrEqual(synopsis!.y + synopsis!.height);
+      await page.screenshot({ path: testInfo.outputPath(`populated-${width}-detail.png`) });
+      await page.locator('[data-focus-id="detail-info"]').click();
+      const modal = page.locator('[data-focus-scope="modal"]');
+      await expect(modal).toBeVisible();
+      const modalBox = await modal.boundingBox();
+      expect(modalBox!.width).toBeLessThanOrEqual(width - 20);
+      expect(modalBox!.height).toBeLessThanOrEqual(height - 20);
+      expect(modalBox!.height).toBeGreaterThan(100);
+      await expectResponsiveViewport(page, width);
+      await page.keyboard.press('Escape');
+      await expect(modal).toHaveCount(0);
+      await page.getByRole('button', { name: 'Choose source', exact: true }).click();
+      const source = page.locator('[data-focus-id="source-0"]');
+      await expect(source).toContainText('International Cinema Archive');
+      await expect(source.locator('p')).toHaveCSS('color', 'rgb(197, 198, 199)');
+      await expectResponsiveViewport(page, width);
+      const sourceSize = await source.evaluate(node => ({ height: node.clientHeight, scrollHeight: node.scrollHeight, width: node.clientWidth, scrollWidth: node.scrollWidth }));
+      expect(sourceSize.scrollHeight).toBeLessThanOrEqual(sourceSize.height + 1);
+      expect(sourceSize.scrollWidth).toBeLessThanOrEqual(sourceSize.width + 1);
+      await page.screenshot({ path: testInfo.outputPath(`populated-${width}-sources.png`) });
+    }
+    expect(fixture.errors).toEqual([]);
+  });
+}
+
+for (const width of [390, 1440]) {
+  test(`responsive Back restores populated shelf offsets at ${width}`, async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== 'vizio');
+    await page.setViewportSize({ width, height: 844 });
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await installBackend(page, { populated: true });
+    await page.goto('/');
+    await page.locator('[data-focus-id="profile-0"]').click();
+    const card = page.locator('.shelves section').last().locator('.media-card').nth(12);
+    await card.scrollIntoViewIfNeeded();
+    await card.focus();
+    await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+    const offsets = () => page.evaluate(() => ({
+      top: document.querySelector('.responsive-app')!.scrollTop,
+      left: document.querySelector('.shelves section:last-child .cards')!.scrollLeft,
+    }));
+    const before = await offsets();
+    expect(before.top).toBeGreaterThan(0);
+    expect(before.left).toBeGreaterThan(0);
+    await card.click();
+    await expect(page.locator('.detail')).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(card).toBeFocused();
+    await expect.poll(async () => (await offsets()).left).toBe(before.left);
+    // Browser scroll clamping can round the final content edge by a few pixels.
+    await expect.poll(async () => Math.abs((await offsets()).top - before.top)).toBeLessThanOrEqual(3);
   });
 }

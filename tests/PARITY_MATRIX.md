@@ -57,3 +57,5 @@ Those remain platform and hardware acceptance work.
 ## Responsive production adoption (issue #3)
 
 Contract: design `2411c28a169412fbedd38a293adc1a7482dcc9c0`, RESPONSIVE_PRODUCTION and RUI-018–021. Browser default adopts responsive layout; explicit TV layout retains the prior canvas and behavior. Real controller/API integration and native command payloads are covered separately from physical decoding. Current validation evidence will be recorded in RESPONSIVE_VALIDATION.md. No measured Roku screenshot match or native packaging claim is made by moving this pin.
+
+RUI-022 populated content correction: design502dcb5. Seven populated viewport checks plus phone/desktop Back anchors and existing responsiveflows passed. Real fixed-root scrollWidth and16:9 artwork bounds are now asserted. Sparse previous checks were insufficient; do not cite them as complete responsive visual acceptance. Physical TV/native-host evidence remains unchanged.

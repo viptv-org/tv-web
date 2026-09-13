@@ -64,6 +64,12 @@ type Screen =
   | "sources"
   | "player";
 type Choice = { label: string; action: () => void };
+type ScrollAnchor = { top: number; regions: { id: string; top: number; left: number }[] };
+function captureScroll(): ScrollAnchor | undefined {
+  const root = document.querySelector<HTMLElement>(".responsive-app");
+  return root ? { top: root.scrollTop, regions: Array.from(root.querySelectorAll<HTMLElement>("[data-scroll-id]")).map(element => ({ id: element.dataset.scrollId!, top: element.scrollTop, left: element.scrollLeft })) } : undefined;
+}
+
 const initialPrefs: PlaybackPreferences = {
   audioLanguage: "",
   subtitleLanguage: "",
@@ -185,6 +191,7 @@ export function App({
       {
         screen: Screen;
         focus: string;
+        scroll?: ScrollAnchor;
         selected?: MediaItem;
         items: readonly MediaItem[];
         episodes: readonly MediaItem[];
@@ -208,6 +215,7 @@ export function App({
     resumeRemainder = useRef(false);
   const seekRepeat = useRef({ key: "", count: 0 }),
     seekValue = useRef<number>();
+  const restoredScroll = useRef<(ScrollAnchor & { focus: string }) | undefined>();
   const currentScreen = useRef(screen);
   currentScreen.current = screen;
   const modalFocus = useRef(""),
@@ -265,7 +273,8 @@ export function App({
   const go = (next: Screen) => {
     stack.current.push({
       screen,
-      focus: (document.activeElement as HTMLElement)?.dataset.focusId ?? "",
+      scroll: responsive ? captureScroll() : undefined,
+      focus: responsive && modal ? modalFocus.current : (document.activeElement as HTMLElement)?.dataset.focusId ?? "",
       selected,
       items,
       episodes,
@@ -577,6 +586,7 @@ export function App({
   // Establish screen focus before paint. A deferred timer can steal focus
   // between the next remote OK down/up, silently dropping its activation.
   useLayoutEffect(() => {
+    if (responsive && restoredScroll.current) return;
     focusElement(
       screen === "profiles"
         ? "profile-0"
@@ -695,12 +705,13 @@ export function App({
       void controller.current.stop().catch(fail);
     const previous = stack.current.pop();
     if (previous) {
+      restoredScroll.current = responsive && previous.scroll ? { ...previous.scroll, focus: previous.focus } : undefined;
       setScreen(previous.screen);
       setSelected(previous.selected);
       setItems(previous.items);
       setEpisodes(previous.episodes);
       setSources(previous.sources);
-      setTimeout(() => focusElement(previous.focus), 50);
+      if (!restoredScroll.current) setTimeout(() => focusElement(previous.focus), 50);
     } else if (screen === "profiles" && profile) setScreen("Home");
     else if (screen !== "Home" && screen !== "pairing" && screen !== "profiles")
       setScreen("Home");
@@ -927,13 +938,14 @@ export function App({
         .catch(fail);
     await controller.current?.stop().catch(fail);
     const old = stack.current.pop();
+    restoredScroll.current = responsive && old?.scroll ? { ...old.scroll, focus: old.focus } : undefined;
     setScreen(old?.screen ?? "Home");
     if (old) {
       setSelected(old.selected);
       setItems(old.items);
       setEpisodes(old.episodes);
       setSources(old.sources);
-      setTimeout(() => focusElement(old.focus), 50);
+      if (!restoredScroll.current) setTimeout(() => focusElement(old.focus), 50);
       if (old.screen === "detail" && old.selected) {
         const ticket = epoch.current;
         void api
@@ -1574,7 +1586,7 @@ export function App({
     setModal({ title: kind === "audio" ? "Audio" : "Subtitles", choices });
   };
   const cards = (list: readonly MediaItem[], prefix: string) => (
-    <div className="cards">
+    <div className="cards" data-scroll-id={`cards-${prefix}`}>
       {list.map((item, i) => {
         const card = <TvButton
           className={`media-card ${item.type === "live" ? "logo-card" : ""}`}
@@ -1651,10 +1663,21 @@ export function App({
     if (!responsive) return;
     const root = document.querySelector<HTMLElement>(".responsive-app");
     if (root) {
+      const anchor = restoredScroll.current;
       root.style.scrollBehavior = "auto";
-      root.scrollTop = 0;
+      root.scrollTop = anchor?.top ?? 0;
       root.scrollLeft = 0;
+      for (const element of root.querySelectorAll<HTMLElement>("[data-scroll-id]")) {
+        const saved = anchor?.regions.find(region => region.id === element.dataset.scrollId);
+        if (!saved) continue;
+        element.style.scrollBehavior = "auto";
+        element.scrollTop = saved.top;
+        element.scrollLeft = saved.left;
+        element.style.removeProperty("scroll-behavior");
+      }
+      if (anchor) focusElement(anchor.focus, { preventScroll: true });
       root.style.removeProperty("scroll-behavior");
+      restoredScroll.current = undefined;
     }
   }, [responsive, screen]);
   const selectedPresentation = selected ? normalizeCore<MediaPresentation>("presentation", selected) : undefined;
@@ -1668,6 +1691,49 @@ export function App({
     "Search",
     "Settings",
   ];
+  const brand = (<div
+          className={`brand ${["profiles", "pairing"].includes(screen) ? "gateway-brand" : ""}`}
+        >
+          <img
+            src={`${import.meta.env.BASE_URL}assets/viptv-mark.png`}
+            alt="viptv"
+          />
+        </div>);
+  const navigation = (<nav aria-label="Main navigation">
+                {navItems.map((n, i) => (
+                  <TvButton
+                    id={`nav-${n}`}
+                    aria-label={n === "profiles" ? "Profile" : n}
+                    key={n}
+                    className={`${n === screen ? "active" : ""} nav-${n.replace(/ /g, "-").toLowerCase()}`}
+                    aria-current={n === screen ? "page" : undefined}
+                    onActivate={() =>
+                      n === "profiles"
+                        ? setScreen("profiles")
+                        : void navigate(n)
+                    }
+                  >
+                    {i === 0 && (
+                      <span className="nav-initials">
+                        {activeProfile?.name.slice(0, 2).toUpperCase()}
+                      </span>
+                    )}
+                    <ReadyImage
+                      className={`nav-icon ${i === 0 ? "nav-avatar" : ""}`}
+                      src={
+                        i === 0 && activeProfile
+                          ? avatarUrl(activeProfile)
+                          : `${import.meta.env.BASE_URL}assets/${["avatar-catalog/critters-1.png", "ui-nav-home.png", "ui-nav-discover.png", "ui-nav-tv.png", "ui-nav-list.png", "ui-nav-search.png", "ui-nav-settings.png"][i]}`
+                      }
+                      alt=""
+                      onError={(e) => {
+                        e.currentTarget.style.visibility = "hidden";
+                      }}
+                    />
+                    <em>{n === "profiles" ? "Profile" : n}</em>
+                  </TvButton>
+                ))}
+              </nav>);
   return (
     <RemoteRoot
       inputMode={layout}
@@ -1684,20 +1750,16 @@ export function App({
       >
         <video ref={video} className="video" playsInline onClick={() => responsive && setOverlay((value) => !value)} />
         {responsive && !["startup", "pairing", "player"].includes(screen) && <header className="responsive-toolbar">
+          {brand}
+          {screen !== "profiles" && navigation}
           <div className="toolbar-spacer" />
           {["detail", "sources", "profiles"].includes(screen) && <TvButton id="responsive-back" onActivate={back} aria-label="Back">←</TvButton>}
           <TvButton id="responsive-cast" aria-label="Watch on TV" onActivate={openCast}><img src={`${import.meta.env.BASE_URL}assets/ui-nav-tv.png`} alt="" /></TvButton>
           <TvButton id="responsive-oled" aria-pressed={oled} onActivate={toggleOled}>OLED {oled ? "on" : "off"}</TvButton>
           {!["profiles"].includes(screen) && <TvButton id="responsive-profile" aria-label="Choose profile" onActivate={() => setScreen("profiles")}><ReadyImage src={activeProfile ? avatarUrl(activeProfile) : undefined} alt="" /><span>{activeProfile?.name ?? "Profile"}</span></TvButton>}
         </header>}
-        <div
-          className={`brand ${["profiles", "pairing"].includes(screen) ? "gateway-brand" : ""}`}
-        >
-          <img
-            src={`${import.meta.env.BASE_URL}assets/viptv-mark.png`}
-            alt="viptv"
-          />
-        </div>
+        {(!responsive || ["startup", "pairing", "player"].includes(screen)) && brand}
+
         {screen === "startup" ? null : screen === "pairing" ? (
           <section className="pairing">
             <h1>Sign in to VIPTV</h1>
@@ -1773,43 +1835,7 @@ export function App({
           </section>
         ) : (
           <>
-            {(responsive ? screen !== "player" : !["detail", "sources", "player"].includes(screen)) && (
-              <nav aria-label="Main navigation">
-                {navItems.map((n, i) => (
-                  <TvButton
-                    id={`nav-${n}`}
-                    aria-label={n === "profiles" ? "Profile" : n}
-                    key={n}
-                    className={`${n === screen ? "active" : ""} nav-${n.replace(/ /g, "-").toLowerCase()}`}
-                    aria-current={n === screen ? "page" : undefined}
-                    onActivate={() =>
-                      n === "profiles"
-                        ? setScreen("profiles")
-                        : void navigate(n)
-                    }
-                  >
-                    {i === 0 && (
-                      <span className="nav-initials">
-                        {activeProfile?.name.slice(0, 2).toUpperCase()}
-                      </span>
-                    )}
-                    <ReadyImage
-                      className={`nav-icon ${i === 0 ? "nav-avatar" : ""}`}
-                      src={
-                        i === 0 && activeProfile
-                          ? avatarUrl(activeProfile)
-                          : `${import.meta.env.BASE_URL}assets/${["avatar-catalog/critters-1.png", "ui-nav-home.png", "ui-nav-discover.png", "ui-nav-tv.png", "ui-nav-list.png", "ui-nav-search.png", "ui-nav-settings.png"][i]}`
-                      }
-                      alt=""
-                      onError={(e) => {
-                        e.currentTarget.style.visibility = "hidden";
-                      }}
-                    />
-                    <em>{n === "profiles" ? "Profile" : n}</em>
-                  </TvButton>
-                ))}
-              </nav>
-            )}
+            {!responsive && !["detail", "sources", "player"].includes(screen) && navigation}
             {screen === "Home" && (
               <main className={`home ${compactHome ? "compact-home" : ""}`}>
                 {!responsive && heroPresentation?.heroImage && (
@@ -2352,7 +2378,7 @@ export function App({
                 {episodes.length > 0 && (
                   <>
                     <span className="episode-heading">Episodes</span>
-                    <div className="episode-grid">
+                    <div className="episode-grid" data-scroll-id="episodes">
                       {episodes
                         .filter((e) => e.season === season)
                         .map((e, i) => {

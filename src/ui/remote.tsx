@@ -11,10 +11,10 @@ import {
 type Action = () => void;
 type Registration = { activate: Action; hold?: Action };
 const Registry = createContext<Map<string, Registration> | null>(null);
-export const focusElement = (id: string) =>
+export const focusElement = (id: string, options?: FocusOptions) =>
   Array.from(document.querySelectorAll<HTMLElement>("[data-focus-id]"))
     .find((element) => element.dataset.focusId === id)
-    ?.focus();
+    ?.focus(options);
 
 export function RemoteRoot({
   children,
