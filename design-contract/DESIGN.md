@@ -27,3 +27,7 @@ TV layouts use the Roku reference canvas and focus model. Phone and desktop layo
 Current platform implementation scope and test interfaces: [TV_IMPLEMENTATION.md](TV_IMPLEMENTATION.md).
 
 Shared data/state architecture and startup adoption: [SHARED_CORE.md](SHARED_CORE.md).
+
+## Responsive viewing client
+
+[RESPONSIVE_UI.md](RESPONSIVE_UI.md) defines responsive geometry; [RESPONSIVE_VIPTV_ALIGNMENT.md](RESPONSIVE_VIPTV_ALIGNMENT.md) restores the original VIPTV visual components and overrides historical appearance proposals. [RESPONSIVE_PRODUCTION.md](RESPONSIVE_PRODUCTION.md) records real shared-client ownership, input adaptations and validation scope. These contracts preserve the Roku/TV baseline and do not imply Android mobile or native host qualification.

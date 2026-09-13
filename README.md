@@ -58,3 +58,11 @@ Validation: real Chromium pairing through the LAN proxy returned200 with no CORS
 Rust in `viptv-org/core` owns response normalization, restoration and shared presentation/source/continuation rules. This app runs its WASM build and shared effect driver; React retains rendering/focus and platform adapters execute network, storage and decoding. A hero uses the core's landscape-only artwork role, with the existing background when no suitable artwork exists.
 
 Update the owning Rust code and generated artifacts, commit core, then run `node scripts/core-sync.mjs sync ../core`. Commit CORE_REF and its hash-checked vendor snapshot together. Android adopts the same revision through its own sync script. Do not patch generated/vendor files independently. Shared rules change once in Rust, but each deployed app still needs to adopt and rebuild from that version.
+
+## Responsive browser and desktop layout
+
+The ordinary browser entry now uses the responsive viewing UI backed by the same real authentication, Rust-normalized catalog, profile/history and playback flows as TV. `?platform=tizen`, `?platform=vizio` or `?layout=tv` preserve the fixed TV renderer. Responsive screens use original VIPTV colors and contained artwork, with an optional locally persisted OLED canvas.
+
+Tauri hosts use `@tauri-apps/plugin-http` for API requests (no redirects), requiring the host's restricted HTTP capability and plugin registration. SmartCast additionally needs the exact native commands from core/adapters/tauri/smartcast.rs and `VITE_VIZIO_RECEIVER_URL` pointing at a deployed HTTPS receiver. The browser offers a truthful native-app handoff; it cannot pair a LAN TV over insecure HTTPS. Native host packaging, receiver deployment and physical decoding are not established by a browser build.
+
+For the authorized LAN preview: `VITE_LAN_PREVIEW=1 NODE_OPTIONS=--max-old-space-size=256 npm run dev -- --port 4181 --strictPort`. Proxying remains same-origin with verified upstream TLS. Do not use this opt-in development server as a public production deployment.

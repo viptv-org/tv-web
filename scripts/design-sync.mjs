@@ -48,7 +48,7 @@ if (command === "sync") {
   // Only committed canonical documents and app artwork enter the snapshot.
   // Private machine files, screenshots and working-tree edits are never read.
   const docs = paths.filter(
-    (p) => p.endsWith(".md") && !p.startsWith("assets/"),
+    (p) => p.endsWith(".md") && !p.startsWith("assets/") && !p.startsWith("prototypes/"),
   );
   const imagePrefix = "assets/roku/roku/images/";
   const assets = paths.filter((p) => p.startsWith(imagePrefix));
@@ -63,7 +63,7 @@ if (command === "sync") {
     ? JSON.parse(read("design-contract/snapshot-lock.json")).files
     : {};
   const imports = [];
-  for (const source of [...docs, "assets/FILES.json", ...data, ...assets]) {
+  for (const source of [...docs, ...paths.filter(p => p.startsWith("tokens/") && p.endsWith(".json")), "assets/FILES.json", ...data, ...assets]) {
     if (!safe(source)) throw Error(`Unsafe design path: ${source}`);
     const destination = source.startsWith(imagePrefix)
       ? `public/assets/${source.slice(imagePrefix.length)}`

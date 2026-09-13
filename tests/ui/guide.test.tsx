@@ -56,6 +56,51 @@ describe('guide cells', () => {
 });
 
 describe('Guide', () => {
+  it('pages real channel windows with touch controls and restores the current timeline', async () => {
+    const api = apiFixture();
+    const onPlay = vi.fn();
+    const clock = vi.spyOn(Date, 'now').mockReturnValue(start * 1000);
+    try {
+      const { container } = render(<Guide responsive api={api as unknown as TvApi} onPlay={onPlay} onError={vi.fn()} onDetails={vi.fn()} />);
+      await screen.findByRole('button', { name: 'Channel 1' });
+      const previous = screen.getByRole('button', { name: 'Previous channels' });
+      const next = screen.getByRole('button', { name: 'Next channels' });
+      expect(previous).toBeDisabled();
+      fireEvent.click(next);
+      expect(screen.getByRole('button', { name: 'Channel 6' })).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Channel 1' })).not.toBeInTheDocument();
+      expect(screen.getAllByTestId(/guide-row-/)).toHaveLength(5);
+      // Seven more visible windows cross the existing forty-channel API page.
+      for (let index = 0; index < 7; index += 1) fireEvent.click(next);
+      await screen.findByRole('button', { name: 'Channel 41' });
+      expect(api.live).toHaveBeenLastCalledWith(expect.objectContaining({ offset: 40 }), expect.anything());
+      fireEvent.click(screen.getByRole('button', { name: 'Channel 42' }));
+      expect(onPlay).toHaveBeenLastCalledWith(channels[41]);
+      fireEvent.click(previous);
+      await screen.findByRole('button', { name: 'Channel 36' });
+      expect(api.live).toHaveBeenLastCalledWith(expect.objectContaining({ offset: 0 }), expect.anything());
+
+      const timeline = container.querySelector('.guide-header')!;
+      const initialLabels = timeline.textContent;
+      const earlier = screen.getByRole('button', { name: 'Earlier' });
+      expect(earlier).toBeDisabled();
+      fireEvent.click(screen.getByRole('button', { name: 'Later' }));
+      expect(timeline.textContent).not.toBe(initialLabels);
+      expect(earlier).not.toBeDisabled();
+      expect(container.querySelector('.responsive-guide-now')).not.toBeInTheDocument();
+      fireEvent.click(earlier);
+      expect(timeline.textContent).toBe(initialLabels);
+      fireEvent.click(screen.getByRole('button', { name: 'Later' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Now' }));
+      expect(timeline.textContent).toBe(initialLabels);
+      expect(screen.getByRole('button', { name: 'Now' })).toHaveAttribute('aria-pressed', 'true');
+      expect(container.querySelector('.responsive-guide-now')).toBeInTheDocument();
+      expect(earlier).toBeDisabled();
+    } finally {
+      clock.mockRestore();
+    }
+  });
+
   it('uses real category filters and keeps five guide rows visible', async () => {
     const api = apiFixture();
     render(<Guide api={api as unknown as TvApi} onPlay={vi.fn()} onError={vi.fn()} onDetails={vi.fn()} />);

@@ -48,3 +48,15 @@ it("activates a short OK press exactly once and cancels a hold when Back is pres
   expect(hold).not.toHaveBeenCalled();
   expect(activate).toHaveBeenCalledTimes(1);
 });
+
+it("leaves native text editing keys to responsive fields while Escape still goes back", () => {
+  const back = vi.fn();
+  render(<RemoteRoot inputMode="responsive" onBack={back}><input aria-label="Search" /></RemoteRoot>);
+  const input = screen.getByRole("textbox");
+  input.focus();
+  for (const key of ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Enter", "Backspace"]) {
+    expect(fireEvent.keyDown(input, { key })).toBe(true);
+  }
+  expect(fireEvent.keyDown(input, { key: "Escape" })).toBe(false);
+  expect(back).toHaveBeenCalledOnce();
+});

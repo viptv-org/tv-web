@@ -1,7 +1,7 @@
 {
   "version": 1,
   "repository": "viptv-org/design",
-  "commit": "0688a47e854aec60b667ba9a575668007ab110ff",
+  "commit": "2411c28a169412fbedd38a293adc1a7482dcc9c0",
   "files": {
     "design-contract/.github/pull_request_template.md": {
       "source": ".github/pull_request_template.md",
@@ -33,7 +33,7 @@
     },
     "design-contract/DESIGN.md": {
       "source": "DESIGN.md",
-      "sha256": "ccad372142629f6d011bb9188c06830e238b16724e82ba08abe4875b05697d17"
+      "sha256": "c7f04841dfe54a5a09c78f56fbdccea4b2dd5884e27c3517b560a4546bf8a9f1"
     },
     "design-contract/DESIGN_SYNC.md": {
       "source": "DESIGN_SYNC.md",
@@ -63,9 +63,21 @@
       "source": "REPOSITORIES.md",
       "sha256": "c74a6c8c58456f039ea4fb9611fffb9c815a5dcef1c324dd6b8ebf035a5d2187"
     },
+    "design-contract/RESPONSIVE_PRODUCTION.md": {
+      "source": "RESPONSIVE_PRODUCTION.md",
+      "sha256": "60e5789f012cd132959e88f661b8973b19b2af6331d0cc3afeda6bf1642e73eb"
+    },
+    "design-contract/RESPONSIVE_UI.md": {
+      "source": "RESPONSIVE_UI.md",
+      "sha256": "f7e45a367a651d4e73025555381992673406dd139344748351d079f6325e49c8"
+    },
+    "design-contract/RESPONSIVE_VIPTV_ALIGNMENT.md": {
+      "source": "RESPONSIVE_VIPTV_ALIGNMENT.md",
+      "sha256": "bbdd5d4046bdd4ca989b9b4bba32e0490edb0e746bf0ad64435210c1fc2d0639"
+    },
     "design-contract/SHARED_CORE.md": {
       "source": "SHARED_CORE.md",
-      "sha256": "835699bc5ddc7e3bc97f5945c5e75606be0dbc5be3df5fa7bf728d95ec3aa4a9"
+      "sha256": "12685fedc448f1cf94ec7f59bce47164b74b08f32ab6e474a94bbed3f983d876"
     },
     "design-contract/SPEC.md": {
       "source": "SPEC.md",
@@ -122,6 +134,10 @@
     "design-contract/specs/visual/VISUAL_SYSTEM.md": {
       "source": "specs/visual/VISUAL_SYSTEM.md",
       "sha256": "eced53dfd779b3909927be7d32fb82becc8736d103983e10f8a7f0290268922f"
+    },
+    "design-contract/tokens/responsive.json": {
+      "source": "tokens/responsive.json",
+      "sha256": "2f193519790c76c0e46a7da9a3564fc62b62d0fae8aca5739877a8ddf41950a8"
     },
     "design-contract/assets/FILES.json": {
       "source": "assets/FILES.json",

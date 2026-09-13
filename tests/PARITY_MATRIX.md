@@ -53,3 +53,7 @@ Tizen/Vizio behavior, is verified.
 WebM fixture. It does not prove a physical SmartCast decoder, Tizen AVPlay,
 codec/DRM support, signing, store submission, or backend delivery behavior.
 Those remain platform and hardware acceptance work.
+
+## Responsive production adoption (issue #3)
+
+Contract: design `2411c28a169412fbedd38a293adc1a7482dcc9c0`, RESPONSIVE_PRODUCTION and RUI-018–021. Browser default adopts responsive layout; explicit TV layout retains the prior canvas and behavior. Real controller/API integration and native command payloads are covered separately from physical decoding. Current validation evidence will be recorded in RESPONSIVE_VALIDATION.md. No measured Roku screenshot match or native packaging claim is made by moving this pin.

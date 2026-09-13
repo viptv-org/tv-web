@@ -21,7 +21,9 @@ export function TextEntry({
   const limit = secret ? 8 : title === "Profile name" ? 64 : 2048;
   const append = (text: string) => setValue((v) => (v + text).slice(0, limit));
   useEffect(() => {
-    focusElement("text-key-0");
+    const input = document.querySelector<HTMLInputElement>(".responsive-app .roku-text-entry input");
+    if (input) input.focus();
+    else focusElement("text-key-0");
   }, []);
   const save = async () => {
     if (pending) return;

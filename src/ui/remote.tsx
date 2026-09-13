@@ -22,8 +22,10 @@ export function RemoteRoot({
   onMediaKey,
   onMediaKeyUp,
   onNavigate,
+  inputMode = "tv",
 }: {
   children: ReactNode;
+  inputMode?: "tv" | "responsive";
   onBack?: Action;
   onMediaKey?: (key: string) => boolean;
   onMediaKeyUp?: (key: string) => void;
@@ -45,6 +47,20 @@ export function RemoteRoot({
       const code = event.keyCode;
       const key = normalizeKey(event);
       handlers.current.onNavigate?.();
+      if (inputMode === "responsive" && key === "Tab") {
+        const scope = document.querySelector<HTMLElement>("[data-focus-scope]");
+        if (scope) {
+          const controls = Array.from(scope.querySelectorAll<HTMLElement>(
+            'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), a[href], [tabindex="0"]',
+          )).filter(element => element.getClientRects().length > 0);
+          const first = controls[0], last = controls[controls.length - 1];
+          if (first && (event.shiftKey ? document.activeElement === first : document.activeElement === last)) {
+            event.preventDefault();
+            (event.shiftKey ? last : first).focus();
+          }
+        }
+        return;
+      }
       const input =
         event.target instanceof HTMLInputElement ||
         event.target instanceof HTMLTextAreaElement;
@@ -59,13 +75,14 @@ export function RemoteRoot({
         handlers.current.onBack?.();
         return;
       }
-      if (input && !["Enter", "ArrowUp", "ArrowDown"].includes(key)) return;
+      if (input && (inputMode === "responsive" || !["Enter", "ArrowUp", "ArrowDown"].includes(key))) return;
       if (handlers.current.onMediaKey?.(key || String(code))) {
         event.preventDefault();
         return;
       }
       const current = document.activeElement as HTMLElement | null;
       const id = current?.dataset.focusId;
+      if (inputMode === "responsive" && !id) return;
       if (key === "Enter" || code === 13) {
         event.preventDefault();
         if (press || !id || event.repeat) return;
@@ -133,7 +150,7 @@ export function RemoteRoot({
       window.removeEventListener("keyup", up);
       window.removeEventListener("blur", clear);
     };
-  }, []);
+  }, [inputMode]);
   return (
     <Registry.Provider value={registry.current}>{children}</Registry.Provider>
   );
@@ -235,7 +252,7 @@ function revealFocusedControl(element: HTMLElement) {
     if (!element.isConnected || document.activeElement !== element) return;
     for (
       let parent = element.parentElement;
-      parent && !parent.classList.contains("tv-screen");
+      parent && (!parent.classList.contains("tv-screen") || parent.classList.contains("responsive-app"));
       parent = parent.parentElement
     ) {
       const style = getComputedStyle(parent);
@@ -253,7 +270,9 @@ function revealFocusedControl(element: HTMLElement) {
             const anchor = target.left < rect.left ? 0.33 : 0.67;
             const desired = Math.max(
               0,
-              element.offsetLeft +
+              (element.closest(".responsive-app")
+                ? parent.scrollLeft + (target.left - rect.left) / scaleX
+                : element.offsetLeft) +
                 element.offsetWidth / 2 -
                 parent.clientWidth * anchor,
             );
@@ -290,6 +309,7 @@ function revealFocusedControl(element: HTMLElement) {
         else if (target.bottom > rect.bottom)
           parent.scrollTop += (target.bottom - rect.bottom) / scaleY;
       }
+      if (parent.classList.contains("responsive-app")) break;
     }
   });
 }

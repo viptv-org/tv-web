@@ -26,6 +26,7 @@ import {
 import { probeBrowserPlaybackCapabilities } from "../player/browser-capabilities";
 import { RemoteRoot, TvButton, focusElement } from "./remote";
 import "./tv.css";
+import "./responsive.css";
 import { RokuText } from "./RokuText";
 import {
   enrichDetail,
@@ -48,6 +49,7 @@ import {
   catalogFilterLabel,
 } from "./catalogFilters";
 import { Guide as LiveGuide } from "./Guide";
+import { CastController } from "./CastController";
 type Screen =
   | "startup"
   | "pairing"
@@ -90,13 +92,27 @@ function presentationContext(item: MediaItem) {
             : "";
   return [context, status].filter(Boolean).join(" · ");
 }
+function ResponsiveTitle({ title, logo }: { title: string; logo?: string | null }) {
+  const [loaded, setLoaded] = useState<string>();
+  return <h1 className={`responsive-title ${logo && loaded === logo ? "has-logo" : ""}`}><span>{title}</span>{logo && <img src={logo} alt="" onLoad={() => setLoaded(logo)} onError={() => setLoaded(undefined)} />}</h1>;
+}
+
 export function App({
   api,
   platform = "html5",
+  layout = "tv",
 }: {
   api: TvApi;
   platform?: PlayerPlatform;
+  layout?: "tv" | "responsive";
 }) {
+  const responsive = layout === "responsive";
+  const [casting, setCasting] = useState(false);
+  const castFocus = useRef<HTMLElement | null>(null);
+  const openCast = () => { castFocus.current = document.activeElement as HTMLElement; setCasting(true); };
+  const closeCast = () => { setCasting(false); requestAnimationFrame(() => castFocus.current?.focus()); };
+  const [oled, setOled] = useState(() => { try { return localStorage.getItem("viptv:appearance:oled") === "true"; } catch { return false; } });
+  const toggleOled = () => setOled((previous) => { const next = !previous; try { localStorage.setItem("viptv:appearance:oled", String(next)); } catch { /* Appearance remains usable without storage. */ } return next; });
   const [compactHome, setCompactHome] = useState(false),
     [bootingHome, setBootingHome] = useState(false),
     [recentLive, setRecentLive] = useState<readonly MediaItem[]>([]),
@@ -443,6 +459,7 @@ export function App({
     }
   };
   useEffect(() => {
+    if (responsive) return;
     const resize = () => {
       const element = document.querySelector<HTMLElement>(".tv-screen");
       if (element) {
@@ -455,7 +472,7 @@ export function App({
     resize();
     window.addEventListener("resize", resize);
     return () => window.removeEventListener("resize", resize);
-  }, []);
+  }, [responsive]);
   useEffect(() => {
     let disposed = false;
     let readyProfile = "";
@@ -1558,8 +1575,8 @@ export function App({
   };
   const cards = (list: readonly MediaItem[], prefix: string) => (
     <div className="cards">
-      {list.map((item, i) => (
-        <TvButton
+      {list.map((item, i) => {
+        const card = <TvButton
           className={`media-card ${item.type === "live" ? "logo-card" : ""}`}
           aria-label={item.name}
           id={`${prefix}-${i}`}
@@ -1610,8 +1627,9 @@ export function App({
           {!!item.position && (
             <progress value={item.position} max={item.duration ?? 1} />
           )}
-        </TvButton>
-      ))}
+        </TvButton>;
+        return responsive ? <div className="responsive-card" key={`${item.type}-${item.id}`}>{card}<TvButton className="card-more" id={`${prefix}-${i}-more`} aria-label={`More options for ${item.name}`} onActivate={() => manage(item)}>•••</TvButton></div> : card;
+      })}
     </div>
   );
   const heroItem = highlighted ?? queue[0] ?? recentLive[0] ?? items[0];
@@ -1629,6 +1647,17 @@ export function App({
   }, [api, heroKey]);
   const heroPresentation = heroItem ? normalizeCore<MediaPresentation>("presentation",
     heroMetadata?.key === heroKey ? enrichDetail(heroItem, heroMetadata.item) : heroItem) : undefined;
+  useLayoutEffect(() => {
+    if (!responsive) return;
+    const root = document.querySelector<HTMLElement>(".responsive-app");
+    if (root) {
+      root.style.scrollBehavior = "auto";
+      root.scrollTop = 0;
+      root.scrollLeft = 0;
+      root.style.removeProperty("scroll-behavior");
+    }
+  }, [responsive, screen]);
+  const selectedPresentation = selected ? normalizeCore<MediaPresentation>("presentation", selected) : undefined;
   const activeProfile = profiles.find((p) => p.id === profile);
   const navItems: Screen[] = [
     "profiles",
@@ -1641,7 +1670,8 @@ export function App({
   ];
   return (
     <RemoteRoot
-      onBack={back}
+      inputMode={layout}
+      onBack={() => casting ? closeCast() : back()}
       onMediaKey={mediaKey}
       onMediaKeyUp={mediaKeyUp}
       onNavigate={() => {
@@ -1650,9 +1680,16 @@ export function App({
       }}
     >
       <div
-        className={`tv-screen screen-${screen.replace(/ /g, "-").toLowerCase()} ${screen === "player" ? "playing" : ""}`}
+        className={`tv-screen ${responsive ? "responsive-app" : ""} ${oled ? "oled" : ""} screen-${screen.replace(/ /g, "-").toLowerCase()} ${screen === "player" ? "playing" : ""}`}
       >
-        <video ref={video} className="video" playsInline />
+        <video ref={video} className="video" playsInline onClick={() => responsive && setOverlay((value) => !value)} />
+        {responsive && !["startup", "pairing", "player"].includes(screen) && <header className="responsive-toolbar">
+          <div className="toolbar-spacer" />
+          {["detail", "sources", "profiles"].includes(screen) && <TvButton id="responsive-back" onActivate={back} aria-label="Back">←</TvButton>}
+          <TvButton id="responsive-cast" aria-label="Watch on TV" onActivate={openCast}><img src={`${import.meta.env.BASE_URL}assets/ui-nav-tv.png`} alt="" /></TvButton>
+          <TvButton id="responsive-oled" aria-pressed={oled} onActivate={toggleOled}>OLED {oled ? "on" : "off"}</TvButton>
+          {!["profiles"].includes(screen) && <TvButton id="responsive-profile" aria-label="Choose profile" onActivate={() => setScreen("profiles")}><ReadyImage src={activeProfile ? avatarUrl(activeProfile) : undefined} alt="" /><span>{activeProfile?.name ?? "Profile"}</span></TvButton>}
+        </header>}
         <div
           className={`brand ${["profiles", "pairing"].includes(screen) ? "gateway-brand" : ""}`}
         >
@@ -1736,14 +1773,15 @@ export function App({
           </section>
         ) : (
           <>
-            {!["detail", "sources", "player"].includes(screen) && (
-              <nav>
+            {(responsive ? screen !== "player" : !["detail", "sources", "player"].includes(screen)) && (
+              <nav aria-label="Main navigation">
                 {navItems.map((n, i) => (
                   <TvButton
                     id={`nav-${n}`}
                     aria-label={n === "profiles" ? "Profile" : n}
                     key={n}
-                    className={n === screen ? "active" : ""}
+                    className={`${n === screen ? "active" : ""} nav-${n.replace(/ /g, "-").toLowerCase()}`}
+                    aria-current={n === screen ? "page" : undefined}
                     onActivate={() =>
                       n === "profiles"
                         ? setScreen("profiles")
@@ -1774,12 +1812,13 @@ export function App({
             )}
             {screen === "Home" && (
               <main className={`home ${compactHome ? "compact-home" : ""}`}>
-                {heroPresentation?.heroImage && (
+                {!responsive && heroPresentation?.heroImage && (
                   <HeroArtwork
                     key={heroPresentation.heroImage}
                     uri={heroPresentation.heroImage}
                   />
                 )}
+                {responsive && <div className="responsive-hero-art"><CardArtwork src={heroPresentation?.heroImage ?? undefined} fallback="Preview unavailable" /></div>}
                 <div className="hero">
                   <small>
                     {(highlighted ?? queue[0] ?? recentLive[0] ?? items[0])
@@ -1789,9 +1828,7 @@ export function App({
                         ? "CONTINUE WATCHING"
                         : `FEATURED ${(highlighted ?? items[0])?.type?.toUpperCase() ?? "MOVIE"}`}
                   </small>
-                  <h1>
-                    <RokuText>{heroItem?.name ?? "VIPTV"}</RokuText>
-                  </h1>
+                  {responsive ? <ResponsiveTitle title={heroItem?.name ?? "VIPTV"} logo={heroPresentation?.titleLogo} /> : <h1><RokuText>{heroItem?.name ?? "VIPTV"}</RokuText></h1>}
                   <p>
                     {(highlighted ?? queue[0] ?? recentLive[0] ?? items[0])
                       ?.description ?? ""}
@@ -1846,6 +1883,7 @@ export function App({
                     >
                       {heroPresentation?.primaryActionLabel ?? "Play"}
                     </TvButton>
+                    {responsive && <><TvButton id="hero-save" className="compact-action" aria-label="My List" aria-pressed={favorites.some((item) => item.id === heroItem?.id)} onActivate={() => { if (heroItem) void toggle(heroItem); }}>{favorites.some((item) => item.id === heroItem?.id) ? "✓" : "+"}</TvButton><TvButton id="hero-more" className="compact-action" aria-label="More options" onActivate={() => { if (heroItem) setModal({ title: heroItem.name, choices: [{ label: "Details", action: () => { setModal(undefined); void detail(heroItem); } }, { label: "More actions", action: () => manage(heroItem) }, { label: "Cancel", action: () => setModal(undefined) }] }); }}>•••</TvButton></>}
                     <TvButton
                       id="hero-details"
                       onFocus={() => setCompactHome(false)}
@@ -1910,6 +1948,7 @@ export function App({
             {["Discover", "My List", "Search"].includes(screen) && (
               <main className={`browse ${screen === "Search" ? "search" : ""}`}>
                 <h1>{screen}</h1>
+                {responsive && ["Search", "Discover"].includes(screen) && <div className="responsive-browse-switch"><TvButton id="browse-search" aria-pressed={screen === "Search"} onActivate={() => void navigate("Search")}>Search</TvButton><TvButton id="browse-discover" aria-pressed={screen === "Discover"} onActivate={() => void navigate("Discover")}>Discover</TvButton></div>}
                 {screen === "Search" && (
                   <div
                     className="keyboard"
@@ -1938,15 +1977,13 @@ export function App({
                     }}
                   >
                     <input
-                      tabIndex={-1}
+                      tabIndex={responsive ? 0 : -1}
                       maxLength={256}
                       aria-label="Search titles"
                       placeholder="Search movies and shows"
                       onKeyDown={(e) => {
                         if (
-                          ["Enter", "ArrowRight", "MediaPlay"].includes(
-                            e.key,
-                          ) &&
+                          (responsive ? ["Enter"] : ["Enter", "ArrowRight", "MediaPlay"]).includes(e.key) &&
                           items.length
                         ) {
                           e.preventDefault();
@@ -2200,16 +2237,15 @@ export function App({
               <main
                 className={`detail ${selected.type === "series" && !selected.episode ? "series" : "movie"}`}
               >
-                {selected.background && (
+                {!responsive && selected.background && (
                   <div className="detail-backdrop" aria-hidden="true">
                     <ReadyImage src={selected.background} alt="" />
                   </div>
                 )}
-                <ReadyImage className="poster" src={selected.poster} alt="" />
+                {!responsive && <ReadyImage className="poster" src={selected.poster} alt="" />}
+                {responsive && <div className="responsive-detail-art"><CardArtwork src={selectedPresentation?.heroImage ?? undefined} fallback="Preview unavailable" /></div>}
                 <div className="detail-copy">
-                  <h1>
-                    <RokuText>{selected.name}</RokuText>
-                  </h1>
+                  {responsive ? <ResponsiveTitle title={selected.name} logo={selectedPresentation?.titleLogo} /> : <h1><RokuText>{selected.name}</RokuText></h1>}
                   <p className="detail-facts">
                     {[selected.year, selected.runtime, ...selected.genres]
                       .filter(Boolean)
@@ -2256,14 +2292,15 @@ export function App({
                       )}
                     <TvButton
                       id="detail-save"
+                      aria-label={favorites.some((f) => f.id === selected.id) ? "Remove from My List" : "Add to My List"}
+                      aria-pressed={favorites.some((f) => f.id === selected.id)}
                       onActivate={() => void toggle(selected)}
                     >
-                      {favorites.some((f) => f.id === selected.id)
-                        ? "Remove from My List"
-                        : "+ My List"}
+                      {responsive ? (favorites.some((f) => f.id === selected.id) ? "✓" : "+") : favorites.some((f) => f.id === selected.id) ? "Remove from My List" : "+ My List"}
                     </TvButton>
                     <TvButton
                       id="detail-info"
+                      aria-label="More info"
                       onActivate={() =>
                         setModal({
                           title: selected.name,
@@ -2287,6 +2324,7 @@ export function App({
                             .filter(Boolean)
                             .join("\n\n"),
                           choices: [
+                            ...(responsive ? [{ label: "Choose source", action: () => { setModal(undefined); void discoverSources(selected); } }, { label: "More actions", action: () => manage(selected) }] : []),
                             {
                               label: "Close",
                               action: () => setModal(undefined),
@@ -2295,7 +2333,7 @@ export function App({
                         })
                       }
                     >
-                      More info
+                      {responsive ? "•••" : "More info"}
                     </TvButton>
                   </div>
                   <p className="detail-credits">
@@ -2317,8 +2355,8 @@ export function App({
                     <div className="episode-grid">
                       {episodes
                         .filter((e) => e.season === season)
-                        .map((e, i) => (
-                          <TvButton
+                        .map((e, i) => {
+                          const episodeCard = <TvButton
                             className="episode"
                             id={`episode-${i}`}
                             key={e.id}
@@ -2352,8 +2390,9 @@ export function App({
                               <RokuText>{e.episodeTitle ?? e.name}</RokuText>
                             </h2>
                             <p>{e.description}</p>
-                          </TvButton>
-                        ))}
+                          </TvButton>;
+                          return responsive ? <div className="responsive-episode" key={e.id}>{episodeCard}<TvButton className="episode-more" id={`episode-${i}-more`} aria-label={`More options for ${e.episodeTitle ?? e.name}`} onActivate={() => manage(e)}>•••</TvButton></div> : episodeCard;
+                        })}
                     </div>
                   </>
                 )}
@@ -2497,6 +2536,7 @@ export function App({
             )}
             {screen === "Live TV" && (
               <LiveGuide
+                responsive={responsive}
                 api={api}
                 onPlay={(item) => void play(item)}
                 onError={fail}
@@ -2787,6 +2827,7 @@ export function App({
             {toast}
           </div>
         )}
+        {casting && <div className="scrim"><div className="modal" role="dialog" aria-modal="true" aria-label="Watch on TV" data-focus-scope="cast"><CastController receiverUrl={import.meta.env.VITE_VIZIO_RECEIVER_URL} onClose={closeCast} /></div></div>}
         {modal && (
           <div className="scrim">
             <div

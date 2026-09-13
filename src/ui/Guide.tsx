@@ -130,8 +130,10 @@ export function Guide({
   onPlay,
   onError,
   onDetails,
+  responsive = false,
 }: {
   api: TvApi;
+  responsive?: boolean;
   onPlay: (item: MediaItem) => void;
   onError: (error: unknown) => void;
   onDetails: (item: MediaItem, program?: GuideProgram) => void;
@@ -162,7 +164,7 @@ export function Guide({
   const focusAfterTimeline = useRef<{ row: number; at: number } | null>(null);
   const cellsByRow = useRef(new Map<number, readonly GuideCell[]>());
 
-  const visibleFirst = firstVisibleRow(selected, channels.length);
+  const visibleFirst = responsive ? Math.floor(selected / VISIBLE_ROWS) * VISIBLE_ROWS : firstVisibleRow(selected, channels.length);
   const visibleChannels = channels.slice(
     visibleFirst,
     visibleFirst + VISIBLE_ROWS,
@@ -336,6 +338,14 @@ export function Guide({
       focusAfterTimeline.current = { row, at: focusAt };
     setWindowStart(next);
     return true;
+  };
+
+  const pageChannels = (direction: -1 | 1) => {
+    const next = visibleFirst + direction * VISIBLE_ROWS;
+    setSelectedProgram(undefined);
+    if (next >= 0 && next < channels.length) setSelected(next);
+    else if (direction > 0 && offset + channels.length < total) routePage(offset + PAGE_SIZE, 0);
+    else if (direction < 0 && offset > 0) routePage(Math.max(0, offset - PAGE_SIZE), PAGE_SIZE - VISIBLE_ROWS);
   };
 
   const restoreNow = () => {
@@ -532,6 +542,14 @@ export function Guide({
           </TvButton>
         ))}
       </div>
+      {responsive && <div className="responsive-guide-controls" aria-label="Guide navigation">
+        <TvButton id="guide-previous-channels" disabled={loading || (offset === 0 && visibleFirst === 0)} onActivate={() => pageChannels(-1)}>Previous channels</TvButton>
+        <TvButton id="guide-next-channels" disabled={loading || offset + visibleFirst + VISIBLE_ROWS >= total} onActivate={() => pageChannels(1)}>Next channels</TvButton>
+        <TvButton id="guide-earlier" disabled={windowStart <= halfHour()} onActivate={() => moveWindow(-1)}>Earlier</TvButton>
+        <TvButton id="guide-now" aria-pressed={following} onActivate={restoreNow}>Now</TvButton>
+        <TvButton id="guide-later" disabled={windowStart >= halfHour() + DAY_SECONDS} onActivate={() => moveWindow(1)}>Later</TvButton>
+        <span>Current time {formatTime(now)}</span>
+      </div>}
       <div className="guide-header">
         {[0, 1, 2, 3].map((index) => (
           <span key={index}>
@@ -618,8 +636,9 @@ export function Guide({
             </div>
           );
         })}
+        {responsive && now >= windowStart && now < windowStart + WINDOW_SECONDS && <div className="guide-now responsive-guide-now" aria-hidden="true" style={{ left: 132 + Math.floor(((now - windowStart) / WINDOW_SECONDS) * GUIDE_WIDTH), height: visibleChannels.length * 91 }} />}
       </div>
-      {now >= windowStart && now < windowStart + WINDOW_SECONDS && (
+      {!responsive && now >= windowStart && now < windowStart + WINDOW_SECONDS && (
         <div
           className="guide-now"
           style={{
@@ -640,7 +659,7 @@ export function Guide({
           : (selectedProgram?.title ?? channels[selected]?.name)}
       </p>
       <p className="guide-help">
-        OK Watch / Details * Details Replay Now Back Sidebar
+        {responsive ? "Select a programme to watch or view details. Scroll sideways to see the full schedule." : "OK Watch / Details * Details Replay Now Back Sidebar"}
       </p>
       {selectedGuide?.timezone && (
         <span className="guide-timezone">{selectedGuide.timezone}</span>

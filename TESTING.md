@@ -150,3 +150,7 @@ Unit suite62passed against actualWASM; runtime TypeScript tests9passed; core Rus
 Playback has one bounded same-source direct-to-managed retry for preparation and later decoder rejection, with stale error checks, position/pause preservation and Stop cancellation. This is not evidence that the owner's exact live stream is qualified. Production backend and household accounts/providers/history were not modified. No emulator, realAndroid/Tizen/Vizio or installedTauri tests performed. Remaining all-platform extraction is recorded in core/README.md.
 
 Final packaging/typecheck and immutable core/design integrity checks passed. Live LAN preview loaded WASM with HTTP200 and completed pairing initiation with HTTP200 and no page errors; no account was approved or selected by this check.
+
+## Responsive viewing client — 2026-09-13
+
+See RESPONSIVE_VALIDATION.md and issue #3 for current immutable pins and results. Production build, strict application/test type checks, 72-test unit batch, five-test Guide follow-up, 60-scenario browser batch and five-scenario final responsive subset passed. Platform-specific duplicate browser exclusions are recorded separately from executed tests. Default browser now uses real responsive presentation; explicit TV platforms retain their prior renderer. Native Tauri packaging/SmartCast hardware and a public Vizio receiver remain unverified/unconfigured.
