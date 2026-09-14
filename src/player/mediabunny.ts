@@ -1,4 +1,4 @@
-import { Input, UrlSource, ALL_FORMATS, CanvasSink, AudioBufferSink, type WrappedCanvas, type WrappedAudioBuffer } from 'mediabunny';
+import { Input, UrlSource, ALL_FORMATS, CanvasSink, AudioBufferSink, type InputVideoTrack, type WrappedCanvas, type WrappedAudioBuffer } from 'mediabunny';
 import { SessionPlayer } from './session';
 import { PlayerOperationError, growOnlyDuration, timelineDuration, type OpenPlayerRequest, type PlayerCapabilities } from './types';
 
@@ -32,6 +32,7 @@ export class MediabunnyAdapter extends SessionPlayer {
   private context?: AudioContext;
   private gain?: GainNode;
   private videoSink?: CanvasSink;
+  private videoTrack?: InputVideoTrack;
   private audioSink?: AudioBufferSink;
   private videoIterator?: AsyncGenerator<WrappedCanvas, void, unknown>;
   private audioIterator?: AsyncGenerator<WrappedAudioBuffer, void, unknown>;
@@ -49,6 +50,8 @@ export class MediabunnyAdapter extends SessionPlayer {
   private ticker?: ReturnType<typeof setInterval>;
   private videoDone = false;
   private audioDone = false;
+  private live = false;
+  private liveRefresh?: ReturnType<typeof setTimeout>;
 
   constructor(private readonly canvas: HTMLCanvasElement) { super(); }
 
@@ -60,10 +63,11 @@ export class MediabunnyAdapter extends SessionPlayer {
     const token = ++this.generation;
     if (request.authorization?.cookie || request.authorization?.userAgent)
       throw new PlayerOperationError('authorization-unsupported', 'Playback requires a backend-compatible media URL.');
-    this.context = new AudioContext();
-    this.gain = this.context.createGain(); this.gain.connect(this.context.destination); this.applyVolume();
     const input = this.input = new Input({
-      source: new UrlSource(request.url, { fetchFn: sessionMediaFetch(request.url), maxCacheSize: 16 * 1024 * 1024, parallelism: 2, getRetryDelay: () => null }),
+      // Readahead and bounded retries stay the library defaults: disabling
+      // retries turned one evicted segment of a rolling playlist into a hard
+      // read failure, and a 32 MiB cache still bounds memory per session.
+      source: new UrlSource(request.url, { fetchFn: sessionMediaFetch(request.url), maxCacheSize: 32 * 1024 * 1024 }),
       formats: ALL_FORMATS,
       formatOptions: { hls: { offsetTimestampsByDateTime: false } },
     });
@@ -72,18 +76,29 @@ export class MediabunnyAdapter extends SessionPlayer {
     if (!video || !(await video.canDecode())) throw new PlayerOperationError('unsupported-format', 'Mediabunny cannot decode this video track.');
     const audio = await video.getPrimaryPairableAudioTrack();
     if (audio && !(await audio.canDecode())) throw new PlayerOperationError('unsupported-format', 'Mediabunny cannot decode this audio track.');
+    // The example creates the context at the track's own sample rate; mismatched
+    // rates resample and drift against the picture.
+    const sampleRate = audio ? await audio.getSampleRate() : undefined;
+    if (!this.isCurrent(session) || token !== this.generation) return;
+    this.context = new AudioContext(sampleRate ? { sampleRate } : undefined);
+    this.gain = this.context.createGain(); this.gain.connect(this.context.destination); this.applyVolume();
     if (!this.isCurrent(session) || token !== this.generation) return;
     const [videoConfig, audioConfig, width, height, start] = await Promise.all([
       video.getDecoderConfig(), audio?.getDecoderConfig(), video.getDisplayWidth(), video.getDisplayHeight(), video.getFirstTimestamp(),
     ]);
     if (!this.isCurrent(session) || token !== this.generation) return;
     this.firstTimestamp = start;
-    // Managed VOD may be a growing HLS playlist until server preparation ends.
-    // Waiting for ENDLIST here would turn every such source into a timeout.
-    this.duration = request.kind === 'live' || await video.isLive() ? null : await video.getDurationFromMetadata({ skipLiveWait: true });
+    // Managed output is a rolling playlist until the source ends, so it is a
+    // live stream even for a movie: the example reads the window, refreshes its
+    // end and never waits for ENDLIST. The session owns the title duration.
+    this.live = request.kind === 'live' || await video.isLive();
+    this.duration = this.live ? null : await video.getDurationFromMetadata({ skipLiveWait: true });
     if (this.duration != null) this.duration = Math.max(0, this.duration - start);
+    if (this.live) void this.refreshLiveWindow(token);
     this.canvas.width = width; this.canvas.height = height;
-    this.videoSink = new CanvasSink(video, { poolSize: 2 });
+    this.videoTrack = video;
+    // Pool of two: only the current and next frame are ever alive (example).
+    this.videoSink = new CanvasSink(video, { poolSize: 2, fit: 'contain' });
     this.audioSink = audio ? new AudioBufferSink(audio) : undefined;
     this.position = Math.max(0, request.startAtSeconds ?? 0);
     const frame = await this.videoSink.getCanvas(start + this.position);
@@ -145,6 +160,21 @@ export class MediabunnyAdapter extends SessionPlayer {
   async selectAudioTrack(): Promise<void> { throw new PlayerOperationError('unsupported-operation', 'Select audio through the playback session.'); }
   async selectTextTrack(): Promise<void> { throw new PlayerOperationError('unsupported-operation', 'Select subtitles through the playback session.'); }
 
+  /** Keeps a rolling window fresh so the read cursor can follow its edge. */
+  private async refreshLiveWindow(token: number): Promise<void> {
+    const track = this.videoTrack;
+    if (!track || token !== this.generation) return;
+    const interval = await track.getLiveRefreshInterval().catch(() => null);
+    if (token !== this.generation) return;
+    this.liveRefresh = setTimeout(() => {
+      if (token !== this.generation) return;
+      void track.isLive().catch(() => false).then(stillLive => {
+        if (stillLive && token === this.generation) return this.refreshLiveWindow(token);
+        return undefined;
+      });
+    }, Math.max(1, interval ?? 4) * 1000);
+  }
+
   private draw(frame: WrappedCanvas): void { this.canvas.getContext('2d')?.drawImage(frame.canvas, 0, 0, this.canvas.width, this.canvas.height); }
   private currentPosition(): number { return this.playing && this.context ? Math.max(0, this.context.currentTime - this.anchor) : this.position; }
   private time() {
@@ -194,6 +224,7 @@ export class MediabunnyAdapter extends SessionPlayer {
   private cancelLoops(): void {
     this.generation++;
     clearInterval(this.ticker); this.ticker = undefined;
+    clearTimeout(this.liveRefresh); this.liveRefresh = undefined;
     // return() may wait for a live read; disposal below aborts the source on stop.
     void this.videoIterator?.return().catch(() => undefined);
     void this.audioIterator?.return().catch(() => undefined);
@@ -203,7 +234,7 @@ export class MediabunnyAdapter extends SessionPlayer {
   }
   private async release(): Promise<void> {
     this.playing = false; this.cancelLoops(); this.input?.dispose(); this.input = undefined;
-    this.videoSink = undefined; this.audioSink = undefined;
+    this.videoSink = undefined; this.videoTrack = undefined; this.audioSink = undefined;
     const context = this.context; this.context = undefined; this.gain = undefined;
     if (context && context.state !== 'closed') await context.close();
   }

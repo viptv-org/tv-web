@@ -113,6 +113,14 @@ export interface OpenPlayerRequest {
   /** Absolute title time represented by native position zero for managed output. */
   readonly timelineOffsetSeconds?: number;
   /**
+   * `managed` output is a rolling HLS window that a streaming engine must buffer
+   * against; `direct` is the untouched original delivery. Omitted keeps the
+   * file-decoder preference.
+   */
+  readonly deliveryMode?: 'direct' | 'managed';
+  /** Container of this delivery, e.g. `hls` or `mp4`. */
+  readonly deliveryFormat?: string;
+  /**
    * The title's full length in seconds as known by the server. Managed output is
    * a rolling HLS window, so an engine duration describes only the buffered part
    * and must never be published as the title length.

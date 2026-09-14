@@ -462,6 +462,8 @@ function adapterRequest(session: PlaybackSession, kind: PlaybackKind, position: 
     // the title is. Direct original files may refine it with their own length.
     timelineDurationSeconds: kind === 'live' || !(session.duration > 0) ? undefined : session.duration,
     adoptEngineDuration: direct,
+    deliveryMode: direct ? 'direct' : 'managed',
+    deliveryFormat: session.format,
     paused,
   };
 }

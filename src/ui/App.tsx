@@ -153,6 +153,9 @@ export function App({
     [profile, setProfile] = useState(""),
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false),
+    // Preparing playback is its own state: `busy` also covers source discovery,
+    // and the player screen does not exist yet while the server prepares.
+    [preparing, setPreparing] = useState(false),
     [toast, setToast] = useState("");
   const [catalogError, setCatalogError] = useState("");
   const [controlActivity, setControlActivity] = useState(0);
@@ -926,6 +929,7 @@ export function App({
     const ticket = ++epoch.current;
     setError("");
     setBusy(true);
+    setPreparing(true);
     try {
       const enriched = {
         ...item,
@@ -998,6 +1002,7 @@ export function App({
       });
     } finally {
       setBusy(false);
+      setPreparing(false);
     }
   };
   const retireBrowserPlayback = async () => {
@@ -2991,7 +2996,15 @@ export function App({
             <p>Starting VIPTV…</p>
           </div>
         )}
-        {busy && screen !== "sources" && (
+        {preparing && screen !== "player" && (
+          <div
+            className={screen === "sources" ? "playback-loading" : "loading"}
+            role="status"
+          >
+            Preparing playback… Back to cancel
+          </div>
+        )}
+        {busy && !preparing && screen !== "sources" && (
           <div
             className={screen === "player" ? "playback-loading" : "loading"}
             role="status"
