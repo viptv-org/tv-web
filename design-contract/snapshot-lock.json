@@ -1,7 +1,7 @@
 {
   "version": 1,
   "repository": "viptv-org/design",
-  "commit": "4b75e5626b84a43d8363988cb54adc894b2c299e",
+  "commit": "f437f3f42c95c9182d430a14cefdea46845189d7",
   "files": {
     "design-contract/.github/pull_request_template.md": {
       "source": ".github/pull_request_template.md",
@@ -113,7 +113,7 @@
     },
     "design-contract/specs/behavior/roku-ux-contract.md": {
       "source": "specs/behavior/roku-ux-contract.md",
-      "sha256": "d35f4b9d639a7c230a4ad08b81411ff9de56d480258baea2eb520f47969af287"
+      "sha256": "b308719daaf84930edb9eed50b80816b354dbfee4ec92d9851fa0cf7d3f14911"
     },
     "design-contract/specs/repos/README.md": {
       "source": "specs/repos/README.md",
