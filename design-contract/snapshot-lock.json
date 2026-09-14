@@ -1,7 +1,7 @@
 {
   "version": 1,
   "repository": "viptv-org/design",
-  "commit": "8f6419fc67d50f8d46e205b1643067fdd15a946a",
+  "commit": "4b75e5626b84a43d8363988cb54adc894b2c299e",
   "files": {
     "design-contract/.github/pull_request_template.md": {
       "source": ".github/pull_request_template.md",
@@ -65,11 +65,11 @@
     },
     "design-contract/RESPONSIVE_PRODUCTION.md": {
       "source": "RESPONSIVE_PRODUCTION.md",
-      "sha256": "9c1feb0aa60be4dd2fccf6818ee93b4386a5399b46057dc404f69e58dc667334"
+      "sha256": "7674170458dc4f188dd042492400f249175a6f5d212d45b3ddd90750e374879b"
     },
     "design-contract/RESPONSIVE_UI.md": {
       "source": "RESPONSIVE_UI.md",
-      "sha256": "f7e45a367a651d4e73025555381992673406dd139344748351d079f6325e49c8"
+      "sha256": "c4341978391b8cc28996c36429b776fad77227072ab7ffa40ba3e25a6f4281df"
     },
     "design-contract/RESPONSIVE_VIPTV_ALIGNMENT.md": {
       "source": "RESPONSIVE_VIPTV_ALIGNMENT.md",
@@ -113,7 +113,7 @@
     },
     "design-contract/specs/behavior/roku-ux-contract.md": {
       "source": "specs/behavior/roku-ux-contract.md",
-      "sha256": "b12625b54607c4431b97355a4432d6a5e9a9cd01dfbd30595da09507e8b2dc8e"
+      "sha256": "d35f4b9d639a7c230a4ad08b81411ff9de56d480258baea2eb520f47969af287"
     },
     "design-contract/specs/repos/README.md": {
       "source": "specs/repos/README.md",

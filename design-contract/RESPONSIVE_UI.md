@@ -61,7 +61,7 @@ These are proposal values where the study implements them; they are not claims t
 
 ## Hero study variants and proposed adoption
 
-All variants are ordinary document sections. Content appears first in reading order and art is decorative. The contained image has a neutral `surface` slot, border radius (12px desktop, 8px mobile), and no gradient. `object-fit: contain` prevents crop/stretch; no art means the slot labels artwork unavailable and the copy remains complete.
+All variants are ordinary document sections. Content appears first in reading order and art is decorative. The contained image of rule 3 has a neutral `surface` slot, border radius (12px desktop, 8px mobile), and no gradient; no art means the slot labels artwork unavailable and the copy remains complete.
 
 | Variant | Study behaviour | Future normative use |
 | --- | --- | --- |
@@ -95,16 +95,7 @@ The study implements no queue mutation, profile edit/create/delete, real media t
 
 ## OLED black — `RUI-OLED`
 
-The study uses these concrete tokens. Future platform work must verify focus, cards, missing art, dialogs, guide, player controls and text scaling with them before claiming parity.
-
-| Token | Cinema dark | OLED black | Rule |
-| --- | --- | --- | --- |
-| `canvas` | `#101112` | `#000000` | Page, rail, unused/video surround only. |
-| `surface` | `#202224` | `#141618` | Cards, controls and raised surfaces stay legible. |
-| `muted-surface` | `#191b1d` | `#0b0c0d` | Compact feature/secondary surface. |
-| `selected` | `#303234` | `#27292b` | Selected/hover support, never focus alone. |
-| `border` | `#414447` | `#414447` | Maintains surface separation. |
-| text/focus | `#f5f5f5` / `#ffffff` | unchanged | White focus outline/fill remains visible; no video/art alteration. |
+The canonical token values are the RUI-019 values in [RESPONSIVE_VIPTV_ALIGNMENT.md](RESPONSIVE_VIPTV_ALIGNMENT.md) and [tokens/responsive.json](tokens/responsive.json); the study's own theme reads them directly. Enabling OLED changes the canvas to `#000000` and retains the canonical component surfaces, so white focus outline/fill stays visible; no video/art alteration. Future platform work must verify focus, cards, missing art, dialogs, guide, player controls and text scaling with these values before claiming parity.
 
 Settings labels this choice `Cinema dark` / `OLED black` and, until a real preference contract exists, `This preview keeps your choice in this URL only.` Future clients must state their real persistence scope and must not promise cross-device synchronisation.
 
