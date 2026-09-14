@@ -36,3 +36,8 @@ Specified RUI-023 in [RESPONSIVE_PRODUCTION.md](RESPONSIVE_PRODUCTION.md): actua
 ## 2026-09-14 — Owner-directed responsive guide and browse corrections
 
 Specified RUI-028 in [RESPONSIVE_VIPTV_ALIGNMENT.md](RESPONSIVE_VIPTV_ALIGNMENT.md): one guide page-chrome row above a single row in which the category sidebar and the guide box share a top edge and height; no Search/Discover cross-links with Discover kept in the phone bottom navigation; no leading Back control in the responsive header; one Home-style card presentation for browse results that ends exactly on the content frame at 600px and above. Supersedes the matching statements in RESPONSIVE_PRODUCTION.md RUI-022/RUI-023 and the mobile fluid browse grid. Implementation evidence belongs to the adopting client.
+
+## 2026-09-14 — Responsive guide channel loading and route layout stability
+
+Extended RUI-028 in [RESPONSIVE_VIPTV_ALIGNMENT.md](RESPONSIVE_VIPTV_ALIGNMENT.md): the responsive guide no longer shows Previous/Next channel buttons and instead loads the next channel page when its scroll reaches the end of the loaded rows; the application and guide scrollers keep a permanent vertical scrollbar slot and the header profile control uses a fixed slot so navigating between tall and short routes cannot shift the frame or reflow the header. Supersedes the responsive paging control named in RESPONSIVE_PRODUCTION.md RUI-027.
+

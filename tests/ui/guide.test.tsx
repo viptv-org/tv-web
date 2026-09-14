@@ -56,27 +56,32 @@ describe('guide cells', () => {
 });
 
 describe('Guide', () => {
-  it('scrolls a complete channel page and restores the current timeline', async () => {
+  it('loads the next channel page at the end of the loaded rows and restores the current timeline', async () => {
     const api = apiFixture();
     const onPlay = vi.fn();
     const clock = vi.spyOn(Date, 'now').mockReturnValue(start * 1000);
     try {
       const { container } = render(<Guide responsive api={api as unknown as TvApi} onPlay={onPlay} onError={vi.fn()} onDetails={vi.fn()} />);
       await screen.findByRole('button', { name: 'Channel 1' });
-      const previous = screen.getByRole('button', { name: 'Previous channels' });
-      const next = screen.getByRole('button', { name: 'Next channels' });
-      expect(previous).toBeDisabled();
+      // The responsive guide has no paging controls: the category sidebar
+      // narrows channels, and the end of the loaded rows loads the next page.
+      expect(screen.queryByRole('button', { name: 'Previous channels' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Next channels' })).not.toBeInTheDocument();
       expect(screen.getAllByTestId(/guide-row-/)).toHaveLength(40);
       expect(screen.getByRole('button', { name: 'Channel 40' })).toBeInTheDocument();
-      expect(screen.getByRole('region', { name: 'Scrollable programme guide' })).toHaveAttribute('tabindex', '0');
-      fireEvent.click(next);
+      expect(screen.getByRole('status')).toHaveTextContent('40 of 80 channels');
+      const region = screen.getByRole('region', { name: 'Scrollable programme guide' });
+      expect(region).toHaveAttribute('tabindex', '0');
+      Object.defineProperty(region, 'scrollHeight', { value: 4000, configurable: true });
+      Object.defineProperty(region, 'clientHeight', { value: 500, configurable: true });
+      region.scrollTop = 3600;
+      fireEvent.scroll(region);
       await screen.findByRole('button', { name: 'Channel 41' });
       expect(api.live).toHaveBeenLastCalledWith(expect.objectContaining({ offset: 40 }), expect.anything());
+      expect(screen.getAllByTestId(/guide-row-/)).toHaveLength(80);
+      expect(screen.getByRole('status')).toHaveTextContent('80 of 80 channels');
       fireEvent.click(screen.getByRole('button', { name: 'Channel 42' }));
       expect(onPlay).toHaveBeenLastCalledWith(channels[41]);
-      fireEvent.click(previous);
-      await screen.findByRole('button', { name: 'Channel 1' });
-      expect(api.live).toHaveBeenLastCalledWith(expect.objectContaining({ offset: 0 }), expect.anything());
 
       const timeline = container.querySelector('.guide-header')!;
       const initialLabels = timeline.textContent;

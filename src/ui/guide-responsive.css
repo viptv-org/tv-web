@@ -24,7 +24,7 @@
 .responsive-epg .epg-time-actions { flex: 0 0 auto; }
 .responsive-app .responsive-epg .epg-time-actions button, .responsive-app .responsive-epg .epg-page-controls button { min-height: 44px; padding: 10px 14px; font-size: 14px; border-radius: 7px; background: #202224; white-space: nowrap; }
 .responsive-app .responsive-epg .epg-time-actions button[aria-pressed="true"] { background: #303234; }
-.responsive-epg .epg-scroll { position: relative; overflow: auto; height: var(--epg-guide-height); width: 100%; border: 1px solid #373a3c; border-radius: 10px; scrollbar-width: auto; scrollbar-color: #62676a #191b1d; overscroll-behavior: contain; scroll-padding: 48px 0 0 var(--epg-channel-width); background: #101112; }
+.responsive-epg .epg-scroll { position: relative; overflow-x: auto; overflow-y: scroll; height: var(--epg-guide-height); width: 100%; border: 1px solid #373a3c; border-radius: 10px; scrollbar-width: auto; scrollbar-color: #62676a #191b1d; overscroll-behavior: contain; scroll-padding: 48px 0 0 var(--epg-channel-width); background: #101112; }
 .responsive-epg .epg-grid { width: calc(var(--epg-channel-width) + 1440px); min-width: 100%; }
 .responsive-epg .epg-time-header { display: flex; position: sticky; top: 0; z-index: 5; height: 48px; background: #202224; border-bottom: 1px solid #414548; }
 .responsive-epg .epg-channel-heading { position: sticky; left: 0; z-index: 6; flex: 0 0 var(--epg-channel-width); width: var(--epg-channel-width); display: flex; align-items: center; padding: 12px; font-size: 13px; color: #b7babc; background: #202224; border-right: 1px solid #414548; }
@@ -40,7 +40,8 @@
 .responsive-epg .epg-program small { display: block; font-size: 11px; line-height: 1.3; color: #b7bec2; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .responsive-epg .epg-program > span { display: block; margin-top: 5px; font-size: 14px; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .responsive-epg .epg-now { position: absolute; top: 0; bottom: 0; width: 2px; background: #f5f5f5; z-index: 2; pointer-events: none; }
-.responsive-epg .epg-page-controls { display: flex; justify-content: space-between; gap: 12px; align-items: center; padding-top: 16px; }
+.responsive-epg .epg-page-controls { display: flex; gap: 12px; align-items: center; padding-top: 16px; }
+.responsive-epg .epg-page-controls > span { font-size: 13px; color: #a6a8aa; }
 .responsive-epg .epg-page-controls > span { font-size: 13px; color: #a6a8aa; }
 .responsive-epg .epg-empty { position: sticky; left: 0; width: 100%; padding: 28px 20px; color: #b7bec2; font-size: 16px; line-height: 1.5; }
 /* Tablet widths give the title its own line so the filter, search and time

@@ -22,7 +22,7 @@ After the implementation batch: build with design/core integrity checks; run uni
 
 Mobile Search and Discover do not cross-link to each other (RUI-028). Discover stays in the phone bottom navigation, so the visible Search/Discover switch is removed and catalog browsing remains reachable without it. Desktop keyboard focus inverts both label and background even on selected or hovered navigation. Native text fields retain cursor/editing keys and focus directly rather than focusing hidden TV keys. Modal Tab remains inside the active dialog; closing returns to its opener.
 
-Live TV retains its channel/time coordinate mapping in an internally scrollable timeline. Responsive controls expose Previous/Next channels and Earlier/Now/Later, using the existing channel pages and time windows. A current-time label and timeline marker remain visible.
+Live TV retains its channel/time coordinate mapping in an internally scrollable timeline. Responsive controls expose Earlier/Now/Later and the category sidebar; RUI-028 removed the responsive Previous/Next channel buttons and loads the next channel page when the guide scroll reaches the end of the loaded rows. TV remote paging is unchanged. The application and guide scrollers keep a permanent vertical scrollbar slot (no width change between tall and short routes; overlay-scrollbar platforms lose no width), and the header profile control uses a fixed slot, so route changes cannot shift the frame or reflow the header. A current-time label and timeline marker remain visible.
 
 ## Adoption evidence and limits
 

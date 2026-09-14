@@ -51,6 +51,14 @@ for (const width of [390, 1440]) {
       await expect(page.locator('.epg-categories')).toBeHidden();
     }
 
+    // Channel paging buttons are gone from the responsive guide; the sidebar
+    // filters channels, and reaching the end of the loaded rows loads the next
+    // page inside the same scroll.
+    await expect(page.getByRole('button', { name: 'Previous channels', exact: true })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Next channels', exact: true })).toHaveCount(0);
+    await expect(page.locator('.epg-page-controls')).toContainText('channels');
+    expect(await page.locator('.tv-screen').evaluate(node => getComputedStyle(node).overflowY)).toBe('scroll');
+    expect(await page.locator('.epg-scroll').evaluate(node => getComputedStyle(node).overflowY)).toBe('scroll');
     expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(false);
   });
 
@@ -138,4 +146,65 @@ test('responsive header, detail, sources and profiles have no leading Back contr
   // Browser history still returns to the pages the removed control reached.
   await page.goBack();
   await expect(page.locator('.sources')).toBeVisible();
+});
+
+test('scrolling the responsive guide to its end loads the next channel page', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  const fixture = await installBackend(page, {});
+  const cors = { 'access-control-allow-origin': 'http://127.0.0.1:4173' };
+  const stations = Array.from({ length: 88 }, (_, index) => ({ id: `station-${index}`, type: 'live', name: `Channel ${index + 1}`, section: 'News' }));
+  await page.route('**/api/live**', async route => {
+    const url = new URL(route.request().url());
+    if (url.pathname.endsWith('/categories')) return route.fulfill({ headers: cors, json: { categories: [], total: 0 } });
+    const offset = Number(url.searchParams.get('offset') ?? 0);
+    const limit = Number(url.searchParams.get('limit') ?? 40);
+    return route.fulfill({ headers: cors, json: { channels: stations.slice(offset, offset + limit), total: stations.length } });
+  });
+  await openProfile(page);
+  await page.getByRole('navigation', { name: 'Main navigation' }).getByRole('button', { name: 'Live TV', exact: true }).click();
+  await expect(page.locator('.epg-row')).toHaveCount(40);
+  await expect(page.locator('.epg-page-controls')).toContainText('40 of 88 channels');
+  const scroller = page.locator('.epg-scroll');
+  await scroller.evaluate(node => { node.scrollTop = node.scrollHeight; });
+  await expect(page.locator('.epg-row')).toHaveCount(80);
+  await expect(page.locator('.epg-page-controls')).toContainText('80 of 88 channels');
+  await scroller.evaluate(node => { node.scrollTop = node.scrollHeight; });
+  await expect(page.locator('.epg-row')).toHaveCount(88);
+  await expect(page.locator('.epg-page-controls')).toContainText('88 of 88 channels');
+  expect(fixture.errors).toEqual([]);
+});
+
+test('header and frame hold their position between a tall and a short route', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await installBackend(page, { activity: true, populated: true });
+  await openProfile(page);
+  const geometry = () => page.evaluate(() => {
+    const box = (selector: string) => {
+      const element = document.querySelector(selector)!;
+      const rect = element.getBoundingClientRect();
+      return [Math.round(rect.x), Math.round(rect.width)];
+    };
+    const root = document.querySelector<HTMLElement>('.tv-screen')!;
+    return {
+      brand: box('.responsive-toolbar .brand'), cast: box('[data-focus-id="responsive-cast"]'),
+      profile: box('[data-focus-id="responsive-profile"]'), heading: box('h1'),
+      gutter: root.offsetWidth - root.clientWidth, overflow: root.scrollHeight > root.clientHeight,
+    };
+  });
+  const nav = page.getByRole('navigation', { name: 'Main navigation' });
+  const home = await geometry();
+  expect(home.overflow).toBe(true);
+  for (const screen of ['Discover', 'Search']) {
+    await nav.getByRole('button', { name: screen, exact: true }).click();
+    await page.waitForTimeout(600);
+    const next = await geometry();
+    // The shared header never reflows between routes, and reserving the scroll
+    // gutter keeps the content frame from moving sideways when a route stops
+    // or starts scrolling.
+    expect(next.brand).toEqual(home.brand);
+    expect(next.cast).toEqual(home.cast);
+    expect(next.profile).toEqual(home.profile);
+    expect(next.heading[0]).toBe(home.heading[0]);
+    expect(next.gutter).toBe(home.gutter);
+  }
 });

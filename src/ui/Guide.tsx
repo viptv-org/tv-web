@@ -15,7 +15,9 @@ import "./guide-responsive.css";
 const PAGE_SIZE = 40;
 const VISIBLE_ROWS = 5;
 const PREFETCH_ROWS = 2;
-const GUIDE_CACHE_LIMIT = 40;
+// The responsive guide keeps a whole category's rows in one scroll, so appended
+// pages must not evict the schedules of the channels above them.
+const GUIDE_CACHE_LIMIT = 200;
 const GUIDE_CELL_LIMIT = 32;
 const WINDOW_SECONDS = 7_200;
 const HOUR_SECONDS = 3_600;
@@ -167,12 +169,16 @@ export function Guide({
   const focusAfterTimeline = useRef<{ row: number; at: number } | null>(null);
   const scrollViewport = useRef<HTMLDivElement>(null);
   const cellsByRow = useRef(new Map<number, readonly GuideCell[]>());
+  const [appending, setAppending] = useState(false);
+  const appendCursor = useRef(PAGE_SIZE);
+  const appendPending = useRef(false);
+  const appendScope = useRef<ReturnType<TvApi["createScope"]> | null>(null);
 
   const visibleFirst = responsive ? 0 : firstVisibleRow(selected, channels.length);
-  const visibleChannels = channels.slice(
-    visibleFirst,
-    visibleFirst + (responsive ? PAGE_SIZE : VISIBLE_ROWS),
-  );
+  // The responsive guide scrolls one long channel list, so every loaded row is
+  // rendered; the TV guide still shows one bounded window of five rows.
+  const rowWindow = responsive ? channels.length : VISIBLE_ROWS;
+  const visibleChannels = channels.slice(visibleFirst, visibleFirst + rowWindow);
   const filterItems = filterOptions(categories);
 
   const visibleCells = useMemo(() => {
@@ -220,6 +226,11 @@ export function Guide({
 
   useEffect(() => {
     const scope = api.createScope();
+    // A route change supersedes any append that was still travelling.
+    appendScope.current?.abort();
+    appendScope.current = null;
+    appendPending.current = false;
+    setAppending(false);
     const generation = ++loadGeneration.current;
     const delay = query ? 650 : 0;
     // A route is atomic: stale rows must not remain focusable during a new
@@ -248,6 +259,7 @@ export function Guide({
             Math.min(focusAfterLoad.current ?? 0, page.channels.length - 1),
           );
           focusAfterLoad.current = null;
+          appendCursor.current = offset + page.channels.length;
           setChannels(page.channels);
           setTotal(page.total);
           setSelected(target);
@@ -270,13 +282,14 @@ export function Guide({
     return () => {
       clearTimeout(timer);
       scope.abort();
+      appendScope.current?.abort();
     };
   }, [api, category, collection, offset, query, responsive]);
 
   useEffect(() => {
     const scope = api.createScope();
     const needed = channels
-      .slice(visibleFirst, visibleFirst + (responsive ? PAGE_SIZE : VISIBLE_ROWS + PREFETCH_ROWS))
+      .slice(visibleFirst, visibleFirst + (responsive ? channels.length : VISIBLE_ROWS + PREFETCH_ROWS))
       .filter(
         (channel) => (cache.current.get(channel.id)?.expires ?? 0) < Date.now(),
       );
@@ -328,6 +341,49 @@ export function Guide({
     if (scrollViewport.current) scrollViewport.current.scrollTop = 0;
   }, [offset, category, collection, query]);
 
+  const appendChannels = () => {
+    if (!responsive || appendPending.current || loading) return;
+    if (!channels.length || appendCursor.current >= total) return;
+    appendPending.current = true;
+    setAppending(true);
+    const scope = api.createScope();
+    appendScope.current = scope;
+    const generation = loadGeneration.current;
+    const start = appendCursor.current;
+    void api
+      .live(
+        {
+          view: "us",
+          collection,
+          category,
+          search: query.trim() || undefined,
+          offset: start,
+          limit: PAGE_SIZE,
+        },
+        { signal: scope.signal },
+      )
+      .then((page) => {
+        if (scope.signal.aborted || generation !== loadGeneration.current) return;
+        appendCursor.current = start + page.channels.length;
+        setTotal(page.total);
+        setChannels((previous) => {
+          const known = new Set(previous.map((channel) => channel.id));
+          const appended = page.channels.filter(
+            (channel) => !known.has(channel.id),
+          );
+          return appended.length ? [...previous, ...appended] : previous;
+        });
+      })
+      .catch((error) => {
+        if (!scope.signal.aborted && generation === loadGeneration.current)
+          onError(error);
+      })
+      .finally(() => {
+        appendPending.current = false;
+        if (!scope.signal.aborted) setAppending(false);
+      });
+  };
+
   const routePage = (nextOffset: number, focusRow: number) => {
     focusAfterLoad.current = focusRow;
     setOffset(nextOffset);
@@ -349,10 +405,6 @@ export function Guide({
   };
 
   const pageChannels = (direction: -1 | 1) => {
-    if (responsive) {
-      routePage(Math.max(0, offset + direction * PAGE_SIZE), 0);
-      return;
-    }
     const next = visibleFirst + direction * VISIBLE_ROWS;
     setSelectedProgram(undefined);
     if (next >= 0 && next < channels.length) setSelected(next);
@@ -568,7 +620,7 @@ export function Guide({
         </nav>
         <section className="epg-content" aria-label="TV schedule">
           <label className="epg-mobile-category"><span>Channel category</span><select value={activeFilter.id} onChange={event => { const filter = filterItems.find(item => item.id === event.target.value); if (filter) selectFilter(filter); }}>{filterItems.map(filter => <option key={filter.id} value={filter.id}>{filter.label}</option>)}</select></label>
-          <div className="epg-scroll" ref={scrollViewport} role="region" aria-label="Scrollable programme guide" aria-describedby="epg-scroll-help" tabIndex={0} onScroll={event => { if (event.currentTarget.scrollLeft > 8) setFollowing(false); }}>
+          <div className="epg-scroll" ref={scrollViewport} role="region" aria-label="Scrollable programme guide" aria-describedby="epg-scroll-help" tabIndex={0} onScroll={event => { const element = event.currentTarget; if (element.scrollLeft > 8) setFollowing(false); if (element.scrollHeight - element.scrollTop - element.clientHeight < 520) appendChannels(); }}>
             <div className="epg-grid">
               <div className="epg-time-header guide-header"><span className="epg-channel-heading">Channels</span><div className="epg-time-labels">{Array.from({ length: 12 }, (_, index) => <span key={index}>{selectedGuide?.timeline?.find(point => point.time === windowStart + index * 1_800)?.displayTime ?? formatTime(windowStart + index * 1_800)}</span>)}</div></div>
               {visibleChannels.map((channel, row) => <div className="epg-row" key={channel.id} data-testid={`guide-row-${row}`}>
@@ -588,7 +640,7 @@ export function Guide({
           </div>
         </section>
       </div>
-      <footer className="epg-page-controls"><span role="status">{channels.length ? `${offset + 1}–${offset + channels.length} of ${total} channels` : `${total} channels`}</span><div><button type="button" disabled={loading || offset === 0} onClick={() => pageChannels(-1)}>Previous channels</button><button type="button" disabled={loading || offset + channels.length >= total} onClick={() => pageChannels(1)}>Next channels</button></div></footer>
+      <footer className="epg-page-controls"><span role="status">{!channels.length ? `${total} channels` : appending ? `Loading more channels… ${channels.length} of ${total}` : `${channels.length} of ${total} channels`}</span></footer>
     </main>
   );
   return (
