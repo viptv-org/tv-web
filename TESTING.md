@@ -170,3 +170,11 @@ Mobile retains selected navigation surfaces without white focus outlines, invert
 ## RUI-025 pointer-first desktop/mobile web
 
 Supersedes desktop focus styling in RUI-024: every responsive viewport uses neutral focus appearance and selected destination surfaces. Automatic navigation/card focus and TV spatial/hold/media key handling are disabled in responsive mode. Native browser input/dialog semantics and Escape remain. Production build,22 responsive/history browser cases and4 remote-input unit tests passed, including TV700ms hold preservation.
+
+## RUI-026 — artwork failures, dialog backdrops and source loading (2026-09-14)
+
+Design `58cc091b797b385dd44c8586455578973577c390`; shared core `b374711cc0af768572d7065744bb609cd5a5c6a8`. Card image transport retries its original URL if the resize derivative fails, then reports failed originals to Rust `cardPresentation.failedImages`. Rust selects the next permitted role; Continue Watching never substitutes a portrait for a failed episode still. Dialog backdrop dismissal uses existing cancel paths; profile PIN work is aborted on cancellation. Source discovery now has one in-row indicator; removed the absolutely positioned empty-state duplicate that could overlap navigation.
+
+Final browser batch: 26 responsive/history/artwork/loading scenarios, 2 responsive profile/text-backdrop scenarios and 28 TV-shell scenarios passed, with 12 existing platform-specific TV-shell skips. Phone/desktop image tests return 404 for episode stills and confirm the shared landscape loads; dialog tests cover inside/outside clicks and unsaved draft cancellation. Spinner regression failed on both widths before the fix; corrected indicator remains in its status row across animation phases. Unit suite: 87 passed, including drag-out and late parent-authorization cancellation. Core's separate native 41 tests and WASM failure-policy regression passed. Device qualification and a new authenticated Bleach-origin check are not implied by fixture acceptance. No emulator, account/provider migration or Roku runtime change.
+
+Final production build passed: design/core snapshot integrity, grouped strict TypeScript checks and Vite bundle. These checks are browser/source evidence, not physical playback certification.

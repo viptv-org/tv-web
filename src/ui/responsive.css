@@ -422,3 +422,13 @@ body:has(.responsive-app) { background: #101112; }
   .responsive-app .source:focus :is(p, small),
   .responsive-app .roku-guide .programs button:focus small { color: #c5c6c7; }
   .responsive-app .timeline:focus::after { content: none; }
+
+.responsive-app .dialog-backdrop > :is(.roku-profile-editor, .roku-text-entry) {
+  position: relative;
+  inset: auto;
+  width: min(100%, 960px);
+  height: auto;
+  max-height: calc(100dvh - 48px);
+  padding: 24px;
+  border-radius: 16px;
+}

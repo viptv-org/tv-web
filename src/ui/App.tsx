@@ -37,6 +37,7 @@ import {
 import {
   HeroArtwork,
   CardArtwork,
+  SharedCardArtwork,
   ReadyImage,
   artworkUrl,
 } from "./RokuArtwork";
@@ -51,6 +52,7 @@ import {
 } from "./catalogFilters";
 import { Guide as LiveGuide } from "./Guide";
 import { CastController } from "./CastController";
+import { DialogBackdrop } from "./DialogBackdrop";
 import { BrowserNavigation, readBrowserRoute, safeRestoredRoute, type BrowserRoute } from "./browserNavigation";
 type Screen =
   | "startup"
@@ -1765,16 +1767,7 @@ export function App({
             } else manage(item);
           }}
         >
-          <CardArtwork
-            src={artworkUrl(
-              presentation.image ?? undefined,
-              256,
-              144,
-              false,
-              presentation.imageRole === "logo",
-            )}
-            fallback={presentation.title}
-          />
+          <SharedCardArtwork item={item} context={inQueue ? "queue" : "catalog"} />
           <strong>
             <RokuText>{presentation.title}</RokuText>
           </strong>
@@ -2999,12 +2992,15 @@ export function App({
             {toast}
           </div>
         )}
-        {casting && <div className="scrim"><div className="modal" role="dialog" aria-modal="true" aria-label="Watch on TV" data-focus-scope="cast"><CastController receiverUrl={import.meta.env.VITE_VIZIO_RECEIVER_URL} onClose={closeCast} /></div></div>}
+        {casting && <DialogBackdrop onCancel={closeCast}><div className="modal" role="dialog" aria-modal="true" aria-label="Watch on TV" data-focus-scope="cast"><CastController receiverUrl={import.meta.env.VITE_VIZIO_RECEIVER_URL} onClose={closeCast} /></div></DialogBackdrop>}
         {modal && (
-          <div className="scrim">
+          <DialogBackdrop onCancel={() => setModal(undefined)}>
             <div
               className={modal.body ? "source-detail-panel" : "modal"}
               data-focus-scope="modal"
+              role="dialog"
+              aria-modal="true"
+              aria-label={modal.title}
             >
               <h2>{modal.title}</h2>
               {modal.message && <p>{modal.message}</p>}
@@ -3038,7 +3034,7 @@ export function App({
                 ))}
               </div>
             </div>
-          </div>
+          </DialogBackdrop>
         )}
       </div>
     </RemoteRoot>

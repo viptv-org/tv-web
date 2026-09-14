@@ -67,3 +67,5 @@ Shared Rust CardPresentation owns shelf image roles, labels, progress and activa
 RUI-024: mobile selected-state styling and desktop focus preservation browser-verified; mobile visual focus suppression does not remove DOM/text-input editing semantics.
 
 RUI-025 supersedes desktop keyboard focus presentation: responsive desktop/mobile use selected states without TV keyboard navigation; TV-mode input remains unchanged. Browser and remote-input regression checks pass.
+
+| RUI-026 / TVW-05, 09, 16 | Shared failed-image recovery; dismissible dialog backdrops; one local source spinner | Core b374711 / design58cc091. Phone390 and desktop1440 browser failure/dismissal/geometry scenarios pass; profile draft and stale authorization cancellation covered. Responsive/history and both TV-shell configurations pass (12 platform-specific skips). | Physical Tizen/Vizio unverified; no new Roku runtime change. |

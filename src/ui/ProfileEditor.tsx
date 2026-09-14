@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { TvApi, type TvProfile } from "../api";
 import { TextEntry } from "./TextEntry";
+import { DialogBackdrop } from "./DialogBackdrop";
 import { TvButton, focusElement } from "./remote";
 import catalog from "./avatars.json";
 import "./account-roku.css";
@@ -38,10 +39,23 @@ export function ProfileEditor({
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false),
     [pending, setPending] = useState<"save" | "delete">("save");
+  const [opener] = useState(() => document.activeElement as HTMLElement | null);
+  const parentScope = useRef<ReturnType<TvApi["createScope"]>>();
+  const returnFocus = useRef("profile-name");
+  useEffect(() => () => {
+    parentScope.current?.abort();
+    setTimeout(() => { if (opener?.isConnected) opener.focus(); }, 0);
+  }, [opener]);
+  const cancel = () => {
+    parentScope.current?.abort();
+    parentScope.current = undefined;
+    if (mode === "form") onCancel();
+    else setMode("form");
+  };
   useEffect(() => {
     focusElement(
       mode === "form"
-        ? "profile-name"
+        ? returnFocus.current
         : mode === "avatar"
           ? `avatar-category-${previewStyle}`
           : mode === "delete"
@@ -74,6 +88,7 @@ export function ProfileEditor({
     } catch (e) {
       if ((e as { status?: number }).status === 403) {
         setPending(remove ? "delete" : "save");
+        returnFocus.current = remove ? "profile-delete" : "profile-save";
         setMode("pin");
       } else
         setError(
@@ -94,8 +109,7 @@ export function ProfileEditor({
     ) {
       e.preventDefault();
       e.stopPropagation();
-      if (mode === "form") onCancel();
-      else setMode("form");
+      cancel();
     }
   };
   if (mode === "name")
@@ -108,7 +122,7 @@ export function ProfileEditor({
             setName(value);
             setMode("form");
           }}
-          onCancel={() => setMode("form")}
+          onCancel={cancel}
         />
       </div>
     );
@@ -121,18 +135,31 @@ export function ProfileEditor({
           onSubmit={async (pin) => {
             if (!/^\d{4,8}$/.test(pin))
               throw new Error("Enter a 4–8 digit PIN.");
-            await api.unlockParent(pin);
+            parentScope.current?.abort();
+            const scope = api.createScope();
+            parentScope.current = scope;
+            try {
+              await api.unlockParent(pin, { signal: scope.signal });
+            } catch (error) {
+              if (scope.signal.aborted) return;
+              throw error;
+            }
+            if (scope.signal.aborted) return;
             setMode("form");
             await save(pending === "delete");
           }}
-          onCancel={() => setMode("form")}
+          onCancel={cancel}
         />
       </div>
     );
   return (
+    <DialogBackdrop onCancel={cancel}>
     <section
       className={`profile-editor roku-profile-editor mode-${mode}`}
       data-focus-scope="profile-editor"
+      role="dialog"
+      aria-modal="true"
+      aria-label={mode === "avatar" ? "Find your favorite" : mode === "delete" ? "Delete profile" : profile ? "Edit profile" : "Add a profile"}
       onKeyDown={key}
     >
       <img
@@ -220,7 +247,7 @@ export function ProfileEditor({
             Delete {profile?.name}? This permanently removes this profile's
             watch history, favorites and preferences.
           </p>
-          <TvButton id="delete-cancel" onActivate={() => setMode("form")}>
+          <TvButton id="delete-cancel" onActivate={cancel}>
             Cancel
           </TvButton>
           <TvButton
@@ -244,6 +271,7 @@ export function ProfileEditor({
           <TvButton
             id="profile-avatar"
             onActivate={() => {
+              returnFocus.current = "profile-avatar";
               setPreviewStyle(style);
               setPage(Math.floor((choice - 1) / 18));
               setMode("avatar");
@@ -254,7 +282,7 @@ export function ProfileEditor({
               alt="Change avatar"
             />
           </TvButton>
-          <TvButton id="profile-name" onActivate={() => setMode("name")}>
+          <TvButton id="profile-name" onActivate={() => { returnFocus.current = "profile-name"; setMode("name"); }}>
             {name || "Enter profile name"}
           </TvButton>
           <div className="actions">
@@ -265,13 +293,13 @@ export function ProfileEditor({
             >
               {profile ? "Save" : "Create profile"}
             </TvButton>
-            <TvButton id="profile-cancel" onActivate={onCancel}>
+            <TvButton id="profile-cancel" onActivate={cancel}>
               Cancel
             </TvButton>
             {profile && !primary && (
               <TvButton
                 id="profile-delete"
-                onActivate={() => setMode("delete")}
+                onActivate={() => { returnFocus.current = "profile-delete"; setMode("delete"); }}
               >
                 Delete profile
               </TvButton>
@@ -282,5 +310,6 @@ export function ProfileEditor({
       {error && <p role="alert">{error}</p>}
       {busy && <p role="status">Saving profile…</p>}
     </section>
+    </DialogBackdrop>
   );
 }

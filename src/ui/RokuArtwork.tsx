@@ -1,3 +1,4 @@
+import type { MediaItem, CardPresentation } from "../api";
 import { normalizeCore } from "../core";
 import { useState, type ImgHTMLAttributes, type ReactNode } from "react";
 
@@ -40,9 +41,11 @@ export function ReadyImage({
 export function CardArtwork({
   src,
   fallback,
+  onError,
 }: {
   src?: string;
   fallback: ReactNode;
+  onError?: () => void;
 }) {
   const [loaded, setLoaded] = useState<string>();
   return (
@@ -54,7 +57,7 @@ export function CardArtwork({
         src={src}
         alt=""
         onLoad={() => setLoaded(src)}
-        onError={() => setLoaded(undefined)}
+        onError={() => { setLoaded(undefined); onError?.(); }}
       />
     </>
   );
@@ -88,4 +91,19 @@ export function HeroArtwork({ uri }: { uri: string }) {
       />
     </div>
   );
+}
+
+/** Network failures are effects; candidate choice remains shared Rust policy. */
+export function SharedCardArtwork({ item, context }: { item: MediaItem; context: "queue" | "catalog" }) {
+  const [failedImages, setFailedImages] = useState<string[]>([]);
+  const [originalRetries, setOriginalRetries] = useState<string[]>([]);
+  const presentation = normalizeCore<CardPresentation>("cardPresentation", { item, context, failedImages });
+  const original = presentation.image ?? undefined;
+  const derivative = artworkUrl(original, 256, 144, false, presentation.imageRole === "logo");
+  const src = original && originalRetries.includes(original) ? original : derivative;
+  return <CardArtwork src={src} fallback={presentation.title} onError={() => {
+    if (!original) return;
+    if (src !== original) setOriginalRetries(previous => previous.includes(original) ? previous : [...previous, original]);
+    else setFailedImages(previous => previous.includes(original) ? previous : [...previous, original]);
+  }} />;
 }

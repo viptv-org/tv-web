@@ -82,3 +82,15 @@ Phone layouts and touch-first tablets show the active navigation destination thr
 ## RUI-025 — pointer-first desktop and mobile web
 
 Extend RUI-024's neutral focus appearance to every responsive viewport, including the desktop header. Selected destinations keep their selected surface; focused controls do not invert, grow a white ring or brighten artwork frames. Responsive pages do not auto-focus navigation/cards on arrival or return and do not run TV spatial arrow navigation, Enter-hold actions or remote media-key mappings. Use pointer/touch controls and visible More actions. Native browser semantics, text editing, dialog focus and Escape dismissal remain available. TV layout retains its existing remote input and focus behavior. Verify desktop Home on arrival, destination selection, arrow keys without grid movement, and preserved TV hold behavior.
+
+## RUI-026 — Failed artwork, dismissible dialogs and source loading
+
+Status: implementation requested; browser acceptance pending. Applies to the shared web UI and shared card policy; Roku remains unchanged.
+
+Continue Watching retains its exact episode still as primary artwork. If fetching/decoding it fails, the renderer reports that failed original URL to Rust's card presentation policy and renders the next permitted candidate: the known series landscape. A failed episode still must not leave a blank card when usable landscape art exists, and must never become a portrait crop. Each candidate is attempted once per mounted card identity; exhaustion retains the existing readable fallback. The core owns ordering and artwork role on every retry, consistently for Android and web.
+
+Clicking/tapping a dialog backdrop dismisses the topmost dialog using the same cancellation path as Back/Cancel. Clicking inside the panel, dragging out from it, and interacting with fields/choices must not dismiss it. Cancellation never submits a form or approves a destructive action. In-flight authorization retains the existing cancellation guard. TV remote Back and responsive Escape remain available; responsive navigation does not acquire a TV focus ring.
+
+Source discovery shows one local spinner alongside **Finding sources…** in the source-filter status row, inside the content area. It must not float into the header, overlap navigation or duplicate the empty-state loading spinner. The indicator occupies a fixed 26×26 box and rotates about its own center; surrounding labels remain still. Empty results retain explanatory text. Source completion removes the discovery spinner.
+
+Acceptance: a failed exact-episode image followed by a successful landscape image renders that landscape without changing queue identity, progress or action; all failed candidates stop retrying. On phone and desktop, dismiss a choices dialog and a text-entry dialog by backdrop click, verify inside clicks retain it and no pending save executes. While a source response is held pending, verify exactly one spinner stays inside the source status row, below navigation, at multiple animation phases; completion removes it. Device evidence is separate from browser checks.

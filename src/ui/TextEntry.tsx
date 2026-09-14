@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { TvButton, focusElement } from "./remote";
+import { DialogBackdrop } from "./DialogBackdrop";
 import "./account-roku.css";
 export function TextEntry({
   title,
@@ -41,8 +42,12 @@ export function TextEntry({
     ? "1234567890"
     : `${lower ? "abcdefghijklmnopqrstuvwxyz" : "ABCDEFGHIJKLMNOPQRSTUVWXYZ"}1234567890:/.-_@`;
   return (
+    <DialogBackdrop onCancel={onCancel}>
     <div
       className="text-entry roku-text-entry"
+      role="dialog"
+      aria-modal="true"
+      aria-label={secret ? "Authorization" : "Text entry"}
       data-focus-scope="entry"
       onKeyDown={(event) => {
         if (
@@ -142,5 +147,6 @@ export function TextEntry({
         </p>
       )}
     </div>
+    </DialogBackdrop>
   );
 }
