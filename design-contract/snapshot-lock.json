@@ -1,7 +1,7 @@
 {
   "version": 1,
   "repository": "viptv-org/design",
-  "commit": "f8ca89d2c3d039fa4b6b51bd095131aa9e870374",
+  "commit": "62988154c207b223741a8abfdda076edf3224481",
   "files": {
     "design-contract/.github/pull_request_template.md": {
       "source": ".github/pull_request_template.md",
@@ -25,7 +25,7 @@
     },
     "design-contract/CHANGELOG.md": {
       "source": "CHANGELOG.md",
-      "sha256": "49a276104511fa81ae12b9818620215883a8eef8d483aa5f5eb76e68f8a8c25a"
+      "sha256": "6fb227235f7faae04abda3361aebbcf43a04dbcddc4de3fa93d37975d073e6a0"
     },
     "design-contract/CONTEXT.md": {
       "source": "CONTEXT.md",
@@ -65,7 +65,7 @@
     },
     "design-contract/RESPONSIVE_PRODUCTION.md": {
       "source": "RESPONSIVE_PRODUCTION.md",
-      "sha256": "98842999cb50d2b551d23338a946475600b02c8cff6da78a02347127a4629c5d"
+      "sha256": "967d251b6d512424ebf7dc4c3770d5ebc7c444220fa7a2754a53b1d563299c08"
     },
     "design-contract/RESPONSIVE_UI.md": {
       "source": "RESPONSIVE_UI.md",
@@ -73,7 +73,7 @@
     },
     "design-contract/RESPONSIVE_VIPTV_ALIGNMENT.md": {
       "source": "RESPONSIVE_VIPTV_ALIGNMENT.md",
-      "sha256": "bbdd5d4046bdd4ca989b9b4bba32e0490edb0e746bf0ad64435210c1fc2d0639"
+      "sha256": "83d8ff55d5b62e53ec849c2158e5d9fae2b0fd8d4756d29c616cdbda9b26cb49"
     },
     "design-contract/SHARED_CORE.md": {
       "source": "SHARED_CORE.md",

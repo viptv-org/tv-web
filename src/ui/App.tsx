@@ -1920,7 +1920,6 @@ export function App({
         <video ref={video} className="video" playsInline onClick={() => responsive && setOverlay((value) => !value)} />
         <canvas ref={canvas} className="video player-canvas" style={{ display: "none" }} onClick={() => responsive && setOverlay((value) => !value)} />
         {responsive && !["startup", "pairing", "player"].includes(screen) && <header className="responsive-toolbar">
-          {["detail", "sources", "profiles"].includes(screen) && <TvButton id="responsive-back" onActivate={back} aria-label="Back">←</TvButton>}
           {brand}
           {screen !== "profiles" && navigation}
           <div className="toolbar-spacer" />
@@ -2143,7 +2142,6 @@ export function App({
             {["Discover", "My List", "Search"].includes(screen) && (
               <main className={`browse ${screen === "Search" ? "search" : ""}`}>
                 <h1>{screen}</h1>
-                {responsive && ["Search", "Discover"].includes(screen) && <div className="responsive-browse-switch"><TvButton id="browse-search" aria-pressed={screen === "Search"} onActivate={() => void navigate("Search")}>Search</TvButton><TvButton id="browse-discover" aria-pressed={screen === "Discover"} onActivate={() => void navigate("Discover")}>Discover</TvButton></div>}
                 {screen === "Search" && (
                   <div
                     className="keyboard"

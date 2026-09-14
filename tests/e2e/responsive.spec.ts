@@ -109,12 +109,14 @@ for (const viewport of [
     await expect(cast).toBeFocused();
     await expectResponsiveViewport(page, viewport.width);
     if (viewport.name === 'phone') {
+      // Phone keeps Discover in the bottom navigation; the browse routes no
+      // longer carry a cross-link to each other.
       await page.getByRole('navigation', { name: 'Main navigation' }).getByRole('button', { name: 'Search', exact: true }).click();
-      const discover = page.locator('[data-focus-id="browse-discover"]');
-      await expect(discover).toBeVisible();
-      await discover.click();
-      await expect(discover).toHaveAttribute('aria-pressed', 'true');
+      await expect(page.locator('.browse').getByRole('heading', { name: 'Search', exact: true })).toBeVisible();
+      await expect(page.locator('[data-focus-id="browse-discover"]')).toHaveCount(0);
+      await page.getByRole('navigation', { name: 'Main navigation' }).getByRole('button', { name: 'Discover', exact: true }).click();
       await expect(page.locator('.browse').getByRole('heading', { name: 'Discover', exact: true })).toBeVisible();
+      await expect(page.locator('[data-focus-id="browse-search"]')).toHaveCount(0);
       await expectResponsiveViewport(page, viewport.width);
       await page.getByRole('navigation', { name: 'Main navigation' }).getByRole('button', { name: 'Home', exact: true }).click();
       await expect(page.locator('.home')).toBeVisible();
@@ -174,8 +176,11 @@ for (const viewport of [
     await expect(page.locator('.responsive-app')).toHaveJSProperty('scrollTop', 0);
     if (viewport.width >= 1200) {
       const nav = await page.locator('nav[aria-label="Main navigation"]').boundingBox();
-      const back = await page.locator('[data-focus-id="responsive-back"]').boundingBox();
-      expect(back!.x + back!.width).toBeLessThanOrEqual(nav!.x);
+      const brand = await page.locator('.responsive-toolbar .brand').boundingBox();
+      // The shared header keeps the brand leading the navigation; detail,
+      // sources and profiles no longer add a second leading Back control.
+      expect(brand!.x + brand!.width).toBeLessThanOrEqual(nav!.x);
+      await expect(page.locator('[data-focus-id="responsive-back"]')).toHaveCount(0);
     }
     const episode = page.locator('[data-focus-id="episode-0"]');
     await expect(episode).toContainText('EPISODE 1');
@@ -246,9 +251,8 @@ for (const width of [360, 390, 768, 1024, 1280, 1440, 2560]) {
     if (width === 390 || width === 1440) {
       const navigation = page.getByRole('navigation', { name: 'Main navigation' });
       await navigation.getByRole('button', { name: 'Search', exact: true }).click();
-      await expect(page.locator('[data-focus-id="browse-discover"]')).toBeVisible();
-      await expectResponsiveViewport(page, width);
-      await page.locator('[data-focus-id="browse-discover"]').click();
+      await expect(page.locator('.browse').getByRole('heading', { name: 'Search', exact: true })).toBeVisible();
+      await navigation.getByRole('button', { name: 'Discover', exact: true }).click();
       await expect(page.locator('.browse .media-card')).toHaveCount(24);
       await expectResponsiveViewport(page, width);
       const browse = await page.locator('.browse').boundingBox();

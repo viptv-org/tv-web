@@ -32,3 +32,7 @@ Recorded the shared React replacement, scoped 43-unit/49-browser validation, Set
 ## 2026-09-14 — Responsive history and populated-card corrections
 
 Specified RUI-023 in [RESPONSIVE_PRODUCTION.md](RESPONSIVE_PRODUCTION.md): actual page history and return context, top-left Back, OLED in Settings, direct live-channel activation, real Continue Watching semantics, stacked hero focus stability and contained live logos. These are owner-requested corrections under implementation; browser and hardware results remain separate evidence.
+
+## 2026-09-14 — Owner-directed responsive guide and browse corrections
+
+Specified RUI-028 in [RESPONSIVE_VIPTV_ALIGNMENT.md](RESPONSIVE_VIPTV_ALIGNMENT.md): one guide page-chrome row above a single row in which the category sidebar and the guide box share a top edge and height; no Search/Discover cross-links with Discover kept in the phone bottom navigation; no leading Back control in the responsive header; one Home-style card presentation for browse results that ends exactly on the content frame at 600px and above. Supersedes the matching statements in RESPONSIVE_PRODUCTION.md RUI-022/RUI-023 and the mobile fluid browse grid. Implementation evidence belongs to the adopting client.

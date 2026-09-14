@@ -543,9 +543,23 @@ export function Guide({
 
   if (responsive) return (
     <main className="responsive-epg">
+      {/* One page row: the guide and its sidebar share the single remaining row below it. */}
       <header className="epg-page-heading">
-        <div><p className="epg-eyebrow">LIVE TV</p><h1>Channel guide</h1></div>
+        <div className="epg-heading-title">
+          <p className="epg-eyebrow">LIVE TV</p>
+          <h1>Channel guide</h1>
+          <p className="epg-scroll-help" id="epg-scroll-help">Scroll down for channels and sideways for later programmes. Select a channel to watch live.</p>
+        </div>
+        <div className="epg-heading-filter">
+          <h2>{activeFilter.label}</h2>
+          <p>{new Date(windowStart * 1000).toLocaleDateString([], { weekday: 'long', month: 'short', day: 'numeric', timeZone: guideTimezone })} · {guideTimezone || 'Local time'}</p>
+        </div>
         <label className="epg-search"><span>Search Live TV</span><input type="search" value={query} placeholder="Channels or programmes" maxLength={128} onChange={event => { setOffset(0); setQuery(event.target.value); }} /></label>
+        <div className="epg-time-actions" aria-label="Guide navigation">
+          <button type="button" disabled={windowStart <= halfHour()} onClick={() => moveWindow(-1)}>Earlier</button>
+          <button type="button" aria-pressed={following} onClick={restoreNow}>Now</button>
+          <button type="button" disabled={windowStart >= halfHour() + DAY_SECONDS} onClick={() => moveWindow(1)}>Later</button>
+        </div>
       </header>
       <div className="epg-layout">
         <nav className="epg-categories" aria-label="Channel categories">
@@ -554,15 +568,6 @@ export function Guide({
         </nav>
         <section className="epg-content" aria-label="TV schedule">
           <label className="epg-mobile-category"><span>Channel category</span><select value={activeFilter.id} onChange={event => { const filter = filterItems.find(item => item.id === event.target.value); if (filter) selectFilter(filter); }}>{filterItems.map(filter => <option key={filter.id} value={filter.id}>{filter.label}</option>)}</select></label>
-          <div className="epg-toolbar">
-            <div><h2>{activeFilter.label}</h2><p>{new Date(windowStart * 1000).toLocaleDateString([], { weekday: 'long', month: 'short', day: 'numeric', timeZone: guideTimezone })} · {guideTimezone || 'Local time'}</p></div>
-            <div className="epg-time-actions" aria-label="Guide navigation">
-              <button type="button" disabled={windowStart <= halfHour()} onClick={() => moveWindow(-1)}>Earlier</button>
-              <button type="button" aria-pressed={following} onClick={restoreNow}>Now</button>
-              <button type="button" disabled={windowStart >= halfHour() + DAY_SECONDS} onClick={() => moveWindow(1)}>Later</button>
-            </div>
-          </div>
-          <p className="epg-scroll-help" id="epg-scroll-help">Scroll down for channels and sideways for later programmes. Select a channel to watch live.</p>
           <div className="epg-scroll" ref={scrollViewport} role="region" aria-label="Scrollable programme guide" aria-describedby="epg-scroll-help" tabIndex={0} onScroll={event => { if (event.currentTarget.scrollLeft > 8) setFollowing(false); }}>
             <div className="epg-grid">
               <div className="epg-time-header guide-header"><span className="epg-channel-heading">Channels</span><div className="epg-time-labels">{Array.from({ length: 12 }, (_, index) => <span key={index}>{selectedGuide?.timeline?.find(point => point.time === windowStart + index * 1_800)?.displayTime ?? formatTime(windowStart + index * 1_800)}</span>)}</div></div>
@@ -581,9 +586,9 @@ export function Guide({
             </div>
             {!channels.length && <p className="epg-empty" role="status">{loading ? 'Loading channels…' : query ? 'No matching US channels or current programmes. Try a channel name, section, or another title.' : 'No channels here yet. Choose another filter.'}</p>}
           </div>
-          <footer className="epg-page-controls"><span role="status">{channels.length ? `${offset + 1}–${offset + channels.length} of ${total} channels` : `${total} channels`}</span><div><button type="button" disabled={loading || offset === 0} onClick={() => pageChannels(-1)}>Previous channels</button><button type="button" disabled={loading || offset + channels.length >= total} onClick={() => pageChannels(1)}>Next channels</button></div></footer>
         </section>
       </div>
+      <footer className="epg-page-controls"><span role="status">{channels.length ? `${offset + 1}–${offset + channels.length} of ${total} channels` : `${total} channels`}</span><div><button type="button" disabled={loading || offset === 0} onClick={() => pageChannels(-1)}>Previous channels</button><button type="button" disabled={loading || offset + channels.length >= total} onClick={() => pageChannels(1)}>Next channels</button></div></footer>
     </main>
   );
   return (

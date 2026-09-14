@@ -92,8 +92,23 @@ body:has(.responsive-app) { background: #101112; }
 .responsive-app .filters, .responsive-app .browse > .filters { position: static; display: flex; flex-wrap: wrap; gap: 12px; width: auto; height: auto; margin-bottom: 24px; }
 .responsive-app .filters button { flex: 0 1 256px; width: auto; min-width: min(150px, 100%); max-width: 100%; font-size: 18px; }
 .responsive-app .result-grid, .responsive-app .screen-discover .browse > .result-grid, .responsive-app .browse > .result-grid { position: static; width: 100%; height: auto; overflow: visible; }
-.responsive-app .result-grid > .cards { display: grid; grid-template-columns: repeat(auto-fill, 256px); justify-content: start; gap: 24px; }
 .responsive-app .result-grid > .cards .responsive-card { margin: 0; }
+/* Browse results fill the shared content frame exactly at every step: the column
+   count and the card width both resolve from the header's own width, so the grid
+   never ends short of the frame edge with a ragged strip of dead space. */
+@media (min-width: 600px) {
+  /* No shelf inset here: the grid must end exactly on the shared frame edge. */
+  .responsive-app .result-grid > .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(232px, 1fr)); gap: 24px; padding: 0; }
+  .responsive-app .result-grid > .cards .responsive-card { width: 100%; }
+  .responsive-app .result-grid > .cards .media-card { display: grid; grid-template-columns: minmax(0, 1fr); width: 100%; height: auto; padding-bottom: 8px; }
+  .responsive-app .result-grid > .cards .media-card > img,
+  .responsive-app .result-grid > .cards .media-card > .art-fallback { position: relative; inset: auto; grid-area: 1 / 1; width: 100%; height: auto; aspect-ratio: 16 / 9; object-fit: cover; }
+  .responsive-app .result-grid > .cards .media-card::after { width: 100%; height: auto; aspect-ratio: 16 / 9; }
+  .responsive-app .result-grid > .cards .media-card > strong { position: static; grid-area: 2 / 1; width: 100%; margin-top: 8px; }
+  .responsive-app .result-grid > .cards .media-card > small { position: static; grid-area: 3 / 1; width: 100%; margin-top: 4px; }
+  .responsive-app .result-grid > .cards .media-card > progress { position: relative; top: auto; left: 8px; grid-area: 1 / 1; align-self: end; width: calc(100% - 16px); margin-bottom: 8px; }
+  .responsive-app .result-grid > .cards .card-more { top: auto; bottom: 14px; }
+}
 .responsive-app .search .keyboard { position: static; width: 100%; height: auto; margin-bottom: 28px; }
 .responsive-app .search .keyboard > input { position: static; width: 100%; height: 56px; padding: 0 18px; border: 2px solid #414447; border-radius: 12px; background: #202224; font-size: 20px; }
 .responsive-app .search .keyboard > input:focus { border-color: #f5f5f5; }
@@ -177,8 +192,7 @@ body:has(.responsive-app) { background: #101112; }
   .responsive-app .toolbar-spacer { display: block; flex: 1; }
   .responsive-app .responsive-toolbar button { font-size: 13px; padding: 0 8px; }
   .responsive-app .brand { top: 20px; width: 36px; height: 32px; }
-  .responsive-app nav { position: fixed; top: auto; bottom: 0; left: 0; width: 100%; height: calc(72px + env(safe-area-inset-bottom)); padding: 0 6px env(safe-area-inset-bottom); background: #191b1df5; border-top: 1px solid #414447; justify-content: space-around; z-index: 20; }
-  .responsive-app nav .nav-discover { display: none; }
+  .responsive-app nav { position: fixed; top: auto; bottom: 0; left: 0; width: 100%; height: calc(72px + env(safe-area-inset-bottom)); padding: 0 4px env(safe-area-inset-bottom); background: #191b1df5; border-top: 1px solid #414447; justify-content: space-around; z-index: 20; }
   .responsive-app nav button { flex: 1 1 0; max-width: 86px; height: 64px; padding: 8px 0; flex-direction: column; justify-content: center; gap: 5px; border-radius: 8px; }
   .responsive-app nav em { display: block; font-size: 11px; white-space: nowrap; }
   .responsive-app nav .nav-icon { width: 24px; height: 24px; }
@@ -207,7 +221,6 @@ body:has(.responsive-app) { background: #101112; }
   .responsive-app .episode { flex: 0 0 calc(100% - 28px); min-width: 240px; max-width: 420px; scroll-snap-align: start; }
   .responsive-app .episode > h2 { font-size: 18px; }
   .responsive-app .episode > p { font-size: 15px; line-height: 22px; }
-  .responsive-app .result-grid > .cards { grid-template-columns: repeat(auto-fill, 232px); }
   .responsive-app .source h2 { font-size: 18px; }
   .responsive-app .source p { font-size: 15px; }
   .responsive-app .source-filters button { flex: 1; min-width: 0; font-size: 15px; }
@@ -300,7 +313,10 @@ body:has(.responsive-app) { background: #101112; }
 @media (min-width: 600px) and (max-width: 999px) {
   .responsive-app .responsive-toolbar { flex-wrap: wrap; min-height: 136px; padding-bottom: 0; }
   .responsive-app .toolbar-spacer { display: block; flex: 1; }
-  .responsive-app nav { position: static; order: 2; flex: 1 0 100%; justify-content: center; }
+  /* The header's own navigation wraps onto its second line. This stays scoped to
+     the header: the unscoped `nav` also matched the guide's category sidebar and
+     moved it into the guide's right-hand column at these widths. */
+  .responsive-app .responsive-toolbar nav { position: static; order: 2; flex: 1 0 100%; justify-content: center; }
 }
 .responsive-app .responsive-guide-controls { display: flex; gap: 12px; flex-wrap: wrap; width: 100%; margin: 16px 0 24px; }
 .responsive-app .responsive-guide-controls button { font-size: 17px; min-height: 48px; padding: 0 16px; }
@@ -313,9 +329,6 @@ body:has(.responsive-app) { background: #101112; }
 
 /* Focus owns inversion even when the selected navigation item is also hovered. */
 .responsive-app button:focus-visible:not(:disabled) { background-color: #f5f5f5; color: #101112; }
-.responsive-app .responsive-browse-switch { display: flex; gap: 12px; margin: 16px 0; }
-.responsive-app .responsive-browse-switch button { font-size: 18px; }
-.responsive-app .responsive-browse-switch button[aria-pressed="true"] { box-shadow: inset 0 0 0 2px #f5f5f5; }
 
 /* Min-content is never the viewport authority. Long shelves scroll locally. */
 .responsive-app main > *, .responsive-app .shelves, .responsive-app .cards,
@@ -350,24 +363,16 @@ body:has(.responsive-app) { background: #101112; }
 .responsive-app .roku-text > span { display: inline; transform: none !important; }
 @media (max-width: 599px) {
   .responsive-app .browse > h1, .responsive-app .sources > h1 { font-size: 32px; line-height: 1.2; }
-  .responsive-app .responsive-browse-switch button { flex: 1; text-align: center; }
   .responsive-app .filters button { flex: 1 1 100%; width: 100%; min-width: 0; }
   .responsive-app .home { gap: 20px; }
   .responsive-app .hero > p { -webkit-line-clamp: 2; }
   .responsive-app .hero > small { font-size: 12px; line-height: 16px; margin-bottom: 8px; }
   .responsive-app .hero .responsive-title > img { max-height: 72px; }
-  /* Browsing grids fill the phone content column; horizontal shelves retain
-     their canonical 232px tiles and visible next-card peek. */
-  .responsive-app .result-grid > .cards { grid-template-columns: minmax(0, 1fr); }
-  .responsive-app .result-grid > .cards .responsive-card { width: 100%; }
-  .responsive-app .result-grid > .cards .media-card { display: grid; grid-template-columns: minmax(0, 1fr); width: 100%; height: auto; padding-bottom: 8px; }
-  .responsive-app .result-grid > .cards .media-card > img,
-  .responsive-app .result-grid > .cards .media-card > .art-fallback { position: relative; inset: auto; grid-area: 1 / 1; width: 100%; height: auto; aspect-ratio: 16 / 9; object-fit: cover; }
-  .responsive-app .result-grid > .cards .media-card::after { width: 100%; height: auto; aspect-ratio: 16 / 9; }
-  .responsive-app .result-grid > .cards .media-card > strong { position: static; grid-area: 2 / 1; margin-top: 8px; }
-  .responsive-app .result-grid > .cards .media-card > small { position: static; grid-area: 3 / 1; margin-top: 4px; }
-  .responsive-app .result-grid > .cards .media-card > progress { position: relative; top: auto; grid-area: 1 / 1; align-self: end; margin-bottom: 8px; }
-  .responsive-app .result-grid > .cards .card-more { top: auto; bottom: 14px; }
+  /* Phone browse results use Home's own shelf presentation: canonical 232px
+     tiles on one scrolling row with a visible next-card peek, instead of a
+     single full-width card per screen. */
+  .responsive-app .result-grid > .cards { display: flex; flex-wrap: nowrap; gap: 16px; width: 100%; overflow-x: auto; overflow-y: hidden; padding: 6px 6px 12px; scroll-snap-type: x proximity; }
+  .responsive-app .result-grid > .cards .responsive-card { flex: 0 0 232px; width: 232px; }
 }
 .responsive-app .filters button { text-overflow: ellipsis; }
 .responsive-app .source p, .responsive-app .source small,
