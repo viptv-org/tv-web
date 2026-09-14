@@ -74,6 +74,9 @@ progress::-webkit-progress-value {
   border-radius: 4px;
   min-width: 6px;
 }
+progress[value="0"]::-webkit-progress-value {
+  min-width: 0;
+}
 progress::-moz-progress-bar {
   background: #f5f5f5;
   border-radius: 4px;

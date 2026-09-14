@@ -39,3 +39,38 @@ Preserve original colors and component geometry. Use compact natural-flow header
 Validate populated Home/Discover/Search/My List and series detail, not only sparse fixtures. Include24-item shelves, long labels/profile names and portrait/large landscape artwork; measure the actual application scrollWidth and every hero box at360,390,768,1024,1280,1440 and2560px. Inspect private phone/desktop captures and check tap/focus, scroll restoration, menus, source entry and player controls. Explicit TV rendering keeps its existing contract.
 
 Mobile Discover/My List grids fill the content column with fluid16:9 cards; horizontal shelves retain232px tiles and a next-card peek. Filter rows span the available phone width; browsing/source headings use32px type. The mobile Home synopsis preview is two lines, with full content on detail. Responsive labels use explicit ellipsis, not stopped TV marquee fragments. Back restores the prior page and horizontal shelf offsets before paint and returns focus to the originating control.
+
+## Responsive navigation, live activation and populated cards — RUI-023
+
+Status: owner-requested correction, implementation and validation in progress on 2026-09-14; no completed device acceptance is implied. This corrects the real client following RUI-022. It does not change the frozen Roku renderer. The baseline continuation behavior remains [Home and Continue Watching](specs/behavior/roku-ux-contract.md#home-hero-queue-and-title-detail), extracted from Roku `a047d9ca5fc80898013eefb66120d20fab5048c0`.
+
+### Navigation and appearance
+
+Responsive Back sits at the top-left of the header whenever a previous application destination exists, before the brand and destination controls in visual and keyboard order. It traverses actual application history. Returning from detail or sources restores the prior screen, filters, query, selected title, vertical page offset, horizontal shelf offset and originating focus. Browser Back and Forward follow that same sequence without exposing an intermediate Home page or leaving stale playback work active. Opening and dismissing a modal does not add a spurious page to history; dismissing restores its opener. Canceling pending work must suppress late navigation or playback effects.
+
+OLED belongs in Settings, with visible copy **OLED mode** and explicit current state **On** or **Off**. It is removed from the global navigation/header. The default canvas remains `#101112`; enabling OLED changes only the canvas to `#000000`, retaining canonical component surfaces, artwork, text contrast, profile and current playback state. The existing local appearance preference persists across reloads. Changing appearance never signs out, switches profiles or resets a route.
+
+### Live and continuation activation
+
+A live-channel card's primary tap/click/OK starts that channel through the existing live playback controller. It does not first open title details or the VOD source picker. The visible More action retains channel options. Guide future-programme activation still opens programme details; this correction does not remove that existing distinction. Starting a channel shows preparing/loading state; failure stays recoverable with a meaningful error and return to the actual originating channel context.
+
+Continue Watching is the first Home shelf when the active profile has queue entries. Use the real shared-core queue and continuation presentation: parent title, exact episode identity/context, artwork role, normalized progress, resume/next action and retained previous episode. Do not fabricate this shelf from recently added titles or unrelated history. Ordinary activation continues the selected entry through the existing controlled resume/next path. A next-episode entry must not resume the prior episode accidentally; previous-episode Resume remains available in its menu. My List's Continue Watching view uses the same queue meaning. More exposes the existing queue management actions and failure/Undo behavior; detail is an explicit secondary action rather than a replacement for continuation. A loaded empty queue omits the shelf; failed or pending queue retrieval must not masquerade as successful empty data.
+
+### Artwork and layout ownership
+
+Phone/tablet Home always has artwork in grid row 1, copy/actions in row 2 and shelves afterward. Focusing a lower shelf may set the inherited TV compact-state flag, but must never move responsive copy into the artwork row, hide the contained image or overlap the hero. Desktop retains its adjacent art/copy layout. Moving focus cannot change the responsive geometry contract.
+
+A live logo occupies the same artwork box as every other card. Its full image element starts at the artwork origin; padding inside that box supplies breathing room and `contain` preserves the logo. Do not combine the TV image offset with the responsive full-card image dimensions. The image must not extend into the title, episode context, progress label or More action. This applies equally to fixed shelf cards and fluid mobile browsing cards. Loading, failed, transparent, square, very wide and large-intrinsic-size images retain identical outer geometry. Continue Watching uses landscape media artwork selected by the shared contract, never the live-logo presentation solely because its source supplied a logo field.
+
+### Required acceptance
+
+- On a populated phone Home, focus or tap cards in the second and later shelves, return to the hero and verify artwork/copy never overlap. Repeat at 390px and a tablet width across the stacked-layout breakpoint.
+- Inspect live logos in Home, Recently Watched Live TV, Discover and My List, including fluid mobile cards. Assert every image stays inside its artwork area and above the title.
+- With at least 24 real-shaped queue entries and long titles, activate a partially watched episode and a next-episode entry. Verify exact media identity, resume position and source intent at the controller boundary; verify queue menu and return position.
+- Exercise Home → detail → sources → Back → Back, browser Back/Forward, direct live entry, loading cancellation and error recovery. Restore the same profile, query, filters, shelf position and focus without a top-of-page flash.
+- Toggle OLED in Settings, navigate away and reload. Verify the stored appearance, canonical surfaces and absence of an OLED header button.
+- Keep screenshots private. Record browser geometry/controller evidence separately from real upstream decoding and physical device validation.
+
+### Shared card presentation authority
+
+The shared Rust API owns the complete card presentation: artwork URL and role, parent title, episode/context label, normalized progress, live identity and primary activation intent. React receives that typed presentation and renders it directly. It must not choose between `poster`, `background`, `thumbnail` or `logo`, guess a card's media type, construct continuation labels, or reinterpret progress to decide how activation works. Core tests must cover live-logo containment intent, episode thumbnails, missing landscape artwork, resumed episodes, next episodes and retained previous episodes. Browser tests use the backend's actual live and continuation payload shapes through that core boundary. Platform adapters perform the requested effect; they do not duplicate its data selection policy.

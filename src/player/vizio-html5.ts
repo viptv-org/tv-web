@@ -63,6 +63,8 @@ export class VizioHtml5Adapter extends SessionPlayer {
   readonly capabilities = VIZIO_HTML5_CAPABILITIES;
   private readonly handlers: Record<string, () => void>;
   private hls: Hls | null = null;
+  private nativeHlsFallback: (() => boolean) | null = null;
+  private pauseRequested = false;
   private activeKind: OpenPlayerRequest['kind'] | null = null;
   private timelineOffsetSeconds = 0;
   private pendingOpen: { readonly sessionId: number; readonly cancel: () => void } | null = null;
@@ -90,15 +92,19 @@ export class VizioHtml5Adapter extends SessionPlayer {
         'The Vizio HTML player cannot attach credentials. Use a backend-compatible URL instead.',
       ));
     }
+    this.nativeHlsFallback = null;
     this.cancelPendingOpen();
     this.destroyHls();
     this.invalidateSession();
+    this.pauseRequested = request.paused ?? false;
     const sessionId = this.startSession(request.kind);
     this.activeKind = request.kind;
     this.timelineOffsetSeconds = nonNegative(request.timelineOffsetSeconds ?? 0);
     this.media.pause();
     return new Promise<void>((resolve, reject) => {
       let openingTimer: ReturnType<typeof setTimeout> | undefined;
+      let targetPosition = request.startAtSeconds ?? 0;
+      let attempt = 0;
       const cleanup = () => {
         clearTimeout(openingTimer);
         this.media.removeEventListener('loadedmetadata', onReady);
@@ -111,23 +117,26 @@ export class VizioHtml5Adapter extends SessionPlayer {
           return;
         }
         cleanup();
-        this.pendingOpen = null;
-        const target = boundedPosition(request.startAtSeconds ?? 0, knownDuration(this.media.duration));
+        const readyAttempt = attempt;
+        const target = boundedPosition(targetPosition, knownDuration(this.media.duration));
         try { this.media.currentTime = target; } catch { /* browser may delay seek until a later ready state */ }
         this.update(sessionId, {
-          state: request.paused ? 'paused' : 'ready',
+          state: this.pauseRequested ? 'paused' : 'ready',
           time: { positionSeconds: this.timelineOffsetSeconds + target, durationSeconds: knownDuration(this.media.duration) },
           tracks: tracksFromMedia(this.media),
           error: null,
         });
-        if (request.paused) {
+        if (this.pauseRequested) {
+          this.pendingOpen = null;
           resolve();
           return;
         }
         this.media.play().then(
-          () => { if (this.isCurrent(sessionId)) resolve(); },
+          () => { if (this.isCurrent(sessionId) && readyAttempt === attempt) { this.pendingOpen = null; resolve(); } },
           (cause) => {
             if (!this.isCurrent(sessionId)) return resolve();
+            if (readyAttempt !== attempt) return;
+            if (this.nativeHlsFallback?.()) return;
             const error = this.media.error ? mediaError(this.media, 'prepare-failed')
               : new PlayerOperationError('prepare-failed', 'The browser could not start the selected source.', cause);
             this.fail(sessionId, error.toFailure());
@@ -136,6 +145,10 @@ export class VizioHtml5Adapter extends SessionPlayer {
         );
       };
       const onFailure = () => {
+        // load() clears an obsolete native error while the same dispatch is
+        // switching to MSE. That old event must not reject the new attempt.
+        if (!this.media.error) return;
+        if (this.nativeHlsFallback?.()) return;
         if (!this.isCurrent(sessionId)) {
           cleanup();
           resolve();
@@ -143,6 +156,7 @@ export class VizioHtml5Adapter extends SessionPlayer {
         }
         cleanup();
         const error = mediaError(this.media, 'prepare-failed');
+        this.nativeHlsFallback = null;
         this.destroyHls();
         this.fail(sessionId, error.toFailure());
         this.pendingOpen = null;
@@ -158,33 +172,60 @@ export class VizioHtml5Adapter extends SessionPlayer {
         if (!this.isCurrent(sessionId)) return;
         cleanup();
         this.pendingOpen = null;
+        this.nativeHlsFallback = null;
         this.destroyHls();
         this.fail(sessionId, error.toFailure());
         reject(error);
       };
       openingTimer = setTimeout(() => failOpen(new PlayerOperationError('prepare-failed', 'The selected source did not become ready in time.')), 20000);
+      const startMse = () => {
+        if (!Hls.isSupported()) throw new PlayerOperationError('unsupported-format', 'This browser cannot play HLS. Native HLS or MediaSource support is required.');
+        const url = checkedMediaUrl(request.url);
+        const prefix = url.pathname.slice(0, url.pathname.lastIndexOf('/') + 1);
+        const hls = new Hls({
+          maxBufferLength: 20,
+          maxMaxBufferLength: 30,
+          backBufferLength: 10,
+          xhrSetup: (_xhr, resourceUrl) => {
+            const resource = checkedMediaUrl(resourceUrl);
+            if (!resource.pathname.startsWith(prefix)) throw new Error('HLS resource is outside the playback session.');
+          },
+        });
+        this.hls = hls;
+        hls.on(Hls.Events.ERROR, (_event, data) => {
+          if (!data.fatal || !this.isCurrent(sessionId)) return;
+          failOpen(new PlayerOperationError(data.type === Hls.ErrorTypes.NETWORK_ERROR ? 'connection-failed' : 'unsupported-format', 'The selected HLS source could not be played.'));
+        });
+        hls.attachMedia(this.media as HTMLMediaElement);
+        hls.loadSource(url.href);
+      };
       try {
-        if (/\.m3u8(?:[?#]|$)/i.test(request.url) && !supportsNativeHls(this.media)) {
-          if (!Hls.isSupported()) throw new PlayerOperationError('unsupported-format', 'This browser cannot play HLS. Native HLS or MediaSource support is required.');
-          const url = checkedMediaUrl(request.url);
-          const prefix = url.pathname.slice(0, url.pathname.lastIndexOf('/') + 1);
-          const hls = new Hls({
-            maxBufferLength: 20,
-            maxMaxBufferLength: 30,
-            backBufferLength: 10,
-            xhrSetup: (_xhr, resourceUrl) => {
-              const resource = checkedMediaUrl(resourceUrl);
-              if (!resource.pathname.startsWith(prefix)) throw new Error('HLS resource is outside the playback session.');
-            },
-          });
-          this.hls = hls;
-          hls.on(Hls.Events.ERROR, (_event, data) => {
-            if (!data.fatal || !this.isCurrent(sessionId)) return;
-            failOpen(new PlayerOperationError(data.type === Hls.ErrorTypes.NETWORK_ERROR ? 'connection-failed' : 'unsupported-format', 'The selected HLS source could not be played.'));
-          });
-          hls.attachMedia(this.media as HTMLMediaElement);
-          hls.loadSource(url.href);
-        } else {
+        const isHls = /\.m3u8(?:[?#]|$)/i.test(request.url);
+        if (isHls && !supportsNativeHls(this.media)) startMse();
+        else {
+          if (isHls && Hls.isSupported()) {
+            // A native MIME hint is not decode evidence. Some Chromium builds
+            // advertise HLS, then reject valid MPEG-TS playlists after metadata.
+            // Retry that exact capability locally once, before server escalation.
+            this.nativeHlsFallback = () => {
+              if (!this.isCurrent(sessionId) || ![3, 4].includes(this.media.error?.code ?? 0)) return false;
+              this.nativeHlsFallback = null;
+              attempt++;
+              if (request.kind !== 'live' && Number.isFinite(this.media.currentTime) && this.media.currentTime > 0)
+                targetPosition = this.media.currentTime;
+              cleanup();
+              this.media.removeAttribute?.('src');
+              this.media.load();
+              this.update(sessionId, { state: 'buffering', error: null });
+              this.media.addEventListener('loadedmetadata', onReady);
+              this.media.addEventListener('error', onFailure);
+              this.pendingOpen = { sessionId, cancel: () => { cleanup(); resolve(); } };
+              openingTimer = setTimeout(() => failOpen(new PlayerOperationError('prepare-failed', 'The selected source did not become ready in time.')), 20000);
+              try { startMse(); }
+              catch (cause) { failOpen(cause instanceof PlayerOperationError ? cause : new PlayerOperationError('prepare-failed', 'The browser could not prepare the selected source.', cause)); }
+              return true;
+            };
+          }
           this.media.src = request.url;
           this.media.load();
         }
@@ -195,6 +236,7 @@ export class VizioHtml5Adapter extends SessionPlayer {
   }
 
   async play(): Promise<void> {
+    this.pauseRequested = false;
     const sessionId = this.activeSessionOrThrow();
     try {
       await this.media.play();
@@ -207,6 +249,7 @@ export class VizioHtml5Adapter extends SessionPlayer {
   }
 
   async pause(): Promise<void> {
+    this.pauseRequested = true;
     const sessionId = this.activeSessionOrThrow();
     this.media.pause();
     this.update(sessionId, { state: 'paused' });
@@ -228,6 +271,7 @@ export class VizioHtml5Adapter extends SessionPlayer {
   }
 
   async stop(): Promise<void> {
+    this.nativeHlsFallback = null;
     this.cancelPendingOpen();
     this.destroyHls();
     this.invalidateSession();
@@ -270,14 +314,17 @@ export class VizioHtml5Adapter extends SessionPlayer {
 
   private onCanPlay(): void { this.onMetadata(); }
   private onPlay(): void {
+    if (this.media.error || this.snapshot.state === 'error') return;
     const sessionId = this.snapshot.sessionId;
     this.update(sessionId, { state: 'playing', error: null });
   }
   private onPause(): void {
     const sessionId = this.snapshot.sessionId;
-    if (!this.media.ended) this.update(sessionId, { state: 'paused' });
+    if (!this.media.ended && !this.media.error && this.snapshot.state !== 'error')
+      this.update(sessionId, { state: 'paused' });
   }
   private onWaiting(): void {
+    if (this.media.error || this.snapshot.state === 'error') return;
     const sessionId = this.snapshot.sessionId;
     this.update(sessionId, { state: 'buffering' });
   }
@@ -286,10 +333,13 @@ export class VizioHtml5Adapter extends SessionPlayer {
     this.update(sessionId, { time: { positionSeconds: this.timelineOffsetSeconds + this.media.currentTime, durationSeconds: knownDuration(this.media.duration) } });
   }
   private onEnded(): void {
+    if (this.media.error || this.snapshot.state === 'error') return;
     const sessionId = this.snapshot.sessionId;
     this.update(sessionId, { state: 'ended' });
   }
   private onError(): void {
+    if (this.nativeHlsFallback?.()) return;
+    if (!this.media.error) return;
     const sessionId = this.snapshot.sessionId;
     this.fail(sessionId, mediaError(this.media, 'connection-failed').toFailure());
   }

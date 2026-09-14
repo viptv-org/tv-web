@@ -33,6 +33,7 @@ export type TvIdentity = CoreView<Core.Identity>;
 /** Shared card vocabulary used by TV shelves, details, progress and queue. */
 export type MediaItem = CoreView<Core.MediaItem>;
 export type MediaPresentation = CoreView<Core.MediaPresentation>;
+export type CardPresentation = CoreView<Core.CardPresentation>;
 
 export type MediaSource = CoreView<Core.MediaSource>;
 

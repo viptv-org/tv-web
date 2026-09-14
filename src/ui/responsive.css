@@ -46,7 +46,7 @@ body:has(.responsive-app) { background: #101112; }
 .responsive-app .home { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: 40px; align-items: center; align-content: start; }
 .responsive-app .responsive-hero-art, .responsive-app .responsive-detail-art { grid-column: 2; grid-row: 1; position: relative; aspect-ratio: 16 / 9; width: 100%; max-width: 782px; max-height: 440px; min-width: 0; justify-self: end; align-self: center; overflow: hidden; border-radius: 8px; background: #202224; }
 .responsive-app .responsive-hero-art > img, .responsive-app .responsive-detail-art > img, .responsive-app .responsive-hero-art > .art-fallback, .responsive-app .responsive-detail-art > .art-fallback { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; font-size: 17px; color: #a6a8aa; }
-.responsive-app .hero, .responsive-app .compact-home .hero { display: block; grid-column: 1; grid-row: 1; position: relative; inset: auto; width: auto; min-width: 0; height: auto; padding: 0; }
+.responsive-app .hero { display: block; grid-column: 1; grid-row: 1; position: relative; inset: auto; width: auto; min-width: 0; height: auto; padding: 0; }
 .responsive-app .hero > small { position: static; display: block; font-size: 14px; line-height: 20px; margin-bottom: 16px; }
 .responsive-app .hero h1, .responsive-app .detail-copy h1 { position: relative; inset: auto; width: auto; height: auto; min-height: 0; font-size: 44px; line-height: 1.15; white-space: normal; overflow: visible; }
 .responsive-app .responsive-title > img { display: none; width: auto; max-width: min(100%, 420px); height: auto; max-height: 128px; object-fit: contain; object-position: left center; }
@@ -63,7 +63,7 @@ body:has(.responsive-app) { background: #101112; }
 .responsive-app .cards { display: flex; gap: 24px; width: 100%; height: auto; overflow-x: auto; padding: 6px 6px 12px; scroll-snap-type: x proximity; scroll-behavior: smooth; }
 .responsive-app .responsive-card { position: relative; flex: 0 0 256px; width: 256px; scroll-snap-align: start; }
 .responsive-app .media-card { display: block; position: relative; width: 256px; height: 218px; padding: 0; margin: 0; background: transparent !important; color: #f5f5f5 !important; }
-.responsive-app .media-card > img, .responsive-app .media-card > .art-fallback { width: 256px; height: 144px; }
+.responsive-app .media-card > img, .responsive-app .media-card > .art-fallback { left: 0; top: 0; width: 256px; height: 144px; }
 .responsive-app .media-card::after { width: 256px; height: 144px; }
 .responsive-app .media-card > strong { top: 152px; width: calc(100% - 48px); height: 25px; font-size: 21px; line-height: 25px; }
 .responsive-app .media-card > small { top: 181px; width: calc(100% - 48px); font-size: 17px; line-height: 22px; height: 22px; }
@@ -375,3 +375,14 @@ body:has(.responsive-app) { background: #101112; }
 .responsive-app .source:focus-visible p, .responsive-app .source:focus-visible small,
 .responsive-app .roku-guide .programs button:focus-visible small { color: #101112; }
 .responsive-app .roku-guide .programs button:focus:not(:focus-visible) { background: #202224; color: #f5f5f5; }
+
+/* Live logos occupy the same artwork box as every other card. The TV logo
+   inset is expressed as padding, so it cannot move the image into card text. */
+.responsive-app .media-card.logo-card > img,
+.responsive-app .result-grid > .cards .media-card.logo-card > img {
+  inset: 0;
+  padding: 18px 32px;
+  object-fit: contain;
+  border-radius: 8px;
+  background: #202224;
+}

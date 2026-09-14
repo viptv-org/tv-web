@@ -648,7 +648,9 @@ test('reported TV web regressions keep episode details, loading feedback and row
   const profileCard = page.locator('[data-focus-id="profile-0"]');
   await expect(profileCard).toHaveCSS('box-sizing', 'border-box');
   await page.getByRole('button', { name: 'Alex' }).press('Enter');
-  await page.getByRole('button', { name: 'Bleach' }).press('Enter');
+  await page.getByRole('button', { name: 'Bleach' }).focus();
+  // Queue OK is Resume; the explicit Details action opens episode information.
+  await page.locator('[data-focus-id="hero-details"]').press('Enter');
   await expect(page.locator('.detail-synopsis')).toContainText('Soul Reaper');
   await expect(page.locator('[data-focus-id="episode-0"]')).toContainText('EPISODE 3');
   await page.locator('[data-focus-id="episode-0"]').press('Enter');

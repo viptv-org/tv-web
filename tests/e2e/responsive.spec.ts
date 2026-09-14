@@ -1,79 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 
-const apiOrigin = 'https://viptv.syek.tech';
-const sessionKey = `viptv-device:${apiOrigin}`;
-const movie = {
-  id: 'responsive-movie', type: 'movie', name: 'A Different Horizon', title: 'A Different Horizon',
-  poster: 'https://art.example/poster.svg', background: 'https://art.example/backdrop.svg',
-  description: 'A small crew follows a distant signal across an unfamiliar world. The journey brings them home.',
-  year: 2026, genres: ['Adventure', 'Drama'],
-};
-
-async function installBackend(page: Page, options: { series?: boolean; invalidLogo?: boolean; populated?: boolean } = {}) {
-  const title = options.series ? {
-    ...movie, id: 'responsive-series', type: 'series', name: 'Beyond the Horizon', title: 'Beyond the Horizon',
-    logo: `https://art.example/${options.invalidLogo ? 'invalid-logo' : 'title-logo'}.svg`,
-    videos: Array.from({ length: 8 }, (_, index) => ({ id: `responsive-series:1:${index + 1}`, title: `Episode ${index + 1}`, season: 1, episode: index + 1, thumbnail: 'https://art.example/episode.svg', description: `Episode ${index + 1} brings the crew closer to the signal.` })),
-  } : options.populated ? { ...movie, logo: 'https://art.example/title-logo.svg', description: `${movie.description} ${movie.description} This extended description exercises real catalog copy wrapping across phones, tablets and wide desktop displays.` } : movie;
-  const profileName = options.populated ? 'Alexandria Montgomery-Jones' : 'Alex';
-  let selectedProfileId: string | null = null;
-  const requests: { method: string; path: string; body: Record<string, unknown> }[] = [];
-  const errors: string[] = [];
-  page.on('pageerror', error => errors.push(error.message));
-  await page.addInitScript(({ key }) => {
-    if (!localStorage.getItem(key)) localStorage.setItem(key, JSON.stringify({
-      sessionId: 'responsive-session', accountId: '7', profileId: null,
-      accessToken: 'fixture-access', refreshToken: 'fixture-refresh', expiresIn: 900,
-    }));
-  }, { key: sessionKey });
-  await page.route('https://art.example/**', route => {
-    const path = new URL(route.request().url()).pathname;
-    if (path === '/invalid-logo.svg') return route.fulfill({ status: 404, body: '' });
-    const portrait = path === '/poster.svg';
-    const logo = path === '/title-logo.svg';
-    const width = logo ? 1280 : portrait ? 2000 : path === '/episode.svg' ? 1920 : 3840;
-    const height = logo ? 320 : portrait ? 3000 : path === '/episode.svg' ? 1080 : 2160;
-    const content = logo
-      ? '<path d="M20 40L120 160 20 280H100L200 160 100 40Z" fill="#f5f5f5"/><text x="245" y="195" font-family="sans-serif" font-size="110" fill="#f5f5f5">THE HORIZON</text>'
-      : `<rect width="${width}" height="${height}" fill="#15263a"/><circle cx="${width * .74}" cy="${height * .28}" r="${width * .12}" fill="#dab979"/><path d="M0 ${height}L${width * .32} ${height * .43}L${width * .62} ${height * .76}L${width} ${height * .38}V${height}Z" fill="#42566a"/><path d="M0 ${height}L${width * .47} ${height * .72}L${width} ${height * .88}V${height}Z" fill="#20313b"/>`;
-    return route.fulfill({ contentType: 'image/svg+xml', body: `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">${content}</svg>` });
-  });
-  await page.route(`${apiOrigin}/api/**`, async route => {
-    const request = route.request();
-    const headers = {
-      'access-control-allow-origin': 'http://127.0.0.1:4173',
-      'access-control-allow-methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
-      'access-control-allow-headers': 'authorization, content-type',
-    };
-    const json = (body: unknown, status = 200) => route.fulfill({ status, headers, contentType: 'application/json', body: JSON.stringify(body) });
-    if (request.method() === 'OPTIONS') return route.fulfill({ status: 204, headers });
-    const path = new URL(request.url()).pathname;
-    const body = JSON.parse(request.postData() || '{}') as Record<string, unknown>;
-    requests.push({ method: request.method(), path, body });
-    if (path === '/api/auth/me') return json({
-      account: { id: '7', username: 'alex', name: 'Alex', role: 'member' },
-      profiles: [{ id: '1', name: profileName, setup_complete: true }],
-      profile_id: selectedProfileId, restricted: false, profile_setup_required: false,
-    });
-    if (path === '/api/auth/profile') {
-      selectedProfileId = String(body.profile_id);
-      return json({ profile_id: selectedProfileId });
-    }
-    if (path === '/api/profiles/1/continue/page') return json({ items: [], offset: 0, total: 0, next_offset: null });
-    if (path === '/api/profiles/1/progress' || path === '/api/profiles/1/favorites') return json([]);
-    if (path === '/api/profiles/1/preferences') return json({ audio_language: 'en', subtitle_language: 'en', subtitles_enabled: false, subtitle_size: 'normal', subtitle_style: 'system', quality: 'auto', autoplay: true });
-    if (path === '/api/catalogs') return json(Array.from({ length: options.populated ? 4 : 1 }, (_, i) => ({ id: i ? `catalog-${i}` : 'popular', name: options.populated ? `Global Cinema Collection — ${['Popular', 'Recently Added', 'Drama', 'Adventure'][i]} Features and Award-Winning International Television` : 'Popular', type: title.type, addon_id: 2, supports_search: true, supports_skip: true })));
-    if (path === '/api/discover') return json({ metas: options.populated ? Array.from({ length: 24 }, (_, i) => ({ ...title, id: i ? `title-${i}` : title.id, name: i ? `The Long Journey Through the Mountains: Chapter ${i}` : title.name })) : [title], has_more: false, next_skip: null });
-    if (path === '/api/live') return json({ channels: [], total: 0 });
-    if (path === `/api/meta/${title.type}/${title.id}`) return json({ meta: title });
-    if (options.populated && /^\/api\/meta\/movie\/title-\d+$/.test(path)) return json({ meta: { ...title, id: path.split("/").at(-1), name: "The Long Journey Through the Mountains" } });
-    if (path === '/api/profiles/1/progress/series') return json([]);
-    if (path === '/api/streams' && request.method() === 'POST') return json({ id: 'responsive-sources' });
-    if (path === '/api/streams/responsive-sources') return json({ events: [{ seq: 1, source: 'addon:2', streams: [{ id: 'responsive-stream', name: options.populated ? 'International Cinema Archive • High Definition • Original Language and Commentary • Extended Edition' : 'Responsive source 1080p', title: 'A Different Horizon 1080p', source_addon_id: 'addon:2', source_name: options.populated ? 'International Cinema and Television Collection — Premium Archive Provider' : 'Fixture addon' }] }], done: true });
-    return json({ error: `Unhandled fixture route ${path}` }, 404);
-  });
-  return { requests, errors, title, profileName };
-}
+import { apiOrigin, sessionKey, movie, installBackend } from './helpers/responsiveBackend';
 
 async function expectResponsiveViewport(page: Page, width: number) {
   const dimensions = await page.evaluate(() => {
@@ -136,25 +63,29 @@ for (const viewport of [
           const rect = document.querySelector<HTMLElement>(selector)!.getBoundingClientRect();
           return { left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom };
         };
-        return { brand: box('.brand'), nav: box('nav[aria-label="Main navigation"]'), cast: box('[data-focus-id="responsive-cast"]'), oled: box('[data-focus-id="responsive-oled"]'), profile: box('[data-focus-id="responsive-profile"]') };
+        return { brand: box('.brand'), nav: box('nav[aria-label="Main navigation"]'), cast: box('[data-focus-id="responsive-cast"]'), profile: box('[data-focus-id="responsive-profile"]') };
       });
       expect(header.brand.right).toBeLessThanOrEqual(header.nav.left);
       expect(header.nav.right).toBeLessThanOrEqual(header.cast.left);
-      expect(header.cast.right).toBeLessThanOrEqual(header.oled.left);
-      expect(header.oled.right).toBeLessThanOrEqual(header.profile.left);
+      expect(header.cast.right).toBeLessThanOrEqual(header.profile.left);
       expect(header.profile.right).toBeLessThanOrEqual(viewport.width);
     }
     await page.screenshot({ path: testInfo.outputPath(`${viewport.name}-home.png`), animations: 'disabled', fullPage: true });
 
-    await page.getByRole('button', { name: 'OLED off', exact: true }).click();
-    await expect(page.getByRole('button', { name: 'OLED on', exact: true })).toHaveAttribute('aria-pressed', 'true');
+    const navigation = page.getByRole('navigation', { name: 'Main navigation' });
+    await expect(page.locator('.responsive-toolbar').getByRole('button', { name: /OLED/ })).toHaveCount(0);
+    await navigation.getByRole('button', { name: 'Settings', exact: true }).click();
+    await page.getByRole('button', { name: 'OLED mode: Off', exact: true }).click();
+    await expect(page.getByRole('button', { name: 'OLED mode: On', exact: true })).toBeVisible();
     await expect(page.locator('.tv-screen')).toHaveCSS('background-color', 'rgb(0, 0, 0)');
+    await navigation.getByRole('button', { name: 'Home', exact: true }).click();
     await page.reload();
     await expect(page.locator('.home')).toBeVisible();
-    await expect(page.getByRole('button', { name: 'OLED on', exact: true })).toHaveAttribute('aria-pressed', 'true');
     expect(await page.evaluate(() => localStorage.getItem('viptv:appearance:oled'))).toBe('true');
     await expect(page.locator('.tv-screen')).toHaveCSS('background-color', 'rgb(0, 0, 0)');
-    await page.getByRole('button', { name: 'OLED on', exact: true }).click();
+    await navigation.getByRole('button', { name: 'Settings', exact: true }).click();
+    await page.getByRole('button', { name: 'OLED mode: On', exact: true }).click();
+    await navigation.getByRole('button', { name: 'Home', exact: true }).click();
     await expectResponsiveViewport(page, viewport.width);
 
     const more = page.getByRole('button', { name: 'More options', exact: true });
@@ -244,7 +175,7 @@ for (const viewport of [
     if (viewport.width >= 1200) {
       const nav = await page.locator('nav[aria-label="Main navigation"]').boundingBox();
       const back = await page.locator('[data-focus-id="responsive-back"]').boundingBox();
-      expect(nav!.x + nav!.width).toBeLessThanOrEqual(back!.x);
+      expect(back!.x + back!.width).toBeLessThanOrEqual(nav!.x);
     }
     const episode = page.locator('[data-focus-id="episode-0"]');
     await expect(episode).toContainText('EPISODE 1');
@@ -383,5 +314,64 @@ for (const width of [390, 1440]) {
     await expect.poll(async () => (await offsets()).left).toBe(before.left);
     // Browser scroll clamping can round the final content edge by a few pixels.
     await expect.poll(async () => Math.abs((await offsets()).top - before.top)).toBeLessThanOrEqual(3);
+  });
+}
+
+for (const width of [390, 768, 1440]) {
+  test(`responsive populated queue and real-shaped live logos remain separated at ${width}`, async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== 'vizio');
+    await page.setViewportSize({ width, height: 1000 });
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    // live_catalog::channels supplies type=live and logo; continuation supplies
+    // the exact episode, progress and series_id, not a generic movie fixture.
+    const fixture = await installBackend(page, { populated: true, activity: true });
+    await page.goto('/');
+    await page.locator('[data-focus-id="profile-0"]').click();
+    const queue = page.locator('.shelves section').filter({ has: page.getByRole('heading', { name: 'Continue Watching', exact: true }) });
+    await expect(queue.locator('.media-card')).toHaveCount(24);
+    await expect(page.locator('.shelves section').first()).toContainText('Continue Watching');
+    await expect(queue.locator('[data-focus-id="queue-0"]')).toContainText('S1');
+    await expect(queue.locator('[data-focus-id="queue-0"] > img')).toHaveAttribute('src', 'https://art.example/episode.svg?episode=1');
+    await expect(queue.locator('[data-focus-id="queue-1"] > img')).toHaveAttribute('src', 'https://art.example/episode.svg?episode=2');
+    expect(fixture.requests.some(request => request.path === '/api/meta/series/queue-series')).toBe(true);
+    expect(await queue.locator('[data-focus-id="queue-0"] progress').evaluate(node => (node as HTMLProgressElement).value / (node as HTMLProgressElement).max)).toBeCloseTo(42 / 2400, 3);
+    const live = page.locator('[data-focus-id="recent-live-0"]');
+    await expect(live).toHaveClass(/logo-card/);
+    await expect(live.locator('img')).toHaveJSProperty('naturalWidth', 7000);
+    const assertLogo = async () => {
+      const geometry = await live.evaluate(node => {
+        const art = node.querySelector('.art-fallback')!.getBoundingClientRect();
+        const logo = node.querySelector('img')!.getBoundingClientRect();
+        const title = node.querySelector('strong')!.getBoundingClientRect();
+        return { left: logo.left - art.left, top: logo.top - art.top, right: logo.right - art.right, bottom: logo.bottom - art.bottom, below: title.top - logo.bottom, fit: getComputedStyle(node.querySelector('img')!).objectFit };
+      });
+      expect(geometry.left).toBeGreaterThanOrEqual(-1);
+      expect(geometry.top).toBeGreaterThanOrEqual(-1);
+      expect(geometry.right).toBeLessThanOrEqual(1);
+      expect(geometry.bottom).toBeLessThanOrEqual(1);
+      expect(geometry.below).toBeGreaterThanOrEqual(0);
+      expect(geometry.fit).toBe('contain');
+    };
+    await assertLogo();
+    // This is the state missed by sparse screenshots: lower-shelf focus sets
+    // compact-home. On stacked layouts it must not win over grid-row:2.
+    await live.focus();
+    await expect(page.locator('.home')).toHaveClass(/compact-home/);
+    if (width < 900) {
+      const geometry = await page.evaluate(() => {
+        const art = document.querySelector('.responsive-hero-art')!.getBoundingClientRect();
+        const copy = document.querySelector('.hero')!.getBoundingClientRect();
+        return { artBottom: art.bottom, copyTop: copy.top, artWidth: art.width };
+      });
+      expect(geometry.copyTop).toBeGreaterThanOrEqual(geometry.artBottom + 15);
+      expect(geometry.artWidth).toBeLessThanOrEqual(width);
+    }
+    await assertLogo();
+    await expectResponsiveViewport(page, width);
+    await page.screenshot({ path: testInfo.outputPath(`queue-live-${width}.png`) });
+    await queue.locator('[data-focus-id="queue-0"]').click();
+    await expect(page.locator('[data-focus-id="source-0"]')).toBeVisible();
+    expect(fixture.requests.find(request => request.path === '/api/streams')?.body).toMatchObject({ id: 'queue-series:1:1', series_id: 'queue-series', season: 1, episode: 1 });
+    expect(fixture.errors).toEqual([]);
   });
 }

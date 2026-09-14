@@ -1,4 +1,29 @@
-# Responsive implementation validation
+# Current correction: shared cards, browser navigation and real playback
+
+Design revision: `6bdd58fe8b59e92a9a7ba889f71bd027bdc5bab8` (RUI-023). Shared core: `1388b17db29a6b0279af5f125cc1fafc76776459`.
+
+The previous fixture pass did not establish that the owner's streams or populated live/queue artwork worked. The reported defects were real: compact-home specificity overlapped mobile hero artwork and copy, inherited logo offsets displaced card images, queue cells chose artwork and generic detail activation in React, appearance was exposed in the header, and screen state had no browser history.
+
+Rust now returns CardPresentation (image/role, title, subtitle, normalized optional progress, action/label). Web and Kotlin consume that projection. Queue adapters fetch metadata with bounded concurrency; Rust merges only the matching episode still/title and preserves source/progress/previous-episode identity. Missing episode art never becomes a parent portrait. The regression fixture deliberately begins with only a saved parent poster and requires the exact episode image from metadata.
+
+Responsive navigation uses /tv paths, stable title identifiers, Back/Forward and authorized reload. Theme/OLED values are local appearance preferences in Settings, never route parameters. Back appears before the brand in DOM and visual order. A live card plays directly without a detail/source intermediate screen; browser Forward to a retired live session returns Live TV without autoplay. Native TV remote behavior remains separately checked.
+
+## Current evidence
+
+- Shared Rust workspace: 40 tests and strict Clippy passed; generated Kotlin/TypeScript and WASM rebuilt.
+- Web unit/controller/API: 81 tests passed, one worker and 256 MB Node heap.
+- Responsive browser: 17 scenarios passed across 360–2560px, including real-shaped queue/live data, exact episode thumbnail identity, logo containment, compact-focus hero separation, left-hand Back, OLED Settings, profile geometry and scroll restoration.
+- Browser routing: four scenarios passed for Back/Forward, player cleanup, direct live selection, clean URLs and profile-preserving reload without autoplay. Initial test failures were corrected fixture selectors (profile accessible name includes initials); the final tests exercise the real App/Rust/history with only external playback/backend boundaries mocked.
+- TV shell browser regression: 28 passed and 12 intentional platform-specific exclusions across Tizen/Vizio fixture projects. Queue information is opened with explicit Details; normal queue activation retains Resume/Next intent.
+- Production build with strict grouped type checks and immutable core/design checks passed.
+- Actual production-adapter playback: native-first Cartoon Network reproduced `PipelineStatus::DEMUXER_ERROR_COULD_NOT_PARSE` at time zero. The same source/session decoded through hls.js/MSE at 1920×1080 with advancing time and no media error. The adapter now retries that local engine once before backend escalation. Actual default VOD playback also advanced at 1920×1080. No new transcode request or source substitution is introduced by that fallback. One separate VOD source failed backend video inspection before player creation; this is not reported as fixed.
+- Final real React flow: restored profile → Live TV → search → select Cartoon Network. Video reached1920×1080 with advancing time, no media error, muted=false and volume1 under normal browser autoplay policy. Exactly one LIVE NOW label and no Sources button appeared. No page exceptions; the test's playback lease was stopped. The first six real queue image URLs matched Rust's projection, including exact episode thumbnails. One upstream thumbnail remained unavailable and showed its fallback.
+- The integrated Home probe also reproduced a2,305,123-byte shared bridge merge that blanked the app: full episode lists were duplicated in queue occurrences and metadata raw. Core1388b17 removes those duplicates, retains the2MiB bound, and passes a400-episode regression. Real Home then rendered without exceptions or overflow.
+- Private playback probe devices and leases were cleaned up. No credentials, provider URLs or screenshots are committed. Physical Tizen/Vizio decoder qualification remains separate.
+
+Android consumes the same pinned core; hosted CI performs its native/Compose compilation. No local Gradle or emulator was used. See Android TESTING.md and the actual hosted run result for its evidence. No installed Tauri shell is claimed.
+
+# Earlier implementation record
 
 Implementation: real shared tv-web application; tracking [#3](https://github.com/viptv-org/tv-web/issues/3). Design: `502dcb5a310d73bd48b00e9d0f919f8699cbffa4`. Core: `d1897fb8fc0401368074698f6b49f1941823f5e5`.
 

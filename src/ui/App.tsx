@@ -5,6 +5,7 @@ import {
   TvApi,
   type MediaItem,
   type MediaPresentation,
+  type CardPresentation,
   type MediaSource,
   type DevicePairing,
   type TvProfile,
@@ -50,6 +51,7 @@ import {
 } from "./catalogFilters";
 import { Guide as LiveGuide } from "./Guide";
 import { CastController } from "./CastController";
+import { BrowserNavigation, readBrowserRoute, safeRestoredRoute, type BrowserRoute } from "./browserNavigation";
 type Screen =
   | "startup"
   | "pairing"
@@ -65,6 +67,10 @@ type Screen =
   | "player";
 type Choice = { label: string; action: () => void };
 type ScrollAnchor = { top: number; regions: { id: string; top: number; left: number }[] };
+type BrowserSnapshot = {
+  screen: Screen; selected?: MediaItem; items: readonly MediaItem[]; episodes: readonly MediaItem[]; sources: readonly MediaSource[];
+  focus: string; scroll?: ScrollAnchor; query: string; season?: number; catalog?: Catalog; catalogValues: Record<string, string>; nextSkip?: number;
+};
 function captureScroll(): ScrollAnchor | undefined {
   const root = document.querySelector<HTMLElement>(".responsive-app");
   return root ? { top: root.scrollTop, regions: Array.from(root.querySelectorAll<HTMLElement>("[data-scroll-id]")).map(element => ({ id: element.dataset.scrollId!, top: element.scrollTop, left: element.scrollLeft })) } : undefined;
@@ -220,6 +226,47 @@ export function App({
   currentScreen.current = screen;
   const modalFocus = useRef(""),
     errorFocus = useRef("");
+  const homeRequestScope = useRef<ReturnType<TvApi["createScope"]>>();
+  const browser = useRef<BrowserNavigation<BrowserSnapshot>>();
+  const browserReady = useRef(false), browserApplying = useRef(false), browserReplace = useRef(true);
+  const browserApplyGeneration = useRef(0), browserFromRoute = useRef(false);
+  const browserInitial = useRef<BrowserRoute | undefined>(responsive ? readBrowserRoute() : undefined);
+  const [browserRevision, setBrowserRevision] = useState(0);
+  const applyBrowserRoute = useRef<(route: BrowserRoute, cached?: BrowserSnapshot, reload?: boolean) => Promise<void>>(async () => {});
+  const captureBrowserSnapshot = (): BrowserSnapshot => ({ screen, selected, items, episodes, sources, query, season, catalog, catalogValues, nextSkip,
+    focus: (document.activeElement as HTMLElement)?.dataset.focusId ?? "", scroll: captureScroll() });
+  const browserCapture = useRef(captureBrowserSnapshot);
+  browserCapture.current = captureBrowserSnapshot;
+  useEffect(() => {
+    if (!responsive) return;
+    const navigation = new BrowserNavigation<BrowserSnapshot>((route, cached) => {
+      if (!browserReady.current) { browserInitial.current = route; return; }
+      void applyBrowserRoute.current(route, cached);
+    }, () => browserCapture.current());
+    browser.current = navigation;
+    return () => { navigation.dispose(); browser.current = undefined; };
+  }, [responsive]);
+  useLayoutEffect(() => {
+    if (!responsive || !browserReady.current || browserApplying.current || bootingHome || ["startup", "pairing"].includes(screen)) return;
+    if (["detail", "sources", "player"].includes(screen) && !selected && !active.current?.item) return;
+    const item = screen === "player" ? active.current?.item ?? selected : selected;
+    const route: BrowserRoute = { screen: screen as BrowserRoute["screen"], ...(screen === "Search" ? { query } : {}),
+      ...(["detail", "sources", "player"].includes(screen) && item ? { media: { id: item.id, type: item.type, seriesId: item.seriesId, season: item.season, episode: item.episode } } : {}) };
+    // Editing the same search query updates its URL without creating a history entry per keystroke.
+    const currentRoute = readBrowserRoute();
+    const searchEdit = screen === "Search" && currentRoute.screen === "Search";
+    const ongoingPlayback = screen === "player" && currentRoute.screen === "player";
+    browser.current?.update(route, captureBrowserSnapshot(), browserReplace.current || searchEdit || ongoingPlayback);
+    browserReplace.current = false;
+  }, [responsive, screen, selected, items, episodes, sources, query, season, catalog, catalogValues, nextSkip, bootingHome, browserRevision]);
+  const finishProfileNavigation = () => {
+    if (!responsive) { setScreen("Home"); return; }
+    browser.current?.clearSnapshots();
+    browserReady.current = true;
+    const route = browserInitial.current ?? { screen: "Home" as const };
+    browserInitial.current = undefined;
+    void applyBrowserRoute.current(route, undefined, true);
+  };
   useLayoutEffect(() => {
     if (modal) {
       if (!modalFocus.current)
@@ -271,7 +318,13 @@ export function App({
       );
   };
   const go = (next: Screen) => {
-    stack.current.push({
+    homeRequestScope.current?.abort();
+    if (!browserFromRoute.current) {
+      browserApplyGeneration.current++;
+      browserApplying.current = false;
+      browser.current?.remember(captureBrowserSnapshot());
+    }
+    if (!browserFromRoute.current) stack.current.push({
       screen,
       scroll: responsive ? captureScroll() : undefined,
       focus: responsive && modal ? modalFocus.current : (document.activeElement as HTMLElement)?.dataset.focusId ?? "",
@@ -284,11 +337,14 @@ export function App({
     setScreen(next);
   };
   const loadHome = async (id = profile) => {
+    homeRequestScope.current?.abort();
+    const scope = api.createScope();
+    homeRequestScope.current = scope;
     const ticket = ++epoch.current;
     setBusy(true);
     try {
       const [home, cats, preferences] = await Promise.all([
-        api.home(id),
+        api.home(id, { signal: scope.signal }),
         api.catalogs(),
         api.preferences(id),
       ]);
@@ -336,9 +392,9 @@ export function App({
         setHomeRows(rows);
       }
     } catch (e) {
-      fail(e);
+      if (ticket === epoch.current) fail(e);
     } finally {
-      setBusy(false);
+      if (ticket === epoch.current) setBusy(false);
     }
   };
   const authorize = async (
@@ -403,7 +459,7 @@ export function App({
         setProfile(id);
         stack.current = [];
         await loadHome(id);
-        setScreen("Home");
+        finishProfileNavigation();
         setBootingHome(false);
       },
     );
@@ -488,8 +544,8 @@ export function App({
     const driver = api.createSessionDriver((view) => {
       if (disposed) return;
       if (view.identity) setProfiles(view.identity.profiles);
-      if (view.phase === "Pairing") void pairing();
-      else if (view.phase === "Profiles") setScreen("profiles");
+      if (view.phase === "Pairing") { browserReady.current = false; browser.current?.clearSnapshots(); void pairing(); }
+      else if (view.phase === "Profiles") { browserReady.current = false; browser.current?.clearSnapshots(); setScreen("profiles"); }
       else if (view.phase === "Error") fail(new Error(view.error ?? "Unable to connect. Try again."));
       else if (view.phase === "Ready" && view.selectedProfileId && readyProfile !== view.selectedProfileId) {
         readyProfile = view.selectedProfileId;
@@ -497,7 +553,7 @@ export function App({
         setBootingHome(true);
         stack.current = [];
         void loadHome(readyProfile).then(() => {
-          if (!disposed) { setScreen("Home"); setBootingHome(false); }
+          if (!disposed) { finishProfileNavigation(); setBootingHome(false); }
         });
       }
     }, (message) => { if (!disposed) fail(new Error(message)); });
@@ -505,6 +561,7 @@ export function App({
     return () => {
       disposed = true;
       driver.dispose();
+      homeRequestScope.current?.abort();
       pairEpoch.current++;
       pairingScope.current?.abort();
       clearTimeout(pairTimer.current);
@@ -693,11 +750,16 @@ export function App({
       }
       // A visible player overlay is its own Back level. Keep the decoder and
       // session active; a subsequent Back from hidden chrome exits playback.
-      if (overlay) {
+      if (overlay && !responsive) {
         setOverlay(false);
         return;
       }
       void stop();
+      return;
+    }
+    if (responsive && browserReady.current) {
+      browser.current?.remember(captureBrowserSnapshot());
+      if (!browser.current?.back()) void applyBrowserRoute.current({ screen: "Home" });
       return;
     }
     epoch.current++;
@@ -718,10 +780,10 @@ export function App({
     else notify("Press Home on your TV remote to leave viptv.");
   };
   const detail = async (item: MediaItem) => {
+    if (item.type === "live") { await play(item); return; }
     go("detail");
     setSelected(item);
     setEpisodes([]);
-    if (item.type === "live") return;
     const ticket = ++epoch.current;
     setBusy(true);
     try {
@@ -770,6 +832,7 @@ export function App({
     }
   };
   const discoverSources = async (item: MediaItem, resume = false) => {
+    if (item.type === "live") { await play(item); return; }
     if (resume && item.queueStatus === "next" && item.previousEpisode) {
       await nextEpisode(item.previousEpisode);
       return;
@@ -878,6 +941,7 @@ export function App({
         item.type !== "live" &&
         stack.current.at(-1)?.screen === "Home"
       ) {
+        if (responsive) browser.current?.replaceRoute({ screen: "detail", media: { id: item.id, type: item.type, seriesId: item.seriesId, season: item.season, episode: item.episode } });
         stack.current.push({
           screen: "detail",
           focus: "detail-play",
@@ -908,21 +972,97 @@ export function App({
               void play(item, source, position);
             },
           },
-          {
+          ...(item.type === "live" ? [] : [{
             label: "Choose another source",
             action: () => {
               setModal(undefined);
               void discoverSources({ ...item, position });
             },
-          },
-          { label: "Back", action: () => setModal(undefined) },
+          }]),
+          { label: item.type === "live" ? "Cancel" : "Back", action: () => setModal(undefined) },
         ],
       });
     } finally {
       setBusy(false);
     }
   };
+  const retireBrowserPlayback = async () => {
+    epoch.current++;
+    nextScope.current?.abort(); nextScope.current = undefined;
+    autoResume.current = false;
+    clearTimeout(seekTimer.current); seekValue.current = undefined; setSeek(undefined);
+    const outgoing = active.current, position = player.current?.snapshot.time;
+    if (outgoing && position && outgoing.item.type !== "live") {
+      void api.saveProgress(profile, outgoing.item, position.positionSeconds, position.durationSeconds ?? outgoing.session.duration).catch(() => notify("Playback stopped. Progress could not be saved."));
+    }
+    await controller.current?.stop().catch(fail);
+    active.current = undefined;
+    setSession(undefined); setBusy(false);
+  };
+  applyBrowserRoute.current = async (input, cached, reload = false) => {
+    const applyGeneration = ++browserApplyGeneration.current;
+    browserApplying.current = true;
+    browserReplace.current = true;
+    const route = safeRestoredRoute(input, reload);
+    browser.current?.replaceRoute(route);
+    setError(""); setModal(undefined); setEntry(undefined); setEditingProfile(undefined); setCasting(false);
+    const generation = ++epoch.current;
+    homeRequestScope.current?.abort();
+    if (active.current || ["opening", "replacing", "preparing-next"].includes(controller.current?.snapshot.state ?? "")) await retireBrowserPlayback();
+    if (applyGeneration !== browserApplyGeneration.current) return;
+    const ticket = epoch.current;
+    stack.current = [];
+    setBusy(false);
+    try {
+      if (cached && route.screen === cached.screen && route.screen !== "player" && route.screen !== "sources") {
+        setScreen(cached.screen); setSelected(cached.selected); setItems(cached.items); setEpisodes(cached.episodes); setSources(cached.sources);
+        setQuery(cached.query); setSeason(cached.season); setCatalog(cached.catalog); setCatalogValues(cached.catalogValues); setNextSkip(cached.nextSkip);
+        restoredScroll.current = cached.scroll ? { ...cached.scroll, focus: cached.focus } : undefined;
+        if (!cached.scroll) setTimeout(() => focusElement(cached.focus), 30);
+      } else if (route.media) {
+        const reference: MediaItem = cached?.selected?.id === route.media.id ? cached.selected : { ...route.media, name: "", title: "", genres: [], episodes: [], raw: {} };
+        setSelected(reference); setEpisodes([]); setSources([]);
+        if (route.screen === "sources") {
+          browserFromRoute.current = true;
+          const pending = discoverSources(reference);
+          browserFromRoute.current = false;
+          browserApplying.current = false;
+          await pending;
+        } else {
+          setScreen("detail"); setBusy(true);
+          browserApplying.current = false;
+          const value = await api.detail(reference);
+          if (ticket !== epoch.current) return;
+          const progress = value.item.type === "series" ? await api.seriesProgress(profile, value.item.seriesId ?? value.item.id).catch(() => []) : [];
+          if (ticket !== epoch.current) return;
+          const episodeItems = mergeEpisodeProgress(value.episodes, progress, value.item.seriesId ?? value.item.id);
+          setSelected(enrichDetail(reference, value.item)); setEpisodes(episodeItems); setSeason(initialEpisode(episodeItems, reference)?.season ?? episodeItems[0]?.season);
+        }
+      } else {
+        setQuery(route.query ?? "");
+        if (reload && route.screen === "Home") setScreen("Home");
+        else {
+          browserFromRoute.current = true;
+          const pending = navigate(route.screen);
+          browserFromRoute.current = false;
+          browserApplying.current = false;
+          await pending;
+        }
+      }
+    } catch (error) { if (applyGeneration === browserApplyGeneration.current && (ticket === epoch.current || generation === epoch.current)) fail(error); }
+    finally {
+      if (applyGeneration === browserApplyGeneration.current) {
+        browserApplying.current = false;
+        setBusy(false); setBrowserRevision(value => value + 1);
+      }
+    }
+  };
   const stop = async () => {
+    if (responsive && browserReady.current) {
+      await retireBrowserPlayback();
+      if (!browser.current?.back()) await applyBrowserRoute.current({ screen: "Home" });
+      return;
+    }
     epoch.current++;
     nextScope.current?.abort();
     const a = active.current,
@@ -1588,8 +1728,18 @@ export function App({
   const cards = (list: readonly MediaItem[], prefix: string) => (
     <div className="cards" data-scroll-id={`cards-${prefix}`}>
       {list.map((item, i) => {
+        const inQueue = prefix === "queue" || (screen === "My List" && libraryQueue);
+        const presentation = normalizeCore<CardPresentation>("cardPresentation", { item, context: inQueue ? "queue" : "catalog" });
+        const activate = () => {
+          switch (presentation.primaryAction) {
+            case "play": return play(item);
+            case "resume": case "next": return discoverSources(item, true);
+            case "sources": return discoverSources(item);
+            default: return detail(item);
+          }
+        };
         const card = <TvButton
-          className={`media-card ${item.type === "live" ? "logo-card" : ""}`}
+          className={`media-card ${presentation.imageRole === "logo" ? "logo-card" : ""}`}
           aria-label={item.name}
           id={`${prefix}-${i}`}
           data-nav-left={
@@ -1604,40 +1754,37 @@ export function App({
           }
           key={`${item.type}-${item.id}`}
           onFocus={() => setHighlighted(item)}
-          onActivate={() => void detail(item)}
+          onActivate={() => void activate()}
           onHold={() => {
             // Only the first logical Home row is a queue-management context.
             // Other Home cards retain their ordinary selection on a held OK;
             // My List, search and episode-card menus remain contextual.
             if (screen === "Home") {
-              if (prefix === "queue" && item.type !== "live") manage(item);
-              else void detail(item);
+              if (inQueue && item.type !== "live") manage(item);
+              else void activate();
             } else manage(item);
           }}
         >
           <CardArtwork
             src={artworkUrl(
-              item.background ?? item.poster,
+              presentation.image ?? undefined,
               256,
               144,
               false,
-              item.type === "live",
+              presentation.imageRole === "logo",
             )}
-            fallback={item.name}
+            fallback={presentation.title}
           />
           <strong>
-            <RokuText>{item.name}</RokuText>
+            <RokuText>{presentation.title}</RokuText>
           </strong>
           <small>
             <RokuText speed={42}>
-              {presentationContext(item) ||
-                [item.year, item.runtime, ...item.genres.slice(0, 2)]
-                  .filter(Boolean)
-                  .join(" · ")}
+              {presentation.subtitle}
             </RokuText>
           </small>
-          {!!item.position && (
-            <progress value={item.position} max={item.duration ?? 1} />
+          {presentation.progress != null && (
+            <progress value={presentation.progress} max={1} />
           )}
         </TvButton>;
         return responsive ? <div className="responsive-card" key={`${item.type}-${item.id}`}>{card}<TvButton className="card-more" id={`${prefix}-${i}-more`} aria-label={`More options for ${item.name}`} onActivate={() => manage(item)}>•••</TvButton></div> : card;
@@ -1750,12 +1897,11 @@ export function App({
       >
         <video ref={video} className="video" playsInline onClick={() => responsive && setOverlay((value) => !value)} />
         {responsive && !["startup", "pairing", "player"].includes(screen) && <header className="responsive-toolbar">
+          {["detail", "sources", "profiles"].includes(screen) && <TvButton id="responsive-back" onActivate={back} aria-label="Back">←</TvButton>}
           {brand}
           {screen !== "profiles" && navigation}
           <div className="toolbar-spacer" />
-          {["detail", "sources", "profiles"].includes(screen) && <TvButton id="responsive-back" onActivate={back} aria-label="Back">←</TvButton>}
           <TvButton id="responsive-cast" aria-label="Watch on TV" onActivate={openCast}><img src={`${import.meta.env.BASE_URL}assets/ui-nav-tv.png`} alt="" /></TvButton>
-          <TvButton id="responsive-oled" aria-pressed={oled} onActivate={toggleOled}>OLED {oled ? "on" : "off"}</TvButton>
           {!["profiles"].includes(screen) && <TvButton id="responsive-profile" aria-label="Choose profile" onActivate={() => setScreen("profiles")}><ReadyImage src={activeProfile ? avatarUrl(activeProfile) : undefined} alt="" /><span>{activeProfile?.name ?? "Profile"}</span></TvButton>}
         </header>}
         {(!responsive || ["startup", "pairing", "player"].includes(screen)) && brand}
@@ -2591,6 +2737,7 @@ export function App({
                 serverOrigin={api.serverOrigin}
                 profile={profile}
                 prefs={prefs}
+                appearance={responsive ? { oled, toggle: toggleOled } : undefined}
                 onPrefs={setPrefs}
                 onProfiles={() => {
                   setManaging(false);
@@ -2662,9 +2809,7 @@ export function App({
                 <div className="player-context">
                   {selected?.season
                     ? `S${selected.season} · E${selected.episode ?? 1} · ${selected.episodeTitle ?? ""}`
-                    : selected?.type === "live"
-                      ? "LIVE NOW"
-                      : ""}
+                    : ""}
                 </div>
                 <h1>
                   <RokuText>{selected?.name ?? ""}</RokuText>

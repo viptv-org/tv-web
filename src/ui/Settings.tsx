@@ -35,6 +35,7 @@ export function Settings({
   onError,
   onModal,
   serverOrigin = "https://viptv.syek.tech",
+  appearance,
 }: {
   api: TvApi;
   profile: string;
@@ -46,6 +47,7 @@ export function Settings({
   onError: (e: unknown) => void;
   onModal: (title: string, choices: Choice[]) => void;
   serverOrigin?: string;
+  appearance?: { oled: boolean; toggle: () => void };
 }) {
   const [addons, setAddons] = useState<readonly JsonObject[]>([]);
   const [page, setPage] = useState<
@@ -92,6 +94,12 @@ export function Settings({
   const rows: Row[] =
     page === "Settings"
       ? [
+          ...(appearance ? [{
+            id: "settings-appearance",
+            label: `OLED mode: ${appearance.oled ? "On" : "Off"}`,
+            description: "Use a pure black background on this device. Your profile and playback settings stay the same.",
+            action: appearance.toggle,
+          }] : []),
           {
             id: "settings-profiles",
             label: "Switch profile",

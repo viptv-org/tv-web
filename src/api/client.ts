@@ -444,15 +444,49 @@ export class TvApi {
     offset?: number,
     options?: RequestOptions,
   ): Promise<Page<MediaItem>> {
-    const v = expectObject(
-      await this.raw(
+    const scope = new AbortController();
+    const cancel = () => scope.abort();
+    options?.signal?.addEventListener("abort", cancel, { once: true });
+    if (options?.signal?.aborted) scope.abort();
+    const ensureActive = () => { if (scope.signal.aborted) throw new DOMException("Request cancelled", "AbortError"); };
+    try {
+      ensureActive();
+      const v = expectObject(await this.raw(
         `/api/profiles/${segment(profileId)}/continue/page${params({ offset })}`,
-        {},
-        true,
-        options,
-      ),
-    );
-    return page(v);
+        {}, true, { signal: scope.signal },
+      ));
+      const result = page(v);
+      const enriched = [...result.items];
+      const metadata = new Map<string, Promise<MediaDetail>>();
+      let cursor = 0;
+      const worker = async () => {
+        while (cursor < enriched.length) {
+          ensureActive();
+          const index = cursor++, item = enriched[index];
+          if (item.type === "live") continue;
+          try {
+            const key = `${item.type}\0${item.seriesId ?? item.id}`;
+            let pending = metadata.get(key);
+            if (!pending) { pending = this.detail(item, { signal: scope.signal }); metadata.set(key, pending); }
+            const detail = await pending;
+            ensureActive();
+            enriched[index] = normalizeCore<MediaItem>("enrichHome", {
+              original: item, metadata: { ...detail.item, episodes: detail.episodes },
+            });
+          } catch (error) {
+            ensureActive();
+            if (isAbort(error) || error instanceof TvApiError && [401, 403].includes(error.status)) throw error;
+            // Artwork outages retain the original resumable queue row and its exact source.
+          }
+        }
+      };
+      await Promise.all(Array.from({ length: Math.min(3, enriched.length) }, worker));
+      ensureActive();
+      return { ...result, items: enriched };
+    } finally {
+      options?.signal?.removeEventListener("abort", cancel);
+      scope.abort();
+    }
   }
   async nextEpisode(
     profileId: string,

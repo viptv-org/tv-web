@@ -13,11 +13,12 @@ vi.mock('hls.js', () => ({ default: class {
   on(event: string, callback: (event: string, data: { fatal: boolean; type: string }) => void) { this.listeners[event] = callback; }
 } }));
 class Media implements HtmlMediaLike {
-  src = ''; currentTime = 0; duration = 90; paused = true; ended = false; error = null;
+  src = ''; currentTime = 0; duration = 90; paused = true; ended = false; error: { code: number; message?: string } | null = null;
   nativeHls = false;
   events = new EventTarget();
   canPlayType = () => this.nativeHls ? 'probably' : '';
-  play = vi.fn(async () => {}); pause = vi.fn(); load = vi.fn();
+  play = vi.fn(async () => {}); pause = vi.fn(); load = vi.fn(() => { this.error = null; });
+  removeAttribute = vi.fn(() => { this.src = ''; });
   addEventListener(event: string, listener: () => void) { this.events.addEventListener(event, listener); }
   removeEventListener(event: string, listener: () => void) { this.events.removeEventListener(event, listener); }
   emit(event: string) { this.events.dispatchEvent(new Event(event)); }
@@ -68,4 +69,42 @@ describe('HTML HLS delivery', () => {
     expect(player.snapshot.state).toBe('error');
     expect(hls.instances[0].destroy).toHaveBeenCalledOnce();
   });
+  it('retries a native HLS demux failure locally on the same session after metadata, preserving paused position', async () => {
+    const media = new Media(); media.nativeHls = true;
+    const player = new VizioHtml5Adapter(media);
+    const opening = player.open({ url: url(), kind: 'vod', startAtSeconds: 37, paused: true, timelineOffsetSeconds: 100 });
+    media.emit('loadedmetadata'); await opening;
+    const sessionId = player.snapshot.sessionId;
+    media.error = { code: 4, message: 'PipelineStatus::DEMUXER_ERROR_COULD_NOT_PARSE' };
+    media.emit('error');
+    expect(hls.instances).toHaveLength(1);
+    expect(hls.instances[0].loadSource).toHaveBeenCalledWith(url());
+    expect(player.snapshot).toMatchObject({ sessionId, state: 'buffering', error: null });
+    media.emit('loadedmetadata');
+    expect(media.currentTime).toBe(37);
+    expect(media.play).not.toHaveBeenCalled();
+    expect(player.snapshot).toMatchObject({ sessionId, state: 'paused', time: { positionSeconds: 137 } });
+    hls.instances[0].listeners.error('error', { fatal: true, type: 'media' });
+    expect(player.snapshot).toMatchObject({ state: 'error', error: { code: 'unsupported-format' } });
+    media.emit('pause');
+    expect(player.snapshot.state).toBe('error');
+    expect(hls.instances).toHaveLength(1);
+    await player.dispose();
+  });
+  it('cancels pending native-to-MSE recovery when stopped', async () => {
+    const media = new Media(); media.nativeHls = true;
+    const player = new VizioHtml5Adapter(media);
+    const opening = player.open({ url: url(), kind: 'vod' });
+    media.error = { code: 3 };
+    media.emit('error');
+    expect(hls.instances).toHaveLength(1);
+    await player.stop();
+    await opening;
+    media.emit('loadedmetadata');
+    expect(media.play).not.toHaveBeenCalled();
+    expect(player.snapshot.state).toBe('stopped');
+    expect(hls.instances[0].destroy).toHaveBeenCalledOnce();
+    await player.dispose();
+  });
+
 });

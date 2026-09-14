@@ -28,3 +28,7 @@ Corrected the rail origin, row spacing and V-mark geometry from frozen Roku Main
 ## 2026-09-13 — Shared TV rebuild delivery
 
 Recorded the shared React replacement, scoped 43-unit/49-browser validation, Settings/Search comparisons, source-filter difference, and immutable sync/PR workflow in [TV_WEB_UI_REBUILD.md](TV_WEB_UI_REBUILD.md). Physical TVs and other matched-content visual states remain pending.
+
+## 2026-09-14 — Responsive history and populated-card corrections
+
+Specified RUI-023 in [RESPONSIVE_PRODUCTION.md](RESPONSIVE_PRODUCTION.md): actual page history and return context, top-left Back, OLED in Settings, direct live-channel activation, real Continue Watching semantics, stacked hero focus stability and contained live logos. These are owner-requested corrections under implementation; browser and hardware results remain separate evidence.
