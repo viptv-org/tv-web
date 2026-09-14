@@ -162,3 +162,7 @@ DESIGN_REF now pins502dcb5. The prior sparse layout tests missed internal fixed-
 ## 2026-09-14 owner-reported responsive correction
 
 See RESPONSIVE_VALIDATION.md for the current evidence and earlier false coverage limits. New tests cover the complete shared card projection, metadata hydration without identity mutation, exact episode artwork, live logo containment, mobile lower-shelf focus, OLED Settings and real browser history. Actual upstream live and VOD adapter playback is verified separately from fixture UI tests.
+
+## RUI-024 mobile focus styling
+
+Mobile retains selected navigation surfaces without white focus outlines, inverted controls or bright card/profile focus frames. Desktop keyboard and TV remote focus remain. Production build and18 responsive browser cases passed, including focused Home/Settings, cards, profiles and actions, plus desktop keyboard focus preservation.

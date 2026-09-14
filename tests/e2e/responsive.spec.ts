@@ -50,8 +50,8 @@ for (const viewport of [
     await page.keyboard.press('Tab');
     const focusedAction = page.locator('[data-focus-id="hero-play"]');
     await focusedAction.focus();
-    await expect(focusedAction).toHaveCSS('background-color', 'rgb(245, 245, 245)');
-    await expect(focusedAction).toHaveCSS('color', 'rgb(16, 17, 18)');
+    await expect(focusedAction).toHaveCSS('background-color', viewport.width < 600 ? 'rgb(32, 34, 36)' : 'rgb(245, 245, 245)');
+    await expect(focusedAction).toHaveCSS('color', viewport.width < 600 ? 'rgb(245, 245, 245)' : 'rgb(16, 17, 18)');
     const heroFontSize = await page.locator('.hero h1').evaluate(node => parseFloat(getComputedStyle(node).fontSize));
     expect(heroFontSize).toBeGreaterThanOrEqual(24);
     const cardBox = await card.boundingBox();
@@ -375,3 +375,37 @@ for (const width of [390, 768, 1440]) {
     expect(fixture.errors).toEqual([]);
   });
 }
+
+test('mobile uses selected tabs without focus skin and desktop retains keyboard focus', async ({ page }, info) => {
+  test.skip(info.project.name !== 'vizio');
+  await page.setViewportSize({ width: 390, height: 844 });
+  await installBackend(page);
+  await page.goto('/');
+  const profile = page.locator('[data-focus-id="profile-0"]');
+  await profile.focus();
+  expect(await profile.evaluate(node => getComputedStyle(node, '::after').borderTopColor)).toBe('rgba(0, 0, 0, 0)');
+  await profile.click();
+  const home = page.locator('[data-focus-id="nav-Home"]');
+  await home.focus();
+  await expect(home).toHaveAttribute('aria-current', 'page');
+  await expect(home).toHaveCSS('outline-style', 'none');
+  await expect(home).toHaveCSS('background-color', 'rgb(48, 50, 52)');
+  await expect(home.locator('img')).toHaveCSS('filter', 'none');
+  const card = page.locator('[data-focus-id="home-0"]');
+  await card.focus();
+  expect(await card.evaluate(node => getComputedStyle(node, '::after').opacity)).toBe('0.35');
+  const action = page.locator('[data-focus-id="hero-play"]');
+  await action.focus();
+  await expect(action).toHaveCSS('outline-style', 'none');
+  await expect(action).toHaveCSS('background-color', 'rgb(32, 34, 36)');
+  await page.locator('[data-focus-id="nav-Settings"]').click();
+  const settings = page.locator('[data-focus-id="nav-Settings"]');
+  await expect(settings).toHaveAttribute('aria-current', 'page');
+  await expect(settings).toHaveCSS('background-color', 'rgb(48, 50, 52)');
+  await expect(settings).toHaveCSS('outline-style', 'none');
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.keyboard.press('Tab');
+  await home.focus();
+  await expect(home).toHaveCSS('outline-style', 'solid');
+  await expect(home).toHaveCSS('background-color', 'rgb(245, 245, 245)');
+});

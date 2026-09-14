@@ -63,3 +63,5 @@ RUI-022 populated content correction: design502dcb5. Seven populated viewport ch
 ## RUI-023 correction
 
 Shared Rust CardPresentation owns shelf image roles, labels, progress and activation for Android/web. Queue image regression starts with a poster-only history row and requires metadata's exact episode still. Responsive lower-shelf focus and live logos are checked at390/768/1440px; routing tests verify Back/Forward, left-hand Back, reload without playback and no live Sources detour. Actual upstream adapter decoding is recorded separately in RESPONSIVE_VALIDATION.md. No device-wide 100% parity claim.
+
+RUI-024: mobile selected-state styling and desktop focus preservation browser-verified; mobile visual focus suppression does not remove DOM/text-input editing semantics.
