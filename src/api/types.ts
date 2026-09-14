@@ -42,7 +42,7 @@ export type Catalog = CoreView<Core.Catalog>;
 export type CatalogExtra = CoreView<Core.CatalogExtra>;
 
 export interface DiscoverRequest {
-  readonly type: MediaKind;
+  readonly type: string;
   readonly catalog?: string;
   readonly addonId?: number;
   readonly skip?: number;

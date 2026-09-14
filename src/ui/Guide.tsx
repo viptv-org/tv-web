@@ -10,6 +10,7 @@ import {
 import { TvButton, focusElement } from "./remote";
 import { TextEntry } from "./TextEntry";
 import "./account-roku.css";
+import "./guide-responsive.css";
 
 const PAGE_SIZE = 40;
 const VISIBLE_ROWS = 5;
@@ -20,6 +21,8 @@ const WINDOW_SECONDS = 7_200;
 const HOUR_SECONDS = 3_600;
 const DAY_SECONDS = 86_400;
 const GUIDE_WIDTH = 804;
+const RESPONSIVE_WINDOW_SECONDS = 21_600;
+const RESPONSIVE_TIMELINE_WIDTH = 1_440;
 
 const halfHour = () => Math.floor(Date.now() / 1_800_000) * 1_800;
 
@@ -162,12 +165,13 @@ export function Guide({
   const loadGeneration = useRef(0);
   const focusAfterLoad = useRef<number | null>(null);
   const focusAfterTimeline = useRef<{ row: number; at: number } | null>(null);
+  const scrollViewport = useRef<HTMLDivElement>(null);
   const cellsByRow = useRef(new Map<number, readonly GuideCell[]>());
 
-  const visibleFirst = responsive ? Math.floor(selected / VISIBLE_ROWS) * VISIBLE_ROWS : firstVisibleRow(selected, channels.length);
+  const visibleFirst = responsive ? 0 : firstVisibleRow(selected, channels.length);
   const visibleChannels = channels.slice(
     visibleFirst,
-    visibleFirst + VISIBLE_ROWS,
+    visibleFirst + (responsive ? PAGE_SIZE : VISIBLE_ROWS),
   );
   const filterItems = filterOptions(categories);
 
@@ -181,12 +185,12 @@ export function Guide({
         guideCells(
           guides[channel.id]?.programs ?? [],
           windowStart,
-          windowStart + WINDOW_SECONDS,
+          windowStart + (responsive ? RESPONSIVE_WINDOW_SECONDS : WINDOW_SECONDS),
         ),
       );
     }
     return next;
-  }, [guides, visibleChannels, visibleFirst, windowStart]);
+  }, [guides, visibleChannels, visibleFirst, windowStart, responsive]);
   cellsByRow.current = visibleCells;
 
   useEffect(() => {
@@ -247,7 +251,7 @@ export function Guide({
           setChannels(page.channels);
           setTotal(page.total);
           setSelected(target);
-          if (page.channels.length > 0) {
+          if (!responsive && page.channels.length > 0) {
             setTimeout(() => {
               if (generation === loadGeneration.current)
                 focusElement(`guide-channel-${target}`);
@@ -267,12 +271,12 @@ export function Guide({
       clearTimeout(timer);
       scope.abort();
     };
-  }, [api, category, collection, offset, query]);
+  }, [api, category, collection, offset, query, responsive]);
 
   useEffect(() => {
     const scope = api.createScope();
     const needed = channels
-      .slice(visibleFirst, visibleFirst + VISIBLE_ROWS + PREFETCH_ROWS)
+      .slice(visibleFirst, visibleFirst + (responsive ? PAGE_SIZE : VISIBLE_ROWS + PREFETCH_ROWS))
       .filter(
         (channel) => (cache.current.get(channel.id)?.expires ?? 0) < Date.now(),
       );
@@ -308,7 +312,7 @@ export function Guide({
     )
       void worker();
     return () => scope.abort();
-  }, [api, channels, visibleFirst]);
+  }, [api, channels, visibleFirst, responsive]);
 
   useEffect(() => {
     const pending = focusAfterTimeline.current;
@@ -319,6 +323,10 @@ export function Guide({
     const index = cellAt(cells, pending.at);
     setTimeout(() => focusElement(`guide-program-${pending.row}-${index}`), 0);
   }, [visibleCells, windowStart]);
+
+  useEffect(() => {
+    if (scrollViewport.current) scrollViewport.current.scrollTop = 0;
+  }, [offset, category, collection, query]);
 
   const routePage = (nextOffset: number, focusRow: number) => {
     focusAfterLoad.current = focusRow;
@@ -341,6 +349,10 @@ export function Guide({
   };
 
   const pageChannels = (direction: -1 | 1) => {
+    if (responsive) {
+      routePage(Math.max(0, offset + direction * PAGE_SIZE), 0);
+      return;
+    }
     const next = visibleFirst + direction * VISIBLE_ROWS;
     setSelectedProgram(undefined);
     if (next >= 0 && next < channels.length) setSelected(next);
@@ -351,6 +363,7 @@ export function Guide({
   const restoreNow = () => {
     setFollowing(true);
     setWindowStart(halfHour());
+    if (scrollViewport.current) scrollViewport.current.scrollLeft = 0;
   };
 
   const closeSearchEntry = () => {
@@ -509,14 +522,70 @@ export function Guide({
     else onPlay(channel);
   };
 
-  const formatTime = (time: number) =>
-    new Date(time * 1000).toLocaleTimeString([], {
-      hour: "numeric",
-      minute: "2-digit",
-    });
   const selectedGuide = channels[selected]
     ? guides[channels[selected].id]
     : undefined;
+  let guideTimezone: string | undefined;
+  if (responsive && selectedGuide?.timezone) {
+    try { new Intl.DateTimeFormat([], { timeZone: selectedGuide.timezone }); guideTimezone = selectedGuide.timezone; } catch { /* Unknown server zones use browser-local labels consistently. */ }
+  }
+  const formatTime = (time: number) =>
+    new Date(time * 1000).toLocaleTimeString([], {
+      hour: "numeric", minute: "2-digit", timeZone: guideTimezone,
+    });
+  const selectFilter = (filter: ReturnType<typeof filterOptions>[number]) => {
+    focusAfterLoad.current = 0;
+    setCollection(filter.collection);
+    setCategory(filter.category);
+    setOffset(0);
+  };
+  const activeFilter = filterItems.find(filter => filter.collection === collection && filter.category === category) ?? filterItems[0];
+
+  if (responsive) return (
+    <main className="responsive-epg">
+      <header className="epg-page-heading">
+        <div><p className="epg-eyebrow">LIVE TV</p><h1>Channel guide</h1></div>
+        <label className="epg-search"><span>Search Live TV</span><input type="search" value={query} placeholder="Channels or programmes" maxLength={128} onChange={event => { setOffset(0); setQuery(event.target.value); }} /></label>
+      </header>
+      <div className="epg-layout">
+        <nav className="epg-categories" aria-label="Channel categories">
+          <h2>Browse channels</h2>
+          {filterItems.map(filter => <button type="button" key={filter.id} aria-pressed={filter.id === activeFilter.id} onClick={() => selectFilter(filter)}>{filter.label}</button>)}
+        </nav>
+        <section className="epg-content" aria-label="TV schedule">
+          <label className="epg-mobile-category"><span>Channel category</span><select value={activeFilter.id} onChange={event => { const filter = filterItems.find(item => item.id === event.target.value); if (filter) selectFilter(filter); }}>{filterItems.map(filter => <option key={filter.id} value={filter.id}>{filter.label}</option>)}</select></label>
+          <div className="epg-toolbar">
+            <div><h2>{activeFilter.label}</h2><p>{new Date(windowStart * 1000).toLocaleDateString([], { weekday: 'long', month: 'short', day: 'numeric', timeZone: guideTimezone })} · {guideTimezone || 'Local time'}</p></div>
+            <div className="epg-time-actions" aria-label="Guide navigation">
+              <button type="button" disabled={windowStart <= halfHour()} onClick={() => moveWindow(-1)}>Earlier</button>
+              <button type="button" aria-pressed={following} onClick={restoreNow}>Now</button>
+              <button type="button" disabled={windowStart >= halfHour() + DAY_SECONDS} onClick={() => moveWindow(1)}>Later</button>
+            </div>
+          </div>
+          <p className="epg-scroll-help" id="epg-scroll-help">Scroll down for channels and sideways for later programmes. Select a channel to watch live.</p>
+          <div className="epg-scroll" ref={scrollViewport} role="region" aria-label="Scrollable programme guide" aria-describedby="epg-scroll-help" tabIndex={0} onScroll={event => { if (event.currentTarget.scrollLeft > 8) setFollowing(false); }}>
+            <div className="epg-grid">
+              <div className="epg-time-header guide-header"><span className="epg-channel-heading">Channels</span><div className="epg-time-labels">{Array.from({ length: 12 }, (_, index) => <span key={index}>{selectedGuide?.timeline?.find(point => point.time === windowStart + index * 1_800)?.displayTime ?? formatTime(windowStart + index * 1_800)}</span>)}</div></div>
+              {visibleChannels.map((channel, row) => <div className="epg-row" key={channel.id} data-testid={`guide-row-${row}`}>
+                <button type="button" className="epg-channel" aria-label={channel.name} onClick={() => onPlay(channel)}>
+                  {channel.poster && !failedLogos.has(channel.id) && <img src={channel.poster} alt="" loading="lazy" onError={() => setFailedLogos(previous => new Set(previous).add(channel.id))} />}
+                  <span>{channel.name}</span>
+                </button>
+                <div className="epg-programs">{(visibleCells.get(row) ?? []).map((cell, index) => {
+                  const width = ((cell.end - cell.start) / RESPONSIVE_WINDOW_SECONDS) * RESPONSIVE_TIMELINE_WIDTH;
+                  return <button type="button" className={`epg-program${cell.missing ? ' epg-gap' : ''}`} key={`${cell.start}-${index}`} style={{ left: ((cell.start - windowStart) / RESPONSIVE_WINDOW_SECONDS) * RESPONSIVE_TIMELINE_WIDTH, width: Math.max(1, width - 4) }} aria-label={`${channel.name}: ${cell.title}, ${formatTime(cell.start)} to ${formatTime(cell.end)}`} onClick={() => activateCell(channel, cell)}>
+                    <small>{cell.missing ? 'LIVE CHANNEL' : `${formatTime(cell.start)} – ${formatTime(cell.end)}`}</small><span>{cell.title}</span>
+                  </button>;
+                })}{now >= windowStart && now < windowStart + RESPONSIVE_WINDOW_SECONDS && <span className="epg-now responsive-guide-now" aria-hidden="true" style={{ left: ((now - windowStart) / RESPONSIVE_WINDOW_SECONDS) * RESPONSIVE_TIMELINE_WIDTH }} />}</div>
+              </div>)}
+            </div>
+            {!channels.length && <p className="epg-empty" role="status">{loading ? 'Loading channels…' : query ? 'No matching US channels or current programmes. Try a channel name, section, or another title.' : 'No channels here yet. Choose another filter.'}</p>}
+          </div>
+          <footer className="epg-page-controls"><span role="status">{channels.length ? `${offset + 1}–${offset + channels.length} of ${total} channels` : `${total} channels`}</span><div><button type="button" disabled={loading || offset === 0} onClick={() => pageChannels(-1)}>Previous channels</button><button type="button" disabled={loading || offset + channels.length >= total} onClick={() => pageChannels(1)}>Next channels</button></div></footer>
+        </section>
+      </div>
+    </main>
+  );
   return (
     <main className="guide roku-guide" onKeyDown={key}>
       <h1>Live TV</h1>

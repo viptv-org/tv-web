@@ -432,3 +432,38 @@ body:has(.responsive-app) { background: #101112; }
   padding: 24px;
   border-radius: 16px;
 }
+
+/* Responsive account access owns a centered card, independent of TV pairing coordinates. */
+.responsive-app .responsive-auth { min-height: 100%; width: 100%; display: grid; place-items: center; padding: max(24px, env(safe-area-inset-top)) 20px; }
+.responsive-app .responsive-auth-card { width: min(100%, 440px); padding: 36px; background: #202224; border-radius: 20px; }
+.responsive-app .responsive-auth .auth-mark { display: block; width: 48px; height: 48px; object-fit: contain; margin: 0 0 28px; }
+.responsive-app .responsive-auth h1 { position: static; width: auto; height: auto; font-size: 30px; line-height: 1.2; }
+.responsive-app .auth-intro { color: #c5c6c7; font-size: 16px; line-height: 1.5; margin: 12px 0 28px; }
+.responsive-app .responsive-auth form { display: grid; gap: 10px; }
+.responsive-app .responsive-auth label { font-size: 16px; }
+.responsive-app .responsive-auth input { width: 100%; min-height: 50px; border: 1px solid #65676a; background: #101112; color: #f5f5f5; border-radius: 8px; padding: 12px 14px; font-size: 17px; margin-bottom: 10px; }
+.responsive-app .responsive-auth .auth-submit { width: 100%; min-height: 50px; margin-top: 8px; background: #f5f5f5; color: #101112; font-size: 17px; font-weight: 650; border-radius: 8px; --responsive-control-surface: #f5f5f5; }
+.responsive-app .responsive-auth .auth-submit:focus { color: #101112 !important; }
+.responsive-app .auth-help, .responsive-app .responsive-auth [role="status"] { color: #c5c6c7; font-size: 15px; line-height: 1.5; margin-top: 16px; }
+.responsive-app .auth-error { color: #ffb5b5; font-size: 15px; line-height: 1.5; margin: 16px 0; }
+.responsive-app .auth-account-link { display: block; margin: 24px 0 16px; color: #f5f5f5; font-size: 15px; text-underline-offset: 4px; }
+.responsive-app .auth-secondary { border-top: 1px solid #45474a; display: flex; justify-content: space-between; gap: 8px; padding-top: 12px; }
+.responsive-app .auth-secondary button { font-size: 14px; padding: 8px 0; background: transparent; }
+.responsive-app .auth-link-device { display: grid; justify-items: center; gap: 12px; margin-top: 20px; font-size: 15px; text-align: center; }
+.responsive-app .auth-link-device img { width: 160px; height: 160px; }
+.responsive-app .auth-link-device strong { font-size: 32px; letter-spacing: 4px; }
+.responsive-app .auth-link-device a { color: #f5f5f5; }
+.responsive-app .responsive-player-tools { display: flex; align-items: center; justify-content: end; gap: 8px; margin-left: auto; }
+.responsive-app .responsive-player-tools button { display: grid; place-items: center; }
+.responsive-app .player-volume { display: flex; align-items: center; gap: 8px; }
+.responsive-app .player-volume input { width: clamp(72px, 10vw, 130px); min-height: 44px; margin: 0; accent-color: #f5f5f5; cursor: pointer; }
+.responsive-app .system-volume { max-width: 120px; color: #c5c6c7; font-size: 13px; line-height: 1.4; }
+.responsive-app .catalog-status { position: relative; color: #c5c6c7; font-size: 17px; line-height: 1.5; margin: 16px 0; }
+.responsive-app .catalog-status button { padding: 12px 16px; margin-top: 12px; }
+.responsive-app:fullscreen { width: 100vw; height: 100dvh; background: #000; }
+@media (max-width: 599px) {
+  .responsive-app .responsive-auth-card { padding: 28px 24px; }
+  .responsive-app .responsive-player-tools { flex: 1 1 100%; justify-content: end; gap: 6px; }
+  .responsive-app .player-volume { margin-right: auto; }
+  .responsive-app .player-volume input { width: 100px; }
+}

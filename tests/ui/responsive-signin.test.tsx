@@ -1,0 +1,30 @@
+import { act, fireEvent, render, screen } from '@testing-library/react';
+import { afterEach, expect, it, vi } from 'vitest';
+import type { TvApi, DevicePairing } from '../../src/api';
+import { ResponsiveSignIn } from '../../src/ui/ResponsiveSignIn';
+const openUrl = vi.hoisted(() => vi.fn(async () => {}));
+vi.mock('@tauri-apps/plugin-opener', () => ({ openUrl }));
+const pair: DevicePairing = { deviceCode: 'one', userCode: 'ABCDEF', verificationUri: 'https://viptv.example/device', verificationUriComplete: 'https://viptv.example/device?code=ABCDEF', qrUri: '', expiresIn: 600, intervalSeconds: 1 };
+afterEach(() => { Reflect.deleteProperty(window, '__TAURI_INTERNALS__'); vi.clearAllMocks(); });
+it('replacing a pairing grant cancels the outstanding sign-in and ignores its late success', async () => {
+  let finish!: () => void;
+  const browserSignIn = vi.fn(() => new Promise<void>(resolve => { finish = resolve; }));
+  const props = { api: { browserSignIn } as unknown as TvApi, pair, qr: '', onRetry: vi.fn() };
+  const view = render(<ResponsiveSignIn {...props} />);
+  fireEvent.change(screen.getByLabelText('Username'), { target: { value: 'viewer' } });
+  fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'password' } });
+  fireEvent.submit(screen.getByRole('button', { name: 'Sign in' }).closest('form')!);
+  expect(screen.getByRole('button', { name: 'Signing in…' })).toBeDisabled();
+  view.rerender(<ResponsiveSignIn {...props} pair={{ ...pair, deviceCode: 'two' }} />);
+  await act(async () => { finish(); });
+  expect(screen.getByRole('button', { name: 'Sign in' })).toBeEnabled();
+  expect(screen.queryByText('Waiting for your account to connect…')).not.toBeInTheDocument();
+});
+it('native sign-in opens the exact approval URL in the system browser', async () => {
+  Object.defineProperty(window, '__TAURI_INTERNALS__', { configurable: true, value: {} });
+  render(<ResponsiveSignIn api={{} as TvApi} pair={pair} qr="" onRetry={vi.fn()} />);
+  expect(screen.queryByLabelText('Password')).not.toBeInTheDocument();
+  await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Continue in browser' })); });
+  expect(openUrl).toHaveBeenCalledWith(pair.verificationUriComplete);
+  expect(screen.getByRole('status')).toHaveTextContent('Waiting for your account');
+});

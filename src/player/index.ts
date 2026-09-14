@@ -13,6 +13,7 @@ export * from './html5-fallback';
 export interface CreatePlayerOptions {
   readonly platform: PlayerPlatform;
   readonly video?: HtmlMediaLike;
+  readonly canvas?: HTMLCanvasElement;
   readonly avplay?: AvplayManager;
 }
 
@@ -24,7 +25,7 @@ export function createPlayer(options: CreatePlayerOptions): Player {
     case 'vizio':
       return new VizioHtml5Adapter(requireVideo(options.video));
     case 'html5':
-      return new Html5FallbackAdapter(requireVideo(options.video));
+      return new Html5FallbackAdapter(requireVideo(options.video), options.canvas);
   }
 }
 

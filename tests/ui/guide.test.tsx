@@ -56,7 +56,7 @@ describe('guide cells', () => {
 });
 
 describe('Guide', () => {
-  it('pages real channel windows with touch controls and restores the current timeline', async () => {
+  it('scrolls a complete channel page and restores the current timeline', async () => {
     const api = apiFixture();
     const onPlay = vi.fn();
     const clock = vi.spyOn(Date, 'now').mockReturnValue(start * 1000);
@@ -66,18 +66,16 @@ describe('Guide', () => {
       const previous = screen.getByRole('button', { name: 'Previous channels' });
       const next = screen.getByRole('button', { name: 'Next channels' });
       expect(previous).toBeDisabled();
+      expect(screen.getAllByTestId(/guide-row-/)).toHaveLength(40);
+      expect(screen.getByRole('button', { name: 'Channel 40' })).toBeInTheDocument();
+      expect(screen.getByRole('region', { name: 'Scrollable programme guide' })).toHaveAttribute('tabindex', '0');
       fireEvent.click(next);
-      expect(screen.getByRole('button', { name: 'Channel 6' })).toBeInTheDocument();
-      expect(screen.queryByRole('button', { name: 'Channel 1' })).not.toBeInTheDocument();
-      expect(screen.getAllByTestId(/guide-row-/)).toHaveLength(5);
-      // Seven more visible windows cross the existing forty-channel API page.
-      for (let index = 0; index < 7; index += 1) fireEvent.click(next);
       await screen.findByRole('button', { name: 'Channel 41' });
       expect(api.live).toHaveBeenLastCalledWith(expect.objectContaining({ offset: 40 }), expect.anything());
       fireEvent.click(screen.getByRole('button', { name: 'Channel 42' }));
       expect(onPlay).toHaveBeenLastCalledWith(channels[41]);
       fireEvent.click(previous);
-      await screen.findByRole('button', { name: 'Channel 36' });
+      await screen.findByRole('button', { name: 'Channel 1' });
       expect(api.live).toHaveBeenLastCalledWith(expect.objectContaining({ offset: 0 }), expect.anything());
 
       const timeline = container.querySelector('.guide-header')!;
@@ -99,6 +97,24 @@ describe('Guide', () => {
     } finally {
       clock.mockRestore();
     }
+  });
+
+  it('shares desktop and compact category filters without remote navigation or arrival focus', async () => {
+    const api = apiFixture();
+    const onPlay = vi.fn();
+    render(<Guide responsive api={api as unknown as TvApi} onPlay={onPlay} onError={vi.fn()} onDetails={vi.fn()} />);
+    const first = await screen.findByRole('button', { name: 'Channel 1' });
+    expect(first).not.toHaveFocus();
+    fireEvent.keyDown(first, { key: 'MediaPlay' });
+    expect(onPlay).not.toHaveBeenCalled();
+    fireEvent.change(screen.getByRole('combobox', { name: 'Channel category' }), { target: { value: 'category:section:news' } });
+    await waitFor(() => expect(api.live).toHaveBeenLastCalledWith(expect.objectContaining({ category: 'section:news', offset: 0 }), expect.anything()));
+    expect(screen.getByRole('button', { name: 'News · 12' })).toHaveAttribute('aria-pressed', 'true');
+    fireEvent.click(screen.getByRole('button', { name: 'My channels' }));
+    await waitFor(() => expect(api.live).toHaveBeenLastCalledWith(expect.objectContaining({ collection: 'favorites', category: undefined, offset: 0 }), expect.anything()));
+    expect(screen.getByRole('combobox', { name: 'Channel category' })).toHaveValue('favorites');
+    fireEvent.change(screen.getByRole('searchbox', { name: 'Search Live TV' }), { target: { value: '  news  ' } });
+    await waitFor(() => expect(api.live).toHaveBeenLastCalledWith(expect.objectContaining({ search: 'news', offset: 0 }), expect.anything()));
   });
 
   it('uses real category filters and keeps five guide rows visible', async () => {

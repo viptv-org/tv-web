@@ -108,3 +108,29 @@ describe('HTML HLS delivery', () => {
   });
 
 });
+
+it('rejects an audio-only black video session after a bounded first-frame wait and cancels the watch on stop', async () => {
+  vi.useFakeTimers();
+  try {
+    const media = new Media(); media.nativeHls = true;
+    Object.defineProperty(media, 'videoWidth', { configurable: true, value: 0 });
+    const player = new VizioHtml5Adapter(media);
+    const opening = player.open({ url: url(), kind: 'vod' }); media.emit('loadedmetadata'); await opening;
+    await vi.advanceTimersByTimeAsync(8000);
+    expect(player.snapshot).toMatchObject({ state: 'error', error: { code: 'unsupported-format' } });
+    await player.stop(); await vi.advanceTimersByTimeAsync(8000); expect(player.snapshot.state).toBe('stopped'); await player.dispose();
+  } finally { vi.useRealTimers(); }
+});
+it('does not reject a decoded first frame or an explicitly audio-only source', async () => {
+  vi.useFakeTimers();
+  try {
+    for (const expectedVideo of [true, false]) {
+      const media = new Media(); media.nativeHls = true;
+      Object.defineProperty(media, 'videoWidth', { configurable: true, value: 0 });
+      const player = new VizioHtml5Adapter(media);
+      const opening = player.open({ url: url(), kind: 'vod', expectedVideo, paused: true }); media.emit('loadedmetadata'); await opening;
+      if (expectedVideo) { Object.defineProperty(media, 'videoWidth', { configurable: true, value: 1920 }); media.emit('timeupdate'); }
+      await vi.advanceTimersByTimeAsync(8000); expect(player.snapshot.state).toBe('paused'); await player.dispose();
+    }
+  } finally { vi.useRealTimers(); }
+});

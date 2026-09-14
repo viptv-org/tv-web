@@ -1,0 +1,35 @@
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
+import { MediabunnyAdapter } from '../../src/player/mediabunny';
+const state = vi.hoisted(() => ({ live: true, duration: vi.fn(), dispose: vi.fn(), close: vi.fn(), draw: vi.fn() }));
+vi.mock('mediabunny', () => ({
+  ALL_FORMATS: [], UrlSource: class {},
+  Input: class {
+    dispose = state.dispose;
+    async getPrimaryVideoTrack() { return { canDecode: async () => true, getPrimaryPairableAudioTrack: async () => null, getDecoderConfig: async () => ({ codec: 'avc1.640029' }), getDisplayWidth: async () => 1920, getDisplayHeight: async () => 1080, getFirstTimestamp: async () => 1.4, isLive: async () => state.live, getDurationFromMetadata: state.duration }; }
+  },
+  CanvasSink: class { async getCanvas() { return { canvas: document.createElement('canvas'), timestamp: 1.4, duration: 0.04 }; } },
+  AudioBufferSink: class {},
+}));
+beforeEach(() => {
+  state.live = true; state.duration.mockReset().mockResolvedValue(101.4); state.dispose.mockReset(); state.close.mockReset();
+  vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({ drawImage: state.draw } as unknown as CanvasRenderingContext2D);
+  vi.stubGlobal('AudioContext', class { state = 'suspended'; destination = {}; createGain() { return { connect() {}, gain: { value: 1 } }; } close = state.close.mockResolvedValue(undefined); });
+});
+afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); });
+it('prepares growing managed VOD without waiting for the playlist to finish', async () => {
+  state.duration.mockImplementation(() => new Promise(() => {}));
+  const player = new MediabunnyAdapter(document.createElement('canvas'));
+  await player.open({ url: `${location.origin}/media/session/cap/index.m3u8`, kind: 'vod', paused: true });
+  expect(state.duration).not.toHaveBeenCalled();
+  expect(player.snapshot).toMatchObject({ state: 'paused', time: { positionSeconds: 0, durationSeconds: null }, diagnostics: { engine: 'mediabunny', width: 1920, height: 1080 } });
+  await player.dispose(); expect(state.dispose).toHaveBeenCalledOnce(); expect(state.close).toHaveBeenCalledOnce();
+});
+it('retains delivered timeline offsets, reads bounded file duration, and unmutes a nonzero volume change', async () => {
+  state.live = false;
+  const player = new MediabunnyAdapter(document.createElement('canvas'));
+  await player.open({ url: `${location.origin}/media/session/cap/source.mp4`, kind: 'vod', paused: true, startAtSeconds: 3, timelineOffsetSeconds: 50 });
+  expect(state.duration).toHaveBeenCalledWith({ skipLiveWait: true });
+  expect(player.snapshot.time).toEqual({ positionSeconds: 53, durationSeconds: 150 });
+  await player.setMuted(true); await player.setVolume(0.6);
+  expect(player.snapshot.volume).toEqual({ level: 0.6, muted: false }); await player.dispose();
+});

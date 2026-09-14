@@ -17,7 +17,12 @@
     "types": [
       "vite/client",
       "node"
-    ]
+    ],
+    "paths": {
+      "mediabunny": [
+        "./node_modules/mediabunny/dist/mediabunny.d.ts"
+      ]
+    }
   },
   "include": [
     "src",

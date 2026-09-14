@@ -8,10 +8,12 @@ Use GitHub issues in viptv-org/tv-web and design issue #4. Keep user data/secret
 
 ## Current validation constraint
 
-The owner resumed testing after the server OOM. Check available memory first; coordinate one browser job at a time, one worker and a 256 MB Node heap. Keep emulators and local Gradle stopped; use hosted Android builds. The TV web workflow runs on pushes, pull requests and manual dispatch. Record current evidence and unexecuted scenarios in TESTING.md; distinguish browser tests from physical TV qualification.
+The owner resumed testing after the server OOM. Check available memory first; coordinate one browser job at a time, one worker and a 256 MB Node heap for browser/unit tests. Run production build/typecheck alone with a 384 MB Node heap; the MediaBunny declaration graph exceeds 256 MB. Keep emulators and local Gradle stopped; use hosted Android builds. The TV web workflow runs on pushes, pull requests and manual dispatch. Record current evidence and unexecuted scenarios in TESTING.md; distinguish browser tests from physical TV qualification.
 
 ## Design synchronization
 
 Before visual, input, navigation or asset changes, read `design-contract/DESIGN_SYNC.md` and `design-contract/TV_WEB_UI_REBUILD.md`. Update the canonical design repository first, then import its immutable commit with `node scripts/design-sync.mjs sync ../design <full-commit>`. Keep `tests/PARITY_MATRIX.md` and `TESTING.md` honest about implemented, browser-reviewed and hardware-qualified states. Build checks enforce snapshot integrity; visual review verifies the rendered implementation.
 
 Shared application rules are owned by ../core (viptv-org/core), pinned in CORE_REF. Change Rust and regenerate bindings/WASM there, commit, then run scripts/core-sync.mjs sync ../core. Never hand-edit vendor/core. Update Android's pin with the same revision for shared behavior changes. React owns rendering/focus and browser/player effects; provider aliases, artwork roles and continuation/source/resume rules belong in Rust. A passing hash check establishes the imported version, not device playback or visual acceptance.
+
+Before changing responsive playback, fullscreen or sign-in, read the platform host requirements in `IMPLEMENTATION.md`.

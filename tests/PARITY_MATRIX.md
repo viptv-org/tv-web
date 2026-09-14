@@ -69,3 +69,6 @@ RUI-024: mobile selected-state styling and desktop focus preservation browser-ve
 RUI-025 supersedes desktop keyboard focus presentation: responsive desktop/mobile use selected states without TV keyboard navigation; TV-mode input remains unchanged. Browser and remote-input regression checks pass.
 
 | RUI-026 / TVW-05, 09, 16 | Shared failed-image recovery; dismissible dialog backdrops; one local source spinner | Core b374711 / design58cc091. Phone390 and desktop1440 browser failure/dismissal/geometry scenarios pass; profile draft and stale authorization cancellation covered. Responsive/history and both TV-shell configurations pass (12 platform-specific skips). | Physical Tizen/Vizio unverified; no new Roku runtime change. |
+
+
+| RUI-027 | Responsive fullscreen/volume/decoder diagnostics; category sidebar and native-scroll guide; shared addon namespaces; centered web/native approval | Design f8ca89d / core a8ece4f. Browser viewport/scroll/fullscreen/auth boundaries and 117 app unit tests pass. Real MediaBunny live/MP4 and same-session HLS.js fallback exercised; detailed counts and rerun caveat in TESTING.md. | Installed Tauri and physical TV qualification pending; insecure LAN HTTP uses available native decoding. |

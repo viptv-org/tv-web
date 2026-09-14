@@ -26,6 +26,7 @@ async function start() {
     baseUrl: origin,
     allowInsecurePreview: lanPreview,
     sessionStore: {
+      withLock: navigator.locks ? work => navigator.locks.request(key, work) : undefined,
       async load() {
         try {
           return JSON.parse(

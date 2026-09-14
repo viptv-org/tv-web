@@ -17,15 +17,15 @@ export interface BrowserProbeEnvironment {
 export interface BrowserPlaybackProbe {
   readonly capabilities: PlaybackCapabilities;
   readonly canPlayManagedHls: boolean;
-  readonly protocols: { readonly nativeHls: boolean; readonly mseHls: boolean; readonly selectedHls: 'native' | 'mse' | 'unsupported' };
+  readonly protocols: { readonly nativeHls: boolean; readonly mseHls: boolean; readonly selectedHls: 'mediabunny' | 'native' | 'mse' | 'unsupported' };
   readonly evidence: readonly string[];
 }
 export function supportsNativeHls(media: { canPlayType?(type: string): string }): boolean {
   return HLS_MIME_TYPES.some((type) => { try { return !!media.canPlayType?.(type); } catch { return false; } });
 }
 
-/** Probe the actual HTML decoding paths. WebCodecs is deliberately not evidence for this player. */
-export async function probeBrowserPlaybackCapabilities(environment?: BrowserProbeEnvironment): Promise<BrowserPlaybackProbe> {
+/** Probe each executable decoding path separately; actual track preparation remains authoritative. */
+export async function probeBrowserPlaybackCapabilities(environment?: BrowserProbeEnvironment, options: { mediabunny?: boolean } = {}): Promise<BrowserPlaybackProbe> {
   const source = typeof MediaSource === 'undefined' ? undefined : MediaSource;
   const env = environment ?? {
     media: document.createElement('video'),
@@ -34,9 +34,12 @@ export async function probeBrowserPlaybackCapabilities(environment?: BrowserProb
     mseTypeSupported: (type: string) => source?.isTypeSupported(type) ?? false,
   };
   const evidence: string[] = [];
+  const bunny = !environment && options.mediabunny ? await probeWebCodecs() : { h264: false, hevc: false, aac: false };
+  const bunnyBaseline = bunny.h264 && bunny.aac;
+  if (!environment && options.mediabunny) evidence.push(`mediabunny:webcodecs:h264=${bunny.h264};hevc=${bunny.hevc};aac=${bunny.aac}`);
   const nativeHls = supportsNativeHls(env.media);
   const mseHls = !nativeHls && env.mseSupported;
-  const selectedHls = nativeHls ? 'native' : mseHls ? 'mse' : 'unsupported';
+  const selectedHls = bunnyBaseline ? 'mediabunny' : nativeHls ? 'native' : mseHls ? 'mse' : 'unsupported';
   async function codec(name: keyof typeof BROWSER_CODECS, path: 'file' | 'media-source'): Promise<boolean> {
     const mime = BROWSER_CODECS[name];
     let hint = false;
@@ -65,10 +68,10 @@ export async function probeBrowserPlaybackCapabilities(environment?: BrowserProb
     mseHls ? codec('hevc', 'media-source') : false,
     mseHls ? codec('aac', 'media-source') : false,
   ]);
-  const h264 = nativeHls ? nativeH264 : mseHls && mseH264;
-  const aac = nativeHls ? nativeAac : mseHls && mseAac;
-  const hevc = nativeHevc && (nativeHls || (mseHls && mseHevc));
-  const directMp4 = nativeH264 && nativeAac;
+  const h264 = bunnyBaseline || (nativeHls ? nativeH264 : mseHls && mseH264);
+  const aac = bunnyBaseline || (nativeHls ? nativeAac : mseHls && mseAac);
+  const hevc = (bunny.hevc && bunny.aac) || (nativeHevc && (nativeHls || (mseHls && mseHevc)));
+  const directMp4 = bunnyBaseline || (nativeH264 && nativeAac);
   const canPlayManagedHls = h264 && aac;
   evidence.push(`hls:${selectedHls}`, 'sample:1080p30; h264-high-4.1; hevc-main-5.0-sdr; aac-lc-stereo');
   return {
@@ -76,4 +79,21 @@ export async function probeBrowserPlaybackCapabilities(environment?: BrowserProb
     canPlayManagedHls,
     protocols: { nativeHls, mseHls, selectedHls }, evidence,
   };
+}
+
+/** Only used by the browser adapter that actually consumes WebCodecs via Mediabunny. */
+export async function probeWebCodecs(): Promise<{ h264: boolean; hevc: boolean; aac: boolean }> {
+  if (!globalThis.isSecureContext || typeof VideoDecoder === 'undefined' || typeof AudioDecoder === 'undefined' || typeof AudioContext === 'undefined')
+    return { h264: false, hevc: false, aac: false };
+  const bounded = async (probe: () => Promise<{ supported?: boolean }>) => {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    try { return await Promise.race([Promise.resolve().then(probe).then(result => result.supported === true), new Promise<boolean>(resolve => { timer = setTimeout(() => resolve(false), 1000); })]); }
+    catch { return false; } finally { clearTimeout(timer); }
+  };
+  const [h264, hevc, aac] = await Promise.all([
+    bounded(() => VideoDecoder.isConfigSupported({ codec: 'avc1.640029', codedWidth: 1920, codedHeight: 1080 })),
+    bounded(() => VideoDecoder.isConfigSupported({ codec: 'hvc1.1.6.L150.B0', codedWidth: 1920, codedHeight: 1080 })),
+    bounded(() => AudioDecoder.isConfigSupported({ codec: 'mp4a.40.2', sampleRate: 48000, numberOfChannels: 2 })),
+  ]);
+  return { h264, hevc, aac };
 }

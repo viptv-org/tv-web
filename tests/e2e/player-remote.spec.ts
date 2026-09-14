@@ -67,6 +67,8 @@ async function installVizioMedia(page: Page) {
       get() { return sources.get(this as HTMLMediaElement) ?? ''; },
       set(value: string) { sources.set(this as HTMLMediaElement, String(value)); },
     });
+    Object.defineProperty(HTMLVideoElement.prototype, 'videoWidth', { configurable: true, get() { return 1920; } });
+    Object.defineProperty(HTMLVideoElement.prototype, 'videoHeight', { configurable: true, get() { return 1080; } });
     Object.defineProperty(media, 'duration', { configurable: true, get() { return 120; } });
     Object.defineProperty(media, 'currentTime', {
       configurable: true,

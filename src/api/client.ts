@@ -51,6 +51,8 @@ export interface DeviceSessionStore {
   load(): Promise<DeviceTokenSet | null>;
   save(tokens: DeviceTokenSet): Promise<void>;
   clear(): Promise<void>;
+  /** Serialize session transactions across hosts sharing this durable grant. */
+  withLock?<T>(work: () => Promise<T>): Promise<T>;
 }
 /** Default storage is process memory. The app must explicitly supply durable platform storage. */
 export class MemoryDeviceSessionStore implements DeviceSessionStore {
@@ -136,7 +138,7 @@ export class TvApi {
       render: (view) => { if (!imperative) render(view); },
       onError,
     });
-    const run = async (event: Event, options?: RequestOptions): Promise<ViewModel> => {
+    const runUnlocked = async (event: Event, options?: RequestOptions): Promise<ViewModel> => {
       options?.signal?.throwIfAborted();
       imperative++;
       const cancel = () => driver.cancelHttp();
@@ -153,8 +155,20 @@ export class TvApi {
         options?.signal?.removeEventListener("abort", cancel);
       }
     };
+    const run = (event: Event, options?: RequestOptions) => this.withSessionLock(async () => {
+      const saved = await this.store.load();
+      if (saved && this.tokens && saved.sessionId === this.tokens.sessionId && saved.accountId === this.tokens.accountId
+        && saved.refreshToken !== this.tokens.refreshToken && !(typeof event === "object" && "AdoptSession" in event)) {
+        const adopted = await runUnlocked({ AdoptSession: { tokensJson: JSON.stringify(saved) } });
+        if (event === "Retry") return adopted;
+      }
+      return runUnlocked(event, options);
+    });
     this.sessionEvent = run;
-    return { ...driver, dispose: () => {
+    return { ...driver, dispatch: (event: Event) => this.withSessionLock(async () => {
+      await driver.dispatch(event);
+      await driver.idle();
+    }), dispose: () => {
       if (this.sessionEvent === run) this.sessionEvent = undefined;
       driver.dispose(); core.free();
     } };
@@ -168,6 +182,25 @@ export class TvApi {
   async restoreSession() {
     this.tokens = await this.store.load();
     return this.tokens;
+  }
+  /** Browser cookie authentication approves only this pending viewing grant.
+   * Passwords never enter core state, bearer storage, URLs, or diagnostics. */
+  async browserSignIn(username: string, password: string, userCode: string, options?: RequestOptions): Promise<void> {
+    const post = async (path: string, body: Record<string, string>, csrf?: string) => {
+      const response = await this.requestFetch(`${this.origin}${path}`, {
+        method: "POST", credentials: "include", redirect: "error", signal: options?.signal,
+        headers: { "Content-Type": "application/json", Accept: "application/json", ...(csrf ? { "x-csrf-token": csrf } : {}) },
+        body: JSON.stringify(body),
+      });
+      const payload = expectObject(await safeJson(response));
+      if (!response.ok) throw new TvApiError(response.status,
+        response.status === 401 ? "The username or password is incorrect." : response.status === 429 ? "Too many attempts. Please try again shortly." : "Sign-in could not complete. Please try again.");
+      return payload;
+    };
+    const login = await post("/api/auth/login", { username: username.trim(), password });
+    const csrf = optionalString(login, "csrf_token");
+    if (!csrf) throw new TvApiError(200, "Sign-in returned an incomplete response. Please try again.");
+    await post("/api/auth/device/approve", { user_code: userCode }, csrf);
   }
   async beginPairing(
     deviceName: string,
@@ -300,7 +333,11 @@ export class TvApi {
     const v = expectObject(
       await this.raw(`/api/discover${query}`, {}, true, options),
     );
-    return normalizeCore<DiscoverPage>("discoverResponse", { response: v, type: request.type });
+    const page = normalizeCore<DiscoverPage>("discoverResponse", { response: v, type: request.type });
+    if (!page.items.length && page.unsupportedCount) {
+      throw new TvApiError(200, "This catalog returned a media type this app does not support.", "unsupported_media_type");
+    }
+    return page;
   }
   async detail(
     item: Pick<MediaItem, "id" | "type"> &
@@ -724,29 +761,39 @@ export class TvApi {
     await this.store.save(tokens);
     return tokens;
   }
+  private withSessionLock<T>(work: () => Promise<T>): Promise<T> {
+    return this.store.withLock ? this.store.withLock(work) : work();
+  }
   private async refreshTokens(
     options?: RequestOptions,
   ): Promise<DeviceTokenSet> {
+    options?.signal?.throwIfAborted();
+    // Rotation belongs to the device session. Cancelling a screen must not
+    // discard the replacement grant after the server consumes its predecessor.
     if (!this.tokens)
       throw new TvApiError(401, "Pairing required", "unauthorized");
     if (this.sessionEvent) {
-      if (!this.refreshFlight) this.refreshFlight = this.sessionEvent("Retry", options).then(() => {
+      if (!this.refreshFlight) this.refreshFlight = this.sessionEvent("Retry").then(() => {
         if (!this.tokens) throw new TvApiError(401, "Pairing required", "unauthorized");
         return this.tokens;
       }).finally(() => { this.refreshFlight = null; });
       return this.refreshFlight;
     }
     if (!this.refreshFlight)
-      this.refreshFlight = this.deviceTokens(
-        "/api/auth/device/refresh",
-        this.tokens.refreshToken,
-        options,
-      )
-        .then((tokens) => this.saveTokens(tokens))
+      this.refreshFlight = this.withSessionLock(async () => {
+        const saved = await this.store.load();
+        if (saved && saved.sessionId === this.tokens?.sessionId && saved.accountId === this.tokens.accountId
+          && saved.refreshToken !== this.tokens.refreshToken) {
+          this.tokens = saved;
+          return saved;
+        }
+        const tokens = await this.deviceTokens("/api/auth/device/refresh", this.tokens!.refreshToken);
+        return this.saveTokens(tokens);
+      })
         .catch(async (error: unknown) => {
           if (
             error instanceof TvApiError &&
-            (error.status === 401 || error.status === 403)
+            error.status === 401
           ) {
             this.tokens = null;
             await this.store.clear();
@@ -767,8 +814,10 @@ export class TvApi {
     const request = async (retry: boolean): Promise<JsonValue> => {
       const headers: Record<string, string> = { Accept: "application/json" };
       if (init.body) headers["Content-Type"] = "application/json";
-      if (authenticated && this.tokens)
-        headers.Authorization = `Bearer ${this.tokens.accessToken}`;
+      options?.signal?.throwIfAborted();
+      const accessToken = this.tokens?.accessToken;
+      if (authenticated && accessToken)
+        headers.Authorization = `Bearer ${accessToken}`;
       let response: Response;
       try {
         response = await this.requestFetch(`${this.origin}${path}`, {
@@ -782,7 +831,9 @@ export class TvApi {
         throw new TvApiError(0, "Network request failed", "network");
       }
       if (response.status === 401 && authenticated && retry) {
-        await this.refreshTokens(options);
+        // Another in-flight request may already have rotated this bearer.
+        // Retry with that replacement instead of rotating again for a late 401.
+        if (accessToken === this.tokens?.accessToken) await this.refreshTokens(options);
         return request(false);
       }
       const payload = await safeJson(response);

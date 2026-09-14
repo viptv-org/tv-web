@@ -18,7 +18,7 @@ try {
     const config = join(directory, 'tsconfig.json');
     writeFileSync(config, JSON.stringify({ extends: join(root, 'tsconfig.json'), include: paths.map(path => join(root, path)) }));
     console.log(`Type checking ${name}`);
-    const result = spawnSync(process.execPath, ['--max-old-space-size=256', join(root, 'node_modules/typescript/bin/tsc'), '--project', config], { cwd: root, stdio: 'inherit' });
+    const result = spawnSync(process.execPath, ['--max-old-space-size=384', join(root, 'node_modules/typescript/bin/tsc'), '--project', config], { cwd: root, stdio: 'inherit' });
     if (result.status !== 0 || result.error) { failed = true; break; }
   }
 } finally { rmSync(directory, { recursive: true, force: true }); }

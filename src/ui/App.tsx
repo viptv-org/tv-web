@@ -1,4 +1,7 @@
 import { normalizeCore } from "../core";
+import { Maximize, Minimize, Volume2, VolumeX, Info } from "lucide-react";
+import { usePlayerFullscreen } from "./usePlayerFullscreen";
+import { ResponsiveSignIn } from "./ResponsiveSignIn";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import QRCode from "qrcode";
 import {
@@ -153,6 +156,9 @@ export function App({
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false),
     [toast, setToast] = useState("");
+  const [catalogError, setCatalogError] = useState("");
+  const [controlActivity, setControlActivity] = useState(0);
+  const lastControlActivity = useRef(0);
   const [searchPartial, setSearchPartial] = useState(false);
   const [catalogValues, setCatalogValues] = useState<Record<string, string>>(
     {},
@@ -189,6 +195,8 @@ export function App({
     [playbackState, setPlaybackState] = useState<PlaybackControllerSnapshot>(),
     [overlay, setOverlay] = useState(true),
     [seek, setSeek] = useState<number>();
+  const playerRoot = useRef<HTMLDivElement>(null);
+  const canvas = useRef<HTMLCanvasElement>(null);
   const video = useRef<HTMLVideoElement>(null),
     player = useRef<Player>(),
     controller = useRef<PlaybackSessionController>(),
@@ -214,6 +222,7 @@ export function App({
     seekTimer = useRef<ReturnType<typeof setTimeout>>(),
     pairTimer = useRef<ReturnType<typeof setTimeout>>(),
     pairEpoch = useRef(0);
+  const fullscreenControl = usePlayerFullscreen(screen === "player", playerRoot, video, (error) => setError(error instanceof Error ? error.message : "Unable to change fullscreen."));
   const pairingScope = useRef<ReturnType<TvApi["createScope"]>>();
   const engineError = useRef<Error>(),
     autoResume = useRef(false),
@@ -347,8 +356,14 @@ export function App({
     try {
       const [home, cats, preferences] = await Promise.all([
         api.home(id, { signal: scope.signal }),
-        api.catalogs(),
-        api.preferences(id),
+        api.catalogs().then((available) => {
+          if (ticket === epoch.current) { setCatalogs(available); setCatalogError(""); }
+          return available;
+        }).catch((cause) => {
+          if (ticket === epoch.current) setCatalogError(cause instanceof Error ? cause.message : "Unable to load catalogs.");
+          return [] as readonly Catalog[];
+        }),
+        api.preferences(id).catch(() => initialPrefs),
       ]);
       if (ticket !== epoch.current) return;
       setQueue(home.continueWatching);
@@ -472,6 +487,8 @@ export function App({
     const scope = api.createScope();
     pairingScope.current = scope;
     const generation = ++pairEpoch.current;
+    setPair(undefined);
+    setQr("");
     setError("");
     setScreen("pairing");
     try {
@@ -573,7 +590,7 @@ export function App({
   useEffect(() => {
     let engine: Player;
     try {
-      engine = createPlayer({ platform, video: video.current! });
+      engine = createPlayer({ platform, video: video.current!, canvas: canvas.current! });
       engineError.current = undefined;
     } catch (error) {
       engineError.current =
@@ -587,7 +604,7 @@ export function App({
     const capabilities = async (): Promise<PlaybackCapabilities> => {
       // AVPlay is a native engine; HTML decoder probes cannot qualify it.
       if (platform === "tizen") return { maxWidth: 1920, maxHeight: 1080, h264: true, hevc: true, aac: true, directPlay: true, hevcSdr: true };
-      browserReport ??= probeBrowserPlaybackCapabilities();
+      browserReport ??= probeBrowserPlaybackCapabilities(undefined, { mediabunny: platform === "html5" });
       const report = await browserReport;
       if (!report.canPlayManagedHls) throw new Error("This browser cannot play the supported H.264/AAC streaming output. Use a supported browser or TV player.");
       return report.capabilities;
@@ -678,7 +695,7 @@ export function App({
       return;
     const t = setTimeout(() => setOverlay(false), 7000);
     return () => clearTimeout(t);
-  }, [screen, overlay, snapshot?.state, modal, seek]);
+  }, [screen, overlay, snapshot?.state, modal, seek, controlActivity]);
   useEffect(() => {
     if (!session) return;
     const t = setInterval(() => {
@@ -1394,6 +1411,7 @@ export function App({
         skip,
       });
       if (ticket !== epoch.current) return;
+      if (page.unsupportedCount) notify("Some catalog items use an unsupported media type.");
       setItems((old) =>
         skip
           ? [
@@ -1425,8 +1443,16 @@ export function App({
         if (ticket === epoch.current) setItems(value);
       }
       if (next === "Discover") {
-        const cat = catalogs[0];
-        if (cat) await loadCatalog(cat);
+        try {
+          const available = await api.catalogs();
+          if (ticket !== epoch.current) return;
+          setCatalogs(available); setCatalogError("");
+          const chosen = available.find(value => value.id === catalog?.id && value.addonId === catalog?.addonId && value.type === catalog?.type) ?? available[0];
+          if (chosen) await loadCatalog(chosen);
+          else setCatalog(undefined);
+        } catch (cause) {
+          if (ticket === epoch.current) setCatalogError(cause instanceof Error ? cause.message : "Unable to load catalogs.");
+        }
       }
     } catch (e) {
       fail(e);
@@ -1877,7 +1903,7 @@ export function App({
   return (
     <RemoteRoot
       inputMode={layout}
-      onBack={() => casting ? closeCast() : back()}
+      onBack={() => casting ? closeCast() : screen === "player" && fullscreenControl.fullscreen && !modal && !entry && !editingProfile ? void fullscreenControl.exit() : back()}
       onMediaKey={mediaKey}
       onMediaKeyUp={mediaKeyUp}
       onNavigate={() => {
@@ -1886,9 +1912,13 @@ export function App({
       }}
     >
       <div
+        ref={playerRoot}
+        onPointerMove={() => { if (responsive && screen === "player" && Date.now() - lastControlActivity.current > 1000) { lastControlActivity.current = Date.now(); setOverlay(true); setControlActivity(value => value + 1); } }}
+        onPointerDownCapture={(event) => { if (responsive && screen === "player" && (event.target as HTMLElement).closest("button, input")) { setOverlay(true); setControlActivity(value => value + 1); } }}
         className={`tv-screen ${responsive ? "responsive-app" : ""} ${oled ? "oled" : ""} screen-${screen.replace(/ /g, "-").toLowerCase()} ${screen === "player" ? "playing" : ""}`}
       >
         <video ref={video} className="video" playsInline onClick={() => responsive && setOverlay((value) => !value)} />
+        <canvas ref={canvas} className="video player-canvas" style={{ display: "none" }} onClick={() => responsive && setOverlay((value) => !value)} />
         {responsive && !["startup", "pairing", "player"].includes(screen) && <header className="responsive-toolbar">
           {["detail", "sources", "profiles"].includes(screen) && <TvButton id="responsive-back" onActivate={back} aria-label="Back">←</TvButton>}
           {brand}
@@ -1897,10 +1927,10 @@ export function App({
           <TvButton id="responsive-cast" aria-label="Watch on TV" onActivate={openCast}><img src={`${import.meta.env.BASE_URL}assets/ui-nav-tv.png`} alt="" /></TvButton>
           {!["profiles"].includes(screen) && <TvButton id="responsive-profile" aria-label="Choose profile" onActivate={() => setScreen("profiles")}><ReadyImage src={activeProfile ? avatarUrl(activeProfile) : undefined} alt="" /><span>{activeProfile?.name ?? "Profile"}</span></TvButton>}
         </header>}
-        {(!responsive || ["startup", "pairing", "player"].includes(screen)) && brand}
+        {(!responsive || ["startup", "player"].includes(screen)) && brand}
 
         {screen === "startup" ? null : screen === "pairing" ? (
-          <section className="pairing">
+          responsive ? <ResponsiveSignIn api={api} pair={pair} qr={qr} onRetry={() => void pairing()} /> : <section className="pairing">
             <h1>Sign in to VIPTV</h1>
             <p>Visit this address, then enter the code shown below.</p>
             <h2>{pair?.verificationUri ?? "Connecting…"}</h2>
@@ -2233,6 +2263,10 @@ export function App({
                     </p>
                   </div>
                 )}
+                {screen === "Discover" && <>
+                  {catalogError && <div className="catalog-status" role="alert"><p>{catalogError}</p><button onClick={() => void navigate("Discover")}>Retry catalogs</button></div>}
+                  {!busy && !catalogError && !catalogs.length && <p className="catalog-status">No catalogs are available. Add or enable a catalog addon in Settings.</p>}
+                </>}
                 {screen === "Discover" && (
                   <div className="filters">
                     <TvButton
@@ -2263,7 +2297,7 @@ export function App({
                           choices: catalogs
                             .filter((c) => !catalog || c.type === catalog.type)
                             .map((cat) => ({
-                              label: cat.name,
+                              label: `${cat.name}${cat.addonName ? ` · ${cat.addonName}` : ""}`,
                               action: () => {
                                 setModal(undefined);
                                 void loadCatalog(cat);
@@ -2272,7 +2306,7 @@ export function App({
                         })
                       }
                     >
-                      {catalog?.name ?? "Catalog"}
+                      {catalog ? `${catalog.name}${catalog.addonName ? ` · ${catalog.addonName}` : ""}` : "Catalog"}
                     </TvButton>
                     {catalog &&
                       catalogFilters(catalog).map((filter) => (
@@ -2920,6 +2954,25 @@ export function App({
                         alt=""
                       />
                     </TvButton>
+                    {responsive && <div className="responsive-player-tools">
+                      {player.current?.capabilities.canSetVolume && snapshot?.volume ? <div className="player-volume">
+                        <button type="button" aria-label={snapshot.volume.muted ? "Unmute" : "Mute"} onClick={() => void player.current?.setMuted?.(!snapshot.volume?.muted).catch(fail)}>{snapshot.volume.muted ? <VolumeX size={22} /> : <Volume2 size={22} />}</button>
+                        <input type="range" aria-label="Volume" min="0" max="1" step="0.01" value={snapshot.volume.muted ? 0 : snapshot.volume.level} onChange={(event) => { setOverlay(true); void player.current?.setVolume?.(Number(event.target.value)).catch(fail); }} />
+                      </div> : <span className="system-volume">Use device volume buttons</span>}
+                      <button type="button" aria-label="Playback info" title="Playback info" onClick={() => setModal({ title: "Playback info", body: [
+                        `Decoder: ${snapshot?.diagnostics?.engine ?? player.current?.capabilities.engine ?? "Unknown"}`,
+                        `Transport: ${snapshot?.diagnostics?.networkTransport ?? "Unknown"}`,
+                        `Container: ${snapshot?.diagnostics?.transport ?? session?.format ?? "Unknown"}`,
+                        `Delivery: ${session?.videoMode === "transcode" || session?.audioMode === "transcode" ? "Transcode" : session?.mode || "Unknown"}`,
+                        session?.videoMode ? `Video delivery: ${session.videoMode}` : "",
+                        session?.audioMode ? `Audio delivery: ${session.audioMode}` : "",
+                        snapshot?.diagnostics?.videoCodec ? `Video codec: ${snapshot.diagnostics.videoCodec}` : "",
+                        snapshot?.diagnostics?.audioCodec ? `Audio codec: ${snapshot.diagnostics.audioCodec}` : "",
+                        snapshot?.diagnostics?.width ? `Resolution: ${snapshot.diagnostics.width} × ${snapshot.diagnostics.height}` : "",
+                        snapshot?.diagnostics?.fallbackReason ? `Fallback: ${snapshot.diagnostics.fallbackReason}` : "",
+                      ].filter(Boolean).join("\n"), choices: [{ label: "Close", action: () => setModal(undefined) }] })}><Info size={22} /></button>
+                      <button type="button" aria-label={fullscreenControl.fullscreen ? "Exit fullscreen" : "Fullscreen"} title={fullscreenControl.fullscreen ? "Exit fullscreen" : "Fullscreen"} onClick={() => void fullscreenControl.toggle()}>{fullscreenControl.fullscreen ? <Minimize size={22} /> : <Maximize size={22} />}</button>
+                    </div>}
                     {!responsive && <TvButton
                       id="exit"
                       aria-label="Exit"

@@ -18,6 +18,10 @@ export interface HtmlTextTrack {
 
 export interface HtmlMediaLike {
   src: string;
+  volume?: number;
+  muted?: boolean;
+  readonly videoWidth?: number;
+  readonly videoHeight?: number;
   currentTime: number;
   readonly duration: number;
   readonly paused: boolean;
@@ -39,6 +43,7 @@ export const VIZIO_HTML5_CAPABILITIES: PlayerCapabilities = {
   directNative: 'probe-required',
   adaptiveStreaming: 'probe-required',
   drm: 'probe-required',
+  canSetVolume: true,
   canPause: true,
   canSeek: true,
   canSelectAudioTrack: false,
@@ -63,6 +68,8 @@ export class VizioHtml5Adapter extends SessionPlayer {
   readonly capabilities = VIZIO_HTML5_CAPABILITIES;
   private readonly handlers: Record<string, () => void>;
   private hls: Hls | null = null;
+  private firstFrameTimer?: ReturnType<typeof setTimeout>;
+  private expectedVideo = true;
   private nativeHlsFallback: (() => boolean) | null = null;
   private pauseRequested = false;
   private activeKind: OpenPlayerRequest['kind'] | null = null;
@@ -72,6 +79,7 @@ export class VizioHtml5Adapter extends SessionPlayer {
   constructor(private readonly media: HtmlMediaLike) {
     super();
     this.handlers = {
+      volumechange: () => this.onVolume(),
       loadedmetadata: () => this.onMetadata(),
       canplay: () => this.onCanPlay(),
       play: () => this.onPlay(),
@@ -93,11 +101,14 @@ export class VizioHtml5Adapter extends SessionPlayer {
       ));
     }
     this.nativeHlsFallback = null;
+    this.clearFirstFrameWatchdog();
     this.cancelPendingOpen();
     this.destroyHls();
     this.invalidateSession();
     this.pauseRequested = request.paused ?? false;
+    this.expectedVideo = request.expectedVideo !== false;
     const sessionId = this.startSession(request.kind);
+    this.update(sessionId, { diagnostics: { engine: 'native-html', networkTransport: new URL(request.url, location.href).pathname.startsWith('/media/') ? 'browser-proxy' : 'direct', transport: /\.m3u8(?:[?#]|$)/i.test(request.url) ? 'hls' : 'file' }, volume: { level: this.media.volume ?? 1, muted: this.media.muted ?? false } });
     this.activeKind = request.kind;
     this.timelineOffsetSeconds = nonNegative(request.timelineOffsetSeconds ?? 0);
     this.media.pause();
@@ -118,6 +129,7 @@ export class VizioHtml5Adapter extends SessionPlayer {
         }
         cleanup();
         const readyAttempt = attempt;
+        this.watchFirstFrame(sessionId);
         const target = boundedPosition(targetPosition, knownDuration(this.media.duration));
         try { this.media.currentTime = target; } catch { /* browser may delay seek until a later ready state */ }
         this.update(sessionId, {
@@ -179,6 +191,7 @@ export class VizioHtml5Adapter extends SessionPlayer {
       };
       openingTimer = setTimeout(() => failOpen(new PlayerOperationError('prepare-failed', 'The selected source did not become ready in time.')), 20000);
       const startMse = () => {
+        this.update(sessionId, { diagnostics: { engine: 'hls.js', networkTransport: 'browser-proxy', transport: 'hls' } });
         if (!Hls.isSupported()) throw new PlayerOperationError('unsupported-format', 'This browser cannot play HLS. Native HLS or MediaSource support is required.');
         const url = checkedMediaUrl(request.url);
         const prefix = url.pathname.slice(0, url.pathname.lastIndexOf('/') + 1);
@@ -252,6 +265,7 @@ export class VizioHtml5Adapter extends SessionPlayer {
     this.pauseRequested = true;
     const sessionId = this.activeSessionOrThrow();
     this.media.pause();
+    this.onTimeUpdate();
     this.update(sessionId, { state: 'paused' });
   }
 
@@ -272,6 +286,7 @@ export class VizioHtml5Adapter extends SessionPlayer {
 
   async stop(): Promise<void> {
     this.nativeHlsFallback = null;
+    this.clearFirstFrameWatchdog();
     this.cancelPendingOpen();
     this.destroyHls();
     this.invalidateSession();
@@ -306,10 +321,29 @@ export class VizioHtml5Adapter extends SessionPlayer {
     this.update(sessionId, { tracks: { ...tracksFromMedia(this.media), selectedTextId: trackId } });
   }
 
+  async setVolume(level: number): Promise<void> {
+    this.media.volume = Math.min(1, Math.max(0, Number.isFinite(level) ? level : 1));
+    if (this.media.volume > 0) this.media.muted = false;
+    this.onVolume();
+  }
+  async setMuted(muted: boolean): Promise<void> { this.media.muted = muted; this.onVolume(); }
+  private onVolume(): void { this.update(this.snapshot.sessionId, { volume: { level: this.media.volume ?? 1, muted: this.media.muted ?? false } }); }
+  private clearFirstFrameWatchdog(): void { clearTimeout(this.firstFrameTimer); this.firstFrameTimer = undefined; }
+  private watchFirstFrame(sessionId: number): void {
+    if (!this.expectedVideo || this.media.videoWidth === undefined || this.media.videoWidth > 0 || this.firstFrameTimer) return;
+    this.firstFrameTimer = setTimeout(() => {
+      this.firstFrameTimer = undefined;
+      if (!this.isCurrent(sessionId) || (this.media.videoWidth ?? 0) > 0 || this.snapshot.state === 'error') return;
+      this.nativeHlsFallback = null;
+      this.fail(sessionId, { code: 'unsupported-format', message: 'The selected source did not produce a decoded video frame.' });
+      this.media.pause(); this.destroyHls();
+    }, 8000);
+  }
   private onMetadata(): void {
+    if ((this.media.videoWidth ?? 0) > 0) this.clearFirstFrameWatchdog();
     const sessionId = this.snapshot.sessionId;
     if (!this.isCurrent(sessionId)) return;
-    this.update(sessionId, { time: { positionSeconds: this.timelineOffsetSeconds + this.media.currentTime, durationSeconds: knownDuration(this.media.duration) }, tracks: tracksFromMedia(this.media) });
+    this.update(sessionId, { diagnostics: this.snapshot.diagnostics ? { ...this.snapshot.diagnostics, width: this.media.videoWidth, height: this.media.videoHeight } : undefined, time: { positionSeconds: this.timelineOffsetSeconds + this.media.currentTime, durationSeconds: knownDuration(this.media.duration) }, tracks: tracksFromMedia(this.media) });
   }
 
   private onCanPlay(): void { this.onMetadata(); }
@@ -329,8 +363,9 @@ export class VizioHtml5Adapter extends SessionPlayer {
     this.update(sessionId, { state: 'buffering' });
   }
   private onTimeUpdate(): void {
+    if ((this.media.videoWidth ?? 0) > 0) this.clearFirstFrameWatchdog();
     const sessionId = this.snapshot.sessionId;
-    this.update(sessionId, { time: { positionSeconds: this.timelineOffsetSeconds + this.media.currentTime, durationSeconds: knownDuration(this.media.duration) } });
+    this.update(sessionId, { diagnostics: this.snapshot.diagnostics ? { ...this.snapshot.diagnostics, width: this.media.videoWidth, height: this.media.videoHeight } : undefined, time: { positionSeconds: this.timelineOffsetSeconds + this.media.currentTime, durationSeconds: knownDuration(this.media.duration) } });
   }
   private onEnded(): void {
     if (this.media.error || this.snapshot.state === 'error') return;

@@ -64,6 +64,8 @@ export abstract class SessionPlayer implements Player {
   }
 
   protected update(sessionId: number, patch: {
+    diagnostics?: PlayerSnapshot['diagnostics'];
+    volume?: PlayerSnapshot['volume'];
     state?: PlayerState;
     time?: PlayerTime;
     tracks?: PlayerTracks;

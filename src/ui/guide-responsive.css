@@ -1,0 +1,68 @@
+/* Responsive EPG has its own geometry; the Roku fixed-canvas guide is unchanged. */
+.responsive-app .responsive-epg { --epg-channel-width: 168px; padding-top: 20px; padding-bottom: 88px; }
+.responsive-epg .epg-page-heading { display: flex; align-items: end; justify-content: space-between; gap: 24px; margin-bottom: 28px; }
+.responsive-epg h1, .responsive-epg h2, .responsive-epg p { position: static; width: auto; height: auto; margin: 0; }
+.responsive-epg h1 { font-size: 34px; line-height: 1.2; }
+.responsive-epg h2 { font-size: 19px; line-height: 1.3; }
+.responsive-epg .epg-eyebrow { font-size: 12px; letter-spacing: .14em; color: #a6a8aa; margin-bottom: 8px; }
+.responsive-epg .epg-search { display: grid; gap: 7px; width: min(340px, 100%); font-size: 13px; color: #c3c5c7; }
+.responsive-epg .epg-search input, .responsive-epg select { width: 100%; min-height: 48px; padding: 10px 14px; border: 1px solid #3a3c3e; border-radius: 8px; background: #191b1d; color: #f5f5f5; font: inherit; font-size: 16px; }
+.responsive-epg .epg-layout { display: grid; grid-template-columns: 216px minmax(0, 1fr); gap: 24px; align-items: start; }
+.responsive-app .responsive-epg .epg-categories { display: flex; flex-direction: column; align-items: stretch; gap: 5px; height: auto; max-height: calc(100dvh - 210px); overflow-y: auto; padding: 8px 10px 16px 0; border-right: 1px solid #303234; }
+.responsive-epg .epg-categories h2 { padding: 0 12px 16px; font-size: 14px; color: #a6a8aa; font-weight: 500; }
+.responsive-app .responsive-epg .epg-categories button { flex: 0 0 auto; justify-content: start; width: 100%; height: auto; min-height: 48px; padding: 12px; font-size: 16px; line-height: 1.35; text-align: left; white-space: normal; border-radius: 8px; background: transparent; }
+.responsive-app .responsive-epg .epg-categories button[aria-pressed="true"] { background: #303234; color: #fff; box-shadow: inset 3px 0 #f5f5f5; }
+.responsive-epg .epg-content { min-width: 0; }
+.responsive-epg .epg-mobile-category { display: none; }
+.responsive-epg .epg-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 12px; }
+.responsive-epg .epg-toolbar p { margin-top: 5px; color: #a6a8aa; font-size: 13px; }
+.responsive-epg .epg-time-actions, .responsive-epg .epg-page-controls > div { display: flex; gap: 8px; }
+.responsive-app .responsive-epg .epg-time-actions button, .responsive-app .responsive-epg .epg-page-controls button { min-height: 44px; padding: 10px 14px; font-size: 14px; border-radius: 7px; background: #202224; white-space: nowrap; }
+.responsive-app .responsive-epg .epg-time-actions button[aria-pressed="true"] { background: #303234; }
+.responsive-epg .epg-scroll-help { margin-bottom: 12px; font-size: 13px; color: #a6a8aa; line-height: 1.5; }
+.responsive-epg .epg-scroll { position: relative; overflow: auto; height: clamp(340px, calc(100dvh - 330px), 760px); width: 100%; border: 1px solid #373a3c; border-radius: 10px; scrollbar-width: auto; scrollbar-color: #62676a #191b1d; overscroll-behavior: contain; scroll-padding: 48px 0 0 var(--epg-channel-width); background: #101112; }
+.responsive-epg .epg-grid { width: calc(var(--epg-channel-width) + 1440px); min-width: 100%; }
+.responsive-epg .epg-time-header { display: flex; position: sticky; top: 0; z-index: 5; height: 48px; background: #202224; border-bottom: 1px solid #414548; }
+.responsive-epg .epg-channel-heading { position: sticky; left: 0; z-index: 6; flex: 0 0 var(--epg-channel-width); width: var(--epg-channel-width); display: flex; align-items: center; padding: 12px; font-size: 13px; color: #b7babc; background: #202224; border-right: 1px solid #414548; }
+.responsive-epg .epg-time-labels { display: flex; flex: 0 0 1440px; }
+.responsive-epg .epg-time-labels > span { display: flex; align-items: center; width: 120px; flex: 0 0 120px; padding-left: 10px; font-size: 13px; border-left: 1px solid #353a3c; }
+.responsive-epg .epg-row { display: flex; height: 84px; border-bottom: 1px solid #303638; }
+.responsive-app .responsive-epg .epg-channel { position: sticky; left: 0; z-index: 3; display: flex; gap: 9px; align-items: center; flex: 0 0 var(--epg-channel-width); width: var(--epg-channel-width); height: 84px; min-height: 84px; padding: 12px; border-radius: 0; border-right: 1px solid #414548; background: #202224; text-align: left; }
+.responsive-epg .epg-channel img { width: 40px; height: 36px; object-fit: contain; flex: 0 0 40px; }
+.responsive-epg .epg-channel span { font-size: 14px; line-height: 1.35; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.responsive-epg .epg-programs { position: relative; flex: 0 0 1440px; height: 84px; background: repeating-linear-gradient(to right, transparent 0, transparent 119px, #24292c 119px, #24292c 120px); }
+.responsive-app .responsive-epg .epg-program { position: absolute; top: 4px; height: 75px; padding: 12px 10px; border-radius: 6px; background: #202224; text-align: left; overflow: hidden; }
+.responsive-app .responsive-epg .epg-gap { background: #17191b; }
+.responsive-epg .epg-program small { display: block; font-size: 11px; line-height: 1.3; color: #b7bec2; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.responsive-epg .epg-program > span { display: block; margin-top: 5px; font-size: 14px; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.responsive-epg .epg-now { position: absolute; top: 0; bottom: 0; width: 2px; background: #f5f5f5; z-index: 2; pointer-events: none; }
+.responsive-epg .epg-page-controls { display: flex; justify-content: space-between; gap: 12px; align-items: center; padding-top: 16px; }
+.responsive-epg .epg-page-controls > span { font-size: 13px; color: #a6a8aa; }
+.responsive-epg .epg-empty { position: sticky; left: 0; width: 100%; padding: 28px 20px; color: #b7bec2; font-size: 16px; line-height: 1.5; }
+@media (max-width: 899px) {
+  .responsive-app .responsive-epg { --epg-channel-width: 112px; padding-top: 16px; }
+  .responsive-epg .epg-layout { grid-template-columns: minmax(0, 1fr); gap: 0; }
+  .responsive-app .responsive-epg .epg-categories { display: none; }
+  .responsive-epg .epg-mobile-category { display: grid; gap: 6px; font-size: 13px; color: #b7babc; margin-bottom: 16px; }
+  .responsive-epg .epg-page-heading { align-items: stretch; flex-direction: column; gap: 16px; margin-bottom: 20px; }
+  .responsive-epg h1 { font-size: 28px; }
+  .responsive-epg .epg-search { width: 100%; }
+  .responsive-epg .epg-toolbar { align-items: start; flex-direction: column; gap: 12px; }
+  .responsive-epg .epg-toolbar h2 { font-size: 18px; }
+  .responsive-epg .epg-time-actions { width: 100%; }
+  .responsive-epg .epg-time-actions button { flex: 1; }
+  .responsive-epg .epg-scroll { height: max(360px, calc(100dvh - 330px)); }
+  .responsive-app .responsive-epg .epg-channel { flex-direction: column; justify-content: center; gap: 4px; padding: 7px; }
+  .responsive-epg .epg-channel img { width: 36px; height: 25px; flex: 0 0 25px; }
+  .responsive-epg .epg-channel span { font-size: 12px; text-align: center; -webkit-line-clamp: 2; }
+  .responsive-epg .epg-page-controls { align-items: stretch; flex-direction: column; }
+  .responsive-epg .epg-page-controls > div { display: flex; }
+  .responsive-epg .epg-page-controls button { flex: 1; }
+}
+
+.responsive-app .responsive-epg button[aria-pressed="true"] { --responsive-control-surface: #303234; }
+.responsive-app .responsive-epg .epg-categories button[aria-pressed="true"] { border-left: 3px solid #f5f5f5; padding-left: 9px; }
+
+/* Long programmes keep their identity visible while their leading edge scrolls away. */
+.responsive-app .responsive-epg .epg-program { overflow: clip; }
+.responsive-epg .epg-program > :is(span, small) { position: sticky; left: calc(var(--epg-channel-width) + 12px); width: max-content; max-width: min(100%, 360px, calc(100vw - var(--epg-channel-width) - 56px)); }

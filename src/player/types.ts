@@ -25,6 +25,7 @@ export interface PlayerCapabilities {
   readonly directNative: CapabilityResult;
   readonly adaptiveStreaming: CapabilityResult;
   readonly drm: CapabilityResult;
+  readonly canSetVolume?: boolean;
   readonly canPause: boolean;
   readonly canSeek: boolean;
   readonly canSelectAudioTrack: boolean;
@@ -72,7 +73,20 @@ export interface PlayerFailure {
   readonly cause?: unknown;
 }
 
+export interface PlayerDiagnostics {
+  readonly engine: 'mediabunny' | 'native-html' | 'hls.js' | 'avplay';
+  readonly transport: 'hls' | 'file';
+  readonly networkTransport?: 'browser-proxy' | 'direct' | 'native-http';
+  readonly videoCodec?: string;
+  readonly audioCodec?: string;
+  readonly width?: number;
+  readonly height?: number;
+  readonly fallbackReason?: string;
+}
+
 export interface PlayerSnapshot {
+  readonly diagnostics?: PlayerDiagnostics;
+  readonly volume?: { readonly level: number; readonly muted: boolean };
   readonly sessionId: number;
   readonly state: PlayerState;
   readonly kind: PlaybackKind | null;
@@ -94,6 +108,8 @@ export interface OpenPlayerRequest {
   readonly kind: PlaybackKind;
   /** Native timeline position within this delivered URL. */
   readonly startAtSeconds?: number;
+  /** Explicit audio-only consumers may opt out of first-video-frame validation. */
+  readonly expectedVideo?: boolean;
   /** Absolute title time represented by native position zero for managed output. */
   readonly timelineOffsetSeconds?: number;
   readonly paused?: boolean;
@@ -105,6 +121,8 @@ export type PlayerListener = (snapshot: PlayerSnapshot) => void;
 export interface Player {
   readonly capabilities: PlayerCapabilities;
   readonly snapshot: PlayerSnapshot;
+  setVolume?(level: number): Promise<void>;
+  setMuted?(muted: boolean): Promise<void>;
   open(request: OpenPlayerRequest): Promise<void>;
   play(): Promise<void>;
   pause(): Promise<void>;
