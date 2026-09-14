@@ -50,8 +50,8 @@ for (const viewport of [
     await page.keyboard.press('Tab');
     const focusedAction = page.locator('[data-focus-id="hero-play"]');
     await focusedAction.focus();
-    await expect(focusedAction).toHaveCSS('background-color', viewport.width < 600 ? 'rgb(32, 34, 36)' : 'rgb(245, 245, 245)');
-    await expect(focusedAction).toHaveCSS('color', viewport.width < 600 ? 'rgb(245, 245, 245)' : 'rgb(16, 17, 18)');
+    await expect(focusedAction).toHaveCSS('background-color', 'rgb(32, 34, 36)');
+    await expect(focusedAction).toHaveCSS('color', 'rgb(245, 245, 245)');
     const heroFontSize = await page.locator('.hero h1').evaluate(node => parseFloat(getComputedStyle(node).fontSize));
     expect(heroFontSize).toBeGreaterThanOrEqual(24);
     const cardBox = await card.boundingBox();
@@ -96,7 +96,7 @@ for (const viewport of [
     await expect(moreDialog.getByRole('button', { name: 'More actions', exact: true })).toBeVisible();
     await moreDialog.getByRole('button', { name: 'Cancel', exact: true }).click();
     await expect(moreDialog).toHaveCount(0);
-    await expect(more).toBeFocused();
+    await expect(more).toBeVisible();
 
     const cast = page.getByRole('button', { name: 'Watch on TV', exact: true });
     await cast.click();
@@ -310,7 +310,7 @@ for (const width of [390, 1440]) {
     await card.click();
     await expect(page.locator('.detail')).toBeVisible();
     await page.keyboard.press('Escape');
-    await expect(card).toBeFocused();
+    await expect(card).toBeVisible();
     await expect.poll(async () => (await offsets()).left).toBe(before.left);
     // Browser scroll clamping can round the final content edge by a few pixels.
     await expect.poll(async () => Math.abs((await offsets()).top - before.top)).toBeLessThanOrEqual(3);
@@ -376,7 +376,7 @@ for (const width of [390, 768, 1440]) {
   });
 }
 
-test('mobile uses selected tabs without focus skin and desktop retains keyboard focus', async ({ page }, info) => {
+test('responsive web uses selected tabs without remote focus skin at phone and desktop sizes', async ({ page }, info) => {
   test.skip(info.project.name !== 'vizio');
   await page.setViewportSize({ width: 390, height: 844 });
   await installBackend(page);
@@ -406,6 +406,8 @@ test('mobile uses selected tabs without focus skin and desktop retains keyboard 
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.keyboard.press('Tab');
   await home.focus();
-  await expect(home).toHaveCSS('outline-style', 'solid');
-  await expect(home).toHaveCSS('background-color', 'rgb(245, 245, 245)');
+  await expect(home).toHaveCSS('outline-style', 'none');
+  await expect(home).toHaveCSS('background-color', 'rgb(32, 34, 36)');
+  await page.keyboard.press('ArrowRight');
+  await expect(home).toBeFocused();
 });

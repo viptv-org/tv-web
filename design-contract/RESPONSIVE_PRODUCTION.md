@@ -78,3 +78,7 @@ The shared Rust API owns the complete card presentation: artwork URL and role, p
 ## RUI-024 — mobile selection without remote focus styling
 
 Phone layouts and touch-first tablets show the active navigation destination through the existing selected surface and icon/label. Programmatic focus restoration or tapping must not produce a white focus outline, inverted white button, bright card frame, or profile focus border. Apply this consistently to navigation, cards, actions, dialogs, profiles and player controls. Preserve normal text-input editing and DOM accessibility semantics. Desktop keyboard and TV remote focus indicators remain visible. Verify initial Home, tapping another destination, focused cards/actions, and an unchanged desktop keyboard focus indicator.
+
+## RUI-025 — pointer-first desktop and mobile web
+
+Extend RUI-024's neutral focus appearance to every responsive viewport, including the desktop header. Selected destinations keep their selected surface; focused controls do not invert, grow a white ring or brighten artwork frames. Responsive pages do not auto-focus navigation/cards on arrival or return and do not run TV spatial arrow navigation, Enter-hold actions or remote media-key mappings. Use pointer/touch controls and visible More actions. Native browser semantics, text editing, dialog focus and Escape dismissal remain available. TV layout retains its existing remote input and focus behavior. Verify desktop Home on arrival, destination selection, arrow keys without grid movement, and preserved TV hold behavior.

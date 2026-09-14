@@ -395,21 +395,21 @@ body:has(.responsive-app) { background: #101112; }
   .responsive-app .player-identity { left: 76px; max-width: calc(100% - 180px); }
 }
 
-/* Mobile keeps destination selection, without the remote's focused-control skin.
+/* Responsive web keeps destination selection without the remote focus skin.
    DOM focus remains available for text editing and assistive technology. */
-@media (max-width: 599px), (hover: none) and (pointer: coarse) {
-  .responsive-app button { --mobile-control-surface: #202224; }
+
+  .responsive-app button { --responsive-control-surface: #202224; }
   .responsive-app :is(.media-card, .episode, .card-more, .timeline),
   .responsive-app .profile-row > button,
   .responsive-app .roku-profile-editor :is([data-focus-id="profile-avatar"], .avatar-grid button) {
-    --mobile-control-surface: transparent;
+    --responsive-control-surface: transparent;
   }
   .responsive-app nav button.active,
-  .responsive-app .filters button.selected { --mobile-control-surface: #303234; }
+  .responsive-app .filters button.selected { --responsive-control-surface: #303234; }
   .responsive-app button:focus {
     outline: none !important;
     box-shadow: none !important;
-    background-color: var(--mobile-control-surface) !important;
+    background-color: var(--responsive-control-surface) !important;
     color: #f5f5f5 !important;
   }
   .responsive-app button:focus img,
@@ -422,4 +422,3 @@ body:has(.responsive-app) { background: #101112; }
   .responsive-app .source:focus :is(p, small),
   .responsive-app .roku-guide .programs button:focus small { color: #c5c6c7; }
   .responsive-app .timeline:focus::after { content: none; }
-}

@@ -1,6 +1,6 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
-import { RemoteRoot, TvButton } from "../../src/ui/remote";
+import { RemoteRoot, TvButton, focusElement } from "../../src/ui/remote";
 afterEach(() => vi.useRealTimers());
 it("fires the secondary action after 700ms without activating again on release", () => {
   vi.useFakeTimers();
@@ -59,4 +59,27 @@ it("leaves native text editing keys to responsive fields while Escape still goes
   }
   expect(fireEvent.keyDown(input, { key: "Escape" })).toBe(false);
   expect(back).toHaveBeenCalledOnce();
+});
+
+it("keeps responsive controls pointer-first without arrival focus or TV key handling", () => {
+  vi.useFakeTimers();
+  const activate = vi.fn(), hold = vi.fn(), media = vi.fn();
+  render(<RemoteRoot inputMode="responsive" onMediaKey={media}><div className="responsive-app">
+    <TvButton id="home" onActivate={activate} onHold={hold}>Home</TvButton>
+    <TvButton id="next" onActivate={activate}>Next</TvButton>
+  </div></RemoteRoot>);
+  const home = screen.getByRole("button", { name: "Home" });
+  focusElement("home");
+  expect(document.activeElement).not.toBe(home);
+  home.focus();
+  expect(fireEvent.keyDown(home, { key: "ArrowRight" })).toBe(true);
+  expect(document.activeElement).toBe(home);
+  fireEvent.keyDown(home, { key: "Enter" });
+  act(() => vi.advanceTimersByTime(800));
+  fireEvent.keyUp(home, { key: "Enter" });
+  expect(hold).not.toHaveBeenCalled();
+  expect(activate).not.toHaveBeenCalled();
+  expect(media).not.toHaveBeenCalled();
+  fireEvent.click(home);
+  expect(activate).toHaveBeenCalledOnce();
 });

@@ -11,10 +11,15 @@ import {
 type Action = () => void;
 type Registration = { activate: Action; hold?: Action };
 const Registry = createContext<Map<string, Registration> | null>(null);
-export const focusElement = (id: string, options?: FocusOptions) =>
-  Array.from(document.querySelectorAll<HTMLElement>("[data-focus-id]"))
-    .find((element) => element.dataset.focusId === id)
-    ?.focus(options);
+export function focusElement(id: string, options?: FocusOptions) {
+  const element = Array.from(document.querySelectorAll<HTMLElement>("[data-focus-id]"))
+    .find((element) => element.dataset.focusId === id);
+  if (!element) return;
+  // Pointer-first pages retain dialog/input semantics, not remote arrival focus.
+  if (element.closest(".responsive-app") && !element.closest("[data-focus-scope]")
+    && !element.matches("input, textarea, select, [contenteditable=true]")) return;
+  element.focus(options);
+}
 
 export function RemoteRoot({
   children,
@@ -46,21 +51,16 @@ export function RemoteRoot({
     const down = (event: KeyboardEvent) => {
       const code = event.keyCode;
       const key = normalizeKey(event);
-      handlers.current.onNavigate?.();
-      if (inputMode === "responsive" && key === "Tab") {
-        const scope = document.querySelector<HTMLElement>("[data-focus-scope]");
-        if (scope) {
-          const controls = Array.from(scope.querySelectorAll<HTMLElement>(
-            'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), a[href], [tabindex="0"]',
-          )).filter(element => element.getClientRects().length > 0);
-          const first = controls[0], last = controls[controls.length - 1];
-          if (first && (event.shiftKey ? document.activeElement === first : document.activeElement === last)) {
-            event.preventDefault();
-            (event.shiftKey ? last : first).focus();
-          }
+      if (inputMode === "responsive") {
+        // Native browser typing/activation remain native. No spatial TV grid,
+        // held-Enter menus, or decoder key mappings on pointer-first pages.
+        if (key === "Escape") {
+          event.preventDefault();
+          handlers.current.onBack?.();
         }
         return;
       }
+      handlers.current.onNavigate?.();
       const input =
         event.target instanceof HTMLInputElement ||
         event.target instanceof HTMLTextAreaElement;
@@ -75,14 +75,13 @@ export function RemoteRoot({
         handlers.current.onBack?.();
         return;
       }
-      if (input && (inputMode === "responsive" || !["Enter", "ArrowUp", "ArrowDown"].includes(key))) return;
+      if (input && !["Enter", "ArrowUp", "ArrowDown"].includes(key)) return;
       if (handlers.current.onMediaKey?.(key || String(code))) {
         event.preventDefault();
         return;
       }
       const current = document.activeElement as HTMLElement | null;
       const id = current?.dataset.focusId;
-      if (inputMode === "responsive" && !id) return;
       if (key === "Enter" || code === 13) {
         event.preventDefault();
         if (press || !id || event.repeat) return;
@@ -128,6 +127,7 @@ export function RemoteRoot({
       }
     };
     const up = (event: KeyboardEvent) => {
+      if (inputMode === "responsive") return;
       handlers.current.onMediaKeyUp?.(normalizeKey(event));
       if (event.key !== "Enter" && event.keyCode !== 13) return;
       if (press) {
@@ -238,7 +238,7 @@ export function TvButton({
       }}
       onFocus={(event) => {
         onFocus?.(event);
-        revealFocusedControl(event.currentTarget);
+        if (!event.currentTarget.closest(".responsive-app")) revealFocusedControl(event.currentTarget);
       }}
     >
       {children}

@@ -60,7 +60,7 @@ test('browser Back and Forward restore detail/source URLs without appearance que
   await expect(page).toHaveURL(/\/tv\/title\/movie\/responsive-movie$/);
   await page.goBack();
   await expect(page.locator('.home')).toBeVisible();
-  await expect(card).toBeFocused();
+  await expect(card).toBeVisible();
   await page.goForward();
   await expect(page.locator('.detail')).toBeVisible();
   await page.goForward();

@@ -166,3 +166,7 @@ See RESPONSIVE_VALIDATION.md for the current evidence and earlier false coverage
 ## RUI-024 mobile focus styling
 
 Mobile retains selected navigation surfaces without white focus outlines, inverted controls or bright card/profile focus frames. Desktop keyboard and TV remote focus remain. Production build and18 responsive browser cases passed, including focused Home/Settings, cards, profiles and actions, plus desktop keyboard focus preservation.
+
+## RUI-025 pointer-first desktop/mobile web
+
+Supersedes desktop focus styling in RUI-024: every responsive viewport uses neutral focus appearance and selected destination surfaces. Automatic navigation/card focus and TV spatial/hold/media key handling are disabled in responsive mode. Native browser input/dialog semantics and Escape remain. Production build,22 responsive/history browser cases and4 remote-input unit tests passed, including TV700ms hold preservation.
