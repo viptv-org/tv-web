@@ -3,6 +3,7 @@ import {
   type OpenPlayerRequest,
   type PlayerErrorCode,
   PlayerOperationError,
+  boundedPosition,
   growOnlyDuration,
   timelineDuration,
   type PlayerCapabilities,
@@ -310,13 +311,6 @@ export class TizenAvplayAdapter extends SessionPlayer {
     return this.snapshot.tracks[kind].find((track) => track.id === id && track.available);
   }
 
-  private activeSessionOrThrow(): number {
-    if (this.snapshot.sessionId === 0 || !this.isCurrent(this.snapshot.sessionId)) {
-      throw new PlayerOperationError('invalid-state', 'No active playback session.');
-    }
-    return this.snapshot.sessionId;
-  }
-
   private throwOperation(sessionId: number, code: PlayerErrorCode, message: string, cause: unknown): never {
     const error = operationFailure(code, message, cause);
     this.fail(sessionId, error.toFailure());
@@ -391,11 +385,6 @@ function parseTrackIndex(id: string): number {
   const index = Number(id.slice(id.indexOf(':') + 1));
   if (!Number.isInteger(index) || index < 0) throw new PlayerOperationError('unsupported-operation', `Invalid track identifier ${id}.`);
   return index;
-}
-
-function boundedPosition(position: number, duration: number | null): number {
-  if (!Number.isFinite(position) || position <= 0) return 0;
-  return duration === null ? position : Math.min(position, duration);
 }
 
 function nonNegative(value: number): number {

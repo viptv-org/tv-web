@@ -1,5 +1,4 @@
 import { initializeCore } from "./core";
-import React from "react";
 import { createRoot } from "react-dom/client";
 import { TvApi, type DeviceTokenSet } from "./api";
 import { App } from "./ui/App";

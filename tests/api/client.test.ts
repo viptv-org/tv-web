@@ -2,10 +2,28 @@ import { describe, expect, it } from "vitest";
 import { MemoryDeviceSessionStore, TvApi } from "../../src/api";
 
 type Call = { readonly input: string; readonly init?: RequestInit };
+const deviceTokens = {
+  sessionId: "s1",
+  accountId: "1",
+  profileId: null,
+  accessToken: "access",
+  refreshToken: "refresh",
+  expiresIn: 900,
+};
 function response(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
     headers: { "Content-Type": "application/json" },
+  });
+}
+function apiFor(
+  fetcher: typeof fetch,
+  sessionStore?: MemoryDeviceSessionStore,
+) {
+  return new TvApi({
+    baseUrl: "https://viptv.example",
+    fetch: fetcher,
+    sessionStore,
   });
 }
 function scripted(...replies: Response[]) {
@@ -33,10 +51,7 @@ describe("TvApi device and media boundary", () => {
         interval: 5,
       }),
     );
-    const api = new TvApi({
-      baseUrl: "https://viptv.example",
-      fetch: fake.fetcher,
-    });
+    const api = apiFor(fake.fetcher);
     await expect(api.beginPairing("Tizen Living Room")).resolves.toMatchObject({
       deviceCode: "device-secret",
       intervalSeconds: 5,
@@ -73,11 +88,7 @@ describe("TvApi device and media boundary", () => {
       }),
       response([]),
     );
-    const api = new TvApi({
-      baseUrl: "https://viptv.example",
-      fetch: fake.fetcher,
-      sessionStore: store,
-    });
+    const api = apiFor(fake.fetcher, store);
     await api.restoreSession();
     await expect(api.catalogs()).resolves.toEqual([]);
     expect(fake.calls.map((call) => call.input)).toEqual([
@@ -106,11 +117,7 @@ describe("TvApi device and media boundary", () => {
     const forbiddenStore = new MemoryDeviceSessionStore();
     await forbiddenStore.save(token);
     const forbidden = scripted(response({ error: "parent PIN required" }, 403));
-    const forbiddenApi = new TvApi({
-      baseUrl: "https://viptv.example",
-      fetch: forbidden.fetcher,
-      sessionStore: forbiddenStore,
-    });
+    const forbiddenApi = apiFor(forbidden.fetcher, forbiddenStore);
     await forbiddenApi.restoreSession();
     await expect(forbiddenApi.signOut()).rejects.toMatchObject({
       name: "TvApiError",
@@ -173,11 +180,7 @@ describe("TvApi device and media boundary", () => {
         done: true,
       }),
     );
-    const api = new TvApi({
-      baseUrl: "https://viptv.example",
-      fetch: fake.fetcher,
-      sessionStore: store,
-    });
+    const api = apiFor(fake.fetcher, store);
     await api.restoreSession();
     const poll = await api.pollSources("job/1", 0);
     expect(fake.calls[0].input).toBe(
@@ -220,11 +223,7 @@ describe("TvApi device and media boundary", () => {
         },
       }),
     );
-    const api = new TvApi({
-      baseUrl: "https://viptv.example",
-      fetch: fake.fetcher,
-      sessionStore: store,
-    });
+    const api = apiFor(fake.fetcher, store);
     await api.restoreSession();
     const detail = await api.detail({ id: "tt-series", type: "series" });
     expect(detail.episodes).toEqual([
@@ -251,11 +250,7 @@ describe("TvApi device and media boundary", () => {
         meta: { id: "tt-movie", name: "A Movie", poster: "poster.jpg" },
       }),
     );
-    const api = new TvApi({
-      baseUrl: "https://viptv.example",
-      fetch: fake.fetcher,
-      sessionStore: store,
-    });
+    const api = apiFor(fake.fetcher, store);
     await api.restoreSession();
     await expect(
       api.detail({ id: "tt-movie", type: "movie" }),
@@ -287,11 +282,7 @@ describe("TvApi device and media boundary", () => {
         },
       ]),
     );
-    const api = new TvApi({
-      baseUrl: "https://viptv.example",
-      fetch: fake.fetcher,
-      sessionStore: store,
-    });
+    const api = apiFor(fake.fetcher, store);
     await api.restoreSession();
     await expect(api.profiles()).resolves.toEqual([
       expect.objectContaining({ id: "3", kid: true, setupComplete: true }),
@@ -337,11 +328,7 @@ describe("TvApi device and media boundary", () => {
         },
       ]),
     );
-    const api = new TvApi({
-      baseUrl: "https://viptv.example",
-      fetch: fake.fetcher,
-      sessionStore: store,
-    });
+    const api = apiFor(fake.fetcher, store);
     await api.restoreSession();
     await expect(api.catalogs()).resolves.toEqual([
       expect.objectContaining({
@@ -392,11 +379,7 @@ describe("TvApi device and media boundary", () => {
         subtitles_supported: false,
       }),
     );
-    const api = new TvApi({
-      baseUrl: "https://viptv.example",
-      fetch: fake.fetcher,
-      sessionStore: store,
-    });
+    const api = apiFor(fake.fetcher, store);
     await api.restoreSession();
     await expect(
       api.startPlayback({
@@ -437,11 +420,7 @@ describe("TvApi device and media boundary", () => {
         url: "/media/playback-1/capability/index.m3u8",
       }),
     );
-    const api = new TvApi({
-      baseUrl: "https://viptv.example",
-      fetch: fake.fetcher,
-      sessionStore: store,
-    });
+    const api = apiFor(fake.fetcher, store);
     await api.restoreSession();
     await expect(
       api.startPlayback({
@@ -491,11 +470,7 @@ describe("TvApi device and media boundary", () => {
         subtitles_supported: false,
       }),
     );
-    const api = new TvApi({
-      baseUrl: "https://viptv.example",
-      fetch: fake.fetcher,
-      sessionStore: store,
-    });
+    const api = apiFor(fake.fetcher, store);
     await api.restoreSession();
     await expect(
       api.startPlayback({
@@ -529,11 +504,7 @@ describe("TvApi device and media boundary", () => {
         categories: [{ id: "section:News", name: "News", count: 12 }],
       }),
     );
-    const api = new TvApi({
-      baseUrl: "https://viptv.example",
-      fetch: fake.fetcher,
-      sessionStore: store,
-    });
+    const api = apiFor(fake.fetcher, store);
     await api.restoreSession();
     await expect(api.liveCategories("us")).resolves.toEqual({
       total: 1,
@@ -572,11 +543,7 @@ describe("TvApi device and media boundary", () => {
         },
       }),
     );
-    const api = new TvApi({
-      baseUrl: "https://viptv.example",
-      fetch: fake.fetcher,
-      sessionStore: store,
-    });
+    const api = apiFor(fake.fetcher, store);
     await api.restoreSession();
     const current = {
       id: "tt-series:1:1",
@@ -601,10 +568,7 @@ describe("TvApi device and media boundary", () => {
         502,
       ),
     );
-    const api = new TvApi({
-      baseUrl: "https://viptv.example",
-      fetch: fake.fetcher,
-    });
+    const api = apiFor(fake.fetcher);
     await expect(api.beginPairing("TV")).rejects.toEqual(
       expect.objectContaining({
         name: "TvApiError",

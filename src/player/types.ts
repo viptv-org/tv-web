@@ -180,6 +180,12 @@ export function timelineDuration(
   return engine !== null && engine > known ? engine : known;
 }
 
+/** A native seek target inside the delivery: never negative, never past its end. */
+export function boundedPosition(position: number, duration: number | null): number {
+  if (!Number.isFinite(position) || position <= 0) return 0;
+  return duration === null ? position : Math.min(position, duration);
+}
+
 /**
  * The seek bar's length only grows. Mirrors the Roku player, where a later or
  * re-read engine value can raise the known duration but never shorten it.

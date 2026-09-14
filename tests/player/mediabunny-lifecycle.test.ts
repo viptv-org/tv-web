@@ -24,12 +24,22 @@ it('prepares growing managed VOD without waiting for the playlist to finish', as
   expect(player.snapshot).toMatchObject({ state: 'paused', time: { positionSeconds: 0, durationSeconds: null }, diagnostics: { engine: 'mediabunny', width: 1920, height: 1080 } });
   await player.dispose(); expect(state.dispose).toHaveBeenCalledOnce(); expect(state.close).toHaveBeenCalledOnce();
 });
-it('retains delivered timeline offsets, reads bounded file duration, and unmutes a nonzero volume change', async () => {
+it('retains delivered timeline offsets, lets an original file refine the total, and unmutes a nonzero volume change', async () => {
   state.live = false;
   const player = new MediabunnyAdapter(document.createElement('canvas'));
-  await player.open({ url: `${location.origin}/media/session/cap/source.mp4`, kind: 'vod', paused: true, startAtSeconds: 3, timelineOffsetSeconds: 50 });
+  await player.open({ url: `${location.origin}/media/session/cap/source.mp4`, kind: 'vod', paused: true, startAtSeconds: 3, timelineOffsetSeconds: 50, timelineDurationSeconds: 140, adoptEngineDuration: true });
   expect(state.duration).toHaveBeenCalledWith({ skipLiveWait: true });
+  // The file's own length is real evidence and may raise the server total (150), never fall below it (140).
   expect(player.snapshot.time).toEqual({ positionSeconds: 53, durationSeconds: 150 });
   await player.setMuted(true); await player.setVolume(0.6);
   expect(player.snapshot.volume).toEqual({ level: 0.6, muted: false }); await player.dispose();
+});
+it('reports the server total for managed output instead of its produced window', async () => {
+  state.live = false;
+  state.duration.mockResolvedValue(32);
+  const player = new MediabunnyAdapter(document.createElement('canvas'));
+  await player.open({ url: `${location.origin}/media/session/cap/index.m3u8`, kind: 'vod', paused: true, timelineDurationSeconds: 5400, adoptEngineDuration: false });
+  // A rolling managed window never becomes the seek bar's length.
+  expect(player.snapshot.time).toMatchObject({ durationSeconds: 5400 });
+  await player.dispose();
 });

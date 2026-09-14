@@ -147,7 +147,14 @@ export class MediabunnyAdapter extends SessionPlayer {
 
   private draw(frame: WrappedCanvas): void { this.canvas.getContext('2d')?.drawImage(frame.canvas, 0, 0, this.canvas.width, this.canvas.height); }
   private currentPosition(): number { return this.playing && this.context ? Math.max(0, this.context.currentTime - this.anchor) : this.position; }
-  private time() { return { positionSeconds: this.currentPosition() + (this.request?.timelineOffsetSeconds ?? 0), durationSeconds: this.duration == null ? null : this.duration + (this.request?.timelineOffsetSeconds ?? 0) }; }
+  private time() {
+    const offset = this.request?.timelineOffsetSeconds ?? 0;
+    const engine = this.duration == null ? null : this.duration + offset;
+    // A managed delivery is a rolling window; the server total is authoritative
+    // and the reported length only ever grows.
+    const next = timelineDuration(this.request?.timelineDurationSeconds, engine, this.request?.adoptEngineDuration === true);
+    return { positionSeconds: this.currentPosition() + offset, durationSeconds: (this.observedTitleDuration = growOnlyDuration(this.observedTitleDuration, next)) };
+  }
   private applyVolume(): void {
     if (this.gain) this.gain.gain.value = this.muted ? 0 : this.volume;
     this.update(this.snapshot.sessionId, { volume: { level: this.volume, muted: this.muted } });

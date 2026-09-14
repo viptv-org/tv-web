@@ -13,7 +13,6 @@ import {
   type DevicePairing,
   type TvProfile,
   type Catalog,
-  type Guide,
   type PlaybackSession,
   type PlaybackPreferences,
   type PlaybackCapabilities,
@@ -22,7 +21,6 @@ import {
   createPlayer,
   PlaybackSessionController,
   exactResumeSource,
-  type PlaybackControllerSnapshot,
   type Player,
   type PlayerPlatform,
   type PlayerSnapshot,
@@ -182,7 +180,6 @@ export function App({
     [searchRows, setSearchRows] = useState<
       { name: string; items: readonly MediaItem[] }[]
     >([]),
-    [guides, setGuides] = useState<Record<string, Guide>>({}),
     [prefs, setPrefs] = useState(initialPrefs),
     [modal, setModal] = useState<{
       title: string;
@@ -192,7 +189,6 @@ export function App({
     }>(),
     [snapshot, setSnapshot] = useState<PlayerSnapshot>(),
     [session, setSession] = useState<PlaybackSession>(),
-    [playbackState, setPlaybackState] = useState<PlaybackControllerSnapshot>(),
     [overlay, setOverlay] = useState(true),
     [seek, setSeek] = useState<number>();
   const playerRoot = useRef<HTMLDivElement>(null);
@@ -622,7 +618,6 @@ export function App({
       });
     });
     const offSessions = sessions.subscribe((state) => {
-      setPlaybackState(state);
       if (state.active) {
         const { intent, session } = state.active;
         active.current = {

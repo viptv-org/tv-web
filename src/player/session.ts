@@ -59,6 +59,14 @@ export abstract class SessionPlayer implements Player {
     return this.currentSession === sessionId;
   }
 
+  /** An operation outside a live session is a programming error, not a failure. */
+  protected activeSessionOrThrow(): number {
+    if (this.snapshot.sessionId === 0 || !this.isCurrent(this.snapshot.sessionId)) {
+      throw new PlayerOperationError('invalid-state', 'No active playback session.');
+    }
+    return this.snapshot.sessionId;
+  }
+
   /** Makes every previous callback inert. */
   protected invalidateSession(): void {
     this.currentSession = 0;

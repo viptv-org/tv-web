@@ -4,6 +4,7 @@ import { SessionPlayer } from './session';
 import {
   type OpenPlayerRequest,
   PlayerOperationError,
+  boundedPosition,
   growOnlyDuration,
   timelineDuration,
   type PlayerCapabilities,
@@ -393,13 +394,6 @@ export class VizioHtml5Adapter extends SessionPlayer {
     this.fail(sessionId, mediaError(this.media, 'connection-failed').toFailure());
   }
 
-  private activeSessionOrThrow(): number {
-    if (this.snapshot.sessionId === 0 || !this.isCurrent(this.snapshot.sessionId)) {
-      throw new PlayerOperationError('invalid-state', 'No active playback session.');
-    }
-    return this.snapshot.sessionId;
-  }
-
   private destroyHls(): void {
     this.hls?.destroy();
     this.hls = null;
@@ -442,11 +436,6 @@ function tracksFromMedia(media: HtmlMediaLike): PlayerTracks {
 
 function knownDuration(duration: number): number | null {
   return Number.isFinite(duration) && duration > 0 ? duration : null;
-}
-
-function boundedPosition(position: number, duration: number | null): number {
-  if (!Number.isFinite(position) || position <= 0) return 0;
-  return duration === null ? position : Math.min(position, duration);
 }
 
 function nonNegative(value: number): number {
