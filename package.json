@@ -16,6 +16,9 @@
     "typecheck": "node scripts/typecheck.mjs"
   },
   "dependencies": {
+    "@mediabunny/ac3": "^1.56.2",
+    "@mediabunny/dts": "^1.56.2",
+    "@mediabunny/prores": "^1.56.2",
     "@tauri-apps/api": "^2.11.1",
     "@tauri-apps/plugin-http": "^2.6.0",
     "@tauri-apps/plugin-opener": "2.5.5",

@@ -73,9 +73,21 @@ export async function probeBrowserPlaybackCapabilities(environment?: BrowserProb
   const hevc = (bunny.hevc && bunny.aac) || (nativeHevc && (nativeHls || (mseHls && mseHevc)));
   const directMp4 = bunnyBaseline || (nativeH264 && nativeAac);
   const canPlayManagedHls = h264 && aac;
+  // A WebCodecs demuxer can read the original container (Matroska, MPEG-TS, the
+  // ISO base media formats and more) instead of a server-remuxed HLS window, so
+  // report that file path and the codecs it can decode.
+  const { decodableCodecs } = bunnyBaseline && !environment && options.mediabunny
+    ? await import('./mediabunny')
+    : { decodableCodecs: undefined };
+  const fileCodecs = decodableCodecs ? await decodableCodecs() : undefined;
+  if (fileCodecs) evidence.push(`files:video=${fileCodecs.video.join('|')};audio=${fileCodecs.audio.join('|')}`);
   evidence.push(`hls:${selectedHls}`, 'sample:1080p30; h264-high-4.1; hevc-main-5.0-sdr; aac-lc-stereo');
   return {
-    capabilities: { maxWidth: 1920, maxHeight: 1080, h264, hevc, aac, directPlay: directMp4 || canPlayManagedHls, hevcSdr: hevc, directMp4, directHls: canPlayManagedHls },
+    capabilities: {
+      maxWidth: fileCodecs ? 3840 : 1920, maxHeight: fileCodecs ? 2160 : 1080,
+      h264, hevc, aac, directPlay: directMp4 || canPlayManagedHls, hevcSdr: hevc, directMp4, directHls: canPlayManagedHls,
+      directFiles: !!fileCodecs, directVideoCodecs: fileCodecs?.video, directAudioCodecs: fileCodecs?.audio,
+    },
     canPlayManagedHls,
     protocols: { nativeHls, mseHls, selectedHls }, evidence,
   };

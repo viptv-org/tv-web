@@ -1,4 +1,4 @@
-import { Input, UrlSource, ALL_FORMATS, CanvasSink, AudioBufferSink, type InputVideoTrack, type WrappedCanvas, type WrappedAudioBuffer } from 'mediabunny';
+import { Input, UrlSource, ALL_FORMATS, CanvasSink, AudioBufferSink, type InputTrack, type InputVideoTrack, type WrappedCanvas, type WrappedAudioBuffer } from 'mediabunny';
 import { SessionPlayer } from './session';
 import { PlayerOperationError, growOnlyDuration, timelineDuration, type OpenPlayerRequest, type PlayerCapabilities } from './types';
 
@@ -73,9 +73,9 @@ export class MediabunnyAdapter extends SessionPlayer {
     });
     const video = await input.getPrimaryVideoTrack();
     if (!this.isCurrent(session) || token !== this.generation) return;
-    if (!video || !(await video.canDecode())) throw new PlayerOperationError('unsupported-format', 'Mediabunny cannot decode this video track.');
+    if (!video || !(await ensureDecodable(video))) throw new PlayerOperationError('unsupported-format', 'Mediabunny cannot decode this video track.');
     const audio = await video.getPrimaryPairableAudioTrack();
-    if (audio && !(await audio.canDecode())) throw new PlayerOperationError('unsupported-format', 'Mediabunny cannot decode this audio track.');
+    if (audio && !(await ensureDecodable(audio))) throw new PlayerOperationError('unsupported-format', 'Mediabunny cannot decode this audio track.');
     // The example creates the context at the track's own sample rate; mismatched
     // rates resample and drift against the picture.
     const sampleRate = audio ? await audio.getSampleRate() : undefined;
@@ -240,3 +240,46 @@ export class MediabunnyAdapter extends SessionPlayer {
   }
 }
 function delay(ms: number): Promise<void> { return new Promise(resolve => setTimeout(resolve, ms)); }
+
+/**
+ * MediaBunny decodes whatever WebCodecs supports plus PCM; Dolby, DTS and ProRes
+ * ship as separate decoders. They are pulled in only when a real track needs one,
+ * so ordinary playback pays no extra download, and loaded once per page.
+ */
+const loadedExtensions = new Map<string, Promise<void>>();
+async function loadCodecExtension(codec: string): Promise<void> {
+  const name = codec === 'ac3' || codec === 'eac3' ? 'ac3' : codec === 'dts' ? 'dts' : codec === 'prores' ? 'prores' : undefined;
+  if (!name) return;
+  let pending = loadedExtensions.get(name);
+  if (!pending) {
+    pending = (async () => {
+      if (name === 'ac3') { const { registerAc3Decoder } = await import('@mediabunny/ac3'); registerAc3Decoder(); }
+      else if (name === 'dts') { const { registerDtsDecoder } = await import('@mediabunny/dts'); registerDtsDecoder(); }
+      else { const { registerProresDecoder } = await import('@mediabunny/prores'); registerProresDecoder(); }
+    })().catch(() => undefined);
+    loadedExtensions.set(name, pending);
+  }
+  return pending;
+}
+
+/** Registers the matching decoder when a track's own codec is not decodable yet. */
+export async function ensureDecodable(track: InputTrack | null | undefined): Promise<boolean> {
+  if (!track) return false;
+  if (await track.canDecode().catch(() => false)) return true;
+  const codec = await track.getCodec().catch(() => null);
+  if (!codec) return false;
+  await loadCodecExtension(codec);
+  return track.canDecode().catch(() => false);
+}
+
+/** Video and audio codecs this client can decode, for the server's delivery choice. */
+export async function decodableCodecs(): Promise<{ video: string[]; audio: string[] }> {
+  const { getDecodableVideoCodecs, getDecodableAudioCodecs } = await import('mediabunny');
+  const [video, audio] = await Promise.all([
+    getDecodableVideoCodecs(['avc', 'hevc', 'vp8', 'vp9', 'av1']).catch(() => []),
+    getDecodableAudioCodecs(['aac', 'opus', 'mp3', 'vorbis', 'flac', 'ac3', 'eac3', 'dts']).catch(() => []),
+  ]);
+  // The extension decoders ship with this bundle, so Dolby and DTS are decodable
+  // on demand even where the browser itself cannot.
+  return { video: [...video, 'prores'], audio: [...new Set([...audio, 'ac3', 'eac3', 'dts'])] };
+}

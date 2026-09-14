@@ -78,7 +78,14 @@ export interface StreamPoll {
   readonly done: boolean;
 }
 
-export interface PlaybackCapabilities {
+/** A WebCodecs demuxer path: the original container is served instead of HLS. */
+export interface DirectFileCapabilities {
+  readonly directFiles?: boolean;
+  readonly directVideoCodecs?: readonly string[];
+  readonly directAudioCodecs?: readonly string[];
+}
+
+export interface PlaybackCapabilities extends DirectFileCapabilities {
   readonly maxWidth: number;
   readonly maxHeight: number;
   readonly h264: boolean;
