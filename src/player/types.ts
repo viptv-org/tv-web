@@ -112,6 +112,17 @@ export interface OpenPlayerRequest {
   readonly expectedVideo?: boolean;
   /** Absolute title time represented by native position zero for managed output. */
   readonly timelineOffsetSeconds?: number;
+  /**
+   * The title's full length in seconds as known by the server. Managed output is
+   * a rolling HLS window, so an engine duration describes only the buffered part
+   * and must never be published as the title length.
+   */
+  readonly timelineDurationSeconds?: number;
+  /**
+   * True only for an original-file delivery, where the engine's own duration is
+   * real evidence and may refine the server total upward.
+   */
+  readonly adoptEngineDuration?: boolean;
   readonly paused?: boolean;
   readonly authorization?: PlaybackAuthorization;
 }
@@ -146,6 +157,37 @@ export class PlayerOperationError extends Error {
   toFailure(): PlayerFailure {
     return { code: this.code, message: this.message, cause: this.cause };
   }
+}
+
+function knownSeconds(value: number | null | undefined): number | null {
+  return typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : null;
+}
+
+/**
+ * Mirrors the Roku player's duration rule: the server-known title length is
+ * authoritative, and only an original-file engine may raise it. A rolling
+ * managed window therefore never becomes the seek bar's duration.
+ */
+export function timelineDuration(
+  authoritativeSeconds: number | undefined,
+  engineSeconds: number | null,
+  adoptEngineDuration = false,
+): number | null {
+  const known = knownSeconds(authoritativeSeconds);
+  if (!adoptEngineDuration) return known;
+  const engine = knownSeconds(engineSeconds);
+  if (known === null) return engine;
+  return engine !== null && engine > known ? engine : known;
+}
+
+/**
+ * The seek bar's length only grows. Mirrors the Roku player, where a later or
+ * re-read engine value can raise the known duration but never shorten it.
+ */
+export function growOnlyDuration(previous: number | null, next: number | null): number | null {
+  if (next === null) return previous;
+  if (previous === null) return next;
+  return next > previous ? next : previous;
 }
 
 export const EMPTY_TRACKS: PlayerTracks = {

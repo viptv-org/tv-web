@@ -3,6 +3,8 @@ import {
   type OpenPlayerRequest,
   type PlayerErrorCode,
   PlayerOperationError,
+  growOnlyDuration,
+  timelineDuration,
   type PlayerCapabilities,
   type PlayerTrack,
   type PlayerTracks,
@@ -72,6 +74,9 @@ export class TizenAvplayAdapter extends SessionPlayer {
   readonly capabilities: PlayerCapabilities;
   private pendingOpen: PendingOpen | null = null;
   private timelineOffsetSeconds = 0;
+  private timelineDurationSeconds: number | undefined;
+  private adoptEngineDuration = false;
+  private observedTitleDuration: number | null = null;
 
   constructor(private readonly avplay: AvplayManager = resolveAvplay()) {
     super();
@@ -90,6 +95,9 @@ export class TizenAvplayAdapter extends SessionPlayer {
     this.closeSafely();
     const sessionId = this.startSession(request.kind);
     this.timelineOffsetSeconds = nonNegative(request.timelineOffsetSeconds ?? 0);
+    this.timelineDurationSeconds = request.timelineDurationSeconds;
+    this.adoptEngineDuration = request.adoptEngineDuration === true;
+    this.observedTitleDuration = null;
 
     try {
       this.avplay.open(request.url);
@@ -275,12 +283,17 @@ export class TizenAvplayAdapter extends SessionPlayer {
   }
 
   private durationSeconds(): number | null {
+    let engine: number | null = null;
     try {
       const duration = this.avplay.getDuration() / 1000;
-      return Number.isFinite(duration) && duration > 0 ? duration : null;
+      engine = Number.isFinite(duration) && duration > 0 ? duration + this.timelineOffsetSeconds : null;
     } catch {
-      return null;
+      engine = null;
     }
+    // A managed delivery is a rolling window; the server total is authoritative
+    // and the reported length only ever grows.
+    const next = timelineDuration(this.timelineDurationSeconds, engine, this.adoptEngineDuration);
+    return (this.observedTitleDuration = growOnlyDuration(this.observedTitleDuration, next));
   }
 
   private applyAuthorization(request: OpenPlayerRequest): void {

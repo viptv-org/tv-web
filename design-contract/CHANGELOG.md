@@ -41,3 +41,7 @@ Specified RUI-028 in [RESPONSIVE_VIPTV_ALIGNMENT.md](RESPONSIVE_VIPTV_ALIGNMENT.
 
 Extended RUI-028 in [RESPONSIVE_VIPTV_ALIGNMENT.md](RESPONSIVE_VIPTV_ALIGNMENT.md): the responsive guide no longer shows Previous/Next channel buttons and instead loads the next channel page when its scroll reaches the end of the loaded rows; the application and guide scrollers keep a permanent vertical scrollbar slot and the header profile control uses a fixed slot so navigating between tall and short routes cannot shift the frame or reflow the header. Supersedes the responsive paging control named in RESPONSIVE_PRODUCTION.md RUI-027.
 
+## 2026-09-14 — Browser timeline duration and preparation recovery
+
+Specified RUI-029 in [BROWSER_PLAYBACK.md](BROWSER_PLAYBACK.md): the seek bar's length is the server's inspected source duration for every managed delivery, an original file may only raise it, live keeps an unknown length, and a rolling produced HLS window is never a duration. Added the bounded preparation ladder on the selected source and the reduced-entry source inspection fallback for unreadable metadata. Mirrors the existing Roku player rule.
+

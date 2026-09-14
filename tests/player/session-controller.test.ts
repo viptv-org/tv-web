@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { PlayerOperationError } from '../../src/player/types';
 import { PlaybackSessionController, exactResumeSource } from '../../src/player/session';
-import type { MediaItem, MediaSource, PlaybackCapabilities, PlaybackSession } from '../../src/api';
+import { TvApiError, type MediaItem, type MediaSource, type PlaybackCapabilities, type PlaybackSession } from '../../src/api';
 import type { OpenPlayerRequest, Player, PlayerCapabilities, PlayerListener, PlayerSnapshot } from '../../src/player';
 
 const capabilities: PlaybackCapabilities = { maxWidth: 1920, maxHeight: 1080, h264: true, hevc: false, aac: true, directPlay: true, hevcSdr: false };
@@ -37,6 +37,35 @@ function session(id: string, url: string, mode = 'managed', position = 0): Playb
 }
 
 describe('PlaybackSessionController', () => {
+  it('escalates a refused preparation through managed output and a forced transcode', async () => {
+    const player = new FakePlayer();
+    const backend = {
+      startPlayback: vi.fn()
+        .mockRejectedValueOnce(new TvApiError(400, 'VIPTV could not complete that request'))
+        .mockRejectedValueOnce(new TvApiError(400, 'VIPTV could not complete that request'))
+        .mockResolvedValueOnce(session('transcoded', '/index.m3u8', 'managed')),
+      stopPlayback: vi.fn().mockResolvedValue(undefined),
+    };
+    const controller = new PlaybackSessionController({ player, backend, capabilities });
+    const active = await controller.start({ item, source });
+    expect(backend.startPlayback).toHaveBeenCalledTimes(3);
+    expect(backend.startPlayback).toHaveBeenNthCalledWith(2, expect.objectContaining({ managedOnly: true }));
+    expect(backend.startPlayback).toHaveBeenNthCalledWith(3, expect.objectContaining({ managedOnly: true, forceTranscode: true }));
+    expect(active.session.id).toBe('transcoded');
+  });
+  it('never retries an authorization or cancellation refusal as a delivery problem', async () => {
+    for (const status of [401, 403, 404, 409, 429]) {
+      const player = new FakePlayer();
+      const backend = {
+        startPlayback: vi.fn().mockRejectedValue(new TvApiError(status, 'refused')),
+        stopPlayback: vi.fn().mockResolvedValue(undefined),
+      };
+      const controller = new PlaybackSessionController({ player, backend, capabilities });
+      await expect(controller.start({ item, source })).rejects.toMatchObject({ status });
+      expect(backend.startPlayback).toHaveBeenCalledTimes(1);
+    }
+  });
+
   it('recovers a late direct decoder error at the absolute paused position and ignores stale errors', async () => {
     const player = new FakePlayer();
     const backend = {

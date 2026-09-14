@@ -44,6 +44,27 @@ describe('HTML HLS delivery', () => {
     media.emit('loadedmetadata'); await second;
     await player.stop(); expect(hls.instances[1].destroy).toHaveBeenCalledOnce();
   });
+  it('keeps the server title duration while a managed HLS window grows', async () => {
+    const media = new Media();
+    const player = new VizioHtml5Adapter(media);
+    const opening = player.open({ url: url(), kind: 'vod', paused: true, timelineOffsetSeconds: 1800, timelineDurationSeconds: 5400, adoptEngineDuration: false });
+    media.duration = 32;
+    media.emit('loadedmetadata'); await opening;
+    expect(player.snapshot.time).toEqual({ positionSeconds: 1800, durationSeconds: 5400 });
+    media.duration = 96; media.emit('timeupdate');
+    expect(player.snapshot.time.durationSeconds).toBe(5400);
+    await player.dispose();
+  });
+  it('lets an original file raise, but never shrink, the server duration', async () => {
+    const media = new Media();
+    const player = new VizioHtml5Adapter(media);
+    const opening = player.open({ url: `${window.location.origin}/media/session/cap/source.mp4`, kind: 'vod', paused: true, timelineDurationSeconds: 5400, adoptEngineDuration: true });
+    media.duration = 5402; media.emit('loadedmetadata'); await opening;
+    expect(player.snapshot.time.durationSeconds).toBe(5402);
+    media.duration = 64; media.emit('timeupdate');
+    expect(player.snapshot.time.durationSeconds).toBe(5402);
+    await player.dispose();
+  });
   it('rejects unsupported HLS without loading a URL', async () => {
     hls.supported = false;
     const media = new Media(); const player = new VizioHtml5Adapter(media);

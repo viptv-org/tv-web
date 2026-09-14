@@ -1,6 +1,6 @@
 import { Input, UrlSource, ALL_FORMATS, CanvasSink, AudioBufferSink, type WrappedCanvas, type WrappedAudioBuffer } from 'mediabunny';
 import { SessionPlayer } from './session';
-import { PlayerOperationError, type OpenPlayerRequest, type PlayerCapabilities } from './types';
+import { PlayerOperationError, growOnlyDuration, timelineDuration, type OpenPlayerRequest, type PlayerCapabilities } from './types';
 
 /** Only opaque backend media capabilities may reach either browser or native HTTP. */
 export function sessionMediaFetch(url: string): typeof fetch {
@@ -42,6 +42,7 @@ export class MediabunnyAdapter extends SessionPlayer {
   private position = 0;
   private firstTimestamp = 0;
   private duration: number | null = null;
+  private observedTitleDuration: number | null = null;
   private anchor = 0;
   private volume = 1;
   private muted = false;
@@ -55,6 +56,7 @@ export class MediabunnyAdapter extends SessionPlayer {
     await this.release();
     const session = this.startSession(request.kind);
     this.request = request;
+    this.observedTitleDuration = null;
     const token = ++this.generation;
     if (request.authorization?.cookie || request.authorization?.userAgent)
       throw new PlayerOperationError('authorization-unsupported', 'Playback requires a backend-compatible media URL.');

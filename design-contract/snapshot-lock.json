@@ -1,7 +1,7 @@
 {
   "version": 1,
   "repository": "viptv-org/design",
-  "commit": "b4c20fea6e97e90c74fbf7f8e5691787b34e3a2a",
+  "commit": "8f6419fc67d50f8d46e205b1643067fdd15a946a",
   "files": {
     "design-contract/.github/pull_request_template.md": {
       "source": ".github/pull_request_template.md",
@@ -21,11 +21,11 @@
     },
     "design-contract/BROWSER_PLAYBACK.md": {
       "source": "BROWSER_PLAYBACK.md",
-      "sha256": "cc04b64f3fc99461db5aa4b8ce1a6ce2530defb1858ec7284fff8495424067b4"
+      "sha256": "034dec78716380046be2d466e8b52e61c6307c827f6565104e5949e5c6aa424e"
     },
     "design-contract/CHANGELOG.md": {
       "source": "CHANGELOG.md",
-      "sha256": "47467ae4136567026ffbe0e51827d710105dce00842ebb69fc2a0afa3eb460b1"
+      "sha256": "41443c8a8d8724c05ef0c8df6ec0ad443c1dd4fe83129c1616a585894eebf0bf"
     },
     "design-contract/CONTEXT.md": {
       "source": "CONTEXT.md",

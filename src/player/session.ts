@@ -1,11 +1,12 @@
 import { normalizeCore } from "../core";
-import type {
-  MediaItem,
-  MediaSource,
-  PlaybackCapabilities,
-  PlaybackSession,
-  PlaybackStart,
-  TvApi,
+import {
+  TvApiError,
+  type MediaItem,
+  type MediaSource,
+  type PlaybackCapabilities,
+  type PlaybackSession,
+  type PlaybackStart,
+  type TvApi,
 } from '../api';
 import {
   PlayerOperationError,
@@ -180,8 +181,20 @@ export class PlaybackSessionController {
     try {
       const capabilities = await this.resolveCapabilities();
       if (operation !== this.operationGeneration) return this.cancelledResult();
-      const request = playbackRequest(intent, capabilities, intent.position ?? 0);
-      return await this.transition(intent, request, this.current, () => operation === this.operationGeneration);
+      let request = playbackRequest(intent, capabilities, intent.position ?? 0);
+      // Preparation refusals escalate the same selected source through the
+      // shared delivery ladder before giving up, so one transport or inspection
+      // refusal cannot strand a source the server can still deliver.
+      for (let attempt = 0; ; attempt += 1) {
+        try {
+          return await this.transition(intent, request, this.current, () => operation === this.operationGeneration);
+        } catch (error) {
+          if (operation !== this.operationGeneration) return this.cancelledResult();
+          const escalated = attempt < 2 ? escalatePreparation(request, error) : undefined;
+          if (!escalated) throw error;
+          request = escalated;
+        }
+      }
     } catch (error) {
       if (operation !== this.operationGeneration) return this.cancelledResult();
       this.publish({ state: this.current ? 'playing' : 'error', active: this.current,
@@ -437,6 +450,10 @@ function adapterRequest(session: PlaybackSession, kind: PlaybackKind, position: 
     kind,
     startAtSeconds: direct ? position : Math.max(0, position - deliveryStart),
     timelineOffsetSeconds: deliveryStart,
+    // A managed delivery is a rolling window; only the session knows how long
+    // the title is. Direct original files may refine it with their own length.
+    timelineDurationSeconds: kind === 'live' || !(session.duration > 0) ? undefined : session.duration,
+    adoptEngineDuration: direct,
     paused,
   };
 }
@@ -451,6 +468,21 @@ function playerState(player: Player): Extract<PlaybackControllerState, 'playing'
 
 function asError(cause: unknown): Error {
   return cause instanceof Error ? cause : new Error('Playback operation failed.');
+}
+
+/**
+ * A preparation refusal is answered with the next delivery rung for the same
+ * source: original delivery, then managed output, then a forced transcode.
+ * Authorization, expiry, cancellation, capacity and position errors keep their
+ * own meaning and are never retried as a delivery problem.
+ */
+function escalatePreparation(request: PlaybackStart, error: unknown): PlaybackStart | undefined {
+  if (!(error instanceof TvApiError)) return undefined;
+  const retryable = error.status === 0 || (error.status >= 400 && error.status < 500 && ![401, 403, 404, 409, 429].includes(error.status));
+  if (!retryable) return undefined;
+  if (!request.managedOnly) return { ...request, managedOnly: true };
+  if (!request.forceTranscode) return { ...request, managedOnly: true, forceTranscode: true };
+  return undefined;
 }
 
 /** Keep the selected source while escalating only after the cheaper rung fails. */

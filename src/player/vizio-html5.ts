@@ -4,6 +4,8 @@ import { SessionPlayer } from './session';
 import {
   type OpenPlayerRequest,
   PlayerOperationError,
+  growOnlyDuration,
+  timelineDuration,
   type PlayerCapabilities,
   type PlayerTrack,
   type PlayerTracks,
@@ -74,6 +76,9 @@ export class VizioHtml5Adapter extends SessionPlayer {
   private pauseRequested = false;
   private activeKind: OpenPlayerRequest['kind'] | null = null;
   private timelineOffsetSeconds = 0;
+  private timelineDurationSeconds: number | undefined;
+  private adoptEngineDuration = false;
+  private observedTitleDuration: number | null = null;
   private pendingOpen: { readonly sessionId: number; readonly cancel: () => void } | null = null;
 
   constructor(private readonly media: HtmlMediaLike) {
@@ -111,6 +116,9 @@ export class VizioHtml5Adapter extends SessionPlayer {
     this.update(sessionId, { diagnostics: { engine: 'native-html', networkTransport: new URL(request.url, location.href).pathname.startsWith('/media/') ? 'browser-proxy' : 'direct', transport: /\.m3u8(?:[?#]|$)/i.test(request.url) ? 'hls' : 'file' }, volume: { level: this.media.volume ?? 1, muted: this.media.muted ?? false } });
     this.activeKind = request.kind;
     this.timelineOffsetSeconds = nonNegative(request.timelineOffsetSeconds ?? 0);
+    this.timelineDurationSeconds = request.timelineDurationSeconds;
+    this.adoptEngineDuration = request.adoptEngineDuration === true;
+    this.observedTitleDuration = null;
     this.media.pause();
     return new Promise<void>((resolve, reject) => {
       let openingTimer: ReturnType<typeof setTimeout> | undefined;
@@ -134,7 +142,7 @@ export class VizioHtml5Adapter extends SessionPlayer {
         try { this.media.currentTime = target; } catch { /* browser may delay seek until a later ready state */ }
         this.update(sessionId, {
           state: this.pauseRequested ? 'paused' : 'ready',
-          time: { positionSeconds: this.timelineOffsetSeconds + target, durationSeconds: knownDuration(this.media.duration) },
+          time: { positionSeconds: this.timelineOffsetSeconds + target, durationSeconds: this.titleDuration() },
           tracks: tracksFromMedia(this.media),
           error: null,
         });
@@ -276,7 +284,7 @@ export class VizioHtml5Adapter extends SessionPlayer {
     try {
       const target = boundedPosition(positionSeconds - this.timelineOffsetSeconds, knownDuration(this.media.duration));
       this.media.currentTime = target;
-      this.update(sessionId, { time: { positionSeconds: this.timelineOffsetSeconds + target, durationSeconds: knownDuration(this.media.duration) } });
+      this.update(sessionId, { time: { positionSeconds: this.timelineOffsetSeconds + target, durationSeconds: this.titleDuration() } });
     } catch (cause) {
       const error = new PlayerOperationError('seek-failed', 'The browser could not seek the selected source.', cause);
       this.fail(sessionId, error.toFailure());
@@ -339,11 +347,17 @@ export class VizioHtml5Adapter extends SessionPlayer {
       this.media.pause(); this.destroyHls();
     }, 8000);
   }
+  /** The seek bar's length: the server total, raised only by an original file. */
+  private titleDuration(): number | null {
+    const next = timelineDuration(this.timelineDurationSeconds, knownDuration(this.media.duration), this.adoptEngineDuration);
+    return (this.observedTitleDuration = growOnlyDuration(this.observedTitleDuration, next));
+  }
+
   private onMetadata(): void {
     if ((this.media.videoWidth ?? 0) > 0) this.clearFirstFrameWatchdog();
     const sessionId = this.snapshot.sessionId;
     if (!this.isCurrent(sessionId)) return;
-    this.update(sessionId, { diagnostics: this.snapshot.diagnostics ? { ...this.snapshot.diagnostics, width: this.media.videoWidth, height: this.media.videoHeight } : undefined, time: { positionSeconds: this.timelineOffsetSeconds + this.media.currentTime, durationSeconds: knownDuration(this.media.duration) }, tracks: tracksFromMedia(this.media) });
+    this.update(sessionId, { diagnostics: this.snapshot.diagnostics ? { ...this.snapshot.diagnostics, width: this.media.videoWidth, height: this.media.videoHeight } : undefined, time: { positionSeconds: this.timelineOffsetSeconds + this.media.currentTime, durationSeconds: this.titleDuration() }, tracks: tracksFromMedia(this.media) });
   }
 
   private onCanPlay(): void { this.onMetadata(); }
@@ -365,7 +379,7 @@ export class VizioHtml5Adapter extends SessionPlayer {
   private onTimeUpdate(): void {
     if ((this.media.videoWidth ?? 0) > 0) this.clearFirstFrameWatchdog();
     const sessionId = this.snapshot.sessionId;
-    this.update(sessionId, { diagnostics: this.snapshot.diagnostics ? { ...this.snapshot.diagnostics, width: this.media.videoWidth, height: this.media.videoHeight } : undefined, time: { positionSeconds: this.timelineOffsetSeconds + this.media.currentTime, durationSeconds: knownDuration(this.media.duration) } });
+    this.update(sessionId, { diagnostics: this.snapshot.diagnostics ? { ...this.snapshot.diagnostics, width: this.media.videoWidth, height: this.media.videoHeight } : undefined, time: { positionSeconds: this.timelineOffsetSeconds + this.media.currentTime, durationSeconds: this.titleDuration() } });
   }
   private onEnded(): void {
     if (this.media.error || this.snapshot.state === 'error') return;
