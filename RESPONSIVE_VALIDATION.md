@@ -6,7 +6,7 @@ The previous fixture pass did not establish that the owner's streams or populate
 
 Rust now returns CardPresentation (image/role, title, subtitle, normalized optional progress, action/label). Web and Kotlin consume that projection. Queue adapters fetch metadata with bounded concurrency; Rust merges only the matching episode still/title and preserves source/progress/previous-episode identity. Missing episode art never becomes a parent portrait. The regression fixture deliberately begins with only a saved parent poster and requires the exact episode image from metadata.
 
-Responsive navigation uses /tv paths, stable title identifiers, Back/Forward and authorized reload. Theme/OLED values are local appearance preferences in Settings, never route parameters. Back appears before the brand in DOM and visual order. A live card plays directly without a detail/source intermediate screen; browser Forward to a retired live session returns Live TV without autoplay. Native TV remote behavior remains separately checked.
+Responsive navigation uses /tv paths, stable title identifiers, Back/Forward and authorized reload. Theme/OLED values are local appearance preferences in Settings, never route parameters. Back appears before the brand in DOM and visual order. Responsive playback also uses an upper-left Back control that stops its lease and restores the prior route; the old bottom-right exit remains only in the TV remote layout. A live card plays directly without a detail/source intermediate screen; browser Forward to a retired live session returns Live TV without autoplay. Native TV remote behavior remains separately checked.
 
 ## Current evidence
 

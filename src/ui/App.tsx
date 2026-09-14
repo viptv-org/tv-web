@@ -2781,6 +2781,7 @@ export function App({
               <div
                 className={`player-overlay ${selected?.type === "live" ? "live-overlay" : ""}`}
               >
+                {responsive && <TvButton id="exit" className="responsive-player-back" aria-label="Back" onActivate={() => void stop()}>←</TvButton>}
                 <div
                   className={`player-identity ${selected?.type === "live" ? "channel-identity" : ""}`}
                 >
@@ -2926,7 +2927,7 @@ export function App({
                         alt=""
                       />
                     </TvButton>
-                    <TvButton
+                    {!responsive && <TvButton
                       id="exit"
                       aria-label="Exit"
                       onActivate={() => void stop()}
@@ -2935,7 +2936,7 @@ export function App({
                         src={`${import.meta.env.BASE_URL}assets/ui-nav-player-exit.png`}
                         alt=""
                       />
-                    </TvButton>
+                    </TvButton>}
                   </div>
                 </div>
               </div>
