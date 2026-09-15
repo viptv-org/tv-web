@@ -203,7 +203,7 @@ export function moveFocus(key: string, current: HTMLElement | null) {
 
 type TvButtonProps = Omit<
   ButtonHTMLAttributes<HTMLButtonElement>,
-  "id" | "onClick"
+  "id"
 > & { id: string; onActivate: Action; onHold?: Action; children: ReactNode };
 export function TvButton({
   id,
@@ -229,7 +229,7 @@ export function TvButton({
     <button
       {...rest}
       data-focus-id={id}
-      onClick={onActivate}
+      onClick={rest.onClick ?? onActivate}
       onContextMenu={(event) => {
         if (onHold) {
           event.preventDefault();

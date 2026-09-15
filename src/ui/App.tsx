@@ -2852,6 +2852,13 @@ export function App({
                       <TvButton
                         id="timeline"
                         className="timeline"
+                        onClick={(event) => {
+                          const duration = snapshot?.time.durationSeconds ?? 0;
+                          if (duration <= 0) return;
+                          const rect = event.currentTarget.getBoundingClientRect();
+                          const target = ((event.clientX - rect.left) / rect.width) * duration;
+                          void controller.current?.seek(Math.max(0, Math.min(duration, target)));
+                        }}
                         onActivate={() =>
                           void (snapshot?.state === "paused"
                             ? player.current?.play()

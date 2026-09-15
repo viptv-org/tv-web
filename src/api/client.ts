@@ -463,7 +463,8 @@ export class TvApi {
     duration: number,
     options?: RequestOptions,
   ) {
-    await this.domainRequest({ operation: "saveProgress", profileId, item, position, duration }, options);
+    if (!Number.isFinite(position) || !Number.isFinite(duration)) return;
+    await this.domainRequest({ operation: "saveProgress", profileId, item, position: Math.max(0, position), duration: Math.max(0, duration) }, options);
   }
   async correctProgress(
     profileId: string,
