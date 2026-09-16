@@ -118,11 +118,9 @@ test('a live card opens playback directly and history never restores a live sour
   await expect(page.locator('.detail')).toHaveCount(0);
   expect(fixture.requests.find(request => request.path === '/api/playback' && request.method === 'POST')?.body).toMatchObject({ channel_id: 'station-0' });
   expect(fixture.requests.filter(request => request.path === '/api/streams')).toHaveLength(0);
-  const back = page.getByRole('button', { name: 'Back', exact: true });
-  const bounds = await back.boundingBox();
-  expect(bounds!.x).toBeLessThan(80);
-  expect(bounds!.y).toBeLessThan(80);
-  await back.click();
+  // The player is left through its own controls row, not a leading overlay
+  // button. This reaches Exit the same way the remote does.
+  await page.getByRole('button', { name: 'Exit', exact: true }).press('Enter');
   await expect(page.locator('.home')).toBeVisible();
   await expect.poll(() => fixture.requests.some(request => request.path === '/api/playback/history-playback' && request.method === 'DELETE')).toBe(true);
   await page.goForward();

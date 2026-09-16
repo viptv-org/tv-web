@@ -879,7 +879,10 @@ function safeJson(response: Response): Promise<JsonValue> {
 }
 function clientMessage(status: number) {
   if (status === 401) return "Pairing expired";
-  if (status === 403) return "This action is not available for this profile";
+  // 403 covers both a profile that cannot use this action and a request the
+  // server refused for another reason, such as an origin or lease mismatch.
+  // Say what is actually known rather than blaming the profile.
+  if (status === 403) return "VIPTV refused that request";
   if (status === 404) return "This item is no longer available";
   if (status === 429) return "Please try again shortly";
   return "VIPTV could not complete that request";

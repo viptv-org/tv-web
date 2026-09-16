@@ -92,6 +92,69 @@ describe('PlaybackSessionController', () => {
       streamId: source.id, position: 42, capabilities, managedOnly: true, forceTranscode: true,
     });
   });
+it('coalesces rapid managed seeks so a superseded replacement never holds provider capacity', async () => {
+    const player = new FakePlayer();
+    // Each managed session holds a provider connection permit. A seek that is
+    // superseded before it starts must release its session immediately, or a
+    // burst of presses exhausts the provider budget and the server answers 429.
+    let deliver!: (value: PlaybackSession) => void;
+    const backend = {
+      startPlayback: vi.fn()
+        .mockResolvedValueOnce(session('first', '/index.m3u8', 'managed'))
+        // The first seek's replacement stays in flight while a second arrives.
+        .mockImplementationOnce(() => new Promise<PlaybackSession>((resolve) => { deliver = resolve; }))
+        .mockResolvedValueOnce(session('second', '/index.m3u8', 'managed', 60)),
+      stopPlayback: vi.fn().mockResolvedValue(undefined),
+    };
+    const controller = new PlaybackSessionController({ player, backend, capabilities });
+    await controller.start({ item, source });
+
+    const supersededSeek = controller.seekFrom(() => 30, () => 0);
+    const currentSeek = controller.seekFrom(() => 60, () => 0);
+    // The first replacement finishes after the second one took ownership.
+    deliver(session('abandoned', '/abandoned.m3u8', 'managed', 30));
+
+    // A superseded seek resolves (yielding the current owner internally) rather
+    // than throwing, so the UI never surfaces an error for a replaced press.
+    await expect(supersededSeek).resolves.toBeUndefined();
+    await currentSeek;
+    // The abandoned session is released instead of being left holding capacity.
+    expect(backend.stopPlayback).toHaveBeenCalledWith('abandoned');
+    expect(controller.snapshot.active?.session.id).toBe('second');
+    // The stale replacement never replaced the live session on the device.
+    expect(player.opened.map((request) => request.url)).toEqual(['/index.m3u8', '/index.m3u8']);
+  });
+
+  it('a seek that stays current still replaces the session and restores the live position', async () => {
+    const player = new FakePlayer();
+    const backend = {
+      startPlayback: vi.fn().mockResolvedValueOnce(session('first', '/index.m3u8', 'managed'))
+        .mockResolvedValueOnce(session('second', '/index.m3u8', 'managed', 30)),
+      stopPlayback: vi.fn().mockResolvedValue(undefined),
+    };
+    const controller = new PlaybackSessionController({ player, backend, capabilities });
+    await controller.start({ item, source });
+    player.snapshot = { ...player.snapshot, state: 'paused', time: { positionSeconds: 12, durationSeconds: 100 } };
+    await controller.seekFrom(() => 30, () => player.snapshot.time.positionSeconds);
+    expect(backend.startPlayback).toHaveBeenNthCalledWith(2, { streamId: source.id, position: 30, capabilities });
+    // The replacement opened at the delivery offset and resumed paused.
+    expect(player.opened[1]).toMatchObject({ paused: true, startAtSeconds: 0, timelineOffsetSeconds: 30 });
+    expect(backend.stopPlayback).toHaveBeenCalledWith('first');
+    expect(controller.snapshot.active?.session.id).toBe('second');
+  });
+
+  it('seeks a direct session in place without creating a replacement session', async () => {
+    const player = new FakePlayer();
+    const backend = {
+      startPlayback: vi.fn().mockResolvedValueOnce(session('direct', '/source.mp4', 'direct')),
+      stopPlayback: vi.fn().mockResolvedValue(undefined),
+    };
+    const controller = new PlaybackSessionController({ player, backend, capabilities });
+    await controller.start({ item, source });
+    await controller.seekFrom(() => 45, () => 0);
+    expect(backend.startPlayback).toHaveBeenCalledTimes(1);
+    expect(player.snapshot.time.positionSeconds).toBe(45);
+  });
 
   it('does not reopen playback after Stop cancels late live recovery', async () => {
     const player = new FakePlayer();

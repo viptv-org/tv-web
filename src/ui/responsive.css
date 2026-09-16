@@ -396,12 +396,11 @@ body:has(.responsive-app) { background: #101112; }
   background: #202224;
 }
 
-/* Pointer/touch playback shares the same leading Back placement as details. */
-.responsive-app .responsive-player-back { position: absolute; top: 24px; left: 24px; width: 48px; height: 48px; padding: 0; z-index: 2; text-align: center; }
-.responsive-app .player-identity { left: 88px; max-width: calc(100% - 250px); }
+/* Pointer/touch playback: the branding occupies the leading slot and the
+   player's own controls row is the only exit, matching the TV overlay. */
+.responsive-app .player-identity { left: 24px; max-width: calc(100% - 250px); }
 @media (max-width: 599px) {
-  .responsive-app .responsive-player-back { left: 16px; top: 16px; }
-  .responsive-app .player-identity { left: 76px; max-width: calc(100% - 180px); }
+  .responsive-app .player-identity { left: 16px; max-width: calc(100% - 180px); }
 }
 
 /* Responsive web keeps destination selection without the remote focus skin.

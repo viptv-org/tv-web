@@ -246,6 +246,39 @@ export class PlaybackSessionController {
     await this.transition({ ...active.intent, position }, request, active, () => operation === this.operationGeneration);
   }
 
+  /**
+   * Repeated seeks: a replacement that is superseded before it starts is
+   * abandoned at once instead of finishing a second managed session. Every
+   * started session holds provider capacity, so rapid presses would otherwise
+   * exhaust the provider's connection budget and be refused with 429.
+   */
+  async seekFrom(
+    resolvePosition: () => number,
+    currentPosition: () => number,
+  ): Promise<void> {
+    this.cancelNext(false);
+    const operation = ++this.operationGeneration;
+    const active = this.requireActive();
+    if (active.session.mode === 'direct') {
+      await this.options.player.seek(resolvePosition());
+      return;
+    }
+    const position = resolvePosition();
+    if (!Number.isFinite(position) || position < 0) throw new Error('Seek position must be a non-negative number.');
+    // Read the live position after this operation still owns the controller;
+    // startPlayback is the first await, so the read is neither stale nor racy.
+    const stillWanted = () => operation === this.operationGeneration;
+    const request = { ...active.request, position };
+    await this.transition(
+      { ...active.intent, position },
+      request,
+      active,
+      stillWanted,
+      () => stillWanted(),
+      { position: currentPosition(), paused: this.options.player.snapshot.state === 'paused' },
+    );
+  }
+
   async replaceTracks(selection: TrackReplacement): Promise<void> {
     this.cancelNext(false);
     const operation = ++this.operationGeneration;
@@ -379,7 +412,10 @@ export class PlaybackSessionController {
       return candidate;
     } catch (cause) {
       const error = asError(cause);
-      await this.options.backend.stopPlayback(session.id).catch(() => undefined);
+      // `session` is undefined only when the backend answered with no session
+      // and the original failure already propagated; do not mask it with a
+      // TypeError while trying to clean up.
+      if (session!) await this.options.backend.stopPlayback(session!.id).catch(() => undefined);
       const shouldRestore = () => stillWanted() || restoreOnCancellation();
       if (shouldRestore()) {
         try {

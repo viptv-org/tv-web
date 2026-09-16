@@ -1567,7 +1567,10 @@ export function App({
     if (Math.abs(position - (snapshot?.time.positionSeconds ?? 0)) < 0.5)
       return;
     try {
-      await controller.current?.seek(position);
+      await controller.current?.seekFrom(
+        () => position,
+        () => snapshot?.time.positionSeconds ?? 0,
+      );
     } catch (e) {
       fail(e);
     }
@@ -2806,7 +2809,6 @@ export function App({
               <div
                 className={`player-overlay ${selected?.type === "live" ? "live-overlay" : ""}`}
               >
-                {responsive && <TvButton id="exit" className="responsive-player-back" aria-label="Back" onActivate={() => void stop()}>←</TvButton>}
                 <div
                   className={`player-identity ${selected?.type === "live" ? "channel-identity" : ""}`}
                 >
@@ -2853,11 +2855,15 @@ export function App({
                         id="timeline"
                         className="timeline"
                         onClick={(event) => {
+                          // A pointer press on the track seeks. It must not also
+                          // reach onActivate, which toggles pause.
+                          event.stopPropagation();
                           const duration = snapshot?.time.durationSeconds ?? 0;
                           if (duration <= 0) return;
                           const rect = event.currentTarget.getBoundingClientRect();
+                          if (rect.width <= 0) return;
                           const target = ((event.clientX - rect.left) / rect.width) * duration;
-                          void controller.current?.seek(Math.max(0, Math.min(duration, target)));
+                          void commitSeek(Math.max(0, Math.min(duration, target)));
                         }}
                         onActivate={() =>
                           void (snapshot?.state === "paused"
@@ -2977,6 +2983,7 @@ export function App({
                         snapshot?.diagnostics?.fallbackReason ? `Fallback: ${snapshot.diagnostics.fallbackReason}` : "",
                       ].filter(Boolean).join("\n"), choices: [{ label: "Close", action: () => setModal(undefined) }] })}><Info size={22} /></button>
                       <button type="button" aria-label={fullscreenControl.fullscreen ? "Exit fullscreen" : "Fullscreen"} title={fullscreenControl.fullscreen ? "Exit fullscreen" : "Fullscreen"} onClick={() => void fullscreenControl.toggle()}>{fullscreenControl.fullscreen ? <Minimize size={22} /> : <Maximize size={22} />}</button>
+                      <button type="button" aria-label="Exit" title="Exit" onClick={() => void stop()}>Close</button>
                     </div>}
                     {!responsive && <TvButton
                       id="exit"
@@ -3003,12 +3010,9 @@ export function App({
             <p>Starting VIPTV…</p>
           </div>
         )}
-        {preparing && screen !== "player" && (
-          <div
-            className={screen === "sources" ? "playback-loading" : "loading"}
-            role="status"
-          >
-            Preparing playback… Back to cancel
+        {preparing && screen !== "player" && screen !== "sources" && (
+          <div className="loading" role="status">
+            Preparing playback…
           </div>
         )}
         {busy && !preparing && screen !== "sources" && (
@@ -3016,9 +3020,7 @@ export function App({
             className={screen === "player" ? "playback-loading" : "loading"}
             role="status"
           >
-            {screen === "player"
-              ? "Preparing playback… Back to cancel"
-              : "Loading…"}
+            {screen === "player" ? "Preparing playback…" : "Loading…"}
           </div>
         )}
         {error && (
