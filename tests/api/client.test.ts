@@ -444,7 +444,7 @@ describe("TvApi device and media boundary", () => {
     });
   });
 
-  it("rejects a playback response that attempts to replace the same-origin media capability", async () => {
+  it("rejects a playback response URL that carries embedded credentials", async () => {
     const store = new MemoryDeviceSessionStore();
     await store.save({
       sessionId: "s1",
@@ -457,7 +457,7 @@ describe("TvApi device and media boundary", () => {
     const fake = scripted(
       response({
         id: "playback-1",
-        url: "https://upstream.invalid/private.m3u8",
+        url: "https://user:pass@upstream.invalid/private.m3u8",
         format: "hls",
         mode: "remux",
         video_mode: "copy",
@@ -486,6 +486,51 @@ describe("TvApi device and media boundary", () => {
         },
       }),
     ).rejects.toMatchObject({ name: "TvApiError", code: "invalid_response" });
+  });
+
+  it("accepts an original absolute source URL with its session authorization", async () => {
+    const store = new MemoryDeviceSessionStore();
+    await store.save({
+      sessionId: "s1",
+      accountId: "1",
+      profileId: "3",
+      accessToken: "access",
+      refreshToken: "refresh",
+      expiresIn: 900,
+    });
+    const fake = scripted(
+      response({
+        id: "playback-1",
+        url: "https://provider.invalid/stream.mkv",
+        format: "mkv",
+        mode: "direct",
+        video_mode: "copy",
+        audio_mode: "copy",
+        position: 0,
+        live: false,
+        duration: 120,
+        audio_tracks: [],
+        subtitle_tracks: [],
+        subtitles_supported: false,
+        authorization: { cookie: "provider-session=1", user_agent: "VIPTV Desktop" },
+      }),
+    );
+    const api = apiFor(fake.fetcher, store);
+    await api.restoreSession();
+    const session = await api.startPlayback({
+      streamId: "stream-1",
+      capabilities: {
+        maxWidth: 1920,
+        maxHeight: 1080,
+        h264: true,
+        hevc: false,
+        aac: true,
+        directPlay: true,
+        hevcSdr: false,
+      },
+    });
+    expect(session.url).toBe("https://provider.invalid/stream.mkv");
+    expect(session.authorization).toEqual({ cookie: "provider-session=1", userAgent: "VIPTV Desktop" });
   });
 
   it("decodes live categories as filters rather than pretending they are playable media", async () => {
