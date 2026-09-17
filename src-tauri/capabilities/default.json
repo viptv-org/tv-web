@@ -1,0 +1,24 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Main window: native video engine, backend HTTP fetch, and external sign-in links",
+  "windows": [
+    "main"
+  ],
+  "permissions": [
+    "core:default",
+    "video:default",
+    "opener:default",
+    {
+      "identifier": "http:default",
+      "allow": [
+        { "url": "https://viptv.syek.tech" },
+        { "url": "https://watch.syek.tech" },
+        { "url": "https://viptv.local.test" },
+        { "url": "https://viptv.local.test:8443" },
+        { "url": "https://watch.local.test" },
+        { "url": "https://watch.local.test:8443" }
+      ]
+    }
+  ]
+}

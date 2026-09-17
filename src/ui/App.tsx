@@ -19,6 +19,7 @@ import {
 } from "../api";
 import {
   createPlayer,
+  TAURI_NATIVE_DELIVERY_CAPABILITIES,
   PlaybackSessionController,
   exactResumeSource,
   type Player,
@@ -622,6 +623,9 @@ export function App({
     const capabilities = async (): Promise<PlaybackCapabilities> => {
       // AVPlay is a native engine; HTML decoder probes cannot qualify it.
       if (platform === "tizen") return { maxWidth: 1920, maxHeight: 1080, h264: true, hevc: true, aac: true, directPlay: true, hevcSdr: true };
+      // The desktop native engine is qualified by its own runtime: browser
+      // decoder probes say nothing about GStreamer and must not gate delivery.
+      if (platform === "tauri") return TAURI_NATIVE_DELIVERY_CAPABILITIES;
       browserReport ??= probeBrowserPlaybackCapabilities(undefined, { mediabunny: platform === "html5" });
       const report = await browserReport;
       if (!report.canPlayManagedHls) throw new Error("This browser cannot play the supported H.264/AAC streaming output. Use a supported browser or TV player.");

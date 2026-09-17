@@ -13,7 +13,8 @@
     "package:tv": "npm run build && node scripts/package-tv.mjs",
     "design:check": "node scripts/design-sync.mjs check",
     "core:check": "node scripts/core-sync.mjs check",
-    "typecheck": "node scripts/typecheck.mjs"
+    "typecheck": "node scripts/typecheck.mjs",
+    "tauri": "tauri"
   },
   "dependencies": {
     "@mediabunny/ac3": "^1.56.2",
@@ -31,6 +32,7 @@
   },
   "devDependencies": {
     "@playwright/test": "1.63.0",
+    "@tauri-apps/cli": "^2.11.4",
     "@testing-library/jest-dom": "6.6.3",
     "@testing-library/react": "16.1.0",
     "@types/node": "22.10.2",

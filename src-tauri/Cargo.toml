@@ -1,0 +1,51 @@
+[package]
+name = "viptv-desktop"
+version = "0.1.0"
+description = "VIPTV desktop viewing app: the shared tv-web UI over the native video engine"
+authors = ["VIPTV contributors"]
+license = ""
+repository = ""
+edition = "2021"
+rust-version = "1.85"
+
+[lib]
+name = "viptv_desktop_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", default-features = false, features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+# rustls-tls-native-roots: the backend transport must honor the platform trust
+# store. The plugin's default rustls-tls ships only bundled webpki roots, which
+# rejects locally-signed dev backends (VIPTV Local Dev CA) even after
+# .local-https/trust-ca.sh installs them system-wide.
+# unsafe-headers: lets the app set an explicit first-party Origin on its API
+# requests. Without it the plugin pins Origin to this window's origin
+# (http://localhost:5173 in dev), which the backend's single-browser-origin
+# pin rejects with 403.
+tauri-plugin-http = { version = "2", features = ["rustls-tls-native-roots", "unsafe-headers"] }
+tauri-plugin-opener = "2"
+
+# The native playback engine lives in the sibling tauri-video-plugin repository
+# and is referenced by path, so this app builds only inside the viptv-org
+# checkout layout (see src-tauri/README.md).
+[target.'cfg(target_os = "linux")'.dependencies]
+tauri-plugin-video = { path = "../../tauri-video-plugin", features = ["gstreamer-runtime"] }
+
+[target.'cfg(target_os = "windows")'.dependencies]
+tauri-plugin-video = { path = "../../tauri-video-plugin", features = ["gstreamer-runtime"] }
+
+[target.'cfg(any(target_os = "macos", target_os = "android"))'.dependencies]
+tauri-plugin-video = { path = "../../tauri-video-plugin", default-features = false }
+
+# Tauri 2.11.4 assumes the WebView's second GTK ancestor is always a GtkWindow.
+# The native video surface adds a legitimate GtkOverlay ancestor, and that bad
+# downcast can abort the process during window resize. Pin Tauri's upstream fix
+# until a crates.io release includes it (details in
+# ../../tauri-video-plugin/docs/linux.md). Keep all three on the same revision.
+[patch.crates-io]
+tauri-runtime = { git = "https://github.com/tauri-apps/tauri.git", rev = "5a882eccfda53a189ec076c79c4ad186f50db5ff" }
+tauri-runtime-wry = { git = "https://github.com/tauri-apps/tauri.git", rev = "5a882eccfda53a189ec076c79c4ad186f50db5ff" }
+tauri-utils = { git = "https://github.com/tauri-apps/tauri.git", rev = "5a882eccfda53a189ec076c79c4ad186f50db5ff" }

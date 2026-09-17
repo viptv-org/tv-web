@@ -3,7 +3,7 @@
  * already-selected delivery URL: choosing a source and choosing a server
  * delivery rung belong to the product/backend, never to a device adapter.
  */
-export type PlayerPlatform = 'tizen' | 'vizio' | 'html5';
+export type PlayerPlatform = 'tizen' | 'vizio' | 'html5' | 'tauri';
 export type PlaybackKind = 'vod' | 'live';
 export type PlayerState =
   | 'idle'
@@ -79,7 +79,7 @@ export interface PlayerFailure {
 }
 
 export interface PlayerDiagnostics {
-  readonly engine: 'mediabunny' | 'native-html' | 'hls.js' | 'avplay';
+  readonly engine: 'mediabunny' | 'native-html' | 'hls.js' | 'avplay' | 'tauri-native';
   readonly transport: 'hls' | 'file';
   readonly networkTransport?: 'browser-proxy' | 'direct' | 'native-http';
   readonly videoCodec?: string;
