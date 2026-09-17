@@ -53,7 +53,7 @@ import {
 } from "./catalogFilters";
 import { Guide as LiveGuide } from "./Guide";
 import { CastController } from "./CastController";
-import { SeekBar, formatPlaybackTime, type BufferedRange } from "./SeekBar";
+import { SeekBar, formatPlaybackTime, seekPinReleased, type BufferedRange } from "./SeekBar";
 import { DialogBackdrop } from "./DialogBackdrop";
 import { BrowserNavigation, readBrowserRoute, safeRestoredRoute, type BrowserRoute } from "./browserNavigation";
 type Screen =
@@ -188,11 +188,14 @@ export function App({
       choices: Choice[];
       body?: string;
       message?: string;
+      /** Choice label that receives focus when the dialog opens. */
+      focus?: string;
     }>(),
     [snapshot, setSnapshot] = useState<PlayerSnapshot>(),
     [session, setSession] = useState<PlaybackSession>(),
     [overlay, setOverlay] = useState(true),
-    [seek, setSeek] = useState<number>();
+    [seek, setSeek] = useState<number>(),
+    [openingSource, setOpeningSource] = useState<string>();
   const playerRoot = useRef<HTMLDivElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
   const video = useRef<HTMLVideoElement>(null),
@@ -229,7 +232,8 @@ export function App({
   const advancedSession = useRef(""),
     resumeRemainder = useRef(false);
   const seekRepeat = useRef({ key: "", count: 0 }),
-    seekValue = useRef<number>();
+    seekValue = useRef<number>(),
+    seekTarget = useRef<number>();
   const restoredScroll = useRef<(ScrollAnchor & { focus: string }) | undefined>();
   const currentScreen = useRef(screen);
   currentScreen.current = screen;
@@ -281,11 +285,27 @@ export function App({
       if (!modalFocus.current)
         modalFocus.current =
           (document.activeElement as HTMLElement)?.dataset.focusId ?? "";
-      focusElement(modal.body ? "source-detail-body" : "modal-0");
+      // Focus the dialog's own primary action: the current value for filters,
+      // the body for detail panels, the first choice otherwise. Keyboard focus
+      // never stays behind the scrim on open.
+      const preferred = modal.focus
+        ? modal.choices.findIndex((choice) => choice.label === modal.focus)
+        : -1;
+      focusElement(
+        modal.body
+          ? "source-detail-body"
+          : preferred >= 0
+            ? `modal-${preferred}`
+            : "modal-0",
+      );
     } else if (modalFocus.current) {
       const id = modalFocus.current;
       modalFocus.current = "";
-      focusElement(id);
+      // Restore the invoker directly so keyboard focus lands back on the
+      // control that opened the dialog instead of the document body.
+      document
+        .querySelector<HTMLElement>(`[data-focus-id="${id}"]`)
+        ?.focus({ preventScroll: true });
     }
   }, [modal]);
   const entryFocus = useRef("");
@@ -612,6 +632,19 @@ export function App({
     controller.current = sessions;
     const off = engine.subscribe((snapshot) => {
       setSnapshot(snapshot);
+      // A committed seek stays displayed until the engine actually lands on
+      // its target; releasing early teleports the thumb back mid-flight.
+      if (
+        seekTarget.current !== undefined &&
+        seekPinReleased(
+          seekTarget.current,
+          snapshot.time.positionSeconds,
+          snapshot.state,
+        )
+      ) {
+        seekTarget.current = undefined;
+        setSeek(undefined);
+      }
       void sessions.recoverPlayback(snapshot).then((handled) => {
         if (!handled && snapshot.error && engine.snapshot.error === snapshot.error)
           setError(snapshot.error.message);
@@ -929,6 +962,7 @@ export function App({
     setError("");
     setBusy(true);
     setPreparing(true);
+    setOpeningSource(source?.id);
     try {
       const enriched = {
         ...item,
@@ -1002,6 +1036,7 @@ export function App({
     } finally {
       setBusy(false);
       setPreparing(false);
+      setOpeningSource(undefined);
     }
   };
   const retireBrowserPlayback = async () => {
@@ -1562,15 +1597,23 @@ export function App({
     }
   }, [screen, modal, sources, sourceQuality, sourceProvider]);
   const commitSeek = async (position: number) => {
-    setSeek(undefined);
-    if (Math.abs(position - (snapshot?.time.positionSeconds ?? 0)) < 0.5)
+    // The target stays displayed until the engine actually lands there;
+    // clearing it up front teleports the thumb back to the pre-seek spot.
+    setSeek(position);
+    seekTarget.current = position;
+    if (Math.abs(position - (snapshot?.time.positionSeconds ?? 0)) < 0.5) {
+      setSeek(undefined);
+      seekTarget.current = undefined;
       return;
+    }
     try {
       await controller.current?.seekFrom(
         () => position,
         () => snapshot?.time.positionSeconds ?? 0,
       );
     } catch (e) {
+      setSeek(undefined);
+      seekTarget.current = undefined;
       fail(e);
     }
   };
@@ -1579,11 +1622,23 @@ export function App({
     void (snapshot?.state === "paused"
       ? player.current?.play()
       : player.current?.pause());
-  // The only real buffer source is the HTML media element. MediaBunny decodes
-  // into the canvas with no buffer signal, so its sessions draw no buffer
-  // layer rather than a fabricated one.
+  // The buffer layer is real data from whichever engine is active: the HTML
+  // element exposes its buffered ranges directly, and MediaBunny reports its
+  // decoded-ahead window on the snapshot. Nothing is ever fabricated.
   const readBufferedRanges = () => {
     const engine = snapshot?.diagnostics?.engine;
+    if (engine === "mediabunny") {
+      const position = snapshot?.time.positionSeconds ?? 0;
+      const end = snapshot?.time.bufferedEndSeconds;
+      return end != null && end > position
+        ? [
+            {
+              start: position,
+              end: Math.min(end, snapshot?.time.durationSeconds ?? end),
+            },
+          ]
+        : null;
+    }
     if (engine !== "native-html" && engine !== "hls.js") return null;
     const media = video.current;
     const duration = snapshot?.time.durationSeconds ?? 0;
@@ -2642,6 +2697,7 @@ export function App({
                     onActivate={() =>
                       setModal({
                         title: "Quality",
+                        focus: sourceQuality,
                         choices: [
                           "All",
                           ...Array.from(
@@ -2664,6 +2720,7 @@ export function App({
                     onActivate={() =>
                       setModal({
                         title: "Source provider",
+                        focus: sourceProvider,
                         choices: [
                           "All",
                           ...Array.from(
@@ -2688,7 +2745,11 @@ export function App({
                         aria-hidden="true"
                       />
                     )}
-                    {busy ? "Finding sources…" : `${sources.length} sources`}
+                    {busy && preparing
+                      ? "Opening stream…"
+                      : busy
+                        ? "Finding sources…"
+                        : `${sources.length} sources`}
                   </span>
                 </div>
                 <div className="source-results">
@@ -2704,7 +2765,9 @@ export function App({
                       <TvButton
                         id={`source-${i}`}
                         key={s.id}
-                        className="source"
+                        className={
+                          s.id === openingSource ? "source opening" : "source"
+                        }
                         onHold={() =>
                           setModal({
                             title: "Source details",
@@ -2724,6 +2787,13 @@ export function App({
                           void play(selected, s, selected.position ?? 0)
                         }
                       >
+
+                        {s.id === openingSource && (
+                          <i
+                            className="source-discovery-spinner source-opening-spinner"
+                            aria-hidden="true"
+                          />
+                        )}
                         <h2>{s.sourceName ?? s.name}</h2>
                         <p>
                           {[s.name, s.title ?? s.filename]
@@ -2865,9 +2935,11 @@ export function App({
                 <span className="player-status">
                   {busy
                     ? "LOADING"
-                    : snapshot?.state === "paused"
-                      ? "PAUSED"
-                      : "PLAYING"}
+                    : snapshot?.state === "buffering"
+                      ? "BUFFERING"
+                      : snapshot?.state === "paused"
+                        ? "PAUSED"
+                        : "PLAYING"}
                 </span>
                 <span className="player-eyebrow">
                   {selected?.type === "live" ? "LIVE NOW" : "NOW PLAYING"}
@@ -3019,7 +3091,6 @@ export function App({
                         snapshot?.diagnostics?.fallbackReason ? `Fallback: ${snapshot.diagnostics.fallbackReason}` : "",
                       ].filter(Boolean).join("\n"), choices: [{ label: "Close", action: () => setModal(undefined) }] })}><Info size={22} /></button>
                       <button type="button" aria-label={fullscreenControl.fullscreen ? "Exit fullscreen" : "Fullscreen"} title={fullscreenControl.fullscreen ? "Exit fullscreen" : "Fullscreen"} onClick={() => void fullscreenControl.toggle()}>{fullscreenControl.fullscreen ? <Minimize size={22} /> : <Maximize size={22} />}</button>
-                      <button type="button" aria-label="Exit" title="Exit" onClick={() => void stop()}>Close</button>
                     </div>}
                     {!responsive && <TvButton
                       id="exit"

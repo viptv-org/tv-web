@@ -83,4 +83,23 @@ describe("dialog backdrop cancellation", () => {
     await waitFor(() => expect(opener).toHaveFocus());
     opener.remove();
   });
+  it("traps Tab inside the dialog while it is open", () => {
+    const outside = document.createElement("button");
+    document.body.append(outside);
+    const { unmount } = render(<DialogBackdrop onCancel={() => {}}><section role="dialog"><button>First</button><button>Second</button></section></DialogBackdrop>);
+    const first = screen.getByRole("button", { name: "First" });
+    const second = screen.getByRole("button", { name: "Second" });
+    outside.focus();
+    fireEvent.keyDown(backdrop(), { key: "Tab" });
+    expect(first).toHaveFocus();
+    second.focus();
+    fireEvent.keyDown(backdrop(), { key: "Tab" });
+    expect(first).toHaveFocus();
+    first.focus();
+    fireEvent.keyDown(backdrop(), { key: "Tab", shiftKey: true });
+    expect(second).toHaveFocus();
+    unmount();
+    outside.remove();
+  });
+
 });

@@ -54,6 +54,11 @@ export interface PlayerTime {
   readonly positionSeconds: number;
   /** Null represents a live or engine-unknown duration. */
   readonly durationSeconds: number | null;
+  /**
+   * Furthest second the engine already holds decoded data for. Null or
+   * omitted when the engine cannot report it; sessions never fake it.
+   */
+  readonly bufferedEndSeconds?: number | null;
 }
 
 export type PlayerErrorCode =

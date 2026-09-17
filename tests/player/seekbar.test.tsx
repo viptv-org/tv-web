@@ -3,6 +3,7 @@ import { afterEach, expect, it, vi } from "vitest";
 import {
   SeekBar,
   formatPlaybackTime,
+  seekPinReleased,
   pointerSeekIntent,
   secondsAtRatio,
   secondsFromPointer,
@@ -200,4 +201,19 @@ it("leaves arrow keys to the app's remote layer when it owns them", () => {
   fireEvent.keyDown(bar, { key: "Enter" });
   expect(onPreview).not.toHaveBeenCalled();
   expect(onSeek).not.toHaveBeenCalled();
+});
+
+it("holds a committed seek target until playback lands on it", () => {
+  expect(seekPinReleased(120, 121, "playing")).toBe(true);
+  expect(seekPinReleased(120, 119.5, "playing")).toBe(true);
+  expect(seekPinReleased(120, 119, "playing")).toBe(false);
+  expect(seekPinReleased(120, 0, "playing")).toBe(false);
+  expect(seekPinReleased(120, 60, "paused")).toBe(false);
+  expect(seekPinReleased(120, 60, "buffering")).toBe(false);
+});
+
+it("releases a pinned seek when the session ends or fails", () => {
+  for (const state of ["error", "stopped", "ended", "disposed", "idle"]) {
+    expect(seekPinReleased(120, 0, state)).toBe(true);
+  }
 });

@@ -47,6 +47,18 @@ export function pointerSeekIntent(traveled: number): SeekIntent {
   return traveled > SEEK_SLOP ? "drag" : "click";
 }
 
+/** A pinned seek target stays displayed until playback lands on it. */
+export function seekPinReleased(
+  target: number,
+  position: number,
+  state: string,
+): boolean {
+  if (["error", "stopped", "ended", "disposed", "idle"].includes(state))
+    return true;
+  return state === "playing" && position >= target - 0.75;
+}
+
+
 const SEEK_SLOP = 6;
 const KEYBOARD_STEP_SECONDS = 10;
 /** Idle window after a keyboard nudge before it commits, matching the remote. */
