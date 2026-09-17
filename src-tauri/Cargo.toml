@@ -32,7 +32,7 @@ tauri-plugin-opener = "2"
 # and is referenced by path, so this app builds only inside the viptv-org
 # checkout layout (see src-tauri/README.md).
 [target.'cfg(target_os = "linux")'.dependencies]
-tauri-plugin-video = { path = "../../tauri-video-plugin", features = ["gstreamer-runtime"] }
+tauri-plugin-video = { path = "../../tauri-video-plugin", features = ["gstreamer-runtime", "mpv-runtime"] }
 
 [target.'cfg(target_os = "windows")'.dependencies]
 tauri-plugin-video = { path = "../../tauri-video-plugin", features = ["gstreamer-runtime"] }

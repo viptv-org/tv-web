@@ -9,6 +9,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
+    "test:autoplay": "VIPTV_TEST_AUTOPLAY=1 npm run tauri dev",
     "preview": "vite preview --host 0.0.0.0",
     "package:tv": "npm run build && node scripts/package-tv.mjs",
     "design:check": "node scripts/design-sync.mjs check",

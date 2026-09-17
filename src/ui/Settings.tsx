@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { TvApi, type PlaybackPreferences, type JsonObject } from "../api";
+
+import { ENGINE_CHOICES } from "./enginePreference";
+import type { NativeVideoEngine } from "@viptv/video";
 import { TextEntry } from "./TextEntry";
 import { TvButton, focusElement } from "./remote";
 import packageInfo from "../../package.json";
@@ -36,6 +39,7 @@ export function Settings({
   onModal,
   serverOrigin = "https://viptv.syek.tech",
   appearance,
+  playbackEngine,
 }: {
   api: TvApi;
   profile: string;
@@ -48,6 +52,7 @@ export function Settings({
   onModal: (title: string, choices: Choice[]) => void;
   serverOrigin?: string;
   appearance?: { oled: boolean; toggle: () => void };
+  playbackEngine?: { choice: NativeVideoEngine; select: (engine: NativeVideoEngine) => void };
 }) {
   const [addons, setAddons] = useState<readonly JsonObject[]>([]);
   const [page, setPage] = useState<
@@ -99,6 +104,22 @@ export function Settings({
             label: `OLED mode: ${appearance.oled ? "On" : "Off"}`,
             description: "Use a pure black background on this device. Your profile and playback settings stay the same.",
             action: appearance.toggle,
+          }] : []),
+          ...(playbackEngine ? [{
+            id: "settings-engine",
+            label: `Playback engine: ${playbackEngine.choice === "auto" ? "Auto" : playbackEngine.choice}`,
+            description: "The native engine that decodes video. Auto uses the app's preferred engine for this device.",
+            action: () =>
+              onModal(
+                "Playback engine",
+                ENGINE_CHOICES.map((engine) => ({
+                  label: engine === "auto" ? "Auto" : engine,
+                  action: () => {
+                    playbackEngine.select(engine);
+                    onModal("", []);
+                  },
+                })),
+              ),
           }] : []),
           {
             id: "settings-profiles",

@@ -21,6 +21,9 @@ import {
   createPlayer,
   deliveryCapabilitiesFor,
   PlaybackSessionController,
+  isTauriRuntime,
+  resolveTauriVideoInvoker,
+  type NativeVideoEngine,
   type Player,
   type PlayerPlatform,
   type PlayerSnapshot,
@@ -45,6 +48,9 @@ import {
 import { TextEntry } from "./TextEntry";
 import { ProfileEditor, avatarUrl } from "./ProfileEditor";
 import { Settings } from "./Settings";
+
+import { readStoredEngine, storeEngine } from "./enginePreference";
+import { createAutoplayTestLogger, probeAutoplayTestMode, probeEngineOverride } from "../testing/autoplay-harness";
 import { resolveNext } from "./continuation";
 import {
   catalogFilters,
@@ -75,6 +81,10 @@ type BrowserSnapshot = {
   screen: Screen; selected?: MediaItem; items: readonly MediaItem[]; episodes: readonly MediaItem[]; sources: readonly MediaSource[];
   focus: string; scroll?: ScrollAnchor; query: string; season?: number; catalog?: Catalog; catalogValues: Record<string, string>; nextSkip?: number;
 };
+/** The desktop shell's command channel, present only inside the Tauri runtime. */
+const desktopInvoker = isTauriRuntime() ? resolveTauriVideoInvoker() : undefined;
+
+
 function captureScroll(): ScrollAnchor | undefined {
   const root = document.querySelector<HTMLElement>(".responsive-app");
   return root ? { top: root.scrollTop, regions: Array.from(root.querySelectorAll<HTMLElement>("[data-scroll-id]")).map(element => ({ id: element.dataset.scrollId!, top: element.scrollTop, left: element.scrollLeft })) } : undefined;
@@ -127,6 +137,30 @@ export function App({
   const closeCast = () => { setCasting(false); requestAnimationFrame(() => castFocus.current?.focus()); };
   const [oled, setOled] = useState(() => { try { return localStorage.getItem("viptv:appearance:oled") === "true"; } catch { return false; } });
   const toggleOled = () => setOled((previous) => { const next = !previous; try { localStorage.setItem("viptv:appearance:oled", String(next)); } catch { /* Appearance remains usable without storage. */ } return next; });
+
+  const [engineChoice, setEngineChoice] = useState(readStoredEngine);
+  const selectEngine = (engine: NativeVideoEngine) => {
+    setEngineChoice(engine);
+    storeEngine(engine);
+  };
+  const autoplayTest = useRef<{ enabled: boolean; log?: (snapshot: PlayerSnapshot) => void }>({ enabled: false });
+  const autoplayStarted = useRef(false);
+  // The desktop shell can launch as a test harness (VIPTV_TEST_AUTOPLAY) or
+  // with an engine override (VIPTV_ENGINE). Both are per-launch facts read
+  // once from the shell; the override never rewrites the persisted choice.
+  useEffect(() => {
+    if (!desktopInvoker) return;
+    let cancelled = false;
+    void probeEngineOverride(desktopInvoker).then((override) => {
+      if (!cancelled && override) setEngineChoice(override);
+    });
+    void probeAutoplayTestMode(desktopInvoker).then((enabled) => {
+      if (!cancelled && enabled) {
+        autoplayTest.current = { enabled: true, log: createAutoplayTestLogger(desktopInvoker) };
+      }
+    });
+    return () => { cancelled = true; };
+  }, []);
   const [compactHome, setCompactHome] = useState(false),
     [bootingHome, setBootingHome] = useState(false),
     [recentLive, setRecentLive] = useState<readonly MediaItem[]>([]),
@@ -608,7 +642,7 @@ export function App({
   useEffect(() => {
     let engine: Player;
     try {
-      engine = createPlayer({ platform, video: video.current!, canvas: canvas.current! });
+      engine = createPlayer({ platform, video: video.current!, canvas: canvas.current!, engine: engineChoice });
       engineError.current = undefined;
     } catch (error) {
       engineError.current =
@@ -627,6 +661,8 @@ export function App({
     controller.current = sessions;
     const off = engine.subscribe((snapshot) => {
       setSnapshot(snapshot);
+
+      if (autoplayTest.current.enabled) autoplayTest.current.log?.(snapshot);
       // A committed seek stays displayed until the engine actually lands on
       // its target; releasing early teleports the thumb back mid-flight.
       if (
@@ -680,7 +716,7 @@ export function App({
         .then(() => engine.dispose())
         .catch(() => undefined);
     };
-  }, [platform, api]);
+  }, [platform, api, engineChoice]);
   useEffect(() => {
     if (screen === "profiles") setTimeout(() => focusElement("profile-0"), 30);
   }, [profilePage]);
@@ -1047,6 +1083,18 @@ export function App({
     active.current = undefined;
     setSession(undefined); setBusy(false);
   };
+
+  // Harness mode: once the home catalog is ready, autoplay the first
+  // playable title so the engine, state, position and error stream to
+  // stdout without anyone driving the UI.
+  useEffect(() => {
+    if (!autoplayTest.current.enabled || autoplayStarted.current) return;
+    if (!homeRows.length || session) return;
+    const item = homeRows.flatMap((row) => row.items).find((candidate) => candidate.type === "movie");
+    if (!item) return;
+    autoplayStarted.current = true;
+    void play(item);
+  }, [homeRows, session]);
   applyBrowserRoute.current = async (input, cached, reload = false) => {
     const applyGeneration = ++browserApplyGeneration.current;
     browserApplying.current = true;
@@ -2862,6 +2910,8 @@ export function App({
                 profile={profile}
                 prefs={prefs}
                 appearance={responsive ? { oled, toggle: toggleOled } : undefined}
+
+                playbackEngine={platform === "tauri" ? { choice: engineChoice, select: selectEngine } : undefined}
                 onPrefs={setPrefs}
                 onProfiles={() => {
                   setManaging(false);
@@ -3074,7 +3124,9 @@ export function App({
                         <input type="range" aria-label="Volume" min="0" max="1" step="0.01" value={snapshot.volume.muted ? 0 : snapshot.volume.level} onChange={(event) => { setOverlay(true); void player.current?.setVolume?.(Number(event.target.value)).catch(fail); }} />
                       </div> : <span className="system-volume">Use device volume buttons</span>}
                       <button type="button" aria-label="Playback info" title="Playback info" onClick={() => setModal({ title: "Playback info", body: [
-                        `Decoder: ${snapshot?.diagnostics?.engine ?? player.current?.capabilities.engine ?? "Unknown"}`,
+                        `Decoder: ${snapshot?.diagnostics
+                          ? `${snapshot.diagnostics.engine}${snapshot.diagnostics.backend ? ` (${snapshot.diagnostics.backend})` : ""}`
+                          : player.current?.capabilities.engine ?? "Unknown"}`,
                         `Transport: ${snapshot?.diagnostics?.networkTransport ?? "Unknown"}`,
                         `Container: ${snapshot?.diagnostics?.transport ?? session?.format ?? "Unknown"}`,
                         `Delivery: ${session?.videoMode === "transcode" || session?.audioMode === "transcode" ? "Transcode" : session?.mode || "Unknown"}`,

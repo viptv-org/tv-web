@@ -1,3 +1,37 @@
+# Selectable engines and the autoplay test harness — 2026-09-17
+
+The desktop app can now choose its playback engine and be tested without
+driving the UI. `createPlayer({ platform: "tauri", engine })` in
+`@viptv/video` requests `mpv` or `gstreamer` through the plugin's backend
+field; `auto` follows the engine preference order the plugin reports in its
+diagnostics (mpv first on Linux when its runtime is compiled — the Linux
+shell now compiles both). The choice persists per device
+(`viptv:playback:engine`) and is editable in Settings → Playback engine;
+`VIPTV_ENGINE=mpv|gstreamer|auto` overrides it for one launch without
+rewriting it. The engine actually serving the session is reported in
+diagnostics (`PlayerDiagnostics.backend`) and shown as `Decoder: tauri-native
+(mpv)` in the playback info sheet.
+
+The autoplay harness runs the real player end to end from stdout:
+
+    npm run test:autoplay          # VIPTV_TEST_AUTOPLAY=1 npm run tauri dev
+    VIPTV_ENGINE=mpv npm run test:autoplay
+
+Launch it against the local HTTPS backend (see the root README), sign in
+once, and watch the terminal: the app autoplays the first movie on Home and
+every player change prints one line
+
+    [test] engine=tauri-native (mpv) state=playing position=12.3s error=none
+
+State changes and errors print immediately, position beats at most every 2 s,
+and a failing source shows `error=…` — the same failure the session
+controller would act on. The shell owns the `[test]` prefix (`test_log`
+command in `src-tauri/src/lib.rs`), so the lines stay greppable no matter
+what the webview logs. Unit tests cover the env parsing (`src-tauri`), the
+engine preference storage, and the harness probes, line format and pacing
+(`tests/ui/engine-preference.test.ts`, `tests/testing/autoplay-harness.test.ts`).
+
+
 # Direct-URL desktop delivery — 2026-09-17
 
 The desktop host now plays the ORIGINAL absolute source URL natively and never accepts managed delivery. `PlaybackCapabilities.directUrls` (set by the Tauri profile) rides the same generic snake_case wire path as `directFiles` through the vendored core; the response normalizer accepts an absolute credential-free http(s) URL as that original source URL and maps the session's source `authorization` {cookie, user_agent} into the view, following the omitted-absent convention of the other view types. The session controller in @viptv/video does not escalate direct-URL clients up the delivery ladder — a delivery refusal, an unsupported-format open failure, or a late decoder failure surfaces instead of falling back to transcode — and the session's authorization flows into the open request, which the Tauri adapter already forwards as native_open cookies/userAgent.
