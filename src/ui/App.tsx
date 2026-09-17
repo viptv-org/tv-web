@@ -19,13 +19,12 @@ import {
 } from "../api";
 import {
   createPlayer,
-  TAURI_NATIVE_DELIVERY_CAPABILITIES,
+  deliveryCapabilitiesFor,
   PlaybackSessionController,
   type Player,
   type PlayerPlatform,
   type PlayerSnapshot,
 } from "@viptv/video";
-import { probeBrowserPlaybackCapabilities } from "@viptv/video";
 import { exactResumeSource } from "./continuation";
 import { RemoteRoot, TvButton, focusElement } from "./remote";
 import "./tv.css";
@@ -619,18 +618,10 @@ export function App({
       return;
     }
     player.current = engine;
-    let browserReport: ReturnType<typeof probeBrowserPlaybackCapabilities> | undefined;
-    const capabilities = async (): Promise<PlaybackCapabilities> => {
-      // AVPlay is a native engine; HTML decoder probes cannot qualify it.
-      if (platform === "tizen") return { maxWidth: 1920, maxHeight: 1080, h264: true, hevc: true, aac: true, directPlay: true, hevcSdr: true };
-      // The desktop native engine is qualified by its own runtime: browser
-      // decoder probes say nothing about GStreamer and must not gate delivery.
-      if (platform === "tauri") return TAURI_NATIVE_DELIVERY_CAPABILITIES;
-      browserReport ??= probeBrowserPlaybackCapabilities(undefined, { mediabunny: platform === "html5" });
-      const report = await browserReport;
-      if (!report.canPlayManagedHls) throw new Error("This browser cannot play the supported H.264/AAC streaming output. Use a supported browser or TV player.");
-      return report.capabilities;
-    };
+    // Per-platform delivery profiles are declared once in @viptv/video
+    // (platform-profiles.ts): TV engines and the desktop host resolve their
+    // profile without a browser decoder probe; only the web entry measures.
+    const capabilities = deliveryCapabilitiesFor(platform);
     playbackCapabilities.current = capabilities;
     const sessions = new PlaybackSessionController<MediaItem, MediaSource>({ player: engine, backend: api, capabilities });
     controller.current = sessions;
