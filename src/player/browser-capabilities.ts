@@ -49,18 +49,32 @@ export async function probeBrowserPlaybackCapabilities(environment?: BrowserProb
     const configuration: MediaDecodingConfiguration = name === 'aac'
       ? { type: path, audio: { contentType: mime, channels: '2', bitrate: 192000, samplerate: 48000 } }
       : { type: path, video: { contentType: mime, width: 1920, height: 1080, bitrate: 8000000, framerate: 30 } };
-    let timer: ReturnType<typeof setTimeout> | undefined;
+    // One bounded probe per configuration; null means the timeout won the race.
+    const probe = async (candidate: MediaDecodingConfiguration): Promise<MediaCapabilitiesDecodingInfo | null> => {
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      try {
+        return await Promise.race([
+          Promise.resolve().then(() => env.decodingInfo!(candidate)),
+          new Promise<null>((resolve) => { timer = setTimeout(() => resolve(null), env.timeoutMs ?? 1000); }),
+        ]);
+      } finally { clearTimeout(timer); }
+    };
     try {
-      const result = await Promise.race([
-        Promise.resolve().then(() => env.decodingInfo!(configuration)),
-        new Promise<null>((resolve) => { timer = setTimeout(() => resolve(null), env.timeoutMs ?? 1000); }),
-      ]);
+      const result = await probe(configuration);
+      if (result !== null && !result.supported && name !== 'aac') {
+        // decodingInfo refuses the 1080p probe sample on hardware that still
+        // decodes smaller frames, so video codecs re-probe at 720p before
+        // reporting the browser incompatible; audio has no geometry to drop.
+        const fallback = await probe({ type: path, video: { contentType: mime, width: 1280, height: 720, bitrate: 4000000, framerate: 30 } });
+        evidence.push(`${path}:${name}:decodingInfo-unsupported-1080p; ${fallback === null ? 'decodingInfo-timeout-720p; mime-supported' : `${fallback.supported ? 'supported' : 'unsupported'}-720p`}`);
+        return fallback === null ? hint : fallback.supported;
+      }
       evidence.push(`${path}:${name}:${result === null ? 'decodingInfo-timeout; mime-supported' : `decodingInfo-${result.supported ? 'supported' : 'unsupported'}; smooth=${result.smooth}; powerEfficient=${result.powerEfficient}`}`);
       return result === null ? hint : result.supported;
     } catch {
       evidence.push(`${path}:${name}:decodingInfo-unavailable; mime-supported`);
       return hint;
-    } finally { clearTimeout(timer); }
+    }
   }
   const [nativeH264, nativeHevc, nativeAac, mseH264, mseHevc, mseAac] = await Promise.all([
     codec('h264', 'file'), codec('hevc', 'file'), codec('aac', 'file'),

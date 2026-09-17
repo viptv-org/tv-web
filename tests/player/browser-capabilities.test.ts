@@ -43,6 +43,32 @@ describe('browser decoder and protocol evidence', () => {
     expect(result.canPlayManagedHls).toBe(false);
     expect(result.capabilities.directMp4).toBe(false);
   });
+  it('re-probes a refused 1080p video sample at 720p before calling the browser incompatible', async () => {
+    const decodingInfo = vi.fn(async (configuration: MediaDecodingConfiguration) =>
+      configuration.video && configuration.video.height > 720 ? { ...supported, supported: false } : supported);
+    const result = await probeBrowserPlaybackCapabilities(browser({ decodingInfo }));
+    expect(result.capabilities).toMatchObject({ h264: true, hevc: true, aac: true });
+    expect(result.canPlayManagedHls).toBe(true);
+    expect(decodingInfo).toHaveBeenCalledWith(expect.objectContaining({
+      video: expect.objectContaining({ width: 1280, height: 720, bitrate: 4000000, framerate: 30 }),
+    }));
+    expect(result.evidence).toContain('file:h264:decodingInfo-unsupported-1080p; supported-720p');
+  });
+  it('applies the 720p re-probe on the media-source path as well', async () => {
+    const decodingInfo = vi.fn(async (configuration: MediaDecodingConfiguration) =>
+      configuration.video && configuration.video.height > 720 ? { ...supported, supported: false } : supported);
+    const result = await probeBrowserPlaybackCapabilities(
+      browser({ media: { canPlayType: () => '' }, mseSupported: true, mseTypeSupported: () => true, decodingInfo }));
+    expect(result.capabilities.h264).toBe(true);
+    expect(result.evidence).toContain('media-source:h264:decodingInfo-unsupported-1080p; supported-720p');
+  });
+  it('treats a codec as supported when the 720p re-probe times out', async () => {
+    const decodingInfo = vi.fn(async (configuration: MediaDecodingConfiguration) =>
+      configuration.video && configuration.video.height > 720 ? { ...supported, supported: false } : new Promise<MediaCapabilitiesDecodingInfo>(() => {}));
+    const result = await probeBrowserPlaybackCapabilities(browser({ decodingInfo, timeoutMs: 5 }));
+    expect(result.capabilities.h264).toBe(true);
+    expect(result.evidence).toContain('file:h264:decodingInfo-unsupported-1080p; decodingInfo-timeout-720p; mime-supported');
+  });
   it('bounds unavailable MediaCapabilities calls and records the MIME-only evidence', async () => {
     const result = await probeBrowserPlaybackCapabilities(browser({ decodingInfo: () => new Promise(() => {}), timeoutMs: 5 }));
     expect(result.canPlayManagedHls).toBe(true);

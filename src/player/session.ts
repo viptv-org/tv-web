@@ -190,9 +190,10 @@ export class PlaybackSessionController {
       const capabilities = await this.resolveCapabilities();
       if (operation !== this.operationGeneration) return this.cancelledResult();
       let request = playbackRequest(intent, capabilities, intent.position ?? 0);
-      // Preparation refusals escalate the same selected source through the
-      // shared delivery ladder before giving up, so one transport or inspection
-      // refusal cannot strand a source the server can still deliver.
+      // Delivery refusals (406) and network failures escalate the same selected
+      // source through the shared delivery ladder before giving up, so one
+      // transport or inspection refusal cannot strand a source the server can
+      // still deliver.
       for (let attempt = 0; ; attempt += 1) {
         try {
           return await this.transition(intent, request, this.current, () => operation === this.operationGeneration);
@@ -517,14 +518,14 @@ function asError(cause: unknown): Error {
 }
 
 /**
- * A preparation refusal is answered with the next delivery rung for the same
+ * A delivery refusal is answered with the next delivery rung for the same
  * source: original delivery, then managed output, then a forced transcode.
- * Authorization, expiry, cancellation, capacity and position errors keep their
- * own meaning and are never retried as a delivery problem.
+ * Only a network failure (0) or the server's delivery refusal (406) escalates;
+ * validation (400) and every other answer keeps its own meaning.
  */
 function escalatePreparation(request: PlaybackStart, error: unknown): PlaybackStart | undefined {
   if (!(error instanceof TvApiError)) return undefined;
-  const retryable = error.status === 0 || (error.status >= 400 && error.status < 500 && ![401, 403, 404, 409, 429].includes(error.status));
+  const retryable = error.status === 0 || error.status === 406;
   if (!retryable) return undefined;
   if (!request.managedOnly) return { ...request, managedOnly: true };
   if (!request.forceTranscode) return { ...request, managedOnly: true, forceTranscode: true };

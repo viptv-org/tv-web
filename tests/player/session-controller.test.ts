@@ -37,12 +37,12 @@ function session(id: string, url: string, mode = 'managed', position = 0): Playb
 }
 
 describe('PlaybackSessionController', () => {
-  it('escalates a refused preparation through managed output and a forced transcode', async () => {
+  it('escalates a delivery refusal through managed output and a forced transcode', async () => {
     const player = new FakePlayer();
     const backend = {
       startPlayback: vi.fn()
-        .mockRejectedValueOnce(new TvApiError(400, 'VIPTV could not complete that request'))
-        .mockRejectedValueOnce(new TvApiError(400, 'VIPTV could not complete that request'))
+        .mockRejectedValueOnce(new TvApiError(406, 'Playback could not start; try forced transcoding or another stream'))
+        .mockRejectedValueOnce(new TvApiError(406, 'Playback could not start; try forced transcoding or another stream'))
         .mockResolvedValueOnce(session('transcoded', '/index.m3u8', 'managed')),
       stopPlayback: vi.fn().mockResolvedValue(undefined),
     };
@@ -53,8 +53,33 @@ describe('PlaybackSessionController', () => {
     expect(backend.startPlayback).toHaveBeenNthCalledWith(3, expect.objectContaining({ managedOnly: true, forceTranscode: true }));
     expect(active.session.id).toBe('transcoded');
   });
-  it('never retries an authorization or cancellation refusal as a delivery problem', async () => {
-    for (const status of [401, 403, 404, 409, 429]) {
+  it('escalates a network failure to managed delivery', async () => {
+    const player = new FakePlayer();
+    const backend = {
+      startPlayback: vi.fn()
+        .mockRejectedValueOnce(new TvApiError(0, 'Network request failed'))
+        .mockResolvedValueOnce(session('managed', '/index.m3u8', 'managed')),
+      stopPlayback: vi.fn().mockResolvedValue(undefined),
+    };
+    const controller = new PlaybackSessionController({ player, backend, capabilities });
+    const active = await controller.start({ item, source });
+    expect(backend.startPlayback).toHaveBeenCalledTimes(2);
+    expect(backend.startPlayback).toHaveBeenNthCalledWith(2, expect.objectContaining({ managedOnly: true }));
+    expect(active.session.id).toBe('managed');
+  });
+  it('stops escalating after two delivery refusals and surfaces the server answer', async () => {
+    const player = new FakePlayer();
+    const backend = {
+      startPlayback: vi.fn().mockRejectedValue(new TvApiError(406, 'Playback could not start; try forced transcoding or another stream')),
+      stopPlayback: vi.fn().mockResolvedValue(undefined),
+    };
+    const controller = new PlaybackSessionController({ player, backend, capabilities });
+    await expect(controller.start({ item, source })).rejects.toMatchObject({ status: 406 });
+    expect(backend.startPlayback).toHaveBeenCalledTimes(3);
+    expect(backend.startPlayback).toHaveBeenNthCalledWith(3, expect.objectContaining({ managedOnly: true, forceTranscode: true }));
+  });
+  it('never retries a validation, authorization, or capacity refusal as a delivery problem', async () => {
+    for (const status of [400, 401, 403, 404, 409, 429]) {
       const player = new FakePlayer();
       const backend = {
         startPlayback: vi.fn().mockRejectedValue(new TvApiError(status, 'refused')),
