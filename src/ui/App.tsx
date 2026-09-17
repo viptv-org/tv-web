@@ -53,6 +53,7 @@ import {
 } from "./catalogFilters";
 import { Guide as LiveGuide } from "./Guide";
 import { CastController } from "./CastController";
+import { SeekBar, formatPlaybackTime, type BufferedRange } from "./SeekBar";
 import { DialogBackdrop } from "./DialogBackdrop";
 import { BrowserNavigation, readBrowserRoute, safeRestoredRoute, type BrowserRoute } from "./browserNavigation";
 type Screen =
@@ -88,8 +89,6 @@ const initialPrefs: PlaybackPreferences = {
   quality: "auto",
   autoplay: true,
 };
-const time = (n: number) =>
-  `${Math.floor(n / 60)}:${String(Math.floor(n % 60)).padStart(2, "0")}`;
 function presentationContext(item: MediaItem) {
   const context =
     item.season !== undefined
@@ -103,7 +102,7 @@ function presentationContext(item: MediaItem) {
         : item.queueStatus === "upcoming"
           ? "Next episode coming soon"
           : item.position
-            ? `Resume at ${time(item.position)}`
+            ? `Resume at ${formatPlaybackTime(item.position)}`
             : "";
   return [context, status].filter(Boolean).join(" · ");
 }
@@ -1575,6 +1574,38 @@ export function App({
       fail(e);
     }
   };
+
+  const togglePlayback = () =>
+    void (snapshot?.state === "paused"
+      ? player.current?.play()
+      : player.current?.pause());
+  // The only real buffer source is the HTML media element. MediaBunny decodes
+  // into the canvas with no buffer signal, so its sessions draw no buffer
+  // layer rather than a fabricated one.
+  const readBufferedRanges = () => {
+    const engine = snapshot?.diagnostics?.engine;
+    if (engine !== "native-html" && engine !== "hls.js") return null;
+    const media = video.current;
+    const duration = snapshot?.time.durationSeconds ?? 0;
+    if (!media || duration <= 0) return null;
+    // Managed deliveries start their element clock at a timeline offset; the
+    // live snapshot position minus that clock recovers it.
+    const offset = Math.max(0, (snapshot?.time.positionSeconds ?? 0) - media.currentTime);
+    const ranges: BufferedRange[] = [];
+    for (let i = 0; i < media.buffered.length; i++) {
+      const start = Math.max(0, media.buffered.start(i) + offset);
+      const end = Math.min(duration, media.buffered.end(i) + offset);
+      if (end > start) ranges.push({ start, end });
+    }
+    return ranges;
+  };
+  // The video surface and the backdrop around the controls toggle playback;
+  // the seek bar and buttons keep their own clicks.
+  const surfaceClick = () => {
+    if (screen !== "player") return;
+    setOverlay(true);
+    togglePlayback();
+  };
   const mediaKey = (key: string) => {
     if (screen !== "player" || modal || entry || editingProfile) return false;
     setOverlay(true);
@@ -1920,8 +1951,8 @@ export function App({
         onPointerDownCapture={(event) => { if (responsive && screen === "player" && (event.target as HTMLElement).closest("button, input")) { setOverlay(true); setControlActivity(value => value + 1); } }}
         className={`tv-screen ${responsive ? "responsive-app" : ""} ${oled ? "oled" : ""} screen-${screen.replace(/ /g, "-").toLowerCase()} ${screen === "player" ? "playing" : ""}`}
       >
-        <video ref={video} className="video" playsInline onClick={() => responsive && setOverlay((value) => !value)} />
-        <canvas ref={canvas} className="video player-canvas" style={{ display: "none" }} onClick={() => responsive && setOverlay((value) => !value)} />
+        <video ref={video} className="video" playsInline onClick={surfaceClick} />
+        <canvas ref={canvas} className="video player-canvas" style={{ display: "none" }} onClick={surfaceClick} />
         {responsive && !["startup", "pairing", "player"].includes(screen) && <header className="responsive-toolbar">
           {brand}
           {screen !== "profiles" && navigation}
@@ -2478,7 +2509,7 @@ export function App({
                       {selected.type === "series" && !selected.episode
                         ? `Season ${season ?? 1}`
                         : selected.position
-                          ? `Resume at ${time(selected.position)}`
+                          ? `Resume at ${formatPlaybackTime(selected.position)}`
                           : "Choose source"}
                     </TvButton>
                     {!!selected.position &&
@@ -2808,6 +2839,13 @@ export function App({
             {screen === "player" && overlay && (
               <div
                 className={`player-overlay ${selected?.type === "live" ? "live-overlay" : ""}`}
+                onClick={(event) => {
+                  // The backdrop around the controls is the play/pause surface,
+                  // matching the video; interactive elements keep their clicks.
+                  if ((event.target as HTMLElement).closest("button, input, .seekbar"))
+                    return;
+                  togglePlayback();
+                }}
               >
                 <div
                   className={`player-identity ${selected?.type === "live" ? "channel-identity" : ""}`}
@@ -2845,38 +2883,36 @@ export function App({
                 <div className="playback-bottom">
                   {selected?.type !== "live" && (
                     <>
+                      <SeekBar
+                        id="timeline"
+                        position={snapshot?.time.positionSeconds ?? 0}
+                        duration={snapshot?.time.durationSeconds ?? 0}
+                        preview={seek}
+                        onPreview={setSeek}
+                        onSeek={(seconds) => void commitSeek(seconds)}
+                        onActivate={togglePlayback}
+                        onActivity={() => {
+                          if (Date.now() - lastControlActivity.current < 1000) return;
+                          lastControlActivity.current = Date.now();
+                          setControlActivity((value) => value + 1);
+                        }}
+                        getBufferedRanges={readBufferedRanges}
+                        // The app's remote key layer owns arrows/OK while this
+                        // bar is focused; only the pointer acts directly here.
+                        remoteKeys={!responsive}
+                      />
                       <p className="player-time">
                         <span>
-                          {time(seek ?? snapshot?.time.positionSeconds ?? 0)}
+                          {formatPlaybackTime(
+                            seek ?? snapshot?.time.positionSeconds ?? 0,
+                          )}
                         </span>
-                        <span>{time(snapshot?.time.durationSeconds ?? 0)}</span>
+                        <span>
+                          {formatPlaybackTime(
+                            snapshot?.time.durationSeconds ?? 0,
+                          )}
+                        </span>
                       </p>
-                      <TvButton
-                        id="timeline"
-                        className="timeline"
-                        onClick={(event) => {
-                          // A pointer press on the track seeks. It must not also
-                          // reach onActivate, which toggles pause.
-                          event.stopPropagation();
-                          const duration = snapshot?.time.durationSeconds ?? 0;
-                          if (duration <= 0) return;
-                          const rect = event.currentTarget.getBoundingClientRect();
-                          if (rect.width <= 0) return;
-                          const target = ((event.clientX - rect.left) / rect.width) * duration;
-                          void commitSeek(Math.max(0, Math.min(duration, target)));
-                        }}
-                        onActivate={() =>
-                          void (snapshot?.state === "paused"
-                            ? player.current?.play()
-                            : player.current?.pause())
-                        }
-                      >
-                        <progress
-                          aria-label="Playback position"
-                          value={seek ?? snapshot?.time.positionSeconds ?? 0}
-                          max={snapshot?.time.durationSeconds ?? 1}
-                        />
-                      </TvButton>
                     </>
                   )}
                   <div className="controls">

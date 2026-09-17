@@ -10,7 +10,7 @@ import {
 
 type Action = () => void;
 type Registration = { activate: Action; hold?: Action };
-const Registry = createContext<Map<string, Registration> | null>(null);
+export const Registry = createContext<Map<string, Registration> | null>(null);
 export function focusElement(id: string, options?: FocusOptions) {
   const element = Array.from(document.querySelectorAll<HTMLElement>("[data-focus-id]"))
     .find((element) => element.dataset.focusId === id);

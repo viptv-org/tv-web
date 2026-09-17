@@ -166,8 +166,10 @@ body:has(.responsive-app) { background: #101112; }
 .responsive-app .player-overlay > h1 { margin-top: 8px; font-size: 32px; }
 .responsive-app .player-context { font-size: 18px; margin-top: 6px; }
 .responsive-app .playback-bottom { position: static; display: flex; flex-direction: column; }
-.responsive-app .timeline { position: relative; inset: auto; order: 0; width: 100%; margin-top: 12px; }
-.responsive-app .timeline progress { width: 100%; }
+.responsive-app .seekbar { position: relative; inset: auto; order: 0; width: 100%; height: 40px; margin-top: 12px; cursor: pointer; }
+.responsive-app .seekbar-track { border-radius: 2px; }
+.responsive-app .seekbar-thumb { width: 12px; height: 12px; }
+.responsive-app .seekbar-tooltip { bottom: 30px; padding: 1px 7px; font-size: 13px; line-height: 20px; }
 .responsive-app .player-time { position: static; order: 1; width: 100%; font-size: 16px; }
 .responsive-app .controls { position: static; order: 2; display: flex; flex-wrap: wrap; gap: 8px; width: 100%; height: auto; margin-top: 8px; }
 .responsive-app .controls button { position: static; width: 56px; height: 56px; min-height: 56px; padding: 14px; }
@@ -407,7 +409,7 @@ body:has(.responsive-app) { background: #101112; }
    DOM focus remains available for text editing and assistive technology. */
 
   .responsive-app button { --responsive-control-surface: #202224; }
-  .responsive-app :is(.media-card, .episode, .card-more, .timeline),
+  .responsive-app :is(.media-card, .episode, .card-more),
   .responsive-app .profile-row > button,
   .responsive-app .roku-profile-editor :is([data-focus-id="profile-avatar"], .avatar-grid button) {
     --responsive-control-surface: transparent;
@@ -429,7 +431,7 @@ body:has(.responsive-app) { background: #101112; }
   }
   .responsive-app .source:focus :is(p, small),
   .responsive-app .roku-guide .programs button:focus small { color: #c5c6c7; }
-  .responsive-app .timeline:focus::after { content: none; }
+  .responsive-app .seekbar:focus { outline: none; }
 
 .responsive-app .dialog-backdrop > :is(.roku-profile-editor, .roku-text-entry) {
   position: relative;
