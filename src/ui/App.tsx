@@ -144,6 +144,7 @@ export function App({
     storeEngine(engine);
   };
   const autoplayTest = useRef<{ enabled: boolean; log?: (snapshot: PlayerSnapshot) => void }>({ enabled: false });
+  const [autoplayEnabled, setAutoplayEnabled] = useState(false);
   const autoplayStarted = useRef(false);
   // The desktop shell can launch as a test harness (VIPTV_TEST_AUTOPLAY) or
   // with an engine override (VIPTV_ENGINE). Both are per-launch facts read
@@ -155,8 +156,12 @@ export function App({
       if (!cancelled && override) setEngineChoice(override);
     });
     void probeAutoplayTestMode(desktopInvoker).then((enabled) => {
-      if (!cancelled && enabled) {
-        autoplayTest.current = { enabled: true, log: createAutoplayTestLogger(desktopInvoker) };
+      if (!cancelled) {
+        setAutoplayEnabled(enabled);
+        void desktopInvoker.invoke("test_log", { message: `autoplay mode=${enabled ? "on" : "off"}` }).catch(() => undefined);
+        if (enabled) {
+          autoplayTest.current = { enabled: true, log: createAutoplayTestLogger(desktopInvoker) };
+        }
       }
     });
     return () => { cancelled = true; };
@@ -979,6 +984,9 @@ export function App({
   };
   const play = async (item: MediaItem, source?: MediaSource, position = 0) => {
     if (!controller.current) {
+      void desktopInvoker?.invoke("test_log", {
+        message: `autoplay gate: no controller; engineError=${engineError.current?.message ?? "none"}`,
+      }).catch(() => undefined);
       fail(
         engineError.current ?? new Error("TV playback engine is unavailable"),
       );
@@ -1042,6 +1050,9 @@ export function App({
         (e instanceof DOMException && e.name === "AbortError")
       )
         return;
+      void desktopInvoker?.invoke("test_log", {
+        message: `autoplay play-failed: ${e instanceof Error ? e.message : String(e)}`,
+      }).catch(() => undefined);
       setModal({
         title: "This source could not be played",
         message:
@@ -1088,13 +1099,46 @@ export function App({
   // playable title so the engine, state, position and error stream to
   // stdout without anyone driving the UI.
   useEffect(() => {
-    if (!autoplayTest.current.enabled || autoplayStarted.current) return;
+    if (!autoplayEnabled || !autoplayTest.current.enabled || autoplayStarted.current) return;
     if (!homeRows.length || session) return;
     const item = homeRows.flatMap((row) => row.items).find((candidate) => candidate.type === "movie");
     if (!item) return;
     autoplayStarted.current = true;
-    void play(item);
-  }, [homeRows, session]);
+    void desktopInvoker?.invoke("test_log", { message: `autoplay trigger item=${item.id}` }).catch(() => undefined);
+    // VOD playback requires an explicit source, so the harness discovers
+    // sources exactly like the sources screen (job + poll) and starts the
+    // first one that arrives; failures surface through the [test] lines.
+    void (async () => {
+      try {
+        const discovery = await api.sources(item);
+        let after = 0;
+        const all: MediaSource[] = [];
+        for (let count = 0; count < 120; count++) {
+          const poll = await api.pollSources(discovery.id, after);
+          for (const event of poll.events) {
+            after = Math.max(after, event.sequence);
+            for (const source of event.sources)
+              if (!all.some((existing) => existing.id === source.id)) all.push(source);
+          }
+          const source = all[0];
+          if (source) {
+            void desktopInvoker?.invoke("test_log", { message: `autoplay source=${source.id}` }).catch(() => undefined);
+            await play(item, source, 0);
+            return;
+          }
+          if (poll.done) {
+            void desktopInvoker?.invoke("test_log", { message: "autoplay no-sources" }).catch(() => undefined);
+            return;
+          }
+          await new Promise((resolve) => setTimeout(resolve, 1500));
+        }
+      } catch (e) {
+        void desktopInvoker?.invoke("test_log", {
+          message: `autoplay discover-failed: ${e instanceof Error ? e.message : String(e)}`,
+        }).catch(() => undefined);
+      }
+    })();
+  }, [homeRows, session, autoplayEnabled]);
   applyBrowserRoute.current = async (input, cached, reload = false) => {
     const applyGeneration = ++browserApplyGeneration.current;
     browserApplying.current = true;
