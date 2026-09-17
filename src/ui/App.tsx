@@ -21,12 +21,12 @@ import {
   createPlayer,
   TAURI_NATIVE_DELIVERY_CAPABILITIES,
   PlaybackSessionController,
-  exactResumeSource,
   type Player,
   type PlayerPlatform,
   type PlayerSnapshot,
-} from "../player";
-import { probeBrowserPlaybackCapabilities } from "../player/browser-capabilities";
+} from "@viptv/video";
+import { probeBrowserPlaybackCapabilities } from "@viptv/video";
+import { exactResumeSource } from "./continuation";
 import { RemoteRoot, TvButton, focusElement } from "./remote";
 import "./tv.css";
 import "./responsive.css";
@@ -632,7 +632,7 @@ export function App({
       return report.capabilities;
     };
     playbackCapabilities.current = capabilities;
-    const sessions = new PlaybackSessionController({ player: engine, backend: api, capabilities });
+    const sessions = new PlaybackSessionController<MediaItem, MediaSource>({ player: engine, backend: api, capabilities });
     controller.current = sessions;
     const off = engine.subscribe((snapshot) => {
       setSnapshot(snapshot);

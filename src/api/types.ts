@@ -78,49 +78,13 @@ export interface StreamPoll {
   readonly done: boolean;
 }
 
-/** A WebCodecs demuxer path: the original container is served instead of HLS. */
-export interface DirectFileCapabilities {
-  readonly directFiles?: boolean;
-  readonly directVideoCodecs?: readonly string[];
-  readonly directAudioCodecs?: readonly string[];
-}
-
-export interface PlaybackCapabilities extends DirectFileCapabilities {
-  readonly maxWidth: number;
-  readonly maxHeight: number;
-  readonly h264: boolean;
-  readonly hevc: boolean;
-  readonly aac: boolean;
-  readonly directPlay: boolean;
-  readonly directMp4?: boolean;
-  readonly directHls?: boolean;
-  readonly hevcSdr: boolean;
-}
-export interface MediaTrack {
-  readonly inputIndex: number;
-  readonly codec?: string;
-  readonly language?: string;
-  readonly languageStatus: string;
-  readonly title: string;
-  readonly selected: boolean;
-  readonly supported: boolean;
-  readonly selectable: boolean;
-}
+export type {
+  DirectFileCapabilities,
+  PlaybackCapabilities,
+  PlaybackStart,
+} from "@viptv/video";
 /** The URL is a short-lived server capability, never an upstream media URL. Do not persist it. */
 export type PlaybackSession = CoreView<Core.PlaybackSession>;
-export interface PlaybackStart {
-  readonly streamId?: string;
-  readonly channelId?: string;
-  readonly position?: number;
-  readonly capabilities: PlaybackCapabilities;
-  readonly forceTranscode?: boolean;
-  readonly managedOnly?: boolean;
-  readonly audioTrackIndex?: number;
-  readonly audioLanguage?: string;
-  readonly subtitleTrackIndex?: number;
-  readonly subtitlesOff?: boolean;
-  readonly startupId?: string;
-}
 
 export interface PlaybackPreferences {
   readonly audioLanguage: string;

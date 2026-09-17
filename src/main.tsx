@@ -2,7 +2,7 @@ import { initializeCore } from "./core";
 import { createRoot } from "react-dom/client";
 import { TvApi, type DeviceTokenSet } from "./api";
 import { App } from "./ui/App";
-import type { PlayerPlatform } from "./player";
+import type { PlayerPlatform } from "@viptv/video";
 const params = new URLSearchParams(location.search);
 const native = "__TAURI_INTERNALS__" in window;
 // The desktop shell runs the shared responsive UI on the native engine; an

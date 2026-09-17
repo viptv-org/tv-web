@@ -237,3 +237,10 @@ A real defect surfaced while removing the dead imports: MediaBunny still publish
 
 Evidence: 122 unit tests and 115 browser cases passed with 59 intentional platform skips; production build, strict TypeScript and design/core integrity passed. No test was deleted or weakened. `design-contract/`, `vendor/core/`, packaged assets and `dist/` were not touched.
 
+
+
+## Playback consolidation — 2026-09-17 (ADR 0003)
+
+The whole player stack moved to the sibling `viptv-org/video` repository (design ADR 0003) and is consumed as `@viptv/video` via `file:../video` (package 0.4.0, commit `5fb3940`). `src/player/` and its 8 test files (77 tests) moved with the code; tv-web keeps the UI, API and e2e suites. `exactResumeSource` — the core-owned resume rule — now lives in `src/ui/continuation.ts` with its assertions in `tests/ui/continuation.test.ts`; the playback contract types (`DirectFileCapabilities`, `PlaybackCapabilities`, `PlaybackStart`) re-export from the package in `src/api/types.ts`. The e2e decoder specs import the real adapter from the package's dev-server module URL (`/@fs/mnt/ALPH/code/viptv-org/video/dist-js/index.js`), verified served and transformed by the dev server.
+
+Verification: grouped strict typecheck passed (application, tests/api, tests/e2e, tests/fixtures, tests/ui); 14 test files / 86 tests passed on one worker with a 256MB heap; production build passed (`vite build`, 2.05s) with the 384MB heap. The e2e decoder spec itself was not executed this round (no browser run against the running stack); its module URL was verified transformed, and the suite's browser qualification evidence is otherwise unchanged.

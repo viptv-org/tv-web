@@ -6,7 +6,7 @@ import type {
   PlaybackPreferences,
   TvApi,
 } from "../api";
-import type { SessionStartIntent } from "../player";
+import type { SessionStartIntent } from "@viptv/video";
 
 /**
  * The continuation selector is deliberately separate from exact resume.
@@ -25,7 +25,7 @@ export async function resolveNext(
   signal?: AbortSignal,
   capabilities: PlaybackCapabilities = DEFAULT_CONTINUATION_CAPABILITIES,
   excludedSourceIds: ReadonlySet<string> = new Set(),
-): Promise<SessionStartIntent | null> {
+): Promise<SessionStartIntent<MediaItem, MediaSource> | null> {
   const next = await api.nextEpisode(profileId, current, { signal });
   if (next.status !== "next" || !next.item) return null;
 
@@ -62,6 +62,11 @@ export function bestContinuationSource(
   capabilities: PlaybackCapabilities = DEFAULT_CONTINUATION_CAPABILITIES,
 ): MediaSource | undefined {
   return normalizeCore<MediaSource | null>("continuationSource", { sources, current, preferences, capabilities }) ?? undefined;
+}
+
+/** Resume must never select a similarly named source from another provider. */
+export function exactResumeSource(item: MediaItem, sources: readonly MediaSource[]): MediaSource | undefined {
+  return normalizeCore<MediaSource | null>("exactResumeSource", { item, sources }) ?? undefined;
 }
 
 export interface SourceMatch {

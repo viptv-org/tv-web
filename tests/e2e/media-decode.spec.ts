@@ -13,7 +13,7 @@ type DecodeResult =
       readonly sourceRemoved: boolean;
     };
 
-const VIZIO_ADAPTER_MODULE = '/src/player/vizio-html5.ts';
+const VIDEO_PACKAGE_MODULE = '/@fs/mnt/ALPH/code/viptv-org/video/dist-js/index.js';
 
 /**
  * This is deliberately a browser decoder test, rather than an HTMLMediaElement
@@ -130,7 +130,7 @@ test('Vizio HTML adapter drives a browser-decoded WebM through pause, seek, end,
       canvas.remove();
       stream.getTracks().forEach((track) => track.stop());
     }
-  }, VIZIO_ADAPTER_MODULE);
+  }, VIDEO_PACKAGE_MODULE);
 
   test.skip(!result.supported, 'Chromium cannot record the WebM fixture in this environment');
   if (!result.supported) return;
@@ -162,7 +162,7 @@ for (const deliveryPath of ['runtime-default', 'forced-mse'] as const) {
     await page.goto('/?platform=vizio');
     const result = await page.evaluate(async ({ adapterModulePath, deliveryPath }) => {
       const { VizioHtml5Adapter } = await import(/* @vite-ignore */ adapterModulePath);
-      const probePath = '/src/player/browser-capabilities.ts';
+      const probePath = adapterModulePath;
       const { probeBrowserPlaybackCapabilities } = await import(/* @vite-ignore */ probePath);
       const report = await probeBrowserPlaybackCapabilities();
       if (!report.canPlayManagedHls) throw new Error(`H.264/AAC HLS unavailable: ${report.evidence.join(', ')}`);
@@ -200,7 +200,7 @@ for (const deliveryPath of ['runtime-default', 'forced-mse'] as const) {
         await player.dispose();
         return { frames, sourceIsMse, expectedMse: deliveryPath === 'forced-mse' || report.protocols.selectedHls === 'mse', pauseDrift, seekPosition, state: player.snapshot.state, sourceRemoved: !video.hasAttribute('src') };
       } finally { await player.dispose(); video.remove(); }
-    }, { adapterModulePath: VIZIO_ADAPTER_MODULE, deliveryPath });
+    }, { adapterModulePath: VIDEO_PACKAGE_MODULE, deliveryPath });
     expect(result.frames).toBeGreaterThan(0);
     expect(result.sourceIsMse).toBe(result.expectedMse);
     expect(result.pauseDrift).toBeLessThan(0.05);
