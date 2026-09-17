@@ -158,6 +158,12 @@ export class MediabunnyAdapter extends SessionPlayer {
     await this.pause();
     this.position = Math.max(0, position - (this.request?.timelineOffsetSeconds ?? 0));
     if (this.duration != null) this.position = Math.min(this.position, this.duration);
+
+    // The decoded window belongs to the old position: reset it before any
+    // snapshot is published, or a backwards seek flashes the stale window all
+    // the way to the old position before the real one takes over.
+    this.decodedEnd = this.position;
+    this.audioQueue = [];
     const token = this.generation;
     const frame = await this.videoSink?.getCanvas(this.firstTimestamp + this.position);
     if (token !== this.generation) return;
@@ -170,8 +176,6 @@ export class MediabunnyAdapter extends SessionPlayer {
     this.update(this.snapshot.sessionId, { state: 'buffering' });
     this.videoIterator = this.videoSink?.canvases(this.firstTimestamp + this.position);
     this.audioIterator = this.audioSink?.buffers(this.firstTimestamp + this.position);
-    this.decodedEnd = this.position;
-    this.audioQueue = [];
     this.audioDecoding = true;
     const preseekSeconds = 2;
     const deadline = performance.now() + 2500;
@@ -188,7 +192,10 @@ export class MediabunnyAdapter extends SessionPlayer {
         break;
       }
       this.enqueueAudio(next.value);
-      await delay(25);
+      // The buffer layer grows visibly while the prebuffer fills instead of
+      // jumping once playback resumes.
+      this.update(this.snapshot.sessionId, { time: this.time() });
+      await delay(5);
     }
     if (token !== this.generation) return;
     await this.play();

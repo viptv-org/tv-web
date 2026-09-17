@@ -43,3 +43,15 @@ it('reports the server total for managed output instead of its produced window',
   expect(player.snapshot.time).toMatchObject({ durationSeconds: 5400 });
   await player.dispose();
 });
+it('never publishes the pre-seek decoded window when seeking backwards', async () => {
+  state.live = false;
+  const player = new MediabunnyAdapter(document.createElement('canvas'));
+  await player.open({ url: `${location.origin}/media/session/cap/source.mp4`, kind: 'vod', paused: true, startAtSeconds: 60 });
+  await player.seek(20);
+  // The decoded window resets to the seek target before the time is
+  // published, so a backwards seek must not flash the stale window that
+  // reaches back up to the old position.
+  expect(player.snapshot.time).toMatchObject({ positionSeconds: 20 });
+  expect(player.snapshot.time.bufferedEndSeconds).toBeUndefined();
+  await player.dispose();
+});
