@@ -65,12 +65,14 @@ function renderSeekBar({
   preview,
   buffer,
   remoteKeys,
+  seekable,
 }: {
   position?: number;
   duration?: number | null;
   preview?: number;
   buffer?(): readonly BufferedRange[] | null;
   remoteKeys?: boolean;
+  seekable?: boolean;
 } = {}) {
   const onPreview = vi.fn();
   const onSeek = vi.fn<(seconds: number, intent: SeekIntent) => void>();
@@ -86,6 +88,7 @@ function renderSeekBar({
       onActivate={onActivate}
       getBufferedRanges={buffer}
       remoteKeys={remoteKeys}
+      seekable={seekable}
     />,
   );
   const bar = screen.getByRole("slider", { name: "Playback position" }) as HTMLDivElement;
@@ -93,6 +96,17 @@ function renderSeekBar({
     ({ left: 0, top: 0, right: 400, bottom: 40, width: 400, height: 40, x: 0, y: 0 }) as unknown as DOMRect;
   return { view, bar, onPreview, onSeek, onActivate };
 }
+
+it("refuses interaction when the engine reports the media unseekable", () => {
+  const { bar, onPreview, onSeek } = renderSeekBar({ seekable: false });
+  fireEvent(bar, pointerEvent("pointerdown", 100));
+  fireEvent(bar, pointerEvent("pointermove", 200));
+  fireEvent(bar, pointerEvent("pointerup", 200));
+  expect(onPreview).not.toHaveBeenCalled();
+  expect(onSeek).not.toHaveBeenCalled();
+  expect(bar.getAttribute("aria-disabled")).toBe("true");
+  expect(bar.tabIndex).toBe(-1);
+});
 
 it("commits a still press as a click and a traveling press as a drag", () => {
   const { bar, onPreview, onSeek } = renderSeekBar();

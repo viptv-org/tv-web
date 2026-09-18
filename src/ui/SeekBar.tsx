@@ -86,6 +86,7 @@ export function SeekBar({
   onActivity,
   getBufferedRanges,
   remoteKeys = false,
+  seekable,
 }: {
   id: string;
   position: number;
@@ -101,6 +102,8 @@ export function SeekBar({
   getBufferedRanges?(): readonly BufferedRange[] | null;
   /** True when the app's remote key layer owns arrows/OK for the focused bar. */
   remoteKeys?: boolean;
+  /** False when the engine reports the media unseekable; omitted means unknown. */
+  seekable?: boolean;
 }) {
   const registry = useContext(Registry);
   const activate = useRef(onActivate);
@@ -148,7 +151,8 @@ export function SeekBar({
     return () => clearInterval(poll);
   }, []);
 
-  const seekable = duration !== null && Number.isFinite(duration) && duration > 0;
+  const canSeek =
+    duration !== null && Number.isFinite(duration) && duration > 0 && seekable !== false;
   const displayed =
     scrub !== undefined && Number.isFinite(scrub)
       ? scrub
@@ -171,7 +175,7 @@ export function SeekBar({
   };
 
   const onPointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
-    if (!seekable) return;
+    if (!canSeek) return;
     // Suppress text selection and the trailing compatibility click; the bar
     // commits on pointer release itself.
     event.preventDefault();
@@ -193,7 +197,7 @@ export function SeekBar({
   };
 
   const onPointerMove = (event: ReactPointerEvent<HTMLDivElement>) => {
-    if (!seekable) return;
+    if (!canSeek) return;
     const seconds = secondsAtClientX(event.clientX);
     if (drag.current) {
       drag.current.seconds = seconds;
@@ -234,7 +238,7 @@ export function SeekBar({
   const onKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
     // TV input routes arrows/OK through the app's remote key layer already;
     // handling them here too would seek twice per press.
-    if (remoteKeys || !seekable) return;
+    if (remoteKeys || !canSeek) return;
     const current = keyboardPending.current ?? pendingPreview.current ?? position;
     let target: number;
     if (event.key === "ArrowLeft") target = current - KEYBOARD_STEP_SECONDS;
@@ -275,8 +279,8 @@ export function SeekBar({
       aria-valuemax={Math.round(duration ?? 0)}
       aria-valuenow={Math.round(displayed)}
       aria-valuetext={formatPlaybackTime(displayed)}
-      aria-disabled={!seekable}
-      tabIndex={seekable ? 0 : -1}
+      aria-disabled={!canSeek}
+      tabIndex={canSeek ? 0 : -1}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}

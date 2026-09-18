@@ -3123,6 +3123,7 @@ export function App({
                         id="timeline"
                         position={snapshot?.time.positionSeconds ?? 0}
                         duration={snapshot?.time.durationSeconds ?? 0}
+                        seekable={snapshot?.time.seekable}
                         preview={seek}
                         onPreview={setSeek}
                         onSeek={(seconds) => void commitSeek(seconds)}
