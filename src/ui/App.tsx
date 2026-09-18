@@ -1768,6 +1768,16 @@ export function App({
       return () => clearTimeout(timer);
     }
   }, [screen, modal, sources, sourceQuality, sourceProvider]);
+  const [playerNotice, setPlayerNotice] = useState<{ message: string; key: number }>();
+  // A refused seek is transient: the engine keeps playing, so the notice
+  // dismisses itself instead of blocking playback or re-popping from the
+  // session state.
+  useEffect(() => {
+    if (!playerNotice) return;
+    const timer = setTimeout(() => setPlayerNotice(undefined), 4000);
+    return () => clearTimeout(timer);
+  }, [playerNotice]);
+
   const commitSeek = async (position: number) => {
     // The target stays displayed until the engine actually lands there;
     // clearing it up front teleports the thumb back to the pre-seek spot.
@@ -1786,7 +1796,10 @@ export function App({
     } catch (e) {
       setSeek(undefined);
       seekTarget.current = undefined;
-      fail(e);
+      setPlayerNotice({
+        message: e instanceof Error ? e.message : "The stream could not seek there.",
+        key: Date.now(),
+      });
     }
   };
 
@@ -3126,6 +3139,12 @@ export function App({
                 <h1>
                   <RokuText>{selected?.name ?? ""}</RokuText>
                 </h1>
+                {playerNotice && (
+                  <div className="player-notice" role="status">
+                    {playerNotice.message}
+                  </div>
+                )}
+
                 <div className="playback-bottom">
                   {selected?.type !== "live" && (
                     <>
