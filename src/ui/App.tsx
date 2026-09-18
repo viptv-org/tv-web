@@ -29,6 +29,14 @@ import {
   type PlayerSnapshot,
 } from "@viptv/video";
 import { exactResumeSource } from "./continuation";
+
+import {
+  connectionSummary,
+  describeApiError,
+  nextConnectionFailure,
+  type ConnectionIssue,
+  type ErrorDetail,
+} from "./errors";
 import { RemoteRoot, TvButton, focusElement } from "./remote";
 import "./tv.css";
 import "./responsive.css";
@@ -227,6 +235,9 @@ export function App({
       choices: Choice[];
       body?: string;
       message?: string;
+
+      /** Classified failure detail rendered as the dialog's details block. */
+      detail?: ErrorDetail;
       /** Choice label that receives focus when the dialog opens. */
       focus?: string;
     }>(),
@@ -378,12 +389,43 @@ export function App({
     }
   }, [error]);
   const notify = (message: string) => setToast(message);
+  // One coalesced connectivity surface: the first network failure opens it,
+  // later failures update it, and a successful probe clears it again.
+  const [connection, setConnection] = useState<ConnectionIssue>();
+  const connected = connection !== undefined;
+  useEffect(() => {
+    if (!connected || !api) return;
+    let cancelled = false;
+    let probing = false;
+    const probe = () => {
+      if (probing || cancelled) return;
+      probing = true;
+      void api
+        .probeBackend()
+        .then((reachable) => {
+          probing = false;
+          if (!cancelled && reachable) setConnection(undefined);
+        })
+        .catch(() => {
+          probing = false;
+        });
+    };
+    probe();
+    const timer = setInterval(probe, 10000);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
+  }, [connected, api]);
   const fail = (e: unknown) => {
     setBootingHome(false);
-    if (!(e instanceof DOMException && e.name === "AbortError"))
-      setError(
-        e instanceof Error ? e.message : "Unable to connect. Try again.",
-      );
+    if (e instanceof DOMException && e.name === "AbortError") return;
+    const detail = describeApiError(e);
+    if (detail.kind === "network") {
+      setConnection((previous) => nextConnectionFailure(previous, Date.now()));
+      return;
+    }
+    setError(detail.message);
   };
   const go = (next: Screen) => {
     homeRequestScope.current?.abort();
@@ -1053,10 +1095,24 @@ export function App({
       void desktopInvoker?.invoke("test_log", {
         message: `autoplay play-failed: ${e instanceof Error ? e.message : String(e)}`,
       }).catch(() => undefined);
+      const failure = describeApiError(e);
+      const engineSnapshot = player.current?.snapshot;
+      const failureLines = [...failure.lines];
+      if (engineSnapshot?.diagnostics)
+        failureLines.push(
+          `Engine: ${engineSnapshot.diagnostics.engine}${engineSnapshot.diagnostics.backend ? ` (${engineSnapshot.diagnostics.backend})` : ""}`,
+        );
+      if (engineSnapshot?.error)
+        failureLines.push(
+          `Engine error: ${engineSnapshot.error.code}: ${engineSnapshot.error.message}`,
+        );
       setModal({
         title: "This source could not be played",
         message:
-          e instanceof Error ? e.message : "Unable to connect. Try again.",
+          failure.kind === "network"
+            ? "The backend could not be reached, so the stream could not be opened."
+            : failure.message,
+        detail: { ...failure, lines: failureLines },
         choices: [
           {
             label: "Retry",
@@ -3221,6 +3277,20 @@ export function App({
             {screen === "player" ? "Preparing playback…" : "Loading…"}
           </div>
         )}
+        {connection && (
+          <div className="error connection" role="alert" data-focus-scope="error">
+            <div className="error-title">Can't reach the backend</div>
+            <div className="error-message">
+              The connection was refused, so the backend is down or unreachable. Retrying
+              every 10 seconds; this clears itself once the backend answers.
+            </div>
+            <div className="error-line">{connectionSummary(connection)}</div>
+            <TvButton id="dismiss-error" onActivate={() => setConnection(undefined)}>
+              Dismiss
+            </TvButton>
+          </div>
+        )}
+
         {error && (
           <div className="error" role="alert" data-focus-scope="error">
             {error}
@@ -3268,8 +3338,20 @@ export function App({
               aria-modal="true"
               aria-label={modal.title}
             >
-              <h2>{modal.title}</h2>
-              {modal.message && <p>{modal.message}</p>}
+              <h2 className={modal.detail ? `modal-title kind-${modal.detail.kind}` : undefined}>
+                {modal.title}
+              </h2>
+              {modal.message && <p className="modal-message">{modal.message}</p>}
+              {modal.detail && modal.detail.lines.length > 0 && (
+                <details className="modal-details">
+                  <summary>Details</summary>
+                  {modal.detail.lines.map((line) => (
+                    <div className="modal-detail-line" key={line}>
+                      {line}
+                    </div>
+                  ))}
+                </details>
+              )}
               {modal.body && (
                 <div
                   className="source-detail-body"

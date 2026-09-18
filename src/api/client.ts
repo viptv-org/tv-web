@@ -39,6 +39,8 @@ export class TvApiError extends Error implements TvApiErrorShape {
     readonly status: number,
     readonly message: string,
     readonly code?: string,
+    /** The method and path the request was making when it failed. */
+    readonly endpoint?: string,
   ) {
     super(message);
   }
@@ -809,6 +811,9 @@ export class TvApi {
     authenticated: boolean,
     options?: RequestOptions,
   ): Promise<JsonValue> {
+    // Failures are labeled with the request that produced them, so dialogs
+    // can say what was happening instead of just "something failed".
+    const endpoint = `${init.method ?? "GET"} ${path}`;
     const request = async (retry: boolean): Promise<JsonValue> => {
       const headers: Record<string, string> = { Accept: "application/json" };
       if (init.body) headers["Content-Type"] = "application/json";
@@ -826,7 +831,7 @@ export class TvApi {
         });
       } catch (error) {
         if (isAbort(error)) throw error;
-        throw new TvApiError(0, "Network request failed", "network");
+        throw new TvApiError(0, "Network request failed", "network", endpoint);
       }
       if (response.status === 401 && authenticated && retry) {
         // Another in-flight request may already have rotated this bearer.
@@ -841,11 +846,35 @@ export class TvApi {
           response.status,
           clientMessage(response.status),
           optionalString(error, "error_code"),
+          endpoint,
         );
       }
       return payload;
     };
     return request(true);
+  }
+
+  /**
+   * Backend reachability for the connectivity surface. A 5xx from the
+   * gateway means the backend behind it is still down, so only an answer
+   * below 500 counts as recovered.
+   */
+  async probeBackend(timeoutMs = 4000): Promise<boolean> {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const response = await this.requestFetch(`${this.origin}/api/health`, {
+        method: "GET",
+        headers: { Accept: "application/json" },
+        cache: "no-store",
+        signal: controller.signal,
+      });
+      return response.status < 500;
+    } catch {
+      return false;
+    } finally {
+      clearTimeout(timer);
+    }
   }
 }
 
