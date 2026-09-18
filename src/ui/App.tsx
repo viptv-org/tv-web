@@ -1199,6 +1199,16 @@ export function App({
           if (source) {
             void desktopInvoker?.invoke("test_log", { message: `autoplay source=${source.id}` }).catch(() => undefined);
             await play(item, source, 0);
+            // Harness seek probes: the first seek of a session is the reported
+            // broken case (restarts at the beginning). Targets are known.
+            setTimeout(() => {
+              void desktopInvoker?.invoke("test_log", { message: "harness seek #1 -> 90" }).catch(() => undefined);
+              void commitSeek(90);
+            }, 14000);
+            setTimeout(() => {
+              void desktopInvoker?.invoke("test_log", { message: "harness seek #2 -> 30" }).catch(() => undefined);
+              void commitSeek(30);
+            }, 32000);
             return;
           }
           if (poll.done) {
