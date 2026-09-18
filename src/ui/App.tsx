@@ -6,6 +6,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import QRCode from "qrcode";
 import {
   TvApi,
+  TvApiError,
   type MediaItem,
   type MediaPresentation,
   type CardPresentation,
@@ -392,6 +393,9 @@ export function App({
   // One coalesced connectivity surface: the first network failure opens it,
   // later failures update it, and a successful probe clears it again.
   const [connection, setConnection] = useState<ConnectionIssue>();
+  // A session-machine failure while the backend was unreachable: retry the
+  // session automatically once the probe reports recovery.
+  const pendingSessionRetry = useRef(false);
   const connected = connection !== undefined;
   useEffect(() => {
     if (!connected || !api) return;
@@ -404,7 +408,13 @@ export function App({
         .probeBackend()
         .then((reachable) => {
           probing = false;
-          if (!cancelled && reachable) setConnection(undefined);
+          if (!cancelled && reachable) {
+            setConnection(undefined);
+            if (pendingSessionRetry.current) {
+              pendingSessionRetry.current = false;
+              setStartupAttempt((attempt) => attempt + 1);
+            }
+          }
         })
         .catch(() => {
           probing = false;
@@ -421,7 +431,7 @@ export function App({
     setBootingHome(false);
     if (e instanceof DOMException && e.name === "AbortError") return;
     const detail = describeApiError(e);
-    if (detail.kind === "network") {
+    if (detail.kind === "network" || detail.kind === "server") {
       setConnection((previous) => nextConnectionFailure(previous, Date.now()));
       return;
     }
@@ -664,7 +674,12 @@ export function App({
       if (view.identity) setProfiles(view.identity.profiles);
       if (view.phase === "Pairing") { browserReady.current = false; browser.current?.clearSnapshots(); void pairing(); }
       else if (view.phase === "Profiles") { browserReady.current = false; browser.current?.clearSnapshots(); setScreen("profiles"); }
-      else if (view.phase === "Error") fail(new Error(view.error ?? "Unable to connect. Try again."));
+      else if (view.phase === "Error") {
+        const error = new TvApiError(view.errorStatus ?? 0, view.error ?? "Unable to connect. Try again.");
+        const kind = describeApiError(error).kind;
+        if (kind === "network" || kind === "server") pendingSessionRetry.current = true;
+        fail(error);
+      }
       else if (view.phase === "Ready" && view.selectedProfileId && readyProfile !== view.selectedProfileId) {
         readyProfile = view.selectedProfileId;
         setProfile(readyProfile);
@@ -674,7 +689,11 @@ export function App({
           if (!disposed) { finishProfileNavigation(); setBootingHome(false); }
         });
       }
-    }, (message) => { if (!disposed) fail(new Error(message)); });
+    }, (message) => {
+      if (disposed) return;
+      pendingSessionRetry.current = true;
+      fail(new TvApiError(0, message, "network"));
+    });
     void driver.dispatch({ Begin: { origin: api.serverOrigin, allowInsecurePreview: import.meta.env.DEV && api.serverOrigin === globalThis.location?.origin } });
     return () => {
       disposed = true;
