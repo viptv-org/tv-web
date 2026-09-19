@@ -2235,6 +2235,15 @@ export function App({
         sourceFocusPending.current = false;
       }}
     >
+      {responsive && screen !== "player" && (
+        <DesktopTitlebar
+          screen={screen}
+          activeProfile={activeProfile}
+          onNavigateSearch={() => navigate("Search")}
+          onNavigateBookmarks={() => navigate("My List")}
+          onOpenProfiles={() => setScreen("profiles")}
+        />
+      )}
       <div
         ref={playerRoot}
         onPointerMove={() => { if (responsive && screen === "player" && Date.now() - lastControlActivity.current > 1000) { lastControlActivity.current = Date.now(); setOverlay(true); setControlActivity(value => value + 1); } }}
@@ -2243,15 +2252,6 @@ export function App({
       >
         <video ref={video} className="video" playsInline onClick={surfaceClick} />
         <canvas ref={canvas} className="video player-canvas" style={{ display: "none" }} onClick={surfaceClick} />
-        {responsive && screen !== "player" && (
-          <DesktopTitlebar
-            screen={screen}
-            activeProfile={activeProfile}
-            onNavigateSearch={() => navigate("Search")}
-            onNavigateBookmarks={() => navigate("My List")}
-            onOpenProfiles={() => setScreen("profiles")}
-          />
-        )}
         {responsive && !["startup", "pairing", "player", "profiles"].includes(screen) && (
           <aside className="desktop-sidebar" aria-label="Sidebar navigation">
             <div className="sidebar-centered-group">

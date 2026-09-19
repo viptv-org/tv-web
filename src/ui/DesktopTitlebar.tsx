@@ -44,11 +44,11 @@ export function DesktopTitlebar({
 }: DesktopTitlebarProps) {
   const handleMinimize = async () => {
     try {
-      const { getCurrentWindow } = await import("@tauri-apps/api/window");
-      await getCurrentWindow().minimize();
+      await invoke("app_window_minimize");
     } catch {
       try {
-        await invoke("app_window_minimize");
+        const { getCurrentWindow } = await import("@tauri-apps/api/window");
+        await getCurrentWindow().minimize();
       } catch (err) {
         console.warn("Minimize unavailable:", err);
       }
@@ -57,11 +57,16 @@ export function DesktopTitlebar({
 
   const handleToggleMaximize = async () => {
     try {
-      const { getCurrentWindow } = await import("@tauri-apps/api/window");
-      await getCurrentWindow().toggleMaximize();
+      await invoke("app_window_toggle_maximize");
     } catch {
       try {
-        await invoke("app_window_toggle_maximize");
+        const { getCurrentWindow } = await import("@tauri-apps/api/window");
+        const win = getCurrentWindow();
+        if (await win.isMaximized()) {
+          await win.unmaximize();
+        } else {
+          await win.maximize();
+        }
       } catch (err) {
         console.warn("Maximize unavailable:", err);
       }
@@ -70,11 +75,11 @@ export function DesktopTitlebar({
 
   const handleClose = async () => {
     try {
-      const { getCurrentWindow } = await import("@tauri-apps/api/window");
-      await getCurrentWindow().close();
+      await invoke("app_window_close");
     } catch {
       try {
-        await invoke("app_window_close");
+        const { getCurrentWindow } = await import("@tauri-apps/api/window");
+        await getCurrentWindow().close();
       } catch (err) {
         console.warn("Close unavailable:", err);
       }
@@ -82,24 +87,26 @@ export function DesktopTitlebar({
   };
 
   const handleStartDragging = async (e: React.MouseEvent) => {
-    if (e.button === 0) {
+    if (e.button !== 0) return;
+    try {
+      await invoke("app_window_start_dragging");
+    } catch {
       try {
         const { getCurrentWindow } = await import("@tauri-apps/api/window");
         await getCurrentWindow().startDragging();
       } catch {
-        try {
-          await invoke("app_window_start_dragging");
-        } catch {
-          // Ignored when not running under Tauri window drag provider
-        }
+        // Ignored when not running under Tauri window drag provider
       }
     }
+  };
+
+  const stopDragEvents = (e: React.SyntheticEvent) => {
+    e.stopPropagation();
   };
 
   return (
     <header
       className="desktop-titlebar responsive-toolbar"
-      data-tauri-drag-region
       style={{
         height: "30px",
         minHeight: "30px",
@@ -108,12 +115,12 @@ export function DesktopTitlebar({
         boxSizing: "border-box",
         overflow: "hidden",
       }}
-      onMouseDown={handleStartDragging}
-      onDoubleClick={handleToggleMaximize}
     >
       <div
         className="titlebar-left brand"
         data-tauri-drag-region
+        onMouseDown={handleStartDragging}
+        onDoubleClick={handleToggleMaximize}
         style={{
           position: "static",
           display: "flex",
@@ -122,6 +129,7 @@ export function DesktopTitlebar({
           height: "100%",
           margin: 0,
           padding: 0,
+          cursor: "default",
         }}
       >
         <img
@@ -138,6 +146,7 @@ export function DesktopTitlebar({
             position: "static",
             margin: 0,
             padding: 0,
+            pointerEvents: "none",
           }}
         />
         <span
@@ -149,21 +158,33 @@ export function DesktopTitlebar({
             color: "#c0c3c6",
             lineHeight: 1,
             userSelect: "none",
+            pointerEvents: "none",
           }}
         >
           VIPTV
         </span>
       </div>
 
-      <div className="titlebar-drag-spacer" data-tauri-drag-region />
+      <div
+        className="titlebar-drag-spacer"
+        data-tauri-drag-region
+        onMouseDown={handleStartDragging}
+        onDoubleClick={handleToggleMaximize}
+      />
 
-      <div className="titlebar-right">
+      <div
+        className="titlebar-right"
+        onMouseDown={stopDragEvents}
+        onPointerDown={stopDragEvents}
+      >
         {screen !== "startup" && (
           <>
             <button
               type="button"
               className="titlebar-search-btn"
               aria-label="Search"
+              onMouseDown={stopDragEvents}
+              onPointerDown={stopDragEvents}
               onClick={(e) => {
                 e.stopPropagation();
                 onNavigateSearch();
@@ -190,6 +211,8 @@ export function DesktopTitlebar({
               className="titlebar-btn titlebar-icon-btn"
               aria-label="My List"
               title="My List"
+              onMouseDown={stopDragEvents}
+              onPointerDown={stopDragEvents}
               onClick={(e) => {
                 e.stopPropagation();
                 onNavigateBookmarks();
@@ -221,6 +244,8 @@ export function DesktopTitlebar({
                 aria-label="Switch Profile"
                 title="Switch Profile"
                 onActivate={() => onOpenProfiles()}
+                onMouseDown={stopDragEvents}
+                onPointerDown={stopDragEvents}
                 onClick={(e) => {
                   e.stopPropagation();
                   onOpenProfiles();
@@ -236,12 +261,18 @@ export function DesktopTitlebar({
           </>
         )}
 
-        <div className="titlebar-window-controls">
+        <div
+          className="titlebar-window-controls"
+          onMouseDown={stopDragEvents}
+          onPointerDown={stopDragEvents}
+        >
           <button
             type="button"
             className="titlebar-btn titlebar-control-btn btn-minimize"
             aria-label="Minimize"
             title="Minimize"
+            onMouseDown={stopDragEvents}
+            onPointerDown={stopDragEvents}
             onClick={(e) => {
               e.stopPropagation();
               void handleMinimize();
@@ -256,6 +287,8 @@ export function DesktopTitlebar({
             className="titlebar-btn titlebar-control-btn btn-maximize"
             aria-label="Maximize"
             title="Maximize"
+            onMouseDown={stopDragEvents}
+            onPointerDown={stopDragEvents}
             onClick={(e) => {
               e.stopPropagation();
               void handleToggleMaximize();
@@ -270,6 +303,8 @@ export function DesktopTitlebar({
             className="titlebar-btn titlebar-control-btn btn-close"
             aria-label="Close"
             title="Close"
+            onMouseDown={stopDragEvents}
+            onPointerDown={stopDragEvents}
             onClick={(e) => {
               e.stopPropagation();
               void handleClose();
