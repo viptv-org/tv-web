@@ -18,8 +18,8 @@
         "title": "VIPTV",
         "width": 1280,
         "height": 720,
-        "minWidth": 480,
-        "minHeight": 320,
+        "minWidth": 960,
+        "minHeight": 540,
         "resizable": true,
         "decorations": true,
         "fullscreen": false

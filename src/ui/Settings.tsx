@@ -40,6 +40,9 @@ export function Settings({
   serverOrigin = "https://viptv.syek.tech",
   appearance,
   playbackEngine,
+  subpage,
+  onSubpageChange,
+  onBack,
 }: {
   api: TvApi;
   profile: string;
@@ -53,11 +56,19 @@ export function Settings({
   serverOrigin?: string;
   appearance?: { oled: boolean; toggle: () => void };
   playbackEngine?: { choice: NativeVideoEngine; select: (engine: NativeVideoEngine) => void };
+  subpage?: "Settings" | "Playback preferences" | "Addons";
+  onSubpageChange?: (p: "Settings" | "Playback preferences" | "Addons") => void;
+  onBack?: () => void;
 }) {
   const [addons, setAddons] = useState<readonly JsonObject[]>([]);
-  const [page, setPage] = useState<
+  const [internalPage, setInternalPage] = useState<
     "Settings" | "Playback preferences" | "Addons"
   >("Settings");
+  const page = subpage !== undefined ? subpage : internalPage;
+  const setPage = (next: typeof page) => {
+    if (subpage === undefined) setInternalPage(next);
+    onSubpageChange?.(next);
+  };
   const [selected, setSelected] = useState(0);
   const [entry, setEntry] = useState(false);
   useEffect(() => {
@@ -301,13 +312,43 @@ export function Settings({
         if (page === "Settings") return;
         event.preventDefault();
         event.stopPropagation();
-        const restore =
-          page === "Addons" ? "settings-addons" : "settings-playback";
-        openPage("Settings");
-        setTimeout(() => focusElement(restore), 0);
+        if (onBack) onBack();
+        else {
+          const restore =
+            page === "Addons" ? "settings-addons" : "settings-playback";
+          openPage("Settings");
+          setTimeout(() => focusElement(restore), 0);
+        }
       }}
     >
-      <h1>{page}</h1>
+      <div className="settings-header">
+        {page !== "Settings" && (
+          <TvButton
+            id="settings-back-btn"
+            className="settings-back-btn"
+            aria-label="Back to Settings"
+            onActivate={() => {
+              if (onBack) onBack();
+              else openPage("Settings");
+            }}
+          >
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <line x1="19" y1="12" x2="5" y2="12" />
+              <polyline points="12 19 5 12 12 5" />
+            </svg>
+          </TvButton>
+        )}
+        <h1>{page}</h1>
+      </div>
       {caption && <p className="settings-caption">{caption}</p>}
       <div className="settings-scroll">
         {rows.map((row, index) => (

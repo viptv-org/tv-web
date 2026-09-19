@@ -614,10 +614,10 @@ export function Guide({
         </div>
       </header>
       <div className="epg-layout">
-        <nav className="epg-categories" aria-label="Channel categories">
+        <aside className="epg-categories" aria-label="Channel categories">
           <h2>Browse channels</h2>
           {filterItems.map(filter => <button type="button" key={filter.id} aria-pressed={filter.id === activeFilter.id} onClick={() => selectFilter(filter)}>{filter.label}</button>)}
-        </nav>
+        </aside>
         <section className="epg-content" aria-label="TV schedule">
           <label className="epg-mobile-category"><span>Channel category</span><select value={activeFilter.id} onChange={event => { const filter = filterItems.find(item => item.id === event.target.value); if (filter) selectFilter(filter); }}>{filterItems.map(filter => <option key={filter.id} value={filter.id}>{filter.label}</option>)}</select></label>
           <div className="epg-scroll" ref={scrollViewport} role="region" aria-label="Scrollable programme guide" aria-describedby="epg-scroll-help" tabIndex={0} onScroll={event => { const element = event.currentTarget; if (element.scrollLeft > 8) setFollowing(false); if (element.scrollHeight - element.scrollTop - element.clientHeight < 520) appendChannels(); }}>

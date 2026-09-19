@@ -72,6 +72,7 @@ export async function installBackend(page: Page, options: { series?: boolean; in
     if (path === '/api/profiles/1/continue/page') return json({ items: options.activity ? queue : [], offset: 0, total: options.activity ? queue.length : 0, next_offset: null });
     if (path === '/api/profiles/1/progress' || path === '/api/profiles/1/favorites') return json([]);
     if (path === '/api/profiles/1/preferences') return json({ audio_language: 'en', subtitle_language: 'en', subtitles_enabled: false, subtitle_size: 'normal', subtitle_style: 'system', quality: 'auto', autoplay: true });
+    if (path === '/api/addons') return json([]);
     if (path === '/api/catalogs') return json(Array.from({ length: options.populated ? 4 : 1 }, (_, i) => ({ id: i ? `catalog-${i}` : 'popular', name: options.populated ? `Global Cinema Collection — ${['Popular', 'Recently Added', 'Drama', 'Adventure'][i]} Features and Award-Winning International Television` : 'Popular', type: title.type, addon_id: 2, supports_search: true, supports_skip: true })));
     if (path === '/api/discover') return json({ metas: options.populated ? Array.from({ length: 24 }, (_, i) => ({ ...title, id: i ? `title-${i}` : title.id, name: i ? `The Long Journey Through the Mountains: Chapter ${i}` : title.name })) : [title], has_more: false, next_skip: null });
     if (path === '/api/live') return json({ channels: options.activity ? liveChannels : [], total: options.activity ? liveChannels.length : 0 });

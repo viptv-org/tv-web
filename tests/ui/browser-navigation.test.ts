@@ -35,4 +35,19 @@ describe("responsive browser navigation", () => {
       expect(history.state.viptvNavigation.position).toBe(position);
     } finally { nav.dispose(); }
   });
+  it("round-trips settings subpages and pushes history entries for subpage navigation", () => {
+    expect(readBrowserRoute(new URL("https://example.test/tv/settings/playback"))).toEqual({ screen: "Settings", subpage: "Playback preferences" });
+    expect(readBrowserRoute(new URL("https://example.test/tv/settings/addons"))).toEqual({ screen: "Settings", subpage: "Addons" });
+    expect(browserRouteUrl({ screen: "Settings", subpage: "Playback preferences" })).toBe("/tv/settings/playback");
+    expect(browserRouteUrl({ screen: "Settings", subpage: "Addons" })).toBe("/tv/settings/addons");
+
+    history.replaceState(null, "", "/tv/settings");
+    const nav = new BrowserNavigation<{ title: string }>(() => {});
+    try {
+      const initialPos = history.state.viptvNavigation.position;
+      nav.update({ screen: "Settings", subpage: "Playback preferences" }, { title: "Playback" });
+      expect(location.pathname).toBe("/tv/settings/playback");
+      expect(history.state.viptvNavigation.position).toBe(initialPos + 1);
+    } finally { nav.dispose(); }
+  });
 });

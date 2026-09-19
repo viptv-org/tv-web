@@ -58,17 +58,16 @@ for (const viewport of [
     expect(cardBox?.width).toBeGreaterThanOrEqual(140);
     expect(cardBox?.width).toBeLessThanOrEqual(viewport.width);
     if (viewport.width >= 1440) {
-      const header = await page.evaluate(() => {
+      const sidebar = await page.evaluate(() => {
         const box = (selector: string) => {
           const rect = document.querySelector<HTMLElement>(selector)!.getBoundingClientRect();
           return { left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom };
         };
         return { brand: box('.brand'), nav: box('nav[aria-label="Main navigation"]'), cast: box('[data-focus-id="responsive-cast"]'), profile: box('[data-focus-id="responsive-profile"]') };
       });
-      expect(header.brand.right).toBeLessThanOrEqual(header.nav.left);
-      expect(header.nav.right).toBeLessThanOrEqual(header.cast.left);
-      expect(header.cast.right).toBeLessThanOrEqual(header.profile.left);
-      expect(header.profile.right).toBeLessThanOrEqual(viewport.width);
+      expect(sidebar.brand.bottom).toBeLessThanOrEqual(sidebar.nav.top);
+      expect(sidebar.nav.bottom).toBeLessThanOrEqual(sidebar.cast.top);
+      expect(sidebar.profile.top).toBeLessThanOrEqual(52);
     }
     await page.screenshot({ path: testInfo.outputPath(`${viewport.name}-home.png`), animations: 'disabled', fullPage: true });
 
@@ -177,9 +176,9 @@ for (const viewport of [
     if (viewport.width >= 1200) {
       const nav = await page.locator('nav[aria-label="Main navigation"]').boundingBox();
       const brand = await page.locator('.responsive-toolbar .brand').boundingBox();
-      // The shared header keeps the brand leading the navigation; detail,
+      // The shared desktop sidebar keeps the brand above the centered navigation; detail,
       // sources and profiles no longer add a second leading Back control.
-      expect(brand!.x + brand!.width).toBeLessThanOrEqual(nav!.x);
+      expect(brand!.y + brand!.height).toBeLessThanOrEqual(nav!.y);
       await expect(page.locator('[data-focus-id="responsive-back"]')).toHaveCount(0);
     }
     const episode = page.locator('[data-focus-id="episode-0"]');
@@ -393,7 +392,7 @@ test('responsive web uses selected tabs without remote focus skin at phone and d
   await home.focus();
   await expect(home).toHaveAttribute('aria-current', 'page');
   await expect(home).toHaveCSS('outline-style', 'none');
-  await expect(home).toHaveCSS('background-color', 'rgb(48, 50, 52)');
+  await expect(home).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
   await expect(home.locator('img')).toHaveCSS('filter', 'none');
   const card = page.locator('[data-focus-id="home-0"]');
   await card.focus();
@@ -405,13 +404,13 @@ test('responsive web uses selected tabs without remote focus skin at phone and d
   await page.locator('[data-focus-id="nav-Settings"]').click();
   const settings = page.locator('[data-focus-id="nav-Settings"]');
   await expect(settings).toHaveAttribute('aria-current', 'page');
-  await expect(settings).toHaveCSS('background-color', 'rgb(48, 50, 52)');
+  await expect(settings).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
   await expect(settings).toHaveCSS('outline-style', 'none');
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.keyboard.press('Tab');
   await home.focus();
   await expect(home).toHaveCSS('outline-style', 'none');
-  await expect(home).toHaveCSS('background-color', 'rgb(32, 34, 36)');
+  await expect(home).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
   await page.keyboard.press('ArrowRight');
   await expect(home).toBeFocused();
 });

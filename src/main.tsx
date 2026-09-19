@@ -58,6 +58,9 @@ async function start() {
     },
   });
   await initializeCore();
+  if (import.meta.env.PROD) {
+    window.addEventListener("contextmenu", (e) => e.preventDefault());
+  }
   const layout = platform === "tizen" || platform === "vizio" || params.get("layout") === "tv" ? "tv" : "responsive";
   root.render(<App api={api} platform={platform} layout={layout} />);
 }

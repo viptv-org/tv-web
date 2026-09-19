@@ -119,7 +119,7 @@ test('Discover keeps all addon namespaces and loads despite an unrelated Home fa
   await page.getByRole('dialog').getByRole('button', { name: 'Popular · AIOMetadata', exact: true }).click();
   await page.locator('[data-focus-id="discover-type"]').click();
   const request = page.waitForRequest(request => new URL(request.url()).pathname === '/api/discover' && new URL(request.url()).searchParams.get('type') === 'anime');
-  await page.getByRole('dialog').getByRole('button', { name: 'anime', exact: true }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Anime', exact: true }).click();
   const selected = new URL((await request).url());
   expect(selected.searchParams.get('addon_id')).toBe('2');
   await expect(page.locator('[data-focus-id="discover-catalog"]')).toContainText('Anime · AIOMetadata');

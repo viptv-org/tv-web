@@ -14,10 +14,39 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             test_autoplay_enabled,
             playback_engine_override,
-            test_log
+            test_log,
+            app_window_minimize,
+            app_window_toggle_maximize,
+            app_window_close,
+            app_window_start_dragging
         ])
         .run(tauri::generate_context!())
         .expect("error while running the VIPTV desktop app");
+}
+
+#[tauri::command]
+fn app_window_minimize(window: tauri::Window) -> Result<(), String> {
+    window.minimize().map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn app_window_toggle_maximize(window: tauri::Window) -> Result<(), String> {
+    let is_max = window.is_maximized().map_err(|e| e.to_string())?;
+    if is_max {
+        window.unmaximize().map_err(|e| e.to_string())
+    } else {
+        window.maximize().map_err(|e| e.to_string())
+    }
+}
+
+#[tauri::command]
+fn app_window_close(window: tauri::Window) -> Result<(), String> {
+    window.close().map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn app_window_start_dragging(window: tauri::Window) -> Result<(), String> {
+    window.start_dragging().map_err(|e| e.to_string())
 }
 
 /// Harness switch: `VIPTV_TEST_AUTOPLAY=1` (or `true`) makes the webview

@@ -107,3 +107,65 @@ export function SharedCardArtwork({ item, context }: { item: MediaItem; context:
     else setFailedImages(previous => previous.includes(original) ? previous : [...previous, original]);
   }} />;
 }
+
+export function CardThumbnail({
+  src,
+  fallback,
+  watched,
+  progress,
+  maxProgress = 1,
+  onError,
+}: {
+  src?: string;
+  fallback: ReactNode;
+  watched?: boolean;
+  progress?: number | null;
+  maxProgress?: number;
+  onError?: () => void;
+}) {
+  return (
+    <>
+      <CardArtwork src={src} fallback={fallback} onError={onError} />
+      {watched && <span className="watched-badge">WATCHED</span>}
+      {!watched && progress != null && progress > 0 && (
+        <progress value={progress} max={maxProgress} />
+      )}
+    </>
+  );
+}
+
+export function SharedCardThumbnail({
+  item,
+  context,
+  progress,
+  maxProgress = 1,
+  watched,
+}: {
+  item: MediaItem;
+  context: "queue" | "catalog";
+  progress?: number | null;
+  maxProgress?: number;
+  watched?: boolean;
+}) {
+  const [failedImages, setFailedImages] = useState<string[]>([]);
+  const [originalRetries, setOriginalRetries] = useState<string[]>([]);
+  const presentation = normalizeCore<CardPresentation>("cardPresentation", { item, context, failedImages });
+  const original = presentation.image ?? undefined;
+  const derivative = artworkUrl(original, 256, 144, false, presentation.imageRole === "logo");
+  const src = original && originalRetries.includes(original) ? original : derivative;
+  const effectiveProgress = progress !== undefined ? progress : presentation.progress;
+  return (
+    <CardThumbnail
+      src={src}
+      fallback={presentation.title}
+      watched={watched}
+      progress={effectiveProgress}
+      maxProgress={maxProgress}
+      onError={() => {
+        if (!original) return;
+        if (src !== original) setOriginalRetries(previous => previous.includes(original) ? previous : [...previous, original]);
+        else setFailedImages(previous => previous.includes(original) ? previous : [...previous, original]);
+      }}
+    />
+  );
+}

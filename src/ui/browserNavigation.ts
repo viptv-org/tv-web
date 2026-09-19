@@ -1,7 +1,10 @@
 /** Browser URLs contain stable identifiers only; catalog data and credentials stay out of history. */
 export type BrowserDestination = "Home" | "Discover" | "Live TV" | "My List" | "Search" | "Settings" | "profiles" | "detail" | "sources" | "player";
+export type SettingsSubpage = "Settings" | "Playback preferences" | "Addons";
+
 export interface BrowserRoute {
   screen: BrowserDestination;
+  subpage?: SettingsSubpage;
   media?: { id: string; type: "movie" | "series" | "episode" | "live"; seriesId?: string; season?: number; episode?: number };
   query?: string;
 }
@@ -18,13 +21,28 @@ export function readBrowserRoute(url = new URL(location.href)): BrowserRoute {
     } catch { return { screen: "Home" }; }
   }
   const screen = Object.entries(paths).find(([, path]) => path === parts[0])?.[0] as BrowserDestination | undefined;
-  return { screen: screen ?? "Home", ...(screen === "Search" ? { query: url.searchParams.get("q") ?? "" } : {}) };
+  const subpage: SettingsSubpage | undefined =
+    screen === "Settings"
+      ? parts[1] === "playback"
+        ? "Playback preferences"
+        : parts[1] === "addons"
+          ? "Addons"
+          : "Settings"
+      : undefined;
+  return {
+    screen: screen ?? "Home",
+    ...(subpage ? { subpage } : {}),
+    ...(screen === "Search" ? { query: url.searchParams.get("q") ?? "" } : {}),
+  };
 }
 export function browserRouteUrl(route: BrowserRoute, current = new URL(location.href)): string {
   const params = new URLSearchParams();
   // Platform/layout select the real runtime. Appearance is a device preference, never a URL mode.
   for (const name of ["platform", "layout"]) { const value = current.searchParams.get(name); if (value !== null) params.set(name, value); }
   let path = paths[route.screen] ?? "home";
+  if (route.screen === "Settings" && route.subpage && route.subpage !== "Settings") {
+    path = `settings/${route.subpage === "Playback preferences" ? "playback" : "addons"}`;
+  }
   if (route.media && ["detail", "sources", "player"].includes(route.screen)) {
     const item = route.media;
     path = `title/${item.type}/${encodeURIComponent(item.id)}${route.screen === "sources" ? "/sources" : route.screen === "player" ? "/watch" : ""}`;
@@ -68,7 +86,13 @@ export class BrowserNavigation<T> {
   };
   update(route: BrowserRoute, snapshot: T, replace = false) {
     const url = browserRouteUrl(route);
-    const sameItem = route.screen === this.route.screen && route.media?.id === this.route.media?.id && route.media?.type === this.route.media?.type;
+    const sameItem = Boolean(
+      route.media &&
+      this.route.media &&
+      route.screen === this.route.screen &&
+      route.media.id === this.route.media.id &&
+      route.media.type === this.route.media.type
+    );
     if (url !== browserRouteUrl(this.route) && !replace && !sameItem) {
       this.entry = { key: ++this.sequence, position: this.entry.position + 1 };
       history.pushState({ viptvNavigation: this.entry }, "", url);

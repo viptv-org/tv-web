@@ -28,12 +28,19 @@ export default defineConfig(({ command }) => ({
   build: { target: "es2017" },
   // Opt-in LAN preview: browser requests stay on its own origin; upstream TLS
   // remains verified. Production still uses the backend's same-origin mount.
-  server: process.env.VITE_LAN_PREVIEW === "1" ? {
-    proxy: {
-      "/api": previewProxy(),
-      "/media": previewProxy(),
+  server: {
+    fs: {
+      allow: [".."],
     },
-  } : undefined,
+    ...(process.env.VITE_LAN_PREVIEW === "1"
+      ? {
+          proxy: {
+            "/api": previewProxy(),
+            "/media": previewProxy(),
+          },
+        }
+      : {}),
+  },
   test: {
     environment: "jsdom",
     include: ["tests/**/*.test.{ts,tsx}"],
