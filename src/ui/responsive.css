@@ -539,7 +539,7 @@ header.desktop-titlebar.responsive-toolbar {
 .responsive-app .shelves, .responsive-app .compact-home .shelves { position: static; grid-column: 1 / -1; width: 100%; height: auto; overflow: visible; }
 .responsive-app .shelves section { margin: 0 0 32px; width: 100%; min-width: 0; height: auto; }
 .responsive-app .shelves h2 { height: auto; font-size: 22px; line-height: 28px; text-transform: uppercase; margin-bottom: 12px; overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
-.responsive-app .cards { display: flex; gap: 24px; width: 100%; height: auto; overflow-x: auto; padding: 6px 6px 12px; scroll-snap-type: x proximity; scroll-behavior: smooth; }
+.responsive-app .cards { display: flex; gap: 24px; width: 100%; height: auto; overflow-x: auto; padding: 6px 6px 12px; overflow-anchor: none; }
 /* Desktop shelf carousels: a compact backgroundless chevron pair pinned to
    the row's bottom-right flips one card-page; exhausted directions grey out
    instead of unmounting, and the pair hides only when the whole row fits. */

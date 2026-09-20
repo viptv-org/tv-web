@@ -222,7 +222,12 @@ for (const width of [360, 390, 768, 1024, 1280, 1440, 2560]) {
     await expectResponsiveViewport(page, width);
     await page.locator('[data-focus-id="profile-0"]').click();
     await expect(page.locator('.shelves section')).toHaveCount(3);
-    await expect(page.locator('.shelves .media-card')).toHaveCount(72);
+    // Windowed rows mount only the visible slice of each shelf; pixel
+    // spacers keep every 24-item track fully scrollable (checked via the
+    // geometry scrollWidth assertions below).
+    const mounted = await page.locator('.shelves .media-card').count();
+    expect(mounted).toBeGreaterThan(0);
+    expect(mounted).toBeLessThan(72);
     await expect(page.locator('.responsive-hero-art > img')).toHaveJSProperty('naturalWidth', 3840);
     await expect(page.locator('.hero .responsive-title')).toHaveClass(/has-logo/);
     const geometry = await page.evaluate(() => {
@@ -299,7 +304,12 @@ for (const width of [390, 1440]) {
     await installBackend(page, { populated: true });
     await page.goto('/');
     await page.locator('[data-focus-id="profile-0"]').click();
-    const card = page.locator('.shelves section').last().locator('.media-card').nth(12);
+    const section = page.locator('.shelves section').last();
+    // Windowed rows mount only cards near the row's scroll offset, so pan
+    // the row to card 12 first and address it as the 4th mounted card.
+    await section.locator('.cards').evaluate(el => { el.scrollLeft = 12 * 280; });
+    await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+    const card = section.locator('.media-card').nth(3);
     await card.scrollIntoViewIfNeeded();
     await card.focus();
     await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
@@ -331,7 +341,12 @@ for (const width of [390, 768, 1440]) {
     await page.goto('/');
     await page.locator('[data-focus-id="profile-0"]').click();
     const queue = page.locator('.shelves section').filter({ has: page.getByRole('heading', { name: 'Continue Watching', exact: true }) });
-    await expect(queue.locator('.media-card')).toHaveCount(24);
+    // The queue row is windowed: only the visible slice stays mounted, but
+    // the full 24-item track remains scrollable behind pixel spacers.
+    const mountedQueue = await queue.locator('.media-card').count();
+    expect(mountedQueue).toBeGreaterThan(0);
+    expect(mountedQueue).toBeLessThan(24);
+    expect(await queue.locator('.cards').evaluate(el => el.scrollWidth)).toBeGreaterThan(23 * 280);
     await expect(page.locator('.shelves section').first()).toContainText('Continue Watching');
     await expect(queue.locator('[data-focus-id="queue-0"]')).toContainText('S1');
     await expect(queue.locator('[data-focus-id="queue-0"] > img')).toHaveAttribute('src', 'https://art.example/episode.svg?episode=1');

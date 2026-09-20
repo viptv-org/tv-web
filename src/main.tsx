@@ -58,6 +58,9 @@ async function start() {
     },
   });
   await initializeCore();
+  if (import.meta.env.DEV) {
+    void import("./testing/fps-harness").then(({ initFpsHarness }) => initFpsHarness());
+  }
   if (import.meta.env.PROD) {
     window.addEventListener("contextmenu", (e) => e.preventDefault());
   }

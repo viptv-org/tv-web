@@ -2178,7 +2178,7 @@ export function App({
   // ref at click time so unrelated App re-renders skip 300+ card re-renders.
   const cardActions = useRef<CardActions>({ play, discoverSources, detail, manage });
   cardActions.current = { play, discoverSources, detail, manage };
-  const cards = (list: readonly MediaItem[], prefix: string) => (
+  const cards = (list: readonly MediaItem[], prefix: string, windowed = false) => (
     <Cards
       list={list}
       prefix={prefix}
@@ -2188,10 +2188,11 @@ export function App({
       actions={cardActions}
       searchKey={searchKey}
       setHighlighted={setHighlighted}
+      windowed={windowed}
     />
   );
   const shelfCards = (list: readonly MediaItem[], prefix: string) =>
-    responsive ? <ShelfCarousel>{cards(list, prefix)}</ShelfCarousel> : cards(list, prefix);
+    responsive ? <ShelfCarousel>{cards(list, prefix, true)}</ShelfCarousel> : cards(list, prefix);
   const firstHomeCatalog = catalogs.find((c) => c.type !== "live");
   const catalogHeroItem = items.find((i) => i.type !== "live") ?? items[0];
   const heroItem = responsive ? catalogHeroItem : (highlighted ?? queue[0] ?? recentLive[0] ?? items[0]);
@@ -2237,7 +2238,14 @@ export function App({
         element.scrollLeft = saved.left;
         element.style.removeProperty("scroll-behavior");
       }
-      if (anchor) focusElement(anchor.focus, { preventScroll: true });
+      // Windowed rows mount their cards only after the restored scroll lands,
+      // so the focus target is addressed after the window has committed.
+      if (anchor)
+        requestAnimationFrame(() =>
+          requestAnimationFrame(() =>
+            focusElement(anchor.focus, { preventScroll: true }),
+          ),
+        );
       root.style.removeProperty("scroll-behavior");
       restoredScroll.current = undefined;
     }
