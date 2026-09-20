@@ -1,9 +1,11 @@
-# VIPTV TV web
+# VIPTV Shared Viewing Client (`tv-web`)
 
-This repository contains the shared React TV application for Tizen and Vizio. It implements the Roku-derived screen, remote, focus, hold, source-selection and continuation behavior in one UI. Only the player adapter and packaging differ:
+This repository contains the canonical shared React viewing client for VIPTV across Web (`watch.syek.tech`), Smart TVs (Tizen, Vizio), and Native Desktop ([`desktop`](../desktop)). It implements unified screen navigation, remote/keyboard/mouse interaction, focus engine, source selection, responsive layouts, and catalog viewing in one shared UI codebase. Only the player adapter and packaging differ:
 
-- Tizen prepares a small unsigned launcher candidate. After signing it opens the hosted `https://<VIPTV origin>/tv/?platform=tizen` application and requests AVPlay; remote-hosted bridge availability still requires TV verification.
-- Vizio receives the same static React bundle at `/tv/` and uses the HTML media adapter. The backend prepares a compatible delivery before playback; transcoding is a fallback after direct play, copy or remux.
+- **Web (`watch.syek.tech`)**: Served via static web bundle and proxy.
+- **Desktop (Linux, Windows, macOS)**: Native desktop shell lives in the dedicated [`viptv-org/desktop`](../desktop) repository, embedding this UI with native video decoding via [`tauri-video-plugin`](../tauri-video-plugin).
+- **Tizen**: Prepares an unsigned launcher candidate that opens the hosted TV application with AVPlay.
+- **Vizio**: Receives the static React bundle at `/tv/` with HTML media adapter.
 
 The hosted bundle should use the VIPTV backend as its **same HTTPS origin**. The backend supports this when `VIPTV_TV_DIST` points to the built distribution. It serves the dashboard at `/` and the TV SPA at `/tv/`, including client-route fallback. This avoids credentialed wildcard CORS and keeps device Bearer requests and short-lived media capabilities same-origin.
 

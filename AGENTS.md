@@ -1,6 +1,6 @@
 # viptv TV web development
 
-Read DESIGN_REF, SPEC.md and the referenced viptv-org/design visual and behavior contracts before changing product behavior. This one frontend serves web, Tizen, Vizio and the Tauri desktop; the playback adapters and the session controller live in the sibling viptv-org/video repository, imported as `@viptv/video` via `file:../video`. Preserve Roku action meaning, 700ms hold, focus restoration, explicit source intent and controlled Next. Platform decoder differences do not justify deleting product features.
+Read DESIGN_REF, SPEC.md and the referenced viptv-org/design visual and behavior contracts before changing product behavior. This one frontend serves web, Tizen, Vizio and the native desktop app (housed in `viptv-org/desktop`); the playback adapters and the session controller live in the sibling viptv-org/video repository, imported as `@viptv/video` via `file:../video`. Preserve Roku action meaning, 700ms hold, focus restoration, explicit source intent and controlled Next. Platform decoder differences do not justify deleting product features.
 
 Tests exercise remote UI, backend HTTP and playback adapter interfaces. Run unit/integration tests, production build and Playwright acceptance for changes. Mock only external platform/network boundaries. Inspect screenshots locally for layout but keep screenshots out of source/design/release files. Report browser simulation, real media and actual TV evidence separately; never claim 100% device coverage from simulated AVPlay.
 
