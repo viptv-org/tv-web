@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { PlayerFullscreen } from '../../src/ui/usePlayerFullscreen';
+import { PlayerFullscreen } from '../../src/hooks/usePlayerFullscreen';
 
 describe('native fullscreen ownership', () => {
   it('toggles the host and restores fullscreen entered by the player', async () => {

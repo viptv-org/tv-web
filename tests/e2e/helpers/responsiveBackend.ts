@@ -35,18 +35,24 @@ export async function installBackend(page: Page, options: { series?: boolean; in
       accessToken: 'fixture-access', refreshToken: 'fixture-refresh', expiresIn: 900,
     }));
   }, { key: sessionKey });
-  await page.route('https://art.example/**', route => {
-    const path = new URL(route.request().url()).pathname;
-    if (path === '/invalid-logo.svg') return route.fulfill({ status: 404, body: '' });
+  const artworkResponse = (path: string) => {
+    if (path === '/invalid-logo.svg') return { status: 404, body: '' };
     const portrait = path === '/poster.svg';
     const logo = path === '/title-logo.svg';
-    if (path.startsWith('/live-logo-')) return route.fulfill({ contentType: 'image/svg+xml', body: '<svg xmlns="http://www.w3.org/2000/svg" width="7000" height="1000" viewBox="0 0 7000 1000"><text x="0" y="750" font-size="900" fill="white">WORLD NEWS</text></svg>' });
+    if (path.startsWith('/live-logo-')) return { contentType: 'image/svg+xml', body: '<svg xmlns="http://www.w3.org/2000/svg" width="7000" height="1000" viewBox="0 0 7000 1000"><text x="0" y="750" font-size="900" fill="white">WORLD NEWS</text></svg>' };
     const width = logo ? 1280 : portrait ? 2000 : path === '/episode.svg' ? 1920 : 3840;
     const height = logo ? 320 : portrait ? 3000 : path === '/episode.svg' ? 1080 : 2160;
     const content = logo
       ? '<path d="M20 40L120 160 20 280H100L200 160 100 40Z" fill="#f5f5f5"/><text x="245" y="195" font-family="sans-serif" font-size="110" fill="#f5f5f5">THE HORIZON</text>'
       : `<rect width="${width}" height="${height}" fill="#15263a"/><circle cx="${width * .74}" cy="${height * .28}" r="${width * .12}" fill="#dab979"/><path d="M0 ${height}L${width * .32} ${height * .43}L${width * .62} ${height * .76}L${width} ${height * .38}V${height}Z" fill="#42566a"/><path d="M0 ${height}L${width * .47} ${height * .72}L${width} ${height * .88}V${height}Z" fill="#20313b"/>`;
-    return route.fulfill({ contentType: 'image/svg+xml', body: `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">${content}</svg>` });
+    return { contentType: 'image/svg+xml', body: `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">${content}</svg>` };
+  };
+  await page.route('https://art.example/**', route => route.fulfill(artworkResponse(new URL(route.request().url()).pathname)));
+  // The core artwork policy proxies every remote image through wsrv.nl; unwrap
+  // the inner url so fixture artwork serves locally without network access.
+  await page.route('https://wsrv.nl/**', route => {
+    const inner = new URL(route.request().url()).searchParams.get('url');
+    route.fulfill(artworkResponse(inner ? new URL(inner).pathname : '/'));
   });
   await page.route(`${apiOrigin}/api/**`, async route => {
     const request = route.request();

@@ -1,8 +1,12 @@
 import type { MediaItem, CardPresentation } from "../api";
 import { normalizeCore } from "../core";
-import { useState, type ImgHTMLAttributes, type ReactNode } from "react";
+import { useMemo, useState, type ImgHTMLAttributes, type ReactNode } from "react";
 
-/** Same public-host allowlist as Roku ImagePolicy: opaque/provider URLs stay at origin. */
+/**
+ * Every remote http(s) image routes through the wsrv.nl cache and resize
+ * pipeline, whatever the origin host; data:/relative sources stay at origin
+ * and network failures fall back to the raw origin URL in the UI.
+ */
 export function artworkUrl(
   original: string | undefined,
   width: number,
@@ -56,6 +60,8 @@ export function CardArtwork({
       <ReadyImage
         src={src}
         alt=""
+        loading="lazy"
+        decoding="async"
         onLoad={() => setLoaded(src)}
         onError={() => { setLoaded(undefined); onError?.(); }}
       />
@@ -140,18 +146,27 @@ export function SharedCardThumbnail({
   progress,
   maxProgress = 1,
   watched,
+  initial,
 }: {
   item: MediaItem;
   context: "queue" | "catalog";
   progress?: number | null;
   maxProgress?: number;
   watched?: boolean;
+  /** Caller-computed presentation for the same item+context; recomputed only after an image failure. */
+  initial?: CardPresentation;
 }) {
   const [failedImages, setFailedImages] = useState<string[]>([]);
   const [originalRetries, setOriginalRetries] = useState<string[]>([]);
-  const presentation = normalizeCore<CardPresentation>("cardPresentation", { item, context, failedImages });
+  const presentation =
+    failedImages.length || !initial
+      ? normalizeCore<CardPresentation>("cardPresentation", { item, context, failedImages })
+      : initial;
   const original = presentation.image ?? undefined;
-  const derivative = artworkUrl(original, 256, 144, false, presentation.imageRole === "logo");
+  const derivative = useMemo(
+    () => artworkUrl(original, 256, 144, false, presentation.imageRole === "logo"),
+    [original, presentation.imageRole],
+  );
   const src = original && originalRetries.includes(original) ? original : derivative;
   const effectiveProgress = progress !== undefined ? progress : presentation.progress;
   return (

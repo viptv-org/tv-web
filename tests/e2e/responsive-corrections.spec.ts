@@ -115,12 +115,12 @@ test('Discover keeps all addon namespaces and loads despite an unrelated Home fa
   if (await page.getByRole('button', { name: 'Dismiss', exact: true }).isVisible()) await page.getByRole('button', { name: 'Dismiss', exact: true }).click();
   await page.getByRole('navigation', { name: 'Main navigation' }).getByRole('button', { name: 'Discover', exact: true }).click();
   await page.locator('[data-focus-id="discover-catalog"]').click();
-  await expect(page.getByRole('dialog').getByRole('button', { name: 'Popular · Cinemeta', exact: true })).toBeVisible();
-  await page.getByRole('dialog').getByRole('button', { name: 'Popular · AIOMetadata', exact: true }).click();
+  await expect(page.getByRole('dialog').getByRole('button', { name: 'Cinemeta · Popular', exact: true })).toBeVisible();
+  await page.getByRole('dialog').getByRole('button', { name: 'AIOMetadata · Popular', exact: true }).click();
   await page.locator('[data-focus-id="discover-type"]').click();
   const request = page.waitForRequest(request => new URL(request.url()).pathname === '/api/discover' && new URL(request.url()).searchParams.get('type') === 'anime');
   await page.getByRole('dialog').getByRole('button', { name: 'Anime', exact: true }).click();
   const selected = new URL((await request).url());
   expect(selected.searchParams.get('addon_id')).toBe('2');
-  await expect(page.locator('[data-focus-id="discover-catalog"]')).toContainText('Anime · AIOMetadata');
+  await expect(page.locator('[data-focus-id="discover-catalog"]')).toContainText('AIOMetadata · Anime');
 });

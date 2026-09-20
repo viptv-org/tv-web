@@ -29,7 +29,7 @@ type LegacyVideo = HTMLVideoElement & {
   webkitExitFullscreen?: () => void;
   webkitDisplayingFullscreen?: boolean;
 };
-export function usePlayerFullscreen(active: boolean, root: RefObject<HTMLElement>, video: RefObject<HTMLVideoElement>, onError: (error: unknown) => void) {
+export function usePlayerFullscreen(active: boolean, root: RefObject<HTMLElement>, video: RefObject<HTMLVideoElement>, onError: (error: unknown) => void, allowWindowFullscreen = true) {
   const [fullscreen, setFullscreen] = useState(false);
   const owner = useRef(false);
   const native = useRef<PlayerFullscreen>();
@@ -68,7 +68,7 @@ export function usePlayerFullscreen(active: boolean, root: RefObject<HTMLElement
     await read();
   }, [isNative, read, video]);
   useEffect(() => {
-    if (!active) void release().catch(onError);
+    if (!active && !allowWindowFullscreen) void release().catch(onError);
   }, [active, release]);
   useEffect(() => () => { void release().catch(() => {}); }, [release]);
   const toggle = async () => {
@@ -95,7 +95,7 @@ export function usePlayerFullscreen(active: boolean, root: RefObject<HTMLElement
         if (!element?.webkitEnterFullscreen || !element.currentSrc) throw new Error('Fullscreen is not available in this browser.');
         element.webkitEnterFullscreen(); owner.current = true;
       }
-      if (!activeRef.current) await release();
+      if (!activeRef.current && !allowWindowFullscreen) await release();
       else await read();
     } catch (error) { onError(error); }
     finally { pending.current = false; }

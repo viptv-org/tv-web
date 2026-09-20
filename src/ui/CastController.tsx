@@ -10,6 +10,20 @@ export interface CastControllerProps {
 }
 
 type Challenge = { challengeType: number; token: number };
+type DiscoveredTv = { name: string; host: string };
+
+/** Trust the native discovery list only as far as its shape: a name to show, an address to connect. */
+function parseDiscoveredTvs(payload: string): DiscoveredTv[] {
+  const list: unknown = JSON.parse(payload);
+  if (!Array.isArray(list)) return [];
+  return list.flatMap(item => {
+    if (typeof item !== "object" || item === null) return [];
+    const { host, name } = item as Record<string, unknown>;
+    if (typeof host !== "string" || !host.trim()) return [];
+    const address = host.trim();
+    return [{ host: address, name: typeof name === "string" && name.trim() ? name.trim() : `TV (${address})` }];
+  });
+}
 
 /** The containing modal owns focus trapping and restoration to its opener. */
 export function CastController({ receiverUrl, onClose }: CastControllerProps) {
@@ -21,6 +35,10 @@ export function CastController({ receiverUrl, onClose }: CastControllerProps) {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [discovered, setDiscovered] = useState<DiscoveredTv[]>([]);
+  const [discovering, setDiscovering] = useState(false);
+  const [discoveryNote, setDiscoveryNote] = useState("");
+  const [manual, setManual] = useState(false);
   const active = useRef(false);
   const mounted = useRef(true);
 
@@ -30,6 +48,29 @@ export function CastController({ receiverUrl, onClose }: CastControllerProps) {
       mounted.current = false;
       if (native && active.current) void invoke("smartcast_cancel").catch(() => undefined);
     };
+  }, [native]);
+
+  // Native mode searches the local network once per open; browser mode keeps
+  // its handoff copy and never issues a command.
+  useEffect(() => {
+    if (!native) return;
+    let cancelled = false;
+    setDiscovering(true);
+    setDiscoveryNote("");
+    invoke<string>("smartcast_discover")
+      .then(payload => {
+        if (cancelled || !mounted.current) return;
+        const found = parseDiscoveredTvs(payload);
+        setDiscovered(found);
+        if (found.length === 0) setDiscoveryNote("No Vizio TVs were found on this network. Enter the IP address manually.");
+      })
+      .catch(() => {
+        if (!cancelled && mounted.current) setDiscoveryNote("Could not search for TVs automatically. Enter the IP address manually.");
+      })
+      .finally(() => {
+        if (!cancelled && mounted.current) setDiscovering(false);
+      });
+    return () => { cancelled = true; };
   }, [native]);
 
   async function run(operation: string, input: Record<string, unknown> = {}) {
@@ -53,16 +94,15 @@ export function CastController({ receiverUrl, onClose }: CastControllerProps) {
     try { await action(); }
     catch {
       if (mounted.current) setError("The native TV controller is unavailable. Use a VIPTV desktop app with SmartCast support and try again.");
-    } finally {
+    }
+    finally {
       active.current = false;
       if (mounted.current) setBusy(false);
     }
   }
 
-  async function connect(event: FormEvent) {
-    event.preventDefault();
+  async function connectTo(address: string) {
     await perform(async () => {
-      const address = host.trim();
       // This is a vault lookup identifier, not a credential; nothing persists in the renderer.
       const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(address.toLowerCase()));
       const credentialId = `tv-${Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, "0")).join("")}`;
@@ -81,6 +121,11 @@ export function CastController({ receiverUrl, onClose }: CastControllerProps) {
       setChallenge({ challengeType: result.challengeType, token: result.token });
       setMessage("Enter the PIN displayed on your TV.");
     });
+  }
+
+  async function connect(event: FormEvent) {
+    event.preventDefault();
+    await connectTo(host.trim());
   }
 
   async function pair(event: FormEvent) {
@@ -134,13 +179,21 @@ export function CastController({ receiverUrl, onClose }: CastControllerProps) {
       <p>This browser cannot pair with or control your TV. Your current playback stays here.</p>
     </> : <>
       <p>Connect to a Vizio SmartCast TV on the same network.</p>
-      {!connected && !challenge && <form onSubmit={connect}>
-        <label htmlFor="cast-tv-address">TV IP address</label>
-        <div className="cast-controller-fields">
-          <input id="cast-tv-address" value={host} onChange={event => setHost(event.target.value)} placeholder="192.168.1.50" autoComplete="off" spellCheck={false} required disabled={busy} maxLength={253} />
-          <button type="submit" disabled={busy || !host.trim()}>Connect</button>
-        </div>
-      </form>}
+      {!connected && !challenge && <>
+        {discovering && <p role="status">Searching for TVs…</p>}
+        {discovered.length > 0 && <ul className="cast-controller-tvs" aria-label="Discovered TVs">
+          {discovered.map(tv => <li key={tv.host}><button type="button" disabled={busy} onClick={() => { setHost(tv.host); void connectTo(tv.host); }}>{tv.name}</button></li>)}
+        </ul>}
+        {discoveryNote && <p role="status">{discoveryNote}</p>}
+        <button type="button" className="cast-controller-manual" aria-expanded={manual} onClick={() => setManual(value => !value)}>Enter IP address manually</button>
+        {manual && <form onSubmit={connect}>
+          <label htmlFor="cast-tv-address">TV IP address</label>
+          <div className="cast-controller-fields">
+            <input id="cast-tv-address" value={host} onChange={event => setHost(event.target.value)} placeholder="192.168.1.50" autoComplete="off" spellCheck={false} required disabled={busy} maxLength={253} />
+            <button type="submit" disabled={busy || !host.trim()}>Connect</button>
+          </div>
+        </form>}
+      </>}
       {challenge && <form onSubmit={pair}>
         <label htmlFor="cast-tv-pin">PIN shown on your TV</label>
         <div className="cast-controller-fields">

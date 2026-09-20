@@ -27,6 +27,7 @@ export function RemoteRoot({
   onMediaKey,
   onMediaKeyUp,
   onNavigate,
+  onToggleFullscreen,
   inputMode = "tv",
 }: {
   children: ReactNode;
@@ -35,10 +36,11 @@ export function RemoteRoot({
   onMediaKey?: (key: string) => boolean;
   onMediaKeyUp?: (key: string) => void;
   onNavigate?: Action;
+  onToggleFullscreen?: Action;
 }) {
   const registry = useRef(new Map<string, Registration>());
-  const handlers = useRef({ onBack, onMediaKey, onMediaKeyUp, onNavigate });
-  handlers.current = { onBack, onMediaKey, onMediaKeyUp, onNavigate };
+  const handlers = useRef({ onBack, onMediaKey, onMediaKeyUp, onNavigate, onToggleFullscreen });
+  handlers.current = { onBack, onMediaKey, onMediaKeyUp, onNavigate, onToggleFullscreen };
   useEffect(() => {
     let lastRepeatedArrow = { key: "", at: 0 };
     let press:
@@ -56,7 +58,11 @@ export function RemoteRoot({
         // held-Enter menus, or decoder key mappings on pointer-first pages.
         if (key === "Escape") {
           event.preventDefault();
-          handlers.current.onBack?.();
+          if (handlers.current.onToggleFullscreen) {
+            handlers.current.onToggleFullscreen();
+          } else {
+            handlers.current.onBack?.();
+          }
           return;
         }
         const input =

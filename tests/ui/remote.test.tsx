@@ -61,6 +61,16 @@ it("leaves native text editing keys to responsive fields while Escape still goes
   expect(back).toHaveBeenCalledOnce();
 });
 
+
+it("triggers onToggleFullscreen when Escape is pressed in responsive mode", () => {
+  const back = vi.fn();
+  const toggleFullscreen = vi.fn();
+  render(<RemoteRoot inputMode="responsive" onBack={back} onToggleFullscreen={toggleFullscreen}><button>Test</button></RemoteRoot>);
+  expect(fireEvent.keyDown(window, { key: "Escape" })).toBe(false);
+  expect(toggleFullscreen).toHaveBeenCalledOnce();
+  expect(back).not.toHaveBeenCalled();
+});
+
 it("keeps responsive controls pointer-first without arrival focus or TV key handling", () => {
   vi.useFakeTimers();
   const activate = vi.fn(), hold = vi.fn(), media = vi.fn();

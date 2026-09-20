@@ -1,9 +1,14 @@
 import { initializeCore, normalizeCore } from "../core";
-import { Maximize, Minimize, Volume2, VolumeX, Info, ChevronLeft, ChevronDown, Check, Plus } from "lucide-react";
-import { usePlayerFullscreen } from "./usePlayerFullscreen";
+import { Maximize, Minimize, Volume2, VolumeX, Info, AudioLines, ChevronLeft, ChevronRight, ChevronDown, Check, Plus, X } from "lucide-react";
+import { usePlayerFullscreen } from "../hooks/usePlayerFullscreen";
+import { ShelfCarousel } from "../components/cards/ShelfCarousel";
+import { Cards, type CardActions } from "../components/cards/Cards";
+import { HomeScreen } from "../screens/HomeScreen";
+import { ResponsiveTitle } from "./ResponsiveTitle";
+import { AudioSelectorPopup, type TrackChoice } from "../components/player/AudioSelectorPopup";
 import { WindowResizeBorders } from "./WindowResizeBorders";
 import { ResponsiveSignIn } from "./ResponsiveSignIn";
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { memo, useEffect, useLayoutEffect, useRef, useState, type Dispatch, type MutableRefObject, type SetStateAction } from "react";
 import QRCode from "qrcode";
 import {
   TvApi,
@@ -69,26 +74,17 @@ import {
   catalogFilters,
   catalogDefaults,
   catalogFilterLabel,
-  formatContentType,
+  discoverTypeGroup,
+  discoverGroupLabel,
+  catalogsForGroup,
+  discoverGroups,
 } from "./catalogFilters";
 import { Guide as LiveGuide } from "./Guide";
 import { CastController } from "./CastController";
 import { SeekBar, formatPlaybackTime, seekPinReleased, type BufferedRange } from "./SeekBar";
 import { DialogBackdrop } from "./DialogBackdrop";
 import { BrowserNavigation, readBrowserRoute, safeRestoredRoute, type BrowserRoute, type SettingsSubpage } from "./browserNavigation";
-type Screen =
-  | "startup"
-  | "pairing"
-  | "profiles"
-  | "Home"
-  | "Discover"
-  | "Live TV"
-  | "My List"
-  | "Search"
-  | "Settings"
-  | "detail"
-  | "sources"
-  | "player";
+import type { Screen } from "./screens";
 type Choice = { label: string; action: () => void };
 type ScrollAnchor = { top: number; regions: { id: string; top: number; left: number }[] };
 type BrowserSnapshot = {
@@ -129,10 +125,6 @@ function presentationContext(item: MediaItem) {
             ? `Resume at ${formatPlaybackTime(item.position)}`
             : "";
   return [context, status].filter(Boolean).join(" · ");
-}
-function ResponsiveTitle({ title, logo }: { title: string; logo?: string | null }) {
-  const [loaded, setLoaded] = useState<string>();
-  return <h1 className={`responsive-title ${logo && loaded === logo ? "has-logo" : ""}`}><span>{title}</span>{logo && <img src={logo} alt="" onLoad={() => setLoaded(logo)} onError={() => setLoaded(undefined)} />}</h1>;
 }
 
 function SeasonDropdown({
@@ -192,6 +184,8 @@ function SeasonDropdown({
   );
 }
 
+
+
 export function App({
   api,
   platform = "html5",
@@ -241,8 +235,17 @@ export function App({
     [bootingHome, setBootingHome] = useState(false),
     [recentLive, setRecentLive] = useState<readonly MediaItem[]>([]),
     [homeRows, setHomeRows] = useState<
-      { name: string; items: readonly MediaItem[] }[]
+      { name: string; items: readonly MediaItem[]; catalog?: Catalog }[]
     >([]);
+  const homeCache = useRef<{
+    profile: string;
+    queue: readonly MediaItem[];
+    favorites: readonly MediaItem[];
+    items: readonly MediaItem[];
+    homeRows: readonly { name: string; items: readonly MediaItem[]; catalog?: Catalog }[];
+    recentLive: readonly MediaItem[];
+  }>();
+  const heroMetadataCache = useRef(new Map<string, MediaItem>());
   const [editingProfile, setEditingProfile] = useState<{
     profile?: TvProfile;
   }>();
@@ -311,6 +314,8 @@ export function App({
     [openingSource, setOpeningSource] = useState<string>();
   const [settingsSubpage, setSettingsSubpage] = useState<"Settings" | "Playback preferences" | "Addons">("Settings");
   const [isMaximized, setIsMaximized] = useState(false);
+  const [activeTrackPopup, setActiveTrackPopup] = useState<"audio" | "text" | null>(null);
+  const [playerInfoOpen, setPlayerInfoOpen] = useState(false);
   useEffect(() => {
     let unlisten: (() => void) | undefined;
     const init = async () => {
@@ -586,9 +591,9 @@ export function App({
         Promise.all(
           cats
             .filter((c) => c.type !== "live" && c !== first)
-            .slice(0, 2)
             .map(async (cat) => ({
-              name: cat.name,
+              name: cat.addonName ? `${cat.addonName} · ${cat.name}` : cat.name,
+              catalog: cat,
               items: (
                 await api
                   .discover({
@@ -604,6 +609,15 @@ export function App({
       if (ticket === epoch.current) {
         setRecentLive(live.channels);
         setHomeRows(rows);
+        const homeItems = page?.items ?? home.myList;
+        homeCache.current = {
+          profile: id,
+          queue: home.continueWatching,
+          favorites: home.myList,
+          items: homeItems,
+          homeRows: rows,
+          recentLive: live.channels,
+        };
       }
     } catch (e) {
       if (ticket === epoch.current) fail(e);
@@ -658,6 +672,8 @@ export function App({
   };
   const chooseProfile = async (id: string) => {
     if (bootingHome) return;
+    homeCache.current = undefined;
+    heroMetadataCache.current.clear();
     epoch.current++;
     setBootingHome(true);
     setItems([]);
@@ -1000,7 +1016,7 @@ export function App({
       if (!browser.current?.back()) {
         if (screen === "Settings" && settingsSubpage !== "Settings") {
           void applyBrowserRoute.current({ screen: "Settings", subpage: "Settings" });
-        } else {
+        } else if (screen !== "Home") {
           void applyBrowserRoute.current({ screen: "Home" });
         }
       }
@@ -1761,9 +1777,17 @@ export function App({
       if (ticket === epoch.current) setBusy(false);
     }
   };
-  const navigate = async (next: Screen) => {
+  const navigate = async (next: Screen, catalogHint?: Catalog) => {
     const ticket = ++epoch.current;
-    setItems([]);
+    if (next === "Home" && homeCache.current && homeCache.current.profile === profile) {
+      setQueue(homeCache.current.queue);
+      setFavorites(homeCache.current.favorites);
+      setItems(homeCache.current.items);
+      setHomeRows([...homeCache.current.homeRows]);
+      setRecentLive(homeCache.current.recentLive);
+    } else if (next !== "Home") {
+      setItems([]);
+    }
     go(next);
     setBusy(true);
     try {
@@ -1777,7 +1801,9 @@ export function App({
           const available = await api.catalogs();
           if (ticket !== epoch.current) return;
           setCatalogs(available); setCatalogError("");
-          const chosen = available.find(value => value.id === catalog?.id && value.addonId === catalog?.addonId && value.type === catalog?.type) ?? available[0];
+          const chosen = catalogHint
+            ? available.find(value => value.id === catalogHint.id && value.addonId === catalogHint.addonId && value.type === catalogHint.type) ?? catalogHint
+            : available.find(value => value.id === catalog?.id && value.addonId === catalog?.addonId && value.type === catalog?.type) ?? available.find(value => value.type !== "live") ?? available[0];
           if (chosen) await loadCatalog(chosen);
           else setCatalog(undefined);
         } catch (cause) {
@@ -2107,10 +2133,12 @@ export function App({
           ).catch(fail);
         },
       });
+    const currentId =
+      kind === "audio" ? snapshot?.tracks.selectedAudioId : snapshot?.tracks.selectedTextId;
     const tracks =
       canNative && native?.length
         ? native.map((t) => ({
-            label: t.label,
+            label: t.label + (currentId === t.id ? " · Current" : ""),
             available: t.available,
             run: () =>
               kind === "audio"
@@ -2118,7 +2146,7 @@ export function App({
                 : player.current!.selectTextTrack(t.id),
           }))
         : (server ?? []).map((t) => ({
-            label: t.title || t.language || `Track ${t.inputIndex + 1}`,
+            label: (t.title || t.language || `Track ${t.inputIndex + 1}`) + (t.selected ? " · Current" : ""),
             available: t.selectable,
             run: () =>
               controller.current!.replaceTracks(
@@ -2152,70 +2180,42 @@ export function App({
     choices.push({ label: "Close", action: () => setModal(undefined) });
     setModal({ title: kind === "audio" ? "Audio" : "Subtitles", choices });
   };
+  // Latest card action closures for the memoized card row: the row reads the
+  // ref at click time so unrelated App re-renders skip 300+ card re-renders.
+  const cardActions = useRef<CardActions>({ play, discoverSources, detail, manage });
+  cardActions.current = { play, discoverSources, detail, manage };
   const cards = (list: readonly MediaItem[], prefix: string) => (
-    <div className="cards" data-scroll-id={`cards-${prefix}`}>
-      {list.map((item, i) => {
-        const inQueue = prefix === "queue" || (screen === "My List" && libraryQueue);
-        const presentation = normalizeCore<CardPresentation>("cardPresentation", { item, context: inQueue ? "queue" : "catalog" });
-        const activate = () => {
-          switch (presentation.primaryAction) {
-            case "play": return play(item);
-            case "resume": case "next": return discoverSources(item, true);
-            case "sources": return discoverSources(item);
-            default: return detail(item);
-          }
-        };
-        const card = <TvButton
-          className={`media-card ${presentation.imageRole === "logo" ? "logo-card" : ""}`}
-          aria-label={item.name}
-          id={`${prefix}-${i}`}
-          data-nav-left={
-            i > 0
-              ? `${prefix}-${i - 1}`
-              : screen === "Search"
-                ? searchKey.current
-                : undefined
-          }
-          data-nav-right={
-            i + 1 < list.length ? `${prefix}-${i + 1}` : `${prefix}-${i}`
-          }
-          key={`${item.type}-${item.id}`}
-          onFocus={() => { if (!responsive) setHighlighted(item); }}
-          onActivate={() => void activate()}
-          onHold={() => {
-            // Only the first logical Home row is a queue-management context.
-            // Other Home cards retain their ordinary selection on a held OK;
-            // My List, search and episode-card menus remain contextual.
-            if (screen === "Home") {
-              if (inQueue && item.type !== "live") manage(item);
-              else void activate();
-            } else manage(item);
-          }}
-        >
-          <SharedCardThumbnail item={item} context={inQueue ? "queue" : "catalog"} progress={presentation.progress} />
-          <strong>
-            <RokuText>{presentation.title}</RokuText>
-          </strong>
-          <small>
-            <RokuText speed={42}>
-              {presentation.subtitle}
-            </RokuText>
-          </small>
-        </TvButton>;
-        return responsive ? <div className="responsive-card" key={`${item.type}-${item.id}`}>{card}</div> : card;
-      })}
-    </div>
+    <Cards
+      list={list}
+      prefix={prefix}
+      screen={screen}
+      responsive={responsive}
+      libraryQueue={libraryQueue}
+      actions={cardActions}
+      searchKey={searchKey}
+      setHighlighted={setHighlighted}
+    />
   );
+  const shelfCards = (list: readonly MediaItem[], prefix: string) =>
+    responsive ? <ShelfCarousel>{cards(list, prefix)}</ShelfCarousel> : cards(list, prefix);
+  const firstHomeCatalog = catalogs.find((c) => c.type !== "live");
   const catalogHeroItem = items.find((i) => i.type !== "live") ?? items[0];
   const heroItem = responsive ? catalogHeroItem : (highlighted ?? queue[0] ?? recentLive[0] ?? items[0]);
   const [heroMetadata, setHeroMetadata] = useState<{ key: string; item: MediaItem }>();
   const heroKey = heroItem ? `${profile}:${heroItem.type}:${heroItem.seriesId ?? heroItem.id}` : "";
   useEffect(() => {
     if (!heroItem || heroItem.type === "live") return;
+    if (heroMetadataCache.current.has(heroKey)) {
+      setHeroMetadata({ key: heroKey, item: heroMetadataCache.current.get(heroKey)! });
+      return;
+    }
     const scope = api.createScope();
     const timer = setTimeout(() => {
       void api.detail({ id: heroItem.seriesId ?? heroItem.id, type: heroItem.type }, scope.request()).then((detail) => {
-        if (!scope.signal.aborted) setHeroMetadata({ key: heroKey, item: detail.item });
+        if (!scope.signal.aborted) {
+          heroMetadataCache.current.set(heroKey, detail.item);
+          setHeroMetadata({ key: heroKey, item: detail.item });
+        }
       }).catch(() => { /* The packaged fallback remains usable during metadata failure. */ });
     }, 150);
     return () => { clearTimeout(timer); scope.abort(); };
@@ -2311,9 +2311,130 @@ export function App({
                 ))}
               </nav>);
 
+  const nativeAudio = snapshot?.tracks.audio;
+  const serverAudio = session?.audioTracks;
+  const canNativeAudio =
+    session?.mode === "direct" &&
+    player.current?.capabilities.canSelectAudioTrack;
+  const currentAudioId = snapshot?.tracks.selectedAudioId;
+
+  const audioTrackList: TrackChoice[] =
+    canNativeAudio && nativeAudio?.length
+      ? nativeAudio.map((t) => ({
+          id: t.id,
+          label: t.label,
+          language: t.language,
+          available: t.available,
+          selected: currentAudioId === t.id,
+          onSelect: () => void player.current!.selectAudioTrack(t.id).catch(fail),
+        }))
+      : (serverAudio ?? []).map((t) => ({
+          id: String(t.inputIndex),
+          label: t.title || t.language || `Track ${t.inputIndex + 1}`,
+          language: t.language,
+          available: t.selectable,
+          selected: t.selected,
+          onSelect: () =>
+            void controller.current!.replaceTracks({
+              audioTrackIndex: t.inputIndex,
+            }).catch(fail),
+        }));
+
+  const nativeText = snapshot?.tracks.text;
+  const serverText = session?.subtitleTracks;
+  const canNativeText =
+    session?.mode === "direct" &&
+    player.current?.capabilities.canSelectTextTrack;
+  const currentTextId = snapshot?.tracks.selectedTextId;
+  const subtitlesOff = canNativeText
+    ? !currentTextId
+    : !(serverText ?? []).some((t) => t.selected);
+
+  const textTrackList: TrackChoice[] =
+    canNativeText && nativeText?.length
+      ? nativeText.map((t) => ({
+          id: t.id,
+          label: t.label,
+          language: t.language,
+          available: t.available,
+          selected: currentTextId === t.id,
+          onSelect: () => void player.current!.selectTextTrack(t.id).catch(fail),
+        }))
+      : (serverText ?? []).map((t) => ({
+          id: String(t.inputIndex),
+          label: t.title || t.language || `Track ${t.inputIndex + 1}`,
+          language: t.language,
+          available: t.selectable,
+          selected: t.selected,
+          onSelect: () =>
+            void controller.current!.replaceTracks({
+              subtitleTrackIndex: t.inputIndex,
+              subtitlesOff: false,
+            }).catch(fail),
+        }));
+
+  const subtitleOffOption = {
+    selected: subtitlesOff,
+    onSelect: () => {
+      void (canNativeText
+        ? player.current!.selectTextTrack(null)
+        : controller.current!.replaceTracks({ subtitlesOff: true })
+      ).catch(fail);
+    },
+  };
+
+  const playerInfoLines = [
+    `Decoder: ${snapshot?.diagnostics
+      ? `${snapshot.diagnostics.engine}${snapshot.diagnostics.backend ? ` (${snapshot.diagnostics.backend})` : ""}`
+      : player.current?.capabilities.engine ?? "Unknown"}`,
+    `Transport: ${snapshot?.diagnostics?.networkTransport ?? "Unknown"}`,
+    `Container: ${snapshot?.diagnostics?.transport ?? session?.format ?? "Unknown"}`,
+    `Delivery: ${session?.videoMode === "transcode" || session?.audioMode === "transcode" ? "Transcode" : session?.mode || "Unknown"}`,
+    session?.videoMode ? `Video delivery: ${session.videoMode}` : "",
+    session?.audioMode ? `Audio delivery: ${session.audioMode}` : "",
+    snapshot?.diagnostics?.videoCodec ? `Video codec: ${snapshot.diagnostics.videoCodec}` : "",
+    snapshot?.diagnostics?.audioCodec ? `Audio codec: ${snapshot.diagnostics.audioCodec}` : "",
+    snapshot?.diagnostics?.width ? `Resolution: ${snapshot.diagnostics.width} × ${snapshot.diagnostics.height}` : "",
+    snapshot?.diagnostics?.fallbackReason ? `Fallback: ${snapshot.diagnostics.fallbackReason}` : "",
+  ].filter(Boolean);
+
+
   return (
     <RemoteRoot
       inputMode={layout}
+      onToggleFullscreen={() => {
+        if (activeTrackPopup) {
+          setActiveTrackPopup(null);
+          return;
+        }
+        if (playerInfoOpen) {
+          setPlayerInfoOpen(false);
+          return;
+        }
+        if (casting) {
+          closeCast();
+          return;
+        }
+        if (editingProfile) {
+          setEditingProfile(undefined);
+          return;
+        }
+        if (entry) {
+          setEntry(undefined);
+          return;
+        }
+        if (modal) {
+          setModal(undefined);
+          return;
+        }
+        // Escape toggles fullscreen only inside the player; on every other
+        // screen it follows the browser Back contract the e2e suite pins.
+        if (screen === "player") {
+          void fullscreenControl.toggle();
+          return;
+        }
+        back();
+      }}
       onBack={() => casting ? closeCast() : screen === "player" && fullscreenControl.fullscreen && !modal && !entry && !editingProfile ? void fullscreenControl.exit() : back()}
       onMediaKey={mediaKey}
       onMediaKeyUp={mediaKeyUp}
@@ -2444,147 +2565,26 @@ export function App({
           <>
             {!responsive && !["detail", "sources", "player"].includes(screen) && navigation}
             {screen === "Home" && (
-              <main className={`home ${compactHome ? "compact-home" : ""}`}>
-                {!responsive && heroPresentation?.heroImage && (
-                  <HeroArtwork
-                    key={heroPresentation.heroImage}
-                    uri={heroPresentation.heroImage}
-                  />
-                )}
-                {responsive && <div className="responsive-hero-art"><CardArtwork src={heroPresentation?.heroImage ?? undefined} fallback="Preview unavailable" /></div>}
-                <div className="hero">
-                  <small>
-                    {responsive
-                      ? `FEATURED ${(heroItem?.type ?? "movie").toUpperCase()}`
-                      : (highlighted ?? queue[0] ?? recentLive[0] ?? items[0])?.type === "live"
-                        ? "LIVE NOW"
-                        : (highlighted ?? queue[0])?.position
-                          ? "CONTINUE WATCHING"
-                          : `FEATURED ${(highlighted ?? items[0])?.type?.toUpperCase() ?? "MOVIE"}`}
-                  </small>
-                  {responsive ? <ResponsiveTitle title={heroItem?.name ?? "VIPTV"} logo={heroPresentation?.titleLogo} /> : <h1><RokuText>{heroItem?.name ?? "VIPTV"}</RokuText></h1>}
-                  <p>
-                    {heroItem?.description ?? ""}
-                  </p>
-                  <div className="hero-facts">
-                    {[
-                      heroItem?.year,
-                      heroItem?.runtime,
-                      ...(heroItem?.genres.slice(0, 2) ?? []),
-                    ]
-                      .filter(Boolean)
-                      .join("  ·  ")}
-                  </div>
-                  <div className="actions">
-                    {!responsive && (
-                      <TvButton
-                        id="hero-play"
-                        className={
-                          (highlighted ?? queue[0])?.queueStatus === "next"
-                            ? "wide-action"
-                            : undefined
-                        }
-                        onFocus={() => setCompactHome(false)}
-                        onActivate={() => {
-                          const item = highlighted ?? queue[0] ?? recentLive[0] ?? items[0];
-                          if (item)
-                            void discoverSources(
-                              item,
-                              !!item.position || item.queueStatus === "next",
-                            );
-                        }}
-                        onHold={() => {
-                          const item = highlighted ?? queue[0] ?? recentLive[0] ?? items[0];
-                          if (!item) return;
-                          if (
-                            item.type !== "live" &&
-                            queue.some(
-                              (queued) =>
-                                queued.id === item.id &&
-                                queued.type === item.type,
-                            )
-                          )
-                            manage(item);
-                          else void discoverSources(item);
-                        }}
-                      >
-                        {heroPresentation?.primaryActionLabel ?? "Play"}
-                      </TvButton>
-                    )}
-                    <TvButton
-                      id="hero-details"
-                      onFocus={() => setCompactHome(false)}
-                      onActivate={() => {
-                        const item = responsive ? heroItem : (highlighted ?? queue[0] ?? recentLive[0] ?? items[0]);
-                        if (item) void detail(item);
-                      }}
-                    >
-                      Details
-                    </TvButton>
-                    {responsive && (
-                      <TvButton
-                        id="hero-save"
-                        className="compact-action hero-save-btn"
-                        aria-label="My List"
-                        aria-pressed={favorites.some((item) => item.id === heroItem?.id)}
-                        onActivate={() => { if (heroItem) void toggle(heroItem); }}
-                      >
-                        {favorites.some((item) => item.id === heroItem?.id) ? (
-                          <Check size={18} />
-                        ) : (
-                          <Plus size={18} />
-                        )}
-                      </TvButton>
-                    )}
-                  </div>
-                </div>
-                <div
-                  className="shelves"
-                  onFocusCapture={(event) => {
-                    const section = (event.target as HTMLElement).closest(
-                      "section",
-                    );
-                    const first = event.currentTarget.querySelector("section");
-                    setCompactHome(!!section && section !== first);
-                  }}
-                >
-                  {queue.length > 0 && (
-                    <section>
-                      <h2>Continue Watching</h2>
-                      {cards(queue, "queue")}
-                    </section>
-                  )}
-                  {recentLive.length > 0 && (
-                    <section>
-                      <h2>Recently Watched Live TV</h2>
-                      {cards(recentLive, "recent-live")}
-                    </section>
-                  )}
-                  {items.length > 0 && (
-                    <section>
-                      <h2>
-                        {catalogs.find((c) => c.type !== "live")?.name ??
-                          "Discover"}
-                      </h2>
-                      {cards(items, "home")}
-                    </section>
-                  )}
-                  {homeRows
-                    .filter((row) => row.items.length)
-                    .map((row, i) => (
-                      <section key={`${row.name}-${i}`}>
-                        <h2>{row.name}</h2>
-                        {cards(row.items, `shelf-${i}`)}
-                      </section>
-                    ))}
-                  {favorites.length > 0 && (
-                    <section>
-                      <h2>My List</h2>
-                      {cards(favorites, "saved")}
-                    </section>
-                  )}
-                </div>
-              </main>
+              <HomeScreen
+                responsive={responsive}
+                compactHome={compactHome}
+                setCompactHome={setCompactHome}
+                heroPresentation={heroPresentation}
+                heroItem={heroItem}
+                highlighted={highlighted}
+                queue={queue}
+                recentLive={recentLive}
+                items={items}
+                homeRows={homeRows}
+                favorites={favorites}
+                firstHomeCatalog={firstHomeCatalog}
+                navigate={navigate}
+                discoverSources={discoverSources}
+                detail={detail}
+                manage={manage}
+                toggle={toggle}
+                shelfCards={shelfCards}
+              />
             )}
             {["Discover", "My List", "Search"].includes(screen) && (
               <main className={`browse ${screen === "Search" ? "search" : ""}`}>
@@ -2719,39 +2719,38 @@ export function App({
                       onActivate={() =>
                         setModal({
                           title: "Content type",
-                          choices: Array.from(
-                            new Set(catalogs.map((c) => c.type)),
-                          ).map((type) => ({
-                            label: formatContentType(type),
+                          choices: discoverGroups(catalogs).map((group) => ({
+                            label: discoverGroupLabel(group),
                             action: () => {
                               setModal(undefined);
-                              const cat = catalogs.find((c) => c.type === type);
-                              if (cat) void loadCatalog(cat);
+                              const first = catalogsForGroup(catalogs, group)[0];
+                              if (first) void loadCatalog(first);
                             },
                           })),
                         })
                       }
                     >
-                      {catalog?.type ? formatContentType(catalog.type) : "Content type"}
+                      {catalog ? discoverGroupLabel(discoverTypeGroup(catalog.type)) : "Content type"}
                     </TvButton>
                     <TvButton
                       id="discover-catalog"
                       onActivate={() =>
                         setModal({
                           title: "Catalog",
-                          choices: catalogs
-                            .filter((c) => !catalog || c.type === catalog.type)
-                            .map((cat) => ({
-                              label: `${cat.name}${cat.addonName ? ` · ${cat.addonName}` : ""}`,
-                              action: () => {
-                                setModal(undefined);
-                                void loadCatalog(cat);
-                              },
-                            })),
+                          choices: (catalog
+                            ? catalogsForGroup(catalogs, discoverTypeGroup(catalog.type))
+                            : catalogs.filter((c) => c.type !== "live")
+                          ).map((cat) => ({
+                            label: `${cat.addonName ? `${cat.addonName} · ` : ""}${cat.name}`,
+                            action: () => {
+                              setModal(undefined);
+                              void loadCatalog(cat);
+                            },
+                          })),
                         })
                       }
                     >
-                      {catalog ? `${catalog.name}${catalog.addonName ? ` · ${catalog.addonName}` : ""}` : "Catalog"}
+                      {catalog ? `${catalog.addonName ? `${catalog.addonName} · ` : ""}${catalog.name}` : "Catalog"}
                     </TvButton>
                     {catalog &&
                       catalogFilters(catalog).map((filter) => (
@@ -3304,7 +3303,7 @@ export function App({
                 onClick={(event) => {
                   // The backdrop around the controls is the play/pause surface,
                   // matching the video; interactive elements keep their clicks.
-                  if ((event.target as HTMLElement).closest("button, input, .seekbar"))
+                  if ((event.target as HTMLElement).closest("button, input, .seekbar, .audio-selector-popup"))
                     return;
                   if (selected?.type === "live") {
                     toggleLiveMute();
@@ -3316,9 +3315,6 @@ export function App({
                 <div
                   className={`player-identity ${selected?.type === "live" ? "channel-identity" : ""}`}
                 >
-                  {selected?.type === "live" && selected.poster && (
-                    <ReadyImage src={selected.poster} alt="" />
-                  )}
                   <span>{selected?.name}</span>
                 </div>
                 {responsive && (
@@ -3399,19 +3395,7 @@ export function App({
                     </>
                   )}
                   <div className="controls">
-                    {selected?.type === "live" ? (
-                      <TvButton
-                        id="mute"
-                        aria-label={snapshot?.volume?.muted ? "Unmute" : "Mute"}
-                        onActivate={() => toggleLiveMute()}
-                      >
-                        {snapshot?.volume?.muted ? (
-                          <VolumeX size={26} color="#f5f5f5" />
-                        ) : (
-                          <Volume2 size={26} color="#f5f5f5" />
-                        )}
-                      </TvButton>
-                    ) : (
+                    {selected?.type !== "live" && (
                       <>
                         <TvButton
                           id="rewind"
@@ -3476,26 +3460,47 @@ export function App({
                         )}
                       </>
                     )}
+                    <div className="track-buttons">
                     <TvButton
                       id="audio"
                       aria-label="Audio"
-                      onActivate={() => trackChoices("audio")}
+                      onActivate={() => {
+                        if (responsive) {
+                          setActiveTrackPopup(activeTrackPopup === "audio" ? null : "audio");
+                          setPlayerInfoOpen(false);
+                        } else {
+                          trackChoices("audio");
+                        }
+                      }}
                     >
-                      <img
-                        src={`${import.meta.env.BASE_URL}assets/ui-nav-player-audio.png`}
-                        alt=""
-                      />
+                      <AudioLines size={26} color="#f5f5f5" aria-hidden="true" />
                     </TvButton>
                     <TvButton
                       id="subtitles"
                       aria-label="Subtitles"
-                      onActivate={() => trackChoices("text")}
+                      onActivate={() => {
+                        if (responsive) {
+                          setActiveTrackPopup(activeTrackPopup === "text" ? null : "text");
+                          setPlayerInfoOpen(false);
+                        } else {
+                          trackChoices("text");
+                        }
+                      }}
                     >
                       <img
                         src={`${import.meta.env.BASE_URL}assets/ui-nav-player-captions.png`}
                         alt=""
                       />
                     </TvButton>
+                    {responsive && activeTrackPopup && (
+                      <AudioSelectorPopup
+                        title={activeTrackPopup === "audio" ? "Audio Tracks" : "Subtitles"}
+                        tracks={activeTrackPopup === "audio" ? audioTrackList : textTrackList}
+                        offOption={activeTrackPopup === "text" ? subtitleOffOption : undefined}
+                        onClose={() => setActiveTrackPopup(null)}
+                      />
+                    )}
+                    </div>
                     {responsive && <div className="responsive-player-tools">
                       {player.current?.capabilities.canSetVolume && snapshot?.volume ? (
                         <div
@@ -3537,20 +3542,20 @@ export function App({
                       ) : (
                         <span className="system-volume">Use device volume buttons</span>
                       )}
-                      <button type="button" aria-label="Playback info" title="Playback info" onClick={() => setModal({ title: "Playback info", body: [
-                        `Decoder: ${snapshot?.diagnostics
-                          ? `${snapshot.diagnostics.engine}${snapshot.diagnostics.backend ? ` (${snapshot.diagnostics.backend})` : ""}`
-                          : player.current?.capabilities.engine ?? "Unknown"}`,
-                        `Transport: ${snapshot?.diagnostics?.networkTransport ?? "Unknown"}`,
-                        `Container: ${snapshot?.diagnostics?.transport ?? session?.format ?? "Unknown"}`,
-                        `Delivery: ${session?.videoMode === "transcode" || session?.audioMode === "transcode" ? "Transcode" : session?.mode || "Unknown"}`,
-                        session?.videoMode ? `Video delivery: ${session.videoMode}` : "",
-                        session?.audioMode ? `Audio delivery: ${session.audioMode}` : "",
-                        snapshot?.diagnostics?.videoCodec ? `Video codec: ${snapshot.diagnostics.videoCodec}` : "",
-                        snapshot?.diagnostics?.audioCodec ? `Audio codec: ${snapshot.diagnostics.audioCodec}` : "",
-                        snapshot?.diagnostics?.width ? `Resolution: ${snapshot.diagnostics.width} × ${snapshot.diagnostics.height}` : "",
-                        snapshot?.diagnostics?.fallbackReason ? `Fallback: ${snapshot.diagnostics.fallbackReason}` : "",
-                      ].filter(Boolean).join("\n"), choices: [{ label: "Close", action: () => setModal(undefined) }] })}><Info size={22} /></button>
+                      <div className="player-info-anchor">
+                        <button type="button" aria-label="Playback info" title="Playback info" onClick={() => { setPlayerInfoOpen((open) => !open); setActiveTrackPopup(null); }}><Info size={22} /></button>
+                        {playerInfoOpen && (
+                          <div className="audio-selector-popup player-info-popup" role="dialog" aria-label="Playback info">
+                            <div className="audio-selector-header">
+                              <span className="audio-selector-title">Playback info</span>
+                              <button type="button" className="audio-selector-close" aria-label="Close" onClick={() => setPlayerInfoOpen(false)} tabIndex={-1}><X size={16} /></button>
+                            </div>
+                            <div className="player-info-body">
+                              {playerInfoLines.map((line) => <p key={line}>{line}</p>)}
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     </div>}
                     {!responsive && <TvButton
                       id="exit"

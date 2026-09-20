@@ -20,6 +20,31 @@ export function catalogFilterLabel(name: string): string {
       : name.charAt(0).toUpperCase() + name.slice(1);
 }
 
+/** Canonical Stremio-style discover groups; addon namespaces fold into them. */
+export type DiscoverGroup = "movie" | "series" | "anime" | "other";
+export function discoverTypeGroup(type: string): DiscoverGroup {
+  if (type === "movie") return "movie";
+  if (type === "series") return "series";
+  if (type === "anime" || type.startsWith("anime.")) return "anime";
+  return "other";
+}
+export function discoverGroupLabel(group: DiscoverGroup): string {
+  if (group === "movie") return "Movies";
+  if (group === "series") return "Series";
+  if (group === "anime") return "Anime";
+  return "Other";
+}
+export function catalogsForGroup(catalogs: readonly Catalog[], group: DiscoverGroup): readonly Catalog[] {
+  return catalogs.filter((c) => c.type !== "live" && discoverTypeGroup(c.type) === group);
+}
+export function discoverGroups(catalogs: readonly Catalog[]): DiscoverGroup[] {
+  const groups: DiscoverGroup[] = [];
+  for (const group of ["movie", "series", "anime", "other"] as const) {
+    if (catalogsForGroup(catalogs, group).length > 0) groups.push(group);
+  }
+  return groups;
+}
+
 export function formatContentType(type: string): string {
   const overrides: Record<string, string> = {
     movie: "Movie",

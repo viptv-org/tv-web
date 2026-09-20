@@ -9,6 +9,11 @@
 .cast-controller button:focus-visible, .cast-controller input:focus-visible { outline: 2px solid #f5f5f5; outline-offset: 3px; }
 .cast-controller button:focus-visible { background: #f5f5f5; color: #101112; }
 .cast-controller button:disabled { opacity: .5; cursor: default; }
+.cast-controller-tvs { list-style: none; display: grid; gap: 10px; margin: 0 0 12px; padding: 0; }
+.cast-controller-tvs button { width: 100%; text-align: left; }
+.cast-controller-manual { min-height: 44px; margin: 0 0 12px; font: normal 16px Arial, sans-serif; background: #17181a; }
+.cast-controller-manual:hover:not(:disabled) { background: #26282a; }
+.cast-controller-manual[aria-expanded="true"] { background: #26282a; }
 .cast-controller-fields { display: flex; gap: 12px; margin-bottom: 20px; }
 .cast-controller-fields input { flex: 1; }
 .cast-controller-actions { display: flex; flex-wrap: wrap; gap: 12px; margin: 16px 0 24px; }

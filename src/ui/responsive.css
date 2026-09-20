@@ -521,11 +521,7 @@ header.desktop-titlebar.responsive-toolbar {
   width: calc(100% - var(--sidebar-width));
   max-width: none;
 }
-.responsive-app .responsive-epg {
-  padding-top: 16px !important;
-  padding-left: 20px !important;
-  padding-right: 20px !important;
-}
+/* Guide page paddings and fit live in guide-responsive.css with the page geometry. */
 .responsive-app .home { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: 40px; align-items: center; align-content: start; }
 .responsive-app .responsive-hero-art, .responsive-app .responsive-detail-art { grid-column: 2; grid-row: 1; position: relative; aspect-ratio: 16 / 9; width: 100%; max-width: 782px; max-height: 440px; min-width: 0; justify-self: end; align-self: center; overflow: hidden; border-radius: 8px; background: #202224; }
 .responsive-app .responsive-hero-art > img, .responsive-app .responsive-detail-art > img, .responsive-app .responsive-hero-art > .art-fallback, .responsive-app .responsive-detail-art > .art-fallback { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; font-size: 17px; color: #a6a8aa; }
@@ -544,7 +540,21 @@ header.desktop-titlebar.responsive-toolbar {
 .responsive-app .shelves section { margin: 0 0 32px; width: 100%; min-width: 0; height: auto; }
 .responsive-app .shelves h2 { height: auto; font-size: 22px; line-height: 28px; text-transform: uppercase; margin-bottom: 12px; overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
 .responsive-app .cards { display: flex; gap: 24px; width: 100%; height: auto; overflow-x: auto; padding: 6px 6px 12px; scroll-snap-type: x proximity; scroll-behavior: smooth; }
-.responsive-app .responsive-card { position: relative; flex: 0 0 256px; width: 256px; scroll-snap-align: start; }
+/* Desktop shelf carousels: a compact backgroundless chevron pair pinned to
+   the row's bottom-right flips one card-page; exhausted directions grey out
+   instead of unmounting, and the pair hides only when the whole row fits. */
+.responsive-app .shelf-carousel { position: relative; width: 100%; min-width: 0; }
+.responsive-app .shelf-nav { position: absolute; right: 4px; bottom: 0; z-index: 6; display: flex; gap: 2px; }
+.responsive-app .shelf-nav-btn { display: grid; place-items: center; width: 44px; height: 40px; min-height: 40px; padding: 0; border: none; border-radius: 8px; background: transparent; color: #a6a8aa; cursor: pointer; }
+.responsive-app button.shelf-nav-btn:hover:not(:disabled) { background: transparent; color: #f5f5f5; }
+.responsive-app .shelf-nav-btn:disabled { opacity: 0.35; cursor: default; }
+.responsive-app .shelf-nav-btn:focus-visible { outline: 2px solid #f5f5f5; outline-offset: -2px; }
+/* Catalog shelf headings gain a trailing plain-text See more affordance. */
+.responsive-app .shelf-heading { display: flex; align-items: baseline; gap: 16px; }
+.responsive-app .shelf-see-more { margin-left: auto; flex: 0 0 auto; display: inline-flex; align-items: center; gap: 4px; min-height: 32px; padding: 2px 2px 2px 6px; border: none; background: transparent; color: #a6a8aa; font-size: 14px; font-weight: 600; letter-spacing: 0.02em; cursor: pointer; white-space: nowrap; }
+.responsive-app button.shelf-see-more:hover { background: transparent; color: #f5f5f5; }
+.responsive-app .shelf-see-more:focus-visible { outline: 2px solid #f5f5f5; outline-offset: 2px; border-radius: 6px; }
+.responsive-app .responsive-card { position: relative; flex: 0 0 256px; width: 256px; scroll-snap-align: start; content-visibility: auto; contain-intrinsic-size: 256px auto 218px; }
 .responsive-app .media-card { display: grid; grid-template-columns: minmax(0, 1fr); width: 256px; height: auto; min-height: 218px; padding: 0; margin: 0; background: transparent !important; color: #f5f5f5 !important; transform: none !important; }
 .responsive-app .media-card > img, .responsive-app .media-card > .art-fallback { position: relative; inset: auto; grid-area: 1 / 1; width: 256px; height: 144px; border-radius: 8px; object-fit: cover; }
 .responsive-app .media-card::after { content: ""; position: absolute; grid-area: 1 / 1; left: 0; top: 0; width: 256px; height: 144px; border-radius: 8px; border: 2px solid transparent; box-sizing: border-box; pointer-events: none; background: none; transition: border-color 0.15s ease, opacity 0.15s ease; }
@@ -673,7 +683,7 @@ header.desktop-titlebar.responsive-toolbar {
   width: 36px;
   height: 36px;
   min-height: 36px;
-  border-radius: 50%;
+  border-radius: 6px;
   background: rgba(255, 255, 255, 0.12);
   border: 1px solid rgba(255, 255, 255, 0.18);
   color: #f5f5f5;
@@ -718,6 +728,74 @@ header.desktop-titlebar.responsive-toolbar {
 .responsive-app .controls { position: static; order: 2; display: flex; flex-wrap: wrap; gap: 8px; width: 100%; height: auto; margin-top: 8px; }
 .responsive-app .controls button { position: static; width: 56px; height: 56px; min-height: 56px; padding: 14px; }
 .responsive-app .controls [data-focus-id="exit"] { margin-left: auto; }
+
+/* Desktop player popups: anchored above the toolbar icon instead of a blocking dialog. */
+.responsive-app .track-buttons { position: relative; display: flex; gap: 8px; }
+.responsive-app .player-info-anchor { position: relative; }
+.responsive-app .audio-selector-popup {
+  position: absolute;
+  bottom: calc(100% + 12px);
+  left: 0;
+  z-index: 30;
+  width: min(340px, calc(100vw - 48px));
+  max-height: min(420px, 60vh);
+  display: flex;
+  flex-direction: column;
+  background: rgba(17, 19, 23, 0.96);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 8px;
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.6);
+  color: #f5f5f5;
+  text-align: left;
+  overflow: hidden;
+}
+.responsive-app .player-info-popup { left: auto; right: 0; }
+.responsive-app .audio-selector-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 10px 12px; border-bottom: 1px solid rgba(255, 255, 255, 0.12); }
+.responsive-app .audio-selector-title { font-size: 14px; font-weight: 600; }
+.responsive-app .audio-selector-popup .audio-selector-close {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  min-height: 26px;
+  padding: 4px;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  color: #a0a3a7;
+  cursor: pointer;
+}
+.responsive-app .audio-selector-popup .audio-selector-close:hover,
+.responsive-app .audio-selector-popup .audio-selector-close:focus { background: rgba(255, 255, 255, 0.12); color: #f5f5f5; }
+.responsive-app .audio-selector-list { margin: 0; padding: 6px; overflow-y: auto; }
+.responsive-app .audio-selector-popup .audio-selector-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  box-sizing: border-box;
+  height: auto;
+  min-height: 0;
+  padding: 10px 12px;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  color: #d1d5db;
+  font-size: 14px;
+  line-height: 1.4;
+  cursor: pointer;
+}
+.responsive-app .audio-selector-popup .audio-selector-item:hover,
+.responsive-app .audio-selector-popup .audio-selector-item:focus { background: rgba(255, 255, 255, 0.1); color: #ffffff; outline: none; }
+.responsive-app .audio-selector-popup .audio-selector-item.is-selected { background: rgba(255, 255, 255, 0.16); color: #ffffff; }
+.responsive-app .audio-selector-popup .audio-selector-item.is-disabled { color: #6b6f74; cursor: default; }
+.responsive-app .audio-selector-popup .track-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.responsive-app .audio-selector-popup .track-unavailable { color: #6b6f74; }
+.responsive-app .audio-selector-popup .track-current { display: inline-flex; align-items: center; gap: 4px; flex: none; color: #ffffff; font-size: 12px; font-weight: 600; }
+.responsive-app .audio-selector-empty { padding: 12px; color: #a0a3a7; font-size: 14px; }
+.responsive-app .player-info-body { margin: 0; padding: 10px 14px 12px; overflow-y: auto; font-size: 13px; line-height: 1.6; color: #c5c6c7; }
+.responsive-app .player-info-body p { margin: 0; }
 .responsive-app .playback-loading { position: fixed; left: 50%; top: 40%; width: min(90%, 420px); transform: translate(-50%, -50%); text-align: center; }
 @media (max-width: 1380px) {
   .responsive-app .responsive-toolbar nav em { display: none; }
