@@ -1,0 +1,395 @@
+.search .keyboard > div {
+  position: absolute;
+  left: 2px;
+  top: 62px;
+  width: 300px;
+  display: grid;
+  grid-template-columns: repeat(6, 50px);
+  grid-auto-rows: 46px;
+}
+.search .keyboard > div button {
+  width: 50px;
+  height: 46px;
+  min-height: 46px;
+  border-radius: 0;
+  padding: 0;
+  text-align: center;
+  font-size: 22px;
+  font-weight: 400;
+  background: #303234;
+}
+.search .keyboard button:focus {
+  outline: 3px solid white;
+  outline-offset: 3px;
+  z-index: 2;
+  color: white;
+}
+.search .keyboard > [data-focus-id="search-scope"] {
+  position: absolute;
+  top: 446px;
+  left: 0;
+  width: 300px;
+  height: 48px;
+  font-size: 19px;
+}
+.search .keyboard > [data-focus-id="clear"],
+.search .keyboard > [data-focus-id="space"],
+.search .keyboard > [data-focus-id="delete"] {
+  position: absolute;
+  top: 338px;
+  width: 100px;
+  height: 46px;
+  min-height: 46px;
+  border-radius: 0;
+  padding: 0;
+  text-align: center;
+  font-size: 19px;
+  background: #303234;
+  font-weight: 400;
+}
+.search .keyboard > [data-focus-id="clear"] {
+  left: 2px;
+}
+.search .keyboard > [data-focus-id="space"] {
+  left: 102px;
+}
+.search .keyboard > [data-focus-id="delete"] {
+  left: 202px;
+}
+.search .result-grid {
+  left: 356px;
+  top: 110px;
+  width: 740px;
+  height: 484px;
+}
+.search .result-grid > section {
+  height: 238px;
+  margin: 0 0 8px;
+}
+.search .result-grid h2 {
+  height: 38px;
+  line-height: 30px;
+  font-size: 22px;
+}
+.search .result-grid .cards {
+  height: 200px;
+  gap: 20px;
+  overflow-y: hidden;
+}
+.search-status {
+  position: absolute;
+  left: 356px;
+  top: 606px;
+  width: 740px;
+  height: 36px;
+  font-size: 20px;
+  line-height: 36px;
+  color: #c5c6c7;
+}
+.roku-text {
+  display: block;
+  width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+}
+.roku-text > span {
+  display: inline-block;
+  min-width: 100%;
+  white-space: nowrap;
+}
+button:focus .roku-text.overflows > span {
+  animation: roku-marquee var(--marquee-duration) linear 1s infinite alternate;
+}
+@keyframes roku-marquee {
+  to {
+    transform: translateX(var(--marquee-distance));
+  }
+}
+.search-help {
+  position: absolute;
+  left: 0;
+  top: 408px;
+  width: 304px;
+  height: 64px;
+  font-size: 19px;
+  line-height: 26px;
+  color: #a6a8aa;
+}
+.search .keyboard > [data-focus-id="search-scope"] {
+  top: 492px;
+  height: 40px;
+  min-height: 40px;
+}
+.startup-cover::after {
+  content: "";
+  position: absolute;
+  left: 610px;
+  top: 476px;
+  width: 60px;
+  height: 60px;
+  border: 5px solid #4a4c4e;
+  border-top-color: #f5f5f5;
+  border-radius: 50%;
+  animation: spin 1.1s linear infinite;
+}
+
+.controls [data-focus-id="rewind"] {
+  left: 0;
+}
+.controls [data-focus-id="pause"] {
+  left: 80px;
+}
+.controls [data-focus-id="forward"] {
+  left: 160px;
+}
+.controls [data-focus-id="next"] {
+  left: 240px;
+}
+.controls [data-focus-id="audio"] {
+  left: 928px;
+}
+.controls [data-focus-id="subtitles"] {
+  left: 1008px;
+}
+.controls [data-focus-id="exit"] {
+  left: 1088px;
+}
+.live-overlay .controls [data-focus-id="audio"] {
+  left: 544px;
+}
+.live-overlay .controls [data-focus-id="subtitles"] {
+  display: none;
+}
+.logo-card > img {
+  left: 40px;
+  top: 22px;
+  width: 176px;
+  height: 100px;
+  object-fit: contain;
+  border-radius: 0;
+}
+.hero-sharp {
+  transition: none;
+}
+.detail-credits {
+  margin-top: 24px;
+  max-height: 84px;
+  font-size: 19px;
+  line-height: 28px;
+  color: #a6a8aa;
+  white-space: pre-wrap;
+  overflow: hidden;
+}
+.series .detail-credits {
+  display: none;
+}
+.hero:focus-within .roku-text.overflows > span,
+.detail:focus-within h1 .roku-text.overflows > span,
+.player-overlay .roku-text.overflows > span {
+  animation: roku-marquee var(--marquee-duration) linear 1s infinite alternate;
+}
+.source-empty {
+  position: absolute;
+  left: 150px;
+  top: 146px;
+  width: 780px;
+  text-align: center;
+}
+.source-empty h2 {
+  font-size: 32px;
+  height: 56px;
+}
+.source-empty p {
+  font-size: 22px;
+  color: #a6a8aa;
+}
+
+.nav-initials {
+  position: absolute;
+  left: 8px;
+  top: 8px;
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #242628;
+  color: white;
+  font-size: 19px;
+}
+.channel-identity {
+  top: 34px;
+  height: 56px;
+  gap: 16px;
+}
+.channel-identity img {
+  width: 84px;
+  height: 56px;
+  padding: 6px 8px;
+  object-fit: contain;
+  background: #242628e8;
+  border-radius: 12px;
+}
+.channel-identity span {
+  font-size: 24px;
+}
+
+/* MiniKeyboard tiles retain native separators, rounded focus and symbol actions. */
+.search > h1 {
+  line-height: 44px;
+}
+.search .keyboard > input::placeholder {
+  color: #c5c6c7;
+  opacity: 1;
+}
+.search .keyboard > div button {
+  box-shadow: inset -1px -1px #242628;
+  font-weight: 700;
+}
+.search .keyboard button:focus {
+  outline: 0;
+}
+.search .keyboard button:focus::before {
+  content: "";
+  position: absolute;
+  inset: -6px;
+  border: 2px solid #f5f5f5;
+  border-radius: 6px;
+  pointer-events: none;
+}
+.search .keyboard > [data-focus-id="clear"],
+.search .keyboard > [data-focus-id="space"],
+.search .keyboard > [data-focus-id="delete"] {
+  box-shadow: inset -1px -1px #242628;
+}
+.search .keyboard svg {
+  vertical-align: middle;
+}
+.search .search-help {
+  font-size: 22px;
+  line-height: 32px;
+}
+
+.search .keyboard > div button {
+  position: relative;
+  font-size: 20px;
+}
+.search .keyboard > input {
+  transform: translateY(-10px);
+  font-size: 24px;
+}
+.search .search-status {
+  line-height: 22px;
+}
+
+/* ------------------------------------------------------------------ */
+/* Interaction states: hover animates only where a pointer exists (TV */
+/* layouts keep their outline-based focus), and any persistent choice */
+/* stays visibly selected.                                             */
+/* ------------------------------------------------------------------ */
+
+.error.connection {
+  display: grid;
+  gap: 8px;
+}
+.error.connection .error-title {
+  font-weight: 700;
+}
+.error.connection .error-message {
+  opacity: 0.9;
+}
+.error.connection .error-line {
+  font-size: 0.85em;
+  opacity: 0.7;
+}
+
+.modal h2.modal-title.kind-network,
+.modal h2.modal-title.kind-server {
+  color: #ff6b6b;
+}
+.modal h2.modal-title.kind-auth,
+.modal h2.modal-title.kind-client {
+  color: #ffb454;
+}
+.modal .modal-message {
+  margin: 0;
+}
+.modal .modal-details {
+  margin: 10px 0 4px;
+  border: 1px solid rgba(128, 128, 128, 0.35);
+  border-radius: 6px;
+  padding: 8px 12px;
+}
+.modal .modal-details summary {
+  cursor: pointer;
+  opacity: 0.85;
+}
+.modal .modal-detail-line {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.82em;
+  opacity: 0.75;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .modal-choices button,
+  .error button,
+  .source-filters button,
+  .filters button,
+  .card-more {
+    transition: filter 120ms ease, transform 120ms ease, background 120ms ease;
+  }
+  .modal-choices button:hover,
+  .error button:hover,
+  .source-filters button:hover,
+  .filters button:hover,
+  .card-more:hover {
+    filter: brightness(1.18);
+    transform: translateY(-1px);
+  }
+  .modal-choices button:active,
+  .error button:active,
+  .source-filters button:active,
+  .filters button:active {
+    transform: translateY(0);
+    filter: brightness(0.95);
+  }
+}
+
+/* A persistent selection is visible on every layout, not just on focus. */
+.source-filters button[aria-pressed="true"],
+.filters button[aria-pressed="true"],
+.source-filters button[aria-current="true"],
+.filters button[aria-current="true"],
+.modal-choices button[aria-pressed="true"] {
+  border-color: #f5f5f5;
+  box-shadow: inset 0 0 0 1px #f5f5f5;
+}
+
+/* Player notice: a transient, self-dismissing message for operation
+   failures (e.g. a refused seek). It floats independently of the player's
+   control stack and never blocks interaction. */
+.player-notice {
+  position: fixed;
+  top: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: min(520px, 84vw);
+  padding: 10px 18px;
+  border-radius: 10px;
+  background: rgba(13, 16, 21, 0.94);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+  color: #f4f5f7;
+  font-size: 14px;
+  line-height: 1.45;
+  text-align: center;
+  z-index: 40;
+  animation: player-notice-in 160ms ease-out;
+}
+@keyframes player-notice-in {
+  from { opacity: 0; transform: translateX(-50%) translateY(-6px); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0); }
+}

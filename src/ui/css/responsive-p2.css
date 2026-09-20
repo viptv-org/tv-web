@@ -1,0 +1,466 @@
+.responsive-app .desktop-sidebar button em {
+  display: none !important;
+}
+.responsive-app .desktop-sidebar button img,
+.responsive-app .desktop-sidebar button .nav-icon,
+.responsive-app .desktop-sidebar button svg {
+  position: static !important;
+  left: auto !important;
+  top: auto !important;
+  right: auto !important;
+  bottom: auto !important;
+  margin: 0 auto !important;
+  width: 24px !important;
+  height: 24px !important;
+  object-fit: contain;
+  color: #a6a8aa;
+  filter: brightness(0.65);
+  opacity: 0.75;
+  transition: filter 0.15s ease, opacity 0.15s ease, color 0.15s ease;
+}
+.responsive-app .desktop-sidebar [data-focus-id="responsive-profile"] img,
+.responsive-app .desktop-sidebar [data-focus-id="responsive-profile"] .nav-avatar {
+  width: 32px !important;
+  height: 32px !important;
+  border-radius: 50% !important;
+  opacity: 1 !important;
+  filter: none !important;
+}
+.responsive-app .desktop-sidebar [data-focus-id="responsive-profile"]:hover img,
+.responsive-app .desktop-sidebar [data-focus-id="responsive-profile"]:hover .nav-avatar {
+  opacity: 1 !important;
+  filter: brightness(1.2) !important;
+}
+.responsive-app .desktop-sidebar button:hover {
+  background: transparent !important;
+  background-color: transparent !important;
+}
+.responsive-app .desktop-sidebar button:hover img,
+.responsive-app .desktop-sidebar button:hover .nav-icon,
+.responsive-app .desktop-sidebar button:hover svg {
+  filter: brightness(1.25);
+  opacity: 1;
+  color: #fff;
+}
+.responsive-app .desktop-sidebar button.active {
+  background: transparent !important;
+  background-color: transparent !important;
+}
+.responsive-app .desktop-sidebar button.active img,
+.responsive-app .desktop-sidebar button.active .nav-icon {
+  filter: brightness(1.7);
+  opacity: 1;
+}
+.responsive-app .desktop-sidebar button:focus,
+.responsive-app .desktop-sidebar button:focus:not(:focus-visible),
+.responsive-app .desktop-sidebar button:focus-visible {
+  background: transparent !important;
+  background-color: transparent !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+.responsive-app main {
+  position: relative;
+  inset: auto;
+  margin: 0;
+  margin-left: var(--sidebar-width);
+  padding: 24px var(--page-gutter) 64px;
+  width: calc(100% - var(--sidebar-width));
+  max-width: none;
+  height: auto;
+  min-height: 100%;
+  background: var(--canvas);
+}
+.responsive-app .roku-settings,
+.responsive-app .roku-guide {
+  margin-left: var(--sidebar-width);
+  width: calc(100% - var(--sidebar-width));
+  max-width: none;
+}
+/* Guide page paddings and fit live in guide-responsive.css with the page geometry. */
+.responsive-app .home { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: 40px; align-items: center; align-content: start; }
+.responsive-app .responsive-hero-art, .responsive-app .responsive-detail-art { grid-column: 2; grid-row: 1; position: relative; aspect-ratio: 16 / 9; width: 100%; max-width: 782px; max-height: 440px; min-width: 0; justify-self: end; align-self: center; overflow: hidden; border-radius: 8px; background: #202224; }
+.responsive-app .responsive-hero-art > img, .responsive-app .responsive-detail-art > img, .responsive-app .responsive-hero-art > .art-fallback, .responsive-app .responsive-detail-art > .art-fallback { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; font-size: 17px; color: #a6a8aa; }
+.responsive-app .hero { display: block; grid-column: 1; grid-row: 1; position: relative; inset: auto; width: auto; min-width: 0; height: auto; padding: 0; }
+.responsive-app .hero > small { position: static; display: block; font-size: 14px; line-height: 20px; margin-bottom: 16px; }
+.responsive-app .hero h1, .responsive-app .detail-copy h1 { position: relative; inset: auto; width: auto; height: auto; min-height: 0; font-size: 44px; line-height: 1.15; white-space: normal; overflow: visible; }
+.responsive-app .responsive-title > img { display: none; width: auto; max-width: min(100%, 420px); height: auto; max-height: 128px; object-fit: contain; object-position: left center; }
+.responsive-app .responsive-title.has-logo > img { display: block; }
+.responsive-app .responsive-title.has-logo > span { position: absolute; width: 1px; height: 1px; clip-path: inset(50%); overflow: hidden; white-space: nowrap; }
+.responsive-app .hero > p, .responsive-app .detail-synopsis { position: static; display: -webkit-box; width: auto; height: auto; max-height: none; margin-top: 24px; color: #c5c6c7; font-size: 20px; line-height: 1.5; -webkit-line-clamp: 4; }
+.responsive-app .hero-facts, .responsive-app .detail-facts { position: static; width: auto; height: auto; margin-top: 16px; font-size: 17px; line-height: 1.5; color: #a6a8aa; }
+.responsive-app .actions, .responsive-app .hero .actions, .responsive-app .detail-copy .actions { position: static; display: flex; flex-wrap: wrap; width: auto; gap: 12px; margin-top: 28px; }
+.responsive-app .hero .actions button, .responsive-app .detail-copy .actions button { flex: 0 1 auto; width: auto; max-width: none; height: 56px; min-height: 56px; padding: 0 20px; font-size: 22px; text-align: center; }
+.responsive-app .hero .actions .compact-action, .responsive-app .detail-copy [data-focus-id="detail-save"], .responsive-app .detail-copy [data-focus-id="detail-info"] { flex: 0 0 56px; width: 56px; padding: 0; }
+.responsive-app .shelves, .responsive-app .compact-home .shelves { position: static; grid-column: 1 / -1; width: 100%; height: auto; overflow: visible; }
+.responsive-app .shelves section { margin: 0 0 32px; width: 100%; min-width: 0; height: auto; }
+.responsive-app .shelves h2 { height: auto; font-size: 22px; line-height: 28px; text-transform: uppercase; margin-bottom: 12px; overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+.responsive-app .cards { display: flex; gap: 24px; width: 100%; height: auto; overflow-x: auto; padding: 6px 6px 12px; overflow-anchor: none; }
+/* Desktop shelf carousels: a compact backgroundless chevron pair pinned to
+   the row's bottom-right flips one card-page; exhausted directions grey out
+   instead of unmounting, and the pair hides only when the whole row fits. */
+.responsive-app .shelf-carousel { position: relative; width: 100%; min-width: 0; }
+.responsive-app .shelf-nav { position: absolute; right: 4px; bottom: 0; z-index: 6; display: flex; gap: 2px; }
+.responsive-app .shelf-nav-btn { display: grid; place-items: center; width: 44px; height: 40px; min-height: 40px; padding: 0; border: none; border-radius: 8px; background: transparent; color: #a6a8aa; cursor: pointer; }
+.responsive-app button.shelf-nav-btn:hover:not(:disabled) { background: transparent; color: #f5f5f5; }
+.responsive-app .shelf-nav-btn:disabled { opacity: 0.35; cursor: default; }
+.responsive-app .shelf-nav-btn:focus-visible { outline: 2px solid #f5f5f5; outline-offset: -2px; }
+/* Catalog shelf headings gain a trailing plain-text See more affordance. */
+.responsive-app .shelf-heading { display: flex; align-items: baseline; gap: 16px; }
+.responsive-app .shelf-see-more { margin-left: auto; flex: 0 0 auto; display: inline-flex; align-items: center; gap: 4px; min-height: 32px; padding: 2px 2px 2px 6px; border: none; background: transparent; color: #a6a8aa; font-size: 14px; font-weight: 600; letter-spacing: 0.02em; cursor: pointer; white-space: nowrap; }
+.responsive-app button.shelf-see-more:hover { background: transparent; color: #f5f5f5; }
+.responsive-app .shelf-see-more:focus-visible { outline: 2px solid #f5f5f5; outline-offset: 2px; border-radius: 6px; }
+.responsive-app .responsive-card { position: relative; flex: 0 0 256px; width: 256px; scroll-snap-align: start; content-visibility: auto; contain-intrinsic-size: 256px auto 218px; }
+.responsive-app .media-card { display: grid; grid-template-columns: minmax(0, 1fr); width: 256px; height: auto; min-height: 218px; padding: 0; margin: 0; background: transparent !important; color: #f5f5f5 !important; transform: none !important; }
+.responsive-app .media-card > img, .responsive-app .media-card > .art-fallback { position: relative; inset: auto; grid-area: 1 / 1; width: 256px; height: 144px; border-radius: 8px; object-fit: cover; }
+.responsive-app .media-card::after { content: ""; position: absolute; grid-area: 1 / 1; left: 0; top: 0; width: 256px; height: 144px; border-radius: 8px; border: 2px solid transparent; box-sizing: border-box; pointer-events: none; background: none; transition: border-color 0.15s ease, opacity 0.15s ease; }
+.responsive-app .media-card:hover::after, .responsive-app .media-card:focus-visible::after { border-color: #f5f5f5; opacity: 1; }
+.responsive-app .media-card:focus:not(:focus-visible)::after { border-color: #f5f5f5; opacity: .35; }
+.responsive-app .media-card > strong { position: static; grid-area: 2 / 1; width: 100%; height: 25px; font-size: 21px; line-height: 25px; margin-top: 8px; }
+.responsive-app .media-card > small { position: static; grid-area: 3 / 1; width: 100%; font-size: 17px; line-height: 22px; height: 22px; margin-top: 4px; }
+.responsive-app .media-card > progress { position: relative !important; top: auto !important; bottom: auto !important; left: 8px !important; grid-area: 1 / 1 !important; align-self: end !important; width: calc(100% - 16px) !important; margin-bottom: 8px !important; margin-top: 0 !important; z-index: 2 !important; height: 6px !important; }
+.responsive-app .media-card:focus { outline: none; }
+.responsive-app .media-card:hover { background: transparent !important; }
+.responsive-app .detail { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr); gap: 28px 40px; align-items: start; align-content: start; }
+.responsive-app .responsive-detail-art { grid-column: 1; justify-self: start; }
+.responsive-app .detail-copy, .responsive-app .series .detail-copy { position: static; grid-column: 2; grid-row: 1; width: auto; min-width: 0; }
+.responsive-app .detail-credits, .responsive-app .series .detail-credits { display: block; position: static; width: auto; height: auto; margin-top: 24px; color: #a6a8aa; font-size: 17px; line-height: 1.5; white-space: pre-line; }
+.responsive-app .episode-heading { position: static; grid-column: 1 / -1; width: auto; text-align: left; font-size: 22px; font-weight: bold; text-transform: uppercase; margin-top: 20px; }
+.responsive-app .episodes-header { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: 24px; margin-bottom: 8px; }
+.responsive-app .episodes-header .episode-heading { margin: 0 !important; }
+.responsive-app .season-select { background: #202224; color: #f5f5f5; border: 1px solid #3a3c3e; border-radius: 8px; padding: 8px 16px; font-size: 15px; cursor: pointer; outline: none; transition: border-color 0.15s, background 0.15s; }
+.responsive-app .season-select:hover, .responsive-app .season-select:focus { border-color: #f5f5f5; background: #26292c; }
+.responsive-app .episode-grid { position: static; grid-column: 1 / -1; display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); grid-auto-rows: auto; gap: 24px; width: 100%; height: auto; overflow: visible; scroll-snap-type: none; }
+.responsive-app .episode { width: 100%; height: auto; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto auto 1fr; background: transparent !important; color: #f5f5f5 !important; padding-bottom: 12px; overflow: visible; }
+.responsive-app .episode > img, .responsive-app .episode > .art-fallback { position: relative; inset: auto; grid-row: 1; grid-column: 1; width: 100%; height: auto; aspect-ratio: 16 / 9; }
+.responsive-app .episode > small, .responsive-app .episode > h2, .responsive-app .episode > p { position: static; width: auto; height: auto; margin-top: 10px; }
+.responsive-app .episode > small { font-size: 15px; line-height: 20px; }
+.responsive-app .episode > h2 { font-size: 21px; line-height: 27px; margin-top: 4px; }
+.responsive-app .episode > p { font-size: 17px; line-height: 24px; -webkit-line-clamp: 3; }
+.responsive-app .episode:hover { background: transparent !important; }
+.responsive-app .episode::after { content: ""; position: absolute; inset: 0; top: 0; width: 100%; height: auto; aspect-ratio: 16 / 9; background: none; border: 2px solid transparent; border-radius: 8px; box-sizing: border-box; pointer-events: none; transition: border-color 0.15s ease, opacity 0.15s ease; }
+.responsive-app .episode:hover::after, .responsive-app .episode:focus-visible::after { border-color: #f5f5f5; opacity: 1; }
+.responsive-app .episode:focus:not(:focus-visible)::after { border-color: #f5f5f5; opacity: .35; }
+.responsive-app :is(.media-card, .episode) > progress { position: relative !important; top: auto !important; bottom: auto !important; left: 8px !important; grid-area: 1 / 1 !important; grid-row: 1 !important; grid-column: 1 !important; align-self: end !important; width: calc(100% - 16px) !important; margin-bottom: 8px !important; margin-top: 0 !important; z-index: 2 !important; height: 6px !important; }
+.responsive-app .episode .watched-badge { left: auto; right: 10px; }
+.responsive-app .browse > h1 { height: auto; margin-bottom: 24px; }
+.responsive-app .filters, .responsive-app .browse > .filters { position: static; display: flex; flex-wrap: wrap; gap: 12px; width: auto; height: auto; margin-bottom: 24px; }
+.responsive-app .filters button { flex: 0 1 256px; width: auto; min-width: min(150px, 100%); max-width: 100%; font-size: 18px; }
+.responsive-app .result-grid, .responsive-app .screen-discover .browse > .result-grid, .responsive-app .browse > .result-grid { position: static; width: 100%; height: auto; overflow: visible; }
+.responsive-app .result-grid > .cards .responsive-card { margin: 0; }
+/* Browse results fill the shared content frame exactly at every step: the column
+   count and the card width both resolve from the header's own width, so the grid
+   never ends short of the frame edge with a ragged strip of dead space. */
+@media (min-width: 600px) {
+  /* No shelf inset here: the grid must end exactly on the shared frame edge. */
+  .responsive-app .result-grid > .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(232px, 1fr)); gap: 24px; padding: 0; }
+  .responsive-app .result-grid > .cards .responsive-card { width: 100%; }
+  .responsive-app .result-grid > .cards .media-card { display: grid; grid-template-columns: minmax(0, 1fr); width: 100%; height: auto; padding-bottom: 8px; }
+  .responsive-app .result-grid > .cards .media-card > img,
+  .responsive-app .result-grid > .cards .media-card > .art-fallback { position: relative; inset: auto; grid-area: 1 / 1; width: 100%; height: auto; aspect-ratio: 16 / 9; object-fit: cover; }
+  .responsive-app .result-grid > .cards .media-card::after { width: 100%; height: auto; aspect-ratio: 16 / 9; }
+  .responsive-app .result-grid > .cards .media-card > strong { position: static; grid-area: 2 / 1; width: 100%; margin-top: 8px; }
+  .responsive-app .result-grid > .cards .media-card > small { position: static; grid-area: 3 / 1; width: 100%; margin-top: 4px; }
+  .responsive-app .result-grid > .cards .media-card > progress { position: relative; top: auto; left: 8px; grid-area: 1 / 1; align-self: end; width: calc(100% - 16px); margin-bottom: 8px; }
+  .responsive-app .result-grid > .cards .card-more { top: auto; bottom: 14px; }
+}
+.responsive-app .search .keyboard { position: static; width: 100%; height: auto; margin-bottom: 28px; }
+.responsive-app .search .keyboard > input { position: static; width: 100%; height: 56px; padding: 0 18px; border: 2px solid #414447; border-radius: 12px; background: #202224; font-size: 20px; }
+.responsive-app .search .keyboard > input:focus { border-color: #f5f5f5; }
+.responsive-app .search .keyboard > div, .responsive-app .search .keyboard > button, .responsive-app .search .search-help { display: none; }
+.responsive-app .search .result-grid > section { height: auto; min-width: 0; margin-bottom: 32px; }
+.responsive-app .search .result-grid h2 { height: auto; font-size: 22px; line-height: 28px; text-transform: uppercase; margin-bottom: 12px; overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+.responsive-app .search .result-grid .cards { width: 100%; height: auto; overflow-x: auto; overflow-y: hidden; }
+.responsive-app .search-status, .responsive-app .search .search-status { position: static; width: auto; font-size: 17px; margin-top: 20px; }
+.responsive-app .sources > h1 { height: auto; }
+.responsive-app .source-context { position: static; margin-top: 12px; font-size: 18px; }
+.responsive-app .source-filters { position: static; width: 100%; height: auto; flex-wrap: wrap; gap: 12px; margin: 24px 0; }
+.responsive-app .source-filters button, .responsive-app .source-filters > span { position: static; width: auto; font-size: 17px; }
+.responsive-app .source-filters > span { display: flex; gap: 10px; align-items: center; }
+.responsive-app .source-discovery-spinner { position: static; display: inline-block; flex-shrink: 0; }
+.responsive-app .source-results { position: static; width: 100%; height: auto; overflow: visible; }
+.responsive-app .source { width: 100%; height: auto; min-height: 100px; padding: 20px; }
+.responsive-app .source h2, .responsive-app .source p, .responsive-app .source small { position: static; width: auto; height: auto; white-space: pre-wrap; overflow-wrap: anywhere; }
+.responsive-app .source h2 { font-size: 22px; }
+.responsive-app .source p { font-size: 17px; margin-top: 10px; max-height: none; display: block; }
+.responsive-app .source small { display: block; font-size: 15px; margin-top: 10px; }
+.responsive-app .source-empty { position: static; width: auto; padding: 32px 0; }
+.responsive-app .profiles, .responsive-app .pairing { position: relative; inset: auto; padding: 80px 24px; width: 100%; min-height: calc(100% - 96px); height: auto; text-align: center; }
+.responsive-app .profiles > h1, .responsive-app .pairing h1, .responsive-app .pairing h2, .responsive-app .pairing > p, .responsive-app .pair-code { position: static; width: auto; height: auto; margin: 0 0 24px; text-align: center; overflow-wrap: anywhere; }
+.responsive-app .pairing h2 { font-size: 22px; }
+.responsive-app .pair-code { font-size: 52px; }
+.responsive-app .pairing .qr { position: static; display: block; width: 180px; height: 180px; margin: 0 auto 24px; }
+.responsive-app .pairing > button { position: static; width: auto; }
+.responsive-app .profile-row { position: static; display: flex; justify-content: center; flex-wrap: wrap; gap: 28px; width: auto; height: auto; margin: 44px 0; }
+.responsive-app .profile-row > button { width: 144px; height: 196px; flex: 0 0 144px; background: transparent !important; }
+.responsive-app .profile-row > button::after { left: 0; top: 0; width: 144px; height: 144px; border-radius: 50%; }
+.responsive-app .profile-row img, .responsive-app .profile-initials { left: 6px; top: 6px; width: 132px; height: 132px; border-radius: 50%; }
+.responsive-app .profile-row strong { left: 0; top: 156px; width: 144px; font-size: 20px; }
+.responsive-app .profile-actions, .responsive-app .profile-pager { position: static; display: flex; justify-content: center; gap: 16px; flex-wrap: wrap; width: auto; margin-top: 24px; }
+.responsive-app .profile-pager button, .responsive-app .profile-pager span { position: static; width: auto; }
+.responsive-app .scrim { position: fixed; inset: 0; padding: 24px; display: flex; align-items: center; justify-content: center; z-index: 40; }
+.responsive-app .modal, .responsive-app .source-detail-panel { position: relative; inset: auto; width: min(100%, 680px); height: auto; max-height: calc(100dvh - 48px); padding: 28px; overflow: auto; background: #202224; border-radius: 16px; }
+.responsive-app .modal > h2, .responsive-app .modal > p, .responsive-app .source-detail-panel > h2 { position: static; width: auto; height: auto; margin-bottom: 20px; }
+.responsive-app .modal-choices, .responsive-app .source-detail-panel .modal-choices { position: static; display: flex; flex-direction: column; gap: 12px; width: auto; height: auto; max-height: none; overflow: visible; }
+.responsive-app .modal-choices button { flex: 0 0 auto; overflow-wrap: anywhere; width: 100%; min-height: 56px; height: auto; padding: 14px 18px; font-size: 20px; background: #303234; }
+.responsive-app .source-detail-body { position: static; width: auto; height: auto; max-height: 50dvh; margin-bottom: 24px; font-size: 18px; line-height: 1.5; overflow: auto; }
+.responsive-app .toast, .responsive-app .loading, .responsive-app .error { position: fixed; inset: auto 24px 24px; width: fit-content; max-width: calc(100% - 48px); height: auto; margin: auto; padding: 16px 24px; z-index: 45; border-radius: 12px; font-size: 18px; background: #202224; }
+.responsive-app .error > button { position: static; display: block; margin-top: 16px; }
+.responsive-app .startup-cover { position: fixed; inset: 0; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; background: var(--canvas); }
+.responsive-app .startup-cover > img, .responsive-app .startup-cover > p, .responsive-app .startup-cover::after { position: static; margin: 16px; }
+.responsive-app.playing { background: #000; overflow: hidden; }
+.responsive-app.playing .brand { display: none; }
+.responsive-app.playing .video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+.responsive-app.playing .player-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 24px max(24px, env(safe-area-inset-right)) 24px max(24px, env(safe-area-inset-left));
+  background: linear-gradient(#0009, transparent 30%, transparent 40%, #000e);
+  overflow: hidden;
+  box-sizing: border-box;
+}
+.responsive-app .player-identity { top: 20px; left: 24px; display: flex; align-items: center; gap: 12px; }
+.responsive-app .player-top-right {
+  position: absolute;
+  top: 20px;
+  right: 24px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  z-index: 10;
+}
+.responsive-app .player-top-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  min-height: 36px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: #f5f5f5;
+  padding: 0;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+.responsive-app .player-top-btn:hover {
+  background: rgba(255, 255, 255, 0.22);
+}
+.responsive-app .player-status {
+  display: none !important;
+}
+.responsive-app .player-eyebrow, .responsive-app .player-overlay > h1, .responsive-app .player-context { position: static; width: auto; height: auto; }
+.responsive-app .player-eyebrow {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  color: #a0a3a7;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.85);
+}
+.responsive-app .player-overlay > h1 {
+  margin-top: 6px;
+  font-size: 28px;
+  font-weight: 700;
+  color: #ffffff;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.9);
+}
+.responsive-app .player-context {
+  font-size: 16px;
+  font-weight: 500;
+  color: #d1d5db;
+  margin-top: 4px;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.85);
+}
+.responsive-app .playback-bottom { position: static; display: flex; flex-direction: column; }
+.responsive-app .seekbar { position: relative; inset: auto; order: 0; width: 100%; height: 40px; margin-top: 12px; cursor: pointer; }
+.responsive-app .seekbar-track { border-radius: 2px; }
+.responsive-app .seekbar-thumb { width: 12px; height: 12px; }
+.responsive-app .seekbar-tooltip { bottom: 30px; padding: 1px 7px; font-size: 13px; line-height: 20px; }
+.responsive-app .player-time { position: static; order: 1; width: 100%; font-size: 16px; }
+.responsive-app .controls { position: static; order: 2; display: flex; flex-wrap: wrap; gap: 8px; width: 100%; height: auto; margin-top: 8px; }
+.responsive-app .controls button { position: static; width: 56px; height: 56px; min-height: 56px; padding: 14px; }
+.responsive-app .controls [data-focus-id="exit"] { margin-left: auto; }
+
+/* Desktop player popups: anchored above the toolbar icon instead of a blocking dialog. */
+.responsive-app .track-buttons { position: relative; display: flex; gap: 8px; }
+.responsive-app .player-info-anchor { position: relative; }
+.responsive-app .audio-selector-popup {
+  position: absolute;
+  bottom: calc(100% + 12px);
+  left: 0;
+  z-index: 30;
+  width: min(340px, calc(100vw - 48px));
+  max-height: min(420px, 60vh);
+  display: flex;
+  flex-direction: column;
+  background: rgba(17, 19, 23, 0.96);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 8px;
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.6);
+  color: #f5f5f5;
+  text-align: left;
+  overflow: hidden;
+}
+.responsive-app .player-info-popup { left: auto; right: 0; }
+.responsive-app .audio-selector-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 10px 12px; border-bottom: 1px solid rgba(255, 255, 255, 0.12); }
+.responsive-app .audio-selector-title { font-size: 14px; font-weight: 600; }
+.responsive-app .audio-selector-popup .audio-selector-close {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  min-height: 26px;
+  padding: 4px;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  color: #a0a3a7;
+  cursor: pointer;
+}
+.responsive-app .audio-selector-popup .audio-selector-close:hover,
+.responsive-app .audio-selector-popup .audio-selector-close:focus { background: rgba(255, 255, 255, 0.12); color: #f5f5f5; }
+.responsive-app .audio-selector-list { margin: 0; padding: 6px; overflow-y: auto; }
+.responsive-app .audio-selector-popup .audio-selector-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  box-sizing: border-box;
+  height: auto;
+  min-height: 0;
+  padding: 10px 12px;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  color: #d1d5db;
+  font-size: 14px;
+  line-height: 1.4;
+  cursor: pointer;
+}
+.responsive-app .audio-selector-popup .audio-selector-item:hover,
+.responsive-app .audio-selector-popup .audio-selector-item:focus { background: rgba(255, 255, 255, 0.1); color: #ffffff; outline: none; }
+.responsive-app .audio-selector-popup .audio-selector-item.is-selected { background: rgba(255, 255, 255, 0.16); color: #ffffff; }
+.responsive-app .audio-selector-popup .audio-selector-item.is-disabled { color: #6b6f74; cursor: default; }
+.responsive-app .audio-selector-popup .track-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.responsive-app .audio-selector-popup .track-unavailable { color: #6b6f74; }
+.responsive-app .audio-selector-popup .track-current { display: inline-flex; align-items: center; gap: 4px; flex: none; color: #ffffff; font-size: 12px; font-weight: 600; }
+.responsive-app .audio-selector-empty { padding: 12px; color: #a0a3a7; font-size: 14px; }
+.responsive-app .player-info-body { margin: 0; padding: 10px 14px 12px; overflow-y: auto; font-size: 13px; line-height: 1.6; color: #c5c6c7; }
+.responsive-app .player-info-body p { margin: 0; }
+.responsive-app .playback-loading { position: fixed; left: 50%; top: 40%; width: min(90%, 420px); transform: translate(-50%, -50%); text-align: center; }
+@media (max-width: 1380px) {
+  .responsive-app .responsive-toolbar nav em { display: none; }
+  .responsive-app .responsive-toolbar nav button { width: 48px; padding: 12px; }
+  .responsive-app .responsive-toolbar:not(.desktop-titlebar) { min-height: 80px; padding-block: 12px; }
+  .responsive-app .responsive-toolbar nav { top: 12px; }
+  .responsive-app .brand { top: 21px; }
+}
+@media (max-width: 899px) {
+  .tv-screen.responsive-app { --page-gutter: 28px; }
+  .responsive-app .home, .responsive-app .detail { grid-template-columns: minmax(0, 1fr); gap: 24px; }
+  .responsive-app .responsive-hero-art, .responsive-app .responsive-detail-art { grid-column: 1; grid-row: 1; max-height: 400px; max-width: 711px; justify-self: center; }
+  .responsive-app .hero, .responsive-app .detail-copy, .responsive-app .series .detail-copy { grid-column: 1; grid-row: 2; }
+  .responsive-app .responsive-toolbar [data-focus-id="responsive-profile"] span { display: none; }
+  .responsive-app .responsive-toolbar [data-focus-id="responsive-profile"] { flex: 0 0 48px; width: 48px; }
+  .responsive-app .hero > p { -webkit-line-clamp: 3; }
+}
+@media (max-width: 599px) {
+  .tv-screen.responsive-app {
+    --page-gutter: 16px;
+    font-size: 16px;
+    top: 0 !important;
+    height: 100% !important;
+  }
+  .responsive-app .desktop-titlebar {
+    display: none !important;
+  }
+  .responsive-app .desktop-sidebar {
+    position: relative;
+    width: 100%;
+    height: 72px;
+    min-height: 72px;
+    border-right: none;
+    flex-direction: row;
+    justify-content: space-between;
+    padding: 0 var(--page-gutter);
+  }
+  .responsive-app .desktop-sidebar .sidebar-brand {
+    position: static;
+    transform: none;
+  }
+  .responsive-app .desktop-sidebar .sidebar-centered-group {
+    flex-direction: row;
+    width: auto;
+    margin: 0;
+  }
+  .responsive-app .responsive-toolbar { height: 72px; min-height: 72px; gap: 8px; }
+  .responsive-app .responsive-toolbar .brand { flex-basis: 32px; width: 32px; height: 30px; margin: 0; }
+  .responsive-app .toolbar-spacer { display: block; flex: 1; }
+  .responsive-app .responsive-toolbar button { font-size: 13px; padding: 0 8px; }
+  .responsive-app .brand { top: 20px; width: 36px; height: 32px; }
+  .responsive-app .desktop-sidebar nav,
+  .responsive-app .responsive-toolbar nav { position: fixed !important; top: auto !important; bottom: 0 !important; left: 0 !important; width: 100% !important; height: calc(72px + env(safe-area-inset-bottom)) !important; padding: 0 4px env(safe-area-inset-bottom) !important; background: #191b1df5 !important; border-top: 1px solid #414447 !important; flex-direction: row !important; justify-content: space-around !important; z-index: 20 !important; }
+  .responsive-app .desktop-sidebar nav button,
+  .responsive-app .responsive-toolbar nav button { flex: 1 1 0; max-width: 86px; height: 64px; padding: 8px 0; flex-direction: column; justify-content: center; gap: 5px; border-radius: 8px; }
+  .responsive-app .desktop-sidebar nav button em,
+  .responsive-app .responsive-toolbar nav em { display: block !important; font-size: 11px; white-space: nowrap; }
+  .responsive-app .desktop-sidebar nav .nav-icon,
+  .responsive-app .responsive-toolbar nav .nav-icon { width: 24px; height: 24px; }
+  .responsive-app main { margin-left: 0 !important; width: 100% !important; padding-top: 16px; padding-bottom: calc(104px + env(safe-area-inset-bottom)); }
+  .responsive-app .roku-settings,
+  .responsive-app .roku-guide { margin-left: 0 !important; width: 100% !important; }
+  .responsive-app .hero h1, .responsive-app .detail-copy h1 { font-size: 32px; }
+  .responsive-app .responsive-title > img { max-width: min(100%, 300px); max-height: 96px; }
+  .responsive-app .hero > p, .responsive-app .detail-synopsis { margin-top: 16px; font-size: 16px; line-height: 1.5; }
+  .responsive-app .hero-facts, .responsive-app .detail-facts { font-size: 14px; }
+  .responsive-app .hero .actions, .responsive-app .detail-copy .actions { gap: 8px; flex-wrap: nowrap; margin-top: 20px; }
+  .responsive-app .hero .actions button, .responsive-app .detail-copy .actions button { height: 52px; min-height: 52px; font-size: 18px; padding: 0 10px; border-radius: 10px; }
+  .responsive-app .hero .actions [data-focus-id="hero-details"], .responsive-app .detail-copy .actions [data-focus-id="detail-play"] { flex: 1 1 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .responsive-app .hero .actions .compact-action, .responsive-app .hero-save-btn { flex: 0 0 52px !important; width: 52px !important; height: 52px !important; min-height: 52px !important; border-radius: 10px !important; }
+  .responsive-app .detail-copy [data-focus-id="detail-save"], .responsive-app .detail-copy [data-focus-id="detail-info"] { flex: 0 0 52px; width: 52px; }
+  .responsive-app [data-focus-id="detail-source"] { display: none; }
+  .responsive-app .shelves h2 { font-size: 20px; }
+  .responsive-app .cards { gap: 16px; }
+  .responsive-app .responsive-card, .responsive-app .media-card { width: 232px; flex-basis: 232px; }
+  .responsive-app .media-card { height: 202px; }
+  .responsive-app .media-card > img, .responsive-app .media-card > .art-fallback, .responsive-app .media-card::after { width: 232px; height: 130.5px; }
+  .responsive-app .media-card > strong { top: 139px; font-size: 17px; line-height: 22px; }
+  .responsive-app .media-card > small { top: 165px; font-size: 14px; line-height: 20px; }
+  .responsive-app .media-card > progress { top: 117px; }
+  .responsive-app .card-more { top: 138px; }
+  .responsive-app .detail-credits, .responsive-app .series .detail-credits { font-size: 14px; }
+  .responsive-app .episode-heading { font-size: 20px; margin-top: 8px; }
+  .responsive-app .episode-grid { display: flex; gap: 16px; overflow-x: auto; scroll-snap-type: x proximity; padding: 4px 0 16px; }
+  .responsive-app .episode { flex: 0 0 calc(100% - 28px); min-width: 240px; max-width: 420px; scroll-snap-align: start; }
+  .responsive-app .episode > h2 { font-size: 18px; }
+  .responsive-app .episode > p { font-size: 15px; line-height: 22px; }
+  .responsive-app .source h2 { font-size: 18px; }
+  .responsive-app .source p { font-size: 15px; }
+  .responsive-app .source-filters button { flex: 1; min-width: 0; font-size: 15px; }
+  .responsive-app .source-filters > span { width: 100%; }
+  .responsive-app .profiles, .responsive-app .pairing { padding: 40px 16px 100px; }
+  .responsive-app .profiles > h1, .responsive-app .pairing > h1 { font-size: 32px; }
+  .responsive-app .profile-row { gap: 16px; }
+  .responsive-app .profile-row > button { width: 124px; flex-basis: 124px; height: 176px; }
+  .responsive-app .profile-row > button::after { width: 124px; height: 124px; }
+  .responsive-app .profile-row img, .responsive-app .profile-initials { width: 112px; height: 112px; }
+  .responsive-app .profile-row strong { width: 124px; top: 136px; font-size: 17px; }
+  .responsive-app .profile-actions button { font-size: 17px; }
+  .responsive-app .scrim { padding: 12px; }
+  .responsive-app .modal, .responsive-app .source-detail-panel { padding: 20px; max-height: calc(100dvh - 24px); }
+  .responsive-app .modal-choices button { font-size: 18px; }
+  .responsive-app .toast, .responsive-app .loading, .responsive-app .error { bottom: calc(88px + env(safe-area-inset-bottom)); font-size: 16px; }
+  .responsive-app .player-overlay { padding: 16px; }
+  .responsive-app .player-overlay > h1 { font-size: 24px; }
+  .responsive-app .player-context, .responsive-app .player-eyebrow { font-size: 14px; }
+  .responsive-app .controls { gap: 4px; }
+  .responsive-app .controls button { width: 48px; min-height: 48px; height: 48px; padding: 10px; }
+  .responsive-app .player-identity { font-size: 18px; left: 16px; }
+  .responsive-app .player-status { right: 16px; font-size: 14px; }
+}

@@ -1,0 +1,441 @@
+:root {
+  font-family: Arial, sans-serif;
+  color: #f5f5f5;
+  background: #101112;
+  font-synthesis: none;
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  overflow: hidden;
+}
+button,
+input {
+  font: inherit;
+}
+button {
+  border: 0;
+  border-radius: 12px;
+  background: #202224;
+  color: #f5f5f5;
+  padding: 0 18px;
+  min-height: 48px;
+  font-size: 22px;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+button:focus {
+  outline: none;
+  background: #f5f5f5;
+  color: #101112;
+}
+button:disabled {
+  opacity: 0.45;
+}
+h1,
+h2,
+p {
+  margin: 0;
+}
+h1 {
+  font-size: 44px;
+  line-height: 1.2;
+}
+h2 {
+  font-size: 26px;
+}
+p {
+  font-size: 22px;
+  line-height: 1.35;
+}
+small,
+.muted {
+  color: #a6a8aa;
+}
+img {
+  object-fit: cover;
+}
+progress {
+  appearance: none;
+  border: 0;
+  border-radius: 4px;
+  background: #4a4c4e;
+  height: 6px;
+  overflow: hidden;
+}
+progress::-webkit-progress-bar {
+  background: #4a4c4e;
+}
+progress::-webkit-progress-value {
+  background: #f5f5f5;
+  border-radius: 4px;
+  min-width: 6px;
+}
+progress[value="0"]::-webkit-progress-value {
+  min-width: 0;
+}
+progress::-moz-progress-bar {
+  background: #f5f5f5;
+  border-radius: 4px;
+}
+* {
+  scrollbar-width: none;
+}
+*::-webkit-scrollbar {
+  display: none;
+}
+.tv-screen {
+  position: absolute;
+  width: 1280px;
+  height: 720px;
+  overflow: hidden;
+  background: #101112;
+  transform-origin: top left;
+}
+main {
+  position: absolute;
+  left: 100px;
+  top: 54px;
+  width: 1096px;
+  height: 654px;
+}
+.video {
+  position: absolute;
+  inset: 0;
+  width: 1280px;
+  height: 720px;
+  background: #000;
+  visibility: hidden;
+}
+.playing {
+  background: transparent;
+}
+.playing .video {
+  visibility: visible;
+}
+.brand {
+  position: absolute;
+  left: 32px;
+  top: 29px;
+  z-index: 3;
+}
+.brand img {
+  width: 36px;
+  height: 31px;
+  object-fit: contain;
+}
+.gateway-brand {
+  left: 96px;
+  top: 44px;
+}
+.gateway-brand img {
+  width: 42px;
+  height: 36px;
+}
+.playing .brand,
+.screen-detail .brand,
+.screen-sources .brand {
+  display: none;
+}
+nav {
+  position: absolute;
+  left: 21px;
+  top: 108px;
+  width: 60px;
+  z-index: 5;
+}
+nav button {
+  display: block;
+  position: relative;
+  width: 60px;
+  height: 60px;
+  padding: 0;
+  margin: 0 0 14px;
+  border-radius: 12px;
+  background: transparent;
+}
+nav em {
+  display: none;
+}
+nav .nav-icon {
+  position: absolute;
+  left: 15px;
+  top: 15px;
+  width: 30px;
+  height: 30px;
+  object-fit: contain;
+}
+nav .nav-avatar {
+  left: 8px;
+  top: 8px;
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+}
+nav button:focus .nav-icon:not(.nav-avatar) {
+  filter: brightness(0);
+}
+.home {
+  inset: 0;
+  width: 1280px;
+  height: 720px;
+}
+.hero-art,
+.hero-art > img {
+  position: absolute;
+  inset: 0;
+  width: 1280px;
+  height: 720px;
+}
+.hero-art > img {
+  object-fit: cover;
+}
+.hero-art .hero-shade-left,
+.hero-art .hero-shade-bottom {
+  object-fit: fill;
+}
+.hero {
+  position: absolute;
+  left: 100px;
+  top: 128px;
+  width: 650px;
+}
+.hero > small {
+  display: block;
+  font-size: 14px;
+  line-height: 24px;
+  color: #c5c6c7;
+}
+.hero h1 {
+  position: absolute;
+  top: 38px;
+  width: 600px;
+  height: 54px;
+  white-space: nowrap;
+  overflow: hidden;
+  font-size: 44px;
+}
+.hero > p {
+  position: absolute;
+  top: 100px;
+  width: 548px;
+  max-height: 80px;
+  font-size: 20px;
+  line-height: 26px;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  color: #d5d6d7;
+}
+.hero-facts {
+  position: absolute;
+  top: 194px;
+  width: 650px;
+  font-size: 19px;
+  white-space: nowrap;
+  overflow: hidden;
+  color: #c5c6c7;
+}
+.actions {
+  display: flex;
+  gap: 16px;
+}
+.hero .actions {
+  position: absolute;
+  top: 247px;
+  gap: 12px;
+}
+.hero .actions button {
+  width: 144px;
+  height: 50px;
+  font-size: 22px;
+  text-align: center;
+  padding: 0 8px;
+}
+.hero .actions .wide-action {
+  width: 236px;
+}
+.hero-portrait {
+  position: absolute;
+  left: 938px;
+  top: 102px;
+  width: 252px;
+  height: 378px;
+  object-fit: contain;
+}
+.compact-home .hero,
+.compact-home .hero-art,
+.compact-home .hero-portrait {
+  display: none;
+}
+.shelves {
+  position: absolute;
+  left: 92px;
+  top: 466px;
+  width: 1188px;
+  height: 254px;
+  padding: 8px;
+  overflow: auto;
+  scroll-padding: 8px;
+}
+.compact-home .shelves {
+  top: 100px;
+  height: 620px;
+}
+.shelves section {
+  height: 254px;
+  margin: 0;
+}
+.shelves h2 {
+  font-size: 22px;
+  line-height: 26px;
+  height: 38px;
+  text-transform: uppercase;
+}
+.cards {
+  display: flex;
+  gap: 24px;
+  overflow: auto;
+  scroll-padding: 0;
+  scroll-behavior: smooth;
+}
+.media-card {
+  position: relative;
+  flex: 0 0 256px;
+  width: 256px;
+  height: 200px;
+  min-height: 0;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  border-radius: 0;
+  text-align: left;
+  overflow: hidden;
+}
+.media-card:focus,
+.episode:focus {
+  background: transparent;
+  color: #f5f5f5;
+}
+.media-card > img,
+.media-card > .art-fallback {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 256px;
+  height: 144px;
+  border-radius: 8px;
+}
+.art-fallback {
+  background: #202224;
+  color: #a6a8aa;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  text-align: center;
+  font-size: 21px;
+}
+.media-card::after,
+.episode::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 256px;
+  height: 144px;
+  background: url("/assets/ui-card-focus.png") center/100% 100% no-repeat;
+  opacity: 0.35;
+  pointer-events: none;
+}
+.media-card:focus::after,
+.episode:focus::after {
+  opacity: 1;
+}
+.media-card > strong {
+  position: absolute;
+  top: 152px;
+  left: 0;
+  width: 256px;
+  line-height: 25px;
+  font-size: 21px;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.media-card > small {
+  position: absolute;
+  top: 178px;
+  left: 0;
+  width: 256px;
+  font-size: 17px;
+  line-height: 21px;
+  white-space: nowrap;
+  overflow: hidden;
+  font-weight: 400;
+}
+.media-card > progress,
+.episode > progress {
+  position: absolute;
+  left: 8px;
+  top: 134px;
+  width: 240px;
+  height: 6px;
+  margin: 0;
+}
+.browse > h1 {
+  height: 64px;
+}
+.browse > .filters {
+  position: absolute;
+  left: 0;
+  top: 124px;
+  width: 1096px;
+  height: 48px;
+  display: flex;
+  gap: 24px;
+  overflow: auto;
+}
+.filters button {
+  position: relative;
+  flex: 0 0 256px;
+  height: 48px;
+  white-space: nowrap;
+  overflow: hidden;
+  padding-right: 38px;
+}
+.filters button::after {
+  content: "";
+  position: absolute;
+  right: 16px;
+  top: 15px;
+  width: 18px;
+  height: 18px;
+  background: url("/assets/ui-nav-chevron.png") center/contain no-repeat;
+}
+.filters button:focus::after {
+  filter: brightness(0);
+}
+.result-grid {
+  position: absolute;
+  left: 0;
+  top: 144px;
+  width: 1096px;
+  height: 510px;
+  overflow: auto;
+}
+.screen-discover .browse > .result-grid,
+.screen-my-list .browse > .result-grid {
+  top: 194px;
+  height: 460px;
+}
+.result-grid > .cards {
+  display: grid;
+  grid-template-columns: repeat(4, 256px);
+  column-gap: 24px;
+  row-gap: 28px;
+  overflow: visible;
+}
