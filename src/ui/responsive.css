@@ -123,8 +123,13 @@ body:has(.responsive-app) { background: #101112; }
 .tv-screen.responsive-app.playing:not(.is-fullscreen) {
   top: 30px;
   height: calc(100% - 30px);
+  overflow: hidden !important;
 }
-.tv-screen.responsive-app.playing.is-fullscreen,
+.tv-screen.responsive-app.playing.is-fullscreen {
+  top: 0;
+  height: 100%;
+  overflow: hidden !important;
+}
 .tv-screen.responsive-app.screen-signin,
 .tv-screen.responsive-app:has(.responsive-auth) {
   top: 0;
@@ -640,26 +645,18 @@ header.desktop-titlebar.responsive-toolbar {
 .responsive-app.playing { background: #000; overflow: hidden; }
 .responsive-app.playing .brand { display: none; }
 .responsive-app.playing .video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
-.responsive-app.playing .player-overlay { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: end; padding: 28px max(24px, env(safe-area-inset-right)) 24px max(24px, env(safe-area-inset-left)); background: linear-gradient(#0009, transparent 30%, transparent 40%, #000e); }
+.responsive-app.playing .player-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 24px max(24px, env(safe-area-inset-right)) 24px max(24px, env(safe-area-inset-left));
+  background: linear-gradient(#0009, transparent 30%, transparent 40%, #000e);
+  overflow: hidden;
+  box-sizing: border-box;
+}
 .responsive-app .player-identity { top: 20px; left: 24px; display: flex; align-items: center; gap: 12px; }
-.responsive-app .player-back-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  min-height: 36px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.12);
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  color: #f5f5f5;
-  padding: 0;
-  cursor: pointer;
-  transition: background 0.15s ease, transform 0.15s ease;
-}
-.responsive-app .player-back-btn:hover {
-  background: rgba(255, 255, 255, 0.22);
-}
 .responsive-app .player-top-right {
   position: absolute;
   top: 20px;
@@ -688,13 +685,7 @@ header.desktop-titlebar.responsive-toolbar {
   background: rgba(255, 255, 255, 0.22);
 }
 .responsive-app .player-status {
-  left: auto;
-  top: 26px;
-  right: 76px;
-  width: auto;
-  font-size: 15px;
-  letter-spacing: 0.05em;
-  color: #9da0a4;
+  display: none !important;
 }
 .responsive-app .player-eyebrow, .responsive-app .player-overlay > h1, .responsive-app .player-context { position: static; width: auto; height: auto; }
 .responsive-app .player-eyebrow {
@@ -706,13 +697,13 @@ header.desktop-titlebar.responsive-toolbar {
 }
 .responsive-app .player-overlay > h1 {
   margin-top: 6px;
-  font-size: 32px;
+  font-size: 28px;
   font-weight: 700;
   color: #ffffff;
   text-shadow: 0 2px 6px rgba(0, 0, 0, 0.9);
 }
 .responsive-app .player-context {
-  font-size: 17px;
+  font-size: 16px;
   font-weight: 500;
   color: #d1d5db;
   margin-top: 4px;
@@ -724,7 +715,7 @@ header.desktop-titlebar.responsive-toolbar {
 .responsive-app .seekbar-thumb { width: 12px; height: 12px; }
 .responsive-app .seekbar-tooltip { bottom: 30px; padding: 1px 7px; font-size: 13px; line-height: 20px; }
 .responsive-app .player-time { position: static; order: 1; width: 100%; font-size: 16px; }
-.responsive-app .controls { position: relative; order: 2; display: flex; flex-wrap: wrap; gap: 8px; width: 100%; height: auto; margin-top: 8px; }
+.responsive-app .controls { position: static; order: 2; display: flex; flex-wrap: wrap; gap: 8px; width: 100%; height: auto; margin-top: 8px; }
 .responsive-app .controls button { position: static; width: 56px; height: 56px; min-height: 56px; padding: 14px; }
 .responsive-app .controls [data-focus-id="exit"] { margin-left: auto; }
 .responsive-app .playback-loading { position: fixed; left: 50%; top: 40%; width: min(90%, 420px); transform: translate(-50%, -50%); text-align: center; }
@@ -794,10 +785,11 @@ header.desktop-titlebar.responsive-toolbar {
   .responsive-app .hero > p, .responsive-app .detail-synopsis { margin-top: 16px; font-size: 16px; line-height: 1.5; }
   .responsive-app .hero-facts, .responsive-app .detail-facts { font-size: 14px; }
   .responsive-app .hero .actions, .responsive-app .detail-copy .actions { gap: 8px; flex-wrap: nowrap; margin-top: 20px; }
-  .responsive-app .hero .actions button, .responsive-app .detail-copy .actions button { height: 52px; min-height: 52px; font-size: 18px; padding: 0 10px; }
-  .responsive-app .hero .actions [data-focus-id="hero-play"], .responsive-app .detail-copy .actions [data-focus-id="detail-play"] { flex: 1 1 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .responsive-app .hero .actions .compact-action, .responsive-app .detail-copy [data-focus-id="detail-save"], .responsive-app .detail-copy [data-focus-id="detail-info"] { flex: 0 0 52px; width: 52px; }
-  .responsive-app [data-focus-id="hero-details"], .responsive-app [data-focus-id="detail-source"] { display: none; }
+  .responsive-app .hero .actions button, .responsive-app .detail-copy .actions button { height: 52px; min-height: 52px; font-size: 18px; padding: 0 10px; border-radius: 10px; }
+  .responsive-app .hero .actions [data-focus-id="hero-details"], .responsive-app .detail-copy .actions [data-focus-id="detail-play"] { flex: 1 1 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .responsive-app .hero .actions .compact-action, .responsive-app .hero-save-btn { flex: 0 0 52px !important; width: 52px !important; height: 52px !important; min-height: 52px !important; border-radius: 10px !important; }
+  .responsive-app .detail-copy [data-focus-id="detail-save"], .responsive-app .detail-copy [data-focus-id="detail-info"] { flex: 0 0 52px; width: 52px; }
+  .responsive-app [data-focus-id="detail-source"] { display: none; }
   .responsive-app .shelves h2 { font-size: 20px; }
   .responsive-app .cards { gap: 16px; }
   .responsive-app .responsive-card, .responsive-app .media-card { width: 232px; flex-basis: 232px; }
@@ -1165,124 +1157,6 @@ header.desktop-titlebar.responsive-toolbar {
   cursor: pointer;
 }
 
-/* Anchored audio/subtitle popup */
-.responsive-app .audio-selector-popup {
-  position: absolute;
-  bottom: calc(100% + 14px);
-  left: 50%;
-  transform: translateX(-50%);
-  width: 280px;
-  max-height: 320px;
-  background: rgba(24, 26, 28, 0.96);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  border-radius: 12px;
-  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.65);
-  display: flex;
-  flex-direction: column;
-  z-index: 100;
-  overflow: hidden;
-  animation: popup-fade-in 0.15s ease-out;
-}
-@keyframes popup-fade-in {
-  from { opacity: 0; transform: translate(-50%, 8px); }
-  to { opacity: 1; transform: translate(-50%, 0); }
-}
-.responsive-app .audio-selector-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px 14px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-}
-.responsive-app .audio-selector-title {
-  font-size: 13px;
-  font-weight: 600;
-  color: #c0c3c6;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-.responsive-app .audio-selector-close {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  min-height: 24px;
-  border-radius: 50%;
-  background: transparent;
-  border: none;
-  color: #9da0a4;
-  cursor: pointer;
-  padding: 0;
-}
-.responsive-app .audio-selector-close:hover {
-  background: rgba(255, 255, 255, 0.12);
-  color: #fff;
-}
-.responsive-app .audio-selector-list {
-  display: flex;
-  flex-direction: column;
-  padding: 6px;
-  overflow-y: auto;
-  max-height: 260px;
-  scrollbar-width: thin;
-}
-.responsive-app .audio-selector-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  min-height: 38px;
-  height: 38px;
-  padding: 0 10px;
-  border-radius: 6px;
-  background: transparent;
-  border: none;
-  color: #c5c6c7;
-  font-size: 14px;
-  cursor: pointer;
-  text-align: left;
-  transition: background 0.12s ease, color 0.12s ease;
-}
-.responsive-app .audio-selector-item:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.08);
-  color: #f5f5f5;
-}
-.responsive-app .audio-selector-item.is-selected {
-  background: rgba(255, 255, 255, 0.14);
-  color: #ffffff;
-  font-weight: 500;
-}
-.responsive-app .audio-selector-item.is-disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-.responsive-app .track-label {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.responsive-app .track-unavailable {
-  font-size: 11px;
-  color: #8c9094;
-}
-.responsive-app .track-check {
-  display: flex;
-  align-items: center;
-  color: #38bdf8;
-  flex-shrink: 0;
-}
-.responsive-app .audio-selector-empty {
-  padding: 16px;
-  text-align: center;
-  color: #8c9094;
-  font-size: 13px;
-}
 
 /* Custom dark Season Dropdown */
 .responsive-app .custom-season-dropdown {
@@ -1356,8 +1230,27 @@ header.desktop-titlebar.responsive-toolbar {
   font-weight: 600;
 }
 
-/* Fixed size action buttons for Hero and Detail pages to avoid layout shifts */
-.responsive-app .hero-save-btn,
+/* Action buttons: hero-save-btn matches height and roundness of details button */
+.responsive-app .hero-save-btn {
+  width: 56px !important;
+  height: 56px !important;
+  min-width: 56px !important;
+  min-height: 56px !important;
+  max-width: 56px !important;
+  max-height: 56px !important;
+  border-radius: 12px !important;
+  padding: 0 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex-shrink: 0 !important;
+}
+.responsive-app .hero .actions [data-focus-id="hero-details"] {
+  height: 56px;
+  min-height: 56px;
+  border-radius: 12px;
+  padding: 0 24px;
+}
 .responsive-app .detail-save-btn {
   width: 44px !important;
   height: 44px !important;

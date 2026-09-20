@@ -1,8 +1,7 @@
-import { normalizeCore } from "../core";
+import { initializeCore, normalizeCore } from "../core";
 import { Maximize, Minimize, Volume2, VolumeX, Info, ChevronLeft, ChevronDown, Check, Plus } from "lucide-react";
-import { WindowResizeBorders } from "./WindowResizeBorders";
-import { AudioSelectorPopup, type TrackChoice } from "./AudioSelectorPopup";
 import { usePlayerFullscreen } from "./usePlayerFullscreen";
+import { WindowResizeBorders } from "./WindowResizeBorders";
 import { ResponsiveSignIn } from "./ResponsiveSignIn";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import QRCode from "qrcode";
@@ -311,7 +310,6 @@ export function App({
     [seek, setSeek] = useState<number>(),
     [openingSource, setOpeningSource] = useState<string>();
   const [settingsSubpage, setSettingsSubpage] = useState<"Settings" | "Playback preferences" | "Addons">("Settings");
-  const [activeTrackPopup, setActiveTrackPopup] = useState<"audio" | "text" | null>(null);
   const [isMaximized, setIsMaximized] = useState(false);
   useEffect(() => {
     let unlisten: (() => void) | undefined;
@@ -2228,6 +2226,11 @@ export function App({
     if (!responsive) return;
     const root = document.querySelector<HTMLElement>(".responsive-app");
     if (root) {
+      if (screen === "player") {
+        root.scrollTop = 0;
+        root.scrollLeft = 0;
+        return;
+      }
       const anchor = restoredScroll.current;
       root.style.scrollBehavior = "auto";
       root.scrollTop = anchor?.top ?? 0;
@@ -2307,77 +2310,6 @@ export function App({
                   </TvButton>
                 ))}
               </nav>);
-  const nativeAudio = snapshot?.tracks.audio;
-  const serverAudio = session?.audioTracks;
-  const canNativeAudio =
-    session?.mode === "direct" &&
-    player.current?.capabilities.canSelectAudioTrack;
-  const currentAudioId = snapshot?.tracks.selectedAudioId;
-
-  const audioTrackList: TrackChoice[] =
-    canNativeAudio && nativeAudio?.length
-      ? nativeAudio.map((t) => ({
-          id: t.id,
-          label: t.label,
-          language: t.language,
-          available: t.available,
-          selected: currentAudioId === t.id,
-          onSelect: () => void player.current!.selectAudioTrack(t.id).catch(fail),
-        }))
-      : (serverAudio ?? []).map((t) => ({
-          id: String(t.inputIndex),
-          label: t.title || t.language || `Track ${t.inputIndex + 1}`,
-          language: t.language,
-          available: t.selectable,
-          selected: t.selected,
-          onSelect: () =>
-            void controller.current!.replaceTracks({
-              audioTrackIndex: t.inputIndex,
-            }).catch(fail),
-        }));
-
-  const nativeText = snapshot?.tracks.text;
-  const serverText = session?.subtitleTracks;
-  const canNativeText =
-    session?.mode === "direct" &&
-    player.current?.capabilities.canSelectTextTrack;
-  const currentTextId = snapshot?.tracks.selectedTextId;
-  const subtitlesOff = canNativeText
-    ? !currentTextId
-    : !(serverText ?? []).some((t) => t.selected);
-
-  const textTrackList: TrackChoice[] =
-    canNativeText && nativeText?.length
-      ? nativeText.map((t) => ({
-          id: t.id,
-          label: t.label,
-          language: t.language,
-          available: t.available,
-          selected: currentTextId === t.id,
-          onSelect: () => void player.current!.selectTextTrack(t.id).catch(fail),
-        }))
-      : (serverText ?? []).map((t) => ({
-          id: String(t.inputIndex),
-          label: t.title || t.language || `Track ${t.inputIndex + 1}`,
-          language: t.language,
-          available: t.selectable,
-          selected: t.selected,
-          onSelect: () =>
-            void controller.current!.replaceTracks({
-              subtitleTrackIndex: t.inputIndex,
-              subtitlesOff: false,
-            }).catch(fail),
-        }));
-
-  const subtitleOffOption = {
-    selected: subtitlesOff,
-    onSelect: () => {
-      void (canNativeText
-        ? player.current!.selectTextTrack(null)
-        : controller.current!.replaceTracks({ subtitlesOff: true })
-      ).catch(fail);
-    },
-  };
 
   return (
     <RemoteRoot
@@ -2544,39 +2476,50 @@ export function App({
                       .join("  ·  ")}
                   </div>
                   <div className="actions">
+                    {!responsive && (
+                      <TvButton
+                        id="hero-play"
+                        className={
+                          (highlighted ?? queue[0])?.queueStatus === "next"
+                            ? "wide-action"
+                            : undefined
+                        }
+                        onFocus={() => setCompactHome(false)}
+                        onActivate={() => {
+                          const item = highlighted ?? queue[0] ?? recentLive[0] ?? items[0];
+                          if (item)
+                            void discoverSources(
+                              item,
+                              !!item.position || item.queueStatus === "next",
+                            );
+                        }}
+                        onHold={() => {
+                          const item = highlighted ?? queue[0] ?? recentLive[0] ?? items[0];
+                          if (!item) return;
+                          if (
+                            item.type !== "live" &&
+                            queue.some(
+                              (queued) =>
+                                queued.id === item.id &&
+                                queued.type === item.type,
+                            )
+                          )
+                            manage(item);
+                          else void discoverSources(item);
+                        }}
+                      >
+                        {heroPresentation?.primaryActionLabel ?? "Play"}
+                      </TvButton>
+                    )}
                     <TvButton
-                      id="hero-play"
-                      className={
-                        !responsive && (highlighted ?? queue[0])?.queueStatus === "next"
-                          ? "wide-action"
-                          : undefined
-                      }
+                      id="hero-details"
                       onFocus={() => setCompactHome(false)}
                       onActivate={() => {
                         const item = responsive ? heroItem : (highlighted ?? queue[0] ?? recentLive[0] ?? items[0]);
-                        if (item)
-                          void discoverSources(
-                            item,
-                            !responsive && (!!item.position || item.queueStatus === "next"),
-                          );
-                      }}
-                      onHold={() => {
-                        const item = responsive ? heroItem : (highlighted ?? queue[0] ?? recentLive[0] ?? items[0]);
-                        if (!item) return;
-                        if (
-                          !responsive &&
-                          item.type !== "live" &&
-                          queue.some(
-                            (queued) =>
-                              queued.id === item.id &&
-                              queued.type === item.type,
-                          )
-                        )
-                          manage(item);
-                        else void discoverSources(item);
+                        if (item) void detail(item);
                       }}
                     >
-                      {responsive ? "Play" : (heroPresentation?.primaryActionLabel ?? "Play")}
+                      Details
                     </TvButton>
                     {responsive && (
                       <TvButton
@@ -2593,16 +2536,6 @@ export function App({
                         )}
                       </TvButton>
                     )}
-                    <TvButton
-                      id="hero-details"
-                      onFocus={() => setCompactHome(false)}
-                      onActivate={() => {
-                        const item = responsive ? heroItem : (highlighted ?? queue[0] ?? recentLive[0] ?? items[0]);
-                        if (item) void detail(item);
-                      }}
-                    >
-                      Details
-                    </TvButton>
                   </div>
                 </div>
                 <div
@@ -3371,7 +3304,7 @@ export function App({
                 onClick={(event) => {
                   // The backdrop around the controls is the play/pause surface,
                   // matching the video; interactive elements keep their clicks.
-                  if ((event.target as HTMLElement).closest("button, input, .seekbar, .audio-selector-popup"))
+                  if ((event.target as HTMLElement).closest("button, input, .seekbar"))
                     return;
                   if (selected?.type === "live") {
                     toggleLiveMute();
@@ -3383,15 +3316,6 @@ export function App({
                 <div
                   className={`player-identity ${selected?.type === "live" ? "channel-identity" : ""}`}
                 >
-                  <TvButton
-                    id="player-back"
-                    className="player-back-btn"
-                    aria-label="Back"
-                    title="Back"
-                    onActivate={() => void stop()}
-                  >
-                    <ChevronLeft size={20} />
-                  </TvButton>
                   {selected?.type === "live" && selected.poster && (
                     <ReadyImage src={selected.poster} alt="" />
                   )}
@@ -3410,15 +3334,17 @@ export function App({
                     </TvButton>
                   </div>
                 )}
-                <span className="player-status">
-                  {busy
-                    ? "LOADING"
-                    : snapshot?.state === "buffering"
-                      ? "BUFFERING"
-                      : snapshot?.state === "paused"
-                        ? "PAUSED"
-                        : "PLAYING"}
-                </span>
+                {!responsive && (
+                  <span className="player-status">
+                    {busy
+                      ? "LOADING"
+                      : snapshot?.state === "buffering"
+                        ? "BUFFERING"
+                        : snapshot?.state === "paused"
+                          ? "PAUSED"
+                          : "PLAYING"}
+                  </span>
+                )}
                 <span className="player-eyebrow">
                   {selected?.type === "live" ? "LIVE NOW" : "NOW PLAYING"}
                 </span>
@@ -3553,13 +3479,7 @@ export function App({
                     <TvButton
                       id="audio"
                       aria-label="Audio"
-                      onActivate={() => {
-                        if (responsive) {
-                          setActiveTrackPopup(activeTrackPopup === "audio" ? null : "audio");
-                        } else {
-                          trackChoices("audio");
-                        }
-                      }}
+                      onActivate={() => trackChoices("audio")}
                     >
                       <img
                         src={`${import.meta.env.BASE_URL}assets/ui-nav-player-audio.png`}
@@ -3569,27 +3489,13 @@ export function App({
                     <TvButton
                       id="subtitles"
                       aria-label="Subtitles"
-                      onActivate={() => {
-                        if (responsive) {
-                          setActiveTrackPopup(activeTrackPopup === "text" ? null : "text");
-                        } else {
-                          trackChoices("text");
-                        }
-                      }}
+                      onActivate={() => trackChoices("text")}
                     >
                       <img
                         src={`${import.meta.env.BASE_URL}assets/ui-nav-player-captions.png`}
                         alt=""
                       />
                     </TvButton>
-                    {responsive && activeTrackPopup && (
-                      <AudioSelectorPopup
-                        title={activeTrackPopup === "audio" ? "Audio Tracks" : "Subtitles"}
-                        tracks={activeTrackPopup === "audio" ? audioTrackList : textTrackList}
-                        offOption={activeTrackPopup === "text" ? subtitleOffOption : undefined}
-                        onClose={() => setActiveTrackPopup(null)}
-                      />
-                    )}
                     {responsive && <div className="responsive-player-tools">
                       {player.current?.capabilities.canSetVolume && snapshot?.volume ? (
                         <div
@@ -3645,7 +3551,6 @@ export function App({
                         snapshot?.diagnostics?.width ? `Resolution: ${snapshot.diagnostics.width} × ${snapshot.diagnostics.height}` : "",
                         snapshot?.diagnostics?.fallbackReason ? `Fallback: ${snapshot.diagnostics.fallbackReason}` : "",
                       ].filter(Boolean).join("\n"), choices: [{ label: "Close", action: () => setModal(undefined) }] })}><Info size={22} /></button>
-                      <button type="button" aria-label={fullscreenControl.fullscreen ? "Exit fullscreen" : "Fullscreen"} title={fullscreenControl.fullscreen ? "Exit fullscreen" : "Fullscreen"} onClick={() => void fullscreenControl.toggle()}>{fullscreenControl.fullscreen ? <Minimize size={22} /> : <Maximize size={22} />}</button>
                     </div>}
                     {!responsive && <TvButton
                       id="exit"

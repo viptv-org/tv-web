@@ -48,7 +48,7 @@ for (const viewport of [
     await expect(card).toBeVisible();
     await expectResponsiveViewport(page, viewport.width);
     await page.keyboard.press('Tab');
-    const focusedAction = page.locator('[data-focus-id="hero-play"]');
+    const focusedAction = page.locator('[data-focus-id="hero-details"]');
     await focusedAction.focus();
     await expect(focusedAction).toHaveCSS('background-color', 'rgb(32, 34, 36)');
     await expect(focusedAction).toHaveCSS('color', 'rgb(245, 245, 245)');
@@ -397,7 +397,7 @@ test('responsive web uses selected tabs without remote focus skin at phone and d
   const card = page.locator('[data-focus-id="home-0"]');
   await card.focus();
   expect(await card.evaluate(node => getComputedStyle(node, '::after').opacity)).toBe('0.35');
-  const action = page.locator('[data-focus-id="hero-play"]');
+  const action = page.locator('[data-focus-id="hero-details"]');
   await action.focus();
   await expect(action).toHaveCSS('outline-style', 'none');
   await expect(action).toHaveCSS('background-color', 'rgb(32, 34, 36)');

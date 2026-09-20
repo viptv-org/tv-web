@@ -136,6 +136,36 @@ export function DesktopTitlebar({
           cursor: "default",
         }}
       >
+        <img
+          src={`${import.meta.env.BASE_URL}assets/viptv-mark.png`}
+          alt="viptv"
+          className="titlebar-logo"
+          style={{
+            width: "12px",
+            height: "12px",
+            maxWidth: "12px",
+            maxHeight: "12px",
+            objectFit: "contain",
+            display: "block",
+            position: "static",
+            margin: 0,
+            padding: 0,
+            pointerEvents: "none",
+          }}
+        />
+        <span
+          className="titlebar-brand"
+          style={{
+            fontSize: "11px",
+            fontWeight: 700,
+            letterSpacing: "0.08em",
+            color: "#f5f5f5",
+            pointerEvents: "none",
+            userSelect: "none",
+          }}
+        >
+          VIPTV
+        </span>
         {canGoBack && (
           <button
             type="button"
@@ -162,7 +192,7 @@ export function DesktopTitlebar({
               minWidth: "20px",
               minHeight: "20px",
               padding: 0,
-              marginRight: "2px",
+              marginLeft: "4px",
             }}
           >
             <svg
@@ -179,37 +209,6 @@ export function DesktopTitlebar({
             </svg>
           </button>
         )}
-        <img
-          src={`${import.meta.env.BASE_URL}assets/viptv-mark.png`}
-          alt="viptv"
-          className="titlebar-logo"
-          style={{
-            width: "12px",
-            height: "12px",
-            maxWidth: "12px",
-            maxHeight: "12px",
-            objectFit: "contain",
-            display: "block",
-            position: "static",
-            margin: 0,
-            padding: 0,
-            pointerEvents: "none",
-          }}
-        />
-        <span
-          className="titlebar-brand"
-          style={{
-            fontSize: "11px",
-            fontWeight: 700,
-            letterSpacing: "0.08em",
-            color: "#c0c3c6",
-            lineHeight: 1,
-            userSelect: "none",
-            pointerEvents: "none",
-          }}
-        >
-          VIPTV
-        </span>
       </div>
 
       <div
