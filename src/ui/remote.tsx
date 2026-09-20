@@ -57,6 +57,17 @@ export function RemoteRoot({
         if (key === "Escape") {
           event.preventDefault();
           handlers.current.onBack?.();
+          return;
+        }
+        const input =
+          event.target instanceof HTMLInputElement ||
+          event.target instanceof HTMLTextAreaElement ||
+          Boolean((event.target as HTMLElement)?.isContentEditable);
+        if (!input && (key === " " || key === "Spacebar")) {
+          if (handlers.current.onMediaKey?.("MediaPlayPause")) {
+            event.preventDefault();
+            return;
+          }
         }
         return;
       }

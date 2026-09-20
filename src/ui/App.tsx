@@ -1,5 +1,7 @@
 import { normalizeCore } from "../core";
-import { Maximize, Minimize, Volume2, VolumeX, Info } from "lucide-react";
+import { Maximize, Minimize, Volume2, VolumeX, Info, ChevronLeft, ChevronDown, Check, Plus } from "lucide-react";
+import { WindowResizeBorders } from "./WindowResizeBorders";
+import { AudioSelectorPopup, type TrackChoice } from "./AudioSelectorPopup";
 import { usePlayerFullscreen } from "./usePlayerFullscreen";
 import { ResponsiveSignIn } from "./ResponsiveSignIn";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
@@ -134,6 +136,63 @@ function ResponsiveTitle({ title, logo }: { title: string; logo?: string | null 
   return <h1 className={`responsive-title ${logo && loaded === logo ? "has-logo" : ""}`}><span>{title}</span>{logo && <img src={logo} alt="" onLoad={() => setLoaded(logo)} onError={() => setLoaded(undefined)} />}</h1>;
 }
 
+function SeasonDropdown({
+  seasons,
+  activeSeason,
+  onSelectSeason,
+}: {
+  seasons: number[];
+  activeSeason?: number;
+  onSelectSeason: (s: number) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [open]);
+
+  return (
+    <div className="custom-season-dropdown" ref={containerRef}>
+      <button
+        type="button"
+        className="season-dropdown-btn"
+        onClick={() => setOpen(!open)}
+        aria-expanded={open}
+      >
+        <span>Season {activeSeason ?? seasons[0]}</span>
+        <ChevronDown size={14} className={open ? "rotate-180" : ""} />
+      </button>
+      {open && (
+        <div className="season-dropdown-menu" role="menu">
+          {seasons.map((s) => (
+            <button
+              key={s}
+              type="button"
+              role="menuitem"
+              className={`season-dropdown-item ${s === (activeSeason ?? seasons[0]) ? "is-selected" : ""}`}
+              onClick={() => {
+                onSelectSeason(s);
+                setOpen(false);
+              }}
+            >
+              <span>Season {s}</span>
+              {s === (activeSeason ?? seasons[0]) && <Check size={14} />}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function App({
   api,
   platform = "html5",
@@ -252,6 +311,23 @@ export function App({
     [seek, setSeek] = useState<number>(),
     [openingSource, setOpeningSource] = useState<string>();
   const [settingsSubpage, setSettingsSubpage] = useState<"Settings" | "Playback preferences" | "Addons">("Settings");
+  const [activeTrackPopup, setActiveTrackPopup] = useState<"audio" | "text" | null>(null);
+  const [isMaximized, setIsMaximized] = useState(false);
+  useEffect(() => {
+    let unlisten: (() => void) | undefined;
+    const init = async () => {
+      try {
+        const { getCurrentWindow } = await import("@tauri-apps/api/window");
+        const win = getCurrentWindow();
+        setIsMaximized(await win.isMaximized());
+        unlisten = await win.onResized(async () => {
+          setIsMaximized(await win.isMaximized());
+        });
+      } catch {}
+    };
+    void init();
+    return () => unlisten?.();
+  }, []);
   useEffect(() => {
     if (screen !== "Settings") setSettingsSubpage("Settings");
   }, [screen]);
@@ -392,11 +468,17 @@ export function App({
       errorFocus.current =
         (document.activeElement as HTMLElement)?.dataset.focusId ?? "";
       setTimeout(() => focusElement("dismiss-error"), 30);
+      if (screen !== "startup") {
+        const timer = setTimeout(() => {
+          setError("");
+        }, 4000);
+        return () => clearTimeout(timer);
+      }
     } else if (errorFocus.current) {
       focusElement(errorFocus.current);
       errorFocus.current = "";
     }
-  }, [error]);
+  }, [error, screen]);
   const notify = (message: string) => setToast(message);
   // One coalesced connectivity surface: the first network failure opens it,
   // later failures update it, and a successful probe clears it again.
@@ -828,7 +910,7 @@ export function App({
       seek !== undefined
     )
       return;
-    const t = setTimeout(() => setOverlay(false), 7000);
+    const t = setTimeout(() => setOverlay(false), 2500);
     return () => clearTimeout(t);
   }, [screen, overlay, snapshot?.state, modal, seek, controlActivity]);
   useEffect(() => {
@@ -1851,44 +1933,51 @@ export function App({
     void (snapshot?.state === "paused"
       ? player.current?.play()
       : player.current?.pause());
+
+  const toggleLiveMute = () => {
+    if (snapshot?.volume) {
+      void player.current?.setMuted?.(!snapshot.volume.muted).catch(fail);
+    }
+  };
+
   // The buffer layer is real data from whichever engine is active: the HTML
-  // element exposes its buffered ranges directly, and MediaBunny reports its
+  // element exposes its buffered ranges directly, and MediaBunny / Tauri native reports its
   // decoded-ahead window on the snapshot. Nothing is ever fabricated.
   const readBufferedRanges = () => {
-    const engine = snapshot?.diagnostics?.engine;
-    if (engine === "mediabunny") {
-      const position = snapshot?.time.positionSeconds ?? 0;
-      const end = snapshot?.time.bufferedEndSeconds;
-      return end != null && end > position
-        ? [
-            {
-              start: position,
-              end: Math.min(end, snapshot?.time.durationSeconds ?? end),
-            },
-          ]
-        : null;
-    }
-    if (engine !== "native-html" && engine !== "hls.js") return null;
-    const media = video.current;
+    const end = snapshot?.time.bufferedEndSeconds;
     const duration = snapshot?.time.durationSeconds ?? 0;
-    if (!media || duration <= 0) return null;
+    const position = snapshot?.time.positionSeconds ?? 0;
+    if (end != null && end > 0) {
+      return [
+        {
+          start: 0,
+          end: Math.min(end, duration > 0 ? duration : end),
+        },
+      ];
+    }
+    const media = video.current;
+    if (!media || duration <= 0 || !media.buffered) return null;
     // Managed deliveries start their element clock at a timeline offset; the
     // live snapshot position minus that clock recovers it.
-    const offset = Math.max(0, (snapshot?.time.positionSeconds ?? 0) - media.currentTime);
+    const offset = Math.max(0, position - media.currentTime);
     const ranges: BufferedRange[] = [];
     for (let i = 0; i < media.buffered.length; i++) {
       const start = Math.max(0, media.buffered.start(i) + offset);
-      const end = Math.min(duration, media.buffered.end(i) + offset);
-      if (end > start) ranges.push({ start, end });
+      const bEnd = Math.min(duration, media.buffered.end(i) + offset);
+      if (bEnd > start) ranges.push({ start, end: bEnd });
     }
-    return ranges;
+    return ranges.length > 0 ? ranges : null;
   };
   // The video surface and the backdrop around the controls toggle playback;
   // the seek bar and buttons keep their own clicks.
   const surfaceClick = () => {
     if (screen !== "player") return;
     setOverlay(true);
-    togglePlayback();
+    if (selected?.type === "live") {
+      toggleLiveMute();
+    } else {
+      togglePlayback();
+    }
   };
   const mediaKey = (key: string) => {
     if (screen !== "player" || modal || entry || editingProfile) return false;
@@ -1962,17 +2051,11 @@ export function App({
         : player.current?.pause());
       return true;
     }
-    if (
-      live &&
-      [
-        "MediaPlayPause",
-        "MediaPlay",
-        "MediaPause",
-        "MediaRewind",
-        "MediaFastForward",
-      ].includes(key)
-    )
+    if (live && ["MediaPlayPause", "MediaPlay", "MediaPause"].includes(key)) {
+      toggleLiveMute();
       return true;
+    }
+    if (live && ["MediaRewind", "MediaFastForward"].includes(key)) return true;
     if (!overlay) {
       setTimeout(() => focusElement(live ? "audio" : "timeline"), 0);
       return true;
@@ -2224,6 +2307,78 @@ export function App({
                   </TvButton>
                 ))}
               </nav>);
+  const nativeAudio = snapshot?.tracks.audio;
+  const serverAudio = session?.audioTracks;
+  const canNativeAudio =
+    session?.mode === "direct" &&
+    player.current?.capabilities.canSelectAudioTrack;
+  const currentAudioId = snapshot?.tracks.selectedAudioId;
+
+  const audioTrackList: TrackChoice[] =
+    canNativeAudio && nativeAudio?.length
+      ? nativeAudio.map((t) => ({
+          id: t.id,
+          label: t.label,
+          language: t.language,
+          available: t.available,
+          selected: currentAudioId === t.id,
+          onSelect: () => void player.current!.selectAudioTrack(t.id).catch(fail),
+        }))
+      : (serverAudio ?? []).map((t) => ({
+          id: String(t.inputIndex),
+          label: t.title || t.language || `Track ${t.inputIndex + 1}`,
+          language: t.language,
+          available: t.selectable,
+          selected: t.selected,
+          onSelect: () =>
+            void controller.current!.replaceTracks({
+              audioTrackIndex: t.inputIndex,
+            }).catch(fail),
+        }));
+
+  const nativeText = snapshot?.tracks.text;
+  const serverText = session?.subtitleTracks;
+  const canNativeText =
+    session?.mode === "direct" &&
+    player.current?.capabilities.canSelectTextTrack;
+  const currentTextId = snapshot?.tracks.selectedTextId;
+  const subtitlesOff = canNativeText
+    ? !currentTextId
+    : !(serverText ?? []).some((t) => t.selected);
+
+  const textTrackList: TrackChoice[] =
+    canNativeText && nativeText?.length
+      ? nativeText.map((t) => ({
+          id: t.id,
+          label: t.label,
+          language: t.language,
+          available: t.available,
+          selected: currentTextId === t.id,
+          onSelect: () => void player.current!.selectTextTrack(t.id).catch(fail),
+        }))
+      : (serverText ?? []).map((t) => ({
+          id: String(t.inputIndex),
+          label: t.title || t.language || `Track ${t.inputIndex + 1}`,
+          language: t.language,
+          available: t.selectable,
+          selected: t.selected,
+          onSelect: () =>
+            void controller.current!.replaceTracks({
+              subtitleTrackIndex: t.inputIndex,
+              subtitlesOff: false,
+            }).catch(fail),
+        }));
+
+  const subtitleOffOption = {
+    selected: subtitlesOff,
+    onSelect: () => {
+      void (canNativeText
+        ? player.current!.selectTextTrack(null)
+        : controller.current!.replaceTracks({ subtitlesOff: true })
+      ).catch(fail);
+    },
+  };
+
   return (
     <RemoteRoot
       inputMode={layout}
@@ -2235,21 +2390,32 @@ export function App({
         sourceFocusPending.current = false;
       }}
     >
-      {responsive && screen !== "player" && (
-        <DesktopTitlebar
-          screen={screen}
-          activeProfile={activeProfile}
-          onNavigateSearch={() => navigate("Search")}
-          onNavigateBookmarks={() => navigate("My List")}
-          onOpenProfiles={() => setScreen("profiles")}
-        />
-      )}
-      <div
-        ref={playerRoot}
-        onPointerMove={() => { if (responsive && screen === "player" && Date.now() - lastControlActivity.current > 1000) { lastControlActivity.current = Date.now(); setOverlay(true); setControlActivity(value => value + 1); } }}
-        onPointerDownCapture={(event) => { if (responsive && screen === "player" && (event.target as HTMLElement).closest("button, input")) { setOverlay(true); setControlActivity(value => value + 1); } }}
-        className={`tv-screen ${responsive ? "responsive-app" : ""} ${oled ? "oled" : ""} screen-${screen.replace(/ /g, "-").toLowerCase()} ${screen === "player" ? "playing" : ""}`}
-      >
+      <div className={`desktop-app-frame ${isMaximized ? "is-maximized" : ""} ${fullscreenControl.fullscreen ? "is-fullscreen" : ""}`}>
+        {responsive && (
+          <WindowResizeBorders disabled={fullscreenControl.fullscreen || isMaximized} />
+        )}
+        {responsive && !fullscreenControl.fullscreen && (
+          <DesktopTitlebar
+            screen={screen}
+            activeProfile={activeProfile}
+            canGoBack={
+              screen !== "startup" &&
+              screen !== "pairing" &&
+              screen !== "profiles" &&
+              (screen !== "Home" || (browser.current?.canGoBack() ?? false))
+            }
+            onNavigateBack={back}
+            onNavigateSearch={() => navigate("Search")}
+            onNavigateBookmarks={() => navigate("My List")}
+            onOpenProfiles={() => setScreen("profiles")}
+          />
+        )}
+        <div
+          ref={playerRoot}
+          onPointerMove={() => { if (responsive && screen === "player" && Date.now() - lastControlActivity.current > 1000) { lastControlActivity.current = Date.now(); setOverlay(true); setControlActivity(value => value + 1); } }}
+          onPointerDownCapture={(event) => { if (responsive && screen === "player" && (event.target as HTMLElement).closest("button, input")) { setOverlay(true); setControlActivity(value => value + 1); } }}
+          className={`tv-screen ${responsive ? "responsive-app" : ""} ${oled ? "oled" : ""} ${isMaximized ? "is-maximized" : ""} ${fullscreenControl.fullscreen ? "is-fullscreen" : ""} screen-${screen.replace(/ /g, "-").toLowerCase()} ${screen === "player" ? "playing" : ""}`}
+        >
         <video ref={video} className="video" playsInline onClick={surfaceClick} />
         <canvas ref={canvas} className="video player-canvas" style={{ display: "none" }} onClick={surfaceClick} />
         {responsive && !["startup", "pairing", "player", "profiles"].includes(screen) && (
@@ -2413,10 +2579,19 @@ export function App({
                       {responsive ? "Play" : (heroPresentation?.primaryActionLabel ?? "Play")}
                     </TvButton>
                     {responsive && (
-                      <>
-                        <TvButton id="hero-save" className="compact-action" aria-label="My List" aria-pressed={favorites.some((item) => item.id === heroItem?.id)} onActivate={() => { if (heroItem) void toggle(heroItem); }}>{favorites.some((item) => item.id === heroItem?.id) ? "✓" : "+"}</TvButton>
-                        <TvButton id="hero-more" className="compact-action" aria-label="More options" onActivate={() => { if (heroItem) setModal({ title: heroItem.name, choices: [{ label: "Details", action: () => { setModal(undefined); void detail(heroItem); } }, { label: "More actions", action: () => manage(heroItem) }, { label: "Cancel", action: () => setModal(undefined) }] }); }}>•••</TvButton>
-                      </>
+                      <TvButton
+                        id="hero-save"
+                        className="compact-action hero-save-btn"
+                        aria-label="My List"
+                        aria-pressed={favorites.some((item) => item.id === heroItem?.id)}
+                        onActivate={() => { if (heroItem) void toggle(heroItem); }}
+                      >
+                        {favorites.some((item) => item.id === heroItem?.id) ? (
+                          <Check size={18} />
+                        ) : (
+                          <Plus size={18} />
+                        )}
+                      </TvButton>
                     )}
                     <TvButton
                       id="hero-details"
@@ -2842,46 +3017,50 @@ export function App({
                       )}
                     <TvButton
                       id="detail-save"
+                      className="detail-save-btn"
                       aria-label={favorites.some((f) => f.id === selected.id) ? "Remove from My List" : "Add to My List"}
                       aria-pressed={favorites.some((f) => f.id === selected.id)}
                       onActivate={() => void toggle(selected)}
                     >
-                      {responsive ? (favorites.some((f) => f.id === selected.id) ? "✓" : "+") : favorites.some((f) => f.id === selected.id) ? "Remove from My List" : "+ My List"}
+                      {responsive ? (favorites.some((f) => f.id === selected.id) ? <Check size={18} /> : <Plus size={18} />) : favorites.some((f) => f.id === selected.id) ? "Remove from My List" : "+ My List"}
                     </TvButton>
                     <TvButton
                       id="detail-info"
-                      aria-label="More info"
-                      onActivate={() =>
-                        setModal({
-                          title: selected.name,
-                          body: [
-                            selected.name,
-                            [
-                              selected.year,
-                              selected.runtime,
-                              ...selected.genres,
+                      aria-label="More options"
+                      onActivate={() => {
+                        if (responsive) {
+                          manage(selected);
+                        } else {
+                          setModal({
+                            title: selected.name,
+                            body: [
+                              selected.name,
+                              [
+                                selected.year,
+                                selected.runtime,
+                                ...selected.genres,
+                              ]
+                                .filter(Boolean)
+                                .join(" · "),
+                              selected.description,
+                              typeof selected.raw.director === "string"
+                                ? `Director: ${selected.raw.director}`
+                                : "",
+                              Array.isArray(selected.raw.cast)
+                                ? `Cast: ${selected.raw.cast.filter((name) => typeof name === "string").join(", ")}`
+                                : "",
                             ]
                               .filter(Boolean)
-                              .join(" · "),
-                            selected.description,
-                            typeof selected.raw.director === "string"
-                              ? `Director: ${selected.raw.director}`
-                              : "",
-                            Array.isArray(selected.raw.cast)
-                              ? `Cast: ${selected.raw.cast.filter((name) => typeof name === "string").join(", ")}`
-                              : "",
-                          ]
-                            .filter(Boolean)
-                            .join("\n\n"),
-                          choices: [
-                            ...(responsive ? [{ label: "Choose source", action: () => { setModal(undefined); void discoverSources(selected); } }, { label: "More actions", action: () => manage(selected) }] : []),
-                            {
-                              label: "Close",
-                              action: () => setModal(undefined),
-                            },
-                          ],
-                        })
-                      }
+                              .join("\n\n"),
+                            choices: [
+                              {
+                                label: "Close",
+                                action: () => setModal(undefined),
+                              },
+                            ],
+                          });
+                        }
+                      }}
                     >
                       {responsive ? "•••" : "More info"}
                     </TvButton>
@@ -2908,18 +3087,11 @@ export function App({
                           new Set(episodes.map((e) => e.season).filter((s): s is number => s !== undefined)),
                         ).sort((a, b) => a - b);
                         return seasons.length > 1 ? (
-                          <select
-                            className="season-select"
-                            value={season}
-                            onChange={(ev) => setSeason(Number(ev.target.value))}
-                            aria-label="Select season"
-                          >
-                            {seasons.map((s) => (
-                              <option key={s} value={s}>
-                                Season {s}
-                              </option>
-                            ))}
-                          </select>
+                          <SeasonDropdown
+                            seasons={seasons}
+                            activeSeason={season}
+                            onSelectSeason={(s) => setSeason(s)}
+                          />
                         ) : null;
                       })()}
                     </div>
@@ -3199,26 +3371,45 @@ export function App({
                 onClick={(event) => {
                   // The backdrop around the controls is the play/pause surface,
                   // matching the video; interactive elements keep their clicks.
-                  if ((event.target as HTMLElement).closest("button, input, .seekbar"))
+                  if ((event.target as HTMLElement).closest("button, input, .seekbar, .audio-selector-popup"))
                     return;
-                  togglePlayback();
+                  if (selected?.type === "live") {
+                    toggleLiveMute();
+                  } else {
+                    togglePlayback();
+                  }
                 }}
               >
                 <div
                   className={`player-identity ${selected?.type === "live" ? "channel-identity" : ""}`}
                 >
-                  {selected?.type === "live" ? (
-                    selected.poster && (
-                      <ReadyImage src={selected.poster} alt="" />
-                    )
-                  ) : (
-                    <img
-                      src={`${import.meta.env.BASE_URL}assets/viptv-mark.png`}
-                      alt=""
-                    />
+                  <TvButton
+                    id="player-back"
+                    className="player-back-btn"
+                    aria-label="Back"
+                    title="Back"
+                    onActivate={() => void stop()}
+                  >
+                    <ChevronLeft size={20} />
+                  </TvButton>
+                  {selected?.type === "live" && selected.poster && (
+                    <ReadyImage src={selected.poster} alt="" />
                   )}
                   <span>{selected?.name}</span>
                 </div>
+                {responsive && (
+                  <div className="player-top-right">
+                    <TvButton
+                      id="player-top-fullscreen"
+                      className="player-top-btn"
+                      aria-label={fullscreenControl.fullscreen ? "Exit fullscreen" : "Fullscreen"}
+                      title={fullscreenControl.fullscreen ? "Exit fullscreen" : "Fullscreen"}
+                      onActivate={() => void fullscreenControl.toggle()}
+                    >
+                      {fullscreenControl.fullscreen ? <Minimize size={18} /> : <Maximize size={18} />}
+                    </TvButton>
+                  </div>
+                )}
                 <span className="player-status">
                   {busy
                     ? "LOADING"
@@ -3282,7 +3473,19 @@ export function App({
                     </>
                   )}
                   <div className="controls">
-                    {selected?.type !== "live" && (
+                    {selected?.type === "live" ? (
+                      <TvButton
+                        id="mute"
+                        aria-label={snapshot?.volume?.muted ? "Unmute" : "Mute"}
+                        onActivate={() => toggleLiveMute()}
+                      >
+                        {snapshot?.volume?.muted ? (
+                          <VolumeX size={26} color="#f5f5f5" />
+                        ) : (
+                          <Volume2 size={26} color="#f5f5f5" />
+                        )}
+                      </TvButton>
+                    ) : (
                       <>
                         <TvButton
                           id="rewind"
@@ -3350,7 +3553,13 @@ export function App({
                     <TvButton
                       id="audio"
                       aria-label="Audio"
-                      onActivate={() => trackChoices("audio")}
+                      onActivate={() => {
+                        if (responsive) {
+                          setActiveTrackPopup(activeTrackPopup === "audio" ? null : "audio");
+                        } else {
+                          trackChoices("audio");
+                        }
+                      }}
                     >
                       <img
                         src={`${import.meta.env.BASE_URL}assets/ui-nav-player-audio.png`}
@@ -3360,18 +3569,68 @@ export function App({
                     <TvButton
                       id="subtitles"
                       aria-label="Subtitles"
-                      onActivate={() => trackChoices("text")}
+                      onActivate={() => {
+                        if (responsive) {
+                          setActiveTrackPopup(activeTrackPopup === "text" ? null : "text");
+                        } else {
+                          trackChoices("text");
+                        }
+                      }}
                     >
                       <img
                         src={`${import.meta.env.BASE_URL}assets/ui-nav-player-captions.png`}
                         alt=""
                       />
                     </TvButton>
+                    {responsive && activeTrackPopup && (
+                      <AudioSelectorPopup
+                        title={activeTrackPopup === "audio" ? "Audio Tracks" : "Subtitles"}
+                        tracks={activeTrackPopup === "audio" ? audioTrackList : textTrackList}
+                        offOption={activeTrackPopup === "text" ? subtitleOffOption : undefined}
+                        onClose={() => setActiveTrackPopup(null)}
+                      />
+                    )}
                     {responsive && <div className="responsive-player-tools">
-                      {player.current?.capabilities.canSetVolume && snapshot?.volume ? <div className="player-volume">
-                        <button type="button" aria-label={snapshot.volume.muted ? "Unmute" : "Mute"} onClick={() => void player.current?.setMuted?.(!snapshot.volume?.muted).catch(fail)}>{snapshot.volume.muted ? <VolumeX size={22} /> : <Volume2 size={22} />}</button>
-                        <input type="range" aria-label="Volume" min="0" max="1" step="0.01" value={snapshot.volume.muted ? 0 : snapshot.volume.level} onChange={(event) => { setOverlay(true); void player.current?.setVolume?.(Number(event.target.value)).catch(fail); }} />
-                      </div> : <span className="system-volume">Use device volume buttons</span>}
+                      {player.current?.capabilities.canSetVolume && snapshot?.volume ? (
+                        <div
+                          className="player-volume"
+                          onPointerDown={(e) => e.stopPropagation()}
+                          onPointerUp={(e) => e.stopPropagation()}
+                          onMouseDown={(e) => e.stopPropagation()}
+                          onMouseUp={(e) => e.stopPropagation()}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <button
+                            type="button"
+                            aria-label={snapshot.volume.muted ? "Unmute" : "Mute"}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              void player.current?.setMuted?.(!snapshot.volume?.muted).catch(fail);
+                            }}
+                          >
+                            {snapshot.volume.muted ? <VolumeX size={22} /> : <Volume2 size={22} />}
+                          </button>
+                          <input
+                            type="range"
+                            aria-label="Volume"
+                            min="0"
+                            max="1"
+                            step="0.01"
+                            value={snapshot.volume.muted ? 0 : snapshot.volume.level}
+                            onPointerDown={(e) => e.stopPropagation()}
+                            onPointerUp={(e) => e.stopPropagation()}
+                            onMouseDown={(e) => e.stopPropagation()}
+                            onMouseUp={(e) => e.stopPropagation()}
+                            onClick={(e) => e.stopPropagation()}
+                            onChange={(event) => {
+                              setOverlay(true);
+                              void player.current?.setVolume?.(Number(event.target.value)).catch(fail);
+                            }}
+                          />
+                        </div>
+                      ) : (
+                        <span className="system-volume">Use device volume buttons</span>
+                      )}
                       <button type="button" aria-label="Playback info" title="Playback info" onClick={() => setModal({ title: "Playback info", body: [
                         `Decoder: ${snapshot?.diagnostics
                           ? `${snapshot.diagnostics.engine}${snapshot.diagnostics.backend ? ` (${snapshot.diagnostics.backend})` : ""}`
@@ -3441,9 +3700,9 @@ export function App({
         )}
 
         {error && (
-          <div className="error" role="alert" data-focus-scope="error">
-            {error}
-            <TvButton id="dismiss-error" onActivate={() => {
+          <div className="error error-toast" role="alert" data-focus-scope="error">
+            <span className="error-toast-text">{error}</span>
+            <TvButton id="dismiss-error" className="error-dismiss-btn" onActivate={() => {
               setError("");
               if (screen === "startup") setStartupAttempt((attempt) => attempt + 1);
             }}>
@@ -3533,6 +3792,7 @@ export function App({
             </div>
           </DialogBackdrop>
         )}
+      </div>
       </div>
     </RemoteRoot>
   );

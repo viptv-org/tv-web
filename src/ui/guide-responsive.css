@@ -1,5 +1,12 @@
 /* Responsive EPG has its own geometry; the Roku fixed-canvas guide is unchanged. */
-.responsive-app .responsive-epg { --epg-channel-width: 168px; /* One shared height keeps the sidebar and the guide box equal. */ --epg-guide-height: clamp(420px, calc(100dvh - 400px), 860px); padding-top: 20px; padding-bottom: 88px; }
+.responsive-app .responsive-epg {
+  --epg-channel-width: 168px;
+  /* One shared height keeps the sidebar and the guide box equal. */
+  --epg-guide-height: clamp(420px, calc(100vh - 220px), 1100px);
+  padding-top: 20px;
+  padding-bottom: 88px;
+  padding-right: var(--page-gutter, 40px) !important;
+}
 /* Every piece of page chrome shares one row, so the guide and sidebar start together. */
 .responsive-epg .epg-page-heading { display: flex; flex-wrap: wrap; align-items: end; gap: 16px 28px; margin-bottom: 20px; }
 .responsive-epg .epg-heading-title { flex: 1 1 300px; min-width: 0; }
@@ -31,15 +38,15 @@
 .responsive-epg .epg-channel-heading { position: sticky !important; left: 0 !important; z-index: 25 !important; flex: 0 0 var(--epg-channel-width); width: var(--epg-channel-width); display: flex; align-items: center; padding: 12px; font-size: 13px; color: #b7babc; background: #202224 !important; border-right: 1px solid #414548; }
 .responsive-epg .epg-time-labels { display: flex; flex: 0 0 1440px; background: #202224 !important; }
 .responsive-epg .epg-time-labels > span { display: flex; align-items: center; width: 120px; flex: 0 0 120px; padding-left: 10px; font-size: 13px; border-left: 1px solid #353a3c; background: #202224 !important; }
-.responsive-epg .epg-row { display: flex; height: 84px; border-bottom: 1px solid #303638; position: relative; z-index: 1; contain: paint; }
-.responsive-app .responsive-epg .epg-channel { position: sticky; left: 0; z-index: 10; display: flex; gap: 9px; align-items: center; flex: 0 0 var(--epg-channel-width); width: var(--epg-channel-width); height: 84px; min-height: 84px; padding: 12px; border-radius: 0; border-right: 1px solid #414548; background: #202224; text-align: left; }
-.responsive-epg .epg-channel img { width: 40px; height: 36px; object-fit: contain; flex: 0 0 40px; }
-.responsive-epg .epg-channel span { font-size: 14px; line-height: 1.35; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
-.responsive-epg .epg-programs { position: relative; flex: 0 0 1440px; height: 84px; background: repeating-linear-gradient(to right, transparent 0, transparent 119px, #24292c 119px, #24292c 120px); }
-.responsive-app .responsive-epg .epg-program { position: absolute; top: 4px; height: 75px; padding: 12px 10px; border-radius: 6px; background: #202224; text-align: left; overflow: hidden; }
+.responsive-epg .epg-row { display: flex; height: 60px; border-bottom: 1px solid #303638; position: relative; z-index: 1; contain: paint; }
+.responsive-app .responsive-epg .epg-channel { position: sticky; left: 0; z-index: 10; display: flex; gap: 8px; align-items: center; flex: 0 0 var(--epg-channel-width); width: var(--epg-channel-width); height: 60px; min-height: 60px; padding: 8px 12px; border-radius: 0; border-right: 1px solid #414548; background: #202224; text-align: left; }
+.responsive-epg .epg-channel img { width: 34px; height: 28px; object-fit: contain; flex: 0 0 34px; }
+.responsive-epg .epg-channel span { font-size: 13px; line-height: 1.25; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.responsive-epg .epg-programs { position: relative; flex: 0 0 1440px; height: 60px; background: repeating-linear-gradient(to right, transparent 0, transparent 119px, #24292c 119px, #24292c 120px); }
+.responsive-app .responsive-epg .epg-program { position: absolute; top: 4px; height: 51px; padding: 6px 10px; border-radius: 6px; background: #202224; text-align: left; overflow: hidden; }
 .responsive-app .responsive-epg .epg-gap { background: #17191b; }
-.responsive-epg .epg-program small { display: block; font-size: 11px; line-height: 1.3; color: #b7bec2; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-.responsive-epg .epg-program > span { display: block; margin-top: 5px; font-size: 14px; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.responsive-epg .epg-program small { display: block; font-size: 10px; line-height: 1.2; color: #b7bec2; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.responsive-epg .epg-program > span { display: block; margin-top: 2px; font-size: 13px; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .responsive-epg .epg-now { position: absolute; top: 0; bottom: 0; width: 2px; background: #f5f5f5; z-index: 2; pointer-events: none; }
 .responsive-epg .epg-page-controls { display: flex; gap: 12px; align-items: center; padding-top: 16px; }
 .responsive-epg .epg-page-controls > span { font-size: 13px; color: #a6a8aa; }

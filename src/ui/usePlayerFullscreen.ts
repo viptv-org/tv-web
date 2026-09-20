@@ -76,9 +76,15 @@ export function usePlayerFullscreen(active: boolean, root: RefObject<HTMLElement
     pending.current = true;
     try {
       if (isNative) {
-        const { getCurrentWindow } = await import('@tauri-apps/api/window');
-        native.current ??= new PlayerFullscreen(getCurrentWindow());
-        setFullscreen(await native.current.toggle());
+        try {
+          const { invoke } = await import('@tauri-apps/api/core');
+          const next = await invoke<boolean>('app_window_toggle_fullscreen');
+          setFullscreen(next);
+        } catch {
+          const { getCurrentWindow } = await import('@tauri-apps/api/window');
+          native.current ??= new PlayerFullscreen(getCurrentWindow());
+          setFullscreen(await native.current.toggle());
+        }
       } else if (document.fullscreenElement) {
         await document.exitFullscreen(); owner.current = false;
       } else if (root.current?.requestFullscreen) {

@@ -104,6 +104,7 @@ export class BrowserNavigation<T> {
   }
   replaceRoute(route: BrowserRoute) { this.route = route; history.replaceState({ viptvNavigation: this.entry }, "", browserRouteUrl(route)); }
   remember(snapshot: T) { this.snapshots.set(this.entry.key, snapshot); }
+  canGoBack(): boolean { return this.entry.position > 0; }
   back(): boolean { if (this.entry.position <= 0) return false; history.back(); return true; }
   clearSnapshots() { this.snapshots.clear(); }
   dispose() { window.removeEventListener("popstate", this.pop); history.scrollRestoration = this.previousScrollRestoration; }

@@ -30,6 +30,8 @@ export function RemoteControlIcon({ className }: { className?: string }) {
 interface DesktopTitlebarProps {
   screen?: string;
   activeProfile?: TvProfile;
+  canGoBack?: boolean;
+  onNavigateBack?: () => void;
   onNavigateSearch: () => void;
   onNavigateBookmarks: () => void;
   onOpenProfiles: () => void;
@@ -38,6 +40,8 @@ interface DesktopTitlebarProps {
 export function DesktopTitlebar({
   screen,
   activeProfile,
+  canGoBack,
+  onNavigateBack,
   onNavigateSearch,
   onNavigateBookmarks,
   onOpenProfiles,
@@ -132,6 +136,49 @@ export function DesktopTitlebar({
           cursor: "default",
         }}
       >
+        {canGoBack && (
+          <button
+            type="button"
+            className="titlebar-btn titlebar-icon-btn titlebar-back-btn"
+            aria-label="Back"
+            title="Back"
+            tabIndex={-1}
+            onMouseDown={(e) => {
+              stopDragEvents(e);
+              e.currentTarget.blur();
+            }}
+            onPointerDown={(e) => {
+              stopDragEvents(e);
+              e.currentTarget.blur();
+            }}
+            onClick={(e) => {
+              stopDragEvents(e);
+              e.currentTarget.blur();
+              onNavigateBack?.();
+            }}
+            style={{
+              width: "20px",
+              height: "20px",
+              minWidth: "20px",
+              minHeight: "20px",
+              padding: 0,
+              marginRight: "2px",
+            }}
+          >
+            <svg
+              width="11"
+              height="11"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <polyline points="15 18 9 12 15 6" />
+            </svg>
+          </button>
+        )}
         <img
           src={`${import.meta.env.BASE_URL}assets/viptv-mark.png`}
           alt="viptv"
@@ -183,10 +230,18 @@ export function DesktopTitlebar({
               type="button"
               className="titlebar-search-btn"
               aria-label="Search"
-              onMouseDown={stopDragEvents}
-              onPointerDown={stopDragEvents}
+              tabIndex={-1}
+              onMouseDown={(e) => {
+                stopDragEvents(e);
+                e.currentTarget.blur();
+              }}
+              onPointerDown={(e) => {
+                stopDragEvents(e);
+                e.currentTarget.blur();
+              }}
               onClick={(e) => {
-                e.stopPropagation();
+                stopDragEvents(e);
+                e.currentTarget.blur();
                 onNavigateSearch();
               }}
             >
@@ -211,10 +266,18 @@ export function DesktopTitlebar({
               className="titlebar-btn titlebar-icon-btn"
               aria-label="My List"
               title="My List"
-              onMouseDown={stopDragEvents}
-              onPointerDown={stopDragEvents}
+              tabIndex={-1}
+              onMouseDown={(e) => {
+                stopDragEvents(e);
+                e.currentTarget.blur();
+              }}
+              onPointerDown={(e) => {
+                stopDragEvents(e);
+                e.currentTarget.blur();
+              }}
               onClick={(e) => {
-                e.stopPropagation();
+                stopDragEvents(e);
+                e.currentTarget.blur();
                 onNavigateBookmarks();
               }}
             >
@@ -243,11 +306,19 @@ export function DesktopTitlebar({
                 className="titlebar-btn titlebar-avatar-btn"
                 aria-label="Switch Profile"
                 title="Switch Profile"
+                tabIndex={-1}
                 onActivate={() => onOpenProfiles()}
-                onMouseDown={stopDragEvents}
-                onPointerDown={stopDragEvents}
+                onMouseDown={(e) => {
+                  stopDragEvents(e);
+                  e.currentTarget.blur();
+                }}
+                onPointerDown={(e) => {
+                  stopDragEvents(e);
+                  e.currentTarget.blur();
+                }}
                 onClick={(e) => {
-                  e.stopPropagation();
+                  stopDragEvents(e);
+                  e.currentTarget.blur();
                   onOpenProfiles();
                 }}
               >
@@ -271,10 +342,18 @@ export function DesktopTitlebar({
             className="titlebar-btn titlebar-control-btn btn-minimize"
             aria-label="Minimize"
             title="Minimize"
-            onMouseDown={stopDragEvents}
-            onPointerDown={stopDragEvents}
+            tabIndex={-1}
+            onMouseDown={(e) => {
+              stopDragEvents(e);
+              e.currentTarget.blur();
+            }}
+            onPointerDown={(e) => {
+              stopDragEvents(e);
+              e.currentTarget.blur();
+            }}
             onClick={(e) => {
-              e.stopPropagation();
+              stopDragEvents(e);
+              e.currentTarget.blur();
               void handleMinimize();
             }}
           >
@@ -287,10 +366,18 @@ export function DesktopTitlebar({
             className="titlebar-btn titlebar-control-btn btn-maximize"
             aria-label="Maximize"
             title="Maximize"
-            onMouseDown={stopDragEvents}
-            onPointerDown={stopDragEvents}
+            tabIndex={-1}
+            onMouseDown={(e) => {
+              stopDragEvents(e);
+              e.currentTarget.blur();
+            }}
+            onPointerDown={(e) => {
+              stopDragEvents(e);
+              e.currentTarget.blur();
+            }}
             onClick={(e) => {
-              e.stopPropagation();
+              stopDragEvents(e);
+              e.currentTarget.blur();
               void handleToggleMaximize();
             }}
           >
@@ -303,10 +390,18 @@ export function DesktopTitlebar({
             className="titlebar-btn titlebar-control-btn btn-close"
             aria-label="Close"
             title="Close"
-            onMouseDown={stopDragEvents}
-            onPointerDown={stopDragEvents}
+            tabIndex={-1}
+            onMouseDown={(e) => {
+              stopDragEvents(e);
+              e.currentTarget.blur();
+            }}
+            onPointerDown={(e) => {
+              stopDragEvents(e);
+              e.currentTarget.blur();
+            }}
             onClick={(e) => {
-              e.stopPropagation();
+              stopDragEvents(e);
+              e.currentTarget.blur();
               void handleClose();
             }}
           >

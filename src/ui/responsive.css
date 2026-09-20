@@ -1,4 +1,100 @@
 body:has(.responsive-app) { background: #101112; }
+
+/* Desktop app frame with native-matching outline and rounding when windowed */
+.desktop-app-frame {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+}
+
+.desktop-app-frame:not(.is-maximized):not(.is-fullscreen) {
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 10px;
+  overflow: hidden;
+  contain: paint;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
+.desktop-app-frame.is-maximized,
+.desktop-app-frame.is-fullscreen {
+  border: none;
+  border-radius: 0;
+  overflow: visible;
+  contain: none;
+  box-shadow: none;
+}
+
+/* 8-zone resize handles for frameless Wayland window resizing */
+.window-resize-borders {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9999;
+}
+.resize-edge,
+.resize-corner {
+  position: absolute;
+  pointer-events: auto;
+}
+.resize-edge.resize-top {
+  top: 0;
+  left: 12px;
+  right: 12px;
+  height: 6px;
+  cursor: ns-resize;
+}
+.resize-edge.resize-bottom {
+  bottom: 0;
+  left: 12px;
+  right: 12px;
+  height: 6px;
+  cursor: ns-resize;
+}
+.resize-edge.resize-left {
+  top: 12px;
+  bottom: 12px;
+  left: 0;
+  width: 6px;
+  cursor: ew-resize;
+}
+.resize-edge.resize-right {
+  top: 12px;
+  bottom: 12px;
+  right: 0;
+  width: 6px;
+  cursor: ew-resize;
+}
+.resize-corner.resize-top-left {
+  top: 0;
+  left: 0;
+  width: 12px;
+  height: 12px;
+  cursor: nwse-resize;
+}
+.resize-corner.resize-top-right {
+  top: 0;
+  right: 0;
+  width: 12px;
+  height: 12px;
+  cursor: nesw-resize;
+}
+.resize-corner.resize-bottom-left {
+  bottom: 0;
+  left: 0;
+  width: 12px;
+  height: 12px;
+  cursor: nesw-resize;
+}
+.resize-corner.resize-bottom-right {
+  bottom: 0;
+  right: 0;
+  width: 12px;
+  height: 12px;
+  cursor: nwse-resize;
+}
+
 /* Responsive arrangement of the canonical VIPTV components. TV coordinates remain
    in tv.css; every override is scoped to the explicitly selected responsive shell. */
 .tv-screen.responsive-app {
@@ -24,7 +120,11 @@ body:has(.responsive-app) { background: #101112; }
   scroll-behavior: smooth;
   scrollbar-width: thin;
 }
-.tv-screen.responsive-app.playing,
+.tv-screen.responsive-app.playing:not(.is-fullscreen) {
+  top: 30px;
+  height: calc(100% - 30px);
+}
+.tv-screen.responsive-app.playing.is-fullscreen,
 .tv-screen.responsive-app.screen-signin,
 .tv-screen.responsive-app:has(.responsive-auth) {
   top: 0;
@@ -37,6 +137,11 @@ body:has(.responsive-app) { background: #101112; }
 .responsive-app button:focus:not(:focus-visible) { background-color: #202224; color: #f5f5f5; }
 .responsive-app button:focus-visible { outline: 2px solid #f5f5f5; outline-offset: 3px; background: #f5f5f5; color: #101112; }
 .responsive-app .roku-text > span { animation: none !important; }
+/* Marquee activates on hover in responsive desktop mode */
+.responsive-app :is(.card, .media-card, .episode):hover .roku-text.overflows > span {
+  display: inline-block;
+  animation: roku-marquee var(--marquee-duration, 8s) linear 0.4s infinite alternate !important;
+}
 .responsive-app .brand { display: block; position: absolute; left: 18px; top: 20px; width: 36px; height: 32px; z-index: 35; }
 .responsive-app .brand img { width: 100%; height: 100%; object-fit: contain; }
 
@@ -228,25 +333,46 @@ header.desktop-titlebar.responsive-toolbar {
   gap: 3px;
 }
 
-.titlebar-btn:focus,
-.titlebar-btn:focus-visible,
-.titlebar-icon-btn:focus,
-.titlebar-icon-btn:focus-visible,
-.titlebar-control-btn:focus,
-.titlebar-control-btn:focus-visible,
-.titlebar-avatar-btn:focus,
-.titlebar-avatar-btn:focus-visible,
-.titlebar-search-btn:focus,
-.titlebar-search-btn:focus-visible {
+.desktop-titlebar button:focus,
+.desktop-titlebar button:focus-visible,
+.desktop-titlebar .titlebar-btn:focus,
+.desktop-titlebar .titlebar-btn:focus-visible,
+.desktop-titlebar .titlebar-icon-btn:focus,
+.desktop-titlebar .titlebar-icon-btn:focus-visible,
+.desktop-titlebar .titlebar-control-btn:focus,
+.desktop-titlebar .titlebar-control-btn:focus-visible,
+.desktop-titlebar .titlebar-avatar-btn:focus,
+.desktop-titlebar .titlebar-avatar-btn:focus-visible,
+.desktop-titlebar .titlebar-search-btn:focus,
+.desktop-titlebar .titlebar-search-btn:focus-visible {
   outline: none !important;
   box-shadow: none !important;
+  background: transparent !important;
+  color: #9da0a4 !important;
 }
 
-.titlebar-btn:active,
-.titlebar-icon-btn:active,
-.titlebar-control-btn:active,
-.titlebar-avatar-btn:active,
-.titlebar-search-btn:active {
+.desktop-titlebar button:hover:not(:disabled),
+.desktop-titlebar .titlebar-btn:hover,
+.desktop-titlebar .titlebar-icon-btn:hover,
+.desktop-titlebar .titlebar-control-btn:hover,
+.desktop-titlebar .titlebar-avatar-btn:hover {
+  background: #25282b !important;
+  border-color: #383b3e !important;
+  color: #f5f5f5 !important;
+}
+
+.desktop-titlebar .titlebar-search-btn:hover {
+  background: #24272a !important;
+  border-color: #383b3e !important;
+  color: #f5f5f5 !important;
+}
+
+.desktop-titlebar button:active,
+.desktop-titlebar .titlebar-btn:active,
+.desktop-titlebar .titlebar-icon-btn:active,
+.desktop-titlebar .titlebar-control-btn:active,
+.desktop-titlebar .titlebar-avatar-btn:active,
+.desktop-titlebar .titlebar-search-btn:active {
   background-color: #2c2f32 !important;
   border-color: #404347 !important;
   color: #ffffff !important;
@@ -513,20 +639,92 @@ header.desktop-titlebar.responsive-toolbar {
 .responsive-app .startup-cover > img, .responsive-app .startup-cover > p, .responsive-app .startup-cover::after { position: static; margin: 16px; }
 .responsive-app.playing { background: #000; overflow: hidden; }
 .responsive-app.playing .brand { display: none; }
-.responsive-app .video { position: fixed; width: 100%; height: 100%; object-fit: contain; }
-.responsive-app .player-overlay { position: fixed; display: flex; flex-direction: column; justify-content: end; padding: 28px max(24px, env(safe-area-inset-right)) 24px max(24px, env(safe-area-inset-left)); background: linear-gradient(#0009, transparent 30%, transparent 40%, #000e); }
-.responsive-app .player-identity { top: 24px; left: 24px; }
-.responsive-app .player-status { left: auto; top: 24px; right: 24px; width: auto; font-size: 18px; }
+.responsive-app.playing .video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+.responsive-app.playing .player-overlay { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: end; padding: 28px max(24px, env(safe-area-inset-right)) 24px max(24px, env(safe-area-inset-left)); background: linear-gradient(#0009, transparent 30%, transparent 40%, #000e); }
+.responsive-app .player-identity { top: 20px; left: 24px; display: flex; align-items: center; gap: 12px; }
+.responsive-app .player-back-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  min-height: 36px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: #f5f5f5;
+  padding: 0;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+.responsive-app .player-back-btn:hover {
+  background: rgba(255, 255, 255, 0.22);
+}
+.responsive-app .player-top-right {
+  position: absolute;
+  top: 20px;
+  right: 24px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  z-index: 10;
+}
+.responsive-app .player-top-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  min-height: 36px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: #f5f5f5;
+  padding: 0;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+.responsive-app .player-top-btn:hover {
+  background: rgba(255, 255, 255, 0.22);
+}
+.responsive-app .player-status {
+  left: auto;
+  top: 26px;
+  right: 76px;
+  width: auto;
+  font-size: 15px;
+  letter-spacing: 0.05em;
+  color: #9da0a4;
+}
 .responsive-app .player-eyebrow, .responsive-app .player-overlay > h1, .responsive-app .player-context { position: static; width: auto; height: auto; }
-.responsive-app .player-overlay > h1 { margin-top: 8px; font-size: 32px; }
-.responsive-app .player-context { font-size: 18px; margin-top: 6px; }
+.responsive-app .player-eyebrow {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  color: #a0a3a7;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.85);
+}
+.responsive-app .player-overlay > h1 {
+  margin-top: 6px;
+  font-size: 32px;
+  font-weight: 700;
+  color: #ffffff;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.9);
+}
+.responsive-app .player-context {
+  font-size: 17px;
+  font-weight: 500;
+  color: #d1d5db;
+  margin-top: 4px;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.85);
+}
 .responsive-app .playback-bottom { position: static; display: flex; flex-direction: column; }
 .responsive-app .seekbar { position: relative; inset: auto; order: 0; width: 100%; height: 40px; margin-top: 12px; cursor: pointer; }
 .responsive-app .seekbar-track { border-radius: 2px; }
 .responsive-app .seekbar-thumb { width: 12px; height: 12px; }
 .responsive-app .seekbar-tooltip { bottom: 30px; padding: 1px 7px; font-size: 13px; line-height: 20px; }
 .responsive-app .player-time { position: static; order: 1; width: 100%; font-size: 16px; }
-.responsive-app .controls { position: static; order: 2; display: flex; flex-wrap: wrap; gap: 8px; width: 100%; height: auto; margin-top: 8px; }
+.responsive-app .controls { position: relative; order: 2; display: flex; flex-wrap: wrap; gap: 8px; width: 100%; height: auto; margin-top: 8px; }
 .responsive-app .controls button { position: static; width: 56px; height: 56px; min-height: 56px; padding: 14px; }
 .responsive-app .controls [data-focus-id="exit"] { margin-left: auto; }
 .responsive-app .playback-loading { position: fixed; left: 50%; top: 40%; width: min(90%, 420px); transform: translate(-50%, -50%); text-align: center; }
@@ -659,7 +857,7 @@ header.desktop-titlebar.responsive-toolbar {
   padding: 24px var(--page-gutter) 104px;
   background: var(--canvas);
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-columns: 260px minmax(0, 1fr);
   gap: 24px 64px;
 }
 .responsive-app .roku-settings h1, .responsive-app .roku-settings .settings-caption { position: static; width: auto; height: auto; grid-column: 1 / -1; }
@@ -903,8 +1101,327 @@ header.desktop-titlebar.responsive-toolbar {
 .responsive-app .auth-link-device a { color: #f5f5f5; }
 .responsive-app .responsive-player-tools { display: flex; align-items: center; justify-content: end; gap: 8px; margin-left: auto; }
 .responsive-app .responsive-player-tools button { display: grid; place-items: center; }
-.responsive-app .player-volume { display: flex; align-items: center; gap: 8px; }
-.responsive-app .player-volume input { width: clamp(72px, 10vw, 130px); min-height: 44px; margin: 0; accent-color: #f5f5f5; cursor: pointer; }
+
+/* Custom volume slider */
+.responsive-app .player-volume {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.responsive-app .player-volume button {
+  width: 36px;
+  height: 36px;
+  min-height: 36px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  color: #c5c6c7;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: color 0.15s ease, background-color 0.15s ease;
+}
+.responsive-app .player-volume button:hover {
+  color: #f5f5f5;
+  background-color: rgba(255, 255, 255, 0.12);
+}
+.responsive-app .player-volume input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: clamp(72px, 10vw, 120px);
+  height: 4px;
+  min-height: 4px;
+  background: rgba(255, 255, 255, 0.25);
+  border-radius: 2px;
+  outline: none;
+  cursor: pointer;
+  padding: 0;
+  margin: 0;
+}
+.responsive-app .player-volume input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #f5f5f5;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+  cursor: pointer;
+  transition: transform 0.1s ease;
+}
+.responsive-app .player-volume input[type="range"]::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+}
+.responsive-app .player-volume input[type="range"]::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #f5f5f5;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+  cursor: pointer;
+}
+
+/* Anchored audio/subtitle popup */
+.responsive-app .audio-selector-popup {
+  position: absolute;
+  bottom: calc(100% + 14px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: 280px;
+  max-height: 320px;
+  background: rgba(24, 26, 28, 0.96);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 12px;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.65);
+  display: flex;
+  flex-direction: column;
+  z-index: 100;
+  overflow: hidden;
+  animation: popup-fade-in 0.15s ease-out;
+}
+@keyframes popup-fade-in {
+  from { opacity: 0; transform: translate(-50%, 8px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+.responsive-app .audio-selector-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+.responsive-app .audio-selector-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #c0c3c6;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.responsive-app .audio-selector-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  min-height: 24px;
+  border-radius: 50%;
+  background: transparent;
+  border: none;
+  color: #9da0a4;
+  cursor: pointer;
+  padding: 0;
+}
+.responsive-app .audio-selector-close:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+.responsive-app .audio-selector-list {
+  display: flex;
+  flex-direction: column;
+  padding: 6px;
+  overflow-y: auto;
+  max-height: 260px;
+  scrollbar-width: thin;
+}
+.responsive-app .audio-selector-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  min-height: 38px;
+  height: 38px;
+  padding: 0 10px;
+  border-radius: 6px;
+  background: transparent;
+  border: none;
+  color: #c5c6c7;
+  font-size: 14px;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+.responsive-app .audio-selector-item:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.08);
+  color: #f5f5f5;
+}
+.responsive-app .audio-selector-item.is-selected {
+  background: rgba(255, 255, 255, 0.14);
+  color: #ffffff;
+  font-weight: 500;
+}
+.responsive-app .audio-selector-item.is-disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.responsive-app .track-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.responsive-app .track-unavailable {
+  font-size: 11px;
+  color: #8c9094;
+}
+.responsive-app .track-check {
+  display: flex;
+  align-items: center;
+  color: #38bdf8;
+  flex-shrink: 0;
+}
+.responsive-app .audio-selector-empty {
+  padding: 16px;
+  text-align: center;
+  color: #8c9094;
+  font-size: 13px;
+}
+
+/* Custom dark Season Dropdown */
+.responsive-app .custom-season-dropdown {
+  position: relative;
+  display: inline-block;
+}
+.responsive-app .season-dropdown-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  height: 36px;
+  padding: 0 14px;
+  background: #1c1e20;
+  border: 1px solid #2a2d30;
+  border-radius: 8px;
+  color: #f5f5f5;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.responsive-app .season-dropdown-btn:hover {
+  background: #25282b;
+  border-color: #383b3e;
+}
+.responsive-app .season-dropdown-btn svg {
+  transition: transform 0.2s ease;
+}
+.responsive-app .season-dropdown-btn svg.rotate-180 {
+  transform: rotate(180deg);
+}
+.responsive-app .season-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  min-width: 140px;
+  background: #1c1e20;
+  border: 1px solid #2a2d30;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  padding: 4px;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.responsive-app .season-dropdown-item {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: 32px;
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 6px;
+  background: transparent;
+  border: none;
+  color: #c5c6c7;
+  font-size: 13px;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+.responsive-app .season-dropdown-item:hover {
+  background: #25282b;
+  color: #f5f5f5;
+}
+.responsive-app .season-dropdown-item.is-selected {
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+  font-weight: 600;
+}
+
+/* Fixed size action buttons for Hero and Detail pages to avoid layout shifts */
+.responsive-app .hero-save-btn,
+.responsive-app .detail-save-btn {
+  width: 44px !important;
+  height: 44px !important;
+  min-width: 44px !important;
+  min-height: 44px !important;
+  max-width: 44px !important;
+  max-height: 44px !important;
+  aspect-ratio: 1 / 1 !important;
+  border-radius: 50% !important;
+  padding: 0 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex-shrink: 0 !important;
+}
+
+/* Sleek floating error toast */
+.responsive-app .error.error-toast {
+  position: fixed;
+  bottom: 28px;
+  right: 28px;
+  left: auto;
+  inset: auto 28px 28px auto;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 18px;
+  background: rgba(28, 30, 32, 0.94);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 10px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  font-size: 14px;
+  color: #f5f5f5;
+  z-index: 1000;
+  max-width: 440px;
+  animation: toast-slide-up 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+@keyframes toast-slide-up {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.responsive-app .error-toast-text {
+  flex: 1;
+  line-height: 1.4;
+}
+.responsive-app .error-dismiss-btn {
+  min-height: 28px !important;
+  height: 28px !important;
+  padding: 0 12px !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  border-radius: 6px !important;
+  background: rgba(255, 255, 255, 0.12) !important;
+  border: 1px solid rgba(255, 255, 255, 0.18) !important;
+  color: #f5f5f5 !important;
+  margin: 0 !important;
+  cursor: pointer;
+}
+.responsive-app .error-dismiss-btn:hover {
+  background: rgba(255, 255, 255, 0.22) !important;
+}
+
 .responsive-app .system-volume { max-width: 120px; color: #c5c6c7; font-size: 13px; line-height: 1.4; }
 .responsive-app .catalog-status { position: relative; color: #c5c6c7; font-size: 17px; line-height: 1.5; margin: 16px 0; }
 .responsive-app .catalog-status button { padding: 12px 16px; margin-top: 12px; }
@@ -915,3 +1432,4 @@ header.desktop-titlebar.responsive-toolbar {
   .responsive-app .player-volume { margin-right: auto; }
   .responsive-app .player-volume input { width: 100px; }
 }
+

@@ -18,7 +18,8 @@ pub fn run() {
             app_window_minimize,
             app_window_toggle_maximize,
             app_window_close,
-            app_window_start_dragging
+            app_window_start_dragging,
+            app_window_toggle_fullscreen
         ])
         .run(tauri::generate_context!())
         .expect("error while running the VIPTV desktop app");
@@ -47,6 +48,13 @@ fn app_window_close(window: tauri::Window) -> Result<(), String> {
 #[tauri::command]
 fn app_window_start_dragging(window: tauri::Window) -> Result<(), String> {
     window.start_dragging().map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn app_window_toggle_fullscreen(window: tauri::Window) -> Result<bool, String> {
+    let current = window.is_fullscreen().map_err(|e| e.to_string())?;
+    window.set_fullscreen(!current).map_err(|e| e.to_string())?;
+    Ok(!current)
 }
 
 /// Harness switch: `VIPTV_TEST_AUTOPLAY=1` (or `true`) makes the webview
