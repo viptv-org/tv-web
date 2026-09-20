@@ -1,13 +1,16 @@
 import { initializeCore, normalizeCore } from "../core";
-import { Maximize, Minimize, Volume2, VolumeX, Info, AudioLines, ChevronLeft, ChevronRight, ChevronDown, Check, Plus, X } from "lucide-react";
 import { usePlayerFullscreen } from "../hooks/usePlayerFullscreen";
 import { ShelfCarousel } from "../components/cards/ShelfCarousel";
 import { Cards, type CardActions } from "../components/cards/Cards";
 import { HomeScreen } from "../screens/HomeScreen";
 
 import { BrowseScreen } from "../screens/BrowseScreen";
-import { ResponsiveTitle } from "./ResponsiveTitle";
-import { AudioSelectorPopup, type TrackChoice } from "../components/player/AudioSelectorPopup";
+
+import { DetailScreen } from "../screens/DetailScreen";
+import { SourcesScreen } from "../screens/SourcesScreen";
+
+import { PlayerScreen } from "../screens/PlayerScreen";
+import { type TrackChoice } from "../components/player/AudioSelectorPopup";
 import { WindowResizeBorders } from "./WindowResizeBorders";
 import { ResponsiveSignIn } from "./ResponsiveSignIn";
 import { memo, useEffect, useLayoutEffect, useRef, useState, type Dispatch, type MutableRefObject, type SetStateAction } from "react";
@@ -55,15 +58,7 @@ import {
   mergeEpisodeProgress,
   initialEpisode,
 } from "./detailProgress";
-import {
-  HeroArtwork,
-  CardArtwork,
-  SharedCardArtwork,
-  CardThumbnail,
-  SharedCardThumbnail,
-  ReadyImage,
-  artworkUrl,
-} from "./RokuArtwork";
+import { ReadyImage } from "./RokuArtwork";
 import { DesktopTitlebar, RemoteControlIcon } from "./DesktopTitlebar";
 import { TextEntry } from "./TextEntry";
 import { ProfileEditor, avatarUrl } from "./ProfileEditor";
@@ -75,7 +70,7 @@ import { resolveNext } from "./continuation";
 import { catalogFilters, catalogDefaults } from "./catalogFilters";
 import { Guide as LiveGuide } from "./Guide";
 import { CastController } from "./CastController";
-import { SeekBar, formatPlaybackTime, seekPinReleased, type BufferedRange } from "./SeekBar";
+import { seekPinReleased, type BufferedRange } from "./SeekBar";
 import { DialogBackdrop } from "./DialogBackdrop";
 import { BrowserNavigation, readBrowserRoute, safeRestoredRoute, type BrowserRoute, type SettingsSubpage } from "./browserNavigation";
 import type { Screen } from "./screens";
@@ -103,80 +98,6 @@ const initialPrefs: PlaybackPreferences = {
   quality: "auto",
   autoplay: true,
 };
-function presentationContext(item: MediaItem) {
-  const context =
-    item.season !== undefined
-      ? `S${item.season} · E${item.episode ?? 1}${item.episodeTitle ? ` · ${item.episodeTitle}` : ""}`
-      : "";
-  const status =
-    item.queueStatus === "next"
-      ? "Play next episode"
-      : item.queueStatus === "caught_up"
-        ? "You're caught up"
-        : item.queueStatus === "upcoming"
-          ? "Next episode coming soon"
-          : item.position
-            ? `Resume at ${formatPlaybackTime(item.position)}`
-            : "";
-  return [context, status].filter(Boolean).join(" · ");
-}
-
-function SeasonDropdown({
-  seasons,
-  activeSeason,
-  onSelectSeason,
-}: {
-  seasons: number[];
-  activeSeason?: number;
-  onSelectSeason: (s: number) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    const handleClickOutside = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [open]);
-
-  return (
-    <div className="custom-season-dropdown" ref={containerRef}>
-      <button
-        type="button"
-        className="season-dropdown-btn"
-        onClick={() => setOpen(!open)}
-        aria-expanded={open}
-      >
-        <span>Season {activeSeason ?? seasons[0]}</span>
-        <ChevronDown size={14} className={open ? "rotate-180" : ""} />
-      </button>
-      {open && (
-        <div className="season-dropdown-menu" role="menu">
-          {seasons.map((s) => (
-            <button
-              key={s}
-              type="button"
-              role="menuitem"
-              className={`season-dropdown-item ${s === (activeSeason ?? seasons[0]) ? "is-selected" : ""}`}
-              onClick={() => {
-                onSelectSeason(s);
-                setOpen(false);
-              }}
-            >
-              <span>Season {s}</span>
-              {s === (activeSeason ?? seasons[0]) && <Check size={14} />}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
 
 
 
@@ -2615,349 +2536,35 @@ export function App({
               />
             )}
             {screen === "detail" && selected && (
-              <main
-                className={`detail ${selected.type === "series" && !selected.episode ? "series" : "movie"}`}
-              >
-                {!responsive && selected.background && (
-                  <div className="detail-backdrop" aria-hidden="true">
-                    <ReadyImage src={selected.background} alt="" />
-                  </div>
-                )}
-                {!responsive && <ReadyImage className="poster" src={selected.poster} alt="" />}
-                {responsive && <div className="responsive-detail-art"><CardArtwork src={selectedPresentation?.heroImage ?? undefined} fallback="Preview unavailable" /></div>}
-                <div className="detail-copy">
-                  {responsive ? <ResponsiveTitle title={selected.name} logo={selectedPresentation?.titleLogo} /> : <h1><RokuText>{selected.name}</RokuText></h1>}
-                  <p className="detail-facts">
-                    {[selected.year, selected.runtime, ...selected.genres]
-                      .filter(Boolean)
-                      .join(" · ")}
-                  </p>
-                  <p className="detail-synopsis">{selected.description}</p>
-                  <div className="actions">
-                    <TvButton
-                      id="detail-play"
-                      onActivate={() => {
-                        if (selected.type === "series" && !selected.episode) {
-                          if (responsive) {
-                            const targetEpisode = episodes.find((e) => e.position && !e.watched) ?? episodes.find((e) => e.season === season) ?? episodes[0] ?? selected;
-                            void discoverSources(targetEpisode, !!targetEpisode.position);
-                          } else {
-                            setModal({
-                              title: "Season",
-                              choices: Array.from(
-                                new Set(episodes.map((e) => e.season)),
-                              ).map((n) => ({
-                                label: `Season ${n ?? 1}`,
-                                action: () => {
-                                  setSeason(n);
-                                  setModal(undefined);
-                                },
-                              })),
-                            });
-                          }
-                        } else {
-                          void (selected.type === "live"
-                            ? play(selected)
-                            : discoverSources(selected, !!selected.position));
-                        }
-                      }}
-                      onHold={() => void discoverSources(selected)}
-                    >
-                      {selected.type === "series" && !selected.episode
-                        ? (responsive
-                            ? (() => {
-                                const resumeEp = episodes.find((e) => e.position && !e.watched);
-                                if (resumeEp && resumeEp.position) return `Resume S${resumeEp.season ?? 1}:E${resumeEp.episode ?? 1}`;
-                                const targetEp = episodes.find((e) => e.season === season) ?? episodes[0];
-                                return targetEp ? `Play S${targetEp.season ?? 1}:E${targetEp.episode ?? 1}` : "Play";
-                              })()
-                            : `Season ${season ?? 1}`)
-                        : selected.position
-                          ? `Resume at ${formatPlaybackTime(selected.position)}`
-                          : "Choose source"}
-                    </TvButton>
-                    {!!selected.position &&
-                      !(selected.type === "series" && !selected.episode) && (
-                        <TvButton
-                          id="detail-source"
-                          onActivate={() => void discoverSources(selected)}
-                        >
-                          Choose source
-                        </TvButton>
-                      )}
-                    <TvButton
-                      id="detail-save"
-                      className="detail-save-btn"
-                      aria-label={favorites.some((f) => f.id === selected.id) ? "Remove from My List" : "Add to My List"}
-                      aria-pressed={favorites.some((f) => f.id === selected.id)}
-                      onActivate={() => void toggle(selected)}
-                    >
-                      {responsive ? (favorites.some((f) => f.id === selected.id) ? <Check size={18} /> : <Plus size={18} />) : favorites.some((f) => f.id === selected.id) ? "Remove from My List" : "+ My List"}
-                    </TvButton>
-                    <TvButton
-                      id="detail-info"
-                      aria-label="More options"
-                      onActivate={() => {
-                        if (responsive) {
-                          manage(selected);
-                        } else {
-                          setModal({
-                            title: selected.name,
-                            body: [
-                              selected.name,
-                              [
-                                selected.year,
-                                selected.runtime,
-                                ...selected.genres,
-                              ]
-                                .filter(Boolean)
-                                .join(" · "),
-                              selected.description,
-                              typeof selected.raw.director === "string"
-                                ? `Director: ${selected.raw.director}`
-                                : "",
-                              Array.isArray(selected.raw.cast)
-                                ? `Cast: ${selected.raw.cast.filter((name) => typeof name === "string").join(", ")}`
-                                : "",
-                            ]
-                              .filter(Boolean)
-                              .join("\n\n"),
-                            choices: [
-                              {
-                                label: "Close",
-                                action: () => setModal(undefined),
-                              },
-                            ],
-                          });
-                        }
-                      }}
-                    >
-                      {responsive ? "•••" : "More info"}
-                    </TvButton>
-                  </div>
-                  <p className="detail-credits">
-                    {[
-                      typeof selected.raw.director === "string"
-                        ? `Director: ${selected.raw.director}`
-                        : "",
-                      Array.isArray(selected.raw.cast)
-                        ? `Cast: ${selected.raw.cast.filter((name) => typeof name === "string").join(", ")}`
-                        : "",
-                    ]
-                      .filter(Boolean)
-                      .join("\n")}
-                  </p>
-                </div>
-                {episodes.length > 0 && (
-                  <>
-                    <div className="episodes-header">
-                      <span className="episode-heading">Episodes</span>
-                      {responsive && (() => {
-                        const seasons = Array.from(
-                          new Set(episodes.map((e) => e.season).filter((s): s is number => s !== undefined)),
-                        ).sort((a, b) => a - b);
-                        return seasons.length > 1 ? (
-                          <SeasonDropdown
-                            seasons={seasons}
-                            activeSeason={season}
-                            onSelectSeason={(s) => setSeason(s)}
-                          />
-                        ) : null;
-                      })()}
-                    </div>
-                    <div className="episode-grid" data-scroll-id="episodes">
-                      {episodes
-                        .filter((e) => e.season === season)
-                        .map((e, i) => {
-                          const episodeCard = <TvButton
-                            className="episode"
-                            id={`episode-${i}`}
-                            key={e.id}
-                            onActivate={() => void discoverSources(e)}
-                            onHold={() => manage(e)}
-                          >
-                            <CardThumbnail
-                              src={artworkUrl(
-                                normalizeCore<MediaPresentation>("presentation", e).episodeImage ?? e.background ?? e.poster,
-                                256,
-                                144,
-                              )}
-                              fallback={
-                                <>
-                                  <img
-                                    src={`${import.meta.env.BASE_URL}assets/viptv-mark.png`}
-                                    alt=""
-                                  />
-                                  <span>Preview unavailable</span>
-                                </>
-                              }
-                              watched={e.watched}
-                              progress={!e.watched && !!e.position && !!e.duration ? e.position : undefined}
-                              maxProgress={e.duration ?? 1}
-                            />
-                            <small>EPISODE {e.episode ?? "?"}</small>
-                            <h2>
-                              <RokuText>{e.episodeTitle ?? e.name}</RokuText>
-                            </h2>
-                            <p>{e.description}</p>
-                          </TvButton>;
-                          return responsive ? <div className="responsive-episode" key={e.id}>{episodeCard}</div> : episodeCard;
-                        })}
-                    </div>
-                  </>
-                )}
-              </main>
+              <DetailScreen
+                responsive={responsive}
+                selected={selected}
+                presentation={selectedPresentation}
+                episodes={episodes}
+                season={season}
+                setSeason={setSeason}
+                favorites={favorites}
+                play={play}
+                discoverSources={discoverSources}
+                manage={manage}
+                toggle={toggle}
+                setModal={setModal}
+              />
             )}
             {screen === "sources" && (
-              <main className="sources">
-                <h1>Sources</h1>
-                <p className="source-context">
-                  {selected?.name}
-                  {selected ? `  ${presentationContext(selected)}` : ""}
-                </p>
-                <div className="source-filters">
-                  <TvButton
-                    id="source-quality"
-                    onActivate={() =>
-                      setModal({
-                        title: "Quality",
-                        focus: sourceQuality,
-                        choices: [
-                          "All",
-                          ...Array.from(
-                            new Set(sources.map((s) => s.quality ?? "Unknown")),
-                          ),
-                        ].map((label) => ({
-                          label,
-                          action: () => {
-                            setSourceQuality(label);
-                            setModal(undefined);
-                          },
-                        })),
-                      })
-                    }
-                  >
-                    Quality: {sourceQuality}
-                  </TvButton>
-                  <TvButton
-                    id="source-provider"
-                    onActivate={() =>
-                      setModal({
-                        title: "Source provider",
-                        focus: sourceProvider,
-                        choices: [
-                          "All",
-                          ...Array.from(
-                            new Set(sources.map((s) => s.sourceName ?? s.name)),
-                          ),
-                        ].map((label) => ({
-                          label,
-                          action: () => {
-                            setSourceProvider(label);
-                            setModal(undefined);
-                          },
-                        })),
-                      })
-                    }
-                  >
-                    Provider: {sourceProvider}
-                  </TvButton>
-                  <span className={busy ? "finding" : undefined}>
-                    {busy && (
-                      <i
-                        className="source-discovery-spinner"
-                        aria-hidden="true"
-                      />
-                    )}
-                    {busy && preparing
-                      ? "Opening stream…"
-                      : busy
-                        ? "Finding sources…"
-                        : `${sources.length} sources`}
-                  </span>
-                </div>
-                <div className="source-results">
-                  {sources
-                    .filter(
-                      (s) =>
-                        (sourceQuality === "All" ||
-                          (s.quality ?? "Unknown") === sourceQuality) &&
-                        (sourceProvider === "All" ||
-                          (s.sourceName ?? s.name) === sourceProvider),
-                    )
-                    .map((s, i) => (
-                      <TvButton
-                        id={`source-${i}`}
-                        key={s.id}
-                        className={
-                          s.id === openingSource ? "source opening" : "source"
-                        }
-                        onHold={() =>
-                          setModal({
-                            title: "Source details",
-                            body: [s.name, s.title, s.filename, s.sourceName]
-                              .filter(Boolean)
-                              .join("\n\n"),
-                            choices: [
-                              {
-                                label: "Close",
-                                action: () => setModal(undefined),
-                              },
-                            ],
-                          })
-                        }
-                        onActivate={() =>
-                          selected &&
-                          void play(selected, s, selected.position ?? 0)
-                        }
-                      >
-
-                        {s.id === openingSource && (
-                          <i
-                            className="source-discovery-spinner source-opening-spinner"
-                            aria-hidden="true"
-                          />
-                        )}
-                        <h2>{s.sourceName ?? s.name}</h2>
-                        <p>
-                          {[s.name, s.title ?? s.filename]
-                            .filter(Boolean)
-                            .join("\n")}
-                        </p>
-                        <small>
-                          {s.quality} {s.audio} {s.sourceName}
-                        </small>
-                      </TvButton>
-                    ))}
-                  {!sources.length && (
-                    <div
-                      className={`source-empty ${busy ? "finding" : ""}`}
-                      role="status"
-                    >
-                      <h2>
-                        {busy ? "Finding sources" : "No sources available"}
-                      </h2>
-                      <p>
-                        {busy
-                          ? "Sources appear here as they arrive."
-                          : "Check your add-ons in Settings."}
-                      </p>
-                    </div>
-                  )}
-                  {sources.length > 0 &&
-                    !sources.some(
-                      (s) =>
-                        (sourceQuality === "All" ||
-                          (s.quality ?? "Unknown") === sourceQuality) &&
-                        (sourceProvider === "All" ||
-                          (s.sourceName ?? s.name) === sourceProvider),
-                    ) && (
-                      <p>
-                        No matching sources. Choose another provider or quality.
-                      </p>
-                    )}
-                </div>
-              </main>
+              <SourcesScreen
+                selected={selected}
+                sources={sources}
+                sourceQuality={sourceQuality}
+                sourceProvider={sourceProvider}
+                setSourceQuality={setSourceQuality}
+                setSourceProvider={setSourceProvider}
+                busy={busy}
+                preparing={preparing}
+                openingSource={openingSource}
+                play={play}
+                setModal={setModal}
+              />
             )}
             {screen === "Live TV" && (
               <LiveGuide
@@ -3036,278 +2643,36 @@ export function App({
               />
             )}
             {screen === "player" && overlay && (
-              <div
-                className={`player-overlay ${selected?.type === "live" ? "live-overlay" : ""}`}
-                onClick={(event) => {
-                  // The backdrop around the controls is the play/pause surface,
-                  // matching the video; interactive elements keep their clicks.
-                  if ((event.target as HTMLElement).closest("button, input, .seekbar, .audio-selector-popup"))
-                    return;
-                  if (selected?.type === "live") {
-                    toggleLiveMute();
-                  } else {
-                    togglePlayback();
-                  }
-                }}
-              >
-                <div
-                  className={`player-identity ${selected?.type === "live" ? "channel-identity" : ""}`}
-                >
-                  <span>{selected?.name}</span>
-                </div>
-                {responsive && (
-                  <div className="player-top-right">
-                    <TvButton
-                      id="player-top-fullscreen"
-                      className="player-top-btn"
-                      aria-label={fullscreenControl.fullscreen ? "Exit fullscreen" : "Fullscreen"}
-                      title={fullscreenControl.fullscreen ? "Exit fullscreen" : "Fullscreen"}
-                      onActivate={() => void fullscreenControl.toggle()}
-                    >
-                      {fullscreenControl.fullscreen ? <Minimize size={18} /> : <Maximize size={18} />}
-                    </TvButton>
-                  </div>
-                )}
-                {!responsive && (
-                  <span className="player-status">
-                    {busy
-                      ? "LOADING"
-                      : snapshot?.state === "buffering"
-                        ? "BUFFERING"
-                        : snapshot?.state === "paused"
-                          ? "PAUSED"
-                          : "PLAYING"}
-                  </span>
-                )}
-                <span className="player-eyebrow">
-                  {selected?.type === "live" ? "LIVE NOW" : "NOW PLAYING"}
-                </span>
-                <div className="player-context">
-                  {selected?.season
-                    ? `S${selected.season} · E${selected.episode ?? 1} · ${selected.episodeTitle ?? ""}`
-                    : ""}
-                </div>
-                <h1>
-                  <RokuText>{selected?.name ?? ""}</RokuText>
-                </h1>
-                {playerNotice && (
-                  <div className="player-notice" role="status">
-                    {playerNotice.message}
-                  </div>
-                )}
-
-                <div className="playback-bottom">
-                  {selected?.type !== "live" && (
-                    <>
-                      <SeekBar
-                        id="timeline"
-                        position={snapshot?.time.positionSeconds ?? 0}
-                        duration={snapshot?.time.durationSeconds ?? 0}
-                        seekable={snapshot?.time.seekable}
-                        preview={seek}
-                        onPreview={setSeek}
-                        onSeek={(seconds) => void commitSeek(seconds)}
-                        onActivate={togglePlayback}
-                        onActivity={() => {
-                          if (Date.now() - lastControlActivity.current < 1000) return;
-                          lastControlActivity.current = Date.now();
-                          setControlActivity((value) => value + 1);
-                        }}
-                        getBufferedRanges={readBufferedRanges}
-                        // The app's remote key layer owns arrows/OK while this
-                        // bar is focused; only the pointer acts directly here.
-                        remoteKeys={!responsive}
-                      />
-                      <p className="player-time">
-                        <span>
-                          {formatPlaybackTime(
-                            seek ?? snapshot?.time.positionSeconds ?? 0,
-                          )}
-                        </span>
-                        <span>
-                          {formatPlaybackTime(
-                            snapshot?.time.durationSeconds ?? 0,
-                          )}
-                        </span>
-                      </p>
-                    </>
-                  )}
-                  <div className="controls">
-                    {selected?.type !== "live" && (
-                      <>
-                        <TvButton
-                          id="rewind"
-                          aria-label="Rewind 10 seconds"
-                          onActivate={() =>
-                            void commitSeek(
-                              Math.max(
-                                0,
-                                (snapshot?.time.positionSeconds ?? 0) - 10,
-                              ),
-                            )
-                          }
-                        >
-                          <img
-                            src={`${import.meta.env.BASE_URL}assets/ui-nav-player-rewind.png`}
-                            alt=""
-                          />
-                        </TvButton>
-                        <TvButton
-                          id="pause"
-                          aria-label={
-                            snapshot?.state === "paused" ? "Play" : "Pause"
-                          }
-                          onActivate={() =>
-                            void (snapshot?.state === "paused"
-                              ? player.current?.play()
-                              : player.current?.pause())
-                          }
-                        >
-                          <img
-                            src={`${import.meta.env.BASE_URL}assets/ui-nav-player-${snapshot?.state === "paused" ? "play" : "pause"}.png`}
-                            alt=""
-                          />
-                        </TvButton>
-                        <TvButton
-                          id="forward"
-                          aria-label="Forward 30 seconds"
-                          onActivate={() =>
-                            void commitSeek(
-                              Math.min(
-                                snapshot?.time.durationSeconds ?? Infinity,
-                                (snapshot?.time.positionSeconds ?? 0) + 30,
-                              ),
-                            )
-                          }
-                        >
-                          <img
-                            src={`${import.meta.env.BASE_URL}assets/ui-nav-player-forward.png`}
-                            alt=""
-                          />
-                        </TvButton>
-                        {selected?.type === "series" && (
-                          <TvButton
-                            id="next"
-                            onActivate={() => void nextEpisode()}
-                          >
-                            <img
-                              src={`${import.meta.env.BASE_URL}assets/ui-nav-player-forward.png`}
-                              alt="Next episode"
-                            />
-                          </TvButton>
-                        )}
-                      </>
-                    )}
-                    <div className="track-buttons">
-                    <TvButton
-                      id="audio"
-                      aria-label="Audio"
-                      onActivate={() => {
-                        if (responsive) {
-                          setActiveTrackPopup(activeTrackPopup === "audio" ? null : "audio");
-                          setPlayerInfoOpen(false);
-                        } else {
-                          trackChoices("audio");
-                        }
-                      }}
-                    >
-                      <AudioLines size={26} color="#f5f5f5" aria-hidden="true" />
-                    </TvButton>
-                    <TvButton
-                      id="subtitles"
-                      aria-label="Subtitles"
-                      onActivate={() => {
-                        if (responsive) {
-                          setActiveTrackPopup(activeTrackPopup === "text" ? null : "text");
-                          setPlayerInfoOpen(false);
-                        } else {
-                          trackChoices("text");
-                        }
-                      }}
-                    >
-                      <img
-                        src={`${import.meta.env.BASE_URL}assets/ui-nav-player-captions.png`}
-                        alt=""
-                      />
-                    </TvButton>
-                    {responsive && activeTrackPopup && (
-                      <AudioSelectorPopup
-                        title={activeTrackPopup === "audio" ? "Audio Tracks" : "Subtitles"}
-                        tracks={activeTrackPopup === "audio" ? audioTrackList : textTrackList}
-                        offOption={activeTrackPopup === "text" ? subtitleOffOption : undefined}
-                        onClose={() => setActiveTrackPopup(null)}
-                      />
-                    )}
-                    </div>
-                    {responsive && <div className="responsive-player-tools">
-                      {player.current?.capabilities.canSetVolume && snapshot?.volume ? (
-                        <div
-                          className="player-volume"
-                          onPointerDown={(e) => e.stopPropagation()}
-                          onPointerUp={(e) => e.stopPropagation()}
-                          onMouseDown={(e) => e.stopPropagation()}
-                          onMouseUp={(e) => e.stopPropagation()}
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <button
-                            type="button"
-                            aria-label={snapshot.volume.muted ? "Unmute" : "Mute"}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              void player.current?.setMuted?.(!snapshot.volume?.muted).catch(fail);
-                            }}
-                          >
-                            {snapshot.volume.muted ? <VolumeX size={22} /> : <Volume2 size={22} />}
-                          </button>
-                          <input
-                            type="range"
-                            aria-label="Volume"
-                            min="0"
-                            max="1"
-                            step="0.01"
-                            value={snapshot.volume.muted ? 0 : snapshot.volume.level}
-                            onPointerDown={(e) => e.stopPropagation()}
-                            onPointerUp={(e) => e.stopPropagation()}
-                            onMouseDown={(e) => e.stopPropagation()}
-                            onMouseUp={(e) => e.stopPropagation()}
-                            onClick={(e) => e.stopPropagation()}
-                            onChange={(event) => {
-                              setOverlay(true);
-                              void player.current?.setVolume?.(Number(event.target.value)).catch(fail);
-                            }}
-                          />
-                        </div>
-                      ) : (
-                        <span className="system-volume">Use device volume buttons</span>
-                      )}
-                      <div className="player-info-anchor">
-                        <button type="button" aria-label="Playback info" title="Playback info" onClick={() => { setPlayerInfoOpen((open) => !open); setActiveTrackPopup(null); }}><Info size={22} /></button>
-                        {playerInfoOpen && (
-                          <div className="audio-selector-popup player-info-popup" role="dialog" aria-label="Playback info">
-                            <div className="audio-selector-header">
-                              <span className="audio-selector-title">Playback info</span>
-                              <button type="button" className="audio-selector-close" aria-label="Close" onClick={() => setPlayerInfoOpen(false)} tabIndex={-1}><X size={16} /></button>
-                            </div>
-                            <div className="player-info-body">
-                              {playerInfoLines.map((line) => <p key={line}>{line}</p>)}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </div>}
-                    {!responsive && <TvButton
-                      id="exit"
-                      aria-label="Exit"
-                      onActivate={() => void stop()}
-                    >
-                      <img
-                        src={`${import.meta.env.BASE_URL}assets/ui-nav-player-exit.png`}
-                        alt=""
-                      />
-                    </TvButton>}
-                  </div>
-                </div>
-              </div>
+              <PlayerScreen
+                responsive={responsive}
+                selected={selected}
+                busy={busy}
+                snapshot={snapshot}
+                playerNotice={playerNotice}
+                seek={seek}
+                setSeek={setSeek}
+                setOverlay={setOverlay}
+                commitSeek={commitSeek}
+                togglePlayback={togglePlayback}
+                toggleLiveMute={toggleLiveMute}
+                fullscreenControl={fullscreenControl}
+                player={player}
+                fail={fail}
+                nextEpisode={nextEpisode}
+                stop={stop}
+                trackChoices={trackChoices}
+                activeTrackPopup={activeTrackPopup}
+                setActiveTrackPopup={setActiveTrackPopup}
+                playerInfoOpen={playerInfoOpen}
+                setPlayerInfoOpen={setPlayerInfoOpen}
+                audioTrackList={audioTrackList}
+                textTrackList={textTrackList}
+                subtitleOffOption={subtitleOffOption}
+                playerInfoLines={playerInfoLines}
+                readBufferedRanges={readBufferedRanges}
+                lastControlActivity={lastControlActivity}
+                setControlActivity={setControlActivity}
+              />
             )}
           </>
         )}
