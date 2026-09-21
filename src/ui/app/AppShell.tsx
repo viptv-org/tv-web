@@ -137,7 +137,7 @@ export function AppShell({ app }: { app: AppApi }) {
         {responsive && isDesktopShell && (
           <WindowResizeBorders disabled={fullscreenControl.fullscreen || isMaximized} />
         )}
-        {responsive && isDesktopShell && !fullscreenControl.fullscreen && (
+        {responsive && !fullscreenControl.fullscreen && (
           <DesktopTitlebar
             screen={screen}
             activeProfile={activeProfile}

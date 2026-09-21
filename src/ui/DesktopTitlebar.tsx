@@ -2,6 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import type { TvProfile } from "../api";
 import { avatarUrl } from "./ProfileEditor";
 import { TvButton } from "./remote";
+import { isDesktopShell } from "./app/appShared";
 
 export function RemoteControlIcon({ className }: { className?: string }) {
   return (
@@ -332,6 +333,7 @@ export function DesktopTitlebar({
           </>
         )}
 
+        {isDesktopShell && (
         <div
           className="titlebar-window-controls"
           onMouseDown={stopDragEvents}
@@ -411,6 +413,7 @@ export function DesktopTitlebar({
             </svg>
           </button>
         </div>
+        )}
       </div>
     </header>
   );

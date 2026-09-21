@@ -357,6 +357,8 @@ for (const width of [390, 768, 1440]) {
     expect(fixture.requests.some(request => request.path === '/api/meta/series/queue-series')).toBe(true);
     expect(await queue.locator('[data-focus-id="queue-0"] progress').evaluate(node => (node as HTMLProgressElement).value / (node as HTMLProgressElement).max)).toBeCloseTo(42 / 2400, 3);
     const live = page.locator('[data-focus-id="recent-live-0"]');
+    // Lazy card art only loads once its row is on screen.
+    await live.scrollIntoViewIfNeeded();
     await expect(live).toHaveClass(/logo-card/);
     await expect(live.locator('img')).toHaveJSProperty('naturalWidth', 7000);
     const assertLogo = async () => {
