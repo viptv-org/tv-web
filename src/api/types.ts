@@ -77,6 +77,21 @@ export interface StreamPoll {
   readonly events: readonly StreamEvent[];
   readonly done: boolean;
 }
+/**
+ * One shared stream-discovery polling step. The Rust core owns the cursor,
+ * deduplication, budget and completion decisions; the platform owns only
+ * transport, cancellation and the fixed poll interval.
+ */
+export interface SourcesPollStep {
+  readonly state: {
+    readonly after: number;
+    readonly sources: readonly MediaSource[];
+    readonly polls: number;
+  };
+  readonly sources: readonly MediaSource[];
+  readonly done: boolean;
+}
+export type SourcesPollState = SourcesPollStep["state"];
 
 export type {
   DirectFileCapabilities,

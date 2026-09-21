@@ -4,6 +4,7 @@ import type {
   MediaSource,
   PlaybackCapabilities,
   PlaybackPreferences,
+  SourcesPollState,
   TvApi,
 } from "../api";
 import type { SessionStartIntent } from "@viptv/video";
@@ -18,7 +19,7 @@ import type { SessionStartIntent } from "@viptv/video";
  * add-ons to supply the best available next episode.
  */
 export async function resolveNext(
-  api: Pick<TvApi, "nextEpisode" | "sources" | "pollSources">,
+  api: Pick<TvApi, "nextEpisode" | "sources" | "pollSourcesStep">,
   profileId: string,
   current: MediaItem,
   preferences: PlaybackPreferences,
@@ -89,31 +90,20 @@ export function sourceMatch(
 }
 
 async function collectSources(
-  api: Pick<TvApi, "pollSources">,
+  api: Pick<TvApi, "pollSourcesStep">,
   id: string,
   signal?: AbortSignal,
 ): Promise<readonly MediaSource[]> {
-  const result: MediaSource[] = [];
-  const seen = new Set<string>();
-  let after = 0;
-  // Roku keeps a three-minute discovery budget. This is the same 120 polls at
-  // 1.5 seconds, with cancellation observed before every request and delay.
-  for (let attempts = 0; attempts < 120; attempts += 1) {
+  // The polling policy (cursor, dedup, three-minute budget, completion) is
+  // the shared Rust reducer; this loop owns only cancellation and the delay.
+  let state: SourcesPollState = { after: 0, sources: [], polls: 0 };
+  for (;;) {
     throwIfAborted(signal);
-    const poll = await api.pollSources(id, after, { signal });
-    for (const event of poll.events) {
-      after = Math.max(after, event.sequence);
-      for (const source of event.sources) {
-        if (!seen.has(source.id)) {
-          seen.add(source.id);
-          result.push(source);
-        }
-      }
-    }
-    if (poll.done) return result;
+    const step = await api.pollSourcesStep(id, state, { signal });
+    if (step.done) return step.sources;
+    state = step.state;
     await delay(1_500, signal);
   }
-  return result;
 }
 
 function throwIfAborted(signal?: AbortSignal) {

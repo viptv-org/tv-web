@@ -27,7 +27,8 @@ import type {
   PlaybackSession,
   PlaybackStart,
   StreamDiscovery,
-  StreamPoll,
+  SourcesPollState,
+  SourcesPollStep,
   TvApiErrorShape,
   TvIdentity,
   TvProfile,
@@ -146,30 +147,39 @@ export class TvApiCatalog extends TvApiClientBase {
     item: MediaItem,
     options?: RequestOptions,
   ): Promise<StreamDiscovery> {
+    const request = normalizeCore<{ method: string; path: string; body: unknown }>(
+      "request",
+      { operation: "sources", item },
+    );
     const v = expectObject(
       await this.raw(
-        "/api/streams",
-        { method: "POST", body: itemRequest(item) },
+        request.path,
+        { method: request.method, body: request.body as JsonObject },
         true,
         options,
       ),
     );
     return { id: idAt(v, "id") };
   }
-  async pollSources(
+  /**
+   * One polling step of stream discovery. Both the poll path (with its
+   * cursor) and the cursor/dedup/budget/completion policy come from the
+   * shared Rust core; the caller supplies its accumulated state and
+   * transports one page at a time.
+   */
+  async pollSourcesStep(
     id: string,
-    after = 0,
+    state: SourcesPollState,
     options?: RequestOptions,
-  ): Promise<StreamPoll> {
-    const v = expectObject(
-      await this.raw(
-        `/api/streams/${segment(id)}${params({ after })}`,
-        {},
-        true,
-        options,
-      ),
+  ): Promise<SourcesPollStep> {
+    const request = normalizeCore<{ method: string; path: string }>(
+      "request",
+      { operation: "sourcesPoll", id, after: state.after },
     );
-    return normalizeCore<StreamPoll>("streamPoll", v);
+    const v = expectObject(
+      await this.raw(request.path, {}, true, options),
+    );
+    return normalizeCore<SourcesPollStep>("sourcesPollStep", { state, poll: v });
   }
   async startPlayback(
     request: PlaybackStart,

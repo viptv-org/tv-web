@@ -12,6 +12,7 @@ import {
   type PlaybackSession,
   type PlaybackPreferences,
   type PlaybackCapabilities,
+  type SourcesPollState,
 } from "../../api";
 import {
   createPlayer,
@@ -121,16 +122,14 @@ export function useCatalog(app: PlaybackSessionApi) {
     const ticket = ++epoch.current;
     try {
       const discovery = await api.sources(item);
-      let after = 0,
-        all: MediaSource[] = [];
-      for (let count = 0; count < 120 && ticket === epoch.current; count++) {
-        const poll = await api.pollSources(discovery.id, after);
+      // The polling policy (cursor, dedup, budget, completion) is the shared
+      // Rust reducer; this loop owns only cancellation, focus and resume.
+      let step: SourcesPollState = { after: 0, sources: [], polls: 0 };
+      while (ticket === epoch.current) {
+        const poll = await api.pollSourcesStep(discovery.id, step);
         if (ticket !== epoch.current) return;
-        for (const event of poll.events) {
-          after = Math.max(after, event.sequence);
-          for (const source of event.sources)
-            if (!all.some((s) => s.id === source.id)) all.push(source);
-        }
+        step = poll.state;
+        const all = poll.sources;
         setSources([...all]);
         if (all.length && sourceFocusPending.current) {
           sourceFocusPending.current = false;

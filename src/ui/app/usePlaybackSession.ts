@@ -12,6 +12,7 @@ import {
   type PlaybackSession,
   type PlaybackPreferences,
   type PlaybackCapabilities,
+  type SourcesPollState,
 } from "../../api";
 import {
   createPlayer,
@@ -62,16 +63,13 @@ export function usePlaybackSession(app: PlaybackEngineApi) {
     void (async () => {
       try {
         const discovery = await api.sources(item);
-        let after = 0;
-        const all: MediaSource[] = [];
-        for (let count = 0; count < 120; count++) {
-          const poll = await api.pollSources(discovery.id, after);
-          for (const event of poll.events) {
-            after = Math.max(after, event.sequence);
-            for (const source of event.sources)
-              if (!all.some((existing) => existing.id === source.id)) all.push(source);
-          }
-          const source = all[0];
+        // The polling policy (cursor, dedup, budget, completion) is the
+        // shared Rust reducer.
+        let state: SourcesPollState = { after: 0, sources: [], polls: 0 };
+        for (;;) {
+          const poll = await api.pollSourcesStep(discovery.id, state);
+          state = poll.state;
+          const source = poll.sources[0];
           if (source) {
             void desktopInvoker?.invoke("test_log", { message: `autoplay source=${source.id}` }).catch(() => undefined);
             await play(item, source, 0);

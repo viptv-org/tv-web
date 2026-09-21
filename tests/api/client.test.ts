@@ -148,18 +148,19 @@ describe("TvApi device and media boundary", () => {
     );
     const api = apiFor(fake.fetcher, store);
     await api.restoreSession();
-    const poll = await api.pollSources("job/1", 0);
+    const step = await api.pollSourcesStep("job/1", { after: 0, sources: [], polls: 0 });
     expect(fake.calls[0].input).toBe(
       "https://viptv.example/api/streams/job%2F1?after=0",
     );
-    expect(poll.events[0].sources[0]).toMatchObject({
+    expect(step.sources[0]).toMatchObject({
       id: "stream-1",
       sourceAddonId: "addon:2",
     });
-    expect(poll.events[0].sources[0].raw).not.toHaveProperty("url");
-    expect(JSON.stringify(poll.events[0].sources[0].raw)).not.toContain(
+    expect(step.sources[0].raw).not.toHaveProperty("url");
+    expect(JSON.stringify(step.sources[0].raw)).not.toContain(
       "secret",
     );
+    expect(step.done).toBe(true);
   });
 
   it("inherits the series identity for Stremio episode videos that omit it", async () => {
