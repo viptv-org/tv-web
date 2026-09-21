@@ -48,6 +48,13 @@ export async function installBackend(page: Page, options: { series?: boolean; in
     return { contentType: 'image/svg+xml', body: `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">${content}</svg>` };
   };
   await page.route('https://art.example/**', route => route.fulfill(artworkResponse(new URL(route.request().url()).pathname)));
+  // Card art is served through the shared wsrv pipeline; unwrap the origin
+  // URL so the fixtures answer for the derivative requests too.
+  await page.route('https://wsrv.nl/**', route => {
+    const inner = new URL(route.request().url()).searchParams.get('url');
+    const origin = inner ? new URL(inner) : undefined;
+    route.fulfill(origin && origin.hostname === 'art.example' ? artworkResponse(origin.pathname) : { status: 404, body: '' });
+  });
   // The core artwork policy proxies every remote image through wsrv.nl; unwrap
   // the inner url so fixture artwork serves locally without network access.
   await page.route('https://wsrv.nl/**', route => {

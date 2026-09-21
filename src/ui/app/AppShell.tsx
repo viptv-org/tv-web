@@ -14,6 +14,7 @@ import { SourcesScreen } from "../../screens/SourcesScreen";
 import { PlayerScreen } from "../../screens/PlayerScreen";
 import type { Screen } from "../screens";
 import type { AppApi } from "./useTvApp";
+import { isDesktopShell } from "./appShared";
 import { AppDialogs } from "./AppDialogs";
 import "../tv.css";
 import "../responsive.css";
@@ -132,11 +133,11 @@ export function AppShell({ app }: { app: AppApi }) {
         sourceFocusPending.current = false;
       }}
     >
-      <div className={`desktop-app-frame ${isMaximized ? "is-maximized" : ""} ${fullscreenControl.fullscreen ? "is-fullscreen" : ""}`}>
-        {responsive && (
+      <div className={`desktop-app-frame ${isDesktopShell ? "desktop-shell" : "browser-shell"} ${isMaximized ? "is-maximized" : ""} ${fullscreenControl.fullscreen ? "is-fullscreen" : ""}`}>
+        {responsive && isDesktopShell && (
           <WindowResizeBorders disabled={fullscreenControl.fullscreen || isMaximized} />
         )}
-        {responsive && !fullscreenControl.fullscreen && (
+        {responsive && isDesktopShell && !fullscreenControl.fullscreen && (
           <DesktopTitlebar
             screen={screen}
             activeProfile={activeProfile}

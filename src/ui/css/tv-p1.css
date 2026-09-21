@@ -11,6 +11,12 @@ body {
   margin: 0;
   overflow: hidden;
 }
+/* The app scrolls inside .tv-screen; focus-driven auto-scrolling must never
+   open a document scrollbar, whose classic gutter would clip the fixed shell
+   by the scrollbar width and read as horizontal overflow. */
+html {
+  overflow: hidden;
+}
 button,
 input {
   font: inherit;

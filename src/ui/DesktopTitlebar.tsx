@@ -166,8 +166,9 @@ export function DesktopTitlebar({
         >
           VIPTV
         </span>
-        {canGoBack && (
-          <button
+        {/* The back slot is always reserved so the brand box never reflows
+            between routes; hidden state merely removes the affordance. */}
+        <button
             type="button"
             className="titlebar-btn titlebar-icon-btn titlebar-back-btn"
             aria-label="Back"
@@ -193,6 +194,7 @@ export function DesktopTitlebar({
               minHeight: "20px",
               padding: 0,
               marginLeft: "4px",
+              visibility: canGoBack ? "visible" : "hidden",
             }}
           >
             <svg
@@ -208,7 +210,6 @@ export function DesktopTitlebar({
               <polyline points="15 18 9 12 15 6" />
             </svg>
           </button>
-        )}
       </div>
 
       <div

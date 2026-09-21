@@ -342,15 +342,18 @@ for (const width of [390, 768, 1440]) {
     await page.locator('[data-focus-id="profile-0"]').click();
     const queue = page.locator('.shelves section').filter({ has: page.getByRole('heading', { name: 'Continue Watching', exact: true }) });
     // The queue row is windowed: only the visible slice stays mounted, but
-    // the full 24-item track remains scrollable behind pixel spacers.
+    // the full 24-item track remains scrollable behind pixel spacers. The
+    // visible slice mounts asynchronously after layout measurement.
+    await expect.poll(() => queue.locator('.media-card').count()).toBeGreaterThan(0);
     const mountedQueue = await queue.locator('.media-card').count();
     expect(mountedQueue).toBeGreaterThan(0);
     expect(mountedQueue).toBeLessThan(24);
     expect(await queue.locator('.cards').evaluate(el => el.scrollWidth)).toBeGreaterThan(23 * 280);
     await expect(page.locator('.shelves section').first()).toContainText('Continue Watching');
     await expect(queue.locator('[data-focus-id="queue-0"]')).toContainText('S1');
-    await expect(queue.locator('[data-focus-id="queue-0"] > img')).toHaveAttribute('src', 'https://art.example/episode.svg?episode=1');
-    await expect(queue.locator('[data-focus-id="queue-1"] > img')).toHaveAttribute('src', 'https://art.example/episode.svg?episode=2');
+    // Card art is served through the shared wsrv pipeline at card geometry.
+    await expect(queue.locator('[data-focus-id="queue-0"] > img')).toHaveAttribute('src', 'https://wsrv.nl/?url=https%3A%2F%2Fart.example%2Fepisode.svg%3Fepisode%3D1&w=256&h=144&fit=cover&output=jpg&q=85&we');
+    await expect(queue.locator('[data-focus-id="queue-1"] > img')).toHaveAttribute('src', 'https://wsrv.nl/?url=https%3A%2F%2Fart.example%2Fepisode.svg%3Fepisode%3D2&w=256&h=144&fit=cover&output=jpg&q=85&we');
     expect(fixture.requests.some(request => request.path === '/api/meta/series/queue-series')).toBe(true);
     expect(await queue.locator('[data-focus-id="queue-0"] progress').evaluate(node => (node as HTMLProgressElement).value / (node as HTMLProgressElement).max)).toBeCloseTo(42 / 2400, 3);
     const live = page.locator('[data-focus-id="recent-live-0"]');

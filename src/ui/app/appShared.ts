@@ -20,6 +20,8 @@ export type BrowserSnapshot = {
 
 /** The desktop shell's command channel, present only inside the Tauri runtime. */
 export const desktopInvoker = isTauriRuntime() ? resolveTauriVideoInvoker() : undefined;
+/** The native desktop shell gets windowed chrome; the browser fills the tab. */
+export const isDesktopShell = isTauriRuntime();
 
 export function captureScroll(): ScrollAnchor | undefined {
   const root = document.querySelector<HTMLElement>(".responsive-app");

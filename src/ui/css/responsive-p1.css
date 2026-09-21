@@ -9,7 +9,7 @@ body:has(.responsive-app) { background: #101112; }
   box-sizing: border-box;
 }
 
-.desktop-app-frame:not(.is-maximized):not(.is-fullscreen) {
+.desktop-app-frame.desktop-shell:not(.is-maximized):not(.is-fullscreen) {
   border: 1px solid rgba(255, 255, 255, 0.14);
   border-radius: 10px;
   overflow: hidden;

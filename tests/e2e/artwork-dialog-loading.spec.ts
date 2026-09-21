@@ -31,16 +31,22 @@ for (const width of [390, 1440]) test(`failed queue still uses shared landscape 
   await page.setViewportSize({ width, height: 900 });
   await installBackend(page, { activity: true });
   await page.route('https://art.example/episode.svg*', route => route.fulfill({ status: 404, body: '' }));
+  await page.route('https://wsrv.nl/*', route => route.fulfill({ status: 404, body: '' }));
   await page.goto('/');
   await page.getByRole('button', { name: 'Alex' }).click();
   const card = page.locator('[data-focus-id="queue-0"]');
   await expect(card.locator('img')).toHaveAttribute('src', 'https://art.example/backdrop.svg');
   await expect(card.locator('img')).toBeVisible();
-  await page.getByRole('button', { name: 'More options', exact: true }).click();
+  // The card's options entry point is the hold gesture: a context-menu event
+  // on the focused card, not a visible per-card button.
+  await card.click({ button: 'right' });
   const dialog = page.locator('[data-focus-scope="modal"]');
   await expect(dialog).toBeVisible();
   await dialog.locator('h2').click();
   await expect(dialog).toBeVisible();
-  await page.locator('.dialog-backdrop').click({ position: { x: 2, y: 2 } });
+  // A backdrop point clear of the 72px phone sidebar, the 12px window
+  // resize corners/edges and the centered dialog itself.
+  const box = await page.locator('[data-focus-scope="modal"]').boundingBox();
+  await page.locator('.dialog-backdrop').click({ position: { x: Math.max(100, Math.round((box?.x ?? 0) / 2)), y: Math.max(40, Math.round((box?.y ?? 400) / 2)) } });
   await expect(dialog).toHaveCount(0);
 });
