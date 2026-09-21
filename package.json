@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
-    "build": "npm run design:check && npm run core:check && npm run typecheck && vite build",
+    "build": "npm run design:check && npm run core:check && npm run video:check && npm run typecheck && vite build",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
@@ -14,14 +14,19 @@
     "package:tv": "npm run build && node scripts/package-tv.mjs",
     "design:check": "node scripts/design-sync.mjs check",
     "core:check": "node scripts/core-sync.mjs check",
-    "typecheck": "node scripts/typecheck.mjs"
+    "typecheck": "node scripts/typecheck.mjs",
+    "video:check": "node scripts/video-sync.mjs check"
   },
   "dependencies": {
+    "@mediabunny/ac3": "^1.56.2",
+    "@mediabunny/dts": "^1.56.2",
+    "@mediabunny/prores": "^1.56.2",
     "@tauri-apps/api": "^2.11.1",
     "@tauri-apps/plugin-http": "^2.6.0",
     "@tauri-apps/plugin-opener": "2.5.5",
-    "@viptv/video": "file:../video",
+    "hls.js": "1.7.3",
     "lucide-react": "0.468.0",
+    "mediabunny": "1.56.2",
     "qrcode": "1.5.4",
     "react": "18.3.1",
     "react-dom": "18.3.1"

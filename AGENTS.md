@@ -1,10 +1,10 @@
 # viptv TV web development
 
-Read DESIGN_REF, SPEC.md and the referenced viptv-org/design visual and behavior contracts before changing product behavior. This one frontend serves web, Tizen, Vizio and the native desktop app (housed in `viptv-org/desktop`); the playback adapters and the session controller live in the sibling viptv-org/video repository, imported as `@viptv/video` via `file:../video`. Preserve Roku action meaning, 700ms hold, focus restoration, explicit source intent and controlled Next. Platform decoder differences do not justify deleting product features.
+Read DESIGN_REF, SPEC.md and the referenced viptv-org/design visual and behavior contracts before changing product behavior. This one frontend serves web, Tizen, Vizio and the native desktop app (housed in `viptv-org/desktop`); the playback adapters and the session controller live in the viptv-org/video repository and are consumed through the hash-pinned vendored source in `vendor/video` (VIDEO_REF), resolved by the `@viptv/video` path alias. Preserve Roku action meaning, 700ms hold, focus restoration, explicit source intent and controlled Next. Platform decoder differences do not justify deleting product features.
 
 Tests exercise remote UI, backend HTTP and playback adapter interfaces. Run unit/integration tests, production build and Playwright acceptance for changes. Mock only external platform/network boundaries. Inspect screenshots locally for layout but keep screenshots out of source/design/release files. Report browser simulation, real media and actual TV evidence separately; never claim 100% device coverage from simulated AVPlay.
 
-The player stack is the `@viptv/video` package installed via `file:../video`: after changing it, run `npm run build` in `../video` before this repository's checks, because types and code resolve from its generated `dist-js`.
+The player stack resolves from the vendored source in `vendor/video`: after changing viptv-org/video, commit it there and run `node scripts/video-sync.mjs sync ../video` (build ordering no longer matters; `npm run video:check` gates the build).
 
 Use GitHub issues in viptv-org/tv-web and design issue #4. Keep user data/secrets private. Playback prefers direct/copy/remux before server transcoding. Build signed TV distribution artifacts only when required certificates are available; never include signing keys.
 

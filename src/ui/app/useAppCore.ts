@@ -161,7 +161,7 @@ export function useAppCore(api: TvApi, platform: PlayerPlatform, layout: "tv" | 
   const canvas = useRef<HTMLCanvasElement>(null);
   const video = useRef<HTMLVideoElement>(null),
     player = useRef<Player>(),
-    controller = useRef<PlaybackSessionController>(),
+    controller = useRef<PlaybackSessionController<MediaItem, MediaSource>>(),
     playbackCapabilities = useRef<() => Promise<PlaybackCapabilities>>(),
     nextScope = useRef<ReturnType<TvApi["createScope"]>>(),
     epoch = useRef(0),

@@ -21,6 +21,9 @@
     "paths": {
       "mediabunny": [
         "./node_modules/mediabunny/dist/mediabunny.d.ts"
+      ],
+      "@viptv/video": [
+        "./vendor/video/src/index.ts"
       ]
     }
   },

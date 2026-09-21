@@ -1,6 +1,8 @@
 import { defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react";
-const upstream = "https://viptv.syek.tech";
+// Opt-in LAN preview upstream; defaults to the production origin only when
+// explicitly provided, so dev configurations never silently proxy to prod.
+const upstream = process.env.VIPTV_PREVIEW_UPSTREAM ?? "https://viptv.syek.tech";
 const previewProxy = () => ({
   target: upstream, changeOrigin: true, secure: true,
   configure(proxy: import("vite").HttpProxy.Server) {
@@ -21,6 +23,9 @@ const previewProxy = () => ({
 });
 export default defineConfig(({ command }) => ({
   plugins: [react()],
+  // The player contract resolves from the pinned vendored source, not the
+  // generated dist-js of a sibling checkout.
+  resolve: { alias: { "@viptv/video": new URL("./vendor/video/src/index.ts", import.meta.url).pathname } },
   base: command === "build" ? "/tv/" : "/",
   // TV entrypoints retain ES2017. BigInt exists only in the lazily imported
   // MediaBunny chunk, gated on a modern WebCodecs runtime before import.

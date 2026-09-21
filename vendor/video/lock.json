@@ -1,0 +1,22 @@
+{
+  "repository": "viptv-org/video",
+  "revision": "1ccfa112743cd6ee5188b6d48fefa795d3d6e5de",
+  "files": {
+    "vendor/video/src/browser-capabilities.ts": "aa3965890b62718c36e27d3eca05be7c766a4ff97ba8169dbcb4663761c28fe4",
+    "vendor/video/src/html5-fallback.ts": "c645fb120946c0a14b7362e466fb25dd4b8fbb10d6221d9f8b7fc3226f58e2a5",
+    "vendor/video/src/index.ts": "7f03e440991a866d25baf991c68153d27a46fb489d7258ee05bf0a10c1b285e6",
+    "vendor/video/src/mediabunny.ts": "a289a82ebcf8e8d14a7874548617097fcc8f99f53ffb1331c88a83e3c7d47c08",
+    "vendor/video/src/platform-profiles.ts": "e401e289ee17134a382f5220c755b58dd02a6186dc5df41f5fa17c8bc8d69293",
+    "vendor/video/src/session-player.ts": "fef026a5fb5ecc31ce07e3e24e4d312650eb6837003524790fcce2524b76b044",
+    "vendor/video/src/session-request.ts": "9774f74cfef67457714e3811ce78450e36e11b54828aa0a9eec02a46b2510e7f",
+    "vendor/video/src/session.ts": "49fbf87c1bf08e45ca6313a8c058d380be2921d3e253596ecb56378691afddf3",
+    "vendor/video/src/tauri-native.ts": "36ec8ede235044c801b09c0738539e70406bf5f864c767c29d7a85f0a1a2ec3e",
+    "vendor/video/src/tauri-native/aperture.ts": "dbdfd49d50406c6dd5aff95fe30636305b0550bb0b5b168498d52ce3f3f6a30e",
+    "vendor/video/src/tauri-native/capabilities.ts": "40a8b6a8070bdc51f095842818fac69c8694f02beec72b22af3d86c5ea9f9702",
+    "vendor/video/src/tauri-native/types.ts": "67b00f35572b4d6500a3b8c62d253665be1d5debbe16aa1006097420ee513d29",
+    "vendor/video/src/tauri-native/wire.ts": "8738d5cefffe2d0feb315d42c10a4f3d3023a356178552765df1a601c6338b63",
+    "vendor/video/src/tizen-avplay.ts": "008417760fd489af1fe5a59cac8ecd7db7eeb96a008b0624e8f85040446c1822",
+    "vendor/video/src/types.ts": "f60f31f1cbdfaff485ad58148affca5441d81904b1d8550211fc363f1954a4f5",
+    "vendor/video/src/vizio-html5.ts": "577e8c5a9f98eec99c281c0464346dd53ed95d06f99a590453ab920a0e426f2a"
+  }
+}
