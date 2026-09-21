@@ -10,7 +10,7 @@ Use GitHub issues in viptv-org/tv-web and design issue #4. Keep user data/secret
 
 ## Current validation constraint
 
-The owner resumed testing after the server OOM. Check available memory first; coordinate one browser job at a time, one worker and a 256 MB Node heap for browser/unit tests. Run production build/typecheck alone with a 384 MB Node heap; the MediaBunny declaration graph exceeds 256 MB. Keep emulators and local Gradle stopped; use hosted Android builds. The TV web workflow runs on pushes, pull requests and manual dispatch. Record current evidence and unexecuted scenarios in TESTING.md; distinguish browser tests from physical TV qualification.
+The host has ample memory (32 GB) — run tests and builds with default heap settings; no worker or browser-job rationing is needed. The TV web workflow runs on pushes, pull requests and manual dispatch. Record current evidence and unexecuted scenarios in TESTING.md; distinguish browser tests from physical TV qualification.
 
 ## Design synchronization
 
