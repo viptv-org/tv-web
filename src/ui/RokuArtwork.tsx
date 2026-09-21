@@ -1,21 +1,14 @@
 import type { MediaItem, CardPresentation } from "../api";
-import { normalizeCore } from "../core";
+import { artworkUrl, cardPresentation } from "../core/presentations";
+export { artworkUrl };
 import { useMemo, useState, type ImgHTMLAttributes, type ReactNode } from "react";
 
 /**
  * Every remote http(s) image routes through the wsrv.nl cache and resize
  * pipeline, whatever the origin host; data:/relative sources stay at origin
  * and network failures fall back to the raw origin URL in the UI.
+ * Results are cached per argument set in core/presentations.
  */
-export function artworkUrl(
-  original: string | undefined,
-  width: number,
-  height: number,
-  large = false,
-  logo = false,
-) {
-  return normalizeCore<string | null>("artworkUrl", { original, width, height, large, logo }) ?? undefined;
-}
 /** Keep failed and not-yet-decoded bitmaps invisible, preserving their layout. */
 export function ReadyImage({
   src,
@@ -103,7 +96,7 @@ export function HeroArtwork({ uri }: { uri: string }) {
 export function SharedCardArtwork({ item, context }: { item: MediaItem; context: "queue" | "catalog" }) {
   const [failedImages, setFailedImages] = useState<string[]>([]);
   const [originalRetries, setOriginalRetries] = useState<string[]>([]);
-  const presentation = normalizeCore<CardPresentation>("cardPresentation", { item, context, failedImages });
+  const presentation = cardPresentation(item, context, failedImages);
   const original = presentation.image ?? undefined;
   const derivative = artworkUrl(original, 256, 144, false, presentation.imageRole === "logo");
   const src = original && originalRetries.includes(original) ? original : derivative;
@@ -160,7 +153,7 @@ export function SharedCardThumbnail({
   const [originalRetries, setOriginalRetries] = useState<string[]>([]);
   const presentation =
     failedImages.length || !initial
-      ? normalizeCore<CardPresentation>("cardPresentation", { item, context, failedImages })
+      ? cardPresentation(item, context, failedImages)
       : initial;
   const original = presentation.image ?? undefined;
   const derivative = useMemo(

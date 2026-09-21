@@ -41,6 +41,7 @@ import { BrowserNavigation, readBrowserRoute, safeRestoredRoute, type BrowserRou
 import { seekPinReleased, type BufferedRange } from "../SeekBar";
 import type { Screen } from "../screens";
 import { normalizeCore } from "../../core";
+import { presentation } from "../../core/presentations";
 import { captureScroll, desktopInvoker, initialPrefs, type BrowserSnapshot, type Choice, type ScrollAnchor } from "./appShared";
 import type { AppApi, CoreApi, DialogsApi, AuthApi, PlaybackEngineApi, PlaybackSessionApi, CatalogApi, NavigationApi, PlaybackControlsApi } from "./useTvApp";
 import { Cards, type CardActions } from "../../components/cards/Cards";
@@ -81,16 +82,26 @@ export function useHero(app: PlaybackControlsApi) {
     const timer = setTimeout(() => {
       void api.detail({ id: heroItem.seriesId ?? heroItem.id, type: heroItem.type }, scope.request()).then((detail) => {
         if (!scope.signal.aborted) {
-          heroMetadataCache.current.set(heroKey, detail.item);
+          // Bounded FIFO: long browsing sessions must not accumulate one
+          // metadata entry per visited hero.
+          const cache = heroMetadataCache.current;
+          if (cache.size >= 64 && !cache.has(heroKey)) {
+            const oldest = cache.keys().next().value;
+            if (oldest !== undefined) cache.delete(oldest);
+          }
+          cache.set(heroKey, detail.item);
           setHeroMetadata({ key: heroKey, item: detail.item });
         }
       }).catch(() => { /* The packaged fallback remains usable during metadata failure. */ });
     }, 150);
     return () => { clearTimeout(timer); scope.abort(); };
   }, [api, heroKey]);
+  // The hero item is an enriched derivative whose identity changes per
+  // render, so it stays a direct normalization; the selected item is stable
+  // and takes the cached projection path.
   const heroPresentation = heroItem ? normalizeCore<MediaPresentation>("presentation",
     heroMetadata?.key === heroKey ? enrichDetail(heroItem, heroMetadata.item) : heroItem) : undefined;
-  const selectedPresentation = selected ? normalizeCore<MediaPresentation>("presentation", selected) : undefined;
+  const selectedPresentation = selected ? presentation(selected) : undefined;
 
   return { cards, shelfCards, heroPresentation, heroItem, selectedPresentation, firstHomeCatalog, catalogHeroItem };
 }

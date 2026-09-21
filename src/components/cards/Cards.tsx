@@ -1,5 +1,5 @@
 import { memo, useCallback, useLayoutEffect, useRef, useState, type Dispatch, type MutableRefObject, type SetStateAction } from "react";
-import { normalizeCore } from "../../core";
+import { cardPresentation } from "../../core/presentations";
 import { type CardPresentation, type MediaItem, type MediaSource } from "../../api";
 import { RokuText } from "../../ui/RokuText";
 import { TvButton } from "../../ui/remote";
@@ -151,7 +151,7 @@ export const Cards = memo(function Cards({
         const i = offset + localIndex;
         const inQueue = prefix === "queue" || (screen === "My List" && libraryQueue);
         const context = inQueue ? "queue" : "catalog";
-        const presentation = normalizeCore<CardPresentation>("cardPresentation", { item, context });
+        const presentation = cardPresentation(item, context);
         const current = actions.current;
         const activate = () => {
           switch (presentation.primaryAction) {

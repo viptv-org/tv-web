@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from "react";
 import { Check, ChevronDown, Plus } from "lucide-react";
 import { normalizeCore } from "../core";
+import { presentation as itemPresentation } from "../core/presentations";
 import { formatPlaybackTime } from "../ui/SeekBar";
 import { CardArtwork, CardThumbnail, ReadyImage, artworkUrl } from "../ui/RokuArtwork";
 import { ResponsiveTitle } from "../ui/ResponsiveTitle";
@@ -276,7 +277,7 @@ export function DetailScreen({
                 >
                   <CardThumbnail
                     src={artworkUrl(
-                      normalizeCore<MediaPresentation>("presentation", e).episodeImage ?? e.background ?? e.poster,
+                      itemPresentation(e).episodeImage ?? e.background ?? e.poster,
                       256,
                       144,
                     )}

@@ -6,4 +6,10 @@ Deploy `dist/` behind HTTPS at the same VIPTV origin under `/tv`. Configure the 
 
 There is no public Vizio capability guarantee in the product contract. Qualify each TV and firmware with the eight fixture groups from `viptv-org/design/PLAYBACK_CAPABILITIES.md`; report direct success first, then copy/remux, audio conversion, and full transcode only when the earlier rung demonstrably fails. Record pass/fail/not-run with model, firmware, URL authorization shape, codec/container, controls, seek, subtitles, source identity, managed recovery, and final-ten-second next/Back behavior. Desktop browser tests verify the shared interface only; they do not establish SmartCast codec or sustained-playback support.
 
-`VizioHtml5Adapter` has no MediaBunny, WebCodecs, WASM, MSE, or client-side transcode path. It is deliberately native `<video>` only and reports its capability fields as probes. A future local MediaBunny path must be a distinct adapter with its own runtime probe, memory evidence, fixture results, and recovery tests; it must not be represented as an implicit fallback by this adapter.
+`VizioHtml5Adapter` is native `<video>` only: it prefers the engine's native
+HLS and falls back to hls.js/MSE when the engine lacks native HLS. It has no
+MediaBunny, WebCodecs, or client-side transcode path, and it reports its
+capability fields as probes. A future local MediaBunny path must be a
+distinct adapter with its own runtime probe, memory evidence, fixture
+results, and recovery tests; it must not be represented as an implicit
+fallback by this adapter.
