@@ -306,5 +306,5 @@ export class TvApi extends TvApiCatalog {
   }
 }
 
-export { ApiScope, MemoryDeviceSessionStore, TvApiError, normalizeCore } from "./client-shared";
+export { ApiScope, MemoryDeviceSessionStore, TvApiError, isAbort, normalizeCore } from "./client-shared";
 export type { DeviceSessionStore, RequestOptions, TvApiOptions } from "./client-shared";
