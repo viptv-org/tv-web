@@ -1,13 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
 import type { TvApi, DevicePairing } from '../api';
 
-export function ResponsiveSignIn({ api, pair, qr, onRetry }: { api: TvApi; pair?: DevicePairing; qr: string; onRetry: () => void }) {
+export function ResponsiveSignIn({ api, pair, qr, onRetry, onUseWithoutAccount }: { api: TvApi; pair?: DevicePairing; qr: string; onRetry: () => void; onUseWithoutAccount?: () => void }) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [pending, setPending] = useState(false);
   const [approved, setApproved] = useState(false);
   const [error, setError] = useState('');
   const [otherDevice, setOtherDevice] = useState(false);
+  const [localFocused, setLocalFocused] = useState(false);
   const scope = useRef<AbortController>();
   const native = '__TAURI_INTERNALS__' in window;
   const rawUrl = pair?.verificationUriComplete || pair?.verificationUri;
@@ -56,6 +57,12 @@ export function ResponsiveSignIn({ api, pair, qr, onRetry }: { api: TvApi; pair?
         <button type="button" onClick={() => setOtherDevice(value => !value)} aria-expanded={otherDevice}>Use another device</button>
         <button type="button" onClick={onRetry} disabled={pending}>Reconnect</button>
       </div>
+      {onUseWithoutAccount && <>
+        <div className="auth-local-entry">
+          <button type="button" onClick={onUseWithoutAccount} onFocus={() => setLocalFocused(true)} onBlur={() => setLocalFocused(false)}>Use without an account</button>
+        </div>
+        {localFocused && <p className="auth-help" role="status">Your addons and playback stay on this device. No account, profiles, or sync.</p>}
+      </>}
       {otherDevice && <div className="auth-link-device">
         {qr && <img src={qr} alt="Scan to connect this device" />}
         <p>Enter this code on your account page</p><strong>{pair?.userCode ?? '••••••'}</strong>

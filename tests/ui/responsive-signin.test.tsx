@@ -28,3 +28,13 @@ it('native sign-in opens the exact approval URL in the system browser', async ()
   expect(openUrl).toHaveBeenCalledWith(pair.verificationUriComplete);
   expect(screen.getByRole('status')).toHaveTextContent('Waiting for your account');
 });
+
+it('offers local mode only when the build declares the capability', () => {
+  const onUseWithoutAccount = vi.fn();
+  const props = { api: {} as TvApi, pair, qr: '', onRetry: vi.fn(), onUseWithoutAccount };
+  render(<ResponsiveSignIn {...props} />);
+  fireEvent.focus(screen.getByRole('button', { name: 'Use without an account' }));
+  expect(screen.getByRole('status')).toHaveTextContent('Your addons and playback stay on this device.');
+  fireEvent.click(screen.getByRole('button', { name: 'Use without an account' }));
+  expect(onUseWithoutAccount).toHaveBeenCalledOnce();
+});

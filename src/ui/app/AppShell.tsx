@@ -16,6 +16,7 @@ import type { Screen } from "../screens";
 import type { AppApi } from "./useTvApp";
 import { isDesktopShell } from "./appShared";
 import { AppDialogs } from "./AppDialogs";
+import { enterLocalMode, localModeAvailable } from "../../local";
 import "../tv.css";
 import "../responsive.css";
 
@@ -27,6 +28,12 @@ export function AppShell({ app }: { app: AppApi }) {
   const { active, activeTrackPopup, api, audioTrackList, authorize, back, browser, busy, canvas, cards, casting, catalog, catalogError, catalogs, catalogValues, chooseProfile, closeCast, commitSeek, compactHome, detail, discoverSources, editingProfile, editProfile, engineChoice, entry, episodes, fail, favorites, firstHomeCatalog, fullscreenControl, go, heroItem, heroPresentation, highlighted, homeRows, isMaximized, items, lastControlActivity, layout, libraryQueue, loadCatalog, manage, managing, mediaKey, mediaKeyUp, modal, navigate, nextEpisode, nextSkip, oled, openCast, openingSource, overlay, pair, pairing, platform, play, player, playerInfoLines, playerInfoOpen, playerNotice, playerRoot, prefs, preparing, profile, profilePage, profiles, qr, query, queue, readBufferedRanges, recentLive, responsive, screen, searchKey, searchPartial, searchRows, season, seek, selected, selectedPresentation, selectEngine, setActiveTrackPopup, setCompactHome, setControlActivity, setEditingProfile, setEntry, setLibraryQueue, setManaging, setModal, setOverlay, setPlayerInfoOpen, setPrefs, setProfile, setProfilePage, setProfiles, setQuery, setScreen, setSeason, setSeek, setSettingsSubpage, setSourceProvider, setSourceQuality, settingsSubpage, shelfCards, snapshot, sourceFocusPending, sourceProvider, sourceQuality, sources, stop, subtitleOffOption, surfaceClick, textTrackList, toggle, toggleLiveMute, toggleOled, togglePlayback, trackChoices, video } = app;
 
   const activeProfile = profiles.find((p) => p.id === profile);
+  // Local addon mode is offered only in local-capable builds (LM-001); the
+  // backend-hosted bundle renders no entry point.
+  const localEntry = localModeAvailable ? () => {
+    enterLocalMode();
+    location.reload();
+  } : undefined;
   const navItems: Screen[] = [
     ...(responsive ? [] : (["profiles"] as Screen[])),
     "Home",
@@ -179,7 +186,7 @@ export function AppShell({ app }: { app: AppApi }) {
         {!responsive && brand}
 
         {screen === "startup" ? null : screen === "pairing" ? (
-          responsive ? <ResponsiveSignIn api={api} pair={pair} qr={qr} onRetry={() => void pairing()} /> : <section className="pairing">
+          responsive ? <ResponsiveSignIn api={api} pair={pair} qr={qr} onRetry={() => void pairing()} onUseWithoutAccount={localEntry} /> : <section className="pairing">
             <h1>Sign in to VIPTV</h1>
             <p>Visit this address, then enter the code shown below.</p>
             <h2>{pair?.verificationUri ?? "Connecting…"}</h2>
@@ -188,6 +195,9 @@ export function AppShell({ app }: { app: AppApi }) {
             <TvButton id="retry" onActivate={() => void pairing()}>
               Try again
             </TvButton>
+            {localEntry && <TvButton id="local-mode" onActivate={localEntry}>
+              Use without an account
+            </TvButton>}
           </section>
         ) : screen === "profiles" ? (
           <section className="profiles">

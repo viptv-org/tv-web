@@ -8,3 +8,4 @@ export {
   type LocalRegistryErrorCode,
 } from "./registry";
 export { LocalDiscovery, type LocalDiscoveryOptions } from "./discovery";
+export { readLocalMode, enterLocalMode, exitLocalMode } from "./mode";

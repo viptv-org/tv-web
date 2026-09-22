@@ -2,6 +2,8 @@ import { initializeCore } from "./core";
 import { createRoot } from "react-dom/client";
 import { TvApi, type DeviceTokenSet } from "./api";
 import { App } from "./ui/App";
+import { LocalApp } from "./ui/LocalApp";
+import { localModeAvailable, readLocalMode } from "./local";
 import type { PlayerPlatform } from "@viptv/video";
 const params = new URLSearchParams(location.search);
 const native = "__TAURI_INTERNALS__" in window;
@@ -65,6 +67,12 @@ async function start() {
     window.addEventListener("contextmenu", (e) => e.preventDefault());
   }
   const layout = platform === "tizen" || platform === "vizio" || params.get("layout") === "tv" ? "tv" : "responsive";
+  // Local addon mode is a boot-level branch (LM-001): the flag is honored
+  // only when the build declares the capability.
+  if (localModeAvailable && readLocalMode()) {
+    root.render(<LocalApp onExit={() => location.reload()} />);
+    return;
+  }
   root.render(<App api={api} platform={platform} layout={layout} />);
 }
 const root = createRoot(document.getElementById("root")!);
