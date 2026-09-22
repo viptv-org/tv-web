@@ -5,7 +5,7 @@ import { CoreBridge } from "../../vendor/core/wasm/viptv_core";
 import { createCoreDriver } from "../../vendor/core/runtime/driver";
 import { createHttpTransport } from "../../vendor/core/runtime/index";
 import type { Event, ViewModel } from "../../vendor/core/typescript/wire";
-import { ApiScope, MemoryDeviceSessionStore, TvApiError, normalizeCore, safeJson, clientMessage, isAbort, tokenSet, profile, mediaItem, page, playback, preferences, itemRequest, snakePreferences, params, segment, objectOrEmpty, expectObject, objectAt, hasObject, arrayValue, isObject, stringAt, optionalString, idAt, boolAt, optionalBool, clean, minimalItem } from "./client-shared";
+import { ApiScope, MemoryDeviceSessionStore, TvApiError, throwIfAborted, normalizeCore, safeJson, clientMessage, isAbort, tokenSet, profile, mediaItem, page, playback, preferences, itemRequest, snakePreferences, params, segment, objectOrEmpty, expectObject, objectAt, hasObject, arrayValue, isObject, stringAt, optionalString, idAt, boolAt, optionalBool, clean, minimalItem } from "./client-shared";
 import type { DeviceSessionStore, RequestOptions, TvApiOptions } from "./client-shared";
 import type {
   Catalog,
@@ -82,14 +82,14 @@ export class TvApiClientBase {
       onError,
     });
     const runUnlocked = async (event: Event, options?: RequestOptions): Promise<ViewModel> => {
-      options?.signal?.throwIfAborted();
+      throwIfAborted(options?.signal);
       imperative++;
       const cancel = () => driver.cancelHttp();
       options?.signal?.addEventListener("abort", cancel, { once: true });
       try {
         await driver.dispatch(event);
         await driver.idle();
-        options?.signal?.throwIfAborted();
+        throwIfAborted(options?.signal);
         const view = JSON.parse(core.view()) as ViewModel;
         if (view.phase === "Error") throw new TvApiError(view.errorStatus ?? 0, view.error ?? "Unable to connect");
         return view;
@@ -224,7 +224,7 @@ export class TvApiClientBase {
   protected async refreshTokens(
     options?: RequestOptions,
   ): Promise<DeviceTokenSet> {
-    options?.signal?.throwIfAborted();
+    throwIfAborted(options?.signal);
     // Rotation belongs to the device session. Cancelling a screen must not
     // discard the replacement grant after the server consumes its predecessor.
     if (!this.tokens)
@@ -274,7 +274,7 @@ export class TvApiClientBase {
     const request = async (retry: boolean): Promise<JsonValue> => {
       const headers: Record<string, string> = { Accept: "application/json" };
       if (init.body) headers["Content-Type"] = "application/json";
-      options?.signal?.throwIfAborted();
+      throwIfAborted(options?.signal);
       const accessToken = this.tokens?.accessToken;
       if (authenticated && accessToken)
         headers.Authorization = `Bearer ${accessToken}`;

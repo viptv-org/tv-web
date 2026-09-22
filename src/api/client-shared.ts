@@ -79,6 +79,15 @@ export interface TvApiOptions {
 export interface RequestOptions {
   readonly signal?: AbortSignal;
 }
+/** AbortSignal.throwIfAborted shipped in Chrome 100; the TV receiver runs Chrome 87. */
+export function throwIfAborted(signal?: AbortSignal): void {
+  if (signal?.aborted) {
+    throw signal.reason instanceof Error
+      ? signal.reason
+      : new DOMException("Aborted", "AbortError");
+  }
+}
+
 export class ApiScope {
   private readonly controller = new AbortController();
   get signal() {

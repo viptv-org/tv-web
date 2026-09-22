@@ -76,6 +76,20 @@ async function start() {
   root.render(<App api={api} platform={platform} layout={layout} />);
 }
 const root = createRoot(document.getElementById("root")!);
-start().catch(() => {
+// TV/embedded-browser diagnosis opt-in: with ?reportboot=1 the page reports
+// boot and render failures to its own origin (/boot-error/...) so a harness
+// can read them from the serving access log. Silent no-op in production.
+if (params.get("reportboot")) {
+  const report = (detail: unknown) => {
+    void fetch(`/boot-error/${encodeURIComponent(String(detail).slice(0, 300))}`).catch(() => undefined);
+  };
+  window.addEventListener("error", event =>
+    report(`${event.message} @ ${(event.filename ?? "").split("/").pop()}:${event.lineno}`));
+  window.addEventListener("unhandledrejection", event => report(event.reason));
+}
+start().catch((error: unknown) => {
+  if (params.get("reportboot")) {
+    void fetch(`/boot-error/start/${encodeURIComponent(String((error as Error)?.message ?? error).slice(0, 300))}`).catch(() => undefined);
+  }
   root.render(<div role="alert">viptv could not load. Please reload the app.</div>);
 });
