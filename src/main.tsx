@@ -70,7 +70,7 @@ async function start() {
   // Local addon mode is a boot-level branch (LM-001): the flag is honored
   // only when the build declares the capability.
   if (localModeAvailable && readLocalMode()) {
-    root.render(<LocalApp onExit={() => location.reload()} />);
+    root.render(<LocalApp onExit={() => location.reload()} fetch={nativeFetch ?? undefined} />);
     return;
   }
   root.render(<App api={api} platform={platform} layout={layout} />);

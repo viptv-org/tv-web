@@ -38,7 +38,7 @@ function addonName(addon: { id: string; manifest: { name?: unknown } }): string 
     : addon.id;
 }
 
-export function LocalApp({ onExit }: { onExit: () => void }) {
+export function LocalApp({ onExit, fetch: fetchImpl }: { onExit: () => void; fetch?: typeof fetch }) {
   const [page, setPage] = useState<Page>({ kind: "home" });
   const [catalogs, setCatalogs] = useState<readonly Catalog[]>([]);
   const [shelves, setShelves] = useState<
@@ -47,9 +47,14 @@ export function LocalApp({ onExit }: { onExit: () => void }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const { registry, discovery } = useMemo(() => {
-    const registry = new LocalAddonRegistry({ storage: new BrowserLocalRegistryStorage() });
-    return { registry, discovery: new LocalDiscovery(registry) };
-  }, []);
+    // Native hosts inject a CORS-free fetch (design LM-006); the browser
+    // falls back to the webview's fetch with normal CORS rules.
+    const registry = new LocalAddonRegistry({
+      storage: new BrowserLocalRegistryStorage(),
+      fetch: fetchImpl,
+    });
+    return { registry, discovery: new LocalDiscovery(registry, { fetch: fetchImpl }) };
+  }, [fetchImpl]);
 
   const reload = useCallback(async () => {
     setLoading(true);
