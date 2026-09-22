@@ -68,3 +68,9 @@ The ordinary browser entry now uses the responsive viewing UI backed by the same
 Tauri hosts use `@tauri-apps/plugin-http` for API requests (no redirects), requiring the host's restricted HTTP capability and plugin registration. SmartCast additionally needs the exact native commands from core/adapters/tauri/smartcast.rs and `VITE_VIZIO_RECEIVER_URL` pointing at a deployed HTTPS receiver. The browser offers a truthful native-app handoff; it cannot pair a LAN TV over insecure HTTPS. Native host packaging, receiver deployment and physical decoding are not established by a browser build.
 
 For the authorized LAN preview: `VITE_LAN_PREVIEW=1 NODE_OPTIONS=--max-old-space-size=256 npm run dev -- --port 4181 --strictPort`. Proxying remains same-origin with verified upstream TLS. Do not use this opt-in development server as a public production deployment.
+
+## License
+
+Copyright (C) 2026 viptv contributors.
+
+This program is free software; you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation; version 2 of the License. See [LICENSE](LICENSE). The playback adapters (`viptv-org/video`, `viptv-org/tauri-video-plugin`) and the Android repository remain under their existing MIT OR Apache-2.0 terms.
