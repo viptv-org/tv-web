@@ -2,10 +2,12 @@
 
 Status: proposed platform work; the Roku baseline remains unchanged.
 
+The accepted platform matrix and playback-consolidation decision of 2026-09-17 are recorded in [docs/adr/0003-shared-platform-matrix-and-playback-consolidation.md](docs/adr/0003-shared-platform-matrix-and-playback-consolidation.md); where the rows below differ, that record is authoritative.
+
 | Target | App | Preferred playback path | Last resort |
 |---|---|---|---|
 | Roku | Existing BrightScript/SceneGraph | Existing verified direct/remux delivery and native Video | Existing managed conversion |
-| Android / Android TV | Kotlin Jetpack Compose, Android-only imported playback library and mediamp | Android native decoder through the player module; capability-tested direct playback | Backend conversion |
+| Android / Android TV | Kotlin Jetpack Compose, in-repo Media3 backend | Android native decoder through the player module; capability-tested direct playback | Backend conversion |
 | Desktop | Tauri + React | Imported tauri-video-plugin; evaluate Mediabunny for supported media and packaging | Backend conversion |
 | Web | React | Browser native media; imported video/Mediabunny when runtime supports required decode/demux | Backend conversion |
 | Samsung Tizen | TV web UI; evaluate SolidTV/LightningJS | AVPlay after capability detection | Backend conversion |

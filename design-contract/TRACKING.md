@@ -20,7 +20,6 @@ Imported player repositories carry these specifications and execution tickets: F
 | Imported repository | Specification | Execution ticket |
 |---|---|---|
 | android | [Spec](https://github.com/viptv-org/android/issues/1) | [Ticket](https://github.com/viptv-org/android/issues/2) |
-| mediamp | [Spec](https://github.com/viptv-org/mediamp/issues/1) | [Ticket](https://github.com/viptv-org/mediamp/issues/2) |
 | tauri-video-plugin | [Spec](https://github.com/viptv-org/tauri-video-plugin/issues/1) | [Ticket](https://github.com/viptv-org/tauri-video-plugin/issues/2) |
 | video | [Spec](https://github.com/viptv-org/video/issues/1) | [Ticket](https://github.com/viptv-org/video/issues/2) |
 

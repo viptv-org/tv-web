@@ -42,3 +42,6 @@ Use platform focus interpolation sparingly: floating horizontal focus, fixed ver
 ## Responsive and accessibility checks
 
 Keep text contrast at the token values, preserve 48px minimum focus target height for remote controls, and ensure focus is discernible without colour alone (white fill/outline plus text inversion). Long labels scroll only when focused. Text must not overlap icon, timeline, or artwork bounds at 200% platform text scaling; use truncation/marquee/line limits as defined rather than shrinking type below the hierarchy.
+
+
+Selection/current state is text-labelled, never colour alone: wherever the player offers a choice among audio tracks, subtitles or delivery engines, the active entry carries an explicit `Current` label (check plus text) and its accessible name includes "current"; unavailable entries stay listed with a visible unavailable marker. This applies to desktop anchored popups, TV choice dialogs and future settings selectors (RUI-028 in RESPONSIVE_PRODUCTION.md).

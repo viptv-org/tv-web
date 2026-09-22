@@ -31,3 +31,7 @@ Shared data/state architecture and startup adoption: [SHARED_CORE.md](SHARED_COR
 ## Responsive viewing client
 
 [RESPONSIVE_UI.md](RESPONSIVE_UI.md) defines responsive geometry; [RESPONSIVE_VIPTV_ALIGNMENT.md](RESPONSIVE_VIPTV_ALIGNMENT.md) restores the original VIPTV visual components and overrides historical appearance proposals. [RESPONSIVE_PRODUCTION.md](RESPONSIVE_PRODUCTION.md) records real shared-client ownership, input adaptations and validation scope. These contracts preserve the Roku/TV baseline and do not imply Android mobile or native host qualification.
+
+## Local addon mode
+
+[LOCAL_MODE.md](LOCAL_MODE.md) proposes account-free operation of the shared viewing client from an on-device addon registry: availability gating, addon management, discover reuse of the RUI-030 hierarchy, direct-first playback without server preparation, and the persistence/privacy contract. Status is proposed; no platform claims adoption until its implementation records evidence.

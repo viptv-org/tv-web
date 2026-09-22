@@ -22,6 +22,5 @@ The original snapshot 7d6b413 was local and unavailable through the original Git
 
 ## Imported libraries and Android tooling
 
-All four player repositories are private, independent copies with their upstream workflows removed and source license/attribution retained. Android's Media3 module passed testDebugUnitTest; mediamp's Android-only modules passed assemble. The web video library passed check (35 tests) and build; the Tauri TypeScript bridge passed check (32 tests) and build. Full native GStreamer/mpv and device matrices are not claimed. Neither Android library is a completed viptv Compose application.
 
 Temurin JDK 17, Android SDK/build tools/emulator and phone API 35 / TV API 36 AVDs are installed under /home/node/viptv-org/.tooling. No /dev/kvm is exposed, so accelerated emulator execution and physical Android TV acceptance are not available in this container. No emulator was booted.
