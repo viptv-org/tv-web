@@ -22,8 +22,10 @@ Status: **proposed**. Source revision: design `627201e898c7fa1af7deea638f201344a
 ```json
 {
   "version": 1,
+  "nextOrdinal": 3,
   "addons": [
     {
+      "ordinal": 1,
       "id": "string",
       "manifestUrl": "https://example.test/manifest.json",
       "manifest": {},
@@ -34,7 +36,7 @@ Status: **proposed**. Source revision: design `627201e898c7fa1af7deea638f201344a
 }
 ```
 
-`id` is the addon manifest `id` when present, otherwise the normalized manifest URL. `manifest` is the parsed manifest document at install time. The registry is the only local-mode persistent state in this revision.
+`id` is the addon manifest `id` when present, otherwise the normalized manifest URL. `manifest` is the parsed manifest document at install time. `ordinal` is a monotonically increasing install counter that is never reused, so a catalog selected as "addon N" keeps pointing at the same addon across restarts and removals. The registry is the only local-mode persistent state in this revision.
 
 **Management surface.** `Settings → Addons` lists installed addons as rows: addon name, short id, and an enabled/disabled control; a remove affordance per row; an `Add addon` action opens a URL field using the platform's existing text entry. Visible copy: empty state `No addons installed yet.`; row disabled state dims the row and its catalogs disappear from browsing.
 
