@@ -1,10 +1,10 @@
 {
   "repository": "viptv-org/core",
-  "revision": "ace630e9540a5c57ca10ad0309224a6ac1092349",
+  "revision": "ae05dbf865c4fdd58d1b38bd6e5a564f98e73aed",
   "files": {
     "wasm/viptv_core.d.ts": "03eb8f9295e42be2d7bf7286f21095dd3b2f33b29660f514c8cffa6a5e9e3bb1",
     "wasm/viptv_core.js": "6612e79284d5d37507af588b6c6dc1163d092d42a6517dab275c901419833eff",
-    "wasm/viptv_core_bg.wasm": "acaa09f786fae5a2aa46db7df9f8445348c186a1c3f3ed590414fa04d9c14b39",
+    "wasm/viptv_core_bg.wasm": "0dbd172ff8f010b6ea9e06df2ace8c05503f1d44069c146e9b1521afa22fd022",
     "wasm/viptv_core_bg.wasm.d.ts": "cbb31fe86f176999df629ea619390fda27439af13315bf39e2beed5cb24ca5c8",
     "typescript/package.json": "650dd3d51aadf50038954422add6924444975666e953a28c65b6355fb6b5e41e",
     "typescript/viptv_core_types.ts": "c13581bf1d3ae834d0989b71b22dd87f2d62eaed526e2807739e9afe64f9ceb3",
