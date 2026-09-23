@@ -1,10 +1,14 @@
+import { Agent } from "node:https";
 import { defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react";
 // Opt-in LAN preview upstream; defaults to the production origin only when
 // explicitly provided, so dev configurations never silently proxy to prod.
 const upstream = process.env.VIPTV_PREVIEW_UPSTREAM ?? "https://viptv.syek.tech";
+// One pooled keep-alive agent: without it every proxied request pays a new
+// TLS handshake to the upstream, which serialises a page's API burst.
+const upstreamAgent = new Agent({ keepAlive: true, maxSockets: 32 });
 const previewProxy = () => ({
-  target: upstream, changeOrigin: true, secure: true,
+  target: upstream, changeOrigin: true, secure: true, agent: upstreamAgent,
   configure(proxy: import("vite").HttpProxy.Server) {
     // Only this opt-in HTTP LAN preview relaxes Secure for its own cookies.
     // Production stays HTTPS/HttpOnly/SameSite and never uses this proxy.

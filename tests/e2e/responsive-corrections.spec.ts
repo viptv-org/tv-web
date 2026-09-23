@@ -36,7 +36,8 @@ for (const width of [390, 1440]) test(`website sign-in is centered and signs in 
   expect(await page.evaluate(key => localStorage.getItem(key), sessionKey)).not.toContain('password');
 });
 
-for (const width of [390, 1440]) test(`guide has native scrolling and pinned channel labels at ${width}`, async ({ page }, testInfo) => {
+for (const width of [768, 1440]) test(`guide has native scrolling and pinned channel labels at ${width}`, async ({ page }, testInfo) => {
+  // Phones replace the timeline with a channel list (responsive-layout.spec).
   await page.setViewportSize({ width, height: 900 });
   await installBackend(page);
   const now = Math.floor(Date.now() / 1000);

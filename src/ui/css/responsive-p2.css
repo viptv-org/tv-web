@@ -60,6 +60,28 @@
   outline: none !important;
 }
 
+/* The active profile anchors the bottom of the sidebar; the bottom padding
+   keeps the centred navigation group clear of it in short windows. */
+.responsive-app .desktop-sidebar { padding-bottom: 64px; }
+.responsive-app .desktop-sidebar .sidebar-profile {
+  position: absolute !important;
+  left: 50%;
+  bottom: 14px;
+  margin: 0 0 0 -21px !important;
+}
+.responsive-app .desktop-sidebar .sidebar-profile .nav-avatar { position: relative !important; z-index: 1; }
+.responsive-app .sidebar-profile-initials {
+  position: absolute;
+  inset: 5px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #303234;
+  color: #c5c6c7;
+  font-size: 12px;
+  font-weight: 700;
+}
+
 .responsive-app main {
   position: relative;
   inset: auto;
@@ -96,7 +118,8 @@
 .responsive-app .shelves, .responsive-app .compact-home .shelves { position: static; grid-column: 1 / -1; width: 100%; height: auto; overflow: visible; }
 .responsive-app .shelves section { margin: 0 0 32px; width: 100%; min-width: 0; height: auto; }
 .responsive-app .shelves h2 { height: auto; font-size: 22px; line-height: 28px; text-transform: uppercase; margin-bottom: 12px; overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
-.responsive-app .cards { display: flex; gap: 24px; width: 100%; height: auto; overflow-x: auto; padding: 6px 6px 12px; overflow-anchor: none; }
+/* No inset: the first card starts on the heading's and the page's edge. */
+.responsive-app .cards { display: flex; gap: 24px; width: 100%; height: auto; overflow-x: auto; padding: 0 0 12px; overflow-anchor: none; }
 /* Desktop shelf carousels: a compact backgroundless chevron pair pinned to
    the row's bottom-right flips one card-page; exhausted directions grey out
    instead of unmounting, and the pair hides only when the whole row fits. */
@@ -166,7 +189,8 @@
   .responsive-app .result-grid > .cards .card-more { top: auto; bottom: 14px; }
 }
 .responsive-app .search .keyboard { position: static; width: 100%; height: auto; margin-bottom: 28px; }
-.responsive-app .search .keyboard > input { position: static; width: 100%; height: 56px; padding: 0 18px; border: 2px solid #414447; border-radius: 12px; background: #202224; font-size: 20px; }
+/* transform: none cancels the TV-only glyph baseline nudge in tv-p4.css. */
+.responsive-app .search .keyboard > input { position: static; width: 100%; height: 56px; padding: 0 18px; border: 2px solid #414447; border-radius: 12px; background: #202224; font-size: 20px; transform: none; }
 .responsive-app .search .keyboard > input:focus { border-color: #f5f5f5; }
 .responsive-app .search .keyboard > div, .responsive-app .search .keyboard > button, .responsive-app .search .search-help { display: none; }
 .responsive-app .search .result-grid > section { height: auto; min-width: 0; margin-bottom: 32px; }
@@ -211,6 +235,9 @@
 .responsive-app .startup-cover > img, .responsive-app .startup-cover > p, .responsive-app .startup-cover::after { position: static; margin: 16px; }
 .responsive-app.playing { background: #000; overflow: hidden; }
 .responsive-app.playing .brand { display: none; }
+/* The idle, hidden video element keeps the frame's size too; at the TV's
+   fixed 1280px it widened the shell's scrollable area on every smaller screen. */
+.responsive-app .video { width: 100%; height: 100%; }
 .responsive-app.playing .video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
 .responsive-app.playing .player-overlay {
   position: absolute;
@@ -223,60 +250,6 @@
   overflow: hidden;
   box-sizing: border-box;
 }
-.responsive-app .player-identity { top: 20px; left: 24px; display: flex; align-items: center; gap: 12px; }
-.responsive-app .player-top-right {
-  position: absolute;
-  top: 20px;
-  right: 24px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  z-index: 10;
-}
-.responsive-app .player-top-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  min-height: 36px;
-  border-radius: 6px;
-  background: rgba(255, 255, 255, 0.12);
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  color: #f5f5f5;
-  padding: 0;
-  cursor: pointer;
-  transition: background 0.15s ease, transform 0.15s ease;
-}
-.responsive-app .player-top-btn:hover {
-  background: rgba(255, 255, 255, 0.22);
-}
-.responsive-app .player-status {
-  display: none !important;
-}
-.responsive-app .player-eyebrow, .responsive-app .player-overlay > h1, .responsive-app .player-context { position: static; width: auto; height: auto; }
-.responsive-app .player-eyebrow {
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 0.1em;
-  color: #a0a3a7;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.85);
-}
-.responsive-app .player-overlay > h1 {
-  margin-top: 6px;
-  font-size: 28px;
-  font-weight: 700;
-  color: #ffffff;
-  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.9);
-}
-.responsive-app .player-context {
-  font-size: 16px;
-  font-weight: 500;
-  color: #d1d5db;
-  margin-top: 4px;
-  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.85);
-}
-.responsive-app .playback-bottom { position: static; display: flex; flex-direction: column; }
 .responsive-app .seekbar { position: relative; inset: auto; order: 0; width: 100%; height: 40px; margin-top: 12px; cursor: pointer; }
 .responsive-app .seekbar-track { border-radius: 2px; }
 .responsive-app .seekbar-thumb { width: 12px; height: 12px; }
@@ -284,7 +257,6 @@
 .responsive-app .player-time { position: static; order: 1; width: 100%; font-size: 16px; }
 .responsive-app .controls { position: static; order: 2; display: flex; flex-wrap: wrap; gap: 8px; width: 100%; height: auto; margin-top: 8px; }
 .responsive-app .controls button { position: static; width: 56px; height: 56px; min-height: 56px; padding: 14px; }
-.responsive-app .controls [data-focus-id="exit"] { margin-left: auto; }
 
 /* Desktop player popups: anchored above the toolbar icon instead of a blocking dialog. */
 .responsive-app .track-buttons { position: relative; display: flex; gap: 8px; }
@@ -457,10 +429,6 @@
   .responsive-app .modal-choices button { font-size: 18px; }
   .responsive-app .toast, .responsive-app .loading, .responsive-app .error { bottom: calc(88px + env(safe-area-inset-bottom)); font-size: 16px; }
   .responsive-app .player-overlay { padding: 16px; }
-  .responsive-app .player-overlay > h1 { font-size: 24px; }
-  .responsive-app .player-context, .responsive-app .player-eyebrow { font-size: 14px; }
   .responsive-app .controls { gap: 4px; }
   .responsive-app .controls button { width: 48px; min-height: 48px; height: 48px; padding: 10px; }
-  .responsive-app .player-identity { font-size: 18px; left: 16px; }
-  .responsive-app .player-status { right: 16px; font-size: 14px; }
 }

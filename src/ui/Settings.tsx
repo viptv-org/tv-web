@@ -6,11 +6,29 @@ import { ENGINE_CHOICES } from "./enginePreference";
 import type { NativeVideoEngine } from "@viptv/video";
 import { TextEntry } from "./TextEntry";
 import { TvButton, focusElement } from "./remote";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import packageInfo from "../../package.json";
 import "./account-roku.css";
 
 type Choice = { label: string; action: () => void };
-type Row = Choice & { id: string; description: string };
+type Row = Choice & {
+  id: string;
+  description: string;
+  /** List layout: section the row is grouped under on the main page. */
+  group?: "Profile" | "Playback" | "This device" | "Account";
+  /** List layout: short title when the TV label also carries the value. */
+  title?: string;
+  /** List layout: secondary line under the title. */
+  note?: string;
+  /** List layout: trailing current value. */
+  value?: string;
+  /** List layout: on/off state rendered as a switch. */
+  toggle?: boolean;
+  /** List layout: informational row without a chevron. */
+  info?: boolean;
+  danger?: boolean;
+};
+const listGroups = ["Profile", "Playback", "This device", "Account"] as const;
 const languages: readonly [string, string][] = [
   ["System default", ""],
   ["English", "en"],
@@ -43,6 +61,8 @@ export function Settings({
   subpage,
   onSubpageChange,
   onBack,
+  list = false,
+  onWatchOnTv,
 }: {
   api: TvApi;
   profile: string;
@@ -59,6 +79,10 @@ export function Settings({
   subpage?: "Settings" | "Playback preferences" | "Addons";
   onSubpageChange?: (p: "Settings" | "Playback preferences" | "Addons") => void;
   onBack?: () => void;
+  /** Pointer/touch arrangement: a grouped settings list with inline values. */
+  list?: boolean;
+  /** Phone entry to the Watch on TV controller, which has no header there. */
+  onWatchOnTv?: () => void;
 }) {
   const [addons, setAddons] = useState<readonly JsonObject[]>([]);
   const [internalPage, setInternalPage] = useState<
@@ -115,11 +139,26 @@ export function Settings({
             label: `OLED mode: ${appearance.oled ? "On" : "Off"}`,
             description: "Use a pure black background on this device. Your profile and playback settings stay the same.",
             action: appearance.toggle,
-          }] : []),
+            group: "This device",
+            title: "OLED mode",
+            note: "Pure black background",
+            toggle: appearance.oled,
+          } satisfies Row] : []),
+          ...(onWatchOnTv ? [{
+            id: "settings-watch-on-tv",
+            label: "Watch on TV",
+            description: "Open VIPTV on a television.",
+            action: onWatchOnTv,
+            group: "This device",
+            note: "Open VIPTV on a television",
+          } satisfies Row] : []),
           ...(playbackEngine ? [{
             id: "settings-engine",
             label: `Playback engine: ${playbackEngine.choice === "auto" ? "Auto" : playbackEngine.choice}`,
             description: "The native engine that decodes video. Auto uses the app's preferred engine for this device.",
+            group: "Playback",
+            title: "Playback engine",
+            value: playbackEngine.choice === "auto" ? "Auto" : playbackEngine.choice,
             action: () =>
               onModal(
                 "Playback engine",
@@ -131,42 +170,54 @@ export function Settings({
                   },
                 })),
               ),
-          }] : []),
+          } satisfies Row] : []),
           {
             id: "settings-profiles",
             label: "Switch profile",
             description: "Choose who's watching.",
             action: onProfiles,
+            group: "Profile",
           },
           {
             id: "settings-playback",
             label: "Playback preferences",
             description: "Audio, subtitles and quality for this profile.",
             action: () => openPage("Playback preferences"),
+            group: "Playback",
+            note: "Audio, subtitles and quality",
           },
           {
             id: "settings-manage",
             label: "Manage profiles",
             description: "Add, rename, choose avatars or delete profiles.",
             action: onManageProfiles,
+            group: "Profile",
+            note: "Add, rename or delete profiles",
           },
           {
             id: "settings-about",
             label: "About VIPTV",
             description: `Version ${packageInfo.version}\n${serverOrigin}`,
             action: () => {},
+            group: "Account",
+            value: `Version ${packageInfo.version}`,
+            info: true,
           },
           {
             id: "settings-addons",
             label: "Addons",
             description: "Manage addons shared by your account.",
             action: () => openPage("Addons"),
+            group: "Account",
+            note: "Shared by your account",
           },
           {
             id: "signout",
             label: "Sign out",
-            description: "Sign out of VIPTV on this TV.",
+            description: list ? "Sign out of VIPTV on this device." : "Sign out of VIPTV on this TV.",
             action: onSignOut,
+            group: "Account",
+            danger: true,
           },
         ]
       : page === "Playback preferences"
@@ -246,6 +297,8 @@ export function Settings({
               label: "Install addon",
               description: "Enter a Stremio manifest URL.",
               action: () => setEntry(true),
+              note: "Enter a Stremio manifest URL",
+              value: "",
             },
             ...addons.map((addon, index): Row => {
               const id = String(addon.id ?? ""),
@@ -287,7 +340,9 @@ export function Settings({
             }),
           ];
   useEffect(() => {
-    focusElement(rows[0].id);
+    // Touch layouts take no programmatic focus: it would only paint a
+    // remote focus state on the first row.
+    if (!list) focusElement(rows[0].id);
   }, [page]);
   const caption =
     page === "Playback preferences"
@@ -299,6 +354,89 @@ export function Settings({
     setEntry(false);
     setTimeout(() => focusElement("addon-add"), 0);
   };
+  const entryPortal =
+    entry &&
+    createPortal(
+      <TextEntry
+        title="Install addon manifest URL"
+        initialValue="https://"
+        onCancel={closeEntry}
+        onSubmit={async (text) => {
+          const url = new URL(text.trim());
+          if (url.protocol !== "https:")
+            throw new Error("Enter an HTTPS manifest URL.");
+          await api.addAddon(url.href);
+          setAddons(await api.addons());
+          closeEntry();
+        }}
+      />,
+      document.querySelector(".tv-screen") ?? document.body,
+    );
+  const back = () => {
+    if (onBack) onBack();
+    else openPage("Settings");
+  };
+  if (list) {
+    // Main page rows carry an explanatory note; sub-page rows show their
+    // current value, so the TV description panel has no phone counterpart.
+    // A main-page row without a group still renders, in a trailing untitled section.
+    const sections: (readonly [string, readonly Row[]])[] =
+      page === "Settings"
+        ? [
+            ...listGroups.map((group) => [group, rows.filter((row) => row.group === group)] as const),
+            ["", rows.filter((row) => !row.group)] as const,
+          ].filter(([, groupRows]) => groupRows.length)
+        : [["", rows]];
+    return (
+      <main className={`settings roku-settings list-settings ${page === "Settings" ? "" : "settings-subpage"}`}>
+        <div className="settings-header">
+          {page !== "Settings" && (
+            <button type="button" className="settings-back-btn" aria-label="Back to Settings" onClick={back}>
+              <ChevronLeft size={22} aria-hidden="true" />
+            </button>
+          )}
+          <h1>{page}</h1>
+        </div>
+        {caption && <p className="settings-caption">{caption}</p>}
+        <div className="settings-scroll">
+          {sections.map(([group, groupRows]) => (
+            <section className="settings-group" key={group || "ungrouped"} aria-label={group || undefined}>
+              {group && <h2>{group}</h2>}
+              <div className="settings-card">
+                {groupRows.map((row) => {
+                  const note = row.note ?? "";
+                  const value = row.value ?? (page === "Settings" ? undefined : row.description);
+                  return (
+                    <TvButton
+                      key={row.id}
+                      id={row.id}
+                      className={`settings-row ${row.danger ? "danger" : ""} ${row.info ? "info" : ""}`}
+                      aria-pressed={row.toggle}
+                      onActivate={row.action}
+                    >
+                      <span className="settings-row-text">
+                        <strong>{row.title ?? row.label}</strong>
+                        {note && <small>{note}</small>}
+                      </span>
+                      {row.toggle !== undefined ? (
+                        <span className="settings-switch" aria-hidden="true" />
+                      ) : (
+                        <>
+                          {value && <span className="settings-value">{value}</span>}
+                          {!row.info && !row.danger && <ChevronRight className="settings-chevron" size={18} aria-hidden="true" />}
+                        </>
+                      )}
+                    </TvButton>
+                  );
+                })}
+              </div>
+            </section>
+          ))}
+        </div>
+        {entryPortal}
+      </main>
+    );
+  }
   return (
     <main
       className={`settings roku-settings ${caption ? "has-caption" : ""}`}
@@ -327,10 +465,7 @@ export function Settings({
             id="settings-back-btn"
             className="settings-back-btn"
             aria-label="Back to Settings"
-            onActivate={() => {
-              if (onBack) onBack();
-              else openPage("Settings");
-            }}
+            onActivate={back}
           >
             <svg
               width="20"
@@ -366,23 +501,7 @@ export function Settings({
         <h2>{rows[selected]?.label}</h2>
         <p>{rows[selected]?.description}</p>
       </aside>
-      {entry &&
-        createPortal(
-          <TextEntry
-            title="Install addon manifest URL"
-            initialValue="https://"
-            onCancel={closeEntry}
-            onSubmit={async (text) => {
-              const url = new URL(text.trim());
-              if (url.protocol !== "https:")
-                throw new Error("Enter an HTTPS manifest URL.");
-              await api.addAddon(url.href);
-              setAddons(await api.addons());
-              closeEntry();
-            }}
-          />,
-          document.querySelector(".tv-screen") ?? document.body,
-        )}
+      {entryPortal}
     </main>
   );
 }

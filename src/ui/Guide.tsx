@@ -1,16 +1,127 @@
 import { createPortal } from "react-dom";
+import { Search } from "lucide-react";
 import { type Guide as GuideData, type GuideProgram, type MediaItem } from "../api";
 import { TvButton } from "./remote";
 import { TextEntry } from "./TextEntry";
+import { AutoLoad } from "./AutoLoad";
 import "./account-roku.css";
 import "./guide-responsive.css";
 import { DAY_SECONDS, GUIDE_CACHE_LIMIT, GUIDE_CELL_LIMIT, GUIDE_WIDTH, HOUR_SECONDS, PAGE_SIZE, PREFETCH_ROWS, RESPONSIVE_TIMELINE_WIDTH, RESPONSIVE_WINDOW_SECONDS, VISIBLE_ROWS, WINDOW_SECONDS, cellAt, filterOptions, firstVisibleRow, guideCells, halfHour } from "./guide-core";
 import { useGuideController, type GuideProps } from "./useGuideController";
 export { guideCells } from "./guide-core";
 
+/** The programme on air at `now` and the one after it. */
+function nowNext(programs: readonly GuideProgram[], now: number) {
+  const sorted = programs.filter((program) => program.end > now).sort((left, right) => left.start - right.start);
+  const current = sorted.find((program) => program.start <= now && program.end > now);
+  const next = sorted.find((program) => program.start >= (current?.end ?? now));
+  return { current, next };
+}
+
+/**
+ * Phone Live TV: a searchable channel list instead of the timeline grid.
+ * Each row shows the channel, what is on now with its progress, and what
+ * follows; tapping a row plays the channel and a long press opens the
+ * programme details. Category chips replace the category picker, and the
+ * list pages itself in as it nears its end.
+ */
+function PhoneLiveGuide({ props, guide }: { props: GuideProps; guide: ReturnType<typeof useGuideController> }) {
+  const { onPlay, onDetails } = props;
+  const {
+    activeFilter, appendChannels, appending, channels, failedLogos, filterItems,
+    formatTime, guides, loading, now, query, selectFilter, setFailedLogos, setOffset,
+    setQuery, total,
+  } = guide;
+  const chipLabel = (filter: (typeof filterItems)[number]) =>
+    filter.id === "all" ? "All" : filter.label.replace(/ · \d+$/, "");
+  return (
+    <main className="phone-live">
+      <header className="live-header">
+        <h1>Live TV</h1>
+        <label className="live-search">
+          <Search size={18} aria-hidden="true" />
+          <input
+            type="search"
+            aria-label="Search Live TV"
+            placeholder="Search channels or shows"
+            maxLength={128}
+            value={query}
+            onChange={(event) => { setOffset(0); setQuery(event.target.value); }}
+          />
+        </label>
+      </header>
+      <div className="chip-row live-filters" role="group" aria-label="Channel category">
+        {filterItems.map((filter) => (
+          <button
+            type="button"
+            key={filter.id}
+            className="chip"
+            aria-pressed={filter.id === activeFilter.id}
+            onClick={() => selectFilter(filter)}
+          >
+            {chipLabel(filter)}
+          </button>
+        ))}
+      </div>
+      <ul className="live-list" aria-label="Channels">
+        {channels.map((channel, index) => {
+          const guideData = guides[channel.id];
+          const { current, next } = nowNext(guideData?.programs ?? [], now);
+          const progress = current ? Math.min(1, Math.max(0, (now - current.start) / (current.end - current.start))) : undefined;
+          const logo = channel.poster && !failedLogos.has(channel.id) ? channel.poster : undefined;
+          return (
+            <li key={channel.id}>
+              <TvButton
+                id={`live-channel-${index}`}
+                className="live-row"
+                aria-label={current ? `${channel.name}, now: ${current.title}` : channel.name}
+                onActivate={() => onPlay(channel)}
+                onHold={() => onDetails(channel, current)}
+              >
+                <span className="live-logo">
+                  {logo ? (
+                    <img src={logo} alt="" loading="lazy" onError={() => setFailedLogos((previous) => new Set(previous).add(channel.id))} />
+                  ) : (
+                    <span>{channel.name.split(/\s+/).filter(Boolean).slice(0, 2).map((word) => word[0]).join("").toUpperCase()}</span>
+                  )}
+                </span>
+                <span className="live-text">
+                  <strong>{channel.name}</strong>
+                  <span className={`live-now ${current ? "" : "muted"}`}>
+                    {current ? current.title || "Untitled programme" : guideData ? "No guide information" : "\u00a0"}
+                  </span>
+                  {progress !== undefined && (
+                    <span className="live-progress" aria-hidden="true"><i style={{ width: `${progress * 100}%` }} /></span>
+                  )}
+                  {next && (
+                    <small>Next {formatTime(next.start)} · {next.title || "Untitled programme"}</small>
+                  )}
+                </span>
+              </TvButton>
+            </li>
+          );
+        })}
+        {loading && !channels.length &&
+          Array.from({ length: 8 }, (_, index) => <li key={`skeleton-${index}`} className="live-skeleton" aria-hidden="true" />)}
+      </ul>
+      {channels.length > 0 && channels.length < total && (
+        <AutoLoad onLoad={appendChannels} disabled={appending || loading} generation={channels.length} />
+      )}
+      {appending && <p className="load-status" role="status">Loading more channels…</p>}
+      {!loading && !channels.length && (
+        <p className="live-empty" role="status">
+          {query ? "No channels or programmes match your search." : "No channels here yet. Choose another category."}
+        </p>
+      )}
+    </main>
+  );
+}
+
 /* The Live TV channel guide: presentation only, over useGuideController. */
 export function Guide(props: GuideProps) {
-  const { api, onPlay, onError, onDetails, responsive = false } = props;
+  const { api, onPlay, onError, onDetails, responsive = false, phone = false } = props;
+  const guide = useGuideController(props);
+  if (responsive && phone) return <PhoneLiveGuide props={props} guide={guide} />;
   const {
     activateCell, appendChannels, appendCursor, appendPending,
     appendScope, appending, cache, categories,
@@ -28,7 +139,7 @@ export function Guide(props: GuideProps) {
     setSelectedProgram, setTotal, setWindowStart, total,
     visibleCells, visibleChannels, visibleFirst, windowStart,
     activeFilter, guideTimezone
-  } = useGuideController(props);
+  } = guide;
   if (responsive) return (
     <main className="responsive-epg">
       {/* One page row: the guide and its sidebar share the single remaining row below it. */}

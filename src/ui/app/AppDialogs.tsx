@@ -7,10 +7,11 @@ import { connectionSummary } from "../errors";
 import type { AppApi } from "./useTvApp";
 
 export function AppDialogs({ app }: { app: AppApi }) {
-  const { api, bootingHome, busy, casting, closeCast, connection, detail, editingProfile, entry, error, modal, player, preparing, profile, profiles, screen, setConnection, setEditingProfile, setEntry, setError, setModal, setProfiles, setStartupAttempt, sources, toast } = app;
+  const { api, bootingHome, busy, items, responsive, casting, closeCast, connection, detail, editingProfile, entry, error, modal, player, preparing, profile, profiles, screen, setConnection, setEditingProfile, setEntry, setError, setModal, setProfiles, setStartupAttempt, sources, toast } = app;
   return (
     <>
-        {(bootingHome || screen === "startup") && (
+        {/* The responsive shell renders HomeSkeleton instead. */}
+        {!responsive && (bootingHome || screen === "startup") && (
           <div className="startup-cover" role="status">
             <img
               src={`${import.meta.env.BASE_URL}assets/viptv-mark.png`}
@@ -24,7 +25,8 @@ export function AppDialogs({ app }: { app: AppApi }) {
             Preparing playback…
           </div>
         )}
-        {busy && !preparing && screen !== "sources" && (
+        {/* The responsive player shows its own buffering ring instead. */}
+        {busy && !preparing && screen !== "sources" && !(responsive && (screen === "player" || screen === "Search" || bootingHome || screen === "startup" || (screen === "Discover" && !items.length))) && (
           <div
             className={screen === "player" ? "playback-loading" : "loading"}
             role="status"

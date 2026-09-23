@@ -37,6 +37,7 @@ import { enrichDetail, mergeEpisodeProgress, initialEpisode } from "../detailPro
 import { readStoredEngine, storeEngine } from "../enginePreference";
 import { createAutoplayTestLogger, probeAutoplayTestMode, probeEngineOverride } from "../../testing/autoplay-harness";
 import { catalogFilters, catalogDefaults } from "../catalogFilters";
+import { browseRequest, firstHomeCatalog, homeRowsFor, type HomeRow } from "./homeRows";
 import { BrowserNavigation, readBrowserRoute, safeRestoredRoute, type BrowserRoute, type SettingsSubpage } from "../browserNavigation";
 import { seekPinReleased, type BufferedRange } from "../SeekBar";
 import type { Screen } from "../screens";
@@ -66,6 +67,43 @@ export function useAuth(app: DialogsApi) {
     setError("");
     setScreen(next);
   };
+  // Home shelf loading: a small queue (at most four catalogs in flight) for
+  // the current Home generation; a profile switch starts a new generation
+  // and drops late results from the previous one.
+  const homeGeneration = useRef(0);
+  const rowQueue = useRef<HomeRow[]>([]);
+  const rowsRequested = useRef(new Set<Catalog>());
+  const rowsInFlight = useRef(0);
+  const pumpHomeRows = () => {
+    while (rowsInFlight.current < 4 && rowQueue.current.length) {
+      const row = rowQueue.current.shift()!;
+      const generation = homeGeneration.current;
+      const request = browseRequest(row.catalog);
+      if (!request) continue;
+      rowsInFlight.current += 1;
+      void api
+        .discover(request)
+        .then((page) => page.items, () => [] as readonly MediaItem[])
+        .then((items) => {
+          rowsInFlight.current -= 1;
+          if (generation === homeGeneration.current) {
+            const fill = (rows: readonly HomeRow[]) =>
+              rows.map((candidate) => (candidate.catalog === row.catalog ? { ...candidate, items, loaded: true } : candidate));
+            setHomeRows(fill);
+            if (homeCache.current) homeCache.current = { ...homeCache.current, homeRows: fill(homeCache.current.homeRows) };
+          }
+          pumpHomeRows();
+        });
+    }
+  };
+  const requestHomeRows = (rows: readonly HomeRow[]) => {
+    for (const row of rows) {
+      if (row.loaded || rowsRequested.current.has(row.catalog)) continue;
+      rowsRequested.current.add(row.catalog);
+      rowQueue.current.push(row);
+    }
+    pumpHomeRows();
+  };
   const loadHome = async (id = profile) => {
     homeRequestScope.current?.abort();
     const scope = api.createScope();
@@ -89,53 +127,42 @@ export function useAuth(app: DialogsApi) {
       setFavorites(home.myList);
       setCatalogs(cats);
       setPrefs(preferences);
-      const first = cats.find((c) => c.type !== "live");
-      const page = first
-        ? await api.discover({
-            type: first.type,
-            catalog: first.id,
-            addonId: first.addonId,
-          }).catch((cause) => {
-            if (ticket === epoch.current) fail(cause);
-            return { items: [] };
-          })
-        : undefined;
-      if (ticket === epoch.current) setItems(page?.items ?? home.myList);
-      const [live, rows] = await Promise.all([
+      // Home shows as soon as its hero catalog and recent channels arrive;
+      // every other shelf renders pending and loads its own catalog
+      // (requestHomeRows), so the page never waits for its slowest addon.
+      const first = firstHomeCatalog(cats);
+      const firstRequest = first && browseRequest(first);
+      const [page, live] = await Promise.all([
+        firstRequest
+          ? api.discover(firstRequest, { signal: scope.signal }).catch((cause) => {
+              if (ticket === epoch.current) fail(cause);
+              return { items: [] };
+            })
+          : undefined,
         api
           .live({ view: "us", collection: "recent", limit: 20 })
           .catch(() => ({ channels: [] })),
-        Promise.all(
-          cats
-            .filter((c) => c.type !== "live" && c !== first)
-            .map(async (cat) => ({
-              name: cat.addonName ? `${cat.addonName} · ${cat.name}` : cat.name,
-              catalog: cat,
-              items: (
-                await api
-                  .discover({
-                    type: cat.type,
-                    catalog: cat.id,
-                    addonId: cat.addonId,
-                  })
-                  .catch(() => ({ items: [] }))
-              ).items,
-            })),
-        ),
       ]);
-      if (ticket === epoch.current) {
-        setRecentLive(live.channels);
-        setHomeRows(rows);
-        const homeItems = page?.items ?? home.myList;
-        homeCache.current = {
-          profile: id,
-          queue: home.continueWatching,
-          favorites: home.myList,
-          items: homeItems,
-          homeRows: rows,
-          recentLive: live.channels,
-        };
-      }
+      if (ticket !== epoch.current) return;
+      const homeItems = page?.items ?? home.myList;
+      const rows = homeRowsFor(cats, first, responsive, homeCache.current?.profile === id ? homeCache.current.homeRows : []);
+      homeGeneration.current += 1;
+      rowQueue.current = [];
+      rowsRequested.current = new Set();
+      setItems(homeItems);
+      setRecentLive(live.channels);
+      setHomeRows(rows);
+      homeCache.current = {
+        profile: id,
+        queue: home.continueWatching,
+        favorites: home.myList,
+        items: homeItems,
+        homeRows: rows,
+        recentLive: live.channels,
+      };
+      // The TV's spatial rows all load in the background; the responsive
+      // shelves load as they near the viewport.
+      if (!responsive) requestHomeRows(rows);
     } catch (e) {
       if (ticket === epoch.current) fail(e);
     } finally {
@@ -327,5 +354,5 @@ export function useAuth(app: DialogsApi) {
     };
   }, [api, startupAttempt]);
 
-  return { go, loadHome, authorize, chooseProfile, pairing };
+  return { go, loadHome, requestHomeRows, authorize, chooseProfile, pairing };
 }

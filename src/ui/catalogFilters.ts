@@ -34,6 +34,20 @@ export function discoverGroupLabel(group: DiscoverGroup): string {
   if (group === "anime") return "Anime";
   return "Other";
 }
+/** Same addon catalog, across refetched catalog lists. */
+export const sameCatalog = (left: Catalog, right: Catalog | undefined) =>
+  !!right && left.id === right.id && left.type === right.type && left.addonId === right.addonId;
+
+/**
+ * Home shelf heading for a catalog: its content type rather than the addon
+ * that serves it ("Series · AniList Trending", not "AIOMetadata · AniList
+ * Trending"). Discover keeps addon names where they disambiguate choices.
+ */
+export function catalogShelfName(catalog: Catalog): string {
+  const group = discoverTypeGroup(catalog.type);
+  const type = group === "other" ? formatContentType(catalog.type) : discoverGroupLabel(group);
+  return catalog.name ? `${type} · ${catalog.name}` : type;
+}
 export function catalogsForGroup(catalogs: readonly Catalog[], group: DiscoverGroup): readonly Catalog[] {
   return catalogs.filter((c) => c.type !== "live" && discoverTypeGroup(c.type) === group);
 }

@@ -12,6 +12,7 @@ import {
 } from "../local";
 import type { Catalog, MediaItem } from "../api";
 import { exitLocalMode } from "../local/mode";
+import { AutoLoad } from "./AutoLoad";
 import "./local.css";
 
 type Page =
@@ -160,6 +161,7 @@ function LocalBrowse({
   const [genre, setGenre] = useState("");
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("Loading catalog…");
+  const [appending, setAppending] = useState(false);
   const scope = useRef<AbortController>();
 
   useEffect(() => () => scope.current?.abort(), []);
@@ -235,24 +237,31 @@ function LocalBrowse({
           </figure>
         ))}
       </div>
+      {/* The end of the grid loads the next page; there is no Load more control. */}
       {nextSkip !== undefined && (
-        <button type="button" className="local-more" onClick={() => {
-          const controller = scope.current;
-          void discovery.discover({
-            type: catalog.type,
-            catalog: catalog.id,
-            addonId: catalog.addonId ?? undefined,
-            skip: nextSkip,
-            genre: genre || undefined,
-            search: search.trim() || undefined,
-          }).then(page => {
-            if (controller?.signal.aborted) return;
-            setItems(previous => [...previous, ...page.items]);
-            setNextSkip(page.hasMore ? (page.nextSkip ?? undefined) : undefined);
-          }).catch(() => undefined);
-        }}>
-          Load more
-        </button>
+        <AutoLoad
+          generation={items.length}
+          disabled={appending}
+          onLoad={() => {
+            const controller = scope.current;
+            setAppending(true);
+            void discovery.discover({
+              type: catalog.type,
+              catalog: catalog.id,
+              addonId: catalog.addonId ?? undefined,
+              skip: nextSkip,
+              genre: genre || undefined,
+              search: search.trim() || undefined,
+            }).then(page => {
+              if (controller?.signal.aborted) return;
+              setItems(previous => [...previous, ...page.items]);
+              // A page that adds nothing ends paging instead of refetching the same offset.
+              setNextSkip(page.hasMore && page.items.length ? (page.nextSkip ?? undefined) : undefined);
+            }).catch(() => {
+              if (!controller?.signal.aborted) setNextSkip(undefined);
+            }).finally(() => setAppending(false));
+          }}
+        />
       )}
     </section>
   );

@@ -8,6 +8,7 @@ import type { TvApi, MediaItem, MediaSource, Catalog, PlaybackSession, DevicePai
 import type { ErrorDetail } from "../errors";
 import { captureScroll, desktopInvoker, initialPrefs, type BrowserSnapshot, type Choice, type ScrollAnchor } from "./appShared";
 import type { Screen } from "../screens";
+import type { HomeRow } from "./homeRows";
 
 /**
  * The complete application state cell: every useState/useRef declaration the
@@ -57,15 +58,13 @@ export function useAppCore(api: TvApi, platform: PlayerPlatform, layout: "tv" | 
   const [compactHome, setCompactHome] = useState(false),
     [bootingHome, setBootingHome] = useState(false),
     [recentLive, setRecentLive] = useState<readonly MediaItem[]>([]),
-    [homeRows, setHomeRows] = useState<
-      { name: string; items: readonly MediaItem[]; catalog?: Catalog }[]
-    >([]);
+    [homeRows, setHomeRows] = useState<readonly HomeRow[]>([]);
   const homeCache = useRef<{
     profile: string;
     queue: readonly MediaItem[];
     favorites: readonly MediaItem[];
     items: readonly MediaItem[];
-    homeRows: readonly { name: string; items: readonly MediaItem[]; catalog?: Catalog }[];
+    homeRows: readonly HomeRow[];
     recentLive: readonly MediaItem[];
   }>();
   const heroMetadataCache = useRef(new Map<string, MediaItem>());
@@ -107,6 +106,9 @@ export function useAppCore(api: TvApi, platform: PlayerPlatform, layout: "tv" | 
     [nextSkip, setNextSkip] = useState<number>(),
     [libraryQueue, setLibraryQueue] = useState(false),
     [selected, setSelected] = useState<MediaItem>(),
+    // The catalog the selected title was opened from, when known: the detail
+    // page's genre links browse that catalog first.
+    [detailOrigin, setDetailOrigin] = useState<Catalog>(),
     [highlighted, setHighlighted] = useState<MediaItem>(),
     [episodes, setEpisodes] = useState<readonly MediaItem[]>([]),
     [sources, setSources] = useState<readonly MediaSource[]>([]),
@@ -116,7 +118,7 @@ export function useAppCore(api: TvApi, platform: PlayerPlatform, layout: "tv" | 
     [query, setQuery] = useState(""),
     [searchScope] = useState("all"),
     [searchRows, setSearchRows] = useState<
-      { name: string; items: readonly MediaItem[] }[]
+      { name: string; items: readonly MediaItem[]; catalog?: Catalog }[]
     >([]),
     [prefs, setPrefs] = useState(initialPrefs),
     [modal, setModal] = useState<{
@@ -263,7 +265,7 @@ export function useAppCore(api: TvApi, platform: PlayerPlatform, layout: "tv" | 
     items, setItems, queue, setQueue, favorites, setFavorites,
     catalogs, setCatalogs, catalog, setCatalog,
     nextSkip, setNextSkip, libraryQueue, setLibraryQueue,
-    selected, setSelected, highlighted, setHighlighted,
+    selected, setSelected, detailOrigin, setDetailOrigin, highlighted, setHighlighted,
     episodes, setEpisodes, sources, setSources,
     sourceQuality, setSourceQuality, sourceProvider, setSourceProvider,
     season, setSeason, query, setQuery, searchScope, searchRows, setSearchRows,

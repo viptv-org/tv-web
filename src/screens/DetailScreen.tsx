@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from "react";
-import { Check, ChevronDown, Plus } from "lucide-react";
+import { useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from "react";
+import { Check, ChevronDown, Ellipsis, Plus } from "lucide-react";
 import { normalizeCore } from "../core";
 import { presentation as itemPresentation } from "../core/presentations";
 import { formatPlaybackTime } from "../ui/SeekBar";
@@ -7,7 +7,8 @@ import { CardArtwork, CardThumbnail, ReadyImage, artworkUrl } from "../ui/RokuAr
 import { ResponsiveTitle } from "../ui/ResponsiveTitle";
 import { RokuText } from "../ui/RokuText";
 import { TvButton } from "../ui/remote";
-import type { MediaItem, MediaPresentation, MediaSource } from "../api";
+import type { Catalog, MediaItem, MediaPresentation, MediaSource } from "../api";
+import { castMembers, directorNames, genreTarget, type GenreTarget } from "../ui/detailLinks";
 
 /**
  * A modal request the screens can raise. Structurally compatible with the
@@ -99,6 +100,9 @@ export function DetailScreen({
   manage,
   toggle,
   setModal,
+  catalogs = [],
+  origin,
+  onGenre,
 }: {
   responsive: boolean;
   selected: MediaItem;
@@ -112,7 +116,20 @@ export function DetailScreen({
   manage: (item: MediaItem) => void;
   toggle: (item: MediaItem) => unknown;
   setModal: Dispatch<SetStateAction<ModalRequest | undefined>>;
+  /** Catalogs the genre links may browse. */
+  catalogs?: readonly Catalog[];
+  /** The catalog the title was opened from, preferred for genre links. */
+  origin?: Catalog;
+  onGenre?: (target: GenreTarget) => void;
 }) {
+  // Genre targets cost a catalog-filter projection per catalog: resolve them
+  // once per title, not per render.
+  const genres = useMemo(
+    () => (responsive ? selected.genres.map((genre) => ({ genre, target: genreTarget(selected, genre, catalogs, origin) })) : []),
+    [responsive, selected, catalogs, origin],
+  );
+  const cast = useMemo(() => (responsive ? castMembers(selected) : []), [responsive, selected]);
+  const directors = responsive ? directorNames(selected) : "";
   return (
     <main
       className={`detail ${selected.type === "series" && !selected.episode ? "series" : "movie"}`}
@@ -127,10 +144,32 @@ export function DetailScreen({
       <div className="detail-copy">
         {responsive ? <ResponsiveTitle title={selected.name} logo={presentation?.titleLogo} /> : <h1><RokuText>{selected.name}</RokuText></h1>}
         <p className="detail-facts">
-          {[selected.year, selected.runtime, ...selected.genres]
+          {(responsive
+            ? [selected.year, selected.runtime, selected.imdbRating ? `IMDb ${selected.imdbRating}` : ""]
+            : [selected.year, selected.runtime, ...selected.genres])
             .filter(Boolean)
             .join(" · ")}
         </p>
+        {genres.length > 0 && (
+          <div className="detail-genres" role="list" aria-label="Genres">
+            {genres.map(({ genre, target }) =>
+              target && onGenre ? (
+                <button
+                  type="button"
+                  role="listitem"
+                  key={genre}
+                  className="genre-chip"
+                  title={`Browse ${genre} in ${target.catalog.name}`}
+                  onClick={() => onGenre(target)}
+                >
+                  {genre}
+                </button>
+              ) : (
+                <span role="listitem" key={genre} className="genre-chip is-static">{genre}</span>
+              ),
+            )}
+          </div>
+        )}
         <p className="detail-synopsis">{selected.description}</p>
         <div className="actions">
           <TvButton
@@ -231,22 +270,43 @@ export function DetailScreen({
               }
             }}
           >
-            {responsive ? "•••" : "More info"}
+            {responsive ? <Ellipsis size={20} aria-hidden="true" /> : "More info"}
           </TvButton>
         </div>
-        <p className="detail-credits">
-          {[
-            typeof selected.raw.director === "string"
-              ? `Director: ${selected.raw.director}`
-              : "",
-            Array.isArray(selected.raw.cast)
-              ? `Cast: ${selected.raw.cast.filter((name) => typeof name === "string").join(", ")}`
-              : "",
-          ]
-            .filter(Boolean)
-            .join("\n")}
-        </p>
+        {responsive ? (
+          directors && <p className="detail-credits">Director: {directors}</p>
+        ) : (
+          <p className="detail-credits">
+            {[
+              typeof selected.raw.director === "string"
+                ? `Director: ${selected.raw.director}`
+                : "",
+              Array.isArray(selected.raw.cast)
+                ? `Cast: ${selected.raw.cast.filter((name) => typeof name === "string").join(", ")}`
+                : "",
+            ]
+              .filter(Boolean)
+              .join("\n")}
+          </p>
+        )}
       </div>
+      {cast.length > 0 && (
+        <section className="detail-cast" aria-label="Cast">
+          <h2 className="episode-heading">Cast</h2>
+          <div className="cast-row" data-scroll-id="cast">
+            {cast.map((member, index) => (
+              <div className="cast-member" key={`${member.name}-${index}`}>
+                <span className="cast-photo" aria-hidden="true">
+                  <span>{member.name.split(/\s+/).map((part) => part[0]).slice(0, 2).join("").toUpperCase()}</span>
+                  {member.photo && <ReadyImage src={artworkUrl(member.photo, 160, 160)} alt="" loading="lazy" />}
+                </span>
+                <strong>{member.name}</strong>
+                {member.character && <small>{member.character}</small>}
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
       {episodes.length > 0 && (
         <>
           <div className="episodes-header">

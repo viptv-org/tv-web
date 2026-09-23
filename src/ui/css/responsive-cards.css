@@ -1,0 +1,43 @@
+/* Poster (2:3) cards for the responsive surfaces set to posters in
+   cardShapes.ts. Landscape cards keep their rules in responsive-p2.css and
+   responsive-phone.css; every selector here names the poster classes, so it
+   outranks those rules without touching a landscape card. */
+.tv-screen.responsive-app { --poster-width: 168px; }
+
+/* The skipped (off-screen) size must equal the rendered one: 2:3 art plus
+   the 30px title and 24px context rows below it. A mismatch changes the
+   shelf height as cards scroll in, shifting restored page offsets. */
+.responsive-app .responsive-card.poster {
+  flex: 0 0 var(--poster-width);
+  width: var(--poster-width);
+  contain-intrinsic-size: auto var(--poster-width) auto calc(var(--poster-width) * 1.5 + 54px);
+}
+.responsive-app .media-card.poster-card { width: var(--poster-width); }
+.responsive-app .media-card.poster-card > img,
+.responsive-app .media-card.poster-card > .art-fallback,
+.responsive-app .media-card.poster-card::after {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 2 / 3;
+}
+.responsive-app .media-card.poster-card > strong { height: 22px; font-size: 17px; line-height: 22px; }
+.responsive-app .media-card.poster-card > small { height: 20px; font-size: 14px; line-height: 20px; }
+
+/* Desktop and tablet browse grids fill the frame with poster columns. */
+@media (min-width: 600px) {
+  .responsive-app .result-grid > .cards.poster-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 28px 20px; }
+  .responsive-app .result-grid > .cards .media-card.poster-card > img,
+  .responsive-app .result-grid > .cards .media-card.poster-card > .art-fallback,
+  .responsive-app .result-grid > .cards .media-card.poster-card::after { aspect-ratio: 2 / 3; }
+}
+
+@media (max-width: 599px) {
+  .tv-screen.responsive-app { --poster-width: 120px; }
+  /* Phone posters carry the same fixed 40px caption as landscape cards. */
+  .responsive-app .responsive-card.poster { contain-intrinsic-size: auto var(--poster-width) auto calc(var(--poster-width) * 1.5 + 40px); }
+  .responsive-app .result-grid > .cards.poster-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px 10px; }
+  .responsive-app .poster-card .card-title,
+  .responsive-app .result-grid > .cards.poster-grid .card-title { font-size: 13px; line-height: 18px; }
+  .responsive-app .poster-card .card-meta { font-size: 11px; }
+  .responsive-app .media-card.poster-card > progress { left: 8px !important; width: calc(100% - 16px) !important; margin-bottom: 8px !important; }
+}

@@ -29,8 +29,5 @@
 .responsive-app:fullscreen { width: 100vw; height: 100dvh; background: #000; }
 @media (max-width: 599px) {
   .responsive-app .responsive-auth-card { padding: 28px 24px; }
-  .responsive-app .responsive-player-tools { flex: 1 1 100%; justify-content: end; gap: 6px; }
-  .responsive-app .player-volume { margin-right: auto; }
-  .responsive-app .player-volume input { width: 100px; }
 }
 

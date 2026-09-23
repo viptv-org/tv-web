@@ -1,5 +1,5 @@
 import { type Dispatch, type MutableRefObject, type SetStateAction } from "react";
-import { AudioLines, Info, Maximize, Minimize, Volume2, VolumeX, X } from "lucide-react";
+import { AudioLines, Captions, ChevronLeft, Info, Maximize, Minimize, Pause, Play, RotateCcw, RotateCw, SkipForward, Volume2, VolumeX, X } from "lucide-react";
 import { AudioSelectorPopup, type TrackChoice } from "../components/player/AudioSelectorPopup";
 import { usePlayerFullscreen } from "../hooks/usePlayerFullscreen";
 import { RokuText } from "../ui/RokuText";
@@ -15,36 +15,7 @@ import type { MediaItem } from "../api";
  * from the given snapshot and handlers, with the DOM contract (class names,
  * focus ids, roles) frozen.
  */
-export function PlayerScreen({
-  responsive,
-  selected,
-  busy,
-  snapshot,
-  playerNotice,
-  seek,
-  setSeek,
-  setOverlay,
-  commitSeek,
-  togglePlayback,
-  toggleLiveMute,
-  fullscreenControl,
-  player,
-  fail,
-  nextEpisode,
-  stop,
-  trackChoices,
-  activeTrackPopup,
-  setActiveTrackPopup,
-  playerInfoOpen,
-  setPlayerInfoOpen,
-  audioTrackList,
-  textTrackList,
-  subtitleOffOption,
-  playerInfoLines,
-  readBufferedRanges,
-  lastControlActivity,
-  setControlActivity,
-}: {
+type PlayerScreenProps = {
   responsive: boolean;
   selected: MediaItem | undefined;
   busy: boolean;
@@ -73,7 +44,231 @@ export function PlayerScreen({
   readBufferedRanges: () => BufferedRange[] | null;
   lastControlActivity: MutableRefObject<number>;
   setControlActivity: Dispatch<SetStateAction<number>>;
-}) {
+};
+
+const INTERACTIVE = "button, input, .seekbar, .audio-selector-popup";
+
+/**
+ * The pointer/touch player overlay for web and desktop: Back and the title
+ * across the top; the timeline and one row of same-sized icon controls at
+ * the bottom (transport on the left; tracks, volume, info and fullscreen on
+ * the right). A tap on the picture hides the controls and a tap on the bare
+ * video brings them back (App's surfaceClick); a double-click toggles
+ * fullscreen. Play/pause stays on its button and the Space key.
+ */
+function ResponsivePlayer({
+  selected,
+  snapshot,
+  playerNotice,
+  seek,
+  setSeek,
+  setOverlay,
+  commitSeek,
+  togglePlayback,
+  fullscreenControl,
+  player,
+  fail,
+  nextEpisode,
+  stop,
+  activeTrackPopup,
+  setActiveTrackPopup,
+  playerInfoOpen,
+  setPlayerInfoOpen,
+  audioTrackList,
+  textTrackList,
+  subtitleOffOption,
+  playerInfoLines,
+  readBufferedRanges,
+  lastControlActivity,
+  setControlActivity,
+}: PlayerScreenProps) {
+  const live = selected?.type === "live";
+  const paused = snapshot?.state === "paused";
+  const position = snapshot?.time.positionSeconds ?? 0;
+  const duration = snapshot?.time.durationSeconds ?? 0;
+  const context = selected?.season
+    ? `S${selected.season} · E${selected.episode ?? 1}${selected.episodeTitle ? ` · ${selected.episodeTitle}` : ""}`
+    : live
+      ? "Live TV"
+      : "";
+  const volume = snapshot?.volume;
+  return (
+    <div
+      className={`player-overlay responsive-player ${live ? "live-overlay" : ""}`}
+      onClick={(event) => {
+        if ((event.target as HTMLElement).closest(INTERACTIVE)) return;
+        if (activeTrackPopup || playerInfoOpen) {
+          setActiveTrackPopup(null);
+          setPlayerInfoOpen(false);
+          return;
+        }
+        setOverlay(false);
+      }}
+      onDoubleClick={(event) => {
+        if (!(event.target as HTMLElement).closest(INTERACTIVE)) void fullscreenControl.toggle();
+      }}
+    >
+      <div className="rp-top">
+        <TvButton id="player-back" className="rp-button" aria-label="Back" title="Back" onActivate={() => void stop()}>
+          <ChevronLeft size={28} aria-hidden="true" />
+        </TvButton>
+        <div className="rp-title">
+          <h1>{selected?.name ?? ""}</h1>
+          {context && <p>{context}</p>}
+        </div>
+      </div>
+      {playerNotice && (
+        <div className="player-notice" role="status">
+          {playerNotice.message}
+        </div>
+      )}
+      <div className="rp-bottom">
+        {!live && (
+          <div className="rp-timeline">
+            <SeekBar
+              id="timeline"
+              position={position}
+              duration={duration}
+              seekable={snapshot?.time.seekable}
+              preview={seek}
+              onPreview={setSeek}
+              onSeek={(seconds) => void commitSeek(seconds)}
+              onActivate={togglePlayback}
+              onActivity={() => {
+                if (Date.now() - lastControlActivity.current < 1000) return;
+                lastControlActivity.current = Date.now();
+                setControlActivity((value) => value + 1);
+              }}
+              getBufferedRanges={readBufferedRanges}
+              remoteKeys={false}
+            />
+            <p className="player-time">
+              <span>{formatPlaybackTime(seek ?? position)}</span>
+              <span>{formatPlaybackTime(duration)}</span>
+            </p>
+          </div>
+        )}
+        <div className="controls rp-controls">
+          <div className="rp-group">
+            {!live && (
+              <>
+                <TvButton id="rewind" className="rp-button" aria-label="Rewind 10 seconds" title="Back 10 seconds" onActivate={() => void commitSeek(Math.max(0, position - 10))}>
+                  <span className="rp-skip" aria-hidden="true"><RotateCcw size={26} /><b>10</b></span>
+                </TvButton>
+                <TvButton id="pause" className="rp-button rp-play" aria-label={paused ? "Play" : "Pause"} title={paused ? "Play" : "Pause"} onActivate={() => void (paused ? player.current?.play() : player.current?.pause())}>
+                  {paused ? <Play size={28} fill="currentColor" aria-hidden="true" /> : <Pause size={28} fill="currentColor" aria-hidden="true" />}
+                </TvButton>
+                <TvButton id="forward" className="rp-button" aria-label="Forward 30 seconds" title="Forward 30 seconds" onActivate={() => void commitSeek(Math.min(duration || Infinity, position + 30))}>
+                  <span className="rp-skip" aria-hidden="true"><RotateCw size={26} /><b>30</b></span>
+                </TvButton>
+                {selected?.type === "series" && (
+                  <TvButton id="next" className="rp-button" aria-label="Next episode" title="Next episode" onActivate={() => void nextEpisode()}>
+                    <SkipForward size={24} aria-hidden="true" />
+                  </TvButton>
+                )}
+              </>
+            )}
+          </div>
+          <div className="rp-group rp-end">
+            <div className="track-buttons">
+              <TvButton id="audio" className="rp-button" aria-label="Audio" title="Audio" aria-expanded={activeTrackPopup === "audio"} onActivate={() => { setActiveTrackPopup(activeTrackPopup === "audio" ? null : "audio"); setPlayerInfoOpen(false); }}>
+                <AudioLines size={24} aria-hidden="true" />
+              </TvButton>
+              <TvButton id="subtitles" className="rp-button" aria-label="Subtitles" title="Subtitles" aria-expanded={activeTrackPopup === "text"} onActivate={() => { setActiveTrackPopup(activeTrackPopup === "text" ? null : "text"); setPlayerInfoOpen(false); }}>
+                <Captions size={24} aria-hidden="true" />
+              </TvButton>
+              {activeTrackPopup && (
+                <AudioSelectorPopup
+                  title={activeTrackPopup === "audio" ? "Audio Tracks" : "Subtitles"}
+                  tracks={activeTrackPopup === "audio" ? audioTrackList : textTrackList}
+                  offOption={activeTrackPopup === "text" ? subtitleOffOption : undefined}
+                  onClose={() => setActiveTrackPopup(null)}
+                />
+              )}
+            </div>
+            {player.current?.capabilities.canSetVolume && volume ? (
+              <div className="player-volume">
+                <button
+                  type="button"
+                  className="rp-button"
+                  aria-label={volume.muted ? "Unmute" : "Mute"}
+                  title={volume.muted ? "Unmute" : "Mute"}
+                  onClick={() => void player.current?.setMuted?.(!volume.muted).catch(fail)}
+                >
+                  {volume.muted ? <VolumeX size={24} aria-hidden="true" /> : <Volume2 size={24} aria-hidden="true" />}
+                </button>
+                <input
+                  type="range"
+                  aria-label="Volume"
+                  min="0"
+                  max="1"
+                  step="0.01"
+                  value={volume.muted ? 0 : volume.level}
+                  onChange={(event) => {
+                    setOverlay(true);
+                    void player.current?.setVolume?.(Number(event.target.value)).catch(fail);
+                  }}
+                />
+              </div>
+            ) : (
+              <span className="system-volume">Use device volume buttons</span>
+            )}
+            <div className="player-info-anchor">
+              <button type="button" className="rp-button" aria-label="Playback info" title="Playback info" aria-expanded={playerInfoOpen} onClick={() => { setPlayerInfoOpen((open) => !open); setActiveTrackPopup(null); }}>
+                <Info size={24} aria-hidden="true" />
+              </button>
+              {playerInfoOpen && (
+                <div className="audio-selector-popup player-info-popup" role="dialog" aria-label="Playback info">
+                  <div className="audio-selector-header">
+                    <span className="audio-selector-title">Playback info</span>
+                    <button type="button" className="audio-selector-close" aria-label="Close" onClick={() => setPlayerInfoOpen(false)} tabIndex={-1}><X size={16} /></button>
+                  </div>
+                  <div className="player-info-body">
+                    {playerInfoLines.map((line) => <p key={line}>{line}</p>)}
+                  </div>
+                </div>
+              )}
+            </div>
+            <TvButton
+              id="fullscreen"
+              className="rp-button"
+              aria-label={fullscreenControl.fullscreen ? "Exit fullscreen" : "Fullscreen"}
+              title={fullscreenControl.fullscreen ? "Exit fullscreen" : "Fullscreen"}
+              onActivate={() => void fullscreenControl.toggle()}
+            >
+              {fullscreenControl.fullscreen ? <Minimize size={24} aria-hidden="true" /> : <Maximize size={24} aria-hidden="true" />}
+            </TvButton>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function PlayerScreen(props: PlayerScreenProps) {
+  if (props.responsive) return <ResponsivePlayer {...props} />;
+  return <TvPlayer {...props} />;
+}
+
+/** The remote-driven TV overlay, unchanged by the pointer/touch overlay above. */
+function TvPlayer({
+  selected,
+  busy,
+  snapshot,
+  playerNotice,
+  seek,
+  setSeek,
+  commitSeek,
+  togglePlayback,
+  toggleLiveMute,
+  player,
+  nextEpisode,
+  stop,
+  trackChoices,
+  readBufferedRanges,
+  lastControlActivity,
+  setControlActivity,
+}: PlayerScreenProps) {
   return (
     <div
       className={`player-overlay ${selected?.type === "live" ? "live-overlay" : ""}`}
@@ -94,20 +289,7 @@ export function PlayerScreen({
       >
         <span>{selected?.name}</span>
       </div>
-      {responsive && (
-        <div className="player-top-right">
-          <TvButton
-            id="player-top-fullscreen"
-            className="player-top-btn"
-            aria-label={fullscreenControl.fullscreen ? "Exit fullscreen" : "Fullscreen"}
-            title={fullscreenControl.fullscreen ? "Exit fullscreen" : "Fullscreen"}
-            onActivate={() => void fullscreenControl.toggle()}
-          >
-            {fullscreenControl.fullscreen ? <Minimize size={18} /> : <Maximize size={18} />}
-          </TvButton>
-        </div>
-      )}
-      {!responsive && (
+      {
         <span className="player-status">
           {busy
             ? "LOADING"
@@ -117,7 +299,7 @@ export function PlayerScreen({
                 ? "PAUSED"
                 : "PLAYING"}
         </span>
-      )}
+      }
       <span className="player-eyebrow">
         {selected?.type === "live" ? "LIVE NOW" : "NOW PLAYING"}
       </span>
@@ -155,7 +337,7 @@ export function PlayerScreen({
               getBufferedRanges={readBufferedRanges}
               // The app's remote key layer owns arrows/OK while this
               // bar is focused; only the pointer acts directly here.
-              remoteKeys={!responsive}
+              remoteKeys
             />
             <p className="player-time">
               <span>
@@ -241,100 +423,22 @@ export function PlayerScreen({
           <TvButton
             id="audio"
             aria-label="Audio"
-            onActivate={() => {
-              if (responsive) {
-                setActiveTrackPopup(activeTrackPopup === "audio" ? null : "audio");
-                setPlayerInfoOpen(false);
-              } else {
-                trackChoices("audio");
-              }
-            }}
+            onActivate={() => trackChoices("audio")}
           >
             <AudioLines size={26} color="#f5f5f5" aria-hidden="true" />
           </TvButton>
           <TvButton
             id="subtitles"
             aria-label="Subtitles"
-            onActivate={() => {
-              if (responsive) {
-                setActiveTrackPopup(activeTrackPopup === "text" ? null : "text");
-                setPlayerInfoOpen(false);
-              } else {
-                trackChoices("text");
-              }
-            }}
+            onActivate={() => trackChoices("text")}
           >
             <img
               src={`${import.meta.env.BASE_URL}assets/ui-nav-player-captions.png`}
               alt=""
             />
           </TvButton>
-          {responsive && activeTrackPopup && (
-            <AudioSelectorPopup
-              title={activeTrackPopup === "audio" ? "Audio Tracks" : "Subtitles"}
-              tracks={activeTrackPopup === "audio" ? audioTrackList : textTrackList}
-              offOption={activeTrackPopup === "text" ? subtitleOffOption : undefined}
-              onClose={() => setActiveTrackPopup(null)}
-            />
-          )}
           </div>
-          {responsive && <div className="responsive-player-tools">
-            {player.current?.capabilities.canSetVolume && snapshot?.volume ? (
-              <div
-                className="player-volume"
-                onPointerDown={(e) => e.stopPropagation()}
-                onPointerUp={(e) => e.stopPropagation()}
-                onMouseDown={(e) => e.stopPropagation()}
-                onMouseUp={(e) => e.stopPropagation()}
-                onClick={(e) => e.stopPropagation()}
-              >
-                <button
-                  type="button"
-                  aria-label={snapshot.volume.muted ? "Unmute" : "Mute"}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    void player.current?.setMuted?.(!snapshot.volume?.muted).catch(fail);
-                  }}
-                >
-                  {snapshot.volume.muted ? <VolumeX size={22} /> : <Volume2 size={22} />}
-                </button>
-                <input
-                  type="range"
-                  aria-label="Volume"
-                  min="0"
-                  max="1"
-                  step="0.01"
-                  value={snapshot.volume.muted ? 0 : snapshot.volume.level}
-                  onPointerDown={(e) => e.stopPropagation()}
-                  onPointerUp={(e) => e.stopPropagation()}
-                  onMouseDown={(e) => e.stopPropagation()}
-                  onMouseUp={(e) => e.stopPropagation()}
-                  onClick={(e) => e.stopPropagation()}
-                  onChange={(event) => {
-                    setOverlay(true);
-                    void player.current?.setVolume?.(Number(event.target.value)).catch(fail);
-                  }}
-                />
-              </div>
-            ) : (
-              <span className="system-volume">Use device volume buttons</span>
-            )}
-            <div className="player-info-anchor">
-              <button type="button" aria-label="Playback info" title="Playback info" onClick={() => { setPlayerInfoOpen((open) => !open); setActiveTrackPopup(null); }}><Info size={22} /></button>
-              {playerInfoOpen && (
-                <div className="audio-selector-popup player-info-popup" role="dialog" aria-label="Playback info">
-                  <div className="audio-selector-header">
-                    <span className="audio-selector-title">Playback info</span>
-                    <button type="button" className="audio-selector-close" aria-label="Close" onClick={() => setPlayerInfoOpen(false)} tabIndex={-1}><X size={16} /></button>
-                  </div>
-                  <div className="player-info-body">
-                    {playerInfoLines.map((line) => <p key={line}>{line}</p>)}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>}
-          {!responsive && <TvButton
+          <TvButton
             id="exit"
             aria-label="Exit"
             onActivate={() => void stop()}
@@ -343,7 +447,7 @@ export function PlayerScreen({
               src={`${import.meta.env.BASE_URL}assets/ui-nav-player-exit.png`}
               alt=""
             />
-          </TvButton>}
+          </TvButton>
         </div>
       </div>
     </div>

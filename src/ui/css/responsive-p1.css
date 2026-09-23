@@ -130,6 +130,16 @@ body:has(.responsive-app) { background: #101112; }
   height: 100%;
   overflow: hidden !important;
 }
+/* Only the frameless Tauri window has a titlebar; the browser layout starts
+   at the top edge instead of leaving the titlebar's 30px strip empty. */
+.browser-shell .tv-screen.responsive-app,
+.browser-shell .tv-screen.responsive-app.playing:not(.is-fullscreen) {
+  top: 0;
+  height: 100%;
+}
+@media (min-width: 600px) {
+  .browser-shell .responsive-app .desktop-sidebar { top: 0; height: 100%; }
+}
 .tv-screen.responsive-app.screen-signin,
 .tv-screen.responsive-app:has(.responsive-auth) {
   top: 0;
@@ -137,8 +147,21 @@ body:has(.responsive-app) { background: #101112; }
 }
 .responsive-app.oled { --canvas: #000; }
 .responsive-app *, .responsive-app *::before, .responsive-app *::after { box-sizing: border-box; }
+/* Touch: no browser tap-highlight flash, and a held button, card or image
+   (hold is a real action here: sources, queue menus, profile editing)
+   never selects text, drags the bitmap or opens the image callout. */
+.responsive-app, .responsive-app * { -webkit-tap-highlight-color: transparent; }
+.responsive-app :is(button, [role="button"], img, .media-card, .episode) {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+.responsive-app img { -webkit-user-drag: none; }
 .responsive-app button { min-height: 48px; transition: background .15s ease, color .15s ease; }
-.responsive-app button:hover:not(:disabled) { background-color: #303234; }
+/* Hover is a pointer affordance: on touch it would stick after a tap. */
+@media (hover: hover) and (pointer: fine) {
+  .responsive-app button:hover:not(:disabled) { background-color: #303234; }
+}
 .responsive-app button:focus:not(:focus-visible) { background-color: #202224; color: #f5f5f5; }
 .responsive-app button:focus-visible { outline: 2px solid #f5f5f5; outline-offset: 3px; background: #f5f5f5; color: #101112; }
 .responsive-app .roku-text > span { animation: none !important; }
@@ -234,33 +257,20 @@ header.desktop-titlebar.responsive-toolbar {
   -webkit-app-region: no-drag !important;
   pointer-events: auto !important;
 }
-.titlebar-search-btn {
+/* The header search field is centred on the window, independent of the side
+   groups' widths. No transform: it would trap the field's fixed popunder
+   inside the header's overflow clip. */
+.titlebar-center {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  width: max-content;
+  margin: 0 auto;
   display: flex;
   align-items: center;
-  gap: 6px;
-  width: 190px;
-  min-width: 160px;
-  height: 24px;
-  min-height: 24px;
-  max-height: 24px;
-  padding: 0 9px;
-  border-radius: 12px;
-  background: #1c1e20;
-  border: 1px solid #2a2d30;
-  color: #8c9094;
-  font-size: 11px;
-  cursor: pointer;
-  box-sizing: border-box;
-  transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
-}
-.titlebar-search-btn:hover {
-  background: #24272a;
-  border-color: #383b3e;
-  color: #f5f5f5;
-}
-.titlebar-search-btn:focus-visible {
-  outline: 2px solid #f5f5f5;
-  outline-offset: 2px;
+  -webkit-app-region: no-drag !important;
 }
 
 /* 1x1 circular buttons on the top bar: exact same height as search bar (24px), no background until hovered */
@@ -347,9 +357,7 @@ header.desktop-titlebar.responsive-toolbar {
 .desktop-titlebar .titlebar-control-btn:focus,
 .desktop-titlebar .titlebar-control-btn:focus-visible,
 .desktop-titlebar .titlebar-avatar-btn:focus,
-.desktop-titlebar .titlebar-avatar-btn:focus-visible,
-.desktop-titlebar .titlebar-search-btn:focus,
-.desktop-titlebar .titlebar-search-btn:focus-visible {
+.desktop-titlebar .titlebar-avatar-btn:focus-visible {
   outline: none !important;
   box-shadow: none !important;
   background: transparent !important;
@@ -366,18 +374,11 @@ header.desktop-titlebar.responsive-toolbar {
   color: #f5f5f5 !important;
 }
 
-.desktop-titlebar .titlebar-search-btn:hover {
-  background: #24272a !important;
-  border-color: #383b3e !important;
-  color: #f5f5f5 !important;
-}
-
 .desktop-titlebar button:active,
 .desktop-titlebar .titlebar-btn:active,
 .desktop-titlebar .titlebar-icon-btn:active,
 .desktop-titlebar .titlebar-control-btn:active,
-.desktop-titlebar .titlebar-avatar-btn:active,
-.desktop-titlebar .titlebar-search-btn:active {
+.desktop-titlebar .titlebar-avatar-btn:active {
   background-color: #2c2f32 !important;
   border-color: #404347 !important;
   color: #ffffff !important;

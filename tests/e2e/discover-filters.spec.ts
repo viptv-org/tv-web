@@ -68,15 +68,21 @@ test('Discover applies declared defaults and resets pagination for genre, input 
   await expect(page.getByRole('button', { name: 'Genre: Any' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Country: Any' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Search catalog: Any' })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Load more' })).toBeVisible();
-  let last = discovers.at(-1)!;
-  expect(last.searchParams.get('skip')).toBe('0');
-  expect(JSON.parse(last.searchParams.get('extras') ?? '{}')).toEqual({ year: '2024' });
+  // There is no Load more control: the short first page leaves the end of the
+  // grid in view, so the next page loads on its own.
+  await expect(page.getByRole('button', { name: 'Load more' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Calendar 20' })).toBeVisible();
+  // Home also asks for this catalog (with its required default); Discover's
+  // own pages are the ones that page with skip.
+  const browse = discovers.filter(url => url.searchParams.has('skip'));
+  expect(browse.map(url => url.searchParams.get('skip'))).toEqual(['0', '20']);
+  for (const url of browse) expect(JSON.parse(url.searchParams.get('extras') ?? '{}')).toEqual({ year: '2024' });
+  let last: URL;
 
   await page.getByRole('button', { name: 'Genre: Any' }).click();
   await page.getByRole('button', { name: 'Drama' }).click();
   await expect(page.getByRole('button', { name: 'Genre: Drama' })).toBeVisible();
-  last = discovers.at(-1)!;
+  last = discovers.find(url => url.searchParams.get('genre') === 'Drama')!;
   expect(last.searchParams.get('skip')).toBe('0');
   expect(last.searchParams.get('genre')).toBe('Drama');
   expect(JSON.parse(last.searchParams.get('extras') ?? '{}')).toEqual({ year: '2024' });
@@ -85,19 +91,20 @@ test('Discover applies declared defaults and resets pagination for genre, input 
   await page.getByRole('textbox', { name: 'Country' }).fill('US');
   await page.getByRole('button', { name: 'Done' }).click();
   await expect(page.getByRole('button', { name: 'Country: US' })).toBeVisible();
-  last = discovers.at(-1)!;
+  const country = () => discovers.filter(url => JSON.parse(url.searchParams.get('extras') ?? '{}').country === 'US');
+  last = country()[0];
   expect(last.searchParams.get('skip')).toBe('0');
   expect(JSON.parse(last.searchParams.get('extras') ?? '{}')).toEqual({ year: '2024', country: 'US' });
 
-  await page.getByRole('button', { name: 'Load more' }).click();
+  // Each filter change restarts at the first page and pages on automatically.
   await expect(page.getByRole('button', { name: 'Calendar 20' })).toBeVisible();
-  expect(discovers.at(-1)!.searchParams.get('skip')).toBe('20');
+  await expect.poll(() => country().map(url => url.searchParams.get('skip'))).toEqual(['0', '20']);
 
   await page.getByRole('button', { name: 'Search catalog: Any' }).click();
   await page.getByRole('textbox', { name: 'Search catalog' }).fill('moon');
   await page.getByRole('button', { name: 'Done' }).click();
   await expect(page.getByRole('button', { name: 'Search catalog: moon' })).toBeVisible();
-  last = discovers.at(-1)!;
+  last = discovers.find(url => url.searchParams.get('search') === 'moon')!;
   expect(last.searchParams.get('skip')).toBe('0');
   expect(last.searchParams.get('search')).toBe('moon');
   expect(last.searchParams.get('genre')).toBe('Drama');

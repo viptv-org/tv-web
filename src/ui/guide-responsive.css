@@ -8,7 +8,7 @@
   height: 100%;
   padding-top: 14px;
   padding-bottom: 10px;
-  padding-left: 20px;
+  padding-left: var(--page-gutter, 40px);
   padding-right: var(--page-gutter, 40px);
 }
 /* Every piece of page chrome shares one row, so the guide and sidebar start together. */

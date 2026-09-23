@@ -1,0 +1,50 @@
+/* Loading skeletons: HomeSkeleton (the startup state), the Discover grid and
+   the phone Live TV list. Blocks take their geometry from the real layout
+   rules they share class names with; this file only paints them. */
+@keyframes skeleton-shimmer {
+  from { background-position: 100% 0; }
+  to { background-position: 0 0; }
+}
+.responsive-app { --skeleton-base: #191b1d; --skeleton-shine: #24272a; }
+.responsive-app.oled { --skeleton-base: #101112; --skeleton-shine: #1b1c1e; }
+.responsive-app :is(.skeleton-block, .skeleton-line, .card-skeleton, .live-skeleton) {
+  background: linear-gradient(100deg, var(--skeleton-base) 30%, var(--skeleton-shine) 50%, var(--skeleton-base) 70%) !important;
+  background-size: 300% 100% !important;
+  border-color: transparent !important;
+  animation: skeleton-shimmer 1.4s ease-in-out infinite;
+}
+.responsive-app .skeleton-line {
+  display: inline-block;
+  max-width: 100%;
+  height: 0.72em;
+  border-radius: 6px;
+  vertical-align: middle;
+}
+.responsive-app .skeleton-shell { pointer-events: none; user-select: none; }
+/* End-of-list and pending-shelf sentinels (AutoLoad). */
+.responsive-app .auto-load { height: 1px; }
+.responsive-app .skeleton-shell .nav-icon { opacity: 0.35 !important; }
+
+/* Home: text lines occupy the line boxes the loaded copy will, and the
+   title holds a title logo's slot (128px, 72px on phones). The synopsis
+   shows as many lines as the loaded preview clamps to at each width. */
+.responsive-app .home-skeleton .hero > p .skeleton-line { display: block; margin: 0.39em 0; }
+.responsive-app .home-skeleton .skeleton-logo { display: block; width: min(100%, 320px); height: 128px; border-radius: 10px; }
+@media (max-width: 899px) {
+  .responsive-app .home-skeleton .hero > p .skeleton-line:nth-child(4) { display: none; }
+}
+@media (max-width: 599px) {
+  .responsive-app .home-skeleton .hero > p .skeleton-line:nth-child(n + 3) { display: none; }
+  .responsive-app .home-skeleton .skeleton-logo { width: min(100%, 220px); height: 72px; }
+}
+.responsive-app .home-skeleton .hero .actions [data-focus-id="hero-details"] { width: 132px; }
+.responsive-app .home-skeleton .media-card > :is(strong, small) .skeleton-line { height: 0.66em; }
+.responsive-app .home-skeleton .card-caption .skeleton-line { height: 11px; }
+
+/* Grid placeholders while a browse route waits for its first page. */
+.responsive-app .card-skeleton { aspect-ratio: 16 / 9; border-radius: 8px; }
+.responsive-app .poster-grid .card-skeleton { aspect-ratio: 2 / 3; }
+
+@media (prefers-reduced-motion: reduce) {
+  .responsive-app :is(.skeleton-block, .skeleton-line, .card-skeleton, .live-skeleton) { animation: none; }
+}

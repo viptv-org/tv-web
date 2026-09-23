@@ -6,6 +6,12 @@ import { RokuText } from "../ui/RokuText";
 import { TvButton } from "../ui/remote";
 import type { Catalog, MediaItem, MediaPresentation } from "../api";
 import type { Screen } from "../ui/screens";
+import { catalogShelfName } from "../ui/catalogFilters";
+import { CARD_SHAPES, homeCatalogShape } from "../ui/cardShapes";
+import type { CardRowOptions } from "../components/cards/Cards";
+import type { HomeRow } from "../ui/app/homeRows";
+import { AutoLoad } from "../ui/AutoLoad";
+import { SkeletonShelfCards } from "./HomeSkeleton";
 
 
 /**
@@ -25,6 +31,7 @@ export function HomeScreen({
   recentLive,
   items,
   homeRows,
+  onRowsNeeded,
   favorites,
   firstHomeCatalog,
   navigate,
@@ -43,7 +50,9 @@ export function HomeScreen({
   queue: readonly MediaItem[];
   recentLive: readonly MediaItem[];
   items: readonly MediaItem[];
-  homeRows: readonly { name: string; items: readonly MediaItem[]; catalog?: Catalog }[];
+  homeRows: readonly HomeRow[];
+  /** Asks for pending shelves' catalogs as they near the viewport. */
+  onRowsNeeded: (rows: readonly HomeRow[]) => void;
   favorites: readonly MediaItem[];
   firstHomeCatalog: Catalog | undefined;
   navigate: (next: Screen, catalog?: Catalog) => unknown;
@@ -51,8 +60,11 @@ export function HomeScreen({
   detail: (item: MediaItem) => unknown;
   manage: (item: MediaItem) => void;
   toggle: (item: MediaItem) => unknown;
-  shelfCards: (list: readonly MediaItem[], prefix: string) => ReactNode;
+  shelfCards: (list: readonly MediaItem[], prefix: string, options?: CardRowOptions) => ReactNode;
 }) {
+  // Catalog shelves alternate their card shape by position (the first
+  // catalog shelf is index 0); queue, live and My List shelves keep theirs.
+  const catalogOffset = items.length > 0 ? 1 : 0;
   return (
     <main className={`home ${compactHome ? "compact-home" : ""}`}>
       {!responsive && heroPresentation?.heroImage && (
@@ -61,8 +73,9 @@ export function HomeScreen({
           uri={heroPresentation.heroImage}
         />
       )}
-      {responsive && <div className="responsive-hero-art"><CardArtwork src={heroPresentation?.heroImage ?? undefined} fallback="Preview unavailable" /></div>}
-      <div className="hero">
+      {responsive && heroItem && <div className="responsive-hero-art"><CardArtwork src={heroPresentation?.heroImage ?? undefined} fallback="Preview unavailable" /></div>}
+      {/* Without a catalog title there is no hero: no placeholder with dead actions. */}
+      {(!responsive || heroItem) && <div className="hero">
         <small>
           {responsive
             ? `FEATURED ${(heroItem?.type ?? "movie").toUpperCase()}`
@@ -147,7 +160,7 @@ export function HomeScreen({
             </TvButton>
           )}
         </div>
-      </div>
+      </div>}
       <div
         className="shelves"
         onFocusCapture={(event) => {
@@ -161,19 +174,19 @@ export function HomeScreen({
         {queue.length > 0 && (
           <section>
             <h2>Continue Watching</h2>
-            {shelfCards(queue, "queue")}
+            {shelfCards(queue, "queue", { shape: CARD_SHAPES.continueWatching })}
           </section>
         )}
         {recentLive.length > 0 && (
           <section>
             <h2>Recently Watched Live TV</h2>
-            {shelfCards(recentLive, "recent-live")}
+            {shelfCards(recentLive, "recent-live", { shape: CARD_SHAPES.recentLive })}
           </section>
         )}
         {items.length > 0 && (
           <section>
             <header className="shelf-heading">
-              <h2>{firstHomeCatalog?.name ?? "Discover"}</h2>
+              <h2>{firstHomeCatalog ? (responsive ? catalogShelfName(firstHomeCatalog) : firstHomeCatalog.name) : "Discover"}</h2>
               {responsive && firstHomeCatalog && (
                 <button
                   type="button"
@@ -186,16 +199,19 @@ export function HomeScreen({
                 </button>
               )}
             </header>
-            {shelfCards(items, "home")}
+            {shelfCards(items, "home", { shape: homeCatalogShape(0), catalog: firstHomeCatalog })}
           </section>
         )}
-        {homeRows
-          .filter((row) => row.items.length)
-          .map((row, i) => (
+        {homeRows.map((row, i) => {
+          // A loaded catalog with nothing to show leaves no shelf. The TV
+          // loads every shelf itself and shows each once it has cards.
+          if (row.loaded ? !row.items.length : !responsive) return null;
+          const shape = homeCatalogShape(catalogOffset + i);
+          return (
             <section key={`${row.name}-${i}`}>
               <header className="shelf-heading">
                 <h2>{row.name}</h2>
-                {responsive && row.catalog && (
+                {responsive && (
                   <button
                     type="button"
                     className="shelf-see-more"
@@ -207,13 +223,21 @@ export function HomeScreen({
                   </button>
                 )}
               </header>
-              {shelfCards(row.items, `shelf-${i}`)}
+              {row.loaded ? (
+                shelfCards(row.items, `shelf-${i}`, { shape, catalog: row.catalog })
+              ) : (
+                <>
+                  <AutoLoad onLoad={() => onRowsNeeded([row])} generation={0} margin={900} />
+                  <SkeletonShelfCards shape={shape} />
+                </>
+              )}
             </section>
-          ))}
+          );
+        })}
         {favorites.length > 0 && (
           <section>
             <h2>My List</h2>
-            {shelfCards(favorites, "saved")}
+            {shelfCards(favorites, "saved", { shape: CARD_SHAPES.myList })}
           </section>
         )}
       </div>

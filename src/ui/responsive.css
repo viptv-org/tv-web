@@ -3,3 +3,13 @@
 @import "./css/responsive-p2.css";
 @import "./css/responsive-p3.css";
 @import "./css/responsive-p4.css";
+/* Phone arrangement last, so it settles the shared rules' cascade. */
+@import "./css/responsive-phone.css";
+/* Poster card shape (cardShapes.ts) on every responsive width. */
+@import "./css/responsive-cards.css";
+/* Pointer/touch player overlay. */
+@import "./css/responsive-player.css";
+/* Loading skeletons. */
+@import "./css/responsive-skeleton.css";
+/* TV-style resets and per-screen polish. */
+@import "./css/responsive-polish.css";

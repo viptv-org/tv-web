@@ -170,9 +170,11 @@ export function ProfileEditor({
       <h1>
         {mode === "avatar"
           ? "Find your favorite"
-          : profile
-            ? "Edit profile"
-            : "Add a profile"}
+          : mode === "delete"
+            ? "Delete profile"
+            : profile
+              ? "Edit profile"
+              : "Add a profile"}
       </h1>
       {mode === "avatar" ? (
         <>

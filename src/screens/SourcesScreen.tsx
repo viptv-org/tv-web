@@ -119,7 +119,7 @@ export function SourcesScreen({
             ? "Opening stream…"
             : busy
               ? "Finding sources…"
-              : `${sources.length} sources`}
+              : `${sources.length} ${sources.length === 1 ? "source" : "sources"}`}
         </span>
       </div>
       <div className="source-results">
@@ -171,7 +171,7 @@ export function SourcesScreen({
                   .join("\n")}
               </p>
               <small>
-                {s.quality} {s.audio} {s.sourceName}
+                {[s.quality, s.audio, s.sourceName].filter(Boolean).join(" · ")}
               </small>
             </TvButton>
           ))}

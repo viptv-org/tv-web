@@ -6,6 +6,8 @@ import { DAY_SECONDS, GUIDE_CACHE_LIMIT, GUIDE_CELL_LIMIT, GUIDE_WIDTH, HOUR_SEC
 export type GuideProps = {
   api: TvApi;
   responsive?: boolean;
+  /** Phone arrangement of the responsive shell: a channel list, not a timeline. */
+  phone?: boolean;
   onPlay: (item: MediaItem) => void;
   onError: (error: unknown) => void;
   onDetails: (item: MediaItem, program?: GuideProgram) => void;

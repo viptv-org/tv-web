@@ -192,7 +192,7 @@ export function useNavigation(app: CatalogApi) {
       window.removeEventListener("auxclick", handleAuxClick);
     };
   }, [responsive, back]);
-  const navigate = async (next: Screen, catalogHint?: Catalog) => {
+  const navigate = async (next: Screen, catalogHint?: Catalog, initialValues?: Record<string, string>) => {
     const ticket = ++epoch.current;
     if (next === "Home" && homeCache.current && homeCache.current.profile === profile) {
       setQueue(homeCache.current.queue);
@@ -219,7 +219,8 @@ export function useNavigation(app: CatalogApi) {
           const chosen = catalogHint
             ? available.find(value => value.id === catalogHint.id && value.addonId === catalogHint.addonId && value.type === catalogHint.type) ?? catalogHint
             : available.find(value => value.id === catalog?.id && value.addonId === catalog?.addonId && value.type === catalog?.type) ?? available.find(value => value.type !== "live") ?? available[0];
-          if (chosen) await loadCatalog(chosen);
+          // Initial filter values (a genre link) apply over the catalog's defaults.
+          if (chosen) await loadCatalog(chosen, 0, initialValues ? { ...catalogDefaults(chosen), ...initialValues } : undefined);
           else setCatalog(undefined);
         } catch (cause) {
           if (ticket === epoch.current) setCatalogError(cause instanceof Error ? cause.message : "Unable to load catalogs.");

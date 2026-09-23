@@ -46,12 +46,13 @@ import { captureScroll, desktopInvoker, initialPrefs, type BrowserSnapshot, type
 import type { AppApi, CoreApi, DialogsApi, AuthApi, PlaybackEngineApi, PlaybackSessionApi, CatalogApi, NavigationApi } from "./useTvApp";
 
 export function useCatalog(app: PlaybackSessionApi) {
-  const { api, autoResume, catalog, catalogs, catalogValues, currentScreen, episodes, epoch, error, fail, favorites, go, items, loadHome, modal, nextEpisode, nextSkip, notify, play, profile, query, queue, screen, searchScope, season, seek, session, setBusy, setCatalog, setCatalogValues, setEpisodes, setError, setFavorites, setItems, setModal, setNextSkip, setQueue, setSearchPartial, setSearchRows, setSeason, setSelected, setSourceProvider, setSourceQuality, setSources, sourceFocusPending, sourceProvider, sourceQuality, sources } = app;
+  const { api, autoResume, catalog, catalogs, catalogValues, currentScreen, episodes, epoch, error, fail, favorites, go, items, loadHome, modal, nextEpisode, nextSkip, notify, play, profile, query, queue, screen, searchScope, season, seek, session, setBusy, setCatalog, setCatalogValues, setDetailOrigin, setEpisodes, setError, setFavorites, setItems, setModal, setNextSkip, setQueue, setSearchPartial, setSearchRows, setSeason, setSelected, setSourceProvider, setSourceQuality, setSources, sourceFocusPending, sourceProvider, sourceQuality, sources } = app;
 
-  const detail = async (item: MediaItem) => {
+  const detail = async (item: MediaItem, origin?: Catalog) => {
     if (item.type === "live") { await play(item); return; }
     go("detail");
     setSelected(item);
+    setDetailOrigin(origin);
     setEpisodes([]);
     const ticket = ++epoch.current;
     setBusy(true);
@@ -355,7 +356,7 @@ export function useCatalog(app: PlaybackSessionApi) {
       setBusy(true);
       try {
         const results: MediaItem[] = [],
-          rows: { name: string; items: readonly MediaItem[] }[] = [];
+          rows: { name: string; items: readonly MediaItem[]; catalog?: Catalog }[] = [];
         const cats = catalogs
           .filter(
             (c) =>
@@ -376,11 +377,11 @@ export function useCatalog(app: PlaybackSessionApi) {
                   },
                   { signal: scope.signal },
                 )
-                .then((p) => ({ name: c.name, items: p.items }))
+                .then((p) => ({ name: c.name, items: p.items, catalog: c }))
                 .catch(() => {
                   if (ticket === epoch.current && !scope.signal.aborted)
                     setSearchPartial(true);
-                  return { name: c.name, items: [] };
+                  return { name: c.name, items: [], catalog: c };
                 }),
             ),
           );
@@ -394,7 +395,7 @@ export function useCatalog(app: PlaybackSessionApi) {
                   ) === index,
               )
               .slice(0, 24);
-            rows.push({ name: page.name, items: unique });
+            rows.push({ name: page.name, items: unique, catalog: page.catalog });
             for (const item of unique)
               if (
                 !results.some((r) => r.type === item.type && r.id === item.id)

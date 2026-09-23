@@ -1,7 +1,5 @@
+import type { ReactNode } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import type { TvProfile } from "../api";
-import { avatarUrl } from "./ProfileEditor";
-import { TvButton } from "./remote";
 import { isDesktopShell } from "./app/appShared";
 
 export function RemoteControlIcon({ className }: { className?: string }) {
@@ -29,23 +27,21 @@ export function RemoteControlIcon({ className }: { className?: string }) {
 }
 
 interface DesktopTitlebarProps {
-  screen?: string;
-  activeProfile?: TvProfile;
   canGoBack?: boolean;
   onNavigateBack?: () => void;
-  onNavigateSearch: () => void;
-  onNavigateBookmarks: () => void;
-  onOpenProfiles: () => void;
+  /** Centred in the bar regardless of the side groups' widths (the search field). */
+  center?: ReactNode;
 }
 
+/**
+ * Frameless Tauri window header: brand and Back on the left, the search
+ * field centred, window controls on the right. Profile switching lives at
+ * the bottom of the sidebar, shared with the browser layout.
+ */
 export function DesktopTitlebar({
-  screen,
-  activeProfile,
   canGoBack,
   onNavigateBack,
-  onNavigateSearch,
-  onNavigateBookmarks,
-  onOpenProfiles,
+  center,
 }: DesktopTitlebarProps) {
   const handleMinimize = async () => {
     try {
@@ -220,119 +216,21 @@ export function DesktopTitlebar({
         onDoubleClick={handleToggleMaximize}
       />
 
+      {center && (
+        <div
+          className="titlebar-center"
+          onMouseDown={stopDragEvents}
+          onPointerDown={stopDragEvents}
+        >
+          {center}
+        </div>
+      )}
+
       <div
         className="titlebar-right"
         onMouseDown={stopDragEvents}
         onPointerDown={stopDragEvents}
       >
-        {screen !== "startup" && (
-          <>
-            <button
-              type="button"
-              className="titlebar-search-btn"
-              aria-label="Search"
-              tabIndex={-1}
-              onMouseDown={(e) => {
-                stopDragEvents(e);
-                e.currentTarget.blur();
-              }}
-              onPointerDown={(e) => {
-                stopDragEvents(e);
-                e.currentTarget.blur();
-              }}
-              onClick={(e) => {
-                stopDragEvents(e);
-                e.currentTarget.blur();
-                onNavigateSearch();
-              }}
-            >
-              <svg
-                width="13"
-                height="13"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <circle cx="11" cy="11" r="8" />
-                <line x1="21" y1="21" x2="16.65" y2="16.65" />
-              </svg>
-              <span>Search</span>
-            </button>
-
-            <button
-              type="button"
-              className="titlebar-btn titlebar-icon-btn"
-              aria-label="My List"
-              title="My List"
-              tabIndex={-1}
-              onMouseDown={(e) => {
-                stopDragEvents(e);
-                e.currentTarget.blur();
-              }}
-              onPointerDown={(e) => {
-                stopDragEvents(e);
-                e.currentTarget.blur();
-              }}
-              onClick={(e) => {
-                stopDragEvents(e);
-                e.currentTarget.blur();
-                onNavigateBookmarks();
-              }}
-            >
-              <svg
-                width="13"
-                height="13"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <line x1="8" y1="6" x2="21" y2="6" />
-                <line x1="8" y1="12" x2="21" y2="12" />
-                <line x1="8" y1="18" x2="21" y2="18" />
-                <line x1="3" y1="6" x2="3.01" y2="6" />
-                <line x1="3" y1="12" x2="3.01" y2="12" />
-                <line x1="3" y1="18" x2="3.01" y2="18" />
-              </svg>
-            </button>
-
-            {activeProfile && (
-              <TvButton
-                id="responsive-profile"
-                className="titlebar-btn titlebar-avatar-btn"
-                aria-label="Switch Profile"
-                title="Switch Profile"
-                tabIndex={-1}
-                onActivate={() => onOpenProfiles()}
-                onMouseDown={(e) => {
-                  stopDragEvents(e);
-                  e.currentTarget.blur();
-                }}
-                onPointerDown={(e) => {
-                  stopDragEvents(e);
-                  e.currentTarget.blur();
-                }}
-                onClick={(e) => {
-                  stopDragEvents(e);
-                  e.currentTarget.blur();
-                  onOpenProfiles();
-                }}
-              >
-                <img
-                  src={avatarUrl(activeProfile)}
-                  alt=""
-                  className="titlebar-avatar-img"
-                />
-              </TvButton>
-            )}
-          </>
-        )}
-
         {isDesktopShell && (
         <div
           className="titlebar-window-controls"

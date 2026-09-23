@@ -17,17 +17,35 @@ import type { AppApi } from "./useTvApp";
 import { isDesktopShell } from "./appShared";
 import { AppDialogs } from "./AppDialogs";
 import { enterLocalMode, localModeAvailable } from "../../local";
+import { usePhoneLayout } from "../usePhoneLayout";
+import { SearchPopunder } from "../SearchPopunder";
+import { HomeSkeleton } from "../../screens/HomeSkeleton";
+import { Bookmark, Compass, House, Search, Settings as SettingsIcon, Tv, type LucideIcon } from "lucide-react";
 import "../tv.css";
 import "../responsive.css";
+
+/** Responsive navigation glyphs; the TV keeps its Roku PNG icon set. */
+const responsiveNavIcons: Partial<Record<Screen, LucideIcon>> = {
+  Home: House,
+  Discover: Compass,
+  "Live TV": Tv,
+  "My List": Bookmark,
+  Search,
+  Settings: SettingsIcon,
+};
 
 /**
  * The application render tree: desktop frame, navigation, screens and
  * dialogs, all reading from the assembled app object.
  */
 export function AppShell({ app }: { app: AppApi }) {
-  const { active, activeTrackPopup, api, audioTrackList, authorize, back, browser, busy, canvas, cards, casting, catalog, catalogError, catalogs, catalogValues, chooseProfile, closeCast, commitSeek, compactHome, detail, discoverSources, editingProfile, editProfile, engineChoice, entry, episodes, fail, favorites, firstHomeCatalog, fullscreenControl, go, heroItem, heroPresentation, highlighted, homeRows, isMaximized, items, lastControlActivity, layout, libraryQueue, loadCatalog, manage, managing, mediaKey, mediaKeyUp, modal, navigate, nextEpisode, nextSkip, oled, openCast, openingSource, overlay, pair, pairing, platform, play, player, playerInfoLines, playerInfoOpen, playerNotice, playerRoot, prefs, preparing, profile, profilePage, profiles, qr, query, queue, readBufferedRanges, recentLive, responsive, screen, searchKey, searchPartial, searchRows, season, seek, selected, selectedPresentation, selectEngine, setActiveTrackPopup, setCompactHome, setControlActivity, setEditingProfile, setEntry, setLibraryQueue, setManaging, setModal, setOverlay, setPlayerInfoOpen, setPrefs, setProfile, setProfilePage, setProfiles, setQuery, setScreen, setSeason, setSeek, setSettingsSubpage, setSourceProvider, setSourceQuality, settingsSubpage, shelfCards, snapshot, sourceFocusPending, sourceProvider, sourceQuality, sources, stop, subtitleOffOption, surfaceClick, textTrackList, toggle, toggleLiveMute, toggleOled, togglePlayback, trackChoices, video } = app;
+  const { active, activeTrackPopup, bootingHome, requestHomeRows, detailOrigin, api, audioTrackList, authorize, back, browser, busy, canvas, cards, casting, catalog, catalogError, catalogs, catalogValues, chooseProfile, closeCast, commitSeek, compactHome, detail, discoverSources, editingProfile, editProfile, engineChoice, entry, episodes, fail, favorites, firstHomeCatalog, fullscreenControl, go, heroItem, heroPresentation, highlighted, homeRows, isMaximized, items, lastControlActivity, layout, libraryQueue, loadCatalog, manage, managing, mediaKey, mediaKeyUp, modal, navigate, nextEpisode, nextSkip, oled, openCast, openingSource, overlay, pair, pairing, platform, play, player, playerInfoLines, playerInfoOpen, playerNotice, playerRoot, prefs, preparing, profile, profilePage, profiles, qr, query, queue, readBufferedRanges, recentLive, responsive, screen, searchKey, searchPartial, searchRows, season, seek, selected, selectedPresentation, selectEngine, setActiveTrackPopup, setCompactHome, setControlActivity, setEditingProfile, setEntry, setLibraryQueue, setManaging, setModal, setOverlay, setPlayerInfoOpen, setPrefs, setProfile, setProfilePage, setProfiles, setQuery, setScreen, setSeason, setSeek, setSettingsSubpage, setSourceProvider, setSourceQuality, settingsSubpage, shelfCards, snapshot, sourceFocusPending, sourceProvider, sourceQuality, sources, stop, subtitleOffOption, surfaceClick, textTrackList, toggle, toggleLiveMute, toggleOled, togglePlayback, trackChoices, video } = app;
 
   const activeProfile = profiles.find((p) => p.id === profile);
+  const phone = usePhoneLayout(responsive);
+  // While the session restores and Home first loads, the responsive shell
+  // shows a skeleton of Home in place of the startup cover and screens.
+  const booting = responsive && (bootingHome || screen === "startup");
   // Local addon mode is offered only in local-capable builds (LM-001); the
   // backend-hosted bundle renders no entry point.
   const localEntry = localModeAvailable ? () => {
@@ -52,7 +70,9 @@ export function AppShell({ app }: { app: AppApi }) {
           />
         </div>);
   const navigation = (<nav aria-label="Main navigation">
-                {navItems.map((n, i) => (
+                {navItems.map((n, i) => {
+                  const Icon = responsive ? responsiveNavIcons[n] : undefined;
+                  return (
                   <TvButton
                     id={`nav-${n}`}
                     aria-label={n === "profiles" ? "Profile" : n}
@@ -70,6 +90,9 @@ export function AppShell({ app }: { app: AppApi }) {
                         {activeProfile?.name.slice(0, 2).toUpperCase()}
                       </span>
                     )}
+                    {Icon ? (
+                      <Icon className="nav-icon" size={24} strokeWidth={n === screen ? 2.25 : 1.75} aria-hidden="true" />
+                    ) : (
                     <ReadyImage
                       className={`nav-icon ${!responsive && i === 0 ? "nav-avatar" : ""}`}
                       src={
@@ -90,9 +113,11 @@ export function AppShell({ app }: { app: AppApi }) {
                         e.currentTarget.style.visibility = "hidden";
                       }}
                     />
-                    <em>{n === "profiles" ? "Profile" : n}</em>
+                    )}
+                    {!responsive && <em>{n === "profiles" ? "Profile" : n}</em>}
                   </TvButton>
-                ))}
+                  );
+                })}
               </nav>);
 
 
@@ -146,8 +171,6 @@ export function AppShell({ app }: { app: AppApi }) {
         )}
         {responsive && isDesktopShell && !fullscreenControl.fullscreen && (
           <DesktopTitlebar
-            screen={screen}
-            activeProfile={activeProfile}
             canGoBack={
               screen !== "startup" &&
               screen !== "pairing" &&
@@ -155,9 +178,20 @@ export function AppShell({ app }: { app: AppApi }) {
               (screen !== "Home" || (browser.current?.canGoBack() ?? false))
             }
             onNavigateBack={back}
-            onNavigateSearch={() => navigate("Search")}
-            onNavigateBookmarks={() => navigate("My List")}
-            onOpenProfiles={() => setScreen("profiles")}
+            center={
+              profile && !["startup", "pairing", "profiles"].includes(screen) ? (
+                <SearchPopunder
+                  api={api}
+                  catalogs={catalogs}
+                  profile={profile}
+                  onOpen={(item) => void detail(item)}
+                  onSubmit={(value) => {
+                    setQuery(value);
+                    void navigate("Search");
+                  }}
+                />
+              ) : undefined
+            }
           />
         )}
         <div
@@ -166,26 +200,53 @@ export function AppShell({ app }: { app: AppApi }) {
           onPointerDownCapture={(event) => { if (responsive && screen === "player" && (event.target as HTMLElement).closest("button, input")) { setOverlay(true); setControlActivity(value => value + 1); } }}
           className={`tv-screen ${responsive ? "responsive-app" : ""} ${oled ? "oled" : ""} ${isMaximized ? "is-maximized" : ""} ${fullscreenControl.fullscreen ? "is-fullscreen" : ""} screen-${screen.replace(/ /g, "-").toLowerCase()} ${screen === "player" ? "playing" : ""}`}
         >
-        <video ref={video} className="video" playsInline onClick={surfaceClick} />
+        <video
+          ref={video}
+          className="video"
+          playsInline
+          onClick={surfaceClick}
+          onDoubleClick={responsive && screen === "player" ? () => void fullscreenControl.toggle() : undefined}
+        />
+        {responsive && screen === "player" && (busy || snapshot?.state === "buffering") && (
+          <div className="player-buffering" role="status" aria-label="Loading video" />
+        )}
         <canvas ref={canvas} className="video player-canvas" style={{ display: "none" }} onClick={surfaceClick} />
-        {responsive && !["startup", "pairing", "player", "profiles"].includes(screen) && (
+        {booting && <HomeSkeleton phone={phone} />}
+        {responsive && !booting && !["startup", "pairing", "player", "profiles"].includes(screen) && (
           <aside className="desktop-sidebar" aria-label="Sidebar navigation">
             <div className="sidebar-centered-group">
               {navigation}
-              <TvButton
+              {/* Phones have no header bar: Watch on TV lives in Settings. */}
+              {!phone && <TvButton
                 id="responsive-cast"
                 aria-label="Watch on TV"
                 className="sidebar-cast"
                 onActivate={openCast}
               >
                 <RemoteControlIcon />
-              </TvButton>
+              </TvButton>}
             </div>
+            {/* The active profile anchors the bottom of the sidebar in the
+                browser and Tauri layouts alike. */}
+            {!phone && activeProfile && (
+              <TvButton
+                id="responsive-profile"
+                className="sidebar-profile"
+                aria-label={`Switch profile (${activeProfile.name})`}
+                title={activeProfile.name}
+                onActivate={() => setScreen("profiles")}
+              >
+                <span className="sidebar-profile-initials" aria-hidden="true">
+                  {activeProfile.name.slice(0, 2).toUpperCase()}
+                </span>
+                <ReadyImage className="nav-avatar" src={avatarUrl(activeProfile)} alt="" />
+              </TvButton>
+            )}
           </aside>
         )}
         {!responsive && brand}
 
-        {screen === "startup" ? null : screen === "pairing" ? (
+        {booting || screen === "startup" ? null : screen === "pairing" ? (
           responsive ? <ResponsiveSignIn api={api} pair={pair} qr={qr} onRetry={() => void pairing()} onUseWithoutAccount={localEntry} /> : <section className="pairing">
             <h1>Sign in to VIPTV</h1>
             <p>Visit this address, then enter the code shown below.</p>
@@ -276,6 +337,7 @@ export function AppShell({ app }: { app: AppApi }) {
                 recentLive={recentLive}
                 items={items}
                 homeRows={homeRows}
+                onRowsNeeded={requestHomeRows}
                 favorites={favorites}
                 firstHomeCatalog={firstHomeCatalog}
                 navigate={navigate}
@@ -290,6 +352,7 @@ export function AppShell({ app }: { app: AppApi }) {
               <BrowseScreen
                 screen={screen}
                 responsive={responsive}
+                phone={phone}
                 query={query}
                 setQuery={setQuery}
                 searchKey={searchKey}
@@ -326,6 +389,9 @@ export function AppShell({ app }: { app: AppApi }) {
                 manage={manage}
                 toggle={toggle}
                 setModal={setModal}
+                catalogs={catalogs}
+                origin={detailOrigin}
+                onGenre={(target) => void navigate("Discover", target.catalog, target.values)}
               />
             )}
             {screen === "sources" && (
@@ -346,6 +412,7 @@ export function AppShell({ app }: { app: AppApi }) {
             {screen === "Live TV" && (
               <LiveGuide
                 responsive={responsive}
+                phone={phone}
                 api={api}
                 onPlay={(item) => void play(item)}
                 onError={fail}
@@ -392,7 +459,7 @@ export function AppShell({ app }: { app: AppApi }) {
                 }
                 onSignOut={() =>
                   setModal({
-                    title: "Sign out of this TV?",
+                    title: responsive ? "Sign out of this device?" : "Sign out of this TV?",
                     choices: [
                       {
                         label: "Sign out",
@@ -417,6 +484,8 @@ export function AppShell({ app }: { app: AppApi }) {
                 subpage={settingsSubpage}
                 onSubpageChange={setSettingsSubpage}
                 onBack={back}
+                list={responsive}
+                onWatchOnTv={phone ? openCast : undefined}
               />
             )}
             {screen === "player" && overlay && (

@@ -1,3 +1,120 @@
+# Loading, player and polish pass — 2026-09-23
+
+- Home loading: Home renders once its hero catalog and recent channels
+  arrive; every other catalog shelf renders at once as a skeleton with its
+  real title and loads its catalog as it nears the viewport (TV: all shelves
+  in the background), at most four catalog requests in flight. Catalogs that
+  cannot list without input (search-only) are skipped, required extras send
+  their defaults, and loaded shelves survive Home reloads. Measured against
+  a mock of 80 catalogs at 150 ms each: Home visible in ~0.4 s with 2–4
+  catalog requests, instead of waiting for all 80. The local Caddy log showed
+  real phone boots of 6–18 s with ~80 serial /api/discover calls.
+- Startup: the startup cover is replaced (responsive shell) by HomeSkeleton,
+  built from Home's own classes; its hero box matches the loaded hero at 390
+  and 1440 px within 0.2 px.
+- Nav responsiveness: windowed rows reuse their last measured pitch and size
+  their first window from the viewport; returning to a heavy Home dropped
+  from ~190–250 ms to ~85–97 ms at 4× CPU throttling.
+- Cards (phone): title and minimal context in a fixed 40 px caption under the
+  art; live channels are logo-width tiles without names; progress 6 px with
+  2 px ends. Touch: no tap highlight, callout or text selection on held
+  controls and art.
+- Player (web/desktop): one row of same-sized icon controls with fullscreen at
+  the end, Back and title across the top, tap toggles controls, double-click
+  toggles fullscreen, a buffering ring over the picture; the TV overlay is a
+  separate render path and unchanged.
+- Detail: clickable genres (origin catalog, then the metadata's Stremio genre
+  link, then any same-type catalog offering it), a cast row with photos when
+  the metadata carries app_extras.cast, equal 48/56 px action squares.
+- Audit fixes across dialogs, sign-in, text entry, profile editor, Settings
+  (grouped list at every width), shelves inset, search/discover status,
+  sources, Live TV gutter and now line, sidebar contrast.
+
+Evidence (browser only): unit 148/148 (new `tests/ui/home-rows.test.ts`,
+`tests/ui/search-popunder.test.tsx`); build green; Playwright on both
+projects with no new failures against the previous run; screenshots
+inspected privately. Not run on a phone, TV or the Tauri window.
+
+
+# Poster cards and desktop header search — 2026-09-23
+
+- Card shapes: `src/ui/cardShapes.ts` sets poster or landscape art per
+  responsive surface; both shapes stay implemented, so any surface flips
+  back with one value. Currently: Discover and Search results are posters;
+  Continue Watching, Live TV and My List stay landscape; Home catalog shelves
+  cycle poster, poster, landscape on every responsive width. Poster art is the
+  Rust-projected `posterImage` role through the shared wsrv pipeline, retried
+  at origin once, then falling back to the landscape art. Live channels and
+  the TV canvas are always landscape.
+- Phone card progress is 6px (was 3px).
+- Desktop: the profile avatar anchors the bottom of the sidebar in both the
+  browser and Tauri layouts; the Tauri titlebar drops its My List and avatar
+  buttons and centres a real search field whose popunder lists per-profile
+  recent searches and quick matches (arrow keys, Enter, Escape), handing
+  Enter or "See all results" to the Search route. The browser layout no longer
+  reserves the Tauri titlebar's empty 30px strip.
+- Fixed while verifying: windowed shelves measured their pitch from a card
+  wrapper and its own inner card, so every responsive row silently kept the
+  280px landscape fallback. Measuring direct children (and re-rendering on a
+  new pitch) makes Back restore poster and phone shelf offsets exactly.
+  Remounted hero titles now promote an already-decoded logo on first render,
+  so the page is no longer briefly 35px short while the phone offset restores.
+
+Evidence (browser only): unit 144/144 including
+`tests/ui/search-popunder.test.tsx`; `responsive-layout` Discover grid now
+asserts poster tracks (160px minimum, three phone columns). The titlebar only
+mounts under Tauri, so its rendering was inspected through a temporary
+browser harness, not the desktop app; the native window was not run.
+
+
+# Phone web UI pass — 2026-09-23
+
+Owner-directed phone (≤599px) corrections to the responsive shell; the
+desktop/Tauri responsive layout and the TV canvas are unchanged apart from the
+two shared fixes noted below.
+
+- Shell: no header bar on phones (the sidebar box leaves the flow, so short
+  routes no longer carry 72px of phantom scroll); icon-only bottom navigation
+  with a pill on the active destination; Watch on TV moved to Settings.
+- Home: hero art is the first element with all corners rounded; no eyebrow
+  when the hero stacks (≤899px); Details and My List share one 48px height;
+  shelf headings name the content type (`Series · AniList Trending`) instead
+  of the addon; rows start on the heading edge and bleed to the screen edge;
+  tighter shelf spacing; no chevron pair on touch.
+- Cards (phone): title and minimal context (`S1 E2`, or the year, plus a
+  short queue state) printed inside the art above a flat 3px progress bar;
+  no text rows, genres or resume times under the art.
+- Discover (phone): type / catalog / filter chip rows and a two-column grid.
+  Every layout, including the TV, now pages automatically through the
+  `AutoLoad` sentinel; there is no Load more control anywhere (local mode
+  included).
+- My List (phone): segmented My List / Continue Watching switch.
+- Live TV (phone): searchable channel list with category chips and now/next
+  rows (current programme with progress, next start time) that pages itself;
+  the timeline grid remains at ≥600px.
+- Settings (phone): centred grouped list with inline notes, trailing values,
+  an OLED switch and Watch on TV.
+- Shared fixes: the idle hidden `<video>` no longer keeps the TV's 1280px
+  width in the responsive shell, and the Search field no longer inherits the
+  TV-only 10px baseline nudge.
+
+Evidence (browser simulation only; no phone, tablet or TV hardware was used):
+unit 141/141; `npm run build` green with design/core/video checks; Playwright
+e2e on both projects compared against a pre-change baseline with no new
+failures. Updated specs: `discover-filters` (automatic paging on the TV
+layout), `responsive-layout` (phone Live TV list, phone two-column Discover),
+`responsive-corrections` (timeline guide measured at 768/1440), `responsive`
+(nav icons are SVG, phone OLED switch, in-art logo title separation).
+Private phone/desktop captures were inspected locally and are not committed.
+
+Still failing, all of them before this pass as well: the stale `responsive`
+flow tests that expect the removed `.responsive-toolbar`, header profile
+control and hero More options button; `populated responsive` (expects three
+shelf sections); `responsive Back restores populated shelf offsets at 390`;
+`browser-navigation` live card; `resilience-settings` focus; flaky
+`next-episode` retries.
+
+
 # Selectable engines and the autoplay test harness — 2026-09-17
 
 The desktop app can now choose its playback engine and be tested without

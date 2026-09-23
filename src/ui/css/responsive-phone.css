@@ -1,0 +1,408 @@
+/* Phone arrangement (≤599px) of the responsive shell. Imported after the
+   shared responsive rules so it settles their cascade; the TV canvas and the
+   desktop/tablet responsive layout are untouched by anything in here. */
+
+/* Shelves scroll by swiping on touch screens; the desktop chevron pair would
+   only float under the row. */
+@media (hover: none), (max-width: 599px) {
+  .responsive-app .shelf-nav { display: none; }
+}
+
+/* Phones caption cards with their own two-line caption; wider layouts keep
+   their text rows below the art. */
+.responsive-app .card-caption { display: none; }
+
+/* A stacked hero has no room for an eyebrow between the art and the title. */
+@media (max-width: 899px) {
+  .responsive-app .hero > small { display: none; }
+}
+
+@media (max-width: 599px) {
+  /* ---- Shell: no header bar ------------------------------------------------
+     The sidebar box leaves the flow entirely; its navigation is the fixed
+     bottom bar, and Watch on TV moves to Settings. Pages start with their own
+     content and never carry the bar's height as phantom scroll. The bar sits
+     below dialogs (40) and full-screen editors (35). */
+  .responsive-app .desktop-sidebar {
+    position: fixed;
+    top: auto;
+    bottom: 0;
+    left: 0;
+    width: 0;
+    height: 0;
+    min-height: 0;
+    padding: 0;
+    border: 0;
+    background: none;
+    z-index: 30;
+  }
+  /* The page's top edge matches its side gutter: the hero art sits 16px
+     from the top exactly as it does from each side. */
+  .responsive-app main {
+    padding-top: max(var(--page-gutter), env(safe-area-inset-top));
+    padding-bottom: calc(84px + env(safe-area-inset-bottom));
+  }
+
+  /* ---- Bottom navigation: icons only, active destination on a pill -------- */
+  .responsive-app .desktop-sidebar nav {
+    position: fixed !important;
+    top: auto !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    height: calc(60px + env(safe-area-inset-bottom)) !important;
+    padding: 0 6px env(safe-area-inset-bottom) !important;
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: space-around !important;
+    gap: 0 !important;
+    background: rgba(16, 17, 18, 0.9) !important;
+    -webkit-backdrop-filter: saturate(160%) blur(18px);
+    backdrop-filter: saturate(160%) blur(18px);
+    border-top: 1px solid rgba(255, 255, 255, 0.07) !important;
+  }
+  .responsive-app.oled .desktop-sidebar nav { background: rgba(0, 0, 0, 0.9) !important; }
+  .responsive-app .desktop-sidebar nav button {
+    flex: 1 1 0;
+    max-width: 72px;
+    width: auto !important;
+    height: 48px !important;
+    min-height: 48px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    display: grid !important;
+    place-items: center !important;
+    border-radius: 0;
+  }
+  .responsive-app .desktop-sidebar nav button::before {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 52px;
+    height: 32px;
+    margin: -16px 0 0 -26px;
+    border-radius: 16px;
+    background: transparent;
+    transition: background-color 0.2s ease;
+  }
+  .responsive-app .desktop-sidebar nav button.active::before { background: #2a2c2f; }
+  .responsive-app .desktop-sidebar nav button .nav-icon,
+  .responsive-app .desktop-sidebar nav button:hover .nav-icon {
+    position: relative !important;
+    z-index: 1;
+    width: 24px !important;
+    height: 24px !important;
+    color: #8d9093;
+    filter: none !important;
+    opacity: 1 !important;
+    transition: color 0.2s ease;
+  }
+  .responsive-app .desktop-sidebar nav button.active .nav-icon { color: #fff; }
+
+  /* ---- Home hero ----------------------------------------------------------- */
+  .responsive-app .home { gap: 16px; }
+  .responsive-app .hero > p:empty { display: none; }
+  .responsive-app .responsive-hero-art { border-radius: 12px; clip-path: inset(0 round 12px); }
+  .responsive-app .hero .actions { margin-top: 16px; gap: 10px; }
+  .responsive-app .hero .actions button,
+  .responsive-app .hero .actions [data-focus-id="hero-details"],
+  .responsive-app .hero .actions .hero-save-btn {
+    height: 48px !important;
+    min-height: 48px !important;
+    max-height: 48px !important;
+    border-radius: 12px !important;
+  }
+  .responsive-app .hero .actions [data-focus-id="hero-details"] { padding: 0 16px; font-size: 17px; font-weight: 600; }
+  .responsive-app .hero .actions .hero-save-btn {
+    flex: 0 0 48px !important;
+    width: 48px !important;
+    min-width: 48px !important;
+    max-width: 48px !important;
+  }
+
+  /* ---- Shelves ------------------------------------------------------------- */
+  .responsive-app .shelves { padding: 0; margin-top: 8px; }
+  .responsive-app .shelves section { margin: 0 0 22px; }
+  .responsive-app .shelves h2,
+  .responsive-app .search .result-grid h2 {
+    margin: 0 0 8px;
+    font-size: 17px;
+    line-height: 22px;
+    font-weight: 700;
+    text-transform: none;
+    -webkit-line-clamp: 1;
+  }
+  .responsive-app .shelf-heading { align-items: center; gap: 12px; margin-bottom: 8px; }
+  .responsive-app .shelf-heading h2 { margin: 0; }
+  .responsive-app .shelf-see-more { min-height: 32px; font-size: 13px; }
+  /* Rows bleed to the screen edges while their first card starts exactly on
+     the heading's edge. */
+  .responsive-app .shelves .cards,
+  .responsive-app .search .result-grid section > .cards {
+    width: auto;
+    margin: 0 calc(-1 * var(--page-gutter));
+    padding: 0 var(--page-gutter);
+    gap: 12px;
+    scroll-padding-inline: var(--page-gutter);
+  }
+
+  /* ---- Cards: art with a two-line caption under it ------------------------ */
+  /* The caption has a fixed 40px height (6px gap, 18px title, 1px, 15px
+     context) so skipped off-screen cards keep the rendered card height and
+     restored page offsets stay exact. */
+  .responsive-app .responsive-card,
+  .responsive-app .media-card { width: 232px; flex-basis: 232px; }
+  .responsive-app .responsive-card { contain-intrinsic-size: auto 232px auto calc(130.5px + 40px); }
+  .responsive-app .media-card { height: auto; min-height: 0; transition: transform 0.12s ease; }
+  .responsive-app .responsive-card .media-card:active { transform: scale(0.97) !important; }
+  .responsive-app .media-card > strong,
+  .responsive-app .media-card > small { display: none; }
+  .responsive-app .media-card > img,
+  .responsive-app .media-card > .art-fallback,
+  .responsive-app .media-card::after {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 16 / 9;
+  }
+  /* The caption names the title; the fallback is only a surface. */
+  .responsive-app .media-card > .art-fallback { font-size: 0; }
+  .responsive-app .card-caption {
+    grid-area: 2 / 1;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    height: 40px;
+    min-width: 0;
+    padding: 6px 2px 0;
+    text-align: left;
+  }
+  .responsive-app .card-meta,
+  .responsive-app .card-title {
+    display: block;
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  .responsive-app .card-title { font-size: 14px; line-height: 18px; font-weight: 600; color: #f5f5f5; }
+  .responsive-app .card-meta { font-size: 12px; line-height: 15px; font-weight: 500; color: #8d9093; }
+
+  /* Live channels are compact logo tiles, as wide as each logo's own aspect
+     at a fixed height (half the landscape card), with no name. */
+  .responsive-app .responsive-card.logo { flex: 0 0 auto; width: auto; contain-intrinsic-size: auto 120px auto 64px; }
+  .responsive-app .media-card.logo-card {
+    width: auto;
+    min-width: 64px;
+    height: 64px;
+    overflow: hidden;
+    border-radius: 10px;
+    background: #1c1e20;
+  }
+  .responsive-app .media-card.logo-card > img,
+  .responsive-app .result-grid > .cards .media-card.logo-card > img {
+    position: relative;
+    inset: auto;
+    width: auto;
+    max-width: 176px;
+    height: 64px;
+    padding: 12px 16px;
+    aspect-ratio: auto;
+    border-radius: 0;
+    background: transparent;
+    object-fit: contain;
+  }
+  .responsive-app .media-card.logo-card > .art-fallback,
+  .responsive-app .media-card.logo-card::after { width: 100%; height: 100%; aspect-ratio: auto; border-radius: 10px; }
+
+  /* Progress: a 6px bar with softly rounded ends, lifted clear of the art edge. */
+  .responsive-app .media-card > progress,
+  .responsive-app .episode > progress {
+    left: 10px !important;
+    width: calc(100% - 20px) !important;
+    height: 6px !important;
+    margin-bottom: 10px !important;
+    border-radius: 2px;
+    background: rgba(255, 255, 255, 0.3);
+  }
+  .responsive-app :is(.media-card, .episode) > progress::-webkit-progress-bar { background: rgba(255, 255, 255, 0.3); border-radius: 2px; }
+  .responsive-app :is(.media-card, .episode) > progress::-webkit-progress-value { border-radius: 2px; min-width: 6px; }
+  .responsive-app :is(.media-card, .episode) > progress::-moz-progress-bar { border-radius: 2px; }
+
+  /* Touch leaves no focus or sticky-hover frame on a tapped card. */
+  .responsive-app .media-card:focus:not(:focus-visible)::after,
+  .responsive-app .media-card:hover:not(:focus-visible)::after { border-color: transparent; }
+
+  /* ---- Detail --------------------------------------------------------------- */
+  /* One 48px row: the flexible primary action, then My List and More squares. */
+  .responsive-app .detail-copy .actions button { height: 48px !important; min-height: 48px !important; border-radius: 12px !important; }
+  .responsive-app .detail-copy .actions :is(.detail-save-btn, [data-focus-id="detail-info"]) {
+    flex: 0 0 48px !important;
+    width: 48px !important;
+    min-width: 48px !important;
+    height: 48px !important;
+    min-height: 48px !important;
+  }
+  .responsive-app .detail-copy .actions [data-focus-id="detail-play"] { font-size: 17px; font-weight: 600; }
+  .responsive-app .genre-chip { font-size: 13px; }
+  .responsive-app .cast-row { gap: 12px; margin: 0 calc(-1 * var(--page-gutter)); padding: 0 var(--page-gutter) 4px; }
+  .responsive-app .cast-member { flex-basis: 80px; width: 80px; }
+  .responsive-app .cast-photo { width: 68px; height: 68px; font-size: 17px; }
+  .responsive-app .cast-member strong { font-size: 13px; line-height: 17px; }
+
+  /* ---- Browse: Discover, My List and Search -------------------------------- */
+  .responsive-app .browse > h1 { font-size: 28px; line-height: 34px; margin: 4px 0 16px; }
+  .responsive-app .search .keyboard { margin-bottom: 20px; }
+  /* The field's look is shared (responsive-polish.css); phones size it down. */
+  .responsive-app .search .keyboard > input { height: 44px; font-size: 16px; }
+  .responsive-app .result-grid > .cards {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px 12px;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    overflow: visible;
+  }
+  .responsive-app .result-grid > .cards .responsive-card { flex: none; width: auto; min-width: 0; contain-intrinsic-size: auto 100px; }
+  .responsive-app .result-grid > .cards .media-card { width: 100%; }
+  .responsive-app .result-grid > .cards .card-title { font-size: 13px; line-height: 18px; }
+  .responsive-app .result-grid > p { color: #a6a8aa; font-size: 15px; margin-top: 8px; }
+  .responsive-app .load-status { padding: 18px 0 4px; color: #8d9093; font-size: 14px; text-align: center; }
+
+  /* Chip rows scroll sideways and bleed to the screen edges. */
+  .responsive-app .chip-row {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    margin: 0 calc(-1 * var(--page-gutter));
+    padding: 0 var(--page-gutter);
+    scrollbar-width: none;
+  }
+  .responsive-app .chip-row + .chip-row { margin-top: 10px; }
+  .responsive-app .discover-chips { margin-bottom: 18px; }
+  .responsive-app .chip {
+    --responsive-control-surface: #17191b;
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 36px;
+    min-height: 36px;
+    padding: 0 14px;
+    border: 1px solid #2c2f32;
+    border-radius: 18px;
+    background: #17191b;
+    color: #c5c6c7;
+    font-size: 14px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  /* Long catalog names truncate inside their chip instead of filling the row. */
+  .responsive-app .chip-row[aria-label="Catalog"] .chip { display: block; max-width: 240px; line-height: 34px; overflow: hidden; text-overflow: ellipsis; }
+  .responsive-app .chip[aria-pressed="true"],
+  .responsive-app .chip[aria-pressed="true"]:hover {
+    --responsive-control-surface: #f5f5f5;
+    background-color: #f5f5f5;
+    border-color: #f5f5f5;
+    color: #101112;
+  }
+  .responsive-app .chip[aria-pressed="true"]:focus { color: #101112 !important; }
+  .responsive-app .filter-chip[aria-pressed="true"],
+  .responsive-app .filter-chip[aria-pressed="true"]:hover {
+    --responsive-control-surface: #2a2c2f;
+    background-color: #2a2c2f;
+    border-color: #4a4d50;
+    color: #fff;
+  }
+  .responsive-app .filter-chip[aria-pressed="true"]:focus { color: #fff !important; }
+  .responsive-app .filter-chip.required { border-color: #7d6a45; }
+  .responsive-app .filter-chip svg { color: #8d9093; }
+
+  /* ---- Live TV: channel list ----------------------------------------------- */
+  .responsive-app .live-header h1 {
+    position: static;
+    width: auto;
+    height: auto;
+    margin: 4px 0 14px;
+    font-size: 28px;
+    line-height: 34px;
+  }
+  .responsive-app .live-search {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    height: 44px;
+    padding: 0 14px;
+    margin-bottom: 12px;
+    border: 1px solid #2a2d30;
+    border-radius: 12px;
+    background: #17191b;
+    color: #8d9093;
+  }
+  .responsive-app .live-search:focus-within { border-color: #5a5d60; }
+  .responsive-app .live-search input {
+    flex: 1 1 auto;
+    min-width: 0;
+    height: 100%;
+    padding: 0;
+    border: 0;
+    outline: none;
+    background: transparent;
+    color: #f5f5f5;
+    font: inherit;
+    font-size: 16px;
+  }
+  .responsive-app .live-search input::-webkit-search-cancel-button { filter: invert(0.7); }
+  .responsive-app .live-filters { margin-bottom: 6px; }
+  .responsive-app .live-list { list-style: none; margin: 0 calc(-1 * var(--page-gutter)); padding: 0; }
+  .responsive-app .live-list li + li { border-top: 1px solid #1c1e20; }
+  .responsive-app .live-row {
+    --responsive-control-surface: transparent;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    width: 100%;
+    min-height: 76px;
+    height: auto;
+    padding: 12px var(--page-gutter);
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    color: #f5f5f5;
+    font-weight: 400;
+    text-align: left;
+  }
+  .responsive-app .live-row:active { background-color: #17191b !important; }
+  .responsive-app .live-logo {
+    flex: 0 0 64px;
+    width: 64px;
+    height: 44px;
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+    border-radius: 8px;
+    background: #1c1e20;
+  }
+  .responsive-app .live-logo img { width: 100%; height: 100%; padding: 6px 8px; object-fit: contain; }
+  .responsive-app .live-logo span { font-size: 12px; font-weight: 700; letter-spacing: 0.04em; color: #a6a8aa; }
+  .responsive-app .live-text { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+  .responsive-app .live-text strong,
+  .responsive-app .live-now,
+  .responsive-app .live-text small { display: block; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  .responsive-app .live-text strong { font-size: 15px; line-height: 20px; font-weight: 600; }
+  .responsive-app .live-now { font-size: 14px; line-height: 19px; color: #c5c6c7; }
+  .responsive-app .live-now.muted { color: #6f7275; }
+  .responsive-app .live-progress { display: block; height: 3px; margin: 3px 0 2px; overflow: hidden; border-radius: 1px; background: #2c2f32; }
+  .responsive-app .live-progress i { display: block; height: 100%; background: #f5f5f5; }
+  .responsive-app .live-text small { font-size: 12px; line-height: 16px; color: #8d9093; }
+  .responsive-app .live-skeleton { height: 68px; margin: 8px var(--page-gutter); border-radius: 8px; }
+  .responsive-app .live-list li.live-skeleton + li { border-top: 0; }
+  .responsive-app .live-empty { padding: 36px 8px; color: #a6a8aa; font-size: 15px; line-height: 1.5; text-align: center; }
+
+}
+
+@media (max-width: 599px) and (prefers-reduced-motion: reduce) {
+  .responsive-app .media-card { transition: none; }
+}

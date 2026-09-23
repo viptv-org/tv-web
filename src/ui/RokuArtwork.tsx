@@ -1,5 +1,5 @@
 import type { MediaItem, CardPresentation } from "../api";
-import { artworkUrl, cardPresentation } from "../core/presentations";
+import { artworkUrl, cardPresentation, presentation } from "../core/presentations";
 export { artworkUrl };
 import { useMemo, useState, type ImgHTMLAttributes, type ReactNode } from "react";
 
@@ -173,6 +173,42 @@ export function SharedCardThumbnail({
         if (!original) return;
         if (src !== original) setOriginalRetries(previous => previous.includes(original) ? previous : [...previous, original]);
         else setFailedImages(previous => previous.includes(original) ? previous : [...previous, original]);
+      }}
+    />
+  );
+}
+
+/**
+ * Poster-shaped card art: the Rust-projected poster role through the shared
+ * wsrv pipeline at poster geometry, retried once at its origin. A title
+ * without a usable poster falls back to its ordinary landscape card art,
+ * which the poster box crops.
+ */
+export function SharedPosterThumbnail({
+  item,
+  context,
+  initial,
+  progress,
+}: {
+  item: MediaItem;
+  context: "queue" | "catalog";
+  initial?: CardPresentation;
+  progress?: number | null;
+}) {
+  const [failed, setFailed] = useState(false);
+  const [retried, setRetried] = useState(false);
+  const poster = presentation(item).posterImage ?? undefined;
+  const derivative = useMemo(() => artworkUrl(poster, 300, 450), [poster]);
+  if (!poster || failed)
+    return <SharedCardThumbnail item={item} context={context} initial={initial} progress={progress} />;
+  return (
+    <CardThumbnail
+      src={retried ? poster : derivative}
+      fallback={initial?.title ?? item.name}
+      progress={progress}
+      onError={() => {
+        if (!retried && derivative !== poster) setRetried(true);
+        else setFailed(true);
       }}
     />
   );

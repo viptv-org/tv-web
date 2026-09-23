@@ -44,15 +44,16 @@ import { normalizeCore } from "../../core";
 import { presentation } from "../../core/presentations";
 import { captureScroll, desktopInvoker, initialPrefs, type BrowserSnapshot, type Choice, type ScrollAnchor } from "./appShared";
 import type { AppApi, CoreApi, DialogsApi, AuthApi, PlaybackEngineApi, PlaybackSessionApi, CatalogApi, NavigationApi, PlaybackControlsApi } from "./useTvApp";
-import { Cards, type CardActions } from "../../components/cards/Cards";
+import { Cards, type CardActions, type CardRowOptions } from "../../components/cards/Cards";
 import { ShelfCarousel } from "../../components/cards/ShelfCarousel";
+import { firstHomeCatalog as firstCatalog } from "./homeRows";
 
 export function useHero(app: PlaybackControlsApi) {
   const { api, catalogs, detail, discoverSources, heroMetadataCache, highlighted, items, libraryQueue, manage, play, profile, queue, recentLive, responsive, screen, searchKey, selected, setHighlighted } = app;
 
   const cardActions = useRef<CardActions>({ play, discoverSources, detail, manage });
   cardActions.current = { play, discoverSources, detail, manage };
-  const cards = (list: readonly MediaItem[], prefix: string, windowed = false) => (
+  const cards = (list: readonly MediaItem[], prefix: string, { shape, catalog, windowed = false }: CardRowOptions = {}) => (
     <Cards
       list={list}
       prefix={prefix}
@@ -63,11 +64,13 @@ export function useHero(app: PlaybackControlsApi) {
       searchKey={searchKey}
       setHighlighted={setHighlighted}
       windowed={windowed}
+      shape={shape}
+      catalog={catalog}
     />
   );
-  const shelfCards = (list: readonly MediaItem[], prefix: string) =>
-    responsive ? <ShelfCarousel>{cards(list, prefix, true)}</ShelfCarousel> : cards(list, prefix);
-  const firstHomeCatalog = catalogs.find((c) => c.type !== "live");
+  const shelfCards = (list: readonly MediaItem[], prefix: string, options: CardRowOptions = {}) =>
+    responsive ? <ShelfCarousel>{cards(list, prefix, { ...options, windowed: true })}</ShelfCarousel> : cards(list, prefix, { catalog: options.catalog });
+  const firstHomeCatalog = firstCatalog(catalogs);
   const catalogHeroItem = items.find((i) => i.type !== "live") ?? items[0];
   const heroItem = responsive ? catalogHeroItem : (highlighted ?? queue[0] ?? recentLive[0] ?? items[0]);
   const [heroMetadata, setHeroMetadata] = useState<{ key: string; item: MediaItem }>();

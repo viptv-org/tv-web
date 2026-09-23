@@ -46,7 +46,7 @@ import type { AppApi, CoreApi, DialogsApi, AuthApi, PlaybackEngineApi, PlaybackS
 import type { TrackChoice } from "../../components/player/AudioSelectorPopup";
 
 export function usePlaybackControls(app: NavigationApi) {
-  const { active, back, controller, editingProfile, entry, fail, modal, notify, overlay, play, player, profile, screen, seek, seekRepeat, seekTarget, seekTimer, seekValue, selected, session, setEditingProfile, setModal, setOverlay, setSeek, snapshot, stop, toggle, video } = app;
+  const { active, back, controller, editingProfile, entry, fail, modal, notify, overlay, play, player, profile, responsive, screen, seek, seekRepeat, seekTarget, seekTimer, seekValue, selected, session, setEditingProfile, setModal, setOverlay, setSeek, snapshot, stop, toggle, video } = app;
   const [playerNotice, setPlayerNotice] = useState<{ message: string; key: number }>();
 
   useEffect(() => {
@@ -124,6 +124,9 @@ export function usePlaybackControls(app: NavigationApi) {
   const surfaceClick = () => {
     if (screen !== "player") return;
     setOverlay(true);
+    // Pointer/touch layouts: a tap on the bare video only brings the
+    // controls back; play/pause is its own button (and the Space key).
+    if (responsive) return;
     if (selected?.type === "live") {
       toggleLiveMute();
     } else {
