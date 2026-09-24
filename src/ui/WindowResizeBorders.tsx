@@ -1,9 +1,13 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState, type PointerEvent } from "react";
 
 interface WindowResizeBordersProps {
   disabled?: boolean;
 }
 
+/**
+ * Frameless-window resize handles (Wayland has no native border): 6 px edges
+ * and 12 px corners around the window, hidden while maximized or fullscreen.
+ */
 export function WindowResizeBorders({ disabled = false }: WindowResizeBordersProps) {
   const [isMaximized, setIsMaximized] = useState(false);
 
@@ -31,7 +35,7 @@ export function WindowResizeBorders({ disabled = false }: WindowResizeBordersPro
 
   const startResize = async (
     direction: "East" | "North" | "NorthEast" | "NorthWest" | "South" | "SouthEast" | "SouthWest" | "West",
-    e: React.PointerEvent
+    e: PointerEvent
   ) => {
     if (e.button !== 0) return;
     e.preventDefault();
@@ -45,37 +49,37 @@ export function WindowResizeBorders({ disabled = false }: WindowResizeBordersPro
   };
 
   return (
-    <div className="window-resize-borders" aria-hidden="true">
+    <div className="vx-shell-resize" aria-hidden="true">
       <div
-        className="resize-edge resize-top"
+        className="vx-shell-resize-edge vx-shell-resize--top"
         onPointerDown={(e) => startResize("North", e)}
       />
       <div
-        className="resize-edge resize-bottom"
+        className="vx-shell-resize-edge vx-shell-resize--bottom"
         onPointerDown={(e) => startResize("South", e)}
       />
       <div
-        className="resize-edge resize-left"
+        className="vx-shell-resize-edge vx-shell-resize--left"
         onPointerDown={(e) => startResize("West", e)}
       />
       <div
-        className="resize-edge resize-right"
+        className="vx-shell-resize-edge vx-shell-resize--right"
         onPointerDown={(e) => startResize("East", e)}
       />
       <div
-        className="resize-corner resize-top-left"
+        className="vx-shell-resize-corner vx-shell-resize--top-left"
         onPointerDown={(e) => startResize("NorthWest", e)}
       />
       <div
-        className="resize-corner resize-top-right"
+        className="vx-shell-resize-corner vx-shell-resize--top-right"
         onPointerDown={(e) => startResize("NorthEast", e)}
       />
       <div
-        className="resize-corner resize-bottom-left"
+        className="vx-shell-resize-corner vx-shell-resize--bottom-left"
         onPointerDown={(e) => startResize("SouthWest", e)}
       />
       <div
-        className="resize-corner resize-bottom-right"
+        className="vx-shell-resize-corner vx-shell-resize--bottom-right"
         onPointerDown={(e) => startResize("SouthEast", e)}
       />
     </div>

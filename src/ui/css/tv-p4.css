@@ -204,20 +204,6 @@ button:focus .roku-text.overflows > span {
   color: #a6a8aa;
 }
 
-.nav-initials {
-  position: absolute;
-  left: calc(8px * var(--tv-k));
-  top: calc(8px * var(--tv-k));
-  width: calc(44px * var(--tv-k));
-  height: calc(44px * var(--tv-k));
-  border-radius: calc(8px * var(--tv-k));
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #242628;
-  color: white;
-  font-size: calc(19px * var(--tv-k));
-}
 .channel-identity {
   top: calc(34px * var(--tv-k));
   height: calc(56px * var(--tv-k));

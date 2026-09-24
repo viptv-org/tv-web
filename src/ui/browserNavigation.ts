@@ -66,10 +66,13 @@ export class BrowserNavigation<T> {
   private snapshots = new Map<number, T>();
   private route: BrowserRoute;
   private previousScrollRestoration: ScrollRestoration;
+  /** Highest history position reachable with Forward (desktop title bar); unknown after a reload. */
+  private forwardLimit = 0;
   constructor(private onPop: (route: BrowserRoute, snapshot: T | undefined) => void, private capture?: () => T) {
     const stored = history.state?.viptvNavigation as Entry | undefined;
     this.entry = stored && Number.isSafeInteger(stored.key) && Number.isSafeInteger(stored.position) ? stored : { key: Date.now(), position: 0 };
     this.sequence = this.entry.key;
+    this.forwardLimit = this.entry.position;
     this.route = readBrowserRoute();
     history.replaceState({ viptvNavigation: this.entry }, "", browserRouteUrl(this.route));
     this.previousScrollRestoration = history.scrollRestoration;
@@ -81,6 +84,7 @@ export class BrowserNavigation<T> {
     const stored = history.state?.viptvNavigation as Entry | undefined;
     this.entry = stored && Number.isSafeInteger(stored.key) && Number.isSafeInteger(stored.position) ? stored : { key: ++this.sequence, position: 0 };
     this.sequence = Math.max(this.sequence, this.entry.key);
+    this.forwardLimit = Math.max(this.forwardLimit, this.entry.position);
     this.route = readBrowserRoute();
     this.onPop(this.route, this.snapshots.get(this.entry.key));
   };
@@ -95,6 +99,8 @@ export class BrowserNavigation<T> {
     );
     if (url !== browserRouteUrl(this.route) && !replace && !sameItem) {
       this.entry = { key: ++this.sequence, position: this.entry.position + 1 };
+      // A new entry drops the forward history, as the browser does.
+      this.forwardLimit = this.entry.position;
       history.pushState({ viptvNavigation: this.entry }, "", url);
     } else history.replaceState({ viptvNavigation: this.entry }, "", url);
     this.route = route;
@@ -106,6 +112,8 @@ export class BrowserNavigation<T> {
   remember(snapshot: T) { this.snapshots.set(this.entry.key, snapshot); }
   canGoBack(): boolean { return this.entry.position > 0; }
   back(): boolean { if (this.entry.position <= 0) return false; history.back(); return true; }
+  canGoForward(): boolean { return this.entry.position < this.forwardLimit; }
+  forward(): boolean { if (!this.canGoForward()) return false; history.forward(); return true; }
   clearSnapshots() { this.snapshots.clear(); }
   dispose() { window.removeEventListener("popstate", this.pop); history.scrollRestoration = this.previousScrollRestoration; }
 }

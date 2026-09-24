@@ -1,57 +1,5 @@
-/* Desktop header search field and its popunder. The field sits in the 30px
-   frameless titlebar, whose own button rules are !important, so every rule
-   here is scoped under .search-popunder and restates what it needs. */
-.search-popunder {
-  position: relative;
-  -webkit-app-region: no-drag;
-  line-height: normal;
-}
-.search-popunder-field {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  width: min(380px, 38vw);
-  height: 24px;
-  padding: 0 4px 0 10px;
-  border: 1px solid #2a2d30;
-  border-radius: 12px;
-  background: #1c1e20;
-  color: #8c9094;
-  box-sizing: border-box;
-  cursor: text;
-  transition: border-color 0.15s ease, background-color 0.15s ease;
-}
-.search-popunder-field:hover { background: #24272a; border-color: #383b3e; }
-.search-popunder-field:focus-within,
-.search-popunder-field.is-open { background: #24272a; border-color: #4a4d51; color: #c5c6c7; }
-.search-popunder-field input {
-  flex: 1 1 auto;
-  min-width: 0;
-  height: 100%;
-  padding: 0;
-  border: 0;
-  outline: none;
-  background: transparent;
-  color: #f5f5f5;
-  font: 12px/1 Arial, sans-serif;
-}
-.search-popunder-field input::placeholder { color: #8c9094; }
-.search-popunder-field input::-webkit-search-cancel-button { display: none; }
-.desktop-titlebar .search-popunder .search-popunder-clear {
-  display: grid;
-  place-items: center;
-  width: 18px;
-  height: 18px;
-  min-width: 18px;
-  min-height: 18px;
-  padding: 0;
-  border: 0;
-  border-radius: 50%;
-  background: transparent !important;
-  color: #8c9094 !important;
-}
-.desktop-titlebar .search-popunder .search-popunder-clear:hover { color: #f5f5f5 !important; background: #33363a !important; }
-
+/* Desktop title-bar search popunder panel (browse family). The field itself
+   is the shell's: src/styles/screens/shell.css (.vx-titlebar-search). */
 /* The panel is fixed to the window, so the titlebar's overflow clip and
    30px height never cut it off. */
 .search-popunder-panel {

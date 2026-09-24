@@ -1,87 +1,3 @@
-.responsive-app .desktop-sidebar button em {
-  display: none !important;
-}
-.responsive-app .desktop-sidebar button img,
-.responsive-app .desktop-sidebar button .nav-icon,
-.responsive-app .desktop-sidebar button svg {
-  position: static !important;
-  left: auto !important;
-  top: auto !important;
-  right: auto !important;
-  bottom: auto !important;
-  margin: 0 auto !important;
-  width: 24px !important;
-  height: 24px !important;
-  object-fit: contain;
-  color: #a6a8aa;
-  filter: brightness(0.65);
-  opacity: 0.75;
-  transition: filter 0.15s ease, opacity 0.15s ease, color 0.15s ease;
-}
-.responsive-app .desktop-sidebar [data-focus-id="responsive-profile"] img,
-.responsive-app .desktop-sidebar [data-focus-id="responsive-profile"] .nav-avatar {
-  width: 32px !important;
-  height: 32px !important;
-  border-radius: 50% !important;
-  opacity: 1 !important;
-  filter: none !important;
-}
-.responsive-app .desktop-sidebar [data-focus-id="responsive-profile"]:hover img,
-.responsive-app .desktop-sidebar [data-focus-id="responsive-profile"]:hover .nav-avatar {
-  opacity: 1 !important;
-  filter: brightness(1.2) !important;
-}
-.responsive-app .desktop-sidebar button:hover {
-  background: transparent !important;
-  background-color: transparent !important;
-}
-.responsive-app .desktop-sidebar button:hover img,
-.responsive-app .desktop-sidebar button:hover .nav-icon,
-.responsive-app .desktop-sidebar button:hover svg {
-  filter: brightness(1.25);
-  opacity: 1;
-  color: #fff;
-}
-.responsive-app .desktop-sidebar button.active {
-  background: transparent !important;
-  background-color: transparent !important;
-}
-.responsive-app .desktop-sidebar button.active img,
-.responsive-app .desktop-sidebar button.active .nav-icon {
-  filter: brightness(1.7);
-  opacity: 1;
-}
-.responsive-app .desktop-sidebar button:focus,
-.responsive-app .desktop-sidebar button:focus:not(:focus-visible),
-.responsive-app .desktop-sidebar button:focus-visible {
-  background: transparent !important;
-  background-color: transparent !important;
-  box-shadow: none !important;
-  outline: none !important;
-}
-
-/* The active profile anchors the bottom of the sidebar; the bottom padding
-   keeps the centred navigation group clear of it in short windows. */
-.responsive-app .desktop-sidebar { padding-bottom: 64px; }
-.responsive-app .desktop-sidebar .sidebar-profile {
-  position: absolute !important;
-  left: 50%;
-  bottom: 14px;
-  margin: 0 0 0 -21px !important;
-}
-.responsive-app .desktop-sidebar .sidebar-profile .nav-avatar { position: relative !important; z-index: 1; }
-.responsive-app .sidebar-profile-initials {
-  position: absolute;
-  inset: 5px;
-  display: grid;
-  place-items: center;
-  border-radius: 50%;
-  background: #303234;
-  color: #c5c6c7;
-  font-size: 12px;
-  font-weight: 700;
-}
-
 .responsive-app main {
   position: relative;
   inset: auto;
@@ -234,7 +150,6 @@
 .responsive-app .startup-cover { position: fixed; inset: 0; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; background: var(--canvas); }
 .responsive-app .startup-cover > img, .responsive-app .startup-cover > p, .responsive-app .startup-cover::after { position: static; margin: 16px; }
 .responsive-app.playing { background: #000; overflow: hidden; }
-.responsive-app.playing .brand { display: none; }
 /* The idle, hidden video element keeps the frame's size too; at the TV's
    fixed 1280px it widened the shell's scrollable area on every smaller screen. */
 .responsive-app .video { width: 100%; height: 100%; }
@@ -326,64 +241,18 @@
 .responsive-app .player-info-body { margin: 0; padding: 10px 14px 12px; overflow-y: auto; font-size: 13px; line-height: 1.6; color: #c5c6c7; }
 .responsive-app .player-info-body p { margin: 0; }
 .responsive-app .playback-loading { position: fixed; left: 50%; top: 40%; width: min(90%, 420px); transform: translate(-50%, -50%); text-align: center; }
-@media (max-width: 1380px) {
-  .responsive-app .responsive-toolbar nav em { display: none; }
-  .responsive-app .responsive-toolbar nav button { width: 48px; padding: 12px; }
-  .responsive-app .responsive-toolbar:not(.desktop-titlebar) { min-height: 80px; padding-block: 12px; }
-  .responsive-app .responsive-toolbar nav { top: 12px; }
-  .responsive-app .brand { top: 21px; }
-}
 @media (max-width: 899px) {
   .tv-screen.responsive-app { --page-gutter: 28px; }
   .responsive-app .home, .responsive-app .detail { grid-template-columns: minmax(0, 1fr); gap: 24px; }
   .responsive-app .responsive-hero-art, .responsive-app .responsive-detail-art { grid-column: 1; grid-row: 1; max-height: 400px; max-width: 711px; justify-self: center; }
   .responsive-app .hero, .responsive-app .detail-copy, .responsive-app .series .detail-copy { grid-column: 1; grid-row: 2; }
-  .responsive-app .responsive-toolbar [data-focus-id="responsive-profile"] span { display: none; }
-  .responsive-app .responsive-toolbar [data-focus-id="responsive-profile"] { flex: 0 0 48px; width: 48px; }
   .responsive-app .hero > p { -webkit-line-clamp: 3; }
 }
 @media (max-width: 599px) {
   .tv-screen.responsive-app {
     --page-gutter: 16px;
     font-size: 16px;
-    top: 0 !important;
-    height: 100% !important;
   }
-  .responsive-app .desktop-titlebar {
-    display: none !important;
-  }
-  .responsive-app .desktop-sidebar {
-    position: relative;
-    width: 100%;
-    height: 72px;
-    min-height: 72px;
-    border-right: none;
-    flex-direction: row;
-    justify-content: space-between;
-    padding: 0 var(--page-gutter);
-  }
-  .responsive-app .desktop-sidebar .sidebar-brand {
-    position: static;
-    transform: none;
-  }
-  .responsive-app .desktop-sidebar .sidebar-centered-group {
-    flex-direction: row;
-    width: auto;
-    margin: 0;
-  }
-  .responsive-app .responsive-toolbar { height: 72px; min-height: 72px; gap: 8px; }
-  .responsive-app .responsive-toolbar .brand { flex-basis: 32px; width: 32px; height: 30px; margin: 0; }
-  .responsive-app .toolbar-spacer { display: block; flex: 1; }
-  .responsive-app .responsive-toolbar button { font-size: 13px; padding: 0 8px; }
-  .responsive-app .brand { top: 20px; width: 36px; height: 32px; }
-  .responsive-app .desktop-sidebar nav,
-  .responsive-app .responsive-toolbar nav { position: fixed !important; top: auto !important; bottom: 0 !important; left: 0 !important; width: 100% !important; height: calc(72px + env(safe-area-inset-bottom)) !important; padding: 0 4px env(safe-area-inset-bottom) !important; background: #191b1df5 !important; border-top: 1px solid #414447 !important; flex-direction: row !important; justify-content: space-around !important; z-index: 20 !important; }
-  .responsive-app .desktop-sidebar nav button,
-  .responsive-app .responsive-toolbar nav button { flex: 1 1 0; max-width: 86px; height: 64px; padding: 8px 0; flex-direction: column; justify-content: center; gap: 5px; border-radius: 8px; }
-  .responsive-app .desktop-sidebar nav button em,
-  .responsive-app .responsive-toolbar nav em { display: block !important; font-size: 11px; white-space: nowrap; }
-  .responsive-app .desktop-sidebar nav .nav-icon,
-  .responsive-app .responsive-toolbar nav .nav-icon { width: 24px; height: 24px; }
   .responsive-app main { margin-left: 0 !important; width: 100% !important; padding-top: 16px; padding-bottom: calc(104px + env(safe-area-inset-bottom)); }
   .responsive-app .roku-settings,
   .responsive-app .roku-guide { margin-left: 0 !important; width: 100% !important; }

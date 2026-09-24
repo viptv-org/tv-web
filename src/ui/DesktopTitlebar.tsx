@@ -1,318 +1,179 @@
-import type { ReactNode } from "react";
+import type { MouseEvent, ReactNode, SyntheticEvent } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { isDesktopShell } from "./app/appShared";
 
-export function RemoteControlIcon({ className }: { className?: string }) {
-  return (
-    <svg
-      className={className}
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <rect x="6.5" y="2" width="11" height="20" rx="3.5" />
-      <circle cx="12" cy="6.5" r="1" fill="currentColor" />
-      <circle cx="9.5" cy="10.5" r="0.75" fill="currentColor" />
-      <circle cx="14.5" cy="10.5" r="0.75" fill="currentColor" />
-      <circle cx="9.5" cy="13.5" r="0.75" fill="currentColor" />
-      <circle cx="14.5" cy="13.5" r="0.75" fill="currentColor" />
-      <rect x="9.5" y="16.5" width="5" height="2.5" rx="1" stroke="currentColor" fill="none" />
-    </svg>
-  );
-}
+// The Watch on TV glyph lives with the rails; re-exported for existing importers.
+export { RemoteControlIcon } from "./ShellNav";
 
 interface DesktopTitlebarProps {
+  /** "pairing": wordmark and window controls only (sign-in, profiles). */
+  variant?: "app" | "pairing";
   canGoBack?: boolean;
+  canGoForward?: boolean;
   onNavigateBack?: () => void;
-  /** Centred in the bar regardless of the side groups' widths (the search field). */
+  onNavigateForward?: () => void;
+  /** Centred on the window regardless of the side groups (the search field). */
   center?: ReactNode;
 }
 
+async function minimize() {
+  try {
+    await invoke("app_window_minimize");
+  } catch {
+    try {
+      const { getCurrentWindow } = await import("@tauri-apps/api/window");
+      await getCurrentWindow().minimize();
+    } catch (err) {
+      console.warn("Minimize unavailable:", err);
+    }
+  }
+}
+
+async function toggleMaximize() {
+  try {
+    await invoke("app_window_toggle_maximize");
+  } catch {
+    try {
+      const { getCurrentWindow } = await import("@tauri-apps/api/window");
+      const win = getCurrentWindow();
+      if (await win.isMaximized()) {
+        await win.unmaximize();
+      } else {
+        await win.maximize();
+      }
+    } catch (err) {
+      console.warn("Maximize unavailable:", err);
+    }
+  }
+}
+
+async function close() {
+  try {
+    await invoke("app_window_close");
+  } catch {
+    try {
+      const { getCurrentWindow } = await import("@tauri-apps/api/window");
+      await getCurrentWindow().close();
+    } catch (err) {
+      console.warn("Close unavailable:", err);
+    }
+  }
+}
+
+async function startDragging(event: MouseEvent) {
+  if (event.button !== 0) return;
+  try {
+    await invoke("app_window_start_dragging");
+  } catch {
+    try {
+      const { getCurrentWindow } = await import("@tauri-apps/api/window");
+      await getCurrentWindow().startDragging();
+    } catch {
+      // Ignored when not running under the Tauri window drag provider.
+    }
+  }
+}
+
+const stop = (event: SyntheticEvent) => event.stopPropagation();
+
+/** Props for a title-bar button: no drag, no lingering focus from a click. */
+const barButton = (action: () => void) => ({
+  type: "button" as const,
+  tabIndex: -1,
+  onMouseDown: (event: MouseEvent<HTMLButtonElement>) => {
+    stop(event);
+    event.currentTarget.blur();
+  },
+  onPointerDown: stop,
+  onClick: (event: MouseEvent<HTMLButtonElement>) => {
+    stop(event);
+    event.currentTarget.blur();
+    action();
+  },
+});
+
 /**
- * Frameless Tauri window header: brand and Back on the left, the search
- * field centred, window controls on the right. Profile switching lives at
- * the bottom of the sidebar, shared with the browser layout.
+ * Frameless Tauri window header (40 px + hairline; reference DeskHome, and
+ * the "Title bar" section of CmpDesk2): the V tile and VIPTV wordmark,
+ * Back / Forward, the search field centred on the window, and the window
+ * controls. The pairing variant (sign-in, profiles) keeps only the wordmark
+ * and window controls. The shell hides the bar in the fullscreen player.
+ * Everything that is not a control drags the window; double-click toggles
+ * maximize.
  */
 export function DesktopTitlebar({
-  canGoBack,
+  variant = "app",
+  canGoBack = false,
+  canGoForward = false,
   onNavigateBack,
+  onNavigateForward,
   center,
 }: DesktopTitlebarProps) {
-  const handleMinimize = async () => {
-    try {
-      await invoke("app_window_minimize");
-    } catch {
-      try {
-        const { getCurrentWindow } = await import("@tauri-apps/api/window");
-        await getCurrentWindow().minimize();
-      } catch (err) {
-        console.warn("Minimize unavailable:", err);
-      }
-    }
-  };
-
-  const handleToggleMaximize = async () => {
-    try {
-      await invoke("app_window_toggle_maximize");
-    } catch {
-      try {
-        const { getCurrentWindow } = await import("@tauri-apps/api/window");
-        const win = getCurrentWindow();
-        if (await win.isMaximized()) {
-          await win.unmaximize();
-        } else {
-          await win.maximize();
-        }
-      } catch (err) {
-        console.warn("Maximize unavailable:", err);
-      }
-    }
-  };
-
-  const handleClose = async () => {
-    try {
-      await invoke("app_window_close");
-    } catch {
-      try {
-        const { getCurrentWindow } = await import("@tauri-apps/api/window");
-        await getCurrentWindow().close();
-      } catch (err) {
-        console.warn("Close unavailable:", err);
-      }
-    }
-  };
-
-  const handleStartDragging = async (e: React.MouseEvent) => {
-    if (e.button !== 0) return;
-    try {
-      await invoke("app_window_start_dragging");
-    } catch {
-      try {
-        const { getCurrentWindow } = await import("@tauri-apps/api/window");
-        await getCurrentWindow().startDragging();
-      } catch {
-        // Ignored when not running under Tauri window drag provider
-      }
-    }
-  };
-
-  const stopDragEvents = (e: React.SyntheticEvent) => {
-    e.stopPropagation();
-  };
-
   return (
     <header
-      className="desktop-titlebar responsive-toolbar"
-      style={{
-        height: "30px",
-        minHeight: "30px",
-        maxHeight: "30px",
-        padding: "0 10px",
-        boxSizing: "border-box",
-        overflow: "hidden",
-      }}
+      className="vx-titlebar desktop-titlebar"
+      data-tauri-drag-region
+      onMouseDown={startDragging}
+      onDoubleClick={() => void toggleMaximize()}
     >
-      <div
-        className="titlebar-left brand"
-        data-tauri-drag-region
-        onMouseDown={handleStartDragging}
-        onDoubleClick={handleToggleMaximize}
-        style={{
-          position: "static",
-          display: "flex",
-          alignItems: "center",
-          gap: "6px",
-          height: "100%",
-          margin: 0,
-          padding: 0,
-          cursor: "default",
-        }}
-      >
-        <img
-          src={`${import.meta.env.BASE_URL}assets/viptv-mark.png`}
-          alt="viptv"
-          className="titlebar-logo"
-          style={{
-            width: "12px",
-            height: "12px",
-            maxWidth: "12px",
-            maxHeight: "12px",
-            objectFit: "contain",
-            display: "block",
-            position: "static",
-            margin: 0,
-            padding: 0,
-            pointerEvents: "none",
-          }}
-        />
-        <span
-          className="titlebar-brand"
-          style={{
-            fontSize: "11px",
-            fontWeight: 700,
-            letterSpacing: "0.08em",
-            color: "#f5f5f5",
-            pointerEvents: "none",
-            userSelect: "none",
-          }}
-        >
-          VIPTV
+      <div className="vx-titlebar-start" data-tauri-drag-region>
+        <span className="vx-titlebar-brand" data-tauri-drag-region aria-label="VIPTV" role="img">
+          <span className="vx-titlebar-mark" aria-hidden="true">V</span>
+          <span className="vx-titlebar-wordmark viptv-type-desktop-wordmark" aria-hidden="true">VIPTV</span>
         </span>
-        {/* The back slot is always reserved so the brand box never reflows
-            between routes; hidden state merely removes the affordance. */}
-        <button
-            type="button"
-            className="titlebar-btn titlebar-icon-btn titlebar-back-btn"
-            aria-label="Back"
-            title="Back"
-            tabIndex={-1}
-            onMouseDown={(e) => {
-              stopDragEvents(e);
-              e.currentTarget.blur();
-            }}
-            onPointerDown={(e) => {
-              stopDragEvents(e);
-              e.currentTarget.blur();
-            }}
-            onClick={(e) => {
-              stopDragEvents(e);
-              e.currentTarget.blur();
-              onNavigateBack?.();
-            }}
-            style={{
-              width: "20px",
-              height: "20px",
-              minWidth: "20px",
-              minHeight: "20px",
-              padding: 0,
-              marginLeft: "4px",
-              visibility: canGoBack ? "visible" : "hidden",
-            }}
-          >
-            <svg
-              width="11"
-              height="11"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
+        {variant === "app" && (
+          <>
+            <button
+              {...barButton(() => onNavigateBack?.())}
+              className="vx-titlebar-nav"
+              aria-label="Back"
+              title="Back"
+              disabled={!canGoBack}
+              onDoubleClick={stop}
             >
-              <polyline points="15 18 9 12 15 6" />
-            </svg>
-          </button>
+              <ChevronLeft size={18} strokeWidth={2} aria-hidden="true" />
+            </button>
+            <button
+              {...barButton(() => onNavigateForward?.())}
+              className="vx-titlebar-nav"
+              aria-label="Forward"
+              title="Forward"
+              disabled={!canGoForward}
+              onDoubleClick={stop}
+            >
+              <ChevronRight size={18} strokeWidth={2} aria-hidden="true" />
+            </button>
+          </>
+        )}
       </div>
 
-      <div
-        className="titlebar-drag-spacer"
-        data-tauri-drag-region
-        onMouseDown={handleStartDragging}
-        onDoubleClick={handleToggleMaximize}
-      />
-
-      {center && (
-        <div
-          className="titlebar-center"
-          onMouseDown={stopDragEvents}
-          onPointerDown={stopDragEvents}
-        >
+      {variant === "app" && center && (
+        <div className="vx-titlebar-center" onMouseDown={stop} onPointerDown={stop} onDoubleClick={stop}>
           {center}
         </div>
       )}
 
-      <div
-        className="titlebar-right"
-        onMouseDown={stopDragEvents}
-        onPointerDown={stopDragEvents}
-      >
-        {isDesktopShell && (
-        <div
-          className="titlebar-window-controls"
-          onMouseDown={stopDragEvents}
-          onPointerDown={stopDragEvents}
-        >
-          <button
-            type="button"
-            className="titlebar-btn titlebar-control-btn btn-minimize"
-            aria-label="Minimize"
-            title="Minimize"
-            tabIndex={-1}
-            onMouseDown={(e) => {
-              stopDragEvents(e);
-              e.currentTarget.blur();
-            }}
-            onPointerDown={(e) => {
-              stopDragEvents(e);
-              e.currentTarget.blur();
-            }}
-            onClick={(e) => {
-              stopDragEvents(e);
-              e.currentTarget.blur();
-              void handleMinimize();
-            }}
-          >
-            <svg width="10" height="2" viewBox="0 0 10 2" fill="currentColor">
-              <rect width="10" height="2" rx="1" />
+      {isDesktopShell && (
+        <div className="vx-titlebar-controls" onMouseDown={stop} onPointerDown={stop} onDoubleClick={stop}>
+          <button {...barButton(() => void minimize())} className="vx-titlebar-control" aria-label="Minimize" title="Minimize">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" aria-hidden="true">
+              <path d="M6 12h12" />
             </svg>
           </button>
-          <button
-            type="button"
-            className="titlebar-btn titlebar-control-btn btn-maximize"
-            aria-label="Maximize"
-            title="Maximize"
-            tabIndex={-1}
-            onMouseDown={(e) => {
-              stopDragEvents(e);
-              e.currentTarget.blur();
-            }}
-            onPointerDown={(e) => {
-              stopDragEvents(e);
-              e.currentTarget.blur();
-            }}
-            onClick={(e) => {
-              stopDragEvents(e);
-              e.currentTarget.blur();
-              void handleToggleMaximize();
-            }}
-          >
-            <svg width="9" height="9" viewBox="0 0 10 10" fill="none">
-              <rect x="0.75" y="0.75" width="8.5" height="8.5" rx="1.5" stroke="currentColor" strokeWidth="1.3" />
+          <button {...barButton(() => void toggleMaximize())} className="vx-titlebar-control" aria-label="Maximize" title="Maximize">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true">
+              <rect x="6" y="6" width="12" height="12" rx="1.5" />
             </svg>
           </button>
-          <button
-            type="button"
-            className="titlebar-btn titlebar-control-btn btn-close"
-            aria-label="Close"
-            title="Close"
-            tabIndex={-1}
-            onMouseDown={(e) => {
-              stopDragEvents(e);
-              e.currentTarget.blur();
-            }}
-            onPointerDown={(e) => {
-              stopDragEvents(e);
-              e.currentTarget.blur();
-            }}
-            onClick={(e) => {
-              stopDragEvents(e);
-              e.currentTarget.blur();
-              void handleClose();
-            }}
-          >
-            <svg width="9" height="9" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round">
-              <line x1="1.5" y1="1.5" x2="8.5" y2="8.5" />
-              <line x1="8.5" y1="1.5" x2="1.5" y2="8.5" />
+          <button {...barButton(() => void close())} className="vx-titlebar-control" aria-label="Close" title="Close">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" aria-hidden="true">
+              <path d="M18 6 6 18" />
+              <path d="m6 6 12 12" />
             </svg>
           </button>
         </div>
-        )}
-      </div>
+      )}
     </header>
   );
 }

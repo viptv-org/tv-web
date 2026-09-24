@@ -23,7 +23,6 @@
 .responsive-app .skeleton-shell { pointer-events: none; user-select: none; }
 /* End-of-list and pending-shelf sentinels (AutoLoad). */
 .responsive-app .auto-load { height: 1px; }
-.responsive-app .skeleton-shell .nav-icon { opacity: 0.35 !important; }
 
 /* Home: text lines occupy the line boxes the loaded copy will, and the
    title holds a title logo's slot (128px, 72px on phones). The synopsis

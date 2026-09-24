@@ -1,8 +1,5 @@
-import { Bookmark, Compass, House, Search, Settings, Tv } from "lucide-react";
-import { RemoteControlIcon } from "../ui/DesktopTitlebar";
 import { homeCatalogShape, CARD_SHAPES, type CardShape } from "../ui/cardShapes";
 
-const NAV_ICONS = [House, Compass, Tv, Bookmark, Search, Settings];
 // Continue Watching first, then the Home catalog pattern.
 const SHELVES: CardShape[] = [CARD_SHAPES.continueWatching, homeCatalogShape(0), homeCatalogShape(1)];
 
@@ -43,27 +40,7 @@ export function SkeletonShelfCards({ shape, count = 8 }: { shape: CardShape; cou
 export function HomeSkeleton({ phone }: { phone: boolean }) {
   return (
     <>
-      <aside className="desktop-sidebar skeleton-shell" aria-hidden="true">
-        <div className="sidebar-centered-group">
-          <nav>
-            {NAV_ICONS.map((Icon, index) => (
-              <button type="button" tabIndex={-1} key={index} className={index === 0 ? "active" : ""}>
-                <Icon className="nav-icon" size={24} strokeWidth={index === 0 ? 2.25 : 1.75} />
-              </button>
-            ))}
-          </nav>
-          {!phone && (
-            <button type="button" tabIndex={-1} className="sidebar-cast">
-              <RemoteControlIcon />
-            </button>
-          )}
-        </div>
-        {!phone && (
-          <button type="button" tabIndex={-1} className="sidebar-profile">
-            <span className="sidebar-profile-initials skeleton-block" />
-          </button>
-        )}
-      </aside>
+      {/* The navigation chrome behind the skeleton is drawn by the shell (AppShell). */}
       <main className="home home-skeleton skeleton-shell" role="status" aria-label="Loading VIPTV">
         <div className="responsive-hero-art skeleton-block" aria-hidden="true" />
         <div className="hero" aria-hidden="true">

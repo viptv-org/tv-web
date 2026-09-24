@@ -51,3 +51,23 @@ describe("responsive browser navigation", () => {
     } finally { nav.dispose(); }
   });
 });
+
+describe("desktop title bar Forward", () => {
+  it("is offered only after going back, and a new entry drops it", async () => {
+    history.replaceState(null, "", "/tv/home");
+    const nav = new BrowserNavigation<{ title: string }>(() => {});
+    try {
+      nav.update({ screen: "Home" }, { title: "Home" }, true);
+      nav.update({ screen: "Settings" }, { title: "Settings" });
+      expect(nav.canGoForward()).toBe(false);
+      const popped = new Promise((done) => window.addEventListener("popstate", done, { once: true }));
+      expect(nav.back()).toBe(true);
+      await popped;
+      expect(nav.canGoBack()).toBe(false);
+      expect(nav.canGoForward()).toBe(true);
+      nav.update({ screen: "Discover" }, { title: "Discover" });
+      expect(nav.canGoForward()).toBe(false);
+      expect(nav.forward()).toBe(false);
+    } finally { nav.dispose(); }
+  });
+});

@@ -1,7 +1,8 @@
 import { WindowResizeBorders } from "../WindowResizeBorders";
 import { ResponsiveSignIn } from "../ResponsiveSignIn";
 import { RemoteRoot, TvButton } from "../remote";
-import { DesktopTitlebar, RemoteControlIcon } from "../DesktopTitlebar";
+import { DesktopTitlebar } from "../DesktopTitlebar";
+import { DesktopRail, PhoneNav, TvRail, isNavDestination, useTvRail, type NavDestination } from "../ShellNav";
 import { RokuText } from "../RokuText";
 import { Settings } from "../Settings";
 import { Guide as LiveGuide } from "../Guide";
@@ -12,7 +13,6 @@ import { BrowseScreen } from "../../screens/BrowseScreen";
 import { DetailScreen } from "../../screens/DetailScreen";
 import { SourcesScreen } from "../../screens/SourcesScreen";
 import { PlayerScreen } from "../../screens/PlayerScreen";
-import type { Screen } from "../screens";
 import type { AppApi } from "./useTvApp";
 import { isDesktopShell } from "./appShared";
 import { AppDialogs } from "./AppDialogs";
@@ -20,19 +20,9 @@ import { enterLocalMode, localModeAvailable } from "../../local";
 import { usePhoneLayout } from "../usePhoneLayout";
 import { SearchPopunder } from "../SearchPopunder";
 import { HomeSkeleton } from "../../screens/HomeSkeleton";
-import { Bookmark, Compass, House, Search, Settings as SettingsIcon, Tv, type LucideIcon } from "lucide-react";
+import { useRef } from "react";
 import "../tv.css";
 import "../responsive.css";
-
-/** Responsive navigation glyphs; the TV keeps its Roku PNG icon set. */
-const responsiveNavIcons: Partial<Record<Screen, LucideIcon>> = {
-  Home: House,
-  Discover: Compass,
-  "Live TV": Tv,
-  "My List": Bookmark,
-  Search,
-  Settings: SettingsIcon,
-};
 
 /**
  * The application render tree: desktop frame, navigation, screens and
@@ -52,15 +42,18 @@ export function AppShell({ app }: { app: AppApi }) {
     enterLocalMode();
     location.reload();
   } : undefined;
-  const navItems: Screen[] = [
-    ...(responsive ? [] : (["profiles"] as Screen[])),
-    "Home",
-    "Discover",
-    "Live TV",
-    "My List",
-    "Search",
-    "Settings",
-  ];
+  // ---- Shell: app chrome (rails, phone nav, title bar) -------------------
+  // Screens that show the navigation chrome (TV rail, desktop / web rail).
+  const chromeScreen = !["startup", "pairing", "profiles", "player"].includes(screen);
+  // The desktop app searches from the title bar, so its rail has no Search.
+  const inRail = (destination: NavDestination) => !(isDesktopShell && destination === "Search");
+  // The rail item drawn as current: the screen's destination, or on a title /
+  // sources page (and the desktop Search page) the section it was opened from.
+  const section = useRef<NavDestination>("Home");
+  if (isNavDestination(screen) && inRail(screen)) section.current = screen;
+  const currentNav: NavDestination = isNavDestination(screen) && (phone || inRail(screen)) ? screen : section.current;
+  const tvRail = useTvRail(!responsive && chromeScreen, screen);
+  const openProfiles = () => setScreen("profiles");
   const brand = (<div
           className={`brand ${["profiles", "pairing"].includes(screen) ? "gateway-brand" : ""}`}
         >
@@ -69,57 +62,6 @@ export function AppShell({ app }: { app: AppApi }) {
             alt="viptv"
           />
         </div>);
-  const navigation = (<nav aria-label="Main navigation">
-                {navItems.map((n, i) => {
-                  const Icon = responsive ? responsiveNavIcons[n] : undefined;
-                  return (
-                  <TvButton
-                    id={`nav-${n}`}
-                    aria-label={n === "profiles" ? "Profile" : n}
-                    key={n}
-                    className={`${n === screen ? "active" : ""} nav-${n.replace(/ /g, "-").toLowerCase()}`}
-                    aria-current={n === screen ? "page" : undefined}
-                    onActivate={() =>
-                      n === "profiles"
-                        ? setScreen("profiles")
-                        : void navigate(n)
-                    }
-                  >
-                    {!responsive && i === 0 && (
-                      <span className="nav-initials">
-                        {activeProfile?.name.slice(0, 2).toUpperCase()}
-                      </span>
-                    )}
-                    {Icon ? (
-                      <Icon className="nav-icon" size={24} strokeWidth={n === screen ? 2.25 : 1.75} aria-hidden="true" />
-                    ) : (
-                    <ReadyImage
-                      className={`nav-icon ${!responsive && i === 0 ? "nav-avatar" : ""}`}
-                      src={
-                        !responsive && i === 0 && activeProfile
-                          ? avatarUrl(activeProfile)
-                          : `${import.meta.env.BASE_URL}assets/${[
-                              ...(!responsive ? ["avatar-catalog/critters-1.png"] : []),
-                              "ui-nav-home.png",
-                              "ui-nav-discover.png",
-                              "ui-nav-tv.png",
-                              "ui-nav-list.png",
-                              "ui-nav-search.png",
-                              "ui-nav-settings.png",
-                            ][i]}`
-                      }
-                      alt=""
-                      onError={(e) => {
-                        e.currentTarget.style.visibility = "hidden";
-                      }}
-                    />
-                    )}
-                    {!responsive && <em>{n === "profiles" ? "Profile" : n}</em>}
-                  </TvButton>
-                  );
-                })}
-              </nav>);
-
 
   return (
     <RemoteRoot
@@ -157,7 +99,7 @@ export function AppShell({ app }: { app: AppApi }) {
         }
         back();
       }}
-      onBack={() => casting ? closeCast() : screen === "player" && fullscreenControl.fullscreen && !modal && !entry && !editingProfile ? void fullscreenControl.exit() : back()}
+      onBack={() => tvRail.exit() || (casting ? closeCast() : screen === "player" && fullscreenControl.fullscreen && !modal && !entry && !editingProfile ? void fullscreenControl.exit() : back())}
       onMediaKey={mediaKey}
       onMediaKeyUp={mediaKeyUp}
       onNavigate={() => {
@@ -171,6 +113,9 @@ export function AppShell({ app }: { app: AppApi }) {
         )}
         {responsive && isDesktopShell && !fullscreenControl.fullscreen && (
           <DesktopTitlebar
+            variant={["pairing", "profiles"].includes(screen) ? "pairing" : "app"}
+            canGoForward={browser.current?.canGoForward() ?? false}
+            onNavigateForward={() => void browser.current?.forward()}
             canGoBack={
               screen !== "startup" &&
               screen !== "pairing" &&
@@ -212,39 +157,22 @@ export function AppShell({ app }: { app: AppApi }) {
         )}
         <canvas ref={canvas} className="video player-canvas" style={{ display: "none" }} onClick={surfaceClick} />
         {booting && <HomeSkeleton phone={phone} />}
-        {responsive && !booting && !["startup", "pairing", "player", "profiles"].includes(screen) && (
-          <aside className="desktop-sidebar" aria-label="Sidebar navigation">
-            <div className="sidebar-centered-group">
-              {navigation}
-              {/* Phones have no header bar: Watch on TV lives in Settings. */}
-              {!phone && <TvButton
-                id="responsive-cast"
-                aria-label="Watch on TV"
-                className="sidebar-cast"
-                onActivate={openCast}
-              >
-                <RemoteControlIcon />
-              </TvButton>}
-            </div>
-            {/* The active profile anchors the bottom of the sidebar in the
-                browser and Tauri layouts alike. */}
-            {!phone && activeProfile && (
-              <TvButton
-                id="responsive-profile"
-                className="sidebar-profile"
-                aria-label={`Switch profile (${activeProfile.name})`}
-                title={activeProfile.name}
-                onActivate={() => setScreen("profiles")}
-              >
-                <span className="sidebar-profile-initials" aria-hidden="true">
-                  {activeProfile.name.slice(0, 2).toUpperCase()}
-                </span>
-                <ReadyImage className="nav-avatar" src={avatarUrl(activeProfile)} alt="" />
-              </TvButton>
-            )}
-          </aside>
+        {responsive && !phone && (booting || chromeScreen) && (
+          <DesktopRail
+            current={booting ? "Home" : currentNav}
+            onNavigate={(destination) => void navigate(destination)}
+            withSearch={!isDesktopShell}
+            casting={casting}
+            onCast={openCast}
+            profile={booting ? undefined : activeProfile}
+            onProfiles={openProfiles}
+            skeleton={booting}
+          />
         )}
-        {!responsive && brand}
+        {responsive && phone && (booting || (isNavDestination(screen) && screen !== "Settings")) && (
+          <PhoneNav current={booting ? "Home" : currentNav} onNavigate={(destination) => void navigate(destination)} skeleton={booting} />
+        )}
+        {!responsive && !chromeScreen && screen !== "player" && brand}
 
         {booting || screen === "startup" ? null : screen === "pairing" ? (
           responsive ? <ResponsiveSignIn api={api} pair={pair} qr={qr} onRetry={() => void pairing()} onUseWithoutAccount={localEntry} /> : <section className="pairing">
@@ -324,7 +252,15 @@ export function AppShell({ app }: { app: AppApi }) {
           </section>
         ) : (
           <>
-            {!responsive && !["detail", "sources", "player"].includes(screen) && navigation}
+            {!responsive && chromeScreen && (
+              <TvRail
+                current={currentNav}
+                profile={activeProfile}
+                onNavigate={(destination) => void navigate(destination)}
+                onProfiles={openProfiles}
+                onExit={tvRail.exit}
+              />
+            )}
             {screen === "Home" && (
               <HomeScreen
                 responsive={responsive}

@@ -1,1 +1,785 @@
-/* Screen family: shell. Reference screens: design/viptv-design-system/reference/screens. */
+/*
+ * Screen family: shell — the app chrome on every platform.
+ * Reference screens (design/viptv-design-system/reference/screens):
+ *   desktop app  DeskHome, WideHome, DeskSettings, DeskCastSearch (+ CmpDesk2 "Title bar", "Rail")
+ *   web          WebHome, WebSearch (rail + Search, no title bar)
+ *   phone        Main, Discover, Library, PhSearch (+ CmpPhone2 "Navigation")
+ *   TV           TvHome, TvMenu, TvTitle (+ CmpTv2 "Navigation")
+ * Markup: src/ui/ShellNav.tsx (rails, phone nav), src/ui/DesktopTitlebar.tsx,
+ * src/ui/WindowResizeBorders.tsx, the field of src/ui/SearchPopunder.tsx,
+ * and the frame in src/ui/app/AppShell.tsx.
+ *
+ * USAGE for other families (custom properties set on .desktop-app-frame,
+ * inherited by everything inside it; responsive layout only):
+ *   --vx-shell-top     height of the desktop title bar incl. its hairline
+ *                      (41px in the desktop app, 0 on the web, on phones and
+ *                      in the fullscreen player)
+ *   --vx-shell-rail    width of the rail (84px desktop / web, 0 on phones)
+ *   --vx-shell-bottom  phone: space the floating nav needs under the content
+ *   A desktop overlay that covers the body row only (dialog / drawer scrims)
+ *   uses  top: var(--vx-shell-top); left: var(--vx-shell-rail).
+ *   Page content starts after the rail: margin-left / padding-left
+ *   var(--vx-shell-rail) (the legacy --sidebar-width now follows it).
+ *
+ * Literal lengths below are per-screen geometry from the reference HTML with
+ * no token (each is named once as a --vx-* property with its source).
+ * TV rules (.tv-layout) are Chrome 87-safe: no :is/:where/:has, nesting,
+ * aspect-ratio, color-mix or individual transform properties.
+ */
+
+/* ---------------------------------------------------------------------------
+ * Frame: the window (desktop app / browser) and the body row.
+ * ------------------------------------------------------------------------ */
+.desktop-app-frame {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+}
+[data-layout="responsive"] .desktop-app-frame {
+  --vx-shell-top: 0px;
+  --vx-shell-rail: var(--viptv-layout-desktop-rail);
+  --vx-shell-bottom: 0px;
+  background: var(--viptv-color-bg);
+}
+/* Desktop app: the 40 px title bar plus its hairline sits above the body row. */
+[data-layout="responsive"] .desktop-app-frame.desktop-shell {
+  --vx-shell-top: calc(var(--viptv-layout-desktop-titlebar) + 1px);
+}
+[data-layout="responsive"] .desktop-app-frame.is-fullscreen {
+  --vx-shell-top: 0px;
+}
+/* A windowed frameless window draws its own outline and rounded corners;
+   contain: paint also makes the frame the box the fixed chrome sits in. */
+[data-layout="responsive"] .desktop-app-frame.desktop-shell:not(.is-maximized):not(.is-fullscreen) {
+  border: 1px solid var(--viptv-color-line-outline);
+  border-radius: var(--viptv-radius-sm-plus);
+  overflow: hidden;
+  contain: paint;
+}
+@media (max-width: 599px) {
+  [data-layout="responsive"] .desktop-app-frame {
+    --vx-shell-rail: 0px;
+    /* Floating nav: 64 tall, 28 above the edge, plus the 150 px fade's reach. */
+    --vx-shell-bottom: calc(var(--viptv-layout-phone-bottom-clearance) + env(safe-area-inset-bottom));
+  }
+}
+
+/* TV canvas: authored at the 1920 × 1080 reference size and scaled to the
+   panel by src/ui/tvCanvas.ts (useAuth). While playing, the canvas is
+   transparent so a platform video plane under the page (AVPlay) shows. */
+.tv-screen {
+  position: absolute;
+  width: 1920px;
+  height: 1080px;
+  overflow: hidden;
+  background: var(--viptv-color-bg);
+  transform-origin: top left;
+}
+.tv-screen.playing {
+  background: transparent;
+}
+
+/* The body row: one vertically scrolling document under the title bar. The
+   rail and phone nav are fixed inside it. No visible scrollbar (as drawn), so
+   switching between a tall and a short route never shifts the frame. */
+[data-layout="responsive"] .tv-screen.responsive-app {
+  --sidebar-width: var(--vx-shell-rail);
+  --canvas: var(--viptv-color-bg);
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: var(--vx-shell-top);
+  bottom: 0;
+  width: 100%;
+  height: calc(100% - var(--vx-shell-top));
+  transform: none;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+  background: var(--viptv-color-bg);
+}
+[data-layout="responsive"] .tv-screen.responsive-app.playing {
+  overflow: hidden;
+  background: var(--viptv-color-bg-oled);
+}
+
+/* Frameless-window resize handles (Wayland): 6 px edges, 12 px corners. */
+.vx-shell-resize {
+  --vx-resize-edge: 6px;
+  --vx-resize-corner: 12px;
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 9999;
+  pointer-events: none;
+}
+.vx-shell-resize-edge,
+.vx-shell-resize-corner {
+  position: absolute;
+  pointer-events: auto;
+}
+.vx-shell-resize--top,
+.vx-shell-resize--bottom {
+  left: var(--vx-resize-corner);
+  right: var(--vx-resize-corner);
+  height: var(--vx-resize-edge);
+  cursor: ns-resize;
+}
+.vx-shell-resize--top { top: 0; }
+.vx-shell-resize--bottom { bottom: 0; }
+.vx-shell-resize--left,
+.vx-shell-resize--right {
+  top: var(--vx-resize-corner);
+  bottom: var(--vx-resize-corner);
+  width: var(--vx-resize-edge);
+  cursor: ew-resize;
+}
+.vx-shell-resize--left { left: 0; }
+.vx-shell-resize--right { right: 0; }
+.vx-shell-resize-corner {
+  width: var(--vx-resize-corner);
+  height: var(--vx-resize-corner);
+}
+.vx-shell-resize--top-left { top: 0; left: 0; cursor: nwse-resize; }
+.vx-shell-resize--top-right { top: 0; right: 0; cursor: nesw-resize; }
+.vx-shell-resize--bottom-left { bottom: 0; left: 0; cursor: nesw-resize; }
+.vx-shell-resize--bottom-right { bottom: 0; right: 0; cursor: nwse-resize; }
+
+/* Shared bits of the rails. */
+.vx-shell-spacer {
+  flex: 1 1 auto;
+}
+.vx-shell-initial {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+/* ---------------------------------------------------------------------------
+ * Desktop app title bar (DeskHome, CmpDesk2 "Title bar"): 40 px + hairline.
+ * ------------------------------------------------------------------------ */
+[data-layout="responsive"] .vx-titlebar {
+  --vx-titlebar-nav: 30px;     /* DeskHome.html: Back / Forward 30 × 30 */
+  --vx-titlebar-control: 46px; /* DeskHome.html: window controls 46 × 40 */
+  --vx-titlebar-mark: 20px;    /* DeskHome.html: accent "V" tile 20 × 20 */
+  --vx-titlebar-search-icon: 15px;
+  --vx-titlebar-side: 180px;   /* widest side group (brand + Back / Forward) plus air */
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: var(--vx-shell-top);
+  margin: 0;
+  padding: 0;
+  border-bottom: 1px solid var(--viptv-color-line-hairline);
+  background: var(--viptv-color-bg);
+  color: var(--viptv-color-text-primary);
+  cursor: default;
+  -webkit-user-select: none;
+  user-select: none;
+}
+[data-layout="responsive"] .vx-titlebar-start {
+  display: flex;
+  align-items: center;
+  gap: var(--viptv-space-1_5);
+  height: 100%;
+  padding-left: var(--viptv-space-3_5);
+}
+[data-layout="responsive"] .vx-titlebar-brand {
+  display: flex;
+  align-items: center;
+  gap: var(--viptv-space-2);
+  padding-right: var(--viptv-space-2_5);
+}
+[data-layout="responsive"] .vx-titlebar-mark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--vx-titlebar-mark);
+  height: var(--vx-titlebar-mark);
+  border-radius: var(--viptv-radius-2xs);
+  background: var(--viptv-accent);
+  color: var(--viptv-color-on-accent);
+  font-family: var(--viptv-font-family-display);
+  font-size: var(--viptv-type-desktop-wordmark-size);
+  font-weight: 800;
+  line-height: 1;
+}
+[data-layout="responsive"] .vx-titlebar-nav,
+[data-layout="responsive"] .vx-titlebar-control {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  min-width: 0;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  cursor: default;
+  transition: background-color var(--viptv-motion-focus) ease-out, color var(--viptv-motion-focus) ease-out;
+}
+[data-layout="responsive"] .vx-titlebar-nav {
+  width: var(--vx-titlebar-nav);
+  height: var(--vx-titlebar-nav);
+  border-radius: var(--viptv-radius-sm);
+  color: var(--viptv-color-text-primary);
+}
+[data-layout="responsive"] .vx-titlebar-nav:disabled {
+  opacity: 1;
+  color: var(--viptv-color-text-tertiary);
+}
+[data-layout="responsive"] .vx-titlebar-controls {
+  display: flex;
+  align-items: center;
+  height: 100%;
+}
+[data-layout="responsive"] .vx-titlebar-control {
+  width: var(--vx-titlebar-control);
+  height: var(--viptv-layout-desktop-titlebar);
+  border-radius: 0;
+  color: var(--viptv-color-text-secondary);
+}
+[data-layout="responsive"] .vx-titlebar-nav > svg,
+[data-layout="responsive"] .vx-titlebar-control > svg {
+  display: block;
+  flex: none;
+}
+@media (hover: hover) and (pointer: fine) {
+  [data-layout="responsive"] .vx-titlebar-nav:hover:not(:disabled),
+  [data-layout="responsive"] .vx-titlebar-control:hover {
+    background: var(--viptv-color-fill-wash);
+    color: var(--viptv-color-text-primary);
+  }
+}
+[data-layout="responsive"] .vx-titlebar-nav:active:not(:disabled),
+[data-layout="responsive"] .vx-titlebar-control:active {
+  background: var(--viptv-color-fill-wash-pressed);
+}
+
+/* Search, centred on the window whatever the side groups' widths. No
+   transform on the way up: the popunder panel is position: fixed and a
+   transformed ancestor would trap it inside the bar. */
+[data-layout="responsive"] .vx-titlebar-center {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  width: max-content;
+  margin: 0 auto;
+}
+[data-layout="responsive"] .vx-titlebar .search-popunder {
+  position: relative;
+  line-height: normal;
+}
+[data-layout="responsive"] .vx-titlebar-search {
+  display: flex;
+  align-items: center;
+  gap: var(--viptv-space-2_5);
+  width: var(--viptv-size-field-search-titlebar-width);
+  /* Narrow windows: stay clear of the side groups (brand + Back / Forward, window controls). */
+  max-width: calc(100vw - 2 * var(--vx-titlebar-side));
+  height: var(--viptv-size-field-desktop-titlebar);
+  padding: 0 var(--viptv-space-1_5) 0 var(--viptv-space-3);
+  border: 1px solid var(--viptv-color-line-hairline);
+  border-radius: var(--viptv-radius-field-titlebar);
+  background: var(--viptv-color-surface-1);
+  color: var(--viptv-color-text-tertiary);
+  font-size: var(--viptv-type-desktop-meta-size);
+  cursor: text;
+  transition: background-color var(--viptv-motion-focus) ease-out, border-color var(--viptv-motion-focus) ease-out;
+}
+[data-layout="responsive"] .vx-titlebar-search:focus-within,
+[data-layout="responsive"] .vx-titlebar-search.is-open {
+  border-color: var(--viptv-color-line-strong);
+  background: var(--viptv-color-surface-2);
+}
+[data-layout="responsive"] .vx-titlebar-search-icon {
+  display: block;
+  flex: none;
+  width: var(--vx-titlebar-search-icon);
+  height: var(--vx-titlebar-search-icon);
+}
+[data-layout="responsive"] .vx-titlebar-search-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--viptv-color-text-primary);
+  font-family: var(--viptv-font-family-ui);
+  font-size: var(--viptv-type-desktop-meta-size);
+  line-height: 1;
+  caret-color: var(--viptv-accent);
+}
+[data-layout="responsive"] .vx-titlebar-search-input:focus-visible {
+  box-shadow: none;
+}
+[data-layout="responsive"] .vx-titlebar-search-input::placeholder {
+  color: var(--viptv-color-text-tertiary);
+  opacity: 1;
+}
+[data-layout="responsive"] .vx-titlebar-search-input::-webkit-search-cancel-button {
+  display: none;
+}
+[data-layout="responsive"] .vx-titlebar .vx-titlebar-search-clear {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: var(--viptv-size-close-disc-titlebar);
+  height: var(--viptv-size-close-disc-titlebar);
+  min-width: 0;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--viptv-color-surface-3);
+  color: var(--viptv-color-text-primary);
+  cursor: pointer;
+}
+@media (hover: hover) and (pointer: fine) {
+  [data-layout="responsive"] .vx-titlebar .vx-titlebar-search-clear:hover {
+    background: var(--viptv-color-surface-4);
+  }
+}
+
+/* ---------------------------------------------------------------------------
+ * Desktop app / web rail (DeskHome, WebHome, CmpDesk2 "Rail"): 84 wide.
+ * ------------------------------------------------------------------------ */
+[data-layout="responsive"] .vx-rail {
+  --vx-rail-item-width: 64px;  /* DeskHome.html: items 64 × 58 */
+  --vx-rail-item-height: 58px;
+  --vx-rail-item-gap: 5px;     /* icon to label */
+  --vx-rail-avatar: 40px;      /* DeskHome.html: profile avatar 40 */
+  position: fixed;
+  left: 0;
+  top: var(--vx-shell-top);
+  bottom: 0;
+  z-index: 45;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--viptv-space-1);
+  width: var(--viptv-layout-desktop-rail);
+  margin: 0;
+  padding: var(--viptv-space-4) 0 var(--viptv-space-4_5);
+  border-right: 1px solid var(--viptv-color-line-hairline);
+  background: var(--viptv-color-bg);
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-width: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+[data-layout="responsive"] .vx-rail-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  gap: var(--vx-rail-item-gap);
+  width: var(--vx-rail-item-width);
+  height: var(--vx-rail-item-height);
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--viptv-radius-lg);
+  background: transparent;
+  color: var(--viptv-color-text-secondary);
+  text-align: center;
+  cursor: pointer;
+  transition:
+    background-color var(--viptv-motion-focus) ease-out,
+    color var(--viptv-motion-focus) ease-out,
+    transform var(--viptv-motion-focus) ease-out;
+}
+[data-layout="responsive"] .vx-rail-item.is-current {
+  background: var(--viptv-color-surface-2);
+  color: var(--viptv-color-text-primary);
+}
+[data-layout="responsive"] .vx-rail-icon {
+  display: block;
+  flex: none;
+}
+[data-layout="responsive"] .vx-rail-label {
+  white-space: nowrap;
+}
+@media (hover: hover) and (pointer: fine) {
+  [data-layout="responsive"] .vx-rail-item:hover:not(.is-current) {
+    background: var(--viptv-color-fill-wash-pressed);
+    color: var(--viptv-color-text-primary);
+  }
+}
+[data-layout="responsive"] .vx-rail-item:active,
+[data-layout="responsive"] .vx-rail-avatar:active {
+  transform: scale(var(--viptv-motion-pressed-scale));
+}
+[data-layout="responsive"] .vx-rail-avatar {
+  position: relative;
+  display: flex;
+  flex: none;
+  width: var(--vx-rail-avatar);
+  height: var(--vx-rail-avatar);
+  min-height: 0;
+  margin: var(--viptv-space-1_5) 0 0;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--viptv-color-surface-3);
+  color: var(--viptv-color-text-primary);
+  cursor: pointer;
+  transition: transform var(--viptv-motion-focus) ease-out;
+}
+[data-layout="responsive"] .vx-rail-avatar-art {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  border-radius: 50%;
+}
+[data-layout="responsive"] .vx-rail-avatar-art > img {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+/* Behind the loading skeleton the rail is drawn, not used. */
+[data-layout="responsive"] .vx-rail.is-skeleton,
+[data-layout="responsive"] .vx-phone-nav.is-skeleton {
+  pointer-events: none;
+}
+
+/* ---------------------------------------------------------------------------
+ * Phone: floating glass bottom nav + round Search (Main, CmpPhone2).
+ * ------------------------------------------------------------------------ */
+@media (max-width: 599px) {
+  [data-layout="responsive"] .vx-phone-nav-fade {
+    --vx-phone-fade: 150px; /* Main.html: fade behind the nav */
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 29;
+    height: var(--vx-phone-fade);
+    background: linear-gradient(
+      to bottom,
+      transparent 0%,
+      color-mix(in srgb, var(--viptv-color-bg) 85%, transparent) 45%,
+      var(--viptv-color-bg) 100%
+    );
+    pointer-events: none;
+  }
+  [data-layout="responsive"] .vx-phone-nav {
+    --vx-phone-nav-inset: var(--viptv-space-1_5);
+    --vx-phone-tab-height: calc(var(--viptv-layout-phone-nav-height) - 2 * var(--vx-phone-nav-inset));
+    position: fixed;
+    left: var(--viptv-layout-phone-gutter);
+    right: var(--viptv-layout-phone-gutter);
+    bottom: max(var(--viptv-layout-phone-nav-bottom), env(safe-area-inset-bottom));
+    z-index: 30;
+    display: flex;
+    align-items: center;
+    gap: var(--viptv-space-2_5);
+    margin: 0;
+    padding: 0;
+  }
+  [data-layout="responsive"] .vx-phone-nav-bar {
+    display: flex;
+    align-items: center;
+    flex: 1 1 auto;
+    gap: var(--viptv-space-0_5);
+    min-width: 0;
+    height: var(--viptv-layout-phone-nav-height);
+    padding: var(--vx-phone-nav-inset);
+    border: 1px solid var(--viptv-color-line-hairline);
+    border-radius: calc(var(--viptv-layout-phone-nav-height) / 2);
+    background: var(--viptv-color-fill-glass);
+    -webkit-backdrop-filter: blur(var(--viptv-size-blur-glass));
+    backdrop-filter: blur(var(--viptv-size-blur-glass));
+    box-shadow: var(--viptv-shadow-nav);
+  }
+  [data-layout="responsive"] .vx-phone-nav-tab {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    flex: 1 1 0;
+    gap: 3px; /* Main.html: icon to label */
+    min-width: 0;
+    height: var(--vx-phone-tab-height);
+    min-height: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: calc(var(--vx-phone-tab-height) / 2);
+    background: transparent;
+    color: var(--viptv-color-text-secondary);
+    text-align: center;
+    transition:
+      background-color var(--viptv-motion-focus) ease-out,
+      color var(--viptv-motion-focus) ease-out,
+      transform var(--viptv-motion-focus) ease-out;
+  }
+  [data-layout="responsive"] .vx-phone-nav-tab > svg {
+    display: block;
+    flex: none;
+  }
+  [data-layout="responsive"] .vx-phone-nav-tab > span {
+    white-space: nowrap;
+  }
+  [data-layout="responsive"] .vx-phone-nav-tab.is-current {
+    background: var(--viptv-color-text-primary);
+    color: var(--viptv-color-on-light);
+  }
+  [data-layout="responsive"] .vx-phone-nav-search {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    width: var(--viptv-layout-phone-nav-height);
+    height: var(--viptv-layout-phone-nav-height);
+    min-height: 0;
+    margin: 0;
+    padding: 0;
+    border: 1px solid var(--viptv-color-line-hairline);
+    border-radius: 50%;
+    background: var(--viptv-color-fill-glass);
+    color: var(--viptv-color-text-primary);
+    box-shadow: var(--viptv-shadow-nav);
+    transition: background-color var(--viptv-motion-focus) ease-out, transform var(--viptv-motion-focus) ease-out;
+  }
+  /* Phones draw no hover or focus; pressed = scale 0.97 + one surface step. */
+  [data-layout="responsive"] .vx-phone-nav-tab:active,
+  [data-layout="responsive"] .vx-phone-nav-search:active {
+    transform: scale(var(--viptv-motion-pressed-scale));
+  }
+  [data-layout="responsive"] .vx-phone-nav-tab:active:not(.is-current) {
+    background: var(--viptv-color-fill-wash);
+  }
+  [data-layout="responsive"] .vx-phone-nav-tab.is-current:active {
+    background: var(--viptv-color-fill-light-pressed);
+  }
+  [data-layout="responsive"] .vx-phone-nav-search:active {
+    background: var(--viptv-color-surface-3);
+  }
+  /* Tab pages scroll clear of the floating nav. */
+  [data-layout="responsive"] .vx-phone-nav ~ main {
+    padding-bottom: var(--vx-shell-bottom);
+  }
+}
+
+/* ---------------------------------------------------------------------------
+ * TV rail (TvHome) and expanded menu (TvMenu), 1920 × 1080 canvas px.
+ * Focus inside the rail expands it: 520 labelled menu over a 0.55 scrim,
+ * profile on top, Search … My List, Settings at the bottom.
+ * ------------------------------------------------------------------------ */
+.tv-layout .vx-tv-rail {
+  --vx-tv-rail-item: 64px;          /* TvHome.html: icon items 64 × 64 */
+  --vx-tv-rail-avatar: 56px;        /* TvHome.html: profile picture 56 */
+  --vx-tv-rail-avatar-gap: 60px;    /* TvHome.html: profile to Search */
+  --vx-tv-menu-row: 68px;           /* TvMenu.html: labelled rows 68 tall */
+  --vx-tv-menu-list: 360px;         /* TvMenu.html: rows 360 wide */
+  --vx-tv-menu-row-x: 26px;         /* TvMenu.html: row side padding */
+  --vx-tv-menu-end: 60px;           /* TvMenu.html: menu right padding */
+  --vx-tv-menu-dot: 8px;            /* TvMenu.html: current destination dot */
+  --vx-tv-menu-profile-gap: 64px;   /* TvMenu.html: profile to Search (margin 54 + gap 10) */
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--viptv-space-3_5);
+  width: var(--viptv-layout-tv-rail-collapsed);
+  margin: 0;
+  padding: var(--viptv-layout-tv-safe-y) 0;
+}
+.tv-layout .vx-tv-rail-profile,
+.tv-layout .vx-tv-rail-item {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font-family: var(--viptv-font-family-ui);
+  font-size: var(--viptv-type-tv-button-size);
+  font-weight: 500;
+  line-height: 1;
+  text-align: left;
+  white-space: nowrap;
+}
+.tv-layout .vx-tv-rail-profile {
+  width: var(--vx-tv-rail-avatar);
+  height: var(--vx-tv-rail-avatar);
+  margin-bottom: var(--vx-tv-rail-avatar-gap);
+  border-radius: 50%;
+  color: var(--viptv-color-text-primary);
+}
+.tv-layout .vx-tv-rail-avatar {
+  position: relative;
+  display: block;
+  flex: none;
+  width: var(--vx-tv-rail-avatar);
+  height: var(--vx-tv-rail-avatar);
+  overflow: hidden;
+  border-radius: 50%;
+  background: var(--viptv-color-surface-avatar);
+  color: var(--viptv-color-text-primary);
+  font-size: var(--viptv-type-tv-label-size);
+  font-weight: 600;
+}
+.tv-layout .vx-tv-rail-avatar > img {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.tv-layout .vx-tv-rail-who,
+.tv-layout .vx-tv-rail-label,
+.tv-layout .vx-tv-rail-dot {
+  display: none;
+}
+.tv-layout .vx-tv-rail-items {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1 1 auto;
+  gap: var(--viptv-space-3_5);
+  width: 100%;
+}
+.tv-layout .vx-tv-rail-item {
+  width: var(--vx-tv-rail-item);
+  height: var(--vx-tv-rail-item);
+  border-radius: calc(var(--vx-tv-rail-item) / 2);
+  color: var(--viptv-color-text-tertiary);
+}
+.tv-layout .vx-tv-rail-item.is-current {
+  background: var(--viptv-color-fill-tv-unfocused);
+  color: var(--viptv-color-text-primary);
+}
+.tv-layout .vx-tv-rail-icon {
+  display: block;
+  flex: none;
+  width: var(--viptv-size-icon-tv);
+  height: var(--viptv-size-icon-tv);
+}
+
+/* Expanded: the rail holds focus. */
+.tv-layout .vx-tv-rail:focus-within {
+  align-items: flex-start;
+  gap: 0;
+  width: var(--viptv-layout-tv-menu-expanded);
+  padding: var(--viptv-layout-tv-safe-y) var(--vx-tv-menu-end) var(--viptv-layout-tv-safe-y) var(--viptv-space-12);
+  background: linear-gradient(to right, var(--viptv-color-bg) 62%, transparent);
+}
+/* The profile becomes a row: picture, name, "Switch profile". Its picture
+   keeps its collapsed place (the 68 row reaches 6 px above and below it). */
+.tv-layout .vx-tv-rail:focus-within .vx-tv-rail-profile {
+  justify-content: flex-start;
+  gap: var(--viptv-space-4_5);
+  width: auto;
+  height: var(--vx-tv-menu-row);
+  margin: calc((var(--vx-tv-rail-avatar) - var(--vx-tv-menu-row)) / 2) 0 calc(var(--vx-tv-menu-profile-gap) - (var(--vx-tv-menu-row) - var(--vx-tv-rail-avatar)) / 2);
+  padding: 0 var(--vx-tv-menu-row-x) 0 var(--viptv-space-1);
+  border-radius: calc(var(--vx-tv-menu-row) / 2);
+}
+.tv-layout .vx-tv-rail:focus-within .vx-tv-rail-who {
+  display: flex;
+  flex-direction: column;
+  gap: var(--viptv-space-0_5);
+}
+.tv-layout .vx-tv-rail-switch {
+  color: var(--viptv-color-text-tertiary);
+}
+.tv-layout .vx-tv-rail-profile:focus .vx-tv-rail-switch {
+  color: var(--viptv-color-text-on-light-secondary);
+}
+.tv-layout .vx-tv-rail:focus-within .vx-tv-rail-items {
+  align-items: stretch;
+  gap: var(--viptv-space-2_5);
+  width: var(--vx-tv-menu-list);
+}
+.tv-layout .vx-tv-rail:focus-within .vx-tv-rail-item {
+  justify-content: flex-start;
+  gap: var(--viptv-space-5_5);
+  width: 100%;
+  height: var(--vx-tv-menu-row);
+  padding: 0 var(--vx-tv-menu-row-x);
+  border-radius: calc(var(--vx-tv-menu-row) / 2);
+  background: transparent;
+  color: var(--viptv-color-text-secondary);
+}
+.tv-layout .vx-tv-rail:focus-within .vx-tv-rail-item.is-current {
+  color: var(--viptv-color-text-primary);
+  font-weight: 700;
+}
+.tv-layout .vx-tv-rail:focus-within .vx-tv-rail-label {
+  display: block;
+}
+.tv-layout .vx-tv-rail:focus-within .vx-tv-rail-dot {
+  display: block;
+  flex: none;
+  width: var(--vx-tv-menu-dot);
+  height: var(--vx-tv-menu-dot);
+  margin-left: auto;
+  border-radius: 50%;
+  background: currentColor;
+}
+/* Focus: off-white fill, dark text, 4 px white ring + lift, row scale. */
+.tv-layout .vx-tv-rail:focus-within .vx-tv-rail-item:focus,
+.tv-layout .vx-tv-rail:focus-within .vx-tv-rail-profile:focus {
+  outline: none;
+  background: var(--viptv-color-text-primary);
+  color: var(--viptv-color-on-light);
+  font-weight: 700;
+  box-shadow: var(--viptv-focus-tv-shadow);
+  transform: scale(var(--viptv-focus-tv-scale-row));
+}
+.tv-layout .vx-tv-rail-scrim {
+  display: none;
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 19;
+  background: var(--viptv-color-scrim-tv-menu);
+  pointer-events: none;
+}
+.tv-layout .vx-tv-rail:focus-within + .vx-tv-rail-scrim {
+  display: block;
+}

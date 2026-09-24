@@ -256,6 +256,3 @@
   .responsive-app .modal-choices button { font-size: 16px; }
 }
 
-/* ---- Sidebar: icons at a readable contrast ----------------------------------- */
-.responsive-app .desktop-sidebar button :is(svg, .nav-icon) { color: #8d9093; filter: none; opacity: 1; }
-.responsive-app .desktop-sidebar button:is(:hover, .active) :is(svg, .nav-icon) { color: #f5f5f5; filter: none; }

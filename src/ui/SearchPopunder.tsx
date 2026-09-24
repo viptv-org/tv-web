@@ -178,10 +178,13 @@ export function SearchPopunder({
   const showPanel = open && (!!text || history.length > 0);
   return (
     <div className="search-popunder" ref={root}>
-      <label className={`search-popunder-field ${showPanel ? "is-open" : ""}`}>
-        <Search size={13} strokeWidth={2.2} aria-hidden="true" />
+      {/* The title-bar field (shell family): 460 × 30, "Search movies and
+          series", a clear button once there is text, no shortcut hint. */}
+      <label className={`search-popunder-field vx-titlebar-search ${showPanel ? "is-open" : ""}`}>
+        <Search className="vx-titlebar-search-icon" size={15} strokeWidth={2} aria-hidden="true" />
         <input
           ref={field}
+          className="vx-titlebar-search-input"
           type="search"
           role="combobox"
           aria-label="Search"
@@ -199,8 +202,8 @@ export function SearchPopunder({
           onKeyDown={key}
         />
         {query && (
-          <button type="button" className="search-popunder-clear" aria-label="Clear search" onClick={() => { setQuery(""); field.current?.focus(); }}>
-            <X size={12} aria-hidden="true" />
+          <button type="button" className="search-popunder-clear vx-titlebar-search-clear" aria-label="Clear search" onClick={() => { setQuery(""); field.current?.focus(); }}>
+            <X size={12} strokeWidth={2.4} aria-hidden="true" />
           </button>
         )}
       </label>

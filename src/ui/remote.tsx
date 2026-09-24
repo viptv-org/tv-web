@@ -216,6 +216,18 @@ export function moveFocus(key: string, current: HTMLElement | null) {
       best = candidate;
     }
   }
+  // A container can name its entry control (data-focus-entry): arriving from
+  // outside lands there instead of on the nearest child (the TV rail enters
+  // on the current destination).
+  const entry = best?.closest<HTMLElement>("[data-focus-entry]");
+  if (best && entry && !entry.contains(current)) {
+    const target = entry.dataset.focusEntry;
+    const landing = target ? all.find((element) => element.dataset.focusId === target) : undefined;
+    if (landing && entry.contains(landing)) {
+      landing.focus();
+      return;
+    }
+  }
   best?.focus();
 }
 

@@ -18,88 +18,12 @@
 }
 
 @media (max-width: 599px) {
-  /* ---- Shell: no header bar ------------------------------------------------
-     The sidebar box leaves the flow entirely; its navigation is the fixed
-     bottom bar, and Watch on TV moves to Settings. Pages start with their own
-     content and never carry the bar's height as phantom scroll. The bar sits
-     below dialogs (40) and full-screen editors (35). */
-  .responsive-app .desktop-sidebar {
-    position: fixed;
-    top: auto;
-    bottom: 0;
-    left: 0;
-    width: 0;
-    height: 0;
-    min-height: 0;
-    padding: 0;
-    border: 0;
-    background: none;
-    z-index: 30;
-  }
   /* The page's top edge matches its side gutter: the hero art sits 16px
-     from the top exactly as it does from each side. */
+     from the top exactly as it does from each side. (The floating nav and
+     the space under tab pages are the shell's: styles/screens/shell.css.) */
   .responsive-app main {
     padding-top: max(var(--page-gutter), env(safe-area-inset-top));
-    padding-bottom: calc(84px + env(safe-area-inset-bottom));
   }
-
-  /* ---- Bottom navigation: icons only, active destination on a pill -------- */
-  .responsive-app .desktop-sidebar nav {
-    position: fixed !important;
-    top: auto !important;
-    bottom: 0 !important;
-    left: 0 !important;
-    width: 100% !important;
-    height: calc(60px + env(safe-area-inset-bottom)) !important;
-    padding: 0 6px env(safe-area-inset-bottom) !important;
-    display: flex !important;
-    flex-direction: row !important;
-    align-items: center !important;
-    justify-content: space-around !important;
-    gap: 0 !important;
-    background: rgba(16, 17, 18, 0.9) !important;
-    -webkit-backdrop-filter: saturate(160%) blur(18px);
-    backdrop-filter: saturate(160%) blur(18px);
-    border-top: 1px solid rgba(255, 255, 255, 0.07) !important;
-  }
-  :root[data-oled] .responsive-app .desktop-sidebar nav { background: rgba(0, 0, 0, 0.9) !important; }
-  .responsive-app .desktop-sidebar nav button {
-    flex: 1 1 0;
-    max-width: 72px;
-    width: auto !important;
-    height: 48px !important;
-    min-height: 48px !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    display: grid !important;
-    place-items: center !important;
-    border-radius: 0;
-  }
-  .responsive-app .desktop-sidebar nav button::before {
-    content: "";
-    position: absolute;
-    left: 50%;
-    top: 50%;
-    width: 52px;
-    height: 32px;
-    margin: -16px 0 0 -26px;
-    border-radius: 16px;
-    background: transparent;
-    transition: background-color 0.2s ease;
-  }
-  .responsive-app .desktop-sidebar nav button.active::before { background: #2a2c2f; }
-  .responsive-app .desktop-sidebar nav button .nav-icon,
-  .responsive-app .desktop-sidebar nav button:hover .nav-icon {
-    position: relative !important;
-    z-index: 1;
-    width: 24px !important;
-    height: 24px !important;
-    color: #8d9093;
-    filter: none !important;
-    opacity: 1 !important;
-    transition: color 0.2s ease;
-  }
-  .responsive-app .desktop-sidebar nav button.active .nav-icon { color: #fff; }
 
   /* ---- Home hero ----------------------------------------------------------- */
   .responsive-app .home { gap: 16px; }

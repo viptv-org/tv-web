@@ -187,7 +187,8 @@ export const screens = {
   // ===== TV 1920×1080 (?platform=tizen, remote keys) ========================
   TvProfiles: { backend: { session: 'profiles' } },
   TvHome: {},
-  TvMenu: { steps: h => h.focus('nav-Home') },
+  // Reference: current Home, focus moved down to Discover (the menu expands while the rail holds focus).
+  TvMenu: { steps: h => h.focus('nav-Discover') },
   TvTitle: { steps: tvToTitle },
   TvSources: { steps: tvToSources },
   TvDiscover: { steps: h => h.tvGo('Discover') },

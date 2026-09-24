@@ -103,14 +103,6 @@ progress::-moz-progress-bar {
 *::-webkit-scrollbar {
   display: none;
 }
-.tv-screen {
-  position: absolute;
-  width: 1920px;
-  height: 1080px;
-  overflow: hidden;
-  background: #101112;
-  transform-origin: top left;
-}
 main {
   position: absolute;
   left: calc(100px * var(--tv-k));
@@ -150,49 +142,6 @@ main {
 .gateway-brand img {
   width: calc(42px * var(--tv-k));
   height: calc(36px * var(--tv-k));
-}
-.playing .brand,
-.screen-detail .brand,
-.screen-sources .brand {
-  display: none;
-}
-nav {
-  position: absolute;
-  left: calc(21px * var(--tv-k));
-  top: calc(108px * var(--tv-k));
-  width: calc(60px * var(--tv-k));
-  z-index: 5;
-}
-nav button {
-  display: block;
-  position: relative;
-  width: calc(60px * var(--tv-k));
-  height: calc(60px * var(--tv-k));
-  padding: 0;
-  margin: 0 0 calc(14px * var(--tv-k));
-  border-radius: calc(12px * var(--tv-k));
-  background: transparent;
-}
-nav em {
-  display: none;
-}
-nav .nav-icon {
-  position: absolute;
-  left: calc(15px * var(--tv-k));
-  top: calc(15px * var(--tv-k));
-  width: calc(30px * var(--tv-k));
-  height: calc(30px * var(--tv-k));
-  object-fit: contain;
-}
-nav .nav-avatar {
-  left: calc(8px * var(--tv-k));
-  top: calc(8px * var(--tv-k));
-  width: calc(44px * var(--tv-k));
-  height: calc(44px * var(--tv-k));
-  border-radius: calc(8px * var(--tv-k));
-}
-nav button:focus .nav-icon:not(.nav-avatar) {
-  filter: brightness(0);
 }
 .home {
   inset: 0;

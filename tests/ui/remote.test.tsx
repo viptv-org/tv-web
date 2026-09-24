@@ -93,3 +93,31 @@ it("keeps responsive controls pointer-first without arrival focus or TV key hand
   fireEvent.click(home);
   expect(activate).toHaveBeenCalledOnce();
 });
+
+it("enters a data-focus-entry container on its named control, then moves spatially inside it", () => {
+  render(
+    <RemoteRoot>
+      <nav data-focus-entry="nav-Home">
+        <TvButton id="nav-Search" onActivate={() => {}}>Search</TvButton>
+        <TvButton id="nav-Home" onActivate={() => {}}>Home</TvButton>
+        <TvButton id="nav-Discover" onActivate={() => {}}>Discover</TvButton>
+      </nav>
+      <TvButton id="play" onActivate={() => {}}>Play</TvButton>
+    </RemoteRoot>,
+  );
+  const place = (name: string, left: number, top: number) => {
+    const element = screen.getByRole("button", { name });
+    element.getBoundingClientRect = () => ({ left, top, width: 64, height: 64, right: left + 64, bottom: top + 64, x: left, y: top, toJSON: () => ({}) }) as DOMRect;
+    return element;
+  };
+  place("Search", 40, 180);
+  const home = place("Home", 40, 260);
+  const discover = place("Discover", 40, 340);
+  const play = place("Play", 190, 350);
+  play.focus();
+  // The nearest rail item is Discover; the container's entry is the current destination.
+  fireEvent.keyDown(window, { key: "ArrowLeft" });
+  expect(document.activeElement).toBe(home);
+  fireEvent.keyDown(window, { key: "ArrowDown" });
+  expect(document.activeElement).toBe(discover);
+});

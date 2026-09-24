@@ -2,8 +2,6 @@
   .responsive-app, .responsive-app .cards { scroll-behavior: auto; }
   .responsive-app button { transition: none; }
 }
-.responsive-app [data-focus-id="responsive-cast"] img { display: block; width: 24px; height: 24px; object-fit: contain; }
-.responsive-app [data-focus-id="responsive-cast"]:focus-visible img { filter: brightness(0); }
 /* Settings and profile editing keep the same mutations and fields, with natural
    document flow replacing remote-only absolute positions. */
 .responsive-app .roku-settings {
@@ -111,14 +109,6 @@
   .responsive-app .responsive-episode { flex: 0 0 calc(100% - 28px); min-width: 240px; max-width: 420px; scroll-snap-align: start; }
   .responsive-app .responsive-episode .episode { width: 100%; min-width: 0; }
 }
-@media (min-width: 600px) and (max-width: 999px) {
-  .responsive-app .responsive-toolbar:not(.desktop-titlebar) { flex-wrap: wrap; min-height: 136px; padding-bottom: 0; }
-  .responsive-app .toolbar-spacer { display: block; flex: 1; }
-  /* The header's own navigation wraps onto its second line. This stays scoped to
-     the header: the unscoped `nav` also matched the guide's category sidebar and
-     moved it into the guide's right-hand column at these widths. */
-  .responsive-app .responsive-toolbar nav { position: static; order: 2; flex: 1 0 100%; justify-content: center; }
-}
 .responsive-app .responsive-guide-controls { display: flex; gap: 12px; flex-wrap: wrap; width: 100%; margin: 16px 0 24px; }
 .responsive-app .responsive-guide-controls button { font-size: 17px; min-height: 48px; padding: 0 16px; }
 .responsive-app .responsive-guide-controls > span { flex-basis: 100%; color: #a6a8aa; font-size: 16px; }
@@ -134,7 +124,7 @@
 /* Min-content is never the viewport authority. Long shelves scroll locally. */
 .responsive-app main > *, .responsive-app .shelves, .responsive-app .cards,
 .responsive-app .result-grid, .responsive-app .result-grid > section,
-.responsive-app .responsive-toolbar > *, .responsive-app .episode-grid { min-width: 0; }
+.responsive-app .episode-grid { min-width: 0; }
 .responsive-app .hero-facts { white-space: normal; overflow-wrap: anywhere; }
 .responsive-app .hero .responsive-title:not(.has-logo),
 .responsive-app .detail-copy .responsive-title:not(.has-logo) { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; overflow-wrap: anywhere; }
@@ -152,8 +142,6 @@
   .responsive-app .shelves h2 { margin-bottom: 10px; }
 }
 
-.responsive-app .responsive-toolbar > button { flex-shrink: 0; }
-.responsive-app .responsive-toolbar > [data-focus-id="responsive-profile"] { flex-shrink: 0; min-width: 48px; }
 
 .responsive-app .profile-row > button:focus-visible,
 .responsive-app .episode:focus-visible { outline: none; }
@@ -198,13 +186,10 @@
   .responsive-app button { --responsive-control-surface: #202224; }
   .responsive-app :is(.media-card, .episode, .card-more),
   .responsive-app .profile-row > button,
-  .responsive-app .desktop-sidebar button,
   .responsive-app .roku-profile-editor :is([data-focus-id="profile-avatar"], .avatar-grid button) {
     --responsive-control-surface: transparent;
   }
-  .responsive-app .responsive-toolbar nav button.active,
   .responsive-app .filters button.selected { --responsive-control-surface: #303234; }
-  .responsive-app .desktop-sidebar button.active { --responsive-control-surface: transparent !important; }
   .responsive-app button:where(:not([class*="vx-"])):focus {
     outline: none !important;
     box-shadow: none !important;
