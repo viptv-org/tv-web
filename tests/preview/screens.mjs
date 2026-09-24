@@ -35,6 +35,14 @@ async function responsivePlayer(h, { pause = false } = {}) {
   await h.page.mouse.move(h.frame.width / 2, h.frame.height / 2);
   await h.sleep(200);
 }
+/** Responsive: click the timeline at a fraction of its width (commits a seek). */
+async function seekTo(h, fraction) {
+  const bar = h.page.locator('[data-focus-id="timeline"]').first();
+  const box = await bar.boundingBox();
+  if (!box) throw new Error('no timeline');
+  await h.page.mouse.click(box.x + box.width * fraction, box.y + box.height / 2);
+  await h.sleep(300);
+}
 /** TV: Home → hero Details (Monster) → Choose source → first source. */
 async function tvToTitle(h) {
   await h.activate('hero-details');
@@ -83,7 +91,7 @@ export const screens = {
   PhPlayerSubs: { path: MONSTER, player: {}, steps: async h => { await responsivePlayer(h); await h.activate('subtitles'); } },
   PhPlayerInfo: { path: MONSTER, player: {}, steps: async h => { await responsivePlayer(h); await h.button('Playback info'); } },
   PhPlayerLive: { path: '/tv/home', player: {}, steps: async h => { await h.activate(h.page.getByRole('button', { name: 'Cartoon Network' }).first()); await h.wait('.rp-controls, [data-focus-id="audio"]', 15000); } },
-  PhPlayerBuffering: { notReachable: 'needs a refused seek from a real engine (the seek-notice path); stub cannot refuse' },
+  PhPlayerBuffering: { notReachable: 'the seek notice + ring: a refused backend seek (backend seekRefused) surfaces as an HTTP 409 error toast and a pending seek (playbackHangAfter: 1) shows neither ring nor notice in this build; retry once the player shows both' },
   PhPlayerNext: { path: MONSTER, player: {}, backend: { playbackHangAfter: 1 }, steps: async h => { await responsivePlayer(h); await h.activate('next'); await h.sleep(600); } },
   PhUpNext: { notReachable: 'no Up Next card in the app yet' },
   PhPlayerError: { path: OAK_SOURCES, player: { stall: true }, steps: async h => { await h.activate('source-0'); await h.page.getByRole('dialog').first().waitFor({ timeout: 25000 }); } },
@@ -135,7 +143,7 @@ export const screens = {
   DeskPlayerAudio: { path: MONSTER, player: {}, steps: async h => { await responsivePlayer(h); await h.activate('audio'); } },
   DeskPlayerInfo: { path: MONSTER, player: {}, steps: async h => { await responsivePlayer(h); await h.button('Playback info'); } },
   DeskPlayerLive: { path: '/tv/home', player: {}, steps: async h => { await h.activate(h.page.getByRole('button', { name: 'Cartoon Network' }).first()); await h.wait('[data-focus-id="audio"]', 15000); await h.page.mouse.move(700, 450); } },
-  DeskPlayerBuffering: { notReachable: 'needs a refused seek from a real engine (the seek-notice path); stub cannot refuse' },
+  DeskPlayerBuffering: { notReachable: 'the seek notice + ring: a refused backend seek (backend seekRefused) surfaces as an HTTP 409 error toast and a pending seek (playbackHangAfter: 1) shows neither ring nor notice in this build; retry once the player shows both' },
   DeskPlayerNext: { path: MONSTER, player: {}, backend: { playbackHangAfter: 1 }, steps: async h => { await responsivePlayer(h); await h.activate('next'); await h.sleep(600); } },
   DeskPlayerError: { path: OAK_SOURCES, player: { stall: true }, steps: async h => { await h.activate('source-0'); await h.page.getByRole('dialog').first().waitFor({ timeout: 25000 }); } },
   DeskPlayerRestore: { path: MONSTER, player: { failAfter: 1 }, backend: { sourcesDone: true }, steps: async h => { await responsivePlayer(h); await h.activate('next'); await h.waitText('could not be restored', 20000); } },
@@ -199,7 +207,7 @@ export const screens = {
   TvPlayerSeek: { player: {}, steps: async h => { await tvPlayer(h); await h.focus('timeline'); await h.press('ArrowRight', 3); } },
   TvPlayerSubs: { player: {}, steps: async h => { await tvPlayer(h); await h.activate('subtitles'); } },
   TvPlayerLive: { player: { live: true }, steps: async h => { await h.tvGo('Live TV'); await h.activate('guide-channel-0'); await h.wait('audio', 15000); } },
-  TvPlayerBuffering: { notReachable: 'needs a refused seek from a real engine (the seek-notice path); stub cannot refuse' },
+  TvPlayerBuffering: { notReachable: 'the seek notice + ring: a refused backend seek (backend seekRefused) surfaces as an HTTP 409 error toast and a pending seek (playbackHangAfter: 1) shows neither ring nor notice in this build; retry once the player shows both' },
   TvPlayerNext: { player: {}, backend: { playbackHangAfter: 1 }, steps: async h => { await tvPlayer(h); await h.activate('next'); await h.sleep(600); } },
   TvUpNext: { notReachable: 'no Up Next card in the app yet' },
   TvPlayerError: { player: { error: true }, steps: async h => { await tvToSources(h); await h.activate('source-0'); await h.page.getByRole('dialog').first().waitFor({ timeout: 25000 }); } },

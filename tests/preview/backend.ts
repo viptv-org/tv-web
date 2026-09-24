@@ -53,6 +53,8 @@ export interface BackendOptions {
   playbackHangAfter?: number;
   /** Playback requests after the first N fail (playback could not be restored). */
   playbackFailAfter?: number;
+  /** Playback requests after the first refuse the new position (seek refused notice). */
+  seekRefused?: boolean;
   /** Creating/updating a profile never answers (Saving profile…). */
   profileSaveHang?: boolean;
   /** Installing an addon never answers (Saving…). */
@@ -566,6 +568,7 @@ export async function installBackend(page: Page, options: BackendOptions): Promi
       playbackCount++;
       if (options.playbackHang || (options.playbackHangAfter !== undefined && playbackCount > options.playbackHangAfter)) return hang();
       if (options.playbackFailAfter !== undefined && playbackCount > options.playbackFailAfter) return json({ error: 'upstream unavailable', error_code: 'SOURCE_TIMEOUT' }, 504);
+      if (options.seekRefused && playbackCount > 1) return json({ error: 'The stream could not seek there.', error_code: 'SEEK_REFUSED' }, 409);
       const liveSession = String(body.type ?? '') === 'live' || /cartoon|news|cnbc|cnn|espn/.test(String(body.id ?? ''));
       return json({
         id: 'preview-playback', url: '/media/preview-playback/index.m3u8', format: 'hls', mode: 'remux', video_mode: 'copy', audio_mode: 'transcode',
@@ -682,8 +685,15 @@ export async function installMediaStubs(page: Page, options: MediaStubOptions = 
     if (frame) document.addEventListener('DOMContentLoaded', () => {
       const style = document.createElement('style');
       style.dataset.preview = 'video-frame';
-      style.textContent = `video.video{background:#000 url("${frame}") center/cover no-repeat!important;object-position:-99999px -99999px!important}`;
+      // The still is laid out the way the element's own object-fit would lay
+      // out real video (the phone letterboxes 16:9 in portrait).
+      style.textContent = `video.video{background:#000 url("${frame}") center/var(--preview-fit,contain) no-repeat!important;object-position:-99999px -99999px!important}`;
       document.head.append(style);
+      const fits: Record<string, string> = { fill: '100% 100%', contain: 'contain', cover: 'cover', none: 'auto', 'scale-down': 'contain' };
+      setInterval(() => {
+        for (const video of document.querySelectorAll<HTMLVideoElement>('video.video'))
+          video.style.setProperty('--preview-fit', fits[getComputedStyle(video).objectFit] ?? 'contain');
+      }, 100);
     });
     void paused;
   }, { duration: options.live ? Infinity : options.duration ?? 3130, position: options.live ? 0 : options.position ?? 768, paused: options.paused ?? false, error: options.error ?? false, frame, stall: options.stall ?? false, failAfter: options.failAfter ?? null });

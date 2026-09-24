@@ -47,16 +47,20 @@ async function compose(page, entry, appPath) {
   const half = Number(option('--width')) || Math.min(width, 1200);
   const scaledHeight = Math.round(height * half / width);
   const stack = flag('--stack');
-  const cell = (title, src) => `<figure><figcaption>${escape(title)}</figcaption><img src="${src}" style="width:${half}px;height:${scaledHeight}px"></figure>`;
+  // Two caption lines (what, then detail) so narrow phone halves stay readable.
+  const cell = (title, detail, src) => `<figure><figcaption><b>${escape(title)}</b><span>${escape(detail)}</span></figcaption><img src="${src}" style="width:${half}px;height:${scaledHeight}px"></figure>`;
   const scale = half === width ? '1:1' : `scaled ${Math.round(half / width * 100)}%`;
+  const note = screens[entry.name]?.note;
   await page.setContent(`<!doctype html><meta charset="utf-8"><style>
     body{margin:0;background:#2b2b30;font:600 16px system-ui,sans-serif;color:#eee}
     main{display:flex;${stack ? 'flex-direction:column;' : ''}gap:16px;padding:16px;width:max-content}
-    figure{margin:0} figcaption{height:28px;line-height:28px;white-space:nowrap;overflow:hidden;max-width:${half}px}
+    figure{margin:0} figcaption{height:44px;width:${half}px;overflow:hidden;margin-bottom:6px}
+    figcaption b,figcaption span{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    figcaption b{font-size:16px;line-height:22px} figcaption span{font-weight:400;font-size:13px;line-height:20px;color:#bbb}
     img{display:block;object-fit:fill;outline:1px solid #555}
   </style><main>
-    ${cell(`Reference · ${entry.name} (${entry.title}) · ${width}×${height} · ${scale}`, dataUrl(referenceImage(entry), 'image/webp'))}
-    ${cell(`App · ${entry.name}.png${screens[entry.name]?.note ? ` · ${screens[entry.name].note}` : ''}`, dataUrl(appPath, 'image/png'))}
+    ${cell(`Reference · ${entry.name}`, `${entry.title} · ${width}×${height} · ${scale}`, dataUrl(referenceImage(entry), 'image/webp'))}
+    ${cell(`App · ${entry.name}`, note ? `Note: ${note}` : `${entry.name}.png · ${scale}`, dataUrl(appPath, 'image/png'))}
   </main>`);
   await page.evaluate(() => Promise.all([...document.images].map(image => image.decode())));
   const out = join(outDir, `${entry.name}.compare.png`);
