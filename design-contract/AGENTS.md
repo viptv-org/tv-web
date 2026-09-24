@@ -1,6 +1,6 @@
 # Design development
 
-Read DESIGN.md before changing specifications. For a feature, read its specs/visual and specs/behavior documents together; they form one contract. For a TV-web rebuild, read TV_WEB_UI_REBUILD.md. Before UI changes, design pin updates, asset imports or parity claims on any platform, read DESIGN_SYNC.md. CONTEXT.md owns product terms. assets/ owns app asset sources and provenance.
+Read DESIGN.md before changing specifications. For a feature, read viptv-design-system/ (visual design: tokens, components, copy, decisions, reference screens) and specs/behavior together; they form one contract. Platform themes are generated from viptv-design-system/tokens/tokens.json by viptv-design-system/tools/gen-themes.mjs. Before UI changes, design pin updates, asset imports or parity claims on any platform, read DESIGN_SYNC.md. CONTEXT.md owns product terms. assets/ owns app asset sources and provenance.
 
 Preserve the baseline/proposed distinction and cite the actual source revision when documenting implemented behavior. For any UI change, update copy, geometry, state transitions, every tap/hold/repeat action, focus restoration and acceptance scenarios together. Describe screenshots in text after private inspection; commit app assets only, never screenshots.
 

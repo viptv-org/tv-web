@@ -1,3 +1,35 @@
+# VIPTV design-system overhaul — 2026-09-23
+
+Design revision `5740c91d6e9cb7616626bdbb0f635cb62f6ec0c2` is imported in
+`DESIGN_REF`. The phone browser, desktop web/Tauri shell preview and TV canvas
+use the new tokens, primitives and screen-family styles. The old TV and
+responsive CSS files were removed. The account website's designed WebLinkTv
+screen is owned and validated separately in `web`.
+
+The preview harness reached 151 of 155 reference screens and generated a
+reference/app comparison for each. The remaining four are the three composite
+States boards (their individual states are reachable) and WebLinkTv (in the
+account website). A pixel-difference sweep covered all 151 pairs; Home,
+Profiles, title/sources, Discover, Search, My List, Settings, casting, local
+mode, player and TV focus states were inspected at native reference sizes.
+The largest remaining differences are fixture content/counts and intentional
+behavior: TV Search omits the reference's microphone because voice input is
+not available, TV Sources retains the provider control, and the accent-colour
+row has no reference screen. The mobile web header/nav insets were tightened
+after review, so these layouts deliberately sit closer to the viewport edges
+than the original phone sheets. See the current parity matrix for scoped
+evidence and hardware limits.
+
+Validation: `python3 ../design/scripts/validate.py` reports 516 design tokens;
+`node ../design/viptv-design-system/tools/gen-themes.mjs --check` passes;
+`npx vitest run` passes 169 tests; `npm run build` passes design, core,
+video and TypeScript checks. `npx playwright test --reporter=dot` passes
+127 browser scenarios with 75 deliberate platform skips across Tizen,
+Vizio and responsive configurations. Local HTTPS serves the rebuilt viewing
+bundle with a verified JavaScript asset. No physical Samsung/Vizio or
+installed Tauri run was performed, and no production deployment was
+attempted.
+
 # Loading, player and polish pass — 2026-09-23
 
 - Home loading: Home renders once its hero catalog and recent channels

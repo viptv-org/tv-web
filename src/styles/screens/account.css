@@ -493,6 +493,7 @@
   --vx-glow-h: 700px;
   --vx-profiles-gap: var(--viptv-space-16);
   min-height: 100%;
+  overflow: hidden;
   padding-top: 120px; /* WebProfilesManage section top */
 }
 .desktop-shell .vx-profiles {

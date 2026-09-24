@@ -26,7 +26,7 @@ test('Vizio fixture opens the same-origin server media capability through the HT
   await page.goto('/?platform=vizio');
   await page.getByRole('button', { name: 'Alex' }).press('Enter');
   await page.getByRole('button', { name: 'Moonfall' }).press('Enter');
-  await page.getByRole('button', { name: 'Choose source', exact: true }).press('Enter');
+  await page.locator('[data-focus-id="detail-source"]').press('Enter');
   await page.getByRole('button', { name: 'Moonfall 1080p' }).press('Enter');
   await expect(page.getByRole('button', { name: 'Pause' })).toBeVisible();
   await expect(page.locator('video')).toHaveJSProperty('src', 'https://viptv.syek.tech/media/playback-1/capability/index.m3u8');
@@ -104,11 +104,11 @@ test('held OK opens queue management without also activating the card, then hide
   await page.keyboard.down('Enter');
   await page.waitForTimeout(750);
   await page.keyboard.up('Enter');
-  await expect(page.locator('.modal').getByRole('heading', { name: 'Queued movie' })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Hide from Continue Watching' })).toBeVisible();
+  await expect(page.locator('.vx-dialog').getByRole('heading', { name: 'Queued movie' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Remove from Continue Watching' })).toBeVisible();
   await expect(page.locator('.detail')).toHaveCount(0);
-  await page.getByRole('button', { name: 'Hide from Continue Watching' }).press('Enter');
-  await expect(page.getByRole('heading', { name: 'Hidden from Continue Watching' })).toBeVisible();
+  await page.getByRole('button', { name: 'Remove from Continue Watching' }).press('Enter');
+  await expect(page.getByRole('heading', { name: 'Removed from Continue Watching' })).toBeVisible();
   await page.getByRole('button', { name: 'Undo' }).press('Enter');
   await expect.poll(() => visibility).toEqual([true, false]);
   assertNoPageErrors();
@@ -130,8 +130,8 @@ test('held queue hero opens Manage before its primary Resume action', async ({ p
   await page.keyboard.down('Enter');
   await page.waitForTimeout(750);
   await page.keyboard.up('Enter');
-  await expect(page.locator('.modal').getByRole('heading', { name: 'Hero queue movie' })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Hide from Continue Watching' })).toBeVisible();
+  await expect(page.locator('.vx-dialog').getByRole('heading', { name: 'Hero queue movie' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Remove from Continue Watching' })).toBeVisible();
   await expect(page.locator('.sources')).toHaveCount(0);
   assertNoPageErrors();
 });
@@ -154,9 +154,9 @@ test('held resumable non-queue hero opens explicit source choice instead of Mana
   await page.keyboard.down('Enter');
   await page.waitForTimeout(750);
   await page.keyboard.up('Enter');
-  await expect(page.locator('.source-context')).toContainText('Resume hero movie');
+  await expect(page.locator('.vx-sources__status')).toContainText('Resume hero movie');
   await expect(page.getByText('Moonfall 1080p')).toBeVisible();
-  await expect(page.locator('.modal')).toHaveCount(0);
+  await expect(page.locator('.vx-app-modal[role="dialog"]')).toHaveCount(0);
   assertNoPageErrors();
 });
 
@@ -176,7 +176,7 @@ test('new-movie hero hold chooses a source while its Home card hold performs ord
   await page.keyboard.down('Enter');
   await page.waitForTimeout(750);
   await page.keyboard.up('Enter');
-  await expect(page.locator('.source-context')).toContainText('Moonfall');
+  await expect(page.locator('.vx-sources__status')).toContainText('Moonfall');
   await expect(page.getByText('Moonfall 1080p')).toBeVisible();
 
   await page.keyboard.press('Escape');
@@ -188,7 +188,6 @@ test('new-movie hero hold chooses a source while its Home card hold performs ord
   await page.waitForTimeout(750);
   await page.keyboard.up('Enter');
   await expect(page.locator('.detail').getByRole('heading', { name: 'Moonfall' })).toBeVisible();
-  await expect(page.locator('.modal')).toHaveCount(0);
+  await expect(page.locator('.vx-app-modal[role="dialog"]')).toHaveCount(0);
   assertNoPageErrors();
 });
-

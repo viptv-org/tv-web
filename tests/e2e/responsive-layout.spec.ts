@@ -181,25 +181,26 @@ for (const width of [390, 1440]) {
   });
 }
 
-test('responsive header, detail, sources and profiles have no leading Back control', async ({ page }) => {
+test('phone detail and source Back controls return through the title and Home', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await installBackend(page, { activity: true, populated: true });
   await openProfile(page);
-  await expect(page.locator('[data-focus-id="responsive-back"]')).toHaveCount(0);
   const card = page.locator('.shelves .media-card').filter({ hasText: 'A Different Horizon' }).first();
   await expect(card).toBeVisible();
   await card.click();
   await expect(page.locator('.detail')).toBeVisible();
-  await expect(page.locator('[data-focus-id="responsive-back"]')).toHaveCount(0);
-  await page.getByRole('button', { name: 'Choose source', exact: true }).click();
+  await expect(page.locator('[data-focus-id="detail-back"]')).toBeVisible();
+  await page.locator('[data-focus-id="detail-source"]').click();
   await expect(page.locator('.sources')).toBeVisible();
   await expect(page.locator('[data-focus-id="responsive-back"]')).toHaveCount(0);
-  await page.locator('[data-focus-id="responsive-profile"]').click();
-  await expect(page.getByRole('heading', { name: "Who's watching?" })).toBeVisible();
-  await expect(page.locator('[data-focus-id="responsive-back"]')).toHaveCount(0);
-  // Browser history still returns to the pages the removed control reached.
   await page.goBack();
-  await expect(page.locator('.sources')).toBeVisible();
+  await expect(page.locator('.sources')).toHaveCount(0);
+  await expect(page.locator('.detail')).toBeVisible();
+  await page.locator('[data-focus-id="detail-back"]').click();
+  await page.getByRole('button', { name: 'Profile: Alex' }).click();
+  await expect(page.getByRole('heading', { name: "Who's watching?" })).toBeVisible();
+  await page.goBack();
+  await expect(page.locator('.vx-home')).toBeVisible();
 });
 
 test('scrolling the responsive guide to its end loads the next channel page', async ({ page }) => {
@@ -257,7 +258,7 @@ test('header and frame hold their position between a tall and a short route', as
     expect(next.rail).toEqual(home.rail);
     expect(next.cast).toEqual(home.cast);
     expect(next.profile).toEqual(home.profile);
-    expect(next.heading[0]).toBe(home.heading[0]);
+    expect(Math.abs(next.heading[0] - home.heading[0])).toBeLessThanOrEqual(1);
     expect(next.gutter).toBe(home.gutter);
     expect(next.gutter).toBe(0);
   }

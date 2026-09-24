@@ -270,7 +270,12 @@ export function usePlaybackSession(app: PlaybackEngineApi) {
           await play(next.item, next.source, 0);
       }
     } catch (e) {
-      if (!scope.signal.aborted) fail(e);
+      if (!scope.signal.aborted) {
+        if (outgoing && controller.current?.snapshot.active)
+          setError("This source could not be played");
+        else
+          fail(e);
+      }
       if (
         outgoing &&
         controller.current?.snapshot.state === "error" &&

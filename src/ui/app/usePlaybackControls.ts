@@ -276,6 +276,7 @@ export function usePlaybackControls(app: NavigationApi) {
     const current = choices.find((choice) => choice.current);
     setModal({
       title: kind === "audio" ? "Audio Tracks" : "Subtitles",
+      view: { kind: "choices" },
       choices,
       focus: current?.label,
       legend: [

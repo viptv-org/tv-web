@@ -82,7 +82,7 @@ test('website fullscreen, volume and backend info operate on a decoded player', 
   });
   await page.goto('/'); await page.getByRole('button', { name: 'Alex' }).click();
   await page.locator('.media-card').filter({ hasText: movie.name }).click();
-  await page.getByRole('button', { name: 'Choose source', exact: true }).click();
+  await page.locator('[data-focus-id="detail-source"]').click();
   await page.locator('[data-focus-id="source-0"]').click();
   await expect.poll(() => page.locator('video').evaluate((video: HTMLVideoElement) => video.videoWidth)).toBeGreaterThan(0);
   await page.getByRole('button', { name: 'Pause', exact: true }).click();
@@ -103,7 +103,7 @@ test('website fullscreen, volume and backend info operate on a decoded player', 
   await expect(info).toContainText('browser-proxy');
   await expect(info).toContainText('remux');
   await expect(info).not.toContainText('/media/');
-  await expect(info).toContainText(/Decoder: (native-html|hls\.js)/);
+  await expect(info.locator('dt').filter({ hasText: 'Decoder' }).locator('..').locator('dd')).toContainText(/native-html|hls\.js/);
 });
 
 test('Discover keeps all addon namespaces and loads despite an unrelated Home failure', async ({ page }) => {

@@ -14,7 +14,7 @@ The host has ample memory (32 GB) — run tests and builds with default heap set
 
 ## Design synchronization
 
-Before visual, input, navigation or asset changes, read `design-contract/DESIGN_SYNC.md` and `design-contract/TV_WEB_UI_REBUILD.md`. Update the canonical design repository first, then import its immutable commit with `node scripts/design-sync.mjs sync ../design <full-commit>`. Keep `tests/PARITY_MATRIX.md` and `TESTING.md` honest about implemented, browser-reviewed and hardware-qualified states. Build checks enforce snapshot integrity; visual review verifies the rendered implementation.
+Before visual, input, navigation or asset changes, read `design-contract/DESIGN_SYNC.md` and the pinned `design-contract/viptv-design-system/` README, components, copy, decisions, tokens and matching reference screens. Update the canonical design repository first, then import its immutable commit with `node scripts/design-sync.mjs sync ../design <full-commit>`. Keep `tests/PARITY_MATRIX.md` and `TESTING.md` honest about implemented, browser-reviewed and hardware-qualified states. Build checks enforce snapshot integrity; visual review verifies the rendered implementation.
 
 Shared application rules are owned by ../core (viptv-org/core), pinned in CORE_REF. Change Rust and regenerate bindings/WASM there, commit, then run scripts/core-sync.mjs sync ../core. Never hand-edit vendor/core. Update Android's pin with the same revision for shared behavior changes. React owns rendering/focus and browser/player effects; provider aliases, artwork roles and continuation/source/resume rules belong in Rust. A passing hash check establishes the imported version, not device playback or visual acceptance.
 

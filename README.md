@@ -41,7 +41,7 @@ For the backend, build the TV distribution first, then set `VIPTV_TV_DIST` to it
 
 ## Design synchronization
 
-The canonical UI and UX contract lives in [viptv-org/design](https://github.com/viptv-org/design). Read the pinned [sync workflow](design-contract/DESIGN_SYNC.md) and [TV rebuild contract](design-contract/TV_WEB_UI_REBUILD.md). `DESIGN_REF` identifies the immutable revision, and the build checks the imported specification and asset hashes. Update design first, then explicitly import its committed revision; visual and behavior evidence remain separate from the mechanical integrity check.
+The canonical UI and UX contract lives in [viptv-org/design](https://github.com/viptv-org/design). Read the pinned [sync workflow](design-contract/DESIGN_SYNC.md) and [VIPTV design system](design-contract/viptv-design-system/README.md). `DESIGN_REF` identifies the immutable revision, and the build checks the imported specification and asset hashes. Update design first, then explicitly import its committed revision; visual and behavior evidence remain separate from the mechanical integrity check.
 
 ## Validation status
 
@@ -63,7 +63,7 @@ Update the owning Rust code and generated artifacts, commit core, then run `node
 
 ## Responsive browser and desktop layout
 
-The ordinary browser entry now uses the responsive viewing UI backed by the same real authentication, Rust-normalized catalog, profile/history and playback flows as TV. `?platform=tizen`, `?platform=vizio` or `?layout=tv` preserve the fixed TV renderer. Responsive screens use original VIPTV colors and contained artwork, with an optional locally persisted OLED canvas.
+The ordinary browser entry uses the responsive viewing UI backed by the same real authentication, Rust-normalized catalog, profile/history and playback flows as TV. `?platform=tizen`, `?platform=vizio` or `?layout=tv` select the fixed TV renderer. All layouts use the pinned VIPTV design system, with a locally persisted OLED choice and accent colour.
 
 Tauri hosts use `@tauri-apps/plugin-http` for API requests (no redirects), requiring the host's restricted HTTP capability and plugin registration. SmartCast additionally needs the exact native commands from core/adapters/tauri/smartcast.rs and `VITE_VIZIO_RECEIVER_URL` pointing at a deployed HTTPS receiver. The browser offers a truthful native-app handoff; it cannot pair a LAN TV over insecure HTTPS. Native host packaging, receiver deployment and physical decoding are not established by a browser build.
 

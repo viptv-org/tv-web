@@ -29,4 +29,4 @@ Imported player repositories carry these specifications and execution tickets: F
 
 ## Shared TV-web presentation replacement — 2026-09-13
 
-[TV_WEB_UI_REBUILD.md](TV_WEB_UI_REBUILD.md) applies the Roku-matching rebuild to both Tizen and Vizio under existing [design #4](https://github.com/viptv-org/design/issues/4) and [tv-web #2](https://github.com/viptv-org/tv-web/issues/2). Implementation and final acceptance are pending. [DESIGN_SYNC.md](DESIGN_SYNC.md) defines future design-first adoption and separate integrity/freshness/parity evidence; Figma authoring remains proposed.
+TV_WEB_UI_REBUILD.md (removed; see git history) applies the Roku-matching rebuild to both Tizen and Vizio under existing [design #4](https://github.com/viptv-org/design/issues/4) and [tv-web #2](https://github.com/viptv-org/tv-web/issues/2). Implementation and final acceptance are pending. [DESIGN_SYNC.md](DESIGN_SYNC.md) defines future design-first adoption and separate integrity/freshness/parity evidence; Figma authoring remains proposed.

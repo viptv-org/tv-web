@@ -106,15 +106,12 @@ When a scenario fails, run it alone with `--debug`, open `<Name>.failed.png`, an
 the printed console errors and last API calls. A missing mock route answers
 `404 Unhandled preview route <METHOD> <path>` and shows up there.
 
-## Screens that are not reachable (18)
+## Screens outside this preview runner (4)
 
 | Screen(s) | Why |
 |---|---|
-| PhStates, DeskStates, TvStates | composite boards of many states; the individual states have their own screens |
-| PhPlayerBuffering, DeskPlayerBuffering, TvPlayerBuffering | ring + "The stream could not seek there." notice: a refused backend seek (`seekRefused`) currently surfaces as an HTTP 409 error toast, and a pending seek shows neither ring nor notice |
-| PhUpNext, DeskUpNext, TvUpNext | the player has no Up Next card yet |
-| PhOverflowCue | cards have no touch ⋯ button yet |
-| WebLinkTv | tv-web has no "Link your TV" code-entry page |
+| PhStates, DeskStates, TvStates | Composite boards; the individual states have their own scenarios. |
+| WebLinkTv | Owned by the account `web` app at `/device`; preview it through local HTTPS. |
 
 ## Known differences in reached screens
 

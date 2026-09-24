@@ -107,20 +107,20 @@ test('Vizio: an empty source filter restores filter focus and source hold expose
   await installBackend(page);
   await enterHome(page);
   await page.getByRole('button', { name: 'Resilient Movie' }).press('Enter');
-  await page.getByRole('button', { name: 'Choose source', exact: true }).press('Enter');
-  const firstSource = page.getByRole('button', { name: 'Good source' });
+  await page.locator('[data-focus-id="detail-source"]').press('Enter');
+  const firstSource = page.locator('[data-focus-id="source-0"]');
   await expect(firstSource).toBeVisible();
   await firstSource.click({ button: 'right' });
   await expect(page.getByRole('heading', { name: 'Source details' })).toBeVisible();
-  await expect(page.locator('.source-detail-panel')).toContainText('good.mkv');
+  await expect(page.getByRole('dialog', { name: 'Source details' })).toContainText('good.mkv');
   await page.keyboard.press('Escape');
   await expect(firstSource).toBeVisible();
 
-  await page.getByRole('button', { name: 'Quality: All' }).click();
-  await page.getByRole('button', { name: '1080p', exact: true }).click();
-  await page.getByRole('button', { name: 'Provider: All' }).click();
+  await page.getByRole('button', { name: /^1080p/ }).first().click();
+  await page.getByRole('button', { name: 'All providers' }).click();
   await page.getByRole('button', { name: 'Other provider' }).click();
-  await expect(page.getByText('No matching sources. Choose another provider or quality.')).toBeVisible();
+  await expect(page.getByText('No matching sources')).toBeVisible();
+  await expect(page.getByText('Choose another provider or quality.')).toBeVisible();
   await expect.poll(() => page.locator('[data-focus-id="source-provider"]').evaluate(element => document.activeElement === element)).toBe(true);
   await expect(page.getByRole('alert')).toHaveCount(0);
 });

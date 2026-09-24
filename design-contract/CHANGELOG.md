@@ -1,5 +1,8 @@
 # Design changes
 
+## VIPTV design system — 2026-09-23
+Adopted [viptv-design-system/](viptv-design-system/README.md) as the single visual design for phone, desktop (Tauri), web and TV: `tokens/tokens.json` (source of truth), component rules, copy, settled decisions and reference screens. Removed the former visual layer (`tokens/`, `scripts/gen-tokens.mjs`, `specs/visual/`, RESPONSIVE_UI/PRODUCTION/VIPTV_ALIGNMENT, DESKTOP_LAYOUT, TV_WEB_UI_REBUILD, ANDROID_UI_REBUILD, TV_CANDIDATE_2026_09_12); they remain in git history. Behavior contracts under `specs/behavior/` are unchanged.
+
 ## Initial extraction — 2026-09-12
 Captured the Roku baseline at vynxc/viptv@7d6b413 and established design-first cross-platform governance. This changes repository ownership, not Roku behavior. Android-only imports and proposed platform adapters are tracked separately from current Roku behavior.
 
@@ -27,11 +30,11 @@ Corrected the rail origin, row spacing and V-mark geometry from frozen Roku Main
 
 ## 2026-09-13 — Shared TV rebuild delivery
 
-Recorded the shared React replacement, scoped 43-unit/49-browser validation, Settings/Search comparisons, source-filter difference, and immutable sync/PR workflow in [TV_WEB_UI_REBUILD.md](TV_WEB_UI_REBUILD.md). Physical TVs and other matched-content visual states remain pending.
+Recorded the shared React replacement, scoped 43-unit/49-browser validation, Settings/Search comparisons, source-filter difference, and immutable sync/PR workflow in TV_WEB_UI_REBUILD.md (removed; see git history). Physical TVs and other matched-content visual states remain pending.
 
 ## 2026-09-14 — Responsive history and populated-card corrections
 
-Specified RUI-023 in [RESPONSIVE_PRODUCTION.md](RESPONSIVE_PRODUCTION.md): actual page history and return context, top-left Back, OLED in Settings, direct live-channel activation, real Continue Watching semantics, stacked hero focus stability and contained live logos. These are owner-requested corrections under implementation; browser and hardware results remain separate evidence.
+Specified RUI-023 in RESPONSIVE_PRODUCTION.md (removed; see git history): actual page history and return context, top-left Back, OLED in Settings, direct live-channel activation, real Continue Watching semantics, stacked hero focus stability and contained live logos. These are owner-requested corrections under implementation; browser and hardware results remain separate evidence.
 
 ## 2026-09-17 — Shared platform matrix and playback consolidation decision
 

@@ -2,11 +2,7 @@
  * Early stylesheet entry (main.tsx imports it after the generated tokens and
  * the bundled fonts, before any UI module). Full load order:
  *   1. theme/viptv-tokens.generated.css, theme/fonts.css
- *   2. styles/index.css → base.css: reset, body type, focus recipes. A floor:
- *      the legacy rules below must keep winning until their family is rebuilt.
- *   3. legacy CSS, still in place (src/ui/SearchPopunder.css, tv.css,
- *      responsive.css and src/ui/css/*), imported by the UI modules. Family agents delete their
- *      rules there as each family is rebuilt.
- *   4. styles/design.css (imported last by main.tsx): primitives/*, screens/*.
+ *   2. styles/index.css → base.css: reset, body type, focus recipes.
+ *   3. styles/design.css (imported last by main.tsx): primitives/*, screens/*.
  */
 @import "./base.css";

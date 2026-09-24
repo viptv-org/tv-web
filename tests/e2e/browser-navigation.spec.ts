@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { apiOrigin, installBackend, movie } from './helpers/responsiveBackend';
+import { apiOrigin, installBackend, movie, sessionKey } from './helpers/responsiveBackend';
 
 /** Only decoding and backend delivery are mocked; App, Rust and browser history are real. */
 async function installPlaybackBoundary(page: Page, requests: Awaited<ReturnType<typeof installBackend>>['requests']) {
@@ -36,6 +36,7 @@ async function installPlaybackBoundary(page: Page, requests: Awaited<ReturnType<
 async function chooseProfile(page: Page) {
   await page.locator('[data-focus-id="profile-0"]').click();
   await expect(page.locator('.home')).toBeVisible();
+  await expect.poll(() => page.evaluate(key => JSON.parse(localStorage.getItem(key) ?? '{}').profileId, sessionKey)).toBe('1');
 }
 
 test.beforeEach(async ({ page }, info) => {
@@ -52,7 +53,7 @@ test('browser Back and Forward restore detail/source URLs without appearance que
   await card.click();
   await expect(page).toHaveURL(/\/tv\/title\/movie\/responsive-movie$/);
   await expect(page.locator('.detail').getByRole('heading', { name: movie.name })).toBeVisible();
-  await page.getByRole('button', { name: 'Choose source', exact: true }).click();
+  await page.locator('[data-focus-id="detail-source"]').click();
   await expect(page.locator('[data-focus-id="source-0"]')).toBeVisible();
   await expect(page).toHaveURL(/\/tv\/title\/movie\/responsive-movie\/sources$/);
   await page.goBack();
@@ -92,7 +93,7 @@ test('browser Back stops playback and Forward requires manual source selection',
   await page.goto('/');
   await chooseProfile(page);
   await page.locator('.media-card').filter({ hasText: movie.name }).click();
-  await page.getByRole('button', { name: 'Choose source', exact: true }).click();
+  await page.locator('[data-focus-id="detail-source"]').click();
   await page.locator('[data-focus-id="source-0"]').click();
   await expect(page.locator('.player-overlay')).toBeVisible();
   await expect(page).toHaveURL(/\/watch$/);
@@ -114,18 +115,17 @@ test('a live card opens playback directly and history never restores a live sour
   await page.locator('[data-focus-id="recent-live-0"]').click();
   await expect(page.locator('.player-overlay')).toBeVisible();
   await expect(page).toHaveURL(/\/tv\/title\/live\/station-0\/watch$/);
-  await expect(page.locator('.source-context')).toHaveCount(0);
+  await expect(page.locator('.vx-sources__status')).toHaveCount(0);
   await expect(page.locator('.detail')).toHaveCount(0);
   expect(fixture.requests.find(request => request.path === '/api/playback' && request.method === 'POST')?.body).toMatchObject({ channel_id: 'station-0' });
   expect(fixture.requests.filter(request => request.path === '/api/streams')).toHaveLength(0);
-  // The player is left through its own controls row, not a leading overlay
-  // button. This reaches Exit the same way the remote does.
-  await page.getByRole('button', { name: 'Exit', exact: true }).press('Enter');
+  // Responsive players use the header Back control to leave playback.
+  await page.locator('[data-focus-id="player-back"]').press('Enter');
   await expect(page.locator('.home')).toBeVisible();
   await expect.poll(() => fixture.requests.some(request => request.path === '/api/playback/history-playback' && request.method === 'DELETE')).toBe(true);
   await page.goForward();
   await expect(page).toHaveURL(/\/tv\/live$/);
-  await expect(page.locator('.source-context')).toHaveCount(0);
+  await expect(page.locator('.vx-sources__status')).toHaveCount(0);
   expect(fixture.requests.filter(request => request.path === '/api/playback' && request.method === 'POST')).toHaveLength(1);
   expect(fixture.errors).toEqual([]);
 });

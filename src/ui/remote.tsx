@@ -7,7 +7,6 @@ import {
   type ButtonHTMLAttributes,
   type ReactNode,
 } from "react";
-import { LEGACY_TV_SCALE } from "./tvCanvas";
 
 type Action = () => void;
 type Registration = { activate: Action; hold?: Action };
@@ -322,8 +321,9 @@ function revealFocusedControl(element: HTMLElement) {
         parent.scrollHeight > parent.clientHeight
       ) {
         const section = element.closest("section");
-        // Headroom above a revealed shelf: 8px, x1.5 on the 1920 x 1080 TV canvas.
-        const headroom = element.closest(".responsive-app") ? 8 : 8 * LEGACY_TV_SCALE;
+        const headroom = parseFloat(getComputedStyle(element).getPropertyValue(
+          element.closest(".responsive-app") ? "--viptv-space-2" : "--viptv-space-3",
+        ));
         if (
           parent.classList.contains("shelves") &&
           section?.parentElement === parent

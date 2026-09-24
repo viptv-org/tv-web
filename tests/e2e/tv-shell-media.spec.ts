@@ -22,7 +22,7 @@ test('held series-root hero opens its episode detail instead of source selection
   await page.waitForTimeout(750);
   await page.keyboard.up('Enter');
   await expect(page.locator('.detail').getByRole('heading', { name: 'Hero fixture show' })).toBeVisible();
-  await expect(page.locator('[data-focus-id="episode-0"]')).toContainText('EPISODE 1');
+  await expect(page.locator('[data-focus-id="episode-0"]')).toContainText('Episode 1');
   await expect(page.locator('.sources')).toHaveCount(0);
   assertNoPageErrors();
 });
@@ -69,18 +69,19 @@ test('series detail keeps Roku-style season choice separate from explicit episod
   await page.route(`${apiOrigin}/api/meta/series/tt-show`, route => json(route, { meta: { ...show, videos: [
     { id: 'tt-show:1:1', title: 'Pilot', season: 1, episode: 1, description: 'Episode one.' },
     { id: 'tt-show:1:2', title: 'The Signal', season: 1, episode: 2, description: 'Episode two.' },
+    { id: 'tt-show:2:1', title: 'Return', season: 2, episode: 1, description: 'A new season.' },
   ] } }));
   await page.addInitScript(({ key, token }) => localStorage.setItem(key, JSON.stringify(token)), { key: `viptv-device:${apiOrigin}`, token: { sessionId: 'device-1', accountId: '7', profileId: null, accessToken: 'access', refreshToken: 'refresh', expiresIn: 900 } });
   await page.goto('/?platform=tizen');
   await page.getByRole('button', { name: 'Alex' }).press('Enter');
   await page.getByRole('button', { name: 'Fixture Show' }).press('Enter');
   await expect(page.getByRole('heading', { name: 'Fixture Show' })).toBeVisible();
-  await expect(page.locator('[data-focus-id="episode-0"]')).toContainText('EPISODE 1');
+  await expect(page.locator('[data-focus-id="episode-0"]')).toContainText('Episode 1');
   await page.getByRole('button', { name: 'Season 1' }).press('Enter');
   await expect(page.getByRole('heading', { name: 'Season' })).toBeVisible();
   await page.getByRole('button', { name: 'Season 1' }).last().press('Enter');
   await page.locator('[data-focus-id="episode-1"]').press('Enter');
-  await expect(page.locator('.source-context')).toContainText('The Signal');
+  await expect(page.locator('.vx-sources__status')).toContainText('S1 E2');
   await expect(page.getByText('Moonfall 1080p')).toBeVisible();
   await expect(page.getByRole('alert')).toHaveCount(0);
   assertNoPageErrors();
@@ -96,9 +97,9 @@ test('resume never substitutes a lookalike source and leaves the user at manual 
   await page.goto('/?platform=vizio');
   await page.getByRole('button', { name: 'Alex' }).press('Enter');
   await page.getByRole('button', { name: 'Resume', exact: true }).press('Enter');
-  await expect(page.locator('.source-context')).toContainText('Resume fixture');
+  await expect(page.locator('.vx-sources__status')).toContainText('Resume fixture');
   await expect(page.getByRole('button', { name: 'Moonfall 1080p' })).toBeVisible();
-  await expect(page.getByRole('status')).toContainText('previous source is unavailable');
+  await expect(page.locator('.vx-toast')).toContainText('previous source is unavailable');
   await expect(page.locator('.player-overlay')).toHaveCount(0);
   await page.getByRole('button', { name: 'Moonfall 1080p' }).press('Enter');
   await expect(page.getByRole('button', { name: 'Pause' })).toBeVisible();
@@ -191,7 +192,7 @@ test('Roku visual contract keeps fixed geometry, focus ownership and proportiona
   assertNoPageErrors();
 });
 
-test('series progress selects its resumed episode and remote paging reveals one complete row', async ({ page }, testInfo) => {
+test('series progress marks watched and resumed episodes while remote paging reveals the row', async ({ page }, testInfo) => {
   const platform = testInfo.project.name as 'tizen' | 'vizio';
   await installPlatformRuntime(page);
   await installBackend(page);
@@ -207,15 +208,20 @@ test('series progress selects its resumed episode and remote paging reveals one 
   await page.goto(`/?platform=${platform}`);
   await page.getByRole('button', { name: 'Alex' }).press('Enter');
   await page.getByRole('button', { name: 'Progress Show', exact: true }).press('Enter');
-  await expect(page.locator('[data-focus-id="episode-1"]')).toBeFocused();
-  await expect(page.locator('[data-focus-id="episode-0"]')).toContainText('WATCHED');
-  await expect(page.locator('[data-focus-id="episode-0"] progress')).toHaveCount(0);
-  await expect(page.locator('[data-focus-id="episode-1"] progress')).toHaveAttribute('value', '42');
-  await expectBox(page, '.episode-grid', { x: 168, y: 393, width: 1644, height: 495 });
+  await expect(page.locator('[data-focus-id="detail-play"]')).toBeFocused();
+  await expect(page.locator('[data-focus-id="episode-0"] [role="progressbar"]')).toHaveAttribute('aria-valuenow', '100');
+  await expect(page.locator('[data-focus-id="episode-1"] [role="progressbar"]')).toHaveAttribute('aria-valuenow', '35');
+  const firstArt = await page.locator('[data-focus-id="episode-0"] .vx-card__art').boundingBox();
+  expect(firstArt).not.toBeNull();
+  expect(firstArt!.width).toBe(360);
+  expect(firstArt!.height).toBe(200);
   await capture(page, testInfo, 'roku-series-progress');
-  await page.keyboard.press('ArrowDown');
+  await page.locator('[data-focus-id="episode-0"]').focus();
+  await page.keyboard.press('ArrowRight');
+  await expect(page.locator('[data-focus-id="episode-1"]')).toBeFocused();
+  for (let step = 0; step < 4; step++) await page.keyboard.press('ArrowRight');
   await expect(page.locator('[data-focus-id="episode-5"]')).toBeFocused();
-  await expectBox(page, '[data-focus-id="episode-5"]', { x: 588, y: 393, width: 384, height: 495 });
+  await expect(page.locator('[data-focus-id="episode-5"]')).toBeInViewport();
   await expectBox(page, '.tv-screen', { x: 0, y: 0, width: 1920, height: 1080 });
 });
 

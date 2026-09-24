@@ -20,8 +20,6 @@ import { usePhoneLayout } from "../usePhoneLayout";
 import { SearchPopunder } from "../SearchPopunder";
 import { HomeSkeleton } from "../../screens/HomeSkeleton";
 import { useRef } from "react";
-import "../tv.css";
-import "../responsive.css";
 
 /**
  * The application render tree: desktop frame, navigation, screens and
@@ -59,15 +57,6 @@ export function AppShell({ app }: { app: AppApi }) {
   const currentNav: NavDestination = isNavDestination(screen) && (phone || inRail(screen)) ? screen : section.current;
   const tvRail = useTvRail(!responsive && chromeScreen, screen);
   const openProfiles = () => setScreen("profiles");
-  const brand = (<div
-          className="brand"
-        >
-          <img
-            src={`${import.meta.env.BASE_URL}assets/viptv-mark.png`}
-            alt="viptv"
-          />
-        </div>);
-
   return (
     <RemoteRoot
       inputMode={layout}
@@ -174,8 +163,6 @@ export function AppShell({ app }: { app: AppApi }) {
         {responsive && phone && (booting || (isNavDestination(screen) && screen !== "Settings")) && (
           <PhoneNav current={booting ? "Home" : currentNav} onNavigate={(destination) => void navigate(destination)} skeleton={booting} />
         )}
-        {!responsive && !chromeScreen && !["player", "pairing", "profiles"].includes(screen) && brand}
-
         {/* ---- Account: sign-in / pairing and Who's watching (account family) ---- */}
         {booting || screen === "startup" ? null : screen === "pairing" ? (
           responsive

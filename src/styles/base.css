@@ -1,9 +1,8 @@
 /*
  * Foundation: design-system reset, body type and focus recipes.
  *
- * Loaded before the legacy stylesheets (see index.css): the reset is only a
- * floor, so the legacy look keeps winning until each family is rebuilt, while
- * the vx- focus utilities below are opt-in and never collide with legacy rules.
+ * Loaded before screen styles (see index.css). The vx- focus utilities are
+ * opt-in so each platform can apply its own focus recipe.
  * TV-reachable: Chrome 87 syntax only (no :is/:where/:has, nesting or @layer).
  */
 
@@ -16,6 +15,7 @@
 html,
 body {
   margin: 0;
+  overflow: hidden;
 }
 body {
   font-family: var(--viptv-font-family-ui);
@@ -48,6 +48,11 @@ a {
   :root[data-layout="responsive"] :focus-visible {
     outline: none;
     box-shadow: var(--viptv-focus-desktop);
+  }
+}
+@media (max-width: 599px) {
+  :root[data-layout="responsive"] button:focus {
+    outline: none;
   }
 }
 

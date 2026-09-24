@@ -1,6 +1,31 @@
-# Shared TV visual rebuild parity — 2026-09-13
+# VIPTV design-system overhaul — 2026-09-23
 
-Design: `3ab29a63cbe6369341ee4376f69a59d4cbb38fc8`. Contract IDs refer to [the pinned acceptance index](../design-contract/TV_WEB_UI_REBUILD.md). Local batch: 43 unit tests, 49 browser passes / 33 deliberate platform skips. Implementation/CI revision is recorded in [execution issue #2](https://github.com/viptv-org/tv-web/issues/2) and TESTING.md. Every surface below is implemented; the evidence columns bound what was actually verified.
+Current design: `5740c91d6e9cb7616626bdbb0f635cb62f6ec0c2`, with the
+authoritative [screen index](../design-contract/viptv-design-system/reference/screens/index.json),
+[components](../design-contract/viptv-design-system/components.md),
+[copy](../design-contract/viptv-design-system/copy.md), and
+[decisions](../design-contract/viptv-design-system/decisions.md). The table
+below describes the current build. The older Roku-based record farther down
+is historical evidence for a superseded design revision.
+
+| Surface | Browser and reference evidence | Remaining limit |
+| --- | --- | --- |
+| Shell and Home | Phone, desktop app preview, browser and TV Home, rail, title bar and phone nav captured and compared; responsive Back and remote focus exercised. | Desktop app frame is a browser preview, not an installed Tauri run. |
+| Title, sources, menus | Phone/desktop/TV title, sources, provider/details and menu/Undo states captured; source identity, hold, filter and Back checked. | Reference and fixture source counts differ; TV provider control remains an explicit adaptation. |
+| Discover, My List, Search, Live | P/D/T results, filters, queue, keyboard and guide states captured; paging, stale response suppression and D-pad flow checked. | Reference uses a voice-search mic; the app has no voice input. Some fixture counts and artwork differ. |
+| Account | Sign-in, pairing expiry, profiles, edit, avatar, text and PIN states captured; auth/focus flows checked. | A protected-profile lock badge awaits a protection flag in the profile data. |
+| Settings, casting, local mode | P/D/T settings and addon states, desktop SmartCast preview and browser/local-mode states captured; local and cast unit flows checked. | Accent-colour choice has no reference screen. SmartCast was simulated; no native LAN TV was paired. |
+| Player and shared states | P/D/T VOD, live, seek, tracks, Up Next, buffering and error states captured; Next, focus, rollback and notices checked in browser. | Browser media stubs and AVPlay simulation do not qualify device decoding. Composite States boards are reviewed through individual states. |
+
+All 151 tv-web-reachable reference screens produced side-by-side comparisons;
+the WebLinkTv code-entry page is implemented in `web`. Browser screenshots
+and comparison artifacts remain ignored local test output. Physical Tizen,
+Vizio and Tauri evidence is unverified. See TESTING.md for the validation
+commands and counts.
+
+# Prior shared TV visual rebuild parity — 2026-09-13
+
+Design: `3ab29a63cbe6369341ee4376f69a59d4cbb38fc8`. Contract IDs refer to that revision's TV_WEB_UI_REBUILD acceptance index, now removed from the current snapshot. Local batch at the time: 43 unit tests, 49 browser passes / 33 deliberate platform skips. Implementation/CI revision is recorded in [execution issue #2](https://github.com/viptv-org/tv-web/issues/2) and TESTING.md. The evidence columns bound what was verified then.
 
 | IDs / surface | Browser evidence | Matched Roku visual evidence | Tizen hardware | Vizio hardware |
 | --- | --- | --- | --- | --- |

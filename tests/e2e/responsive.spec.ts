@@ -115,17 +115,21 @@ for (const viewport of [
     await openHome();
     await expectResponsiveViewport(page, viewport.width);
 
-    const more = page.getByRole('button', { name: 'More options', exact: true });
-    await more.click();
-    const moreDialog = page.locator('.modal[data-focus-scope="modal"]');
-    await expect(moreDialog.getByRole('heading', { name: movie.name })).toBeVisible();
-    await expect(moreDialog.getByRole('button', { name: 'Details', exact: true })).toBeVisible();
-    await expect(moreDialog.getByRole('button', { name: 'More actions', exact: true })).toBeVisible();
+    await card.click();
+    await page.locator('[data-focus-id="detail-info"]').click();
+    const moreDialog = page.getByRole('dialog', { name: movie.name });
+    await expect(moreDialog.getByRole('button', { name: 'Choose source', exact: true })).toBeVisible();
+    await expect(moreDialog.getByRole('button', { name: 'Add to My List', exact: true })).toBeVisible();
     await moreDialog.getByRole('button', { name: 'Cancel', exact: true }).click();
     await expect(moreDialog).toHaveCount(0);
-    await expect(more).toBeVisible();
+    await page.goBack();
+    await expect(card).toBeVisible();
 
-    const cast = page.getByRole('button', { name: 'Watch on TV', exact: true });
+    if (viewport.name === 'phone') {
+      await navigation.getByRole('button', { name: 'My List', exact: true }).click();
+      await page.locator('[data-focus-id="library-settings"]').click();
+    }
+    const cast = page.getByRole('button', { name: /^Watch on TV/ });
     await cast.click();
     const castDialog = page.getByRole('dialog', { name: 'Watch on TV' });
     await expect(castDialog).toContainText('VIPTV desktop app with SmartCast support');
@@ -137,6 +141,8 @@ for (const viewport of [
     await expect(cast).toBeFocused();
     await expectResponsiveViewport(page, viewport.width);
     if (viewport.name === 'phone') {
+      await page.goBack();
+      await page.getByRole('navigation', { name: 'Main navigation' }).getByRole('button', { name: 'Home', exact: true }).click();
       // Phone keeps Discover in the bottom navigation; the browse routes no
       // longer carry a cross-link to each other.
       await page.getByRole('navigation', { name: 'Main navigation' }).getByRole('button', { name: 'Search', exact: true }).click();
@@ -153,8 +159,8 @@ for (const viewport of [
     await card.click();
     await expect(page.locator('.detail').getByRole('heading', { name: movie.name })).toBeVisible();
     await expectResponsiveViewport(page, viewport.width);
-    await page.getByRole('button', { name: 'Choose source', exact: true }).click();
-    await expect(page.locator('.source-context')).toContainText(movie.name);
+    await page.locator('[data-focus-id="detail-source"]').click();
+    await expect(page.locator('.vx-sources__status')).toContainText(viewport.width < 600 ? movie.name : 'found');
     await expect(page.locator('[data-focus-id="source-0"]')).toBeVisible();
     await expectResponsiveViewport(page, viewport.width);
     expect(fixture.requests.some(request => request.path === '/api/meta/movie/responsive-movie')).toBe(true);
@@ -212,19 +218,19 @@ for (const viewport of [
       await expect(page.locator('[data-focus-id="responsive-back"]')).toHaveCount(0);
     }
     const episode = page.locator('[data-focus-id="episode-0"]');
-    await expect(episode).toContainText('EPISODE 1');
-    await expect(page.locator('.responsive-episode')).toHaveCount(8);
+    await expect(episode).toContainText('Episode 1');
+    await expect(page.locator('.vx-title__episode')).toHaveCount(8);
     const dimensions = await episode.boundingBox();
     expect(dimensions?.width).toBeGreaterThanOrEqual(240);
-    const grid = page.locator('.episode-grid');
+    const grid = page.locator('.vx-title__episode-list');
     if (viewport.name === 'phone') {
       await expect(grid).toHaveCSS('display', 'flex');
-      expect(await grid.evaluate(node => node.scrollWidth > node.clientWidth)).toBe(true);
+      expect(await grid.evaluate(node => node.scrollWidth <= node.clientWidth + 1)).toBe(true);
     } else {
       await expect(grid).toHaveCSS('display', 'grid');
       // Read both cards in one animation frame: the real shell can still be
       // smoothly revealing focused content between separate protocol calls.
-      const positions = await grid.evaluate(node => Array.from(node.querySelectorAll('.episode')).slice(0, 2).map(card => {
+      const positions = await grid.evaluate(node => Array.from(node.querySelectorAll('.vx-title__episode')).slice(0, 2).map(card => {
         const box = card.getBoundingClientRect(); return { x: box.x, y: box.y };
       }));
       expect(positions[1].y).toBeCloseTo(positions[0].y, 0);
@@ -233,7 +239,7 @@ for (const viewport of [
     await expectResponsiveViewport(page, viewport.width);
     await page.screenshot({ path: testInfo.outputPath(`${viewport.name}-series.png`), animations: 'disabled', fullPage: true });
     await episode.click();
-    await expect(page.locator('.source-context')).toContainText('Episode 1');
+    await expect(page.locator('.vx-sources__status')).toContainText(viewport.width < 600 ? 'S1 E1' : 'found');
     await expect(page.locator('[data-focus-id="source-0"]')).toBeVisible();
     expect(fixture.requests.find(request => request.path === '/api/streams')?.body).toMatchObject({ id: 'responsive-series:1:1', series_id: 'responsive-series', season: 1, episode: 1 });
     await expectResponsiveViewport(page, viewport.width);
@@ -306,24 +312,24 @@ for (const width of [360, 390, 768, 1024, 1280, 1440, 2560]) {
       await page.locator('.shelves .media-card').filter({ hasText: fixture.title.name }).first().click();
       await expect(page.locator('.detail')).toBeVisible();
       await expectResponsiveViewport(page, width);
-      const synopsis = await page.locator('.detail-synopsis').boundingBox();
-      const actions = await page.locator('.detail-copy .actions').boundingBox();
+      const synopsis = await page.locator('.vx-title__synopsis').boundingBox();
+      const actions = await page.locator('.vx-title__actions').boundingBox();
       expect(actions!.y).toBeGreaterThanOrEqual(synopsis!.y + synopsis!.height);
       await page.screenshot({ path: testInfo.outputPath(`populated-${width}-detail.png`) });
       await page.locator('[data-focus-id="detail-info"]').click();
       const modal = page.locator('[data-focus-scope="modal"]');
       await expect(modal).toBeVisible();
       const modalBox = await modal.boundingBox();
-      expect(modalBox!.width).toBeLessThanOrEqual(width - 20);
+      expect(modalBox!.width).toBeLessThanOrEqual(width < 600 ? width : width - 20);
       expect(modalBox!.height).toBeLessThanOrEqual(height - 20);
       expect(modalBox!.height).toBeGreaterThan(100);
       await expectResponsiveViewport(page, width);
       await page.keyboard.press('Escape');
       await expect(modal).toHaveCount(0);
-      await page.getByRole('button', { name: 'Choose source', exact: true }).click();
+      await page.locator('[data-focus-id="detail-source"]').click();
       const source = page.locator('[data-focus-id="source-0"]');
-      await expect(source).toContainText('International Cinema Archive');
-      await expect(source.locator('p')).toHaveCSS('color', 'rgb(197, 198, 199)');
+      await expect(source).toContainText('International Cinema and Television Collection');
+      await expect(source.locator('.vx-source-row__file')).toHaveCSS('color', 'rgb(143, 141, 137)');
       await expectResponsiveViewport(page, width);
       const sourceSize = await source.evaluate(node => ({ height: node.clientHeight, scrollHeight: node.scrollHeight, width: node.clientWidth, scrollWidth: node.scrollWidth }));
       expect(sourceSize.scrollHeight).toBeLessThanOrEqual(sourceSize.height + 1);

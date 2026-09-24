@@ -691,8 +691,21 @@
   white-space: nowrap;
 }
 /* A title wider than the canvas travels (Roku ScrollingLabel). */
+.tv-layout .vx-player__title .roku-text {
+  display: block;
+  width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+}
+.tv-layout .vx-player__title .roku-text > span {
+  display: inline-block;
+  min-width: 100%;
+}
 .tv-layout .vx-player__title .roku-text.overflows > span {
   animation: roku-marquee var(--marquee-duration) linear var(--viptv-motion-marquee-delay) infinite alternate;
+}
+@keyframes roku-marquee {
+  to { transform: translateX(var(--marquee-distance)); }
 }
 /* Seeking: room above the timeline for the seek bubble (TvPlayerSeek). */
 .tv-layout .vx-player--seeking .vx-player__timeline {

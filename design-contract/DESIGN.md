@@ -4,13 +4,13 @@ This repository is the source of truth for viptv product UI, UX and app assets. 
 
 ## Reading order
 1. CONTEXT.md defines shared product terms.
-2. specs/visual/ defines dimensions, typography, imagery, focus, motion and screen states.
+2. [viptv-design-system/](viptv-design-system/README.md) is the visual design system for every platform: tokens (`tokens/tokens.json` is the single source of truth), component rules, exact copy, settled decisions and the reference screens. It replaces the former `specs/visual/`, `tokens/` and responsive/TV visual documents, which remain in git history.
 3. specs/behavior/ defines navigation, button actions, playback, continuation and account behavior.
 4. PLATFORM_PLAN.md and PLAYBACK_CAPABILITIES.md define proposed platform adapters and the direct-first fallback contract.
 5. assets/ contains app artwork, fonts/icons where available, generators and provenance. It contains no screenshots.
 6. REPOSITORIES.md and specs/repos/ define ownership and delivery contracts.
 
-For the shared Tizen/Vizio presentation replacement, read [TV_WEB_UI_REBUILD.md](TV_WEB_UI_REBUILD.md). For every platform UI change, pin update, asset import or parity claim, follow [DESIGN_SYNC.md](DESIGN_SYNC.md). It defines immutable adoption, integrity versus freshness, per-state evidence and the proposed future Figma authoring workflow.
+For every platform UI change, pin update, asset import or parity claim, follow [DESIGN_SYNC.md](DESIGN_SYNC.md). It defines immutable adoption, integrity versus freshness, per-state evidence and the proposed future Figma authoring workflow.
 
 ## Required format for any new or revised feature
 State its stable identifier, status (baseline or proposed), source revision, user intent, entry/exit points, complete visible copy and data, layout in reference coordinates, focus order/restoration, every input's press/release/repeat/hold behavior and threshold, disabled/loading/empty/error states, cancellation and recovery, timing, accessibility and platform equivalents. Supply concrete acceptance scenarios including failure and return navigation. Explicitly mark unknown measurements; never invent parity evidence.
@@ -28,9 +28,9 @@ Current platform implementation scope and test interfaces: [TV_IMPLEMENTATION.md
 
 Shared data/state architecture and startup adoption: [SHARED_CORE.md](SHARED_CORE.md).
 
-## Responsive viewing client
+## Visual design system
 
-[RESPONSIVE_UI.md](RESPONSIVE_UI.md) defines responsive geometry; [RESPONSIVE_VIPTV_ALIGNMENT.md](RESPONSIVE_VIPTV_ALIGNMENT.md) restores the original VIPTV visual components and overrides historical appearance proposals. [RESPONSIVE_PRODUCTION.md](RESPONSIVE_PRODUCTION.md) records real shared-client ownership, input adaptations and validation scope. These contracts preserve the Roku/TV baseline and do not imply Android mobile or native host qualification.
+Phone, desktop (Tauri), web and TV share one design system: [viptv-design-system/](viptv-design-system/README.md). Build every screen from its reference image and HTML (`reference/screens/`), the rules in `components.md`, the strings in `copy.md` and the decisions in `decisions.md`. Platform theme files are generated from `tokens/tokens.json` by `tools/gen-themes.mjs`; never hand-edit a generated theme or hard-code a value.
 
 ## Local addon mode
 

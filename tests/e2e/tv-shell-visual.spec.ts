@@ -69,10 +69,10 @@ test('reported TV web regressions keep episode details, loading feedback and row
   await page.getByRole('button', { name: 'Bleach' }).focus();
   // Queue OK is Resume; the explicit Details action opens episode information.
   await page.locator('[data-focus-id="hero-details"]').press('Enter');
-  await expect(page.locator('.detail-synopsis')).toContainText('Soul Reaper');
-  await expect(page.locator('[data-focus-id="episode-0"]')).toContainText('EPISODE 3');
+  await expect(page.locator('.vx-title__synopsis')).toContainText('Soul Reaper');
+  await expect(page.locator('[data-focus-id="episode-0"]')).toContainText('Episode 3');
   await page.locator('[data-focus-id="episode-0"]').press('Enter');
-  await expect(page.locator('.source-discovery-spinner')).toBeVisible();
+  await expect(page.locator('.vx-sources__status .vx-spinner')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Bleach 1080p' })).toBeVisible();
   await expect(page.getByRole('alert')).toHaveCount(0);
 });

@@ -204,7 +204,7 @@ export const screens = {
   WebSignInDevice: { backend: { session: 'none' }, steps: h => h.button('Use another device') },
   WebSignInLocal: { local: true, backend: { session: 'none' }, steps: h => h.focus(h.page.getByRole('button', { name: 'Use without an account' })) },
   DeskSignIn: { backend: { session: 'none' } },
-  WebLinkTv: { notReachable: 'no web "Link your TV" code-entry page in this app' },
+  WebLinkTv: { notReachable: 'owned by the account web app; inspect /device there' },
   DeskProfiles: { backend: { session: 'profiles' }, path: '/tv/profiles' },
   DeskProfilesPaged: { backend: { session: 'profiles', manyProfiles: true }, path: '/tv/profiles' },
   WebProfilesManage: { backend: { session: 'profiles' }, path: '/tv/profiles', steps: h => h.activate('manage-profiles') },
@@ -250,7 +250,7 @@ export const screens = {
   TvMenu: { steps: h => h.focus('nav-Discover') },
   TvTitle: { steps: tvToTitle },
   TvSources: { steps: tvToSources },
-  TvDiscover: { steps: h => h.tvGo('Discover') },
+  TvDiscover: { steps: async h => { await h.tvGo('Discover'); await h.focus('result-1'); } },
   TvLive: { steps: async h => { await h.tvGo('Live TV'); await h.focus('guide-program-1-0'); } },
   TvSearch: { steps: async h => { await h.tvGo('Search'); await h.fill(h.page.getByRole('textbox', { name: 'Search titles' }), 'naruto'); await h.settle(); await h.focus('key-T'); } },
   TvSettings: { steps: h => h.tvGo('Settings') },
@@ -289,7 +289,7 @@ export const screens = {
   TvLiveDetails: { steps: async h => { await h.tvGo('Live TV'); await h.hold('guide-program-1-0'); } },
   TvLiveSearch: { steps: async h => { await h.tvGo('Live TV'); await h.activate('guide-search'); await h.type('cnb'); } },
   TvMoreInfo: { steps: async h => { await tvToTitle(h); await h.activate('detail-info'); } },
-  TvLibrary: { steps: async h => { await h.tvGo('My List'); await h.activate('library-queue'); } },
+  TvLibrary: { steps: async h => { await h.tvGo('My List'); await h.activate('library-queue'); await h.focus('result-0'); } },
   TvStates: { notReachable: 'composite board of many states; shoot the individual states instead' },
 };
 

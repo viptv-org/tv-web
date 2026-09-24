@@ -181,7 +181,7 @@ test('Vizio: Back cancels a still-preparing Next without replacing the outgoing 
   await enterFirstEpisode(page, state);
 
   await page.getByRole('button', { name: 'Next episode' }).press('Enter');
-  await expect(page.getByRole('status')).toContainText('Preparing playback');
+  await expect(page.locator('.vx-preparing')).toContainText('Preparing playback');
   await expect.poll(() => state.nextRequests).toBe(1);
   await page.keyboard.press('Escape');
   await expect(page.getByRole('button', { name: 'Pause' })).toBeVisible();
@@ -340,6 +340,6 @@ test('Vizio: failed explicit Resume offers exact Retry and manual source choice 
   expect(state.playbackRequests.every(request => request.stream_id === 'first-source' && request.position === 42)).toBe(true);
   await page.getByRole('button', { name: 'Back', exact: true }).press('Enter');
   await page.keyboard.press('Escape');
-  await expect(page.getByRole('heading', { name: 'Continue Watching', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Continue watching', exact: true })).toBeVisible();
   noPageErrors();
 });

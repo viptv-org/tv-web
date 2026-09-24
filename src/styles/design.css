@@ -1,7 +1,5 @@
 /*
- * The new design system layers. Imported LAST (after every legacy stylesheet)
- * so the vx- primitives and family layouts win over legacy rules at equal
- * specificity while legacy CSS is being retired family by family.
+ * The design system layers. Imported last by main.tsx.
  */
 @import "./primitives/buttons.css";
 @import "./primitives/chips.css";

@@ -26,7 +26,7 @@ test('phone: floating nav with a separate Search button, tab screens only; Setti
   await expect(page.locator('[data-focus-id="nav-Discover"]')).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
   const bar = await box(page, '.vx-phone-nav-bar');
   expect(bar).toMatchObject({ x: 16, height: 64 });
-  expect(bar.y + bar.height).toBe(844 - 28);
+  expect(bar.y + bar.height).toBe(844 - 20);
   const search = await box(page, '[data-focus-id="nav-Search"]');
   expect(search).toMatchObject({ width: 64, height: 64 });
   expect(search.x + search.width).toBe(390 - 16);

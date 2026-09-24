@@ -266,10 +266,11 @@ test.describe('Vizio remote player contract', () => {
     expect(state.playbackRequests[1]).toMatchObject({ position: 10 });
 
     await page.getByRole('button', { name: 'Audio' }).press('Enter');
-    await expect(page.getByText('Surround · unavailable')).toBeVisible();
-    await page.getByText('Surround · unavailable').press('Enter');
+    const unavailable = page.getByRole('button', { name: /^Surround/ });
+    await expect(unavailable.locator('.vx-dialogs-row__unavailable')).toBeVisible();
+    await unavailable.press('Enter');
     await expect(page.getByText('This track is not supported on this TV.')).toBeVisible();
-    await page.getByRole('button', { name: 'Close' }).press('Enter');
+    await page.keyboard.press('Escape');
     await page.getByRole('button', { name: 'Subtitles' }).press('Enter');
     await page.getByRole('button', { name: 'Off' }).press('Enter');
     await expect.poll(() => state.playbackRequests.length).toBe(3);

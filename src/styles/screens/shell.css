@@ -18,8 +18,7 @@
  *   --vx-shell-bottom  phone: space the floating nav needs under the content
  *   A desktop overlay that covers the body row only (dialog / drawer scrims)
  *   uses  top: var(--vx-shell-top); left: var(--vx-shell-rail).
- *   Page content starts after the rail: margin-left / padding-left
- *   var(--vx-shell-rail) (the legacy --sidebar-width now follows it).
+ *   Page content starts after the rail using var(--vx-shell-rail).
  *
  * Literal lengths below are per-screen geometry from the reference HTML with
  * no token (each is named once as a --vx-* property with its source).
@@ -60,6 +59,12 @@
   contain: paint;
 }
 @media (max-width: 599px) {
+  /* Mobile web: keep the header and floating nav closer to the viewport edges. */
+  :root[data-layout="responsive"][data-platform="html5"] {
+    --viptv-layout-phone-top-inset: var(--viptv-space-8);
+    --viptv-layout-phone-nav-bottom: var(--viptv-space-5);
+    --viptv-layout-phone-bottom-clearance: calc(var(--viptv-layout-phone-nav-height) + var(--viptv-layout-phone-nav-bottom) + var(--viptv-space-12));
+  }
   [data-layout="responsive"] .desktop-app-frame {
     --vx-shell-rail: 0px;
     /* Floating nav: 64 tall, 28 above the edge, plus the 150 px fade's reach. */
@@ -86,8 +91,6 @@
    visible scrollbar (as drawn), so switching between a tall and a short
    route never shifts the frame. */
 [data-layout="responsive"] .tv-screen.responsive-app {
-  --sidebar-width: var(--vx-shell-rail, 0px);
-  --canvas: var(--viptv-color-bg);
   position: relative;
   flex: 1 1 auto;
   width: 100%;

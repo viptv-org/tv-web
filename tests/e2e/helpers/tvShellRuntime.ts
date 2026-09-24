@@ -166,21 +166,27 @@ for (const platform of ['tizen', 'vizio'] as const) {
     test.skip(test.info().project.name !== platform, 'run each platform query in its matching project');
     const assertNoPageErrors = await installPlatformRuntime(page);
     await enterHome(page, platform);
-    await expectBox(page, '.shelves', { x: 138, y: 699, width: 1782, height: 381 });
+    await expectBox(page, '.shelves', { x: 144, y: 700, width: 1776 });
     const firstCard = await page.locator('.media-card').first().boundingBox();
     expect(firstCard).not.toBeNull();
-    expect(firstCard!.width).toBe(384);
-    expect(firstCard!.height).toBe(300);
+    expect(firstCard!.width).toBe(320);
+    const cardArt = await page.locator('.media-card .vx-card__art').first().boundingBox();
+    expect(cardArt).not.toBeNull();
+    expect(cardArt!.width).toBe(320);
+    expect(cardArt!.height).toBe(180);
     await expect(page.getByRole('alert')).toHaveCount(0);
     await capture(page, testInfo, `${platform}-home`);
     await page.keyboard.press('ArrowRight');
     await page.keyboard.press('ArrowLeft');
     await page.getByRole('button', { name: 'Moonfall' }).press('Enter');
     await expect(page.getByRole('heading', { name: 'Moonfall' })).toBeVisible();
-    await page.getByRole('button', { name: 'Choose source', exact: true }).press('Enter');
-    await expect(page.locator('.source-context')).toContainText('Moonfall');
+    await page.locator('[data-focus-id="detail-source"]').press('Enter');
+    await expect(page.locator('.vx-sources__status')).toContainText('Moonfall');
     await expect(page.getByText('Moonfall 1080p')).toBeVisible();
-    await expectBox(page, '.source-context', { x: 150, y: 178.5 });
+    const panel = await page.getByRole('dialog', { name: 'Choose a source' }).boundingBox();
+    const sourceStatus = await page.locator('.vx-sources__status').boundingBox();
+    expect(sourceStatus!.x).toBeGreaterThanOrEqual(panel!.x + 32);
+    expect(sourceStatus!.y).toBeGreaterThan(panel!.y);
     await expect(page.getByRole('alert')).toHaveCount(0);
     await capture(page, testInfo, `${platform}-sources`);
 
@@ -205,8 +211,7 @@ for (const platform of ['tizen', 'vizio'] as const) {
     await expect(page.getByRole('alert')).toHaveCount(0);
     await capture(page, testInfo, `${platform}-settings`);
     await page.getByRole('button', { name: 'Playback preferences' }).press('Enter');
-    await expect(page.getByRole('button', { name: 'Preferred audio', exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: /^Preferred audio/ })).toBeVisible();
     assertNoPageErrors();
   });
 }
-

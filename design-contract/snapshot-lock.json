@@ -1,7 +1,7 @@
 {
   "version": 1,
   "repository": "viptv-org/design",
-  "commit": "26a0d3266c40a0565be735cbf080b52a31969163",
+  "commit": "5740c91d6e9cb7616626bdbb0f635cb62f6ec0c2",
   "files": {
     "design-contract/.github/pull_request_template.md": {
       "source": ".github/pull_request_template.md",
@@ -9,15 +9,11 @@
     },
     "design-contract/AGENTS.md": {
       "source": "AGENTS.md",
-      "sha256": "0510e65d4b6098f135c5ae95e02f29dd6d8a4d8346efcaa97f1a4b06d0a010bf"
+      "sha256": "1848b6a99d0180212691e934e63d9f10e1d48f8ce56c09f50f8a6e8a8c155d2f"
     },
     "design-contract/ANDROID_DEVELOPMENT.md": {
       "source": "ANDROID_DEVELOPMENT.md",
       "sha256": "f06c6c2e70dce41c15487735bc769ba4504706c51aee3e69033f876c63e3d325"
-    },
-    "design-contract/ANDROID_UI_REBUILD.md": {
-      "source": "ANDROID_UI_REBUILD.md",
-      "sha256": "f70129ef6f0b9062d533532263c5f6a3f888a3b3f7d0839b49e0b8472a805401"
     },
     "design-contract/BROWSER_PLAYBACK.md": {
       "source": "BROWSER_PLAYBACK.md",
@@ -25,7 +21,7 @@
     },
     "design-contract/CHANGELOG.md": {
       "source": "CHANGELOG.md",
-      "sha256": "0b0dca62be51342fc33fc81e10161728f02f63dc598f3922c7a28ddcfe13f5b4"
+      "sha256": "df5621a822f33da75b00c3b6f16fb5c8ebc989641134a2c79a0d8759a8453f68"
     },
     "design-contract/CONTEXT.md": {
       "source": "CONTEXT.md",
@@ -37,15 +33,11 @@
     },
     "design-contract/DESIGN.md": {
       "source": "DESIGN.md",
-      "sha256": "e61541c560b55e50a297d5e34ca7ad19ec7cff37093b75f40ae97b0916cb38e7"
+      "sha256": "ce3c8206bc2b2b8750e4b97134ae603c83b3053d8923f8177047a6fbd40edacc"
     },
     "design-contract/DESIGN_SYNC.md": {
       "source": "DESIGN_SYNC.md",
-      "sha256": "76de3af5d73be7330baa85768bff655ed56fb39df34b55269fe1e1fb40d8ce6e"
-    },
-    "design-contract/DESKTOP_LAYOUT.md": {
-      "source": "DESKTOP_LAYOUT.md",
-      "sha256": "3aaaa215c72b2015521372999ad915eb0ed1f4d90a7337df19de0d56ea9988ef"
+      "sha256": "a9c136ab42d220842d2f6d8cf77a797905fb07e2893653a94a7bb27704e6ee61"
     },
     "design-contract/DEVELOPMENT.md": {
       "source": "DEVELOPMENT.md",
@@ -53,7 +45,7 @@
     },
     "design-contract/LOCAL_MODE.md": {
       "source": "LOCAL_MODE.md",
-      "sha256": "9eebb2272da6f7717b9f54e212a91ae8712946084aa9dd6e2340a0dbd4379143"
+      "sha256": "4448f519f3391920d55f9e7324874ef7c2be5ccd10d88b4753e1fc5f0c815eee"
     },
     "design-contract/MIGRATION.md": {
       "source": "MIGRATION.md",
@@ -69,27 +61,15 @@
     },
     "design-contract/README.md": {
       "source": "README.md",
-      "sha256": "7d4dae9cb9b02c59e24a866327b61161a1820c429d23d0191b8acfa8d2d78253"
+      "sha256": "6a1c6b1a30fe19b73c9430fc7f3b2713ee8b1dd0f166544aa891cc1555790300"
     },
     "design-contract/REPOSITORIES.md": {
       "source": "REPOSITORIES.md",
       "sha256": "0e71e9fe41da82d8cbd483785337f47445455ee30c0e44aec550f7f625ff5202"
     },
-    "design-contract/RESPONSIVE_PRODUCTION.md": {
-      "source": "RESPONSIVE_PRODUCTION.md",
-      "sha256": "1e5e6272d3426531cf67e34eddd6626753433dce2db2d418a60e661f2a363614"
-    },
-    "design-contract/RESPONSIVE_UI.md": {
-      "source": "RESPONSIVE_UI.md",
-      "sha256": "f7e45a367a651d4e73025555381992673406dd139344748351d079f6325e49c8"
-    },
-    "design-contract/RESPONSIVE_VIPTV_ALIGNMENT.md": {
-      "source": "RESPONSIVE_VIPTV_ALIGNMENT.md",
-      "sha256": "bbdd5d4046bdd4ca989b9b4bba32e0490edb0e746bf0ad64435210c1fc2d0639"
-    },
     "design-contract/SHARED_CORE.md": {
       "source": "SHARED_CORE.md",
-      "sha256": "12685fedc448f1cf94ec7f59bce47164b74b08f32ab6e474a94bbed3f983d876"
+      "sha256": "f11fb63753848134053a66baeb470b1212e91fb907adb01d7f2b818cb2bd3bc6"
     },
     "design-contract/SPEC.md": {
       "source": "SPEC.md",
@@ -97,19 +77,11 @@
     },
     "design-contract/TRACKING.md": {
       "source": "TRACKING.md",
-      "sha256": "287fc52a4321fbba04a84e0a1cd120fc955b954ae8f14ccedf902d29bc0d5520"
-    },
-    "design-contract/TV_CANDIDATE_2026_09_12.md": {
-      "source": "TV_CANDIDATE_2026_09_12.md",
-      "sha256": "1190e92a13f8f50a4423a48c1ec6e0416f9812a25af1ebe6883a5e35a7cad38d"
+      "sha256": "8ad7efb62ad473938c36a40df4d2d3ec75667cb1440a9509c65024e80e07dcef"
     },
     "design-contract/TV_IMPLEMENTATION.md": {
       "source": "TV_IMPLEMENTATION.md",
-      "sha256": "464c2c99c2a5c65ee88fd7969958fa4a7971996fe2716230faa6e3631340f6dd"
-    },
-    "design-contract/TV_WEB_UI_REBUILD.md": {
-      "source": "TV_WEB_UI_REBUILD.md",
-      "sha256": "0dd0b6b8dc093e0d9e24fe6833a1ebac4c30c66b95b6b4f17051668e1bbf8c9b"
+      "sha256": "0aae196cce3757325d6ba64253b7259bccac53d6078415f9231537e94827f6c1"
     },
     "design-contract/docs/adr/0001-design-owned-assets.md": {
       "source": "docs/adr/0001-design-owned-assets.md",
@@ -121,7 +93,7 @@
     },
     "design-contract/docs/adr/0003-shared-platform-matrix-and-playback-consolidation.md": {
       "source": "docs/adr/0003-shared-platform-matrix-and-playback-consolidation.md",
-      "sha256": "cd1c9a604b86b7bf9ec2baec69cd528bdc70422133331a1e2c9028dbccf586d9"
+      "sha256": "7265e352bc8fa4516390b1c791bec1a5e83bc4c8238a17aa341699f7f386a75d"
     },
     "design-contract/docs/branding.md": {
       "source": "docs/branding.md",
@@ -135,25 +107,37 @@
       "source": "specs/repos/README.md",
       "sha256": "37f48c8c9132d2990bc998b2560823e829d4ab685911c3580344d1818dbc8dbc"
     },
-    "design-contract/specs/visual/README.md": {
-      "source": "specs/visual/README.md",
-      "sha256": "5ded6251f13077a3f7b5ddf7674c46d9c65f93f2532883a0fb7077a401d639ef"
+    "design-contract/viptv-design-system/README.md": {
+      "source": "viptv-design-system/README.md",
+      "sha256": "20b2b9619be75a00cf195583dbdae7d92bbfaf45d9f8d97f1855d1e2afa99b72"
     },
-    "design-contract/specs/visual/SCREENS.md": {
-      "source": "specs/visual/SCREENS.md",
-      "sha256": "8f30f0916f46a8a7fe03d5ca88b93a17ed9afc9a30462c5829f28c53264fe390"
+    "design-contract/viptv-design-system/claude-code/.claude/skills/viptv-ui/SKILL.md": {
+      "source": "viptv-design-system/claude-code/.claude/skills/viptv-ui/SKILL.md",
+      "sha256": "3a1b991e86a5f96a441aab63d6f6ab7f463f9ef7f90508ff92ec70b02a557a33"
     },
-    "design-contract/specs/visual/STATES_AND_MOTION.md": {
-      "source": "specs/visual/STATES_AND_MOTION.md",
-      "sha256": "847ee0b899eb601e2308707e5672292526309c078558bf4b669364f4cc8a952d"
+    "design-contract/viptv-design-system/components.md": {
+      "source": "viptv-design-system/components.md",
+      "sha256": "3c17d413e9d673c4b9d4eff37a106491d451354b02f7824a90bc151e4542d206"
     },
-    "design-contract/specs/visual/VISUAL_SYSTEM.md": {
-      "source": "specs/visual/VISUAL_SYSTEM.md",
-      "sha256": "eced53dfd779b3909927be7d32fb82becc8736d103983e10f8a7f0290268922f"
+    "design-contract/viptv-design-system/copy.md": {
+      "source": "viptv-design-system/copy.md",
+      "sha256": "31aa355db5594975acc8893d7072516a6ab1c09d7c83d49ae9e198f0fbe0bbda"
     },
-    "design-contract/tokens/responsive.json": {
-      "source": "tokens/responsive.json",
-      "sha256": "2f193519790c76c0e46a7da9a3564fc62b62d0fae8aca5739877a8ddf41950a8"
+    "design-contract/viptv-design-system/decisions.md": {
+      "source": "viptv-design-system/decisions.md",
+      "sha256": "689d512fdda192a50fc3d68b28ab28c0ff7ce47d368709a69909b2ead00fa7d7"
+    },
+    "design-contract/viptv-design-system/reference/screens/index.json": {
+      "source": "viptv-design-system/reference/screens/index.json",
+      "sha256": "98dbb78c3f00be474cc59a3db1672fe4ed02a9915f30b8df131f16dd02469347"
+    },
+    "design-contract/viptv-design-system/tokens/tokens.json": {
+      "source": "viptv-design-system/tokens/tokens.json",
+      "sha256": "ebce6279e2f40575f9b5dca9fca112674e60ae13a5dd1f208acc0db527ffaa6d"
+    },
+    "design-contract/viptv-design-system/tools/targets.json": {
+      "source": "viptv-design-system/tools/targets.json",
+      "sha256": "c50f1973ee5ecee443e4c6e282853f87403d088e5c3c3ff12082df8daddf50bd"
     },
     "design-contract/assets/FILES.json": {
       "source": "assets/FILES.json",

@@ -30,7 +30,7 @@ Android, Roku and future clients use the same design-first pin and evidence proc
 
 ## Per-platform parity record
 
-Each implementation's parity matrix records one row per affected screen/state, referencing the normative section and stable acceptance ID. Shared TV-web uses [TV_WEB_UI_REBUILD.md](TV_WEB_UI_REBUILD.md) TVW IDs; Android uses its [rebuild contract](ANDROID_UI_REBUILD.md) and TESTING.md. Record at least:
+Each implementation's parity matrix records one row per affected screen/state, referencing the normative section and stable acceptance ID. Shared TV-web and Android use the design system reference screen names (viptv-design-system/reference/screens/index.json) as state IDs, plus their TESTING.md. Record at least:
 
 | Field | Required content |
 | --- | --- |

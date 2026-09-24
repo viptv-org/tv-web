@@ -2,7 +2,7 @@
 
 Status: implementation authorized 2026-09-12. This adds platform implementations of the existing Roku baseline; it does not change Roku behavior. Android TV uses native Jetpack Compose. Tizen and Vizio use one React frontend in viptv-org/tv-web with a replaceable platform player module. React is selected here to share the existing TypeScript controller ecosystem and permit automated DOM/remote acceptance; SolidTV/LightningJS is not required for the shared-frontend contract.
 
-The shared Tizen/Vizio presentation replacement is governed by [TV_WEB_UI_REBUILD.md](TV_WEB_UI_REBUILD.md). Design updates and per-platform acceptance follow [DESIGN_SYNC.md](DESIGN_SYNC.md). Historical functional checks do not qualify replacement visuals.
+The shared Tizen/Vizio presentation follows the design system in [viptv-design-system/](viptv-design-system/README.md) (TV reference screens, 10-foot rules). Design updates and per-platform acceptance follow [DESIGN_SYNC.md](DESIGN_SYNC.md). Historical functional checks do not qualify replacement visuals.
 
 ## Product contract
 
@@ -22,6 +22,4 @@ The user authorized work without questions. Test interfaces are the public app r
 
 Required scenario groups: pairing pending/approved/expired/error/retry; profile choose/create/edit/avatar/delete/primary protection/unlock; Home focus/hero/loading/back; Discover filters/paging; search keyboard/debounce/results/failure; movie/series/season/episode state; manual source paging/filter/explicit selection/Resume exact identity; player pause/seek/repeat/debounce/cancel/rollback/tracks/exit; Next scoped selection/last-ten eligibility/cancel/previous Resume; queue hide/undo/watched/history; live guide future OK versus Play/filters/windows/gaps; settings/source preferences/addons/signout; stale request/session cancellation; offline and partial failures.
 
-Measure actual automated results against each group. A passing simulation is not a claim of 100% physical Tizen/Vizio/Android TV compatibility. Report untested hardware codec/DRM/signing/store constraints with the artifact. The owner deferred emulators after server OOM, then resumed testing on real hardware and bounded browser workers; follow TV_CANDIDATE_2026_09_12.md for current resource constraints. Screenshots may be created under ignored test-results/artifacts for inspection, never in design or packaged application artifacts.
-
-Current implementation and joint-testing checkpoint: [TV_CANDIDATE_2026_09_12.md](TV_CANDIDATE_2026_09_12.md).
+Measure actual automated results against each group. A passing simulation is not a claim of 100% physical Tizen/Vizio/Android TV compatibility. Report untested hardware codec/DRM/signing/store constraints with the artifact. The owner deferred emulators after server OOM, then resumed testing on real hardware and bounded browser workers; keep emulator and browser-worker use bounded. Screenshots may be created under ignored test-results/artifacts for inspection, never in design or packaged application artifacts.

@@ -51,7 +51,7 @@ Status: **proposed**. Source revision: design `627201e898c7fa1af7deea638f201344a
 
 ## LM-003 — Local discover browsing
 
-Local mode reuses the signed-in Home/Discover hierarchy (RESPONSIVE_PRODUCTION.md RUI-030): content-type group → catalog → declared filters, derived only from **enabled local addons**. Catalog rows disambiguate by addon name (`addon · catalog`). No filter appears that the selected catalog does not declare.
+Local mode reuses the signed-in Home/Discover hierarchy (RUI-030, formerly in RESPONSIVE_PRODUCTION.md): content-type group → catalog → declared filters, derived only from **enabled local addons**. Catalog rows disambiguate by addon name (`addon · catalog`). No filter appears that the selected catalog does not declare.
 
 Discovery negotiation, aggregation, pagination and error copy are byte-identical to the backend contract because they run the same shared provider logic in the client: 32-catalog aggregation cap for search, 200-item page cap, `has_more`/`next_skip` derived from raw page length, genre validation errors, and addon order by installation. Deviations are defects, not platform exceptions.
 

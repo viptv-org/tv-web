@@ -57,13 +57,18 @@ if (command === "sync") {
       p,
     ),
   );
+  const designSystemData = paths.filter((p) => [
+    "viptv-design-system/tokens/tokens.json",
+    "viptv-design-system/tools/targets.json",
+    "viptv-design-system/reference/screens/index.json",
+  ].includes(p));
   const previous = existsSync(
     resolve(root, "design-contract/snapshot-lock.json"),
   )
     ? JSON.parse(read("design-contract/snapshot-lock.json")).files
     : {};
   const imports = [];
-  for (const source of [...docs, ...paths.filter(p => p.startsWith("tokens/") && p.endsWith(".json")), "assets/FILES.json", ...data, ...assets]) {
+  for (const source of [...docs, ...designSystemData, ...paths.filter(p => p.startsWith("tokens/") && p.endsWith(".json")), "assets/FILES.json", ...data, ...assets]) {
     if (!safe(source)) throw Error(`Unsafe design path: ${source}`);
     const destination = source.startsWith(imagePrefix)
       ? `public/assets/${source.slice(imagePrefix.length)}`

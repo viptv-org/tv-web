@@ -45,6 +45,7 @@ describe('card text (Home reference captions)', () => {
     const live: MediaItem = { ...base, type: 'live', name: 'Cartoon Network' };
     expect(liveSubtitle({ ...live, description: 'West' })).toBe('West');
     expect(liveSubtitle({ ...live, raw: { section: 'entertainment' } })).toBe('Entertainment');
-    expect(liveSubtitle({ ...(live as MediaItem & { category: string }), category: 'news' })).toBe('News');
+    const categorized: MediaItem & { category: string } = { ...live, category: 'news' };
+    expect(liveSubtitle(categorized)).toBe('News');
   });
 });

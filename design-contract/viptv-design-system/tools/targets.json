@@ -1,0 +1,33 @@
+[
+  {
+    "repo": "design",
+    "note": "The design system's own convenience exports (web, Tailwind, JS).",
+    "files": [
+      { "path": "viptv-design-system/tokens/tokens.css", "format": "css", "options": { "googleFonts": true } },
+      { "path": "viptv-design-system/tokens/tokens.ts", "format": "ts" },
+      { "path": "viptv-design-system/tokens/tailwind.preset.js", "format": "tailwind-preset" }
+    ]
+  },
+  {
+    "repo": "tv-web",
+    "note": "Shared React client: phone, desktop web (Chrome), Tauri desktop, Tizen and Vizio. Fonts are bundled locally, not loaded from Google.",
+    "files": [
+      { "path": "src/theme/viptv-tokens.generated.css", "format": "css", "options": { "googleFonts": false, "reset": false } },
+      { "path": "src/theme/viptv-tokens.generated.ts", "format": "ts" }
+    ]
+  },
+  {
+    "repo": "android",
+    "note": "Jetpack Compose (Android and Android TV).",
+    "files": [
+      { "path": "app/src/androidMain/kotlin/org/viptv/app/theme/ViptvTokens.kt", "format": "kotlin", "options": { "packageName": "org.viptv.app.theme" } }
+    ]
+  },
+  {
+    "repo": "roku",
+    "note": "Roku SceneGraph / BrightScript.",
+    "files": [
+      { "path": "roku/source/ViptvTokens.brs", "format": "brightscript" }
+    ]
+  }
+]
