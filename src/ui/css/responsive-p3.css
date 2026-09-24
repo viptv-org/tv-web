@@ -129,7 +129,7 @@
 }
 
 /* Focus owns inversion even when the selected navigation item is also hovered. */
-.responsive-app button:focus-visible:not(:disabled) { background-color: #f5f5f5; color: #101112; }
+.responsive-app button:where(:not([class*="vx-"])):focus-visible:not(:disabled) { background-color: #f5f5f5; color: #101112; }
 
 /* Min-content is never the viewport authority. Long shelves scroll locally. */
 .responsive-app main > *, .responsive-app .shelves, .responsive-app .cards,
@@ -205,7 +205,7 @@
   .responsive-app .responsive-toolbar nav button.active,
   .responsive-app .filters button.selected { --responsive-control-surface: #303234; }
   .responsive-app .desktop-sidebar button.active { --responsive-control-surface: transparent !important; }
-  .responsive-app button:focus {
+  .responsive-app button:where(:not([class*="vx-"])):focus {
     outline: none !important;
     box-shadow: none !important;
     background-color: var(--responsive-control-surface) !important;

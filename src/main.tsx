@@ -1,5 +1,6 @@
-// Styles first: generated design tokens, bundled fonts, then the app stylesheet
-// entry (base → legacy → primitives → screens; see styles/index.css).
+// Stylesheet order: generated tokens → bundled fonts → styles/index.css (reset
+// floor) → legacy CSS (imported by the UI modules) → styles/design.css
+// (primitives + screen families, below, so they win at equal specificity).
 import "./theme/viptv-tokens.generated.css";
 import "./theme/fonts";
 import "./styles/index.css";

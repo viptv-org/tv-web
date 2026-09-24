@@ -22,11 +22,15 @@ import { screens } from './screens.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const root = resolve(here, '../..');
-export const outDir = join(root, 'test-results/preview');
+// `npx playwright test` wipes test-results/; PREVIEW_OUT redirects output.
+export const outDir = process.env.PREVIEW_OUT ? resolve(process.env.PREVIEW_OUT) : join(root, 'test-results/preview');
 export const referenceIndex = JSON.parse(readFileSync(join(referenceDir, 'screens/index.json'), 'utf8'));
 export const reference = name => referenceIndex.find(entry => entry.name === name);
 /** Dev servers: the normal build, and a local-mode build (VITE_VIPTV_LOCAL_MODE=1). */
-const servers = { app: { port: 4180, env: {} }, local: { port: 4181, env: { VITE_VIPTV_LOCAL_MODE: '1' } } };
+const servers = { app: { port: 4180, local: false }, local: { port: 4190, local: true } };
+/* Env a harness server must (not) have: a LAN-preview or custom API origin
+   would send API calls to a real backend instead of the mock. */
+const UNSAFE_ENV = ['VITE_LAN_PREVIEW', 'VITE_API_ORIGIN', 'VITE_VIPTV_LOCAL_MODE'];
 const FREEZE = '*,*::before,*::after{animation:none!important;transition:none!important;caret-color:transparent!important}';
 
 const args = process.argv.slice(2);
@@ -48,16 +52,34 @@ export function frameFor(entry, spec) {
 async function reachable(port) {
   try { return (await fetch(`http://127.0.0.1:${port}/`, { signal: AbortSignal.timeout(1500) })).ok; } catch { return false; }
 }
+/** The Vite env the server on `port` compiled in (read from a transformed module). */
+async function serverEnv(port) {
+  const source = await (await fetch(`http://127.0.0.1:${port}/src/local/capability.ts`, { signal: AbortSignal.timeout(5000) })).text();
+  const match = /import\.meta\.env = (\{[^;]*\});/.exec(source);
+  return match ? JSON.parse(match[1]) : undefined;
+}
+async function checkServer(kind) {
+  const server = servers[kind];
+  const env = await serverEnv(server.port).catch(() => undefined);
+  const ok = env && env.DEV && (env.VITE_VIPTV_LOCAL_MODE === '1') === server.local
+    && !env.VITE_LAN_PREVIEW && !env.VITE_API_ORIGIN;
+  if (!ok) throw new Error(`port ${server.port} is serving something other than the preview ${kind} dev server (env ${JSON.stringify(env)}); stop it or free the port`);
+}
 const started = [];
+/** Stop the dev servers this process started (not reused or --keep ones). */
+export function stopServers() { for (const child of started.splice(0)) child.kill(); }
 async function ensureServer(kind) {
   const server = servers[kind];
-  if (await reachable(server.port)) return server.port;
+  if (await reachable(server.port)) { await checkServer(kind); return server.port; }
+  const env = { ...process.env };
+  for (const name of UNSAFE_ENV) delete env[name];
+  if (server.local) env.VITE_VIPTV_LOCAL_MODE = '1';
   const child = spawn(process.execPath, [join(root, 'node_modules/vite/bin/vite.js'), '--port', String(server.port), '--strictPort', '--host', '127.0.0.1'], {
-    cwd: root, env: { ...process.env, ...server.env }, stdio: 'ignore', detached: flag('--keep'),
+    cwd: root, env, stdio: 'ignore', detached: flag('--keep'),
   });
   if (flag('--keep')) child.unref(); else started.push(child);
   for (let attempt = 0; attempt < 120; attempt++) {
-    if (await reachable(server.port)) return server.port;
+    if (await reachable(server.port)) { await checkServer(kind); return server.port; }
     await new Promise(done => setTimeout(done, 250));
   }
   throw new Error(`vite did not start on ${server.port}`);
@@ -206,7 +228,7 @@ async function main() {
     }
   } finally {
     await browser.close();
-    for (const child of started) child.kill();
+    stopServers();
   }
   writeFileSync(join(outDir, 'last-run.json'), JSON.stringify(summary, null, 2));
   console.log(`\n${summary.ok.length} shot, ${summary.failed.length} failed${summary.failed.length ? `: ${summary.failed.join(', ')}` : ''}`);

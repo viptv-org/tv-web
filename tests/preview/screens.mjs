@@ -20,11 +20,13 @@
  */
 
 // ---- shared step sequences ------------------------------------------------
-const MONSTER_SOURCES = '/tv/title/episode/tt-monster%3A1%3A1/sources?series=tt-monster&season=1&episode=1';
+const MONSTER = '/tv/title/series/tt-monster';
 const OAK_SOURCES = '/tv/title/movie/tt-oak-street/sources';
 
-/** Responsive: start the Monster S1 E1 player from its source list. */
+/** Responsive: Monster title → S1 E1 → first source → player. */
 async function responsivePlayer(h, { pause = false } = {}) {
+  await h.activate('episode-0');
+  await h.wait('source-0', 15000);
   await h.activate('source-0');
   await h.page.locator('.rp-controls, .player-controls, [data-focus-id="pause"]').first().waitFor({ timeout: 15000 });
   await h.settle();
@@ -41,7 +43,7 @@ async function tvToTitle(h) {
 }
 async function tvToSources(h) {
   await tvToTitle(h);
-  await h.activate('detail-source');
+  await h.activate('episode-0');
   await h.wait('source-0', 15000);
   await h.settle();
 }
@@ -56,6 +58,10 @@ async function openProfileEditor(h, name = 'zayne') {
   await h.activate('manage-profiles');
   await h.activate(h.page.getByRole('button', { name }).first());
   await h.wait('profile-save');
+}
+async function libraryQueue(h) {
+  if (h.tv) await h.activate('library-queue');
+  else await h.button('Continue Watching');
 }
 async function settingsRow(h, id) {
   if (h.tv) await h.tvGo('Settings');
@@ -73,12 +79,12 @@ export const screens = {
   Live: { path: '/tv/live' },
   Library: { path: '/tv/my-list', backend: { favorites: true } },
   Settings: { path: '/tv/settings' },
-  PhPlayer: { path: MONSTER_SOURCES, player: {}, steps: h => responsivePlayer(h, { pause: true }) },
-  PhPlayerSubs: { path: MONSTER_SOURCES, player: {}, steps: async h => { await responsivePlayer(h); await h.activate('subtitles'); } },
-  PhPlayerInfo: { path: MONSTER_SOURCES, player: {}, steps: async h => { await responsivePlayer(h); await h.button('Playback info'); } },
+  PhPlayer: { path: MONSTER, player: {}, steps: h => responsivePlayer(h, { pause: true }) },
+  PhPlayerSubs: { path: MONSTER, player: {}, steps: async h => { await responsivePlayer(h); await h.activate('subtitles'); } },
+  PhPlayerInfo: { path: MONSTER, player: {}, steps: async h => { await responsivePlayer(h); await h.button('Playback info'); } },
   PhPlayerLive: { path: '/tv/home', player: {}, steps: async h => { await h.activate(h.page.getByRole('button', { name: 'Cartoon Network' }).first()); await h.wait('.rp-controls, [data-focus-id="audio"]', 15000); } },
   PhPlayerBuffering: { notReachable: 'needs a refused seek from a real engine (the seek-notice path); stub cannot refuse' },
-  PhPlayerNext: { path: MONSTER_SOURCES, player: {}, backend: { playbackHangAfter: 1 }, steps: async h => { await responsivePlayer(h); await h.activate('next'); await h.sleep(600); } },
+  PhPlayerNext: { path: MONSTER, player: {}, backend: { playbackHangAfter: 1 }, steps: async h => { await responsivePlayer(h); await h.activate('next'); await h.sleep(600); } },
   PhUpNext: { notReachable: 'no Up Next card in the app yet' },
   PhPlayerError: { path: OAK_SOURCES, player: { error: true }, steps: async h => { await h.activate('source-0'); await h.page.getByRole('dialog').first().waitFor({ timeout: 25000 }); } },
   PhSignIn: { backend: { session: 'none' } },
@@ -97,7 +103,7 @@ export const screens = {
   PhAddonInstall: { path: '/tv/settings/addons', steps: async h => { await h.activate('addon-add'); await h.type('http://addon.example/manifest.json'); await h.activate('text-save'); } },
   PhAddonManage: { path: '/tv/settings/addons', steps: h => h.activate('addon-2') },
   PhAddonRemove: { path: '/tv/settings/addons', steps: async h => { await h.activate('addon-1'); await h.button('Remove addon'); } },
-  PhLocalHome: { local: true, init: seedLocalMode, path: '/' },
+  PhLocalHome: { local: true, init: seedLocalMode, path: '/', backend: { localAddons: true } },
   PhItemMenu: { path: '/tv/home', note: 'menu for Mayday (phone Continue Watching has no Monster)', steps: h => h.hold('queue-0') },
   PhItemMenuLive: { path: '/tv/live', steps: async h => { await h.activate(h.page.getByRole('button', { name: 'Recent', exact: true })); await h.settle(); await h.hold('live-channel-0'); } },
   PhHidden: { path: '/tv/home', steps: async h => { await h.hold('queue-0'); await h.button('Hide from Continue Watching'); } },
@@ -110,7 +116,7 @@ export const screens = {
   PhLiveDetailsNone: { path: '/tv/live', note: 'ESPN (no guide) stands in for Cartoon Network', steps: async h => { await h.page.locator('[data-focus-id="live-channel-11"]').scrollIntoViewIfNeeded(); await h.hold('live-channel-11'); } },
   PhSearch: { path: '/tv/search', query: 'q=naruto' },
   PhSearchBlank: { path: '/tv/search', query: 'q=naruto', backend: { searchFail: true }, note: 'partial-failure notice reached with a query' },
-  PhLibraryCW: { path: '/tv/my-list', steps: h => h.activate('library-queue'), backend: { family: 'desk' } },
+  PhLibraryCW: { path: '/tv/my-list', steps: libraryQueue, backend: { family: 'desk' } },
   PhCastUnavailable: { path: '/tv/settings', steps: h => h.activate('settings-watch-on-tv') },
   PhStates: { notReachable: 'composite board of many states; shoot the individual states instead' },
 
@@ -125,14 +131,14 @@ export const screens = {
   WideHome: { path: '/tv/home' },
   WebHome: { path: '/tv/home' },
   WebSearch: { path: '/tv/search', query: 'q=naruto' },
-  DeskPlayer: { path: MONSTER_SOURCES, player: {}, steps: async h => { await responsivePlayer(h); const bar = h.page.locator('[data-focus-id="timeline"]').first(); const box = await bar.boundingBox(); if (box) await h.page.mouse.move(box.x + box.width * 0.61, box.y + box.height / 2); await h.sleep(300); } },
-  DeskPlayerAudio: { path: MONSTER_SOURCES, player: {}, steps: async h => { await responsivePlayer(h); await h.activate('audio'); } },
-  DeskPlayerInfo: { path: MONSTER_SOURCES, player: {}, steps: async h => { await responsivePlayer(h); await h.button('Playback info'); } },
+  DeskPlayer: { path: MONSTER, player: {}, steps: async h => { await responsivePlayer(h); const bar = h.page.locator('[data-focus-id="timeline"]').first(); const box = await bar.boundingBox(); if (box) await h.page.mouse.move(box.x + box.width * 0.61, box.y + box.height / 2); await h.sleep(300); } },
+  DeskPlayerAudio: { path: MONSTER, player: {}, steps: async h => { await responsivePlayer(h); await h.activate('audio'); } },
+  DeskPlayerInfo: { path: MONSTER, player: {}, steps: async h => { await responsivePlayer(h); await h.button('Playback info'); } },
   DeskPlayerLive: { path: '/tv/home', player: {}, steps: async h => { await h.activate(h.page.getByRole('button', { name: 'Cartoon Network' }).first()); await h.wait('[data-focus-id="audio"]', 15000); await h.page.mouse.move(700, 450); } },
   DeskPlayerBuffering: { notReachable: 'needs a refused seek from a real engine (the seek-notice path); stub cannot refuse' },
-  DeskPlayerNext: { path: MONSTER_SOURCES, player: {}, backend: { playbackHangAfter: 1 }, steps: async h => { await responsivePlayer(h); await h.activate('next'); await h.sleep(600); } },
+  DeskPlayerNext: { path: MONSTER, player: {}, backend: { playbackHangAfter: 1 }, steps: async h => { await responsivePlayer(h); await h.activate('next'); await h.sleep(600); } },
   DeskPlayerError: { path: OAK_SOURCES, player: { error: true }, steps: async h => { await h.activate('source-0'); await h.page.getByRole('dialog').first().waitFor({ timeout: 25000 }); } },
-  DeskPlayerRestore: { path: MONSTER_SOURCES, player: {}, backend: { playbackFailAfter: 1 }, steps: async h => { await responsivePlayer(h); await h.activate('next'); await h.waitText('could not be restored', 15000); } },
+  DeskPlayerRestore: { path: MONSTER, player: {}, backend: { playbackFailAfter: 1 }, steps: async h => { await responsivePlayer(h); await h.activate('next'); await h.waitText('could not be restored', 15000); } },
   DeskUpNext: { notReachable: 'no Up Next card in the app yet' },
   WebSignIn: { backend: { session: 'none' } },
   WebSignInError: { backend: { session: 'none', loginError: true }, steps: async h => { await h.fill('#signin-username', 'vynxc'); await h.fill('#signin-password', 'password'); await h.button('Sign in'); await h.waitText('incorrect'); } },
@@ -154,11 +160,11 @@ export const screens = {
   DeskAddonInstall: { path: '/tv/settings/addons', backend: { addonInstallHang: true }, steps: async h => { await h.activate('addon-add'); await h.type('https://lordstreams.example/manifest.json'); await h.activate('text-save'); } },
   DeskAddonManage: { path: '/tv/settings/addons', steps: h => h.activate('addon-2') },
   DeskAddonRemove: { path: '/tv/settings/addons', steps: async h => { await h.activate('addon-1'); await h.button('Remove addon'); } },
-  WebLocalHome: { local: true, init: seedLocalMode, path: '/' },
-  WebLocalLoading: { local: true, init: seedLocalMode, path: '/', localHang: true },
+  WebLocalHome: { local: true, init: seedLocalMode, path: '/', backend: { localAddons: true } },
+  WebLocalLoading: { local: true, init: seedLocalMode, path: '/', backend: { localAddons: 'hang' } },
   WebLocalEmpty: { local: true, init: () => { if (!sessionStorage.getItem('preview:local')) { sessionStorage.setItem('preview:local', '1'); localStorage.setItem('viptv.local.mode.v1', '1'); } }, path: '/' },
-  WebLocalAddons: { local: true, init: seedLocalMode, path: '/', steps: async h => { await h.button('Addons'); await h.fill(h.page.getByLabel('Addon manifest URL'), 'https://lordstreams.example/manifest.json'); await h.button('Install addon'); } },
-  WebLocalRemove: { local: true, init: seedLocalMode, path: '/', steps: async h => { await h.button('Addons'); await h.activate(h.page.getByRole('button', { name: 'Remove' }).first()); } },
+  WebLocalAddons: { local: true, init: seedLocalMode, path: '/', backend: { localAddons: true }, steps: async h => { await h.button('Addons'); await h.fill(h.page.getByLabel('Addon manifest URL'), 'https://lordstreams.example/manifest.json'); await h.button('Install addon'); } },
+  WebLocalRemove: { local: true, init: seedLocalMode, path: '/', backend: { localAddons: true }, steps: async h => { await h.button('Addons'); await h.activate(h.page.getByRole('button', { name: 'Remove' }).first()); } },
   DeskItemMenu: { path: '/tv/home', steps: h => h.hold('queue-1') },
   DeskHidden: { path: '/tv/home', steps: async h => { await h.hold('queue-1'); await h.button('Hide from Continue Watching'); } },
   DeskDiscoverCatalog: { path: '/tv/discover', steps: h => h.activate('discover-catalog') },
@@ -168,7 +174,7 @@ export const screens = {
   DeskLiveDetails: { path: '/tv/live', steps: h => h.hold('guide-program-1-0') },
   DeskSearchRecent: { path: '/tv/home', backend: { recentSearches: ['naruto', 'the batman', 'dune', 'fast charlie', 'lanterns', 'one night only', 're:zero', 'mayday'] }, steps: h => h.activate(h.page.getByRole('combobox').or(h.page.getByPlaceholder(/Search/)).first()) },
   DeskSearchMatches: { path: '/tv/home', steps: async h => { await h.activate(h.page.getByRole('combobox').or(h.page.getByPlaceholder(/Search/)).first()); await h.type('the'); await h.settle(); } },
-  DeskLibraryCW: { path: '/tv/my-list', steps: h => h.activate('library-queue') },
+  DeskLibraryCW: { path: '/tv/my-list', steps: libraryQueue },
   DeskCastSearch: { notReachable: 'Watch on TV pairing runs only in the Tauri runtime (SmartCast commands)' },
   DeskCastManual: { notReachable: 'Watch on TV pairing runs only in the Tauri runtime (SmartCast commands)' },
   DeskCastBusy: { notReachable: 'Watch on TV pairing runs only in the Tauri runtime (SmartCast commands)' },
@@ -232,9 +238,11 @@ function seedLocalMode() {
   if (sessionStorage.getItem('preview:local')) return;
   sessionStorage.setItem('preview:local', '1');
   localStorage.setItem('viptv.local.mode.v1', '1');
+  // Mirrors localManifest() in backend.ts (init scripts cannot import).
   const addon = (ordinal, id, name, base, enabled) => ({
     ordinal, id, manifestUrl: `https://${base}/manifest.json`, installedAt: 1790000000000 + ordinal, enabled,
-    manifest: { id, name, version: '1.0.0', resources: ['catalog', 'meta', 'stream'], types: ['movie', 'series'], catalogs: [{ type: 'movie', id: 'popular', name: 'Popular movies' }, { type: 'movie', id: 'new', name: 'New releases' }] },
+    manifest: { id, name, version: '1.0.0', resources: ['catalog', 'meta', 'stream'], types: ['movie', 'series'], idPrefixes: ['tt'],
+      catalogs: ordinal === 1 ? [{ type: 'movie', id: 'popular', name: 'Popular movies' }, { type: 'movie', id: 'new', name: 'New releases' }] : [] },
   });
   localStorage.setItem('viptv.local.registry.v1', JSON.stringify({ version: 1, nextOrdinal: 4, addons: [
     addon(1, 'com.lordstreams.addon', 'LordStreams', 'lordstreams.example', true),

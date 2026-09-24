@@ -1,10 +1,13 @@
 /*
- * tv-web stylesheet entry (imported by main.tsx after the generated tokens and
- * the bundled fonts). Order matters — later files win at equal specificity:
- *   1. base.css       reset, body type, focus recipes (a floor under legacy)
- *   2. legacy/*.css   the pre-redesign rules, split by family; each family
- *                     agent deletes its file once the family is rebuilt
- *   3. primitives/*   shared vx- components
- *   4. screens/*      per-family vx-<family>- layouts
+ * Early stylesheet entry (main.tsx imports it after the generated tokens and
+ * the bundled fonts, before any UI module). Full load order:
+ *   1. theme/viptv-tokens.generated.css, theme/fonts.css
+ *   2. styles/index.css → base.css: reset, body type, focus recipes. A floor:
+ *      the legacy rules below must keep winning until their family is rebuilt.
+ *   3. legacy CSS, still in place (src/ui/account-roku.css, guide-responsive.css,
+ *      CastController.css, SearchPopunder.css, tv.css, responsive.css, local.css
+ *      and src/ui/css/*), imported by the UI modules. Family agents delete their
+ *      rules there as each family is rebuilt.
+ *   4. styles/design.css (imported last by main.tsx): primitives/*, screens/*.
  */
 @import "./base.css";

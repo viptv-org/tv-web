@@ -11,10 +11,14 @@
   --viptv-color-surface-2: #212124;
   --viptv-color-surface-3: #2A2A2E;
   --viptv-color-surface-4: #34343A;
+  --viptv-color-surface-1-pressed: #1C1C1F;
+  --viptv-color-surface-avatar: #0E0E10;
   --viptv-color-text-primary: #F4F2EE;
   --viptv-color-text-body: #DAD8D3;
   --viptv-color-text-secondary: #B6B4AF;
   --viptv-color-text-tertiary: #8F8D89;
+  --viptv-color-text-on-light-secondary: #4A4945;
+  --viptv-color-text-on-light-accent: #6B5A12;
   --viptv-color-on-light: #111113;
   --viptv-color-on-accent: #15130F;
   --viptv-color-accent-default: #F5C542;
@@ -26,19 +30,44 @@
   --viptv-color-status-danger: #FF7A6E;
   --viptv-color-status-danger-tv: #FF8A7E;
   --viptv-color-status-spinner-track: #45454B;
+  --viptv-color-status-danger-on-light: #B42318;
+  --viptv-color-status-spinner-on-accent: rgba(0,0,0,0.25);
   --viptv-color-line-hairline: rgba(255,255,255,0.07);
   --viptv-color-line-chip: rgba(255,255,255,0.10);
   --viptv-color-line-outline: rgba(255,255,255,0.14);
   --viptv-color-line-strong: rgba(255,255,255,0.22);
+  --viptv-color-line-control: rgba(255,255,255,0.30);
+  --viptv-color-line-link-hover: rgba(255,255,255,0.80);
+  --viptv-color-line-keycap-tv: rgba(255,255,255,0.28);
+  --viptv-color-line-on-accent: rgba(0,0,0,0.18);
   --viptv-color-fill-tv-unfocused: rgba(255,255,255,0.12);
   --viptv-color-fill-tv-selected: rgba(255,255,255,0.16);
   --viptv-color-fill-glass: rgba(32,32,35,0.94);
   --viptv-color-fill-badge-glass: rgba(0,0,0,0.55);
+  --viptv-color-fill-white: #FFFFFF;
+  --viptv-color-fill-light-pressed: #DDDBD6;
+  --viptv-color-fill-wash: rgba(255,255,255,0.06);
+  --viptv-color-fill-wash-pressed: rgba(255,255,255,0.04);
+  --viptv-color-fill-tag: rgba(255,255,255,0.10);
+  --viptv-color-fill-tv-field: rgba(255,255,255,0.07);
+  --viptv-color-fill-buffered: rgba(255,255,255,0.40);
+  --viptv-color-fill-scrollbar: rgba(255,255,255,0.35);
+  --viptv-color-fill-on-accent-hover: rgba(0,0,0,0.08);
+  --viptv-color-fill-on-light-badge: rgba(0,0,0,0.10);
+  --viptv-color-fill-live-glass: rgba(0,0,0,0.50);
+  --viptv-color-fill-watching-badge: rgba(0,0,0,0.65);
+  --viptv-color-fill-notice-glass: rgba(22,22,24,0.90);
+  --viptv-color-fill-notice-glass-tv: rgba(22,22,24,0.92);
+  --viptv-color-fill-popover-glass: rgba(22,22,24,0.97);
+  --viptv-color-fill-dot: #3A3A3F;
+  --viptv-color-fill-dot-over-art: rgba(255,255,255,0.45);
   --viptv-color-scrim-sheet: rgba(0,0,0,0.62);
   --viptv-color-scrim-dialog: rgba(0,0,0,0.55);
   --viptv-color-scrim-tv-panel: rgba(0,0,0,0.60);
   --viptv-color-scrim-tv-menu: rgba(0,0,0,0.55);
   --viptv-color-scrim-tv-fullscreen: rgba(11,11,12,0.94);
+  --viptv-color-skeleton-ground: #17171A;
+  --viptv-color-skeleton-card: #1E1E21;
   --viptv-font-family-display: 'Bricolage Grotesque', 'Bricolage Grotesque Variable', 'Helvetica Neue', sans-serif;
   --viptv-font-family-ui: Onest, system-ui, sans-serif;
   --viptv-font-family-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
@@ -53,6 +82,11 @@
   --viptv-radius-sheet: 28px;
   --viptv-radius-phone-frame: 44px;
   --viptv-radius-avatar: 0.2;
+  --viptv-radius-2xs: 6px;
+  --viptv-radius-sm-plus: 10px;
+  --viptv-radius-xl-plus: 20px;
+  --viptv-radius-2xl-plus: 24px;
+  --viptv-radius-sheet-top: 30px;
   --viptv-space-0: 0px;
   --viptv-space-1: 4px;
   --viptv-space-2: 8px;
@@ -96,6 +130,9 @@
   --viptv-size-button-desktop: 48px;
   --viptv-size-button-tv: 72px;
   --viptv-size-button-tv-small: 52px;
+  --viptv-size-button-pill: 44px;
+  --viptv-size-button-small: 40px;
+  --viptv-size-button-split-chevron: 44px;
   --viptv-size-chip-phone: 44px;
   --viptv-size-chip-desktop: 40px;
   --viptv-size-chip-desktop-drawer: 36px;
@@ -104,13 +141,151 @@
   --viptv-size-field-desktop: 48px;
   --viptv-size-field-desktop-titlebar: 30px;
   --viptv-size-field-tv: 80px;
+  --viptv-size-field-tv-entry: 96px;
+  --viptv-size-field-search-phone: 52px;
+  --viptv-size-field-search-titlebar-width: 460px;
   --viptv-size-field-radius-phone: 16px;
   --viptv-size-field-radius-desktop: 12px;
   --viptv-size-field-radius-tv: 20px;
   --viptv-size-row-tv: 80px;
+  --viptv-size-row-settings: 60px;
+  --viptv-size-row-choice-phone: 56px;
+  --viptv-size-row-choice-desktop: 48px;
+  --viptv-size-row-menu: 40px;
+  --viptv-size-row-section-nav: 44px;
+  --viptv-size-row-settings-icon: 34px;
+  --viptv-size-row-settings-icon-radius: 11px;
   --viptv-size-progress-phone: 4px;
   --viptv-size-progress-desktop: 4px;
   --viptv-size-progress-tv: 6px;
+  --viptv-size-progress-small: 3px;
+  --viptv-size-icon-phone: 20px;
+  --viptv-size-icon-phone-round: 22px;
+  --viptv-size-icon-desktop: 18px;
+  --viptv-size-icon-desktop-round: 20px;
+  --viptv-size-icon-tv: 28px;
+  --viptv-size-icon-tv-round: 30px;
+  --viptv-size-icon-small: 16px;
+  --viptv-size-icon-alert: 15px;
+  --viptv-size-switch-width: 52px;
+  --viptv-size-switch-height: 32px;
+  --viptv-size-switch-knob: 26px;
+  --viptv-size-switch-tv-width: 72px;
+  --viptv-size-switch-tv-height: 42px;
+  --viptv-size-switch-tv-knob: 36px;
+  --viptv-size-switch-inset: 3px;
+  --viptv-size-radio: 20px;
+  --viptv-size-spinner-default: 12px;
+  --viptv-size-spinner-inline: 14px;
+  --viptv-size-spinner-tv: 18px;
+  --viptv-size-spinner-buffering: 48px;
+  --viptv-size-spinner-tv-panel: 56px;
+  --viptv-size-spinner-stroke: 2px;
+  --viptv-size-spinner-stroke-tv: 3px;
+  --viptv-size-spinner-stroke-tv-panel: 5px;
+  --viptv-size-live-dot-default: 8px;
+  --viptv-size-live-dot-tv: 12px;
+  --viptv-size-live-dot-badge: 6px;
+  --viptv-size-dot-default: 6px;
+  --viptv-size-dot-active-width: 18px;
+  --viptv-size-grabber-width: 40px;
+  --viptv-size-grabber-height: 5px;
+  --viptv-size-grabber-hit: 28px;
+  --viptv-size-close-disc-default: 36px;
+  --viptv-size-close-disc-small: 32px;
+  --viptv-size-close-disc-titlebar: 20px;
+  --viptv-size-toast-phone-bottom: 116px;
+  --viptv-size-toast-desktop-bottom: 24px;
+  --viptv-size-toast-tv-top: 54px;
+  --viptv-size-toast-phone-max: 358px;
+  --viptv-size-toast-desktop-max: 560px;
+  --viptv-size-toast-height: 44px;
+  --viptv-size-toast-notice-height: 40px;
+  --viptv-size-toast-action-height: 32px;
+  --viptv-size-toast-tv-height: 84px;
+  --viptv-size-toast-tv-notice-height: 64px;
+  --viptv-size-toast-tv-action-height: 60px;
+  --viptv-size-keycap-height: 20px;
+  --viptv-size-keycap-radius: 6px;
+  --viptv-size-keycap-tv-height: 34px;
+  --viptv-size-keycap-tv-min-width: 40px;
+  --viptv-size-keycap-tv-radius: 10px;
+  --viptv-size-keycap-tv-border: 2px;
+  --viptv-size-pin-width: 44px;
+  --viptv-size-pin-height: 52px;
+  --viptv-size-pin-dot: 12px;
+  --viptv-size-pin-caret: 22px;
+  --viptv-size-pin-tv-width: 72px;
+  --viptv-size-pin-tv-height: 80px;
+  --viptv-size-pin-tv-dot: 18px;
+  --viptv-size-pin-tv-caret: 36px;
+  --viptv-size-caret-width: 2px;
+  --viptv-size-caret-height: 20px;
+  --viptv-size-caret-tv-width: 3px;
+  --viptv-size-key-tv: 64px;
+  --viptv-size-key-tv-radius: 14px;
+  --viptv-size-key-tv-keypad: 80px;
+  --viptv-size-key-tv-keyboard-width: 640px;
+  --viptv-size-key-tv-keypad-width: 420px;
+  --viptv-size-empty-icon-phone: 52px;
+  --viptv-size-empty-icon-desktop: 60px;
+  --viptv-size-empty-icon-tv: 88px;
+  --viptv-size-banner-icon-default: 40px;
+  --viptv-size-banner-icon-tv: 72px;
+  --viptv-size-tile-phone-poster-width: 111px;
+  --viptv-size-tile-phone-poster-height: 139px;
+  --viptv-size-tile-phone-continue-width: 292px;
+  --viptv-size-tile-phone-continue-height: 96px;
+  --viptv-size-tile-phone-continue-thumb-width: 60px;
+  --viptv-size-tile-phone-continue-thumb-height: 76px;
+  --viptv-size-tile-phone-live-now-width: 200px;
+  --viptv-size-tile-phone-channel-logo-width: 60px;
+  --viptv-size-tile-phone-channel-logo-height: 60px;
+  --viptv-size-tile-phone-profile-width: 112px;
+  --viptv-size-tile-phone-profile-height: 112px;
+  --viptv-size-tile-phone-avatar-width: 96px;
+  --viptv-size-tile-phone-avatar-height: 96px;
+  --viptv-size-tile-phone-source-quality-width: 56px;
+  --viptv-size-tile-phone-source-quality-height: 44px;
+  --viptv-size-tile-desktop-poster-width: 172px;
+  --viptv-size-tile-desktop-poster-height: 258px;
+  --viptv-size-tile-web-poster-width: 164px;
+  --viptv-size-tile-web-poster-height: 246px;
+  --viptv-size-tile-desktop-continue-width: 256px;
+  --viptv-size-tile-desktop-continue-height: 128px;
+  --viptv-size-tile-desktop-episode-width: 272px;
+  --viptv-size-tile-desktop-episode-height: 150px;
+  --viptv-size-tile-desktop-live-width: 220px;
+  --viptv-size-tile-desktop-live-height: 124px;
+  --viptv-size-tile-desktop-profile-width: 140px;
+  --viptv-size-tile-desktop-profile-height: 140px;
+  --viptv-size-tile-desktop-avatar-width: 120px;
+  --viptv-size-tile-desktop-avatar-height: 120px;
+  --viptv-size-tile-desktop-source-quality-width: 54px;
+  --viptv-size-tile-desktop-source-quality-height: 40px;
+  --viptv-size-tile-tv-still-width: 320px;
+  --viptv-size-tile-tv-still-height: 180px;
+  --viptv-size-tile-tv-grid-width: 360px;
+  --viptv-size-tile-tv-grid-height: 202px;
+  --viptv-size-tile-tv-episode-width: 360px;
+  --viptv-size-tile-tv-episode-height: 200px;
+  --viptv-size-tile-tv-profile-width: 220px;
+  --viptv-size-tile-tv-profile-height: 220px;
+  --viptv-size-tile-tv-avatar-width: 170px;
+  --viptv-size-tile-tv-avatar-height: 170px;
+  --viptv-size-tile-tv-source-quality-width: 92px;
+  --viptv-size-tile-tv-source-quality-height: 56px;
+  --viptv-size-tile-lock-badge: 30px;
+  --viptv-size-tile-lock-badge-desktop: 32px;
+  --viptv-size-tile-lock-badge-tv: 48px;
+  --viptv-size-tile-check-badge: 24px;
+  --viptv-size-tile-check-badge-tv: 34px;
+  --viptv-size-tile-play-disc: 44px;
+  --viptv-size-tile-hover-play-disc: 48px;
+  --viptv-size-tile-selected-ring: 3px;
+  --viptv-size-source-row-phone: 76px;
+  --viptv-size-source-row-desktop: 68px;
+  --viptv-size-source-row-tv: 104px;
   --viptv-focus-desktop: 0 0 0 2px #0B0B0C, 0 0 0 4px #F4F2EE;
   --viptv-focus-desktop-hover-card: inset 0 0 0 2px #F4F2EE;
   --viptv-focus-tv-shadow: 0 0 0 4px #FFFFFF, 0 24px 60px rgba(0,0,0,0.65);
@@ -118,10 +293,16 @@
   --viptv-focus-tv-scale-row: 1.02;
   --viptv-focus-tv-scale-tile: 1.06;
   --viptv-focus-tv-caption-shift: 8px;
+  --viptv-focus-tv-scale-key: 1.12;
   --viptv-shadow-nav: 0 12px 32px rgba(0,0,0,0.55);
   --viptv-shadow-popover: 0 20px 60px rgba(0,0,0,0.55);
   --viptv-shadow-toast: 0 12px 30px rgba(0,0,0,0.5);
   --viptv-shadow-tv-panel: -40px 0 100px rgba(0,0,0,0.6);
+  --viptv-shadow-dialog: 0 30px 80px rgba(0,0,0,0.5);
+  --viptv-shadow-drawer: -30px 0 80px rgba(0,0,0,0.5);
+  --viptv-shadow-banner: 0 20px 50px rgba(0,0,0,0.55);
+  --viptv-shadow-popup: 0 24px 60px rgba(0,0,0,0.6);
+  --viptv-shadow-tv-dialog: 0 40px 100px rgba(0,0,0,0.6);
   --viptv-motion-focus: 150ms;
   --viptv-motion-pressed-scale: 0.97;
   --viptv-motion-toast-notice: 5000ms;
@@ -175,6 +356,14 @@
   --viptv-type-phone-nav-label-weight: 600;
   --viptv-type-phone-nav-label-line-height: 1;
   --viptv-type-phone-nav-label-letter-spacing: 0.01em;
+  --viptv-type-phone-button-detail-size: 18px;
+  --viptv-type-phone-button-detail-weight: 700;
+  --viptv-type-phone-button-detail-line-height: 1;
+  --viptv-type-phone-button-detail-letter-spacing: 0em;
+  --viptv-type-phone-empty-title-size: 22px;
+  --viptv-type-phone-empty-title-weight: 700;
+  --viptv-type-phone-empty-title-line-height: 1.2;
+  --viptv-type-phone-empty-title-letter-spacing: -0.01em;
   --viptv-type-desktop-page-title-size: 40px;
   --viptv-type-desktop-page-title-weight: 700;
   --viptv-type-desktop-page-title-line-height: 1.05;
@@ -227,6 +416,10 @@
   --viptv-type-desktop-rail-label-weight: 600;
   --viptv-type-desktop-rail-label-line-height: 1;
   --viptv-type-desktop-rail-label-letter-spacing: 0em;
+  --viptv-type-desktop-empty-title-size: 26px;
+  --viptv-type-desktop-empty-title-weight: 700;
+  --viptv-type-desktop-empty-title-line-height: 1.2;
+  --viptv-type-desktop-empty-title-letter-spacing: -0.01em;
   --viptv-type-tv-screen-title-size: 56px;
   --viptv-type-tv-screen-title-weight: 700;
   --viptv-type-tv-screen-title-line-height: 1.05;
@@ -275,6 +468,26 @@
   --viptv-type-tv-min-weight: 400;
   --viptv-type-tv-min-line-height: 1.3;
   --viptv-type-tv-min-letter-spacing: 0em;
+  --viptv-type-tv-empty-title-size: 40px;
+  --viptv-type-tv-empty-title-weight: 700;
+  --viptv-type-tv-empty-title-line-height: 1.15;
+  --viptv-type-tv-empty-title-letter-spacing: -0.01em;
+  --viptv-type-tv-field-size: 30px;
+  --viptv-type-tv-field-weight: 400;
+  --viptv-type-tv-field-line-height: 1.2;
+  --viptv-type-tv-field-letter-spacing: 0em;
+  --viptv-type-tv-field-large-size: 34px;
+  --viptv-type-tv-field-large-weight: 600;
+  --viptv-type-tv-field-large-line-height: 1.2;
+  --viptv-type-tv-field-large-letter-spacing: 0em;
+  --viptv-type-tv-entry-size: 38px;
+  --viptv-type-tv-entry-weight: 600;
+  --viptv-type-tv-entry-line-height: 1.2;
+  --viptv-type-tv-entry-letter-spacing: 0em;
+  --viptv-type-tv-status-size: 20px;
+  --viptv-type-tv-status-weight: 700;
+  --viptv-type-tv-status-line-height: 1.2;
+  --viptv-type-tv-status-letter-spacing: 0.1em;
   /* The one runtime accent the user picks (Settings). Components read only this. */
   --viptv-accent: var(--viptv-color-accent-default);
 }
@@ -301,6 +514,8 @@
 .viptv-type-phone-caption { font-family: var(--viptv-font-family-ui); font-size: var(--viptv-type-phone-caption-size); font-weight: var(--viptv-type-phone-caption-weight); line-height: var(--viptv-type-phone-caption-line-height); letter-spacing: var(--viptv-type-phone-caption-letter-spacing); }
 .viptv-type-phone-eyebrow { font-family: var(--viptv-font-family-ui); font-size: var(--viptv-type-phone-eyebrow-size); font-weight: var(--viptv-type-phone-eyebrow-weight); line-height: var(--viptv-type-phone-eyebrow-line-height); letter-spacing: var(--viptv-type-phone-eyebrow-letter-spacing); text-transform: uppercase; }
 .viptv-type-phone-nav-label { font-family: var(--viptv-font-family-ui); font-size: var(--viptv-type-phone-nav-label-size); font-weight: var(--viptv-type-phone-nav-label-weight); line-height: var(--viptv-type-phone-nav-label-line-height); letter-spacing: var(--viptv-type-phone-nav-label-letter-spacing); }
+.viptv-type-phone-button-detail { font-family: var(--viptv-font-family-ui); font-size: var(--viptv-type-phone-button-detail-size); font-weight: var(--viptv-type-phone-button-detail-weight); line-height: var(--viptv-type-phone-button-detail-line-height); letter-spacing: var(--viptv-type-phone-button-detail-letter-spacing); }
+.viptv-type-phone-empty-title { font-family: var(--viptv-font-family-display); font-size: var(--viptv-type-phone-empty-title-size); font-weight: var(--viptv-type-phone-empty-title-weight); line-height: var(--viptv-type-phone-empty-title-line-height); letter-spacing: var(--viptv-type-phone-empty-title-letter-spacing); }
 .viptv-type-desktop-page-title { font-family: var(--viptv-font-family-display); font-size: var(--viptv-type-desktop-page-title-size); font-weight: var(--viptv-type-desktop-page-title-weight); line-height: var(--viptv-type-desktop-page-title-line-height); letter-spacing: var(--viptv-type-desktop-page-title-letter-spacing); }
 .viptv-type-desktop-hero-title { font-family: var(--viptv-font-family-display); font-size: var(--viptv-type-desktop-hero-title-size); font-weight: var(--viptv-type-desktop-hero-title-weight); line-height: var(--viptv-type-desktop-hero-title-line-height); letter-spacing: var(--viptv-type-desktop-hero-title-letter-spacing); }
 .viptv-type-desktop-dialog-title { font-family: var(--viptv-font-family-display); font-size: var(--viptv-type-desktop-dialog-title-size); font-weight: var(--viptv-type-desktop-dialog-title-weight); line-height: var(--viptv-type-desktop-dialog-title-line-height); letter-spacing: var(--viptv-type-desktop-dialog-title-letter-spacing); }
@@ -314,6 +529,7 @@
 .viptv-type-desktop-caption { font-family: var(--viptv-font-family-ui); font-size: var(--viptv-type-desktop-caption-size); font-weight: var(--viptv-type-desktop-caption-weight); line-height: var(--viptv-type-desktop-caption-line-height); letter-spacing: var(--viptv-type-desktop-caption-letter-spacing); }
 .viptv-type-desktop-eyebrow { font-family: var(--viptv-font-family-ui); font-size: var(--viptv-type-desktop-eyebrow-size); font-weight: var(--viptv-type-desktop-eyebrow-weight); line-height: var(--viptv-type-desktop-eyebrow-line-height); letter-spacing: var(--viptv-type-desktop-eyebrow-letter-spacing); text-transform: uppercase; }
 .viptv-type-desktop-rail-label { font-family: var(--viptv-font-family-ui); font-size: var(--viptv-type-desktop-rail-label-size); font-weight: var(--viptv-type-desktop-rail-label-weight); line-height: var(--viptv-type-desktop-rail-label-line-height); letter-spacing: var(--viptv-type-desktop-rail-label-letter-spacing); }
+.viptv-type-desktop-empty-title { font-family: var(--viptv-font-family-display); font-size: var(--viptv-type-desktop-empty-title-size); font-weight: var(--viptv-type-desktop-empty-title-weight); line-height: var(--viptv-type-desktop-empty-title-line-height); letter-spacing: var(--viptv-type-desktop-empty-title-letter-spacing); }
 .viptv-type-tv-screen-title { font-family: var(--viptv-font-family-display); font-size: var(--viptv-type-tv-screen-title-size); font-weight: var(--viptv-type-tv-screen-title-weight); line-height: var(--viptv-type-tv-screen-title-line-height); letter-spacing: var(--viptv-type-tv-screen-title-letter-spacing); }
 .viptv-type-tv-panel-title { font-family: var(--viptv-font-family-display); font-size: var(--viptv-type-tv-panel-title-size); font-weight: var(--viptv-type-tv-panel-title-weight); line-height: var(--viptv-type-tv-panel-title-line-height); letter-spacing: var(--viptv-type-tv-panel-title-letter-spacing); }
 .viptv-type-tv-section { font-family: var(--viptv-font-family-display); font-size: var(--viptv-type-tv-section-size); font-weight: var(--viptv-type-tv-section-weight); line-height: var(--viptv-type-tv-section-line-height); letter-spacing: var(--viptv-type-tv-section-letter-spacing); }
@@ -326,3 +542,8 @@
 .viptv-type-tv-caption { font-family: var(--viptv-font-family-ui); font-size: var(--viptv-type-tv-caption-size); font-weight: var(--viptv-type-tv-caption-weight); line-height: var(--viptv-type-tv-caption-line-height); letter-spacing: var(--viptv-type-tv-caption-letter-spacing); }
 .viptv-type-tv-eyebrow { font-family: var(--viptv-font-family-ui); font-size: var(--viptv-type-tv-eyebrow-size); font-weight: var(--viptv-type-tv-eyebrow-weight); line-height: var(--viptv-type-tv-eyebrow-line-height); letter-spacing: var(--viptv-type-tv-eyebrow-letter-spacing); text-transform: uppercase; }
 .viptv-type-tv-min { font-family: var(--viptv-font-family-ui); font-size: var(--viptv-type-tv-min-size); font-weight: var(--viptv-type-tv-min-weight); line-height: var(--viptv-type-tv-min-line-height); letter-spacing: var(--viptv-type-tv-min-letter-spacing); }
+.viptv-type-tv-empty-title { font-family: var(--viptv-font-family-display); font-size: var(--viptv-type-tv-empty-title-size); font-weight: var(--viptv-type-tv-empty-title-weight); line-height: var(--viptv-type-tv-empty-title-line-height); letter-spacing: var(--viptv-type-tv-empty-title-letter-spacing); }
+.viptv-type-tv-field { font-family: var(--viptv-font-family-ui); font-size: var(--viptv-type-tv-field-size); font-weight: var(--viptv-type-tv-field-weight); line-height: var(--viptv-type-tv-field-line-height); letter-spacing: var(--viptv-type-tv-field-letter-spacing); }
+.viptv-type-tv-field-large { font-family: var(--viptv-font-family-ui); font-size: var(--viptv-type-tv-field-large-size); font-weight: var(--viptv-type-tv-field-large-weight); line-height: var(--viptv-type-tv-field-large-line-height); letter-spacing: var(--viptv-type-tv-field-large-letter-spacing); }
+.viptv-type-tv-entry { font-family: var(--viptv-font-family-ui); font-size: var(--viptv-type-tv-entry-size); font-weight: var(--viptv-type-tv-entry-weight); line-height: var(--viptv-type-tv-entry-line-height); letter-spacing: var(--viptv-type-tv-entry-letter-spacing); }
+.viptv-type-tv-status { font-family: var(--viptv-font-family-ui); font-size: var(--viptv-type-tv-status-size); font-weight: var(--viptv-type-tv-status-weight); line-height: var(--viptv-type-tv-status-line-height); letter-spacing: var(--viptv-type-tv-status-letter-spacing); }
