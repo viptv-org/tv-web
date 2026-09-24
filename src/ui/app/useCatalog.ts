@@ -1,5 +1,5 @@
 import { createElement, memo, useEffect, useLayoutEffect, useRef, useState } from "react";
-import { BookmarkMinus, BookmarkPlus, Circle, CircleCheck, EyeOff, List, RotateCcw, SkipBack } from "lucide-react";
+import { BookmarkMinus, BookmarkPlus, Circle, CircleCheck, CirclePlay, EyeOff, Info, List, RotateCcw, SkipBack } from "lucide-react";
 import { menuAnchor } from "../../screens/titleMenu";
 import { sourceKey } from "../../screens/titleSources";
 import QRCode from "qrcode";
@@ -246,22 +246,37 @@ export function useCatalog(app: PlaybackSessionApi) {
       fail(e);
     }
   };
-  const manage = (item: MediaItem) => {
+  const manage = (item: MediaItem, liveDetails?: () => void) => {
     if (item.type === "live") {
+      // Live family: the channel menu (PhItemMenuLive; Live TV long-press /
+      // right-click, Home live cards). The Live guide adds Programme details.
+      const channelIcon = { "aria-hidden": true, strokeWidth: 2 } as const;
+      const savedChannel = favorites.some((f) => f.id === item.id);
       setModal({
         title: item.name,
+        view: { kind: "menu", anchor: responsive ? menuAnchor() : undefined },
         choices: [
           {
             label: "Watch channel",
+            icon: createElement(CirclePlay, channelIcon),
             action: () => {
               setModal(undefined);
               void play(item);
             },
           },
+          ...(liveDetails
+            ? [{
+                label: "Programme details",
+                icon: createElement(Info, channelIcon),
+                action: () => {
+                  setModal(undefined);
+                  liveDetails();
+                },
+              }]
+            : []),
           {
-            label: favorites.some((f) => f.id === item.id)
-              ? "Remove from My List"
-              : "Add to My List",
+            label: savedChannel ? "Remove from My List" : "Add to My List",
+            icon: savedChannel ? createElement(BookmarkMinus, channelIcon) : createElement(BookmarkPlus, channelIcon),
             action: () => {
               setModal(undefined);
               void toggle(item);

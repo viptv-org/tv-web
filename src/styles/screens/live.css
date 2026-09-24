@@ -1,1 +1,959 @@
-/* Screen family: live. Reference screens: design/viptv-design-system/reference/screens. */
+/*
+ * Screen family: live — Live TV on every platform (src/ui/Guide.tsx).
+ * Reference screens (design/viptv-design-system/reference/screens):
+ *   phone        Live, PhLiveDetails, PhLiveDetailsNone, PhItemMenuLive (+ PhStates live cells)
+ *   desktop/web  DeskLive, DeskLiveDetails (+ DeskStates live cells; 2560 wide shows more hours)
+ *   TV           TvLive, TvLiveDetails, TvLiveSearch (+ TvStates live cells)
+ * Primitives used: vx-channel-row / vx-monogram / vx-guide-block (cards.css), vx-chip,
+ * vx-search, vx-progress, vx-live-dot, vx-badge--live, vx-dialog / vx-overlay, vx-empty,
+ * vx-status, vx-loading-more, vx-skel-row, vx-legend.
+ * Time scales in px per minute (guide-core.ts): desktop 200 px / 30 min, TV 300 px / 30 min.
+ * Literal lengths are per-screen geometry from the reference HTML with no token; each is named
+ * once as a --vx-live-* property with its source.
+ * TV rules (.tv-layout) are Chrome 87-safe: no :is/:where/:has, nesting, aspect-ratio,
+ * color-mix or individual transform properties.
+ */
+
+/* ---------------------------------------------------------------------------
+ * Shared: live dot + time, monogram, now pill / line.
+ * ------------------------------------------------------------------------ */
+[data-layout] .vx-live-clock {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--viptv-space-2);
+  color: var(--viptv-color-text-secondary);
+  font-size: var(--viptv-type-phone-meta-size);
+  font-weight: 600;
+  white-space: nowrap;
+}
+[data-layout] .vx-live-mono {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: var(--viptv-size-button-small);
+  height: var(--viptv-size-button-small);
+  overflow: hidden;
+  border-radius: var(--viptv-radius-sm-plus);
+  background: var(--viptv-color-surface-2);
+  color: var(--viptv-color-text-primary);
+  font-size: var(--viptv-type-desktop-rail-label-size);
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  white-space: nowrap;
+}
+[data-layout] .vx-live-now-pill {
+  position: absolute;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+  border-radius: var(--viptv-radius-md);
+  background: var(--viptv-accent);
+  color: var(--viptv-color-on-accent);
+  font-weight: 700;
+  white-space: nowrap;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+[data-layout] .vx-live-now-line {
+  position: absolute;
+  bottom: 0;
+  z-index: 1;
+  background: var(--viptv-accent);
+  pointer-events: none;
+}
+
+/* Programme details (Guide-owned vx-dialog): meta line + description. */
+[data-layout] .vx-live-details__meta {
+  display: flex;
+  align-items: center;
+  gap: var(--viptv-space-2);
+  min-width: 0;
+  color: var(--viptv-color-text-secondary);
+  font-size: var(--viptv-type-desktop-row-size);
+  font-weight: 600;
+  white-space: nowrap;
+}
+[data-layout="responsive"] .vx-live-details__text {
+  color: var(--viptv-color-text-body);
+  line-height: 1.55; /* DeskLiveDetails.html / PhLiveDetails.html */
+}
+[data-layout] .vx-live-details__bare {
+  justify-content: flex-end;
+}
+
+/* ---------------------------------------------------------------------------
+ * Desktop / web (≥ 600): DeskLive. Page 32 / 48 padding, category sidebar 200,
+ * guide box with a sticky time header and sticky channel column; scrolls natively.
+ * ------------------------------------------------------------------------ */
+[data-layout="responsive"] main.vx-live--desk {
+  --vx-live-channel-w: 220px;   /* DeskLive.html: channel column */
+  --vx-live-row-h: var(--viptv-space-16); /* 64 */
+  --vx-live-head-h: var(--viptv-size-button-pill); /* 44 */
+  --vx-live-sidebar-w: 200px;   /* DeskLive.html: category list */
+  --vx-live-search-w: 320px;    /* DeskLive.html: search field */
+  --vx-live-time-h: 36px;       /* DeskLive.html: Earlier / Now / Later */
+  --vx-live-slot-w: 200px;      /* DeskLive.html: half an hour */
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--viptv-space-5_5);
+  box-sizing: border-box;
+  width: calc(100% - var(--vx-shell-rail));
+  height: 100%;
+  min-height: 0;
+  margin: 0 0 0 var(--vx-shell-rail);
+  padding: var(--viptv-space-8) var(--viptv-space-12) 0;
+  overflow: hidden;
+  background: var(--viptv-color-bg);
+  color: var(--viptv-color-text-primary);
+  font-family: var(--viptv-font-family-ui);
+}
+[data-layout="responsive"] .vx-live-desk__head {
+  display: flex;
+  flex: none;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--viptv-space-4) var(--viptv-space-6);
+}
+[data-layout="responsive"] .vx-live-desk__heading {
+  display: flex;
+  flex-direction: column;
+  gap: var(--viptv-space-1_5);
+  min-width: 0;
+}
+[data-layout="responsive"] .vx-live-desk__title {
+  margin: 0;
+  font-family: var(--viptv-font-family-display);
+  font-size: var(--viptv-type-desktop-page-title-size);
+  font-weight: var(--viptv-type-desktop-page-title-weight);
+  line-height: 1.2; /* DeskLive.html: the page title's normal line height (Bricolage) */
+  letter-spacing: var(--viptv-type-desktop-page-title-letter-spacing);
+}
+[data-layout="responsive"] .vx-live-desk__date {
+  margin: 0;
+  color: var(--viptv-color-text-secondary);
+  font-size: var(--viptv-type-desktop-row-size);
+  line-height: 1.35;
+}
+[data-layout="responsive"] .vx-live-desk__tools {
+  display: flex;
+  align-items: center;
+  gap: var(--viptv-space-2_5);
+  min-width: 0;
+}
+[data-layout="responsive"] .vx-live-search {
+  --vx-h: var(--vx-live-head-h);
+  gap: var(--viptv-space-2_5);
+  width: var(--vx-live-search-w);
+  max-width: 100%;
+  padding: 0 var(--viptv-space-1_5) 0 var(--viptv-space-3_5);
+  color: var(--viptv-color-text-tertiary);
+  font-size: var(--viptv-type-desktop-row-size);
+}
+[data-layout="responsive"] .vx-live-search > svg {
+  width: var(--viptv-size-icon-small);
+  height: var(--viptv-size-icon-small);
+}
+[data-layout="responsive"] .vx-live-search .vx-search__clear {
+  width: calc(var(--vx-live-head-h) - 2 * var(--viptv-space-1_5));
+  height: calc(var(--vx-live-head-h) - 2 * var(--viptv-space-1_5));
+}
+
+/* Earlier / Now / Later: a surface-1 track, Now is off-white while following. */
+[data-layout="responsive"] .vx-live-time {
+  display: flex;
+  flex: none;
+  gap: var(--viptv-space-0_5);
+  padding: var(--viptv-space-1);
+  border-radius: calc((var(--vx-live-time-h) + 2 * var(--viptv-space-1)) / 2);
+  background: var(--viptv-color-surface-1);
+}
+[data-layout="responsive"] .vx-live-time > button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  height: var(--vx-live-time-h);
+  min-height: 0;
+  margin: 0;
+  padding: 0 var(--viptv-space-4);
+  border: 0;
+  border-radius: calc(var(--vx-live-time-h) / 2);
+  outline: none;
+  background: transparent;
+  color: var(--viptv-color-text-secondary);
+  font-family: var(--viptv-font-family-ui);
+  font-size: var(--viptv-type-desktop-row-size);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color var(--viptv-motion-focus) ease-out, color var(--viptv-motion-focus) ease-out;
+}
+[data-layout="responsive"] .vx-live-time > .vx-live-time__step {
+  width: var(--viptv-size-button-small);
+  padding: 0;
+}
+[data-layout="responsive"] .vx-live-time__step > svg {
+  width: var(--viptv-size-icon-desktop);
+  height: var(--viptv-size-icon-desktop);
+}
+[data-layout="responsive"] .vx-live-time > .vx-live-time__now[aria-pressed="true"] {
+  background: var(--viptv-color-text-primary);
+  color: var(--viptv-color-on-light);
+}
+[data-layout="responsive"] .vx-live-time > button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+[data-layout="responsive"] .vx-live-time > button:active:not(:disabled) {
+  transform: scale(var(--viptv-motion-pressed-scale));
+}
+@media (hover: hover) and (pointer: fine) {
+  [data-layout="responsive"] .vx-live-time > button:hover:not(:disabled):not([aria-pressed="true"]) {
+    background: var(--viptv-color-fill-wash);
+    color: var(--viptv-color-text-primary);
+  }
+}
+[data-layout="responsive"] .vx-live-time > button:focus-visible {
+  box-shadow: var(--viptv-focus-desktop);
+}
+
+[data-layout="responsive"] .vx-live-desk__body {
+  display: flex;
+  flex: 1 1 auto;
+  gap: var(--viptv-space-6);
+  min-height: 0;
+}
+
+/* Category sidebar (≥ 900): 40 rows, current surface-2, count in tertiary. */
+[data-layout="responsive"] .vx-live-cats {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: var(--viptv-space-0_5);
+  width: var(--vx-live-sidebar-w);
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+[data-layout="responsive"] .vx-live-cat {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--viptv-space-2);
+  box-sizing: border-box;
+  height: var(--viptv-size-chip-desktop);
+  min-height: 0;
+  margin: 0;
+  padding: 0 var(--viptv-space-3_5);
+  border: 0;
+  border-radius: var(--viptv-radius-md);
+  outline: none;
+  background: transparent;
+  color: var(--viptv-color-text-secondary);
+  font-family: var(--viptv-font-family-ui);
+  font-size: var(--viptv-type-desktop-row-size);
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color var(--viptv-motion-focus) ease-out, color var(--viptv-motion-focus) ease-out;
+}
+[data-layout="responsive"] .vx-live-cat[aria-pressed="true"] {
+  background: var(--viptv-color-surface-2);
+  color: var(--viptv-color-text-primary);
+  font-weight: 600;
+}
+[data-layout="responsive"] .vx-live-cat__label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+[data-layout="responsive"] .vx-live-cat__count {
+  flex: none;
+  color: var(--viptv-color-text-tertiary);
+  font-size: var(--viptv-type-desktop-caption-size);
+  font-weight: 400;
+}
+[data-layout="responsive"] .vx-live-cat:active {
+  background: var(--viptv-color-surface-2);
+}
+@media (hover: hover) and (pointer: fine) {
+  [data-layout="responsive"] .vx-live-cat:hover:not([aria-pressed="true"]) {
+    background: var(--viptv-color-fill-wash-pressed);
+    color: var(--viptv-color-text-primary);
+  }
+}
+[data-layout="responsive"] .vx-live-cat:focus-visible {
+  box-shadow: var(--viptv-focus-desktop);
+}
+
+/* The guide box: hairline frame open at the bottom edge (radius 18 top). */
+[data-layout="responsive"] .vx-live-guide {
+  position: relative;
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  border: 1px solid var(--viptv-color-line-hairline);
+  border-bottom: 0;
+  border-radius: var(--viptv-radius-2xl) var(--viptv-radius-2xl) 0 0;
+}
+[data-layout="responsive"] .vx-live-guide__scroll {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+  outline: none;
+  scroll-padding: var(--vx-live-head-h) 0 0 var(--vx-live-channel-w);
+}
+[data-layout="responsive"] .vx-live-guide__scroll:focus-visible {
+  box-shadow: inset 0 0 0 2px var(--viptv-color-text-primary);
+}
+[data-layout="responsive"] .vx-live-guide__grid {
+  position: relative;
+  min-width: 100%;
+}
+[data-layout="responsive"] .vx-live-guide__head {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  display: flex;
+  height: var(--vx-live-head-h);
+  background: var(--viptv-color-surface-1);
+}
+[data-layout="responsive"] .vx-live-guide__count {
+  position: sticky;
+  left: 0;
+  z-index: 4;
+  display: flex;
+  flex: none;
+  align-items: center;
+  box-sizing: border-box;
+  width: var(--vx-live-channel-w);
+  padding-left: var(--viptv-space-3_5);
+  border-right: 1px solid var(--viptv-color-line-hairline);
+  background: var(--viptv-color-surface-1);
+  color: var(--viptv-color-text-tertiary);
+  font-size: var(--viptv-type-desktop-meta-size);
+  font-weight: 600;
+}
+[data-layout="responsive"] .vx-live-guide__times {
+  position: relative;
+  flex: none;
+  height: 100%;
+}
+[data-layout="responsive"] .vx-live-guide__time {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+  width: var(--vx-live-slot-w);
+  padding-left: var(--viptv-space-3);
+  border-left: 1px solid var(--viptv-color-line-hairline);
+  color: var(--viptv-color-text-secondary);
+  font-size: var(--viptv-type-desktop-meta-size);
+  font-weight: 600;
+  white-space: nowrap;
+}
+[data-layout="responsive"] .vx-live-guide__head .vx-live-now-pill {
+  top: var(--viptv-space-2_5);
+  height: var(--viptv-size-badge-pill);
+  padding: 0 var(--viptv-space-2);
+  font-size: var(--viptv-type-desktop-caption-size);
+}
+/* 64 + the 1 px hairline above it (DeskLive.html rows are content-box). */
+[data-layout="responsive"] .vx-live-row {
+  display: flex;
+  box-sizing: content-box;
+  height: var(--vx-live-row-h);
+  border-top: 1px solid var(--viptv-color-line-hairline);
+}
+[data-layout="responsive"] .vx-live-channel {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--viptv-space-3);
+  box-sizing: border-box;
+  width: var(--vx-live-channel-w);
+  height: 100%;
+  min-height: 0;
+  margin: 0;
+  padding: 0 var(--viptv-space-3_5);
+  border: 0;
+  border-right: 1px solid var(--viptv-color-line-hairline);
+  border-radius: 0;
+  outline: none;
+  background: var(--viptv-color-bg);
+  color: var(--viptv-color-text-primary);
+  font-family: var(--viptv-font-family-ui);
+  font-size: var(--viptv-type-desktop-row-size);
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+[data-layout="responsive"] .vx-live-channel__name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+@media (hover: hover) and (pointer: fine) {
+  [data-layout="responsive"] .vx-live-channel:hover {
+    background: var(--viptv-color-surface-1);
+  }
+}
+[data-layout="responsive"] .vx-live-channel:active {
+  background: var(--viptv-color-surface-1);
+}
+[data-layout="responsive"] .vx-live-channel:focus-visible {
+  box-shadow: var(--viptv-focus-desktop-card-inset);
+}
+[data-layout="responsive"] .vx-live-row__programs {
+  position: relative;
+  flex: none;
+  height: 100%;
+}
+/* Blocks sit 2 px in from their slot (Guide.tsx) and centre in the 64 row. */
+[data-layout="responsive"] .vx-live-block {
+  position: absolute;
+  top: calc((var(--vx-live-row-h) - var(--viptv-size-guide-block-desktop)) / 2);
+  min-height: 0;
+  overflow: clip;
+}
+/* A long programme keeps its time and title in view while its start scrolls away. */
+[data-layout="responsive"] .vx-live-block > .vx-guide-block__time,
+[data-layout="responsive"] .vx-live-block > .vx-guide-block__title {
+  position: sticky;
+  left: calc(var(--vx-live-channel-w) + var(--viptv-space-3));
+  width: max-content;
+  max-width: 100%;
+}
+[data-layout="responsive"] .vx-live-block:active {
+  transform: scale(var(--viptv-motion-pressed-scale-row));
+}
+[data-layout="responsive"] .vx-live-guide .vx-live-now-line {
+  top: var(--vx-live-head-h);
+  width: var(--viptv-size-border-strong);
+  opacity: 0.9;
+}
+[data-layout="responsive"] .vx-live-guide .vx-loading-more {
+  position: sticky;
+  left: 0;
+}
+[data-layout="responsive"] .vx-live-guide__loading,
+[data-layout="responsive"] .vx-live-guide .vx-live-empty {
+  position: sticky;
+  left: 0;
+  box-sizing: border-box;
+  max-width: 100%;
+  padding: var(--viptv-space-12) var(--viptv-space-6);
+}
+[data-layout="responsive"] .vx-live-guide__loading {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding-top: var(--viptv-space-6);
+}
+[data-layout="responsive"] .vx-live-guide__loading > .vx-status {
+  margin-bottom: var(--viptv-space-5);
+}
+
+/* Tablet widths (600–899): category chips above the guide, narrower channel column. */
+@media (max-width: 899px) {
+  [data-layout="responsive"] main.vx-live--desk {
+    --vx-live-channel-w: 168px; /* tablet: monogram + a short name */
+    gap: var(--viptv-space-4);
+    padding: var(--viptv-space-6) var(--viptv-space-6) 0;
+  }
+  [data-layout="responsive"] .vx-live-desk__tools {
+    flex: 1 1 100%;
+  }
+  [data-layout="responsive"] .vx-live-search {
+    flex: 1 1 auto;
+    width: auto;
+  }
+}
+[data-layout="responsive"] .vx-live-chips--desk {
+  display: flex;
+  flex: none;
+  gap: var(--viptv-space-2);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+/* Desktop programme details: centred in the body row (DeskLiveDetails.html: 50 %, not the
+   primitive's 35 %); the scrim leaves the title bar and the rail bright. */
+[data-layout="responsive"] .vx-live-details-layer {
+  position: fixed;
+  top: var(--vx-shell-top, 0px);
+  left: var(--vx-shell-rail, 0px);
+}
+@media (min-width: 600px) {
+  [data-layout="responsive"] .vx-live-details {
+    top: 50%;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+ * Phone (≤ 599): Live. Title + clock, category chips, channel rows (84), docked search.
+ * ------------------------------------------------------------------------ */
+@media (max-width: 599px) {
+  [data-layout="responsive"] main.vx-live--phone {
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
+    width: 100%;
+    min-height: 100%;
+    margin: 0;
+    padding: var(--viptv-layout-phone-top-inset) 0 var(--vx-shell-bottom);
+    background: var(--viptv-color-bg);
+    color: var(--viptv-color-text-primary);
+    font-family: var(--viptv-font-family-ui);
+  }
+  [data-layout="responsive"] .vx-live-phone__header {
+    display: flex;
+    flex: none;
+    align-items: center;
+    gap: var(--viptv-space-3);
+    height: var(--viptv-space-12);
+    padding: 0 var(--viptv-layout-phone-gutter);
+  }
+  [data-layout="responsive"] .vx-live-phone__title {
+    flex: 1 1 auto;
+    min-width: 0;
+    margin: 0;
+    font-family: var(--viptv-font-family-display);
+    font-size: var(--viptv-type-phone-screen-title-size);
+    font-weight: var(--viptv-type-phone-screen-title-weight);
+    line-height: var(--viptv-type-phone-screen-title-line-height);
+    letter-spacing: var(--viptv-type-phone-screen-title-letter-spacing);
+  }
+  /* Search Live TV (not drawn on Live.html: its docked field is PhSearch's). */
+  [data-layout="responsive"] .vx-live-phone__search-toggle {
+    display: flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    width: var(--viptv-layout-phone-min-target);
+    height: var(--viptv-layout-phone-min-target);
+    min-height: 0;
+    margin: 0 calc(var(--viptv-space-1) * -1) 0 0;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: var(--viptv-color-surface-1);
+    color: var(--viptv-color-text-primary);
+    -webkit-tap-highlight-color: transparent;
+    transition: background-color var(--viptv-motion-focus) ease-out, transform var(--viptv-motion-focus) ease-out;
+  }
+  [data-layout="responsive"] .vx-live-phone__search-toggle > svg {
+    width: var(--viptv-size-icon-phone);
+    height: var(--viptv-size-icon-phone);
+  }
+  [data-layout="responsive"] .vx-live-phone__search-toggle[aria-expanded="true"] {
+    background: var(--viptv-color-text-primary);
+    color: var(--viptv-color-on-light);
+  }
+  [data-layout="responsive"] .vx-live-phone__search-toggle:active {
+    transform: scale(var(--viptv-motion-pressed-scale));
+  }
+  [data-layout="responsive"] .vx-live-chips {
+    display: flex;
+    flex: none;
+    gap: var(--viptv-space-2);
+    margin-top: var(--viptv-space-3_5);
+    padding: 0 var(--viptv-layout-phone-gutter);
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  [data-layout="responsive"] .vx-live-chips::-webkit-scrollbar {
+    display: none;
+  }
+  [data-layout="responsive"] .vx-live-list {
+    display: flex;
+    flex-direction: column;
+    margin: var(--viptv-space-2) 0 0;
+    padding: 0;
+    list-style: none;
+  }
+  [data-layout="responsive"] .vx-live-item {
+    min-height: calc(var(--viptv-size-tile-phone-channel-logo-height) + var(--viptv-space-6));
+    margin: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    text-align: left;
+    cursor: pointer;
+  }
+  [data-layout="responsive"] .vx-live-item .vx-monogram {
+    letter-spacing: 0.02em;
+  }
+  [data-layout="responsive"] .vx-live-item__none {
+    color: var(--viptv-color-text-tertiary);
+    font-weight: 400;
+  }
+  [data-layout="responsive"] .vx-live-progress {
+    --vx-progress-h: var(--viptv-size-progress-small);
+    flex: none;
+  }
+  [data-layout="responsive"] .vx-live-empty {
+    display: flex;
+    flex: 1 1 auto;
+    align-items: center;
+    justify-content: center;
+    padding: 0 var(--viptv-space-6);
+  }
+  [data-layout="responsive"] .vx-live-empty .vx-empty__title {
+    font-size: var(--viptv-type-phone-empty-title-size);
+  }
+  [data-layout="responsive"] .vx-live-empty .vx-empty__text {
+    font-size: var(--viptv-type-phone-body-size);
+  }
+  /* Docked above the nav (PhSearch.html: bottom 108 = 28 + 64 + 16), over its own fade. */
+  [data-layout="responsive"] .vx-live-search-dock {
+    position: fixed;
+    left: var(--viptv-layout-phone-gutter);
+    right: var(--viptv-layout-phone-gutter);
+    bottom: calc(max(var(--viptv-layout-phone-nav-bottom), env(safe-area-inset-bottom)) + var(--viptv-layout-phone-nav-height) + var(--viptv-space-4));
+    z-index: 31;
+  }
+  [data-layout="responsive"] .vx-live-search-dock::before {
+    content: "";
+    position: absolute;
+    left: calc(var(--viptv-layout-phone-gutter) * -1);
+    right: calc(var(--viptv-layout-phone-gutter) * -1);
+    bottom: calc(var(--viptv-space-4) * -1);
+    height: calc(var(--viptv-size-field-search-phone) + var(--viptv-space-16) + var(--viptv-space-8));
+    background: linear-gradient(to bottom, transparent 0%, var(--viptv-color-bg) 75%);
+    background: linear-gradient(
+      to bottom,
+      transparent 0%,
+      color-mix(in srgb, var(--viptv-color-bg) 92%, transparent) 45%,
+      var(--viptv-color-bg) 75%
+    );
+    pointer-events: none;
+  }
+  [data-layout="responsive"] .vx-live-search-dock > .vx-search {
+    border: var(--viptv-size-border-focus) solid var(--viptv-color-line-strong);
+    -webkit-backdrop-filter: blur(var(--viptv-size-blur-glass));
+    backdrop-filter: blur(var(--viptv-size-blur-glass));
+  }
+  [data-layout="responsive"] .vx-live-search-dock .vx-search__input {
+    font-size: var(--viptv-type-phone-body-strong-size);
+  }
+  [data-layout="responsive"] .vx-live--phone .vx-loading-more {
+    padding-bottom: var(--viptv-space-4);
+  }
+  /* Phone details sheet: meta and body sizes (PhLiveDetails.html). */
+  [data-layout="responsive"] .vx-live-details .vx-dialog__header.vx-live-details__bare {
+    display: none;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+ * TV (1920 × 1080 canvas): TvLive. Hero 54–354, chips at 374, grid 460 → 100 from the
+ * bottom (5 rows of 100: four full + a peek), legend bottom-right.
+ * ------------------------------------------------------------------------ */
+.tv-layout main.vx-live--tv {
+  --vx-live-left: calc(var(--viptv-layout-tv-rail-collapsed) + var(--viptv-space-12)); /* 192 */
+  --vx-live-channel-w: 300px;  /* TvLive.html: channel column = half an hour */
+  --vx-live-hero-h: 300px;     /* TvLive.html: hero band */
+  --vx-live-chips-top: 374px;  /* TvLive.html */
+  --vx-live-grid-top: 460px;   /* TvLive.html */
+  --vx-live-grid-bottom: 100px; /* TvLive.html */
+  --vx-live-row-h: 100px;      /* TvLive.html */
+  --vx-live-head-h: var(--viptv-space-12); /* 48 */
+  --vx-live-pill-h: 38px;      /* TvLive.html: now pill */
+  --vx-live-grid-pad: var(--viptv-space-2); /* room for focus rings inside the clipped grid */
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  color: var(--viptv-color-text-primary);
+  font-family: var(--viptv-font-family-ui);
+}
+.tv-layout .vx-live-tv__hero {
+  position: absolute;
+  left: var(--vx-live-left);
+  right: var(--viptv-layout-tv-safe-x);
+  top: var(--viptv-layout-tv-safe-y);
+  display: flex;
+  align-items: stretch;
+  height: var(--vx-live-hero-h);
+}
+.tv-layout .vx-live-tv__info {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--viptv-space-3_5);
+  min-width: 0;
+  margin-right: var(--viptv-space-12);
+}
+.tv-layout .vx-live-tv__eyebrow,
+.tv-layout .vx-live-tv__when {
+  display: flex;
+  align-items: center;
+  color: var(--viptv-color-text-secondary);
+  font-size: var(--viptv-type-tv-meta-size);
+}
+.tv-layout .vx-live-tv__eyebrow {
+  gap: var(--viptv-space-3_5);
+}
+.tv-layout .vx-live-tv__when {
+  gap: var(--viptv-space-4_5);
+}
+.tv-layout .vx-live-tv__eyebrow .vx-badge--live {
+  --vx-h: var(--viptv-size-badge-tv);
+  font-size: var(--viptv-type-tv-min-size);
+  font-weight: 800;
+}
+.tv-layout .vx-live-tv__title {
+  margin: 0;
+  overflow: hidden;
+  font-family: var(--viptv-font-family-display);
+  font-size: var(--viptv-type-tv-screen-title-size);
+  font-weight: var(--viptv-type-tv-screen-title-weight);
+  line-height: 1.2; /* TvLive.html: the hero title's normal line height (Bricolage) */
+  letter-spacing: var(--viptv-type-tv-screen-title-letter-spacing);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tv-layout .vx-live-tv__progress {
+  flex: none;
+  width: 220px; /* TvLive.html: hero progress */
+}
+.tv-layout .vx-live-tv__next {
+  overflow: hidden;
+  color: var(--viptv-color-text-tertiary);
+  font-size: var(--viptv-type-tv-meta-size);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* The live preview tile: the channel monogram (TvLive.html 480 × 270). */
+.tv-layout .vx-live-tv__preview {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  align-self: center;
+  box-sizing: border-box;
+  width: 480px;
+  height: 270px;
+  border: var(--viptv-size-border-strong) solid var(--viptv-color-line-hairline);
+  border-radius: var(--viptv-radius-xl-plus);
+  background: var(--viptv-color-surface-1);
+  color: var(--viptv-color-text-tertiary);
+  font-size: var(--viptv-type-tv-caption-size);
+}
+.tv-layout .vx-live-tv__preview-mono {
+  margin-bottom: var(--viptv-space-3);
+  color: var(--viptv-color-text-secondary);
+  font-family: var(--viptv-font-family-display);
+  font-size: var(--viptv-type-tv-screen-title-size);
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.tv-layout .vx-live-tv__chips {
+  position: absolute;
+  left: var(--vx-live-left);
+  right: var(--viptv-layout-tv-safe-x);
+  top: var(--vx-live-chips-top);
+  display: flex;
+  gap: var(--viptv-space-1_5);
+  padding: var(--viptv-space-2) var(--viptv-space-2);
+  margin: calc(var(--viptv-space-2) * -1);
+  overflow: hidden;
+}
+.tv-layout .vx-live-tv__chips > .vx-chip {
+  flex: none;
+}
+/* Search Live TV: a round chip with the magnifier (and the query once one is set). */
+.tv-layout .vx-live-tv__search {
+  min-width: var(--viptv-size-chip-tv);
+  padding: 0 var(--viptv-space-4);
+  justify-content: center;
+}
+.tv-layout .vx-live-tv__search > svg {
+  flex: none;
+  width: var(--viptv-size-icon-tv);
+  height: var(--viptv-size-icon-tv);
+}
+.tv-layout .vx-live-tv__search > svg + span {
+  margin-left: var(--viptv-space-2_5);
+}
+
+.tv-layout .vx-live-tv__grid {
+  position: absolute;
+  left: calc(var(--vx-live-left) - var(--vx-live-grid-pad));
+  right: calc(var(--viptv-layout-tv-safe-x) - var(--vx-live-grid-pad));
+  top: var(--vx-live-grid-top);
+  bottom: var(--vx-live-grid-bottom);
+  padding: 0 var(--vx-live-grid-pad);
+  overflow: hidden;
+}
+.tv-layout .vx-live-tv__head {
+  position: relative;
+  height: var(--vx-live-head-h);
+  margin-left: var(--vx-live-channel-w);
+}
+.tv-layout .vx-live-tv__time {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  padding-left: var(--viptv-space-4);
+  border-left: var(--viptv-size-border-strong) solid var(--viptv-color-line-hairline);
+  color: var(--viptv-color-text-secondary);
+  font-size: var(--viptv-type-tv-meta-size);
+  font-weight: 600;
+  white-space: nowrap;
+}
+.tv-layout .vx-live-tv__head .vx-live-now-pill {
+  top: var(--viptv-space-1);
+  height: var(--vx-live-pill-h);
+  padding: 0 var(--viptv-space-3_5);
+  border-radius: calc(var(--vx-live-pill-h) / 2);
+  font-size: var(--viptv-type-tv-caption-size);
+  font-weight: 800;
+}
+.tv-layout .vx-live-tv__row {
+  position: relative;
+  display: flex;
+  height: var(--vx-live-row-h);
+}
+/* Channel cell: number, monogram, name. Focus = the off-white block look. */
+.tv-layout .vx-live-tv__channel {
+  display: flex;
+  flex: none;
+  align-items: center;
+  box-sizing: border-box;
+  /* TvLive.html: a 300 column; the focus pill stops 8 short of the blocks. */
+  width: calc(var(--vx-live-channel-w) - var(--viptv-space-2));
+  height: var(--viptv-size-guide-block-tv);
+  min-height: 0;
+  margin: calc((var(--vx-live-row-h) - var(--viptv-size-guide-block-tv)) / 2) var(--viptv-space-2) 0 0;
+  padding: 0 var(--viptv-space-2) 0 0;
+  border: 0;
+  border-radius: var(--viptv-radius-xl);
+  outline: none;
+  background: transparent;
+  color: var(--viptv-color-guide-upcoming-text);
+  font-family: var(--viptv-font-family-ui);
+  font-size: var(--viptv-type-tv-meta-size);
+  font-weight: 600;
+  text-align: left;
+  transition: background-color var(--viptv-motion-focus) ease-out, box-shadow var(--viptv-motion-focus) ease-out;
+}
+.tv-layout .vx-live-tv__row.is-selected .vx-live-tv__channel {
+  color: var(--viptv-color-text-primary);
+}
+.tv-layout .vx-live-tv__channel:focus {
+  background: var(--viptv-color-text-primary);
+  color: var(--viptv-color-on-light);
+  box-shadow: var(--viptv-focus-tv-shadow-block);
+}
+.tv-layout .vx-live-tv__number {
+  flex: none;
+  width: var(--viptv-space-8);
+  margin-right: var(--viptv-space-4_5);
+  color: var(--viptv-color-text-tertiary);
+  font-size: var(--viptv-type-tv-caption-size);
+  font-weight: 400;
+  text-align: right;
+}
+.tv-layout .vx-live-tv__channel:focus .vx-live-tv__number {
+  color: var(--viptv-color-text-on-light-secondary);
+}
+.tv-layout .vx-live-tv__channel .vx-live-mono {
+  width: var(--viptv-size-button-tv);
+  height: var(--viptv-size-button-tv);
+  margin-right: var(--viptv-space-4_5);
+  border-radius: var(--viptv-radius-xl);
+  font-size: var(--viptv-type-tv-keycap-size);
+  letter-spacing: 0;
+}
+.tv-layout .vx-live-tv__channel:focus .vx-live-mono {
+  background: var(--viptv-color-fill-on-light-badge);
+  color: var(--viptv-color-on-light);
+}
+.tv-layout .vx-live-tv__name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tv-layout .vx-live-tv__programs {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 100%;
+}
+/* Blocks: 4 px in from their slot (Guide.tsx), centred in the 100 row. */
+.tv-layout .vx-live-block {
+  position: absolute;
+  top: calc((var(--vx-live-row-h) - var(--viptv-size-guide-block-tv)) / 2);
+  min-height: 0;
+}
+.tv-layout .vx-live-block.is-open {
+  background: var(--viptv-color-text-primary);
+  color: var(--viptv-color-on-light);
+  box-shadow: var(--viptv-focus-tv-shadow-block);
+}
+.tv-layout .vx-live-block.is-open .vx-guide-block__time {
+  color: var(--viptv-color-text-on-light-secondary);
+}
+.tv-layout .vx-live-block.vx-guide-block--empty {
+  padding: 0 var(--viptv-space-5_5);
+}
+.tv-layout .vx-live-tv__grid .vx-live-now-line {
+  top: var(--vx-live-head-h);
+  z-index: 2;
+  width: var(--viptv-size-border-tv-strong);
+}
+.tv-layout .vx-live-tv__status {
+  margin-top: var(--viptv-space-2_5);
+}
+.tv-layout .vx-live-tv__grid .vx-live-empty {
+  padding-top: var(--viptv-space-2_5);
+}
+/* TvLive.html draws the guide legend 40 from the bottom (panels keep 54). */
+.tv-layout .vx-live-tv__legend.vx-legend--corner {
+  bottom: calc(var(--viptv-layout-tv-safe-y) - var(--viptv-space-3_5));
+}
+
+/* TV programme details panel (TvLiveDetails.html): meta 22 with a 12 dot, body 24. */
+.tv-layout .vx-live-details__meta {
+  gap: var(--viptv-space-3);
+  font-size: var(--viptv-type-tv-meta-size);
+  font-weight: 400;
+}
+.tv-layout .vx-live-details__channel {
+  font-weight: 600;
+}
+.tv-layout .vx-live-details .vx-dialog__header.vx-live-details__bare {
+  display: none;
+}

@@ -10,13 +10,11 @@
   min-height: 100%;
   background: var(--canvas);
 }
-.responsive-app .roku-settings,
-.responsive-app .roku-guide {
+.responsive-app .roku-settings {
   margin-left: var(--sidebar-width);
   width: calc(100% - var(--sidebar-width));
   max-width: none;
 }
-/* Guide page paddings and fit live in guide-responsive.css with the page geometry. */
 
 .responsive-app .actions { position: static; display: flex; flex-wrap: wrap; width: auto; gap: 12px; margin-top: 28px; }
 
@@ -76,8 +74,7 @@
     font-size: 16px;
   }
   .responsive-app main { margin-left: 0 !important; width: 100% !important; padding-top: 16px; padding-bottom: calc(104px + env(safe-area-inset-bottom)); }
-  .responsive-app .roku-settings,
-  .responsive-app .roku-guide { margin-left: 0 !important; width: 100% !important; }
+  .responsive-app .roku-settings { margin-left: 0 !important; width: 100% !important; }
 
   .responsive-app .cards { gap: 16px; }
   .responsive-app .card-more { top: 138px; }
@@ -89,4 +86,8 @@
   .responsive-app .profile-row > button::after { width: 124px; height: 124px; }
   .responsive-app .profile-row img, .responsive-app .profile-initials { width: 112px; height: 112px; }
   .responsive-app .profile-row strong { width: 124px; top: 136px; font-size: 17px; }
-  .responsive-app .profile-actions button { font-size: 17px; }}
+  .responsive-app .profile-actions button { font-size: 17px; }
+  .responsive-app .scrim { padding: 12px; }
+  .responsive-app .modal, .responsive-app .source-detail-panel { padding: 20px; max-height: calc(100dvh - 24px); }
+  .responsive-app .modal-choices button { font-size: 18px; }
+  .responsive-app .toast, .responsive-app .loading, .responsive-app .error { bottom: calc(88px + env(safe-area-inset-bottom)); font-size: 16px; }}

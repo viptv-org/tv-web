@@ -80,16 +80,6 @@
 .responsive-app .roku-text-entry .actions { position: static; width: auto; margin-top: 24px; display: flex; gap: 16px; }
 .responsive-app .roku-text-entry .actions button { width: auto; }
 .responsive-app .roku-text-entry .entry-error { position: static; width: auto; margin-top: 16px; }
-/* The programme timeline retains its time-to-pixel mapping. On a small viewport
-   it scrolls horizontally inside the guide, never enlarging the application. */
-.responsive-app .roku-guide { position: relative; inset: auto; width: calc(100% - 2 * var(--page-gutter)); height: auto; min-height: 800px; margin: 24px auto 104px; padding: 0; overflow-x: auto; background: var(--canvas); }
-.responsive-app .roku-guide > h1 { position: static; font-size: 32px; height: auto; margin-bottom: 24px; }
-.responsive-app .roku-guide .guide-filters { position: static; display: flex; gap: 12px; width: 100%; height: auto; margin-bottom: 24px; overflow-x: auto; }
-.responsive-app .roku-guide .guide-filters button { flex: 0 0 auto; width: auto; min-height: 48px; padding: 0 16px; background: #202224; }
-.responsive-app .roku-guide .guide-header { position: relative; top: auto; left: 132px; margin: 16px 0; }
-.responsive-app .roku-guide .guide-rows { position: relative; top: auto; left: 0; width: 936px; }
-.responsive-app .roku-guide::after, .responsive-app .roku-guide .guide-now { display: none; }
-.responsive-app .roku-guide .guide-selection-count, .responsive-app .roku-guide .guide-selection-title, .responsive-app .roku-guide .guide-help, .responsive-app .roku-guide .guide-timezone, .responsive-app .roku-guide .guide-empty { position: static; width: min(100%, 936px); height: auto; margin-top: 16px; font-size: 17px; white-space: normal; }
 @media (max-width: 899px) {
   .responsive-app .roku-settings { grid-template-columns: minmax(0, 1fr); gap: 24px; }
 }
@@ -104,14 +94,6 @@
 }
 
 
-.responsive-app .responsive-guide-controls { display: flex; gap: 12px; flex-wrap: wrap; width: 100%; margin: 16px 0 24px; }
-.responsive-app .responsive-guide-controls button { font-size: 17px; min-height: 48px; padding: 0 16px; }
-.responsive-app .responsive-guide-controls > span { flex-basis: 100%; color: #a6a8aa; font-size: 16px; }
-.responsive-app .roku-guide .guide-now.responsive-guide-now { display: block; top: 0; z-index: 2; }
-@media (max-width: 599px) {
-  .responsive-app .responsive-guide-controls { gap: 8px; }
-  .responsive-app .responsive-guide-controls button { font-size: 15px; padding: 0 12px; }
-}
 
 /* Focus owns inversion even when the selected navigation item is also hovered. */
 .responsive-app button:where(:not([class*="vx-"])):focus-visible:not(:disabled) { background-color: #f5f5f5; color: #101112; }
@@ -138,9 +120,6 @@
   .responsive-app .result-grid > .cards .responsive-card { flex: 0 0 232px; width: 232px; }
 }
 .responsive-app .filters button { text-overflow: ellipsis; }
-.responsive-app .roku-guide .programs button small { color: #c5c6c7; }
-.responsive-app .roku-guide .programs button:focus-visible small { color: #101112; }
-.responsive-app .roku-guide .programs button:focus:not(:focus-visible) { background: #202224; color: #f5f5f5; }
 
 /* Responsive web keeps destination selection without the remote focus skin.
    DOM focus remains available for text editing and assistive technology. */
@@ -165,7 +144,6 @@
   .responsive-app .roku-profile-editor :is([data-focus-id="profile-avatar"], .avatar-grid button):focus {
     border-color: transparent;
   }
-  .responsive-app .roku-guide .programs button:focus small { color: #c5c6c7; }
 .responsive-app .dialog-backdrop > :is(.roku-profile-editor, .roku-text-entry) {
   position: relative;
   inset: auto;

@@ -4,7 +4,7 @@
  *   1. theme/viptv-tokens.generated.css, theme/fonts.css
  *   2. styles/index.css → base.css: reset, body type, focus recipes. A floor:
  *      the legacy rules below must keep winning until their family is rebuilt.
- *   3. legacy CSS, still in place (src/ui/account-roku.css, guide-responsive.css,
+ *   3. legacy CSS, still in place (src/ui/account-roku.css,
  *      CastController.css, SearchPopunder.css, tv.css, responsive.css, local.css
  *      and src/ui/css/*), imported by the UI modules. Family agents delete their
  *      rules there as each family is rebuilt.

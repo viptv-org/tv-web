@@ -370,23 +370,7 @@ export function AppShell({ app }: { app: AppApi }) {
                 api={api}
                 onPlay={(item) => void play(item)}
                 onError={fail}
-                onDetails={(item, program) =>
-                  setModal({
-                    title: program
-                      ? `${program.title} · ${program.description ?? ""}`
-                      : "No guide information. You can still watch this channel.",
-                    choices: [
-                      {
-                        label: "Watch channel now",
-                        action: () => {
-                          setModal(undefined);
-                          void play(item);
-                        },
-                      },
-                      { label: "Close", action: () => setModal(undefined) },
-                    ],
-                  })
-                }
+                onMenu={(item, details) => manage(item, details)}
               />
             )}
             {screen === "Settings" && (

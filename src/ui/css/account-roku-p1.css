@@ -1,6 +1,5 @@
 /* Account and guide coordinates fill the 1920 × 1080 TV canvas (authored at 1280 × 720, scaled by --tv-k). */
 .roku-settings,
-.roku-guide,
 .roku-profile-editor,
 .roku-text-entry {
   position: absolute;
@@ -368,77 +367,4 @@
   width: calc(1000px * var(--tv-k));
   margin: 0;
   font-size: calc(19px * var(--tv-k));
-}
-.roku-guide > h1 {
-  position: absolute;
-  left: calc(112px * var(--tv-k));
-  top: calc(34px * var(--tv-k));
-  margin: 0;
-  font-size: calc(26px * var(--tv-k));
-  line-height: calc(38px * var(--tv-k));
-}
-.roku-guide .guide-filters {
-  position: absolute;
-  left: calc(104px * var(--tv-k));
-  top: calc(163px * var(--tv-k));
-  width: calc(184px * var(--tv-k));
-  height: calc(384px * var(--tv-k));
-  display: block;
-  overflow-y: auto;
-  scrollbar-width: none;
-  margin: 0;
-}
-.roku-guide .guide-filters button {
-  display: block;
-  width: calc(184px * var(--tv-k));
-  height: calc(42px * var(--tv-k));
-  min-height: calc(42px * var(--tv-k));
-  margin: 0 0 calc(6px * var(--tv-k));
-  padding: 0 calc(8px * var(--tv-k));
-  font-size: calc(19px * var(--tv-k));
-  text-align: left;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  background: transparent;
-  color: #a6a8aa;
-}
-.roku-guide .guide-filters button[aria-pressed="true"] {
-  color: #f5f5f5;
-}
-.roku-guide .guide-filters button:focus {
-  background: #f5f5f5;
-  color: #101112;
-}
-.roku-guide .guide-header {
-  position: absolute;
-  left: calc(432px * var(--tv-k));
-  top: calc(116px * var(--tv-k));
-  width: calc(804px * var(--tv-k));
-  height: calc(28px * var(--tv-k));
-  display: flex;
-  margin: 0;
-  font-size: calc(19px * var(--tv-k));
-  line-height: calc(28px * var(--tv-k));
-}
-.roku-guide .guide-header span {
-  display: block;
-  width: calc(201px * var(--tv-k));
-  flex-shrink: 0;
-}
-.roku-guide::after {
-  content: "";
-  position: absolute;
-  left: calc(112px * var(--tv-k));
-  top: calc(149px * var(--tv-k));
-  width: calc(1124px * var(--tv-k));
-  height: 1px;
-  background: #303234;
-}
-.roku-guide .guide-rows {
-  position: absolute;
-  left: calc(300px * var(--tv-k));
-  top: calc(166px * var(--tv-k));
-  width: calc(936px * var(--tv-k));
-  height: calc(455px * var(--tv-k));
 }

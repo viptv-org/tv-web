@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { TvApi, type Guide as GuideData, type GuideProgram, type LiveCategory, type MediaItem } from "../api";
 import { focusElement } from "./remote";
-import { DAY_SECONDS, GUIDE_CACHE_LIMIT, GUIDE_CELL_LIMIT, GUIDE_WIDTH, HOUR_SECONDS, PAGE_SIZE, PREFETCH_ROWS, RESPONSIVE_TIMELINE_WIDTH, RESPONSIVE_WINDOW_SECONDS, VISIBLE_ROWS, WINDOW_SECONDS, type GuideCell, cellAt, filterOptions, firstVisibleRow, guideCells, halfHour } from "./guide-core";
+import { DAY_SECONDS, GUIDE_CACHE_LIMIT, HOUR_SECONDS, PAGE_SIZE, PREFETCH_ROWS, RESPONSIVE_WINDOW_SECONDS, VISIBLE_ROWS, WINDOW_SECONDS, type GuideCell, type GuideFilter, cellAt, clockTime, filterOptions, firstVisibleRow, guideCells, guideZone, halfHour, timeRange } from "./guide-core";
 
 export type GuideProps = {
   api: TvApi;
@@ -10,12 +10,24 @@ export type GuideProps = {
   phone?: boolean;
   onPlay: (item: MediaItem) => void;
   onError: (error: unknown) => void;
-  onDetails: (item: MediaItem, program?: GuideProgram) => void;
+  /**
+   * The channel menu (phone long-press, desktop right-click on a channel):
+   * Watch channel, Programme details (`details`), Add to / Remove from My List.
+   */
+  onMenu?: (item: MediaItem, details: () => void) => void;
+};
+
+/** Programme details for one channel: `program` absent = no guide information. */
+export type GuideDetails = {
+  readonly channel: MediaItem;
+  readonly program?: GuideProgram;
+  /** The TV / desktop block that opened it (kept lit under the panel). */
+  readonly block?: string;
 };
 
 /* The guide's state, data loading, windowing, key handling and filter
    actions; Guide.tsx renders exclusively from this controller. */
-export function useGuideController({ api, onPlay, onError, onDetails, responsive = false }: GuideProps) {
+export function useGuideController({ api, onPlay, onError, responsive = false }: GuideProps) {
   const [channels, setChannels] = useState<readonly MediaItem[]>([]);
   const [total, setTotal] = useState(0);
   const [offset, setOffset] = useState(0);
@@ -34,6 +46,11 @@ export function useGuideController({ api, onPlay, onError, onDetails, responsive
   const [now, setNow] = useState(Date.now() / 1000);
   const [following, setFollowing] = useState(true);
   const [guides, setGuides] = useState<Record<string, GuideData>>({});
+  const [details, setDetails] = useState<GuideDetails>();
+  // The unfiltered channel count (desktop sidebar "All US channels 86"),
+  // remembered while another filter is active.
+  const [allTotal, setAllTotal] = useState<number>();
+  const detailsReturn = useRef<{ element: HTMLElement | null; id: string }>({ element: null, id: "" });
   const cache = useRef(
     new Map<string, { expires: number; guide: GuideData }>(),
   );
@@ -135,6 +152,7 @@ export function useGuideController({ api, onPlay, onError, onDetails, responsive
           appendCursor.current = offset + page.channels.length;
           setChannels(page.channels);
           setTotal(page.total);
+          if (!collection && !category && !query.trim()) setAllTotal(page.total);
           setSelected(target);
           if (!responsive && page.channels.length > 0) {
             setTimeout(() => {
@@ -313,12 +331,16 @@ export function useGuideController({ api, onPlay, onError, onDetails, responsive
     closeSearchEntry();
   };
 
+  const filterIndex = (filter: GuideFilter | undefined) =>
+    Math.max(0, filterItems.findIndex((item) => item.id === filter?.id));
+
   const key = (event: React.KeyboardEvent) => {
     const target = event.target as HTMLElement;
     const id = target.dataset.focusId ?? "";
     if (!id.startsWith("guide-") && !id.startsWith("live-filter-")) return;
     const channelMatch = /^guide-channel-(\d+)$/.exec(id);
     const programMatch = /^guide-program-(\d+)-(\d+)$/.exec(id);
+    const chip = id === "guide-search" || id.startsWith("live-filter-");
 
     if (event.key === "MediaPlay" || event.key === "MediaPlayPause") {
       const row = Number((channelMatch ?? programMatch)?.[1]);
@@ -351,6 +373,13 @@ export function useGuideController({ api, onPlay, onError, onDetails, responsive
       moveWindow(direction, row, windowStart + direction * HOUR_SECONDS);
       return;
     }
+    // The chip row sits above the grid: Down enters the guide on the selected channel.
+    if (chip && event.key === "ArrowDown" && channels.length) {
+      event.preventDefault();
+      event.stopPropagation();
+      focusElement(`guide-channel-${selected}`);
+      return;
+    }
     if (
       (channelMatch || programMatch) &&
       event.key === "ArrowUp" &&
@@ -381,7 +410,12 @@ export function useGuideController({ api, onPlay, onError, onDetails, responsive
       event.stopPropagation();
       const row = Number((channelMatch ?? programMatch)?.[1]);
       const nextRow = row + (event.key === "ArrowUp" ? -1 : 1);
-      if (nextRow < 0 || nextRow >= channels.length) return;
+      // Up from the first channel returns to the active filter chip.
+      if (nextRow < 0) {
+        focusElement(`live-filter-${filterIndex(activeFilter)}`);
+        return;
+      }
+      if (nextRow >= channels.length) return;
       const anchor = programMatch
         ? (cellsByRow.current.get(row)?.[Number(programMatch[2])]?.start ?? now)
         : now;
@@ -389,22 +423,6 @@ export function useGuideController({ api, onPlay, onError, onDetails, responsive
       if (programMatch)
         focusAfterTimeline.current = { row: nextRow, at: anchor };
       else setTimeout(() => focusElement(`guide-channel-${nextRow}`), 0);
-      return;
-    }
-    if (
-      id.startsWith("live-filter-") &&
-      event.key === "ArrowRight" &&
-      channels.length
-    ) {
-      event.preventDefault();
-      event.stopPropagation();
-      focusElement(`guide-channel-${selected}`);
-      return;
-    }
-    if (event.key === "ArrowLeft" && channelMatch) {
-      event.preventDefault();
-      event.stopPropagation();
-      focusElement("live-filter-0");
       return;
     }
     if (
@@ -425,7 +443,8 @@ export function useGuideController({ api, onPlay, onError, onDetails, responsive
         focusElement(`guide-program-${row}-${index - 1}`);
         return;
       }
-      if (!moveWindow(-1, row, windowStart - 1)) focusElement("live-filter-0");
+      // At the earliest edge Left leaves the timeline for the channel column.
+      if (!moveWindow(-1, row, windowStart - 1)) focusElement(`guide-channel-${row}`);
       return;
     }
     if (index + 1 < cells.length) {
@@ -442,45 +461,90 @@ export function useGuideController({ api, onPlay, onError, onDetails, responsive
     );
   };
 
-  const activateCell = (channel: MediaItem, cell: GuideCell) => {
-    if (cell.start > now) onDetails(channel, cell.program);
+  /*
+   * Programme details (Guide-owned dialog). Opening remembers the control that
+   * asked for it; closing returns focus there. While open, BACK / Esc close it
+   * wherever focus is (a capture listener ahead of RemoteRoot's Back).
+   */
+  const openDetails = (channel: MediaItem, program?: GuideProgram, block?: string) => {
+    const active = document.activeElement as HTMLElement | null;
+    detailsReturn.current = { element: active, id: active?.dataset.focusId ?? "" };
+    setDetails({ channel, program, block });
+  };
+  const closeDetails = () => {
+    setDetails(undefined);
+    const { element, id } = detailsReturn.current;
+    detailsReturn.current = { element: null, id: "" };
+    setTimeout(() => {
+      if (element?.isConnected) element.focus({ preventScroll: true });
+      else if (id) focusElement(id);
+    }, 0);
+  };
+  const watchDetails = () => {
+    const channel = details?.channel;
+    setDetails(undefined);
+    detailsReturn.current = { element: null, id: "" };
+    if (channel) onPlay(channel);
+  };
+  useEffect(() => {
+    if (!details) return;
+    const back = (event: KeyboardEvent) => {
+      if (
+        !["Escape", "BrowserBack", "GoBack"].includes(event.key) &&
+        event.keyCode !== 10009 &&
+        event.keyCode !== 461
+      )
+        return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      closeDetails();
+    };
+    window.addEventListener("keydown", back, true);
+    return () => window.removeEventListener("keydown", back, true);
+  }, [details]);
+
+  /** OK on a programme: upcoming opens its details, airing (or a gap) watches the channel. */
+  const activateCell = (channel: MediaItem, cell: GuideCell, block?: string) => {
+    if (cell.start > now) openDetails(channel, cell.program, block);
     else onPlay(channel);
   };
 
   const selectedGuide = channels[selected]
     ? guides[channels[selected].id]
     : undefined;
-  let guideTimezone: string | undefined;
-  if (responsive && selectedGuide?.timezone) {
-    try { new Intl.DateTimeFormat([], { timeZone: selectedGuide.timezone }); guideTimezone = selectedGuide.timezone; } catch { /* Unknown server zones use browser-local labels consistently. */ }
-  }
-  const formatTime = (time: number) =>
-    new Date(time * 1000).toLocaleTimeString([], {
-      hour: "numeric", minute: "2-digit", timeZone: guideTimezone,
-    });
-  const selectFilter = (filter: ReturnType<typeof filterOptions>[number]) => {
+  // The responsive guide labels times in the schedule's zone; the TV keeps
+  // the device clock (the panel is set to local time).
+  const guideTimezone = responsive ? guideZone(selectedGuide?.timezone) : undefined;
+  /** "10:30 AM" */
+  const formatTime = (time: number) => clockTime(time, guideTimezone);
+  /** "10:30" (blocks, "Next 11:00") */
+  const formatShort = (time: number) => clockTime(time, guideTimezone, false);
+  /** "10:30 – 12:00", or "10:30 – 12:00 PM" with `period`. */
+  const formatRange = (start: number, end: number, period = false) => timeRange(start, end, guideTimezone, period);
+  const selectFilter = (filter: GuideFilter) => {
     focusAfterLoad.current = 0;
     setCollection(filter.collection);
     setCategory(filter.category);
     setOffset(0);
   };
+  const submitQuery = (value: string) => {
+    focusAfterLoad.current = 0;
+    setOffset(0);
+    setQuery(value.slice(0, 128));
+  };
   const activeFilter = filterItems.find(filter => filter.collection === collection && filter.category === category) ?? filterItems[0];
   return {
-    activateCell, appendChannels, appendCursor, appendPending,
-    appendScope, appending, cache, categories,
-    category, cellsByRow, channels, closeSearchEntry,
-    collection, failedLogos, filterItems, focusAfterLoad,
-    focusAfterTimeline, following, formatTime, guides,
-    key, loadGeneration, loading, moveWindow,
-    now, offset, pageChannels, query,
-    restoreNow, routePage, rowWindow, scrollViewport,
+    activateCell, allTotal, appendChannels, appending,
+    channels, closeDetails, closeSearchEntry, details,
+    failedLogos, filterItems, following, formatRange,
+    formatShort, formatTime, guides, key,
+    loading, moveWindow, now, offset,
+    openDetails, query, restoreNow, scrollViewport,
     searchEntry, searchEntryKey, selectFilter, selected,
-    selectedGuide, selectedProgram, setAppending, setCategories,
-    setCategory, setChannels, setCollection, setFailedLogos,
-    setFollowing, setGuides, setLoading, setNow,
-    setOffset, setQuery, setSearchEntry, setSelected,
-    setSelectedProgram, setTotal, setWindowStart, total,
-    visibleCells, visibleChannels, visibleFirst, windowStart,
-    activeFilter, guideTimezone
+    selectedGuide, selectedProgram, setFailedLogos, setFollowing,
+    setSearchEntry, setSelected, setSelectedProgram, submitQuery,
+    total, visibleCells, visibleChannels, visibleFirst,
+    watchDetails, windowStart, activeFilter, guideTimezone,
+    pageChannels, focusAfterLoad, setQuery, setOffset,
   };
 }
