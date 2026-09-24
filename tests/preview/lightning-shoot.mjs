@@ -12,7 +12,8 @@ const viaPlay = process.argv.includes('--via-play');
 const searchFailure = process.argv.includes('--search-fail');
 const emptySearch = process.argv.includes('--empty-search');
 const platform = process.argv.find(arg => arg.startsWith('--platform='))?.slice('--platform='.length) ?? 'tizen';
-if (!['TvPairing', 'TvPairingLoading', 'TvPairingExpired', 'TvProfiles', 'TvProfilesManage', 'TvManageCue', 'TvHome', 'TvMenu', 'TvDiscover', 'TvDiscoverFilter', 'TvLibrary', 'TvItemMenu', 'TvSearch', 'TvLive', 'TvLiveDetails', 'TvLiveSearch', 'TvTitle', 'TvSources', 'TvSourceProvider', 'TvSourceDetails', 'TvPlayer', 'TvPlayerSeek', 'TvPlayerSubs'].includes(name)) {
+const settingsNames = ['TvSettings', 'TvPlayback', 'TvPlaybackChoice', 'TvAddons', 'TvAddonManage', 'TvAddonRemove', 'TvSignOut'];
+if (!['TvPairing', 'TvPairingLoading', 'TvPairingExpired', 'TvProfiles', 'TvProfilesManage', 'TvManageCue', 'TvHome', 'TvMenu', 'TvDiscover', 'TvDiscoverFilter', 'TvLibrary', 'TvItemMenu', 'TvSearch', 'TvLive', 'TvLiveDetails', 'TvLiveSearch', ...settingsNames, 'TvTitle', 'TvSources', 'TvSourceProvider', 'TvSourceDetails', 'TvPlayer', 'TvPlayerSeek', 'TvPlayerSubs'].includes(name)) {
   console.error('Usage: node tests/preview/lightning-shoot.mjs [TvPairing|TvPairingLoading|TvPairingExpired|TvProfiles|TvProfilesManage|TvManageCue|TvHome|TvMenu|TvDiscover|TvDiscoverFilter|TvLibrary|TvItemMenu|TvSearch|TvLive|TvLiveDetails|TvLiveSearch|TvTitle|TvSources|TvSourceProvider|TvSourceDetails|TvPlayer|TvPlayerSeek|TvPlayerSubs] [--platform=tizen|vizio|webos]');
   process.exit(2);
 }
@@ -29,14 +30,78 @@ try {
   page.on('pageerror', error => errors.push(error.stack ?? error.message));
   page.on('console', message => { if (message.type() === 'error') errors.push(message.text()); else logs.push(message.text()); });
   const profiles = name.startsWith('TvProfiles') || name === 'TvManageCue';
-  const backend = await installBackend(page, { family: 'tv', session: name === 'TvHome' || name === 'TvMenu' || name === 'TvDiscover' || name === 'TvDiscoverFilter' || name === 'TvLibrary' || name === 'TvItemMenu' || name === 'TvSearch' || name === 'TvLive' || name === 'TvLiveDetails' || name === 'TvLiveSearch' || name === 'TvTitle' || name === 'TvSources' || name === 'TvSourceProvider' || name === 'TvSourceDetails' || name === 'TvPlayer' || name === 'TvPlayerSeek' || name === 'TvPlayerSubs' ? 'ready' : profiles ? 'profiles' : 'none', pairing: name === 'TvPairingLoading' ? 'loading' : name === 'TvPairingExpired' ? 'expired' : undefined, favorites: name === 'TvLibrary', searchFail: searchFailure });
+  const backend = await installBackend(page, { family: 'tv', session: settingsNames.includes(name) || name === 'TvHome' || name === 'TvMenu' || name === 'TvDiscover' || name === 'TvDiscoverFilter' || name === 'TvLibrary' || name === 'TvItemMenu' || name === 'TvSearch' || name === 'TvLive' || name === 'TvLiveDetails' || name === 'TvLiveSearch' || name === 'TvTitle' || name === 'TvSources' || name === 'TvSourceProvider' || name === 'TvSourceDetails' || name === 'TvPlayer' || name === 'TvPlayerSeek' || name === 'TvPlayerSubs' ? 'ready' : profiles ? 'profiles' : 'none', pairing: name === 'TvPairingLoading' ? 'loading' : name === 'TvPairingExpired' ? 'expired' : undefined, favorites: name === 'TvLibrary', searchFail: searchFailure });
   if (name === 'TvPlayer' || name === 'TvPlayerSeek' || name === 'TvPlayerSubs' || name === 'TvLibrary' || name === 'TvItemMenu') await installMediaStubs(page, { frame: '63e024', paused: name === 'TvPlayer' });
   const url = process.env.LIGHTNING_PREVIEW_URL ?? 'http://127.0.0.1:4180/lightning.html';
   await page.goto(`${url}?platform=${platform}&focusdebug=1`);
   await page.locator('canvas').waitFor({ state: 'visible', timeout: 20000 }).catch(async cause => {
     throw new Error(`${cause.message}\nPage: ${await page.locator('body').innerText()}\n${errors.join('\n')}`);
   });
-  await page.waitForTimeout(name === 'TvPairingExpired' ? 2200 : name === 'TvHome' || name === 'TvMenu' || name === 'TvDiscover' || name === 'TvDiscoverFilter' || name === 'TvLibrary' || name === 'TvItemMenu' || name === 'TvSearch' || name === 'TvLive' || name === 'TvLiveDetails' || name === 'TvLiveSearch' || name === 'TvTitle' || name === 'TvSources' || name === 'TvSourceProvider' || name === 'TvSourceDetails' || name === 'TvPlayer' || name === 'TvPlayerSeek' || name === 'TvPlayerSubs' ? 1800 : 900);
+  await page.waitForTimeout(name === 'TvPairingExpired' ? 2200 : settingsNames.includes(name) || name === 'TvHome' || name === 'TvMenu' || name === 'TvDiscover' || name === 'TvDiscoverFilter' || name === 'TvLibrary' || name === 'TvItemMenu' || name === 'TvSearch' || name === 'TvLive' || name === 'TvLiveDetails' || name === 'TvLiveSearch' || name === 'TvTitle' || name === 'TvSources' || name === 'TvSourceProvider' || name === 'TvSourceDetails' || name === 'TvPlayer' || name === 'TvPlayerSeek' || name === 'TvPlayerSubs' ? 1800 : 900);
+  if (settingsNames.includes(name)) {
+    const focused = (view, index) => page.waitForFunction(
+      ({ view, index }) => window.__viptvFocus?.view === view && window.__viptvFocus?.index === index,
+      { view, index }, { timeout: 7000 });
+    await focused('home-action', 0);
+    await page.keyboard.press('ArrowLeft');
+    await focused('rail-item', 2);
+    for (let step = 0; step < 4; step++) {
+      await page.keyboard.press('ArrowDown');
+      await focused('rail-item', step + 3);
+    }
+    await page.keyboard.press('Enter');
+    await focused('settings-row', 0);
+    await page.waitForTimeout(300);
+    if (name === 'TvPlayback' || name === 'TvPlaybackChoice') {
+      await page.keyboard.press('ArrowDown');
+      await focused('settings-row', 1);
+      await page.keyboard.press('Enter');
+      await focused('settings-row', 0);
+      if (name === 'TvPlayback') {
+        for (let step = 0; step < 5; step++) {
+          await page.keyboard.press('ArrowDown');
+          await focused('settings-row', step + 1);
+        }
+      } else {
+        for (let step = 0; step < 3; step++) {
+          await page.keyboard.press('ArrowDown');
+          await focused('settings-row', step + 1);
+        }
+        await page.keyboard.press('Enter');
+        await focused('settings-choice', 1);
+      }
+    } else if (name === 'TvAddons' || name === 'TvAddonManage' || name === 'TvAddonRemove') {
+      for (let step = 0; step < 3; step++) {
+        await page.keyboard.press('ArrowDown');
+        await focused('settings-row', step + 1);
+      }
+      await page.keyboard.press('Enter');
+      await focused('settings-row', 0);
+      const targetAddonRow = name === 'TvAddonRemove' ? 2 : 3;
+      for (let step = 0; step < targetAddonRow; step++) {
+        await page.keyboard.press('ArrowDown');
+        await focused('settings-row', step + 1);
+      }
+      if (name !== 'TvAddons') {
+        await page.keyboard.press('Enter');
+        await focused('settings-choice', 0);
+        if (name === 'TvAddonRemove') {
+          await page.keyboard.press('ArrowDown');
+          await focused('settings-choice', 1);
+          await page.keyboard.press('Enter');
+          await focused('settings-choice', 0);
+        }
+      }
+    } else if (name === 'TvSignOut') {
+      for (let step = 0; step < 5; step++) {
+        await page.keyboard.press('ArrowDown');
+        await focused('settings-row', step + 1);
+      }
+      await page.keyboard.press('Enter');
+      await focused('settings-choice', 1);
+    }
+    await page.waitForTimeout(300);
+  }
   if (name === 'TvLive' || name === 'TvLiveDetails' || name === 'TvLiveSearch') {
     await page.waitForFunction(() => window.__viptvFocus?.view === 'home-action' && window.__viptvFocus?.index === 0, null, { timeout: 5000 });
     await page.keyboard.press('ArrowLeft');
@@ -245,6 +310,55 @@ try {
   mkdirSync(outDir, { recursive: true });
   const file = join(outDir, `${name}.lightning${viaPlay ? '.resume' : ''}${searchFailure ? '.failure' : emptySearch ? '.empty' : ''}${platform === 'tizen' ? '' : `.${platform}`}.png`);
   await page.screenshot({ path: file });
+  if (settingsNames.includes(name)) {
+    const focused = (view, index) => page.waitForFunction(
+      ({ view, index }) => window.__viptvFocus?.view === view && window.__viptvFocus?.index === index,
+      { view, index }, { timeout: 7000 });
+    if (name === 'TvSettings') {
+      await page.keyboard.press('ArrowRight');
+      await focused('settings-profile', 0);
+      await page.keyboard.press('ArrowLeft');
+      await focused('settings-row', 0);
+      await page.keyboard.press('Escape');
+      await focused('home-action', 0);
+    } else if (name === 'TvPlaybackChoice') {
+      await page.keyboard.press('ArrowUp');
+      await focused('settings-choice', 0);
+      await page.keyboard.press('Enter');
+      await focused('settings-row', 3);
+      await page.waitForFunction(() => window.__viptvFocus?.view === 'settings-row', null, { timeout: 5000 });
+      if (!backend.requests.some(request => request.method === 'PUT' && request.path.includes('/preferences')))
+        throw new Error('Playback preference selection did not save through the profile API');
+      await page.keyboard.press('Escape');
+      await focused('settings-row', 1);
+      await page.keyboard.press('Escape');
+      await focused('home-action', 0);
+    } else if (name === 'TvSignOut') {
+      await page.keyboard.press('Escape');
+      await focused('settings-row', 5);
+      if (backend.requests.some(request => request.path.includes('logout') || request.path.includes('signout')))
+        throw new Error('Cancel revoked the TV session');
+    } else if (name === 'TvAddons') {
+      await page.keyboard.press('Escape');
+      await focused('settings-row', 3);
+      await page.keyboard.press('Escape');
+      await focused('home-action', 0);
+    } else if (name === 'TvAddonManage') {
+      await page.keyboard.press('Enter');
+      await focused('settings-row', 3);
+      if (!backend.requests.some(request => request.path.includes('/api/addons/') && request.method !== 'GET'))
+        throw new Error('Addon enable action did not reach the addon API');
+    } else if (name === 'TvAddonRemove') {
+      await page.keyboard.press('Escape');
+      await focused('settings-choice', 0);
+      await page.keyboard.press('Escape');
+      await focused('settings-row', 2).catch(async cause => {
+        throw new Error(`${cause.message}; focus ${JSON.stringify(await page.evaluate(() => window.__viptvFocus))}; errors ${JSON.stringify(errors)}`);
+      });
+      if (backend.requests.some(request => request.method === 'DELETE' && request.path.includes('/api/addons/')))
+        throw new Error('Cancelled addon removal called DELETE');
+    }
+  }
   if (name === 'TvLive') {
     const focused = (view, index) => page.waitForFunction(
       ({ view, index }) => window.__viptvFocus?.view === view && window.__viptvFocus?.index === index,
@@ -640,7 +754,7 @@ try {
     await focused('home-action', 0);
   }
   const pairingRequests = () => backend.requests.filter(request => request.path === '/api/auth/device/code').length;
-  if (pairingRequests() !== (profiles || name === 'TvHome' || name === 'TvMenu' || name === 'TvDiscover' || name === 'TvDiscoverFilter' || name === 'TvLibrary' || name === 'TvItemMenu' || name === 'TvSearch' || name === 'TvLive' || name === 'TvLiveDetails' || name === 'TvLiveSearch' || name === 'TvTitle' || name === 'TvSources' || name === 'TvSourceProvider' || name === 'TvSourceDetails' || name === 'TvPlayer' || name === 'TvPlayerSeek' || name === 'TvPlayerSubs' ? 0 : 1)) throw new Error(`Unexpected device-pairing request count ${pairingRequests()}`);
+  if (pairingRequests() !== (profiles || settingsNames.includes(name) || name === 'TvHome' || name === 'TvMenu' || name === 'TvDiscover' || name === 'TvDiscoverFilter' || name === 'TvLibrary' || name === 'TvItemMenu' || name === 'TvSearch' || name === 'TvLive' || name === 'TvLiveDetails' || name === 'TvLiveSearch' || name === 'TvTitle' || name === 'TvSources' || name === 'TvSourceProvider' || name === 'TvSourceDetails' || name === 'TvPlayer' || name === 'TvPlayerSeek' || name === 'TvPlayerSubs' ? 0 : 1)) throw new Error(`Unexpected device-pairing request count ${pairingRequests()}`);
   if (name === 'TvHome' && !backend.requests.some(request => request.path.endsWith('/continue/page')))
     throw new Error(`Home did not request profile data: ${JSON.stringify(backend.requests)}`);
   if (name === 'TvHome') {

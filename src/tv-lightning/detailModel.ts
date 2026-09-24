@@ -77,7 +77,7 @@ export async function loadDetailView(
     item: selected,
     target,
     title: selected.name,
-    titleLogo: present.titleLogo ?? "",
+    titleLogo: artworkUrl(present.titleLogo ?? undefined, 310, 90, false, true) ?? present.titleLogo ?? "",
     heroImage: artworkUrl(art ?? undefined, 1280, 720, true) ?? art ?? "",
     facts,
     synopsis: selected.description ?? "",
@@ -90,7 +90,7 @@ export async function loadDetailView(
       const still = presentation(episode).episodeImage ?? episode.background ?? episode.poster;
       return {
         item: episode,
-        image: artworkUrl(still ?? undefined, 544, 300) ?? still ?? "",
+        image: artworkUrl(still ?? undefined, 360, 200) ?? still ?? "",
         number: `EPISODE ${episode.episode ?? index + 1}`,
         title: episode.episodeTitle ?? episode.name,
         synopsis: episode.description ?? "",

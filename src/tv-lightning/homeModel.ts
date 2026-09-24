@@ -72,7 +72,7 @@ export function projectHome(heroItem: MediaItem | undefined, queue: readonly Med
     queueItems: queue,
     favoriteItems: favorites,
     heroImage: artworkUrl(hero.heroImage ?? undefined, 1280, 720, true) ?? hero.heroImage ?? "",
-    titleLogo: hero.titleLogo ?? "",
+    titleLogo: artworkUrl(hero.titleLogo ?? undefined, 410, 118, false, true) ?? hero.titleLogo ?? "",
     title: item.name || hero.title,
     eyebrow: eyebrow.toUpperCase(),
     episodeLabel: hero.episodeLabel,
@@ -89,18 +89,18 @@ export function projectHome(heroItem: MediaItem | undefined, queue: readonly Med
 }
 
 export async function loadHomeView(api: TvApi, profileId: string, signal: AbortSignal): Promise<HomeView> {
-  const [home, catalogs] = await Promise.all([
-    api.home(profileId, { signal }),
-    api.catalogs().catch(() => []),
-  ]);
+  const home = await api.home(profileId, { signal });
+  // Continue Watching already determines both hero and first shelf. Do not
+  // hold the first interactive Home frame on unrelated catalog/live requests.
+  if (home.continueWatching[0])
+    return projectHome(home.continueWatching[0], home.continueWatching, undefined, home.myList);
+  const live = await api.live({ view: "us", collection: "recent", limit: 20 }, { signal }).catch(() => ({ channels: [] as readonly MediaItem[] }));
+  if (live.channels[0]) return projectHome(live.channels[0], home.continueWatching, undefined, home.myList);
+  const catalogs = await api.catalogs({ signal }).catch(() => []);
   const first = firstHomeCatalog(catalogs);
   const request = first && browseRequest(first);
-  const [page, live] = await Promise.all([
-    request ? api.discover(request, { signal }).catch(() => ({ items: [] as readonly MediaItem[] })) : undefined,
-    api.live({ view: "us", collection: "recent", limit: 20 }).catch(() => ({ channels: [] as readonly MediaItem[] })),
-  ]);
-  const heroItem = home.continueWatching[0] ?? live.channels[0] ?? page?.items[0] ?? home.myList[0];
-  return projectHome(heroItem, home.continueWatching, undefined, home.myList);
+  const page = request ? await api.discover(request, { signal }).catch(() => ({ items: [] as readonly MediaItem[] })) : undefined;
+  return projectHome(page?.items[0] ?? home.myList[0], home.continueWatching, undefined, home.myList);
 }
 
 export async function enrichHomeHero(api: TvApi, view: HomeView, signal: AbortSignal): Promise<HomeView> {

@@ -1,6 +1,7 @@
 import Blits from "@lightningjs/blits";
 import QRCode from "qrcode";
-import type { TvApi, DevicePairing, TvProfile, MediaItem, MediaSource, Catalog, Guide, LiveCategory } from "../api";
+import type { TvApi, DevicePairing, TvProfile, MediaItem, MediaSource, Catalog, Guide, LiveCategory, JsonObject, PlaybackPreferences } from "../api";
+import packageInfo from "../../package.json";
 import { tokens } from "../theme/viptv-tokens.generated";
 import { ProfileTile, ManageProfilesButton, addProfileTile, emptyProfileTile, profileTileData } from "./ProfileTile";
 import { emptyHome, enrichHomeHero, loadHomeView, queueHomeCards, type HomeView } from "./homeModel";
@@ -18,6 +19,9 @@ import { LiveScreen } from "./LiveScreen";
 import { LiveSearchScreen } from "./LiveSearchScreen";
 import { liveSearchKeys } from "./liveSearchModel";
 import { LiveDetailsScreen } from "./LiveDetailsScreen";
+import { SettingsScreen, type SettingsScreenView, type SettingsPanelView } from "./SettingsScreen";
+import type { SettingsDialogView } from "./SettingsDialogScreen";
+import { defaultSettingsPreferences, emptySettingsChoice, emptySettingsProfile, emptySettingsRow, settingsChoices, settingsProfiles, settingsRows, type SettingsChoiceView, type SettingsPage, type SettingsRowView } from "./settingsModel";
 import { emptyLiveHero, liveFilters, projectLiveGuide, type LiveChannelView, type LiveFilterView, type LiveHeroView, type LiveProgramView } from "./liveModel";
 import { DAY_SECONDS, HOUR_SECONDS, PAGE_SIZE, WINDOW_SECONDS, guideZone, halfHour, timeRange } from "../ui/guide-core";
 import { cardPresentation } from "../core/presentations";
@@ -33,7 +37,7 @@ import { TitleAction, EpisodeTile } from "./TitleFocus";
 import { emptySources, emptySourceRow, projectSources, type SourcesView } from "./sourceModel";
 import { SourceChip, SourceProvider, SourceRow, ProviderOption, SourceDetailsClose, emptySourceChip, emptyProviderChoice } from "./SourceFocus";
 import { noteDiscoverFilter, noteDiscoverWindow, noteFocus, noteLibraryState, noteLiveState, notePlayerState, noteSearchState, noteSourceFilter, noteSourceIntent, noteSourceWindow, noteTitleMenu, noteTrackPanel, noteTrackSelection } from "./focusDebug";
-import { createLightningPlaybackRuntime, type LightningPlaybackRuntime } from "./playbackRuntime";
+import type { LightningPlaybackRuntime } from "./playbackRuntime";
 import { PlayerControl, PlayerTimeline, PlayerTrackOption } from "./PlayerFocus";
 import type { PlayerSnapshot } from "@viptv/video";
 import { emptyTrackChoice, trackChoicesFor, type TrackChoiceView } from "./trackModel";
@@ -155,6 +159,10 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
   let liveFocusGeneration = 0;
   let liveSearchCanonicalQuery = "";
   let liveSearchPhysicalListener: ((event: KeyboardEvent) => void) | null = null;
+  let settingsCanonicalRows: SettingsRowView[] = [];
+  let settingsCanonicalChoices: SettingsChoiceView[] = [];
+  let settingsGeneration = 0;
+  let settingsScope: ReturnType<TvApi["createScope"]> | undefined;
   let sourceGeneration = 0;
   let sourceScope: ReturnType<TvApi["createScope"]> | undefined;
   let sourceTimer: ReturnType<typeof setTimeout> | undefined;
@@ -164,7 +172,7 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
   let chromeTimer: ReturnType<typeof setTimeout> | undefined;
   let disposeSession: (() => void) | undefined;
   return Blits.Application({
-    components: { ProfileTile, ManageProfilesButton, HomeAction, HomeCard, RailItem, DiscoverScreen, LibraryScreen, SearchScreen, LiveScreen, LiveSearchScreen, LiveDetailsScreen, TitleMenuScreen, DiscoverFilterOption, TitleAction, EpisodeTile, SourceChip, SourceProvider, SourceRow, ProviderOption, SourceDetailsClose, PlayerControl, PlayerTimeline, PlayerTrackOption },
+    components: { ProfileTile, ManageProfilesButton, HomeAction, HomeCard, RailItem, DiscoverScreen, LibraryScreen, SearchScreen, LiveScreen, LiveSearchScreen, LiveDetailsScreen, SettingsScreen, TitleMenuScreen, DiscoverFilterOption, TitleAction, EpisodeTile, SourceChip, SourceProvider, SourceRow, ProviderOption, SourceDetailsClose, PlayerControl, PlayerTimeline, PlayerTrackOption },
     template: `
       <Element w="1920" h="1080" :color="$phase === 'player' || $phase === 'playerTracks' || $phase === 'preparing' ? 'rgba(0,0,0,0)' : $background">
         <Element x="260" y="86" w="1400" h="800" src="$pairingGlow" :show="$phase === 'pairing' || $phase === 'expired' || $phase === 'error'" />
@@ -266,10 +274,10 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
           :surface="$surface" :background="$background" :primary="$primary" :body="$body" :keyBorder="$keyBorder" :heading="$searchHeading" :query="$searchQuery" :placeholder="$searchPlaceholder" :caretX="$searchCaretX"
           :keys="$searchKeys" :headings="$searchHeadings" :cards="$searchCards" :status="$searchStatus" :okLabel="$searchOkLabel" :typeLabel="$searchTypeLabel" :jumpIcon="$searchJumpIcon" :jumpLabel="$searchJumpLabel" :backLabel="$searchBackLabel" :deleteLabel="$searchDeleteLabel" />
         <LiveScreen ref="liveScreen" :show="($phase === 'live' && $liveSearchOpen === false) || ($sourceReturnOrigin === 'live' && ($phase === 'sources' || $phase === 'provider' || $phase === 'sourceDetails'))"
-          :homeProfileAvatar="$homeProfileAvatar" :railSearch="$railSearch" :railHomeUnselected="$railHomeUnselected" :railDiscover="$railDiscover" :railLiveSelected="$railLiveSelected" :railList="$railList" :railSettings="$railSettings"
-          :surface="$surface" :background="$background" :primary="$primary" :body="$body" :keyBorder="$keyBorder" :hero="$liveHero" :filters="$liveFilters" :channels="$liveRows" :programs="$livePrograms" :timeline="$liveTimeline"
-          :nowX="$liveNowX" :nowLabel="$liveNowLabel" :status="$liveStatus" :liveLabel="$liveLabel" :previewLabel="$livePreviewLabel" :okLabel="$liveOkLabel" :watchLabel="$liveWatchLabel" :optionsIcon="$liveOptionsIcon" :detailsLabel="$liveDetailsLabel" :channelIcon="$liveChannelIcon" :channelsLabel="$liveChannelsLabel" :timeIcon="$liveTimeIcon" :timeLabel="$liveTimeLabel" />
+          :chrome="$liveChrome" :hero="$liveHero" :filters="$liveFilters" :channels="$liveRows" :programs="$livePrograms" :timeline="$liveTimeline"
+          :nowX="$liveNowX" :nowLabel="$liveNowLabel" :status="$liveStatus" />
         <LiveSearchScreen ref="liveSearchScreen" :show="$liveSearchOpen" :view="$liveSearchView" />
+        <SettingsScreen ref="settingsScreen" :show="$phase === 'settings'" :view="$settingsView" :panel="$settingsPanel" :dialogOpen="$settingsDialogOpen" :dialog="$settingsDialogView" />
         <Element :show="$phase === 'detail' || ($sourceReturnOrigin === 'detail' && ($phase === 'sources' || $phase === 'provider' || $phase === 'sourceDetails'))">
           <Element x="1120" y="0" w="800" h="720" :src="$detail.heroImage" :show="$detail.heroImage !== ''" alpha="0.75" />
           <Element w="1920" h="1080" src="$homeScrim" />
@@ -520,11 +528,11 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
         homeCardIndex: 0,
         railExpanded: false,
         railFocusIndex: 2,
-        railReturnZone: "action" as "action" | "card" | "chip" | "segment" | "result" | "key" | "channel" | "program" | "filter" | "episode",
+        railReturnZone: "action" as "action" | "card" | "chip" | "segment" | "result" | "key" | "channel" | "program" | "filter" | "episode" | "row" | "profile",
         railReturnIndex: 0,
         railProfileName: "",
         railNotice: "",
-        railCurrent: "home" as "home" | "discover" | "library" | "search" | "live",
+        railCurrent: "home" as "home" | "discover" | "library" | "search" | "live" | "settings",
         menuScrim: tokens["color.scrim.tv-menu"],
         menuGradient: menuGradient(),
         discoverHeading: "",
@@ -628,6 +636,16 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
         liveNowX: -1,
         liveNowLabel: "",
         liveStatus: "",
+        liveChrome: {
+          homeProfileAvatar: "", railSearch: railIcon("search"), railHomeUnselected: railIcon("home"),
+          railDiscover: railIcon("discover"), railLiveSelected: railIcon("live", true),
+          railList: railIcon("list"), railSettings: railIcon("settings"),
+          surface: tokens["color.surface.2"], background: tokens["color.bg"],
+          primary: tokens["color.text.primary"], body: tokens["color.text.body"],
+          keyBorder: tokens["color.line.outline"], liveLabel: "LIVE", previewLabel: "Live preview",
+          okLabel: "OK", watchLabel: "Watch", optionsIcon: "≡", detailsLabel: "Details",
+          channelIcon: "▲ ▼", channelsLabel: "Channels", timeIcon: "◀ ▶", timeLabel: "Time",
+        },
         liveSearchOpen: false,
         liveSearchUppercase: false,
         liveSearchKeyIndex: 0,
@@ -646,6 +664,29 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
         liveReturnZone: "action" as "action" | "card" | "chip" | "segment" | "key" | "result",
         liveReturnIndex: 0,
         liveDetailsOpen: false,
+        settingsPage: "Settings" as SettingsPage,
+        settingsSelectedIndex: 0,
+        settingsFocusZone: "row" as "row" | "profile",
+        settingsProfileIndex: 0,
+        settingsRowsCount: 6,
+        settingsPrefs: defaultSettingsPreferences as PlaybackPreferences,
+        settingsAddons: [] as JsonObject[],
+        settingsView: {
+          page: "", rows: Array.from({ length: 6 }, () => ({ ...emptySettingsRow })),
+          profiles: Array.from({ length: 4 }, () => ({ ...emptySettingsProfile })),
+          showProfiles: false, avatar: "", railSearch: "", railHome: "", railDiscover: "",
+          railLive: "", railList: "", railSettings: "", version: "",
+        } as SettingsScreenView,
+        settingsPanel: { title: "", description: "", caption: "" } as SettingsPanelView,
+        settingsDialogOpen: false,
+        settingsDialogKind: "choice" as "choice" | "signout" | "addonManage" | "addonRemove",
+        settingsDialogKey: "quality" as keyof PlaybackPreferences,
+        settingsDialogAddon: null as JsonObject | null,
+        settingsChoiceIndex: 0,
+        settingsDialogView: { title: "", choices: Array.from({ length: 8 }, () => ({ ...emptySettingsChoice })), start: 0, signout: false } as SettingsDialogView,
+        settingsReturnPhase: "home" as "home" | "discover" | "library" | "search" | "live",
+        settingsReturnZone: "action" as "action" | "card" | "chip" | "segment" | "key" | "result" | "filter" | "channel" | "program",
+        settingsReturnIndex: 0,
         liveDetailsTitle: "",
         liveDetailsChannel: "",
         liveDetailsRange: "",
@@ -704,7 +745,7 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
         danger: tokens["color.status.danger-tv"],
         codeSize: pairCodeSize,
         codeLetterSpacing: pairCodeSize * 0.08,
-        phase: "starting" as "starting" | "pairing" | "expired" | "error" | "profiles" | "ready" | "home" | "discover" | "library" | "search" | "live" | "detail" | "sources" | "provider" | "sourceDetails" | "preparing" | "player" | "playerTracks",
+        phase: "starting" as "starting" | "pairing" | "expired" | "error" | "profiles" | "ready" | "home" | "discover" | "library" | "search" | "live" | "settings" | "detail" | "sources" | "provider" | "sourceDetails" | "preparing" | "player" | "playerTracks",
         address: "Connecting…",
         code: "••••••",
         qr: "",
@@ -735,7 +776,9 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
     },
     hooks: {
       ready() {
+        if (new URLSearchParams(location.search).has("perfdebug")) performance.mark("viptv:app-ready");
         const session = api.createSessionDriver((view) => {
+          if (new URLSearchParams(location.search).has("perfdebug")) performance.mark(`viptv:session-${view.phase}`);
           if (view.identity) this.profiles = [...view.identity.profiles];
           if (view.phase === "Pairing") void this.beginPairing();
           else if (view.phase === "Profiles") {
@@ -880,6 +923,26 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
         this.$listen("live-details-move", (delta: number) => this.focusLiveDetailsOption(Math.max(0, Math.min(1, this.liveDetailsOptionIndex + Number(delta)))));
         this.$listen("live-details-activate", () => this.activateLiveDetails());
         this.$listen("live-details-back", () => this.closeLiveDetails());
+        this.$listen("settings-row-focused", (position: number) => {
+          this.settingsSelectedIndex = Number(position);
+          this.settingsFocusZone = "row";
+          this.refreshSettingsPanel();
+        });
+        this.$listen("settings-row-move", (delta: number) => this.moveSettingsRow(Number(delta)));
+        this.$listen("settings-row-left", () => this.openRail());
+        this.$listen("settings-row-right", () => {
+          if (this.settingsPage === "Settings" && this.settingsSelectedIndex === 0) this.focusSettingsProfile(0);
+        });
+        this.$listen("settings-row-activate", () => void this.activateSettingsRow());
+        this.$listen("settings-profile-focused", (position: number) => { this.settingsProfileIndex = Number(position); this.settingsFocusZone = "profile"; });
+        this.$listen("settings-profile-move", (delta: number) => this.moveSettingsProfile(Number(delta)));
+        this.$listen("settings-profile-exit", () => this.focusSettingsRow(0));
+        this.$listen("settings-profile-activate", () => void this.activateSettingsProfile());
+        this.$listen("settings-choice-focused", (position: number) => { this.settingsChoiceIndex = this.settingsDialogView.start + Number(position); });
+        this.$listen("settings-choice-move", (delta: number) => this.moveSettingsChoice(Number(delta)));
+        this.$listen("settings-choice-activate", () => void this.activateSettingsChoice());
+        this.$listen("settings-dialog-back", () => this.closeSettingsDialog());
+        this.$listen("settings-back", () => this.backFromSettings());
         this.$listen("title-menu-focused", (position: number) => { this.titleMenuFocusIndex = Number(position); });
         this.$listen("title-menu-move", (delta: number) => this.moveTitleMenu(Number(delta)));
         this.$listen("title-menu-activate", () => void this.activateTitleMenu());
@@ -961,6 +1024,7 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
     },
     methods: {
       async loadHome(profileId: string) {
+        if (new URLSearchParams(location.search).has("perfdebug")) performance.mark("viptv:home-start");
         const generation = ++homeGeneration;
         homeScope?.abort();
         homeScope = api.createScope();
@@ -974,8 +1038,10 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
         this.startingLabel = "Starting VIPTV…";
         try {
           const view = await loadHomeView(api, profileId, homeScope.signal);
+          if (new URLSearchParams(location.search).has("perfdebug")) performance.mark("viptv:home-data");
           if (generation !== homeGeneration || homeScope.signal.aborted) return;
           this.phase = "home";
+          if (new URLSearchParams(location.search).has("perfdebug")) performance.mark("viptv:home-phase");
           setTimeout(() => {
             if (generation !== homeGeneration) return;
             this.homeAddLabel = view.saved ? "✓" : "+";
@@ -988,7 +1054,8 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
             this.homeCards = Array.from({ length: 6 }, (_, index) => view.cards[index] ?? { ...emptyHomeCard });
             this.revealHomeControls();
             this.focusHomeAction(0);
-          }, 50);
+            if (new URLSearchParams(location.search).has("perfdebug")) performance.mark("viptv:home-focus-request");
+          }, 16);
           void enrichHomeHero(api, view, homeScope.signal).then(enriched => {
             if (generation === homeGeneration && !homeScope?.signal.aborted) this.home = enriched;
           }).catch(() => { /* Packaged queue metadata remains usable. */ });
@@ -1025,22 +1092,23 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
         this.focusHomeCard(Math.max(0, Math.min(count - 1, this.homeCardIndex + delta)));
       },
       openRail() {
-        if (this.phase !== "home" && this.phase !== "detail" && this.phase !== "discover" && this.phase !== "library" && this.phase !== "search" && this.phase !== "live") return;
+        if (this.phase !== "home" && this.phase !== "detail" && this.phase !== "discover" && this.phase !== "library" && this.phase !== "search" && this.phase !== "live" && this.phase !== "settings") return;
         this.railReturnZone = this.phase === "home" ? this.homeFocusZone
           : this.phase === "discover" ? this.discoverFocusZone
           : this.phase === "library" ? this.libraryFocusZone
           : this.phase === "search" ? this.searchFocusZone === "key" ? "key" : "result"
-          : this.phase === "live" ? this.liveFocusZone : this.detailFocusZone;
+          : this.phase === "live" ? this.liveFocusZone : this.phase === "settings" ? this.settingsFocusZone : this.detailFocusZone;
         this.railReturnIndex = this.phase === "home"
           ? this.homeFocusZone === "card" ? this.homeCardIndex : this.homeActionIndex
           : this.phase === "discover" ? this.discoverFocusZone === "card" ? this.discoverCardIndex : this.discoverChipIndex
           : this.phase === "library" ? this.libraryFocusZone === "card" ? this.libraryCardIndex : this.librarySegmentIndex
           : this.phase === "search" ? this.searchFocusZone === "key" ? this.searchKeyIndex : this.searchResultIndex
           : this.phase === "live" ? this.liveFocusZone === "filter" ? this.liveFilterIndex : this.liveFocusZone === "program" ? this.liveProgramPosition : this.liveSelectedRow
+          : this.phase === "settings" ? this.settingsFocusZone === "profile" ? this.settingsProfileIndex : this.settingsSelectedIndex
           : this.detailFocusZone === "episode" ? this.detailEpisodeIndex : this.detailActionIndex;
         this.railExpanded = true;
         this.railNotice = "";
-        this.focusRail(this.railCurrent === "search" ? 1 : this.railCurrent === "discover" ? 3 : this.railCurrent === "live" ? 4 : this.railCurrent === "library" ? 5 : 2);
+        this.focusRail(this.railCurrent === "search" ? 1 : this.railCurrent === "discover" ? 3 : this.railCurrent === "live" ? 4 : this.railCurrent === "library" ? 5 : this.railCurrent === "settings" ? 6 : 2);
         setTimeout(() => {
           if (!this.railExpanded) return;
           for (let index = 0; index < 7; index++)
@@ -1077,6 +1145,9 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
           if (this.railReturnZone === "filter") this.focusLiveFilter(this.railReturnIndex);
           else if (this.railReturnZone === "program") this.focusLiveProgram(this.railReturnIndex);
           else this.focusLiveChannel(this.railReturnIndex);
+        } else if (this.phase === "settings") {
+          if (this.railReturnZone === "profile") this.focusSettingsProfile(this.railReturnIndex);
+          else this.focusSettingsRow(this.railReturnIndex);
         }
       },
       activateRail() {
@@ -1129,8 +1200,14 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
             this.liveReturnIndex = this.railReturnIndex;
             void this.openLive();
           }
-        } else {
-          this.railNotice = "This screen is not available yet.";
+        } else if (this.railFocusIndex === 6) {
+          if (this.phase === "settings") this.closeRail();
+          else {
+            this.settingsReturnPhase = this.phase === "search" ? "search" : this.phase === "discover" ? "discover" : this.phase === "library" ? "library" : this.phase === "live" ? "live" : "home";
+            this.settingsReturnZone = this.railReturnZone === "result" ? "result" : this.railReturnZone === "key" ? "key" : this.railReturnZone === "filter" ? "filter" : this.railReturnZone === "program" ? "program" : this.railReturnZone === "channel" ? "channel" : this.railReturnZone === "chip" ? "chip" : this.railReturnZone === "segment" ? "segment" : this.railReturnZone === "card" ? "card" : "action";
+            this.settingsReturnIndex = this.railReturnIndex;
+            void this.openSettings();
+          }
         }
       },
       goHomeFromRail() {
@@ -1138,6 +1215,7 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
         libraryScope?.abort(); ++libraryGeneration;
         searchScope?.abort(); ++searchGeneration; clearTimeout(searchTimer);
         liveScope?.abort(); ++liveGeneration; clearInterval(liveClockTimer);
+        settingsScope?.abort(); ++settingsGeneration;
         detailScope?.abort(); ++detailGeneration;
         this.railExpanded = false;
         this.railCurrent = "home";
@@ -1819,6 +1897,8 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
         liveScope?.abort();
         ++liveGeneration;
         clearInterval(liveClockTimer);
+        settingsScope?.abort();
+        ++settingsGeneration;
         this.railExpanded = false;
         this.phase = this.searchReturnPhase;
         this.railCurrent = this.searchReturnPhase;
@@ -1852,6 +1932,7 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
         this.railExpanded = false;
         this.railCurrent = "live";
         this.phase = "live";
+        this.liveChrome = { ...this.liveChrome, homeProfileAvatar: this.homeProfileAvatar };
         this.liveDetailsOpen = false;
         this.liveSearchOpen = false;
         liveSearchCanonicalQuery = "";
@@ -2300,6 +2381,315 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
           }
         }, 0);
       },
+      async openSettings() {
+        const generation = ++settingsGeneration;
+        settingsScope?.abort();
+        const scope = api.createScope();
+        settingsScope = scope;
+        this.railExpanded = false;
+        this.railCurrent = "settings";
+        this.phase = "settings";
+        this.settingsPage = "Settings";
+        this.settingsSelectedIndex = 0;
+        this.settingsFocusZone = "row";
+        this.settingsDialogOpen = false;
+        this.settingsPrefs = defaultSettingsPreferences;
+        this.settingsAddons = [];
+        this.refreshSettingsView();
+        setTimeout(() => {
+          if (this.phase !== "settings" || generation !== settingsGeneration) return;
+          this.refreshSettingsView();
+          this.revealSettingsControls();
+          this.focusSettingsRow(0);
+        }, 70);
+        const [preferences, addons] = await Promise.allSettled([
+          api.preferences(this.currentProfileId, { signal: scope.signal }),
+          api.addons({ signal: scope.signal }),
+        ]);
+        if (generation !== settingsGeneration || scope.signal.aborted || this.phase !== "settings") return;
+        if (preferences.status === "fulfilled") this.settingsPrefs = preferences.value;
+        if (addons.status === "fulfilled") this.settingsAddons = [...addons.value];
+        this.refreshSettingsView();
+      },
+      refreshSettingsView() {
+        settingsCanonicalRows = settingsRows(this.settingsPage, this.settingsPrefs, this.settingsAddons, api.serverOrigin, packageInfo.version);
+        const rows = Array.from({ length: 6 }, (_, index) => settingsCanonicalRows[index] ? { ...settingsCanonicalRows[index] } : { ...emptySettingsRow });
+        const profiles = settingsProfiles(this.profiles, this.currentProfileId);
+        this.settingsRowsCount = Math.min(6, settingsCanonicalRows.length);
+        this.settingsView = {
+          page: this.settingsPage,
+          rows,
+          profiles: Array.from({ length: 4 }, (_, index) => profiles[index] ? { ...profiles[index] } : { ...emptySettingsProfile }),
+          showProfiles: this.settingsPage === "Settings" && this.settingsSelectedIndex === 0,
+          avatar: this.homeProfileAvatar,
+          railSearch: this.railSearch, railHome: this.railHomeUnselected,
+          railDiscover: this.railDiscover, railLive: this.railLive,
+          railList: this.railList, railSettings: railIcon("settings", true),
+          version: `VIPTV ${packageInfo.version}`,
+        };
+        this.refreshSettingsPanel();
+        setTimeout(() => { if (this.phase === "settings") this.revealSettingsControls(); }, 50);
+      },
+      refreshSettingsPanel() {
+        const row = settingsCanonicalRows[this.settingsSelectedIndex];
+        if (!row) return;
+        this.settingsPanel = {
+          title: row.title,
+          description: row.description,
+          caption: this.settingsPage === "Playback preferences"
+            ? "Applies to your next playback. Manual track choices take priority."
+            : this.settingsPage === "Addons"
+              ? "Shared by all profiles and devices on your account." : "",
+        };
+        const showProfiles = this.settingsPage === "Settings" && this.settingsSelectedIndex === 0;
+        if (this.settingsView.showProfiles !== showProfiles)
+          this.settingsView = { ...this.settingsView, showProfiles };
+      },
+      revealSettingsControls() {
+        const screen = this.$select("settingsScreen");
+        (screen as unknown as { reveal?: () => void })?.reveal?.();
+        for (let index = 0; index < this.settingsRowsCount; index++)
+          (screen?.$select(`settingsRow${index}`) as unknown as { reveal?: () => void })?.reveal?.();
+        for (let index = 0; index < Math.min(4, this.profiles.length); index++)
+          (screen?.$select(`settingsProfile${index}`) as unknown as { reveal?: () => void })?.reveal?.();
+      },
+      focusSettingsRow(index: number) {
+        if (!settingsCanonicalRows[index]) return;
+        this.settingsSelectedIndex = index;
+        this.settingsFocusZone = "row";
+        this.refreshSettingsPanel();
+        this.$select("settingsScreen")?.$select(`settingsRow${index}`)?.$focus();
+      },
+      moveSettingsRow(delta: number) {
+        const next = Math.max(0, Math.min(this.settingsRowsCount - 1, this.settingsSelectedIndex + delta));
+        this.focusSettingsRow(next);
+      },
+      focusSettingsProfile(index: number) {
+        if (!this.profiles[index]) return;
+        this.settingsProfileIndex = index;
+        this.settingsFocusZone = "profile";
+        this.$select("settingsScreen")?.$select(`settingsProfile${index}`)?.$focus();
+      },
+      moveSettingsProfile(delta: number) {
+        const next = this.settingsProfileIndex + delta;
+        if (next < 0) this.focusSettingsRow(0);
+        else if (next < Math.min(4, this.profiles.length)) this.focusSettingsProfile(next);
+      },
+      async activateSettingsProfile() {
+        const profile = this.profiles[this.settingsProfileIndex];
+        if (!profile) return;
+        try { await api.selectProfile(profile.id); }
+        catch (cause) {
+          this.settingsPanel = { ...this.settingsPanel, description: cause instanceof Error ? cause.message : "Could not open this profile." };
+        }
+      },
+      async activateSettingsRow() {
+        const row = settingsCanonicalRows[this.settingsSelectedIndex];
+        if (!row) return;
+        if (this.settingsPage === "Settings") {
+          if (row.id === "settings-profiles") { this.showProfiles(this.profiles); return; }
+          if (row.id === "settings-manage") { this.showProfiles(this.profiles); this.toggleManageProfiles(); return; }
+          if (row.id === "settings-playback" || row.id === "settings-addons") {
+            this.settingsPage = row.id === "settings-playback" ? "Playback preferences" : "Addons";
+            this.settingsSelectedIndex = 0;
+            this.refreshSettingsView();
+            setTimeout(() => this.focusSettingsRow(0), 60);
+            return;
+          }
+          if (row.id === "signout") this.openSettingsSignOut();
+          return;
+        }
+        if (this.settingsPage === "Playback preferences") {
+          const choice = settingsChoices(row.id, this.settingsPrefs);
+          if (choice) this.openSettingsChoice(row.title, choice.key, choice.options);
+        } else if (row.id === "addon-add") {
+          this.settingsPanel = { ...this.settingsPanel, description: "Install addon text entry is not available in this preview yet." };
+        } else {
+          const addon = this.settingsAddons[this.settingsSelectedIndex - 1];
+          if (addon) this.openSettingsAddonManage(addon);
+        }
+      },
+      openSettingsAddonManage(addon: JsonObject) {
+        this.settingsDialogAddon = addon;
+        this.settingsDialogKind = "addonManage";
+        settingsCanonicalChoices = [
+          { label: addon.enabled === false ? "Enable" : "Disable", value: "toggle", current: false, visible: true },
+          { label: "Remove addon", value: "remove-addon", current: false, visible: true },
+          { label: "Cancel", value: "__cancel__", current: false, visible: true },
+        ];
+        this.settingsChoiceIndex = 0;
+        this.settingsDialogOpen = true;
+        this.refreshSettingsDialog(`Manage ${String(addon.name ?? "Addon")}`);
+        setTimeout(() => this.focusSettingsChoice(0), 60);
+      },
+      openSettingsAddonRemove() {
+        const addon = this.settingsDialogAddon;
+        if (!addon) return;
+        this.settingsDialogKind = "addonRemove";
+        settingsCanonicalChoices = [
+          { label: "Cancel", value: "__cancel__", current: false, visible: true },
+          { label: "Remove", value: "remove", current: false, visible: true },
+        ];
+        this.settingsChoiceIndex = 0;
+        this.refreshSettingsDialog(`Remove ${String(addon.name ?? "Addon")}?`);
+        setTimeout(() => this.focusSettingsChoice(0), 60);
+      },
+      openSettingsChoice(title: string, key: keyof PlaybackPreferences, choices: SettingsChoiceView[]) {
+        this.settingsDialogKind = "choice";
+        this.settingsDialogKey = key;
+        settingsCanonicalChoices = [...choices, { label: "Cancel", value: "__cancel__", current: false, visible: true }];
+        this.settingsChoiceIndex = Math.max(0, choices.findIndex(choice => choice.current));
+        this.settingsDialogOpen = true;
+        this.refreshSettingsDialog(title);
+        setTimeout(() => this.focusSettingsChoice(this.settingsChoiceIndex), 60);
+      },
+      openSettingsSignOut() {
+        this.settingsDialogKind = "signout";
+        settingsCanonicalChoices = [
+          { label: "Sign out", value: "signout", current: false, visible: true },
+          { label: "Cancel", value: "__cancel__", current: false, visible: true },
+        ];
+        this.settingsChoiceIndex = 1;
+        this.settingsDialogOpen = true;
+        this.refreshSettingsDialog("Sign out of this TV?");
+        setTimeout(() => this.focusSettingsChoice(1), 60);
+      },
+      refreshSettingsDialog(title: string) {
+        const start = Math.max(0, Math.min(this.settingsChoiceIndex - 3, settingsCanonicalChoices.length - 8));
+        this.settingsDialogView = {
+          title,
+          choices: Array.from({ length: 8 }, (_, index) => settingsCanonicalChoices[start + index] ? { ...settingsCanonicalChoices[start + index] } : { ...emptySettingsChoice }),
+          start,
+          signout: this.settingsDialogKind === "signout",
+        };
+        setTimeout(() => {
+          if (!this.settingsDialogOpen) return;
+          (this.$select("settingsScreen")?.$select("settingsDialogScreen") as unknown as { reveal?: () => void })?.reveal?.();
+          for (let index = 0; index < Math.min(8, settingsCanonicalChoices.length - start); index++)
+            (this.$select("settingsScreen")?.$select("settingsDialogScreen")?.$select(`settingsChoice${index}`) as unknown as { reveal?: () => void })?.reveal?.();
+        }, 40);
+      },
+      focusSettingsChoice(index: number) {
+        if (!settingsCanonicalChoices[index]) return;
+        this.settingsChoiceIndex = index;
+        const start = this.settingsDialogView.start;
+        if (index < start || index >= start + 8) {
+          this.refreshSettingsDialog(this.settingsDialogView.title);
+          setTimeout(() => this.$select("settingsScreen")?.$select("settingsDialogScreen")?.$select(`settingsChoice${index - this.settingsDialogView.start}`)?.$focus(), 60);
+        } else this.$select("settingsScreen")?.$select("settingsDialogScreen")?.$select(`settingsChoice${index - start}`)?.$focus();
+      },
+      moveSettingsChoice(delta: number) {
+        this.focusSettingsChoice(Math.max(0, Math.min(settingsCanonicalChoices.length - 1, this.settingsChoiceIndex + delta)));
+      },
+      closeSettingsDialog() {
+        if (!this.settingsDialogOpen) return;
+        if (this.settingsDialogKind === "addonRemove" && this.settingsDialogAddon) {
+          this.openSettingsAddonManage(this.settingsDialogAddon);
+          return;
+        }
+        this.settingsDialogOpen = false;
+        setTimeout(() => { if (this.phase === "settings") this.focusSettingsRow(this.settingsSelectedIndex); }, 40);
+      },
+      async activateSettingsChoice() {
+        const choice = settingsCanonicalChoices[this.settingsChoiceIndex];
+        if (!choice) return;
+        if (this.settingsDialogKind === "addonManage") {
+          if (choice.value === "__cancel__") { this.closeSettingsDialog(); return; }
+          if (choice.value === "remove-addon") { this.openSettingsAddonRemove(); return; }
+          const addon = this.settingsDialogAddon;
+          if (!addon) return;
+          this.settingsDialogOpen = false;
+          try {
+            await api.updateAddon(String(addon.id ?? ""), { enabled: addon.enabled === false });
+            this.settingsAddons = [...await api.addons()];
+            if (this.phase === "settings") { this.refreshSettingsView(); this.focusSettingsRow(this.settingsSelectedIndex); }
+          } catch (cause) {
+            this.settingsPanel = { ...this.settingsPanel, description: cause instanceof Error ? cause.message : "Could not update addon." };
+            this.focusSettingsRow(this.settingsSelectedIndex);
+          }
+          return;
+        }
+        if (this.settingsDialogKind === "addonRemove") {
+          if (choice.value === "__cancel__") { this.closeSettingsDialog(); return; }
+          const addon = this.settingsDialogAddon;
+          if (!addon) return;
+          this.settingsDialogOpen = false;
+          try {
+            await api.deleteAddon(String(addon.id ?? ""));
+            this.settingsAddons = [...await api.addons()];
+            if (this.phase === "settings") {
+              this.settingsSelectedIndex = Math.min(this.settingsSelectedIndex, this.settingsAddons.length);
+              this.refreshSettingsView();
+              this.focusSettingsRow(this.settingsSelectedIndex);
+            }
+          } catch (cause) {
+            this.settingsPanel = { ...this.settingsPanel, description: cause instanceof Error ? cause.message : "Could not remove addon." };
+            this.focusSettingsRow(this.settingsSelectedIndex);
+          }
+          return;
+        }
+        if (choice.value === "__cancel__") { this.closeSettingsDialog(); return; }
+        if (this.settingsDialogKind === "signout") {
+          this.settingsDialogOpen = false;
+          try { await api.signOut(); }
+          catch (cause) {
+            this.settingsPanel = { ...this.settingsPanel, description: cause instanceof Error ? cause.message : "Could not sign out." };
+            this.focusSettingsRow(this.settingsSelectedIndex);
+          }
+          return;
+        }
+        const patch = { [this.settingsDialogKey]: choice.value } as Partial<PlaybackPreferences>;
+        this.closeSettingsDialog();
+        try {
+          this.settingsPrefs = await api.savePreferences(this.currentProfileId, patch);
+          if (this.phase === "settings") this.refreshSettingsView();
+        } catch (cause) {
+          this.settingsPanel = { ...this.settingsPanel, description: cause instanceof Error ? cause.message : "Could not save preference." };
+        }
+      },
+      backFromSettings() {
+        if (this.settingsDialogOpen) { this.closeSettingsDialog(); return; }
+        if (this.settingsFocusZone === "profile") { this.focusSettingsRow(0); return; }
+        if (this.settingsPage !== "Settings") {
+          const restore = this.settingsPage === "Playback preferences" ? 1 : 3;
+          this.settingsPage = "Settings";
+          this.settingsSelectedIndex = restore;
+          this.refreshSettingsView();
+          setTimeout(() => this.focusSettingsRow(restore), 60);
+          return;
+        }
+        this.returnFromSettings();
+      },
+      returnFromSettings() {
+        settingsScope?.abort(); ++settingsGeneration;
+        this.railExpanded = false;
+        this.phase = this.settingsReturnPhase;
+        this.railCurrent = this.settingsReturnPhase;
+        setTimeout(() => {
+          if (this.phase === "discover") {
+            this.revealDiscoverChips(); this.refreshDiscoverCards();
+            if (this.settingsReturnZone === "chip") this.focusDiscoverChip(this.settingsReturnIndex);
+            else this.focusDiscoverCard(this.settingsReturnIndex);
+          } else if (this.phase === "library") {
+            this.revealLibrarySegments(); this.refreshLibraryCards();
+            if (this.settingsReturnZone === "segment") this.focusLibrarySegment(this.settingsReturnIndex);
+            else this.focusLibraryCard(this.settingsReturnIndex);
+          } else if (this.phase === "search") {
+            this.refreshSearchLayout();
+            if (this.settingsReturnZone === "result") this.focusSearchResult(this.settingsReturnIndex);
+            else this.focusSearchKey(this.settingsReturnIndex);
+          } else if (this.phase === "live") {
+            this.refreshLiveView();
+            if (this.settingsReturnZone === "filter") this.focusLiveFilter(this.settingsReturnIndex);
+            else if (this.settingsReturnZone === "program") this.focusLiveProgram(this.settingsReturnIndex);
+            else this.focusLiveChannel(this.settingsReturnIndex);
+          } else {
+            this.revealHomeControls();
+            if (this.settingsReturnZone === "card") this.focusHomeCard(this.settingsReturnIndex);
+            else this.focusHomeAction(this.settingsReturnIndex);
+          }
+        }, 40);
+      },
       openTitleMenu(item: MediaItem, origin: "home" | "library" | "discover" | "search", index: number) {
         const inQueue = [...this.home.queueItems, ...this.libraryQueueItems]
           .some(candidate => candidate.type === item.type && candidate.id === item.id);
@@ -2697,10 +3087,12 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
         noteSourceIntent(item.id, row.source.id, item.position ?? 0, this.sourceResume);
         void this.playSource(item, row.source, item.position ?? 0);
       },
-      ensurePlaybackRuntime() {
+      async ensurePlaybackRuntime() {
         if (playback) return playback;
         const video = document.getElementById("tv-video") as HTMLVideoElement | null;
         if (!video) throw new Error("TV video surface is unavailable.");
+        const { createLightningPlaybackRuntime } = await import("./playbackRuntime");
+        if (playback) return playback;
         playback = createLightningPlaybackRuntime(api, platform, video, snapshot => this.updatePlayerSnapshot(snapshot));
         return playback;
       },
@@ -2724,7 +3116,8 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
         if (platform === "tizen") document.body.style.background = "transparent";
         else layer.style.display = "block";
         try {
-          const runtime = this.ensurePlaybackRuntime();
+          const runtime = await this.ensurePlaybackRuntime();
+          if (generation !== playbackGeneration || this.phase !== "preparing") return;
           const started = await runtime.start(item, source, position);
           if (generation !== playbackGeneration) {
             if (runtime.controller.snapshot.active?.session.id === started.session.id) await runtime.stop();
@@ -3307,6 +3700,7 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
         else if (this.phase === "discover") this.returnFromDiscover();
         else if (this.phase === "library") this.returnFromLibrary();
         else if (this.phase === "search") this.backFromSearch();
+        else if (this.phase === "settings") this.backFromSettings();
         else if (this.phase === "live") {
           if (this.liveSearchOpen) this.closeLiveSearch();
           else this.returnFromLive();

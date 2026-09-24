@@ -2,7 +2,6 @@ import Blits from "@lightningjs/blits";
 import "../theme/viptv-tokens.generated.css";
 import { TvApi, type DeviceTokenSet } from "../api";
 import { initializeCore } from "../core";
-import { createLightningTvApp } from "./App";
 import bricolage700Url from "@fontsource/bricolage-grotesque/files/bricolage-grotesque-latin-700-normal.woff2?url";
 import bricolage800Url from "@fontsource/bricolage-grotesque/files/bricolage-grotesque-latin-800-normal.woff2?url";
 import onestUrl from "@fontsource/onest/files/onest-latin-400-normal.woff2?url";
@@ -32,11 +31,12 @@ const api = new TvApi({
 });
 
 async function start() {
-  await initializeCore();
+  if (new URLSearchParams(location.search).has("perfdebug")) performance.mark("viptv:init-start");
   // Web-font texture creation occurs on the first Lightning render. Loading
   // the fonts first prevents static labels from keeping empty first textures
-  // while later reactive labels appear after the files arrive.
-  await Promise.all([
+  // while later reactive labels appear after the files arrive. Core WASM and
+  // font downloads are independent, so do both before launching the UI.
+  const fontsReady = Promise.all([
     new FontFace("Bricolage700", `url(${bricolage700Url})`).load(),
     new FontFace("Bricolage800", `url(${bricolage800Url})`).load(),
     new FontFace("Onest", `url(${onestUrl})`).load(),
@@ -44,7 +44,9 @@ async function start() {
     new FontFace("Onest600", `url(${onest600Url})`).load(),
     new FontFace("Onest700", `url(${onest700Url})`).load(),
   ]).then(faces => faces.forEach(face => document.fonts.add(face)));
-  Blits.Launch(createLightningTvApp(api, platform), "app", {
+  const [appModule] = await Promise.all([import("./App"), initializeCore(), fontsReady]);
+  if (new URLSearchParams(location.search).has("perfdebug")) performance.mark("viptv:deps-ready");
+  Blits.Launch(appModule.createLightningTvApp(api, platform), "app", {
     w: 1920,
     h: 1080,
     screenResolution: "1080p",
@@ -61,6 +63,7 @@ async function start() {
     defaultFont: "Onest",
     keymap: { 10009: "back", 461: "back", 8: "back", 27: "back", 457: "menu", 93: "menu" },
   });
+  if (new URLSearchParams(location.search).has("perfdebug")) performance.mark("viptv:launch-return");
 }
 start().catch((cause: unknown) => {
   document.getElementById("app")!.textContent = `VIPTV could not start: ${String(cause)}`;

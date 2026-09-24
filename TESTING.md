@@ -1,3 +1,54 @@
+# Lightning TV Settings and performance checkpoint — 2026-09-24
+
+The staged Blits rail now opens Settings. Browser fixtures reached the six root
+rows, the profile tiles, Playback preferences, an API-backed choice/save, the
+account addon list, addon Enable/Disable action, nested Remove confirmation,
+and the sign-out confirmation. Back restores the parent row and then Home;
+cancelling removal or sign-out leaves those resources intact. Settings and
+Playback-choice captures were byte-equal in Tizen, Vizio and webOS browser
+modes. Addon install text entry, confirmed removal, profile editing, and
+parent-PIN sign-out remain unverified or incomplete in Blits; no TV launcher
+was switched.
+
+Matched 1920×1080 React-to-Blits comparisons remain open: `TvSettings`
+172,804 changed pixels (8.3335%, SSIM 0.894380), `TvPlayback` 197,552
+(9.5270%, SSIM 0.834234), `TvPlaybackChoice` 1,148,625 (55.3928%, SSIM
+0.878242), `TvAddons` 177,432 (8.5567%, SSIM 0.852570), and `TvSignOut`
+1,100,764 (53.0847%, SSIM 0.900069). `TvAddonManage` changed 1,030,417
+(49.6922%, SSIM 0.891538) and `TvAddonRemove` 1,029,282 (49.6374%, SSIM
+0.901659). These use the matching React PNG via
+`--reference`; the comparator's default is the pinned design WebP, which is a
+different comparison.
+
+The production-bundle Chromium timing script is
+`node tests/preview/perf-compare.mjs` against a local Vite preview mounted at
+`/tv/` (`npx vite preview --base /tv/ --host 127.0.0.1 --port 4182`). On the
+final bundle, five unthrottled runs with the same mocked Home data reached
+first interactive focus at 201 ms median for React and 388 ms for Blits.
+Five runs at 4× CPU throttle measured 663 ms and 1,238 ms. The
+input-to-focus markers were React DOM `focusin` (0.5 ms median unthrottled)
+and Blits lifecycle focus (21.8 ms), so they do not prove equal visual paint
+stages; the harness explicitly focuses React's first action while Blits
+focuses it automatically. Blits had 25 of 627 sampled frame intervals over 33 ms unthrottled;
+React had 0 of 39, over shorter interactions. These results do **not** establish
+a performance win. Chromium used a SwiftShader software GPU; these are browser
+proxies, not physical-TV measurements. A separate steady-state diagnostic after
+a three-second settle found only 1 of 162 slow frames unthrottled, but about
+20 of 158 at 4× CPU throttle. Hidden route trees in the root Blits template
+remain a likely startup cost and a candidate for further restructuring.
+Playback is now loaded only when a source is chosen, and Home no longer waits
+for unrelated catalog/live fallback requests when Continue Watching supplies
+the hero. Reducing the Home reveal delay to one frame preserved the prior
+Blits `TvHome` capture exactly (0 changed pixels); the browser player fixture
+still reached playback. TV performance remains an open acceptance gate.
+
+The artwork audit confirmed remote card and hero images already use the shared
+wsrv policy. The remaining raw Home/title logos now request wsrv derivatives
+at their rendered dimensions (410×118 and 310×90), and five visible title
+episode stills request 360×200 rather than 544×300 derivatives. Home and title
+fixture screenshots remained unchanged at the pixel level; actual network
+latency and physical-TV decode cost have not been measured.
+
 # Lightning TV Search — 2026-09-24
 
 The staged Blits rail now opens Search. Its 39-key TV keyboard owns D-pad
@@ -74,8 +125,9 @@ captures for Tizen, Vizio and webOS matched byte-for-byte; the `TvMenu` capture
 still differs from the React TV reference by 1,625,803 pixels (78.4049%,
 SSIM 0.930841). The full-frame result includes the previously measured Home
 background deviation. Browser D-pad checks covered menu entry, Discover focus,
-Right/Back restoration and the profile route. Search, Live TV and Settings
-are still pending in Blits. `npm run build`, 169 unit tests
+Right/Back restoration and the profile route. This was the menu-only
+checkpoint; Search, Live TV and Settings were added in later staged commits.
+`npm run build`, 169 unit tests
 and the targeted responsive/TV Playwright suite (24 passed, 10 skipped) pass.
 The public TV launcher remains on React; this is staged browser evidence only.
 
@@ -764,11 +816,13 @@ Watch goes through the staged source picker, which differs from React's direct
 play action. Physical typing preserves the query, but its focused keyboard key
 does not consistently retain the white focus decoration after the text redraw.
 
-Matched 1920×1080 React comparison remains open: `TvLive` changed 2,007,797
-pixels (96.8266%), MAE 4.3532, RMSE 20.8231, SSIM 0.929048;
-`TvLiveDetails` changed 1,146,861 (55.3077%), MAE 2.3857, RMSE 13.3959,
-SSIM 0.954988; `TvLiveSearch` changed 2,073,317 (99.9864%), MAE 3.1263,
-RMSE 21.9524, SSIM 0.586614. These are development measurements, not parity
+Matched 1920×1080 React comparison remains open: `TvLive` changed 561,727
+pixels (27.0895%), MAE 4.3172, RMSE 23.3649, SSIM 0.908843;
+`TvLiveDetails` changed 1,235,755 (59.5947%), MAE 5.0488, RMSE 21.4385,
+SSIM 0.877160; `TvLiveSearch` changed 144,918 (6.9887%), MAE 1.7969,
+RMSE 14.4489, SSIM 0.824780. The previous larger changed-pixel figures used
+the comparator's default design WebP and were incorrectly labelled React.
+These are development measurements, not parity
 acceptance. All three Blits frames were byte-equal across Tizen, Vizio, and
 webOS browser modes. No physical TV run or launcher switch was made.
 
