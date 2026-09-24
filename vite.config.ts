@@ -1,6 +1,8 @@
 import { Agent } from "node:https";
+import { resolve } from "node:path";
 import { defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react";
+import blits from "@lightningjs/blits/vite";
 // Opt-in LAN preview upstream; defaults to the production origin only when
 // explicitly provided, so dev configurations never silently proxy to prod.
 const upstream = process.env.VIPTV_PREVIEW_UPSTREAM ?? "https://viptv.syek.tech";
@@ -26,7 +28,7 @@ const previewProxy = () => ({
   },
 });
 export default defineConfig(({ command }) => ({
-  plugins: [react()],
+  plugins: [react(), ...blits],
   // The player contract resolves from the pinned vendored source, not the
   // generated dist-js of a sibling checkout.
   resolve: { alias: { "@viptv/video": new URL("./vendor/video/src/index.ts", import.meta.url).pathname } },
@@ -34,7 +36,17 @@ export default defineConfig(({ command }) => ({
   // TV entrypoints retain ES2017. BigInt exists only in the lazily imported
   // MediaBunny chunk, gated on a modern WebCodecs runtime before import.
   esbuild: { supported: { bigint: true } },
-  build: { target: "es2017" },
+  build: {
+    target: "es2017",
+    rollupOptions: {
+      // Keep the working React entry for responsive web, desktop and TV while
+      // Lightning screen/interaction parity is qualified on the separate page.
+      input: {
+        app: resolve(import.meta.dirname, "index.html"),
+        lightning: resolve(import.meta.dirname, "lightning.html"),
+      },
+    },
+  },
   // Opt-in LAN preview: browser requests stay on its own origin; upstream TLS
   // remains verified. Production still uses the backend's same-origin mount.
   server: {

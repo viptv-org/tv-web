@@ -476,3 +476,32 @@ Implements LOCAL_MODE.md LM-001–LM-003 (status: proposed): account-free operat
 **Explicitly not implemented in this revision:** local playback (LM-004) — no stream discovery or player wiring exists in local mode, so browse cards are non-interactive; TV spatial-remote focus for the local shell (DOM/keyboard order only); local detail screens. These are recorded gaps, not claims.
 
 **Evidence:** 141 vitest cases passed (20 new local data-layer tests, 8 LocalApp component tests, 1 sign-in entry test) against the real vendored wasm; production build with design/core/video integrity checks passed; a headless-Chromium script (VITE flag on, manifest/catalog routes mocked, backend aborted) verified entry → empty state → install → shelves → browse + genre filter → exit with no page errors. Physical TV, Tauri packaging and real addon hosts remain unverified; browser CORS governs which addon hosts a web fat build can reach (design LM-006).
+# LightningJS TV-only migration checkpoint — 2026-09-24
+
+Design pin `aa2a1d69935fc07a97bd37d5fa0f78ab8d1c7b47`. A separate
+`lightning.html` entry now builds with LightningJS Blits 2.10 and the shared
+`TvApi`/Rust session driver. Its first real screen requests a device code,
+renders the address/code/QR, expires the code, and retries on Enter release.
+`node tests/preview/lightning-shoot.mjs TvPairing` and the Loading/Expired
+variants used the same mock backend as the React TV captures at 1920×1080.
+Tizen, Vizio and webOS browser-configuration pairing captures were byte-equal;
+the expired run verified a second pairing request after Enter. The existing
+React TV pairing capture remained pixel-identical to its saved baseline after
+the separate entry and build plugin were added.
+
+The current Lightning `TvPairing` screenshot versus that React baseline has
+331,807 changed pixels (16.0015%), MAE 3.7149, RMSE 25.1868 and SSIM
+0.911408. The metric is an open failure against the requested 1:1 target,
+not a parity claim. Text rasterization/weight, focus shadow, QR edges and
+spacing remain visibly different. The screenshots and amplified diff are in
+ignored `test-results/preview/`. Profile and Home currently have staging
+placeholders; no other TV screen, D-pad flow, media adapter or webOS host is
+migrated. Production Tizen/Vizio launchers and responsive web/Tauri still use
+their existing entry. No Lightning run has been made on physical TV hardware.
+Checkpoint validation: 169/169 Vitest tests passed, 127 Playwright scenarios
+passed with 75 deliberate platform skips, and the production build passed its
+design/core/video integrity and TypeScript checks. These existing suites cover
+the unchanged entry; the new pairing fixture checks are browser-only.
+The production bundle's separate `/tv/lightning.html` entry was also served
+through Vite preview with base `/tv/`; it rendered the same pixel metric as
+the dev capture. This does not mean the public site or TV package uses it.

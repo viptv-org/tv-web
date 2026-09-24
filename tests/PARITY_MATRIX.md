@@ -98,3 +98,13 @@ RUI-025 supersedes desktop keyboard focus presentation: responsive desktop/mobil
 
 
 | RUI-027 | Responsive fullscreen/volume/decoder diagnostics; category sidebar and native-scroll guide; shared addon namespaces; centered web/native approval | Design f8ca89d / core a8ece4f. Browser viewport/scroll/fullscreen/auth boundaries and 117 app unit tests pass. Real MediaBunny live/MP4 and same-session HLS.js fallback exercised; detailed counts and rerun caveat in TESTING.md. | Installed Tauri and physical TV qualification pending; insecure LAN HTTP uses available native decoding. |
+# LightningJS TV-only migration — 2026-09-24
+
+Design pin `aa2a1d69935fc07a97bd37d5fa0f78ab8d1c7b47`; React TV
+baseline `6f335d7631e1334be398b7aa5977ce4ce51ac50a`.
+
+| TV state / path | Lightning browser evidence | 1:1 visual evidence | Device evidence / disposition |
+| --- | --- | --- | --- |
+| Pairing, loading, expiry, retry | Shared device API/QR mocked at 1920×1080; expiry Enter release caused a new device-code request. Tizen/Vizio/webOS browser captures were byte-equal. | Pairing vs current React: 331,807 pixels changed (16.0015%), MAE 3.7149, RMSE 25.1868, SSIM 0.911408. Open deviation. | Physical Tizen/Vizio/webOS unverified; staged entry only. |
+| Profiles, Home and all other TV states | Staging placeholders only; no acceptance result. | Unmeasured. | Not migrated or qualified. |
+| React TV launch path | `TvPairing` capture remains exactly equal to saved React baseline (0 changed pixels). | Existing path unchanged for that state. | Current Tizen/Vizio launcher retained. |

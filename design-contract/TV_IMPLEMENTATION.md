@@ -1,12 +1,48 @@
-# Android TV, Tizen and Vizio implementation
+# Android TV, Tizen, Vizio and LG webOS implementation
 
-Status: implementation authorized 2026-09-12. This adds platform implementations of the existing Roku baseline; it does not change Roku behavior. Android TV uses native Jetpack Compose. Tizen and Vizio use one React frontend in viptv-org/tv-web with a replaceable platform player module. React is selected here to share the existing TypeScript controller ecosystem and permit automated DOM/remote acceptance; SolidTV/LightningJS is not required for the shared-frontend contract.
+## Proposed TV-only LightningJS renderer migration — 2026-09-24
+
+Status: authorized, implementation and parity review in progress. The current
+React TV implementation at `viptv-org/tv-web@6f335d7631e1334be398b7aa5977ce4ce51ac50a`
+is the behavioral and rendered baseline for this renderer replacement. Tizen,
+Vizio and LG webOS will use one LightningJS Blits component tree with the
+Lightning renderer and focus/input lifecycle. The React phone, responsive web
+and Tauri desktop entry remains as it is. The new TV renderer is staged behind
+a separate entry until the migration qualifies for those TV launchers. Roku and
+Android TV retain their separate native implementations.
+
+The canonical TV reference frame is **1920 × 1080** with a 96 × 54 safe area,
+as specified in `viptv-design-system/`. Every TV screen and visible state keeps
+the same copy, assets, color, typography, spacing, selection and focus treatment
+as the current TV UI. The new renderer may not borrow the React DOM focus
+registry or simulate Lightning by wrapping the existing UI. It uses the same
+API, shared core and platform playback contracts so renderer replacement does
+not change pairing, profiles, source identity, Resume, controlled Next or queue
+semantics. The 700 ms OK hold fires once, suppresses release activation, and
+retains Menu/Info equivalents. Directional, Back and media-key transitions,
+focus restoration, loading, error, cancellation and return flows must match the
+existing TV behavior in each platform adapter.
+
+Acceptance is per matched-content state, not a build-wide claim. Capture the
+current React TV result and new Lightning result at 1920 × 1080, device scale
+1, with the same backend fixture, fonts, artwork, appearance and focus. Record
+changed-pixel count, MAE, RMSE and SSIM, then inspect an amplified difference
+image. The target for the renderer migration is zero changed pixels against
+the current TV output; compare the same capture to the pinned design WebP as
+a separate design-parity measurement. A nonzero result remains an open
+deviation until corrected or explicitly approved with its measured extent.
+Run input/flow acceptance for Tizen, Vizio and webOS browser configurations;
+record real-device playback, latency, navigation and signing separately.
+Screenshots and diff images stay in ignored test output. Do not switch packaged
+TV launchers or claim hardware qualification before those checks are complete.
+
+Historical status: implementation authorized 2026-09-12. This added platform implementations of the existing Roku baseline without changing Roku behavior. Android TV uses native Jetpack Compose. Tizen and Vizio originally used one React frontend in viptv-org/tv-web with a replaceable platform player module. The proposed TV-only renderer migration above supersedes that choice for Tizen and Vizio and adds webOS as a target.
 
 The shared Tizen/Vizio presentation follows the design system in [viptv-design-system/](viptv-design-system/README.md) (TV reference screens, 10-foot rules). Design updates and per-platform acceptance follow [DESIGN_SYNC.md](DESIGN_SYNC.md). Historical functional checks do not qualify replacement visuals.
 
 ## Product contract
 
-Implement the visual, interaction and server queue specifications under specs/. Use the canonical 1280×720 TV frame uniformly scaled to viewport. Preserve pairing/profile gates, stable Home shelves/hero, Discover/search, movie and series/episode detail, manual sources, exact-source Resume, controlled Next, My List/queue/corrections, Guide, preferences, profiles and parent unlock behavior. Media loading and failure retain the same source/position/focus intent. UI assets come from design with pinned provenance; no screenshot files are committed.
+Implement the visual, interaction and server queue specifications under specs/. Use the canonical 1920×1080 TV frame uniformly scaled to viewport. Preserve pairing/profile gates, stable Home shelves/hero, Discover/search, movie and series/episode detail, manual sources, exact-source Resume, controlled Next, My List/queue/corrections, Guide, preferences, profiles and parent unlock behavior. Media loading and failure retain the same source/position/focus intent. UI assets come from design with pinned provenance; no screenshot files are committed.
 
 Both web TV builds consume identical UI/controller code. Tizen uses AVPlay; Vizio receives device-compatible media through an HTML media adapter. Native web preview is a testing/hosted mode, not evidence about a physical TV decoder. Transcoding remains last resort after runtime-compatible direct/copy/remux paths. Android TV uses the Android-only Media3 module through its native Compose app.
 
