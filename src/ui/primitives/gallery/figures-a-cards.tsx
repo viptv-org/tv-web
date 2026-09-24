@@ -6,6 +6,7 @@
 import type { CSSProperties, ReactNode } from "react";
 import { Check, Film, Lock, Pencil, Plus } from "lucide-react";
 import { PlayIcon } from "../icons";
+import { ProfileTileContent, SourceRowContent, sourceRowClass } from "../Cards";
 import { register } from "./registry";
 
 const assets = import.meta.glob("../../../../../design/viptv-design-system/reference/assets/*", {
@@ -42,36 +43,21 @@ function Card({ kind, img, title, meta, progress, badge, play, force, actions, m
   );
 }
 
-function SourceRow({ quality, provider, file, best, opening, force, openingLabel = "Opening…" }: {
+function SourceRow({ quality, provider, file, best, opening, force, openingLabel }: {
   quality: string; provider: string; file: string; best?: boolean; opening?: boolean; force?: string; openingLabel?: string;
 }) {
   return (
-    <button className={best ? "vx-source-row vx-source-row--best" : "vx-source-row"} aria-label={`Play from ${provider}, ${quality}`} data-force={force}>
-      <span className="vx-source-row__quality">{quality}</span>
-      <span className="vx-source-row__body">
-        {best ? <span className="vx-eyebrow vx-eyebrow--accent">Best match</span> : null}
-        <span className="vx-source-row__provider">{provider}</span>
-        <span className="vx-source-row__file">{file}</span>
-      </span>
-      {opening
-        ? <span className="vx-source-row__status"><span className="vx-spinner vx-spinner--inline" aria-hidden="true" />{openingLabel}</span>
-        : <span className="vx-source-row__icon"><PlayIcon /></span>}
+    <button className={sourceRowClass(best)} aria-label={`Play from ${provider}, ${quality}`} data-force={force}>
+      <SourceRowContent quality={quality} provider={provider} file={file} best={best} opening={opening} openingLabel={openingLabel} icon={<PlayIcon />} />
     </button>
   );
 }
 
 function Profile({ name, img, letter, color, lock, force, cue }: { name: string; img?: string; letter?: string; color?: string; lock?: boolean; force?: string; cue?: boolean }) {
-  const avatar = (
-    <span className="vx-profile__avatar">
-      {img ? <img alt="" src={art(img)} /> : <span className={letter && letter.length > 1 ? "vx-profile__letter vx-profile__letter--initials" : "vx-profile__letter"} style={{ background: color }}>{letter}</span>}
-    </span>
-  );
   return (
     <button className="vx-profile" data-force={force}>
-      {lock || cue
-        ? <span className="vx-profile__frame">{avatar}{lock ? <span className="vx-lock-badge" role="img" aria-label="Parent PIN required"><Lock {...sw(2.4)} /></span> : null}{cue ? <span className="vx-pencil-cue" aria-hidden="true"><Pencil {...sw(2.2)} /></span> : null}</span>
-        : avatar}
-      <span className="vx-profile__name">{name}</span>
+      <ProfileTileContent name={name} src={img ? art(img) : undefined} letter={letter} color={color}
+        lockIcon={lock ? <Lock {...sw(2.4)} /> : undefined} cueIcon={cue ? <Pencil {...sw(2.2)} /> : undefined} />
     </button>
   );
 }

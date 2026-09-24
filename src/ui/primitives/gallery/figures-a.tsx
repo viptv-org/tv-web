@@ -6,6 +6,8 @@
 import type { CSSProperties, ReactNode } from "react";
 import { Check, ChevronDown, CircleAlert, Compass, Delete, Ellipsis, LogOut, Plus, Search, Space, Trash, X } from "lucide-react";
 import { PlayIcon } from "../icons";
+import { Choice, ChoiceList } from "../Toggles";
+import { PinBoxes } from "../Fields";
 import { register } from "./registry";
 import "./figures-a-cards";
 
@@ -41,13 +43,9 @@ function Field({ label, value, placeholder, caret, force, error, disabled, mono,
 }
 
 function Pin({ filled, active, total = 6, error, message }: { filled: number; active?: boolean; total?: number; error?: boolean; message?: string }) {
-  const boxes = Array.from({ length: total }, (_, index) => {
-    const cls = index < filled ? "vx-pin__box vx-pin__box--filled" : index === filled && active ? "vx-pin__box vx-pin__box--active" : "vx-pin__box";
-    return <span key={index} className={cls} />;
-  });
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12, alignItems: "flex-start" }}>
-      <div className={error ? "vx-pin vx-pin--error" : "vx-pin"} role="group" aria-label={`Parent PIN, ${filled} of 4 to 8 digits entered`}>{boxes}</div>
+      <PinBoxes length={total} filled={filled} active={active} error={error} label={`Parent PIN, ${filled} of 4 to 8 digits entered`} />
       {message ? <span className="vx-inline-error" role="alert"><CircleAlert {...sw(2.2)} />{message}</span> : null}
     </div>
   );
@@ -156,13 +154,13 @@ register("CmpPhone1", {
   </div>),
   "Choice rows · pressed / unavailable": () => col(358, 0, <div className="vx-choice-list">
     <button className="vx-choice" data-force="active"><span className="vx-choice__label">[English]</span></button>
-    <button className="vx-choice" disabled><span className="vx-choice__label">[Portuguese (PGS)] (unavailable)</span></button>
+    <Choice unavailable>[Portuguese (PGS)]</Choice>
   </div>),
-  "Radio rows · settings choice": () => col(358, 0, <div className="vx-choice-list" role="radiogroup" aria-label="Subtitle size">
-    <button className="vx-choice" role="radio" aria-checked="false"><span className="vx-radio" aria-hidden="true" /><span className="vx-choice__label">Small</span></button>
-    <button className="vx-choice" role="radio" aria-checked="true"><span className="vx-radio" aria-hidden="true" /><span className="vx-choice__label">System default</span><Current /></button>
-    <button className="vx-choice" role="radio" aria-checked="false"><span className="vx-radio" aria-hidden="true" /><span className="vx-choice__label">Large</span></button>
-  </div>),
+  "Radio rows · settings choice": () => col(358, 0, <ChoiceList label="Subtitle size">
+    <Choice radio>Small</Choice>
+    <Choice radio current checkIcon={<Check {...sw(2.6)} />}>System default</Choice>
+    <Choice radio>Large</Choice>
+  </ChoiceList>),
 });
 
 /* ---------- Desktop & web ---------- */
@@ -375,10 +373,10 @@ register("CmpTv1", {
     <Pin filled={3} active />
     <Pin filled={4} error message="Incorrect PIN. Try again." />
   </>),
-  "Choice rows · focused current / default / unavailable / destructive": () => col(620, 14, <div className="vx-choice-list" role="radiogroup" aria-label="Subtitles">
-    <button className="vx-choice" aria-current="true" data-force="focus"><span className="vx-choice__label"><span>[English]</span><span className="vx-choice__note">· Current</span></span></button>
-    <button className="vx-choice"><span className="vx-choice__label"><span>Off</span></span></button>
-    <button className="vx-choice" disabled><span className="vx-choice__label"><span>[Portuguese (PGS)]</span><span className="vx-choice__note">· unavailable</span></span></button>
-    <button className="vx-choice vx-choice--destructive"><span className="vx-choice__label"><span>Remove addon</span></span></button>
-  </div>),
+  "Choice rows · focused current / default / unavailable / destructive": () => col(620, 14, <ChoiceList label="Subtitles">
+    <Choice current data-force="focus">[English]</Choice>
+    <Choice>Off</Choice>
+    <Choice unavailable>[Portuguese (PGS)]</Choice>
+    <Choice destructive>Remove addon</Choice>
+  </ChoiceList>),
 });

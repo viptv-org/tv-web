@@ -197,6 +197,14 @@
   font-weight: 500;
   white-space: nowrap;
 }
+/* Platform-specific notes (ChoiceContent renders both): "(unavailable)" P/D, "· Current" TV. */
+[data-layout="responsive"] .vx-choice__note--tv,
+.tv-layout .vx-choice__note--responsive {
+  display: none;
+}
+[data-layout="responsive"] .vx-choice__note--responsive {
+  font-weight: inherit;
+}
 [data-layout] .vx-choice:disabled,
 [data-layout] .vx-choice[aria-disabled="true"],
 [data-layout] .vx-choice--unavailable {
