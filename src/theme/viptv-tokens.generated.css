@@ -66,6 +66,7 @@
   --viptv-color-fill-glass-button: rgba(255,255,255,0.18);
   --viptv-color-fill-grabber: #45454B;
   --viptv-color-fill-icon-disc-tv: rgba(255,255,255,0.08);
+  --viptv-color-fill-cue-glass: rgba(22,22,24,0.95);
   --viptv-color-scrim-sheet: rgba(0,0,0,0.62);
   --viptv-color-scrim-dialog: rgba(0,0,0,0.55);
   --viptv-color-scrim-tv-panel: rgba(0,0,0,0.60);
@@ -77,6 +78,12 @@
   --viptv-color-skeleton-ground: #17171A;
   --viptv-color-skeleton-card: #1E1E21;
   --viptv-color-skeleton-shimmer: rgba(255,255,255,0.04);
+  --viptv-color-guide-airing: #26262A;
+  --viptv-color-guide-empty: #1B1B1E;
+  --viptv-color-guide-upcoming-text: #CFCDC8;
+  --viptv-color-guide-airing-tv: rgba(255,255,255,0.11);
+  --viptv-color-guide-upcoming-tv: rgba(255,255,255,0.045);
+  --viptv-color-guide-empty-tv: rgba(255,255,255,0.05);
   --viptv-font-family-display: 'Bricolage Grotesque', 'Bricolage Grotesque Variable', 'Helvetica Neue', sans-serif;
   --viptv-font-family-ui: Onest, system-ui, sans-serif;
   --viptv-font-family-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
@@ -309,6 +316,7 @@
   --viptv-size-tile-hover-play-disc: 48px;
   --viptv-size-tile-selected-ring: 3px;
   --viptv-size-tile-hover-action: 36px;
+  --viptv-size-tile-pencil-cue: 56px;
   --viptv-size-source-row-phone: 76px;
   --viptv-size-source-row-desktop: 68px;
   --viptv-size-source-row-tv: 104px;
@@ -341,6 +349,10 @@
   --viptv-size-radio-dot: 10px;
   --viptv-size-scrollbar-tv-width: 6px;
   --viptv-size-scrollbar-tv-thumb: 160px;
+  --viptv-size-guide-block-desktop: 54px;
+  --viptv-size-guide-block-tv: 88px;
+  --viptv-size-guide-block-bar: 3px;
+  --viptv-size-guide-block-bar-tv: 5px;
   --viptv-focus-desktop: 0 0 0 2px #0B0B0C, 0 0 0 4px #F4F2EE;
   --viptv-focus-desktop-hover-card: inset 0 0 0 2px #F4F2EE;
   --viptv-focus-tv-shadow: 0 0 0 4px #FFFFFF, 0 24px 60px rgba(0,0,0,0.65);
@@ -351,6 +363,7 @@
   --viptv-focus-tv-scale-key: 1.12;
   --viptv-focus-tv-caption-shift-profile: 10px;
   --viptv-focus-desktop-card-inset: inset 0 0 0 2px #F4F2EE, inset 0 0 0 4px #0B0B0C;
+  --viptv-focus-tv-shadow-block: 0 0 0 4px #FFFFFF, 0 20px 50px rgba(0,0,0,0.6);
   --viptv-shadow-nav: 0 12px 32px rgba(0,0,0,0.55);
   --viptv-shadow-popover: 0 20px 60px rgba(0,0,0,0.55);
   --viptv-shadow-toast: 0 12px 30px rgba(0,0,0,0.5);

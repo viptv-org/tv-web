@@ -101,7 +101,8 @@ export function mountGallery(root: Root, params: URLSearchParams) {
   const sheet = params.get("sheet") as SheetName | null;
   const html = document.documentElement;
   html.setAttribute("data-layout", platform === "tv" ? "tv" : "responsive");
-  html.setAttribute("data-platform", platform === "tv" ? "tizen" : "html5");
+  // The desktop sheets draw the desktop app (Tauri); web-only sizes are shown explicitly.
+  html.setAttribute("data-platform", platform === "tv" ? "tizen" : platform === "desktop" ? "tauri" : "html5");
   // Legacy tv-p1 locks html/body scrolling for the fixed TV canvas; the gallery scrolls
   // (visible on both, so the viewport scrolls rather than a 390-wide body box).
   html.style.overflow = "visible";

@@ -1,1 +1,1234 @@
-/* Design-system primitive: cards. See design/viptv-design-system/components.md. */
+/*
+ * Design-system primitive: cards and tiles (components.md §6; sheets CmpPhone2 / CmpDesk2 /
+ * CmpTv2). Shared visuals and the reference sizes; families lay the tiles out (rows, grids).
+ * Scoping as in buttons.css. Art is never stretched: tiles keep fixed sizes.
+ *
+ * Art card (poster, continue still, episode, live tile, TV still / grid tile)
+ *   <a class="vx-card vx-card--poster" href="…">
+ *     <span class="vx-card__art"><img alt="" src="…">
+ *       [<span class="vx-card__badge"><span class="vx-badge vx-badge--up-next">Up next</span></span>]
+ *       [<span class="vx-card__progress"><span class="vx-progress">…</span></span>]
+ *       [<span class="vx-card__play" aria-hidden="true"><span class="vx-card__play-disc"><svg play/></span></span>]  (D hover)
+ *     </span>
+ *     <span class="vx-card__caption"><span class="vx-card__title">Mayday</span>
+ *       <span class="vx-card__meta">2026 · 111 min · Action</span></span></a>
+ *   sizes: --poster (P fluid 4:5 in a 3-column grid, D 172 × 258, web 164 × 246) · --continue
+ *   (D 256 × 128, TV 320 × 180) · --episode (D 272 × 150, TV 360 × 200) · --grid (TV 360 × 202)
+ *   · --live (D 220 × 124 text monogram: <span class="vx-card__art vx-card__art--monogram">CNN…)
+ *   continue / live captions read 15 / 13 secondary (D). Episode caption:
+ *   <span class="vx-card__heading"><span class="vx-card__number">E1</span><span class="vx-card__title">…</span></span>
+ *   <span class="vx-card__synopsis">…</span>  (TV: <span class="vx-card__eyebrow">Episode 1</span> + title)
+ *   D hover: inset 2 px off-white ring (+ the play disc when present); D keyboard focus: an inset
+ *   off-white ring with a ground gap; pressed: art scales 0.98 under a 0.25 dim.
+ *   TV focus (the card is the focusable element): 4 px white ring + lift, art scale 1.06, the
+ *   caption drops 8 px and brightens.
+ * Poster hover actions (D): <span class="vx-card__actions"><span class="vx-card__action-play"><svg/>Play</span>
+ *   <span class="vx-card__action-add"><svg plus/></span></span> inside the art (shown on hover / focus-within).
+ * Missing art: <span class="vx-missing-art"><svg film/><span class="vx-missing-art__title">Naruto</span></span>
+ *   fills a .vx-card__art, or stands alone at the size its family sets (--vx-card-w / --vx-card-h).
+ * Phone continue card: <a class="vx-continue-card"><img class="vx-continue-card__thumb">
+ *   <span class="vx-continue-card__body"><span class="vx-continue-card__title">…</span>
+ *   <span class="vx-continue-card__meta">…</span><span class="vx-progress">…</span></span>
+ *   <span class="vx-continue-card__play" aria-hidden="true"><svg play/></span></a>   292 × 96
+ * Phone live-now card: <a class="vx-live-card"><span class="vx-live-label">…</span>
+ *   <span class="vx-live-card__title">Cartoon Network</span><span class="vx-live-card__sub">West</span>
+ *   <span class="vx-progress vx-progress--small">…</span></a>   200 wide
+ * Phone channel row: <a class="vx-channel-row"><span class="vx-monogram">CNBC</span>
+ *   <span class="vx-channel-row__body"><span class="vx-channel-row__channel">CNBC</span>
+ *   <span class="vx-channel-row__title">…</span><span class="vx-progress vx-progress--small">…</span>
+ *   <span class="vx-channel-row__next">Next 12:00 · …</span></span></a>
+ * Guide block: <button class="vx-guide-block vx-guide-block--airing"><span class="vx-guide-block__time">10:30 – 11:00</span>
+ *   <span class="vx-guide-block__title">…</span><span class="vx-guide-block__bar" style="width:83%"></span></button>
+ *   --airing | (upcoming) | --empty; the family sets the width (px per minute).
+ * Source row: <button class="vx-source-row [vx-source-row--best]" aria-label="Play from LordStreams, 1080p">
+ *   <span class="vx-source-row__quality">1080p</span><span class="vx-source-row__body">
+ *   [<span class="vx-eyebrow vx-eyebrow--accent">Best match</span>]<span class="vx-source-row__provider">LordStreams</span>
+ *   <span class="vx-source-row__file">…</span></span><span class="vx-source-row__icon"><svg play/></span></button>
+ *   opening: replace the icon with <span class="vx-source-row__status"><span class="vx-spinner vx-spinner--inline"></span>Opening…</span>
+ * Profile tile: <button class="vx-profile"><span class="vx-profile__avatar"><img alt="">
+ *   | <span class="vx-profile__letter" style="background:<profile colour>">C</span> (--initials for two letters)</span>
+ *   [<span class="vx-lock-badge" role="img" aria-label="Parent PIN required"><svg lock/></span>]
+ *   [<span class="vx-pencil-cue" aria-hidden="true"><svg pencil/></span>] (TV manage)
+ *   <span class="vx-profile__name">vynxc</span></button>   (wrap avatar + badges in
+ *   <span class="vx-profile__frame">…</span> when a badge is present)
+ *   add tile: <button class="vx-profile vx-profile--add"><span class="vx-profile__avatar"><svg plus/></span>
+ *   <span class="vx-profile__name">Add profile</span></button> (disabled at 12 profiles)
+ *   P 112 · D 140 · T 220; radius 20 % of the size.
+ * Avatar tile: <button class="vx-avatar-tile" aria-pressed="true" aria-label="Clay friends 2"><img alt="">
+ *   <span class="vx-check-badge" aria-hidden="true"><svg check/></span></button>   P 96 · D 120 · T 170
+ */
+
+/* ---------- Art cards ---------- */
+[data-layout] .vx-card {
+  --vx-card-w: var(--viptv-size-tile-desktop-poster-width);
+  --vx-card-h: var(--viptv-size-tile-desktop-poster-height);
+  --vx-card-r: var(--viptv-radius-lg);
+  position: relative;
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: var(--viptv-space-2_5);
+  box-sizing: border-box;
+  width: var(--vx-card-w);
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--viptv-color-text-primary);
+  font-family: var(--viptv-font-family-ui);
+  font-weight: 400; /* legacy .responsive-app button sets 600 */
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+[data-layout] .vx-card__art {
+  position: relative;
+  display: block;
+  flex: none;
+  box-sizing: border-box;
+  width: var(--vx-card-w);
+  height: var(--vx-card-h);
+  overflow: hidden;
+  border-radius: var(--vx-card-r);
+  background: var(--viptv-color-surface-1);
+  transition: transform var(--viptv-motion-focus) ease-out, box-shadow var(--viptv-motion-focus) ease-out;
+}
+[data-layout] .vx-card__art > img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+/* Ring / dim layer: drawn inside the art so the card's clipping never cuts it. */
+[data-layout] .vx-card__art::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  border-radius: inherit;
+  pointer-events: none;
+}
+[data-layout] .vx-card__art--monogram {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--viptv-color-line-hairline);
+  font-family: var(--viptv-font-family-display);
+  font-size: var(--viptv-type-desktop-monogram-size);
+  font-weight: var(--viptv-type-desktop-monogram-weight);
+  line-height: var(--viptv-type-desktop-monogram-line-height);
+  letter-spacing: var(--viptv-type-desktop-monogram-letter-spacing);
+}
+[data-layout] .vx-card__badge {
+  position: absolute;
+  top: var(--viptv-space-2_5);
+  left: var(--viptv-space-2_5);
+  z-index: 1;
+  display: flex;
+}
+[data-layout] .vx-card__progress {
+  position: absolute;
+  right: var(--viptv-space-2_5);
+  bottom: calc(var(--viptv-space-2) + 1px); /* 9, as drawn */
+  left: var(--viptv-space-2_5);
+  z-index: 1;
+}
+[data-layout] .vx-card__progress > .vx-progress {
+  background: var(--viptv-color-line-strong);
+}
+[data-layout] .vx-card__caption {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--viptv-space-0_5) + 1px); /* 3 */
+  min-width: 0;
+  padding: 0 var(--viptv-space-0_5);
+  transition: transform var(--viptv-motion-focus) ease-out;
+}
+[data-layout] .vx-card__title,
+[data-layout] .vx-card__meta {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+[data-layout] .vx-card__title {
+  font-size: var(--viptv-type-desktop-row-size);
+  font-weight: 600;
+  line-height: 1.3;
+}
+[data-layout] .vx-card__meta {
+  color: var(--viptv-color-text-tertiary);
+  font-size: var(--viptv-type-desktop-caption-size);
+  line-height: 1.35;
+}
+[data-layout] .vx-card--continue,
+[data-layout] .vx-card--live {
+  --vx-card-w: var(--viptv-size-tile-desktop-continue-width);
+  --vx-card-h: var(--viptv-size-tile-desktop-continue-height);
+}
+[data-layout] .vx-card--live {
+  --vx-card-w: var(--viptv-size-tile-desktop-live-width);
+  --vx-card-h: var(--viptv-size-tile-desktop-live-height);
+}
+[data-layout] .vx-card--continue .vx-card__title,
+[data-layout] .vx-card--live .vx-card__title {
+  font-size: var(--viptv-type-desktop-label-size);
+}
+[data-layout] .vx-card--continue .vx-card__meta,
+[data-layout] .vx-card--live .vx-card__meta {
+  color: var(--viptv-color-text-secondary);
+  font-size: var(--viptv-type-desktop-meta-size);
+}
+[data-layout] .vx-card--live .vx-card__title,
+[data-layout] .vx-card--live .vx-card__meta {
+  white-space: normal;
+}
+[data-layout] .vx-card--episode {
+  --vx-card-w: var(--viptv-size-tile-desktop-episode-width);
+  --vx-card-h: var(--viptv-size-tile-desktop-episode-height);
+}
+[data-layout] .vx-card__heading {
+  display: flex;
+  align-items: baseline;
+  gap: var(--viptv-space-2);
+  min-width: 0;
+}
+[data-layout] .vx-card__number {
+  flex: none;
+  color: var(--viptv-color-text-tertiary);
+  font-size: var(--viptv-type-desktop-meta-size);
+  font-weight: 600;
+}
+[data-layout] .vx-card--episode .vx-card__title {
+  font-size: var(--viptv-type-phone-body-strong-size);
+}
+[data-layout] .vx-card__synopsis {
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--viptv-color-text-secondary);
+  font-size: var(--viptv-type-desktop-row-size);
+  line-height: 1.45;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+[data-layout] .vx-card__eyebrow {
+  color: var(--viptv-color-text-tertiary);
+  font-size: var(--viptv-type-desktop-eyebrow-size);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  transition: transform var(--viptv-motion-focus) ease-out;
+}
+/* Desktop hover play disc (continue cards): 0.38 dim + a 48 accent disc. */
+[data-layout] .vx-card__play {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: var(--viptv-color-scrim-card-hover);
+}
+[data-layout] .vx-card__play-disc {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--viptv-size-tile-hover-play-disc);
+  height: var(--viptv-size-tile-hover-play-disc);
+  border-radius: 50%;
+  background: var(--viptv-accent);
+  color: var(--viptv-color-on-accent);
+}
+[data-layout] .vx-card__play-disc > svg {
+  display: block;
+  width: var(--viptv-size-icon-phone);
+  height: var(--viptv-size-icon-phone);
+}
+/* Desktop poster hover actions: Play pill + round "+" over a bottom gradient. */
+[data-layout] .vx-card__actions {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 1;
+  display: none;
+  gap: var(--viptv-space-2);
+  padding: calc(var(--viptv-space-9) + var(--viptv-space-1)) var(--viptv-space-2_5) var(--viptv-space-2_5); /* 40 10 10 */
+  background: linear-gradient(to bottom, transparent, var(--viptv-color-scrim-card-actions));
+}
+[data-layout] .vx-card__action-play,
+[data-layout] .vx-card__action-add {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  height: var(--viptv-size-tile-hover-action);
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: calc(var(--viptv-size-tile-hover-action) / 2);
+  font-family: var(--viptv-font-family-ui);
+  cursor: pointer;
+}
+[data-layout] .vx-card__action-play {
+  flex: 1 1 auto;
+  gap: var(--viptv-space-1_5);
+  background: var(--viptv-accent);
+  color: var(--viptv-color-on-accent);
+  font-size: var(--viptv-type-desktop-meta-size);
+  font-weight: 700;
+}
+[data-layout] .vx-card__action-add {
+  flex: none;
+  width: var(--viptv-size-tile-hover-action);
+  background: var(--viptv-color-fill-glass-button);
+  color: var(--viptv-color-text-primary);
+}
+[data-layout] .vx-card__action-play > svg {
+  width: var(--viptv-size-icon-xs);
+  height: var(--viptv-size-icon-xs);
+}
+[data-layout] .vx-card__action-add > svg {
+  width: var(--viptv-size-icon-small);
+  height: var(--viptv-size-icon-small);
+}
+/* Pressed (P/D). */
+[data-layout="responsive"] .vx-card:active .vx-card__art {
+  transform: scale(var(--viptv-motion-pressed-scale-card));
+}
+[data-layout="responsive"] .vx-card:active .vx-card__art::after {
+  background: var(--viptv-color-scrim-card-pressed);
+}
+@media (hover: hover) and (pointer: fine) {
+  [data-layout="responsive"] .vx-card:hover .vx-card__art::after {
+    box-shadow: var(--viptv-focus-desktop-hover-card);
+  }
+  [data-layout="responsive"] .vx-card:hover .vx-card__play,
+  [data-layout="responsive"] .vx-card:hover .vx-card__actions {
+    display: flex;
+  }
+  [data-layout="responsive"] .vx-card:active .vx-card__play {
+    display: none;
+  }
+}
+@media (min-width: 600px) {
+  [data-layout="responsive"] .vx-card:focus-visible {
+    outline: none;
+    box-shadow: none;
+  }
+  [data-layout="responsive"] .vx-card:focus-visible .vx-card__art::after {
+    box-shadow: var(--viptv-focus-desktop-card-inset);
+  }
+  [data-layout="responsive"] .vx-card:focus-within .vx-card__actions {
+    display: flex;
+  }
+  /* Web posters are 164 × 246 (the desktop app draws 172 × 258). */
+  :root[data-platform="html5"] .vx-card--poster {
+    --vx-card-w: var(--viptv-size-tile-web-poster-width);
+    --vx-card-h: var(--viptv-size-tile-web-poster-height);
+  }
+}
+
+/* Missing art: a surface-2 block with a film icon and the title in display type. */
+[data-layout] .vx-missing-art {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--viptv-space-2_5);
+  box-sizing: border-box;
+  width: var(--vx-card-w, 100%);
+  height: var(--vx-card-h, 100%);
+  padding: var(--viptv-space-3);
+  border-radius: var(--vx-card-r, var(--viptv-radius-lg));
+  background: var(--viptv-color-surface-2);
+  color: var(--viptv-color-text-tertiary);
+}
+[data-layout] .vx-card__art > .vx-missing-art {
+  width: 100%;
+  height: 100%;
+  border-radius: 0;
+}
+[data-layout] .vx-missing-art > svg {
+  display: block;
+  flex: none;
+  width: var(--viptv-size-icon-large);
+  height: var(--viptv-size-icon-large);
+}
+[data-layout] .vx-missing-art__title {
+  color: var(--viptv-color-text-secondary);
+  font-family: var(--viptv-font-family-display);
+  font-size: var(--viptv-type-phone-body-strong-size);
+  font-weight: 700;
+  line-height: 1.2;
+  text-align: center;
+}
+
+/* ---------- Phone cards ---------- */
+[data-layout] .vx-continue-card {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--viptv-space-3);
+  box-sizing: border-box;
+  width: var(--viptv-size-tile-phone-continue-width);
+  height: var(--viptv-size-tile-phone-continue-height);
+  padding: var(--viptv-space-2_5) var(--viptv-space-3) var(--viptv-space-2_5) var(--viptv-space-2_5);
+  border-radius: var(--viptv-radius-3xl);
+  background: var(--viptv-color-surface-1);
+  color: var(--viptv-color-text-primary);
+  font-family: var(--viptv-font-family-ui);
+  font-weight: 400; /* legacy .responsive-app button sets 600 */
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform var(--viptv-motion-focus) ease-out, background-color var(--viptv-motion-focus) ease-out;
+}
+[data-layout] .vx-continue-card__thumb {
+  display: block;
+  flex: none;
+  width: var(--viptv-size-tile-phone-continue-thumb-width);
+  height: var(--viptv-size-tile-phone-continue-thumb-height);
+  border-radius: var(--viptv-radius-lg);
+  background: var(--viptv-color-surface-2);
+  object-fit: cover;
+}
+[data-layout] .vx-continue-card__body {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: var(--viptv-space-1_5);
+  min-width: 0;
+}
+[data-layout] .vx-continue-card__title,
+[data-layout] .vx-continue-card__meta {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+[data-layout] .vx-continue-card__title {
+  font-size: var(--viptv-type-phone-body-size);
+  font-weight: 600;
+  line-height: 1.3;
+}
+[data-layout] .vx-continue-card__meta {
+  color: var(--viptv-color-text-secondary);
+  font-size: var(--viptv-type-phone-meta-size);
+  line-height: 1.35;
+}
+[data-layout] .vx-continue-card__play {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: var(--viptv-size-tile-play-disc);
+  height: var(--viptv-size-tile-play-disc);
+  border-radius: 50%;
+  background: var(--viptv-color-surface-3);
+  color: var(--viptv-accent);
+}
+[data-layout] .vx-continue-card__play > svg {
+  display: block;
+  width: var(--viptv-size-icon-desktop);
+  height: var(--viptv-size-icon-desktop);
+}
+[data-layout="responsive"] .vx-continue-card:active {
+  background: var(--viptv-color-surface-1-pressed);
+  transform: scale(var(--viptv-motion-pressed-scale-card));
+}
+
+[data-layout] .vx-live-card {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: var(--viptv-space-2_5);
+  box-sizing: border-box;
+  width: var(--viptv-size-tile-phone-live-now-width);
+  padding: var(--viptv-space-3_5);
+  border-radius: var(--viptv-radius-3xl);
+  background: var(--viptv-color-surface-1);
+  color: var(--viptv-color-text-primary);
+  font-family: var(--viptv-font-family-ui);
+  font-weight: 400; /* legacy .responsive-app button sets 600 */
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+}
+[data-layout] .vx-live-card__title {
+  font-size: var(--viptv-type-phone-body-strong-size);
+  font-weight: 600;
+  line-height: 1.3;
+}
+[data-layout] .vx-live-card__sub {
+  margin-top: calc(var(--viptv-space-1_5) * -1);
+  color: var(--viptv-color-text-secondary);
+  font-size: var(--viptv-type-phone-meta-size);
+  line-height: 1.35;
+}
+[data-layout="responsive"] .vx-live-card:active {
+  background: var(--viptv-color-surface-1-pressed);
+  transform: scale(var(--viptv-motion-pressed-scale-card));
+}
+
+[data-layout] .vx-channel-row {
+  display: flex;
+  align-items: center;
+  gap: var(--viptv-space-3_5);
+  box-sizing: border-box;
+  width: 100%;
+  min-height: calc(var(--viptv-size-tile-phone-channel-logo-height) + var(--viptv-space-6)); /* 84 */
+  padding: var(--viptv-space-2_5) var(--viptv-space-4);
+  color: var(--viptv-color-text-primary);
+  font-family: var(--viptv-font-family-ui);
+  font-weight: 400; /* legacy .responsive-app button sets 600 */
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+}
+[data-layout="responsive"] .vx-channel-row:active {
+  background: var(--viptv-color-surface-1);
+}
+[data-layout] .vx-monogram {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: var(--viptv-size-tile-phone-channel-logo-width);
+  height: var(--viptv-size-tile-phone-channel-logo-height);
+  overflow: hidden;
+  border: 1px solid var(--viptv-color-line-hairline);
+  border-radius: var(--viptv-radius-2xl);
+  background: var(--viptv-color-surface-1);
+  font-size: var(--viptv-type-phone-label-size);
+  font-weight: 700;
+  line-height: 1;
+}
+[data-layout] .vx-channel-row__body {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: calc(var(--viptv-space-1) + 1px); /* 5 */
+  min-width: 0;
+}
+[data-layout] .vx-channel-row__channel {
+  color: var(--viptv-color-text-secondary);
+  font-size: var(--viptv-type-phone-meta-size);
+  line-height: 1.35;
+}
+[data-layout] .vx-channel-row__title,
+[data-layout] .vx-channel-row__next {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+[data-layout] .vx-channel-row__title {
+  font-size: var(--viptv-type-phone-body-strong-size);
+  font-weight: 600;
+  line-height: 1.3;
+}
+[data-layout] .vx-channel-row__next {
+  color: var(--viptv-color-text-tertiary);
+  font-size: var(--viptv-type-phone-caption-size);
+  line-height: 1.35;
+}
+
+/* ---------- Guide blocks (D, TV) ---------- */
+[data-layout] .vx-guide-block {
+  position: relative;
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--viptv-space-0_5);
+  box-sizing: border-box;
+  height: var(--viptv-size-guide-block-desktop);
+  min-width: 0;
+  margin: 0;
+  padding: 0 var(--viptv-space-3);
+  overflow: hidden;
+  border: 0;
+  border-radius: var(--viptv-radius-sm-plus);
+  outline: none;
+  background: var(--viptv-color-surface-1);
+  color: var(--viptv-color-guide-upcoming-text);
+  font-family: var(--viptv-font-family-ui);
+  font-weight: 400; /* legacy .responsive-app button sets 600 */
+  text-align: left;
+  cursor: pointer;
+}
+[data-layout] .vx-guide-block--airing {
+  background: var(--viptv-color-guide-airing);
+  color: var(--viptv-color-text-primary);
+}
+[data-layout] .vx-guide-block--empty {
+  background: var(--viptv-color-guide-empty);
+  color: var(--viptv-color-text-secondary);
+}
+[data-layout] .vx-guide-block__time {
+  color: var(--viptv-color-text-tertiary);
+  font-size: var(--viptv-type-desktop-rail-label-size);
+  line-height: 1.3;
+  white-space: nowrap;
+}
+[data-layout] .vx-guide-block__title {
+  overflow: hidden;
+  font-size: var(--viptv-type-desktop-meta-size);
+  font-weight: 600;
+  line-height: 1.3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+[data-layout] .vx-guide-block__bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: var(--viptv-size-guide-block-bar);
+  background: var(--viptv-accent);
+}
+@media (hover: hover) and (pointer: fine) {
+  [data-layout="responsive"] .vx-guide-block:hover {
+    box-shadow: var(--viptv-focus-desktop-hover-card);
+  }
+}
+@media (min-width: 600px) {
+  [data-layout="responsive"] .vx-guide-block:focus-visible {
+    outline: none;
+    box-shadow: var(--viptv-focus-desktop);
+  }
+}
+
+/* ---------- Source rows ---------- */
+[data-layout] .vx-source-row {
+  display: flex;
+  align-items: center;
+  gap: var(--viptv-space-3_5);
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  min-height: var(--viptv-size-source-row-desktop);
+  height: auto;
+  margin: 0;
+  padding: var(--viptv-space-2_5) var(--viptv-space-3_5);
+  border: 1px solid var(--viptv-color-line-hairline);
+  border-radius: var(--viptv-radius-xl);
+  outline: none;
+  background: var(--viptv-color-surface-2);
+  color: var(--viptv-color-text-primary);
+  font-family: var(--viptv-font-family-ui);
+  font-weight: 400; /* legacy .responsive-app button sets 600 */
+  text-align: left;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform var(--viptv-motion-focus) ease-out, background-color var(--viptv-motion-focus) ease-out, box-shadow var(--viptv-motion-focus) ease-out;
+}
+[data-layout] .vx-source-row--best {
+  border: var(--viptv-size-border-focus) solid var(--viptv-accent);
+}
+[data-layout] .vx-source-row__quality {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: var(--viptv-size-tile-desktop-source-quality-width);
+  height: var(--viptv-size-tile-desktop-source-quality-height);
+  border-radius: var(--viptv-radius-sm-plus);
+  background: var(--viptv-color-surface-3);
+  font-size: var(--viptv-type-desktop-meta-size);
+  font-weight: 700;
+  line-height: 1;
+}
+[data-layout] .vx-source-row__body {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: calc(var(--viptv-space-0_5) + 1px); /* 3 */
+  min-width: 0;
+}
+[data-layout] .vx-source-row__provider {
+  font-size: var(--viptv-type-desktop-label-size);
+  font-weight: 600;
+  line-height: 1.3;
+}
+[data-layout] .vx-source-row__file {
+  overflow: hidden;
+  color: var(--viptv-color-text-tertiary);
+  font-size: var(--viptv-type-desktop-meta-size);
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+[data-layout] .vx-source-row__icon {
+  display: flex;
+  flex: none;
+  color: var(--viptv-color-text-secondary);
+}
+[data-layout] .vx-source-row__icon > svg {
+  display: block;
+  width: var(--viptv-size-icon-small);
+  height: var(--viptv-size-icon-small);
+}
+[data-layout] .vx-source-row__status {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--viptv-space-2);
+  color: var(--viptv-color-text-secondary);
+  font-size: var(--viptv-type-desktop-meta-size);
+  white-space: nowrap;
+}
+[data-layout] .vx-source-row__status > .vx-spinner {
+  --vx-spinner: var(--viptv-size-spinner-inline);
+}
+[data-layout="responsive"] .vx-source-row:active {
+  background: var(--viptv-color-surface-3);
+  transform: scale(var(--viptv-motion-pressed-scale-row));
+}
+@media (hover: hover) and (pointer: fine) {
+  [data-layout="responsive"] .vx-source-row:hover {
+    background: var(--viptv-color-surface-3);
+  }
+  [data-layout="responsive"] .vx-source-row:hover .vx-source-row__quality {
+    background: var(--viptv-color-surface-4);
+  }
+  [data-layout="responsive"] .vx-source-row:hover .vx-source-row__icon {
+    color: var(--viptv-color-text-primary);
+  }
+}
+@media (min-width: 600px) {
+  [data-layout="responsive"] .vx-source-row:focus-visible {
+    outline: none;
+    box-shadow: var(--viptv-focus-desktop);
+  }
+}
+
+/* ---------- Profile and avatar tiles ---------- */
+[data-layout] .vx-profile {
+  --vx-avatar: var(--viptv-size-tile-desktop-profile-width);
+  position: relative;
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--viptv-space-3);
+  box-sizing: border-box;
+  width: var(--vx-avatar);
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--viptv-color-text-primary);
+  font-family: var(--viptv-font-family-ui);
+  font-weight: 400; /* legacy .responsive-app button sets 600 */
+  text-decoration: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+[data-layout] .vx-profile__frame {
+  position: relative;
+  display: block;
+  flex: none;
+}
+[data-layout] .vx-profile__avatar {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: var(--vx-avatar);
+  height: var(--vx-avatar);
+  overflow: hidden;
+  border-radius: calc(var(--vx-avatar) * var(--viptv-radius-avatar));
+  background: var(--viptv-color-surface-avatar);
+  transition: transform var(--viptv-motion-focus) ease-out, box-shadow var(--viptv-motion-focus) ease-out;
+}
+[data-layout] .vx-profile__avatar > img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+/* Letter avatars: the profile colour comes from data (inline background). The glyph is
+   0.41 of the tile (one letter) or 0.31 (initials), as drawn on every sheet. */
+[data-layout] .vx-profile__letter {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  color: var(--viptv-color-fill-white);
+  font-family: var(--viptv-font-family-display);
+  font-size: calc(var(--vx-avatar) * 0.413);
+  font-weight: 800;
+  line-height: 1;
+}
+[data-layout] .vx-profile__letter--initials {
+  font-size: calc(var(--vx-avatar) * 0.3125);
+}
+[data-layout] .vx-profile__name {
+  display: block;
+  max-width: var(--vx-avatar);
+  overflow: hidden;
+  color: var(--viptv-color-text-primary);
+  font-size: var(--viptv-type-phone-body-strong-size);
+  font-weight: 600;
+  line-height: 1.3;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: transform var(--viptv-motion-focus) ease-out;
+}
+[data-layout] .vx-profile--add .vx-profile__avatar {
+  border: var(--viptv-size-border-strong) dashed var(--viptv-color-line-strong);
+  background: transparent;
+  color: var(--viptv-color-text-secondary);
+}
+[data-layout] .vx-profile--add .vx-profile__avatar > svg {
+  display: block;
+  width: calc(var(--vx-avatar) * 0.29);
+  height: calc(var(--vx-avatar) * 0.29);
+}
+[data-layout] .vx-profile--add .vx-profile__name {
+  color: var(--viptv-color-text-secondary);
+}
+[data-layout] .vx-profile:disabled,
+[data-layout] .vx-profile[aria-disabled="true"] {
+  opacity: 1;
+  cursor: default;
+}
+[data-layout] .vx-profile:disabled .vx-profile__avatar,
+[data-layout] .vx-profile:disabled .vx-profile__name,
+[data-layout] .vx-profile[aria-disabled="true"] .vx-profile__avatar,
+[data-layout] .vx-profile[aria-disabled="true"] .vx-profile__name {
+  opacity: 0.4;
+}
+[data-layout] .vx-lock-badge {
+  position: absolute;
+  right: calc(var(--viptv-space-1_5) * -1);
+  bottom: calc(var(--viptv-space-1_5) * -1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: var(--viptv-size-tile-lock-badge-desktop);
+  height: var(--viptv-size-tile-lock-badge-desktop);
+  border: var(--viptv-size-border-strong) solid var(--viptv-color-bg);
+  border-radius: 50%;
+  background: var(--viptv-color-surface-3);
+  color: var(--viptv-color-text-primary);
+}
+[data-layout] .vx-lock-badge > svg {
+  display: block;
+  width: var(--viptv-size-icon-small);
+  height: var(--viptv-size-icon-small);
+}
+[data-layout] .vx-pencil-cue {
+  position: absolute;
+  top: calc(var(--viptv-space-2_5) * -1);
+  right: calc(var(--viptv-space-2_5) * -1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: var(--viptv-size-tile-pencil-cue);
+  height: var(--viptv-size-tile-pencil-cue);
+  border: var(--viptv-size-border-strong) solid var(--viptv-color-line-outline);
+  border-radius: 50%;
+  background: var(--viptv-color-fill-cue-glass);
+  color: var(--viptv-color-text-primary);
+}
+[data-layout] .vx-pencil-cue > svg {
+  display: block;
+  width: var(--viptv-size-icon-large);
+  height: var(--viptv-size-icon-large);
+}
+
+[data-layout] .vx-avatar-tile {
+  --vx-avatar: var(--viptv-size-tile-desktop-avatar-width);
+  position: relative;
+  display: block;
+  flex: none;
+  box-sizing: border-box;
+  width: var(--vx-avatar);
+  height: var(--vx-avatar);
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: calc(var(--vx-avatar) * var(--viptv-radius-avatar));
+  outline: none;
+  background: var(--viptv-color-surface-avatar);
+  cursor: pointer;
+  transition: transform var(--viptv-motion-focus) ease-out, box-shadow var(--viptv-motion-focus) ease-out;
+}
+[data-layout] .vx-avatar-tile > img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  object-fit: cover;
+}
+[data-layout] .vx-avatar-tile[aria-pressed="true"],
+[data-layout] .vx-avatar-tile[aria-checked="true"],
+[data-layout] .vx-avatar-tile[aria-selected="true"] {
+  box-shadow: 0 0 0 var(--viptv-size-tile-selected-ring) var(--viptv-color-text-primary);
+}
+[data-layout] .vx-check-badge {
+  position: absolute;
+  right: var(--viptv-space-1_5);
+  bottom: var(--viptv-space-1_5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--viptv-size-tile-check-badge);
+  height: var(--viptv-size-tile-check-badge);
+  border-radius: 50%;
+  background: var(--viptv-color-text-primary);
+  color: var(--viptv-color-on-light);
+}
+[data-layout] .vx-check-badge > svg {
+  display: block;
+  width: var(--viptv-size-icon-xs);
+  height: var(--viptv-size-icon-xs);
+}
+[data-layout="responsive"] .vx-profile:active .vx-profile__avatar,
+[data-layout="responsive"] .vx-avatar-tile:active {
+  transform: scale(var(--viptv-motion-pressed-scale));
+}
+@media (hover: hover) and (pointer: fine) {
+  [data-layout="responsive"] .vx-profile:hover .vx-profile__avatar,
+  [data-layout="responsive"] .vx-avatar-tile:hover:not([aria-pressed="true"]) {
+    box-shadow: var(--viptv-focus-desktop-hover-card);
+  }
+  [data-layout="responsive"] .vx-profile--add:hover .vx-profile__avatar {
+    box-shadow: none;
+    border-color: var(--viptv-color-line-link-hover);
+  }
+}
+@media (min-width: 600px) {
+  [data-layout="responsive"] .vx-profile:focus-visible {
+    box-shadow: none;
+  }
+  [data-layout="responsive"] .vx-profile:focus-visible .vx-profile__avatar,
+  [data-layout="responsive"] .vx-avatar-tile:focus-visible {
+    outline: none;
+    box-shadow: var(--viptv-focus-desktop);
+  }
+}
+
+/* ---------- Phone ---------- */
+@media (max-width: 599px) {
+  [data-layout="responsive"] .vx-card {
+    --vx-card-r: var(--viptv-radius-xl);
+    gap: var(--viptv-space-2);
+  }
+  /* Phone posters fill their 3-column grid cell at 4:5 (responsive-only, so aspect-ratio is fine). */
+  [data-layout="responsive"] .vx-card--poster {
+    --vx-card-w: 100%;
+    --vx-card-h: auto;
+  }
+  [data-layout="responsive"] .vx-card--poster .vx-card__art {
+    aspect-ratio: 4 / 5;
+  }
+  [data-layout="responsive"] .vx-card__caption {
+    gap: var(--viptv-space-0_5);
+  }
+  [data-layout="responsive"] .vx-card__title {
+    font-size: var(--viptv-type-phone-meta-size);
+  }
+  [data-layout="responsive"] .vx-card__meta {
+    font-size: var(--viptv-type-phone-caption-size);
+  }
+  [data-layout="responsive"] .vx-missing-art__title {
+    font-size: var(--viptv-type-phone-meta-size);
+  }
+  [data-layout="responsive"] .vx-source-row {
+    gap: var(--viptv-space-3_5);
+    min-height: var(--viptv-size-source-row-phone);
+    padding: var(--viptv-space-3) var(--viptv-space-3_5);
+    border-radius: var(--viptv-radius-xl-plus);
+  }
+  [data-layout="responsive"] .vx-source-row__quality {
+    width: var(--viptv-size-tile-phone-source-quality-width);
+    height: var(--viptv-size-tile-phone-source-quality-height);
+    border-radius: var(--viptv-radius-md);
+  }
+  [data-layout="responsive"] .vx-source-row__provider {
+    font-size: var(--viptv-type-phone-body-strong-size);
+  }
+  [data-layout="responsive"] .vx-source-row__icon > svg {
+    width: var(--viptv-size-icon-desktop);
+    height: var(--viptv-size-icon-desktop);
+  }
+  [data-layout="responsive"] .vx-profile {
+    --vx-avatar: var(--viptv-size-tile-phone-profile-width);
+  }
+  [data-layout="responsive"] .vx-lock-badge {
+    width: var(--viptv-size-tile-lock-badge);
+    height: var(--viptv-size-tile-lock-badge);
+  }
+  [data-layout="responsive"] .vx-lock-badge > svg {
+    width: var(--viptv-size-icon-alert);
+    height: var(--viptv-size-icon-alert);
+  }
+  [data-layout="responsive"] .vx-avatar-tile {
+    --vx-avatar: var(--viptv-size-tile-phone-avatar-width);
+  }
+}
+@media (min-width: 600px) {
+  [data-layout="responsive"] .vx-profile__name {
+    font-size: var(--viptv-type-tv-min-size); /* 18 (D profile names) */
+  }
+}
+
+/*
+ * TV: 4 px white ring + lift, art scale 1.06; the caption drops 8 (profiles 10) and
+ * brightens (body → primary, tertiary → secondary). Rows gap 36, art to caption 16.
+ */
+.tv-layout .vx-card {
+  --vx-card-r: var(--viptv-radius-xl);
+  --vx-card-w: var(--viptv-size-tile-tv-still-width);
+  --vx-card-h: var(--viptv-size-tile-tv-still-height);
+  gap: var(--viptv-layout-tv-art-to-caption);
+}
+.tv-layout .vx-card--grid,
+.tv-layout .vx-card--poster {
+  --vx-card-w: var(--viptv-size-tile-tv-grid-width);
+  --vx-card-h: var(--viptv-size-tile-tv-grid-height);
+}
+.tv-layout .vx-card--episode {
+  --vx-card-w: var(--viptv-size-tile-tv-episode-width);
+  --vx-card-h: var(--viptv-size-tile-tv-episode-height);
+  gap: var(--viptv-space-3_5);
+}
+.tv-layout .vx-card__badge {
+  top: var(--viptv-space-3_5);
+  left: var(--viptv-space-3_5);
+}
+.tv-layout .vx-card__progress {
+  right: var(--viptv-space-3_5);
+  bottom: var(--viptv-space-3);
+  left: var(--viptv-space-3_5);
+}
+.tv-layout .vx-card__caption {
+  gap: var(--viptv-space-1);
+  padding: 0;
+}
+.tv-layout .vx-card__title,
+.tv-layout .vx-card--continue .vx-card__title,
+.tv-layout .vx-card--live .vx-card__title {
+  color: var(--viptv-color-text-body);
+  font-size: var(--viptv-type-tv-label-size);
+}
+.tv-layout .vx-card__meta,
+.tv-layout .vx-card--continue .vx-card__meta,
+.tv-layout .vx-card--live .vx-card__meta {
+  color: var(--viptv-color-text-tertiary);
+  font-size: var(--viptv-type-tv-caption-size);
+}
+.tv-layout .vx-card__eyebrow {
+  font-size: var(--viptv-type-tv-eyebrow-size);
+}
+.tv-layout .vx-card--episode > .vx-card__title {
+  margin-top: calc(var(--viptv-space-2) * -1);
+  font-size: var(--viptv-type-tv-body-size);
+  white-space: nowrap;
+}
+.tv-layout .vx-card:focus {
+  outline: none;
+}
+.tv-layout .vx-card:focus .vx-card__art {
+  box-shadow: var(--viptv-focus-tv-shadow);
+  transform: scale(var(--viptv-focus-tv-scale-tile));
+}
+.tv-layout .vx-card:focus .vx-card__caption,
+.tv-layout .vx-card:focus > .vx-card__eyebrow,
+.tv-layout .vx-card:focus > .vx-card__title {
+  transform: translateY(var(--viptv-focus-tv-caption-shift));
+}
+.tv-layout .vx-card:focus .vx-card__title {
+  color: var(--viptv-color-text-primary);
+}
+.tv-layout .vx-card:focus .vx-card__meta {
+  color: var(--viptv-color-text-secondary);
+}
+.tv-layout .vx-missing-art > svg {
+  width: var(--viptv-size-icon-tv-large);
+  height: var(--viptv-size-icon-tv-large);
+}
+.tv-layout .vx-missing-art__title {
+  font-size: var(--viptv-type-tv-body-size);
+}
+
+.tv-layout .vx-guide-block {
+  gap: var(--viptv-space-1);
+  height: var(--viptv-size-guide-block-tv);
+  padding: 0 var(--viptv-space-5);
+  border-radius: var(--viptv-radius-lg);
+  background: var(--viptv-color-guide-upcoming-tv);
+  color: var(--viptv-color-text-primary);
+}
+.tv-layout .vx-guide-block--airing {
+  background: var(--viptv-color-guide-airing-tv);
+}
+.tv-layout .vx-guide-block--empty {
+  background: var(--viptv-color-guide-empty-tv);
+}
+.tv-layout .vx-guide-block__time {
+  font-size: var(--viptv-type-tv-min-size);
+}
+.tv-layout .vx-guide-block__title {
+  font-size: var(--viptv-type-tv-label-size);
+}
+.tv-layout .vx-guide-block__bar {
+  height: var(--viptv-size-guide-block-bar-tv);
+}
+.tv-layout .vx-guide-block:focus {
+  background: var(--viptv-color-text-primary);
+  color: var(--viptv-color-on-light);
+  box-shadow: var(--viptv-focus-tv-shadow-block);
+}
+.tv-layout .vx-guide-block:focus .vx-guide-block__time {
+  color: var(--viptv-color-text-on-light-secondary);
+}
+
+.tv-layout .vx-source-row {
+  gap: var(--viptv-space-6);
+  min-height: var(--viptv-size-source-row-tv);
+  padding: 0 var(--viptv-space-7);
+  border: 0;
+  border-radius: var(--viptv-radius-xl-plus);
+  background: var(--viptv-color-fill-wash);
+}
+.tv-layout .vx-source-row__quality {
+  width: var(--viptv-size-tile-tv-source-quality-width);
+  height: var(--viptv-size-tile-tv-source-quality-height);
+  border-radius: var(--viptv-radius-md);
+  background: var(--viptv-color-fill-tag);
+  font-size: var(--viptv-type-tv-meta-size);
+  font-weight: 800;
+}
+.tv-layout .vx-source-row__body {
+  gap: var(--viptv-space-1);
+}
+.tv-layout .vx-source-row__provider {
+  font-size: var(--viptv-type-tv-row-size);
+  font-weight: 700;
+}
+.tv-layout .vx-source-row__file,
+.tv-layout .vx-source-row__status {
+  font-size: var(--viptv-type-tv-caption-size);
+}
+.tv-layout .vx-source-row__status {
+  flex-direction: row-reverse;
+  gap: var(--viptv-space-3);
+}
+.tv-layout .vx-source-row__status > .vx-spinner {
+  --vx-spinner: var(--viptv-size-spinner-tv);
+}
+.tv-layout .vx-source-row__icon {
+  display: none;
+  color: inherit;
+}
+.tv-layout .vx-source-row__icon > svg {
+  width: var(--viptv-size-icon-tv);
+  height: var(--viptv-size-icon-tv);
+}
+.tv-layout .vx-source-row:focus {
+  outline: none;
+  background: var(--viptv-color-text-primary);
+  color: var(--viptv-color-on-light);
+  box-shadow: var(--viptv-focus-tv-shadow);
+  transform: scale(var(--viptv-focus-tv-scale-row));
+}
+.tv-layout .vx-source-row:focus .vx-source-row__icon {
+  display: flex;
+}
+.tv-layout .vx-source-row:focus .vx-source-row__quality {
+  background: var(--viptv-color-fill-on-light-badge);
+}
+.tv-layout .vx-source-row:focus .vx-source-row__file {
+  color: var(--viptv-color-text-on-light-secondary);
+}
+.tv-layout .vx-source-row:focus .vx-eyebrow--accent {
+  color: var(--viptv-color-text-on-light-accent);
+}
+
+.tv-layout .vx-profile {
+  --vx-avatar: var(--viptv-size-tile-tv-profile-width);
+  gap: var(--viptv-space-4_5);
+}
+.tv-layout .vx-profile__name {
+  color: var(--viptv-color-text-secondary);
+  font-size: var(--viptv-type-tv-row-size);
+  font-weight: 500;
+}
+.tv-layout .vx-profile:focus {
+  outline: none;
+}
+.tv-layout .vx-profile:focus .vx-profile__avatar {
+  box-shadow: var(--viptv-focus-tv-shadow);
+  transform: scale(var(--viptv-focus-tv-scale-tile));
+}
+.tv-layout .vx-profile:focus .vx-profile__name {
+  color: var(--viptv-color-text-primary);
+  font-weight: 700;
+  transform: translateY(var(--viptv-focus-tv-caption-shift-profile));
+}
+.tv-layout .vx-profile--add .vx-profile__avatar {
+  border-width: var(--viptv-size-border-tv-strong);
+}
+.tv-layout .vx-profile:focus .vx-pencil-cue {
+  background: var(--viptv-color-text-primary);
+  color: var(--viptv-color-on-light);
+}
+.tv-layout .vx-lock-badge {
+  width: var(--viptv-size-tile-lock-badge-tv);
+  height: var(--viptv-size-tile-lock-badge-tv);
+  border-width: var(--viptv-size-border-tv-strong);
+}
+.tv-layout .vx-lock-badge > svg {
+  width: var(--viptv-size-icon-large);
+  height: var(--viptv-size-icon-large);
+}
+.tv-layout .vx-avatar-tile {
+  --vx-avatar: var(--viptv-size-tile-tv-avatar-width);
+}
+.tv-layout .vx-avatar-tile[aria-pressed="true"],
+.tv-layout .vx-avatar-tile[aria-checked="true"],
+.tv-layout .vx-avatar-tile[aria-selected="true"] {
+  box-shadow: 0 0 0 calc(var(--viptv-size-border-strong) * 2) var(--viptv-color-line-selected-tv); /* 4 */
+}
+.tv-layout .vx-avatar-tile:focus {
+  box-shadow: var(--viptv-focus-tv-shadow);
+  transform: scale(var(--viptv-focus-tv-scale-tile));
+}
+.tv-layout .vx-check-badge {
+  width: var(--viptv-size-tile-check-badge-tv);
+  height: var(--viptv-size-tile-check-badge-tv);
+}
+.tv-layout .vx-check-badge > svg {
+  width: var(--viptv-size-icon-tv-xs);
+  height: var(--viptv-size-icon-tv-xs);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-layout] .vx-card__art,
+  [data-layout] .vx-card__caption,
+  [data-layout] .vx-card__eyebrow,
+  [data-layout] .vx-continue-card,
+  [data-layout] .vx-source-row,
+  [data-layout] .vx-profile__avatar,
+  [data-layout] .vx-profile__name,
+  [data-layout] .vx-avatar-tile {
+    transition: none;
+  }
+}

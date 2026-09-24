@@ -192,7 +192,7 @@
   width: var(--viptv-size-timeline-tv-knob);
   height: var(--viptv-size-timeline-tv-knob);
   margin-left: calc(var(--viptv-size-timeline-tv-knob) / -2);
-  box-shadow: var(--viptv-focus-tv-shadow);
+  box-shadow: var(--viptv-focus-tv-shadow-block);
 }
 .tv-layout .vx-timeline__bar:focus .vx-timeline__bubble {
   display: flex;
@@ -204,6 +204,9 @@
   background: var(--viptv-color-surface-1);
   box-shadow: var(--viptv-shadow-popup);
   font-size: var(--viptv-type-tv-row-size);
+}
+.tv-layout .vx-timeline__buffered {
+  background: var(--viptv-color-line-control);
 }
 /* TV seek preview segment between the played edge and the target. */
 .tv-layout .vx-timeline__seek {
