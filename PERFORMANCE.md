@@ -1,3 +1,38 @@
+# SolidTV title/player completion — 2026-09-24
+
+The latest implementation adds reachable seasons/long episode lists, native
+scrolling information panels, long track lists, committed seek presentation and
+controller recovery/session synchronization. [Current raw measurements](tests/solid-completion2-performance.json)
+include all source hashes, trials and per-key samples.
+
+Three sequential trials per renderer at 4× CPU throttling measured:
+
+| Metric | React TV | SolidTV |
+| --- | ---: | ---: |
+| Home focus-ready median | 513.5 ms | 507.4 ms |
+| Slowest Home startup | 559.0 ms | 595.6 ms |
+| First guide focus-ready median | 139.0 ms | 131.5 ms |
+| Main-thread work/key median | 11.891 ms | 5.110 ms |
+| Focus-update p95 | 22.9 ms | 0.7 ms |
+| Handler p95 | 1.9 ms | 0.5 ms |
+| Two frame opportunities p95 | 70.7 ms | 36.7 ms |
+| Frame interval p95 | 16.7 ms | 16.8 ms |
+| Long tasks / frames over 33.4 ms | 0 / 0 | 0 / 0 |
+| Post-GC JS heap | 5.562 MiB | 6.967 MiB |
+| Renderer texture allocation | Not measured | 49.542 MiB |
+| Decoded JavaScript fetched | 1197.337 KiB | 624.158 KiB |
+
+All eight configured speed/frame checks pass in this run; main-thread work/key
+is **57.0% lower**. Startup is a small median difference and has varied around
+a tie across preceding versions/runs; the slowest Solid startup is worse.
+Do not infer a robust universal startup advantage from three trials. Solid
+uses **1.405 MiB more JS heap**, and texture memory has no measured React
+counterpart. These desktop GPU/fixture results do not certify TV hardware.
+Method and reproduction are documented below. Earlier sections and files are
+historical evidence for earlier source hashes, not current claims.
+
+---
+
 # SolidTV completion checkpoint — 2026-09-24
 
 Native-focus and feature-completion changes retain substantially lower

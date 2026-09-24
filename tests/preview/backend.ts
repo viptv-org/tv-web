@@ -55,6 +55,8 @@ export interface BackendOptions {
   playbackHangAfter?: number;
   /** Playback requests after the first N fail (playback could not be restored). */
   playbackFailAfter?: number;
+  /** Distinct sessions for replacement/heartbeat identity regressions. */
+  playbackUniqueIds?: boolean;
   /** Playback requests after the first refuse the new position (seek refused notice). */
   seekRefused?: boolean;
   /** Creating/updating a profile never answers (Saving profile…). */
@@ -585,7 +587,7 @@ export async function installBackend(page: Page, options: BackendOptions): Promi
       if (options.seekRefused && playbackCount > 1) return json({ error: 'The stream could not seek there.', error_code: 'SEEK_REFUSED' }, 409);
       const liveSession = typeof body.channel_id === 'string' || String(body.type ?? '') === 'live' || /cartoon|news|cnbc|cnn|espn/.test(String(body.id ?? ''));
       return json({
-        id: 'preview-playback', url: '/media/preview-playback/index.m3u8', format: 'hls', mode: 'remux', video_mode: 'copy', audio_mode: 'transcode',
+        id: options.playbackUniqueIds ? `preview-playback-${playbackCount}` : 'preview-playback', url: '/media/preview-playback/index.m3u8', format: 'hls', mode: 'remux', video_mode: 'copy', audio_mode: 'transcode',
         position: liveSession ? 0 : options.playbackPositionFromRequest ? Number(body.position ?? 0) : options.media?.position ?? 768, live: liveSession, duration: liveSession ? 0 : options.media?.duration ?? 3130,
         audio_tracks: [track(0, 'en', 'English · 5.1', 'eac3', true), track(1, 'en', 'English · Stereo', 'aac'), track(2, 'es', 'Spanish · Stereo', 'aac'), track(3, 'ja', 'Japanese · TrueHD', 'truehd', false, false)],
         subtitle_tracks: [track(0, 'en', 'English', 'subrip', true), track(1, 'en', 'English (SDH)', 'subrip'), track(2, 'es', 'Spanish', 'subrip'), track(3, 'fr', 'French', 'subrip'), track(4, 'pt', 'Portuguese (PGS)', 'hdmv_pgs_subtitle', false, false), track(5, 'de', 'German', 'subrip')],

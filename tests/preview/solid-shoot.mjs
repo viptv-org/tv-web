@@ -42,6 +42,7 @@ try {
   const profiles = name.startsWith('TvProfiles') || name === 'TvManageCue';
   const backend = await installBackend(page, { family: 'tv', session: settingsNames.includes(name) || name === 'TvHome' || name === 'TvMenu' || name === 'TvDiscover' || name === 'TvDiscoverFilter' || name === 'TvLibrary' || name === 'TvItemMenu' || name === 'TvSearch' || name === 'TvLive' || name === 'TvLiveDetails' || name === 'TvLiveSearch' || name === 'TvTitle' || name === 'TvSources' || name === 'TvSourceProvider' || name === 'TvSourceDetails' || name === 'TvPlayer' || name === 'TvPlayerSeek' || name === 'TvPlayerSubs' ? 'ready' : profiles ? 'profiles' : 'none', pairing: name === 'TvPairingLoading' ? 'loading' : name === 'TvPairingExpired' ? 'expired' : undefined, favorites: name === 'TvLibrary', searchFail: searchFailure });
   if (name === 'TvPlayer' || name === 'TvPlayerSeek' || name === 'TvPlayerSubs' || name === 'TvLibrary' || name === 'TvItemMenu') await installMediaStubs(page, { frame: '63e024', paused: name === 'TvPlayer' });
+  if (name === 'TvLive') await installMediaStubs(page, { frame: '63e024', live: true });
   const url = process.env.SOLID_PREVIEW_URL ?? process.env.LIGHTNING_PREVIEW_URL ?? 'http://127.0.0.1:4180/solid.html';
   await page.goto(`${url}?platform=${platform}&focusdebug=1`);
   await page.locator('canvas').waitFor({ state: 'visible', timeout: 20000 }).catch(async cause => {
@@ -270,7 +271,7 @@ try {
         await page.keyboard.down('Enter');
         await page.waitForTimeout(750);
         await page.keyboard.up('Enter');
-        await focused('source-details-close', 0);
+        await page.waitForFunction(()=>window.__viptvEntryFocus?.id==='source-details-body',null,{timeout:7000});
         await page.waitForTimeout(150);
         if (await page.evaluate(() => window.__viptvSourceIntent))
           throw new Error('Held source OK also selected a source on release');
@@ -385,7 +386,10 @@ try {
     await page.keyboard.press('ArrowLeft');
     await page.waitForFunction(() => window.__viptvFocus?.view === 'guide-program' && window.__viptvLive?.row === 1 && window.__viptvLive?.cell === 0, null, { timeout: 5000 });
     await page.keyboard.press('Enter');
-    await focused('source-row', 0);
+    await focused('player-control', 1);
+    if (!backend.requests.some(request => request.path === '/api/playback' && typeof request.body?.channel_id === 'string'))
+      throw new Error('Currently airing programme did not start direct live playback');
+    await page.keyboard.press('Escape');
     await page.keyboard.press('Escape');
     await page.waitForFunction(() => window.__viptvFocus?.view === 'guide-program' && window.__viptvLive?.row === 1 && window.__viptvLive?.cell === 0, null, { timeout: 5000 });
     await page.keyboard.press('ArrowUp');
@@ -805,6 +809,8 @@ try {
     if (!backend.requests.some(request => request.path.endsWith('/favorites/toggle')))
       throw new Error('Title My List action did not use the shared API');
     await focused('title-action', 2);
+    await page.keyboard.press('ArrowDown');
+    await page.waitForFunction(()=>window.__viptvEntryFocus?.id==='title-season');
     await page.keyboard.press('ArrowDown');
     await focused('title-episode', 0);
     await page.keyboard.press('ArrowRight');

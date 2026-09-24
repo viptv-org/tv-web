@@ -69,6 +69,26 @@ try{
     await page.evaluate(()=>{const v=document.querySelector('video');Object.defineProperty(v,'ended',{configurable:true,get:()=>true});v.dispatchEvent(new Event('ended'));});
     await expect.poll(()=>posts().length).toBe(2);
   });
+  await run('failed-rollback-no-stale-heartbeat',{mediaStub:{failAfter:1}},async({page,backend,entry,play,next})=>{
+    await play();await next();await entry('player-dialog-retry');
+    await page.waitForTimeout(15500);
+    expect(backend.requests.filter(request=>request.path.endsWith('/heartbeat'))).toHaveLength(0);
+  });
+  await run('late-player-error-exact-retry',{playbackFailAfter:1},async({page,posts,entry,play})=>{
+    await play();const original=posts()[0].body.stream_id;
+    await page.evaluate(()=>{document.querySelector('video').currentTime=42;});
+    await page.waitForFunction(()=>window.__viptvPlayer?.position===42);
+    await page.evaluate(()=>{
+      const video=document.querySelector('video');
+      Object.defineProperty(video,'error',{configurable:true,get:()=>({code:3,message:'Fixture decoder failure'})});
+      video.dispatchEvent(new Event('error'));
+    });
+    await entry('player-dialog-retry');
+    const before=posts().length;await page.keyboard.press('Enter');
+    await expect.poll(()=>posts().length).toBeGreaterThan(before);
+    expect(posts().at(-1).body.stream_id).toBe(original);
+    expect(posts().at(-1).body.position).toBe(42);
+  });
   await run('queued-next-source-previous',{queueNext:true,queuePosition:42},async({page,focused,backend,play})=>{
     await page.keyboard.down('Enter');await page.waitForTimeout(760);await page.keyboard.up('Enter');await focused('title-menu-option',0);
     await page.keyboard.press('ArrowDown');await page.keyboard.press('Enter');await focused('source-row',0);

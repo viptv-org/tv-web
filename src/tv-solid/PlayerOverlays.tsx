@@ -1,5 +1,5 @@
 /** @jsxImportSource @solidtv/solid */
-import { For, createMemo, onCleanup, onMount } from 'solid-js';
+import { For, createMemo, createSignal, onCleanup, onMount } from 'solid-js';
 import { activeElement, type ElementNode } from '@solidtv/solid';
 import type { MediaItem } from '../api';
 import { artworkUrl, presentation } from '../core/presentations';
@@ -99,13 +99,16 @@ export function UpNextOverlay(props: UpNextOverlayProps) {
 export interface PlayerDialogProps {
   title: string;
   message?: string;
-  choices: {id:string;label:string}[];
+  choices: {id:string;label:string;current?:boolean}[];
+  initialId?: string;
   onSelect: (id:string) => void;
   onCancel: () => void;
 }
 export function PlayerDialog(props: PlayerDialogProps) {
   const focus=nativeOverlay();
-  onMount(()=>focus.focus(props.choices[0] ? `player-dialog-${props.choices[0].id}` : ''));
+  const initial=Math.max(0,props.choices.findIndex(choice=>choice.id===props.initialId));
+  const [start,setStart]=createSignal(0);
+  onMount(()=>moveTo(initial));
   const width=px('layout.tv.panel-width'), left=screenWidth-width, x=left+px('layout.tv.panel-pad-left');
   const contentWidth=width-px('layout.tv.panel-pad-left')-px('layout.tv.panel-pad-right');
   const top=px('layout.tv.panel-pad-top'), gap=px('space.4.5');
@@ -114,12 +117,18 @@ export function PlayerDialog(props: PlayerDialogProps) {
   const messageSize=parseFloat(tokens['type.tv.label'].fontSize), messageLine=tokens['type.tv.body'].lineHeight;
   const messageHeight=createMemo(()=>lineCount(props.message??'',contentWidth,'Onest',messageSize)*messageSize*messageLine);
   const choicesY=createMemo(()=>top+titleHeight()+gap+(props.message ? messageHeight()+gap : 0));
-  const move=(index:number,direction:string)=>{const next=Math.max(0,Math.min(props.choices.length-1,index+(direction==='Up' ? -1 : direction==='Down' ? 1 : 0)));if(props.choices[next])focus.focus(`player-dialog-${props.choices[next].id}`);};
+  const capacity=createMemo(()=>Math.max(1,Math.floor((screenHeight-px('size.button.tv')-choicesY())/(px('size.row.tv')+px('space.3.5')))));
+  function moveTo(index:number) {
+    const next=Math.max(0,Math.min(props.choices.length-1,index));
+    if(next<start())setStart(next);else if(next>=start()+capacity())setStart(next-capacity()+1);
+    queueMicrotask(()=>{if(props.choices[next])focus.focus(`player-dialog-${props.choices[next].id}`);});
+  }
+  const move=(index:number,direction:string)=>moveTo(index+(direction==='Up'?-1:direction==='Down'?1:0));
   return <TvView nodeRef={focus.root} w={screenWidth} h={screenHeight} color={tokens['color.scrim.tv-panel']} onBack={()=>{props.onCancel();return true;}} onKeyPress={(event:KeyboardEvent)=>{if(['Escape','BrowserBack','GoBack'].includes(event.key)||[10009,461].includes(event.keyCode))props.onCancel();return true;}}>
     <TvView x={left} w={width} h={screenHeight} color={tokens['color.surface.1']} />
     <TvText x={x} y={top} maxwidth={contentWidth} size={titleSize} font="Bricolage700" cssLineBox lineheight={titleType.lineHeight} letterspacing={parseFloat(titleType.letterSpacing)*titleSize} content={props.title} color={tokens['color.text.primary']} />
     <TvText show={!!props.message} x={x} y={top+titleHeight()+gap} maxwidth={contentWidth} size={messageSize} font="Onest" cssLineBox lineheight={messageLine} content={props.message??''} color={tokens['color.text.secondary']} />
-    <For each={props.choices}>{(choice,index)=><EntryButton id={`player-dialog-${choice.id}`} x={x} y={choicesY()+index()*(px('size.row.tv')+px('space.3.5'))} w={contentWidth} h={px('size.row.tv')} radius={px('radius.3xl')} background={tokens['color.surface.1']} align="left" label={choice.label} register={focus.register} onMove={direction=>move(index(),direction)} onActivate={()=>props.onSelect(choice.id)} />}</For>
+    <For each={props.choices.slice(start(),start()+capacity())}>{(choice,index)=><EntryButton id={`player-dialog-${choice.id}`} x={x} y={choicesY()+index()*(px('size.row.tv')+px('space.3.5'))} w={contentWidth} h={px('size.row.tv')} radius={px('radius.3xl')} background={tokens['color.surface.1']} selected={choice.current} align="left" label={choice.label} register={focus.register} onMove={direction=>move(start()+index(),direction)} onActivate={()=>props.onSelect(choice.id)} />}</For>
     <EntryLegend items={[{key:'OK',label:'Select'},{key:'BACK',label:'Cancel'}]} />
   </TvView>;
 }

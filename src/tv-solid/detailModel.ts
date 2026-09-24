@@ -39,6 +39,9 @@ export interface DetailView {
   sourceLabel: string;
   saved: boolean;
   season: number;
+  /** Canonical, progress-enriched metadata; season browsing never changes Resume. */
+  allEpisodes: readonly MediaItem[];
+  seasons: readonly number[];
   episodeCount: number;
   episodes: DetailEpisodeView[];
 }
@@ -55,6 +58,8 @@ export const emptyDetail: DetailView = {
   sourceLabel: "Choose source",
   saved: false,
   season: 1,
+  allEpisodes: [],
+  seasons: [],
   episodeCount: 0,
   episodes: [],
 };
@@ -79,7 +84,6 @@ export async function loadDetailView(
   const selected = enrichDetail(original, value.item);
   const first = initialEpisode(episodes, original);
   const season = first?.season ?? episodes[0]?.season ?? 1;
-  const shown = episodes.filter((episode) => episode.season === season);
   const target =
     first ??
     (selected.type === "series" && selected.episode === undefined
@@ -103,7 +107,7 @@ export async function loadDetailView(
   ]
     .filter(Boolean)
     .join(" · ");
-  return {
+  return selectDetailSeason({
     item: selected,
     target,
     title: selected.name,
@@ -120,6 +124,20 @@ export async function loadDetailView(
       (favorite) =>
         favorite.id === selected.id && favorite.type === selected.type,
     ),
+    season,
+    allEpisodes: episodes,
+    seasons: [...new Set(episodes.map(episode => episode.season ?? 1))].sort((a, b) => a - b),
+    episodeCount: 0,
+    episodes: [],
+  }, season);
+}
+
+/** Browsing another season preserves the title's original Play/Resume intent. */
+export function selectDetailSeason(detail: DetailView, season: number): DetailView {
+  if (!Number.isFinite(season) || (detail.seasons.length && !detail.seasons.includes(season))) return detail;
+  const shown = detail.allEpisodes.filter(episode => (episode.season ?? 1) === season);
+  return {
+    ...detail,
     season,
     episodeCount: shown.length,
     episodes: shown.map((episode, index) => {
@@ -142,4 +160,14 @@ export async function loadDetailView(
       };
     }),
   };
+}
+
+/** A bounded render window; indices remain relative to the selected season. */
+export function detailEpisodeWindow(detail: DetailView, requestedStart: number, size = 3) {
+  const count = Math.max(1, Math.floor(Number.isFinite(size) ? size : 3));
+  const start = Math.max(0, Math.min(
+    Math.floor(Number.isFinite(requestedStart) ? requestedStart : 0),
+    Math.max(0, detail.episodes.length - count),
+  ));
+  return { start, total: detail.episodeCount, episodes: detail.episodes.slice(start, start + count) };
 }

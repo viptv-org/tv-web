@@ -48,4 +48,20 @@ try {
   expect(backend.errors).toEqual([]);
   console.log('Home playback failure: source recovery and return focus passed');
   await page.close();
+  {
+    const retry=await browser.newPage({viewport:{width:1920,height:1080}});
+    const backend=await installBackend(retry,{family:'tv',session:'ready'});
+    let fail=true;
+    await retry.route('**/api/profiles/*/continue/page**',route=>fail
+      ? route.fulfill({status:503,contentType:'application/json',body:JSON.stringify({error:'Temporary catalog outage'})})
+      : route.fallback());
+    await retry.goto(`${url}?platform=vizio&focusdebug=1`);
+    await retry.waitForFunction(()=>window.__viptvFocus?.view==='error',null,{timeout:10000});
+    fail=false;await retry.keyboard.press('Enter');
+    await retry.waitForFunction(()=>window.__viptvFocus?.view==='home-action',null,{timeout:10000});
+    expect(backend.requests.filter(request=>request.path.includes('/device/code'))).toHaveLength(0);
+    expect(backend.errors).toEqual([]);
+    console.log('Home request retry preserves the signed-in session and does not start pairing');
+    await retry.close();
+  }
 } finally {await browser.close();}

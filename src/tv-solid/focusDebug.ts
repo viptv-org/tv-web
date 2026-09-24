@@ -20,6 +20,11 @@ export function noteUpNext(open: boolean, left = 0) {
   (window as Window & {__viptvUpNext?:{open:boolean;left:number}}).__viptvUpNext={open,left};
 }
 
+export function noteSeekState(target: number | null, pending: number, displayed: number) {
+  if (!enabled) return;
+  (window as Window & {__viptvSeek?:{target:number|null;pending:number;displayed:number}}).__viptvSeek={target,pending,displayed};
+}
+
 /** Test-only identity marker; never includes source URLs or credentials. */
 export function noteSourceIntent(
   itemId: string,
@@ -189,15 +194,17 @@ export function noteTrackSelection(
   kind: string,
   id: string,
   available: boolean,
+  committed = false,
 ) {
   if (!enabled) return;
   (
     window as Window & {
-      __viptvTrackSelection?: { kind: string; id: string; available: boolean };
+      __viptvTrackSelection?: { kind: string; id: string; available: boolean; committed: boolean };
     }
   ).__viptvTrackSelection = {
     kind,
     id,
     available,
+    committed,
   };
 }

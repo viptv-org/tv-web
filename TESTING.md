@@ -12,10 +12,19 @@ filters, fresh pairing after sign-out, Next/recovery/Up Next, and direct guide
 channel playback with exact focus return. Home backdrop composition reuses
 wsrv derivatives; native SVG textures now render icons and key outlines.
 
-Validation: production build and integrity/type checks pass; 181 unit tests
+Follow-up closes season selection/long episode navigation, full More info and
+Source details scrolling (including long Unicode URLs), >8-track pagination,
+Home retry without re-pairing, seek-target pinning and replacement-session
+heartbeats. Added tests cover three-platform 12-track selection, cross-season
+tenth-episode/source/Resume identity, three text-panel cases, Home retry and
+managed seek/replacement heartbeat, retired-session heartbeat suppression, and
+late decoder-error Retry preserving exact source and captured position. Controller recovery lifecycle has five
+focused unit regressions; season projection adds three.
+
+Validation: production build and integrity/type checks pass; 189 unit tests
 pass. All 30 baseline SolidTV screenshot scenarios pass. Additional sequential
 browser acceptance passes cover seven account scenarios, four text-entry and
-sign-out flows, nine Next/recovery cases, three platform remote-focus modes,
+sign-out flows, eleven Next/recovery cases, three platform remote-focus modes,
 and direct live/programme playback in all three platform modes plus failed
 preparation Back and cancelled-start ownership. These are fixture-driven browser tests, not physical TVs.
 
@@ -24,8 +33,9 @@ screen inventory, physical Tizen/Vizio/webOS video and remote qualification,
 and launcher/consumer switch. React remains the default launch entry. No
 production deployment or desktop submodule update was performed. Historical
 results below describe their original checkpoints; current performance results
-are in PERFORMANCE.md. The latest 4× run uses 55.5% less main-thread work/key,
-but its strict startup gate fails and JS heap remains higher.
+are in PERFORMANCE.md. The latest 4× run uses 57.0% less main-thread work/key
+and passes all eight speed/frame gates; startup varies near a tie and JS heap
+remains higher.
 
 ---
 
