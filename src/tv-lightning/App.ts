@@ -8,6 +8,9 @@ import { railIcon } from "./railIcons";
 import { RailItem } from "./RailFocus";
 import { DiscoverFilterOption } from "./DiscoverFocus";
 import { DiscoverScreen } from "./DiscoverScreen";
+import { LibraryScreen } from "./LibraryScreen";
+import { libraryCard } from "./libraryModel";
+import { cardPresentation } from "../core/presentations";
 import {
   catalogDefaults, catalogFilters, catalogForGroup, catalogsForGroup, discoverCard,
   discoverChips, discoverTypeGroup, emptyDiscoverCard, emptyDiscoverChip,
@@ -19,7 +22,7 @@ import { emptyDetail, emptyDetailEpisode, loadDetailView, type DetailView } from
 import { TitleAction, EpisodeTile } from "./TitleFocus";
 import { emptySources, emptySourceRow, projectSources, type SourcesView } from "./sourceModel";
 import { SourceChip, SourceProvider, SourceRow, ProviderOption, SourceDetailsClose, emptySourceChip, emptyProviderChoice } from "./SourceFocus";
-import { noteDiscoverFilter, noteDiscoverWindow, noteFocus, notePlayerState, noteSourceFilter, noteSourceIntent, noteSourceWindow, noteTrackPanel, noteTrackSelection } from "./focusDebug";
+import { noteDiscoverFilter, noteDiscoverWindow, noteFocus, noteLibraryState, notePlayerState, noteSourceFilter, noteSourceIntent, noteSourceWindow, noteTrackPanel, noteTrackSelection } from "./focusDebug";
 import { createLightningPlaybackRuntime, type LightningPlaybackRuntime } from "./playbackRuntime";
 import { PlayerControl, PlayerTimeline, PlayerTrackOption } from "./PlayerFocus";
 import type { PlayerSnapshot } from "@viptv/video";
@@ -120,6 +123,9 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
   let discoverGeneration = 0;
   let discoverScope: ReturnType<TvApi["createScope"]> | undefined;
   let discoverRequestedPage = "";
+  let libraryGeneration = 0;
+  let libraryScope: ReturnType<TvApi["createScope"]> | undefined;
+  let libraryRequestedPage = "";
   let sourceGeneration = 0;
   let sourceScope: ReturnType<TvApi["createScope"]> | undefined;
   let sourceTimer: ReturnType<typeof setTimeout> | undefined;
@@ -129,7 +135,7 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
   let chromeTimer: ReturnType<typeof setTimeout> | undefined;
   let disposeSession: (() => void) | undefined;
   return Blits.Application({
-    components: { ProfileTile, ManageProfilesButton, HomeAction, HomeCard, RailItem, DiscoverScreen, DiscoverFilterOption, TitleAction, EpisodeTile, SourceChip, SourceProvider, SourceRow, ProviderOption, SourceDetailsClose, PlayerControl, PlayerTimeline, PlayerTrackOption },
+    components: { ProfileTile, ManageProfilesButton, HomeAction, HomeCard, RailItem, DiscoverScreen, LibraryScreen, DiscoverFilterOption, TitleAction, EpisodeTile, SourceChip, SourceProvider, SourceRow, ProviderOption, SourceDetailsClose, PlayerControl, PlayerTimeline, PlayerTrackOption },
     template: `
       <Element w="1920" h="1080" :color="$phase === 'player' || $phase === 'playerTracks' || $phase === 'preparing' ? 'rgba(0,0,0,0)' : $background">
         <Element x="260" y="86" w="1400" h="800" src="$pairingGlow" :show="$phase === 'pairing' || $phase === 'expired' || $phase === 'error'" />
@@ -225,17 +231,18 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
           <Text x="1730" y="66" :content="$optionsLabel" font="Onest" size="20" color="$body" />
         </Element>
         <DiscoverScreen ref="discoverScreen" :show="$phase === 'discover'" :homeProfileAvatar="$homeProfileAvatar" :railSearch="$railSearch" :railHome="$railHome" :railDiscoverSelected="$railDiscoverSelected" :railLive="$railLive" :railList="$railList" :railSettings="$railSettings" :surface="$surface" :discoverHeading="$discoverHeading" :discoverChips="$discoverChips" :discoverCards="$discoverCards" :discoverWindowStart="$discoverWindowStart" :discoverError="$discoverError" :discoverOkLabel="$discoverOkLabel" :discoverSelectLabel="$discoverSelectLabel" :discoverOptionsIcon="$discoverOptionsIcon" :discoverOptionsLabel="$discoverOptionsLabel" :background="$background" :primary="$primary" :body="$body" :keyBorder="$keyBorder" />
-        <Element :show="$phase === 'detail' || $phase === 'sources' || $phase === 'provider' || $phase === 'sourceDetails'">
+        <LibraryScreen ref="libraryScreen" :show="$phase === 'library' || ($sourceReturnOrigin === 'library' && ($phase === 'sources' || $phase === 'provider' || $phase === 'sourceDetails'))" :homeProfileAvatar="$homeProfileAvatar" :railSearch="$railSearch" :railHomeUnselected="$railHomeUnselected" :railDiscover="$railDiscover" :railLive="$railLive" :railListSelected="$railListSelected" :railSettings="$railSettings" :surface="$surface" :libraryHeading="$libraryHeading" :libraryMode="$libraryMode" :libraryCards="$libraryCards" :libraryWindowStart="$libraryWindowStart" :libraryError="$libraryError" :libraryOkLabel="$libraryOkLabel" :librarySelectLabel="$librarySelectLabel" :libraryOptionsIcon="$libraryOptionsIcon" :libraryOptionsLabel="$libraryOptionsLabel" :background="$background" :primary="$primary" :body="$body" :keyBorder="$keyBorder" />
+        <Element :show="$phase === 'detail' || ($sourceReturnOrigin === 'detail' && ($phase === 'sources' || $phase === 'provider' || $phase === 'sourceDetails'))">
           <Element x="1120" y="0" w="800" h="720" :src="$detail.heroImage" :show="$detail.heroImage !== ''" alpha="0.75" />
           <Element w="1920" h="1080" src="$homeScrim" />
           <Element x="44" y="54" w="56" h="56" rounded="28" color="$surface" />
           <Element x="50" y="60" w="44" h="44" rounded="22" :src="$homeProfileAvatar" :show="$homeProfileAvatar !== ''" />
           <Element x="60" y="202" w="24" h="24" :src="$railSearch" />
-          <Element x="40" :y="$railCurrent === 'discover' ? 340 : 262" w="64" h="64" rounded="32" color="$surface" />
-          <Element x="60" y="282" w="24" h="24" :src="$railCurrent === 'discover' ? $railHomeUnselected : $railHome" />
+          <Element x="40" :y="$railCurrent === 'discover' ? 340 : $railCurrent === 'library' ? 496 : 262" w="64" h="64" rounded="32" color="$surface" />
+          <Element x="60" y="282" w="24" h="24" :src="$railCurrent === 'home' ? $railHome : $railHomeUnselected" />
           <Element x="60" y="360" w="24" h="24" :src="$railCurrent === 'discover' ? $railDiscoverSelected : $railDiscover" />
           <Element x="60" y="440" w="24" h="24" :src="$railLive" />
-          <Element x="60" y="516" w="24" h="24" :src="$railList" />
+          <Element x="60" y="516" w="24" h="24" :src="$railCurrent === 'library' ? $railListSelected : $railList" />
           <Element x="60" y="978" w="24" h="24" :src="$railSettings" />
           <Element x="192" y="96" w="310" h="90" fit="contain" :src="$detail.titleLogo" :show="$detail.titleLogo !== ''" />
           <Text x="192" y="96" maxwidth="850" :content="$detail.title" font="Bricolage700" size="56" color="$primary" :show="$detail.titleLogo === ''" />
@@ -365,7 +372,7 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
           <Text x="1693" y="1000" :content="$discoverBackLabel" font="Onest700" size="16" color="$primary" />
           <Text x="1760" y="999" :content="$discoverCancelLabel" font="Onest" size="20" color="$body" />
         </Element>
-        <Element zIndex="20" :show="$railExpanded && ($phase === 'home' || $phase === 'detail' || $phase === 'discover')">
+        <Element zIndex="20" :show="$railExpanded && ($phase === 'home' || $phase === 'detail' || $phase === 'discover' || $phase === 'library')">
           <Element w="1920" h="1080" color="$menuScrim" />
           <Element w="520" h="1080" src="$menuGradient" />
           <RailItem ref="rail0" position="0" label="Profile" icon="" focusedIcon="" :avatar="$homeProfileAvatar" :profileName="$railProfileName" :current="false" x="48" y="48" />
@@ -373,7 +380,7 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
           <RailItem ref="rail2" position="2" label="Home" :icon="$railHome" :focusedIcon="$railHomeFocus" avatar="" profileName="" :current="$railCurrent === 'home'" x="48" y="252" />
           <RailItem ref="rail3" position="3" label="Discover" :icon="$railDiscover" :focusedIcon="$railDiscoverFocus" avatar="" profileName="" :current="$railCurrent === 'discover'" x="48" y="330" />
           <RailItem ref="rail4" position="4" label="Live TV" :icon="$railLive" :focusedIcon="$railLiveFocus" avatar="" profileName="" :current="false" x="48" y="408" />
-          <RailItem ref="rail5" position="5" label="My List" :icon="$railList" :focusedIcon="$railListFocus" avatar="" profileName="" :current="false" x="48" y="486" />
+          <RailItem ref="rail5" position="5" label="My List" :icon="$railList" :focusedIcon="$railListFocus" avatar="" profileName="" :current="$railCurrent === 'library'" x="48" y="486" />
           <RailItem ref="rail6" position="6" label="Settings" :icon="$railSettings" :focusedIcon="$railSettingsFocus" avatar="" profileName="" :current="false" x="48" y="958" />
           <Text x="48" y="864" maxwidth="400" :content="$railNotice" font="Onest" size="20" color="$secondary" />
         </Element>
@@ -420,6 +427,7 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
         sourceWindowStart: 0,
         sourceReturnZone: "action" as "action" | "episode",
         sourceReturnIndex: 0,
+        sourceReturnOrigin: "detail" as "detail" | "library",
         sourceResume: false,
         sourceScrim: tokens["color.scrim.tv-panel"],
         sourcePanelGround: tokens["color.surface.1"],
@@ -472,11 +480,11 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
         homeCardIndex: 0,
         railExpanded: false,
         railFocusIndex: 2,
-        railReturnZone: "action" as "action" | "card" | "chip" | "episode",
+        railReturnZone: "action" as "action" | "card" | "chip" | "segment" | "episode",
         railReturnIndex: 0,
         railProfileName: "",
         railNotice: "",
-        railCurrent: "home" as "home" | "discover",
+        railCurrent: "home" as "home" | "discover" | "library",
         menuScrim: tokens["color.scrim.tv-menu"],
         menuGradient: menuGradient(),
         discoverHeading: "",
@@ -508,9 +516,30 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
         discoverOptionLabels: Array.from({ length: 8 }, () => ""),
         discoverOptionIndex: 0,
         discoverFilterReturnChip: 0,
-        discoverReturnZone: "action" as "action" | "card",
+        discoverReturnPhase: "home" as "home" | "library",
+        discoverReturnZone: "action" as "action" | "card" | "segment",
         discoverReturnIndex: 0,
-        detailReturnPhase: "home" as "home" | "discover",
+        detailReturnPhase: "home" as "home" | "discover" | "library",
+        libraryHeading: "",
+        libraryMode: "favorites" as "favorites" | "queue",
+        libraryFavorites: [] as MediaItem[],
+        libraryQueueItems: [] as MediaItem[],
+        libraryItems: [] as MediaItem[],
+        libraryNextOffset: null as number | null,
+        libraryCards: Array.from({ length: 12 }, () => ({ ...emptyDiscoverCard })) as DiscoverCardView[],
+        libraryWindowStart: 0,
+        libraryCardIndex: 0,
+        librarySegmentIndex: 0,
+        libraryFocusZone: "segment" as "segment" | "card",
+        libraryReturnPhase: "home" as "home" | "discover",
+        libraryReturnZone: "action" as "action" | "card" | "chip",
+        libraryReturnIndex: 0,
+        libraryBusy: false,
+        libraryError: "",
+        libraryOkLabel: "",
+        librarySelectLabel: "",
+        libraryOptionsIcon: "",
+        libraryOptionsLabel: "",
         currentProfileId: "",
         homeNotice: "",
         homeAddLabel: "",
@@ -529,6 +558,7 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
         railLive: railIcon("live"),
         railLiveFocus: railIcon("live", false, true),
         railList: railIcon("list"),
+        railListSelected: railIcon("list", true),
         railListFocus: railIcon("list", false, true),
         railSettings: railIcon("settings"),
         railSettingsFocus: railIcon("settings", false, true),
@@ -538,7 +568,7 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
         danger: tokens["color.status.danger-tv"],
         codeSize: pairCodeSize,
         codeLetterSpacing: pairCodeSize * 0.08,
-        phase: "starting" as "starting" | "pairing" | "expired" | "error" | "profiles" | "ready" | "home" | "discover" | "detail" | "sources" | "provider" | "sourceDetails" | "preparing" | "player" | "playerTracks",
+        phase: "starting" as "starting" | "pairing" | "expired" | "error" | "profiles" | "ready" | "home" | "discover" | "library" | "detail" | "sources" | "provider" | "sourceDetails" | "preparing" | "player" | "playerTracks",
         address: "Connecting…",
         code: "••••••",
         qr: "",
@@ -642,6 +672,13 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
         this.$listen("discover-option-move", (delta: number) => this.moveDiscoverOption(Number(delta)));
         this.$listen("discover-option-activate", () => void this.selectDiscoverOption());
         this.$listen("discover-option-close", () => this.closeDiscoverFilter());
+        this.$listen("library-segment-focused", (position: number) => { this.librarySegmentIndex = Number(position); });
+        this.$listen("library-segment-move", (delta: number) => this.moveLibrarySegment(Number(delta)));
+        this.$listen("library-segment-activate", () => void this.activateLibrarySegment());
+        this.$listen("library-card-enter", () => this.focusLibraryCard(this.libraryCardIndex));
+        this.$listen("library-card-focused", (position: number) => { this.libraryCardIndex = Number(position); });
+        this.$listen("library-card-move", (direction: string) => this.moveLibraryCard(direction));
+        this.$listen("library-card-activate", () => this.activateLibraryCard());
         this.$listen("title-action-move", (delta: number) =>
           Number(delta) < 0 && this.detailActionIndex === 0
             ? this.openRail()
@@ -697,6 +734,8 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
         ++detailGeneration;
         discoverScope?.abort();
         ++discoverGeneration;
+        libraryScope?.abort();
+        ++libraryGeneration;
         sourceScope?.abort();
         ++sourceGeneration;
         clearTimeout(sourceTimer);
@@ -775,16 +814,18 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
         this.focusHomeCard(Math.max(0, Math.min(count - 1, this.homeCardIndex + delta)));
       },
       openRail() {
-        if (this.phase !== "home" && this.phase !== "detail" && this.phase !== "discover") return;
+        if (this.phase !== "home" && this.phase !== "detail" && this.phase !== "discover" && this.phase !== "library") return;
         this.railReturnZone = this.phase === "home" ? this.homeFocusZone
-          : this.phase === "discover" ? this.discoverFocusZone : this.detailFocusZone;
+          : this.phase === "discover" ? this.discoverFocusZone
+          : this.phase === "library" ? this.libraryFocusZone : this.detailFocusZone;
         this.railReturnIndex = this.phase === "home"
           ? this.homeFocusZone === "card" ? this.homeCardIndex : this.homeActionIndex
           : this.phase === "discover" ? this.discoverFocusZone === "card" ? this.discoverCardIndex : this.discoverChipIndex
+          : this.phase === "library" ? this.libraryFocusZone === "card" ? this.libraryCardIndex : this.librarySegmentIndex
           : this.detailFocusZone === "episode" ? this.detailEpisodeIndex : this.detailActionIndex;
         this.railExpanded = true;
         this.railNotice = "";
-        this.focusRail(this.railCurrent === "discover" ? 3 : 2);
+        this.focusRail(this.railCurrent === "discover" ? 3 : this.railCurrent === "library" ? 5 : 2);
         setTimeout(() => {
           if (!this.railExpanded) return;
           for (let index = 0; index < 7; index++)
@@ -811,6 +852,9 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
         } else if (this.phase === "discover") {
           if (this.railReturnZone === "chip") this.focusDiscoverChip(this.railReturnIndex);
           else this.focusDiscoverCard(this.railReturnIndex);
+        } else if (this.phase === "library") {
+          if (this.railReturnZone === "segment") this.focusLibrarySegment(this.railReturnIndex);
+          else this.focusLibraryCard(this.railReturnIndex);
         }
       },
       activateRail() {
@@ -825,21 +869,39 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
             this.railCurrent = "home";
             this.returnFromDetail();
           } else if (this.phase === "discover") this.returnFromDiscover();
+          else if (this.phase === "library") this.returnFromLibrary();
           else this.closeRail();
         } else if (this.railFocusIndex === 3) {
           if (this.phase === "discover") this.closeRail();
           else {
             if (this.phase === "home") {
+              this.discoverReturnPhase = "home";
               this.discoverReturnZone = this.railReturnZone === "card" ? "card" : "action";
+              this.discoverReturnIndex = this.railReturnIndex;
+            } else if (this.phase === "library") {
+              this.discoverReturnPhase = "library";
+              this.discoverReturnZone = this.railReturnZone === "segment" ? "segment" : "card";
               this.discoverReturnIndex = this.railReturnIndex;
             }
             void this.openDiscover();
+          }
+        } else if (this.railFocusIndex === 5) {
+          if (this.phase === "library") this.closeRail();
+          else {
+            this.libraryReturnPhase = this.phase === "discover" ? "discover" : "home";
+            this.libraryReturnZone = this.railReturnZone === "chip" ? "chip" : this.railReturnZone === "card" ? "card" : "action";
+            this.libraryReturnIndex = this.railReturnIndex;
+            void this.openLibrary();
           }
         } else {
           this.railNotice = "This screen is not available yet.";
         }
       },
       async openDiscover() {
+        if (this.phase === "library") {
+          libraryScope?.abort();
+          ++libraryGeneration;
+        }
         const generation = ++discoverGeneration;
         discoverScope?.abort();
         const scope = api.createScope();
@@ -1055,12 +1117,222 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
         ++discoverGeneration;
         this.discoverFilterOpen = false;
         this.railExpanded = false;
-        this.railCurrent = "home";
-        this.phase = "home";
+        this.railCurrent = this.discoverReturnPhase;
+        this.phase = this.discoverReturnPhase;
         setTimeout(() => {
-          this.revealHomeControls();
-          if (this.discoverReturnZone === "card") this.focusHomeCard(this.discoverReturnIndex);
-          else this.focusHomeAction(this.discoverReturnIndex);
+          if (this.phase === "library") {
+            this.revealLibrarySegments();
+            this.refreshLibraryCards();
+            if (this.discoverReturnZone === "segment") this.focusLibrarySegment(this.discoverReturnIndex);
+            else this.focusLibraryCard(this.discoverReturnIndex);
+          } else {
+            this.revealHomeControls();
+            if (this.discoverReturnZone === "card") this.focusHomeCard(this.discoverReturnIndex);
+            else this.focusHomeAction(this.discoverReturnIndex);
+          }
+        }, 0);
+      },
+      async openLibrary() {
+        if (this.phase === "discover") {
+          discoverScope?.abort();
+          ++discoverGeneration;
+        }
+        const generation = ++libraryGeneration;
+        libraryScope?.abort();
+        const scope = api.createScope();
+        libraryScope = scope;
+        this.railExpanded = false;
+        this.railCurrent = "library";
+        this.phase = "library";
+        this.libraryMode = "favorites";
+        this.librarySegmentIndex = 0;
+        this.libraryCardIndex = 0;
+        this.libraryWindowStart = 0;
+        this.libraryError = "";
+        this.libraryBusy = true;
+        this.libraryItems = [...this.home.favoriteItems];
+        this.refreshLibraryCards();
+        setTimeout(() => {
+          if (this.phase !== "library") return;
+          this.libraryHeading = "My List";
+          this.libraryOkLabel = "OK";
+          this.librarySelectLabel = "Select";
+          this.libraryOptionsIcon = "≡";
+          this.libraryOptionsLabel = "Options";
+          this.revealLibrarySegments();
+        }, 0);
+        try {
+          const favorites = await api.favorites(this.currentProfileId, { signal: scope.signal });
+          if (generation !== libraryGeneration || scope.signal.aborted) return;
+          this.libraryFavorites = favorites;
+          this.libraryItems = favorites;
+          noteLibraryState("favorites", favorites.length);
+          this.libraryBusy = false;
+          this.libraryError = favorites.length ? "" : "Your list is empty. Add titles with the + button.";
+          this.refreshLibraryCards();
+          setTimeout(() => {
+            if (generation === libraryGeneration && this.phase === "library" && !this.railExpanded)
+              if (favorites.length) this.focusLibraryCard(0);
+              else this.focusLibrarySegment(0);
+          }, 60);
+        } catch (cause) {
+          if (generation !== libraryGeneration || scope.signal.aborted) return;
+          this.libraryBusy = false;
+          this.libraryError = cause instanceof Error ? cause.message : "Unable to load My List.";
+          this.focusLibrarySegment(0);
+        }
+      },
+      async loadLibraryQueue(offset = 0) {
+        if (offset) {
+          const pageKey = `${this.currentProfileId}@${offset}`;
+          if (pageKey === libraryRequestedPage) return;
+          libraryRequestedPage = pageKey;
+        } else libraryRequestedPage = "";
+        const generation = ++libraryGeneration;
+        libraryScope?.abort();
+        const scope = api.createScope();
+        libraryScope = scope;
+        this.libraryMode = "queue";
+        this.libraryBusy = true;
+        this.libraryError = "";
+        if (!offset) {
+          this.libraryWindowStart = 0;
+          this.libraryCardIndex = 0;
+          this.libraryItems = this.libraryQueueItems.length ? [...this.libraryQueueItems] : [...this.home.queueItems];
+          this.refreshLibraryCards();
+        }
+        try {
+          const page = await api.queue(this.currentProfileId, offset, { signal: scope.signal });
+          if (generation !== libraryGeneration || scope.signal.aborted) return;
+          this.libraryQueueItems = offset
+            ? [...this.libraryQueueItems, ...page.items.filter(item => !this.libraryQueueItems.some(old => old.type === item.type && old.id === item.id))]
+            : [...page.items];
+          this.libraryItems = [...this.libraryQueueItems];
+          noteLibraryState("queue", this.libraryItems.length);
+          this.libraryNextOffset = page.nextOffset;
+          this.libraryBusy = false;
+          this.libraryError = this.libraryItems.length ? "" : "Nothing in progress. Titles you start watching appear here.";
+          this.refreshLibraryCards();
+        } catch (cause) {
+          if (generation !== libraryGeneration || scope.signal.aborted) return;
+          this.libraryBusy = false;
+          this.libraryError = cause instanceof Error ? cause.message : "Unable to load Continue Watching.";
+        }
+      },
+      async reloadLibraryFavorites(index: number) {
+        const generation = ++libraryGeneration;
+        libraryScope?.abort();
+        const scope = api.createScope();
+        libraryScope = scope;
+        try {
+          const favorites = await api.favorites(this.currentProfileId, { signal: scope.signal });
+          if (generation !== libraryGeneration || scope.signal.aborted || this.phase !== "library") return;
+          this.libraryFavorites = favorites;
+          this.libraryItems = [...favorites];
+          this.libraryWindowStart = 0;
+          this.libraryCardIndex = Math.min(index, Math.max(0, favorites.length - 1));
+          this.libraryError = favorites.length ? "" : "Your list is empty. Add titles with the + button.";
+          noteLibraryState("favorites", favorites.length);
+          this.refreshLibraryCards();
+          setTimeout(() => {
+            if (generation !== libraryGeneration || this.phase !== "library") return;
+            if (favorites.length) this.focusLibraryCard(this.libraryCardIndex);
+            else this.focusLibrarySegment(0);
+          }, 40);
+        } catch {
+          if (generation !== libraryGeneration || scope.signal.aborted) return;
+          this.focusLibraryCard(Math.min(index, Math.max(0, this.libraryItems.length - 1)));
+        }
+      },
+      revealLibrarySegments() {
+        for (let index = 0; index < 2; index++)
+          (this.$select("libraryScreen")?.$select(`librarySegment${index}`) as unknown as { reveal?: () => void })?.reveal?.();
+      },
+      refreshLibraryCards() {
+        const visible = this.libraryItems.slice(this.libraryWindowStart, this.libraryWindowStart + 12);
+        this.libraryCards = Array.from({ length: 12 }, (_, index) => visible[index]
+          ? libraryCard(visible[index], this.libraryMode === "queue") : { ...emptyDiscoverCard });
+        setTimeout(() => {
+          if (this.phase !== "library" && this.sourceReturnOrigin !== "library") return;
+          for (let index = 0; index < 12; index++)
+            (this.$select("libraryScreen")?.$select(`libraryCard${index}`) as unknown as { reveal?: () => void })?.reveal?.();
+        }, 0);
+      },
+      focusLibrarySegment(index: number) {
+        this.libraryFocusZone = "segment";
+        this.librarySegmentIndex = index;
+        this.$select("libraryScreen")?.$select(`librarySegment${index}`)?.$focus();
+      },
+      moveLibrarySegment(delta: number) {
+        if (delta < 0 && this.librarySegmentIndex === 0) { this.openRail(); return; }
+        this.focusLibrarySegment(Math.max(0, Math.min(1, this.librarySegmentIndex + delta)));
+      },
+      async activateLibrarySegment() {
+        if (this.librarySegmentIndex === 1) void this.loadLibraryQueue();
+        else {
+          libraryScope?.abort();
+          ++libraryGeneration;
+          this.libraryMode = "favorites";
+          this.libraryItems = [...this.libraryFavorites];
+          noteLibraryState("favorites", this.libraryItems.length);
+          this.libraryWindowStart = 0;
+          this.libraryCardIndex = 0;
+          this.libraryNextOffset = null;
+          this.libraryError = this.libraryItems.length ? "" : "Your list is empty. Add titles with the + button.";
+          this.refreshLibraryCards();
+        }
+      },
+      focusLibraryCard(index: number) {
+        if (!this.libraryItems[index]) return;
+        this.libraryFocusZone = "card";
+        this.libraryCardIndex = index;
+        const previousWindow = this.libraryWindowStart;
+        if (index < this.libraryWindowStart) this.libraryWindowStart = Math.floor(index / 4) * 4;
+        else if (index >= this.libraryWindowStart + 12) this.libraryWindowStart = (Math.floor(index / 4) - 2) * 4;
+        if (this.libraryWindowStart !== previousWindow) this.refreshLibraryCards();
+        const local = index - this.libraryWindowStart;
+        if (this.libraryWindowStart !== previousWindow)
+          setTimeout(() => {
+            this.$select("libraryScreen")?.$select(`libraryCard${local}`)?.$focus();
+            noteFocus("library-card", index);
+          }, 0);
+        else this.$select("libraryScreen")?.$select(`libraryCard${local}`)?.$focus();
+      },
+      moveLibraryCard(direction: string) {
+        const index = this.libraryCardIndex;
+        if (direction === "left" && index % 4 === 0) { this.openRail(); return; }
+        if (direction === "up" && index < 4) { this.focusLibrarySegment(this.librarySegmentIndex); return; }
+        const delta = direction === "left" ? -1 : direction === "right" ? 1 : direction === "up" ? -4 : 4;
+        const next = index + delta;
+        if (next >= 0 && next < this.libraryItems.length && (direction !== "right" || index % 4 !== 3)) this.focusLibraryCard(next);
+        if (direction === "down" && this.libraryMode === "queue" && this.libraryNextOffset !== null && this.libraryItems.length - next < 8 && !this.libraryBusy)
+          void this.loadLibraryQueue(this.libraryNextOffset);
+      },
+      activateLibraryCard() {
+        const item = this.libraryItems[this.libraryCardIndex];
+        if (!item) return;
+        const action = cardPresentation(item, this.libraryMode === "queue" ? "queue" : "catalog").primaryAction;
+        if (action === "resume" || action === "next") void this.openSources(item, true);
+        else if (action === "sources" || action === "play") void this.openSources(item, false);
+        else void this.openDetail(item);
+      },
+      returnFromLibrary() {
+        libraryScope?.abort();
+        ++libraryGeneration;
+        this.railExpanded = false;
+        this.phase = this.libraryReturnPhase;
+        this.railCurrent = this.libraryReturnPhase;
+        setTimeout(() => {
+          if (this.phase === "discover") {
+            this.revealDiscoverChips();
+            this.refreshDiscoverCards();
+            if (this.libraryReturnZone === "chip") this.focusDiscoverChip(this.libraryReturnIndex);
+            else this.focusDiscoverCard(this.libraryReturnIndex);
+          } else {
+            this.revealHomeControls();
+            if (this.libraryReturnZone === "card") this.focusHomeCard(this.libraryReturnIndex);
+            else this.focusHomeAction(this.libraryReturnIndex);
+          }
         }, 0);
       },
       async activateHomeAction() {
@@ -1092,7 +1364,7 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
         if (item) void this.openDetail(item);
       },
       async openDetail(item: MediaItem) {
-        if (this.phase !== "home" && this.phase !== "discover") return;
+        if (this.phase !== "home" && this.phase !== "discover" && this.phase !== "library") return;
         const generation = ++detailGeneration;
         detailScope?.abort();
         detailScope = api.createScope();
@@ -1100,9 +1372,12 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
         if (this.phase === "home") {
           this.detailReturnZone = this.homeFocusZone;
           this.detailReturnIndex = this.homeFocusZone === "card" ? this.homeCardIndex : this.homeActionIndex;
-        } else {
+        } else if (this.phase === "discover") {
           this.detailReturnZone = "card";
           this.detailReturnIndex = this.discoverCardIndex;
+        } else {
+          this.detailReturnZone = "card";
+          this.detailReturnIndex = this.libraryCardIndex;
         }
         this.homeNotice = "";
         try {
@@ -1163,14 +1438,18 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
         this.detailNotice = action === "info" ? this.detail.synopsis : "Choose source is not available yet.";
       },
       async openSources(item: MediaItem, resume: boolean) {
-        if (this.phase !== "detail") return;
+        if (this.phase !== "detail" && this.phase !== "library") return;
         const generation = ++sourceGeneration;
         sourceScope?.abort();
         clearTimeout(sourceTimer);
         const scope = api.createScope();
         sourceScope = scope;
-        this.sourceReturnZone = this.detailFocusZone;
-        this.sourceReturnIndex = this.detailFocusZone === "episode" ? this.detailEpisodeIndex : this.detailActionIndex;
+        this.sourceReturnOrigin = this.phase === "library" ? "library" : "detail";
+        if (this.phase === "library") this.sourceReturnIndex = this.libraryCardIndex;
+        else {
+          this.sourceReturnZone = this.detailFocusZone;
+          this.sourceReturnIndex = this.detailFocusZone === "episode" ? this.detailEpisodeIndex : this.detailActionIndex;
+        }
         this.sourceResume = resume;
         this.sourceRowIndex = 0;
         this.sourceWindowStart = 0;
@@ -1612,10 +1891,14 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
         sourceScope?.abort();
         ++sourceGeneration;
         clearTimeout(sourceTimer);
-        this.phase = "detail";
+        this.phase = this.sourceReturnOrigin === "library" ? "library" : "detail";
         this.sourceNotice = "";
         setTimeout(() => {
-          if (this.sourceReturnZone === "episode") this.focusTitleEpisode(this.sourceReturnIndex);
+          if (this.phase === "library") {
+            this.revealLibrarySegments();
+            this.refreshLibraryCards();
+            this.focusLibraryCard(this.sourceReturnIndex);
+          } else if (this.sourceReturnZone === "episode") this.focusTitleEpisode(this.sourceReturnIndex);
           else this.focusTitleAction(this.sourceReturnIndex);
         }, 0);
       },
@@ -1686,6 +1969,13 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
             this.revealDiscoverChips();
             this.refreshDiscoverCards();
             this.focusDiscoverCard(this.detailReturnIndex);
+          } else if (this.phase === "library") {
+            this.revealLibrarySegments();
+            if (this.libraryMode === "favorites") void this.reloadLibraryFavorites(this.detailReturnIndex);
+            else {
+              this.refreshLibraryCards();
+              this.focusLibraryCard(this.detailReturnIndex);
+            }
           } else {
             this.revealHomeControls();
             if (this.detailReturnZone === "card") this.focusHomeCard(this.detailReturnIndex);
@@ -1696,6 +1986,8 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
       showProfiles(profiles: readonly TvProfile[]) {
         discoverScope?.abort();
         ++discoverGeneration;
+        libraryScope?.abort();
+        ++libraryGeneration;
         this.profiles = [...profiles];
         this.railExpanded = false;
         this.phase = "profiles";
@@ -1860,6 +2152,7 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
         else if (this.phase === "sources") this.closeSources();
         else if (this.phase === "detail") this.returnFromDetail();
         else if (this.phase === "discover") this.returnFromDiscover();
+        else if (this.phase === "library") this.returnFromLibrary();
         else if (this.phase === "home" && this.profiles.length) this.showProfiles(this.profiles);
       },
       any() {

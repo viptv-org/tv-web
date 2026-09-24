@@ -10,8 +10,9 @@ export interface DiscoverCardView {
   title: string;
   subtitle: string;
   image: string;
+  progress: number;
 }
-export const emptyDiscoverCard: DiscoverCardView = { id: "", title: "", subtitle: "", image: "" };
+export const emptyDiscoverCard: DiscoverCardView = { id: "", title: "", subtitle: "", image: "", progress: 0 };
 
 export interface DiscoverChipView {
   label: string;
@@ -33,6 +34,7 @@ export function discoverCard(item: MediaItem): DiscoverCardView {
     title: card.title,
     subtitle: card.subtitle,
     image: artworkUrl(card.image ?? undefined, 320, 180, false, card.imageRole === "logo") ?? card.image ?? "",
+    progress: card.progress ?? 0,
   };
 }
 

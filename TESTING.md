@@ -1,3 +1,23 @@
+# Lightning TV My List — 2026-09-24
+
+The staged Blits menu now opens My List. Browser fixtures cover saved titles,
+Continue Watching, focus restoration through title detail and a direct Resume
+source/player path, and refetch after a saved-title toggle. Held OK at 700 ms
+does not also activate on release; the queue-management action menu is still
+pending. Queue and saved-grid captures were byte-identical across Tizen,
+Vizio and webOS browser modes. At 1920 × 1080, `TvLibrary` queue changed
+614,925 pixels against React (29.6549%, SSIM 0.953726). A matched saved-grid
+capture with six fixture favorites changed 463,694 pixels (22.3618%, SSIM
+0.951455). Reproduce the two states with `node tests/preview/lightning-shoot.mjs TvLibrary`
+and `node tests/preview/react-library-saved.mjs`, then run the pixel comparator.
+Both are open deviations. Source/media behavior used browser stubs;
+physical TV navigation, decoding, hide/Undo, watched correction and previous
+episode actions remain unverified or unimplemented in Blits. Phone `Main` and
+desktop `DeskHome` remained exactly equal to their pre-migration captures
+(0 changed pixels at 390×844 and 1440×900). `npm run build`, 169 unit
+tests and the targeted responsive/TV browser suite (24 passed, 10 skipped)
+passed. The packaged TV launchers remain on React.
+
 # Lightning TV Discover — 2026-09-24
 
 The staged Blits menu now opens Discover. Its grid uses shared API catalogs,
@@ -6,7 +26,7 @@ restores the same card. Browser fixtures exercised Genre choice, catalog/type
 switching, three-row focus window movement and return to Home. Tizen, Vizio and
 webOS browser captures were byte-identical for `TvDiscover` and
 `TvDiscoverFilter`. At 1920 × 1080 against matched React TV captures,
-`TvDiscover` changed 797,513 pixels (38.4603%, SSIM 0.864570), and
+`TvDiscover` changed 725,162 pixels (34.9712%, SSIM 0.952812), and
 `TvDiscoverFilter` changed 1,178,903 pixels (56.8530%, SSIM 0.940365).
 These are open visual deviations. Text-only required filters, horizontal chip
 overflow and longer filter lists still need implementation. No physical Blits
@@ -22,8 +42,8 @@ captures for Tizen, Vizio and webOS matched byte-for-byte; the `TvMenu` capture
 still differs from the React TV reference by 1,625,803 pixels (78.4049%,
 SSIM 0.930841). The full-frame result includes the previously measured Home
 background deviation. Browser D-pad checks covered menu entry, Discover focus,
-Right/Back restoration and the profile route. Search, Live TV, My List and
-Settings are still pending in Blits. `npm run build`, 169 unit tests
+Right/Back restoration and the profile route. Search, Live TV and Settings
+are still pending in Blits. `npm run build`, 169 unit tests
 and the targeted responsive/TV Playwright suite (24 passed, 10 skipped) pass.
 The public TV launcher remains on React; this is staged browser evidence only.
 

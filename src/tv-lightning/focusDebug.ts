@@ -40,6 +40,11 @@ export function noteDiscoverFilter(open: boolean) {
   (window as Window & { __viptvDiscoverFilter?: { open: boolean } }).__viptvDiscoverFilter = { open };
 }
 
+export function noteLibraryState(mode: string, count: number) {
+  if (!enabled) return;
+  (window as Window & { __viptvLibrary?: { mode: string; count: number } }).__viptvLibrary = { mode, count };
+}
+
 /** Test-only player state, without session or delivery URLs. */
 export function notePlayerState(state: string, position: number) {
   if (!enabled) return;
