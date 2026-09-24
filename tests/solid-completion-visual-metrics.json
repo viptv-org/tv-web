@@ -1,0 +1,21 @@
+{
+  "comparison": "Matched React and SolidTV browser fixture states; not complete canonical coverage",
+  "viewport": [
+    1920,
+    1080
+  ],
+  "metrics": {
+    "TvProfileEdit": {
+      "meanAbsoluteChannelError255": 1.1668264531893004,
+      "changedPixels": 220692,
+      "changedPixelPercent": 10.642939814814815,
+      "maxChannelError255": 243
+    },
+    "TvProfileName": {
+      "meanAbsoluteChannelError255": 1.4607756237139917,
+      "changedPixels": 120681,
+      "changedPixelPercent": 5.819878472222222,
+      "maxChannelError255": 244
+    }
+  }
+}

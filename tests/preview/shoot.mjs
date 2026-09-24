@@ -172,7 +172,8 @@ export async function shoot(browser, name, { debug = false } = {}) {
   if (!spec) throw new Error(`${name} is not registered in tests/preview/screens.mjs`);
   if (spec.notReachable) throw new Error(`${name} is not reachable yet: ${spec.notReachable}`);
   const frame = frameFor(entry, spec);
-  const port = await ensureServer(spec.local ? 'local' : 'app');
+  const previewUrl = process.env.PREVIEW_URL;
+  const port = previewUrl ? undefined : await ensureServer(spec.local ? 'local' : 'app');
   const context = await browser.newContext({
     viewport: { width: frame.width, height: frame.height }, deviceScaleFactor: 1,
     ...(frame.phone ? { isMobile: true, hasTouch: true } : {}),
@@ -194,7 +195,7 @@ export async function shoot(browser, name, { debug = false } = {}) {
     if (spec.init) await page.addInitScript(spec.init);
     const path = spec.path ?? (frame.tv ? '/' : '/tv/home');
     const query = [frame.query, spec.query].filter(Boolean).join('&');
-    await page.goto(`http://127.0.0.1:${port}${path}${query ? `${path.includes('?') ? '&' : '?'}${query}` : ''}`);
+    await page.goto(`${previewUrl ?? `http://127.0.0.1:${port}`}${path}${query ? `${path.includes('?') ? '&' : '?'}${query}` : ''}`);
     await page.locator('.tv-screen, #root > *').first().waitFor({ state: 'attached', timeout: 20000 });
     const h = helpers(page, frame);
     await h.settle(800);

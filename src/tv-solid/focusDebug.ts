@@ -1,16 +1,23 @@
 /** Opt-in browser focus marker for remote timing and preview assertions. */
+import { activeElement } from "@solidtv/solid";
 const enabled = new URLSearchParams(location.search).get("focusdebug") === "1";
 export function noteFocus(view: string, index: number) {
   if (!enabled) return;
   (
     window as Window & {
-      __viptvFocus?: { view: string; index: number; at: number };
+      __viptvFocus?: { view: string; index: number; at: number; nativeFocus: boolean };
     }
   ).__viptvFocus = {
     view,
     index,
     at: performance.now(),
+    nativeFocus: activeElement() !== undefined,
   };
+}
+
+export function noteUpNext(open: boolean, left = 0) {
+  if (!enabled) return;
+  (window as Window & {__viptvUpNext?:{open:boolean;left:number}}).__viptvUpNext={open,left};
 }
 
 /** Test-only identity marker; never includes source URLs or credentials. */

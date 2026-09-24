@@ -71,6 +71,9 @@ export const HomeAction = defineScreen({
     down() {
       this.$emit("home-cards-enter");
     },
+    menu() {
+      if (this.holdable) this.$emit("home-action-hold", this.action);
+    },
     enter() {
       if (!this.pressed) {
         this.pressed = true;
@@ -91,7 +94,7 @@ export const HomeAction = defineScreen({
   },
 
   render: (s) => (
-    <TvView w={s.buttonWidth} h={s.buttonHeight}>
+    <TvView w={s.buttonWidth} h={s.buttonHeight} scale={s.focused ? tokens["focus.tv-scale-button"] : 1}>
       <TvView
         x={-4}
         y={-4}
@@ -105,10 +108,10 @@ export const HomeAction = defineScreen({
         w={s.buttonWidth}
         h={s.buttonHeight}
         rounded={s.buttonHeight / 2}
-        color={s.focused ? s.primary : s.surface}
+        color={s.focused ? s.primary : tokens["color.fill.tv-unfocused"]}
       />
       <TvText
-        x={s.round ? 20 : s.action === "details" ? 33 : 45}
+        x={s.round ? 20 : s.action === "details" ? 33 : 34}
         y={s.buttonHeight / 2 - 17}
         content={s.iconText}
         font={"Onest"}
@@ -116,7 +119,7 @@ export const HomeAction = defineScreen({
         color={s.focused ? s.onLight : s.primary}
       />
       <TvText
-        x={s.action === "details" ? 33 : 81}
+        x={s.action === "details" ? 34 : 72}
         y={s.buttonHeight / 2 - 16}
         content={s.labelText}
         font={"Onest700"}
@@ -204,7 +207,8 @@ export const HomeCard = defineScreen({
   },
 
   render: (s) => (
-    <TvView show={s.card.id !== ""} scale={s.focused ? 1.06 : 1}>
+    <TvView show={s.card.id !== ""}>
+      <TvView w={320} h={180} scale={s.focused ? 1.06 : 1}>
       <TvView
         x={-4}
         y={-4}
@@ -227,6 +231,7 @@ export const HomeCard = defineScreen({
         y={164}
         w={292}
         h={6}
+        rounded={3}
         color={s.progressTrack}
         show={s.card.progress > 0}
       />
@@ -235,20 +240,26 @@ export const HomeCard = defineScreen({
         y={164}
         w={Math.max(0, Math.min(292, s.card.progress * 292))}
         h={6}
+        rounded={3}
         color={s.accent}
         show={s.card.progress > 0}
       />
+      </TvView>
       <TvText
-        y={198}
+        y={s.focused ? 204 : 196}
+        lineheight={1.3}
+        cssLineBox={true}
         maxwidth={320}
         maxlines={1}
         content={s.titleText}
-        font={"Onest700"}
+        font={"Onest600"}
         size={24}
         color={s.focused ? s.primary : s.primary}
       />
       <TvText
-        y={s.focused ? 239 : 231}
+        y={s.focused ? 239.1875 : 231.1875}
+        lineheight={1.35}
+        cssLineBox={true}
         maxwidth={320}
         maxlines={1}
         content={s.subtitleText}

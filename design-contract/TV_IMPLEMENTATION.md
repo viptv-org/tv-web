@@ -1,12 +1,13 @@
 # Android TV, Tizen, Vizio and LG webOS implementation
 
-## Proposed TV-only LightningJS renderer migration — 2026-09-24
+## Proposed TV-only SolidTV renderer migration — 2026-09-24
 
 Status: authorized, implementation and parity review in progress. The current
 React TV implementation at `viptv-org/tv-web@6f335d7631e1334be398b7aa5977ce4ce51ac50a`
 is the behavioral and rendered baseline for this renderer replacement. Tizen,
-Vizio and LG webOS will use one LightningJS Blits component tree with the
-Lightning renderer and focus/input lifecycle. The React phone, responsive web
+Vizio and LG webOS will use one SolidTV component tree with the
+SolidTV renderer and native focus/input lifecycle. This supersedes the staged
+Blits choice following the owner's SolidTV migration request. The React phone, responsive web
 and Tauri desktop entry remains as it is. The new TV renderer is staged behind
 a separate entry until the migration qualifies for those TV launchers. Roku and
 Android TV retain their separate native implementations.
@@ -15,7 +16,9 @@ The canonical TV reference frame is **1920 × 1080** with a 96 × 54 safe area,
 as specified in `viptv-design-system/`. Every TV screen and visible state keeps
 the same copy, assets, color, typography, spacing, selection and focus treatment
 as the current TV UI. The new renderer may not borrow the React DOM focus
-registry or simulate Lightning by wrapping the existing UI. It uses the same
+registry or keep a separate global TV focus registry. SolidTV's active element,
+focus path and key dispatch own navigation; a thin adapter may preserve existing
+controller method names, release callbacks and platform key aliases. It uses the same
 API, shared core and platform playback contracts so renderer replacement does
 not change pairing, profiles, source identity, Resume, controlled Next or queue
 semantics. The 700 ms OK hold fires once, suppresses release activation, and

@@ -7,22 +7,25 @@ import { join } from 'node:path';
 import { installBackend, installMediaStubs } from './backend.ts';
 import { outDir, reference } from './shoot.mjs';
 
-const name = process.argv[2] ?? 'TvPairing';
+const requestedNames = process.argv.slice(2).filter(arg => !arg.startsWith('--'));
 const viaPlay = process.argv.includes('--via-play');
 const searchFailure = process.argv.includes('--search-fail');
 const emptySearch = process.argv.includes('--empty-search');
 const platform = process.argv.find(arg => arg.startsWith('--platform='))?.slice('--platform='.length) ?? 'tizen';
 const settingsNames = ['TvSettings', 'TvPlayback', 'TvPlaybackChoice', 'TvAddons', 'TvAddonManage', 'TvAddonRemove', 'TvSignOut'];
-if (!['TvPairing', 'TvPairingLoading', 'TvPairingExpired', 'TvProfiles', 'TvProfilesManage', 'TvManageCue', 'TvHome', 'TvMenu', 'TvDiscover', 'TvDiscoverFilter', 'TvLibrary', 'TvItemMenu', 'TvSearch', 'TvLive', 'TvLiveDetails', 'TvLiveSearch', ...settingsNames, 'TvTitle', 'TvSources', 'TvSourceProvider', 'TvSourceDetails', 'TvPlayer', 'TvPlayerSeek', 'TvPlayerSubs'].includes(name)) {
+const scenarioNames = ['TvPairing', 'TvPairingLoading', 'TvPairingExpired', 'TvProfiles', 'TvProfilesManage', 'TvManageCue', 'TvHome', 'TvMenu', 'TvDiscover', 'TvDiscoverFilter', 'TvLibrary', 'TvItemMenu', 'TvSearch', 'TvLive', 'TvLiveDetails', 'TvLiveSearch', ...settingsNames, 'TvTitle', 'TvSources', 'TvSourceProvider', 'TvSourceDetails', 'TvPlayer', 'TvPlayerSeek', 'TvPlayerSubs'];
+const selectedNames = process.argv.includes('--all') ? scenarioNames : requestedNames.length ? requestedNames : ['TvPairing'];
+if (selectedNames.some(name => !scenarioNames.includes(name))) {
   console.error('Usage: node tests/preview/solid-shoot.mjs [TvPairing|TvPairingLoading|TvPairingExpired|TvProfiles|TvProfilesManage|TvManageCue|TvHome|TvMenu|TvDiscover|TvDiscoverFilter|TvLibrary|TvItemMenu|TvSearch|TvLive|TvLiveDetails|TvLiveSearch|TvTitle|TvSources|TvSourceProvider|TvSourceDetails|TvPlayer|TvPlayerSeek|TvPlayerSubs] [--platform=tizen|vizio|webos]');
   process.exit(2);
 }
 if (!['tizen', 'vizio', 'webos'].includes(platform)) throw new Error(`Unsupported TV platform ${platform}`);
+async function shootSolid(browser, name) {
 const entry = reference(name);
 if (!entry) throw new Error(`Missing design reference ${name}`);
-const browser = await chromium.launch();
+let page;
 try {
-  const page = await browser.newPage({ viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 1,
+  page = await browser.newPage({ viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 1,
     ...(name.startsWith('TvLive') ? { timezoneId: 'America/New_York' } : {}) });
   // Focus debug state updates synchronously; wait for the WebGL frame and
   // glyph upload before capturing the visual state that the key selected.
@@ -992,6 +995,17 @@ try {
     !(searchFailure && /Failed to load resource: the server responded with a status of 502/.test(message)));
   if (unexpected.length || backend.errors.length) throw new Error([...unexpected, ...backend.errors].join('\n'));
   console.log(file);
+} catch (cause) {
+  console.error(name, await page?.evaluate(() => window.__viptvFocus).catch(() => null));
+  mkdirSync(outDir, {recursive:true});
+  await page?.screenshot({path:join(outDir,`${name}.failed.png`)}).catch(() => undefined);
+  throw cause;
 } finally {
-  await browser.close();
+  await page?.close();
 }
+}
+
+const browser = await chromium.launch();
+try {
+  for (const name of selectedNames) await shootSolid(browser, name);
+} finally { await browser.close(); }

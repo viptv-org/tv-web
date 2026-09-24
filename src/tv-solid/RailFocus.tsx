@@ -2,6 +2,8 @@
 import { defineScreen, TvView, TvText } from "./runtime";
 import { tokens } from "../theme/viptv-tokens.generated";
 import { noteFocus } from "./focusDebug";
+import { railIcon, type RailIcon } from "./railIcons";
+const icons: RailIcon[] = ["home", "search", "home", "discover", "live", "list", "settings"];
 
 /** A labelled TV rail row. SolidTV owns focus and D-pad input while expanded. */
 export const RailItem = defineScreen({
@@ -113,7 +115,7 @@ export const RailItem = defineScreen({
         y={20}
         w={28}
         h={28}
-        src={s.focused ? s.focusedIcon : s.icon}
+        src={railIcon(icons[s.position], s.current, s.focused, true)}
         show={s.position !== 0}
       />
       <TvText

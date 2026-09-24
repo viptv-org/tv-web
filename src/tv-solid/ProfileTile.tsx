@@ -12,6 +12,7 @@ export interface ProfileTileData {
   initial: string;
   visible: boolean;
   add: boolean;
+  disabled?: boolean;
 }
 
 export const emptyProfileTile: ProfileTileData = {
@@ -154,6 +155,7 @@ export const ProfileTile = defineScreen({
       this.$emit("profile-manage-focus");
     },
     enter() {
+      if (this.tile.disabled) return;
       if (!this.pressed) {
         this.pressed = true;
         this.holdFired = false;
@@ -172,7 +174,7 @@ export const ProfileTile = defineScreen({
   },
 
   render: (s) => (
-    <TvView y={398} show={s.tile.visible} scale={s.focused ? 1.06 : 1}>
+    <TvView y={398} show={s.tile.visible} alpha={s.tile.disabled ? 0.45 : 1} scale={s.focused ? 1.06 : 1}>
       <TvView
         x={-4}
         y={-4}
@@ -259,7 +261,7 @@ export const ProfileTile = defineScreen({
 });
 
 export const ManageProfilesButton = defineScreen({
-  props: ["managing"] as unknown as { managing: boolean },
+  props: ["managing", "paged"] as unknown as { managing: boolean; paged: boolean },
 
   state() {
     return {
@@ -298,7 +300,7 @@ export const ManageProfilesButton = defineScreen({
   render: (s) => (
     <TvView
       x={824}
-      y={761}
+      y={s.paged ? 837 : 761}
       w={272}
       h={60}
       rounded={30}

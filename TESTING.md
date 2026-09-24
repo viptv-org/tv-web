@@ -1,3 +1,34 @@
+# SolidTV completion work — 2026-09-24
+
+The completion branch uses native SolidTV focus ownership and remote routing,
+including release/hold cancellation on blur. The compatibility scope API now
+bridges leaf callbacks to native ElementNode focus rather than maintaining a
+second active-focus registry. Design is pinned to
+`268e42c6a456f82a1e6f5b3c8893eccbcc7c1b2d`.
+
+Implemented Home Play/held actions, profile editing/creation/deletion/PIN and
+pagination, shared remote text entry, addon installation, required catalog
+filters, fresh pairing after sign-out, Next/recovery/Up Next, and direct guide
+channel playback with exact focus return. Home backdrop composition reuses
+wsrv derivatives; native SVG textures now render icons and key outlines.
+
+Validation: production build and integrity/type checks pass; 181 unit tests
+pass. All 30 baseline SolidTV screenshot scenarios pass. Additional sequential
+browser acceptance passes cover seven account scenarios, four text-entry and
+sign-out flows, nine Next/recovery cases, three platform remote-focus modes,
+and direct live/programme playback in all three platform modes plus failed
+preparation Back and cancelled-start ownership. These are fixture-driven browser tests, not physical TVs.
+
+Remaining delivery gates: complete visual parity across the full canonical
+screen inventory, physical Tizen/Vizio/webOS video and remote qualification,
+and launcher/consumer switch. React remains the default launch entry. No
+production deployment or desktop submodule update was performed. Historical
+results below describe their original checkpoints; current performance results
+are in PERFORMANCE.md. The latest 4× run uses 55.5% less main-thread work/key,
+but its strict startup gate fails and JS heap remains higher.
+
+---
+
 # SolidTV performance optimization — 2026-09-24
 
 See [PERFORMANCE.md](PERFORMANCE.md) for the reproducible React comparison,

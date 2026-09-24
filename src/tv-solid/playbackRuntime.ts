@@ -15,7 +15,7 @@ export interface SolidTVPlaybackRuntime {
   readonly controller: PlaybackSessionController<MediaItem, MediaSource>;
   start(
     item: MediaItem,
-    source: MediaSource,
+    source: MediaSource | undefined,
     position: number,
   ): ReturnType<PlaybackSessionController<MediaItem, MediaSource>["start"]>;
   stop(): Promise<void>;
@@ -49,14 +49,14 @@ export function createSolidTVPlaybackRuntime(
     start(item, source, position) {
       const enriched: MediaItem = {
         ...item,
-        sourceAddonId: source.sourceAddonId ?? item.sourceAddonId,
-        sourceName: source.sourceName ?? item.sourceName,
+        sourceAddonId: source?.sourceAddonId ?? item.sourceAddonId,
+        sourceName: source?.sourceName ?? item.sourceName,
         sourceFingerprint:
-          typeof source.raw.source_fingerprint === "string"
+          typeof source?.raw.source_fingerprint === "string"
             ? source.raw.source_fingerprint
             : item.sourceFingerprint,
-        sourceQuality: source.quality ?? item.sourceQuality,
-        sourceAudio: source.audio ?? item.sourceAudio,
+        sourceQuality: source?.quality ?? item.sourceQuality,
+        sourceAudio: source?.audio ?? item.sourceAudio,
       };
       return controller.start({ item: enriched, source, position });
     },

@@ -1,3 +1,58 @@
+# SolidTV completion checkpoint — 2026-09-24
+
+Native-focus and feature-completion changes retain substantially lower
+navigation CPU work than React. The latest **three trials per renderer at
+4× CPU throttling** measured **55.5% less main-thread work per key**. The
+strict all-metrics gate does **not** pass: Home startup is 2.1% slower and
+JS heap remains higher. Do not describe this as faster on every measure.
+
+| Production app, hardware WebGL | React TV | SolidTV |
+| --- | ---: | ---: |
+| Home focus-ready, median | 504.6 ms | 515.3 ms |
+| First guide focus-ready, median | 138.8 ms | 127.1 ms |
+| Keydown listener work, p95 | 2.1 ms | 0.5 ms |
+| Keydown to focus update, p95 | 22.5 ms | 0.7 ms |
+| Keydown to two frame opportunities, p95 | 70.3 ms | 36.4 ms |
+| Main-thread work per key, median | 11.987 ms | 5.331 ms |
+| Frame interval, p95 | 16.8 ms | 16.8 ms |
+| Frames over 33.4 ms / long tasks | 0 / 0 | 0 / 0 |
+| Post-GC JS heap after Home/guide | 5.563 MiB | 6.968 MiB |
+| Renderer-reported texture allocation | Not measured | 49.584 MiB |
+| Decoded JavaScript fetched | 1197.298 KiB | 613.292 KiB |
+
+[Full current measurements](tests/solid-completion-performance.json) include
+all trials, 216 remote keys per renderer, frames, GPU identity and the hash of
+all SolidTV source files plus benchmark configuration. Tests ran sequentially
+in fresh contexts with alternating renderer order, identical fixtures, native
+clocks and trusted HTTPS. No other browser tests or build ran concurrently.
+The Solid texture figure has no comparable React GPU figure and excludes
+other driver allocations. JS heap is not total process memory; key task time
+is not total CPU utilization. Focus markers/two RAFs are not input-to-photon
+measurements. This desktop GPU test does not certify physical TV behavior.
+
+Home uses wsrv-sized artwork derivatives and composes the pinned backdrop once
+per artwork change, retaining its texture through focus moves. Guide requests
+now overlap first-screen setup and apply their data in a batch. SVG data URIs
+use explicit SVG textures; the previous URL detector silently omitted icons.
+
+The initial completion measurement found guide entry slower (153.2 versus
+127.5 ms). After the guide fix, two runs measured Solid guide entry at 134.3
+versus 138.2 ms and 127.1 versus 138.8 ms. Startup varied near a tie; the latest
+run above is the reported result, including its failing startup gate.
+
+Reproduce after `npm run build` with the trusted local HTTPS static server:
+
+```sh
+PERF_PREVIEW_URL=https://viptv.local.test:8446/tv \
+PERF_RUNS=3 PERF_CPU_THROTTLE=4 PERF_ASSERT_BETTER=1 \
+PERF_OUTPUT=/tmp/solid-completion-performance.json npm run perf:tv
+```
+
+The historical optimization evidence below belongs to the earlier checkpoint
+and must not be used as the current startup or memory claim.
+
+---
+
 # SolidTV performance comparison — 2026-09-24
 
 The optimized SolidTV entry is faster than this application's React TV entry

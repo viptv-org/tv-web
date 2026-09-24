@@ -3,6 +3,13 @@ import { createComponent, createRoot, createSignal } from "solid-js";
 
 type Node = { props: Record<string, unknown>; children: Node[] };
 const graphics = vi.hoisted(() => ({ nodes: [] as Node[] }));
+// These tests exercise deferred painting; native focus is covered by the
+// browser remote scenarios with the real SolidTV focus manager.
+vi.mock("@solidtv/solid/primitives", () => ({
+  useFocusManager: vi.fn(),
+  suppressKeyUntilRelease: vi.fn(),
+  releaseKeySuppression: vi.fn(),
+}));
 // Mock the external graphics boundary; keep Solid's real reactive ownership.
 vi.mock("@solidtv/solid", async () => {
   const { createRenderEffect } = await import("solid-js");

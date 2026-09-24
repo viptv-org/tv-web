@@ -75,6 +75,12 @@ export interface BackendOptions {
   recentSearches?: string[];
   /** Media timeline for the stubbed player, seconds. */
   media?: { duration?: number; position?: number; paused?: boolean };
+  /** Continuation fixture: override the outgoing queue position/duration. */
+  queuePosition?: number;
+  queueDuration?: number;
+  queueNext?: boolean;
+  /** Model a backend that acknowledges each requested playback position. */
+  playbackPositionFromRequest?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -380,7 +386,11 @@ export async function installBackend(page: Page, options: BackendOptions): Promi
   let unlocked = false;
   let favorites: Record<string, unknown>[] = options.favorites ? favoritesFor(family) : [];
   if (options.liveFavorite) favorites = [liveItem(channels.find(channel => channel.id === 'cartoon-network-west')!), ...favorites];
-  const queue = options.queue === false ? [] : queueFor(family);
+  const queue = options.queue === false ? [] : queueFor(family).map((item,index)=>{
+    if(index!==0)return item;
+    const previous={...item,...(options.queuePosition!==undefined?{position:options.queuePosition}:{}),...(options.queueDuration!==undefined?{duration:options.queueDuration}:{})};
+    return options.queueNext ? {...previous,id:'tt-monster:1:2',episode:2,episode_title:'Please Don’t Go',queue_status:'next',previous_episode:previous,position:0} : previous;
+  });
   let addonList = addons();
   let playbackCount = 0;
 
@@ -398,7 +408,7 @@ export async function installBackend(page: Page, options: BackendOptions): Promi
   });
 
   const serveFile = (route: Route, path: string, contentType?: string) => {
-    try { return route.fulfill({ status: 200, body: readFileSync(path), ...(contentType ? { contentType } : {}) }); }
+    try { return route.fulfill({ status: 200, headers: { 'access-control-allow-origin': '*' }, body: readFileSync(path), ...(contentType ? { contentType } : {}) }); }
     catch { return route.fulfill({ status: 404, body: '' }); }
   };
   const art = (route: Route, url: string) => {
@@ -517,7 +527,7 @@ export async function installBackend(page: Page, options: BackendOptions): Promi
       }
       if (rest === 'favorites') return json({ ok: true });
       if (rest === 'preferences') {
-        const preferences = { audio_language: '', subtitle_language: '', subtitles_enabled: false, subtitle_size: 'normal', subtitle_style: 'system', quality: 'auto', autoplay: true };
+        const preferences = { audio_language: 'en', subtitle_language: 'en', subtitles_enabled: false, subtitle_size: 'normal', subtitle_style: 'system', quality: 'auto', autoplay: true };
         return json(method === 'PUT' ? { ...preferences, ...body } : preferences);
       }
     }
@@ -573,10 +583,10 @@ export async function installBackend(page: Page, options: BackendOptions): Promi
       if (options.playbackHang || (options.playbackHangAfter !== undefined && playbackCount > options.playbackHangAfter)) return hang();
       if (options.playbackFailAfter !== undefined && playbackCount > options.playbackFailAfter) return json({ error: 'upstream unavailable', error_code: 'SOURCE_TIMEOUT' }, 504);
       if (options.seekRefused && playbackCount > 1) return json({ error: 'The stream could not seek there.', error_code: 'SEEK_REFUSED' }, 409);
-      const liveSession = String(body.type ?? '') === 'live' || /cartoon|news|cnbc|cnn|espn/.test(String(body.id ?? ''));
+      const liveSession = typeof body.channel_id === 'string' || String(body.type ?? '') === 'live' || /cartoon|news|cnbc|cnn|espn/.test(String(body.id ?? ''));
       return json({
         id: 'preview-playback', url: '/media/preview-playback/index.m3u8', format: 'hls', mode: 'remux', video_mode: 'copy', audio_mode: 'transcode',
-        position: liveSession ? 0 : options.media?.position ?? 768, live: liveSession, duration: liveSession ? 0 : options.media?.duration ?? 3130,
+        position: liveSession ? 0 : options.playbackPositionFromRequest ? Number(body.position ?? 0) : options.media?.position ?? 768, live: liveSession, duration: liveSession ? 0 : options.media?.duration ?? 3130,
         audio_tracks: [track(0, 'en', 'English · 5.1', 'eac3', true), track(1, 'en', 'English · Stereo', 'aac'), track(2, 'es', 'Spanish · Stereo', 'aac'), track(3, 'ja', 'Japanese · TrueHD', 'truehd', false, false)],
         subtitle_tracks: [track(0, 'en', 'English', 'subrip', true), track(1, 'en', 'English (SDH)', 'subrip'), track(2, 'es', 'Spanish', 'subrip'), track(3, 'fr', 'French', 'subrip'), track(4, 'pt', 'Portuguese (PGS)', 'hdmv_pgs_subtitle', false, false), track(5, 'de', 'German', 'subrip')],
         subtitles_supported: true,

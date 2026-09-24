@@ -14,13 +14,21 @@ import {
   type JSX,
 } from "solid-js";
 import type { ImageTexture } from "@solidtv/renderer";
+import { canvasFont } from "./fonts";
 import {
+  Config,
+  activeElement,
   createElement,
   getRenderer,
   insert,
   spread,
   type ElementNode,
 } from "@solidtv/solid";
+import {
+  useFocusManager,
+  suppressKeyUntilRelease,
+  releaseKeySuppression,
+} from "@solidtv/solid/primitives";
 
 /** The screen controller contract keeps the existing remote actions intact.
  * Solid owns every signal, component lifetime and rendered node. */
@@ -48,9 +56,23 @@ interface ScreenScope {
   refs: Map<string, ScreenInstance>;
   input: Methods;
   hooks: Methods;
+  node?: ElementNode;
+  cancelReleases: Set<() => void>;
+  leafFocused: boolean;
 }
 const Scope = createContext<ScreenScope>();
-let focused: ScreenScope | undefined;
+const nodeScopes = new WeakMap<ElementNode, ScreenScope>();
+const pendingReleases = new Set<() => void>();
+function unfocusScope(scope: ScreenScope | undefined) {
+  if (!scope?.leafFocused) return;
+  scope.leafFocused = false;
+  scope.hooks.unfocus?.();
+}
+function focusScope(scope: ScreenScope | undefined) {
+  if (!scope || scope.leafFocused) return;
+  scope.leafFocused = true;
+  scope.hooks.focus?.();
+}
 
 export function defineScreen<
   P extends object = {},
@@ -59,6 +81,7 @@ export function defineScreen<
 >(definition: Definition<P, S, M>): Component<any> {
   return (props: Record<string, any>) => {
     const parent = useContext(Scope);
+    if (!parent) useRemoteInput();
     const listeners = new Map<string, Set<(value: any) => void>>();
     const data: Record<string, any> = {};
     const instance = data as ScreenInstance;
@@ -68,6 +91,8 @@ export function defineScreen<
       refs: new Map(),
       input: {},
       hooks: {},
+      cancelReleases: new Set(),
+      leafFocused: false,
     };
     const initial = untrack(
       () => definition.state?.call(props as P & ScreenActions) ?? {},
@@ -110,15 +135,7 @@ export function defineScreen<
     }
     Object.assign(data, {
       $select: (ref: string) => scope.refs.get(ref),
-      $focus: () => {
-        if (focused === scope) return;
-        const previous = focused;
-        focused = scope;
-        batch(() => {
-          previous?.hooks.unfocus?.();
-          scope.hooks.focus?.();
-        });
-      },
+      $focus: () => batch(() => scope.node?.setFocus()),
       $listen: (name: string, callback: (value: any) => void) => {
         if (!listeners.has(name)) listeners.set(name, new Set());
         listeners.get(name)!.add(callback);
@@ -163,16 +180,45 @@ export function defineScreen<
     });
     onCleanup(() => {
       scope.hooks.destroy?.();
-      if (focused === scope) {
-        scope.hooks.unfocus?.();
-        focused = undefined;
-      }
+      for (const cancel of scope.cancelReleases) cancel();
+      unfocusScope(scope);
+      if (scope.node) nodeScopes.delete(scope.node);
       listeners.clear();
     });
     return createComponent(Scope.Provider, {
       value: scope,
       get children() {
         return TvView({
+          nodeRef: (node: ElementNode) => { scope.node = node; nodeScopes.set(node,scope); },
+          onFocus: (current: ElementNode, previous?: ElementNode) => {
+            if (current !== scope.node) return;
+            batch(() => {
+              if (previous) unfocusScope(nodeScopes.get(previous));
+              focusScope(scope);
+            });
+          },
+          onBlur: () => unfocusScope(scope),
+          onKeyPress: (event: KeyboardEvent, mappedKey?: string) => {
+            const handler = scope.input[mappedKey?.toLowerCase() ?? ""] ?? scope.input.any;
+            if (!handler) return false;
+            const release = handler(event);
+            if (typeof release === "function") {
+              let cancelled = false;
+              const cancel = () => {
+                cancelled = true;
+                if (typeof instance.pressed === "boolean") instance.pressed = false;
+                releaseKeySuppression(event);
+              };
+              scope.cancelReleases.add(cancel);
+              pendingReleases.add(cancel);
+              suppressKeyUntilRelease(event, () => {
+                scope.cancelReleases.delete(cancel);
+                pendingReleases.delete(cancel);
+                if (!cancelled) release();
+              });
+            }
+            return true;
+          },
           get x() {
             return props.x ?? 0;
           },
@@ -191,69 +237,31 @@ export function defineScreen<
   };
 }
 
-/** Preserve key-down navigation and key-up activation, including 700ms holds. */
-export function installRemoteInput() {
-  const releases = new Map<string, () => void>();
-  const keys: Record<string, string> = {
-    ArrowLeft: "left",
-    ArrowRight: "right",
-    ArrowUp: "up",
-    ArrowDown: "down",
-    Enter: "enter",
-    Escape: "back",
-    Backspace: "back",
-    ContextMenu: "menu",
-  };
-  const codes: Record<number, string> = {
-    10009: "back",
-    461: "back",
-    457: "menu",
-    93: "menu",
-    8: "back",
-    27: "back",
-    13: "enter",
-    37: "left",
-    38: "up",
-    39: "right",
-    40: "down",
-  };
-  const down = (event: KeyboardEvent) => {
-    const action = codes[event.keyCode] ?? keys[event.key];
-    let target = focused;
-    while (target) {
-      const handler = target.input[action] ?? target.input.any;
-      if (handler) {
-        event.preventDefault();
-        const release = handler(event);
-        if (
-          typeof release === "function" &&
-          !releases.has(event.code || event.key)
-        )
-          releases.set(event.code || event.key, release);
-        return;
-      }
-      target = target.parent;
-    }
-  };
-  const up = (event: KeyboardEvent) => {
-    const key = event.code || event.key;
-    const release = releases.get(key);
-    releases.delete(key);
-    release?.();
-  };
+/** SolidTV owns the active element, focus path, key bubbling and releases. */
+function useRemoteInput() {
+  Config.preventDefaultOnHandledKeys = true;
+  useFocusManager({
+    Left: ["ArrowLeft", 37], Right: ["ArrowRight", 39],
+    Up: ["ArrowUp", 38], Down: ["ArrowDown", 40], Enter: ["Enter", 13],
+    Back: ["Escape", "Backspace", "GoBack", 10009, 461, 8, 27],
+    Menu: ["ContextMenu", 457, 93],
+  });
   const blur = () => {
-    releases.clear();
-    focused?.hooks.unfocus?.();
+    for (const cancel of pendingReleases) cancel();
+    const node = activeElement();
+    if (node) unfocusScope(nodeScopes.get(node));
   };
-  window.addEventListener("keydown", down);
-  window.addEventListener("keyup", up);
+  const focus = () => {
+    const node = activeElement();
+    if (node) focusScope(nodeScopes.get(node));
+  };
   window.addEventListener("blur", blur);
-  return () => {
-    window.removeEventListener("keydown", down);
-    window.removeEventListener("keyup", up);
+  window.addEventListener("focus", focus);
+  onCleanup(() => {
+    for (const cancel of pendingReleases) cancel();
     window.removeEventListener("blur", blur);
-    releases.clear();
-  };
+    window.removeEventListener("focus", focus);
+  });
 }
 
 const names: Record<string, string> = {
@@ -294,10 +302,23 @@ function baselineOffset(font: string, size: number): number {
   measure ??= document.createElement("canvas").getContext("2d")!;
   measure.font = `${size}px Unknown, ${font}`;
   measure.textBaseline = "alphabetic";
-  const alphabetic = measure.measureText("Mg").actualBoundingBoxAscent;
+  const alphabetic = measure.measureText("Mg").actualBoundingBoxAscent ?? size * 0.8;
   measure.textBaseline = "hanging";
-  const hanging = measure.measureText("Mg").actualBoundingBoxAscent;
+  const hanging = measure.measureText("Mg").actualBoundingBoxAscent ?? 0;
   const offset = alphabetic - hanging - size * 0.8;
+  baselineCache.set(key, offset);
+  return offset;
+}
+function cssBaselineOffset(font: string, size: number): number {
+  const key = `css:${font}:${size}`;
+  if (baselineCache.has(key)) return baselineCache.get(key)!;
+  measure ??= document.createElement("canvas").getContext("2d")!;
+  measure.font = `${size}px Unknown, ${font}`;
+  measure.textBaseline = "alphabetic";
+  const metrics = measure.measureText("Mg");
+  const ascent = metrics.fontBoundingBoxAscent ?? metrics.actualBoundingBoxAscent ?? size * 0.8;
+  const descent = metrics.fontBoundingBoxDescent ?? metrics.actualBoundingBoxDescent ?? size * 0.2;
+  const offset = (ascent - descent) / 2 - size * 0.3;
   baselineCache.set(key, offset);
   return offset;
 }
@@ -326,17 +347,28 @@ function visualNode(
       color: 0xffffffff,
       fontFamily: "Onest",
       fontSize: 32,
+      overflowSuffix: "…",
+      wordBreak: props.maxlines === 1 ? "break-all" : "break-word",
       contain: props.maxwidth !== undefined ? "width" : undefined,
     });
   for (const key of Object.keys(props)) {
     if (
-      ["children", "show", "alpha", "fit", "nodeRef", "onError"].includes(key)
+      ["children", "show", "alpha", "fit", "nodeRef", "onError", "cssLineBox"].includes(key)
     )
       continue;
     if (key === "src" && props.src instanceof ImageData) {
       Object.defineProperty(mapped, "texture", {
         enumerable: true,
         get: () => imageTexture(props.src),
+      });
+      continue;
+    }
+    if (key === "src" && typeof props.src === "string" && props.src.startsWith("data:image/svg+xml")) {
+      // The renderer's URL detector recognizes .svg files, not SVG data URIs.
+      // Explicit SVG textures use its SVG rasterizer instead of image workers.
+      Object.defineProperty(mapped, "texture", {
+        enumerable: true,
+        get: () => getRenderer().createTexture("ImageTexture", {src:props.src,type:"svg",w:props.w,h:props.h}),
       });
       continue;
     }
@@ -347,6 +379,8 @@ function visualNode(
       get: () =>
         name.startsWith("color")
           ? tvColor(props[key])
+          : name === "fontFamily"
+            ? canvasFont(props[key], props.size ?? 32)
           : name === "text"
             ? String(props[key] ?? "")
             : props[key],
@@ -369,10 +403,11 @@ function visualNode(
       configurable: true,
       get: () =>
         (props.y ?? 0) +
-        baselineOffset(props.font ?? "Onest", props.size ?? 32),
+        (props.cssLineBox ? cssBaselineOffset : baselineOffset)(canvasFont(props.font ?? "Onest", props.size ?? 32), props.size ?? 32),
     });
   if (props.onError) mapped.onEvent = { failed: () => props.onError() };
   spread(node, mapped, true);
+  props.nodeRef?.(node);
   // Keep each node's original sibling position even while invisible. Only
   // defer its subtree; late insertion of an outline/image can cover siblings.
   const mounted = createMemo(

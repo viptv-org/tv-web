@@ -1,3 +1,26 @@
+# SolidTV completion checkpoint — 2026-09-24
+
+Design pin: `268e42c6a456f82a1e6f5b3c8893eccbcc7c1b2d`.
+Native SolidTV focus now owns the active element, focus path and remote routing.
+
+| Surface | Added browser acceptance | Remaining evidence |
+| --- | --- | --- |
+| Home | Primary Play, held menu/source actions, queued Next, stale Next after navigation | Full canonical visual inventory; physical TV |
+| Profiles | Edit/name/avatar/PIN, create/delete, protected selection, 12-profile paging, cancellation | Pixel-exact canonical review; physical TV |
+| Text entry | Required filters, addon URL validation/install, held Delete, sign-out PIN success/retry | Full long-input/error states on TV |
+| Player | Next, three source attempts, rollback failure and exact-source Retry, paused/cancelled Up Next, final-ten-second Resume | Physical video surface/codec checks; all canonical overlays |
+| Live | Direct channel/programme playback, exact focus return, failure Back, no live progress writes | Physical stream playback and remote |
+| Visuals | Matched Home backdrop/typography, SVG rail/key icons, profile field/keyboard geometry, non-overlapping player hints | Full exact design parity is not yet certified |
+
+Matched profile screenshot metrics are in [solid-completion-visual-metrics.json](solid-completion-visual-metrics.json): Edit mean channel error 1.1668/255 (10.6429% pixels differ), Name 1.4608/255 (5.8199% pixels differ). These are **not pixel-identical**.
+
+Default launchers remain React until delivery gates pass. Current measurements
+and limitations are in [PERFORMANCE.md](../PERFORMANCE.md); earlier results below
+belong to earlier immutable checkpoints. No physical TV or production claim is
+made from browser platform flags.
+
+---
+
 # SolidTV renderer adoption — 2026-09-24
 
 Pinned design: `aa2a1d69935fc07a97bd37d5fa0f78ab8d1c7b47`. The entries below

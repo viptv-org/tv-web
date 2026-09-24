@@ -6,6 +6,7 @@ import {
 } from "../core/presentations";
 import { enrichDetail } from "../ui/detailProgress";
 import { browseRequest, firstHomeCatalog } from "../ui/app/homeRows";
+import { continueMeta } from "../components/cards/cardText";
 
 export interface HomeCardView {
   id: string;
@@ -28,6 +29,7 @@ export interface HomeView {
   queueItems: readonly MediaItem[];
   favoriteItems: readonly MediaItem[];
   heroImage: string;
+  ambientImage: string;
   titleLogo: string;
   title: string;
   eyebrow: string;
@@ -46,6 +48,7 @@ export const emptyHome: HomeView = {
   queueItems: [],
   favoriteItems: [],
   heroImage: "",
+  ambientImage: "",
   titleLogo: "",
   title: "",
   eyebrow: "",
@@ -65,7 +68,7 @@ export function queueHomeCards(queue: readonly MediaItem[]): HomeCardView[] {
     return {
       id: candidate.id,
       title: card.title,
-      subtitle: card.subtitle,
+      subtitle: continueMeta(candidate, card),
       image:
         artworkUrl(
           card.image ?? undefined,
@@ -115,6 +118,7 @@ export function projectHome(
     heroItem,
     queueItems: queue,
     favoriteItems: favorites,
+    ambientImage: artworkUrl(hero.heroImage ?? undefined, 256, 144) ?? "",
     heroImage:
       artworkUrl(hero.heroImage ?? undefined, 1280, 720, true) ??
       hero.heroImage ??

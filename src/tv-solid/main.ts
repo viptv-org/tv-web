@@ -7,7 +7,7 @@ import {
 import { createComponent } from "solid-js";
 import { WebGlCoreRenderer } from "@solidtv/renderer/webgl";
 import { CanvasTextRenderer } from "@solidtv/renderer/canvas";
-import { installRemoteInput } from "./runtime";
+import { displayFonts, configureDisplayFonts } from "./fonts";
 import "../theme/viptv-tokens.generated.css";
 import { TvApi, type DeviceTokenSet } from "../api";
 import { initializeCore } from "../core";
@@ -60,24 +60,26 @@ const api = new TvApi({
 async function start() {
   if (new URLSearchParams(location.search).has("perfdebug"))
     performance.mark("viptv:init-start");
-  // Web-font texture creation occurs on the first SolidTV render. Loading
-  // the fonts first prevents static labels from keeping empty first textures
-  // while later reactive labels appear after the files arrive. Core WASM and
-  // font downloads are independent, so do both before launching the UI.
-  const fontsReady = Promise.all([
-    new FontFace("Bricolage700", `url(${bricolage700Url})`).load(),
-    new FontFace("Bricolage800", `url(${bricolage800Url})`).load(),
-    new FontFace("Onest", `url(${onestUrl})`).load(),
-    new FontFace("Onest500", `url(${onest500Url})`).load(),
-    new FontFace("Onest600", `url(${onest600Url})`).load(),
-    new FontFace("Onest700", `url(${onest700Url})`).load(),
-  ]).then((faces) => faces.forEach((face) => document.fonts.add(face)));
-  // Start independent module/WASM/font work before synchronous WebGL setup.
+  // Prefetch each face once through SolidTV before synchronous WebGL setup.
+  // The renderer attaches the prefetched faces when its stage is available.
   const dependencies = Promise.all([
     import("./App"),
     initializeCore(),
-    fontsReady,
   ]);
+  const rendererFonts = loadFonts(
+    [
+      { fontFamily: "Bricolage700", fontUrl: bricolage700Url },
+      { fontFamily: "Bricolage800", fontUrl: bricolage800Url },
+      { fontFamily: "Onest", fontUrl: onestUrl },
+      { fontFamily: "Onest500", fontUrl: onest500Url },
+      { fontFamily: "Onest600", fontUrl: onest600Url },
+      { fontFamily: "Onest700", fontUrl: onest700Url },
+      ...displayFonts,
+    ].map((font) => ({
+      ...font,
+      metrics: { ascender: 800, descender: -200, lineGap: 0, unitsPerEm: 1000 },
+    })),
+  );
   Config.fontSettings = { fontFamily: "Onest", fontSize: 32 };
   Config.animationsEnabled = false;
   const { render, renderer } = createRenderer(
@@ -94,29 +96,18 @@ async function start() {
     "app",
   );
   registerDefaultShaderRounded(renderer.stage.shManager);
-  const rendererFonts = loadFonts(
-    [
-      { fontFamily: "Bricolage700", fontUrl: bricolage700Url },
-      { fontFamily: "Bricolage800", fontUrl: bricolage800Url },
-      { fontFamily: "Onest", fontUrl: onestUrl },
-      { fontFamily: "Onest500", fontUrl: onest500Url },
-      { fontFamily: "Onest600", fontUrl: onest600Url },
-      { fontFamily: "Onest700", fontUrl: onest700Url },
-    ].map((font) => ({
-      ...font,
-      metrics: { ascender: 800, descender: -200, lineGap: 0, unitsPerEm: 1000 },
-    })),
-  );
+  if (new URLSearchParams(location.search).has("perfdebug"))
+    (window as Window & { __viptvRendererMetrics?: () => { textureBytes: number } }).__viptvRendererMetrics =
+      () => ({ textureBytes: "txMemManager" in renderer.stage ? renderer.stage.txMemManager.getMemoryInfo().memUsed : 0 });
   const [[appModule]] = await Promise.all([dependencies, rendererFonts]);
+  configureDisplayFonts();
   if (new URLSearchParams(location.search).has("perfdebug"))
     performance.mark("viptv:deps-ready");
-  const disposeInput = installRemoteInput();
   const dispose = render(() =>
     createComponent(appModule.createSolidTvApp(api, platform), {}),
   );
   if (import.meta.hot)
     import.meta.hot.dispose(() => {
-      disposeInput();
       dispose();
     });
   if (new URLSearchParams(location.search).has("perfdebug"))
