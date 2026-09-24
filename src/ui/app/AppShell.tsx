@@ -1,13 +1,12 @@
 import { WindowResizeBorders } from "../WindowResizeBorders";
 import { ResponsiveSignIn } from "../ResponsiveSignIn";
-import { RemoteRoot, TvButton } from "../remote";
+import { RemoteRoot } from "../remote";
 import { DesktopTitlebar } from "../DesktopTitlebar";
 import { DesktopRail, PhoneNav, TvRail, isNavDestination, useTvRail, type NavDestination } from "../ShellNav";
-import { RokuText } from "../RokuText";
 import { Settings } from "../Settings";
 import { Guide as LiveGuide } from "../Guide";
-import { ReadyImage } from "../RokuArtwork";
-import { ProfileEditor, avatarUrl } from "../ProfileEditor";
+import { TvPairing } from "../Pairing";
+import { ProfilesScreen } from "../Profiles";
 import { HomeScreen } from "../../screens/HomeScreen";
 import { BrowseScreen } from "../../screens/BrowseScreen";
 import { DetailScreen } from "../../screens/DetailScreen";
@@ -29,7 +28,7 @@ import "../responsive.css";
  * dialogs, all reading from the assembled app object.
  */
 export function AppShell({ app }: { app: AppApi }) {
-  const { active, activeTrackPopup, bootingHome, requestHomeRows, detailOrigin, api, audioTrackList, authorize, back, browser, busy, canvas, cards, casting, catalog, catalogError, catalogs, catalogValues, chooseProfile, closeCast, commitSeek, compactHome, detail, discoverSources, editingProfile, editProfile, engineChoice, entry, episodes, fail, favorites, firstHomeCatalog, fullscreenControl, go, heroDetails, heroItem, heroPresentation, heroRotation, highlighted, homeRows, isMaximized, items, lastControlActivity, layout, libraryQueue, loadCatalog, manage, managing, mediaKey, mediaKeyUp, modal, navigate, nextEpisode, nextSkip, oled, openCast, openingSource, overlay, pair, pairing, platform, play, player, playerInfoOpen, playerNotice, playerRoot, prefs, preparing, profile, profilePage, profiles, qr, query, queue, readBufferedRanges, recentLive, responsive, screen, searchKey, searchPartial, searchRows, season, seek, selected, selectedPresentation, selectEngine, previewSources, sourcePreview, stack, setActiveTrackPopup, setCompactHome, setControlActivity, setEditingProfile, setEntry, setLibraryQueue, setManaging, setModal, setOverlay, setPlayerInfoOpen, setPrefs, setProfile, setProfilePage, setProfiles, setQuery, setScreen, setSeason, setSeek, setSettingsSubpage, setSourceProvider, setSourceQuality, settingsSubpage, shelfCards, snapshot, sourceFocusPending, sourceProvider, sourceQuality, sources, stop, subtitleOffOption, surfaceClick, textTrackList, toggle, toggleLiveMute, toggleOled, togglePlayback, trackChoices, video } = app;
+  const { active, activeTrackPopup, bootingHome, requestHomeRows, detailOrigin, api, audioTrackList, authorize, back, browser, busy, canvas, cards, casting, catalog, catalogError, catalogs, catalogValues, chooseProfile, closeCast, commitSeek, compactHome, detail, discoverSources, editingProfile, editProfile, engineChoice, entry, episodes, fail, favorites, firstHomeCatalog, fullscreenControl, go, heroDetails, heroItem, heroPresentation, heroRotation, highlighted, homeRows, isMaximized, items, lastControlActivity, layout, libraryQueue, loadCatalog, manage, managing, mediaKey, mediaKeyUp, modal, navigate, nextEpisode, nextSkip, oled, openCast, openingSource, overlay, pair, pairExpired, pairing, platform, play, player, playerInfoOpen, playerNotice, playerRoot, prefs, preparing, profile, profilePage, profiles, qr, query, queue, readBufferedRanges, recentLive, responsive, screen, searchKey, searchPartial, searchRows, season, seek, selected, selectedPresentation, selectEngine, previewSources, sourcePreview, stack, setActiveTrackPopup, setCompactHome, setControlActivity, setEditingProfile, setEntry, setLibraryQueue, setManaging, setModal, setOverlay, setPlayerInfoOpen, setPrefs, setProfile, setProfilePage, setProfiles, setQuery, setScreen, setSeason, setSeek, setSettingsSubpage, setSourceProvider, setSourceQuality, settingsSubpage, shelfCards, snapshot, sourceFocusPending, sourceProvider, sourceQuality, sources, stop, subtitleOffOption, surfaceClick, textTrackList, toggle, toggleLiveMute, toggleOled, togglePlayback, trackChoices, video } = app;
 
   const activeProfile = profiles.find((p) => p.id === profile);
   const phone = usePhoneLayout(responsive);
@@ -61,7 +60,7 @@ export function AppShell({ app }: { app: AppApi }) {
   const tvRail = useTvRail(!responsive && chromeScreen, screen);
   const openProfiles = () => setScreen("profiles");
   const brand = (<div
-          className={`brand ${["profiles", "pairing"].includes(screen) ? "gateway-brand" : ""}`}
+          className="brand"
         >
           <img
             src={`${import.meta.env.BASE_URL}assets/viptv-mark.png`}
@@ -175,84 +174,24 @@ export function AppShell({ app }: { app: AppApi }) {
         {responsive && phone && (booting || (isNavDestination(screen) && screen !== "Settings")) && (
           <PhoneNav current={booting ? "Home" : currentNav} onNavigate={(destination) => void navigate(destination)} skeleton={booting} />
         )}
-        {!responsive && !chromeScreen && screen !== "player" && brand}
+        {!responsive && !chromeScreen && !["player", "pairing", "profiles"].includes(screen) && brand}
 
+        {/* ---- Account: sign-in / pairing and Who's watching (account family) ---- */}
         {booting || screen === "startup" ? null : screen === "pairing" ? (
-          responsive ? <ResponsiveSignIn api={api} pair={pair} qr={qr} onRetry={() => void pairing()} onUseWithoutAccount={localEntry} /> : <section className="pairing">
-            <h1>Sign in to VIPTV</h1>
-            <p>Visit this address, then enter the code shown below.</p>
-            <h2>{pair?.verificationUri ?? "Connecting…"}</h2>
-            <div className="pair-code">{pair?.userCode ?? "••••••"}</div>
-            {qr && <img className="qr" src={qr} alt="Scan to link your TV" />}
-            <TvButton id="retry" onActivate={() => void pairing()}>
-              Try again
-            </TvButton>
-            {localEntry && <TvButton id="local-mode" onActivate={localEntry}>
-              Use without an account
-            </TvButton>}
-          </section>
+          responsive
+            ? <ResponsiveSignIn api={api} pair={pair} qr={qr} expired={pairExpired} onRetry={() => void pairing()} onUseWithoutAccount={localEntry} />
+            : <TvPairing pair={pair} qr={qr} expired={pairExpired} onRetry={() => void pairing()} onUseWithoutAccount={localEntry} />
         ) : screen === "profiles" ? (
-          <section className="profiles">
-            <h1>{managing ? "Manage profiles" : "Who's watching?"}</h1>
-            <div className="profile-row">
-              {profiles
-                .slice(profilePage * 5, profilePage * 5 + 5)
-                .map((p, i) => (
-                  <TvButton
-                    id={`profile-${i}`}
-                    key={p.id}
-                    onActivate={() =>
-                      managing ? editProfile(p) : void chooseProfile(p.id)
-                    }
-                    onHold={() => editProfile(p)}
-                  >
-                    <span className="profile-initials">
-                      {p.name.slice(0, 2).toUpperCase()}
-                    </span>
-                    <ReadyImage src={avatarUrl(p)} alt="" />
-                    <strong>
-                      <RokuText>{p.name}</RokuText>
-                    </strong>
-                  </TvButton>
-                ))}
-            </div>
-            <div className="profile-actions">
-              <TvButton
-                id="add-profile"
-                disabled={profiles.length >= 12}
-                onActivate={() => editProfile()}
-              >
-                Add profile
-              </TvButton>
-              <TvButton
-                id="manage-profiles"
-                onActivate={() => setManaging(!managing)}
-              >
-                {managing ? "Done" : "Manage profiles"}
-              </TvButton>
-            </div>
-            {profiles.length > 5 && (
-              <div className="profile-pager">
-                <TvButton
-                  id="profiles-previous"
-                  disabled={profilePage === 0}
-                  onActivate={() => setProfilePage((p) => p - 1)}
-                >
-                  Previous
-                </TvButton>
-                <span>
-                  {profilePage + 1} / {Math.ceil(profiles.length / 5)}
-                </span>
-                <TvButton
-                  id="profiles-next"
-                  disabled={(profilePage + 1) * 5 >= profiles.length}
-                  onActivate={() => setProfilePage((p) => p + 1)}
-                >
-                  Next
-                </TvButton>
-              </div>
-            )}
-          </section>
+          <ProfilesScreen
+            profiles={profiles}
+            managing={managing}
+            onManage={() => setManaging(!managing)}
+            page={profilePage}
+            onPage={setProfilePage}
+            onChoose={(id) => void chooseProfile(id)}
+            onEdit={editProfile}
+            tv={!responsive}
+          />
         ) : (
           <>
             {!responsive && chromeScreen && (

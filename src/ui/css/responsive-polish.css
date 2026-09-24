@@ -24,65 +24,6 @@
 .responsive-app .cast-controller p + p { margin-top: 12px; }
 .responsive-app .cast-controller > button:last-child { margin-top: 20px; }
 
-/* ---- Sign-in ------------------------------------------------------------- */
-@media (hover: hover) and (pointer: fine) {
-  .responsive-app .responsive-auth .auth-submit:hover:not(:disabled) { background-color: #e2e2e2; }
-}
-
-/* ---- Text entry ------------------------------------------------------------ */
-.responsive-app .roku-text-entry input {
-  height: 50px;
-  padding: 0 14px;
-  border: 1px solid #65676a;
-  border-radius: 8px;
-  background: #101112;
-  color: #f5f5f5;
-  font-size: 17px;
-}
-.responsive-app .roku-text-entry input:focus { border-color: #f5f5f5; outline: none; }
-.responsive-app .roku-text-entry .actions button { flex: 1 1 120px; min-height: 48px; font-size: 16px; }
-
-/* ---- Profile editor: avatar beside the name field, one action row ----------- */
-.responsive-app .roku-profile-editor h1 { font-size: 28px; }
-.responsive-app .roku-profile-editor .profile-form {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  gap: 8px 20px;
-  align-items: center;
-}
-.responsive-app .roku-profile-editor .profile-form > .profile-introduction { grid-column: 1 / -1; margin: 0 0 12px; font-size: 16px; color: #c5c6c7; }
-.responsive-app .roku-profile-editor .profile-form > [data-focus-id="profile-avatar"] { grid-column: 1; grid-row: 2 / span 2; margin: 0; }
-.responsive-app .roku-profile-editor .profile-form > .profile-avatar-label { grid-column: 1; grid-row: 4; margin: 0; font-size: 13px; line-height: 18px; text-align: center; color: #a6a8aa; }
-.responsive-app .roku-profile-editor .profile-form > .profile-name-label { grid-column: 2; grid-row: 2; align-self: end; margin: 0; font-size: 12px; line-height: 16px; letter-spacing: 0.08em; color: #8d9093; }
-.responsive-app .roku-profile-editor .profile-form > [data-focus-id="profile-name"] {
-  grid-column: 2;
-  grid-row: 3;
-  align-self: start;
-  width: 100%;
-  min-height: 50px;
-  margin: 0;
-  padding: 0 14px;
-  border: 1px solid #65676a;
-  border-radius: 8px;
-  background: #101112;
-  font-size: 17px;
-  font-weight: 400;
-  text-align: left;
-}
-.responsive-app .roku-profile-editor .profile-form > .profile-input-help { display: none; }
-.responsive-app .roku-profile-editor .profile-form > .actions { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 12px; margin: 16px 0 0; }
-.responsive-app .roku-profile-editor :is(.profile-form .actions, .profile-delete-confirmation) button { flex: 1 1 140px; width: auto; min-height: 48px; font-size: 16px; text-align: center; }
-.responsive-app .roku-profile-editor :is([data-focus-id="profile-delete"], [data-focus-id="delete-confirm"]) { color: #ff8a80; }
-.responsive-app .roku-profile-editor .profile-delete-confirmation { display: flex; flex-wrap: wrap; gap: 12px; }
-.responsive-app .roku-profile-editor .profile-delete-confirmation p { flex-basis: 100%; margin-bottom: 8px; color: #c5c6c7; }
-.responsive-app .roku-profile-editor :is(.picker-hint, .avatar-page-label) { line-height: 1.5; }
-
-/* ---- Profiles picker ----------------------------------------------------- */
-.responsive-app .profile-row strong { color: #f5f5f5; line-height: 1.25; }
-.responsive-app .profile-row strong .roku-text,
-.responsive-app .profile-row strong .roku-text > span { white-space: normal; }
-.responsive-app .profile-row strong .roku-text { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
-
 /* ---- Settings: grouped list ---------------------------------------------- */
 /* One centred column on wide screens; the full width on phones, where
    responsive-p3's !important sidebar inset must be outranked. */

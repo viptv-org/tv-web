@@ -63,7 +63,7 @@ describe("dialog backdrop cancellation", () => {
     let resolveUnlock!: () => void;
     const unlock = vi.spyOn(api, "unlockParent").mockImplementation(() => new Promise<void>((resolve) => { resolveUnlock = resolve; }));
     fireEvent.click(screen.getByRole("button", { name: "Save" }));
-    fireEvent.change(await screen.findByLabelText("Parent PIN", { selector: "input" }), { target: { value: "1234" } });
+    fireEvent.change(await screen.findByLabelText("Enter parent PIN", { selector: "input" }), { target: { value: "1234" } });
     fireEvent.click(screen.getByRole("button", { name: "Done" }));
     const signal = unlock.mock.calls[0][1]?.signal;
     fireEvent.click(backdrop());

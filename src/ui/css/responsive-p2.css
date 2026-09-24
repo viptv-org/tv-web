@@ -16,8 +16,6 @@
   max-width: none;
 }
 
-.responsive-app .actions { position: static; display: flex; flex-wrap: wrap; width: auto; gap: 12px; margin-top: 28px; }
-
 .local-app .shelves { position: static; grid-column: 1 / -1; width: 100%; height: auto; overflow: visible; }
 .local-app .shelves section { margin: 0 0 32px; width: 100%; min-width: 0; height: auto; }
 .local-app .shelves h2 { height: auto; font-size: 22px; line-height: 28px; text-transform: uppercase; margin-bottom: 12px; overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
@@ -51,19 +49,6 @@
 .responsive-app .search .result-grid .cards { width: 100%; height: auto; overflow-x: auto; overflow-y: hidden; }
 .responsive-app .search-status, .responsive-app .search .search-status { position: static; width: auto; font-size: 17px; margin-top: 20px; }
 
-.responsive-app .profiles, .responsive-app .pairing { position: relative; inset: auto; padding: 80px 24px; width: 100%; min-height: calc(100% - 96px); height: auto; text-align: center; }
-.responsive-app .profiles > h1, .responsive-app .pairing h1, .responsive-app .pairing h2, .responsive-app .pairing > p, .responsive-app .pair-code { position: static; width: auto; height: auto; margin: 0 0 24px; text-align: center; overflow-wrap: anywhere; }
-.responsive-app .pairing h2 { font-size: 22px; }
-.responsive-app .pair-code { font-size: 52px; }
-.responsive-app .pairing .qr { position: static; display: block; width: 180px; height: 180px; margin: 0 auto 24px; }
-.responsive-app .pairing > button { position: static; width: auto; }
-.responsive-app .profile-row { position: static; display: flex; justify-content: center; flex-wrap: wrap; gap: 28px; width: auto; height: auto; margin: 44px 0; }
-.responsive-app .profile-row > button { width: 144px; height: 196px; flex: 0 0 144px; background: transparent !important; }
-.responsive-app .profile-row > button::after { left: 0; top: 0; width: 144px; height: 144px; border-radius: 50%; }
-.responsive-app .profile-row img, .responsive-app .profile-initials { left: 6px; top: 6px; width: 132px; height: 132px; border-radius: 50%; }
-.responsive-app .profile-row strong { left: 0; top: 156px; width: 144px; font-size: 20px; }
-.responsive-app .profile-actions, .responsive-app .profile-pager { position: static; display: flex; justify-content: center; gap: 16px; flex-wrap: wrap; width: auto; margin-top: 24px; }
-.responsive-app .profile-pager button, .responsive-app .profile-pager span { position: static; width: auto; }
 @media (max-width: 899px) {
   .tv-screen.responsive-app { --page-gutter: 28px; }
 
@@ -79,11 +64,4 @@
   .responsive-app .cards { gap: 16px; }
   .responsive-app .card-more { top: 138px; }
 
-  .responsive-app .profiles, .responsive-app .pairing { padding: 40px 16px 100px; }
-  .responsive-app .profiles > h1, .responsive-app .pairing > h1 { font-size: 32px; }
-  .responsive-app .profile-row { gap: 16px; }
-  .responsive-app .profile-row > button { width: 124px; flex-basis: 124px; height: 176px; }
-  .responsive-app .profile-row > button::after { width: 124px; height: 124px; }
-  .responsive-app .profile-row img, .responsive-app .profile-initials { width: 112px; height: 112px; }
-  .responsive-app .profile-row strong { width: 124px; top: 136px; font-size: 17px; }
-  .responsive-app .profile-actions button { font-size: 17px; }}
+  }

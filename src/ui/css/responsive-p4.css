@@ -1,7 +1,4 @@
 .responsive-app .catalog-status { position: relative; color: #c5c6c7; font-size: 17px; line-height: 1.5; margin: 16px 0; }
 .responsive-app .catalog-status button { padding: 12px 16px; margin-top: 12px; }
 .responsive-app:fullscreen { width: 100vw; height: 100dvh; background: #000; }
-@media (max-width: 599px) {
-  .responsive-app .responsive-auth-card { padding: 28px 24px; }
-}
 

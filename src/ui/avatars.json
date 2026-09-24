@@ -2,19 +2,23 @@
   "categories": [
     {
       "style": "disney",
-      "name": "Disney favorites"
+      "name": "Disney favorites",
+      "available": false
     },
     {
       "style": "princesses",
-      "name": "Princesses"
+      "name": "Princesses",
+      "available": false
     },
     {
       "style": "animal-friends",
-      "name": "Animal friends"
+      "name": "Animal friends",
+      "available": false
     },
     {
       "style": "villains",
-      "name": "Villains"
+      "name": "Villains",
+      "available": false
     },
     {
       "style": "critters",

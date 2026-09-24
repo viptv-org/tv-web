@@ -239,6 +239,9 @@ export function useAuth(app: DialogsApi) {
       },
     );
   };
+  // TV pairing / sign-in: the code expired (a persistent state until Try again /
+  // Reconnect requests a new one: decisions.md 3).
+  const [pairExpired, setPairExpired] = useState(false);
   const pairing = async () => {
     clearTimeout(pairTimer.current);
     pairingScope.current?.abort();
@@ -246,6 +249,7 @@ export function useAuth(app: DialogsApi) {
     pairingScope.current = scope;
     const generation = ++pairEpoch.current;
     setPair(undefined);
+    setPairExpired(false);
     setQr("");
     setError("");
     setScreen("pairing");
@@ -270,7 +274,7 @@ export function useAuth(app: DialogsApi) {
       const poll = async () => {
         if (generation !== pairEpoch.current) return;
         if (Date.now() > expires) {
-          setError("This code expired. Select Retry for a new code.");
+          setPairExpired(true);
           return;
         }
         try {
@@ -356,5 +360,5 @@ export function useAuth(app: DialogsApi) {
     };
   }, [api, startupAttempt]);
 
-  return { go, loadHome, requestHomeRows, authorize, chooseProfile, pairing };
+  return { go, loadHome, requestHomeRows, authorize, chooseProfile, pairing, pairExpired };
 }

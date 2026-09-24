@@ -120,18 +120,6 @@ main {
   height: calc(31px * var(--tv-k));
   object-fit: contain;
 }
-.gateway-brand {
-  left: calc(96px * var(--tv-k));
-  top: calc(44px * var(--tv-k));
-}
-.gateway-brand img {
-  width: calc(42px * var(--tv-k));
-  height: calc(36px * var(--tv-k));
-}
-.actions {
-  display: flex;
-  gap: calc(16px * var(--tv-k));
-}
 
 .art-fallback {
   background: #202224;

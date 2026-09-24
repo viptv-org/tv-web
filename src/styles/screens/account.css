@@ -1,1 +1,1311 @@
-/* Screen family: account. Reference screens: design/viptv-design-system/reference/screens. */
+/*
+ * Screen family: account — sign-in / TV pairing, Who's watching / Manage profiles, the profile
+ * editor + avatar picker, text entry and the parent PIN.
+ * Reference screens (design/viptv-design-system/reference/screens):
+ *   TV pairing   TvPairing, TvPairingLoading, TvPairingExpired
+ *   sign-in      PhSignIn, WebSignIn, WebSignInError, WebSignInDevice, WebSignInLocal, DeskSignIn
+ *   profiles     PhProfiles, DeskProfiles, DeskProfilesPaged, TvProfiles, PhProfilesManage,
+ *                WebProfilesManage, TvProfilesManage, TvManageCue
+ *   editor       PhProfileEdit, DeskProfileEdit, TvProfileEdit, PhProfileAdd, PhProfileDelete,
+ *                DeskProfileDelete, TvProfileDelete, PhAvatars, DeskAvatars, TvAvatars
+ *   text / PIN   PhProfileName, TvProfileName, PhPin, DeskPin, TvPin, TvPinError
+ *                (+ the generic entries PhFilterText, TvFilterText, *AddonInstall)
+ * Markup: src/ui/Pairing.tsx, src/ui/ResponsiveSignIn.tsx, src/ui/Profiles.tsx,
+ * src/ui/ProfileEditor.tsx, src/ui/TextEntry.tsx. Overlays sit in the dialogs family's layer
+ * (DialogBackdrop → .vx-dialog-layer) with the primitive .vx-dialog / .vx-tv-entry inside.
+ *
+ * Literal lengths are per-screen geometry from the reference HTML that has no token; each is
+ * named once as a --vx-* property with the screen it comes from. TV rules (.tv-layout) are
+ * Chrome 87-safe. Legacy global rules still style every <button> (tv-p1: background, radius,
+ * padding, min-height 48, 22 px / 700, text-align left, :focus inversion, :disabled 0.45), so
+ * custom buttons here restate them.
+ */
+
+/* ---------------------------------------------------------------------------
+ * Shared: the soft glow behind the gateway screens and the "V" app mark.
+ * ------------------------------------------------------------------------ */
+[data-layout] .vx-pairing::before,
+[data-layout] .vx-signin::before,
+[data-layout] .vx-profiles::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: var(--vx-glow-top, 45%);
+  width: var(--vx-glow-w);
+  height: var(--vx-glow-h);
+  background: radial-gradient(closest-side, var(--viptv-color-fill-wash), transparent);
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+}
+[data-layout] .vx-signin__mark,
+[data-layout] .vx-pairing__mark {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: var(--vx-mark);
+  height: var(--vx-mark);
+  border-radius: calc(var(--vx-mark) * var(--viptv-radius-app-mark));
+  background: var(--viptv-accent);
+  color: var(--viptv-color-on-accent);
+  font-family: var(--viptv-font-family-display);
+}
+
+/* ---------------------------------------------------------------------------
+ * TV pairing (TvPairing / TvPairingLoading / TvPairingExpired), 1920 × 1080 canvas.
+ * ------------------------------------------------------------------------ */
+.tv-layout .vx-pairing {
+  --vx-glow-w: 1400px; /* TvPairing glow */
+  --vx-glow-h: 800px;
+  --vx-mark: 52px; /* TvPairing "V" tile */
+  --vx-pairing-top: 250px; /* TvPairing section top */
+  --vx-pairing-gap: 120px; /* TvPairing: text column to QR */
+  --vx-qr: 360px; /* TvPairing QR tile */
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  color: var(--viptv-color-text-primary);
+  font-family: var(--viptv-font-family-ui);
+}
+.tv-layout .vx-pairing__brand {
+  position: absolute;
+  left: var(--viptv-layout-tv-safe-x);
+  top: var(--viptv-layout-tv-safe-y);
+  display: flex;
+  align-items: center;
+  gap: var(--viptv-space-4);
+}
+.tv-layout .vx-pairing__mark {
+  font-size: var(--viptv-type-tv-app-mark-size);
+  font-weight: var(--viptv-type-tv-app-mark-weight);
+  line-height: 1;
+}
+.tv-layout .vx-pairing__wordmark {
+  font-family: var(--viptv-font-family-display);
+  font-size: var(--viptv-type-tv-wordmark-size);
+  font-weight: var(--viptv-type-tv-wordmark-weight);
+  line-height: var(--viptv-type-tv-wordmark-line-height);
+  letter-spacing: var(--viptv-type-tv-wordmark-letter-spacing);
+}
+.tv-layout .vx-pairing__body {
+  position: absolute;
+  left: calc(2 * var(--viptv-layout-tv-safe-x));
+  right: calc(2 * var(--viptv-layout-tv-safe-x));
+  top: var(--vx-pairing-top);
+  display: flex;
+  align-items: flex-start;
+  gap: var(--vx-pairing-gap);
+}
+.tv-layout .vx-pairing__main {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: var(--viptv-space-5_5);
+  min-width: 0;
+}
+.tv-layout .vx-pairing__title {
+  margin: 0;
+  font-family: var(--viptv-font-family-display);
+  font-size: var(--viptv-type-tv-screen-title-size);
+  font-weight: var(--viptv-type-tv-screen-title-weight);
+  line-height: 1.2; /* TvPairing: the h1 keeps a normal line box */
+  letter-spacing: var(--viptv-type-tv-screen-title-letter-spacing);
+}
+.tv-layout .vx-pairing__intro {
+  margin: 0;
+  color: var(--viptv-color-text-body);
+  font-size: var(--viptv-type-tv-body-size);
+  line-height: var(--viptv-type-tv-body-line-height);
+}
+.tv-layout .vx-pairing__address {
+  color: var(--viptv-color-text-primary);
+  font-size: var(--viptv-type-tv-field-large-size);
+  font-weight: var(--viptv-type-tv-field-large-weight);
+  line-height: var(--viptv-type-tv-field-large-line-height);
+  overflow-wrap: anywhere;
+}
+.tv-layout .vx-pairing__address--pending {
+  color: var(--viptv-color-text-secondary);
+}
+.tv-layout .vx-pairing__code {
+  align-self: flex-start;
+  margin-top: var(--viptv-space-2);
+  padding: var(--viptv-space-4_5) calc(var(--viptv-space-8) + var(--viptv-space-0_5));
+  border-radius: var(--viptv-radius-2xl-plus);
+  background: var(--viptv-color-fill-tv-field);
+  color: var(--viptv-color-text-primary);
+  font-family: var(--viptv-font-family-display);
+  font-size: var(--viptv-type-tv-pair-code-size);
+  font-weight: var(--viptv-type-tv-pair-code-weight);
+  line-height: var(--viptv-type-tv-pair-code-line-height);
+  letter-spacing: var(--viptv-type-tv-pair-code-letter-spacing);
+  white-space: nowrap;
+}
+.tv-layout .vx-pairing__code--pending,
+.tv-layout .vx-pairing__code--expired {
+  color: var(--viptv-color-text-tertiary);
+}
+.tv-layout .vx-pairing__code--expired {
+  text-decoration: line-through;
+  text-decoration-thickness: calc(2 * var(--viptv-size-border-strong));
+}
+.tv-layout .vx-pairing__status {
+  display: flex;
+  align-items: center;
+  gap: var(--viptv-space-3);
+  color: var(--viptv-color-text-primary);
+  font-size: var(--viptv-type-tv-button-size);
+  font-weight: 600;
+  line-height: 1.3;
+}
+.tv-layout .vx-pairing__status > svg {
+  flex: none;
+  width: var(--viptv-size-icon-tv);
+  height: var(--viptv-size-icon-tv);
+}
+.tv-layout .vx-pairing__actions {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--viptv-space-6);
+  margin-top: calc(var(--viptv-space-7) + var(--viptv-space-0_5)); /* 30 */
+}
+.tv-layout .vx-pairing__qr-slot {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  align-items: center;
+  padding-top: var(--viptv-space-5);
+}
+.tv-layout .vx-pairing__qr {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: var(--vx-qr);
+  height: var(--vx-qr);
+  padding: var(--viptv-space-6);
+  overflow: hidden;
+  border-radius: calc(var(--vx-qr) * var(--viptv-radius-qr));
+  background: var(--viptv-color-fill-white);
+}
+.tv-layout .vx-pairing__qr > img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+.tv-layout .vx-pairing__qr--pending {
+  background: var(--viptv-color-fill-tv-field);
+}
+.tv-layout .vx-pairing__qr--expired {
+  opacity: 0.18; /* TvPairingExpired: the QR dims */
+}
+
+/* ---------------------------------------------------------------------------
+ * Sign-in card (PhSignIn, WebSignIn*, DeskSignIn). Phone: bottom-aligned in the thumb zone;
+ * web / desktop app: centred in the body row.
+ * ------------------------------------------------------------------------ */
+[data-layout="responsive"] .vx-signin {
+  --vx-glow-w: 1100px; /* WebSignIn glow */
+  --vx-glow-h: 900px;
+  --vx-mark: 44px; /* PhSignIn / WebSignIn "V" tile */
+  --vx-signin-card: 440px; /* WebSignIn card width */
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  min-height: 100%;
+  padding: var(--viptv-space-3) var(--viptv-space-4);
+  color: var(--viptv-color-text-primary);
+  font-family: var(--viptv-font-family-ui);
+}
+[data-layout="responsive"] .vx-signin__card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--viptv-space-4_5);
+  box-sizing: border-box;
+  width: var(--vx-signin-card);
+  max-width: 100%;
+  padding: var(--viptv-space-8);
+  border: 1px solid var(--viptv-color-line-hairline);
+  border-radius: var(--viptv-radius-2xl-plus);
+  background: var(--viptv-color-surface-1);
+}
+[data-layout="responsive"] .vx-signin__mark {
+  font-size: var(--viptv-type-desktop-app-mark-size);
+  font-weight: var(--viptv-type-desktop-app-mark-weight);
+  line-height: 1;
+}
+[data-layout="responsive"] .vx-signin__title {
+  margin: 0;
+  font-family: var(--viptv-font-family-display);
+  font-size: var(--viptv-type-desktop-card-title-size);
+  font-weight: var(--viptv-type-desktop-card-title-weight);
+  line-height: var(--viptv-type-desktop-card-title-line-height);
+  letter-spacing: var(--viptv-type-desktop-card-title-letter-spacing);
+}
+[data-layout="responsive"] .vx-signin__intro {
+  margin: 0;
+  color: var(--viptv-color-text-secondary);
+  font-size: var(--viptv-type-desktop-label-size);
+  line-height: 1.5;
+}
+[data-layout="responsive"] .vx-signin__form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--viptv-space-3_5);
+  margin: 0;
+}
+[data-layout="responsive"] .vx-signin__browser {
+  display: flex;
+  flex-direction: column;
+  gap: var(--viptv-space-3);
+}
+[data-layout="responsive"] .vx-signin__help {
+  margin: 0;
+  color: var(--viptv-color-text-secondary);
+  font-size: var(--viptv-type-desktop-row-size);
+  line-height: 1.5;
+}
+[data-layout="responsive"] .vx-signin__account {
+  display: flex;
+  justify-content: center;
+}
+[data-layout="responsive"] .vx-signin__secondary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: var(--viptv-space-2_5);
+  border-top: 1px solid var(--viptv-color-line-hairline);
+}
+[data-layout="responsive"] .vx-signin__device {
+  display: flex;
+  align-items: center;
+  gap: var(--viptv-space-2_5);
+  box-sizing: border-box;
+  height: var(--viptv-layout-phone-min-target);
+  min-height: var(--viptv-layout-phone-min-target);
+  margin: 0;
+  padding: 0 var(--viptv-space-1);
+  border: 0;
+  border-radius: var(--viptv-radius-md);
+  outline: none;
+  background: transparent;
+  color: var(--viptv-color-text-primary);
+  font-family: var(--viptv-font-family-ui);
+  font-size: var(--viptv-type-phone-body-size);
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+[data-layout="responsive"] .vx-signin__device > svg {
+  flex: none;
+  width: var(--viptv-size-icon-desktop);
+  height: var(--viptv-size-icon-desktop);
+}
+[data-layout="responsive"] .vx-signin__device > svg:last-child {
+  width: var(--viptv-size-icon-small);
+  height: var(--viptv-size-icon-small);
+  color: var(--viptv-color-text-secondary);
+}
+[data-layout="responsive"] .vx-signin__device:active {
+  transform: scale(var(--viptv-motion-pressed-scale));
+}
+[data-layout="responsive"] .vx-signin__reconnect > svg {
+  flex: none;
+  width: var(--viptv-size-icon-small);
+  height: var(--viptv-size-icon-small);
+}
+[data-layout="responsive"] .vx-signin__reconnect:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+[data-layout="responsive"] .vx-signin__device-panel {
+  --vx-qr: 108px; /* WebSignInDevice QR tile */
+  display: flex;
+  align-items: center;
+  gap: var(--viptv-space-4_5);
+  padding: var(--viptv-space-3_5);
+  border-radius: var(--viptv-radius-2xl);
+  background: var(--viptv-color-surface-2);
+}
+[data-layout="responsive"] .vx-signin__qr {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: var(--vx-qr);
+  height: var(--vx-qr);
+  padding: var(--viptv-space-1_5);
+  overflow: hidden;
+  border-radius: calc(var(--vx-qr) * var(--viptv-radius-qr));
+  background: var(--viptv-color-fill-white);
+}
+[data-layout="responsive"] .vx-signin__qr > img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+[data-layout="responsive"] .vx-signin__qr--pending {
+  background: var(--viptv-color-surface-3);
+}
+[data-layout="responsive"] .vx-signin__device-body {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--viptv-space-2_5);
+  min-width: 0;
+}
+[data-layout="responsive"] .vx-signin__device-text {
+  color: var(--viptv-color-text-secondary);
+  font-size: var(--viptv-type-desktop-row-size);
+  line-height: 1.3;
+}
+[data-layout="responsive"] .vx-signin__code {
+  font-family: var(--viptv-font-family-mono);
+  font-size: var(--viptv-type-desktop-device-code-size);
+  font-weight: var(--viptv-type-desktop-device-code-weight);
+  line-height: var(--viptv-type-desktop-device-code-line-height);
+  letter-spacing: var(--viptv-type-desktop-device-code-letter-spacing);
+}
+[data-layout="responsive"] .vx-signin__device-body > .vx-btn {
+  --vx-px: var(--viptv-space-5_5);
+}
+[data-layout="responsive"] .vx-signin__expired > svg {
+  flex: none;
+  width: var(--viptv-size-icon-alert);
+  height: var(--viptv-size-icon-alert);
+}
+[data-layout="responsive"] .vx-signin__local {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--viptv-space-2);
+}
+/* "Use without an account": a full-width outline button at button height (WebSignInLocal). */
+[data-layout="responsive"] .vx-signin__local > .vx-btn--outline {
+  --vx-h: var(--viptv-size-button-desktop);
+  --vx-fs: var(--viptv-type-desktop-button-size);
+  justify-content: center;
+  padding: 0 var(--viptv-space-5_5);
+}
+[data-layout="responsive"] .vx-signin__local-help {
+  margin: 0;
+  color: var(--viptv-color-text-tertiary);
+  font-size: var(--viptv-type-desktop-meta-size);
+  line-height: 1.5;
+  text-align: center;
+}
+@media (max-width: 599px) {
+  [data-layout="responsive"] .vx-signin {
+    --vx-glow-w: 560px; /* PhSignIn glow */
+    --vx-glow-h: 600px;
+    justify-content: flex-end;
+    padding: var(--viptv-layout-phone-top-inset) var(--viptv-layout-phone-gutter) var(--viptv-layout-phone-sheet-bottom);
+  }
+  [data-layout="responsive"] .vx-signin__card {
+    width: 100%;
+    padding: var(--viptv-space-6);
+  }
+  [data-layout="responsive"] .vx-signin__title {
+    font-size: var(--viptv-type-phone-subpage-title-size);
+    font-weight: var(--viptv-type-phone-subpage-title-weight);
+    line-height: var(--viptv-type-phone-subpage-title-line-height);
+    letter-spacing: var(--viptv-type-phone-subpage-title-letter-spacing);
+  }
+  [data-layout="responsive"] .vx-signin__intro {
+    font-size: var(--viptv-type-phone-body-size);
+  }
+  [data-layout="responsive"] .vx-signin__local > .vx-btn--outline {
+    --vx-h: var(--viptv-size-button-phone);
+  }
+}
+
+/* ---------------------------------------------------------------------------
+ * Who's watching? / Manage profiles.
+ * ------------------------------------------------------------------------ */
+[data-layout] .vx-profiles {
+  position: relative;
+  box-sizing: border-box;
+  color: var(--viptv-color-text-primary);
+  font-family: var(--viptv-font-family-ui);
+}
+[data-layout] .vx-profiles__wordmark {
+  display: block;
+  font-family: var(--viptv-font-family-display);
+}
+[data-layout] .vx-profiles__body {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+[data-layout] .vx-profiles__title {
+  margin: 0;
+  font-family: var(--viptv-font-family-display);
+  font-weight: 700;
+  line-height: 1.2; /* the reference titles keep a normal line box (Ph/Desk/TvProfiles) */
+  letter-spacing: -0.02em;
+  text-align: center;
+}
+[data-layout] .vx-profiles__tiles {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+}
+[data-layout] .vx-profiles__pager {
+  display: flex;
+  align-items: center;
+  gap: var(--viptv-space-4);
+}
+[data-layout] .vx-profiles__page {
+  color: var(--viptv-color-text-secondary);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+/* The pager reads right under the tiles (DeskProfilesPaged: -40 against the 64 gap). */
+[data-layout] .vx-profiles__tiles + .vx-profiles__pager {
+  margin-top: calc(var(--vx-profiles-gap) * -1 + var(--viptv-space-6));
+}
+[data-layout] .vx-profiles .vx-profile__name {
+  max-width: var(--vx-avatar);
+}
+/* Letter avatar (no image): the profile initial on the letter ground. */
+[data-layout] .vx-account-letter {
+  background: var(--viptv-color-fill-profile-letter);
+}
+
+/* Desktop app / web (DeskProfiles, DeskProfilesPaged, WebProfilesManage). */
+[data-layout="responsive"] .vx-profiles {
+  --vx-glow-top: 42%;
+  --vx-glow-w: 1200px; /* DeskProfiles glow */
+  --vx-glow-h: 700px;
+  --vx-profiles-gap: var(--viptv-space-16);
+  min-height: 100%;
+  padding-top: 120px; /* WebProfilesManage section top */
+}
+.desktop-shell .vx-profiles {
+  padding-top: 150px; /* DeskProfiles: section top under the title bar */
+}
+[data-layout="responsive"] .vx-profiles__wordmark {
+  display: none;
+}
+[data-layout="responsive"] .vx-profiles__body {
+  gap: var(--vx-profiles-gap);
+}
+[data-layout="responsive"] .vx-profiles__title {
+  font-size: var(--viptv-type-desktop-page-title-size);
+}
+[data-layout="responsive"] .vx-profiles__tiles {
+  flex-wrap: wrap;
+  gap: calc(2 * var(--viptv-space-5));
+}
+[data-layout="responsive"] .vx-profiles .vx-profile {
+  --vx-avatar: 150px; /* DeskProfiles tile */
+}
+[data-layout="responsive"] .vx-profiles__page {
+  font-size: var(--viptv-type-desktop-row-size);
+}
+
+/* Phone (PhProfiles, PhProfilesManage): a 2-column grid in the thumb zone. */
+@media (max-width: 599px) {
+  [data-layout="responsive"] .vx-profiles {
+    --vx-glow-top: 50%;
+    --vx-glow-w: 560px; /* PhProfiles glow */
+    --vx-glow-h: 520px;
+    --vx-profiles-gap: calc(2 * var(--viptv-space-5));
+    display: flex;
+    flex-direction: column;
+    padding: var(--viptv-layout-phone-top-inset) var(--viptv-layout-phone-gutter) var(--viptv-layout-phone-sheet-bottom);
+  }
+  [data-layout="responsive"] .vx-profiles__wordmark {
+    display: block;
+    font-size: var(--viptv-type-phone-wordmark-size);
+    font-weight: var(--viptv-type-phone-wordmark-weight);
+    line-height: 1.2; /* PhProfiles: normal line box */
+    letter-spacing: var(--viptv-type-phone-wordmark-letter-spacing);
+  }
+  [data-layout="responsive"] .vx-profiles__body {
+    flex: 1 1 auto;
+    justify-content: flex-end;
+  }
+  [data-layout="responsive"] .vx-profiles__title {
+    font-size: var(--viptv-type-phone-screen-title-size);
+  }
+  [data-layout="responsive"] .vx-profiles__tiles {
+    display: grid;
+    grid-template-columns: repeat(2, var(--vx-avatar));
+    column-gap: var(--viptv-space-9);
+    row-gap: calc(var(--viptv-space-6) + var(--viptv-space-0_5)); /* 26 */
+    --vx-avatar: 140px; /* PhProfiles tile */
+  }
+  [data-layout="responsive"] .vx-profiles .vx-profile {
+    --vx-avatar: 140px;
+  }
+  [data-layout="responsive"] .vx-profiles__manage {
+    --vx-h: var(--viptv-size-button-phone);
+    display: flex;
+    width: 100%;
+  }
+  [data-layout="responsive"] .vx-profiles__page {
+    font-size: var(--viptv-type-phone-meta-size);
+  }
+}
+
+/* TV (TvProfiles, TvProfilesManage, TvManageCue). */
+.tv-layout .vx-profiles {
+  --vx-glow-top: 40%;
+  --vx-glow-w: 1400px; /* TvProfiles glow */
+  --vx-glow-h: 700px;
+  --vx-profiles-gap: 90px; /* TvProfiles: title / tiles / button */
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+}
+.tv-layout .vx-profiles__wordmark {
+  position: absolute;
+  left: var(--viptv-layout-tv-safe-x);
+  top: var(--viptv-layout-tv-safe-y);
+  font-size: var(--viptv-type-tv-wordmark-size);
+  font-weight: var(--viptv-type-tv-wordmark-weight);
+  line-height: 1.2; /* TvProfiles: normal line box */
+  letter-spacing: var(--viptv-type-tv-wordmark-letter-spacing);
+}
+.tv-layout .vx-profiles__body {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 230px; /* TvProfiles section top */
+  gap: var(--vx-profiles-gap);
+}
+.tv-layout .vx-profiles__title {
+  font-size: var(--viptv-type-tv-gateway-title-size);
+}
+.tv-layout .vx-profiles__tiles {
+  gap: var(--viptv-space-16);
+}
+.tv-layout .vx-profiles__page {
+  font-size: var(--viptv-type-tv-label-size);
+}
+/* "Manage profiles" / "Done": a 60 pill, 22 px (TvProfiles). */
+.tv-layout .vx-profiles--managing .vx-profiles__manage {
+  --vx-icon: var(--viptv-size-icon-tv); /* TvProfilesManage: "Done" check 28 */
+  --vx-px: calc(var(--viptv-space-8) + var(--viptv-space-0_5)); /* 34 */
+}
+.tv-layout .vx-profiles__manage {
+  --vx-h: 60px; /* TvProfiles manage button */
+  --vx-px: calc(var(--viptv-space-7) + var(--viptv-space-0_5)); /* 30 */
+  --vx-fs: var(--viptv-type-tv-meta-size);
+  --vx-icon: var(--viptv-size-icon-large);
+  gap: var(--viptv-space-3);
+}
+
+/* ---------------------------------------------------------------------------
+ * Profile editor page + avatar picker (a full page on every platform; overlays stack on it).
+ * ------------------------------------------------------------------------ */
+[data-layout="responsive"] .tv-screen .vx-dialog-layer.vx-account-page {
+  display: block;
+  padding: 0;
+  position: fixed;
+  top: var(--vx-shell-top, 0px);
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 40;
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-width: none;
+  background: var(--viptv-color-bg);
+}
+.tv-layout .vx-dialog-layer.vx-account-page {
+  display: block;
+  padding: 0;
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 40;
+  background: var(--viptv-color-bg);
+}
+[data-layout] .vx-account-page > .vx-scrim {
+  display: none;
+}
+[data-layout] .vx-account-editor {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  margin: 0;
+  color: var(--viptv-color-text-primary);
+  font-family: var(--viptv-font-family-ui);
+}
+[data-layout] .vx-account-editor__head {
+  display: flex;
+  flex-direction: column;
+}
+[data-layout] .vx-account-editor__title {
+  margin: 0;
+  font-family: var(--viptv-font-family-display);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+[data-layout] .vx-account-editor__intro {
+  margin: 0;
+  color: var(--viptv-color-text-secondary);
+}
+[data-layout] .vx-account-editor__body,
+[data-layout] .vx-account-editor__fields {
+  display: flex;
+  flex-direction: column;
+}
+[data-layout] .vx-account-editor__fields {
+  min-width: 0;
+}
+/* Change avatar: the picture over its label. */
+[data-layout] .vx-account-editor__avatar {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  align-items: center;
+  align-self: center;
+  box-sizing: border-box;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  outline: none;
+  background: transparent;
+  color: var(--viptv-color-text-secondary);
+  font-family: var(--viptv-font-family-ui);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+[data-layout] .vx-account-editor__avatar:focus {
+  background: transparent;
+  color: var(--viptv-color-text-secondary);
+}
+[data-layout] .vx-account-editor__avatar-art {
+  display: block;
+  width: var(--vx-editor-avatar);
+  height: var(--vx-editor-avatar);
+  overflow: hidden;
+  border-radius: calc(var(--vx-editor-avatar) * var(--viptv-radius-avatar));
+  background: var(--viptv-color-surface-avatar);
+  transition: transform var(--viptv-motion-focus) ease-out, box-shadow var(--viptv-motion-focus) ease-out;
+}
+[data-layout] .vx-account-editor__avatar-art > img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+[data-layout] .vx-account-editor__avatar-label {
+  font-weight: 600;
+  line-height: 1.3;
+}
+[data-layout] .vx-account-editor__label {
+  color: var(--viptv-color-text-secondary);
+  font-weight: 700;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+/* The profile name reads like a field; selecting it opens the text entry. */
+[data-layout] .vx-account-name {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--viptv-space-3);
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+  border: 1px solid var(--viptv-color-line-hairline);
+  outline: none;
+  color: var(--viptv-color-text-primary);
+  font-family: var(--viptv-font-family-ui);
+  font-weight: 500;
+  line-height: 1.2;
+  text-align: left;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform var(--viptv-motion-focus) ease-out, box-shadow var(--viptv-motion-focus) ease-out, background-color var(--viptv-motion-focus) ease-out;
+}
+[data-layout] .vx-account-name__value,
+[data-layout] .vx-account-name__placeholder {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+[data-layout] .vx-account-name__placeholder {
+  color: var(--viptv-color-text-tertiary);
+}
+[data-layout] .vx-account-name > svg {
+  display: block;
+  flex: none;
+  color: var(--viptv-color-text-secondary);
+}
+[data-layout] .vx-account-name--error {
+  border: var(--viptv-size-border-focus) solid var(--viptv-color-status-danger);
+}
+[data-layout] .vx-account-editor__help {
+  color: var(--viptv-color-text-tertiary);
+}
+[data-layout] .vx-account-editor__actions {
+  display: flex;
+}
+
+/* Phone / desktop shared */
+[data-layout="responsive"] .vx-account-editor__avatar {
+  gap: var(--viptv-space-3);
+  font-size: var(--viptv-type-desktop-row-size);
+}
+[data-layout="responsive"] .vx-account-editor__avatar:active .vx-account-editor__avatar-art {
+  transform: scale(var(--viptv-motion-pressed-scale));
+}
+@media (hover: hover) and (pointer: fine) {
+  [data-layout="responsive"] .vx-account-editor__avatar:hover .vx-account-editor__avatar-art {
+    box-shadow: var(--viptv-focus-desktop-hover-card);
+  }
+  [data-layout="responsive"] .vx-account-name:hover {
+    border-color: var(--viptv-color-line-strong);
+  }
+}
+[data-layout="responsive"] .vx-account-name:active {
+  background: var(--viptv-color-surface-2);
+}
+@media (min-width: 600px) {
+  [data-layout="responsive"] .vx-account-editor__avatar:focus-visible {
+    box-shadow: none;
+  }
+  [data-layout="responsive"] .vx-account-editor__avatar:focus-visible .vx-account-editor__avatar-art,
+  [data-layout="responsive"] .vx-account-name:focus-visible,
+  [data-layout="responsive"] .vx-avatars__back:focus-visible {
+    box-shadow: var(--viptv-focus-desktop);
+  }
+}
+[data-layout="responsive"] .vx-account-editor__label {
+  font-size: var(--viptv-type-phone-eyebrow-size);
+  letter-spacing: var(--viptv-type-desktop-eyebrow-letter-spacing);
+}
+[data-layout="responsive"] .vx-account-editor__fields {
+  gap: var(--viptv-space-2);
+}
+
+/* Desktop app / web (DeskProfileEdit, DeskProfileDelete): a centred 480 column. */
+[data-layout="responsive"] .vx-account-editor {
+  --vx-editor-avatar: 150px; /* DeskProfileEdit avatar */
+  gap: var(--viptv-space-5_5);
+  width: 480px; /* DeskProfileEdit column */
+  max-width: calc(100% - 2 * var(--viptv-space-4));
+  margin: 0 auto;
+  padding: 90px 0 var(--viptv-space-12); /* DeskProfileEdit: column top */
+}
+[data-layout="responsive"] .vx-account-editor--deletable {
+  padding-top: 70px; /* DeskProfileDelete: column top with the delete row */
+}
+[data-layout="responsive"] .vx-account-editor__head {
+  align-items: center;
+  gap: var(--viptv-space-2);
+  text-align: center;
+}
+[data-layout="responsive"] .vx-account-editor__title {
+  font-size: var(--viptv-type-desktop-page-title-size);
+  line-height: 1.2; /* DeskProfileEdit: normal line box */
+}
+[data-layout="responsive"] .vx-account-editor__intro {
+  font-size: var(--viptv-type-desktop-body-size);
+  line-height: 1.3;
+}
+[data-layout="responsive"] .vx-account-editor__body {
+  gap: var(--viptv-space-5_5);
+}
+[data-layout="responsive"] .vx-account-name {
+  height: 52px; /* DeskProfileEdit name field */
+  min-height: 0;
+  padding: 0 var(--viptv-space-4);
+  border-radius: var(--viptv-radius-lg);
+  background: var(--viptv-color-surface-2);
+  font-size: var(--viptv-type-desktop-body-size);
+}
+[data-layout="responsive"] .vx-account-name--error {
+  border: var(--viptv-size-border-focus) solid var(--viptv-color-status-danger);
+}
+[data-layout="responsive"] .vx-account-name > svg {
+  width: var(--viptv-size-icon-desktop);
+  height: var(--viptv-size-icon-desktop);
+}
+/* Save + Cancel share a row (each grows from its content); Delete sits centred below. */
+[data-layout="responsive"] .vx-account-editor__actions {
+  flex-wrap: wrap;
+  gap: 0 var(--viptv-space-2_5);
+  margin-top: calc(var(--viptv-space-5_5) - var(--viptv-space-2));
+}
+[data-layout="responsive"] .vx-account-editor__actions::after {
+  content: "";
+  order: 1;
+  flex-basis: 100%;
+}
+[data-layout="responsive"] .vx-account-editor__actions > .vx-btn {
+  flex: 1 1 auto;
+}
+[data-layout="responsive"] .vx-account-editor__actions > .vx-btn--destructive {
+  flex: 0 0 auto;
+  order: 2;
+  margin: var(--viptv-space-5_5) auto 0;
+}
+
+/* Phone (PhProfileEdit, PhProfileAdd): full-height column, actions stacked at the bottom. */
+@media (max-width: 599px) {
+  [data-layout="responsive"] .vx-account-editor {
+    gap: var(--viptv-space-4_5);
+    width: auto;
+    max-width: none;
+    min-height: 100%;
+    padding: var(--viptv-layout-phone-top-inset) var(--viptv-layout-phone-gutter) var(--viptv-layout-phone-sheet-bottom);
+  }
+  [data-layout="responsive"] .vx-account-editor__head {
+    align-items: stretch;
+    gap: var(--viptv-space-1_5);
+    padding-top: var(--viptv-space-1_5);
+    text-align: left;
+  }
+  [data-layout="responsive"] .vx-account-editor__title {
+    font-size: var(--viptv-type-phone-subpage-title-size);
+    line-height: 1.2; /* PhProfileEdit: normal line box */
+  }
+  [data-layout="responsive"] .vx-account-editor__intro {
+    font-size: var(--viptv-type-phone-body-size);
+  }
+  [data-layout="responsive"] .vx-account-editor__body {
+    flex: 1 1 auto;
+    gap: calc(var(--viptv-space-4_5) + var(--viptv-space-4)); /* 34: gap + 16 (PhProfileEdit) */
+  }
+  [data-layout="responsive"] .vx-account-editor__avatar {
+    margin-top: calc(var(--viptv-space-6) + var(--viptv-space-0_5)); /* 26 */
+  }
+  [data-layout="responsive"] .vx-account-editor__fields {
+    flex: 1 1 auto;
+  }
+  [data-layout="responsive"] .vx-account-name {
+    height: var(--viptv-size-field-phone);
+    border-radius: var(--viptv-size-field-radius-phone);
+    background: var(--viptv-color-surface-1);
+    font-size: var(--viptv-type-phone-body-strong-size);
+  }
+  [data-layout="responsive"] .vx-account-editor__actions {
+    display: flex;
+    flex-direction: column;
+    gap: var(--viptv-space-2_5);
+    margin-top: auto;
+    padding-top: var(--viptv-space-4_5);
+  }
+  [data-layout="responsive"] .vx-account-editor__actions::after {
+    content: none;
+  }
+  [data-layout="responsive"] .vx-account-editor__actions > .vx-btn,
+  [data-layout="responsive"] .vx-account-editor__actions > .vx-btn--destructive {
+    display: flex;
+    flex: none;
+    width: 100%;
+    margin: 0;
+  }
+}
+
+/* TV (TvProfileEdit): avatar left, the name field and actions right. */
+.tv-layout .vx-account-editor {
+  --vx-editor-avatar: 260px; /* TvProfileEdit avatar */
+  position: absolute;
+  left: calc(2 * var(--viptv-layout-tv-safe-x));
+  right: calc(2 * var(--viptv-layout-tv-safe-x));
+  top: 120px; /* TvProfileEdit section top */
+  gap: var(--viptv-space-4_5);
+}
+.tv-layout .vx-account-editor__head {
+  gap: var(--viptv-space-4_5);
+}
+.tv-layout .vx-account-editor__title {
+  font-size: var(--viptv-type-tv-screen-title-size);
+  line-height: 1.2; /* TvProfileEdit: normal line box */
+}
+.tv-layout .vx-account-editor__intro {
+  font-size: var(--viptv-type-tv-body-size);
+  line-height: 1.3;
+}
+.tv-layout .vx-account-editor__body {
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 110px; /* TvProfileEdit: avatar to fields */
+  margin-top: calc(var(--viptv-space-16) - var(--viptv-space-1)); /* 60 */
+}
+.tv-layout .vx-account-editor__avatar {
+  align-self: flex-start;
+  gap: var(--viptv-space-5);
+  font-size: var(--viptv-type-tv-label-size);
+}
+.tv-layout .vx-account-editor__avatar:focus .vx-account-editor__avatar-art {
+  box-shadow: var(--viptv-focus-tv-shadow);
+  transform: scale(var(--viptv-focus-tv-scale-tile));
+}
+.tv-layout .vx-account-editor__avatar:focus .vx-account-editor__avatar-label {
+  color: var(--viptv-color-text-primary);
+}
+.tv-layout .vx-account-editor__fields {
+  flex: 1 1 auto;
+  gap: var(--viptv-space-4);
+  max-width: 860px; /* TvProfileEdit fields column */
+}
+.tv-layout .vx-account-editor__label {
+  font-size: var(--viptv-type-tv-eyebrow-size);
+  letter-spacing: var(--viptv-type-tv-eyebrow-letter-spacing);
+}
+.tv-layout .vx-account-name {
+  height: 88px; /* TvProfileEdit name field */
+  min-height: 0;
+  padding: 0 calc(var(--viptv-space-7) + var(--viptv-space-0_5)); /* 30 */
+  border: 0;
+  border-radius: var(--viptv-radius-3xl);
+  background: var(--viptv-color-fill-tv-field);
+  font-size: var(--viptv-type-tv-field-large-size);
+  font-weight: var(--viptv-type-tv-field-large-weight);
+}
+.tv-layout .vx-account-name > svg {
+  width: var(--viptv-size-icon-tv);
+  height: var(--viptv-size-icon-tv);
+  color: inherit;
+}
+.tv-layout .vx-account-name--error {
+  border: var(--viptv-size-border-strong) solid var(--viptv-color-status-danger-tv);
+}
+.tv-layout .vx-account-name:focus {
+  background: var(--viptv-color-text-primary);
+  color: var(--viptv-color-on-light);
+  box-shadow: var(--viptv-focus-tv-shadow);
+  transform: scale(var(--viptv-focus-tv-scale-row));
+}
+.tv-layout .vx-account-name:focus .vx-account-name__placeholder {
+  color: var(--viptv-color-text-on-light-secondary);
+}
+.tv-layout .vx-account-editor__help {
+  font-size: var(--viptv-type-tv-meta-size);
+  line-height: var(--viptv-type-tv-meta-line-height);
+}
+.tv-layout .vx-account-editor__actions {
+  gap: var(--viptv-space-4_5);
+  margin-top: calc(var(--viptv-space-12) - var(--viptv-space-1)); /* 44 */
+}
+
+/* Avatar picker: "Find your favorite". */
+[data-layout] .vx-avatars__head {
+  display: flex;
+  align-items: center;
+}
+[data-layout] .vx-avatars__count {
+  margin: 0;
+  color: var(--viptv-color-text-secondary);
+}
+[data-layout] .vx-avatars__worlds {
+  display: flex;
+  gap: var(--viptv-space-2);
+}
+[data-layout] .vx-avatars__grid {
+  display: grid;
+  grid-template-columns: repeat(var(--vx-avatar-cols), var(--vx-avatar-tile));
+}
+[data-layout] .vx-avatars__grid > .vx-avatar-tile {
+  --vx-avatar: var(--vx-avatar-tile);
+}
+[data-layout] .vx-avatars__pager {
+  display: flex;
+  align-items: center;
+}
+[data-layout] .vx-avatars__page {
+  color: var(--viptv-color-text-secondary);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+[data-layout] .vx-avatars__back {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: var(--viptv-layout-phone-min-target);
+  height: var(--viptv-layout-phone-min-target);
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  outline: none;
+  background: transparent;
+  color: var(--viptv-color-text-primary);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+[data-layout] .vx-avatars__back:focus {
+  background: transparent;
+  color: var(--viptv-color-text-primary);
+}
+[data-layout] .vx-avatars__back > svg {
+  width: var(--viptv-size-icon-large);
+  height: var(--viptv-size-icon-large);
+}
+[data-layout="responsive"] .vx-avatars__back:active {
+  background: var(--viptv-color-surface-2);
+}
+
+/* Desktop / web (DeskAvatars): centred; worlds wrap. */
+[data-layout="responsive"] .vx-account-editor--avatars {
+  --vx-avatar-cols: 6;
+  --vx-avatar-tile: 116px; /* DeskAvatars tile */
+  align-items: center;
+  gap: var(--viptv-space-3_5);
+  width: auto;
+  max-width: none;
+  padding: 56px var(--viptv-space-6) var(--viptv-space-12); /* DeskAvatars section top */
+}
+[data-layout="responsive"] .vx-account-editor--avatars .vx-avatars__back {
+  display: none;
+}
+[data-layout="responsive"] .vx-avatars__count {
+  font-size: var(--viptv-type-desktop-body-size);
+}
+[data-layout="responsive"] .vx-avatars__worlds {
+  flex-wrap: wrap;
+  justify-content: center;
+  max-width: 1200px; /* DeskAvatars worlds row */
+  margin-top: var(--viptv-space-2_5);
+}
+[data-layout="responsive"] .vx-avatars__grid {
+  gap: var(--viptv-space-5);
+  margin-top: var(--viptv-space-4);
+}
+[data-layout="responsive"] .vx-avatars__pager {
+  gap: var(--viptv-space-4_5);
+  margin-top: var(--viptv-space-2);
+}
+[data-layout="responsive"] .vx-avatars__page {
+  font-size: var(--viptv-type-desktop-row-size);
+}
+
+/* Phone (PhAvatars): a scrolling 3-column grid; worlds and the pager dock at the bottom. */
+@media (max-width: 599px) {
+  [data-layout="responsive"] .vx-account-editor--avatars {
+    --vx-avatar-cols: 3;
+    --vx-avatar-tile: 104px; /* PhAvatars tile */
+    align-items: stretch;
+    gap: 0;
+    padding: var(--viptv-layout-phone-top-inset) 0 var(--viptv-layout-phone-sheet-top);
+  }
+  [data-layout="responsive"] .vx-account-editor--avatars::after {
+    content: "";
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 190px; /* PhAvatars bottom fade */
+    background: linear-gradient(to bottom, transparent, var(--viptv-color-bg) 40%);
+    pointer-events: none;
+  }
+  [data-layout="responsive"] .vx-avatars__head {
+    gap: var(--viptv-space-1);
+    height: var(--viptv-size-button-desktop);
+    padding: 0 var(--viptv-space-2) 0 var(--viptv-space-1);
+  }
+  [data-layout="responsive"] .vx-account-editor--avatars .vx-avatars__back {
+    display: flex;
+  }
+  [data-layout="responsive"] .vx-account-editor--avatars .vx-account-editor__title {
+    flex: 1 1 auto;
+    font-size: var(--viptv-type-phone-subpage-title-size);
+    line-height: var(--viptv-type-phone-screen-title-line-height);
+  }
+  [data-layout="responsive"] .vx-avatars__count {
+    margin: var(--viptv-space-1) var(--viptv-layout-phone-gutter) var(--viptv-space-3_5);
+    font-size: var(--viptv-type-phone-label-size);
+  }
+  [data-layout="responsive"] .vx-avatars__grid {
+    justify-content: space-between;
+    row-gap: var(--viptv-space-4_5);
+    column-gap: 0;
+    margin: 0;
+    padding: 0 var(--viptv-layout-phone-gutter);
+  }
+  [data-layout="responsive"] .vx-avatars__worlds {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: calc(var(--viptv-layout-phone-sheet-bottom) + var(--viptv-size-button-pill) + var(--viptv-space-3));
+    z-index: 1;
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    max-width: none;
+    margin: 0;
+    padding: 0 var(--viptv-layout-phone-gutter);
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  [data-layout="responsive"] .vx-avatars__worlds::-webkit-scrollbar {
+    display: none;
+  }
+  [data-layout="responsive"] .vx-avatars__pager {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: var(--viptv-layout-phone-sheet-bottom);
+    z-index: 1;
+    justify-content: space-between;
+    margin: 0;
+    padding: 0 var(--viptv-layout-phone-gutter);
+  }
+  [data-layout="responsive"] .vx-avatars__pager > .vx-btn {
+    --vx-h: var(--viptv-size-button-pill);
+    --vx-fs: var(--viptv-type-phone-body-size);
+    --vx-icon: var(--viptv-size-icon-phone);
+  }
+  [data-layout="responsive"] .vx-avatars__page {
+    font-size: var(--viptv-type-phone-meta-size);
+  }
+  [data-layout="responsive"] .vx-avatars__page-world {
+    display: none;
+  }
+}
+
+/* TV (TvAvatars): left-aligned; the worlds row scrolls sideways under a fade. */
+.tv-layout .vx-account-editor--avatars {
+  --vx-avatar-cols: 6;
+  --vx-avatar-tile: 150px; /* TvAvatars tile */
+  right: var(--viptv-layout-tv-safe-x);
+  top: var(--viptv-layout-tv-safe-y);
+  gap: var(--viptv-space-4);
+}
+.tv-layout .vx-account-editor--avatars .vx-account-editor__title {
+  line-height: 1.2;
+}
+.tv-layout .vx-avatars__count {
+  font-size: var(--viptv-type-tv-label-size);
+}
+.tv-layout .vx-avatars__worlds {
+  margin-top: var(--viptv-space-3_5);
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(to right, var(--viptv-color-bg) calc(100% - 160px), transparent); /* TvAvatars fade */
+}
+.tv-layout .vx-avatars__grid {
+  gap: calc(var(--viptv-space-6) + var(--viptv-space-0_5)); /* 26 */
+  margin-top: var(--viptv-space-5_5);
+}
+.tv-layout .vx-avatars__pager {
+  gap: var(--viptv-space-6);
+  margin-top: var(--viptv-space-6);
+}
+.tv-layout .vx-avatars__page {
+  order: -1;
+  margin-right: var(--viptv-space-1_5);
+  font-size: var(--viptv-type-tv-label-size);
+}
+.tv-layout .vx-avatars__pager > .vx-btn--small {
+  --vx-h: var(--viptv-size-button-tv);
+  --vx-fs: var(--viptv-type-tv-button-size);
+}
+
+/* ---------------------------------------------------------------------------
+ * Text entry and parent PIN (TextEntry): sheet / dialog / TV panel or full screen.
+ * ------------------------------------------------------------------------ */
+@media (min-width: 600px) {
+  /* DeskPin, DeskProfileDelete, DeskAddonInstall: centred in the body row. */
+  [data-layout="responsive"] .vx-entry-layer > .vx-dialog {
+    top: 50%;
+  }
+}
+[data-layout] .vx-entry__pin {
+  position: relative;
+  align-self: flex-start;
+}
+/* The PIN input lies transparent over the boxes: taps focus it (numeric keypad on phones). */
+[data-layout] .vx-entry__pin-input,
+[data-layout] .vx-entry__tv-input {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  outline: none;
+  opacity: 0;
+  background: transparent;
+  color: transparent;
+  font-size: var(--viptv-type-phone-body-strong-size);
+  caret-color: transparent;
+}
+[data-layout] .vx-entry__count {
+  margin-top: calc(var(--viptv-space-1_5) * -1);
+  color: var(--viptv-color-text-tertiary);
+  font-size: var(--viptv-type-phone-caption-size);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+[data-layout] .vx-entry .vx-dialog__actions > .vx-btn[aria-busy="true"] {
+  opacity: 1;
+}
+
+/* TV text: full screen on the solid ground (TvProfileName, TvFilterText, TvAddonInstall). */
+.tv-layout .vx-entry-layer--full > .vx-scrim {
+  background: var(--viptv-color-bg);
+}
+.tv-layout .vx-entry .vx-tv-entry__title {
+  line-height: 1.2; /* TvProfileName: normal line box */
+}
+.tv-layout .vx-tv-entry .vx-field__control {
+  position: relative;
+}
+.tv-layout .vx-tv-entry .vx-field--error .vx-field__control {
+  border: var(--viptv-size-border-strong) solid var(--viptv-color-status-danger-tv);
+}
+.tv-layout .vx-tv-entry .vx-field__placeholder {
+  font-weight: 500;
+}
+.tv-layout .vx-tv-entry__hints > .vx-inline-error {
+  gap: var(--viptv-space-2_5);
+}
+
+/* TV PIN: right panel with the PIN keypad (TvPin, TvPinError). */
+.tv-layout .vx-entry--pin {
+  gap: var(--viptv-space-5_5);
+}
+.tv-layout .vx-entry--pin .vx-dialog__title {
+  line-height: 1.2;
+}
+.tv-layout .vx-entry--pin .vx-dialog__text {
+  line-height: var(--viptv-type-tv-label-line-height);
+}
+.tv-layout .vx-entry__pin-block {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--viptv-space-3);
+}
+.tv-layout .vx-entry--pin .vx-keypad {
+  width: 480px; /* TvPin keypad */
+  margin-top: var(--viptv-space-4);
+}
+
+/* Delete confirmation (PhProfileDelete, DeskProfileDelete, TvProfileDelete): primitives only. */
