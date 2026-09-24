@@ -2,6 +2,8 @@ import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
   testDir: './tests/e2e',
+  // Own folder: the default (test-results/) is wiped per run and would delete the preview harness output.
+  outputDir: 'test-results/e2e',
   timeout: 30_000,
   workers: 1,
   fullyParallel: false,
