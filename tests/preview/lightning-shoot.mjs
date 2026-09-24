@@ -4,14 +4,14 @@
 import { chromium } from '@playwright/test';
 import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
-import { installBackend } from './backend.ts';
+import { installBackend, installMediaStubs } from './backend.ts';
 import { outDir, reference } from './shoot.mjs';
 
 const name = process.argv[2] ?? 'TvPairing';
 const viaPlay = process.argv.includes('--via-play');
 const platform = process.argv.find(arg => arg.startsWith('--platform='))?.slice('--platform='.length) ?? 'tizen';
-if (!['TvPairing', 'TvPairingLoading', 'TvPairingExpired', 'TvProfiles', 'TvProfilesManage', 'TvManageCue', 'TvHome', 'TvTitle', 'TvSources', 'TvSourceProvider', 'TvSourceDetails'].includes(name)) {
-  console.error('Usage: node tests/preview/lightning-shoot.mjs [TvPairing|TvPairingLoading|TvPairingExpired|TvProfiles|TvProfilesManage|TvManageCue|TvHome|TvTitle|TvSources|TvSourceProvider|TvSourceDetails] [--platform=tizen|vizio|webos]');
+if (!['TvPairing', 'TvPairingLoading', 'TvPairingExpired', 'TvProfiles', 'TvProfilesManage', 'TvManageCue', 'TvHome', 'TvTitle', 'TvSources', 'TvSourceProvider', 'TvSourceDetails', 'TvPlayer', 'TvPlayerSeek'].includes(name)) {
+  console.error('Usage: node tests/preview/lightning-shoot.mjs [TvPairing|TvPairingLoading|TvPairingExpired|TvProfiles|TvProfilesManage|TvManageCue|TvHome|TvTitle|TvSources|TvSourceProvider|TvSourceDetails|TvPlayer|TvPlayerSeek] [--platform=tizen|vizio|webos]');
   process.exit(2);
 }
 if (!['tizen', 'vizio', 'webos'].includes(platform)) throw new Error(`Unsupported TV platform ${platform}`);
@@ -25,14 +25,15 @@ try {
   page.on('pageerror', error => errors.push(error.stack ?? error.message));
   page.on('console', message => { if (message.type() === 'error') errors.push(message.text()); else logs.push(message.text()); });
   const profiles = name.startsWith('TvProfiles') || name === 'TvManageCue';
-  const backend = await installBackend(page, { family: 'tv', session: name === 'TvHome' || name === 'TvTitle' || name === 'TvSources' || name === 'TvSourceProvider' || name === 'TvSourceDetails' ? 'ready' : profiles ? 'profiles' : 'none', pairing: name === 'TvPairingLoading' ? 'loading' : name === 'TvPairingExpired' ? 'expired' : undefined });
+  const backend = await installBackend(page, { family: 'tv', session: name === 'TvHome' || name === 'TvTitle' || name === 'TvSources' || name === 'TvSourceProvider' || name === 'TvSourceDetails' || name === 'TvPlayer' || name === 'TvPlayerSeek' ? 'ready' : profiles ? 'profiles' : 'none', pairing: name === 'TvPairingLoading' ? 'loading' : name === 'TvPairingExpired' ? 'expired' : undefined });
+  if (name === 'TvPlayer' || name === 'TvPlayerSeek') await installMediaStubs(page, { frame: '63e024', paused: name === 'TvPlayer' });
   const url = process.env.LIGHTNING_PREVIEW_URL ?? 'http://127.0.0.1:4180/lightning.html';
   await page.goto(`${url}?platform=${platform}&focusdebug=1`);
   await page.locator('canvas').waitFor({ state: 'visible', timeout: 20000 }).catch(async cause => {
     throw new Error(`${cause.message}\nPage: ${await page.locator('body').innerText()}\n${errors.join('\n')}`);
   });
-  await page.waitForTimeout(name === 'TvPairingExpired' ? 2200 : name === 'TvHome' || name === 'TvTitle' || name === 'TvSources' || name === 'TvSourceProvider' || name === 'TvSourceDetails' ? 1800 : 900);
-  if (name === 'TvTitle' || name === 'TvSources' || name === 'TvSourceProvider' || name === 'TvSourceDetails') {
+  await page.waitForTimeout(name === 'TvPairingExpired' ? 2200 : name === 'TvHome' || name === 'TvTitle' || name === 'TvSources' || name === 'TvSourceProvider' || name === 'TvSourceDetails' || name === 'TvPlayer' || name === 'TvPlayerSeek' ? 1800 : 900);
+  if (name === 'TvTitle' || name === 'TvSources' || name === 'TvSourceProvider' || name === 'TvSourceDetails' || name === 'TvPlayer' || name === 'TvPlayerSeek') {
     const focused = (view, index) => page.waitForFunction(
       ({ view, index }) => window.__viptvFocus?.view === view && window.__viptvFocus?.index === index,
       { view, index }, { timeout: 5000 });
@@ -41,7 +42,7 @@ try {
     await page.keyboard.press('Enter');
     await focused('title-action', 0);
     await page.waitForTimeout(350);
-    if (name === 'TvSources' || name === 'TvSourceProvider' || name === 'TvSourceDetails') {
+    if (name === 'TvSources' || name === 'TvSourceProvider' || name === 'TvSourceDetails' || name === 'TvPlayer' || name === 'TvPlayerSeek') {
       if (!viaPlay) await page.keyboard.press('ArrowRight');
       await page.keyboard.press('Enter');
       await focused('source-row', 0);
@@ -62,6 +63,21 @@ try {
         if (await page.evaluate(() => window.__viptvSourceIntent))
           throw new Error('Held source OK also selected a source on release');
       }
+      if (name === 'TvPlayer') {
+        await page.keyboard.press('Enter');
+        await focused('player-control', 1);
+        await page.keyboard.press('Enter');
+        await page.waitForFunction(() => window.__viptvPlayer?.state === 'paused', null, { timeout: 5000 });
+        await page.waitForTimeout(150);
+      }
+      if (name === 'TvPlayerSeek') {
+        await page.keyboard.press('Enter');
+        await focused('player-control', 1);
+        await page.keyboard.press('ArrowUp');
+        await focused('player-timeline', 0);
+        await page.keyboard.press('ArrowRight');
+        await page.waitForTimeout(140);
+      }
     }
   }
   if (name === 'TvProfilesManage') {
@@ -81,7 +97,7 @@ try {
   const file = join(outDir, `${name}.lightning${viaPlay ? '.resume' : ''}${platform === 'tizen' ? '' : `.${platform}`}.png`);
   await page.screenshot({ path: file });
   const pairingRequests = () => backend.requests.filter(request => request.path === '/api/auth/device/code').length;
-  if (pairingRequests() !== (profiles || name === 'TvHome' || name === 'TvTitle' || name === 'TvSources' || name === 'TvSourceProvider' || name === 'TvSourceDetails' ? 0 : 1)) throw new Error(`Unexpected device-pairing request count ${pairingRequests()}`);
+  if (pairingRequests() !== (profiles || name === 'TvHome' || name === 'TvTitle' || name === 'TvSources' || name === 'TvSourceProvider' || name === 'TvSourceDetails' || name === 'TvPlayer' || name === 'TvPlayerSeek' ? 0 : 1)) throw new Error(`Unexpected device-pairing request count ${pairingRequests()}`);
   if (name === 'TvHome' && !backend.requests.some(request => request.path.endsWith('/continue/page')))
     throw new Error(`Home did not request profile data: ${JSON.stringify(backend.requests)}`);
   if (name === 'TvHome') {
@@ -159,19 +175,16 @@ try {
     if (!backend.requests.some(request => request.path === '/api/streams' && request.method === 'POST') ||
         !backend.requests.some(request => request.path.startsWith('/api/streams/')))
       throw new Error(`Source discovery did not start and poll: ${JSON.stringify(backend.requests)}`);
+    if (viaPlay && backend.requests.some(request => request.path === '/api/playback'))
+      throw new Error('Resume without a saved fingerprint selected a source automatically');
     await page.keyboard.press('ArrowDown');
     await focused('source-row', 1);
-    await page.keyboard.press('Enter');
-    const intent = await page.evaluate(() => window.__viptvSourceIntent);
-    if (intent?.sourceId !== 'source-2' || intent?.itemId !== 'tt-monster:1:1' || intent?.position !== 4 || intent?.resume !== viaPlay)
-      throw new Error(`Wrong exact source intent: ${JSON.stringify(intent)}`);
     for (let step = 0; step < 5; step++) await page.keyboard.press('ArrowDown');
     await page.waitForTimeout(120);
     await page.screenshot({ path: join(outDir, 'TvSources.lightning.paged.png') });
-    await page.keyboard.press('Enter');
-    const pagedIntent = await page.evaluate(() => window.__viptvSourceIntent);
-    if (pagedIntent?.sourceId !== 'source-7')
-      throw new Error(`Source rows did not page to the seventh source: ${JSON.stringify(pagedIntent)}`);
+    const windowState = await page.evaluate(() => window.__viptvSourceWindow);
+    if (windowState?.index !== 6 || windowState?.start !== 1)
+      throw new Error(`Source rows did not page to the seventh source: ${JSON.stringify(windowState)}`);
     await page.keyboard.press('ArrowRight');
     await focused('source-chip', 1);
     await page.keyboard.press('ArrowRight');
@@ -212,6 +225,53 @@ try {
     await focused('source-row', 0);
     await page.keyboard.press('Escape');
     await focused('title-action', 1);
+  }
+  if (name === 'TvPlayer') {
+    const focused = (view, index) => page.waitForFunction(
+      ({ view, index }) => window.__viptvFocus?.view === view && window.__viptvFocus?.index === index,
+      { view, index }, { timeout: 5000 });
+    if (!backend.requests.some(request => request.path === '/api/playback' && request.method === 'POST'))
+      throw new Error('Selected source did not start a backend playback session');
+    const intent = await page.evaluate(() => window.__viptvSourceIntent);
+    if (intent?.sourceId !== 'source-1' || intent?.itemId !== 'tt-monster:1:1' || intent?.position !== 4 || intent?.resume !== viaPlay)
+      throw new Error(`Playback lost the explicit source/resume intent: ${JSON.stringify(intent)}`);
+    const beforeSeek = (await page.evaluate(() => window.__viptvPlayer))?.position ?? 0;
+    await page.keyboard.press('ArrowLeft');
+    await focused('player-control', 0);
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(180);
+    const afterBackTen = (await page.evaluate(() => window.__viptvPlayer))?.position ?? 0;
+    if (afterBackTen > beforeSeek)
+      throw new Error(`Back-ten advanced the player from ${beforeSeek} to ${afterBackTen}`);
+    await page.keyboard.press('ArrowUp');
+    await focused('player-timeline', 0);
+    await page.keyboard.press('ArrowRight');
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(180);
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(80);
+    const layer = await page.locator('#video-layer').evaluate(element => getComputedStyle(element).display);
+    if (platform !== 'tizen' && layer === 'none') throw new Error('First Back exited playback instead of hiding controls');
+    await page.keyboard.press('Escape');
+    await focused('source-row', 0);
+    if (!backend.requests.some(request => request.path.startsWith('/api/playback/') && request.method !== 'GET'))
+      throw new Error('Exiting the player did not stop its backend session');
+    if (!backend.requests.some(request => request.path.endsWith('/progress') && request.method !== 'GET'))
+      throw new Error(`Exiting the player did not save progress: ${JSON.stringify(backend.requests.slice(-8))}`);
+  }
+  if (name === 'TvPlayerSeek') {
+    const beforeCancel = (await page.evaluate(() => window.__viptvPlayer))?.position ?? 0;
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(100);
+    const afterCancel = (await page.evaluate(() => window.__viptvPlayer))?.position ?? 0;
+    if (Math.abs(afterCancel - beforeCancel) > 1)
+      throw new Error(`Back committed a seek preview: ${beforeCancel} → ${afterCancel}`);
+    await page.keyboard.press('ArrowRight');
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(250);
+    const afterCommit = (await page.evaluate(() => window.__viptvPlayer))?.position ?? 0;
+    if (afterCommit <= beforeCancel)
+      throw new Error(`Enter did not commit a forward seek: ${beforeCancel} → ${afterCommit}`);
   }
   if (name === 'TvPairingExpired') {
     await page.keyboard.press('Enter');

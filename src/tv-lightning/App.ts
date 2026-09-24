@@ -11,7 +11,11 @@ import { emptyDetail, emptyDetailEpisode, loadDetailView, type DetailView } from
 import { TitleAction, EpisodeTile } from "./TitleFocus";
 import { emptySources, emptySourceRow, projectSources, type SourcesView } from "./sourceModel";
 import { SourceChip, SourceProvider, SourceRow, ProviderOption, SourceDetailsClose, emptySourceChip, emptyProviderChoice } from "./SourceFocus";
-import { noteSourceFilter, noteSourceIntent } from "./focusDebug";
+import { notePlayerState, noteSourceFilter, noteSourceIntent, noteSourceWindow } from "./focusDebug";
+import { createLightningPlaybackRuntime, type LightningPlaybackRuntime } from "./playbackRuntime";
+import { PlayerControl, PlayerTimeline } from "./PlayerFocus";
+import type { PlayerSnapshot } from "@viptv/video";
+import { exactResumeSource } from "../ui/continuation";
 
 type TvPlatform = "tizen" | "vizio" | "webos";
 const px = (name: keyof typeof tokens) => Number.parseFloat(String(tokens[name]));
@@ -59,6 +63,11 @@ function homeScrim() {
   return canvas.toDataURL("image/png");
 }
 
+const playerClock = (seconds: number) => {
+  const total = Math.max(0, Math.floor(seconds));
+  return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, "0")}`;
+};
+
 /** Native 1920×1080 positions from the pinned TvPairing reference. */
 const pairingFrame = {
   brandX: px("layout.tv.safe-x"),
@@ -88,11 +97,15 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
   let sourceGeneration = 0;
   let sourceScope: ReturnType<TvApi["createScope"]> | undefined;
   let sourceTimer: ReturnType<typeof setTimeout> | undefined;
+  let playback: LightningPlaybackRuntime | undefined;
+  let playbackGeneration = 0;
+  let heartbeatTimer: ReturnType<typeof setInterval> | undefined;
+  let chromeTimer: ReturnType<typeof setTimeout> | undefined;
   let disposeSession: (() => void) | undefined;
   return Blits.Application({
-    components: { ProfileTile, ManageProfilesButton, HomeAction, HomeCard, TitleAction, EpisodeTile, SourceChip, SourceProvider, SourceRow, ProviderOption, SourceDetailsClose },
+    components: { ProfileTile, ManageProfilesButton, HomeAction, HomeCard, TitleAction, EpisodeTile, SourceChip, SourceProvider, SourceRow, ProviderOption, SourceDetailsClose, PlayerControl, PlayerTimeline },
     template: `
-      <Element w="1920" h="1080" color="$background">
+      <Element w="1920" h="1080" :color="$phase === 'player' || $phase === 'preparing' ? 'rgba(0,0,0,0)' : $background">
         <Element x="260" y="86" w="1400" h="800" src="$pairingGlow" :show="$phase === 'pairing' || $phase === 'expired' || $phase === 'error'" />
         <Element x="260" y="82" w="1400" h="700" src="$profilesGlow" :show="$phase === 'profiles'" />
         <Element :show="$phase === 'pairing' || $phase === 'expired' || $phase === 'error'">
@@ -265,6 +278,29 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
           <Element x="1704" y="204" w="6" h="222" rounded="3" color="$scrollbar" />
           <SourceDetailsClose ref="sourceDetailsClose" x="185" y="949" />
         </Element>
+        <Element :show="$phase === 'preparing'">
+          <Element x="682" y="430" w="556" h="220" rounded="28" color="$sourcePanelGround" />
+          <Text x="746" y="516" :content="$preparingText" font="Onest700" size="32" color="$primary" />
+        </Element>
+        <Element :show="$phase === 'player' && $playerOverlay">
+          <Text x="96" y="76" :content="$playerTitle" font="Onest700" size="24" color="$primary" />
+          <Text x="1680" y="76" maxwidth="144" align="right" :content="$playerStatus" font="Onest700" size="20" color="$primary" />
+          <Text x="96" :y="$playerSeekPreview !== null ? 560 : 610" :content="$nowPlayingLabel" font="Onest700" size="20" color="$secondary" />
+          <Text x="96" :y="$playerSeekPreview !== null ? 597 : 647" :content="$playerEpisodeLine" font="Onest600" size="26" color="$primary" />
+          <Text x="96" :y="$playerSeekPreview !== null ? 640 : 690" maxwidth="1300" maxlines="1" :content="$playerTitle" font="Bricolage700" size="56" color="$primary" />
+          <PlayerTimeline ref="playerTimeline" :progress="$playerProgress" :seeking="$playerSeekPreview !== null" :previewText="$playerSeekLabel" x="96" y="780" />
+          <Text x="96" y="826" :content="$playerPositionText" font="Onest700" size="22" color="$primary" />
+          <Text x="1640" y="826" maxwidth="184" align="right" :content="$playerDurationText" font="Onest" size="22" color="$secondary" />
+          <PlayerControl ref="playerControl0" position="0" action="back10" icon="≪" diameter="72" x="96" y="878" />
+          <PlayerControl ref="playerControl1" position="1" action="toggle" :icon="$playerToggleIcon" diameter="84" x="181" y="872" />
+          <PlayerControl ref="playerControl2" position="2" action="forward30" icon="≫" diameter="72" x="276" y="878" />
+          <PlayerControl ref="playerControl3" position="3" action="next" icon="▶|" diameter="72" x="366" y="878" />
+          <PlayerControl ref="playerControl4" position="4" action="audio" icon="≋" diameter="72" x="1572" y="878" />
+          <PlayerControl ref="playerControl5" position="5" action="subtitles" icon="▤" diameter="72" x="1662" y="878" />
+          <PlayerControl ref="playerControl6" position="6" action="exit" icon="↪" diameter="72" x="1752" y="878" />
+          <Text x="1390" y="1000" :content="$playerLegend" font="Onest" size="20" color="$secondary" />
+        </Element>
+        <Text x="700" y="190" maxwidth="520" align="center" :content="$playerNotice" font="Onest" size="24" color="$primary" :show="$phase === 'player'" />
         <Text x="96" y="54" :show="$phase === 'ready'" :content="$startingLabel" font="Onest" size="28" color="$primary" />
       </Element>
     `,
@@ -316,6 +352,25 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
         sourceDetailsBody: "",
         sourceDetailsReturnIndex: 0,
         scrollbar: tokens["color.fill.scrollbar"],
+        preparingText: "",
+        playerSnapshot: null as PlayerSnapshot | null,
+        playerOverlay: true,
+        playerTitle: "",
+        playerEpisodeLine: "",
+        nowPlayingLabel: "",
+        playerStatus: "",
+        playerPositionText: "",
+        playerDurationText: "",
+        playerProgress: 0,
+        playerToggleIcon: "Ⅱ",
+        playerLegend: "",
+        playerNotice: "",
+        playerFocusIndex: 1,
+        playerSeekPreview: null as number | null,
+        playerSeekLabel: "",
+        playerItem: null as MediaItem | null,
+        playerSessionId: "",
+        playerSessionDuration: 0,
         detailEpisodes: Array.from({ length: 5 }, () => ({ ...emptyDetailEpisode })),
         detailSaveIcon: "",
         detailSeasonLabel: "",
@@ -349,7 +404,7 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
         danger: tokens["color.status.danger-tv"],
         codeSize: pairCodeSize,
         codeLetterSpacing: pairCodeSize * 0.08,
-        phase: "starting" as "starting" | "pairing" | "expired" | "error" | "profiles" | "ready" | "home" | "detail" | "sources" | "provider" | "sourceDetails",
+        phase: "starting" as "starting" | "pairing" | "expired" | "error" | "profiles" | "ready" | "home" | "detail" | "sources" | "provider" | "sourceDetails" | "preparing" | "player",
         address: "Connecting…",
         code: "••••••",
         qr: "",
@@ -469,6 +524,12 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
         this.$listen("source-row-activate", () => this.selectSourceRow());
         this.$listen("source-row-hold", () => this.openSourceDetails());
         this.$listen("source-detail-close", () => this.closeSourceDetails());
+        this.$listen("player-control-move", (delta: number) => this.focusPlayerControl(Math.max(0, Math.min(6, this.playerFocusIndex + Number(delta)))));
+        this.$listen("player-timeline-focus", () => this.focusPlayerTimeline());
+        this.$listen("player-controls-return", () => this.focusPlayerControl(this.playerFocusIndex));
+        this.$listen("player-control-activate", () => void this.activatePlayerControl());
+        this.$listen("player-seek-preview", (delta: number) => this.previewPlayerSeek(Number(delta)));
+        this.$listen("player-seek-commit", () => void this.commitPlayerSeek());
         void session.dispatch({ Begin: {
           origin: api.serverOrigin,
           allowInsecurePreview: import.meta.env.DEV && api.serverOrigin === location.origin,
@@ -484,6 +545,11 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
         sourceScope?.abort();
         ++sourceGeneration;
         clearTimeout(sourceTimer);
+        clearInterval(heartbeatTimer);
+        clearTimeout(chromeTimer);
+        ++playbackGeneration;
+        void playback?.dispose().catch(() => undefined);
+        document.getElementById("player-shade")?.style.setProperty("display", "none");
         clearTimeout(pairingTimer);
         disposeSession?.();
       },
@@ -684,7 +750,19 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
             if (!hadRows && state.sources.length) setTimeout(() => {
               if (generation === sourceGeneration && this.phase === "sources") this.focusSourceRow(0);
             }, 50);
-            if (step.done) break;
+            if (resume && item.sourceAddonId && item.sourceFingerprint) {
+              const exact = exactResumeSource(item, state.sources);
+              if (exact) {
+                this.sourceSelectedId = exact.id;
+                noteSourceIntent(item.id, exact.id, item.position ?? 0, true);
+                void this.playSource(item, exact, item.position ?? 0);
+                return;
+              }
+            }
+            if (step.done) {
+              if (resume) this.sourceNotice = "Your previous source is unavailable. Choose a source to continue.";
+              break;
+            }
             await new Promise<void>(resolve => {
               const finish = () => { clearTimeout(sourceTimer); scope.signal.removeEventListener("abort", finish); resolve(); };
               sourceTimer = setTimeout(finish, 1500);
@@ -733,6 +811,7 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
         const previousStart = this.sourceWindowStart;
         if (this.sourceRowIndex < this.sourceWindowStart) this.sourceWindowStart = this.sourceRowIndex;
         else if (this.sourceRowIndex >= this.sourceWindowStart + 6) this.sourceWindowStart = this.sourceRowIndex - 5;
+        noteSourceWindow(this.sourceRowIndex, this.sourceWindowStart);
         if (this.sourceWindowStart !== previousStart) {
           this.sourceRows = Array.from({ length: 6 }, (_, slot) => this.source.rows[this.sourceWindowStart + slot] ?? { ...emptySourceRow });
           setTimeout(() => { if (this.phase === "sources") this.revealSourceControls(); }, 60);
@@ -756,7 +835,194 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
         if (!row?.source || !item) return;
         this.sourceSelectedId = row.source.id;
         noteSourceIntent(item.id, row.source.id, item.position ?? 0, this.sourceResume);
-        this.sourceNotice = "Playback is unavailable.";
+        void this.playSource(item, row.source, item.position ?? 0);
+      },
+      ensurePlaybackRuntime() {
+        if (playback) return playback;
+        const video = document.getElementById("tv-video") as HTMLVideoElement | null;
+        if (!video) throw new Error("TV video surface is unavailable.");
+        playback = createLightningPlaybackRuntime(api, platform, video, snapshot => this.updatePlayerSnapshot(snapshot));
+        return playback;
+      },
+      async playSource(item: MediaItem, source: MediaSource, position: number) {
+        if (this.phase !== "sources") return;
+        const generation = ++playbackGeneration;
+        sourceScope?.abort();
+        ++sourceGeneration;
+        clearTimeout(sourceTimer);
+        this.playerItem = item;
+        const title = item.name;
+        const episodeLine = item.season !== undefined
+          ? `S${item.season} · E${item.episode ?? 1} · ${item.episodeTitle ?? item.name}` : "";
+        this.playerTitle = "";
+        this.playerEpisodeLine = "";
+        this.preparingText = "Preparing playback…";
+        this.playerNotice = "";
+        this.phase = "preparing";
+        const layer = document.getElementById("video-layer")!;
+        this.setPlayerShade(false);
+        if (platform === "tizen") document.body.style.background = "transparent";
+        else layer.style.display = "block";
+        try {
+          const runtime = this.ensurePlaybackRuntime();
+          const started = await runtime.start(item, source, position);
+          if (generation !== playbackGeneration) {
+            if (runtime.controller.snapshot.active?.session.id === started.session.id) await runtime.stop();
+            return;
+          }
+          // Persist the controller's enriched item so progress retains the
+          // selected source's addon/fingerprint identity on exit and heartbeat.
+          this.playerItem = started.intent.item;
+          this.playerSessionId = started.session.id;
+          this.playerSessionDuration = started.session.duration;
+          this.phase = "player";
+          this.playerOverlay = true;
+          this.setPlayerShade(true);
+          this.nowPlayingLabel = "NOW PLAYING";
+          this.playerLegend = "OK  Select     ◀ ▶  Move     BACK  Hide controls";
+          this.updatePlayerSnapshot(runtime.player.snapshot);
+          setTimeout(() => {
+            if (generation !== playbackGeneration || this.phase !== "player") return;
+            this.playerTitle = title;
+            this.playerEpisodeLine = episodeLine;
+            this.revealPlayerControls();
+            this.focusPlayerControl(1);
+          }, 50);
+          clearInterval(heartbeatTimer);
+          heartbeatTimer = setInterval(() => {
+            if (this.phase !== "player" || !this.playerSessionId || !this.playerItem) return;
+            void api.heartbeat(this.playerSessionId).catch(() => undefined);
+            if (this.playerItem.type !== "live") {
+              const time = runtime.player.snapshot.time;
+              void api.saveProgress(this.currentProfileId, this.playerItem,
+                time.positionSeconds, time.durationSeconds ?? this.playerSessionDuration).catch(() => undefined);
+            }
+          }, 15000);
+        } catch (cause) {
+          if (generation !== playbackGeneration) return;
+          layer.style.display = "none";
+          this.setPlayerShade(false);
+          document.body.style.background = "";
+          this.phase = "sources";
+          this.sourceNotice = cause instanceof Error ? cause.message : "This source could not be played.";
+          setTimeout(() => this.focusSourceRow(this.sourceRowIndex), 0);
+        }
+      },
+      updatePlayerSnapshot(snapshot: PlayerSnapshot) {
+        this.playerSnapshot = snapshot;
+        notePlayerState(snapshot.state, snapshot.time.positionSeconds);
+        this.playerStatus = snapshot.state.toUpperCase();
+        this.playerToggleIcon = snapshot.state === "paused" ? "▶" : "Ⅱ";
+        const position = snapshot.time.positionSeconds;
+        const duration = snapshot.time.durationSeconds ?? this.playerSessionDuration;
+        if (this.playerSeekPreview === null) {
+          this.playerPositionText = playerClock(position);
+          this.playerProgress = duration > 0 ? Math.min(1, position / duration) : 0;
+        }
+        this.playerDurationText = duration > 0 ? playerClock(duration) : "";
+        if (snapshot.error && this.phase === "player") this.playerNotice = snapshot.error.message;
+        if (snapshot.state === "playing" && this.phase === "player") this.schedulePlayerChromeHide();
+      },
+      setPlayerShade(visible: boolean) {
+        const shade = document.getElementById("player-shade");
+        if (shade) shade.style.display = visible ? "block" : "none";
+      },
+      schedulePlayerChromeHide() {
+        clearTimeout(chromeTimer);
+        if (!this.playerOverlay || this.playerSnapshot?.state !== "playing") return;
+        chromeTimer = setTimeout(() => {
+          if (this.phase === "player" && this.playerSnapshot?.state === "playing") {
+            this.playerOverlay = false;
+            this.setPlayerShade(false);
+            this.$focus();
+          }
+        }, 7000);
+      },
+      revealPlayerControls() {
+        for (let index = 0; index < 7; index++)
+          (this.$select(`playerControl${index}`) as unknown as { reveal?: () => void })?.reveal?.();
+      },
+      focusPlayerControl(index: number) {
+        if (this.phase !== "player") return;
+        this.playerOverlay = true;
+        this.setPlayerShade(true);
+        this.playerFocusIndex = index;
+        this.$select(`playerControl${index}`)?.$focus();
+        this.schedulePlayerChromeHide();
+      },
+      focusPlayerTimeline() {
+        if (this.phase !== "player") return;
+        this.playerOverlay = true;
+        this.setPlayerShade(true);
+        this.$select("playerTimeline")?.$focus();
+        this.schedulePlayerChromeHide();
+      },
+      async activatePlayerControl() {
+        if (this.phase !== "player") return;
+        const runtime = playback;
+        if (!runtime) return;
+        const action = ["back10", "toggle", "forward30", "next", "audio", "subtitles", "exit"][this.playerFocusIndex];
+        try {
+          if (action === "toggle") {
+            if (runtime.player.snapshot.state === "paused") await runtime.player.play();
+            else await runtime.player.pause();
+          } else if (action === "back10" || action === "forward30") {
+            const current = runtime.player.snapshot.time.positionSeconds;
+            const duration = runtime.player.snapshot.time.durationSeconds ?? this.playerSessionDuration;
+            const target = Math.max(0, Math.min(duration || Infinity, current + (action === "back10" ? -10 : 30)));
+            await runtime.controller.seekFrom(() => target, () => current);
+          } else if (action === "exit") {
+            await this.exitPlayer();
+            return;
+          } else this.playerNotice = `${action} is unavailable.`;
+        } catch (cause) {
+          this.playerNotice = cause instanceof Error ? cause.message : "The TV could not complete this request.";
+        }
+        this.schedulePlayerChromeHide();
+      },
+      previewPlayerSeek(delta: number) {
+        if (this.phase !== "player" || !playback) return;
+        const current = this.playerSeekPreview ?? playback.player.snapshot.time.positionSeconds;
+        const duration = playback.player.snapshot.time.durationSeconds ?? this.playerSessionDuration;
+        this.playerSeekPreview = Math.max(0, Math.min(duration || Infinity, current + delta));
+        this.playerSeekLabel = playerClock(this.playerSeekPreview);
+        this.playerProgress = duration > 0 ? Math.min(1, this.playerSeekPreview / duration) : 0;
+        this.playerLegend = "◀ ▶  Seek     OK  Jump     BACK  Cancel";
+        clearTimeout(chromeTimer);
+      },
+      async commitPlayerSeek() {
+        if (this.phase !== "player" || !playback || this.playerSeekPreview === null) return;
+        const target = this.playerSeekPreview;
+        const current = playback.player.snapshot.time.positionSeconds;
+        try { await playback.controller.seekFrom(() => target, () => current); }
+        catch (cause) { this.playerNotice = cause instanceof Error ? cause.message : "The stream could not seek there."; }
+        finally {
+          this.playerSeekPreview = null;
+          this.playerSeekLabel = "";
+          this.playerLegend = "OK  Select     ◀ ▶  Move     BACK  Hide controls";
+          this.updatePlayerSnapshot(playback.player.snapshot);
+        }
+      },
+      async exitPlayer() {
+        if (this.phase !== "player" && this.phase !== "preparing") return;
+        ++playbackGeneration;
+        clearInterval(heartbeatTimer);
+        clearTimeout(chromeTimer);
+        const runtime = playback;
+        const snapshot = runtime?.player.snapshot;
+        if (runtime && this.playerItem && snapshot && this.playerItem.type !== "live")
+          await api.saveProgress(this.currentProfileId, this.playerItem,
+            snapshot.time.positionSeconds, snapshot.time.durationSeconds ?? this.playerSessionDuration).catch(() => undefined);
+        await runtime?.stop().catch(() => undefined);
+        document.getElementById("video-layer")!.style.display = "none";
+        this.setPlayerShade(false);
+        document.body.style.background = "";
+        this.phase = "sources";
+        this.playerOverlay = true;
+        this.playerSeekPreview = null;
+        this.playerSeekLabel = "";
+        this.updateSources(this.source.sources, false, true);
+        setTimeout(() => this.focusSourceRow(this.sourceRowIndex), 0);
       },
       openSourceDetails() {
         if (this.phase !== "sources") return;
@@ -1028,11 +1294,28 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
       },
       back() {
         if (this.phase === "profiles" && this.managing) this.toggleManageProfiles();
+        else if (this.phase === "player") {
+          if (this.playerSeekPreview !== null) {
+            this.playerSeekPreview = null;
+            this.playerSeekLabel = "";
+            this.playerLegend = "OK  Select     ◀ ▶  Move     BACK  Hide controls";
+            if (this.playerSnapshot) this.updatePlayerSnapshot(this.playerSnapshot);
+          } else if (this.playerOverlay) {
+            this.playerOverlay = false;
+            this.setPlayerShade(false);
+            clearTimeout(chromeTimer);
+            this.$focus();
+          } else void this.exitPlayer();
+        }
+        else if (this.phase === "preparing") void this.exitPlayer();
         else if (this.phase === "sourceDetails") this.closeSourceDetails();
         else if (this.phase === "provider") this.closeProviderPicker();
         else if (this.phase === "sources") this.closeSources();
         else if (this.phase === "detail") this.returnFromDetail();
         else if (this.phase === "home" && this.profiles.length) this.showProfiles(this.profiles);
+      },
+      any() {
+        if (this.phase === "player" && !this.playerOverlay) this.focusPlayerControl(1);
       },
     },
   });

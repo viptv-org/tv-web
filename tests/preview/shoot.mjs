@@ -43,7 +43,11 @@ const names = args.filter((arg, index) => !arg.startsWith('--') && args[index - 
 /** The scenario's frame: viewport, URL mode and data family from the reference size. */
 export function frameFor(entry, spec) {
   const [width, height] = entry.size;
-  if (entry.platform === 'tv') return { width, height, family: 'tv', query: 'platform=tizen', tv: true };
+  if (entry.platform === 'tv') {
+    const platform = process.env.PREVIEW_TV_PLATFORM ?? 'tizen';
+    if (!['tizen', 'vizio'].includes(platform)) throw new Error(`Unsupported preview TV platform ${platform}`);
+    return { width, height, family: 'tv', query: `platform=${platform}`, tv: true };
+  }
   if (entry.platform === 'phone') return { width, height, family: 'phone', query: '', phone: true };
   // Desktop app at 1440×900 and 2560×1080; plain web at 1280×800.
   const desktop = spec.shell ?? width !== 1280;

@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 /*
- * Compare a TV screenshot to the pinned design image at native resolution.
+ * Compare a reference-sized screenshot to the pinned design image or a saved
+ * baseline at native resolution.
  * Writes numeric evidence and a 4×-amplified RGB difference image under the
  * ignored preview output directory. Exact pixel equality is the final gate;
  * MAE/RMSE/SSIM help locate progress while that gate is still red.
@@ -18,12 +19,12 @@ const referenceOption = argumentsAfterName.indexOf('--reference');
 const referenceOverride = referenceOption >= 0 ? argumentsAfterName[referenceOption + 1] : undefined;
 const optionalPath = argumentsAfterName.find((arg, index) => !arg.startsWith('--') && (referenceOption < 0 || index !== referenceOption + 1));
 const entry = name && reference(name);
-if (!entry || entry.platform !== 'tv') {
-  console.error('Usage: node tests/preview/pixel-compare.mjs <TV reference name> [candidate.png] [--reference baseline.png] [--require-exact]');
+if (!entry || entry.platform === 'components') {
+  console.error('Usage: node tests/preview/pixel-compare.mjs <reference name> [candidate.png] [--reference baseline.png] [--require-exact]');
   process.exit(2);
 }
 const candidate = optionalPath ? resolve(optionalPath) : join(outDir, `${name}.png`);
-const referenceImage = referenceOverride ? resolve(referenceOverride) : join(referenceDir, 'screens/img/tv', `${name}.webp`);
+const referenceImage = referenceOverride ? resolve(referenceOverride) : join(referenceDir, 'screens/img', entry.platform, `${name}.webp`);
 if (!existsSync(candidate) || !existsSync(referenceImage)) {
   console.error(`Missing screenshot or reference: ${candidate}`);
   process.exit(2);

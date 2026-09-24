@@ -540,7 +540,7 @@ actual Blits component focus instead of an arbitrary delay.
 The 1920×1080 Lightning `TvTitle` capture against matched React content has
 1,474,821 changed pixels (71.1237%), MAE 8.2731, RMSE 27.3696, SSIM
 0.793883. The ambient backdrop, source pill, focus shadow, episode details
-and typography remain open visual differences. Playback, More info and full
+and typography remain open visual differences. Full playback controls, More info and full
 episode activation still need their intended flows;
 the visible staged controls do not qualify those behaviors or a TV launcher.
 The production `/tv/` preview reproduced the Title capture and metric, and
@@ -570,8 +570,8 @@ RMSE 22.7721, SSIM 0.887465; `TvSourceProvider` 1,267,892 changed pixels
 (61.1445%), MAE 6.2317, RMSE 22.8690, SSIM 0.847848;
 `TvSourceDetails` 184,921 changed pixels (8.9179%), MAE 2.4859, RMSE
 20.9487, SSIM 0.627974. Background ambience, text metrics, panel/footer
-geometry and focus shadows need correction. Source selection currently records
-the exact intent in the staged UI; it does not start playback. Physical TV
+geometry and focus shadows need correction. Source selection now passes the
+exact intent to the pinned playback controller in the staged UI. Physical TV
 input/decoder behavior and the TV launcher remain unqualified.
 The staged panel currently mounts five quality chips and six provider-choice
 slots; additional custom qualities/providers still need navigable overflow.
@@ -580,6 +580,44 @@ their pixel metrics. The unchanged React `TvSources` recapture had zero
 changed pixels. Checkpoint validation passed 169/169 unit tests, 24 targeted
 responsive/TV Playwright scenarios with 10 deliberate skips, and the
 design/core/video integrity, TypeScript and production-build checks.
+
+## Player transport and overlay continuation
+
+The staged Lightning entry now gives the pinned `@viptv/video` package the
+explicit selected source and resume position. Its session controller starts
+the backend delivery, opens the existing platform adapter, and preserves
+source addon/fingerprint fields for progress saves. Vizio and staged webOS
+browser paths render the media element beneath the transparent Lightning
+canvas; Tizen uses AVPlay, whose browser stub advances state but paints no
+video frame. A host CSS shade uses the design tokens so the video remains
+visible behind Blits controls. WebOS currently uses the shared HTML fallback
+profile rather than a dedicated device-qualified adapter.
+
+The browser fixture verified a backend playback session, Pause, a relative
+seek, seek-preview Back cancellation, Enter seek commit, first Back hiding
+controls, second Back stopping the session and saving progress. Play with no
+saved source fingerprint did not pick a lookalike stream automatically;
+manual source selection preserved its ID and Resume intent. All three browser
+platform configurations passed these transport-state checks. These are
+mocked media/AVPlay boundaries, not physical codec, DRM or video-layer proof.
+
+Matched Vizio-browser captures at 1920×1080 still fail the exact visual gate:
+`TvPlayer` has 94,978 changed pixels (4.5803%), MAE 3.2571, RMSE 24.6134,
+SSIM 0.753696; `TvPlayerSeek` has 114,621 changed pixels (5.5276%), MAE
+3.4487, RMSE 24.7832, SSIM 0.737013. Control icon/text rasterization,
+seek bubble/ring and placement remain open. Audio/subtitle panels, Next,
+player error/recovery, live and DVR behavior, and real Tizen/Vizio/webOS
+decoder/layering qualification remain incomplete; the TV launchers stay on
+the React path.
+
+The phone `Main` (390×844) and desktop `DeskHome` (1440×900) React captures
+were compared against an isolated tv-web `de6adc1` checkout from before the
+player wiring. Both had zero changed pixels, MAE/RMSE 0 and SSIM 1. The
+temporary checkout was removed; screenshots remain under ignored test output.
+The production `/tv/` preview repeated the Vizio Player/Seek fixture and
+matched the dev pixel metrics. Final checkpoint checks passed 169/169 unit
+tests, 24 targeted responsive/TV Playwright scenarios (10 deliberate skips),
+and design/core/video integrity, TypeScript and production build.
 
 Design pin `aa2a1d69935fc07a97bd37d5fa0f78ab8d1c7b47`. A separate
 `lightning.html` entry now builds with LightningJS Blits 2.10 and the shared

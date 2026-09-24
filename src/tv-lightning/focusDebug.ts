@@ -22,3 +22,15 @@ export function noteSourceFilter(quality: string, provider: string, rows: number
     quality, provider, rows,
   };
 }
+
+/** Test-only list window for checking long D-pad navigation. */
+export function noteSourceWindow(index: number, start: number) {
+  if (!enabled) return;
+  (window as Window & { __viptvSourceWindow?: { index: number; start: number } }).__viptvSourceWindow = { index, start };
+}
+
+/** Test-only player state, without session or delivery URLs. */
+export function notePlayerState(state: string, position: number) {
+  if (!enabled) return;
+  (window as Window & { __viptvPlayer?: { state: string; position: number } }).__viptvPlayer = { state, position };
+}
