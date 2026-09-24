@@ -1,7 +1,25 @@
+# Physical Vizio cast recovery — 2026-09-24
+
+The desktop SmartCast command launched Conjure (app 17, namespace 4), but the
+public watch entry returned nginx HTTP 403 because its static bundle
+directory was empty. A root-path build of tv-web commit `feeffe9` was
+restored to the watch host. Its running container had retained an old empty
+bind mount, so restarting that container was also necessary. The public
+entry and JavaScript asset then returned HTTP 200 with the correct MIME
+types. After another launch, the TV loaded assets and completed device
+approval, profile and catalog requests. The user confirmed it works.
+
+This is physical-TV evidence for launch, sign-in and entry to the viewing UI
+on a 65-inch Vizio SmartCast set (firmware 2.600.596.0-10, Chrome 87 user
+agent). It does not qualify every screen, remote action or media decoder.
+The cast dialog's launch response proves only that the TV accepted the
+command; receiver loading was verified separately through public HTTP and
+the TV's subsequent requests.
+
 # VIPTV design-system overhaul — 2026-09-23
 
-Design revision `5740c91d6e9cb7616626bdbb0f635cb62f6ec0c2` is imported in
-`DESIGN_REF`. The phone browser, desktop web/Tauri shell preview and TV canvas
+Design revision `5740c91d6e9cb7616626bdbb0f635cb62f6ec0c2` was imported
+for this pass. The phone browser, desktop web/Tauri shell preview and TV canvas
 use the new tokens, primitives and screen-family styles. The old TV and
 responsive CSS files were removed. The account website's designed WebLinkTv
 screen is owned and validated separately in `web`.

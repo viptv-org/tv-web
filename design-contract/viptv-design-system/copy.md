@@ -53,6 +53,10 @@ These are the exact strings used on the screens. Text in `[brackets]` is a place
 - This source could not be played / The selected source did not become ready in time.
 - Playback could not be restored
 - The TV could not complete this request.
+- VIPTV receiver is unavailable (HTTP [status]). The TV was not launched.
+- VIPTV receiver did not serve its app bundle. The TV was not launched.
+- Could not check the VIPTV receiver. Check your connection and try again.
+- The TV accepted the launch request. Check its screen to confirm VIPTV opened.
 - This code expired. (TV pairing, with "Try again")
 
 ## Dialogs

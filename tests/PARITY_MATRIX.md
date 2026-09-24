@@ -1,6 +1,6 @@
 # VIPTV design-system overhaul — 2026-09-23
 
-Current design: `5740c91d6e9cb7616626bdbb0f635cb62f6ec0c2`, with the
+Current design: `732244c79c05da9a47004dd97cdc6caf1ed534be`, with the
 authoritative [screen index](../design-contract/viptv-design-system/reference/screens/index.json),
 [components](../design-contract/viptv-design-system/components.md),
 [copy](../design-contract/viptv-design-system/copy.md), and
@@ -14,14 +14,15 @@ is historical evidence for a superseded design revision.
 | Title, sources, menus | Phone/desktop/TV title, sources, provider/details and menu/Undo states captured; source identity, hold, filter and Back checked. | Reference and fixture source counts differ; TV provider control remains an explicit adaptation. |
 | Discover, My List, Search, Live | P/D/T results, filters, queue, keyboard and guide states captured; paging, stale response suppression and D-pad flow checked. | Reference uses a voice-search mic; the app has no voice input. Some fixture counts and artwork differ. |
 | Account | Sign-in, pairing expiry, profiles, edit, avatar, text and PIN states captured; auth/focus flows checked. | A protected-profile lock badge awaits a protection flag in the profile data. |
-| Settings, casting, local mode | P/D/T settings and addon states, desktop SmartCast preview and browser/local-mode states captured; local and cast unit flows checked. | Accent-colour choice has no reference screen. SmartCast was simulated; no native LAN TV was paired. |
+| Settings, casting, local mode | P/D/T settings and addon states, desktop SmartCast preview and browser/local-mode states captured; local and cast unit flows checked. The desktop command paired with and launched a physical Vizio on 2026-09-24. | Accent-colour choice has no reference screen. Other cast states remain browser simulations. |
 | Player and shared states | P/D/T VOD, live, seek, tracks, Up Next, buffering and error states captured; Next, focus, rollback and notices checked in browser. | Browser media stubs and AVPlay simulation do not qualify device decoding. Composite States boards are reviewed through individual states. |
 
 All 151 tv-web-reachable reference screens produced side-by-side comparisons;
 the WebLinkTv code-entry page is implemented in `web`. Browser screenshots
-and comparison artifacts remain ignored local test output. Physical Tizen,
-Vizio and Tauri evidence is unverified. See TESTING.md for the validation
-commands and counts.
+and comparison artifacts remain ignored local test output. Physical Vizio
+launch, sign-in and viewing entry were confirmed on 2026-09-24; other
+physical Vizio states, Tizen and installed Tauri evidence remain unverified.
+See TESTING.md for the scoped observation and validation commands.
 
 # Prior shared TV visual rebuild parity — 2026-09-13
 
