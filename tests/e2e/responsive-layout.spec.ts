@@ -35,8 +35,8 @@ test('phone Live TV is a searchable channel list with category chips and no guid
   await page.getByRole('navigation', { name: 'Main navigation' }).getByRole('button', { name: 'Live TV', exact: true }).click();
 
   // No timeline table, time paging or category picker on a phone.
-  await expect(page.locator('.vx-live-item')).toHaveCount(40);
-  await expect(page.locator('.vx-live-guide__scroll')).toHaveCount(0);
+  await expect(page.locator('.live-row')).toHaveCount(40);
+  await expect(page.locator('.epg-scroll')).toHaveCount(0);
   await expect(page.getByRole('combobox', { name: 'Channel category' })).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Earlier', exact: true })).toHaveCount(0);
   const chips = page.getByRole('group', { name: 'Channel category' });
@@ -44,28 +44,20 @@ test('phone Live TV is a searchable channel list with category chips and no guid
   await expect(chips.getByRole('button', { name: 'News', exact: true })).toBeVisible();
 
   // Each row names the channel, what is on now with its progress, and what is next.
-  const first = page.locator('.vx-live-item').first();
+  const first = page.locator('.live-row').first();
   await expect(first).toContainText('Channel 1');
   await expect(first).toContainText('Current programme');
-  await expect(first.locator('.vx-live-progress')).toBeVisible();
+  await expect(first.locator('.live-progress')).toBeVisible();
   await expect(first).toContainText('Later programme');
 
   // Scrolling the page to the end of the list loads the next channel pages.
   const screen = page.locator('.tv-screen');
   await screen.evaluate(node => { node.scrollTop = node.scrollHeight; });
-  await expect(page.locator('.vx-live-item')).toHaveCount(80);
+  await expect(page.locator('.live-row')).toHaveCount(80);
   await screen.evaluate(node => { node.scrollTop = node.scrollHeight; });
-  await expect(page.locator('.vx-live-item')).toHaveCount(88);
+  await expect(page.locator('.live-row')).toHaveCount(88);
 
-  // Search sits behind the header button and docks its field above the nav.
-  await expect(page.getByRole('searchbox', { name: 'Search Live TV' })).toHaveCount(0);
-  await page.getByRole('button', { name: 'Search Live TV' }).click();
-  const field = page.getByRole('searchbox', { name: 'Search Live TV' });
-  await expect(field).toBeFocused();
-  const dock = await field.boundingBox();
-  const nav = await page.getByRole('navigation', { name: 'Main navigation' }).boundingBox();
-  expect(dock!.y + dock!.height).toBeLessThanOrEqual(nav!.y);
-  await field.fill('news');
+  await page.getByRole('searchbox', { name: 'Search Live TV' }).fill('news');
   await expect.poll(() => searches.at(-1)).toBe('news');
   expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(false);
   expect(fixture.errors).toEqual([]);
@@ -78,31 +70,34 @@ for (const width of [390, 1440]) {
     await installBackend(page, { activity: true });
     await openProfile(page);
     await page.getByRole('navigation', { name: 'Main navigation' }).getByRole('button', { name: 'Live TV', exact: true }).click();
-    await expect(page.locator('.vx-live--desk')).toBeVisible();
-    await expect(page.locator('.vx-live-guide__scroll')).toBeVisible();
+    await expect(page.locator('.responsive-epg')).toBeVisible();
+    await expect(page.locator('.epg-scroll')).toBeVisible();
 
-    // DeskLive: title + date, then the search field and Earlier / Now / Later
-    // share the single heading row.
-    const heading = await box(page, '.vx-live-desk__head');
-    for (const selector of ['.vx-live-desk__heading', '.vx-live-search', '.vx-live-time']) {
+    // The separate guide toolbar is gone: the active filter, its date, the
+    // search field and Earlier/Now/Later share the single heading row.
+    await expect(page.locator('.epg-toolbar')).toHaveCount(0);
+    const heading = await box(page, '.epg-page-heading');
+    for (const selector of ['.epg-heading-title', '.epg-heading-filter', '.epg-search', '.epg-time-actions']) {
       const child = await box(page, selector);
       expect(child.y).toBeGreaterThanOrEqual(heading.y - 1);
       expect(child.y + child.height).toBeLessThanOrEqual(heading.y + heading.height + 1);
     }
 
     if (width >= 900) {
-      const sidebar = await box(page, '.vx-live-cats');
-      const guide = await box(page, '.vx-live-guide');
-      // Both columns start on the same row; the guide runs to the window edge.
+      const sidebar = await box(page, '.epg-categories');
+      const guide = await box(page, '.epg-scroll');
+      // Both columns start on the same row and are the same size.
       expect(Math.abs(sidebar.y - guide.y)).toBeLessThan(2);
+      expect(Math.abs(sidebar.height - guide.height)).toBeLessThan(2);
       expect(sidebar.x + sidebar.width).toBeLessThan(guide.x);
-      expect(Math.abs(guide.y + guide.height - 900)).toBeLessThan(2);
       // Heading and columns share the same frame edges.
       expect(Math.abs(heading.x - sidebar.x)).toBeLessThan(2);
       expect(Math.abs(heading.x + heading.width - (guide.x + guide.width))).toBeLessThan(2);
+      const pageControls = await box(page, '.epg-page-controls');
+      expect(pageControls.y).toBeGreaterThanOrEqual(sidebar.y + sidebar.height - 1);
     } else {
-      await expect(page.getByRole('group', { name: 'Channel categories' }).getByRole('button', { name: 'All US channels' })).toBeVisible();
-      await expect(page.locator('.vx-live-cats')).toHaveCount(0);
+      await expect(page.getByRole('combobox', { name: 'Channel category' })).toBeVisible();
+      await expect(page.locator('.epg-categories')).toBeHidden();
     }
 
     // Channel paging buttons are gone from the responsive guide; the sidebar
@@ -110,10 +105,10 @@ for (const width of [390, 1440]) {
     // page inside the same scroll.
     await expect(page.getByRole('button', { name: 'Previous channels', exact: true })).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'Next channels', exact: true })).toHaveCount(0);
-    await expect(page.locator('.vx-live-guide__count')).toContainText('channels');
-    // The page itself never scrolls; the guide scrolls both ways.
-    expect(await page.locator('.vx-live--desk').evaluate(node => getComputedStyle(node).overflowY)).toBe('hidden');
-    expect(await page.locator('.vx-live-guide__scroll').evaluate(node => getComputedStyle(node).overflowY)).toBe('auto');
+    await expect(page.locator('.epg-page-controls')).toContainText('channels');
+    // The body row scrolls as one document with no visible scrollbar (shell).
+    expect(await page.locator('.tv-screen').evaluate(node => getComputedStyle(node).overflowY)).toBe('auto');
+    expect(await page.locator('.epg-scroll').evaluate(node => getComputedStyle(node).overflowY)).toBe('scroll');
     expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(false);
   });
 
@@ -220,14 +215,15 @@ test('scrolling the responsive guide to its end loads the next channel page', as
   });
   await openProfile(page);
   await page.getByRole('navigation', { name: 'Main navigation' }).getByRole('button', { name: 'Live TV', exact: true }).click();
-  const rows = page.locator('[data-testid^="guide-row-"]');
-  await expect(rows).toHaveCount(40);
-  await expect(page.locator('.vx-live-guide__count')).toHaveText('88 channels');
-  const scroller = page.locator('.vx-live-guide__scroll');
+  await expect(page.locator('.epg-row')).toHaveCount(40);
+  await expect(page.locator('.epg-page-controls')).toContainText('40 of 88 channels');
+  const scroller = page.locator('.epg-scroll');
   await scroller.evaluate(node => { node.scrollTop = node.scrollHeight; });
-  await expect(rows).toHaveCount(80);
+  await expect(page.locator('.epg-row')).toHaveCount(80);
+  await expect(page.locator('.epg-page-controls')).toContainText('80 of 88 channels');
   await scroller.evaluate(node => { node.scrollTop = node.scrollHeight; });
-  await expect(rows).toHaveCount(88);
+  await expect(page.locator('.epg-row')).toHaveCount(88);
+  await expect(page.locator('.epg-page-controls')).toContainText('88 of 88 channels');
   expect(fixture.errors).toEqual([]);
 });
 

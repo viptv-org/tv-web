@@ -718,7 +718,10 @@
 }
 
 /* Expanded: the rail holds focus. */
+/* Only while the rail holds focus (so never under a dialog): above the page
+   and its key legend (z 30), under toasts. */
 .tv-layout .vx-tv-rail:focus-within {
+  z-index: 34;
   align-items: flex-start;
   gap: 0;
   width: var(--viptv-layout-tv-menu-expanded);
@@ -801,4 +804,5 @@
 }
 .tv-layout .vx-tv-rail:focus-within + .vx-tv-rail-scrim {
   display: block;
+  z-index: 33;
 }
