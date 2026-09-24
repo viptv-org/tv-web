@@ -26,8 +26,9 @@ const root = resolve(here, '../..');
 export const outDir = process.env.PREVIEW_OUT ? resolve(process.env.PREVIEW_OUT) : join(root, 'test-results/preview');
 export const referenceIndex = JSON.parse(readFileSync(join(referenceDir, 'screens/index.json'), 'utf8'));
 export const reference = name => referenceIndex.find(entry => entry.name === name);
-/** Dev servers: the normal build, and a local-mode build (VITE_VIPTV_LOCAL_MODE=1). */
-const servers = { app: { port: 4180, local: false }, local: { port: 4190, local: true } };
+/** Dev servers: the normal build, and a local-mode build (VITE_VIPTV_LOCAL_MODE=1).
+    Keep off the Fetch "bad ports" list (e.g. 4190): Node and Chromium refuse them. */
+const servers = { app: { port: 4180, local: false }, local: { port: 4181, local: true } };
 /* Env a harness server must (not) have: a LAN-preview or custom API origin
    would send API calls to a real backend instead of the mock. */
 const UNSAFE_ENV = ['VITE_LAN_PREVIEW', 'VITE_API_ORIGIN', 'VITE_VIPTV_LOCAL_MODE'];
@@ -105,6 +106,8 @@ function helpers(page, frame) {
       await h.sleep(250);
     },
     async button(name, options = {}) { await h.activate(page.getByRole('button', { name, exact: options.exact ?? true }).first()); },
+    /** A button in the topmost dialog (a modal choice, not the row behind it). */
+    async choose(name, options = {}) { await h.activate(page.getByRole('dialog').last().getByRole('button', { name, exact: options.exact ?? true }).first()); },
     /** Hold OK (TV Info key) or right-click / long-press (responsive). */
     async hold(what) {
       const element = target(what);
@@ -118,7 +121,18 @@ function helpers(page, frame) {
     async type(text) { await page.keyboard.type(text, { delay: 30 }); await h.sleep(200); },
     async fill(what, text) { const element = target(what); await element.waitFor({ state: 'visible', timeout: 10000 }); await element.fill(text); await h.sleep(200); },
     /** TV: open a rail destination (no URL routing on the TV). */
-    async tvGo(label) { await h.activate(page.locator(`nav [data-focus-id="nav-${label}"]`)); await h.settle(); },
+    async tvGo(label) {
+      // The rail can swallow OK while Home is still booting: retry until the
+      // destination is the current page.
+      const button = page.locator(`nav [data-focus-id="nav-${label}"]`).first();
+      for (let attempt = 0; attempt < 4; attempt++) {
+        await h.activate(button);
+        if (await button.getAttribute('aria-current').catch(() => null) === 'page') break;
+        await h.sleep(750);
+        if (await button.getAttribute('aria-current').catch(() => null) === 'page') break;
+      }
+      await h.settle();
+    },
     async settle(quiet = 600) { await settle(page, quiet); },
   };
   return h;
@@ -154,6 +168,7 @@ export async function shoot(browser, name, { debug = false } = {}) {
   });
   const page = await context.newPage();
   const consoleErrors = [];
+  let backend;
   page.on('console', message => { if (message.type() === 'error') consoleErrors.push(message.text()); });
   page.on('request', () => { lastActivity = Date.now(); });
   page.on('requestfinished', () => { lastActivity = Date.now(); });
@@ -161,7 +176,7 @@ export async function shoot(browser, name, { debug = false } = {}) {
   try {
     // Reference clock: Wednesday 23 Sep 2026, 10:55 ET (phone 10:32).
     if (spec.clock !== false) await page.clock.setFixedTime(new Date(`2026-09-23T${spec.clock ?? (frame.phone ? '10:32' : '10:55')}:00-04:00`));
-    const backend = await installBackend(page, { family: frame.family, ...(spec.backend ?? {}) });
+    backend = await installBackend(page, { family: frame.family, ...(spec.backend ?? {}) });
     if (spec.player || frame.tv) await installMediaStubs(page, { frame: '63e024', ...(spec.player ?? {}) });
     if (spec.init) await page.addInitScript(spec.init);
     const path = spec.path ?? (frame.tv ? '/' : '/tv/home');
@@ -184,6 +199,7 @@ export async function shoot(browser, name, { debug = false } = {}) {
       mkdirSync(outDir, { recursive: true });
       await page.screenshot({ path: join(outDir, `${name}.failed.png`) }).catch(() => undefined);
       console.error(consoleErrors.slice(0, 8).join('\n'));
+      if (backend) console.error(`last API calls: ${backend.requests.slice(-40).map(request => `${request.method} ${request.path}`).join(', ')}`);
     }
     throw error;
   } finally {

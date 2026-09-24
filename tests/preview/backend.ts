@@ -615,12 +615,38 @@ async function installLocalAddons(page: Page, family: Family, hang: boolean) {
  * "plays" without decoding (Playwright Chromium has no H.264). The player
  * frame shows `frame` (a reference still) so screenshots read like video.
  */
-export async function installMediaStubs(page: Page, options: { duration?: number; position?: number; paused?: boolean; error?: boolean; frame?: string; live?: boolean } = {}) {
+export interface MediaStubOptions {
+  duration?: number; position?: number; paused?: boolean; frame?: string; live?: boolean;
+  /** The media element / AVPlay reports a decode error when a source loads. */
+  error?: boolean;
+  /** Sources never become ready (the engines' open timeout fires, shortened to 1.5 s). */
+  stall?: boolean;
+  /** Only the first N source loads succeed; later loads stall (next episode + restore fail). */
+  failAfter?: number;
+}
+export async function installMediaStubs(page: Page, options: MediaStubOptions = {}) {
   const frame = options.frame && assetFiles.get(options.frame) ? `${ART}${assetFiles.get(options.frame)}` : '';
-  await page.addInitScript(({ duration, position, paused, error, frame }) => {
+  await page.addInitScript(({ duration, position, paused, error, frame, stall, failAfter }) => {
     let avplayTime = position * 1000;
+    // No WebCodecs: the responsive player takes its HTML media path (stubbed
+    // below) instead of MediaBunny decoding the HLS fixture onto a canvas.
+    for (const name of ['VideoDecoder', 'AudioDecoder']) Object.defineProperty(window, name, { configurable: true, writable: true, value: undefined });
+    let loads = 0;
+    /** This load never becomes ready (stall, or past failAfter). */
+    const stalls = () => { loads++; return stall || (failAfter !== null && loads > failAfter); };
+    if (stall || failAfter !== null) {
+      // The engines give a source 20 s to become ready; the preview waits 1.5 s.
+      const nativeSetTimeout = window.setTimeout;
+      window.setTimeout = ((handler: TimerHandler, delay?: number, ...rest: unknown[]) =>
+        nativeSetTimeout(handler, delay === 20000 ? 1500 : delay, ...rest)) as typeof window.setTimeout;
+    }
     Object.defineProperty(window, 'webapis', { configurable: true, value: { avplay: {
-      open() {}, close() {}, prepareAsync(success: () => void) { setTimeout(success, 0); }, play() {}, pause() {}, stop() {}, suspend() {}, restore() {},
+      open() {}, close() {},
+      prepareAsync(success: () => void, failure?: (error: unknown) => void) {
+        if (error) setTimeout(() => failure?.('PLAYER_ERROR_INVALID_OPERATION'), 30);
+        else if (!stalls()) setTimeout(success, 0);
+        else setTimeout(() => failure?.('PLAYER_ERROR_CONNECTION_FAILED'), 1500);
+      }, play() {}, pause() {}, stop() {}, suspend() {}, restore() {},
       seekTo(milliseconds: number, success?: () => void) { avplayTime = milliseconds; success?.(); },
       jumpForward(milliseconds: number, success?: () => void) { avplayTime += milliseconds; success?.(); },
       jumpBackward(milliseconds: number, success?: () => void) { avplayTime -= milliseconds; success?.(); },
@@ -644,6 +670,7 @@ export async function installMediaStubs(page: Page, options: { duration?: number
     media.load = function (this: HTMLMediaElement) {
       const element = this;
       if (!get(element).src) return;
+      if (!error && stalls()) { setTimeout(() => fire(element, 'loadstart'), 30); return; }
       setTimeout(() => error ? fire(element, 'error') : fire(element, 'loadstart', 'durationchange', 'loadedmetadata', 'loadeddata', 'canplay', 'canplaythrough'), 30);
     };
     media.play = function (this: HTMLMediaElement) { get(this).paused = false; setTimeout(() => fire(this, 'play', 'playing', 'timeupdate'), 0); return Promise.resolve(); };
@@ -659,5 +686,5 @@ export async function installMediaStubs(page: Page, options: { duration?: number
       document.head.append(style);
     });
     void paused;
-  }, { duration: options.live ? Infinity : options.duration ?? 3130, position: options.live ? 0 : options.position ?? 768, paused: options.paused ?? false, error: options.error ?? false, frame });
+  }, { duration: options.live ? Infinity : options.duration ?? 3130, position: options.live ? 0 : options.position ?? 768, paused: options.paused ?? false, error: options.error ?? false, frame, stall: options.stall ?? false, failAfter: options.failAfter ?? null });
 }
