@@ -10,6 +10,8 @@ import { TvApi, type DeviceTokenSet } from "./api";
 import { App } from "./ui/App";
 import { LocalApp } from "./ui/LocalApp";
 import { localModeAvailable, readLocalMode } from "./local";
+// Design-system layers load after every legacy stylesheet (imported by App/LocalApp above).
+import "./styles/design.css";
 import type { PlayerPlatform } from "@viptv/video";
 const params = new URLSearchParams(location.search);
 const native = "__TAURI_INTERNALS__" in window;
