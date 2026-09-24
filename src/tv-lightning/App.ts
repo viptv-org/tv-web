@@ -11,10 +11,11 @@ import { emptyDetail, emptyDetailEpisode, loadDetailView, type DetailView } from
 import { TitleAction, EpisodeTile } from "./TitleFocus";
 import { emptySources, emptySourceRow, projectSources, type SourcesView } from "./sourceModel";
 import { SourceChip, SourceProvider, SourceRow, ProviderOption, SourceDetailsClose, emptySourceChip, emptyProviderChoice } from "./SourceFocus";
-import { notePlayerState, noteSourceFilter, noteSourceIntent, noteSourceWindow } from "./focusDebug";
+import { notePlayerState, noteSourceFilter, noteSourceIntent, noteSourceWindow, noteTrackPanel, noteTrackSelection } from "./focusDebug";
 import { createLightningPlaybackRuntime, type LightningPlaybackRuntime } from "./playbackRuntime";
-import { PlayerControl, PlayerTimeline } from "./PlayerFocus";
+import { PlayerControl, PlayerTimeline, PlayerTrackOption } from "./PlayerFocus";
 import type { PlayerSnapshot } from "@viptv/video";
+import { emptyTrackChoice, trackChoicesFor, type TrackChoiceView } from "./trackModel";
 import { exactResumeSource } from "../ui/continuation";
 
 type TvPlatform = "tizen" | "vizio" | "webos";
@@ -103,9 +104,9 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
   let chromeTimer: ReturnType<typeof setTimeout> | undefined;
   let disposeSession: (() => void) | undefined;
   return Blits.Application({
-    components: { ProfileTile, ManageProfilesButton, HomeAction, HomeCard, TitleAction, EpisodeTile, SourceChip, SourceProvider, SourceRow, ProviderOption, SourceDetailsClose, PlayerControl, PlayerTimeline },
+    components: { ProfileTile, ManageProfilesButton, HomeAction, HomeCard, TitleAction, EpisodeTile, SourceChip, SourceProvider, SourceRow, ProviderOption, SourceDetailsClose, PlayerControl, PlayerTimeline, PlayerTrackOption },
     template: `
-      <Element w="1920" h="1080" :color="$phase === 'player' || $phase === 'preparing' ? 'rgba(0,0,0,0)' : $background">
+      <Element w="1920" h="1080" :color="$phase === 'player' || $phase === 'playerTracks' || $phase === 'preparing' ? 'rgba(0,0,0,0)' : $background">
         <Element x="260" y="86" w="1400" h="800" src="$pairingGlow" :show="$phase === 'pairing' || $phase === 'expired' || $phase === 'error'" />
         <Element x="260" y="82" w="1400" h="700" src="$profilesGlow" :show="$phase === 'profiles'" />
         <Element :show="$phase === 'pairing' || $phase === 'expired' || $phase === 'error'">
@@ -282,7 +283,7 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
           <Element x="682" y="430" w="556" h="220" rounded="28" color="$sourcePanelGround" />
           <Text x="746" y="516" :content="$preparingText" font="Onest700" size="32" color="$primary" />
         </Element>
-        <Element :show="$phase === 'player' && $playerOverlay">
+        <Element :show="($phase === 'player' || $phase === 'playerTracks') && $playerOverlay">
           <Text x="96" y="76" :content="$playerTitle" font="Onest700" size="24" color="$primary" />
           <Text x="1680" y="76" maxwidth="144" align="right" :content="$playerStatus" font="Onest700" size="20" color="$primary" />
           <Text x="96" :y="$playerSeekPreview !== null ? 560 : 610" :content="$nowPlayingLabel" font="Onest700" size="20" color="$secondary" />
@@ -300,7 +301,22 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
           <PlayerControl ref="playerControl6" position="6" action="exit" icon="↪" diameter="72" x="1752" y="878" />
           <Text x="1390" y="1000" :content="$playerLegend" font="Onest" size="20" color="$secondary" />
         </Element>
-        <Text x="700" y="190" maxwidth="520" align="center" :content="$playerNotice" font="Onest" size="24" color="$primary" :show="$phase === 'player'" />
+        <Text x="700" y="190" maxwidth="520" align="center" :content="$playerNotice" font="Onest" size="24" color="$primary" :show="$phase === 'player' || $phase === 'playerTracks'" />
+        <Element :show="$phase === 'playerTracks'">
+          <Element w="1920" h="1080" color="$sourceScrim" />
+          <Element x="1100" y="0" w="820" h="1080" color="$sourcePanelGround" />
+          <Text x="1164" y="64" :content="$trackPanelTitle" font="Bricolage700" size="44" color="$primary" />
+          <PlayerTrackOption ref="playerTrack0" position="0" :choice="$trackSlots[0]" x="1164" y="126" />
+          <PlayerTrackOption ref="playerTrack1" position="1" :choice="$trackSlots[1]" x="1164" y="220" />
+          <PlayerTrackOption ref="playerTrack2" position="2" :choice="$trackSlots[2]" x="1164" y="314" />
+          <PlayerTrackOption ref="playerTrack3" position="3" :choice="$trackSlots[3]" x="1164" y="408" />
+          <PlayerTrackOption ref="playerTrack4" position="4" :choice="$trackSlots[4]" x="1164" y="502" />
+          <PlayerTrackOption ref="playerTrack5" position="5" :choice="$trackSlots[5]" x="1164" y="596" />
+          <PlayerTrackOption ref="playerTrack6" position="6" :choice="$trackSlots[6]" x="1164" y="690" />
+          <PlayerTrackOption ref="playerTrack7" position="7" :choice="$trackSlots[7]" x="1164" y="784" />
+          <Text x="1164" y="902" maxwidth="660" :content="$trackNotice" font="Onest" size="22" color="$secondary" />
+          <Text x="1382" y="998" :content="$trackLegend" font="Onest" size="20" color="$secondary" />
+        </Element>
         <Text x="96" y="54" :show="$phase === 'ready'" :content="$startingLabel" font="Onest" size="28" color="$primary" />
       </Element>
     `,
@@ -371,6 +387,15 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
         playerItem: null as MediaItem | null,
         playerSessionId: "",
         playerSessionDuration: 0,
+        trackPanelOpen: false,
+        trackPanelKind: "text" as "audio" | "text",
+        trackPanelTitle: "",
+        trackChoices: [] as TrackChoiceView[],
+        trackSlots: Array.from({ length: 8 }, () => ({ ...emptyTrackChoice })),
+        trackFocusIndex: 0,
+        trackReturnControlIndex: 5,
+        trackLegend: "",
+        trackNotice: "",
         detailEpisodes: Array.from({ length: 5 }, () => ({ ...emptyDetailEpisode })),
         detailSaveIcon: "",
         detailSeasonLabel: "",
@@ -404,7 +429,7 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
         danger: tokens["color.status.danger-tv"],
         codeSize: pairCodeSize,
         codeLetterSpacing: pairCodeSize * 0.08,
-        phase: "starting" as "starting" | "pairing" | "expired" | "error" | "profiles" | "ready" | "home" | "detail" | "sources" | "provider" | "sourceDetails" | "preparing" | "player",
+        phase: "starting" as "starting" | "pairing" | "expired" | "error" | "profiles" | "ready" | "home" | "detail" | "sources" | "provider" | "sourceDetails" | "preparing" | "player" | "playerTracks",
         address: "Connecting…",
         code: "••••••",
         qr: "",
@@ -530,6 +555,8 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
         this.$listen("player-control-activate", () => void this.activatePlayerControl());
         this.$listen("player-seek-preview", (delta: number) => this.previewPlayerSeek(Number(delta)));
         this.$listen("player-seek-commit", () => void this.commitPlayerSeek());
+        this.$listen("player-track-move", (delta: number) => this.moveTrackFocus(Number(delta)));
+        this.$listen("player-track-activate", () => void this.selectTrackChoice());
         void session.dispatch({ Begin: {
           origin: api.serverOrigin,
           allowInsecurePreview: import.meta.env.DEV && api.serverOrigin === location.origin,
@@ -929,7 +956,7 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
       },
       schedulePlayerChromeHide() {
         clearTimeout(chromeTimer);
-        if (!this.playerOverlay || this.playerSnapshot?.state !== "playing") return;
+        if (!this.playerOverlay || this.trackPanelOpen || this.playerSnapshot?.state !== "playing") return;
         chromeTimer = setTimeout(() => {
           if (this.phase === "player" && this.playerSnapshot?.state === "playing") {
             this.playerOverlay = false;
@@ -974,11 +1001,90 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
           } else if (action === "exit") {
             await this.exitPlayer();
             return;
+          } else if (action === "audio" || action === "subtitles") {
+            this.openTrackPanel(action === "audio" ? "audio" : "text");
+            return;
           } else this.playerNotice = `${action} is unavailable.`;
         } catch (cause) {
           this.playerNotice = cause instanceof Error ? cause.message : "The TV could not complete this request.";
         }
         this.schedulePlayerChromeHide();
+      },
+      openTrackPanel(kind: "audio" | "text") {
+        if (this.phase !== "player" || !playback) return;
+        const session = playback.controller.snapshot.active?.session;
+        if (!session) return;
+        const choices = trackChoicesFor(kind, playback.player, session);
+        if (!choices.length) { this.playerNotice = kind === "audio" ? "No audio tracks are available." : "No subtitles are available."; return; }
+        this.trackPanelKind = kind;
+        this.trackReturnControlIndex = this.playerFocusIndex;
+        this.trackChoices = choices;
+        this.trackSlots = Array.from({ length: 8 }, (_, index) => choices[index] ?? { ...emptyTrackChoice });
+        this.trackFocusIndex = Math.max(0, choices.findIndex(choice => choice.current));
+        this.trackNotice = "";
+        this.trackPanelOpen = true;
+        this.phase = "playerTracks";
+        noteTrackPanel(true, kind);
+        this.playerOverlay = true;
+        this.setPlayerShade(true);
+        clearTimeout(chromeTimer);
+        setTimeout(() => {
+          if (!this.trackPanelOpen || this.phase !== "playerTracks") return;
+          this.trackPanelTitle = kind === "audio" ? "Audio Tracks" : "Subtitles";
+          this.trackLegend = "▲ ▼  Move     OK  Select     BACK  Close";
+          for (let index = 0; index < 8; index++)
+            (this.$select(`playerTrack${index}`) as unknown as { reveal?: () => void })?.reveal?.();
+          this.focusTrackChoice(this.trackFocusIndex);
+        }, 50);
+      },
+      focusTrackChoice(index: number) {
+        if (this.phase !== "playerTracks" || !this.trackPanelOpen) return;
+        this.trackFocusIndex = index;
+        this.$select(`playerTrack${index}`)?.$focus();
+      },
+      moveTrackFocus(delta: number) {
+        if (this.phase !== "playerTracks" || !this.trackPanelOpen) return;
+        this.focusTrackChoice(Math.max(0, Math.min(this.trackChoices.length - 1, this.trackFocusIndex + delta)));
+      },
+      async selectTrackChoice() {
+        if (this.phase !== "playerTracks" || !this.trackPanelOpen || !playback) return;
+        const choice = this.trackChoices[this.trackFocusIndex];
+        if (!choice) return;
+        noteTrackSelection(this.trackPanelKind, choice.id, choice.available);
+        if (!choice.available) { this.trackNotice = "This track is not supported on this TV."; return; }
+        this.closeTrackPanel();
+        try {
+          if (choice.mode === "off") {
+            const session = playback.controller.snapshot.active?.session;
+            if (session?.mode === "direct" && playback.player.capabilities.canDisableTextTrack)
+              await playback.player.selectTextTrack(null);
+            else await playback.controller.replaceTracks({ subtitlesOff: true });
+          } else if (choice.mode === "native") {
+            if (this.trackPanelKind === "audio") await playback.player.selectAudioTrack(choice.id);
+            else await playback.player.selectTextTrack(choice.id);
+          } else if (this.trackPanelKind === "audio") {
+            await playback.controller.replaceTracks({ audioTrackIndex: choice.inputIndex });
+          } else {
+            await playback.controller.replaceTracks({ subtitleTrackIndex: choice.inputIndex, subtitlesOff: false });
+          }
+          const active = playback.controller.snapshot.active;
+          if (active) {
+            this.playerSessionId = active.session.id;
+            this.playerSessionDuration = active.session.duration;
+          }
+        } catch (cause) {
+          this.playerNotice = cause instanceof Error ? cause.message : "Could not change this track.";
+        }
+      },
+      closeTrackPanel() {
+        if (!this.trackPanelOpen) return;
+        this.trackPanelOpen = false;
+        this.phase = "player";
+        noteTrackPanel(false, this.trackPanelKind);
+        this.trackNotice = "";
+        setTimeout(() => {
+          if (this.phase === "player") this.focusPlayerControl(this.trackReturnControlIndex);
+        }, 0);
       },
       previewPlayerSeek(delta: number) {
         if (this.phase !== "player" || !playback) return;
@@ -1004,7 +1110,7 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
         }
       },
       async exitPlayer() {
-        if (this.phase !== "player" && this.phase !== "preparing") return;
+        if (this.phase !== "player" && this.phase !== "playerTracks" && this.phase !== "preparing") return;
         ++playbackGeneration;
         clearInterval(heartbeatTimer);
         clearTimeout(chromeTimer);
@@ -1019,6 +1125,7 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
         document.body.style.background = "";
         this.phase = "sources";
         this.playerOverlay = true;
+        this.trackPanelOpen = false;
         this.playerSeekPreview = null;
         this.playerSeekLabel = "";
         this.updateSources(this.source.sources, false, true);
@@ -1294,8 +1401,10 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
       },
       back() {
         if (this.phase === "profiles" && this.managing) this.toggleManageProfiles();
+        else if (this.phase === "playerTracks") this.closeTrackPanel();
         else if (this.phase === "player") {
-          if (this.playerSeekPreview !== null) {
+          if (this.trackPanelOpen) this.closeTrackPanel();
+          else if (this.playerSeekPreview !== null) {
             this.playerSeekPreview = null;
             this.playerSeekLabel = "";
             this.playerLegend = "OK  Select     ◀ ▶  Move     BACK  Hide controls";

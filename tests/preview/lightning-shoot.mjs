@@ -10,8 +10,8 @@ import { outDir, reference } from './shoot.mjs';
 const name = process.argv[2] ?? 'TvPairing';
 const viaPlay = process.argv.includes('--via-play');
 const platform = process.argv.find(arg => arg.startsWith('--platform='))?.slice('--platform='.length) ?? 'tizen';
-if (!['TvPairing', 'TvPairingLoading', 'TvPairingExpired', 'TvProfiles', 'TvProfilesManage', 'TvManageCue', 'TvHome', 'TvTitle', 'TvSources', 'TvSourceProvider', 'TvSourceDetails', 'TvPlayer', 'TvPlayerSeek'].includes(name)) {
-  console.error('Usage: node tests/preview/lightning-shoot.mjs [TvPairing|TvPairingLoading|TvPairingExpired|TvProfiles|TvProfilesManage|TvManageCue|TvHome|TvTitle|TvSources|TvSourceProvider|TvSourceDetails|TvPlayer|TvPlayerSeek] [--platform=tizen|vizio|webos]');
+if (!['TvPairing', 'TvPairingLoading', 'TvPairingExpired', 'TvProfiles', 'TvProfilesManage', 'TvManageCue', 'TvHome', 'TvTitle', 'TvSources', 'TvSourceProvider', 'TvSourceDetails', 'TvPlayer', 'TvPlayerSeek', 'TvPlayerSubs'].includes(name)) {
+  console.error('Usage: node tests/preview/lightning-shoot.mjs [TvPairing|TvPairingLoading|TvPairingExpired|TvProfiles|TvProfilesManage|TvManageCue|TvHome|TvTitle|TvSources|TvSourceProvider|TvSourceDetails|TvPlayer|TvPlayerSeek|TvPlayerSubs] [--platform=tizen|vizio|webos]');
   process.exit(2);
 }
 if (!['tizen', 'vizio', 'webos'].includes(platform)) throw new Error(`Unsupported TV platform ${platform}`);
@@ -25,15 +25,15 @@ try {
   page.on('pageerror', error => errors.push(error.stack ?? error.message));
   page.on('console', message => { if (message.type() === 'error') errors.push(message.text()); else logs.push(message.text()); });
   const profiles = name.startsWith('TvProfiles') || name === 'TvManageCue';
-  const backend = await installBackend(page, { family: 'tv', session: name === 'TvHome' || name === 'TvTitle' || name === 'TvSources' || name === 'TvSourceProvider' || name === 'TvSourceDetails' || name === 'TvPlayer' || name === 'TvPlayerSeek' ? 'ready' : profiles ? 'profiles' : 'none', pairing: name === 'TvPairingLoading' ? 'loading' : name === 'TvPairingExpired' ? 'expired' : undefined });
-  if (name === 'TvPlayer' || name === 'TvPlayerSeek') await installMediaStubs(page, { frame: '63e024', paused: name === 'TvPlayer' });
+  const backend = await installBackend(page, { family: 'tv', session: name === 'TvHome' || name === 'TvTitle' || name === 'TvSources' || name === 'TvSourceProvider' || name === 'TvSourceDetails' || name === 'TvPlayer' || name === 'TvPlayerSeek' || name === 'TvPlayerSubs' ? 'ready' : profiles ? 'profiles' : 'none', pairing: name === 'TvPairingLoading' ? 'loading' : name === 'TvPairingExpired' ? 'expired' : undefined });
+  if (name === 'TvPlayer' || name === 'TvPlayerSeek' || name === 'TvPlayerSubs') await installMediaStubs(page, { frame: '63e024', paused: name === 'TvPlayer' });
   const url = process.env.LIGHTNING_PREVIEW_URL ?? 'http://127.0.0.1:4180/lightning.html';
   await page.goto(`${url}?platform=${platform}&focusdebug=1`);
   await page.locator('canvas').waitFor({ state: 'visible', timeout: 20000 }).catch(async cause => {
     throw new Error(`${cause.message}\nPage: ${await page.locator('body').innerText()}\n${errors.join('\n')}`);
   });
-  await page.waitForTimeout(name === 'TvPairingExpired' ? 2200 : name === 'TvHome' || name === 'TvTitle' || name === 'TvSources' || name === 'TvSourceProvider' || name === 'TvSourceDetails' || name === 'TvPlayer' || name === 'TvPlayerSeek' ? 1800 : 900);
-  if (name === 'TvTitle' || name === 'TvSources' || name === 'TvSourceProvider' || name === 'TvSourceDetails' || name === 'TvPlayer' || name === 'TvPlayerSeek') {
+  await page.waitForTimeout(name === 'TvPairingExpired' ? 2200 : name === 'TvHome' || name === 'TvTitle' || name === 'TvSources' || name === 'TvSourceProvider' || name === 'TvSourceDetails' || name === 'TvPlayer' || name === 'TvPlayerSeek' || name === 'TvPlayerSubs' ? 1800 : 900);
+  if (name === 'TvTitle' || name === 'TvSources' || name === 'TvSourceProvider' || name === 'TvSourceDetails' || name === 'TvPlayer' || name === 'TvPlayerSeek' || name === 'TvPlayerSubs') {
     const focused = (view, index) => page.waitForFunction(
       ({ view, index }) => window.__viptvFocus?.view === view && window.__viptvFocus?.index === index,
       { view, index }, { timeout: 5000 });
@@ -42,7 +42,7 @@ try {
     await page.keyboard.press('Enter');
     await focused('title-action', 0);
     await page.waitForTimeout(350);
-    if (name === 'TvSources' || name === 'TvSourceProvider' || name === 'TvSourceDetails' || name === 'TvPlayer' || name === 'TvPlayerSeek') {
+    if (name === 'TvSources' || name === 'TvSourceProvider' || name === 'TvSourceDetails' || name === 'TvPlayer' || name === 'TvPlayerSeek' || name === 'TvPlayerSubs') {
       if (!viaPlay) await page.keyboard.press('ArrowRight');
       await page.keyboard.press('Enter');
       await focused('source-row', 0);
@@ -78,6 +78,18 @@ try {
         await page.keyboard.press('ArrowRight');
         await page.waitForTimeout(140);
       }
+      if (name === 'TvPlayerSubs') {
+        await page.keyboard.press('Enter');
+        await focused('player-control', 1);
+        for (let step = 0; step < 4; step++) await page.keyboard.press('ArrowRight');
+        await focused('player-control', 5);
+        await page.keyboard.press('Enter');
+        await focused('player-track-option', 1);
+        await page.waitForTimeout(500);
+        const panel = await page.evaluate(() => window.__viptvTrackPanel);
+        if (!panel?.open || panel.kind !== 'text')
+          throw new Error(`Subtitle panel closed unexpectedly: ${JSON.stringify(panel)}; errors: ${JSON.stringify(errors)}`);
+      }
     }
   }
   if (name === 'TvProfilesManage') {
@@ -97,7 +109,7 @@ try {
   const file = join(outDir, `${name}.lightning${viaPlay ? '.resume' : ''}${platform === 'tizen' ? '' : `.${platform}`}.png`);
   await page.screenshot({ path: file });
   const pairingRequests = () => backend.requests.filter(request => request.path === '/api/auth/device/code').length;
-  if (pairingRequests() !== (profiles || name === 'TvHome' || name === 'TvTitle' || name === 'TvSources' || name === 'TvSourceProvider' || name === 'TvSourceDetails' || name === 'TvPlayer' || name === 'TvPlayerSeek' ? 0 : 1)) throw new Error(`Unexpected device-pairing request count ${pairingRequests()}`);
+  if (pairingRequests() !== (profiles || name === 'TvHome' || name === 'TvTitle' || name === 'TvSources' || name === 'TvSourceProvider' || name === 'TvSourceDetails' || name === 'TvPlayer' || name === 'TvPlayerSeek' || name === 'TvPlayerSubs' ? 0 : 1)) throw new Error(`Unexpected device-pairing request count ${pairingRequests()}`);
   if (name === 'TvHome' && !backend.requests.some(request => request.path.endsWith('/continue/page')))
     throw new Error(`Home did not request profile data: ${JSON.stringify(backend.requests)}`);
   if (name === 'TvHome') {
@@ -272,6 +284,44 @@ try {
     const afterCommit = (await page.evaluate(() => window.__viptvPlayer))?.position ?? 0;
     if (afterCommit <= beforeCancel)
       throw new Error(`Enter did not commit a forward seek: ${beforeCancel} → ${afterCommit}`);
+  }
+  if (name === 'TvPlayerSubs') {
+    const focused = (view, index) => page.waitForFunction(
+      ({ view, index }) => window.__viptvFocus?.view === view && window.__viptvFocus?.index === index,
+      { view, index }, { timeout: 5000 });
+    const playbackRequests = () => backend.requests.filter(request => request.path === '/api/playback' && request.method === 'POST').length;
+    const beforeUnsupported = playbackRequests();
+    for (let step = 0; step < 4; step++) await page.keyboard.press('ArrowDown');
+    await focused('player-track-option', 5);
+    await page.keyboard.press('Enter');
+    const unsupported = await page.evaluate(() => window.__viptvTrackSelection);
+    if (unsupported?.kind !== 'text' || unsupported.id !== '4' || unsupported.available !== false || playbackRequests() !== beforeUnsupported)
+      throw new Error(`Unsupported subtitle changed playback: ${JSON.stringify(unsupported)}`);
+    if (!(await page.evaluate(() => window.__viptvTrackPanel?.open))) throw new Error('Unsupported subtitle closed the panel');
+    await page.keyboard.press('Escape');
+    await focused('player-control', 5);
+    await page.keyboard.press('Enter');
+    await focused('player-track-option', 1);
+    await page.keyboard.press('ArrowUp');
+    await focused('player-track-option', 0);
+    await page.keyboard.press('Enter');
+    await focused('player-control', 5);
+    const off = await page.evaluate(() => window.__viptvTrackSelection);
+    if (off?.id !== '__off__' || playbackRequests() <= beforeUnsupported)
+      throw new Error(`Subtitle Off did not replace the managed track: ${JSON.stringify(off)}`);
+    await page.keyboard.press('ArrowLeft');
+    await focused('player-control', 4);
+    await page.keyboard.press('Enter');
+    await focused('player-track-option', 0);
+    await page.screenshot({ path: join(outDir, 'TvPlayerSubs.lightning.audio.png') });
+    await page.keyboard.press('ArrowDown');
+    await focused('player-track-option', 1);
+    const beforeAudio = playbackRequests();
+    await page.keyboard.press('Enter');
+    await focused('player-control', 4);
+    const audio = await page.evaluate(() => window.__viptvTrackSelection);
+    if (audio?.kind !== 'audio' || audio.id !== '1' || playbackRequests() <= beforeAudio)
+      throw new Error(`Audio track change did not replace the managed session: ${JSON.stringify(audio)}`);
   }
   if (name === 'TvPairingExpired') {
     await page.keyboard.press('Enter');

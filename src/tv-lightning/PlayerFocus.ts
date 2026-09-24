@@ -1,6 +1,7 @@
 import Blits from "@lightningjs/blits";
 import { tokens } from "../theme/viptv-tokens.generated";
 import { noteFocus } from "./focusDebug";
+import type { TrackChoiceView } from "./trackModel";
 
 export const PlayerControl = Blits.Component("PlayerControl", {
   props: ["position", "action", "icon", "diameter"] as unknown as {
@@ -63,5 +64,50 @@ export const PlayerTimeline = Blits.Component("PlayerTimeline", {
     right() { this.$emit("player-seek-preview", 30); },
     down() { this.$emit("player-controls-return"); },
     enter() { return () => this.$emit("player-seek-commit"); },
+  },
+});
+
+/** Focusable row in the TV audio/subtitles right panel. */
+export const PlayerTrackOption = Blits.Component("PlayerTrackOption", {
+  props: ["position", "choice"] as unknown as { position: number; choice: TrackChoiceView },
+  template: `
+    <Element w="660" h="80" :show="$choice.id !== ''">
+      <Element x="-11" y="-4" w="682" h="88" rounded="23" color="$white" :show="$focused" />
+      <Element w="660" h="80" rounded="20" :color="$focused ? $primary : $background" />
+      <Text x="24" y="25" :content="$caption" font="Onest700" size="26" :color="$focused ? $onLight : $choice.available ? $primary : $secondary" />
+      <Text :x="$suffixX" y="25" :content="$suffix" font="Onest" size="26" :color="$focused ? $onLightSecondary : $secondary" />
+    </Element>
+  `,
+  state() {
+    return {
+      focused: false, caption: "", suffix: "", suffixX: 110,
+      white: tokens["color.fill.white"], primary: tokens["color.text.primary"],
+      onLight: tokens["color.on.light"], secondary: tokens["color.text.secondary"],
+      onLightSecondary: tokens["color.text.on-light-secondary"],
+      background: tokens["color.surface.1"],
+    };
+  },
+  hooks: {
+    focus() { this.focused = true; this.reveal(); noteFocus("player-track-option", this.position); },
+    unfocus() { this.focused = false; },
+  },
+  methods: {
+    reveal() {
+      this.caption = this.choice.label;
+      this.suffix = this.choice.current ? "· Current" : !this.choice.available ? "· unavailable" : "";
+      this.suffixX = Math.max(78, 24 + this.choice.label.length * 15);
+    },
+  },
+  watch: {
+    choice(value: TrackChoiceView) {
+      this.caption = value.label;
+      this.suffix = value.current ? "· Current" : !value.available ? "· unavailable" : "";
+      this.suffixX = Math.max(78, 24 + value.label.length * 15);
+    },
+  },
+  input: {
+    up() { this.$emit("player-track-move", -1); },
+    down() { this.$emit("player-track-move", 1); },
+    enter() { return () => this.$emit("player-track-activate", this.position); },
   },
 });

@@ -605,10 +605,31 @@ Matched Vizio-browser captures at 1920×1080 still fail the exact visual gate:
 `TvPlayer` has 94,978 changed pixels (4.5803%), MAE 3.2571, RMSE 24.6134,
 SSIM 0.753696; `TvPlayerSeek` has 114,621 changed pixels (5.5276%), MAE
 3.4487, RMSE 24.7832, SSIM 0.737013. Control icon/text rasterization,
-seek bubble/ring and placement remain open. Audio/subtitle panels, Next,
+seek bubble/ring and placement remain open. Full track-panel paging, Next,
 player error/recovery, live and DVR behavior, and real Tizen/Vizio/webOS
 decoder/layering qualification remain incomplete; the TV launchers stay on
 the React path.
+
+## Audio/subtitle track continuation
+
+The staged player now opens a Blits right panel focused on the current audio
+or subtitle track. It uses the pinned video controller's direct/native track
+when available, otherwise the server session's track list and managed
+`replaceTracks` path. Subtitles Off follows the same native-versus-managed
+rule as React. Browser fixtures on Tizen, Vizio and staged webOS verified
+current-track focus, Back returning to the originating control, an
+unavailable PGS choice staying open without a playback replacement, and
+managed replacements for Subtitles Off and English Stereo audio. The UI
+snapshot of the Vizio subtitle panel matched the fixture content but still
+had 380,929 changed pixels (18.3704%), MAE 3.7155, RMSE 21.8704 and SSIM
+0.862725 against React at 1920×1080. Panel typography, ring and footer
+remain open deviations. The staged panel mounts eight track rows; longer
+lists still need focusable paging and real-device track qualification.
+The production `/tv/` preview reproduced the subtitle-panel capture and
+metric. After this change, 169/169 unit tests, 24 targeted responsive/TV
+Playwright scenarios (10 deliberate skips), and the production build passed.
+Phone `Main` and desktop `DeskHome` recaptures remained pixel-identical to
+the isolated pre-player baseline (0 changed pixels each).
 
 The phone `Main` (390×844) and desktop `DeskHome` (1440×900) React captures
 were compared against an isolated tv-web `de6adc1` checkout from before the

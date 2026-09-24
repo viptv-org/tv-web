@@ -34,3 +34,17 @@ export function notePlayerState(state: string, position: number) {
   if (!enabled) return;
   (window as Window & { __viptvPlayer?: { state: string; position: number } }).__viptvPlayer = { state, position };
 }
+
+/** Test-only track-panel lifecycle marker. */
+export function noteTrackPanel(open: boolean, kind: string) {
+  if (!enabled) return;
+  (window as Window & { __viptvTrackPanel?: { open: boolean; kind: string } }).__viptvTrackPanel = { open, kind };
+}
+
+/** Test-only track choice, without media URLs or session data. */
+export function noteTrackSelection(kind: string, id: string, available: boolean) {
+  if (!enabled) return;
+  (window as Window & { __viptvTrackSelection?: { kind: string; id: string; available: boolean } }).__viptvTrackSelection = {
+    kind, id, available,
+  };
+}
