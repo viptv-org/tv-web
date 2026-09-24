@@ -9,9 +9,11 @@ import { outDir, reference } from './shoot.mjs';
 
 const name = process.argv[2] ?? 'TvPairing';
 const viaPlay = process.argv.includes('--via-play');
+const searchFailure = process.argv.includes('--search-fail');
+const emptySearch = process.argv.includes('--empty-search');
 const platform = process.argv.find(arg => arg.startsWith('--platform='))?.slice('--platform='.length) ?? 'tizen';
-if (!['TvPairing', 'TvPairingLoading', 'TvPairingExpired', 'TvProfiles', 'TvProfilesManage', 'TvManageCue', 'TvHome', 'TvMenu', 'TvDiscover', 'TvDiscoverFilter', 'TvLibrary', 'TvItemMenu', 'TvTitle', 'TvSources', 'TvSourceProvider', 'TvSourceDetails', 'TvPlayer', 'TvPlayerSeek', 'TvPlayerSubs'].includes(name)) {
-  console.error('Usage: node tests/preview/lightning-shoot.mjs [TvPairing|TvPairingLoading|TvPairingExpired|TvProfiles|TvProfilesManage|TvManageCue|TvHome|TvMenu|TvDiscover|TvDiscoverFilter|TvLibrary|TvItemMenu|TvTitle|TvSources|TvSourceProvider|TvSourceDetails|TvPlayer|TvPlayerSeek|TvPlayerSubs] [--platform=tizen|vizio|webos]');
+if (!['TvPairing', 'TvPairingLoading', 'TvPairingExpired', 'TvProfiles', 'TvProfilesManage', 'TvManageCue', 'TvHome', 'TvMenu', 'TvDiscover', 'TvDiscoverFilter', 'TvLibrary', 'TvItemMenu', 'TvSearch', 'TvTitle', 'TvSources', 'TvSourceProvider', 'TvSourceDetails', 'TvPlayer', 'TvPlayerSeek', 'TvPlayerSubs'].includes(name)) {
+  console.error('Usage: node tests/preview/lightning-shoot.mjs [TvPairing|TvPairingLoading|TvPairingExpired|TvProfiles|TvProfilesManage|TvManageCue|TvHome|TvMenu|TvDiscover|TvDiscoverFilter|TvLibrary|TvItemMenu|TvSearch|TvTitle|TvSources|TvSourceProvider|TvSourceDetails|TvPlayer|TvPlayerSeek|TvPlayerSubs] [--platform=tizen|vizio|webos]');
   process.exit(2);
 }
 if (!['tizen', 'vizio', 'webos'].includes(platform)) throw new Error(`Unsupported TV platform ${platform}`);
@@ -25,14 +27,41 @@ try {
   page.on('pageerror', error => errors.push(error.stack ?? error.message));
   page.on('console', message => { if (message.type() === 'error') errors.push(message.text()); else logs.push(message.text()); });
   const profiles = name.startsWith('TvProfiles') || name === 'TvManageCue';
-  const backend = await installBackend(page, { family: 'tv', session: name === 'TvHome' || name === 'TvMenu' || name === 'TvDiscover' || name === 'TvDiscoverFilter' || name === 'TvLibrary' || name === 'TvItemMenu' || name === 'TvTitle' || name === 'TvSources' || name === 'TvSourceProvider' || name === 'TvSourceDetails' || name === 'TvPlayer' || name === 'TvPlayerSeek' || name === 'TvPlayerSubs' ? 'ready' : profiles ? 'profiles' : 'none', pairing: name === 'TvPairingLoading' ? 'loading' : name === 'TvPairingExpired' ? 'expired' : undefined, favorites: name === 'TvLibrary' });
+  const backend = await installBackend(page, { family: 'tv', session: name === 'TvHome' || name === 'TvMenu' || name === 'TvDiscover' || name === 'TvDiscoverFilter' || name === 'TvLibrary' || name === 'TvItemMenu' || name === 'TvSearch' || name === 'TvTitle' || name === 'TvSources' || name === 'TvSourceProvider' || name === 'TvSourceDetails' || name === 'TvPlayer' || name === 'TvPlayerSeek' || name === 'TvPlayerSubs' ? 'ready' : profiles ? 'profiles' : 'none', pairing: name === 'TvPairingLoading' ? 'loading' : name === 'TvPairingExpired' ? 'expired' : undefined, favorites: name === 'TvLibrary', searchFail: searchFailure });
   if (name === 'TvPlayer' || name === 'TvPlayerSeek' || name === 'TvPlayerSubs' || name === 'TvLibrary' || name === 'TvItemMenu') await installMediaStubs(page, { frame: '63e024', paused: name === 'TvPlayer' });
   const url = process.env.LIGHTNING_PREVIEW_URL ?? 'http://127.0.0.1:4180/lightning.html';
   await page.goto(`${url}?platform=${platform}&focusdebug=1`);
   await page.locator('canvas').waitFor({ state: 'visible', timeout: 20000 }).catch(async cause => {
     throw new Error(`${cause.message}\nPage: ${await page.locator('body').innerText()}\n${errors.join('\n')}`);
   });
-  await page.waitForTimeout(name === 'TvPairingExpired' ? 2200 : name === 'TvHome' || name === 'TvMenu' || name === 'TvDiscover' || name === 'TvDiscoverFilter' || name === 'TvLibrary' || name === 'TvItemMenu' || name === 'TvTitle' || name === 'TvSources' || name === 'TvSourceProvider' || name === 'TvSourceDetails' || name === 'TvPlayer' || name === 'TvPlayerSeek' || name === 'TvPlayerSubs' ? 1800 : 900);
+  await page.waitForTimeout(name === 'TvPairingExpired' ? 2200 : name === 'TvHome' || name === 'TvMenu' || name === 'TvDiscover' || name === 'TvDiscoverFilter' || name === 'TvLibrary' || name === 'TvItemMenu' || name === 'TvSearch' || name === 'TvTitle' || name === 'TvSources' || name === 'TvSourceProvider' || name === 'TvSourceDetails' || name === 'TvPlayer' || name === 'TvPlayerSeek' || name === 'TvPlayerSubs' ? 1800 : 900);
+  if (name === 'TvSearch') {
+    await page.waitForFunction(() => window.__viptvFocus?.view === 'home-action' && window.__viptvFocus?.index === 0, null, { timeout: 5000 });
+    await page.keyboard.press('ArrowLeft');
+    await page.waitForFunction(() => window.__viptvFocus?.view === 'rail-item' && window.__viptvFocus?.index === 2, null, { timeout: 5000 });
+    await page.keyboard.press('ArrowUp');
+    await page.keyboard.press('Enter');
+    await page.waitForFunction(() => window.__viptvFocus?.view === 'search-key' && window.__viptvFocus?.index === 0, null, { timeout: 5000 });
+    if (!searchFailure && !emptySearch) {
+      mkdirSync(outDir, { recursive: true });
+      await page.waitForTimeout(120);
+      await page.screenshot({ path: join(outDir, `TvSearch.lightning.blank${platform === 'tizen' ? '' : `.${platform}`}.png`) });
+    }
+    const query = emptySearch ? 'zzzz' : 'naruto';
+    await page.keyboard.type(query, { delay: 40 });
+    await page.waitForFunction(({ query, emptySearch, searchFailure }) =>
+      window.__viptvSearch?.query === query && window.__viptvSearch?.done === true && window.__viptvSearch?.busy === false &&
+      (emptySearch ? window.__viptvSearch.count === 0 : window.__viptvSearch.count > 0) &&
+      (!searchFailure || window.__viptvSearch.partial === true),
+    { query, emptySearch, searchFailure }, { timeout: 15000 });
+    const resultCount = await page.evaluate(() => window.__viptvSearch?.count);
+    if (!emptySearch && resultCount !== (searchFailure ? 1 : 14))
+      throw new Error(`Search section count differs from the fixture: ${resultCount}`);
+    for (let step = 0; step < 3; step++) await page.keyboard.press('ArrowDown');
+    await page.keyboard.press('ArrowRight');
+    await page.waitForFunction(() => window.__viptvFocus?.view === 'search-key' && window.__viptvFocus?.index === 19, null, { timeout: 5000 });
+    await page.waitForTimeout(350);
+  }
   if (name === 'TvItemMenu') {
     await page.waitForFunction(() => window.__viptvFocus?.view === 'home-action' && window.__viptvFocus?.index === 0, null, { timeout: 5000 });
     await page.keyboard.press('ArrowDown');
@@ -172,7 +201,7 @@ try {
       throw new Error('Held Enter also selected a profile on release');
   }
   mkdirSync(outDir, { recursive: true });
-  const file = join(outDir, `${name}.lightning${viaPlay ? '.resume' : ''}${platform === 'tizen' ? '' : `.${platform}`}.png`);
+  const file = join(outDir, `${name}.lightning${viaPlay ? '.resume' : ''}${searchFailure ? '.failure' : emptySearch ? '.empty' : ''}${platform === 'tizen' ? '' : `.${platform}`}.png`);
   await page.screenshot({ path: file });
   if (name === 'TvMenu') {
     const focused = (view, index) => page.waitForFunction(
@@ -282,6 +311,99 @@ try {
     await focused('home-card', 0);
     if (!backend.requests.some(request => request.path.includes('/progress') && request.method !== 'GET'))
       throw new Error('Mark watched did not correct progress');
+  }
+  if (name === 'TvSearch' && !searchFailure && !emptySearch) {
+    const focused = (view, index) => page.waitForFunction(
+      ({ view, index }) => window.__viptvFocus?.view === view && window.__viptvFocus?.index === index,
+      { view, index }, { timeout: 7000 });
+    if (!backend.requests.some(request => request.path === '/api/discover' && request.query.includes('search=naruto')) ||
+        !backend.requests.some(request => request.path === '/api/live' && request.query.includes('search=naruto')))
+      throw new Error('Search did not query both searchable catalogs and Live TV');
+    await page.keyboard.press('Enter');
+    await page.waitForFunction(() => window.__viptvSearch?.query === 'narutot', null, { timeout: 5000 });
+    await page.keyboard.press('Escape');
+    await page.waitForFunction(() => window.__viptvSearch?.query === 'naruto', null, { timeout: 5000 });
+    if (backend.requests.some(request => request.path === '/api/discover' && request.query.includes('search=narutot')))
+      throw new Error('Replaced search query started a stale catalog request');
+    await page.waitForFunction(() => window.__viptvSearch?.query === 'naruto' && window.__viptvSearch?.count > 0 && !window.__viptvSearch?.busy, null, { timeout: 10000 });
+    for (let step = 0; step < 5; step++) await page.keyboard.press('ArrowRight');
+    await focused('search-card', 0);
+    await page.keyboard.down('Enter');
+    await page.waitForTimeout(750);
+    await page.keyboard.up('Enter');
+    await focused('title-menu-option', 0);
+    await page.keyboard.press('Escape');
+    await focused('search-card', 0);
+    await page.keyboard.press('ArrowLeft');
+    await focused('search-key', 23);
+    await page.keyboard.press('ArrowRight');
+    await focused('search-card', 0);
+    await page.keyboard.press('ArrowRight');
+    await focused('search-card', 1);
+    await page.keyboard.press('Enter');
+    await focused('title-action', 0);
+    await page.keyboard.press('Escape');
+    await focused('search-card', 1);
+    await page.keyboard.press('ArrowDown');
+    await focused('search-card', 10);
+    await page.keyboard.press('ArrowDown');
+    await focused('search-card', 13);
+    await page.keyboard.down('Enter');
+    await page.waitForTimeout(750);
+    await page.keyboard.up('Enter');
+    await focused('title-menu-option', 0);
+    await page.keyboard.press('Escape');
+    await focused('search-card', 13).catch(async cause => {
+      throw new Error(`${cause.message}; focus ${JSON.stringify(await page.evaluate(() => window.__viptvFocus))}; menu ${JSON.stringify(await page.evaluate(() => window.__viptvTitleMenu))}; search ${JSON.stringify(await page.evaluate(() => window.__viptvSearch))}; errors ${JSON.stringify(errors)}`);
+    });
+    await page.keyboard.press('ArrowLeft');
+    await focused('search-key', 23);
+    await page.keyboard.press('Escape');
+    await page.waitForFunction(() => window.__viptvSearch?.query === 'narut', null, { timeout: 5000 });
+    await page.keyboard.press('ArrowDown');
+    await page.keyboard.press('ArrowDown');
+    await page.keyboard.press('ArrowDown');
+    await focused('search-key', 38);
+    await page.keyboard.press('Enter');
+    await page.waitForFunction(() => window.__viptvSearch?.query === '', null, { timeout: 5000 });
+    await page.keyboard.press('ArrowLeft');
+    await page.keyboard.press('ArrowLeft');
+    await focused('search-key', 36);
+    for (let step = 0; step < 6; step++) await page.keyboard.press('ArrowUp');
+    await focused('search-key', 0);
+    await page.keyboard.press('Enter');
+    await page.waitForFunction(() => window.__viptvSearch?.query === 'a', null, { timeout: 5000 });
+    await page.keyboard.press('Escape');
+    await page.waitForFunction(() => window.__viptvSearch?.query === '', null, { timeout: 5000 });
+    for (let step = 0; step < 6; step++) await page.keyboard.press('ArrowDown');
+    await focused('search-key', 36);
+    await page.keyboard.press('Enter');
+    await page.waitForFunction(() => window.__viptvSearch?.query === ' ', null, { timeout: 5000 });
+    await page.keyboard.press('ArrowRight');
+    await focused('search-key', 37);
+    await page.keyboard.press('Enter');
+    await page.waitForFunction(() => window.__viptvSearch?.query === '', null, { timeout: 5000 });
+    await page.keyboard.press('ArrowLeft');
+    await focused('search-key', 36);
+    await page.keyboard.press('ArrowLeft');
+    await focused('rail-item', 1);
+    await page.keyboard.press('ArrowDown');
+    await page.keyboard.press('ArrowDown');
+    await focused('rail-item', 3);
+    await page.keyboard.press('Enter');
+    await focused('discover-card', 0);
+    await page.keyboard.press('Escape');
+    await focused('search-key', 36);
+    await page.keyboard.press('ArrowLeft');
+    await focused('rail-item', 1);
+    for (let step = 0; step < 4; step++) await page.keyboard.press('ArrowDown');
+    await focused('rail-item', 5);
+    await page.keyboard.press('Enter');
+    await focused('library-segment', 0);
+    await page.keyboard.press('Escape');
+    await focused('search-key', 36);
+    await page.keyboard.press('Escape');
+    await focused('home-action', 0);
   }
   if (name === 'TvDiscover') {
     const focused = (view, index) => page.waitForFunction(
@@ -404,7 +526,7 @@ try {
     await focused('home-action', 0);
   }
   const pairingRequests = () => backend.requests.filter(request => request.path === '/api/auth/device/code').length;
-  if (pairingRequests() !== (profiles || name === 'TvHome' || name === 'TvMenu' || name === 'TvDiscover' || name === 'TvDiscoverFilter' || name === 'TvLibrary' || name === 'TvItemMenu' || name === 'TvTitle' || name === 'TvSources' || name === 'TvSourceProvider' || name === 'TvSourceDetails' || name === 'TvPlayer' || name === 'TvPlayerSeek' || name === 'TvPlayerSubs' ? 0 : 1)) throw new Error(`Unexpected device-pairing request count ${pairingRequests()}`);
+  if (pairingRequests() !== (profiles || name === 'TvHome' || name === 'TvMenu' || name === 'TvDiscover' || name === 'TvDiscoverFilter' || name === 'TvLibrary' || name === 'TvItemMenu' || name === 'TvSearch' || name === 'TvTitle' || name === 'TvSources' || name === 'TvSourceProvider' || name === 'TvSourceDetails' || name === 'TvPlayer' || name === 'TvPlayerSeek' || name === 'TvPlayerSubs' ? 0 : 1)) throw new Error(`Unexpected device-pairing request count ${pairingRequests()}`);
   if (name === 'TvHome' && !backend.requests.some(request => request.path.endsWith('/continue/page')))
     throw new Error(`Home did not request profile data: ${JSON.stringify(backend.requests)}`);
   if (name === 'TvHome') {
@@ -631,7 +753,8 @@ try {
     if (!selection || (selection.body?.profile_id ?? selection.body?.profileId) !== '2')
       throw new Error(`Right then Enter did not select the second profile; requests: ${JSON.stringify(backend.requests)}; errors: ${JSON.stringify(errors)}; logs: ${JSON.stringify(logs)}`);
   }
-  const unexpected = errors.filter(message => !/Failed to load resource: the server responded with a status of 400/.test(message));
+  const unexpected = errors.filter(message => !/Failed to load resource: the server responded with a status of 400/.test(message) &&
+    !(searchFailure && /Failed to load resource: the server responded with a status of 502/.test(message)));
   if (unexpected.length || backend.errors.length) throw new Error([...unexpected, ...backend.errors].join('\n'));
   console.log(file);
 } finally {

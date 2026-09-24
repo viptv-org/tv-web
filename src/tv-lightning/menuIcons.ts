@@ -19,6 +19,9 @@ export function menuIcon(action: TitleMenuAction, onLight = false): string {
   context.lineJoin = "round";
   context.beginPath();
   switch (action) {
+    case "watchLive":
+      context.moveTo(7, 4); context.lineTo(20, 12); context.lineTo(7, 20); context.closePath();
+      break;
     case "previous":
       context.moveTo(19, 4); context.lineTo(9, 12); context.lineTo(19, 20); context.closePath();
       context.moveTo(5, 5); context.lineTo(5, 19);

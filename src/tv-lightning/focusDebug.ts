@@ -50,6 +50,13 @@ export function noteTitleMenu(open: boolean, kind: string) {
   (window as Window & { __viptvTitleMenu?: { open: boolean; kind: string } }).__viptvTitleMenu = { open, kind };
 }
 
+export function noteSearchState(query: string, count: number, busy: boolean, partial: boolean, done = false) {
+  if (!enabled) return;
+  (window as Window & { __viptvSearch?: { query: string; count: number; busy: boolean; partial: boolean; done: boolean } }).__viptvSearch = {
+    query, count, busy, partial, done,
+  };
+}
+
 /** Test-only player state, without session or delivery URLs. */
 export function notePlayerState(state: string, position: number) {
   if (!enabled) return;

@@ -3,7 +3,7 @@ import { menuIcon } from "./menuIcons";
 
 export type TitleMenuAction =
   | "previous" | "source" | "watched" | "restart" | "hide" | "favorite" | "cancel"
-  | "undo" | "done";
+  | "undo" | "done" | "watchLive";
 export interface TitleMenuChoiceView {
   key: TitleMenuAction;
   label: string;
@@ -19,6 +19,11 @@ export function titleMenuChoice(key: TitleMenuAction, label: string): TitleMenuC
 
 /** Same action order/copy as the React TV held-card menu. */
 export function titleMenuChoices(item: MediaItem, inQueue: boolean, saved: boolean): TitleMenuChoiceView[] {
+  if (item.type === "live") return [
+    titleMenuChoice("watchLive", "Watch channel"),
+    titleMenuChoice("favorite", saved ? "Remove from My List" : "Add to My List"),
+    titleMenuChoice("cancel", "Cancel"),
+  ];
   const choices: TitleMenuChoiceView[] = [];
   if (item.previousEpisode) choices.push(titleMenuChoice("previous", "Resume previous episode"));
   choices.push(titleMenuChoice("source", "Choose source"));

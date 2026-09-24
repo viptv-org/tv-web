@@ -1,6 +1,25 @@
+# Lightning TV Search — 2026-09-24
+
+The staged Blits rail now opens Search. Its 39-key TV keyboard owns D-pad
+focus, accepts physical keyboard letters, and searches normalized catalogs and
+Live TV after 650 ms. Browser fixtures exercised a replaced query without a
+stale request, 14 grouped Naruto results, result/keyboard focus movement,
+title/Back restoration, Delete/Clear, no results, and partial catalog failure
+that retained the live result. Populated and blank captures were byte-identical
+across Tizen, Vizio and webOS browser configurations. At 1920 × 1080 against
+matched React captures, populated `TvSearch` changed 407,982 pixels (19.6751%,
+SSIM 0.942227); blank Search changed 79,744 pixels (3.8457%, SSIM 0.827156).
+Both remain open visual deviations. Reproduce the blank React frame with
+`node tests/preview/react-search-blank.mjs`; no-result and partial-failure
+states have browser captures but no matched React pixel measurement.
+`npm run build`, 169 unit tests and the targeted responsive/TV browser suite
+(24 passed, 10 skipped) pass. Phone `Main` and desktop `DeskHome` are exactly
+equal to their pre-migration captures (0 changed pixels). No physical Blits TV
+run or TV launcher switch was performed.
+
 # Lightning TV held-card menu — 2026-09-24
 
-The staged Blits action menu now opens from Home, Discover and My List tiles
+The staged Blits action menu now opens from Home, Search, Discover and My List tiles
 on a 700 ms OK hold; ContextMenu also opens it. Back restores the tile, and a
 held release does not also activate it. Tizen, Vizio and webOS browser-mode
 captures of `TvItemMenu` were byte-identical. At 1920 × 1080 against the React
@@ -16,7 +35,8 @@ has not been compared pixel-for-pixel.
 
 The staged Blits menu now opens My List. Browser fixtures cover saved titles,
 Continue Watching, focus restoration through title detail and a direct Resume
-source/player path, and refetch after a saved-title toggle. Queue and saved-grid captures were byte-identical across Tizen,
+source/player path, and refetch after a saved-title toggle. Queue and saved-grid
+captures were byte-identical across Tizen,
 Vizio and webOS browser modes. At 1920 × 1080, `TvLibrary` queue changed
 614,925 pixels against React (29.6549%, SSIM 0.953726). A matched saved-grid
 capture with six fixture favorites changed 463,694 pixels (22.3618%, SSIM
