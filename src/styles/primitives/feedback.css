@@ -1,1 +1,758 @@
-/* Design-system primitive: feedback. See design/viptv-design-system/components.md. */
+/*
+ * Design-system primitive: feedback (components.md §9; CmpPhone3 / CmpDesk3 / CmpTv3 "Feedback").
+ *
+ * Toast (surface-3, radius 20; TV surface-1, radius 24). Notices: text only, 5 s, secondary text.
+ * Errors: 4 s, primary text, alert icon + one action (Dismiss / "Try again" at startup).
+ *   <div class="vx-toast-region" aria-live="polite">          (P bottom 116 above the nav,
+ *     <div class="vx-toast vx-toast--error" role="alert">      D bottom-centre 24, TV top-centre)
+ *       <svg class="vx-toast__icon" aria-hidden="true"/>
+ *       <span class="vx-toast__text">Could not save your profile. Please try again.</span>
+ *       <button class="vx-toast__action">Dismiss</button></div></div>
+ * Player notice pill (4 s) and "Preparing playback…" (spinner + words; TV: a centred panel):
+ *   <div class="vx-notice [vx-notice--top]" role="status">The stream could not seek there.</div>
+ *   <div class="vx-preparing [vx-notice--top | vx-preparing--center]" role="status">
+ *     <span class="vx-spinner" aria-hidden="true"></span><span>Preparing playback…</span></div>
+ * Backend banner (TV: centred alert panel over a 0.6 scrim):
+ *   <section class="vx-banner" role="alert" aria-labelledby="bb-t">
+ *     <span class="vx-banner__icon" aria-hidden="true"><svg/></span>
+ *     <div class="vx-banner__body"><h2 class="vx-banner__title" id="bb-t">Can’t reach the backend</h2>
+ *       <p class="vx-banner__text">…</p><span class="vx-banner__meta">Backend unreachable since …</span>
+ *       <div class="vx-banner__actions"><button class="vx-btn vx-btn--small">Dismiss</button></div></div></section>
+ * Inline error: <p class="vx-inline-error" role="alert"><svg aria-hidden="true"/>Enter a name to continue.</p>
+ *   (one rule set, in fields.css, for field errors and standalone ones)
+ * Status line:  <div class="vx-status" role="status"><span class="vx-spinner" aria-hidden="true"></span>Finding sources…</div>
+ * Loading more: <div class="vx-loading-more" role="status"><span class="vx-spinner" aria-hidden="true"></span>Loading more titles…</div>
+ * Empty state:  <div class="vx-empty [vx-empty--center]"><span class="vx-empty__icon" aria-hidden="true"><svg/></span>
+ *   <h2 class="vx-empty__title">Your list is empty.</h2><p class="vx-empty__text">Add titles with the + button.</p>
+ *   <div class="vx-empty__action"><a class="vx-btn vx-btn--light vx-btn--pill">Browse Discover</a></div></div>
+ * Skeletons (P/D only; TV shows the startup cover): .vx-skel blocks + composites, see below.
+ * Startup cover (TV): <div class="vx-startup" role="status"><span class="vx-startup__mark">VIPTV</span>
+ *   <span class="vx-status"><span class="vx-spinner" aria-hidden="true"></span>Starting VIPTV…</span></div>
+ */
+
+/* Toast */
+[data-layout] .vx-toast-region {
+  position: fixed;
+  right: 0;
+  bottom: var(--viptv-size-toast-desktop-bottom);
+  left: 0;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--viptv-space-2);
+  padding: 0 var(--viptv-space-4);
+  pointer-events: none;
+}
+[data-layout] .vx-toast-region > * {
+  pointer-events: auto;
+}
+[data-layout] .vx-toast {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--viptv-space-2_5);
+  box-sizing: border-box;
+  max-width: var(--viptv-size-toast-desktop-max);
+  min-height: var(--viptv-size-toast-notice-height);
+  margin: 0;
+  padding: 0 var(--viptv-space-4);
+  border: 1px solid var(--viptv-color-line-hairline);
+  border-radius: var(--viptv-radius-xl-plus);
+  background: var(--viptv-color-surface-3);
+  box-shadow: var(--viptv-shadow-toast);
+  color: var(--viptv-color-text-secondary);
+  font-family: var(--viptv-font-family-ui);
+  font-size: var(--viptv-type-desktop-meta-size);
+  white-space: nowrap;
+}
+[data-layout] .vx-toast--error {
+  min-height: var(--viptv-size-toast-height);
+  padding: 0 var(--viptv-space-1_5) 0 var(--viptv-space-4);
+  color: var(--viptv-color-text-primary);
+}
+[data-layout] .vx-toast__icon {
+  display: block;
+  flex: none;
+  width: var(--viptv-size-icon-small);
+  height: var(--viptv-size-icon-small);
+}
+[data-layout] .vx-toast__text {
+  padding: var(--viptv-space-2) 0;
+  line-height: var(--viptv-type-desktop-meta-line-height);
+  white-space: normal;
+}
+[data-layout] .vx-toast__action {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  height: var(--viptv-size-toast-action-height);
+  min-height: 0;
+  margin: 0 0 0 var(--viptv-space-1);
+  padding: 0 var(--viptv-space-3);
+  border: 0;
+  border-radius: calc(var(--viptv-size-toast-action-height) / 2);
+  outline: none;
+  background: var(--viptv-color-fill-tag);
+  color: var(--viptv-color-text-primary);
+  font-family: var(--viptv-font-family-ui);
+  font-size: var(--viptv-type-desktop-meta-size);
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform var(--viptv-motion-focus) ease-out, background-color var(--viptv-motion-focus) ease-out, box-shadow var(--viptv-motion-focus) ease-out;
+}
+[data-layout="responsive"] .vx-toast__action:active {
+  background: var(--viptv-color-fill-wash);
+  transform: scale(var(--viptv-motion-pressed-scale));
+}
+@media (hover: hover) and (pointer: fine) {
+  [data-layout="responsive"] .vx-toast__action:hover {
+    background: var(--viptv-color-line-strong);
+  }
+}
+@media (min-width: 600px) {
+  [data-layout="responsive"] .vx-toast__action:focus-visible {
+    box-shadow: var(--viptv-focus-desktop);
+  }
+}
+
+/* Player notice pill + "Preparing playback…" pill (P/D) */
+[data-layout] .vx-notice,
+[data-layout] .vx-preparing {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--viptv-space-2_5);
+  box-sizing: border-box;
+  height: var(--viptv-size-toast-notice-height);
+  margin: 0;
+  padding: 0 var(--viptv-space-4);
+  border: 1px solid var(--viptv-color-line-hairline);
+  border-radius: calc(var(--viptv-size-toast-notice-height) / 2);
+  background: var(--viptv-color-fill-notice-glass);
+  -webkit-backdrop-filter: blur(var(--viptv-size-blur-notice));
+  backdrop-filter: blur(var(--viptv-size-blur-notice));
+  color: var(--viptv-color-text-primary);
+  font-family: var(--viptv-font-family-ui);
+  font-size: var(--viptv-type-desktop-meta-size);
+  font-weight: 500;
+  white-space: nowrap;
+}
+/* Anchored top-centre over the video (P/D 20, TV 28 from the top). */
+[data-layout] .vx-notice--top {
+  position: absolute;
+  top: var(--viptv-space-5);
+  left: 50%;
+  z-index: 30;
+  transform: translateX(-50%);
+}
+
+/* Backend banner */
+[data-layout] .vx-banner {
+  display: flex;
+  gap: var(--viptv-space-3_5);
+  box-sizing: border-box;
+  width: 100%;
+  max-width: var(--viptv-size-toast-desktop-max);
+  margin: 0;
+  padding: var(--viptv-space-4_5);
+  border: 1px solid var(--viptv-color-line-hairline);
+  border-radius: var(--viptv-radius-xl-plus);
+  background: var(--viptv-color-surface-1);
+  box-shadow: var(--viptv-shadow-banner);
+  color: var(--viptv-color-text-primary);
+}
+[data-layout] .vx-banner__icon {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: var(--viptv-size-banner-icon-default);
+  height: var(--viptv-size-banner-icon-default);
+  border-radius: 50%;
+  background: var(--viptv-color-surface-3);
+}
+[data-layout] .vx-banner__icon > svg {
+  display: block;
+  width: var(--viptv-size-icon-phone);
+  height: var(--viptv-size-icon-phone);
+}
+[data-layout] .vx-banner__body {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: var(--viptv-space-1_5);
+  min-width: 0;
+}
+[data-layout] .vx-banner__title {
+  margin: 0;
+  font-family: var(--viptv-font-family-ui);
+  font-size: var(--viptv-type-desktop-body-size);
+  font-weight: 700;
+  line-height: 1.3;
+}
+[data-layout] .vx-banner__text {
+  margin: 0;
+  color: var(--viptv-color-text-secondary);
+  font-size: var(--viptv-type-desktop-row-size);
+  line-height: 1.45;
+}
+[data-layout] .vx-banner__meta {
+  color: var(--viptv-color-text-tertiary);
+  font-size: var(--viptv-type-desktop-meta-size);
+  line-height: var(--viptv-type-desktop-meta-line-height);
+}
+[data-layout] .vx-banner__actions {
+  display: flex;
+  gap: var(--viptv-space-2_5);
+  margin-top: var(--viptv-space-1_5);
+}
+/* The banner's Dismiss is a 40 secondary pill at 14 px on every responsive width. */
+[data-layout="responsive"] .vx-banner__actions > .vx-btn {
+  --vx-h: var(--viptv-size-button-small);
+  --vx-fs: var(--viptv-type-desktop-row-size);
+}
+
+/* Status line, loading more (the inline error line is styled in fields.css) */
+[data-layout] .vx-status,
+[data-layout] .vx-loading-more {
+  display: flex;
+  align-items: center;
+  gap: var(--viptv-space-2);
+  margin: 0;
+  color: var(--viptv-color-text-tertiary);
+  font-family: var(--viptv-font-family-ui);
+  font-size: var(--viptv-type-desktop-meta-size);
+  line-height: var(--viptv-type-desktop-meta-line-height);
+}
+[data-layout] .vx-loading-more {
+  justify-content: center;
+  gap: var(--viptv-space-2_5);
+  padding: var(--viptv-space-4) 0;
+}
+
+/* Empty state: 52 round icon (D 60, TV 88), a title, one line of help, optional one action. */
+[data-layout] .vx-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--viptv-space-3_5);
+  max-width: 520px; /* CmpPhone3 / CmpDesk3 "Empty state" text measure */
+  margin: 0;
+}
+[data-layout] .vx-empty--center {
+  align-items: center;
+  margin-right: auto;
+  margin-left: auto;
+  text-align: center;
+}
+[data-layout] .vx-empty__icon {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: var(--viptv-size-empty-icon-desktop);
+  height: var(--viptv-size-empty-icon-desktop);
+  border: 1px solid var(--viptv-color-line-hairline);
+  border-radius: 50%;
+  background: var(--viptv-color-surface-1);
+  color: var(--viptv-color-text-primary);
+}
+[data-layout] .vx-empty__icon > svg {
+  display: block;
+  width: var(--viptv-size-icon-large);
+  height: var(--viptv-size-icon-large);
+}
+[data-layout] .vx-empty__title {
+  margin: 0;
+  color: var(--viptv-color-text-primary);
+  font-family: var(--viptv-font-family-display);
+  font-size: var(--viptv-type-desktop-empty-title-size);
+  font-weight: var(--viptv-type-desktop-empty-title-weight);
+  line-height: var(--viptv-type-desktop-empty-title-line-height);
+  letter-spacing: var(--viptv-type-desktop-empty-title-letter-spacing);
+}
+[data-layout] .vx-empty__text {
+  margin: 0;
+  color: var(--viptv-color-text-secondary);
+  font-size: var(--viptv-type-desktop-body-size);
+  line-height: var(--viptv-type-desktop-body-line-height);
+}
+[data-layout] .vx-empty__action {
+  display: flex;
+  gap: var(--viptv-space-2_5);
+  margin-top: var(--viptv-space-1_5);
+}
+[data-layout="responsive"] .vx-empty__action > .vx-btn--pill {
+  --vx-px: var(--viptv-space-5);
+}
+
+/*
+ * Skeletons: the real layout's shapes, ground #17171A on the page and #1E1E21 inside a
+ * surface-1 card (.vx-skel--card or any .vx-skel inside .vx-skel-surface). A soft shimmer sweeps
+ * each shape; it stops under prefers-reduced-motion. Families size shapes (tile tokens, or a
+ * width/height style from the reference screen); lines take a width percentage.
+ *   <span class="vx-skel vx-skel--line" style="width: 80%"></span>
+ * Composites (markup in src/ui/primitives/Skeleton.tsx): .vx-skel-tile (art + 2 caption lines;
+ * --poster / --still / --episode), .vx-skel-continue (phone continue card), .vx-skel-featured
+ * (phone featured card), .vx-skel-hero (desktop hero), .vx-skel-row (list row).
+ */
+[data-layout] .vx-skel {
+  --vx-skel-h: var(--viptv-space-2_5);
+  position: relative;
+  display: block;
+  flex: none;
+  overflow: hidden;
+  border-radius: var(--viptv-radius-sm);
+  background: var(--viptv-color-skeleton-ground);
+}
+[data-layout] .vx-skel--card,
+[data-layout] .vx-skel-surface .vx-skel {
+  background: var(--viptv-color-skeleton-card);
+}
+[data-layout] .vx-skel::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  background: linear-gradient(90deg, transparent, var(--viptv-color-skeleton-shimmer), transparent);
+  transform: translateX(-100%);
+  animation: vx-shimmer var(--viptv-motion-shimmer) ease-in-out infinite;
+}
+[data-layout] .vx-skel--line {
+  height: var(--vx-skel-h);
+  border-radius: calc(var(--vx-skel-h) / 2);
+}
+[data-layout] .vx-skel--line-md {
+  --vx-skel-h: var(--viptv-space-3);
+}
+[data-layout] .vx-skel--line-lg {
+  --vx-skel-h: var(--viptv-space-3_5);
+}
+[data-layout] .vx-skel--bar {
+  --vx-skel-h: var(--viptv-size-progress-desktop);
+}
+[data-layout] .vx-skel--round {
+  border-radius: 50%;
+}
+[data-layout] .vx-skel-surface {
+  background: var(--viptv-color-surface-1);
+}
+[data-layout] .vx-skel-lines {
+  display: flex;
+  flex-direction: column;
+  gap: var(--viptv-space-2);
+}
+@keyframes vx-shimmer {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-layout] .vx-skel::after {
+    display: none;
+    animation: none;
+  }
+}
+
+/* Tile: art + two caption lines (80% / 45%). Art sizes come from the tile tokens. */
+[data-layout] .vx-skel-tile {
+  --vx-skel-w: var(--viptv-size-tile-desktop-poster-width);
+  --vx-skel-art-h: var(--viptv-size-tile-desktop-poster-height);
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: var(--viptv-space-2_5);
+  width: var(--vx-skel-w);
+}
+[data-layout] .vx-skel-tile--still {
+  --vx-skel-w: var(--viptv-size-tile-desktop-continue-width);
+  --vx-skel-art-h: var(--viptv-size-tile-desktop-continue-height);
+}
+[data-layout] .vx-skel-tile--episode {
+  --vx-skel-w: var(--viptv-size-tile-desktop-episode-width);
+  --vx-skel-art-h: var(--viptv-size-tile-desktop-episode-height);
+}
+[data-layout] .vx-skel-tile__art {
+  width: 100%;
+  height: var(--vx-skel-art-h);
+  border-radius: var(--viptv-radius-lg);
+}
+
+/* Phone continue card: 292 × 96 surface-1 card, thumb, two lines, bar, play disc. */
+[data-layout] .vx-skel-continue {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--viptv-space-3);
+  box-sizing: border-box;
+  width: var(--viptv-size-tile-phone-continue-width);
+  height: var(--viptv-size-tile-phone-continue-height);
+  padding: var(--viptv-space-2_5) var(--viptv-space-3) var(--viptv-space-2_5) var(--viptv-space-2_5);
+  border-radius: var(--viptv-radius-3xl);
+}
+[data-layout] .vx-skel-continue__thumb {
+  width: var(--viptv-size-tile-phone-continue-thumb-width);
+  height: var(--viptv-size-tile-phone-continue-thumb-height);
+  border-radius: var(--viptv-radius-lg);
+}
+[data-layout] .vx-skel-continue > .vx-skel-lines {
+  flex: 1 1 auto;
+}
+[data-layout] .vx-skel-continue__disc {
+  width: var(--viptv-size-tile-play-disc);
+  height: var(--viptv-size-tile-play-disc);
+}
+
+/* Phone featured card (CmpPhone3 "Skeleton · featured card"): art 150, logo 150 × 40, 3 lines, buttons. */
+[data-layout] .vx-skel-featured {
+  display: block;
+  overflow: hidden;
+  border-radius: var(--viptv-radius-sheet);
+}
+[data-layout] .vx-skel-featured__art {
+  width: 100%;
+  height: 150px; /* CmpPhone3 featured skeleton art height */
+  border-radius: 0;
+}
+[data-layout] .vx-skel-featured__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--viptv-space-2_5);
+  padding: var(--viptv-space-4) var(--viptv-space-4_5) var(--viptv-space-4_5);
+}
+[data-layout] .vx-skel-featured__logo {
+  width: 150px; /* CmpPhone3 featured skeleton title-logo block */
+  height: var(--viptv-size-button-small);
+  border-radius: var(--viptv-radius-sm);
+}
+[data-layout] .vx-skel-actions {
+  display: flex;
+  gap: var(--viptv-space-2_5);
+}
+[data-layout] .vx-skel-actions > .vx-skel {
+  --vx-skel-h: var(--viptv-size-button-desktop);
+  height: var(--vx-skel-h);
+  border-radius: calc(var(--vx-skel-h) / 2);
+}
+[data-layout] .vx-skel-actions > .vx-skel--grow {
+  flex: 1 1 auto;
+}
+[data-layout] .vx-skel-actions > .vx-skel--round {
+  width: var(--vx-skel-h);
+}
+
+/* Desktop hero (CmpDesk3 "Skeleton · hero"): text column 300 + art 420 × 234. */
+[data-layout] .vx-skel-hero {
+  display: flex;
+  align-items: center;
+  gap: calc(2 * var(--viptv-space-5)); /* 40, CmpDesk3 hero skeleton column gap */
+}
+[data-layout] .vx-skel-hero__text {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: var(--viptv-space-4);
+  width: 300px; /* CmpDesk3 hero skeleton text column */
+}
+[data-layout] .vx-skel-hero__logo {
+  width: 220px; /* CmpDesk3 hero skeleton title block */
+  height: 86px;
+  border-radius: var(--viptv-radius-sm-plus);
+}
+[data-layout] .vx-skel-hero__art {
+  width: 420px; /* CmpDesk3 hero skeleton art */
+  height: 234px;
+  border-radius: var(--viptv-radius-3xl);
+}
+[data-layout] .vx-skel-hero .vx-skel-actions > .vx-skel--pill {
+  width: 110px; /* CmpDesk3 hero skeleton button */
+}
+[data-layout] .vx-skel-hero .vx-skel-lines {
+  gap: var(--viptv-space-2_5);
+}
+
+/* List row: phone 60 art r18 + 4 lines (min 84); desktop 40 icon r10 + name + two blocks. */
+[data-layout] .vx-skel-row {
+  display: flex;
+  align-items: center;
+  gap: var(--viptv-space-3_5);
+  box-sizing: border-box;
+  height: var(--viptv-space-16);
+}
+[data-layout] .vx-skel-row__art {
+  width: var(--viptv-size-button-small);
+  height: var(--viptv-size-button-small);
+  border-radius: var(--viptv-radius-sm-plus);
+}
+[data-layout] .vx-skel-row__name {
+  width: 140px; /* CmpDesk3 list-row skeleton name */
+}
+[data-layout] .vx-skel-row__block {
+  height: var(--viptv-size-button-phone);
+  border-radius: var(--viptv-radius-sm-plus);
+}
+[data-layout] .vx-skel-row > .vx-skel-lines {
+  flex: 1 1 auto;
+}
+
+@media (max-width: 599px) {
+  [data-layout="responsive"] .vx-toast-region {
+    bottom: var(--viptv-size-toast-phone-bottom);
+  }
+  [data-layout="responsive"] .vx-toast,
+  [data-layout="responsive"] .vx-banner {
+    max-width: var(--viptv-size-toast-phone-max);
+  }
+  [data-layout="responsive"] .vx-empty {
+    gap: var(--viptv-space-3_5);
+  }
+  [data-layout="responsive"] .vx-empty__icon {
+    width: var(--viptv-size-empty-icon-phone);
+    height: var(--viptv-size-empty-icon-phone);
+  }
+  [data-layout="responsive"] .vx-empty__icon > svg {
+    width: var(--viptv-size-icon-phone-round);
+    height: var(--viptv-size-icon-phone-round);
+  }
+  [data-layout="responsive"] .vx-empty__title {
+    font-size: var(--viptv-type-phone-empty-title-size);
+    font-weight: var(--viptv-type-phone-empty-title-weight);
+    line-height: var(--viptv-type-phone-empty-title-line-height);
+    letter-spacing: var(--viptv-type-phone-empty-title-letter-spacing);
+  }
+  [data-layout="responsive"] .vx-empty__text {
+    font-size: var(--viptv-type-phone-body-size);
+    line-height: 1.5;
+  }
+  [data-layout="responsive"] .vx-skel-tile {
+    --vx-skel-w: var(--viptv-size-tile-phone-poster-width);
+    --vx-skel-art-h: var(--viptv-size-tile-phone-poster-height);
+  }
+  [data-layout="responsive"] .vx-skel-tile__art {
+    border-radius: var(--viptv-radius-xl);
+  }
+  [data-layout="responsive"] .vx-skel-actions > .vx-skel {
+    --vx-skel-h: var(--viptv-size-button-phone);
+  }
+  [data-layout="responsive"] .vx-skel-row {
+    height: auto;
+    min-height: 84px; /* CmpPhone3 list-row skeleton (channel row) */
+    padding: var(--viptv-space-2_5) var(--viptv-space-4);
+  }
+  [data-layout="responsive"] .vx-skel-row__art {
+    width: var(--viptv-size-tile-phone-channel-logo-width);
+    height: var(--viptv-size-tile-phone-channel-logo-height);
+    border-radius: var(--viptv-radius-2xl);
+  }
+}
+
+/* TV (1920×1080 canvas px) */
+.tv-layout .vx-toast-region {
+  top: var(--viptv-size-toast-tv-top);
+  bottom: auto;
+  position: absolute;
+}
+.tv-layout .vx-toast {
+  gap: var(--viptv-space-4);
+  max-width: none;
+  min-height: var(--viptv-size-toast-tv-height);
+  padding: var(--viptv-space-3) var(--viptv-space-3_5) var(--viptv-space-3) var(--viptv-space-7);
+  border: var(--viptv-size-border-strong) solid var(--viptv-color-line-chip);
+  border-radius: var(--viptv-radius-2xl-plus);
+  background: var(--viptv-color-surface-1);
+  box-shadow: var(--viptv-shadow-popup);
+  color: var(--viptv-color-text-primary);
+  font-size: var(--viptv-type-tv-label-size);
+}
+.tv-layout .vx-toast__icon {
+  width: var(--viptv-size-icon-tv);
+  height: var(--viptv-size-icon-tv);
+}
+.tv-layout .vx-toast__text {
+  padding: 0;
+  line-height: var(--viptv-type-tv-label-line-height);
+  white-space: nowrap;
+}
+.tv-layout .vx-toast__action {
+  height: var(--viptv-size-toast-tv-action-height);
+  margin-left: var(--viptv-space-3);
+  padding: 0 calc(var(--viptv-space-8) + var(--viptv-space-0_5)); /* 34, the TV pill padding */
+  border-radius: calc(var(--viptv-size-toast-tv-action-height) / 2);
+  background: var(--viptv-color-fill-tv-unfocused);
+  font-size: var(--viptv-type-tv-meta-size);
+  font-weight: 700;
+}
+.tv-layout .vx-toast__action:focus {
+  background: var(--viptv-color-text-primary);
+  color: var(--viptv-color-on-light);
+  box-shadow: var(--viptv-focus-tv-shadow);
+  transform: scale(var(--viptv-focus-tv-scale-button));
+}
+.tv-layout .vx-notice,
+.tv-layout .vx-preparing {
+  gap: var(--viptv-space-3_5);
+  height: var(--viptv-size-toast-tv-notice-height);
+  padding: 0 var(--viptv-space-7);
+  border: var(--viptv-size-border-strong) solid var(--viptv-color-line-chip);
+  border-radius: calc(var(--viptv-size-toast-tv-notice-height) / 2);
+  background: var(--viptv-color-fill-notice-glass-tv);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  font-size: var(--viptv-type-tv-label-size);
+  font-weight: 400;
+}
+.tv-layout .vx-notice--top {
+  top: var(--viptv-space-7);
+}
+/* TV "Preparing playback…" is a centred panel: 56 spinner over 30/600 words. */
+.tv-layout .vx-preparing {
+  flex-direction: column;
+  gap: var(--viptv-space-5_5);
+  height: auto;
+  padding: 40px 60px; /* CmpTv3 "Preparing playback panel" */
+  border-radius: var(--viptv-radius-sheet);
+  font-size: var(--viptv-type-tv-field-size);
+  font-weight: 600;
+  white-space: normal;
+  text-align: center;
+}
+.tv-layout .vx-preparing > .vx-spinner {
+  --vx-spinner: var(--viptv-size-spinner-tv-panel);
+  --vx-spinner-stroke: var(--viptv-size-spinner-stroke-tv-panel);
+}
+.tv-layout .vx-preparing--center {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 30;
+  transform: translate(-50%, -50%);
+}
+/* TV backend panel: a centred 980 alert panel (icon above the words), over a 0.6 scrim. */
+.tv-layout .vx-banner {
+  flex-direction: column;
+  gap: var(--viptv-space-5);
+  width: 980px; /* CmpTv3 "Backend panel" width */
+  max-width: none;
+  padding: 54px 60px; /* CmpTv3 "Backend panel" padding */
+  border: 0;
+  border-radius: var(--viptv-radius-sheet);
+  box-shadow: var(--viptv-shadow-tv-dialog);
+}
+.tv-layout .vx-banner__icon {
+  width: var(--viptv-size-banner-icon-tv);
+  height: var(--viptv-size-banner-icon-tv);
+  background: var(--viptv-color-fill-icon-disc-tv);
+}
+.tv-layout .vx-banner__icon > svg {
+  width: var(--viptv-size-icon-banner-tv);
+  height: var(--viptv-size-icon-banner-tv);
+}
+.tv-layout .vx-banner__body {
+  display: contents;
+}
+.tv-layout .vx-banner__title {
+  font-family: var(--viptv-font-family-display);
+  font-size: var(--viptv-type-tv-panel-title-size);
+  font-weight: var(--viptv-type-tv-panel-title-weight);
+  line-height: var(--viptv-type-tv-panel-title-line-height);
+}
+.tv-layout .vx-banner__text {
+  color: var(--viptv-color-text-body);
+  font-size: var(--viptv-type-tv-body-size);
+  line-height: var(--viptv-type-tv-body-line-height);
+}
+.tv-layout .vx-banner__meta {
+  font-size: var(--viptv-type-tv-meta-size);
+}
+.tv-layout .vx-banner__actions {
+  gap: var(--viptv-space-4_5);
+  margin-top: var(--viptv-space-2_5);
+}
+.tv-layout .vx-banner--center {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 37;
+  transform: translate(-50%, -50%);
+}
+.tv-layout .vx-status,
+.tv-layout .vx-loading-more {
+  gap: var(--viptv-space-3);
+  color: var(--viptv-color-text-secondary);
+  font-size: var(--viptv-type-tv-meta-size);
+  line-height: var(--viptv-type-tv-meta-line-height);
+}
+.tv-layout .vx-loading-more {
+  gap: var(--viptv-space-2_5);
+  padding: var(--viptv-space-6) 0;
+}
+.tv-layout .vx-empty {
+  gap: var(--viptv-space-4_5);
+  max-width: 820px; /* CmpTv3 "Empty state" text measure */
+}
+.tv-layout .vx-empty__icon {
+  width: var(--viptv-size-empty-icon-tv);
+  height: var(--viptv-size-empty-icon-tv);
+  border: 0;
+  background: var(--viptv-color-fill-tv-field);
+}
+.tv-layout .vx-empty__icon > svg {
+  width: var(--viptv-size-icon-tv-large);
+  height: var(--viptv-size-icon-tv-large);
+}
+.tv-layout .vx-empty__title {
+  font-size: var(--viptv-type-tv-empty-title-size);
+  font-weight: var(--viptv-type-tv-empty-title-weight);
+  line-height: var(--viptv-type-tv-empty-title-line-height);
+  letter-spacing: 0;
+}
+.tv-layout .vx-empty__text {
+  font-size: var(--viptv-type-tv-body-size);
+  line-height: var(--viptv-type-tv-body-line-height);
+}
+.tv-layout .vx-empty__action {
+  gap: var(--viptv-space-4_5);
+  margin-top: var(--viptv-space-2_5);
+}
+/* TV startup cover: wordmark over "Starting VIPTV…", centred on the ground. */
+.tv-layout .vx-startup {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--viptv-space-5_5);
+  background: var(--viptv-color-bg);
+  color: var(--viptv-color-text-primary);
+}
+.tv-layout .vx-startup__mark {
+  font-family: var(--viptv-font-family-display);
+  font-size: var(--viptv-type-tv-wordmark-size);
+  font-weight: var(--viptv-type-tv-wordmark-weight);
+  line-height: var(--viptv-type-tv-wordmark-line-height);
+}
+.tv-layout .vx-startup .vx-status {
+  gap: var(--viptv-space-3_5);
+  font-size: var(--viptv-type-tv-label-size);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-layout] .vx-toast__action {
+    transition: none;
+  }
+}

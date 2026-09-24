@@ -1,1 +1,396 @@
-/* Design-system primitive: rows. See design/viptv-design-system/components.md. */
+/*
+ * Design-system primitive: rows (components.md §5; CmpPhone1 / CmpDesk1 / CmpTv1
+ * "Selection and settings rows"). Choice rows, radio rows and the switch live in toggles.css.
+ *
+ * Settings group: a label over a surface-1 card of rows split by hairlines (P radius 22, D 18).
+ *   <section class="vx-settings-group" aria-labelledby="g-play">
+ *     <h2 class="vx-settings-group__label" id="g-play">Playback</h2>
+ *     <div class="vx-settings-card">
+ *       <a class="vx-settings-row" href="…">                      (or <button type="button">)
+ *         <span class="vx-settings-row__icon" aria-hidden="true"><svg/></span>
+ *         <span class="vx-settings-row__text">
+ *           <span class="vx-settings-row__title">Playback preferences</span>
+ *           <span class="vx-settings-row__note">Audio, subtitles and quality</span></span>
+ *         <span class="vx-settings-row__end">
+ *           <span class="vx-settings-row__value">Version 0.1.0</span>      (values never wrap)
+ *           <svg class="vx-settings-row__chevron" aria-hidden="true"/></span></a></div></section>
+ *   Toggle rows have no chevron: the row is the switch (<button role="switch" aria-checked> with
+ *   the visual switch as an aria-hidden child in __end), or a <div> row holding the switch button.
+ *   --danger: destructive row ("Sign out", "Remove addon"): danger text + icon, no chevron.
+ *   States: pressed (P) / hover (D) = surface-2; :focus-visible (D) ring; disabled 0.4.
+ * TV: rows are 80 tall, radius 22, no card; focused = off-white fill, ring, scale 1.02. The
+ *   description panel on the right explains the focused row:
+ *   <aside class="vx-tv-description"><h2 class="vx-tv-description__title">Maximum quality</h2>
+ *     <p class="vx-tv-description__text">Current: Auto</p></aside>
+ * Section nav (D settings): <nav class="vx-section-nav" aria-label="Settings">
+ *   <span class="vx-section-nav__label">This device</span>
+ *   <a class="vx-section-nav__item" aria-current="page"><svg/>Appearance</a>
+ *   <a class="vx-section-nav__item vx-section-nav__item--danger"><svg/>Sign out</a></nav>
+ */
+
+/* Group + card */
+[data-layout] .vx-settings-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--viptv-space-2);
+  margin: 0;
+}
+[data-layout] .vx-settings-group__label {
+  margin: 0;
+  padding: 0 var(--viptv-space-4);
+  color: var(--viptv-color-text-tertiary);
+  font-family: var(--viptv-font-family-ui);
+  font-size: var(--viptv-type-desktop-nav-label-size);
+  font-weight: var(--viptv-type-desktop-nav-label-weight);
+  line-height: var(--viptv-type-desktop-nav-label-line-height);
+  letter-spacing: var(--viptv-type-desktop-nav-label-letter-spacing);
+  text-transform: uppercase;
+}
+[data-layout] .vx-settings-card {
+  --vx-card-r: var(--viptv-radius-2xl);
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  border-radius: var(--vx-card-r);
+  background: var(--viptv-color-surface-1);
+}
+
+/* Row */
+[data-layout] .vx-settings-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--viptv-space-3_5);
+  box-sizing: border-box;
+  width: 100%;
+  min-height: var(--viptv-size-row-settings);
+  margin: 0;
+  padding: var(--viptv-space-2) var(--viptv-space-4);
+  border: 0;
+  border-radius: 0;
+  outline: none;
+  background: transparent;
+  color: var(--viptv-color-text-primary);
+  font-family: var(--viptv-font-family-ui);
+  font-size: var(--viptv-type-desktop-body-size);
+  font-weight: 500;
+  line-height: 1.3;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background-color var(--viptv-motion-focus) ease-out, box-shadow var(--viptv-motion-focus) ease-out;
+}
+/* The card does not clip (so the keyboard ring stays whole); the end rows take its corners. */
+[data-layout] .vx-settings-card > .vx-settings-row:first-child {
+  border-top-left-radius: var(--vx-card-r);
+  border-top-right-radius: var(--vx-card-r);
+}
+[data-layout] .vx-settings-card > .vx-settings-row:last-child {
+  border-bottom-left-radius: var(--vx-card-r);
+  border-bottom-right-radius: var(--vx-card-r);
+}
+[data-layout] .vx-settings-row__icon {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: var(--viptv-size-row-settings-icon);
+  height: var(--viptv-size-row-settings-icon);
+  border-radius: var(--viptv-size-row-settings-icon-radius);
+  background: var(--viptv-color-surface-3);
+  color: inherit;
+}
+[data-layout] .vx-settings-row__icon > svg {
+  display: block;
+  width: var(--viptv-size-icon-desktop);
+  height: var(--viptv-size-icon-desktop);
+}
+/* Hairlines split rows under the text column only (as drawn), full row height. */
+[data-layout] .vx-settings-row__text {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  justify-content: center;
+  align-self: stretch;
+  gap: var(--viptv-space-0_5);
+  min-width: 0;
+  margin: calc(var(--viptv-space-2) * -1) 0;
+  padding: var(--viptv-space-2) 0;
+}
+[data-layout] .vx-settings-row + .vx-settings-row .vx-settings-row__text {
+  border-top: 1px solid var(--viptv-color-line-hairline);
+}
+[data-layout] .vx-settings-row__title {
+  font-size: inherit;
+  font-weight: inherit;
+}
+[data-layout] .vx-settings-row__note {
+  color: var(--viptv-color-text-tertiary);
+  font-size: var(--viptv-type-desktop-meta-size);
+  font-weight: 400;
+  line-height: var(--viptv-type-desktop-meta-line-height);
+}
+[data-layout] .vx-settings-row__end {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--viptv-space-2);
+}
+[data-layout] .vx-settings-row__value {
+  color: var(--viptv-color-text-secondary);
+  font-size: var(--viptv-type-desktop-row-size);
+  font-weight: 400;
+  white-space: nowrap;
+}
+[data-layout] .vx-settings-row__chevron {
+  display: block;
+  flex: none;
+  width: var(--viptv-size-icon-desktop);
+  height: var(--viptv-size-icon-desktop);
+  color: var(--viptv-color-text-tertiary);
+}
+[data-layout] .vx-settings-row--danger {
+  color: var(--viptv-color-status-danger);
+}
+[data-layout] .vx-settings-row:disabled,
+[data-layout] .vx-settings-row[aria-disabled="true"] {
+  opacity: 0.4;
+  cursor: default;
+}
+[data-layout="responsive"] .vx-settings-row:active:not(:disabled):not([aria-disabled="true"]) {
+  background: var(--viptv-color-surface-2);
+}
+@media (hover: hover) and (pointer: fine) {
+  [data-layout="responsive"] .vx-settings-row:hover:not(:disabled):not([aria-disabled="true"]) {
+    background: var(--viptv-color-surface-2);
+  }
+}
+@media (min-width: 600px) {
+  [data-layout="responsive"] .vx-settings-row:focus-visible {
+    z-index: 1;
+    outline: none;
+    box-shadow: var(--viptv-focus-desktop);
+  }
+}
+
+/* Section nav (desktop settings) */
+[data-layout] .vx-section-nav {
+  display: flex;
+  flex-direction: column;
+  gap: var(--viptv-space-0_5);
+  margin: 0;
+  padding: 0;
+}
+[data-layout] .vx-section-nav__label {
+  display: block;
+  margin: 0;
+  padding: var(--viptv-space-2) var(--viptv-space-3) var(--viptv-space-1_5);
+  color: var(--viptv-color-text-tertiary);
+  font-family: var(--viptv-font-family-ui);
+  font-size: var(--viptv-type-desktop-nav-label-size);
+  font-weight: var(--viptv-type-desktop-nav-label-weight);
+  line-height: var(--viptv-type-desktop-nav-label-line-height);
+  letter-spacing: var(--viptv-type-desktop-nav-label-letter-spacing);
+  text-transform: uppercase;
+}
+[data-layout] .vx-section-nav__item + .vx-section-nav__label {
+  padding-top: var(--viptv-space-4);
+}
+[data-layout] .vx-section-nav__item {
+  display: flex;
+  align-items: center;
+  gap: var(--viptv-space-3);
+  box-sizing: border-box;
+  width: 100%;
+  height: var(--viptv-size-row-section-nav);
+  min-height: 0;
+  margin: 0;
+  padding: 0 var(--viptv-space-3);
+  border: 0;
+  border-radius: var(--viptv-radius-md);
+  outline: none;
+  background: transparent;
+  color: var(--viptv-color-text-secondary);
+  font-family: var(--viptv-font-family-ui);
+  font-size: var(--viptv-type-desktop-label-size);
+  font-weight: 500;
+  line-height: 1;
+  text-align: left;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background-color var(--viptv-motion-focus) ease-out, color var(--viptv-motion-focus) ease-out;
+}
+[data-layout] .vx-section-nav__item > svg {
+  display: block;
+  flex: none;
+  width: var(--viptv-size-icon-desktop);
+  height: var(--viptv-size-icon-desktop);
+}
+[data-layout] .vx-section-nav__item[aria-current="page"],
+[data-layout] .vx-section-nav__item[aria-current="true"] {
+  background: var(--viptv-color-surface-2);
+  color: var(--viptv-color-text-primary);
+  font-weight: 600;
+}
+[data-layout] .vx-section-nav__item--danger {
+  color: var(--viptv-color-status-danger);
+}
+[data-layout="responsive"] .vx-section-nav__item:active {
+  background: var(--viptv-color-surface-2);
+}
+@media (hover: hover) and (pointer: fine) {
+  [data-layout="responsive"] .vx-section-nav__item:hover:not([aria-current="page"]):not([aria-current="true"]) {
+    background: var(--viptv-color-fill-wash-pressed);
+    color: var(--viptv-color-text-primary);
+  }
+  [data-layout="responsive"] .vx-section-nav__item--danger:hover {
+    color: var(--viptv-color-status-danger);
+  }
+}
+@media (min-width: 600px) {
+  [data-layout="responsive"] .vx-section-nav__item:focus-visible {
+    outline: none;
+    box-shadow: var(--viptv-focus-desktop);
+  }
+}
+
+/* Phone */
+@media (max-width: 599px) {
+  [data-layout="responsive"] .vx-settings-group__label {
+    font-size: var(--viptv-type-phone-group-label-size);
+    font-weight: var(--viptv-type-phone-group-label-weight);
+    line-height: var(--viptv-type-phone-group-label-line-height);
+    letter-spacing: var(--viptv-type-phone-group-label-letter-spacing);
+  }
+  [data-layout="responsive"] .vx-settings-card {
+    --vx-card-r: var(--viptv-radius-3xl);
+  }
+  [data-layout="responsive"] .vx-settings-row {
+    font-size: var(--viptv-type-phone-body-strong-size);
+  }
+  [data-layout="responsive"] .vx-settings-row__note {
+    font-size: var(--viptv-type-phone-meta-size);
+  }
+  [data-layout="responsive"] .vx-settings-row__value {
+    font-size: var(--viptv-type-phone-label-size);
+  }
+}
+
+/* TV (1920×1080 canvas px): 80-tall rows, radius 22, no card; focus = off-white + ring + 1.02. */
+.tv-layout .vx-settings-group {
+  gap: var(--viptv-space-3);
+}
+.tv-layout .vx-settings-group__label {
+  padding: 0 var(--viptv-space-7);
+  font-size: var(--viptv-type-tv-eyebrow-size);
+  font-weight: var(--viptv-type-tv-eyebrow-weight);
+  line-height: var(--viptv-type-tv-eyebrow-line-height);
+  letter-spacing: var(--viptv-type-tv-eyebrow-letter-spacing);
+}
+.tv-layout .vx-settings-card {
+  --vx-card-r: var(--viptv-radius-3xl);
+  gap: var(--viptv-space-2_5);
+  background: transparent;
+}
+.tv-layout .vx-settings-row,
+.tv-layout .vx-settings-card > .vx-settings-row:first-child,
+.tv-layout .vx-settings-card > .vx-settings-row:last-child {
+  border-radius: var(--viptv-radius-3xl);
+}
+.tv-layout .vx-settings-row {
+  gap: var(--viptv-space-5_5);
+  min-height: var(--viptv-size-row-tv);
+  padding: var(--viptv-space-2_5) var(--viptv-space-7);
+  font-size: var(--viptv-type-tv-list-row-size);
+  font-weight: var(--viptv-type-tv-list-row-weight);
+  line-height: var(--viptv-type-tv-list-row-line-height);
+  transition:
+    transform var(--viptv-motion-focus) ease-out,
+    box-shadow var(--viptv-motion-focus) ease-out,
+    background-color var(--viptv-motion-focus) ease-out,
+    color var(--viptv-motion-focus) ease-out;
+}
+.tv-layout .vx-settings-row__icon {
+  width: auto;
+  height: auto;
+  border-radius: 0;
+  background: transparent;
+}
+.tv-layout .vx-settings-row__icon > svg {
+  width: var(--viptv-size-icon-tv);
+  height: var(--viptv-size-icon-tv);
+}
+.tv-layout .vx-settings-row__text,
+.tv-layout .vx-settings-row + .vx-settings-row .vx-settings-row__text {
+  margin: 0;
+  padding: 0;
+  border-top: 0;
+}
+.tv-layout .vx-settings-row__note {
+  color: var(--viptv-color-text-secondary);
+  font-size: var(--viptv-type-tv-meta-size);
+}
+.tv-layout .vx-settings-row__value {
+  font-size: var(--viptv-type-tv-meta-size);
+  font-weight: 500;
+}
+.tv-layout .vx-settings-row__chevron {
+  width: var(--viptv-size-icon-tv-small);
+  height: var(--viptv-size-icon-tv-small);
+  color: inherit;
+}
+.tv-layout .vx-settings-row--danger {
+  color: var(--viptv-color-status-danger-tv);
+}
+.tv-layout .vx-settings-row:focus {
+  outline: none;
+  background: var(--viptv-color-text-primary);
+  color: var(--viptv-color-on-light);
+  box-shadow: var(--viptv-focus-tv-shadow);
+  transform: scale(var(--viptv-focus-tv-scale-row));
+}
+.tv-layout .vx-settings-row:focus .vx-settings-row__note,
+.tv-layout .vx-settings-row:focus .vx-settings-row__value {
+  color: var(--viptv-color-text-on-light-secondary);
+}
+.tv-layout .vx-settings-row--danger:focus {
+  color: var(--viptv-color-status-danger-on-light);
+}
+.tv-layout .vx-settings-row:active:not(:disabled) {
+  background: var(--viptv-color-fill-light-pressed);
+}
+
+/* TV description panel (right side of the settings screens) */
+.tv-layout .vx-tv-description {
+  display: flex;
+  flex-direction: column;
+  gap: var(--viptv-space-3_5);
+  margin: 0;
+}
+.tv-layout .vx-tv-description__title {
+  margin: 0;
+  color: var(--viptv-color-text-primary);
+  font-family: var(--viptv-font-family-display);
+  font-size: var(--viptv-type-tv-description-title-size);
+  font-weight: var(--viptv-type-tv-description-title-weight);
+  line-height: var(--viptv-type-tv-description-title-line-height);
+  letter-spacing: var(--viptv-type-tv-description-title-letter-spacing);
+}
+.tv-layout .vx-tv-description__text {
+  margin: 0;
+  color: var(--viptv-color-text-secondary);
+  font-size: var(--viptv-type-tv-label-size);
+  font-weight: 400;
+  line-height: var(--viptv-type-tv-body-line-height);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-layout] .vx-settings-row,
+  [data-layout] .vx-section-nav__item {
+    transition: none;
+  }
+}

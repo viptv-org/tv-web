@@ -1,1 +1,813 @@
-/* Design-system primitive: overlays. See design/viptv-design-system/components.md. */
+/*
+ * Design-system primitive: overlays (components.md §8; CmpPhone3 / CmpDesk3 / CmpTv3 "Overlays").
+ *
+ * One markup, three platform shapes:
+ *   phone   bottom sheet: auto height, radius 30 top, grabber, 0.62 scrim, stacked 54 actions
+ *   desktop centred dialog 460 (radius 18, padding 24, × disc), 0.55 scrim, stacked 48 actions
+ *   TV      right panel 820 (padding 64 / 96 / 120 / 64), 0.6 scrim, 80-tall action rows, BACK
+ * --drawer is the tall list overlay: phone sheet from 150 px down, desktop right drawer 460, TV panel.
+ *
+ * <div class="vx-overlay">                   absolute over its containing block: mount it in the
+ *   <div class="vx-scrim" aria-hidden="true"></div>     body row on desktop (title bar and rail stay
+ *   <section class="vx-dialog" role="dialog" aria-modal="true" aria-labelledby="d-t">   bright)
+ *     <button class="vx-dialog__grabber" type="button" aria-label="Close"><span></span></button>
+ *     <div class="vx-dialog__header">
+ *       <h2 class="vx-dialog__title" id="d-t">Sign out of this device?</h2>
+ *       [<span class="vx-dialog__meta">12 sources</span>]
+ *       <button class="vx-close" type="button" aria-label="Close"><svg/></button></div>
+ *     <p class="vx-dialog__text">The selected source did not become ready in time.</p>
+ *       (--detail: pre-line body text, e.g. Source details)
+ *     [<div class="vx-menu">…menu items…</div>]
+ *     <div class="vx-dialog__actions"><button class="vx-btn vx-btn--destructive">…</button>
+ *       <button class="vx-btn">Cancel</button></div></section></div>
+ * Grabber shows on phone only, the × disc on desktop only (Esc too); TV closes with BACK.
+ * Cancel stays neutral and gets default focus on D and T. Destructive = .vx-btn--destructive.
+ * Drawer parts: __head (header + status), __tools (chips), __scroll (list), __footer (kbd hints).
+ *
+ * Menu (title menu, dialog lists, popover items; P 56 hairline rows, D 48 radius 10, TV 80 rows):
+ *   <div class="vx-menu" role="menu"><button class="vx-menu__item" role="menuitem">
+ *     <span class="vx-menu__icon" aria-hidden="true"><svg/></span>
+ *     <span class="vx-menu__label">Choose source</span>
+ *     [<span class="vx-menu__current"><svg/>Current</span>]</button></div>
+ * Popover (D, belongs to one control, no scrim): positioned by the owner (top / left style).
+ *   <div class="vx-popover" role="menu"><div class="vx-popover__label">Source provider</div>
+ *     …vx-menu__item…</div>
+ * TV full-screen text panel (More info, Source details), scrolled with ▲▼:
+ *   <div class="vx-overlay"><div class="vx-scrim vx-scrim--fullscreen"></div>
+ *     <section class="vx-text-panel" role="dialog"><h2 class="vx-text-panel__title">…</h2>
+ *       <div class="vx-text-panel__meta">…</div>
+ *       <div class="vx-text-panel__box" tabindex="0"><div class="vx-text-panel__content"><p>…</p></div>
+ *         <span class="vx-text-panel__bar" aria-hidden="true"></span></div>
+ *       <div class="vx-text-panel__actions"><button class="vx-btn">Close</button></div></section>
+ *     <div class="vx-legend vx-legend--corner">▲▼ Scroll · BACK Close</div></div>
+ * TV full-screen text entry: field left, keyboard right (keyboard markup: fields.css).
+ *   <section class="vx-tv-entry [vx-tv-entry--digits]" role="dialog">
+ *     <div class="vx-tv-entry__main"><h2 class="vx-tv-entry__title">Profile name</h2>
+ *       …field…<div class="vx-tv-entry__hints"><span>Select to type …</span>
+ *       <span class="vx-tv-entry__count">5 / 64</span></div></div>
+ *     <div class="vx-tv-entry__keys">…keyboard…</div></section>
+ * React: Overlay, Dialog, Menu/MenuItem, Popover, TvTextPanel, TvTextEntry (src/ui/primitives/Overlays.tsx).
+ */
+
+/* Layer + scrim */
+[data-layout] .vx-overlay {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 40;
+}
+[data-layout] .vx-overlay--fixed {
+  position: fixed;
+}
+[data-layout] .vx-scrim {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: var(--viptv-color-scrim-dialog);
+}
+
+/* Dialog: desktop centred 460 (placed a little above centre, as the sheets draw it). */
+[data-layout] .vx-dialog {
+  position: absolute;
+  top: 35%;
+  left: 50%;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--viptv-space-3_5);
+  box-sizing: border-box;
+  width: var(--viptv-layout-desktop-dialog-width);
+  max-width: calc(100% - 2 * var(--viptv-space-6));
+  max-height: calc(100% - 2 * var(--viptv-space-6));
+  margin: 0;
+  padding: var(--viptv-space-6);
+  overflow-y: auto;
+  border: 1px solid var(--viptv-color-line-hairline);
+  border-radius: var(--viptv-radius-2xl);
+  outline: none;
+  background: var(--viptv-color-surface-1);
+  box-shadow: var(--viptv-shadow-dialog);
+  color: var(--viptv-color-text-primary);
+  font-family: var(--viptv-font-family-ui);
+  transform: translate(-50%, -50%);
+}
+[data-layout] .vx-dialog__grabber {
+  display: none;
+}
+[data-layout] .vx-dialog__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--viptv-space-4);
+}
+[data-layout] .vx-dialog__title {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
+  font-family: var(--viptv-font-family-display);
+  font-size: var(--viptv-type-desktop-dialog-title-size);
+  font-weight: var(--viptv-type-desktop-dialog-title-weight);
+  line-height: var(--viptv-type-desktop-dialog-title-line-height);
+  letter-spacing: var(--viptv-type-desktop-dialog-title-letter-spacing);
+}
+[data-layout] .vx-dialog__meta {
+  flex: none;
+  color: var(--viptv-color-text-secondary);
+  font-size: var(--viptv-type-desktop-row-size);
+  white-space: nowrap;
+}
+[data-layout] .vx-dialog__text {
+  margin: 0;
+  color: var(--viptv-color-text-secondary);
+  font-size: var(--viptv-type-desktop-row-size);
+  line-height: 1.5;
+}
+[data-layout] .vx-dialog__text--detail {
+  color: var(--viptv-color-text-body);
+  line-height: 1.6;
+  white-space: pre-line;
+}
+[data-layout] .vx-dialog__actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--viptv-space-2_5);
+  margin-top: var(--viptv-space-1);
+}
+[data-layout] .vx-dialog__actions > .vx-btn {
+  display: flex;
+  width: 100%;
+}
+
+/* × close disc (desktop dialogs and drawers). */
+[data-layout] .vx-close {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: var(--viptv-size-close-disc-default);
+  height: var(--viptv-size-close-disc-default);
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  outline: none;
+  background: var(--viptv-color-surface-3);
+  color: var(--viptv-color-text-primary);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform var(--viptv-motion-focus) ease-out, background-color var(--viptv-motion-focus) ease-out, box-shadow var(--viptv-motion-focus) ease-out;
+}
+[data-layout] .vx-close > svg {
+  display: block;
+  width: var(--viptv-size-icon-desktop);
+  height: var(--viptv-size-icon-desktop);
+}
+[data-layout="responsive"] .vx-close:active {
+  background: var(--viptv-color-surface-2);
+  transform: scale(var(--viptv-motion-pressed-scale));
+}
+@media (hover: hover) and (pointer: fine) {
+  [data-layout="responsive"] .vx-close:hover {
+    background: var(--viptv-color-surface-4);
+  }
+}
+@media (min-width: 600px) {
+  [data-layout="responsive"] .vx-close:focus-visible {
+    box-shadow: var(--viptv-focus-desktop);
+  }
+}
+
+/* Drawer (desktop right drawer 460 under the title bar; phone tall sheet; TV panel). */
+[data-layout] .vx-dialog--drawer {
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: auto;
+  gap: 0;
+  width: var(--viptv-layout-desktop-drawer-width);
+  max-width: 100%;
+  max-height: none;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  border-left: 1px solid var(--viptv-color-line-hairline);
+  border-radius: 0;
+  box-shadow: var(--viptv-shadow-drawer);
+  transform: none;
+}
+[data-layout] .vx-dialog__head {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: var(--viptv-space-1_5);
+  padding: var(--viptv-space-6) var(--viptv-space-6) 0;
+}
+[data-layout] .vx-dialog--drawer .vx-dialog__header {
+  align-items: center;
+}
+[data-layout] .vx-dialog__tools {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--viptv-space-2_5);
+  padding: var(--viptv-space-4_5) var(--viptv-space-6) var(--viptv-space-4);
+}
+[data-layout] .vx-dialog__scroll {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: var(--viptv-space-2);
+  min-height: 0;
+  padding: 0 var(--viptv-space-6) var(--viptv-space-6);
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+[data-layout] .vx-dialog__scroll::-webkit-scrollbar {
+  display: none;
+}
+[data-layout] .vx-dialog__footer {
+  flex: none;
+  padding: var(--viptv-space-3_5) var(--viptv-space-6);
+  border-top: 1px solid var(--viptv-color-line-hairline);
+}
+
+/* Menu items (title menu, lists inside dialogs, popover items) */
+[data-layout] .vx-menu {
+  display: flex;
+  flex-direction: column;
+  gap: var(--viptv-space-0_5);
+  margin: 0 calc(var(--viptv-space-2_5) * -1);
+  padding: 0;
+  list-style: none;
+}
+[data-layout] .vx-menu__item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--viptv-space-3);
+  box-sizing: border-box;
+  width: 100%;
+  min-height: var(--viptv-size-row-choice-desktop);
+  margin: 0;
+  padding: var(--viptv-space-2) var(--viptv-space-3_5);
+  border: 0;
+  border-radius: var(--viptv-radius-sm-plus);
+  outline: none;
+  background: transparent;
+  color: var(--viptv-color-text-primary);
+  font-family: var(--viptv-font-family-ui);
+  font-size: var(--viptv-type-desktop-label-size);
+  font-weight: 500;
+  line-height: 1.3;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background-color var(--viptv-motion-focus) ease-out, box-shadow var(--viptv-motion-focus) ease-out, transform var(--viptv-motion-focus) ease-out;
+}
+[data-layout] .vx-menu__icon {
+  display: flex;
+  flex: none;
+  color: var(--viptv-color-text-secondary);
+}
+[data-layout] .vx-menu__icon > svg {
+  display: block;
+  width: var(--viptv-size-icon-desktop-round);
+  height: var(--viptv-size-icon-desktop-round);
+}
+[data-layout] .vx-menu__label {
+  display: flex;
+  flex-direction: column;
+  gap: var(--viptv-space-0_5);
+  min-width: 0;
+}
+[data-layout] .vx-menu__note {
+  color: var(--viptv-color-text-tertiary);
+  font-size: var(--viptv-type-desktop-meta-size);
+  font-weight: 400;
+}
+[data-layout] .vx-menu__current {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--viptv-space-1_5);
+  margin-left: auto;
+  color: var(--viptv-color-text-secondary);
+  font-size: var(--viptv-type-desktop-meta-size);
+  font-weight: 600;
+  white-space: nowrap;
+}
+[data-layout] .vx-menu__current > svg {
+  display: block;
+  width: var(--viptv-size-icon-small);
+  height: var(--viptv-size-icon-small);
+}
+[data-layout] .vx-menu__item--danger,
+[data-layout] .vx-menu__item--danger .vx-menu__icon {
+  color: var(--viptv-color-status-danger);
+}
+[data-layout] .vx-menu__item:disabled,
+[data-layout] .vx-menu__item[aria-disabled="true"] {
+  opacity: 0.4;
+  cursor: default;
+}
+[data-layout="responsive"] .vx-menu__item:active:not(:disabled):not([aria-disabled="true"]) {
+  background: var(--viptv-color-surface-2);
+}
+@media (hover: hover) and (pointer: fine) {
+  [data-layout="responsive"] .vx-menu__item:hover:not(:disabled):not([aria-disabled="true"]) {
+    background: var(--viptv-color-surface-2);
+  }
+}
+@media (min-width: 600px) {
+  [data-layout="responsive"] .vx-menu__item:focus-visible {
+    z-index: 1;
+    box-shadow: var(--viptv-focus-desktop);
+  }
+}
+
+/* A choice list (toggles.css) inside a dialog bleeds to the dialog edge like a menu. */
+[data-layout] .vx-dialog .vx-choice-list {
+  margin: 0 calc(var(--viptv-space-2_5) * -1);
+}
+
+/* Popover (desktop): belongs to one control, no scrim; the owner sets top / left. */
+[data-layout] .vx-popover {
+  position: absolute;
+  z-index: 45;
+  display: flex;
+  flex-direction: column;
+  gap: var(--viptv-space-0_5);
+  box-sizing: border-box;
+  width: var(--viptv-layout-desktop-popover-width);
+  max-height: calc(100% - 2 * var(--viptv-space-6));
+  margin: 0;
+  padding: var(--viptv-space-1_5);
+  overflow-y: auto;
+  border: 1px solid var(--viptv-color-line-hairline);
+  border-radius: var(--viptv-radius-xl);
+  outline: none;
+  background: var(--viptv-color-surface-1);
+  box-shadow: var(--viptv-shadow-popover);
+  color: var(--viptv-color-text-primary);
+  font-family: var(--viptv-font-family-ui);
+}
+[data-layout] .vx-popover__label {
+  padding: var(--viptv-space-2) var(--viptv-space-3) var(--viptv-space-1_5);
+  color: var(--viptv-color-text-tertiary);
+  font-size: var(--viptv-type-desktop-eyebrow-size);
+  font-weight: var(--viptv-type-desktop-eyebrow-weight);
+  line-height: var(--viptv-type-desktop-eyebrow-line-height);
+  letter-spacing: var(--viptv-type-desktop-eyebrow-letter-spacing);
+  text-transform: uppercase;
+}
+[data-layout] .vx-popover .vx-menu {
+  margin: 0;
+}
+[data-layout] .vx-popover .vx-menu__item {
+  min-height: var(--viptv-size-row-menu);
+  padding: var(--viptv-space-1_5) var(--viptv-space-3);
+  font-size: var(--viptv-type-desktop-row-size);
+}
+[data-layout] .vx-popover .vx-menu__label {
+  gap: 1px;
+}
+[data-layout] .vx-popover .vx-menu__icon > svg {
+  width: var(--viptv-size-icon-desktop);
+  height: var(--viptv-size-icon-desktop);
+}
+[data-layout] .vx-popover .vx-menu__current {
+  font-size: var(--viptv-type-desktop-caption-size);
+}
+[data-layout] .vx-popover .vx-menu__current > svg {
+  width: var(--viptv-size-icon-xs);
+  height: var(--viptv-size-icon-xs);
+}
+
+/* Phone: bottom sheets. */
+@media (max-width: 599px) {
+  [data-layout="responsive"] .vx-scrim {
+    background: var(--viptv-color-scrim-sheet);
+  }
+  [data-layout="responsive"] .vx-dialog {
+    top: auto;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    gap: var(--viptv-space-3);
+    width: auto;
+    max-width: none;
+    max-height: calc(100% - var(--viptv-layout-phone-top-inset));
+    padding: 0 var(--viptv-space-4) var(--viptv-layout-phone-sheet-bottom);
+    border: 0;
+    border-top: 1px solid var(--viptv-color-line-hairline);
+    border-radius: var(--viptv-radius-sheet-top) var(--viptv-radius-sheet-top) 0 0;
+    box-shadow: none;
+    transform: none;
+  }
+  /* 28 tall hit row; the 4 px under it (not the 12 px gap) as drawn. */
+  [data-layout="responsive"] .vx-dialog__grabber {
+    display: flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    height: var(--viptv-size-grabber-hit);
+    min-height: 0;
+    margin: 0 calc(var(--viptv-space-4) * -1) calc(var(--viptv-space-1) - var(--viptv-space-3));
+    padding: 0;
+    border: 0;
+    outline: none;
+    background: transparent;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  [data-layout="responsive"] .vx-dialog__grabber > span {
+    display: block;
+    width: var(--viptv-size-grabber-width);
+    height: var(--viptv-size-grabber-height);
+    border-radius: var(--viptv-size-grabber-height);
+    background: var(--viptv-color-fill-grabber);
+  }
+  [data-layout="responsive"] .vx-dialog__title {
+    font-size: var(--viptv-type-phone-dialog-title-size);
+    font-weight: var(--viptv-type-phone-dialog-title-weight);
+    line-height: var(--viptv-type-phone-dialog-title-line-height);
+    letter-spacing: var(--viptv-type-phone-dialog-title-letter-spacing);
+  }
+  [data-layout="responsive"] .vx-dialog .vx-close {
+    display: none;
+  }
+  [data-layout="responsive"] .vx-dialog__text {
+    font-size: var(--viptv-type-phone-body-size);
+  }
+  [data-layout="responsive"] .vx-dialog__actions {
+    margin-top: var(--viptv-space-1_5);
+  }
+  /* Tall list sheet: from 150 px to the bottom edge, header + chips fixed, list scrolls. */
+  [data-layout="responsive"] .vx-dialog--drawer {
+    top: var(--viptv-layout-phone-sheet-top);
+    gap: 0;
+    max-height: none;
+    padding: 0;
+  }
+  [data-layout="responsive"] .vx-dialog--drawer .vx-dialog__grabber {
+    margin: 0;
+  }
+  [data-layout="responsive"] .vx-dialog__head {
+    padding: var(--viptv-space-1) var(--viptv-space-4) 0;
+  }
+  [data-layout="responsive"] .vx-dialog--drawer .vx-dialog__header {
+    align-items: baseline;
+  }
+  [data-layout="responsive"] .vx-dialog__tools {
+    gap: var(--viptv-space-2);
+    padding: var(--viptv-space-4) var(--viptv-space-4) var(--viptv-space-3_5);
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  [data-layout="responsive"] .vx-dialog__tools::-webkit-scrollbar {
+    display: none;
+  }
+  [data-layout="responsive"] .vx-dialog__scroll {
+    gap: var(--viptv-space-2_5);
+    padding: 0 var(--viptv-space-4) calc(2 * var(--viptv-space-5));
+  }
+  [data-layout="responsive"] .vx-dialog__footer {
+    display: none;
+  }
+  /* Sheet lists are full-bleed 56 rows split by hairlines. */
+  [data-layout="responsive"] .vx-menu {
+    gap: 0;
+    margin: var(--viptv-space-1) calc(var(--viptv-space-4) * -1) 0;
+  }
+  [data-layout="responsive"] .vx-menu__item {
+    min-height: var(--viptv-size-row-choice-phone);
+    padding: var(--viptv-space-2) var(--viptv-space-4);
+    border-radius: 0;
+    font-size: var(--viptv-type-phone-body-strong-size);
+  }
+  [data-layout="responsive"] .vx-menu__item + .vx-menu__item {
+    border-top: 1px solid var(--viptv-color-line-hairline);
+  }
+  [data-layout="responsive"] .vx-dialog .vx-choice-list {
+    margin: var(--viptv-space-1) calc(var(--viptv-space-4) * -1) 0;
+  }
+  [data-layout="responsive"] .vx-menu__item[aria-current="true"] {
+    font-weight: 600;
+  }
+  [data-layout="responsive"] .vx-menu__icon > svg {
+    width: var(--viptv-size-icon-phone);
+    height: var(--viptv-size-icon-phone);
+  }
+  [data-layout="responsive"] .vx-popover .vx-menu {
+    margin: 0;
+  }
+  [data-layout="responsive"] .vx-popover .vx-menu__item {
+    min-height: var(--viptv-layout-phone-min-target);
+    border-radius: var(--viptv-radius-sm-plus);
+    font-size: var(--viptv-type-phone-label-size);
+  }
+  [data-layout="responsive"] .vx-popover .vx-menu__item + .vx-menu__item {
+    border-top: 0;
+  }
+}
+
+/* TV (1920×1080 canvas px): right panel, rows 80 radius 22, focus = off-white + ring + 1.02. */
+.tv-layout .vx-scrim {
+  background: var(--viptv-color-scrim-tv-panel);
+}
+.tv-layout .vx-scrim--fullscreen {
+  background: var(--viptv-color-scrim-tv-fullscreen);
+}
+.tv-layout .vx-dialog,
+.tv-layout .vx-dialog--drawer {
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: auto;
+  gap: var(--viptv-space-4_5);
+  width: var(--viptv-layout-tv-panel-width);
+  max-width: none;
+  max-height: none;
+  padding: var(--viptv-layout-tv-panel-pad-top) var(--viptv-layout-tv-panel-pad-right) var(--viptv-layout-tv-panel-pad-bottom) var(--viptv-layout-tv-panel-pad-left);
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  box-shadow: var(--viptv-shadow-tv-panel);
+  transform: none;
+}
+.tv-layout .vx-dialog .vx-close {
+  display: none;
+}
+.tv-layout .vx-dialog__head,
+.tv-layout .vx-dialog__tools,
+.tv-layout .vx-dialog__scroll {
+  padding: 0;
+}
+.tv-layout .vx-dialog__head {
+  gap: var(--viptv-space-3);
+}
+.tv-layout .vx-dialog__scroll {
+  gap: var(--viptv-space-3_5);
+  overflow: visible;
+}
+.tv-layout .vx-dialog__footer {
+  display: none;
+}
+.tv-layout .vx-dialog__title {
+  font-size: var(--viptv-type-tv-panel-title-size);
+  font-weight: var(--viptv-type-tv-panel-title-weight);
+  line-height: var(--viptv-type-tv-panel-title-line-height);
+  letter-spacing: var(--viptv-type-tv-panel-title-letter-spacing);
+}
+.tv-layout .vx-dialog__meta {
+  font-size: var(--viptv-type-tv-meta-size);
+}
+.tv-layout .vx-dialog__text,
+.tv-layout .vx-dialog__text--detail {
+  color: var(--viptv-color-text-secondary);
+  font-size: var(--viptv-type-tv-label-size);
+  line-height: var(--viptv-type-tv-body-line-height);
+}
+.tv-layout .vx-dialog .vx-legend--corner {
+  right: var(--viptv-layout-tv-panel-pad-right);
+}
+.tv-layout .vx-dialog .vx-choice-list {
+  margin: 0;
+}
+.tv-layout .vx-dialog__actions,
+.tv-layout .vx-menu {
+  gap: var(--viptv-space-3_5);
+  margin: 0;
+}
+.tv-layout .vx-menu + .vx-dialog__actions {
+  margin-top: calc(var(--viptv-space-3_5) - var(--viptv-space-4_5));
+}
+/* Panel actions and menu items are rows, not pills (TV has no accent buttons). */
+.tv-layout .vx-dialog__actions > .vx-btn,
+.tv-layout .vx-menu__item {
+  --vx-h: var(--viptv-size-row-tv);
+  --vx-bg: transparent;
+  --vx-fg: var(--viptv-color-text-primary);
+  --vx-fs: var(--viptv-type-tv-list-row-size);
+  justify-content: flex-start;
+  gap: var(--viptv-space-4_5);
+  width: 100%;
+  height: auto;
+  min-height: var(--viptv-size-row-tv);
+  padding: 0 var(--viptv-space-7);
+  border: 0;
+  border-radius: var(--viptv-radius-3xl);
+  background: var(--vx-bg);
+  color: var(--vx-fg);
+  font-size: var(--vx-fs);
+  font-weight: var(--viptv-type-tv-list-row-weight);
+  line-height: var(--viptv-type-tv-list-row-line-height);
+  text-align: left;
+  white-space: normal;
+  transition:
+    transform var(--viptv-motion-focus) ease-out,
+    box-shadow var(--viptv-motion-focus) ease-out,
+    background-color var(--viptv-motion-focus) ease-out,
+    color var(--viptv-motion-focus) ease-out;
+}
+.tv-layout .vx-dialog__actions > .vx-btn > svg,
+.tv-layout .vx-menu__icon {
+  display: none;
+}
+.tv-layout .vx-dialog__actions > .vx-btn--destructive,
+.tv-layout .vx-menu__item--danger {
+  --vx-fg: var(--viptv-color-status-danger-tv);
+}
+.tv-layout .vx-dialog__actions > .vx-btn:focus,
+.tv-layout .vx-menu__item:focus {
+  --vx-bg: var(--viptv-color-text-primary);
+  --vx-fg: var(--viptv-color-on-light);
+  outline: none;
+  box-shadow: var(--viptv-focus-tv-shadow);
+  transform: scale(var(--viptv-focus-tv-scale-row));
+}
+.tv-layout .vx-dialog__actions > .vx-btn--destructive:focus,
+.tv-layout .vx-menu__item--danger:focus {
+  --vx-fg: var(--viptv-color-status-danger-on-light);
+}
+.tv-layout .vx-dialog__actions > .vx-btn:active:not(:disabled),
+.tv-layout .vx-menu__item:active:not(:disabled) {
+  --vx-bg: var(--viptv-color-fill-light-pressed);
+}
+.tv-layout .vx-menu__note {
+  color: var(--viptv-color-text-secondary);
+  font-size: var(--viptv-type-tv-meta-size);
+}
+.tv-layout .vx-menu__item:focus .vx-menu__note,
+.tv-layout .vx-menu__item:focus .vx-menu__current {
+  color: var(--viptv-color-text-on-light-secondary);
+}
+/* TV reads the marker after the label: "Auto · Current". */
+.tv-layout .vx-menu__current {
+  margin-left: 0;
+  font-size: var(--viptv-type-tv-label-size);
+  font-weight: 400;
+}
+.tv-layout .vx-menu__current > svg {
+  display: none;
+}
+.tv-layout .vx-menu__current::before {
+  content: "· ";
+}
+
+/* TV full-screen text panel (More info, Source details). */
+.tv-layout .vx-text-panel {
+  position: absolute;
+  top: var(--viptv-layout-tv-safe-y);
+  right: calc(2 * var(--viptv-layout-tv-safe-x));
+  bottom: var(--viptv-layout-tv-safe-y);
+  left: calc(2 * var(--viptv-layout-tv-safe-x));
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--viptv-space-5_5);
+  margin: 0;
+  color: var(--viptv-color-text-primary);
+}
+.tv-layout .vx-text-panel__title {
+  margin: 30px 0 0; /* CmpTv3 "Full-screen text panel" title offset */
+  font-family: var(--viptv-font-family-display);
+  font-size: var(--viptv-type-tv-screen-title-size);
+  font-weight: var(--viptv-type-tv-screen-title-weight);
+  line-height: 1.2; /* the panel title sits on a normal line box (CmpTv3) */
+  letter-spacing: var(--viptv-type-tv-screen-title-letter-spacing);
+}
+.tv-layout .vx-text-panel__meta {
+  color: var(--viptv-color-text-secondary);
+  font-size: var(--viptv-type-tv-label-size);
+}
+.tv-layout .vx-text-panel__box {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 30px 60px 30px 34px; /* CmpTv3 "Full-screen text panel" box insets (room for the bar) */
+  overflow: hidden;
+  border-radius: var(--viptv-radius-3xl);
+  outline: none;
+  background: var(--viptv-color-surface-1);
+  transition: box-shadow var(--viptv-motion-focus) ease-out;
+}
+.tv-layout .vx-text-panel__box:focus {
+  box-shadow: var(--viptv-focus-tv-shadow);
+}
+.tv-layout .vx-text-panel__content {
+  height: 100%;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+.tv-layout .vx-text-panel__content::-webkit-scrollbar {
+  display: none;
+}
+.tv-layout .vx-text-panel__content > p {
+  margin: 0 0 var(--viptv-space-6);
+  color: var(--viptv-color-text-body);
+  font-size: var(--viptv-type-tv-row-size);
+  line-height: 1.5;
+  white-space: pre-line;
+}
+.tv-layout .vx-text-panel__bar {
+  position: absolute;
+  top: 30px; /* aligned with the box's top inset */
+  right: var(--viptv-space-4_5);
+  width: var(--viptv-size-scrollbar-tv-width);
+  height: var(--viptv-size-scrollbar-tv-thumb);
+  border-radius: var(--viptv-size-scrollbar-tv-width);
+  background: var(--viptv-color-fill-scrollbar);
+}
+.tv-layout .vx-text-panel__actions {
+  display: flex;
+  gap: var(--viptv-space-4_5);
+}
+
+/* TV full-screen text entry: field left, keyboard (640) or PIN keypad (420) right. */
+.tv-layout .vx-scrim--solid {
+  background: var(--viptv-color-bg);
+}
+.tv-layout .vx-tv-entry {
+  position: absolute;
+  top: var(--viptv-layout-tv-safe-y);
+  right: var(--viptv-layout-tv-safe-x);
+  bottom: var(--viptv-layout-tv-safe-y);
+  left: var(--viptv-layout-tv-safe-x);
+  z-index: 1;
+  display: flex;
+  gap: var(--viptv-space-24);
+  margin: 0;
+  color: var(--viptv-color-text-primary);
+}
+.tv-layout .vx-tv-entry__main {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: var(--viptv-space-5_5);
+  min-width: 0;
+  padding-top: calc(2 * var(--viptv-space-5)); /* 40, CmpTv3 "Full-screen text entry" */
+}
+.tv-layout .vx-tv-entry__title {
+  margin: 0;
+  font-family: var(--viptv-font-family-display);
+  font-size: var(--viptv-type-tv-panel-title-size);
+  font-weight: var(--viptv-type-tv-panel-title-weight);
+  line-height: var(--viptv-type-tv-panel-title-line-height);
+  letter-spacing: var(--viptv-type-tv-panel-title-letter-spacing);
+}
+.tv-layout .vx-tv-entry__hints {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--viptv-space-6);
+  color: var(--viptv-color-text-tertiary);
+  font-size: var(--viptv-type-tv-meta-size);
+  line-height: var(--viptv-type-tv-meta-line-height);
+}
+.tv-layout .vx-tv-entry__count {
+  flex: none;
+  font-size: var(--viptv-type-tv-caption-size);
+  font-variant-numeric: tabular-nums;
+}
+.tv-layout .vx-tv-entry__keys {
+  flex: none;
+  width: var(--viptv-size-key-tv-keyboard-width);
+  padding-top: calc(2 * var(--viptv-space-5)); /* 40, CmpTv3 "Full-screen text entry" */
+}
+.tv-layout .vx-tv-entry--digits .vx-tv-entry__keys {
+  width: var(--viptv-size-key-tv-keypad-width);
+}
+/* The collected value reads large: 96 tall, radius 22, 38/600, no border (a fields.css .vx-field). */
+.tv-layout .vx-tv-entry .vx-field {
+  --vx-h: var(--viptv-size-field-tv-entry);
+  --vx-r: var(--viptv-radius-3xl);
+}
+.tv-layout .vx-tv-entry .vx-field__control {
+  padding: 0 calc(var(--viptv-space-7) + var(--viptv-space-0_5)); /* 30 */
+  border: 0;
+  font-size: var(--viptv-type-tv-entry-size);
+  font-weight: var(--viptv-type-tv-entry-weight);
+  line-height: var(--viptv-type-tv-entry-line-height);
+}
+.tv-layout .vx-tv-entry .vx-caret {
+  height: var(--viptv-type-tv-entry-size);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-layout] .vx-close,
+  [data-layout] .vx-menu__item,
+  .tv-layout .vx-dialog__actions > .vx-btn,
+  .tv-layout .vx-text-panel__box {
+    transition: none;
+  }
+}

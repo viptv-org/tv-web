@@ -1,1 +1,97 @@
-/* Design-system primitive: keys. See design/viptv-design-system/components.md. */
+/*
+ * Design-system primitive: keys (components.md §3 "Key hints"; CmpDesk1 "kbd hints",
+ * CmpTv1 "Key legend", CmpDesk3 right drawer footer, CmpTv3 full-screen panels).
+ *
+ * Desktop / web: keycaps grouped into hints. Phones have no keyboard, so hints hide there.
+ *   <div class="vx-kbd-hints" aria-hidden="true">
+ *     <span class="vx-kbd-hint"><kbd class="vx-kbd">↑</kbd><kbd class="vx-kbd">↓</kbd> Move</span>
+ *     <span class="vx-kbd-hint"><kbd class="vx-kbd">Esc</kbd> Close</span></div>
+ * TV: the key legend every TV screen shows, bottom-right in the safe area (--corner), e.g.
+ * "OK Select · BACK Close". Keycaps are glyph chips (2 px 0.28 outline, radius 10).
+ *   <div class="vx-legend vx-legend--corner" aria-hidden="true">
+ *     <span class="vx-legend__item"><span class="vx-legend__key">OK</span><span>Select</span></span></div>
+ * React: <Kbd>, <KbdHints hints={[{ keys: ["↑", "↓"], label: "Move" }]}/>,
+ *        <KeyLegend items={[{ key: "OK", label: "Select" }]} corner/> (src/ui/primitives/Keys.tsx).
+ */
+[data-layout] .vx-kbd {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  height: var(--viptv-size-keycap-height);
+  min-width: var(--viptv-size-keycap-height);
+  margin: 0;
+  padding: 0 var(--viptv-space-1_5);
+  border: 1px solid var(--viptv-color-line-outline);
+  border-radius: var(--viptv-size-keycap-radius);
+  background: transparent;
+  color: var(--viptv-color-text-secondary);
+  font-family: inherit;
+  font-size: var(--viptv-type-desktop-keycap-size);
+  font-weight: var(--viptv-type-desktop-keycap-weight);
+  line-height: var(--viptv-type-desktop-keycap-line-height);
+  letter-spacing: var(--viptv-type-desktop-keycap-letter-spacing);
+  white-space: nowrap;
+}
+[data-layout] .vx-kbd-hints {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--viptv-space-4_5);
+  color: var(--viptv-color-text-tertiary);
+  font-size: var(--viptv-type-desktop-caption-size);
+  line-height: var(--viptv-type-desktop-caption-line-height);
+}
+[data-layout] .vx-kbd-hint {
+  display: flex;
+  align-items: center;
+  gap: var(--viptv-space-1_5);
+  white-space: nowrap;
+}
+@media (max-width: 599px) {
+  [data-layout="responsive"] .vx-kbd-hints {
+    display: none;
+  }
+}
+
+/* TV key legend (1920×1080 canvas px). */
+.tv-layout .vx-legend {
+  display: flex;
+  align-items: center;
+  gap: var(--viptv-space-9);
+  color: var(--viptv-color-text-secondary);
+  font-size: var(--viptv-type-tv-caption-size);
+  line-height: var(--viptv-type-tv-caption-line-height);
+  white-space: nowrap;
+  pointer-events: none;
+}
+.tv-layout .vx-legend--corner {
+  position: absolute;
+  right: var(--viptv-layout-tv-safe-x);
+  bottom: var(--viptv-layout-tv-safe-y);
+  z-index: 30;
+}
+.tv-layout .vx-legend__item {
+  display: flex;
+  align-items: center;
+  gap: var(--viptv-space-3);
+}
+.tv-layout .vx-legend__key {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  min-width: var(--viptv-size-keycap-tv-min-width);
+  height: var(--viptv-size-keycap-tv-height);
+  padding: 0 var(--viptv-space-2_5);
+  border: var(--viptv-size-keycap-tv-border) solid var(--viptv-color-line-keycap-tv);
+  border-radius: var(--viptv-size-keycap-tv-radius);
+  color: var(--viptv-color-text-primary);
+  font-family: var(--viptv-font-family-ui);
+  font-size: var(--viptv-type-tv-keycap-size);
+  font-weight: var(--viptv-type-tv-keycap-weight);
+  line-height: var(--viptv-type-tv-keycap-line-height);
+  letter-spacing: var(--viptv-type-tv-keycap-letter-spacing);
+}
