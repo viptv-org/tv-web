@@ -26,7 +26,8 @@
  *   <h2 class="vx-empty__title">Your list is empty.</h2><p class="vx-empty__text">Add titles with the + button.</p>
  *   <div class="vx-empty__action"><a class="vx-btn vx-btn--light vx-btn--pill">Browse Discover</a></div></div>
  * Skeletons (P/D only; TV shows the startup cover): .vx-skel blocks + composites, see below.
- * Startup cover (TV): <div class="vx-startup" role="status"><span class="vx-startup__mark">VIPTV</span>
+ * Startup cover (TV): <div class="vx-startup" role="status"><span class="vx-startup__brand" aria-hidden="true">
+ *   <span class="vx-startup__tile">V</span><span class="vx-startup__mark">VIPTV</span></span>
  *   <span class="vx-status"><span class="vx-spinner" aria-hidden="true"></span>Starting VIPTV…</span></div>
  */
 
@@ -724,7 +725,8 @@
   gap: var(--viptv-space-4_5);
   margin-top: var(--viptv-space-2_5);
 }
-/* TV startup cover: wordmark over "Starting VIPTV…", centred on the ground. */
+/* TV startup cover (TvStates "Startup cover"): the 64 V tile + 56 wordmark over
+   "Starting VIPTV…" (26 secondary, 18 spinner), centred on the ground. */
 .tv-layout .vx-startup {
   position: absolute;
   top: 0;
@@ -736,19 +738,40 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: var(--viptv-space-5_5);
+  gap: calc(var(--viptv-space-7) + var(--viptv-space-0_5)); /* 30 */
   background: var(--viptv-color-bg);
   color: var(--viptv-color-text-primary);
 }
-.tv-layout .vx-startup__mark {
+.tv-layout .vx-startup__brand {
+  display: flex;
+  align-items: center;
+  gap: var(--viptv-space-4);
+}
+.tv-layout .vx-startup__tile {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--viptv-space-16);
+  height: var(--viptv-space-16);
+  border-radius: 19px; /* TvStates startup V tile (0.3 of 64, as the title-bar tile) */
+  background: var(--viptv-accent);
+  color: var(--viptv-color-on-accent);
   font-family: var(--viptv-font-family-display);
   font-size: var(--viptv-type-tv-wordmark-size);
   font-weight: var(--viptv-type-tv-wordmark-weight);
+  line-height: 1;
+}
+.tv-layout .vx-startup__mark {
+  font-family: var(--viptv-font-family-display);
+  font-size: var(--viptv-type-tv-screen-title-size);
+  font-weight: var(--viptv-type-tv-wordmark-weight);
   line-height: var(--viptv-type-tv-wordmark-line-height);
+  letter-spacing: var(--viptv-type-tv-wordmark-letter-spacing);
 }
 .tv-layout .vx-startup .vx-status {
-  gap: var(--viptv-space-3_5);
-  font-size: var(--viptv-type-tv-label-size);
+  gap: var(--viptv-space-4);
+  color: var(--viptv-color-text-secondary);
+  font-size: var(--viptv-type-tv-body-size);
 }
 
 @media (prefers-reduced-motion: reduce) {

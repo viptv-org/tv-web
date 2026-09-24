@@ -104,17 +104,6 @@
 .responsive-app .profile-row strong { left: 0; top: 156px; width: 144px; font-size: 20px; }
 .responsive-app .profile-actions, .responsive-app .profile-pager { position: static; display: flex; justify-content: center; gap: 16px; flex-wrap: wrap; width: auto; margin-top: 24px; }
 .responsive-app .profile-pager button, .responsive-app .profile-pager span { position: static; width: auto; }
-.responsive-app .scrim { position: fixed; inset: 0; padding: 24px; display: flex; align-items: center; justify-content: center; z-index: 40; }
-.responsive-app .modal, .responsive-app .source-detail-panel { position: relative; inset: auto; width: min(100%, 680px); height: auto; max-height: calc(100dvh - 48px); padding: 28px; overflow: auto; background: #202224; border-radius: 16px; }
-.responsive-app .modal > h2, .responsive-app .modal > p, .responsive-app .source-detail-panel > h2 { position: static; width: auto; height: auto; margin-bottom: 20px; }
-.responsive-app .modal-choices, .responsive-app .source-detail-panel .modal-choices { position: static; display: flex; flex-direction: column; gap: 12px; width: auto; height: auto; max-height: none; overflow: visible; }
-.responsive-app .modal-choices button { flex: 0 0 auto; overflow-wrap: anywhere; width: 100%; min-height: 56px; height: auto; padding: 14px 18px; font-size: 20px; background: #303234; }
-.responsive-app .source-detail-body { position: static; width: auto; height: auto; max-height: 50dvh; margin-bottom: 24px; font-size: 18px; line-height: 1.5; overflow: auto; }
-.responsive-app .toast, .responsive-app .loading, .responsive-app .error { position: fixed; inset: auto 24px 24px; width: fit-content; max-width: calc(100% - 48px); height: auto; margin: auto; padding: 16px 24px; z-index: 45; border-radius: 12px; font-size: 18px; background: #202224; }
-.responsive-app .error > button { position: static; display: block; margin-top: 16px; }
-.responsive-app .startup-cover { position: fixed; inset: 0; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; background: var(--canvas); }
-.responsive-app .startup-cover > img, .responsive-app .startup-cover > p, .responsive-app .startup-cover::after { position: static; margin: 16px; }
-.responsive-app .playback-loading { position: fixed; left: 50%; top: 40%; width: min(90%, 420px); transform: translate(-50%, -50%); text-align: center; }
 @media (max-width: 899px) {
   .tv-screen.responsive-app { --page-gutter: 28px; }
   .responsive-app .detail { grid-template-columns: minmax(0, 1fr); gap: 24px; }

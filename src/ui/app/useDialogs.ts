@@ -42,7 +42,12 @@ import { seekPinReleased, type BufferedRange } from "../SeekBar";
 import type { Screen } from "../screens";
 import { normalizeCore } from "../../core";
 import { captureScroll, desktopInvoker, initialPrefs, type BrowserSnapshot, type Choice, type ScrollAnchor } from "./appShared";
+import { initialChoiceIndex } from "./dialogModel";
+import { tokens } from "../../theme/viptv-tokens.generated";
 import type { AppApi, CoreApi, DialogsApi, AuthApi, PlaybackEngineApi, PlaybackSessionApi, CatalogApi, NavigationApi } from "./useTvApp";
+
+/** Error toasts stay 4 s (motion.toast-error); notices 5 s (useNavigation). */
+const TOAST_ERROR_MS = parseInt(tokens["motion.toast-error"], 10);
 
 export function useDialogs(app: CoreApi) {
   const { api, entry, error, errorFocus, modal, modalFocus, screen, session, setBootingHome, setEntryState, setError, setStartupAttempt, setToast } = app;
@@ -52,18 +57,20 @@ export function useDialogs(app: CoreApi) {
       if (!modalFocus.current)
         modalFocus.current =
           (document.activeElement as HTMLElement)?.dataset.focusId ?? "";
-      // Focus the dialog's own primary action: the current value for filters,
-      // the body for detail panels, the first choice otherwise. Keyboard focus
-      // never stays behind the scrim on open.
-      const preferred = modal.focus
-        ? modal.choices.findIndex((choice) => choice.label === modal.focus)
-        : -1;
+      // Focus the dialog's own primary action: the current value for lists,
+      // the body for detail panels, Cancel beside a destructive action, the
+      // first choice otherwise (dialogModel.ts). Keyboard focus never stays
+      // behind the scrim on open.
+      // Long text takes focus only when it can scroll (TvMoreInfo); short
+      // text leaves it on Close (TvSourceDetails, DeskSourceDetails).
+      const body = modal.body !== undefined || modal.view?.kind === "text"
+        ? document.querySelector<HTMLElement>('[data-focus-id="source-detail-body"]')
+        : null;
+      const scroller = body?.querySelector<HTMLElement>(".vx-text-panel__content") ?? body;
       focusElement(
-        modal.body
+        scroller && scroller.scrollHeight > scroller.clientHeight + 1
           ? "source-detail-body"
-          : preferred >= 0
-            ? `modal-${preferred}`
-            : "modal-0",
+          : `modal-${initialChoiceIndex(modal)}`,
       );
     } else if (modalFocus.current) {
       const id = modalFocus.current;
@@ -103,7 +110,7 @@ export function useDialogs(app: CoreApi) {
       if (screen !== "startup") {
         const timer = setTimeout(() => {
           setError("");
-        }, 4000);
+        }, TOAST_ERROR_MS);
         return () => clearTimeout(timer);
       }
     } else if (errorFocus.current) {
@@ -119,6 +126,24 @@ export function useDialogs(app: CoreApi) {
   // session automatically once the probe reports recovery.
   const pendingSessionRetry = useRef(false);
   const connected = connection !== undefined;
+  // TV: the backend panel is modal (0.6 scrim, focus scope "error"), so its
+  // Dismiss takes focus while it shows and the page control gets it back
+  // after (TvStates "Backend unreachable panel"). Phone / desktop keep focus
+  // where it is: their banner sits beside the page.
+  const connectionFocus = useRef<string>();
+  useEffect(() => {
+    if (app.responsive) return;
+    if (connected && connectionFocus.current === undefined) {
+      connectionFocus.current = (document.activeElement as HTMLElement)?.dataset.focusId ?? "";
+      const timer = setTimeout(() => focusElement("dismiss-error"), 30);
+      return () => clearTimeout(timer);
+    }
+    if (!connected && connectionFocus.current !== undefined) {
+      const id = connectionFocus.current;
+      connectionFocus.current = undefined;
+      if (id && !error) focusElement(id);
+    }
+  }, [connected]);
   useEffect(() => {
     if (!connected || !api) return;
     let cancelled = false;

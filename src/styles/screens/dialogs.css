@@ -1,1 +1,238 @@
-/* Screen family: dialogs. Reference screens: design/viptv-design-system/reference/screens. */
+/*
+ * Screen family: dialogs — the app-wide overlays and feedback.
+ * Reference screens (design/viptv-design-system/reference/screens):
+ *   PhStates, DeskStates, TvStates (banner, toasts, startup cover, preparing / loading,
+ *   skeletons, empty states, loading-more rows) and the overlays the generic modal draws:
+ *   Ph/Desk/TvSignOut, Ph/Desk/TvPlayerError, DeskPlayerRestore, Ph/Desk/TvLiveDetails,
+ *   PhItemMenuLive, Ph/TvDiscoverFilter, TvPlayerSubs, Ph/Desk/TvItemMenu, Ph/Desk/TvHidden,
+ *   Ph/Desk/TvSourceProvider, Ph/Desk/TvSourceDetails, TvMoreInfo.
+ * Markup: src/ui/app/AppDialogs.tsx (AppModal, AppPopover), src/ui/DialogBackdrop.tsx,
+ * src/ui/app/AppStates.tsx (shared empty state / loading-more wrappers).
+ *
+ * The shapes are the primitives (overlays.css: .vx-overlay / .vx-scrim / .vx-dialog / .vx-menu /
+ * .vx-popover / .vx-text-panel; feedback.css: toasts, banner, preparing, status, empty, skeletons,
+ * startup cover). This file places them in the app and adds the generic modal's extras.
+ * TV rules (.tv-layout) are Chrome 87-safe.
+ */
+
+/* ---------------------------------------------------------------------------
+ * The dialog layer (DialogBackdrop). TV: the whole 1920 × 1080 canvas (primitive
+ * .vx-overlay, absolute). Phone / desktop: fixed over the body row — under the desktop
+ * title bar and right of the rail when one is shown — so both stay bright
+ * (components.md §8, decisions.md). Its children that are not absolutely placed
+ * (the account family's pages) are centred.
+ * ------------------------------------------------------------------------ */
+[data-layout] .vx-dialog-layer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+}
+[data-layout="responsive"] .vx-dialog-layer {
+  position: fixed;
+  top: var(--vx-shell-top, 0px);
+  padding: var(--viptv-space-6);
+}
+[data-layout="responsive"] .vx-rail ~ .vx-dialog-layer {
+  left: var(--vx-shell-rail, 0px);
+}
+@media (max-width: 599px) {
+  [data-layout="responsive"] .vx-dialog-layer {
+    padding: var(--viptv-space-3);
+  }
+}
+/* A popover keeps the layer (outside press closes it, Tab stays in) without dimming. */
+[data-layout] .vx-scrim--clear {
+  background: transparent;
+}
+
+/* ---------------------------------------------------------------------------
+ * Generic modal (AppModal): the primitive dialog + a meta line, a scrolling body,
+ * the error "Details" disclosure and "· unavailable" rows.
+ * ------------------------------------------------------------------------ */
+/* Live details: "● CNBC · [9:00] – 12:00" (PhLiveDetails / DeskLiveDetails 14 / 600). */
+[data-layout] .vx-dialogs-meta {
+  margin: 0;
+  color: var(--viptv-color-text-secondary);
+  font-size: var(--viptv-type-desktop-row-size);
+  font-weight: 600;
+  line-height: var(--viptv-type-desktop-meta-line-height);
+}
+/* Long text (Source details) scrolls inside the sheet / dialog; ↑ ↓ scroll it when focused. */
+[data-layout] .vx-dialogs-body {
+  flex: 0 1 auto;
+  min-height: 0;
+  max-height: 50vh;
+  overflow-y: auto;
+  overflow-wrap: anywhere;
+  outline: none;
+  scrollbar-width: none;
+}
+[data-layout] .vx-dialogs-body::-webkit-scrollbar {
+  display: none;
+}
+@media (min-width: 600px) {
+  [data-layout="responsive"] .vx-dialogs-body:focus-visible {
+    border-radius: var(--viptv-radius-sm);
+    box-shadow: var(--viptv-focus-desktop);
+  }
+}
+/* Error "Details" (PhPlayerError / DeskPlayerError): a quiet toggle over a monospace box. */
+[data-layout] .vx-dialogs-details__toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--viptv-space-1_5);
+  height: var(--viptv-size-close-disc-default);
+  min-height: 0;
+  margin: 0;
+  padding: 0 var(--viptv-space-3) 0 0;
+  border: 0;
+  border-radius: var(--viptv-radius-sm);
+  outline: none;
+  background: transparent;
+  color: var(--viptv-color-text-secondary);
+  font-family: var(--viptv-font-family-ui);
+  font-size: var(--viptv-type-desktop-row-size);
+  font-weight: 600;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+[data-layout] .vx-dialogs-details__toggle > svg {
+  display: block;
+  width: var(--viptv-size-icon-small);
+  height: var(--viptv-size-icon-small);
+  transition: transform var(--viptv-motion-focus) ease-out;
+}
+[data-layout] .vx-dialogs-details__toggle[aria-expanded="true"] > svg {
+  transform: rotate(180deg);
+}
+@media (min-width: 600px) {
+  [data-layout="responsive"] .vx-dialogs-details__toggle:focus-visible {
+    box-shadow: var(--viptv-focus-desktop);
+  }
+}
+[data-layout] .vx-dialogs-details__lines {
+  display: flex;
+  flex-direction: column;
+  gap: var(--viptv-space-1);
+  margin-top: var(--viptv-space-2);
+  padding: var(--viptv-space-3) var(--viptv-space-3_5);
+  border: 1px solid var(--viptv-color-line-hairline);
+  border-radius: var(--viptv-radius-md);
+  background: var(--viptv-color-surface-2);
+  color: var(--viptv-color-text-secondary);
+  font-family: var(--viptv-font-family-mono);
+  font-size: var(--viptv-type-desktop-mono-size);
+  line-height: var(--viptv-type-desktop-mono-line-height);
+  overflow-wrap: anywhere;
+}
+/* "[Portuguese (PGS)] · unavailable": tertiary, the row stays reachable (its action explains). */
+[data-layout] .vx-dialogs-row__unavailable {
+  color: var(--viptv-color-text-tertiary);
+  font-weight: 400;
+}
+[data-layout] .vx-dialogs-row--unavailable {
+  color: var(--viptv-color-text-secondary);
+}
+/* Desktop popover (AppPopover): a hairline before Cancel (DeskItemMenu); menus with icons are 300. */
+[data-layout] .vx-dialogs-rule {
+  display: block;
+  flex: none;
+  height: 1px;
+  margin: var(--viptv-space-1) var(--viptv-space-2);
+  background: var(--viptv-color-line-hairline);
+}
+[data-layout] .vx-app-popover .vx-menu {
+  gap: var(--viptv-space-0_5);
+}
+[data-layout] .vx-app-popover--menu {
+  width: 300px; /* DeskItemMenu.html title menu popover */
+}
+
+/* TV: the panel's list scrolls (Subtitles, Genre, …) with room for the focus ring and lift;
+   menu rows keep their 28 icons (TvItemMenu), coloured like the row text. */
+.tv-layout .vx-app-modal .vx-menu {
+  flex: 0 1 auto;
+  min-height: 0;
+  margin: calc(var(--viptv-space-2) * -1) calc(var(--viptv-space-3) * -1);
+  padding: var(--viptv-space-2) var(--viptv-space-3);
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+.tv-layout .vx-app-modal .vx-menu::-webkit-scrollbar {
+  display: none;
+}
+.tv-layout .vx-app-modal .vx-menu__icon {
+  display: flex;
+  color: inherit;
+}
+.tv-layout .vx-app-modal .vx-menu__icon > svg {
+  width: var(--viptv-size-icon-tv);
+  height: var(--viptv-size-icon-tv);
+}
+.tv-layout .vx-dialogs-meta {
+  font-size: var(--viptv-type-tv-meta-size);
+  font-weight: 400;
+  line-height: var(--viptv-type-tv-meta-line-height);
+}
+.tv-layout .vx-dialogs-row__unavailable {
+  color: var(--viptv-color-text-tertiary);
+}
+.tv-layout .vx-menu__item:focus .vx-dialogs-row__unavailable {
+  color: var(--viptv-color-text-on-light-secondary);
+}
+
+/* ---------------------------------------------------------------------------
+ * Toasts and the backend banner (primitive .vx-toast-region: P bottom 116 above the
+ * nav, D bottom-centre 24, TV top-centre 54). The phone / desktop banner stacks in the
+ * same region: 358 on phones, 520 on desktop (DeskStates "Backend unreachable banner").
+ * TV: a centred 980 alert panel over the 0.6 scrim (TvStates "Backend unreachable panel").
+ * ------------------------------------------------------------------------ */
+[data-layout="responsive"] .vx-toast-region > .vx-banner {
+  max-width: 520px; /* DeskStates.html backend banner */
+}
+@media (max-width: 599px) {
+  [data-layout="responsive"] .vx-toast-region > .vx-banner {
+    max-width: var(--viptv-size-toast-phone-max);
+  }
+}
+.tv-layout .vx-dialogs-alert {
+  z-index: 45;
+}
+
+/* ---------------------------------------------------------------------------
+ * Loading / preparing. Phone / desktop: a pill centred at the top of the body row
+ * (PhStates / DeskStates "Preparing playback pill"). TV: the centred panel
+ * (TvStates "Preparing playback panel"), or a status line in the top-right safe area
+ * while a page loads.
+ * ------------------------------------------------------------------------ */
+[data-layout="responsive"] .vx-dialogs-status {
+  position: fixed;
+  top: calc(var(--vx-shell-top, 0px) + var(--viptv-space-5));
+  right: 0;
+  left: var(--vx-shell-rail, 0px);
+  z-index: 55;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+}
+@media (max-width: 599px) {
+  [data-layout="responsive"] .vx-dialogs-status {
+    top: calc(env(safe-area-inset-top) + var(--viptv-space-5));
+  }
+}
+.tv-layout .vx-dialogs-loading {
+  position: absolute;
+  top: var(--viptv-layout-tv-safe-y);
+  right: var(--viptv-layout-tv-safe-x);
+  z-index: 35;
+}
+.tv-layout .vx-preparing--center {
+  z-index: 35;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-layout] .vx-dialogs-details__toggle > svg {
+    transition: none;
+  }
+}

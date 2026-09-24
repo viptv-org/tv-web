@@ -22,12 +22,7 @@
 .responsive-app :is(.shelf-see-more, .chip, .genre-chip, .rp-button, .error-dismiss-btn) { position: relative; }
 .responsive-app :is(.shelf-see-more, .chip, .genre-chip, .error-dismiss-btn)::before { content: ""; position: absolute; inset: -6px -2px; }
 /* ---- Dialogs --------------------------------------------------------------- */
-/* The focused choice keeps a visible surface on the dialog's own #202224. */
-.responsive-app .modal-choices button { --responsive-control-surface: #303234; min-height: 52px; font-size: 17px; }
-.responsive-app .modal > h2 { font-size: 24px; line-height: 1.3; }
-.responsive-app .dialog-backdrop .account-mark { display: none; }
 /* Watch on TV: the controller panel is the dialog's content, not a box in a box. */
-.responsive-app .modal > .cast-controller { max-width: none; padding: 0; background: transparent; }
 .responsive-app .cast-controller p + p { margin-top: 12px; }
 .responsive-app .cast-controller > button:last-child { margin-top: 20px; }
 
@@ -233,7 +228,5 @@
 @media (max-width: 599px) {
   /* Phones: popups span the screen above the control row instead of
      hanging off a button near the edge. */
-    .responsive-app .modal > h2 { font-size: 21px; }
-  .responsive-app .modal-choices button { font-size: 16px; }
-}
+  }
 

@@ -225,11 +225,14 @@ export function SkeletonRow({ variant = "desktop" }: { variant?: "phone" | "desk
   );
 }
 
-/** TV launch cover: wordmark over "Starting VIPTV…" (TV has no skeletons). */
+/** TV launch cover: the V tile + VIPTV wordmark over "Starting VIPTV…" (TV has no skeletons; TvStates). */
 export function StartupCover({ label = "Starting VIPTV…" }: { label?: ReactNode }) {
   return (
     <div className="vx-startup" role="status">
-      <span className="vx-startup__mark">VIPTV</span>
+      <span className="vx-startup__brand" aria-hidden="true">
+        <span className="vx-startup__tile">V</span>
+        <span className="vx-startup__mark">VIPTV</span>
+      </span>
       <span className="vx-status"><Spinner />{label}</span>
     </div>
   );

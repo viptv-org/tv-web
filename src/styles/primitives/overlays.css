@@ -73,10 +73,12 @@
   background: var(--viptv-color-scrim-dialog);
 }
 
-/* Dialog: desktop centred 460 (placed a little above centre, as the sheets draw it). */
+/* Dialog: desktop centred 460 on the body row (every reference screen centres it:
+   DeskSignOut, DeskAddonRemove, DeskHidden, DeskPlayerError, …; the component sheets
+   place their figures arbitrarily). */
 [data-layout] .vx-dialog {
   position: absolute;
-  top: 35%;
+  top: 50%;
   left: 50%;
   z-index: 1;
   display: flex;
@@ -655,8 +657,8 @@
 /* TV reads the marker after the label: "Auto · Current". */
 .tv-layout .vx-menu__current {
   margin-left: 0;
-  font-size: var(--viptv-type-tv-label-size);
-  font-weight: 400;
+  font-size: inherit; /* "Any · Current" reads at the row size, 500 (TvDiscoverFilter, TvSourceProvider) */
+  font-weight: 500;
 }
 .tv-layout .vx-menu__current > svg {
   display: none;

@@ -215,50 +215,6 @@ button:focus .roku-text.overflows > span {
 /* stays visibly selected.                                             */
 /* ------------------------------------------------------------------ */
 
-.error.connection {
-  display: grid;
-  gap: calc(8px * var(--tv-k));
-}
-.error.connection .error-title {
-  font-weight: 700;
-}
-.error.connection .error-message {
-  opacity: 0.9;
-}
-.error.connection .error-line {
-  font-size: 0.85em;
-  opacity: 0.7;
-}
-
-.modal h2.modal-title.kind-network,
-.modal h2.modal-title.kind-server {
-  color: #ff6b6b;
-}
-.modal h2.modal-title.kind-auth,
-.modal h2.modal-title.kind-client {
-  color: #ffb454;
-}
-.modal .modal-message {
-  margin: 0;
-}
-.modal .modal-details {
-  margin: calc(10px * var(--tv-k)) 0 calc(4px * var(--tv-k));
-  border: 1px solid rgba(128, 128, 128, 0.35);
-  border-radius: calc(6px * var(--tv-k));
-  padding: calc(8px * var(--tv-k)) calc(12px * var(--tv-k));
-}
-.modal .modal-details summary {
-  cursor: pointer;
-  opacity: 0.85;
-}
-.modal .modal-detail-line {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 0.82em;
-  opacity: 0.75;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-}
-
 @media (hover: hover) and (pointer: fine) {
   .modal-choices button,
   .error button,
@@ -267,8 +223,6 @@ button:focus .roku-text.overflows > span {
   .card-more {
     transition: filter 120ms ease, transform 120ms ease, background 120ms ease;
   }
-  .modal-choices button:hover,
-  .error button:hover,
   .source-filters button:hover,
   .filters button:hover,
   .card-more:hover {
