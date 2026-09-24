@@ -151,7 +151,19 @@ test('Roku visual contract keeps fixed geometry, focus ownership and proportiona
   await enterHome(page, platform);
   // Coordinates are on the 1920 x 1080 TV canvas (the project viewport).
   await expectBox(page, '.tv-screen', { x: 0, y: 0, width: 1920, height: 1080 });
-  await expectBox(page, 'nav', { x: 31.5, y: 162, width: 90 });
+  // The collapsed rail (TvHome): 144 wide, full height, icons only.
+  await expectBox(page, 'nav[aria-label="Main navigation"]', { x: 0, y: 0, width: 144, height: 1080 });
+  // Focus in the rail expands the labelled menu (TvMenu: 520 over a scrim);
+  // Back returns focus to the page and collapses it again.
+  await page.locator('[data-focus-id="nav-Discover"]').focus();
+  await expectBox(page, 'nav[aria-label="Main navigation"]', { x: 0, y: 0, width: 520, height: 1080 });
+  await expect(page.locator('.vx-tv-rail-scrim')).toBeVisible();
+  await expect(page.locator('[data-focus-id="nav-Home"]')).toHaveAttribute('aria-current', 'page');
+  await page.keyboard.press('ArrowDown');
+  await expect(page.locator('[data-focus-id="nav-Live TV"]')).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect.poll(() => page.evaluate(() => !!document.activeElement?.closest('[data-focus-id]') && !document.activeElement?.closest('nav'))).toBe(true);
+  await expectBox(page, 'nav[aria-label="Main navigation"]', { x: 0, y: 0, width: 144, height: 1080 });
   await page.getByRole('button', { name: 'Settings', exact: true }).press('Enter');
   await page.getByRole('button', { name: 'Switch profile', exact: true }).focus();
   await expectBox(page, '.settings-scroll', { x: 150, y: 216, width: 804 });
@@ -202,3 +214,39 @@ test('series progress selects its resumed episode and remote paging reveals one 
   await expectBox(page, '.tv-screen', { x: 0, y: 0, width: 1920, height: 1080 });
 });
 
+test('TV shell: rail expands into the menu while focused; entry on the current item, Right / Back return to the page', async ({ page }, info) => {
+  const platform = info.project.name as 'tizen' | 'vizio';
+  await installPlatformRuntime(page);
+  await enterHome(page, platform);
+  // Let startup requests settle so no late restore moves focus mid-test.
+  await page.waitForLoadState('networkidle');
+  const nav = 'nav[aria-label="Main navigation"]';
+  await expectBox(page, nav, { x: 0, y: 0, width: 144, height: 1080 });
+  // Arrival: focus rests in the page, not the rail.
+  await expect.poll(() => page.evaluate(() => !!document.activeElement?.closest('[data-focus-id]') && !document.activeElement?.closest('nav'))).toBe(true);
+  // Left from the first content column enters the rail on the current destination.
+  const hero = page.locator('[data-focus-id="hero-play"], [data-focus-id="hero-details"]').first();
+  await hero.focus();
+  for (let i = 0; i < 4 && !(await page.evaluate(() => !!document.activeElement?.closest('nav'))); i++) await page.keyboard.press('ArrowLeft');
+  await expect(page.locator('[data-focus-id="nav-Home"]')).toBeFocused();
+  await expectBox(page, nav, { x: 0, y: 0, width: 520, height: 1080 });
+  await expectBox(page, '[data-focus-id="nav-Search"]', { x: 48, y: 174, width: 360, height: 68 });
+  await expectBox(page, '[data-focus-id="nav-Settings"]', { x: 48, y: 958, width: 360, height: 68 }, 8);
+  await expect(page.locator('.vx-tv-rail-scrim')).toBeVisible();
+  await page.keyboard.press('ArrowDown');
+  await expect(page.locator('[data-focus-id="nav-Discover"]')).toBeFocused();
+  await expect(page.locator('[data-focus-id="nav-Discover"]')).toHaveCSS('background-color', 'rgb(244, 242, 238)');
+  await page.keyboard.press('ArrowRight');
+  await expect(hero).toBeFocused();
+  await expectBox(page, nav, { x: 0, y: 0, width: 144, height: 1080 });
+  // Choose Discover: focus moves into the new page and the menu collapses.
+  await page.locator('[data-focus-id="nav-Discover"]').focus();
+  await page.keyboard.press('Enter');
+  await expect.poll(() => page.evaluate(() => !!document.activeElement?.closest('[data-focus-id]') && !document.activeElement?.closest('nav')), { timeout: 8000 }).toBe(true);
+  await expect(page.locator('[data-focus-id="nav-Discover"]')).toHaveAttribute('aria-current', 'page');
+  // Back in the rail returns to the page instead of leaving it.
+  await page.locator('[data-focus-id="nav-Live TV"]').focus();
+  await page.keyboard.press('Escape');
+  await expect.poll(() => page.evaluate(() => !document.activeElement?.closest('nav'))).toBe(true);
+  await expect(page.locator('[data-focus-id="nav-Discover"]')).toHaveAttribute('aria-current', 'page');
+});

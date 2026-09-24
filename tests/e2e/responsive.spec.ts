@@ -25,7 +25,8 @@ async function expectResponsiveViewport(page: Page, width: number) {
   expect(dimensions.screenWidth).toBeCloseTo(dimensions.clientWidth, 0);
   expect(dimensions.screenLeft).toBeCloseTo(0, 0);
   expect(dimensions.transform).toBe('none');
-  expect(dimensions.background).toBe('rgb(16, 17, 18)');
+  // The frame ground is the design system's bg (#0B0B0C).
+  expect(dimensions.background).toBe('rgb(11, 11, 12)');
   await expect(page.getByRole('alert')).toHaveCount(0);
 }
 
@@ -58,37 +59,55 @@ for (const viewport of [
     expect(cardBox?.width).toBeGreaterThanOrEqual(140);
     expect(cardBox?.width).toBeLessThanOrEqual(viewport.width);
     if (viewport.width >= 1440) {
-      const sidebar = await page.evaluate(() => {
+      const rail = await page.evaluate(() => {
         const box = (selector: string) => {
           const rect = document.querySelector<HTMLElement>(selector)!.getBoundingClientRect();
           return { left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom };
         };
-        return { brand: box('.brand'), nav: box('nav[aria-label="Main navigation"]'), cast: box('[data-focus-id="responsive-cast"]'), profile: box('[data-focus-id="responsive-profile"]') };
+        return { nav: box('nav[aria-label="Main navigation"]'), myList: box('[data-focus-id="nav-My List"]'), cast: box('[data-focus-id="responsive-cast"]'), settings: box('[data-focus-id="nav-Settings"]'), profile: box('[data-focus-id="responsive-profile"]') };
       });
-      expect(sidebar.brand.bottom).toBeLessThanOrEqual(sidebar.nav.top);
-      expect(sidebar.nav.bottom).toBeLessThanOrEqual(sidebar.cast.top);
-      expect(sidebar.profile.top).toBeLessThanOrEqual(52);
+      // The 84 rail: destinations from the top, then On TV, Settings and the
+      // avatar at the bottom (DeskHome / WebHome).
+      expect(rail.nav.left).toBe(0);
+      expect(rail.nav.right).toBe(84);
+      expect(rail.nav.bottom).toBe(viewport.height);
+      expect(rail.myList.bottom).toBeLessThan(rail.cast.top);
+      expect(rail.cast.bottom).toBeLessThanOrEqual(rail.settings.top);
+      expect(rail.settings.bottom).toBeLessThanOrEqual(rail.profile.top);
+      expect(rail.profile.bottom).toBe(viewport.height - 18);
     }
     await page.screenshot({ path: testInfo.outputPath(`${viewport.name}-home.png`), animations: 'disabled', fullPage: true });
 
     const navigation = page.getByRole('navigation', { name: 'Main navigation' });
+    // Phones have no Settings in the bottom nav: it sits in the My List header.
+    const openSettings = async () => {
+      if (viewport.width < 600) {
+        await navigation.getByRole('button', { name: 'My List', exact: true }).click();
+        await page.locator('[data-focus-id="library-settings"]').click();
+      } else await navigation.getByRole('button', { name: 'Settings', exact: true }).click();
+    };
+    // Phone Settings is not a tab screen (no bottom nav): Back returns to My List.
+    const openHome = async () => {
+      if (viewport.width < 600) await page.goBack();
+      await navigation.getByRole('button', { name: 'Home', exact: true }).click();
+    };
     await expect(page.locator('.responsive-toolbar').getByRole('button', { name: /OLED/ })).toHaveCount(0);
     // Phones render OLED mode as a switch row; wider layouts keep the labelled button.
     const oled = (on: boolean) => viewport.width < 600
       ? page.locator(`[data-focus-id="settings-appearance"][aria-pressed="${on}"]`)
       : page.getByRole('button', { name: `OLED mode: ${on ? 'On' : 'Off'}`, exact: true });
-    await navigation.getByRole('button', { name: 'Settings', exact: true }).click();
+    await openSettings();
     await oled(false).click();
     await expect(oled(true)).toBeVisible();
     await expect(page.locator('.tv-screen')).toHaveCSS('background-color', 'rgb(0, 0, 0)');
-    await navigation.getByRole('button', { name: 'Home', exact: true }).click();
+    await openHome();
     await page.reload();
     await expect(page.locator('.home')).toBeVisible();
     expect(await page.evaluate(() => localStorage.getItem('viptv:appearance:oled'))).toBe('true');
     await expect(page.locator('.tv-screen')).toHaveCSS('background-color', 'rgb(0, 0, 0)');
-    await navigation.getByRole('button', { name: 'Settings', exact: true }).click();
+    await openSettings();
     await oled(true).click();
-    await navigation.getByRole('button', { name: 'Home', exact: true }).click();
+    await openHome();
     await expectResponsiveViewport(page, viewport.width);
 
     const more = page.getByRole('button', { name: 'More options', exact: true });
@@ -178,11 +197,12 @@ for (const viewport of [
     await expect(page.locator('.detail.series')).toBeVisible();
     await expect(page.locator('.responsive-app')).toHaveJSProperty('scrollTop', 0);
     if (viewport.width >= 1200) {
+      // The rail stays on a title page (its section current); detail, sources
+      // and profiles add no second leading Back control.
       const nav = await page.locator('nav[aria-label="Main navigation"]').boundingBox();
-      const brand = await page.locator('.responsive-toolbar .brand').boundingBox();
-      // The shared desktop sidebar keeps the brand above the centered navigation; detail,
-      // sources and profiles no longer add a second leading Back control.
-      expect(brand!.y + brand!.height).toBeLessThanOrEqual(nav!.y);
+      expect(nav!.x).toBe(0);
+      expect(nav!.width).toBe(84);
+      await expect(page.locator('[data-focus-id="nav-Home"]')).toHaveAttribute('aria-current', 'page');
       await expect(page.locator('[data-focus-id="responsive-back"]')).toHaveCount(0);
     }
     const episode = page.locator('[data-focus-id="episode-0"]');
@@ -426,10 +446,14 @@ test('responsive web uses selected tabs without remote focus skin at phone and d
   await profile.click();
   const home = page.locator('[data-focus-id="nav-Home"]');
   await home.focus();
+  // Phone bottom nav: the current tab is an off-white pill with dark text;
+  // phones draw no focus ring (Main, CmpPhone2).
   await expect(home).toHaveAttribute('aria-current', 'page');
   await expect(home).toHaveCSS('outline-style', 'none');
-  await expect(home).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
-  await expect(home.locator('svg')).toHaveCSS('filter', 'none');
+  await expect(home).toHaveCSS('box-shadow', 'none');
+  await expect(home).toHaveCSS('background-color', 'rgb(244, 242, 238)');
+  await expect(home).toHaveCSS('color', 'rgb(17, 17, 19)');
+  await expect(page.locator('[data-focus-id="nav-Discover"]')).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
   const card = page.locator('[data-focus-id="home-0"]');
   await card.focus();
   expect(await card.evaluate(node => getComputedStyle(node, '::after').opacity)).toBe('0.35');
@@ -437,16 +461,24 @@ test('responsive web uses selected tabs without remote focus skin at phone and d
   await action.focus();
   await expect(action).toHaveCSS('outline-style', 'none');
   await expect(action).toHaveCSS('background-color', 'rgb(32, 34, 36)');
-  await page.locator('[data-focus-id="nav-Settings"]').click();
+  // Settings is not a phone tab: the My List header carries it, and the
+  // Settings page shows no bottom nav.
+  await expect(page.locator('[data-focus-id="nav-Settings"]')).toHaveCount(0);
+  await page.locator('[data-focus-id="nav-My List"]').click();
+  await page.locator('[data-focus-id="library-settings"]').click();
+  await expect(page.getByRole('heading', { name: 'Settings', level: 1 })).toBeVisible();
+  await expect(page.getByRole('navigation', { name: 'Main navigation' })).toHaveCount(0);
+  // Desktop rail: the current destination has a surface-2 fill; keyboard
+  // focus is the off-white ring with a ground gap, never a fill (CmpDesk2).
+  await page.setViewportSize({ width: 1440, height: 900 });
   const settings = page.locator('[data-focus-id="nav-Settings"]');
   await expect(settings).toHaveAttribute('aria-current', 'page');
-  await expect(settings).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
-  await expect(settings).toHaveCSS('outline-style', 'none');
-  await page.setViewportSize({ width: 1440, height: 900 });
+  await expect(settings).toHaveCSS('background-color', 'rgb(33, 33, 36)');
   await page.keyboard.press('Tab');
   await home.focus();
   await expect(home).toHaveCSS('outline-style', 'none');
   await expect(home).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+  await expect(home).toHaveCSS('box-shadow', 'rgb(11, 11, 12) 0px 0px 0px 2px, rgb(244, 242, 238) 0px 0px 0px 4px');
   await page.keyboard.press('ArrowRight');
   await expect(home).toBeFocused();
 });

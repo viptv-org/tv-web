@@ -106,7 +106,8 @@ for (const width of [390, 1440]) {
     await expect(page.getByRole('button', { name: 'Previous channels', exact: true })).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'Next channels', exact: true })).toHaveCount(0);
     await expect(page.locator('.epg-page-controls')).toContainText('channels');
-    expect(await page.locator('.tv-screen').evaluate(node => getComputedStyle(node).overflowY)).toBe('scroll');
+    // The body row scrolls as one document with no visible scrollbar (shell).
+    expect(await page.locator('.tv-screen').evaluate(node => getComputedStyle(node).overflowY)).toBe('auto');
     expect(await page.locator('.epg-scroll').evaluate(node => getComputedStyle(node).overflowY)).toBe('scroll');
     expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(false);
   });
@@ -238,7 +239,7 @@ test('header and frame hold their position between a tall and a short route', as
     };
     const root = document.querySelector<HTMLElement>('.tv-screen')!;
     return {
-      brand: box('.responsive-toolbar .brand'), cast: box('[data-focus-id="responsive-cast"]'),
+      rail: box('nav[aria-label="Main navigation"]'), cast: box('[data-focus-id="responsive-cast"]'),
       profile: box('[data-focus-id="responsive-profile"]'), heading: box('h1'),
       gutter: root.offsetWidth - root.clientWidth, overflow: root.scrollHeight > root.clientHeight,
     };
@@ -250,13 +251,14 @@ test('header and frame hold their position between a tall and a short route', as
     await nav.getByRole('button', { name: screen, exact: true }).click();
     await page.waitForTimeout(600);
     const next = await geometry();
-    // The shared header never reflows between routes, and reserving the scroll
-    // gutter keeps the content frame from moving sideways when a route stops
-    // or starts scrolling.
-    expect(next.brand).toEqual(home.brand);
+    // The rail never reflows between routes, and the scrollbar-less body row
+    // (no gutter at all) keeps the content frame from moving sideways when a
+    // route stops or starts scrolling.
+    expect(next.rail).toEqual(home.rail);
     expect(next.cast).toEqual(home.cast);
     expect(next.profile).toEqual(home.profile);
     expect(next.heading[0]).toBe(home.heading[0]);
     expect(next.gutter).toBe(home.gutter);
+    expect(next.gutter).toBe(0);
   }
 });
