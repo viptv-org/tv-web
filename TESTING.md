@@ -54,7 +54,9 @@ latency and physical-TV decode cost have not been measured.
 Search now keeps all result identities in a non-reactive navigation index but
 mounts only cards intersecting its 1920×1080 viewport. A 120-result model
 check showed nine mounted views and wsrv artwork URLs only for those nine;
-offscreen cards retain their original positions for D-pad paging. The existing
+offscreen cards retain their original positions for D-pad paging. Once an API
+batch has arrived, a D-pad window move now projects at most those nine cards
+instead of rebuilding every result's presentation. The existing
 browser scenario still moved through offscreen results, held a result menu,
 restored focus and returned to Home. Its `TvSearch` frame was pixel-identical
 to the prior Blits capture. This reduces component and image work during

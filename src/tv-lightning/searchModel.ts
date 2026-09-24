@@ -102,3 +102,30 @@ export function projectSearch(rows: readonly SearchRow[], offsets: Readonly<Reco
   }
   return { headings, cards };
 }
+
+/** Reposition only the visible TV result tiles during D-pad paging. The full
+ * result index is built when API rows change, not on every focus movement. */
+export function projectSearchWindow(
+  headings: readonly SearchHeadingView[],
+  bySection: ReadonlyMap<string, readonly SearchCardView[]>,
+  offsets: Readonly<Record<string, number>>,
+  verticalOffset: number,
+): { headings: SearchHeadingView[]; cards: SearchCardView[] } {
+  const visibleHeadings = headings.map((heading, index) => ({ ...heading, y: 150 + index * 360 - verticalOffset }));
+  const cards: SearchCardView[] = [];
+  for (const heading of visibleHeadings) {
+    const y = heading.y + 58;
+    if (y >= 976 || y + 270 <= 150) continue;
+    const section = bySection.get(heading.id) ?? [];
+    const start = offsets[heading.id] ?? 0;
+    for (let localIndex = start; localIndex < Math.min(section.length, start + 3); localIndex++) {
+      const card = section[localIndex];
+      const art = cardPresentation(card.item, "catalog");
+      cards.push({
+        ...card, x: 850 + (localIndex - start) * 356, y, visible: true,
+        image: card.image || artworkUrl(art.image ?? undefined, 320, 180, false, art.imageRole === "logo") || art.image || "",
+      });
+    }
+  }
+  return { headings: visibleHeadings, cards };
+}

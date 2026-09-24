@@ -14,7 +14,7 @@ import { libraryCard } from "./libraryModel";
 import { TitleMenuScreen } from "./TitleMenuScreen";
 import { emptyTitleMenuChoice, titleMenuChoice, titleMenuChoices, type TitleMenuChoiceView } from "./titleMenuModel";
 import { SearchScreen } from "./SearchScreen";
-import { projectSearch, searchKeys, type SearchCardView, type SearchHeadingView, type SearchRow } from "./searchModel";
+import { projectSearch, projectSearchWindow, searchKeys, type SearchCardView, type SearchHeadingView, type SearchRow } from "./searchModel";
 import { LiveScreen } from "./LiveScreen";
 import { LiveSearchScreen } from "./LiveSearchScreen";
 import { liveSearchKeys } from "./liveSearchModel";
@@ -150,6 +150,8 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
   let searchScope: ReturnType<TvApi["createScope"]> | undefined;
   let searchTimer: ReturnType<typeof setTimeout> | undefined;
   let searchCanonicalCards: SearchCardView[] = [];
+  let searchCanonicalHeadings: SearchHeadingView[] = [];
+  let searchCanonicalSections = new Map<string, SearchCardView[]>();
   let liveGeneration = 0;
   let liveScope: ReturnType<TvApi["createScope"]> | undefined;
   let liveClockTimer: ReturnType<typeof setInterval> | undefined;
@@ -1457,7 +1459,7 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
             if (this.discoverReturnZone === "segment") this.focusLibrarySegment(this.discoverReturnIndex);
             else this.focusLibraryCard(this.discoverReturnIndex);
           } else if (this.phase === "search") {
-            this.refreshSearchLayout();
+            this.refreshSearchWindow();
             if (this.discoverReturnZone === "result") this.focusSearchResult(this.discoverReturnIndex);
             else this.focusSearchKey(this.discoverReturnIndex);
           } else {
@@ -1665,7 +1667,7 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
             if (this.libraryReturnZone === "chip") this.focusDiscoverChip(this.libraryReturnIndex);
             else this.focusDiscoverCard(this.libraryReturnIndex);
           } else if (this.phase === "search") {
-            this.refreshSearchLayout();
+            this.refreshSearchWindow();
             if (this.libraryReturnZone === "result") this.focusSearchResult(this.libraryReturnIndex);
             else this.focusSearchKey(this.libraryReturnIndex);
           } else {
@@ -1692,6 +1694,8 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
         this.searchRows = [];
         this.searchHeadings = [];
         searchCanonicalCards = [];
+        searchCanonicalHeadings = [];
+        searchCanonicalSections.clear();
         this.searchVisibleCards = [];
         this.searchSectionOffsets = {};
         this.searchVerticalOffset = 0;
@@ -1738,6 +1742,8 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
         this.searchRows = [];
         this.searchHeadings = [];
         searchCanonicalCards = [];
+        searchCanonicalHeadings = [];
+        searchCanonicalSections.clear();
         this.searchVisibleCards = [];
         this.searchSectionOffsets = {};
         this.searchVerticalOffset = 0;
@@ -1799,9 +1805,20 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
       },
       refreshSearchLayout() {
         const view = projectSearch(this.searchRows, this.searchSectionOffsets, this.searchVerticalOffset);
-        this.searchHeadings = view.headings;
         searchCanonicalCards = view.cards;
-        this.searchVisibleCards = view.cards.filter(card => card.visible).map(card => ({ ...card, item: { ...card.item } }));
+        searchCanonicalHeadings = view.headings;
+        searchCanonicalSections = new Map();
+        for (const card of searchCanonicalCards) {
+          const section = searchCanonicalSections.get(card.section) ?? [];
+          section.push(card);
+          searchCanonicalSections.set(card.section, section);
+        }
+        this.refreshSearchWindow();
+      },
+      refreshSearchWindow() {
+        const view = projectSearchWindow(searchCanonicalHeadings, searchCanonicalSections, this.searchSectionOffsets, this.searchVerticalOffset);
+        this.searchHeadings = view.headings;
+        this.searchVisibleCards = view.cards.map(card => ({ ...card, item: { ...card.item } }));
         setTimeout(() => {
           if (this.phase !== "search") return;
           for (const card of this.searchVisibleCards)
@@ -1855,7 +1872,7 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
         if (changed) {
           this.searchSectionOffsets = { ...this.searchSectionOffsets, [card.section]: nextStart };
           this.searchVerticalOffset = vertical;
-          this.refreshSearchLayout();
+          this.refreshSearchWindow();
         }
         const focusWhenReady = (attempt: number) => {
           if (this.phase !== "search" || this.titleMenuOpen || this.searchFocusZone !== "result" || this.searchResultIndex !== index) return;
@@ -2375,7 +2392,7 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
             if (this.liveReturnZone === "segment") this.focusLibrarySegment(this.liveReturnIndex);
             else this.focusLibraryCard(this.liveReturnIndex);
           } else if (this.phase === "search") {
-            this.refreshSearchLayout();
+            this.refreshSearchWindow();
             if (this.liveReturnZone === "result") this.focusSearchResult(this.liveReturnIndex);
             else this.focusSearchKey(this.liveReturnIndex);
           } else {
@@ -2679,7 +2696,7 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
             if (this.settingsReturnZone === "segment") this.focusLibrarySegment(this.settingsReturnIndex);
             else this.focusLibraryCard(this.settingsReturnIndex);
           } else if (this.phase === "search") {
-            this.refreshSearchLayout();
+            this.refreshSearchWindow();
             if (this.settingsReturnZone === "result") this.focusSearchResult(this.settingsReturnIndex);
             else this.focusSearchKey(this.settingsReturnIndex);
           } else if (this.phase === "live") {
@@ -3430,7 +3447,7 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
             this.refreshDiscoverCards();
             this.focusDiscoverCard(this.sourceReturnIndex);
           } else if (this.phase === "search") {
-            this.refreshSearchLayout();
+            this.refreshSearchWindow();
             this.focusSearchResult(this.sourceReturnIndex);
           } else if (this.phase === "live") {
             this.refreshLiveView();
@@ -3515,7 +3532,7 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
               this.focusLibraryCard(this.detailReturnIndex);
             }
           } else if (this.phase === "search") {
-            this.refreshSearchLayout();
+            this.refreshSearchWindow();
             this.focusSearchResult(this.detailReturnIndex);
           } else {
             this.revealHomeControls();

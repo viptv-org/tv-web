@@ -3,7 +3,7 @@ import type { Catalog, MediaItem } from "../../src/api";
 
 vi.mock("../../src/tv-lightning/searchKeyIcons", () => ({ searchKeyIcon: () => "" }));
 
-const { projectSearch } = await import("../../src/tv-lightning/searchModel");
+const { projectSearch, projectSearchWindow } = await import("../../src/tv-lightning/searchModel");
 
 const item = (group: string, index: number): MediaItem => ({
   id: `${group}-${index}`, type: group === "live" ? "live" : "movie",
@@ -29,4 +29,11 @@ it("keeps full Search navigation positions while requesting only onscreen wsrv a
   expect(moved.cards.filter(card => card.visible).map(card => card.position)).toEqual([24, 25, 26, 48, 49, 50, 72, 73, 74]);
   expect(moved.cards[5].position).toBe(5);
   expect(moved.cards[5].visible).toBe(false);
+
+  const bySection = new Map<string, typeof initial.cards>();
+  for (const card of initial.cards) bySection.set(card.section, [...(bySection.get(card.section) ?? []), card]);
+  const windowed = projectSearchWindow(initial.headings, bySection, { movie: 5 }, 360);
+  expect(windowed.cards.map(card => card.position)).toEqual(moved.cards.filter(card => card.visible).map(card => card.position));
+  expect(windowed.cards.map(card => [card.x, card.y])).toEqual(moved.cards.filter(card => card.visible).map(card => [card.x, card.y]));
+  expect(windowed.cards.every(card => card.image.includes("wsrv.nl"))).toBe(true);
 });
