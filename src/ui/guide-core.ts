@@ -152,23 +152,8 @@ export function filterOptions(categories: readonly LiveCategory[]): readonly Gui
   ];
 }
 
-const STOP_WORDS = new Set(["the", "of", "and", "&", "a", "an", "tv", "hd"]);
-
-/**
- * Channel logos are always text monograms in display type (components.md §6):
- * a short one-word name as it is ("SYFY", "CNBC"), a leading acronym ("ABC
- * News Live" → "ABC"), else the initials of the name ("Cartoon Network" → "CN").
- * Same rule as the Home live tiles (components/cards/cardText.ts).
- */
-export function channelMonogram(name: string): string {
-  const words = name.replace(/[()[\]]/g, " ").split(/[\s/_-]+/).filter(Boolean);
-  if (!words.length) return "";
-  const [first] = words;
-  if (words.length === 1) return first.length <= 5 ? first : first.slice(0, 4).toUpperCase();
-  if (/^[A-Z0-9]{2,4}$/.test(first)) return first;
-  const initials = words.filter((word) => !STOP_WORDS.has(word.toLowerCase())).map((word) => word[0]!.toUpperCase());
-  return (initials.length ? initials : words.map((word) => word[0]!.toUpperCase())).slice(0, 3).join("");
-}
+/** Channel logos are text monograms (components.md §6); one rule with the Home live tiles. */
+export { channelMonogram } from "../components/cards/cardText";
 
 /** A validated IANA zone for Intl, or undefined (browser-local labels). */
 export function guideZone(zone: string | undefined): string | undefined {
