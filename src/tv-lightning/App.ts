@@ -3,13 +3,15 @@ import QRCode from "qrcode";
 import type { TvApi, DevicePairing, TvProfile, MediaItem, MediaSource, Catalog } from "../api";
 import { tokens } from "../theme/viptv-tokens.generated";
 import { ProfileTile, ManageProfilesButton, addProfileTile, emptyProfileTile, profileTileData } from "./ProfileTile";
-import { emptyHome, enrichHomeHero, loadHomeView, type HomeView } from "./homeModel";
+import { emptyHome, enrichHomeHero, loadHomeView, queueHomeCards, type HomeView } from "./homeModel";
 import { railIcon } from "./railIcons";
 import { RailItem } from "./RailFocus";
 import { DiscoverFilterOption } from "./DiscoverFocus";
 import { DiscoverScreen } from "./DiscoverScreen";
 import { LibraryScreen } from "./LibraryScreen";
 import { libraryCard } from "./libraryModel";
+import { TitleMenuScreen } from "./TitleMenuScreen";
+import { emptyTitleMenuChoice, titleMenuChoice, titleMenuChoices, type TitleMenuChoiceView } from "./titleMenuModel";
 import { cardPresentation } from "../core/presentations";
 import {
   catalogDefaults, catalogFilters, catalogForGroup, catalogsForGroup, discoverCard,
@@ -22,7 +24,7 @@ import { emptyDetail, emptyDetailEpisode, loadDetailView, type DetailView } from
 import { TitleAction, EpisodeTile } from "./TitleFocus";
 import { emptySources, emptySourceRow, projectSources, type SourcesView } from "./sourceModel";
 import { SourceChip, SourceProvider, SourceRow, ProviderOption, SourceDetailsClose, emptySourceChip, emptyProviderChoice } from "./SourceFocus";
-import { noteDiscoverFilter, noteDiscoverWindow, noteFocus, noteLibraryState, notePlayerState, noteSourceFilter, noteSourceIntent, noteSourceWindow, noteTrackPanel, noteTrackSelection } from "./focusDebug";
+import { noteDiscoverFilter, noteDiscoverWindow, noteFocus, noteLibraryState, notePlayerState, noteSourceFilter, noteSourceIntent, noteSourceWindow, noteTitleMenu, noteTrackPanel, noteTrackSelection } from "./focusDebug";
 import { createLightningPlaybackRuntime, type LightningPlaybackRuntime } from "./playbackRuntime";
 import { PlayerControl, PlayerTimeline, PlayerTrackOption } from "./PlayerFocus";
 import type { PlayerSnapshot } from "@viptv/video";
@@ -135,7 +137,7 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
   let chromeTimer: ReturnType<typeof setTimeout> | undefined;
   let disposeSession: (() => void) | undefined;
   return Blits.Application({
-    components: { ProfileTile, ManageProfilesButton, HomeAction, HomeCard, RailItem, DiscoverScreen, LibraryScreen, DiscoverFilterOption, TitleAction, EpisodeTile, SourceChip, SourceProvider, SourceRow, ProviderOption, SourceDetailsClose, PlayerControl, PlayerTimeline, PlayerTrackOption },
+    components: { ProfileTile, ManageProfilesButton, HomeAction, HomeCard, RailItem, DiscoverScreen, LibraryScreen, TitleMenuScreen, DiscoverFilterOption, TitleAction, EpisodeTile, SourceChip, SourceProvider, SourceRow, ProviderOption, SourceDetailsClose, PlayerControl, PlayerTimeline, PlayerTrackOption },
     template: `
       <Element w="1920" h="1080" :color="$phase === 'player' || $phase === 'playerTracks' || $phase === 'preparing' ? 'rgba(0,0,0,0)' : $background">
         <Element x="260" y="86" w="1400" h="800" src="$pairingGlow" :show="$phase === 'pairing' || $phase === 'expired' || $phase === 'error'" />
@@ -188,7 +190,7 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
           <Text x="1718" y="1000" :content="$moveIcon" font="Onest" size="16" color="$primary" />
           <Text x="1770" y="999" :content="$moveLabel" font="Onest" size="20" color="$body" />
         </Element>
-        <Element :show="$phase === 'home'">
+        <Element :show="$phase === 'home' || ($sourceReturnOrigin === 'home' && ($phase === 'sources' || $phase === 'provider' || $phase === 'sourceDetails'))">
           <Element x="1120" y="0" w="800" h="720" :src="$home.heroImage" :show="$home.heroImage !== ''" />
           <Element w="1920" h="1080" src="$homeScrim" />
           <Element x="44" y="54" w="56" h="56" rounded="28" color="$surface" />
@@ -230,7 +232,7 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
           <Text x="1693" y="65" :content="$optionsIcon" font="Onest" size="19" color="$primary" />
           <Text x="1730" y="66" :content="$optionsLabel" font="Onest" size="20" color="$body" />
         </Element>
-        <DiscoverScreen ref="discoverScreen" :show="$phase === 'discover'" :homeProfileAvatar="$homeProfileAvatar" :railSearch="$railSearch" :railHome="$railHome" :railDiscoverSelected="$railDiscoverSelected" :railLive="$railLive" :railList="$railList" :railSettings="$railSettings" :surface="$surface" :discoverHeading="$discoverHeading" :discoverChips="$discoverChips" :discoverCards="$discoverCards" :discoverWindowStart="$discoverWindowStart" :discoverError="$discoverError" :discoverOkLabel="$discoverOkLabel" :discoverSelectLabel="$discoverSelectLabel" :discoverOptionsIcon="$discoverOptionsIcon" :discoverOptionsLabel="$discoverOptionsLabel" :background="$background" :primary="$primary" :body="$body" :keyBorder="$keyBorder" />
+        <DiscoverScreen ref="discoverScreen" :show="$phase === 'discover' || ($sourceReturnOrigin === 'discover' && ($phase === 'sources' || $phase === 'provider' || $phase === 'sourceDetails'))" :homeProfileAvatar="$homeProfileAvatar" :railSearch="$railSearch" :railHome="$railHome" :railDiscoverSelected="$railDiscoverSelected" :railLive="$railLive" :railList="$railList" :railSettings="$railSettings" :surface="$surface" :discoverHeading="$discoverHeading" :discoverChips="$discoverChips" :discoverCards="$discoverCards" :discoverWindowStart="$discoverWindowStart" :discoverError="$discoverError" :discoverOkLabel="$discoverOkLabel" :discoverSelectLabel="$discoverSelectLabel" :discoverOptionsIcon="$discoverOptionsIcon" :discoverOptionsLabel="$discoverOptionsLabel" :background="$background" :primary="$primary" :body="$body" :keyBorder="$keyBorder" />
         <LibraryScreen ref="libraryScreen" :show="$phase === 'library' || ($sourceReturnOrigin === 'library' && ($phase === 'sources' || $phase === 'provider' || $phase === 'sourceDetails'))" :homeProfileAvatar="$homeProfileAvatar" :railSearch="$railSearch" :railHomeUnselected="$railHomeUnselected" :railDiscover="$railDiscover" :railLive="$railLive" :railListSelected="$railListSelected" :railSettings="$railSettings" :surface="$surface" :libraryHeading="$libraryHeading" :libraryMode="$libraryMode" :libraryCards="$libraryCards" :libraryWindowStart="$libraryWindowStart" :libraryError="$libraryError" :libraryOkLabel="$libraryOkLabel" :librarySelectLabel="$librarySelectLabel" :libraryOptionsIcon="$libraryOptionsIcon" :libraryOptionsLabel="$libraryOptionsLabel" :background="$background" :primary="$primary" :body="$body" :keyBorder="$keyBorder" />
         <Element :show="$phase === 'detail' || ($sourceReturnOrigin === 'detail' && ($phase === 'sources' || $phase === 'provider' || $phase === 'sourceDetails'))">
           <Element x="1120" y="0" w="800" h="720" :src="$detail.heroImage" :show="$detail.heroImage !== ''" alpha="0.75" />
@@ -372,6 +374,7 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
           <Text x="1693" y="1000" :content="$discoverBackLabel" font="Onest700" size="16" color="$primary" />
           <Text x="1760" y="999" :content="$discoverCancelLabel" font="Onest" size="20" color="$body" />
         </Element>
+        <TitleMenuScreen ref="titleMenuScreen" :show="$titleMenuOpen" :heading="$titleMenuHeading" :choices="$titleMenuSlots" :notice="$titleMenuNotice" :okLabel="$titleMenuOkLabel" :selectLabel="$titleMenuSelectLabel" :backLabel="$titleMenuBackLabel" :cancelLabel="$titleMenuCancelLabel" />
         <Element zIndex="20" :show="$railExpanded && ($phase === 'home' || $phase === 'detail' || $phase === 'discover' || $phase === 'library')">
           <Element w="1920" h="1080" color="$menuScrim" />
           <Element w="520" h="1080" src="$menuGradient" />
@@ -427,7 +430,7 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
         sourceWindowStart: 0,
         sourceReturnZone: "action" as "action" | "episode",
         sourceReturnIndex: 0,
-        sourceReturnOrigin: "detail" as "detail" | "library",
+        sourceReturnOrigin: "detail" as "detail" | "library" | "home" | "discover",
         sourceResume: false,
         sourceScrim: tokens["color.scrim.tv-panel"],
         sourcePanelGround: tokens["color.surface.1"],
@@ -540,6 +543,21 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
         librarySelectLabel: "",
         libraryOptionsIcon: "",
         libraryOptionsLabel: "",
+        titleMenuOpen: false,
+        titleMenuKind: "actions" as "actions" | "undo",
+        titleMenuHeading: "",
+        titleMenuNotice: "",
+        titleMenuChoices: [] as TitleMenuChoiceView[],
+        titleMenuSlots: Array.from({ length: 7 }, () => ({ ...emptyTitleMenuChoice })) as TitleMenuChoiceView[],
+        titleMenuFocusIndex: 0,
+        titleMenuItem: null as MediaItem | null,
+        titleMenuOrigin: "home" as "home" | "library" | "discover",
+        titleMenuReturnIndex: 0,
+        titleMenuBusy: false,
+        titleMenuOkLabel: "",
+        titleMenuSelectLabel: "",
+        titleMenuBackLabel: "",
+        titleMenuCancelLabel: "",
         currentProfileId: "",
         homeNotice: "",
         homeAddLabel: "",
@@ -657,6 +675,10 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
         this.$listen("home-action-activate", () => void this.activateHomeAction());
         this.$listen("home-action-hold", () => { this.homeNotice = "Choose a source from the title screen."; });
         this.$listen("home-card-activate", () => void this.openDetailByCard());
+        this.$listen("home-card-hold", (position: number) => {
+          const item = this.home.queueItems[Number(position)];
+          if (item) this.openTitleMenu(item, "home", Number(position));
+        });
         this.$listen("rail-focused", (position: number) => { this.railFocusIndex = Number(position); });
         this.$listen("rail-move", (delta: number) => this.moveRail(Number(delta)));
         this.$listen("rail-exit", () => this.closeRail());
@@ -668,6 +690,10 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
         this.$listen("discover-card-focused", (position: number) => { this.discoverCardIndex = Number(position); });
         this.$listen("discover-card-move", (direction: string) => this.moveDiscoverCard(direction));
         this.$listen("discover-card-activate", () => this.activateDiscoverCard());
+        this.$listen("discover-card-hold", (position: number) => {
+          const item = this.discoverItems[Number(position)];
+          if (item) this.openTitleMenu(item, "discover", Number(position));
+        });
         this.$listen("discover-option-focused", (position: number) => { this.discoverOptionIndex = Number(position); });
         this.$listen("discover-option-move", (delta: number) => this.moveDiscoverOption(Number(delta)));
         this.$listen("discover-option-activate", () => void this.selectDiscoverOption());
@@ -679,6 +705,14 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
         this.$listen("library-card-focused", (position: number) => { this.libraryCardIndex = Number(position); });
         this.$listen("library-card-move", (direction: string) => this.moveLibraryCard(direction));
         this.$listen("library-card-activate", () => this.activateLibraryCard());
+        this.$listen("library-card-hold", (position: number) => {
+          const item = this.libraryItems[Number(position)];
+          if (item) this.openTitleMenu(item, "library", Number(position));
+        });
+        this.$listen("title-menu-focused", (position: number) => { this.titleMenuFocusIndex = Number(position); });
+        this.$listen("title-menu-move", (delta: number) => this.moveTitleMenu(Number(delta)));
+        this.$listen("title-menu-activate", () => void this.activateTitleMenu());
+        this.$listen("title-menu-back", () => this.closeTitleMenu());
         this.$listen("title-action-move", (delta: number) =>
           Number(delta) < 0 && this.detailActionIndex === 0
             ? this.openRail()
@@ -1335,6 +1369,142 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
           }
         }, 0);
       },
+      openTitleMenu(item: MediaItem, origin: "home" | "library" | "discover", index: number) {
+        const inQueue = [...this.home.queueItems, ...this.libraryQueueItems]
+          .some(candidate => candidate.type === item.type && candidate.id === item.id);
+        const saved = [...this.home.favoriteItems, ...this.libraryFavorites]
+          .some(candidate => candidate.type === item.type && candidate.id === item.id);
+        this.titleMenuItem = item;
+        this.titleMenuOrigin = origin;
+        this.titleMenuReturnIndex = index;
+        this.titleMenuKind = "actions";
+        this.titleMenuChoices = titleMenuChoices(item, inQueue, saved);
+        this.titleMenuSlots = Array.from({ length: 7 }, (_, slot) => this.titleMenuChoices[slot] ?? { ...emptyTitleMenuChoice });
+        this.titleMenuFocusIndex = 0;
+        this.titleMenuHeading = "";
+        this.titleMenuNotice = "";
+        this.titleMenuBusy = false;
+        this.titleMenuOpen = true;
+        noteTitleMenu(true, "actions");
+        setTimeout(() => {
+          if (!this.titleMenuOpen || this.titleMenuKind !== "actions") return;
+          this.titleMenuHeading = item.name;
+          this.titleMenuOkLabel = "OK";
+          this.titleMenuSelectLabel = "Select";
+          this.titleMenuBackLabel = "BACK";
+          this.titleMenuCancelLabel = "Cancel";
+          this.revealTitleMenu();
+          this.focusTitleMenu(0);
+        }, 40);
+      },
+      revealTitleMenu() {
+        for (let index = 0; index < 7; index++)
+          (this.$select("titleMenuScreen")?.$select(`titleMenuOption${index}`) as unknown as { reveal?: () => void })?.reveal?.();
+      },
+      focusTitleMenu(index: number) {
+        this.titleMenuFocusIndex = index;
+        this.$select("titleMenuScreen")?.$select(`titleMenuOption${index}`)?.$focus();
+      },
+      moveTitleMenu(delta: number) {
+        const last = Math.max(0, this.titleMenuChoices.length - 1);
+        this.focusTitleMenu(Math.max(0, Math.min(last, this.titleMenuFocusIndex + delta)));
+      },
+      closeTitleMenu(restore = true) {
+        if (!this.titleMenuOpen) return;
+        this.titleMenuOpen = false;
+        this.titleMenuBusy = false;
+        noteTitleMenu(false, this.titleMenuKind);
+        if (!restore) return;
+        if (this.titleMenuOrigin === "home") {
+          const last = this.home.queueItems.length - 1;
+          if (last >= 0) this.focusHomeCard(Math.min(this.titleMenuReturnIndex, last));
+          else this.focusHomeAction(0);
+        } else if (this.titleMenuOrigin === "library") {
+          const last = this.libraryItems.length - 1;
+          if (last >= 0) this.focusLibraryCard(Math.min(this.titleMenuReturnIndex, last));
+          else this.focusLibrarySegment(this.libraryMode === "queue" ? 1 : 0);
+        } else this.focusDiscoverCard(this.titleMenuReturnIndex);
+      },
+      updateQueueLists(items: readonly MediaItem[]) {
+        const cards = queueHomeCards(items);
+        this.home = { ...this.home, queueItems: items, cards };
+        this.homeCards = Array.from({ length: 6 }, (_, index) => cards[index] ?? { ...emptyHomeCard });
+        this.libraryQueueItems = [...items];
+        if (this.libraryMode === "queue") {
+          this.libraryItems = [...items];
+          this.libraryCardIndex = Math.min(this.libraryCardIndex, Math.max(0, items.length - 1));
+          this.refreshLibraryCards();
+          noteLibraryState("queue", items.length);
+        }
+        this.revealHomeControls();
+      },
+      async refreshQueueAfterMenu() {
+        const page = await api.queue(this.currentProfileId, 0);
+        this.updateQueueLists(page.items);
+        this.libraryNextOffset = page.nextOffset;
+      },
+      showUndoMenu(item: MediaItem) {
+        this.titleMenuKind = "undo";
+        this.titleMenuChoices = [
+          titleMenuChoice("undo", "Undo"),
+          titleMenuChoice("done", "Done"),
+        ];
+        this.titleMenuSlots = Array.from({ length: 7 }, (_, index) => this.titleMenuChoices[index] ?? { ...emptyTitleMenuChoice });
+        this.titleMenuHeading = "";
+        this.titleMenuNotice = "";
+        this.titleMenuBusy = false;
+        noteTitleMenu(true, "undo");
+        setTimeout(() => {
+          if (!this.titleMenuOpen || this.titleMenuKind !== "undo") return;
+          this.titleMenuHeading = "Removed from Continue Watching";
+          this.revealTitleMenu();
+          this.focusTitleMenu(0);
+        }, 40);
+      },
+      async activateTitleMenu() {
+        if (!this.titleMenuOpen || this.titleMenuBusy) return;
+        const choice = this.titleMenuChoices[this.titleMenuFocusIndex];
+        const item = this.titleMenuItem;
+        if (!choice || !item) return;
+        if (choice.key === "cancel" || choice.key === "done") { this.closeTitleMenu(); return; }
+        if (choice.key === "previous" || choice.key === "source" || choice.key === "restart") {
+          const target = choice.key === "previous" ? item.previousEpisode : choice.key === "restart" ? { ...item, position: 0 } : item;
+          if (!target) return;
+          this.closeTitleMenu(false);
+          void this.openSources(target, choice.key === "previous");
+          return;
+        }
+        this.titleMenuBusy = true;
+        try {
+          if (choice.key === "watched") {
+            await api.correctProgress(this.currentProfileId, item, !item.watched);
+            await this.refreshQueueAfterMenu();
+            this.closeTitleMenu();
+          } else if (choice.key === "hide") {
+            await api.setQueueVisibility(this.currentProfileId, item, true);
+            this.updateQueueLists(this.home.queueItems.filter(candidate => candidate.type !== item.type || candidate.id !== item.id));
+            this.showUndoMenu(item);
+          } else if (choice.key === "undo") {
+            await api.setQueueVisibility(this.currentProfileId, item, false);
+            await this.refreshQueueAfterMenu();
+            this.closeTitleMenu();
+          } else if (choice.key === "favorite") {
+            await api.toggleFavorite(this.currentProfileId, item);
+            const favorites = await api.favorites(this.currentProfileId);
+            this.home = { ...this.home, favoriteItems: favorites };
+            this.libraryFavorites = favorites;
+            if (this.libraryMode === "favorites") {
+              this.libraryItems = [...favorites];
+              this.refreshLibraryCards();
+              noteLibraryState("favorites", favorites.length);
+            }
+            this.closeTitleMenu();
+          }
+        } catch (cause) {
+          this.titleMenuNotice = cause instanceof Error ? cause.message : "This action could not finish.";
+          this.titleMenuBusy = false;
+        }
+      },
       async activateHomeAction() {
         if (this.phase !== "home" || this.homeFocusZone !== "action") return;
         const action = ["play", "details", "save"][this.homeActionIndex];
@@ -1438,14 +1608,16 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
         this.detailNotice = action === "info" ? this.detail.synopsis : "Choose source is not available yet.";
       },
       async openSources(item: MediaItem, resume: boolean) {
-        if (this.phase !== "detail" && this.phase !== "library") return;
+        if (this.phase !== "detail" && this.phase !== "library" && this.phase !== "home" && this.phase !== "discover") return;
         const generation = ++sourceGeneration;
         sourceScope?.abort();
         clearTimeout(sourceTimer);
         const scope = api.createScope();
         sourceScope = scope;
-        this.sourceReturnOrigin = this.phase === "library" ? "library" : "detail";
+        this.sourceReturnOrigin = this.phase;
         if (this.phase === "library") this.sourceReturnIndex = this.libraryCardIndex;
+        else if (this.phase === "home") this.sourceReturnIndex = this.homeCardIndex;
+        else if (this.phase === "discover") this.sourceReturnIndex = this.discoverCardIndex;
         else {
           this.sourceReturnZone = this.detailFocusZone;
           this.sourceReturnIndex = this.detailFocusZone === "episode" ? this.detailEpisodeIndex : this.detailActionIndex;
@@ -1891,13 +2063,20 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
         sourceScope?.abort();
         ++sourceGeneration;
         clearTimeout(sourceTimer);
-        this.phase = this.sourceReturnOrigin === "library" ? "library" : "detail";
+        this.phase = this.sourceReturnOrigin;
         this.sourceNotice = "";
         setTimeout(() => {
           if (this.phase === "library") {
             this.revealLibrarySegments();
             this.refreshLibraryCards();
             this.focusLibraryCard(this.sourceReturnIndex);
+          } else if (this.phase === "home") {
+            this.revealHomeControls();
+            this.focusHomeCard(this.sourceReturnIndex);
+          } else if (this.phase === "discover") {
+            this.revealDiscoverChips();
+            this.refreshDiscoverCards();
+            this.focusDiscoverCard(this.sourceReturnIndex);
           } else if (this.sourceReturnZone === "episode") this.focusTitleEpisode(this.sourceReturnIndex);
           else this.focusTitleAction(this.sourceReturnIndex);
         }, 0);
@@ -2128,7 +2307,8 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
         return () => void this.beginPairing();
       },
       back() {
-        if (this.railExpanded) this.closeRail();
+        if (this.titleMenuOpen) this.closeTitleMenu();
+        else if (this.railExpanded) this.closeRail();
         else if (this.discoverFilterOpen) this.closeDiscoverFilter();
         else if (this.phase === "profiles" && this.managing) this.toggleManageProfiles();
         else if (this.phase === "playerTracks") this.closeTrackPanel();

@@ -39,6 +39,19 @@ export const emptyHome: HomeView = {
   playLabel: "Play", saved: false, cards: [],
 };
 
+export function queueHomeCards(queue: readonly MediaItem[]): HomeCardView[] {
+  return queue.slice(0, 6).map(candidate => {
+    const card = cardPresentation(candidate, "queue");
+    return {
+      id: candidate.id,
+      title: card.title,
+      subtitle: card.subtitle,
+      image: artworkUrl(card.image ?? undefined, 320, 180, false, card.imageRole === "logo") ?? card.image ?? "",
+      progress: card.progress ?? 0,
+    };
+  });
+}
+
 const clock = (seconds: number) => {
   const total = Math.max(0, Math.floor(seconds));
   return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, "0")}`;
@@ -53,16 +66,7 @@ export function projectHome(heroItem: MediaItem | undefined, queue: readonly Med
   const eyebrow = heroItem.type === "live" ? "Live now" : hasProgress ? "Continue watching" : `Featured ${heroItem.type}`;
   const meta = [item.year, item.imdbRating && `IMDb ${item.imdbRating}`, ...item.genres.slice(0, 3)]
     .filter(Boolean).join(" · ");
-  const cards = queue.slice(0, 6).map((candidate) => {
-    const card = cardPresentation(candidate, "queue");
-    return {
-      id: candidate.id,
-      title: card.title,
-      subtitle: card.subtitle,
-      image: artworkUrl(card.image ?? undefined, 320, 180, false, card.imageRole === "logo") ?? card.image ?? "",
-      progress: card.progress ?? 0,
-    };
-  });
+  const cards = queueHomeCards(queue);
   return {
     heroItem,
     queueItems: queue,

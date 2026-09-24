@@ -45,6 +45,11 @@ export function noteLibraryState(mode: string, count: number) {
   (window as Window & { __viptvLibrary?: { mode: string; count: number } }).__viptvLibrary = { mode, count };
 }
 
+export function noteTitleMenu(open: boolean, kind: string) {
+  if (!enabled) return;
+  (window as Window & { __viptvTitleMenu?: { open: boolean; kind: string } }).__viptvTitleMenu = { open, kind };
+}
+
 /** Test-only player state, without session or delivery URLs. */
 export function notePlayerState(state: string, position: number) {
   if (!enabled) return;

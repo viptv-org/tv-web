@@ -1,10 +1,22 @@
+# Lightning TV held-card menu — 2026-09-24
+
+The staged Blits action menu now opens from Home, Discover and My List tiles
+on a 700 ms OK hold; ContextMenu also opens it. Back restores the tile, and a
+held release does not also activate it. Tizen, Vizio and webOS browser-mode
+captures of `TvItemMenu` were byte-identical. At 1920 × 1080 against the React
+TV capture it changed 1,223,606 pixels (59.0088%, MAE 4.7415, RMSE 21.5925,
+SSIM 0.886041). This remains an open visual deviation. Browser fixtures
+exercised Choose source, previous-episode Resume at its saved position, restart
+at zero, hide/Undo requests, My List toggle and watched correction through the
+shared API. The fixture records hide/Undo calls but does not mutate its queue,
+so a real backend and physical-TV confirmation remain pending. The Undo view
+has not been compared pixel-for-pixel.
+
 # Lightning TV My List — 2026-09-24
 
 The staged Blits menu now opens My List. Browser fixtures cover saved titles,
 Continue Watching, focus restoration through title detail and a direct Resume
-source/player path, and refetch after a saved-title toggle. Held OK at 700 ms
-does not also activate on release; the queue-management action menu is still
-pending. Queue and saved-grid captures were byte-identical across Tizen,
+source/player path, and refetch after a saved-title toggle. Queue and saved-grid captures were byte-identical across Tizen,
 Vizio and webOS browser modes. At 1920 × 1080, `TvLibrary` queue changed
 614,925 pixels against React (29.6549%, SSIM 0.953726). A matched saved-grid
 capture with six fixture favorites changed 463,694 pixels (22.3618%, SSIM
@@ -12,7 +24,7 @@ capture with six fixture favorites changed 463,694 pixels (22.3618%, SSIM
 and `node tests/preview/react-library-saved.mjs`, then run the pixel comparator.
 Both are open deviations. Source/media behavior used browser stubs;
 physical TV navigation, decoding, hide/Undo, watched correction and previous
-episode actions remain unverified or unimplemented in Blits. Phone `Main` and
+episode actions remain unverified on hardware. Phone `Main` and
 desktop `DeskHome` remained exactly equal to their pre-migration captures
 (0 changed pixels at 390×844 and 1440×900). `npm run build`, 169 unit
 tests and the targeted responsive/TV browser suite (24 passed, 10 skipped)

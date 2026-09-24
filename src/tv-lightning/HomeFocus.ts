@@ -79,6 +79,7 @@ export const HomeCard = Blits.Component("HomeCard", {
   state() {
     return {
       focused: false,
+      pressed: false, holdFired: false, holdTimer: 0,
       titleText: "",
       subtitleText: "",
       white: tokens["color.fill.white"],
@@ -91,7 +92,8 @@ export const HomeCard = Blits.Component("HomeCard", {
   },
   hooks: {
     focus() { this.focused = true; this.reveal(); noteFocus("home-card", this.position); this.$emit("home-card-focused", this.position); },
-    unfocus() { this.focused = false; },
+    unfocus() { this.focused = false; clearTimeout(this.holdTimer); },
+    destroy() { clearTimeout(this.holdTimer); },
   },
   methods: {
     reveal() { this.titleText = this.card.title; this.subtitleText = this.card.subtitle; },
@@ -100,6 +102,22 @@ export const HomeCard = Blits.Component("HomeCard", {
     left() { this.$emit("home-card-move", { position: this.position, delta: -1 }); },
     right() { this.$emit("home-card-move", { position: this.position, delta: 1 }); },
     up() { this.$emit("home-action-return"); },
-    enter() { return () => this.$emit("home-card-activate", this.position); },
+    menu() { this.$emit("home-card-hold", this.position); },
+    enter() {
+      if (!this.pressed) {
+        this.pressed = true;
+        this.holdFired = false;
+        this.holdTimer = window.setTimeout(() => {
+          this.holdFired = true;
+          this.$emit("home-card-hold", this.position);
+        }, 700);
+      }
+      return () => {
+        clearTimeout(this.holdTimer);
+        const activate = !this.holdFired;
+        this.pressed = false;
+        if (activate) this.$emit("home-card-activate", this.position);
+      };
+    },
   },
 });

@@ -59,7 +59,7 @@ async function start() {
       { family: "Onest700", type: "web", file: onest700Url },
     ],
     defaultFont: "Onest",
-    keymap: { 10009: "back", 461: "back", 8: "back", 27: "back" },
+    keymap: { 10009: "back", 461: "back", 8: "back", 27: "back", 457: "menu", 93: "menu" },
   });
 }
 start().catch((cause: unknown) => {

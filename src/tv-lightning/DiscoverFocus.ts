@@ -71,6 +71,7 @@ export const DiscoverCard = Blits.Component("DiscoverCard", {
     right() { this.$emit("discover-card-move", "right"); },
     up() { this.$emit("discover-card-move", "up"); },
     down() { this.$emit("discover-card-move", "down"); },
+    menu() { this.$emit("discover-card-hold", this.position); },
     enter() {
       if (!this.pressed) {
         this.pressed = true;

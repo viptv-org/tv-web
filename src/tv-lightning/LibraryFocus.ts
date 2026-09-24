@@ -71,6 +71,7 @@ export const LibraryCard = Blits.Component("LibraryCard", {
     right() { this.$emit("library-card-move", "right"); },
     up() { this.$emit("library-card-move", "up"); },
     down() { this.$emit("library-card-move", "down"); },
+    menu() { this.$emit("library-card-hold", this.position); },
     enter() {
       if (!this.pressed) {
         this.pressed = true;
