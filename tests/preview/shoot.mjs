@@ -75,7 +75,7 @@ async function ensureServer(kind) {
   const env = { ...process.env };
   for (const name of UNSAFE_ENV) delete env[name];
   if (server.local) env.VITE_VIPTV_LOCAL_MODE = '1';
-  const configArgs = server.local ? ['--config', join(here, 'vite.local.config.mjs')] : [];
+  const configArgs = ['--config', join(here, server.local ? 'vite.local.config.mjs' : 'vite.app.config.mjs')];
   const child = spawn(process.execPath, [join(root, 'node_modules/vite/bin/vite.js'), ...configArgs, '--port', String(server.port), '--strictPort', '--host', '127.0.0.1'], {
     cwd: root, env, stdio: 'ignore', detached: flag('--keep'),
   });
@@ -112,8 +112,17 @@ function helpers(page, frame) {
     async hold(what) {
       const element = target(what);
       await element.waitFor({ state: 'visible', timeout: 10000 });
-      if (frame.tv) { await element.focus(); await page.keyboard.press('ContextMenu'); }
-      else await element.click({ button: 'right' });
+      const dialogs = page.getByRole('dialog');
+      const before = await dialogs.count();
+      // Every held target opens a dialog; under load the first hold can land
+      // before the element is wired, so try once more if none appeared.
+      for (let attempt = 0; attempt < 2; attempt++) {
+        if (frame.tv) { await element.focus(); await page.keyboard.press('ContextMenu'); }
+        else await element.click({ button: 'right' });
+        const deadline = Date.now() + 2000;
+        while (Date.now() < deadline && await dialogs.count() <= before) await h.sleep(100);
+        if (await dialogs.count() > before) break;
+      }
       await h.sleep(250);
     },
     async focus(what) { const element = target(what); await element.waitFor({ state: 'visible', timeout: 10000 }); await element.focus(); await h.sleep(150); },

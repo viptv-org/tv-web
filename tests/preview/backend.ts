@@ -41,6 +41,8 @@ export interface BackendOptions {
   queue?: boolean;
   /** My List entries (default false). */
   favorites?: boolean;
+  /** My List starts with a live channel (Cartoon Network). */
+  liveFavorite?: boolean;
   /** Sources keep "still checking" (default true) or finish. */
   sourcesDone?: boolean;
   /** Installing an addon fails (400). */
@@ -236,8 +238,9 @@ const catalogs = [
     extra: [{ name: 'genre', options: GENRES }, { name: 'year', options: ['2026', '2025', '2024', '2023'] }, { name: 'search' }, { name: 'skip' }] },
   { id: 'seasonal', type: 'movie', name: 'Seasonal', addon_id: 2, addon_name: 'Trakt', supports_search: false, supports_skip: true, extra: [{ name: 'skip' }] },
   { id: 'trakt-trending', type: 'movie', name: 'Trakt Trending', addon_id: 2, addon_name: 'Trakt', supports_search: false, supports_skip: true, extra: [{ name: 'skip' }] },
-  // A required text extra, so the required-filter entry is reachable.
-  { id: 'latest-digital', type: 'movie', name: 'Latest digital', addon_id: 1, addon_name: 'Cinemeta', supports_search: true, supports_skip: false, extra: [{ name: 'search', is_required: true }] },
+  // A required text extra, so the required-filter entry is reachable; not a
+  // search source, so Search shows the reference's Popular rows only.
+  { id: 'latest-digital', type: 'movie', name: 'Latest digital', addon_id: 1, addon_name: 'Cinemeta', supports_search: false, supports_skip: false, extra: [{ name: 'search', is_required: true }] },
   { id: 'top', type: 'series', name: 'Popular', addon_id: 1, addon_name: 'Cinemeta', supports_search: true, supports_skip: true,
     extra: [{ name: 'genre', options: GENRES }, { name: 'search' }, { name: 'skip' }] },
   { id: 'kitsu-top-airing', type: 'anime', name: 'Top airing', addon_id: 3, addon_name: 'Anime Kitsu', supports_search: false, supports_skip: true, extra: [{ name: 'skip' }] },
@@ -375,7 +378,8 @@ export async function installBackend(page: Page, options: BackendOptions): Promi
   if (options.manyProfiles) profiles.push(...extraProfiles.map(([name, style, choice], index) => ({ id: String(index + 4), name, avatar_style: style, avatar_choice: choice, setup_complete: true })));
   let selectedProfile: string | null = session === 'ready' ? '1' : null;
   let unlocked = false;
-  let favorites = options.favorites ? favoritesFor(family) : [];
+  let favorites: Record<string, unknown>[] = options.favorites ? favoritesFor(family) : [];
+  if (options.liveFavorite) favorites = [liveItem(channels.find(channel => channel.id === 'cartoon-network-west')!), ...favorites];
   const queue = options.queue === false ? [] : queueFor(family);
   let addonList = addons();
   let playbackCount = 0;
