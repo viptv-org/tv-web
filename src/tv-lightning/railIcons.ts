@@ -4,14 +4,14 @@ type Icon = "search" | "home" | "discover" | "live" | "list" | "settings";
 const cache = new Map<string, string>();
 
 /** Small, cached canvas textures for the collapsed TV rail's line icons. */
-export function railIcon(icon: Icon, selected = false): string {
-  const key = `${icon}:${selected}`;
+export function railIcon(icon: Icon, selected = false, onLight = false): string {
+  const key = `${icon}:${selected}:${onLight}`;
   const known = cache.get(key);
   if (known) return known;
   const canvas = document.createElement("canvas");
   canvas.width = canvas.height = 32;
   const context = canvas.getContext("2d")!;
-  context.strokeStyle = selected ? tokens["color.text.primary"] : tokens["color.text.secondary"];
+  context.strokeStyle = onLight ? tokens["color.on.light"] : selected ? tokens["color.text.primary"] : tokens["color.text.secondary"];
   context.lineWidth = 2.2;
   context.lineCap = "round";
   context.lineJoin = "round";

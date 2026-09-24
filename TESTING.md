@@ -1,3 +1,15 @@
+# Lightning TV menu — 2026-09-24
+
+The staged Lightning TV entry now has a focus-owning expanded rail. Browser
+captures for Tizen, Vizio and webOS matched byte-for-byte; the `TvMenu` capture
+still differs from the React TV reference by 1,625,803 pixels (78.4049%,
+SSIM 0.930841). The full-frame result includes the previously measured Home
+background deviation. Browser D-pad checks covered menu entry, Discover focus,
+Right/Back restoration and the profile route. Search, Discover, Live TV, My
+List and Settings are still pending in Blits. `npm run build`, 169 unit tests
+and the targeted responsive/TV Playwright suite (24 passed, 10 skipped) pass.
+The public TV launcher remains on React; this is staged browser evidence only.
+
 # Physical Vizio cast recovery — 2026-09-24
 
 The desktop SmartCast command launched Conjure (app 17, namespace 4), but the

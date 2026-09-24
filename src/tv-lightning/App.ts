@@ -5,6 +5,7 @@ import { tokens } from "../theme/viptv-tokens.generated";
 import { ProfileTile, ManageProfilesButton, addProfileTile, emptyProfileTile, profileTileData } from "./ProfileTile";
 import { emptyHome, enrichHomeHero, loadHomeView, type HomeView } from "./homeModel";
 import { railIcon } from "./railIcons";
+import { RailItem } from "./RailFocus";
 import { HomeAction, HomeCard } from "./HomeFocus";
 import { emptyHomeCard } from "./homeModel";
 import { emptyDetail, emptyDetailEpisode, loadDetailView, type DetailView } from "./detailModel";
@@ -64,6 +65,20 @@ function homeScrim() {
   return canvas.toDataURL("image/png");
 }
 
+function menuGradient() {
+  const canvas = document.createElement("canvas");
+  canvas.width = 520;
+  canvas.height = 1;
+  const context = canvas.getContext("2d")!;
+  const gradient = context.createLinearGradient(0, 0, 520, 0);
+  gradient.addColorStop(0, tokens["color.bg"]);
+  gradient.addColorStop(0.62, tokens["color.bg"]);
+  gradient.addColorStop(1, "rgba(11,11,12,0)");
+  context.fillStyle = gradient;
+  context.fillRect(0, 0, 520, 1);
+  return canvas.toDataURL("image/png");
+}
+
 const playerClock = (seconds: number) => {
   const total = Math.max(0, Math.floor(seconds));
   return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, "0")}`;
@@ -104,7 +119,7 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
   let chromeTimer: ReturnType<typeof setTimeout> | undefined;
   let disposeSession: (() => void) | undefined;
   return Blits.Application({
-    components: { ProfileTile, ManageProfilesButton, HomeAction, HomeCard, TitleAction, EpisodeTile, SourceChip, SourceProvider, SourceRow, ProviderOption, SourceDetailsClose, PlayerControl, PlayerTimeline, PlayerTrackOption },
+    components: { ProfileTile, ManageProfilesButton, HomeAction, HomeCard, RailItem, TitleAction, EpisodeTile, SourceChip, SourceProvider, SourceRow, ProviderOption, SourceDetailsClose, PlayerControl, PlayerTimeline, PlayerTrackOption },
     template: `
       <Element w="1920" h="1080" :color="$phase === 'player' || $phase === 'playerTracks' || $phase === 'preparing' ? 'rgba(0,0,0,0)' : $background">
         <Element x="260" y="86" w="1400" h="800" src="$pairingGlow" :show="$phase === 'pairing' || $phase === 'expired' || $phase === 'error'" />
@@ -317,6 +332,18 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
           <Text x="1164" y="902" maxwidth="660" :content="$trackNotice" font="Onest" size="22" color="$secondary" />
           <Text x="1382" y="998" :content="$trackLegend" font="Onest" size="20" color="$secondary" />
         </Element>
+        <Element :show="$railExpanded && ($phase === 'home' || $phase === 'detail')">
+          <Element w="1920" h="1080" color="$menuScrim" />
+          <Element w="520" h="1080" src="$menuGradient" />
+          <RailItem ref="rail0" position="0" label="Profile" icon="" focusedIcon="" :avatar="$homeProfileAvatar" :profileName="$railProfileName" :current="false" x="48" y="48" />
+          <RailItem ref="rail1" position="1" label="Search" :icon="$railSearch" :focusedIcon="$railSearchFocus" avatar="" profileName="" :current="false" x="48" y="174" />
+          <RailItem ref="rail2" position="2" label="Home" :icon="$railHome" :focusedIcon="$railHomeFocus" avatar="" profileName="" :current="true" x="48" y="252" />
+          <RailItem ref="rail3" position="3" label="Discover" :icon="$railDiscover" :focusedIcon="$railDiscoverFocus" avatar="" profileName="" :current="false" x="48" y="330" />
+          <RailItem ref="rail4" position="4" label="Live TV" :icon="$railLive" :focusedIcon="$railLiveFocus" avatar="" profileName="" :current="false" x="48" y="408" />
+          <RailItem ref="rail5" position="5" label="My List" :icon="$railList" :focusedIcon="$railListFocus" avatar="" profileName="" :current="false" x="48" y="486" />
+          <RailItem ref="rail6" position="6" label="Settings" :icon="$railSettings" :focusedIcon="$railSettingsFocus" avatar="" profileName="" :current="false" x="48" y="958" />
+          <Text x="48" y="864" maxwidth="400" :content="$railNotice" font="Onest" size="20" color="$secondary" />
+        </Element>
         <Text x="96" y="54" :show="$phase === 'ready'" :content="$startingLabel" font="Onest" size="28" color="$primary" />
       </Element>
     `,
@@ -410,6 +437,14 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
         homeFocusZone: "action" as "action" | "card",
         homeActionIndex: 0,
         homeCardIndex: 0,
+        railExpanded: false,
+        railFocusIndex: 2,
+        railReturnZone: "action" as "action" | "card" | "episode",
+        railReturnIndex: 0,
+        railProfileName: "",
+        railNotice: "",
+        menuScrim: tokens["color.scrim.tv-menu"],
+        menuGradient: menuGradient(),
         currentProfileId: "",
         homeNotice: "",
         homeAddLabel: "",
@@ -418,11 +453,17 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
         secondary: tokens["color.text.secondary"],
         noticeGlass: tokens["color.fill.notice-glass-tv"],
         railSearch: railIcon("search"),
+        railSearchFocus: railIcon("search", false, true),
         railHome: railIcon("home", true),
+        railHomeFocus: railIcon("home", false, true),
         railDiscover: railIcon("discover"),
+        railDiscoverFocus: railIcon("discover", false, true),
         railLive: railIcon("live"),
+        railLiveFocus: railIcon("live", false, true),
         railList: railIcon("list"),
+        railListFocus: railIcon("list", false, true),
         railSettings: railIcon("settings"),
+        railSettingsFocus: railIcon("settings", false, true),
         homeProfileAvatar: "",
         optionsIcon: "",
         optionsLabel: "",
@@ -518,8 +559,14 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
         this.$listen("home-action-activate", () => void this.activateHomeAction());
         this.$listen("home-action-hold", () => { this.homeNotice = "Choose a source from the title screen."; });
         this.$listen("home-card-activate", () => void this.openDetailByCard());
+        this.$listen("rail-focused", (position: number) => { this.railFocusIndex = Number(position); });
+        this.$listen("rail-move", (delta: number) => this.moveRail(Number(delta)));
+        this.$listen("rail-exit", () => this.closeRail());
+        this.$listen("rail-activate", () => this.activateRail());
         this.$listen("title-action-move", (delta: number) =>
-          this.focusTitleAction(Math.max(0, Math.min(3, this.detailActionIndex + Number(delta)))));
+          Number(delta) < 0 && this.detailActionIndex === 0
+            ? this.openRail()
+            : this.focusTitleAction(Math.max(0, Math.min(3, this.detailActionIndex + Number(delta)))));
         this.$listen("title-episodes-enter", () => {
           if (this.detail.episodes.length) this.focusTitleEpisode(0);
         });
@@ -588,6 +635,7 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
         homeScope = api.createScope();
         const selectedProfile = this.profiles.find(profile => profile.id === profileId);
         this.homeProfileAvatar = selectedProfile ? profileTileData(selectedProfile).image : "";
+        this.railProfileName = selectedProfile?.name ?? "Profile";
         this.currentProfileId = profileId;
         this.homeNotice = "";
         this.phase = "ready";
@@ -630,6 +678,7 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
         this.$select(`heroAction${index}`)?.$focus();
       },
       moveHomeAction(position: number, delta: number) {
+        if (delta < 0 && this.homeActionIndex === 0) { this.openRail(); return; }
         this.focusHomeAction(Math.max(0, Math.min(2, this.homeActionIndex + delta)));
       },
       focusHomeCard(index: number) {
@@ -640,7 +689,56 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
       moveHomeCard(position: number, delta: number) {
         const count = this.home.cards.length;
         if (!count) return;
+        if (delta < 0 && this.homeCardIndex === 0) { this.openRail(); return; }
         this.focusHomeCard(Math.max(0, Math.min(count - 1, this.homeCardIndex + delta)));
+      },
+      openRail() {
+        if (this.phase !== "home" && this.phase !== "detail") return;
+        this.railReturnZone = this.phase === "home" ? this.homeFocusZone : this.detailFocusZone;
+        this.railReturnIndex = this.phase === "home"
+          ? this.homeFocusZone === "card" ? this.homeCardIndex : this.homeActionIndex
+          : this.detailFocusZone === "episode" ? this.detailEpisodeIndex : this.detailActionIndex;
+        this.railExpanded = true;
+        this.railNotice = "";
+        this.focusRail(2);
+        setTimeout(() => {
+          if (!this.railExpanded) return;
+          for (let index = 0; index < 7; index++)
+            (this.$select(`rail${index}`) as unknown as { reveal?: () => void })?.reveal?.();
+        }, 0);
+      },
+      focusRail(index: number) {
+        this.railFocusIndex = index;
+        this.$select(`rail${index}`)?.$focus();
+      },
+      moveRail(delta: number) {
+        this.focusRail(Math.max(0, Math.min(6, this.railFocusIndex + delta)));
+      },
+      closeRail() {
+        if (!this.railExpanded) return;
+        this.railExpanded = false;
+        this.railNotice = "";
+        if (this.phase === "home") {
+          if (this.railReturnZone === "card") this.focusHomeCard(this.railReturnIndex);
+          else this.focusHomeAction(this.railReturnIndex);
+        } else if (this.phase === "detail") {
+          if (this.railReturnZone === "episode") this.focusTitleEpisode(this.railReturnIndex);
+          else this.focusTitleAction(this.railReturnIndex);
+        }
+      },
+      activateRail() {
+        if (!this.railExpanded) return;
+        if (this.railFocusIndex === 0) {
+          this.railExpanded = false;
+          this.showProfiles(this.profiles);
+        } else if (this.railFocusIndex === 2) {
+          if (this.phase === "detail") {
+            this.railExpanded = false;
+            this.returnFromDetail();
+          } else this.closeRail();
+        } else {
+          this.railNotice = "This screen is not available yet.";
+        }
       },
       async activateHomeAction() {
         if (this.phase !== "home" || this.homeFocusZone !== "action") return;
@@ -1262,6 +1360,7 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
       },
       showProfiles(profiles: readonly TvProfile[]) {
         this.profiles = [...profiles];
+        this.railExpanded = false;
         this.phase = "profiles";
         this.profilePage = 0;
         this.profileFocus = 0;
@@ -1400,7 +1499,8 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
         return () => void this.beginPairing();
       },
       back() {
-        if (this.phase === "profiles" && this.managing) this.toggleManageProfiles();
+        if (this.railExpanded) this.closeRail();
+        else if (this.phase === "profiles" && this.managing) this.toggleManageProfiles();
         else if (this.phase === "playerTracks") this.closeTrackPanel();
         else if (this.phase === "player") {
           if (this.trackPanelOpen) this.closeTrackPanel();

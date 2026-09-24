@@ -2,6 +2,7 @@ import Blits from "@lightningjs/blits";
 import type { TvProfile } from "../api";
 import { tokens } from "../theme/viptv-tokens.generated";
 import avatarCatalog from "../ui/avatars.json";
+import { noteFocus } from "./focusDebug";
 
 export interface ProfileTileData {
   id: string;
@@ -105,6 +106,7 @@ export const ProfileTile = Blits.Component("ProfileTile", {
     focus() {
       this.focused = true;
       this.reveal();
+      noteFocus("profile-tile", this.position);
       this.$emit("profile-focus", this.position);
     },
     unfocus() { this.focused = false; clearTimeout(this.holdTimer); },
