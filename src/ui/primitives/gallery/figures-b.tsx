@@ -108,7 +108,7 @@ register("CmpPhone3", {
   "Empty state": () => <EmptyState icon={<Bookmark {...sw(2)} />} title="Your list is empty.">Add titles with the + button.</EmptyState>,
   "Loading more": () => <LoadingMore />,
   // The reference card is content-sized (316) inside its 330 figure.
-  "Skeleton · featured card": () => <div style={{ width: 316 }}><SkeletonFeatured /></div>,
+  "Skeleton · featured card": () => <div style={{ width: 330 }}><div style={{ width: 316 }}><SkeletonFeatured /></div></div>,
   "Skeleton · poster / continue": () => <><SkeletonTile /><SkeletonContinue /></>,
   "Skeleton · list row": () => <div style={{ width: 390 }}><SkeletonRow variant="phone" /></div>,
 });
