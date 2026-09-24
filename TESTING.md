@@ -1,3 +1,20 @@
+# Lightning TV Discover — 2026-09-24
+
+The staged Blits menu now opens Discover. Its grid uses shared API catalogs,
+Rust-normalized cards and Blits D-pad focus; a card opens title detail and Back
+restores the same card. Browser fixtures exercised Genre choice, catalog/type
+switching, three-row focus window movement and return to Home. Tizen, Vizio and
+webOS browser captures were byte-identical for `TvDiscover` and
+`TvDiscoverFilter`. At 1920 × 1080 against matched React TV captures,
+`TvDiscover` changed 797,513 pixels (38.4603%, SSIM 0.864570), and
+`TvDiscoverFilter` changed 1,178,903 pixels (56.8530%, SSIM 0.940365).
+These are open visual deviations. Text-only required filters, horizontal chip
+overflow and longer filter lists still need implementation. No physical Blits
+TV run or launcher switch was performed. Build and 169 unit tests pass; the
+targeted responsive/TV Playwright suite passed 24 with 10 platform skips on
+the isolated rerun. Its prior concurrent run lost one browser execution
+context while a build was running.
+
 # Lightning TV menu — 2026-09-24
 
 The staged Lightning TV entry now has a focus-owning expanded rail. Browser
@@ -5,8 +22,8 @@ captures for Tizen, Vizio and webOS matched byte-for-byte; the `TvMenu` capture
 still differs from the React TV reference by 1,625,803 pixels (78.4049%,
 SSIM 0.930841). The full-frame result includes the previously measured Home
 background deviation. Browser D-pad checks covered menu entry, Discover focus,
-Right/Back restoration and the profile route. Search, Discover, Live TV, My
-List and Settings are still pending in Blits. `npm run build`, 169 unit tests
+Right/Back restoration and the profile route. Search, Live TV, My List and
+Settings are still pending in Blits. `npm run build`, 169 unit tests
 and the targeted responsive/TV Playwright suite (24 passed, 10 skipped) pass.
 The public TV launcher remains on React; this is staged browser evidence only.
 

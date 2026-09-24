@@ -29,6 +29,17 @@ export function noteSourceWindow(index: number, start: number) {
   (window as Window & { __viptvSourceWindow?: { index: number; start: number } }).__viptvSourceWindow = { index, start };
 }
 
+/** Test-only Discover grid window; contains no account or media identifiers. */
+export function noteDiscoverWindow(index: number, start: number, count: number) {
+  if (!enabled) return;
+  (window as Window & { __viptvDiscoverWindow?: { index: number; start: number; count: number } }).__viptvDiscoverWindow = { index, start, count };
+}
+
+export function noteDiscoverFilter(open: boolean) {
+  if (!enabled) return;
+  (window as Window & { __viptvDiscoverFilter?: { open: boolean } }).__viptvDiscoverFilter = { open };
+}
+
 /** Test-only player state, without session or delivery URLs. */
 export function notePlayerState(state: string, position: number) {
   if (!enabled) return;

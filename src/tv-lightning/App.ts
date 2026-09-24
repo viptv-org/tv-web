@@ -1,18 +1,25 @@
 import Blits from "@lightningjs/blits";
 import QRCode from "qrcode";
-import type { TvApi, DevicePairing, TvProfile, MediaItem, MediaSource } from "../api";
+import type { TvApi, DevicePairing, TvProfile, MediaItem, MediaSource, Catalog } from "../api";
 import { tokens } from "../theme/viptv-tokens.generated";
 import { ProfileTile, ManageProfilesButton, addProfileTile, emptyProfileTile, profileTileData } from "./ProfileTile";
 import { emptyHome, enrichHomeHero, loadHomeView, type HomeView } from "./homeModel";
 import { railIcon } from "./railIcons";
 import { RailItem } from "./RailFocus";
+import { DiscoverFilterOption } from "./DiscoverFocus";
+import { DiscoverScreen } from "./DiscoverScreen";
+import {
+  catalogDefaults, catalogFilters, catalogForGroup, catalogsForGroup, discoverCard,
+  discoverChips, discoverTypeGroup, emptyDiscoverCard, emptyDiscoverChip,
+  initialCatalog, requestForCatalog, sameCatalog, type DiscoverCardView, type DiscoverChipView,
+} from "./discoverModel";
 import { HomeAction, HomeCard } from "./HomeFocus";
 import { emptyHomeCard } from "./homeModel";
 import { emptyDetail, emptyDetailEpisode, loadDetailView, type DetailView } from "./detailModel";
 import { TitleAction, EpisodeTile } from "./TitleFocus";
 import { emptySources, emptySourceRow, projectSources, type SourcesView } from "./sourceModel";
 import { SourceChip, SourceProvider, SourceRow, ProviderOption, SourceDetailsClose, emptySourceChip, emptyProviderChoice } from "./SourceFocus";
-import { notePlayerState, noteSourceFilter, noteSourceIntent, noteSourceWindow, noteTrackPanel, noteTrackSelection } from "./focusDebug";
+import { noteDiscoverFilter, noteDiscoverWindow, noteFocus, notePlayerState, noteSourceFilter, noteSourceIntent, noteSourceWindow, noteTrackPanel, noteTrackSelection } from "./focusDebug";
 import { createLightningPlaybackRuntime, type LightningPlaybackRuntime } from "./playbackRuntime";
 import { PlayerControl, PlayerTimeline, PlayerTrackOption } from "./PlayerFocus";
 import type { PlayerSnapshot } from "@viptv/video";
@@ -110,6 +117,9 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
   let homeScope: ReturnType<TvApi["createScope"]> | undefined;
   let detailGeneration = 0;
   let detailScope: ReturnType<TvApi["createScope"]> | undefined;
+  let discoverGeneration = 0;
+  let discoverScope: ReturnType<TvApi["createScope"]> | undefined;
+  let discoverRequestedPage = "";
   let sourceGeneration = 0;
   let sourceScope: ReturnType<TvApi["createScope"]> | undefined;
   let sourceTimer: ReturnType<typeof setTimeout> | undefined;
@@ -119,7 +129,7 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
   let chromeTimer: ReturnType<typeof setTimeout> | undefined;
   let disposeSession: (() => void) | undefined;
   return Blits.Application({
-    components: { ProfileTile, ManageProfilesButton, HomeAction, HomeCard, RailItem, TitleAction, EpisodeTile, SourceChip, SourceProvider, SourceRow, ProviderOption, SourceDetailsClose, PlayerControl, PlayerTimeline, PlayerTrackOption },
+    components: { ProfileTile, ManageProfilesButton, HomeAction, HomeCard, RailItem, DiscoverScreen, DiscoverFilterOption, TitleAction, EpisodeTile, SourceChip, SourceProvider, SourceRow, ProviderOption, SourceDetailsClose, PlayerControl, PlayerTimeline, PlayerTrackOption },
     template: `
       <Element w="1920" h="1080" :color="$phase === 'player' || $phase === 'playerTracks' || $phase === 'preparing' ? 'rgba(0,0,0,0)' : $background">
         <Element x="260" y="86" w="1400" h="800" src="$pairingGlow" :show="$phase === 'pairing' || $phase === 'expired' || $phase === 'error'" />
@@ -214,15 +224,16 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
           <Text x="1693" y="65" :content="$optionsIcon" font="Onest" size="19" color="$primary" />
           <Text x="1730" y="66" :content="$optionsLabel" font="Onest" size="20" color="$body" />
         </Element>
+        <DiscoverScreen ref="discoverScreen" :show="$phase === 'discover'" :homeProfileAvatar="$homeProfileAvatar" :railSearch="$railSearch" :railHome="$railHome" :railDiscoverSelected="$railDiscoverSelected" :railLive="$railLive" :railList="$railList" :railSettings="$railSettings" :surface="$surface" :discoverHeading="$discoverHeading" :discoverChips="$discoverChips" :discoverCards="$discoverCards" :discoverWindowStart="$discoverWindowStart" :discoverError="$discoverError" :discoverOkLabel="$discoverOkLabel" :discoverSelectLabel="$discoverSelectLabel" :discoverOptionsIcon="$discoverOptionsIcon" :discoverOptionsLabel="$discoverOptionsLabel" :background="$background" :primary="$primary" :body="$body" :keyBorder="$keyBorder" />
         <Element :show="$phase === 'detail' || $phase === 'sources' || $phase === 'provider' || $phase === 'sourceDetails'">
           <Element x="1120" y="0" w="800" h="720" :src="$detail.heroImage" :show="$detail.heroImage !== ''" alpha="0.75" />
           <Element w="1920" h="1080" src="$homeScrim" />
           <Element x="44" y="54" w="56" h="56" rounded="28" color="$surface" />
           <Element x="50" y="60" w="44" h="44" rounded="22" :src="$homeProfileAvatar" :show="$homeProfileAvatar !== ''" />
           <Element x="60" y="202" w="24" h="24" :src="$railSearch" />
-          <Element x="40" y="262" w="64" h="64" rounded="32" color="$surface" />
-          <Element x="60" y="282" w="24" h="24" :src="$railHome" />
-          <Element x="60" y="360" w="24" h="24" :src="$railDiscover" />
+          <Element x="40" :y="$railCurrent === 'discover' ? 340 : 262" w="64" h="64" rounded="32" color="$surface" />
+          <Element x="60" y="282" w="24" h="24" :src="$railCurrent === 'discover' ? $railHomeUnselected : $railHome" />
+          <Element x="60" y="360" w="24" h="24" :src="$railCurrent === 'discover' ? $railDiscoverSelected : $railDiscover" />
           <Element x="60" y="440" w="24" h="24" :src="$railLive" />
           <Element x="60" y="516" w="24" h="24" :src="$railList" />
           <Element x="60" y="978" w="24" h="24" :src="$railSettings" />
@@ -332,13 +343,35 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
           <Text x="1164" y="902" maxwidth="660" :content="$trackNotice" font="Onest" size="22" color="$secondary" />
           <Text x="1382" y="998" :content="$trackLegend" font="Onest" size="20" color="$secondary" />
         </Element>
-        <Element :show="$railExpanded && ($phase === 'home' || $phase === 'detail')">
+        <Element zIndex="10" :show="$discoverFilterOpen">
+          <Element w="1920" h="1080" color="$sourceScrim" />
+          <Element x="1100" y="0" w="820" h="1080" color="$sourcePanelGround" />
+          <Text x="1164" y="64" :content="$discoverFilterTitle" font="Bricolage700" size="44" color="$primary" />
+          <DiscoverFilterOption ref="discoverOption0" position="0" :label="$discoverOptionLabels[0]" :selected="$discoverOptionLabels[0] === $discoverFilterValue" :visible="$discoverOptionLabels[0] !== ''" x="1158" y="130" />
+          <DiscoverFilterOption ref="discoverOption1" position="1" :label="$discoverOptionLabels[1]" :selected="$discoverOptionLabels[1] === $discoverFilterValue" :visible="$discoverOptionLabels[1] !== ''" x="1158" y="224" />
+          <DiscoverFilterOption ref="discoverOption2" position="2" :label="$discoverOptionLabels[2]" :selected="$discoverOptionLabels[2] === $discoverFilterValue" :visible="$discoverOptionLabels[2] !== ''" x="1158" y="318" />
+          <DiscoverFilterOption ref="discoverOption3" position="3" :label="$discoverOptionLabels[3]" :selected="$discoverOptionLabels[3] === $discoverFilterValue" :visible="$discoverOptionLabels[3] !== ''" x="1158" y="412" />
+          <DiscoverFilterOption ref="discoverOption4" position="4" :label="$discoverOptionLabels[4]" :selected="$discoverOptionLabels[4] === $discoverFilterValue" :visible="$discoverOptionLabels[4] !== ''" x="1158" y="506" />
+          <DiscoverFilterOption ref="discoverOption5" position="5" :label="$discoverOptionLabels[5]" :selected="$discoverOptionLabels[5] === $discoverFilterValue" :visible="$discoverOptionLabels[5] !== ''" x="1158" y="600" />
+          <DiscoverFilterOption ref="discoverOption6" position="6" :label="$discoverOptionLabels[6]" :selected="$discoverOptionLabels[6] === $discoverFilterValue" :visible="$discoverOptionLabels[6] !== ''" x="1158" y="694" />
+          <DiscoverFilterOption ref="discoverOption7" position="7" :label="$discoverOptionLabels[7]" :selected="$discoverOptionLabels[7] === $discoverFilterValue" :visible="$discoverOptionLabels[7] !== ''" x="1158" y="788" />
+          <Element x="1100" y="976" w="820" h="104" color="$sourcePanelGround" />
+          <Element x="1530" y="994" w="45" h="31" rounded="8" color="$keyBorder" />
+          <Element x="1532" y="996" w="41" h="27" rounded="6" color="$sourcePanelGround" />
+          <Text x="1538" y="1000" :content="$discoverFilterOkLabel" font="Onest700" size="16" color="$primary" />
+          <Text x="1588" y="999" :content="$discoverFilterSelectLabel" font="Onest" size="20" color="$body" />
+          <Element x="1682" y="994" w="66" h="31" rounded="8" color="$keyBorder" />
+          <Element x="1684" y="996" w="62" h="27" rounded="6" color="$sourcePanelGround" />
+          <Text x="1693" y="1000" :content="$discoverBackLabel" font="Onest700" size="16" color="$primary" />
+          <Text x="1760" y="999" :content="$discoverCancelLabel" font="Onest" size="20" color="$body" />
+        </Element>
+        <Element zIndex="20" :show="$railExpanded && ($phase === 'home' || $phase === 'detail' || $phase === 'discover')">
           <Element w="1920" h="1080" color="$menuScrim" />
           <Element w="520" h="1080" src="$menuGradient" />
           <RailItem ref="rail0" position="0" label="Profile" icon="" focusedIcon="" :avatar="$homeProfileAvatar" :profileName="$railProfileName" :current="false" x="48" y="48" />
           <RailItem ref="rail1" position="1" label="Search" :icon="$railSearch" :focusedIcon="$railSearchFocus" avatar="" profileName="" :current="false" x="48" y="174" />
-          <RailItem ref="rail2" position="2" label="Home" :icon="$railHome" :focusedIcon="$railHomeFocus" avatar="" profileName="" :current="true" x="48" y="252" />
-          <RailItem ref="rail3" position="3" label="Discover" :icon="$railDiscover" :focusedIcon="$railDiscoverFocus" avatar="" profileName="" :current="false" x="48" y="330" />
+          <RailItem ref="rail2" position="2" label="Home" :icon="$railHome" :focusedIcon="$railHomeFocus" avatar="" profileName="" :current="$railCurrent === 'home'" x="48" y="252" />
+          <RailItem ref="rail3" position="3" label="Discover" :icon="$railDiscover" :focusedIcon="$railDiscoverFocus" avatar="" profileName="" :current="$railCurrent === 'discover'" x="48" y="330" />
           <RailItem ref="rail4" position="4" label="Live TV" :icon="$railLive" :focusedIcon="$railLiveFocus" avatar="" profileName="" :current="false" x="48" y="408" />
           <RailItem ref="rail5" position="5" label="My List" :icon="$railList" :focusedIcon="$railListFocus" avatar="" profileName="" :current="false" x="48" y="486" />
           <RailItem ref="rail6" position="6" label="Settings" :icon="$railSettings" :focusedIcon="$railSettingsFocus" avatar="" profileName="" :current="false" x="48" y="958" />
@@ -439,12 +472,45 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
         homeCardIndex: 0,
         railExpanded: false,
         railFocusIndex: 2,
-        railReturnZone: "action" as "action" | "card" | "episode",
+        railReturnZone: "action" as "action" | "card" | "chip" | "episode",
         railReturnIndex: 0,
         railProfileName: "",
         railNotice: "",
+        railCurrent: "home" as "home" | "discover",
         menuScrim: tokens["color.scrim.tv-menu"],
         menuGradient: menuGradient(),
+        discoverHeading: "",
+        discoverOkLabel: "",
+        discoverSelectLabel: "",
+        discoverOptionsIcon: "",
+        discoverOptionsLabel: "",
+        discoverBackLabel: "",
+        discoverCancelLabel: "",
+        discoverFilterOkLabel: "",
+        discoverFilterSelectLabel: "",
+        discoverCatalogs: [] as Catalog[],
+        discoverCatalog: null as Catalog | null,
+        discoverValues: {} as Record<string, string>,
+        discoverItems: [] as MediaItem[],
+        discoverNextSkip: null as number | null,
+        discoverBusy: false,
+        discoverError: "",
+        discoverChips: Array.from({ length: 12 }, () => ({ ...emptyDiscoverChip })) as DiscoverChipView[],
+        discoverCards: Array.from({ length: 12 }, () => ({ ...emptyDiscoverCard })) as DiscoverCardView[],
+        discoverFocusZone: "card" as "card" | "chip",
+        discoverChipIndex: 0,
+        discoverCardIndex: 0,
+        discoverWindowStart: 0,
+        discoverFilterOpen: false,
+        discoverFilterName: "",
+        discoverFilterTitle: "",
+        discoverFilterValue: "",
+        discoverOptionLabels: Array.from({ length: 8 }, () => ""),
+        discoverOptionIndex: 0,
+        discoverFilterReturnChip: 0,
+        discoverReturnZone: "action" as "action" | "card",
+        discoverReturnIndex: 0,
+        detailReturnPhase: "home" as "home" | "discover",
         currentProfileId: "",
         homeNotice: "",
         homeAddLabel: "",
@@ -455,8 +521,10 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
         railSearch: railIcon("search"),
         railSearchFocus: railIcon("search", false, true),
         railHome: railIcon("home", true),
+        railHomeUnselected: railIcon("home"),
         railHomeFocus: railIcon("home", false, true),
         railDiscover: railIcon("discover"),
+        railDiscoverSelected: railIcon("discover", true),
         railDiscoverFocus: railIcon("discover", false, true),
         railLive: railIcon("live"),
         railLiveFocus: railIcon("live", false, true),
@@ -470,7 +538,7 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
         danger: tokens["color.status.danger-tv"],
         codeSize: pairCodeSize,
         codeLetterSpacing: pairCodeSize * 0.08,
-        phase: "starting" as "starting" | "pairing" | "expired" | "error" | "profiles" | "ready" | "home" | "detail" | "sources" | "provider" | "sourceDetails" | "preparing" | "player" | "playerTracks",
+        phase: "starting" as "starting" | "pairing" | "expired" | "error" | "profiles" | "ready" | "home" | "discover" | "detail" | "sources" | "provider" | "sourceDetails" | "preparing" | "player" | "playerTracks",
         address: "Connecting…",
         code: "••••••",
         qr: "",
@@ -563,6 +631,17 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
         this.$listen("rail-move", (delta: number) => this.moveRail(Number(delta)));
         this.$listen("rail-exit", () => this.closeRail());
         this.$listen("rail-activate", () => this.activateRail());
+        this.$listen("discover-chip-focused", (position: number) => { this.discoverChipIndex = Number(position); });
+        this.$listen("discover-chip-move", (delta: number) => this.moveDiscoverChip(Number(delta)));
+        this.$listen("discover-chip-activate", () => void this.activateDiscoverChip());
+        this.$listen("discover-card-enter", () => this.focusDiscoverCard(this.discoverCardIndex));
+        this.$listen("discover-card-focused", (position: number) => { this.discoverCardIndex = Number(position); });
+        this.$listen("discover-card-move", (direction: string) => this.moveDiscoverCard(direction));
+        this.$listen("discover-card-activate", () => this.activateDiscoverCard());
+        this.$listen("discover-option-focused", (position: number) => { this.discoverOptionIndex = Number(position); });
+        this.$listen("discover-option-move", (delta: number) => this.moveDiscoverOption(Number(delta)));
+        this.$listen("discover-option-activate", () => void this.selectDiscoverOption());
+        this.$listen("discover-option-close", () => this.closeDiscoverFilter());
         this.$listen("title-action-move", (delta: number) =>
           Number(delta) < 0 && this.detailActionIndex === 0
             ? this.openRail()
@@ -616,6 +695,8 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
         ++homeGeneration;
         detailScope?.abort();
         ++detailGeneration;
+        discoverScope?.abort();
+        ++discoverGeneration;
         sourceScope?.abort();
         ++sourceGeneration;
         clearTimeout(sourceTimer);
@@ -636,6 +717,7 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
         const selectedProfile = this.profiles.find(profile => profile.id === profileId);
         this.homeProfileAvatar = selectedProfile ? profileTileData(selectedProfile).image : "";
         this.railProfileName = selectedProfile?.name ?? "Profile";
+        this.railCurrent = "home";
         this.currentProfileId = profileId;
         this.homeNotice = "";
         this.phase = "ready";
@@ -693,14 +775,16 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
         this.focusHomeCard(Math.max(0, Math.min(count - 1, this.homeCardIndex + delta)));
       },
       openRail() {
-        if (this.phase !== "home" && this.phase !== "detail") return;
-        this.railReturnZone = this.phase === "home" ? this.homeFocusZone : this.detailFocusZone;
+        if (this.phase !== "home" && this.phase !== "detail" && this.phase !== "discover") return;
+        this.railReturnZone = this.phase === "home" ? this.homeFocusZone
+          : this.phase === "discover" ? this.discoverFocusZone : this.detailFocusZone;
         this.railReturnIndex = this.phase === "home"
           ? this.homeFocusZone === "card" ? this.homeCardIndex : this.homeActionIndex
+          : this.phase === "discover" ? this.discoverFocusZone === "card" ? this.discoverCardIndex : this.discoverChipIndex
           : this.detailFocusZone === "episode" ? this.detailEpisodeIndex : this.detailActionIndex;
         this.railExpanded = true;
         this.railNotice = "";
-        this.focusRail(2);
+        this.focusRail(this.railCurrent === "discover" ? 3 : 2);
         setTimeout(() => {
           if (!this.railExpanded) return;
           for (let index = 0; index < 7; index++)
@@ -724,6 +808,9 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
         } else if (this.phase === "detail") {
           if (this.railReturnZone === "episode") this.focusTitleEpisode(this.railReturnIndex);
           else this.focusTitleAction(this.railReturnIndex);
+        } else if (this.phase === "discover") {
+          if (this.railReturnZone === "chip") this.focusDiscoverChip(this.railReturnIndex);
+          else this.focusDiscoverCard(this.railReturnIndex);
         }
       },
       activateRail() {
@@ -732,13 +819,249 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
           this.railExpanded = false;
           this.showProfiles(this.profiles);
         } else if (this.railFocusIndex === 2) {
+          this.railExpanded = false;
           if (this.phase === "detail") {
-            this.railExpanded = false;
+            this.detailReturnPhase = "home";
+            this.railCurrent = "home";
             this.returnFromDetail();
-          } else this.closeRail();
+          } else if (this.phase === "discover") this.returnFromDiscover();
+          else this.closeRail();
+        } else if (this.railFocusIndex === 3) {
+          if (this.phase === "discover") this.closeRail();
+          else {
+            if (this.phase === "home") {
+              this.discoverReturnZone = this.railReturnZone === "card" ? "card" : "action";
+              this.discoverReturnIndex = this.railReturnIndex;
+            }
+            void this.openDiscover();
+          }
         } else {
           this.railNotice = "This screen is not available yet.";
         }
+      },
+      async openDiscover() {
+        const generation = ++discoverGeneration;
+        discoverScope?.abort();
+        const scope = api.createScope();
+        discoverScope = scope;
+        this.railExpanded = false;
+        this.railCurrent = "discover";
+        this.phase = "discover";
+        this.discoverError = "";
+        this.discoverBusy = true;
+        setTimeout(() => {
+          if (this.phase !== "discover") return;
+          this.discoverHeading = "Discover";
+          this.discoverOkLabel = "OK";
+          this.discoverSelectLabel = "Select";
+          this.discoverOptionsIcon = "≡";
+          this.discoverOptionsLabel = "Options";
+        }, 0);
+        try {
+          const available = await api.catalogs({ signal: scope.signal });
+          if (generation !== discoverGeneration || scope.signal.aborted) return;
+          this.discoverCatalogs = available;
+          const previous = this.discoverCatalog;
+          const selected = available.find(candidate => candidate.id === previous?.id && candidate.type === previous.type && candidate.addonId === previous.addonId)
+            ?? initialCatalog(available);
+          if (selected) void this.loadDiscoverCatalog(selected);
+          else {
+            this.discoverBusy = false;
+            this.discoverError = "No catalogs are available. Add or enable a catalog addon in Settings.";
+          }
+        } catch (cause) {
+          if (generation !== discoverGeneration || scope.signal.aborted) return;
+          this.discoverBusy = false;
+          this.discoverError = cause instanceof Error ? cause.message : "Unable to load catalogs.";
+        }
+      },
+      async loadDiscoverCatalog(catalog: Catalog, values: Record<string, string> = catalogDefaults(catalog), skip = 0, focusCard = true) {
+        if (skip) {
+          const pageKey = `${catalog.addonId ?? ""}:${catalog.type}:${catalog.id}:${JSON.stringify(values)}@${skip}`;
+          if (pageKey === discoverRequestedPage) return;
+          discoverRequestedPage = pageKey;
+        } else discoverRequestedPage = "";
+        const generation = ++discoverGeneration;
+        discoverScope?.abort();
+        const scope = api.createScope();
+        discoverScope = scope;
+        this.discoverCatalog = catalog;
+        this.discoverValues = values;
+        const chips = discoverChips(this.discoverCatalogs, catalog, values);
+        this.discoverChips = Array.from({ length: 12 }, (_, index) => chips[index] ?? { ...emptyDiscoverChip });
+        if (!skip) {
+          this.discoverItems = [];
+          this.discoverWindowStart = 0;
+          this.discoverCardIndex = 0;
+          this.refreshDiscoverCards();
+        }
+        this.discoverError = "";
+        const request = requestForCatalog(catalog, values, skip);
+        if (!request) {
+          this.discoverBusy = false;
+          this.discoverError = "Choose the required filters to browse this catalog.";
+          this.revealDiscoverChips();
+          return;
+        }
+        this.discoverBusy = true;
+        try {
+          const page = await api.discover(request, { signal: scope.signal });
+          if (generation !== discoverGeneration || scope.signal.aborted) return;
+          this.discoverItems = skip
+            ? [...this.discoverItems, ...page.items.filter(item => !this.discoverItems.some(old => old.type === item.type && old.id === item.id))]
+            : [...page.items];
+          this.discoverNextSkip = page.hasMore ? page.nextSkip ?? skip + page.items.length : null;
+          this.discoverBusy = false;
+          this.discoverError = this.discoverItems.length ? "" : "No titles yet";
+          this.refreshDiscoverCards();
+          this.revealDiscoverChips();
+          if (!skip && focusCard) setTimeout(() => {
+            if (generation === discoverGeneration && this.phase === "discover" && !this.discoverFilterOpen && !this.railExpanded)
+              this.focusDiscoverCard(0);
+          }, 60);
+        } catch (cause) {
+          if (generation !== discoverGeneration || scope.signal.aborted) return;
+          this.discoverBusy = false;
+          this.discoverError = cause instanceof Error ? cause.message : "Unable to load titles.";
+          this.revealDiscoverChips();
+        }
+      },
+      refreshDiscoverCards() {
+        const visible = this.discoverItems.slice(this.discoverWindowStart, this.discoverWindowStart + 12);
+        this.discoverCards = Array.from({ length: 12 }, (_, index) => visible[index] ? discoverCard(visible[index]) : { ...emptyDiscoverCard });
+        setTimeout(() => {
+          if (this.phase !== "discover") return;
+          for (let index = 0; index < 12; index++)
+            (this.$select("discoverScreen")?.$select(`discoverCard${index}`) as unknown as { reveal?: () => void })?.reveal?.();
+        }, 0);
+      },
+      revealDiscoverChips() {
+        setTimeout(() => {
+          if (this.phase !== "discover") return;
+          for (let index = 0; index < 12; index++)
+            (this.$select("discoverScreen")?.$select(`discoverChip${index}`) as unknown as { reveal?: () => void })?.reveal?.();
+        }, 0);
+      },
+      focusDiscoverChip(index: number) {
+        this.discoverFocusZone = "chip";
+        this.discoverChipIndex = index;
+        this.$select("discoverScreen")?.$select(`discoverChip${index}`)?.$focus();
+      },
+      moveDiscoverChip(delta: number) {
+        if (delta < 0 && this.discoverChipIndex === 0) { this.openRail(); return; }
+        const last = Math.max(0, this.discoverChips.filter(chip => chip.visible).length - 1);
+        this.focusDiscoverChip(Math.max(0, Math.min(last, this.discoverChipIndex + delta)));
+      },
+      focusDiscoverCard(index: number) {
+        if (!this.discoverItems[index]) return;
+        this.discoverFocusZone = "card";
+        this.discoverCardIndex = index;
+        const previousWindow = this.discoverWindowStart;
+        if (index < this.discoverWindowStart) this.discoverWindowStart = Math.floor(index / 4) * 4;
+        else if (index >= this.discoverWindowStart + 12) this.discoverWindowStart = (Math.floor(index / 4) - 2) * 4;
+        noteDiscoverWindow(index, this.discoverWindowStart, this.discoverItems.length);
+        if (this.discoverWindowStart !== previousWindow) this.refreshDiscoverCards();
+        const local = index - this.discoverWindowStart;
+        if (this.discoverWindowStart !== previousWindow)
+          setTimeout(() => {
+            this.$select("discoverScreen")?.$select(`discoverCard${local}`)?.$focus();
+            noteFocus("discover-card", index);
+          }, 0);
+        else this.$select("discoverScreen")?.$select(`discoverCard${local}`)?.$focus();
+      },
+      moveDiscoverCard(direction: string) {
+        const index = this.discoverCardIndex;
+        if (direction === "left" && index % 4 === 0) { this.openRail(); return; }
+        if (direction === "up" && index < 4) { this.focusDiscoverChip(Math.min(this.discoverChipIndex, Math.max(0, this.discoverChips.filter(chip => chip.visible).length - 1))); return; }
+        const delta = direction === "left" ? -1 : direction === "right" ? 1 : direction === "up" ? -4 : 4;
+        const next = index + delta;
+        if (next >= 0 && next < this.discoverItems.length && (direction !== "right" || index % 4 !== 3)) this.focusDiscoverCard(next);
+        if (direction === "down" && this.discoverNextSkip !== null && this.discoverItems.length - next < 8 && !this.discoverBusy && this.discoverCatalog)
+          void this.loadDiscoverCatalog(this.discoverCatalog, this.discoverValues, this.discoverNextSkip);
+      },
+      activateDiscoverCard() {
+        const item = this.discoverItems[this.discoverCardIndex];
+        if (item) void this.openDetail(item);
+      },
+      async activateDiscoverChip() {
+        const chip = this.discoverChips[this.discoverChipIndex];
+        if (!chip?.visible) return;
+        if (chip.kind === "group") {
+          const first = catalogForGroup(this.discoverCatalogs, chip.value as ReturnType<typeof discoverTypeGroup>);
+          if (first && chip.value !== discoverTypeGroup(this.discoverCatalog?.type ?? ""))
+            void this.loadDiscoverCatalog(first, catalogDefaults(first), 0, false);
+        } else if (chip.kind === "catalog") {
+          const current = this.discoverCatalog;
+          if (!current) return;
+          const next = catalogsForGroup(this.discoverCatalogs, discoverTypeGroup(current.type))[Number(chip.value)];
+          if (next && !sameCatalog(next, current)) void this.loadDiscoverCatalog(next, catalogDefaults(next), 0, false);
+        } else this.openDiscoverFilter(chip.value);
+      },
+      openDiscoverFilter(name: string) {
+        const filter = this.discoverCatalog && catalogFilters(this.discoverCatalog).find(candidate => candidate.name === name);
+        if (!filter) return;
+        if (!filter.options.length) {
+          this.discoverError = "Text filters are not available yet.";
+          return;
+        }
+        this.discoverFilterName = name;
+        this.discoverFilterTitle = "";
+        this.discoverFilterOkLabel = "";
+        this.discoverFilterSelectLabel = "";
+        this.discoverBackLabel = "";
+        this.discoverCancelLabel = "";
+        this.discoverFilterValue = this.discoverValues[name] || "Any";
+        this.discoverFilterReturnChip = this.discoverChipIndex;
+        this.discoverOptionLabels = Array.from({ length: 8 }, (_, index) => (filter.required ? [...filter.options, "Cancel"] : ["Any", ...filter.options, "Cancel"])[index] ?? "");
+        this.discoverFilterOpen = true;
+        noteDiscoverFilter(true);
+        setTimeout(() => {
+          if (!this.discoverFilterOpen) return;
+          this.discoverFilterTitle = name === "genre" ? "Genre" : name.charAt(0).toUpperCase() + name.slice(1);
+          this.discoverFilterOkLabel = "OK";
+          this.discoverFilterSelectLabel = "Select";
+          this.discoverBackLabel = "BACK";
+          this.discoverCancelLabel = "Cancel";
+          for (let index = 0; index < 8; index++)
+            (this.$select(`discoverOption${index}`) as unknown as { reveal?: () => void })?.reveal?.();
+          this.focusDiscoverOption(Math.max(0, this.discoverOptionLabels.indexOf(this.discoverFilterValue)));
+        }, 0);
+      },
+      focusDiscoverOption(index: number) {
+        this.discoverOptionIndex = index;
+        this.$select(`discoverOption${index}`)?.$focus();
+      },
+      moveDiscoverOption(delta: number) {
+        const last = Math.max(0, this.discoverOptionLabels.filter(Boolean).length - 1);
+        this.focusDiscoverOption(Math.max(0, Math.min(last, this.discoverOptionIndex + delta)));
+      },
+      closeDiscoverFilter() {
+        if (!this.discoverFilterOpen) return;
+        this.discoverFilterOpen = false;
+        noteDiscoverFilter(false);
+        this.focusDiscoverChip(this.discoverFilterReturnChip);
+      },
+      async selectDiscoverOption() {
+        const value = this.discoverOptionLabels[this.discoverOptionIndex];
+        const catalog = this.discoverCatalog;
+        if (!catalog || !value) return;
+        if (value === "Cancel") { this.closeDiscoverFilter(); return; }
+        const name = this.discoverFilterName;
+        this.closeDiscoverFilter();
+        void this.loadDiscoverCatalog(catalog, { ...this.discoverValues, [name]: value === "Any" ? "" : value }, 0, false);
+      },
+      returnFromDiscover() {
+        discoverScope?.abort();
+        ++discoverGeneration;
+        this.discoverFilterOpen = false;
+        this.railExpanded = false;
+        this.railCurrent = "home";
+        this.phase = "home";
+        setTimeout(() => {
+          this.revealHomeControls();
+          if (this.discoverReturnZone === "card") this.focusHomeCard(this.discoverReturnIndex);
+          else this.focusHomeAction(this.discoverReturnIndex);
+        }, 0);
       },
       async activateHomeAction() {
         if (this.phase !== "home" || this.homeFocusZone !== "action") return;
@@ -769,12 +1092,18 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
         if (item) void this.openDetail(item);
       },
       async openDetail(item: MediaItem) {
-        if (this.phase !== "home") return;
+        if (this.phase !== "home" && this.phase !== "discover") return;
         const generation = ++detailGeneration;
         detailScope?.abort();
         detailScope = api.createScope();
-        this.detailReturnZone = this.homeFocusZone;
-        this.detailReturnIndex = this.homeFocusZone === "card" ? this.homeCardIndex : this.homeActionIndex;
+        this.detailReturnPhase = this.phase;
+        if (this.phase === "home") {
+          this.detailReturnZone = this.homeFocusZone;
+          this.detailReturnIndex = this.homeFocusZone === "card" ? this.homeCardIndex : this.homeActionIndex;
+        } else {
+          this.detailReturnZone = "card";
+          this.detailReturnIndex = this.discoverCardIndex;
+        }
         this.homeNotice = "";
         try {
           const view = await loadDetailView(api, item, this.currentProfileId, this.home.favoriteItems, detailScope.signal);
@@ -1350,15 +1679,23 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
       returnFromDetail() {
         detailScope?.abort();
         ++detailGeneration;
-        this.phase = "home";
+        this.phase = this.detailReturnPhase;
         this.detailNotice = "";
         setTimeout(() => {
-          this.revealHomeControls();
-          if (this.detailReturnZone === "card") this.focusHomeCard(this.detailReturnIndex);
-          else this.focusHomeAction(this.detailReturnIndex);
+          if (this.phase === "discover") {
+            this.revealDiscoverChips();
+            this.refreshDiscoverCards();
+            this.focusDiscoverCard(this.detailReturnIndex);
+          } else {
+            this.revealHomeControls();
+            if (this.detailReturnZone === "card") this.focusHomeCard(this.detailReturnIndex);
+            else this.focusHomeAction(this.detailReturnIndex);
+          }
         }, 0);
       },
       showProfiles(profiles: readonly TvProfile[]) {
+        discoverScope?.abort();
+        ++discoverGeneration;
         this.profiles = [...profiles];
         this.railExpanded = false;
         this.phase = "profiles";
@@ -1500,6 +1837,7 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
       },
       back() {
         if (this.railExpanded) this.closeRail();
+        else if (this.discoverFilterOpen) this.closeDiscoverFilter();
         else if (this.phase === "profiles" && this.managing) this.toggleManageProfiles();
         else if (this.phase === "playerTracks") this.closeTrackPanel();
         else if (this.phase === "player") {
@@ -1521,6 +1859,7 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
         else if (this.phase === "provider") this.closeProviderPicker();
         else if (this.phase === "sources") this.closeSources();
         else if (this.phase === "detail") this.returnFromDetail();
+        else if (this.phase === "discover") this.returnFromDiscover();
         else if (this.phase === "home" && this.profiles.length) this.showProfiles(this.profiles);
       },
       any() {

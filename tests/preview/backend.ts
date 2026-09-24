@@ -364,7 +364,7 @@ const track = (inputIndex: number, language: string, title: string, codec: strin
 // ---------------------------------------------------------------------------
 
 export interface BackendHandle {
-  requests: { method: string; path: string; body: unknown }[];
+  requests: { method: string; path: string; query: string; body: unknown }[];
   errors: string[];
 }
 
@@ -439,7 +439,7 @@ export async function installBackend(page: Page, options: BackendOptions): Promi
     const path = url.pathname, method = request.method();
     let body: Record<string, unknown> = {};
     try { body = JSON.parse(request.postData() || '{}'); } catch { /* not JSON */ }
-    requests.push({ method, path, body });
+    requests.push({ method, path, query: url.search, body });
     const hang = () => new Promise<void>(() => undefined);
     if (options.backendDown) return route.abort('connectionrefused');
     const pinGate = () => (options.wrongPin || !unlocked) ? json({ error: 'parent PIN required' }, 403) : undefined;
