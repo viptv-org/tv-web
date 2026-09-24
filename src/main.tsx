@@ -102,7 +102,11 @@ if (params.get("reportboot")) {
     report(`${event.message} @ ${(event.filename ?? "").split("/").pop()}:${event.lineno}`));
   window.addEventListener("unhandledrejection", event => report(event.reason));
 }
-start().catch((error: unknown) => {
+// DEV-only component gallery (?gallery=phone|desktop|tv[&sheet=CmpPhone1]): the
+// design-system primitives laid out like the reference component sheets.
+if (import.meta.env.DEV && params.get("gallery")) {
+  void import("./ui/primitives/gallery/Gallery").then(({ mountGallery }) => mountGallery(root, params));
+} else start().catch((error: unknown) => {
   if (params.get("reportboot")) {
     void fetch(`/boot-error/start/${encodeURIComponent(String((error as Error)?.message ?? error).slice(0, 300))}`).catch(() => undefined);
   }

@@ -473,6 +473,7 @@
 }
 .tv-layout .vx-source-pill:focus > .vx-badge--quality {
   background: var(--viptv-color-fill-on-light-badge);
+  color: inherit;
 }
 
 @media (prefers-reduced-motion: reduce) {

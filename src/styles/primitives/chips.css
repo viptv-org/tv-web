@@ -1,1 +1,289 @@
-/* Design-system primitive: chips. See design/viptv-design-system/components.md. */
+/*
+ * Design-system primitive: chips and segmented controls (components.md §2;
+ * sheets CmpPhone1 / CmpDesk1 / CmpTv1). Scoping as in buttons.css.
+ *
+ * Filter chip   <button class="vx-chip" aria-pressed="false"><span>Seasonal</span></button>
+ *               selected: aria-pressed="true" (or aria-selected / aria-checked="true", or .vx-chip--set)
+ *               count:    <span>1080p</span><span class="vx-chip__count">5</span>
+ * Dropdown chip <button class="vx-chip vx-chip--dropdown" aria-haspopup="dialog">
+ *                 <span class="vx-chip__key">Genre:</span><span>Any</span><svg chevron/></button>
+ *               a set value adds .vx-chip--set ("Genre: [Comedy]" in primary text)
+ * Required tag  <span>Year</span><span class="vx-chip__tag">Required</span>
+ * Catalog chip  (D) a dropdown chip that reads "Addon · Catalog".
+ * Sizes         P 44, D 40, .vx-chip--drawer 36 (desktop source drawer), TV 56.
+ * Divider       <span class="vx-chip-divider" aria-hidden="true"></span> (1 × 24 P / 28 D, 2 × 32 TV)
+ * Segmented     <div class="vx-segmented" role="group" aria-label="…">
+ *                 <button class="vx-segmented__item" aria-pressed="true">Movies</button>…</div>
+ *               phone: full width, equal segments; D: fits its content;
+ *               .vx-segmented--drawer = 36 items on the ground colour (desktop drawer).
+ */
+
+[data-layout] .vx-chip {
+  --vx-h: var(--viptv-size-chip-desktop);
+  --vx-icon: var(--viptv-size-icon-small);
+  position: relative;
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: var(--viptv-space-1_5);
+  box-sizing: border-box;
+  height: var(--vx-h);
+  min-height: var(--vx-h);
+  min-width: 0;
+  margin: 0;
+  padding: 0 var(--viptv-space-4);
+  border: 1px solid var(--viptv-color-line-chip);
+  border-radius: calc(var(--vx-h) / 2);
+  outline: none;
+  background: transparent;
+  color: var(--viptv-color-text-secondary);
+  font-family: var(--viptv-font-family-ui);
+  font-size: var(--viptv-type-desktop-row-size);
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0;
+  text-align: center;
+  white-space: nowrap;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    transform var(--viptv-motion-focus) ease-out,
+    background-color var(--viptv-motion-focus) ease-out,
+    color var(--viptv-motion-focus) ease-out,
+    box-shadow var(--viptv-motion-focus) ease-out;
+}
+[data-layout] .vx-chip > svg {
+  display: block;
+  flex: none;
+  width: var(--vx-icon);
+  height: var(--vx-icon);
+}
+[data-layout] .vx-chip--dropdown {
+  padding-right: var(--viptv-space-3);
+}
+[data-layout] .vx-chip--drawer {
+  --vx-h: var(--viptv-size-chip-desktop-drawer);
+}
+[data-layout] .vx-chip[aria-pressed="true"],
+[data-layout] .vx-chip[aria-selected="true"],
+[data-layout] .vx-chip[aria-checked="true"],
+[data-layout] .vx-chip--set {
+  border-color: var(--viptv-color-line-strong);
+  background: var(--viptv-color-surface-3);
+  color: var(--viptv-color-text-primary);
+}
+/* "Genre:" — the filter name before its value. */
+[data-layout] .vx-chip__key {
+  color: var(--viptv-color-text-tertiary);
+  font-weight: 500;
+}
+/* "5" in "1080p 5": the source count. */
+[data-layout] .vx-chip__count {
+  font-weight: 500;
+  opacity: 0.75;
+}
+[data-layout] .vx-chip__tag {
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+  height: var(--viptv-size-tag-default);
+  padding: 0 var(--viptv-space-1_5);
+  border-radius: calc(var(--viptv-size-tag-default) / 2);
+  background: var(--viptv-color-fill-tag);
+  color: inherit;
+  font-size: var(--viptv-type-phone-eyebrow-size);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+[data-layout] .vx-chip:disabled,
+[data-layout] .vx-chip[aria-disabled="true"] {
+  opacity: 0.4;
+  cursor: default;
+}
+[data-layout="responsive"] .vx-chip:active:not(:disabled):not([aria-disabled="true"]) {
+  transform: scale(var(--viptv-motion-pressed-scale));
+}
+@media (hover: hover) and (pointer: fine) {
+  [data-layout="responsive"] .vx-chip:hover:not(:disabled):not([aria-disabled="true"]):not([aria-pressed="true"]):not([aria-selected="true"]):not([aria-checked="true"]):not(.vx-chip--set) {
+    background: var(--viptv-color-fill-wash);
+    color: var(--viptv-color-text-primary);
+  }
+}
+@media (min-width: 600px) {
+  [data-layout="responsive"] .vx-chip:focus-visible {
+    outline: none;
+    box-shadow: var(--viptv-focus-desktop);
+  }
+}
+
+/* Group divider between chip groups (type chips | sort chips). */
+[data-layout] .vx-chip-divider {
+  display: block;
+  flex: none;
+  width: 1px;
+  height: var(--viptv-size-divider-desktop);
+  background: var(--viptv-color-line-outline);
+}
+
+/* Segmented control: a surface-1 track with 4 px padding; the selected segment is off-white. */
+[data-layout] .vx-segmented {
+  --vx-h: var(--viptv-size-chip-desktop);
+  display: inline-flex;
+  flex: none;
+  gap: var(--viptv-space-0_5);
+  box-sizing: border-box;
+  max-width: 100%;
+  padding: var(--viptv-space-1);
+  border-radius: calc(var(--vx-h) / 2 + var(--viptv-space-1));
+  background: var(--viptv-color-surface-1);
+}
+[data-layout] .vx-segmented--drawer {
+  --vx-h: var(--viptv-size-chip-desktop-drawer);
+  background: var(--viptv-color-bg);
+}
+[data-layout] .vx-segmented__item {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  height: var(--vx-h);
+  min-height: var(--vx-h);
+  min-width: 0;
+  margin: 0;
+  padding: 0 var(--viptv-space-4_5);
+  border: 0;
+  border-radius: calc(var(--vx-h) / 2);
+  outline: none;
+  background: transparent;
+  color: var(--viptv-color-text-secondary);
+  font-family: var(--viptv-font-family-ui);
+  font-size: var(--viptv-type-desktop-row-size);
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    transform var(--viptv-motion-focus) ease-out,
+    background-color var(--viptv-motion-focus) ease-out,
+    color var(--viptv-motion-focus) ease-out,
+    box-shadow var(--viptv-motion-focus) ease-out;
+}
+[data-layout] .vx-segmented__item[aria-pressed="true"],
+[data-layout] .vx-segmented__item[aria-selected="true"],
+[data-layout] .vx-segmented__item[aria-checked="true"],
+[data-layout] .vx-segmented__item[aria-current="page"],
+[data-layout] .vx-segmented__item[aria-current="true"] {
+  background: var(--viptv-color-text-primary);
+  color: var(--viptv-color-on-light);
+}
+[data-layout] .vx-segmented__item:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+[data-layout="responsive"] .vx-segmented__item:active:not(:disabled) {
+  transform: scale(var(--viptv-motion-pressed-scale));
+}
+@media (hover: hover) and (pointer: fine) {
+  [data-layout="responsive"] .vx-segmented__item[aria-pressed="false"]:hover:not(:disabled),
+  [data-layout="responsive"] .vx-segmented__item[aria-selected="false"]:hover:not(:disabled) {
+    color: var(--viptv-color-text-primary);
+  }
+}
+@media (min-width: 600px) {
+  [data-layout="responsive"] .vx-segmented__item:focus-visible {
+    outline: none;
+    box-shadow: var(--viptv-focus-desktop);
+  }
+}
+
+/* Phone */
+@media (max-width: 599px) {
+  [data-layout="responsive"] .vx-chip {
+    --vx-h: var(--viptv-size-chip-phone);
+    font-size: var(--viptv-type-phone-label-size);
+  }
+  [data-layout="responsive"] .vx-chip-divider {
+    height: var(--viptv-size-divider-phone);
+  }
+  [data-layout="responsive"] .vx-segmented {
+    --vx-h: var(--viptv-size-chip-phone);
+    display: flex;
+    width: 100%;
+  }
+  [data-layout="responsive"] .vx-segmented__item {
+    flex: 1 1 0;
+    font-size: var(--viptv-type-phone-label-size);
+  }
+}
+
+/*
+ * TV: borderless 56 pills, 24/700. Selected-but-not-focused = 0.16 fill;
+ * focused = off-white fill, dark text, 4 px white ring + lift, scale 1.05.
+ */
+.tv-layout .vx-chip {
+  --vx-h: var(--viptv-size-chip-tv);
+  --vx-icon: var(--viptv-size-icon-tv-small);
+  gap: var(--viptv-space-2_5);
+  padding: 0 var(--viptv-space-7);
+  border: 0;
+  font-size: var(--viptv-type-tv-label-size);
+  font-weight: 700;
+}
+.tv-layout .vx-chip--dropdown {
+  padding-right: var(--viptv-space-3);
+}
+.tv-layout .vx-chip[aria-pressed="true"],
+.tv-layout .vx-chip[aria-selected="true"],
+.tv-layout .vx-chip[aria-checked="true"],
+.tv-layout .vx-chip--set {
+  background: var(--viptv-color-fill-tv-selected);
+  color: var(--viptv-color-text-primary);
+}
+.tv-layout .vx-chip__key {
+  color: inherit;
+}
+.tv-layout .vx-chip__tag {
+  height: var(--viptv-size-tag-tv);
+  padding: 0 var(--viptv-space-2_5);
+  font-size: var(--viptv-type-tv-eyebrow-size);
+}
+.tv-layout .vx-chip:focus,
+.tv-layout .vx-segmented__item:focus {
+  outline: none;
+  background: var(--viptv-color-text-primary);
+  color: var(--viptv-color-on-light);
+  box-shadow: var(--viptv-focus-tv-shadow);
+  transform: scale(var(--viptv-focus-tv-scale-button));
+}
+.tv-layout .vx-chip:focus > .vx-chip__tag {
+  background: var(--viptv-color-fill-on-light-badge);
+}
+.tv-layout .vx-chip-divider {
+  width: var(--viptv-size-border-strong);
+  height: var(--viptv-size-divider-tv);
+}
+/* TV segmented (rare; TV screens use chips): chip-sized items on a 0.07 track. */
+.tv-layout .vx-segmented {
+  --vx-h: var(--viptv-size-chip-tv);
+  background: var(--viptv-color-fill-tv-field);
+}
+.tv-layout .vx-segmented__item {
+  padding: 0 var(--viptv-space-7);
+  font-size: var(--viptv-type-tv-label-size);
+  font-weight: 700;
+}
+.tv-layout .vx-segmented__item[aria-pressed="true"],
+.tv-layout .vx-segmented__item[aria-selected="true"],
+.tv-layout .vx-segmented__item[aria-checked="true"] {
+  background: var(--viptv-color-fill-tv-selected);
+  color: var(--viptv-color-text-primary);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-layout] .vx-chip,
+  [data-layout] .vx-segmented__item {
+    transition: none;
+  }
+}

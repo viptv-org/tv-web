@@ -1,1 +1,543 @@
-/* Design-system primitive: fields. See design/viptv-design-system/components.md. */
+/*
+ * Design-system primitive: fields (components.md §4; sheets CmpPhone1 / CmpDesk1 / CmpTv1).
+ * Scoping as in buttons.css. The accent is used only for the caret.
+ *
+ * Text field
+ *   <label class="vx-field">
+ *     <span class="vx-field__label">Username</span>
+ *     <span class="vx-field__control"><input class="vx-field__input" …>
+ *       [<button class="vx-field__action" aria-label="Show password"><svg eye/></button>]</span>
+ *     [<span class="vx-inline-error" role="alert"><svg alert/>The username or password is incorrect.</span>]
+ *   </label>
+ *   P 54 r16 16px · D 48 r12 15px · T 80 r20 30px on 0.07 white.
+ *   focus: border 1.5 px 0.22 (+ keyboard ring on D) — automatic via :focus-within.
+ *   error: .vx-field--error (and aria-invalid="true" on the input) → 1.5 px danger border.
+ *   disabled: .vx-field--disabled (and disabled on the input) → 0.4.
+ *   URL: .vx-field--mono (monospace value). Label only for screen readers: .vx-sr-only on the label span.
+ * Display-only value (TV text entry shows the value it collects):
+ *   <span class="vx-field__control"><span class="vx-field__value">naruto<span class="vx-caret"></span></span></span>
+ *   placeholder text: <span class="vx-field__placeholder">[Profile name]</span>
+ * Inline error  <span class="vx-inline-error" role="alert"><svg/>Enter an HTTPS manifest URL.</span>
+ * Search        <label class="vx-search"><svg search/><input class="vx-search__input" placeholder="Search movies and series">
+ *                 <button class="vx-search__clear" aria-label="Clear search"><svg x/></button>
+ *                 <span class="vx-sr-only">Search</span></label>
+ *   phone docked pill 52 (glass) · .vx-search--page (web page search 48, surface-1)
+ *   · .vx-search--titlebar (desktop title bar 460 × 30 r9) · TV: 80 field, 34/600 value.
+ *   Render the clear button only once there is text.
+ * PIN           <div class="vx-pin" role="group" aria-label="Parent PIN, 3 of 4 to 8 digits entered">
+ *                 <span class="vx-pin__box vx-pin__box--filled"></span> … <span class="vx-pin__box vx-pin__box--active"></span>
+ *                 <span class="vx-pin__box"></span></div>   (.vx-pin--error turns every border danger)
+ *   P/D 44 × 52 r12 · T 72 × 80 r18.
+ * TV keyboard   <div class="vx-keyboard"><div class="vx-keyboard__keys">
+ *                 <button class="vx-key">a</button>… <button class="vx-key vx-key--action vx-key--span-3" aria-label="Space"><svg/></button>
+ *               </div><div class="vx-keyboard__actions"><button class="vx-btn">Done</button><button class="vx-btn">Cancel</button></div></div>
+ *   6 columns, 64 keys r14 (a–z, 0–9, : / . - _ @, Aa, Space ×3, Delete ×2); focus scale 1.12.
+ * PIN keypad    same markup with .vx-keypad (3 columns, 80 keys r18: 1–9, ⌫, 0, blank).
+ */
+
+[data-layout] .vx-field {
+  --vx-h: var(--viptv-size-field-desktop);
+  --vx-r: var(--viptv-size-field-radius-desktop);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--viptv-space-2);
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+}
+[data-layout] .vx-field__label {
+  color: var(--viptv-color-text-secondary);
+  font-family: var(--viptv-font-family-ui);
+  font-size: var(--viptv-type-desktop-meta-size);
+  font-weight: 600;
+  line-height: 1.3;
+}
+[data-layout] .vx-field__control {
+  display: flex;
+  align-items: center;
+  gap: var(--viptv-space-3);
+  box-sizing: border-box;
+  height: var(--vx-h);
+  min-width: 0;
+  padding: 0 var(--viptv-space-4);
+  border: 1px solid var(--viptv-color-line-hairline);
+  border-radius: var(--vx-r);
+  background: var(--viptv-color-surface-1);
+  color: var(--viptv-color-text-primary);
+  font-family: var(--viptv-font-family-ui);
+  font-size: var(--viptv-type-desktop-label-size);
+  line-height: 1.2;
+  transition: border-color var(--viptv-motion-focus) ease-out, box-shadow var(--viptv-motion-focus) ease-out;
+}
+[data-layout] .vx-field__input {
+  flex: 1 1 auto;
+  width: 100%;
+  min-width: 0;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  box-shadow: none;
+  color: var(--viptv-color-text-primary);
+  font: inherit;
+  caret-color: var(--viptv-accent);
+  -webkit-appearance: none;
+  appearance: none;
+}
+[data-layout] .vx-field__input::placeholder {
+  color: var(--viptv-color-text-tertiary);
+  opacity: 1;
+}
+[data-layout] .vx-field__input::-webkit-search-cancel-button {
+  display: none;
+}
+[data-layout] .vx-field__value,
+[data-layout] .vx-field__placeholder {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+}
+[data-layout] .vx-field__placeholder {
+  color: var(--viptv-color-text-tertiary);
+}
+[data-layout] .vx-field--mono .vx-field__input,
+[data-layout] .vx-field--mono .vx-field__value {
+  font-family: var(--viptv-font-family-mono);
+}
+/* Focus: the border rises to 1.5 px at 0.22; the caret is accent. */
+[data-layout] .vx-field__control:focus-within,
+[data-layout] .vx-field__control.is-focused {
+  border: var(--viptv-size-border-focus) solid var(--viptv-color-line-strong);
+}
+[data-layout] .vx-field--error .vx-field__control,
+[data-layout] .vx-field__control--error {
+  border: var(--viptv-size-border-focus) solid var(--viptv-color-status-danger);
+}
+[data-layout] .vx-field--disabled .vx-field__control {
+  opacity: 0.4;
+}
+@media (min-width: 600px) {
+  /* D: the keyboard ring surrounds the whole control, not the bare input. */
+  [data-layout="responsive"] .vx-field__control:focus-within {
+    box-shadow: var(--viptv-focus-desktop);
+  }
+  [data-layout="responsive"] .vx-field__input:focus-visible {
+    box-shadow: none;
+  }
+}
+/* Trailing action inside a field (password eye, clear): 32 round surface-3. */
+[data-layout] .vx-field__action,
+[data-layout] .vx-search__clear {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: var(--viptv-size-close-disc-small);
+  height: var(--viptv-size-close-disc-small);
+  min-height: 0;
+  margin: 0 calc(var(--viptv-space-2) * -1) 0 0;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  outline: none;
+  background: var(--viptv-color-surface-3);
+  color: var(--viptv-color-text-primary);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+[data-layout] .vx-field__action > svg,
+[data-layout] .vx-search__clear > svg {
+  display: block;
+  width: var(--viptv-size-icon-small);
+  height: var(--viptv-size-icon-small);
+}
+[data-layout="responsive"] .vx-field__action:active,
+[data-layout="responsive"] .vx-search__clear:active {
+  transform: scale(var(--viptv-motion-pressed-scale));
+  background: var(--viptv-color-surface-2);
+}
+@media (hover: hover) and (pointer: fine) {
+  [data-layout="responsive"] .vx-field__action:hover,
+  [data-layout="responsive"] .vx-search__clear:hover {
+    background: var(--viptv-color-surface-4);
+  }
+}
+@media (min-width: 600px) {
+  [data-layout="responsive"] .vx-field__action:focus-visible,
+  [data-layout="responsive"] .vx-search__clear:focus-visible {
+    box-shadow: var(--viptv-focus-desktop);
+  }
+}
+
+/* A drawn caret (display-only values: TV text entry, PIN box). */
+[data-layout] .vx-caret {
+  display: inline-block;
+  width: var(--viptv-size-caret-width);
+  height: var(--viptv-size-caret-height);
+  margin-left: var(--viptv-space-0_5);
+  vertical-align: middle;
+  background: var(--viptv-accent);
+  animation: vx-caret-blink 1s step-end infinite;
+}
+@keyframes vx-caret-blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+/* Inline error: an alert icon + danger text under the field. */
+[data-layout] .vx-inline-error {
+  display: flex;
+  align-items: center;
+  gap: var(--viptv-space-1_5);
+  color: var(--viptv-color-status-danger);
+  font-family: var(--viptv-font-family-ui);
+  font-size: var(--viptv-type-desktop-meta-size);
+  font-weight: 400;
+  line-height: 1.35;
+}
+[data-layout] .vx-inline-error > svg {
+  display: block;
+  flex: none;
+  width: var(--viptv-size-icon-alert);
+  height: var(--viptv-size-icon-alert);
+}
+
+/* Search fields. */
+[data-layout] .vx-search {
+  --vx-h: var(--viptv-size-field-desktop);
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--viptv-space-3);
+  box-sizing: border-box;
+  height: var(--vx-h);
+  min-width: 0;
+  margin: 0;
+  padding: 0 var(--viptv-space-2_5) 0 var(--viptv-space-4_5);
+  border: 1px solid var(--viptv-color-line-hairline);
+  border-radius: calc(var(--vx-h) / 2);
+  background: var(--viptv-color-surface-1);
+  color: var(--viptv-color-text-secondary);
+  font-family: var(--viptv-font-family-ui);
+  font-size: var(--viptv-type-phone-body-strong-size);
+  line-height: 1.2;
+  cursor: text;
+}
+[data-layout] .vx-search > svg {
+  display: block;
+  flex: none;
+  width: var(--viptv-size-icon-phone);
+  height: var(--viptv-size-icon-phone);
+}
+[data-layout] .vx-search__input {
+  flex: 1 1 auto;
+  width: 100%;
+  min-width: 0;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  box-shadow: none;
+  color: var(--viptv-color-text-primary);
+  font: inherit;
+  caret-color: var(--viptv-accent);
+  -webkit-appearance: none;
+  appearance: none;
+}
+[data-layout] .vx-search__input::placeholder {
+  color: var(--viptv-color-text-tertiary);
+  opacity: 1;
+}
+[data-layout] .vx-search__input::-webkit-search-cancel-button,
+[data-layout] .vx-search__input::-webkit-search-decoration {
+  display: none;
+}
+[data-layout] .vx-search__clear {
+  margin: 0;
+}
+[data-layout] .vx-search > .vx-field__value {
+  color: var(--viptv-color-text-primary);
+}
+[data-layout] .vx-search:focus-within,
+[data-layout] .vx-search.is-focused {
+  border: var(--viptv-size-border-focus) solid var(--viptv-color-line-strong);
+}
+@media (min-width: 600px) {
+  [data-layout="responsive"] .vx-search:focus-within {
+    box-shadow: var(--viptv-focus-desktop);
+  }
+  [data-layout="responsive"] .vx-search__input:focus-visible {
+    box-shadow: none;
+  }
+}
+/* Web page search (D) keeps the default look above; the phone docks a glass pill. */
+[data-layout] .vx-search--titlebar {
+  --vx-h: var(--viptv-size-field-desktop-titlebar);
+  gap: var(--viptv-space-2_5);
+  width: var(--viptv-size-field-search-titlebar-width);
+  max-width: 100%;
+  padding: 0 var(--viptv-space-1_5) 0 var(--viptv-space-3);
+  border-radius: var(--viptv-radius-field-titlebar);
+  color: var(--viptv-color-text-tertiary);
+  font-size: var(--viptv-type-desktop-meta-size);
+}
+[data-layout] .vx-search--titlebar > svg {
+  width: var(--viptv-size-icon-alert);
+  height: var(--viptv-size-icon-alert);
+}
+[data-layout] .vx-search--titlebar .vx-search__clear {
+  width: var(--viptv-size-close-disc-titlebar);
+  height: var(--viptv-size-close-disc-titlebar);
+}
+[data-layout] .vx-search--titlebar .vx-search__clear > svg {
+  width: var(--viptv-size-icon-2xs);
+  height: var(--viptv-size-icon-2xs);
+}
+[data-layout] .vx-search--titlebar:focus-within,
+[data-layout] .vx-search--titlebar.is-focused {
+  border: 1px solid var(--viptv-color-line-strong);
+  background: var(--viptv-color-surface-2);
+}
+@media (min-width: 600px) {
+  /* The focused title-bar field is marked by its surface step, not a ring (CmpDesk1/2). */
+  [data-layout="responsive"] .vx-search--titlebar:focus-within {
+    box-shadow: none;
+  }
+}
+
+/* PIN boxes. */
+[data-layout] .vx-pin {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: var(--viptv-space-2);
+}
+[data-layout] .vx-pin__box {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: var(--viptv-size-pin-width);
+  height: var(--viptv-size-pin-height);
+  border: 1px solid var(--viptv-color-line-hairline);
+  border-radius: var(--viptv-radius-md);
+  background: var(--viptv-color-surface-1);
+}
+[data-layout] .vx-pin__box--filled::after {
+  content: "";
+  display: block;
+  width: var(--viptv-size-pin-dot);
+  height: var(--viptv-size-pin-dot);
+  border-radius: 50%;
+  background: var(--viptv-color-text-primary);
+}
+[data-layout] .vx-pin__box--active {
+  border: var(--viptv-size-border-strong) solid var(--viptv-color-line-strong);
+}
+[data-layout] .vx-pin__box--active::after {
+  content: "";
+  display: block;
+  width: var(--viptv-size-caret-width);
+  height: var(--viptv-size-pin-caret);
+  background: var(--viptv-accent);
+  animation: vx-caret-blink 1s step-end infinite;
+}
+[data-layout] .vx-pin--error .vx-pin__box {
+  border: 1px solid var(--viptv-color-status-danger);
+}
+
+/* Phone */
+@media (max-width: 599px) {
+  [data-layout="responsive"] .vx-field {
+    --vx-h: var(--viptv-size-field-phone);
+    --vx-r: var(--viptv-size-field-radius-phone);
+  }
+  [data-layout="responsive"] .vx-field__control {
+    font-size: var(--viptv-type-phone-body-strong-size);
+  }
+  /* Docked search above the nav: glass pill. */
+  [data-layout="responsive"] .vx-search {
+    --vx-h: var(--viptv-size-field-search-phone);
+    background: var(--viptv-color-fill-glass);
+  }
+}
+
+/*
+ * TV: 80 fields on 0.07 white (r20, 30px value), 26 side padding; the danger colour is
+ * danger-tv. The field is display-only — text is entered with the on-screen keyboard.
+ */
+.tv-layout .vx-field {
+  --vx-h: var(--viptv-size-field-tv);
+  --vx-r: var(--viptv-size-field-radius-tv);
+  gap: var(--viptv-space-3);
+}
+.tv-layout .vx-field__label {
+  font-size: var(--viptv-type-tv-meta-size);
+}
+.tv-layout .vx-field__control {
+  padding: 0 calc(var(--viptv-space-6) + var(--viptv-space-0_5)); /* 26 */
+  background: var(--viptv-color-fill-tv-field);
+  font-size: var(--viptv-type-tv-field-size);
+}
+.tv-layout .vx-field--error .vx-field__control,
+.tv-layout .vx-field__control--error {
+  border-color: var(--viptv-color-status-danger-tv);
+}
+.tv-layout .vx-caret {
+  width: var(--viptv-size-caret-tv-width);
+  height: var(--viptv-size-caret-tv-height);
+  margin-left: var(--viptv-space-1);
+}
+.tv-layout .vx-inline-error {
+  color: var(--viptv-color-status-danger-tv);
+  font-size: var(--viptv-type-tv-meta-size);
+}
+.tv-layout .vx-inline-error > svg {
+  width: var(--viptv-size-icon-alert-tv);
+  height: var(--viptv-size-icon-alert-tv);
+}
+.tv-layout .vx-search {
+  --vx-h: var(--viptv-size-field-tv);
+  gap: var(--viptv-space-4);
+  padding: 0 var(--viptv-space-3) 0 calc(var(--viptv-space-6) + var(--viptv-space-0_5));
+  border: 0;
+  border-radius: var(--viptv-size-field-radius-tv);
+  background: var(--viptv-color-fill-tv-field);
+  color: var(--viptv-color-text-primary);
+  font-size: var(--viptv-type-tv-field-large-size);
+  font-weight: var(--viptv-type-tv-field-large-weight);
+}
+.tv-layout .vx-search > svg {
+  width: var(--viptv-size-icon-tv);
+  height: var(--viptv-size-icon-tv);
+}
+.tv-layout .vx-pin {
+  gap: var(--viptv-space-3_5);
+}
+.tv-layout .vx-pin__box {
+  width: var(--viptv-size-pin-tv-width);
+  height: var(--viptv-size-pin-tv-height);
+  border-radius: var(--viptv-radius-2xl);
+  background: var(--viptv-color-fill-tv-field);
+}
+.tv-layout .vx-pin__box--filled::after {
+  width: var(--viptv-size-pin-tv-dot);
+  height: var(--viptv-size-pin-tv-dot);
+}
+.tv-layout .vx-pin__box--active::after {
+  height: var(--viptv-size-pin-tv-caret);
+}
+.tv-layout .vx-pin--error .vx-pin__box {
+  border-color: var(--viptv-color-status-danger-tv);
+}
+
+/* TV on-screen keyboard and PIN keypad (TV only). */
+[data-layout] .vx-keyboard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--viptv-space-2_5);
+  width: var(--viptv-size-key-tv-keyboard-width);
+}
+[data-layout] .vx-keyboard__keys {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: var(--viptv-space-2_5);
+}
+[data-layout] .vx-keyboard__actions {
+  display: flex;
+  gap: var(--viptv-space-3_5);
+  margin-top: var(--viptv-space-1_5);
+}
+[data-layout] .vx-keyboard__actions > .vx-btn {
+  flex: 1 1 0;
+}
+[data-layout] .vx-keypad {
+  gap: var(--viptv-space-3_5);
+  width: var(--viptv-size-key-tv-keypad-width);
+}
+[data-layout] .vx-keypad .vx-keyboard__keys {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--viptv-space-3);
+}
+[data-layout] .vx-keypad .vx-keyboard__actions {
+  margin-top: 0;
+}
+[data-layout] .vx-key {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  min-width: 0;
+  height: var(--viptv-size-key-tv);
+  min-height: var(--viptv-size-key-tv);
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--viptv-size-key-tv-radius);
+  outline: none;
+  background: var(--viptv-color-fill-tv-field);
+  color: var(--viptv-color-text-primary);
+  font-family: var(--viptv-font-family-ui);
+  font-size: var(--viptv-type-tv-row-size);
+  font-weight: 600;
+  line-height: 1;
+  text-align: center;
+  cursor: pointer;
+  transition: transform var(--viptv-motion-focus) ease-out, box-shadow var(--viptv-motion-focus) ease-out;
+}
+[data-layout] .vx-key > svg {
+  display: block;
+  width: var(--viptv-size-icon-tv);
+  height: var(--viptv-size-icon-tv);
+}
+[data-layout] .vx-key--action {
+  font-size: var(--viptv-type-tv-label-size);
+  font-weight: 700;
+}
+[data-layout] .vx-key--span-2 {
+  grid-column: span 2;
+}
+[data-layout] .vx-key--span-3 {
+  grid-column: span 3;
+}
+[data-layout] .vx-keypad .vx-key {
+  height: var(--viptv-size-key-tv-keypad);
+  min-height: var(--viptv-size-key-tv-keypad);
+  border-radius: var(--viptv-radius-2xl);
+  font-size: var(--viptv-type-tv-field-large-size);
+}
+[data-layout] .vx-keypad .vx-key > svg {
+  width: var(--viptv-size-icon-tv-round);
+  height: var(--viptv-size-icon-tv-round);
+}
+[data-layout] .vx-key:focus {
+  z-index: 2;
+  outline: none;
+  background: var(--viptv-color-text-primary);
+  color: var(--viptv-color-on-light);
+  box-shadow: var(--viptv-focus-tv-shadow);
+  transform: scale(var(--viptv-focus-tv-scale-key));
+}
+[data-layout] .vx-key:active {
+  background: var(--viptv-color-fill-light-pressed);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-layout] .vx-caret,
+  [data-layout] .vx-pin__box--active::after {
+    animation: none;
+  }
+  [data-layout] .vx-field__control,
+  [data-layout] .vx-key {
+    transition: none;
+  }
+}

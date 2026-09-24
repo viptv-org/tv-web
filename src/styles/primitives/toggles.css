@@ -1,1 +1,311 @@
-/* Design-system primitive: toggles. See design/viptv-design-system/components.md. */
+/*
+ * Design-system primitive: toggles, radio and choice rows (components.md §4 Toggle, §5
+ * Choice list / Radio rows; sheets CmpPhone1 / CmpDesk1 / CmpTv1). Scoping as in buttons.css.
+ *
+ * Switch   <button class="vx-switch" role="switch" aria-checked="true" aria-label="OLED mode"></button>
+ *          52 × 32 (TV 72 × 42), white knob; on = accent, off = surface-3 (TV white 0.2);
+ *          disabled 0.4. Inside a settings row the row takes focus; the switch is then
+ *          presentational (<span class="vx-switch" aria-hidden="true" data-checked="true">).
+ * Choice list
+ *   <div class="vx-choice-list" role="radiogroup|listbox|group" aria-label="…">
+ *     <button class="vx-choice" aria-current="true">            ← the current value
+ *       [<span class="vx-radio" aria-hidden="true"></span>]      ← radio rows (settings choices)
+ *       <span class="vx-choice__label">Auto [<span class="vx-choice__sub">note</span>]</span>
+ *       <span class="vx-choice__current"><svg check/>Current</span></button>   (P/D)
+ *     <button class="vx-choice" disabled>[Portuguese (PGS)] (unavailable)</button>
+ *   </div>
+ *   P rows 56 separated by hairlines; D rows 48 r10 with 2 px gaps; T rows 80 r22, 14 gaps,
+ *   the current row reads "Label · Current" (<span class="vx-choice__note">· Current</span>),
+ *   an unavailable one "Label · unavailable" (tertiary). .vx-choice--destructive = danger text.
+ *   The current row is marked with aria-current="true" (or aria-checked / aria-selected="true").
+ */
+
+/* Switch */
+[data-layout] .vx-switch {
+  --vx-w: var(--viptv-size-switch-width);
+  --vx-h: var(--viptv-size-switch-height);
+  --vx-knob: var(--viptv-size-switch-knob);
+  position: relative;
+  display: inline-block;
+  flex: none;
+  box-sizing: border-box;
+  width: var(--vx-w);
+  height: var(--vx-h);
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: calc(var(--vx-h) / 2);
+  outline: none;
+  background: var(--viptv-color-surface-3);
+  vertical-align: middle;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background-color var(--viptv-motion-focus) ease-out, box-shadow var(--viptv-motion-focus) ease-out;
+}
+[data-layout] .vx-switch::after {
+  content: "";
+  position: absolute;
+  top: var(--viptv-size-switch-inset);
+  left: var(--viptv-size-switch-inset);
+  width: var(--vx-knob);
+  height: var(--vx-knob);
+  border-radius: 50%;
+  background: var(--viptv-color-fill-white);
+  transition: transform var(--viptv-motion-focus) ease-out;
+}
+[data-layout] .vx-switch[aria-checked="true"],
+[data-layout] .vx-switch[data-checked="true"] {
+  background: var(--viptv-accent);
+}
+[data-layout] .vx-switch[aria-checked="true"]::after,
+[data-layout] .vx-switch[data-checked="true"]::after {
+  transform: translateX(calc(var(--vx-w) - var(--vx-knob) - var(--viptv-size-switch-inset) * 2));
+}
+[data-layout] .vx-switch:disabled,
+[data-layout] .vx-switch[aria-disabled="true"] {
+  opacity: 0.4;
+  cursor: default;
+}
+@media (min-width: 600px) {
+  [data-layout="responsive"] .vx-switch:focus-visible {
+    outline: none;
+    box-shadow: var(--viptv-focus-desktop);
+  }
+}
+.tv-layout .vx-switch {
+  --vx-w: var(--viptv-size-switch-tv-width);
+  --vx-h: var(--viptv-size-switch-tv-height);
+  --vx-knob: var(--viptv-size-switch-tv-knob);
+  background: var(--viptv-color-fill-tv-switch-off);
+}
+.tv-layout .vx-switch[aria-checked="true"],
+.tv-layout .vx-switch[data-checked="true"] {
+  background: var(--viptv-accent);
+}
+.tv-layout .vx-switch:focus {
+  outline: none;
+  box-shadow: var(--viptv-focus-tv-shadow);
+  transform: scale(var(--viptv-focus-tv-scale-button));
+}
+
+/* Radio indicator (inside a choice row). */
+[data-layout] .vx-radio {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: var(--viptv-size-radio);
+  height: var(--viptv-size-radio);
+  border: var(--viptv-size-border-strong) solid var(--viptv-color-line-control);
+  border-radius: 50%;
+}
+[data-layout] .vx-radio::after {
+  content: "";
+  display: none;
+  width: var(--viptv-size-radio-dot);
+  height: var(--viptv-size-radio-dot);
+  border-radius: 50%;
+  background: currentColor;
+}
+[data-layout] .vx-radio--on,
+[data-layout] .vx-choice[aria-current="true"] > .vx-radio,
+[data-layout] .vx-choice[aria-checked="true"] > .vx-radio,
+[data-layout] .vx-choice[aria-selected="true"] > .vx-radio {
+  border-color: currentColor;
+}
+[data-layout] .vx-radio--on::after,
+[data-layout] .vx-choice[aria-current="true"] > .vx-radio::after,
+[data-layout] .vx-choice[aria-checked="true"] > .vx-radio::after,
+[data-layout] .vx-choice[aria-selected="true"] > .vx-radio::after {
+  display: block;
+}
+
+/* Choice list and rows. Desktop / web is the base. */
+[data-layout] .vx-choice-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--viptv-space-0_5);
+  min-width: 0;
+}
+[data-layout] .vx-choice {
+  display: flex;
+  align-items: center;
+  gap: var(--viptv-space-3);
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  min-height: var(--viptv-size-row-choice-desktop);
+  height: auto;
+  margin: 0;
+  padding: var(--viptv-space-2) var(--viptv-space-3_5);
+  border: 0;
+  border-radius: var(--viptv-radius-sm-plus);
+  outline: none;
+  background: transparent;
+  color: var(--viptv-color-text-primary);
+  font-family: var(--viptv-font-family-ui);
+  font-size: var(--viptv-type-desktop-label-size);
+  font-weight: 500;
+  line-height: 1.3;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    transform var(--viptv-motion-focus) ease-out,
+    background-color var(--viptv-motion-focus) ease-out,
+    color var(--viptv-motion-focus) ease-out,
+    box-shadow var(--viptv-motion-focus) ease-out;
+}
+[data-layout] .vx-choice[aria-current="true"],
+[data-layout] .vx-choice[aria-checked="true"],
+[data-layout] .vx-choice[aria-selected="true"] {
+  font-weight: 600;
+}
+[data-layout] .vx-choice__label {
+  display: flex;
+  flex-direction: column;
+  gap: var(--viptv-space-0_5);
+  min-width: 0;
+}
+[data-layout] .vx-choice__sub {
+  color: var(--viptv-color-text-secondary);
+  font-size: var(--viptv-type-desktop-meta-size);
+  font-weight: 400;
+}
+/* "✓ Current" at the end of the current row (P/D). */
+[data-layout] .vx-choice__current {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--viptv-space-1_5);
+  margin-left: auto;
+  color: var(--viptv-color-text-secondary);
+  font-size: var(--viptv-type-desktop-meta-size);
+  font-weight: 600;
+  white-space: nowrap;
+}
+[data-layout] .vx-choice__current > svg {
+  display: block;
+  width: var(--viptv-size-icon-small);
+  height: var(--viptv-size-icon-small);
+}
+/* "· Current" / "· unavailable" read after the label (TV). */
+[data-layout] .vx-choice__note {
+  font-weight: 500;
+  white-space: nowrap;
+}
+[data-layout] .vx-choice:disabled,
+[data-layout] .vx-choice[aria-disabled="true"],
+[data-layout] .vx-choice--unavailable {
+  color: var(--viptv-color-text-tertiary);
+  opacity: 1; /* legacy tv-p1 dims every disabled button */
+  cursor: default;
+}
+[data-layout] .vx-choice--destructive {
+  color: var(--viptv-color-status-danger);
+}
+[data-layout="responsive"] .vx-choice:active:not(:disabled):not([aria-disabled="true"]) {
+  background: var(--viptv-color-surface-2);
+  transform: scale(var(--viptv-motion-pressed-scale-row));
+}
+@media (hover: hover) and (pointer: fine) {
+  [data-layout="responsive"] .vx-choice:hover:not(:disabled):not([aria-disabled="true"]) {
+    background: var(--viptv-color-surface-2);
+  }
+}
+@media (min-width: 600px) {
+  [data-layout="responsive"] .vx-choice:focus-visible {
+    outline: none;
+    box-shadow: var(--viptv-focus-desktop);
+  }
+}
+
+/* Phone: full-bleed rows split by hairlines. */
+@media (max-width: 599px) {
+  [data-layout="responsive"] .vx-choice-list {
+    gap: 0;
+  }
+  [data-layout="responsive"] .vx-choice {
+    min-height: var(--viptv-size-row-choice-phone);
+    padding: var(--viptv-space-2) var(--viptv-space-4);
+    border-radius: 0;
+    font-size: var(--viptv-type-phone-body-strong-size);
+  }
+  [data-layout="responsive"] .vx-choice + .vx-choice {
+    border-top: 1px solid var(--viptv-color-line-hairline);
+  }
+}
+
+/*
+ * TV: 80 rows r22, 26/600, 14 apart; focus = off-white fill + ring + lift, scale 1.02
+ * (the sheet draws 1.03; the BRIEF / token value for full-width rows wins). Focus opens
+ * on the current option (the screen sets initial focus).
+ */
+.tv-layout .vx-choice-list {
+  gap: var(--viptv-space-3_5);
+}
+.tv-layout .vx-choice {
+  gap: var(--viptv-space-4_5);
+  min-height: var(--viptv-size-row-tv);
+  padding: 0 var(--viptv-space-7);
+  border-radius: var(--viptv-radius-3xl);
+  font-size: var(--viptv-type-tv-body-size);
+  font-weight: 600;
+}
+.tv-layout .vx-choice__label {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: var(--viptv-space-3);
+}
+.tv-layout .vx-choice__sub {
+  flex-basis: 100%;
+  font-size: var(--viptv-type-tv-meta-size);
+}
+.tv-layout .vx-choice__current {
+  display: none;
+}
+.tv-layout .vx-choice__note {
+  color: var(--viptv-color-text-secondary);
+}
+.tv-layout .vx-choice:disabled .vx-choice__note,
+.tv-layout .vx-choice--unavailable .vx-choice__note {
+  color: var(--viptv-color-text-tertiary);
+}
+.tv-layout .vx-choice--destructive {
+  color: var(--viptv-color-status-danger-tv);
+}
+.tv-layout .vx-choice:focus {
+  outline: none;
+  background: var(--viptv-color-text-primary);
+  color: var(--viptv-color-on-light);
+  box-shadow: var(--viptv-focus-tv-shadow);
+  transform: scale(var(--viptv-focus-tv-scale-row));
+}
+.tv-layout .vx-choice:focus .vx-choice__note,
+.tv-layout .vx-choice:focus .vx-choice__sub {
+  color: var(--viptv-color-text-on-light-secondary);
+}
+.tv-layout .vx-choice--destructive:focus {
+  color: var(--viptv-color-status-danger-on-light);
+}
+.tv-layout .vx-radio {
+  width: var(--viptv-size-icon-tv);
+  height: var(--viptv-size-icon-tv);
+  border-width: var(--viptv-size-border-tv-strong);
+}
+.tv-layout .vx-radio::after {
+  width: var(--viptv-size-live-dot-tv);
+  height: var(--viptv-size-live-dot-tv);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-layout] .vx-switch,
+  [data-layout] .vx-switch::after,
+  [data-layout] .vx-choice {
+    transition: none;
+  }
+}

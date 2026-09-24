@@ -1,1 +1,222 @@
-/* Design-system primitive: badges. See design/viptv-design-system/components.md. */
+/*
+ * Design-system primitive: badges and indicators (components.md §3; sheets CmpPhone1 /
+ * CmpDesk1 / CmpTv1 and the cards on CmpPhone2 / CmpDesk2 / CmpTv2). Scoping as in buttons.css.
+ * Badges are not interactive; they never take focus.
+ *
+ * <span class="vx-badge vx-badge--quality">1080p</span>        P 26 r8 surface-3 · D 22 r6 · T 32 r8 0.16
+ * <span class="vx-badge vx-badge--live"><span class="vx-badge__dot"></span>LIVE</span>
+ *                                  glass over art (P/D); TV = solid red block, no dot
+ * <span class="vx-live-label"><span class="vx-live-dot"></span>Live</span>   row label (red dot + caps)
+ * <span class="vx-badge vx-badge--featured">Featured</span>   glass over the phone hero
+ * <span class="vx-badge vx-badge--up-next">Up next</span>     accent pill (episodes)
+ * <span class="vx-badge vx-badge--watching">Watching</span>   dark glass pill over a still
+ * <span class="vx-eyebrow">Featured movie</span>              caps eyebrow, secondary
+ * <span class="vx-eyebrow vx-eyebrow--accent">Best match</span> accent eyebrow (first source row)
+ * <span class="vx-status-word">Paused</span>                  TV player status (20/700 +0.1em)
+ * <span class="vx-dots" aria-hidden="true"><span class="vx-dots__dot" aria-current="true"></span>…</span>
+ *                                  carousel dots: active 18 × 6 off-white, others 6 × 6;
+ *                                  .vx-dots--over-art = inactive white 0.45 (desktop hero)
+ * Lock / check badges and the TV pencil cue belong to the tiles (cards.css).
+ */
+
+[data-layout] .vx-badge {
+  --vx-h: var(--viptv-size-badge-desktop);
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: var(--viptv-space-1_5);
+  box-sizing: border-box;
+  height: var(--vx-h);
+  padding: 0 var(--viptv-space-2);
+  border-radius: calc(var(--vx-h) / 2);
+  color: var(--viptv-color-text-primary);
+  font-family: var(--viptv-font-family-ui);
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+/* Quality: "4K", "1080p", "720p", "SD". */
+[data-layout] .vx-badge--quality {
+  padding: 0 calc(var(--viptv-space-1_5) + 1px); /* 7, as drawn (D) */
+  border-radius: var(--viptv-radius-2xs);
+  background: var(--viptv-color-surface-3);
+  font-size: var(--viptv-type-desktop-rail-label-size);
+}
+
+/* LIVE: glass over art with a 6 px red dot (the only place red appears besides the live dot). */
+[data-layout] .vx-badge--live {
+  --vx-h: var(--viptv-size-badge-glass);
+  background: var(--viptv-color-fill-live-glass);
+  font-size: var(--viptv-type-phone-eyebrow-size);
+  letter-spacing: 0.06em;
+}
+[data-layout] .vx-badge__dot {
+  display: block;
+  flex: none;
+  width: var(--viptv-size-live-dot-badge);
+  height: var(--viptv-size-live-dot-badge);
+  border-radius: 50%;
+  background: var(--viptv-color-status-live);
+}
+
+[data-layout] .vx-badge--featured {
+  --vx-h: var(--viptv-size-badge-featured);
+  padding: 0 var(--viptv-space-3);
+  background: var(--viptv-color-fill-badge-glass);
+  font-size: var(--viptv-type-phone-caption-size);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  -webkit-backdrop-filter: blur(var(--viptv-size-blur-badge));
+  backdrop-filter: blur(var(--viptv-size-blur-badge));
+}
+
+[data-layout] .vx-badge--up-next,
+[data-layout] .vx-badge--watching {
+  --vx-h: var(--viptv-size-badge-pill);
+  padding: 0 var(--viptv-space-2_5);
+  font-size: var(--viptv-type-phone-eyebrow-size);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+[data-layout] .vx-badge--up-next {
+  background: var(--viptv-accent);
+  color: var(--viptv-color-on-accent);
+}
+[data-layout] .vx-badge--watching {
+  background: var(--viptv-color-fill-watching-badge);
+}
+
+/* Row label: "● LIVE" before a live programme (live-now card, live rows). */
+[data-layout] .vx-live-label {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: var(--viptv-space-2);
+  color: var(--viptv-color-text-secondary);
+  font-family: var(--viptv-font-family-ui);
+  font-size: var(--viptv-type-desktop-eyebrow-size);
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+[data-layout] .vx-eyebrow {
+  display: block;
+  color: var(--viptv-color-text-secondary);
+  font-family: var(--viptv-font-family-ui);
+  font-size: var(--viptv-type-phone-eyebrow-size);
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+[data-layout] .vx-eyebrow--accent {
+  color: var(--viptv-accent);
+}
+
+[data-layout] .vx-status-word {
+  font-family: var(--viptv-font-family-ui);
+  font-size: var(--viptv-type-tv-status-size);
+  font-weight: var(--viptv-type-tv-status-weight);
+  line-height: var(--viptv-type-tv-status-line-height);
+  letter-spacing: var(--viptv-type-tv-status-letter-spacing);
+  text-transform: uppercase;
+}
+
+/* Carousel dots. */
+[data-layout] .vx-dots {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: var(--viptv-space-1_5);
+}
+[data-layout] .vx-dots__dot {
+  display: block;
+  flex: none;
+  width: var(--viptv-size-dot-default);
+  height: var(--viptv-size-dot-default);
+  border-radius: calc(var(--viptv-size-dot-default) / 2);
+  background: var(--viptv-color-fill-dot);
+  transition: width var(--viptv-motion-focus) ease-out;
+}
+[data-layout] .vx-dots--over-art .vx-dots__dot {
+  background: var(--viptv-color-fill-dot-over-art);
+}
+[data-layout] .vx-dots .vx-dots__dot[aria-current="true"],
+[data-layout] .vx-dots .vx-dots__dot--active {
+  width: var(--viptv-size-dot-active-width);
+  background: var(--viptv-color-text-primary);
+}
+
+/* Phone */
+@media (max-width: 599px) {
+  [data-layout="responsive"] .vx-badge--quality {
+    --vx-h: var(--viptv-size-badge-phone);
+    padding: 0 var(--viptv-space-2);
+    border-radius: var(--viptv-radius-sm);
+    font-size: var(--viptv-type-phone-caption-size);
+  }
+  [data-layout="responsive"] .vx-live-label {
+    font-size: var(--viptv-type-phone-caption-size);
+  }
+}
+
+/*
+ * TV. Text is 18 minimum (BRIEF), so the sheet's 17 px LIVE block and 16 px WATCHING read 18.
+ */
+.tv-layout .vx-badge {
+  --vx-h: var(--viptv-size-badge-tv);
+  padding: 0 var(--viptv-space-2_5);
+  font-size: var(--viptv-type-tv-min-size);
+}
+.tv-layout .vx-badge--quality {
+  border-radius: var(--viptv-radius-sm);
+  background: var(--viptv-color-fill-tv-selected);
+}
+.tv-layout .vx-badge--live {
+  padding: 0 var(--viptv-space-3);
+  border-radius: var(--viptv-radius-sm);
+  background: var(--viptv-color-status-live);
+  color: var(--viptv-color-fill-white);
+  letter-spacing: 0.06em;
+}
+.tv-layout .vx-badge--live > .vx-badge__dot {
+  display: none;
+}
+.tv-layout .vx-badge--up-next,
+.tv-layout .vx-badge--watching,
+.tv-layout .vx-badge--featured {
+  --vx-h: var(--viptv-size-badge-tv-pill);
+  padding: 0 var(--viptv-space-3);
+  border-radius: calc(var(--vx-h) / 2);
+  letter-spacing: 0.06em;
+}
+.tv-layout .vx-live-label,
+.tv-layout .vx-eyebrow {
+  font-size: var(--viptv-type-tv-eyebrow-size);
+  letter-spacing: var(--viptv-type-tv-eyebrow-letter-spacing);
+}
+.tv-layout .vx-live-label {
+  gap: var(--viptv-space-3);
+}
+.tv-layout .vx-dots {
+  gap: var(--viptv-space-2);
+}
+.tv-layout .vx-dots__dot {
+  width: var(--viptv-size-live-dot-tv);
+  height: var(--viptv-size-live-dot-tv);
+  border-radius: calc(var(--viptv-size-live-dot-tv) / 2);
+}
+.tv-layout .vx-dots .vx-dots__dot[aria-current="true"],
+.tv-layout .vx-dots .vx-dots__dot--active {
+  width: calc(var(--viptv-size-live-dot-tv) * 3);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-layout] .vx-dots__dot {
+    transition: none;
+  }
+}

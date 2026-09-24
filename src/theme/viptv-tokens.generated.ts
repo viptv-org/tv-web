@@ -60,6 +60,9 @@ export const tokens = {
   "color.fill.dot": "#3A3A3F",
   "color.fill.dot-over-art": "rgba(255,255,255,0.45)",
   "color.fill.tv-switch-off": "rgba(255,255,255,0.20)",
+  "color.fill.glass-button": "rgba(255,255,255,0.18)",
+  "color.fill.grabber": "#45454B",
+  "color.fill.icon-disc-tv": "rgba(255,255,255,0.08)",
   "color.scrim.sheet": "rgba(0,0,0,0.62)",
   "color.scrim.dialog": "rgba(0,0,0,0.55)",
   "color.scrim.tv-panel": "rgba(0,0,0,0.60)",
@@ -67,6 +70,7 @@ export const tokens = {
   "color.scrim.tv-fullscreen": "rgba(11,11,12,0.94)",
   "color.scrim.card-hover": "rgba(0,0,0,0.38)",
   "color.scrim.card-pressed": "rgba(0,0,0,0.25)",
+  "color.scrim.card-actions": "rgba(0,0,0,0.85)",
   "color.skeleton.ground": "#17171A",
   "color.skeleton.card": "#1E1E21",
   "color.skeleton.shimmer": "rgba(255,255,255,0.04)",
@@ -247,6 +251,29 @@ export const tokens = {
     "lineHeight": 1.2,
     "letterSpacing": "-0.01em"
   },
+  "type.phone.dialog-title": {
+    "fontFamily": [
+      "Bricolage Grotesque",
+      "Bricolage Grotesque Variable",
+      "Helvetica Neue",
+      "sans-serif"
+    ],
+    "fontSize": "24px",
+    "fontWeight": 700,
+    "lineHeight": 1.15,
+    "letterSpacing": "-0.02em"
+  },
+  "type.phone.group-label": {
+    "fontFamily": [
+      "Onest",
+      "system-ui",
+      "sans-serif"
+    ],
+    "fontSize": "12px",
+    "fontWeight": 700,
+    "lineHeight": 1.2,
+    "letterSpacing": "0.08em"
+  },
   "type.desktop.page-title": {
     "fontFamily": [
       "Bricolage Grotesque",
@@ -418,6 +445,28 @@ export const tokens = {
     "fontWeight": 800,
     "lineHeight": 1,
     "letterSpacing": "-0.02em"
+  },
+  "type.desktop.nav-label": {
+    "fontFamily": [
+      "Onest",
+      "system-ui",
+      "sans-serif"
+    ],
+    "fontSize": "11px",
+    "fontWeight": 700,
+    "lineHeight": 1.2,
+    "letterSpacing": "0.08em"
+  },
+  "type.desktop.keycap": {
+    "fontFamily": [
+      "Onest",
+      "system-ui",
+      "sans-serif"
+    ],
+    "fontSize": "11px",
+    "fontWeight": 600,
+    "lineHeight": 1,
+    "letterSpacing": "0em"
   },
   "type.tv.screen-title": {
     "fontFamily": [
@@ -611,6 +660,40 @@ export const tokens = {
     "lineHeight": 1.2,
     "letterSpacing": "0.1em"
   },
+  "type.tv.keycap": {
+    "fontFamily": [
+      "Onest",
+      "system-ui",
+      "sans-serif"
+    ],
+    "fontSize": "16px",
+    "fontWeight": 700,
+    "lineHeight": 1,
+    "letterSpacing": "0em"
+  },
+  "type.tv.list-row": {
+    "fontFamily": [
+      "Onest",
+      "system-ui",
+      "sans-serif"
+    ],
+    "fontSize": "26px",
+    "fontWeight": 600,
+    "lineHeight": 1.3,
+    "letterSpacing": "0em"
+  },
+  "type.tv.description-title": {
+    "fontFamily": [
+      "Bricolage Grotesque",
+      "Bricolage Grotesque Variable",
+      "Helvetica Neue",
+      "sans-serif"
+    ],
+    "fontSize": "40px",
+    "fontWeight": 700,
+    "lineHeight": 1.15,
+    "letterSpacing": "0em"
+  },
   "radius.xs": "4px",
   "radius.sm": "8px",
   "radius.field-titlebar": "9px",
@@ -676,6 +759,10 @@ export const tokens = {
   "layout.tv.row-gap": "36px",
   "layout.tv.heading-to-row": "22px",
   "layout.tv.art-to-caption": "16px",
+  "layout.tv.panel-pad-top": "64px",
+  "layout.tv.panel-pad-right": "96px",
+  "layout.tv.panel-pad-bottom": "120px",
+  "layout.tv.panel-pad-left": "64px",
   "size.button.phone": "54px",
   "size.button.phone-detail": "58px",
   "size.button.desktop": "48px",
@@ -729,6 +816,14 @@ export const tokens = {
   "size.icon.tv-round": "30px",
   "size.icon.small": "16px",
   "size.icon.alert": "15px",
+  "size.icon.xs": "14px",
+  "size.icon.2xs": "12px",
+  "size.icon.large": "24px",
+  "size.icon.tv-large": "36px",
+  "size.icon.tv-small": "26px",
+  "size.icon.tv-xs": "20px",
+  "size.icon.alert-tv": "24px",
+  "size.icon.banner-tv": "34px",
   "size.switch.width": "52px",
   "size.switch.height": "32px",
   "size.switch.knob": "26px",
@@ -784,6 +879,7 @@ export const tokens = {
   "size.caret.width": "2px",
   "size.caret.height": "20px",
   "size.caret.tv-width": "3px",
+  "size.caret.tv-height": "34px",
   "size.key.tv": "64px",
   "size.key.tv-radius": "14px",
   "size.key.tv-keypad": "80px",
@@ -845,6 +941,7 @@ export const tokens = {
   "size.tile.play-disc": "44px",
   "size.tile.hover-play-disc": "48px",
   "size.tile.selected-ring": "3px",
+  "size.tile.hover-action": "36px",
   "size.source-row.phone": "76px",
   "size.source-row.desktop": "68px",
   "size.source-row.tv": "104px",
@@ -865,6 +962,18 @@ export const tokens = {
   "size.timeline.tv-track-focus": "10px",
   "size.timeline.tv-knob": "32px",
   "size.timeline.tv-bubble": "56px",
+  "size.badge.phone": "26px",
+  "size.badge.desktop": "22px",
+  "size.badge.tv": "32px",
+  "size.badge.glass": "22px",
+  "size.badge.featured": "28px",
+  "size.badge.pill": "24px",
+  "size.badge.tv-pill": "30px",
+  "size.tag.default": "18px",
+  "size.tag.tv": "26px",
+  "size.radio-dot": "10px",
+  "size.scrollbar.tv-width": "6px",
+  "size.scrollbar.tv-thumb": "160px",
   "focus.desktop": "0 0 0 2px #0B0B0C, 0 0 0 4px #F4F2EE",
   "focus.desktop-hover-card": "inset 0 0 0 2px #F4F2EE",
   "focus.tv-fill": "background #F4F2EE; color #111113; box-shadow 0 0 0 4px #FFFFFF, 0 24px 60px rgba(0,0,0,0.65); scale 1.05",
@@ -877,6 +986,7 @@ export const tokens = {
   "focus.tv-caption-shift": "8px",
   "focus.tv-scale-key": 1.12,
   "focus.tv-caption-shift-profile": "10px",
+  "focus.desktop-card-inset": "inset 0 0 0 2px #F4F2EE, inset 0 0 0 4px #0B0B0C",
   "shadow.nav": "0 12px 32px rgba(0,0,0,0.55)",
   "shadow.popover": "0 20px 60px rgba(0,0,0,0.55)",
   "shadow.toast": "0 12px 30px rgba(0,0,0,0.5)",
