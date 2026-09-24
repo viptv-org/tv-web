@@ -4,7 +4,6 @@ import type { Catalog, MediaItem, TvApi } from "../api";
 import { artworkUrl, cardPresentation, presentation } from "../core/presentations";
 import { formatContentType } from "./catalogFilters";
 import { ReadyImage } from "./RokuArtwork";
-import "./SearchPopunder.css";
 
 const QUICK_RESULTS = 8;
 const HISTORY_LIMIT = 8;
@@ -207,50 +206,52 @@ export function SearchPopunder({
           </button>
         )}
       </label>
+      {/* The panel (browse family, src/styles/screens/browse.css): recent searches with Clear
+          while empty (DeskSearchRecent), quick matches + "See all results" while typing
+          (DeskSearchMatches). */}
       {showPanel && (
-        <div className="search-popunder-panel" id="search-popunder-list" role="listbox" aria-label={text ? "Search suggestions" : "Recent searches"}>
+        <div className="vx-popunder" id="search-popunder-list" role="listbox" aria-label={text ? "Quick matches" : "Recent searches"}>
           {!text && (
-            <div className="search-popunder-heading">
-              <span>Recent searches</span>
-              <button type="button" onClick={() => { setHistory([]); writeHistory(profile, []); }}>Clear</button>
+            <div className="vx-popunder__heading">
+              <span className="vx-popunder__label">Recent searches</span>
+              <button type="button" className="vx-popunder__clear" onClick={() => { setHistory([]); writeHistory(profile, []); }}>Clear</button>
             </div>
           )}
-          {text && loading && !results.length && <p className="search-popunder-status">Searching…</p>}
-          {text && !loading && !results.length && <p className="search-popunder-status">No quick matches</p>}
+          {text && loading && !results.length && <p className="vx-popunder__status" role="status">Searching…</p>}
+          {text && !loading && !results.length && <p className="vx-popunder__status" role="status">No quick matches</p>}
           {entries.map((entry, index) => {
             const common = {
               id: `search-popunder-${index}`,
               role: "option" as const,
               "aria-selected": index === active,
-              className: `search-popunder-row ${index === active ? "is-active" : ""} row-${entry.kind}`,
+              className: `vx-popunder__row vx-popunder__row--${entry.kind}${index === active ? " is-active" : ""}`,
               onPointerEnter: () => setActive(index),
               onClick: () => choose(entry),
             };
             if (entry.kind === "history")
               return (
                 <button type="button" key={`history-${entry.text}`} {...common}>
-                  <History size={15} aria-hidden="true" />
-                  <span className="search-popunder-name">{entry.text}</span>
+                  <History aria-hidden="true" strokeWidth={2} />
+                  <span className="vx-popunder__name">{entry.text}</span>
                 </button>
               );
             if (entry.kind === "all")
               return (
                 <button type="button" key="all" {...common}>
-                  <Search size={15} aria-hidden="true" />
-                  <span className="search-popunder-name">See all results for “{entry.text}”</span>
-                  <ArrowRight size={15} aria-hidden="true" />
+                  <span className="vx-popunder__name">See all results for “{entry.text}”</span>
+                  <ArrowRight aria-hidden="true" strokeWidth={2} />
                 </button>
               );
             const { item } = entry;
             const art = presentation(item).posterImage ?? cardPresentation(item, "catalog").image ?? undefined;
             return (
               <button type="button" key={`${item.type}:${item.id}`} {...common}>
-                <span className="search-popunder-art">
+                <span className="vx-popunder__art">
                   <ReadyImage src={artworkUrl(art, 80, 120)} alt="" loading="lazy" />
                 </span>
-                <span className="search-popunder-text">
-                  <span className="search-popunder-name">{item.name}</span>
-                  <small>{[formatContentType(item.type), item.year].filter(Boolean).join(" · ")}</small>
+                <span className="vx-popunder__text">
+                  <span className="vx-popunder__name">{item.name}</span>
+                  <span className="vx-popunder__meta">{[formatContentType(item.type), item.year].filter(Boolean).join(" · ")}</span>
                 </span>
               </button>
             );

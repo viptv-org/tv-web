@@ -1,1 +1,817 @@
-/* Screen family: browse. Reference screens: design/viptv-design-system/reference/screens. */
+/*
+ * Screen family: browse — Discover, My List (My List | Continue Watching) and Search.
+ * Reference screens (design/viptv-design-system/reference/screens):
+ *   phone    Discover, PhDiscoverFilter, PhFilterText, Library, PhLibraryCW, PhSearch, PhSearchBlank
+ *   desktop  DeskDiscover, DeskDiscoverCatalog, DeskDiscoverFilter, DeskLibrary, DeskLibraryCW,
+ *            WebSearch, DeskSearchRecent, DeskSearchMatches (title-bar popunder panel)
+ *   TV       TvDiscover, TvDiscoverFilter, TvFilterText, TvLibrary, TvSearch
+ * Markup: src/screens/BrowseScreen.tsx (main.vx-browse), the panel of src/ui/SearchPopunder.tsx.
+ * Choice lists open in the App modal (sheet / anchored popover / TV panel) and text filters in
+ * TextEntry; their shells are the overlays primitive / title / account families'.
+ *
+ * Cards are the home family's (src/components/cards/Cards.tsx): this file only lays out the
+ * `.cards` track and its direct children (`.vx-card-slot` on phone / desktop, the card on TV).
+ * Tiles keep their own fixed widths (never stretched): desktop and TV grids wrap them; phones use
+ * fluid columns. `--poster-width` feeds the legacy card rules while they remain.
+ *
+ * Literal lengths are per-screen geometry from the reference HTML with no token; each cites its
+ * screen. TV rules (.tv-layout) are Chrome 87-safe: no :is/:where/:has, nesting, aspect-ratio,
+ * color-mix or individual transform properties.
+ */
+
+/* ---------------------------------------------------------------------------
+ * Page frame: desktop app and web (DeskDiscover: padding 36 48 48, gap 24).
+ * ------------------------------------------------------------------------ */
+[data-layout="responsive"] main.vx-browse {
+  position: relative;
+  inset: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--viptv-space-6);
+  box-sizing: border-box;
+  width: calc(100% - var(--vx-shell-rail, 0px));
+  max-width: none;
+  height: auto;
+  min-height: 100%;
+  margin: 0 0 0 var(--vx-shell-rail, 0px);
+  padding: var(--viptv-space-9) var(--viptv-space-12) var(--viptv-space-12);
+  background: var(--viptv-color-bg);
+  color: var(--viptv-color-text-primary);
+  font-family: var(--viptv-font-family-ui);
+}
+[data-layout] .vx-browse__head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--viptv-space-6);
+  min-width: 0;
+}
+/* Segments fit their content on desktop (DeskLibrary: 2 segments, not a full-width track). */
+[data-layout] .vx-browse__head > .vx-segmented {
+  align-self: flex-start;
+}
+[data-layout] .vx-browse__heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--viptv-space-3);
+  min-width: 0;
+}
+[data-layout] .vx-browse__title {
+  position: static;
+  width: auto;
+  height: auto;
+  margin: 0;
+  color: var(--viptv-color-text-primary);
+  font-family: var(--viptv-font-family-display);
+  font-size: var(--viptv-type-desktop-page-title-size);
+  font-weight: var(--viptv-type-desktop-page-title-weight);
+  line-height: var(--viptv-type-desktop-page-title-line-height);
+  letter-spacing: var(--viptv-type-desktop-page-title-letter-spacing);
+  white-space: nowrap;
+}
+[data-layout] .vx-browse__body {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+/* Discover controls: type segments | catalog chip | extras (DeskDiscoverCatalog: gap 16, extras 8). */
+[data-layout] .vx-browse__controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--viptv-space-4);
+  min-width: 0;
+}
+[data-layout] .vx-browse__chip-group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--viptv-space-2);
+  min-width: 0;
+}
+[data-layout] .vx-browse__chip-value {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Grids: fixed-width tiles that wrap (DeskDiscover: 172 posters, gap 28 × 20; DeskLibraryCW: 256
+   stills, gap 28 × 16). The legacy cards read --poster-width. */
+[data-layout] .vx-browse__grid {
+  min-width: 0;
+}
+[data-layout] .vx-browse__grid > .cards,
+[data-layout] .vx-browse__skeleton {
+  --poster-width: var(--viptv-size-tile-desktop-poster-width);
+  position: static;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--viptv-space-7) var(--viptv-space-5);
+  width: 100%;
+  height: auto;
+  margin: 0;
+  padding: 0;
+  overflow: visible;
+}
+[data-layout] .vx-browse__grid--still > .cards {
+  gap: var(--viptv-space-7) var(--viptv-space-4);
+}
+[data-layout] .vx-browse__grid > .cards > * {
+  flex: none;
+  margin: 0;
+}
+[data-layout="responsive"] .browser-shell .vx-browse__grid > .cards,
+[data-layout="responsive"] .browser-shell .vx-browse__skeleton {
+  --poster-width: var(--viptv-size-tile-web-poster-width);
+}
+
+/* Empty states sit where the grid would start; My List's is 24 lower (DeskLibrary). */
+[data-layout] .vx-browse__empty {
+  margin-top: var(--viptv-space-6);
+}
+[data-layout] .vx-browse--discover .vx-browse__empty {
+  margin-top: 0;
+}
+/* "Add titles with the (+) button.": the + drawn as a 24 surface-3 disc (DeskLibrary). */
+[data-layout] .vx-browse__inline-plus {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--viptv-size-badge-pill);
+  height: var(--viptv-size-badge-pill);
+  border-radius: 50%;
+  background: var(--viptv-color-surface-3);
+  color: var(--viptv-color-text-primary);
+  vertical-align: middle;
+}
+[data-layout] .vx-browse__inline-plus > svg {
+  width: var(--viptv-size-icon-xs);
+  height: var(--viptv-size-icon-xs);
+}
+[data-layout="responsive"] .vx-browse__empty .vx-empty__action > .vx-btn {
+  min-height: 0;
+}
+
+/* ---------------------------------------------------------------------------
+ * Search (WebSearch: padding 32 48 48, gap 22; desktop app: the title-bar field searches).
+ * ------------------------------------------------------------------------ */
+[data-layout="responsive"] main.vx-browse--search {
+  gap: var(--viptv-space-5_5);
+  padding-top: var(--viptv-space-8);
+}
+[data-layout="responsive"] .vx-browse--search .vx-browse__head {
+  gap: var(--viptv-space-5_5);
+}
+[data-layout="responsive"] .vx-browse--search .vx-browse__body {
+  gap: var(--viptv-space-5_5);
+}
+/* Web page field: 56 tall, radius 18, 18 px text, clear disc + Esc keycap (WebSearch). */
+[data-layout] .vx-browse__page-field {
+  --vx-h: var(--viptv-size-field-search-page);
+  gap: var(--viptv-space-3_5);
+  padding: 0 var(--viptv-space-3) 0 var(--viptv-space-5);
+  border-radius: var(--viptv-radius-2xl);
+  font-size: var(--viptv-type-desktop-search-field-size);
+  line-height: var(--viptv-type-desktop-search-field-line-height);
+}
+[data-layout] .vx-browse__page-field > .vx-kbd {
+  flex: none;
+}
+/* Result types: All · Movies 9 · … on a surface-1 track, 36 segments (WebSearch). */
+[data-layout] .vx-browse__types {
+  --vx-h: var(--viptv-size-chip-desktop-drawer);
+  align-self: flex-start;
+}
+[data-layout] .vx-browse__search-status {
+  min-height: var(--viptv-space-5);
+}
+/* Section: heading + count (baseline, gap 10), See all + chevrons, then the row (WebSearch). */
+[data-layout] .vx-browse__section {
+  min-width: 0;
+}
+[data-layout] .vx-browse__section-head {
+  display: flex;
+  align-items: center;
+  gap: var(--viptv-space-2_5);
+  min-width: 0;
+  margin-bottom: var(--viptv-space-3_5);
+}
+[data-layout] .vx-browse__section-name {
+  display: flex;
+  align-items: baseline;
+  gap: var(--viptv-space-2_5);
+  min-width: 0;
+}
+[data-layout] .vx-browse__section-title {
+  margin: 0;
+  color: var(--viptv-color-text-primary);
+  font-family: var(--viptv-font-family-display);
+  font-size: var(--viptv-type-desktop-section-size);
+  font-weight: var(--viptv-type-desktop-section-weight);
+  line-height: var(--viptv-type-desktop-section-line-height);
+  letter-spacing: var(--viptv-type-desktop-section-letter-spacing);
+}
+[data-layout] .vx-browse__section-count {
+  color: var(--viptv-color-text-tertiary);
+  font-size: var(--viptv-type-desktop-row-size);
+  font-weight: 500;
+}
+[data-layout] .vx-browse__section-tools {
+  display: flex;
+  align-items: center;
+  gap: var(--viptv-space-2);
+  margin-left: auto;
+}
+[data-layout] .vx-browse__section-tools > .vx-link {
+  padding: 0 var(--viptv-space-2);
+}
+[data-layout] .vx-browse__row-nav {
+  --vx-h: var(--viptv-size-button-row-nav);
+  --vx-bg: var(--viptv-color-surface-2);
+  --vx-icon-round: var(--viptv-size-icon-desktop);
+}
+[data-layout] .vx-browse__row-nav:disabled {
+  --vx-bg: var(--viptv-color-surface-1);
+  --vx-fg: var(--viptv-color-text-tertiary);
+  opacity: 1;
+}
+/* A result row: one line of tiles that pages sideways (gap 20 desktop). */
+[data-layout] .vx-browse__row > .cards {
+  --poster-width: var(--viptv-size-tile-desktop-poster-width);
+  position: static;
+  display: flex;
+  flex-wrap: nowrap;
+  gap: var(--viptv-space-5);
+  width: 100%;
+  height: auto;
+  margin: 0;
+  padding: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+}
+[data-layout] .vx-browse__row > .cards::-webkit-scrollbar {
+  display: none;
+}
+[data-layout] .vx-browse__row > .cards > * {
+  flex: none;
+  margin: 0;
+}
+[data-layout="responsive"] .browser-shell .vx-browse__row > .cards {
+  --poster-width: var(--viptv-size-tile-web-poster-width);
+}
+/* "Searching 2 more addons…": a notice pill bottom-centre of the body row (WebSearch). */
+[data-layout="responsive"] .vx-browse__progress {
+  position: fixed;
+  z-index: 20;
+  bottom: var(--viptv-size-toast-desktop-bottom);
+  left: calc(var(--vx-shell-rail, 0px) + (100% - var(--vx-shell-rail, 0px)) / 2);
+  display: flex;
+  align-items: center;
+  gap: var(--viptv-space-2_5);
+  transform: translateX(-50%);
+  white-space: nowrap;
+  pointer-events: none;
+}
+/* Blank / no results: centred under the head on desktop. */
+[data-layout="responsive"] .vx-browse--search .vx-browse__empty {
+  margin-top: var(--viptv-space-6);
+}
+
+/* ---------------------------------------------------------------------------
+ * Phone (Discover, Library, PhLibraryCW, PhSearch, PhSearchBlank): 58 top inset, 16 gutters,
+ * content clear of the floating nav.
+ * ------------------------------------------------------------------------ */
+@media (max-width: 599px) {
+  [data-layout="responsive"] main.vx-browse {
+    gap: 0;
+    width: 100%;
+    margin-left: 0;
+    padding: var(--viptv-layout-phone-top-inset) 0 var(--vx-shell-bottom, var(--viptv-layout-phone-bottom-clearance));
+  }
+  [data-layout="responsive"] .vx-browse__head {
+    gap: 0;
+  }
+  /* Title row: 48 tall, 16 gutters (Discover.html). */
+  [data-layout="responsive"] .vx-browse__heading {
+    min-height: var(--viptv-space-12);
+    padding: 0 var(--viptv-layout-phone-gutter);
+  }
+  [data-layout="responsive"] .vx-browse__title {
+    font-size: var(--viptv-type-phone-screen-title-size);
+    font-weight: var(--viptv-type-phone-screen-title-weight);
+    line-height: var(--viptv-type-phone-screen-title-line-height);
+    letter-spacing: var(--viptv-type-phone-screen-title-letter-spacing);
+  }
+  /* My List's Settings gear: 44 round surface-1 (Library). */
+  [data-layout="responsive"] .vx-browse__header-action {
+    --vx-h: var(--viptv-layout-phone-min-target);
+    --vx-bg: var(--viptv-color-surface-1);
+    --vx-icon-round: var(--viptv-size-icon-phone);
+  }
+  /* Segments 14 under the title, chips 12 under the segments, the grid 20 lower. */
+  [data-layout="responsive"] .vx-browse__head > .vx-browse__segmented {
+    align-self: stretch;
+    width: auto;
+    margin: var(--viptv-space-3_5) var(--viptv-layout-phone-gutter) 0;
+  }
+  [data-layout="responsive"] .vx-browse__head > .vx-browse__profile + .vx-browse__segmented {
+    margin-top: var(--viptv-space-3);
+  }
+  [data-layout="responsive"] .vx-browse__chips {
+    display: flex;
+    align-items: center;
+    gap: var(--viptv-space-2);
+    margin-top: var(--viptv-space-3);
+    padding: 0 var(--viptv-layout-phone-gutter);
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+  }
+  [data-layout="responsive"] .vx-browse__chips::-webkit-scrollbar {
+    display: none;
+  }
+  /* "Choose catalog": 44 round, 0.14 outline, 18 icon in primary text (Discover.html). */
+  [data-layout="responsive"] .vx-browse__catalogs {
+    --vx-fg: var(--viptv-color-text-primary);
+    --vx-icon-round: var(--viptv-size-icon-desktop);
+  }
+  [data-layout="responsive"] .vx-browse__body {
+    padding-top: var(--viptv-space-5);
+  }
+  /* Grids: three fluid poster columns, two for Continue Watching stills (gap 18 × 12). */
+  [data-layout="responsive"] .vx-browse__grid > .cards,
+  [data-layout="responsive"] .vx-browse__skeleton {
+    --poster-width: 100%;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--viptv-space-4_5) var(--viptv-space-3);
+    padding: 0 var(--viptv-layout-phone-gutter);
+  }
+  [data-layout="responsive"] .vx-browse__grid--still > .cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--viptv-space-4_5) var(--viptv-space-3);
+  }
+  [data-layout="responsive"] .vx-browse__grid > .cards > * {
+    min-width: 0;
+    width: auto;
+  }
+  [data-layout="responsive"] .vx-browse__empty {
+    margin: var(--viptv-space-6) var(--viptv-layout-phone-gutter) 0;
+  }
+
+  /* Profile row above the segments: 64 tall, radius 22, 44 avatar (Library.html). */
+  [data-layout="responsive"] .vx-browse__profile {
+    display: flex;
+    align-items: center;
+    gap: var(--viptv-space-3);
+    box-sizing: border-box;
+    width: auto;
+    height: 64px; /* Library.html */
+    min-height: 0;
+    margin: var(--viptv-space-3_5) var(--viptv-layout-phone-gutter) 0;
+    padding: 0 var(--viptv-space-4) 0 var(--viptv-space-2_5);
+    border: 0;
+    border-radius: var(--viptv-radius-3xl);
+    background: var(--viptv-color-surface-1);
+    color: var(--viptv-color-text-primary);
+    font-family: var(--viptv-font-family-ui);
+    text-align: left;
+    -webkit-tap-highlight-color: transparent;
+    transition: transform var(--viptv-motion-focus) ease-out, background-color var(--viptv-motion-focus) ease-out;
+  }
+  [data-layout="responsive"] .vx-browse__profile:active {
+    background: var(--viptv-color-surface-2);
+    transform: scale(var(--viptv-motion-pressed-scale-row));
+  }
+  [data-layout="responsive"] .vx-browse__profile > svg {
+    flex: none;
+    width: var(--viptv-size-icon-desktop);
+    height: var(--viptv-size-icon-desktop);
+    color: var(--viptv-color-text-secondary);
+  }
+  [data-layout="responsive"] .vx-browse__profile-avatar {
+    position: relative;
+    display: flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    width: var(--viptv-layout-phone-min-target);
+    height: var(--viptv-layout-phone-min-target);
+    overflow: hidden;
+    border-radius: 50%;
+    background: var(--viptv-color-surface-3);
+    font-size: var(--viptv-type-phone-body-strong-size);
+    font-weight: 600;
+  }
+  [data-layout="responsive"] .vx-browse__profile-avatar > img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  [data-layout="responsive"] .vx-browse__profile-text {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    gap: var(--viptv-space-0_5);
+    min-width: 0;
+  }
+  [data-layout="responsive"] .vx-browse__profile-name {
+    overflow: hidden;
+    font-size: var(--viptv-type-phone-body-strong-size);
+    font-weight: var(--viptv-type-phone-body-strong-weight);
+    line-height: var(--viptv-type-phone-body-strong-line-height);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  [data-layout="responsive"] .vx-browse__profile-note {
+    color: var(--viptv-color-text-tertiary);
+    font-size: var(--viptv-type-phone-meta-size);
+    line-height: var(--viptv-type-phone-meta-line-height);
+  }
+
+  /* Search: the field docks above the nav; content clears it (PhSearch: bottom padding 200). */
+  [data-layout="responsive"] main.vx-browse--search {
+    padding-bottom: calc(var(--vx-shell-bottom, var(--viptv-layout-phone-bottom-clearance)) + var(--viptv-size-field-search-phone) + var(--viptv-space-2));
+  }
+  [data-layout="responsive"] .vx-browse--search .vx-browse__head,
+  [data-layout="responsive"] .vx-browse--search .vx-browse__body {
+    gap: 0;
+  }
+  [data-layout="responsive"] .vx-browse--search .vx-browse__search-status {
+    min-height: 0;
+    padding: var(--viptv-space-1_5) var(--viptv-layout-phone-gutter) var(--viptv-space-2_5);
+  }
+  [data-layout="responsive"] .vx-browse--search .vx-browse__body {
+    padding-top: 0;
+  }
+  [data-layout="responsive"] .vx-browse__section + .vx-browse__section {
+    margin-top: var(--viptv-space-5);
+  }
+  [data-layout="responsive"] .vx-browse__section-head {
+    align-items: center;
+    min-height: var(--viptv-layout-phone-min-target);
+    margin: 0;
+    padding: 0 var(--viptv-layout-phone-gutter);
+  }
+  [data-layout="responsive"] .vx-browse__section-title {
+    font-size: var(--viptv-type-phone-section-size);
+    font-weight: var(--viptv-type-phone-section-weight);
+    line-height: var(--viptv-type-phone-section-line-height);
+    letter-spacing: var(--viptv-type-phone-section-letter-spacing);
+  }
+  /* Rows: 111-wide posters, gap 10, scrolling under the 16 gutters. */
+  [data-layout="responsive"] .vx-browse__row > .cards {
+    --poster-width: var(--viptv-size-tile-phone-poster-width);
+    gap: var(--viptv-space-2_5);
+    padding: 0 var(--viptv-layout-phone-gutter);
+    scroll-padding: 0 var(--viptv-layout-phone-gutter);
+  }
+  [data-layout="responsive"] .vx-browse__row > .cards > * {
+    width: var(--viptv-size-tile-phone-poster-width);
+  }
+  /* Blank page: the note sits low, just above the docked field (PhSearchBlank). */
+  [data-layout="responsive"] main.vx-browse--search.is-empty {
+    min-height: 100%;
+  }
+  [data-layout="responsive"] .vx-browse--search.is-empty .vx-browse__body {
+    flex: 1 1 auto;
+    justify-content: flex-end;
+  }
+  [data-layout="responsive"] .vx-browse--search .vx-browse__empty {
+    gap: var(--viptv-space-2_5);
+    margin: 0 auto;
+    padding: 0 var(--viptv-space-8) 40px; /* PhSearchBlank.html: 0 32 40 */
+  }
+  [data-layout="responsive"] .vx-browse--search .vx-empty__text {
+    color: var(--viptv-color-text-secondary);
+    font-size: var(--viptv-type-phone-body-strong-size);
+    line-height: 1.5;
+  }
+  /* Docked field: 16 above the nav (bottom 108), with its own fade behind (PhSearch). */
+  [data-layout="responsive"] .vx-browse__dock {
+    position: fixed;
+    z-index: 6;
+    left: var(--viptv-layout-phone-gutter);
+    right: var(--viptv-layout-phone-gutter);
+    bottom: calc(var(--viptv-layout-phone-nav-bottom) + var(--viptv-layout-phone-nav-height) + var(--viptv-layout-phone-gutter) + env(safe-area-inset-bottom));
+  }
+  [data-layout="responsive"] .vx-browse__dock::before {
+    content: "";
+    position: absolute;
+    z-index: -1;
+    left: calc(var(--viptv-layout-phone-gutter) * -1);
+    right: calc(var(--viptv-layout-phone-gutter) * -1);
+    bottom: calc(var(--viptv-layout-phone-gutter) * -1);
+    height: 170px; /* PhSearch.html: fade 170 tall under the field */
+    background: linear-gradient(to bottom, transparent 0%, var(--viptv-color-bg) 45%, var(--viptv-color-bg) 100%);
+    opacity: 0.92;
+    pointer-events: none;
+  }
+  [data-layout="responsive"] .vx-browse__dock-field {
+    padding: 0 var(--viptv-space-2_5) 0 var(--viptv-space-4_5);
+    border: var(--viptv-size-border-focus) solid var(--viptv-color-line-strong);
+  }
+}
+
+/* ---------------------------------------------------------------------------
+ * Desktop title-bar search popunder panel (DeskSearchRecent / DeskSearchMatches): 460 wide, 4 under
+ * the 41 px bar, radius 16, padding 8, rows 40 (recent) / 72 (matches). The field is the shell's.
+ * ------------------------------------------------------------------------ */
+[data-layout] .vx-popunder {
+  position: fixed;
+  z-index: 60;
+  top: calc(var(--vx-shell-top, var(--viptv-layout-desktop-titlebar)) + var(--viptv-space-1));
+  left: 50%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--viptv-space-0_5);
+  box-sizing: border-box;
+  width: var(--viptv-size-field-search-titlebar-width);
+  max-width: calc(100vw - 2 * var(--viptv-space-4));
+  max-height: calc(100vh - var(--vx-shell-top, var(--viptv-layout-desktop-titlebar)) - 2 * var(--viptv-space-4));
+  padding: var(--viptv-space-2);
+  overflow-y: auto;
+  border: 1px solid var(--viptv-color-line-hairline);
+  border-radius: var(--viptv-radius-xl);
+  background: var(--viptv-color-surface-1);
+  box-shadow: var(--viptv-shadow-popup);
+  color: var(--viptv-color-text-primary);
+  font-family: var(--viptv-font-family-ui);
+  line-height: normal;
+  text-align: left;
+  transform: translateX(-50%);
+  scrollbar-width: none;
+}
+[data-layout] .vx-popunder__heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--viptv-space-1_5) var(--viptv-space-3) var(--viptv-space-2);
+}
+[data-layout] .vx-popunder__label {
+  color: var(--viptv-color-text-tertiary);
+  font-size: var(--viptv-type-desktop-eyebrow-size);
+  font-weight: var(--viptv-type-desktop-eyebrow-weight);
+  line-height: var(--viptv-type-desktop-eyebrow-line-height);
+  letter-spacing: var(--viptv-type-desktop-eyebrow-letter-spacing);
+  text-transform: uppercase;
+}
+[data-layout] .vx-popunder__clear {
+  min-height: 0;
+  height: auto;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--viptv-radius-xs);
+  background: transparent;
+  color: var(--viptv-color-text-secondary);
+  font-family: inherit;
+  font-size: var(--viptv-type-desktop-meta-size);
+  font-weight: 600;
+  line-height: 1.3;
+  cursor: pointer;
+}
+[data-layout] .vx-popunder__status {
+  margin: 0;
+  padding: var(--viptv-space-3);
+  color: var(--viptv-color-text-tertiary);
+  font-size: var(--viptv-type-desktop-meta-size);
+}
+[data-layout] .vx-popunder__row {
+  display: flex;
+  align-items: center;
+  gap: var(--viptv-space-3);
+  box-sizing: border-box;
+  width: 100%;
+  min-height: var(--viptv-size-row-menu);
+  margin: 0;
+  padding: 0 var(--viptv-space-3);
+  border: 0;
+  border-radius: var(--viptv-radius-sm-plus);
+  background: transparent;
+  color: var(--viptv-color-text-primary);
+  font-family: inherit;
+  font-size: var(--viptv-type-desktop-row-size);
+  font-weight: 400;
+  line-height: 1.3;
+  text-align: left;
+  cursor: pointer;
+}
+[data-layout] .vx-popunder__row > svg {
+  flex: none;
+  width: var(--viptv-size-icon-small);
+  height: var(--viptv-size-icon-small);
+  color: var(--viptv-color-text-tertiary);
+}
+[data-layout] .vx-popunder__row.is-active {
+  background: var(--viptv-color-surface-2);
+}
+/* Quick match: 40 × 60 poster, title 14/600 + "Movie · 2026" 12 tertiary; 72 tall. */
+[data-layout] .vx-popunder__row--item {
+  min-height: 72px; /* DeskSearchMatches.html */
+  padding: var(--viptv-space-1_5) var(--viptv-space-3);
+}
+[data-layout] .vx-popunder__art {
+  flex: none;
+  width: 40px; /* DeskSearchMatches.html: 40 × 60 poster */
+  height: 60px;
+  overflow: hidden;
+  border-radius: var(--viptv-radius-2xs);
+  background: var(--viptv-color-surface-2);
+}
+[data-layout] .vx-popunder__art > img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+[data-layout] .vx-popunder__text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--viptv-space-0_5);
+  min-width: 0;
+}
+[data-layout] .vx-popunder__name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+[data-layout] .vx-popunder__row--item .vx-popunder__name {
+  font-weight: 600;
+}
+[data-layout] .vx-popunder__meta {
+  color: var(--viptv-color-text-tertiary);
+  font-size: var(--viptv-type-desktop-caption-size);
+}
+/* "See all results for “the”" + arrow: 44 tall under a hairline (DeskSearchMatches). */
+[data-layout] .vx-popunder__row--all {
+  justify-content: space-between;
+  min-height: var(--viptv-layout-phone-min-target);
+  margin-top: var(--viptv-space-1);
+  border-top: 1px solid var(--viptv-color-line-hairline);
+  font-weight: 600;
+}
+[data-layout] .vx-popunder__row--all > svg {
+  color: var(--viptv-color-text-primary);
+}
+@media (hover: hover) and (pointer: fine) {
+  [data-layout="responsive"] .vx-popunder__row:hover {
+    background: var(--viptv-color-surface-2);
+  }
+  [data-layout="responsive"] .vx-popunder__clear:hover {
+    color: var(--viptv-color-text-primary);
+  }
+}
+@media (min-width: 600px) {
+  [data-layout="responsive"] .vx-popunder__clear:focus-visible {
+    outline: none;
+    box-shadow: var(--viptv-focus-desktop);
+  }
+}
+
+/* ---------------------------------------------------------------------------
+ * TV (1920 × 1080 canvas): content from x 192 (144 rail + 48) to the 96 safe edge, 54 from the
+ * top; the legend sits bottom-right. Focused controls keep 24 px of room inside every clipping
+ * viewport (BrowseScreen keepInView), so viewports are widened by 24 with matching padding.
+ * ------------------------------------------------------------------------ */
+.tv-layout main.vx-browse {
+  --vx-browse-room: var(--viptv-space-6);
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: var(--viptv-layout-tv-safe-y) var(--viptv-layout-tv-safe-x)
+    calc(var(--viptv-layout-tv-safe-y) + var(--viptv-size-keycap-tv-height) + var(--viptv-space-4))
+    calc(var(--viptv-layout-tv-rail-collapsed) + var(--viptv-space-12));
+  overflow: hidden;
+  color: var(--viptv-color-text-primary);
+  font-family: var(--viptv-font-family-ui);
+}
+.tv-layout .vx-browse__head {
+  gap: var(--viptv-space-5_5);
+}
+.tv-layout .vx-browse__title {
+  font-size: var(--viptv-type-tv-screen-title-size);
+  font-weight: var(--viptv-type-tv-screen-title-weight);
+  line-height: var(--viptv-type-tv-screen-title-line-height);
+  letter-spacing: var(--viptv-type-tv-screen-title-letter-spacing);
+}
+/* One chip row (types | catalogs | extras) that scrolls sideways under focus (TvDiscover). */
+.tv-layout .vx-browse__chips {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: var(--viptv-space-2);
+  margin: calc(var(--vx-browse-room) * -1);
+  padding: var(--vx-browse-room);
+  overflow: hidden;
+}
+.tv-layout .vx-browse__chip-group {
+  flex: none;
+  flex-wrap: nowrap;
+}
+/* TvDiscover.html: the divider has 18 px of margin inside the 8 px gaps. */
+.tv-layout .vx-browse__chips > .vx-chip-divider {
+  margin: 0 var(--viptv-space-4_5);
+}
+/* The grid starts 48 below the chips (TvDiscover: margin-top 26 inside the column's 22 gap). */
+.tv-layout .vx-browse__body {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  margin: calc(var(--viptv-space-5_5) + var(--viptv-space-6) + var(--viptv-space-0_5) - var(--vx-browse-room)) calc(var(--vx-browse-room) * -1) 0;
+  padding: var(--vx-browse-room);
+  overflow: hidden;
+}
+.tv-layout .vx-browse__grid > .cards {
+  column-gap: 44px; /* TvDiscover.html / TvLibrary.html: 4 × 360 tiles, gaps 44 */
+  row-gap: 44px;
+}
+.tv-layout .vx-browse__empty {
+  margin-top: 0;
+}
+
+/* TV Search: keyboard column (x 192, 560 wide) and results from x 850, y 150 (TvSearch). */
+.tv-layout .vx-browse__keyboard-panel {
+  position: absolute;
+  left: calc(var(--viptv-layout-tv-rail-collapsed) + var(--viptv-space-12));
+  top: var(--viptv-layout-tv-safe-y);
+  display: flex;
+  flex-direction: column;
+  gap: var(--viptv-space-5_5);
+  width: 560px; /* TvSearch.html */
+}
+.tv-layout .vx-browse__tv-field {
+  padding: 0 var(--viptv-space-3) 0 calc(var(--viptv-space-6) + var(--viptv-space-0_5)); /* 26 */
+  cursor: default;
+}
+.tv-layout .vx-browse__tv-field .vx-field__value,
+.tv-layout .vx-browse__tv-field .vx-field__placeholder {
+  overflow: hidden;
+  font-size: var(--viptv-type-tv-field-large-size);
+  font-weight: var(--viptv-type-tv-field-large-weight);
+  white-space: nowrap;
+}
+.tv-layout .vx-browse__tv-field .vx-field__placeholder {
+  color: var(--viptv-color-text-tertiary);
+}
+.tv-layout .vx-browse__keys {
+  margin-top: var(--viptv-space-1_5);
+}
+.tv-layout .vx-browse__results {
+  position: absolute;
+  left: calc(850px - var(--vx-browse-room)); /* TvSearch.html: results from x 850 */
+  right: 0;
+  top: calc(150px - var(--vx-browse-room)); /* TvSearch.html: first heading at y 150 */
+  bottom: calc(var(--viptv-layout-tv-safe-y) + var(--viptv-size-keycap-tv-height) + var(--viptv-space-4));
+  display: flex;
+  flex-direction: column;
+  gap: 44px; /* TvSearch.html: sections 44 apart */
+  margin: 0;
+  padding: var(--vx-browse-room);
+  overflow: hidden;
+}
+.tv-layout .vx-browse__section-name {
+  gap: var(--viptv-space-4_5);
+}
+.tv-layout .vx-browse__section-head {
+  margin-bottom: var(--viptv-layout-tv-heading-to-row);
+}
+.tv-layout .vx-browse__section-title {
+  font-size: var(--viptv-type-tv-section-size);
+  font-weight: var(--viptv-type-tv-section-weight);
+  line-height: var(--viptv-type-tv-section-line-height);
+  letter-spacing: var(--viptv-type-tv-section-letter-spacing);
+}
+.tv-layout .vx-browse__section-count {
+  font-size: var(--viptv-type-tv-meta-size);
+  font-weight: var(--viptv-type-tv-meta-weight);
+}
+/* Result rows scroll sideways under focus with room for the ring (gap 36). */
+.tv-layout .vx-browse__row > .cards {
+  gap: var(--viptv-layout-tv-row-gap);
+  margin: calc(var(--vx-browse-room) * -1);
+  padding: var(--vx-browse-room);
+  overflow: hidden;
+}
+.tv-layout .vx-browse__search-status {
+  margin: 0;
+}
+
+/* Choice popovers: value lists 240 wide, the catalog list 300 (DeskDiscoverFilter / DeskDiscoverCatalog). */
+[data-layout="responsive"] .vx-popover.vx-browse-popover {
+  width: 240px;
+}
+[data-layout="responsive"] .vx-popover.vx-browse-popover--catalog {
+  width: 300px;
+}

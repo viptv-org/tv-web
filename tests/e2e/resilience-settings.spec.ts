@@ -92,8 +92,11 @@ test('Vizio: cross-catalog search retains working rows and names a partial failu
   await page.getByRole('button', { name: 'Search' }).click();
   await page.getByRole('textbox', { name: 'Search titles' }).fill('resilient');
   await expect(page.getByRole('button', { name: 'Resilient Movie' })).toBeVisible();
-  await expect(page.locator('.result-grid')).toContainText('Working catalog');
-  await expect(page.locator('.result-grid')).not.toContainText('Offline catalog');
+  // Results group by type (TvSearch "Movies  N results"): the working catalog's title is the
+  // one movie; the failed catalog adds nothing and is named by the partial notice below.
+  const results = page.locator('.vx-browse__results');
+  await expect(results.getByRole('heading', { name: 'Movies', exact: true })).toBeVisible();
+  await expect(results).toContainText('1 result');
   await expect(page.getByText("Some sources couldn't load.")).toBeVisible();
   await expect(page.getByRole('alert')).toHaveCount(0);
 });

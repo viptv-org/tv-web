@@ -5,8 +5,6 @@
 @import "./css/responsive-p4.css";
 /* Phone arrangement last, so it settles the shared rules' cascade. */
 @import "./css/responsive-phone.css";
-/* Poster card shape (cardShapes.ts) on every responsive width. */
-@import "./css/responsive-cards.css";
 /* Loading skeletons. */
 @import "./css/responsive-skeleton.css";
 /* TV-style resets and per-screen polish. */

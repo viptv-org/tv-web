@@ -118,12 +118,14 @@ test('Discover keeps all addon namespaces and loads despite an unrelated Home fa
   await expect(page.getByRole('navigation', { name: 'Main navigation' })).toBeVisible();
   if (await page.getByRole('button', { name: 'Dismiss', exact: true }).isVisible()) await page.getByRole('button', { name: 'Dismiss', exact: true }).click();
   await page.getByRole('navigation', { name: 'Main navigation' }).getByRole('button', { name: 'Discover', exact: true }).click();
+  // Desktop: one catalog control ("Addon · Catalog") opens a popover of the type's catalogs,
+  // the current one marked; the type is a segmented control beside it (DeskDiscoverCatalog).
   await page.locator('[data-focus-id="discover-catalog"]').click();
-  await expect(page.getByRole('dialog').getByRole('button', { name: 'Cinemeta · Popular', exact: true })).toBeVisible();
+  await expect(page.getByRole('dialog').getByRole('button', { name: /^Cinemeta · Popular/ })).toHaveAttribute('aria-current', 'true');
   await page.getByRole('dialog').getByRole('button', { name: 'AIOMetadata · Popular', exact: true }).click();
-  await page.locator('[data-focus-id="discover-type"]').click();
+  await expect(page.locator('[data-focus-id="discover-catalog"]')).toContainText('AIOMetadata · Popular');
   const request = page.waitForRequest(request => new URL(request.url()).pathname === '/api/discover' && new URL(request.url()).searchParams.get('type') === 'anime');
-  await page.getByRole('dialog').getByRole('button', { name: 'Anime', exact: true }).click();
+  await page.getByRole('group', { name: 'Content type' }).getByRole('button', { name: 'Anime', exact: true }).click();
   const selected = new URL((await request).url());
   expect(selected.searchParams.get('addon_id')).toBe('2');
   await expect(page.locator('[data-focus-id="discover-catalog"]')).toContainText('AIOMetadata · Anime');

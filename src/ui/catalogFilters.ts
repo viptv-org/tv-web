@@ -1,5 +1,5 @@
 import { normalizeCore } from "../core";
-import type { Catalog } from "../api";
+import type { Catalog, MediaItem } from "../api";
 export type CatalogFilter = {
   name: string;
   required: boolean;
@@ -37,6 +37,70 @@ export function discoverGroupLabel(group: DiscoverGroup): string {
 /** Same addon catalog, across refetched catalog lists. */
 export const sameCatalog = (left: Catalog, right: Catalog | undefined) =>
   !!right && left.id === right.id && left.type === right.type && left.addonId === right.addonId;
+
+/** "Addon · Catalog" ("Cinemeta · Popular"): the desktop catalog chip and every catalog list. */
+export function catalogChoiceLabel(catalog: Catalog): string {
+  return catalog.addonName ? `${catalog.addonName} · ${catalog.name}` : catalog.name;
+}
+
+/**
+ * Chip labels for one type's catalogs (phone and TV catalog chips): the
+ * catalog name, in "Addon · Catalog" form only where two catalogs share a name.
+ */
+export function catalogChipLabels(catalogs: readonly Catalog[]): string[] {
+  const counts = new Map<string, number>();
+  for (const catalog of catalogs) counts.set(catalog.name, (counts.get(catalog.name) ?? 0) + 1);
+  return catalogs.map((catalog) =>
+    (counts.get(catalog.name) ?? 0) > 1 ? catalogChoiceLabel(catalog) : catalog.name,
+  );
+}
+
+/** A filter chip's accessible name: "Genre: Any", "Year: Required", "Search catalog: moon". */
+export function catalogFilterSummary(filter: CatalogFilter, value: string | undefined): string {
+  const current = value?.trim();
+  return `${catalogFilterLabel(filter.name)}: ${current || (filter.required ? "Required" : "Any")}`;
+}
+
+/** Search results grouped the way the design shows them: by content type, then Live TV. */
+export type SearchSectionKey = DiscoverGroup | "live";
+export type SearchSection = {
+  key: SearchSectionKey;
+  title: string;
+  items: readonly MediaItem[];
+  /** The first catalog that contributed, handed to the detail page as the titles' origin. */
+  catalog?: Catalog;
+};
+const SEARCH_ORDER: readonly SearchSectionKey[] = ["movie", "series", "anime", "other", "live"];
+export function searchSectionTitle(key: SearchSectionKey): string {
+  return key === "live" ? "Live TV" : discoverGroupLabel(key);
+}
+/**
+ * Folds the per-catalog search rows into one section per content type (in
+ * Movies, Series, Anime, Other, Live TV order), without duplicates. A section
+ * whose catalogs all came back empty is kept with no items, so its count
+ * ("Live TV · 0") still shows.
+ */
+export function searchSections(
+  rows: readonly { name: string; items: readonly MediaItem[]; catalog?: Catalog }[],
+): SearchSection[] {
+  const sections = new Map<SearchSectionKey, { items: MediaItem[]; seen: Set<string>; catalog?: Catalog }>();
+  for (const row of rows) {
+    const key: SearchSectionKey = row.catalog ? discoverTypeGroup(row.catalog.type) : "live";
+    const section = sections.get(key) ?? { items: [], seen: new Set<string>(), catalog: row.catalog };
+    section.catalog ??= row.catalog;
+    for (const item of row.items) {
+      const id = `${item.type}:${item.id}`;
+      if (section.seen.has(id)) continue;
+      section.seen.add(id);
+      section.items.push(item);
+    }
+    sections.set(key, section);
+  }
+  return SEARCH_ORDER.filter((key) => sections.has(key)).map((key) => {
+    const section = sections.get(key)!;
+    return { key, title: searchSectionTitle(key), items: section.items, catalog: section.catalog };
+  });
+}
 
 /**
  * Home shelf heading for a catalog: its content type rather than the addon

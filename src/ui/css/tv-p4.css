@@ -1,91 +1,3 @@
-.search .keyboard > div {
-  position: absolute;
-  left: calc(2px * var(--tv-k));
-  top: calc(62px * var(--tv-k));
-  width: calc(300px * var(--tv-k));
-  display: grid;
-  grid-template-columns: repeat(6, calc(50px * var(--tv-k)));
-  grid-auto-rows: calc(46px * var(--tv-k));
-}
-.search .keyboard > div button {
-  width: calc(50px * var(--tv-k));
-  height: calc(46px * var(--tv-k));
-  min-height: calc(46px * var(--tv-k));
-  border-radius: 0;
-  padding: 0;
-  text-align: center;
-  font-size: calc(22px * var(--tv-k));
-  font-weight: 400;
-  background: #303234;
-}
-.search .keyboard button:focus {
-  outline: calc(3px * var(--tv-k)) solid white;
-  outline-offset: calc(3px * var(--tv-k));
-  z-index: 2;
-  color: white;
-}
-.search .keyboard > [data-focus-id="search-scope"] {
-  position: absolute;
-  top: calc(446px * var(--tv-k));
-  left: 0;
-  width: calc(300px * var(--tv-k));
-  height: calc(48px * var(--tv-k));
-  font-size: calc(19px * var(--tv-k));
-}
-.search .keyboard > [data-focus-id="clear"],
-.search .keyboard > [data-focus-id="space"],
-.search .keyboard > [data-focus-id="delete"] {
-  position: absolute;
-  top: calc(338px * var(--tv-k));
-  width: calc(100px * var(--tv-k));
-  height: calc(46px * var(--tv-k));
-  min-height: calc(46px * var(--tv-k));
-  border-radius: 0;
-  padding: 0;
-  text-align: center;
-  font-size: calc(19px * var(--tv-k));
-  background: #303234;
-  font-weight: 400;
-}
-.search .keyboard > [data-focus-id="clear"] {
-  left: calc(2px * var(--tv-k));
-}
-.search .keyboard > [data-focus-id="space"] {
-  left: calc(102px * var(--tv-k));
-}
-.search .keyboard > [data-focus-id="delete"] {
-  left: calc(202px * var(--tv-k));
-}
-.search .result-grid {
-  left: calc(356px * var(--tv-k));
-  top: calc(110px * var(--tv-k));
-  width: calc(740px * var(--tv-k));
-  height: calc(484px * var(--tv-k));
-}
-.search .result-grid > section {
-  height: calc(238px * var(--tv-k));
-  margin: 0 0 calc(8px * var(--tv-k));
-}
-.search .result-grid h2 {
-  height: calc(38px * var(--tv-k));
-  line-height: calc(30px * var(--tv-k));
-  font-size: calc(22px * var(--tv-k));
-}
-.search .result-grid .cards {
-  height: calc(200px * var(--tv-k));
-  gap: calc(20px * var(--tv-k));
-  overflow-y: hidden;
-}
-.search-status {
-  position: absolute;
-  left: calc(356px * var(--tv-k));
-  top: calc(606px * var(--tv-k));
-  width: calc(740px * var(--tv-k));
-  height: calc(36px * var(--tv-k));
-  font-size: calc(20px * var(--tv-k));
-  line-height: calc(36px * var(--tv-k));
-  color: #c5c6c7;
-}
 .roku-text {
   display: block;
   width: 100%;
@@ -105,70 +17,6 @@ button:focus .roku-text.overflows > span {
     transform: translateX(var(--marquee-distance));
   }
 }
-.search-help {
-  position: absolute;
-  left: 0;
-  top: calc(408px * var(--tv-k));
-  width: calc(304px * var(--tv-k));
-  height: calc(64px * var(--tv-k));
-  font-size: calc(19px * var(--tv-k));
-  line-height: calc(26px * var(--tv-k));
-  color: #a6a8aa;
-}
-.search .keyboard > [data-focus-id="search-scope"] {
-  top: calc(492px * var(--tv-k));
-  height: calc(40px * var(--tv-k));
-  min-height: calc(40px * var(--tv-k));
-}
-
-/* MiniKeyboard tiles retain native separators, rounded focus and symbol actions. */
-.search > h1 {
-  line-height: calc(44px * var(--tv-k));
-}
-.search .keyboard > input::placeholder {
-  color: #c5c6c7;
-  opacity: 1;
-}
-.search .keyboard > div button {
-  box-shadow: inset -1px -1px #242628;
-  font-weight: 700;
-}
-.search .keyboard button:focus {
-  outline: 0;
-}
-.search .keyboard button:focus::before {
-  content: "";
-  position: absolute;
-  inset: calc(-6px * var(--tv-k));
-  border: calc(2px * var(--tv-k)) solid #f5f5f5;
-  border-radius: calc(6px * var(--tv-k));
-  pointer-events: none;
-}
-.search .keyboard > [data-focus-id="clear"],
-.search .keyboard > [data-focus-id="space"],
-.search .keyboard > [data-focus-id="delete"] {
-  box-shadow: inset -1px -1px #242628;
-}
-.search .keyboard svg {
-  vertical-align: middle;
-}
-.search .search-help {
-  font-size: calc(22px * var(--tv-k));
-  line-height: calc(32px * var(--tv-k));
-}
-
-.search .keyboard > div button {
-  position: relative;
-  font-size: calc(20px * var(--tv-k));
-}
-.search .keyboard > input {
-  transform: translateY(calc(-10px * var(--tv-k)));
-  font-size: calc(24px * var(--tv-k));
-}
-.search .search-status {
-  line-height: calc(22px * var(--tv-k));
-}
-
 /* ------------------------------------------------------------------ */
 /* Interaction states: hover animates only where a pointer exists (TV */
 /* layouts keep their outline-based focus), and any persistent choice */
@@ -176,25 +24,15 @@ button:focus .roku-text.overflows > span {
 /* ------------------------------------------------------------------ */
 
 @media (hover: hover) and (pointer: fine) {
-.filters button,
-.card-more {
+  .card-more {
     transition: filter 120ms ease, transform 120ms ease, background 120ms ease;
   }
-  .filters button:hover,
-.card-more:hover {
+  .card-more:hover {
     filter: brightness(1.18);
     transform: translateY(-1px);
   }
-.filters button:active {
-    transform: translateY(0);
-    filter: brightness(0.95);
-  }
+
 }
 
 /* A persistent selection is visible on every layout, not just on focus. */
-.filters button[aria-pressed="true"],
-.filters button[aria-current="true"] {
-  border-color: #f5f5f5;
-  box-shadow: inset 0 0 0 1px #f5f5f5;
-}
 

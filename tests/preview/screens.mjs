@@ -137,7 +137,9 @@ export const screens = {
   PhLiveDetails: { path: '/tv/live', steps: async h => { await h.hold('live-channel-1'); await h.choose('Programme details'); } },
   PhLiveDetailsNone: { path: '/tv/live', note: 'ESPN (no guide) stands in for Cartoon Network', steps: async h => { await h.page.locator('[data-focus-id="live-channel-11"]').scrollIntoViewIfNeeded(); await h.hold('live-channel-11'); await h.choose('Programme details'); } },
   PhSearch: { path: '/tv/search', query: 'q=naruto' },
-  PhSearchBlank: { path: '/tv/search', query: 'q=naruto', backend: { searchFail: true }, note: 'partial-failure notice reached with a query' },
+  // The blank page (no query). The app only knows a partial failure once a query ran, so the
+  // "Some sources couldn't load." suffix the reference adds to the blank note does not show here.
+  PhSearchBlank: { path: '/tv/search', note: 'blank page: the partial-failure suffix needs a query' },
   PhLibraryCW: { path: '/tv/my-list', steps: libraryQueue, backend: { family: 'desk' } },
   PhCastUnavailable: { path: '/tv/settings', steps: h => h.activate('settings-watch-on-tv') },
   PhStates: { notReachable: 'composite board of many states; shoot the individual states instead' },
@@ -246,7 +248,7 @@ export const screens = {
   TvItemMenu: { steps: h => h.hold('queue-0') },
   TvHidden: { steps: async h => { await h.hold('queue-0'); await h.button('Hide from Continue Watching'); } },
   TvDiscoverFilter: { steps: async h => { await h.tvGo('Discover'); await h.activate('discover-filter-genre'); } },
-  TvFilterText: { steps: async h => { await h.tvGo('Discover'); await h.activate('discover-catalog'); await h.button('Latest digital', { exact: false }); await h.settle(); await h.activate('discover-filter-search'); await h.activate('text-save'); await h.waitText('required filter'); } },
+  TvFilterText: { steps: async h => { await h.tvGo('Discover'); await h.button('Latest digital', { exact: false }); await h.settle(); await h.activate('discover-filter-search'); await h.activate('text-save'); await h.waitText('required filter'); } },
   TvSourceProvider: { steps: async h => { await tvToSources(h); await h.activate('source-provider'); } },
   TvSourceDetails: { steps: async h => { await tvToSources(h); await h.hold('source-0'); } },
   TvLiveDetails: { steps: async h => { await h.tvGo('Live TV'); await h.hold('guide-program-1-0'); } },

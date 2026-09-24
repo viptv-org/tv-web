@@ -1,30 +1,77 @@
 import {
+  useEffect,
   useRef,
+  useState,
   type Dispatch,
+  type FocusEvent,
+  type KeyboardEvent,
   type MutableRefObject,
   type ReactNode,
   type SetStateAction,
 } from "react";
-import { ChevronDown } from "lucide-react";
+import {
+  Bookmark,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  CircleAlert,
+  Compass,
+  Delete,
+  Plus,
+  Search as SearchIcon,
+  Settings as SettingsIcon,
+  SlidersHorizontal,
+  Space,
+  Trash2,
+  X,
+} from "lucide-react";
 import { TvButton, focusElement } from "../ui/remote";
 import { AutoLoad } from "../ui/AutoLoad";
 import { CARD_SHAPES, type CardShape } from "../ui/cardShapes";
 import type { CardRowOptions } from "../components/cards/Cards";
-import type { Catalog, MediaItem } from "../api";
+import type { Catalog, MediaItem, TvProfile } from "../api";
 import type { ErrorDetail } from "../ui/errors";
 import type { Screen } from "../ui/screens";
+import { isDesktopShell, type Choice, type ModalView } from "../ui/app/appShared";
+import { ReadyImage } from "../ui/RokuArtwork";
+import { avatarUrl } from "../ui/ProfileEditor";
+import { ChipDivider } from "../ui/primitives/Chips";
+import { FieldValue } from "../ui/primitives/Fields";
+import { KeyLegend, type LegendItem } from "../ui/primitives/Keys";
+import { LoadingMore, SkeletonTile } from "../ui/primitives/Feedback";
 import {
-  catalogFilters,
+  catalogChipLabels,
+  catalogChoiceLabel,
   catalogFilterLabel,
-  discoverTypeGroup,
-  discoverGroupLabel,
+  catalogFilterSummary,
+  catalogFilters,
   catalogsForGroup,
+  discoverGroupLabel,
   discoverGroups,
+  discoverTypeGroup,
   sameCatalog,
+  searchSections,
   type CatalogFilter,
+  type DiscoverGroup,
+  type SearchSection,
+  type SearchSectionKey,
 } from "../ui/catalogFilters";
 
-type Choice = { label: string; action: () => void };
+/*
+ * Browse family: Discover, My List and Search on every platform.
+ * Reference screens (design/viptv-design-system/reference/screens):
+ *   phone    Discover, PhDiscoverFilter, PhFilterText, Library, PhLibraryCW, PhSearch, PhSearchBlank
+ *   desktop  DeskDiscover, DeskDiscoverCatalog, DeskDiscoverFilter, DeskLibrary, DeskLibraryCW, WebSearch
+ *   TV       TvDiscover, TvDiscoverFilter, TvFilterText, TvLibrary, TvSearch
+ * Styles: src/styles/screens/browse.css (vx-browse-…).
+ *
+ * Choice lists (catalog, filter values) go through the App's generic modal
+ * with a `choices` view: a phone bottom sheet, a desktop popover anchored
+ * under its chip, a TV right panel. Text filters open the shared TextEntry.
+ * Data, navigation, paging and modal / entry ownership stay with the App
+ * state machine; this component renders what it is given.
+ */
+
 type ModalSpec = {
   title: string;
   choices: Choice[];
@@ -35,6 +82,10 @@ type ModalSpec = {
   detail?: ErrorDetail;
   /** Choice label that receives focus when the dialog opens. */
   focus?: string;
+  /** Presentation hint (value list; desktop popover anchor). */
+  view?: ModalView;
+  /** Family-scoped modifier on the dialog / popover (browse.css popover widths). */
+  className?: string;
 };
 type EntrySpec = {
   title: string;
@@ -43,108 +94,222 @@ type EntrySpec = {
   save: (value: string) => Promise<void>;
 };
 
-/** Placeholder tiles while a browse grid waits for its first page. */
-function SkeletonCards({ shape }: { shape: CardShape }) {
+const KEYS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890";
+const KEY_COLUMNS = 6;
+const BACK_KEYS = ["Escape", "BrowserBack", "GoBack"];
+const BACK_CODES = [10009, 461];
+/** Room kept around a TV-focused control inside a clipping viewport (4 px ring + scale). */
+const TV_FOCUS_ROOM = 24;
+
+/** A desktop popover anchored under its control (DeskDiscoverCatalog / DeskDiscoverFilter: 8 px below). */
+function anchorUnder(element: Element | null | undefined): ModalView["anchor"] {
+  if (!element) return undefined;
+  const rect = element.getBoundingClientRect();
+  if (!rect.width && !rect.height) return undefined;
+  return { x: rect.left, y: rect.bottom + 8, align: "start" };
+}
+
+/** TV: keep a focused control inside its clipping viewport with room for its focus ring. */
+function keepInView(viewport: HTMLElement | null, unit: HTMLElement, axis: "x" | "y") {
+  if (!viewport || !viewport.contains(unit)) return;
+  const box = viewport.getBoundingClientRect();
+  const size = axis === "y" ? viewport.offsetHeight : viewport.offsetWidth;
+  const scale = (axis === "y" ? box.height : box.width) / (size || 1) || 1;
+  const rect = unit.getBoundingClientRect();
+  const scroll = axis === "y" ? viewport.scrollTop : viewport.scrollLeft;
+  const view = axis === "y" ? viewport.clientHeight : viewport.clientWidth;
+  const start = ((axis === "y" ? rect.top - box.top : rect.left - box.left) / scale) + scroll;
+  const end = start + (axis === "y" ? rect.height : rect.width) / scale;
+  let next = scroll;
+  if (start - TV_FOCUS_ROOM < scroll) next = start - TV_FOCUS_ROOM;
+  else if (end + TV_FOCUS_ROOM > scroll + view) next = end + TV_FOCUS_ROOM - view;
+  next = Math.max(0, next);
+  if (next === scroll) return;
+  if (axis === "y") viewport.scrollTop = next;
+  else viewport.scrollLeft = next;
+}
+
+/** Empty / status block (feedback primitive markup): 52 / 60 / 88 icon disc, optional title, one line. */
+function BrowseEmpty({ icon, title, children, action, center, alert, className }: {
+  icon: ReactNode;
+  title?: ReactNode;
+  children?: ReactNode;
+  action?: ReactNode;
+  center?: boolean;
+  alert?: boolean;
+  className?: string;
+}) {
   return (
-    <div className={`cards skeleton-cards ${shape === "poster" ? "poster-grid" : ""}`} aria-hidden="true">
-      {Array.from({ length: shape === "poster" ? 12 : 8 }, (_, index) => <div key={index} className="card-skeleton" />)}
+    <div
+      className={["vx-empty", center ? "vx-empty--center" : "", "vx-browse__empty", className ?? ""].filter(Boolean).join(" ")}
+      role={alert ? "alert" : undefined}
+    >
+      <span className="vx-empty__icon" aria-hidden="true">{icon}</span>
+      {title ? <h2 className="vx-empty__title">{title}</h2> : null}
+      {children ? <p className="vx-empty__text">{children}</p> : null}
+      {action ? <div className="vx-empty__action">{action}</div> : null}
     </div>
   );
 }
 
-/**
- * Phone Discover controls: one horizontally scrolling chip row each for the
- * content type, the catalogs of that type and the catalog's declared
- * filters. Filter chips open the same choice dialog / text entry as the TV
- * filter buttons, so every catalog extra stays reachable.
- */
-function DiscoverChips({
-  catalogs,
-  catalog,
-  catalogValues,
-  loadCatalog,
-  openFilter,
-}: {
-  catalogs: readonly Catalog[];
-  catalog: Catalog | undefined;
-  catalogValues: Record<string, string>;
-  loadCatalog: (cat: Catalog) => Promise<void>;
-  openFilter: (catalog: Catalog, filter: CatalogFilter) => void;
-}) {
-  const groups = discoverGroups(catalogs);
-  const group = catalog ? discoverTypeGroup(catalog.type) : groups[0];
-  const groupCatalogs = group ? catalogsForGroup(catalogs, group) : [];
-  // Addon names appear only where two catalogs of one type share a name.
-  const nameCounts = new Map<string, number>();
-  for (const cat of groupCatalogs) nameCounts.set(cat.name, (nameCounts.get(cat.name) ?? 0) + 1);
-  const filters = catalog ? catalogFilters(catalog) : [];
-  if (!groups.length) return null;
+/** Dropdown chip content: "Genre: Any ⌄", "Genre: Comedy ⌄", or "Year  Required ⌄". */
+function FilterChipContent({ filter, value }: { filter: CatalogFilter; value: string }) {
+  const label = catalogFilterLabel(filter.name);
   return (
-    <div className="discover-chips">
-      {groups.length > 1 && (
-        <div className="chip-row" role="group" aria-label="Content type">
-          {groups.map((option) => (
-            <button
-              type="button"
-              key={option}
-              className="chip"
-              aria-pressed={option === group}
-              onClick={() => {
-                const first = catalogsForGroup(catalogs, option)[0];
-                if (first && option !== group) void loadCatalog(first);
-              }}
-            >
-              {discoverGroupLabel(option)}
-            </button>
-          ))}
-        </div>
+    <>
+      {value || !filter.required ? (
+        <>
+          <span className="vx-chip__key">{label}:</span>
+          <span className="vx-browse__chip-value">{value || "Any"}</span>
+        </>
+      ) : (
+        <>
+          <span>{label}</span>
+          <span className="vx-chip__tag">Required</span>
+        </>
       )}
-      {groupCatalogs.length > 1 && (
-        <div className="chip-row" role="group" aria-label="Catalog">
-          {groupCatalogs.map((cat) => (
-            <button
-              type="button"
-              key={`${cat.addonId ?? ""}:${cat.type}:${cat.id}`}
-              className="chip"
-              aria-pressed={sameCatalog(cat, catalog)}
-              onClick={() => { if (!sameCatalog(cat, catalog)) void loadCatalog(cat); }}
-            >
-              {(nameCounts.get(cat.name) ?? 0) > 1 && cat.addonName ? `${cat.name} · ${cat.addonName}` : cat.name}
-            </button>
-          ))}
-        </div>
-      )}
-      {catalog && filters.length > 0 && (
-        <div className="chip-row" role="group" aria-label="Filters">
-          {filters.map((filter) => {
-            const value = catalogValues[filter.name]?.trim();
-            const label = catalogFilterLabel(filter.name);
-            return (
-              <button
-                type="button"
-                key={filter.name}
-                className={`chip filter-chip ${!value && filter.required ? "required" : ""}`}
-                aria-pressed={!!value}
-                aria-label={`${label}: ${value || (filter.required ? "Required" : "Any")}`}
-                onClick={() => openFilter(catalog, filter)}
-              >
-                {value ? `${label}: ${value}` : label}
-                <ChevronDown size={14} aria-hidden="true" />
+      <ChevronDown aria-hidden="true" strokeWidth={2.2} />
+    </>
+  );
+}
+
+/** Phone My List: the profile row above the segments (Library). */
+function ProfileSwitch({ profile, onProfiles }: { profile: TvProfile; onProfiles: () => void }) {
+  return (
+    <button
+      type="button"
+      className="vx-browse__profile"
+      aria-label={`Switch profile, current: ${profile.name}`}
+      onClick={onProfiles}
+    >
+      <span className="vx-browse__profile-avatar" aria-hidden="true">
+        <span>{profile.name.trim().slice(0, 1).toUpperCase()}</span>
+        <ReadyImage src={avatarUrl(profile)} alt="" />
+      </span>
+      <span className="vx-browse__profile-text">
+        <span className="vx-browse__profile-name">{profile.name}</span>
+        <span className="vx-browse__profile-note">Switch profile</span>
+      </span>
+      <ChevronDown aria-hidden="true" strokeWidth={2} />
+    </button>
+  );
+}
+
+/**
+ * One search result section: heading + count, and on desktop "See all" (the
+ * section's type filter) plus chevrons that page the row sideways.
+ */
+function SearchSectionView({
+  section,
+  index,
+  layout,
+  responsive,
+  phone,
+  grid,
+  onSeeAll,
+  cards,
+}: {
+  section: SearchSection;
+  index: number;
+  layout: "phone" | "desktop";
+  responsive: boolean;
+  phone: boolean;
+  /** Desktop type filter: the section fills a wrapping grid. */
+  grid: boolean;
+  onSeeAll?: () => void;
+  cards: (list: readonly MediaItem[], prefix: string, options?: CardRowOptions) => ReactNode;
+}) {
+  const row = useRef<HTMLDivElement>(null);
+  const [edges, setEdges] = useState({ left: false, right: false });
+  const controls = responsive && !phone && !grid;
+  useEffect(() => {
+    if (!controls) return;
+    const scroller = row.current?.querySelector<HTMLElement>(".cards");
+    if (!scroller) return;
+    const read = () =>
+      setEdges((previous) => {
+        const next = {
+          left: scroller.scrollLeft > 4,
+          right: scroller.scrollLeft + scroller.clientWidth < scroller.scrollWidth - 4,
+        };
+        return previous.left === next.left && previous.right === next.right ? previous : next;
+      });
+    read();
+    scroller.addEventListener("scroll", read, { passive: true });
+    window.addEventListener("resize", read);
+    return () => {
+      scroller.removeEventListener("scroll", read);
+      window.removeEventListener("resize", read);
+    };
+  }, [controls, section.items]);
+  const page = (direction: 1 | -1) => {
+    const scroller = row.current?.querySelector<HTMLElement>(".cards");
+    const first = scroller?.firstElementChild as HTMLElement | null;
+    if (!scroller) return;
+    const pitch = first ? first.offsetWidth + (parseFloat(getComputedStyle(scroller).columnGap) || 0) : scroller.clientWidth;
+    const step = Math.max(1, Math.floor(scroller.clientWidth / pitch)) * pitch;
+    scroller.scrollBy({ left: direction * step, behavior: "instant" as ScrollBehavior });
+  };
+  const titleId = `search-section-${section.key}`;
+  const count = section.items.length;
+  return (
+    <section className="vx-browse__section" aria-labelledby={titleId} data-section={section.key}>
+      <div className="vx-browse__section-head">
+        <span className="vx-browse__section-name">
+          <h2 className="vx-browse__section-title" id={titleId}>{section.title}</h2>
+          {!phone && (
+            <span className="vx-browse__section-count">
+              {responsive ? count : `${count} ${count === 1 ? "result" : "results"}`}
+            </span>
+          )}
+        </span>
+        {controls && (
+          <span className="vx-browse__section-tools">
+            {onSeeAll && (edges.left || edges.right) && (
+              <button type="button" className="vx-link vx-link--plain" onClick={onSeeAll}>
+                See all
               </button>
-            );
-          })}
-        </div>
-      )}
-    </div>
+            )}
+            {(edges.left || edges.right) && (
+              <>
+                <button
+                  type="button"
+                  className="vx-btn vx-btn--icon vx-browse__row-nav"
+                  aria-label={`Scroll ${section.title} left`}
+                  disabled={!edges.left}
+                  onClick={() => page(-1)}
+                >
+                  <ChevronLeft aria-hidden="true" strokeWidth={2.2} />
+                </button>
+                <button
+                  type="button"
+                  className="vx-btn vx-btn--icon vx-browse__row-nav"
+                  aria-label={`Scroll ${section.title} right`}
+                  disabled={!edges.right}
+                  onClick={() => page(1)}
+                >
+                  <ChevronRight aria-hidden="true" strokeWidth={2.2} />
+                </button>
+              </>
+            )}
+          </span>
+        )}
+      </div>
+      <div className={grid ? "vx-browse__grid vx-browse__grid--poster" : "vx-browse__row"} ref={row}>
+        {cards(section.items, index === 0 ? "result" : `search-${index}`, {
+          shape: CARD_SHAPES.search[layout],
+          catalog: section.catalog,
+        })}
+      </div>
+    </section>
   );
 }
 
 /**
  * The browse screens: Discover (addon-driven type -> catalog -> filters),
- * My List (favorites / continue watching) and Search (query keyboard +
- * grouped results). All data, navigation and modal/entry ownership stay with
- * the App state machine; this component renders what it is given with the
- * DOM contract (class names, focus ids, roles) frozen.
+ * My List (My List | Continue Watching) and Search (phone docked field, web
+ * page field, desktop app title-bar field, TV on-screen keyboard; results
+ * grouped by type).
  */
 export function BrowseScreen({
   screen,
@@ -170,6 +335,8 @@ export function BrowseScreen({
   nextSkip,
   searchPartial,
   cards,
+  profile,
+  onProfiles,
 }: {
   screen: Screen;
   responsive: boolean;
@@ -199,7 +366,23 @@ export function BrowseScreen({
   cards: (list: readonly MediaItem[], prefix: string, options?: CardRowOptions) => ReactNode;
   /** Phone arrangement of the responsive shell. */
   phone?: boolean;
+  /** Phone My List: the current profile and the Who's watching route. */
+  profile?: TvProfile;
+  onProfiles?: () => void;
 }) {
+  const tv = !responsive;
+  const desktop = responsive && !phone;
+  // The web search page carries its own field; the desktop app searches from its title bar.
+  const webPage = desktop && !isDesktopShell;
+  const layout = phone ? "phone" : "desktop";
+  const body = useRef<HTMLDivElement>(null);
+  const chips = useRef<HTMLDivElement>(null);
+  const field = useRef<HTMLInputElement>(null);
+  const [searchType, setSearchType] = useState<SearchSectionKey | "all">("all");
+  // Desktop: the chip whose popover is open draws as pressed (DeskDiscoverFilter). Focus
+  // returns to the chip when the popover closes, which clears it.
+  const [expanded, setExpanded] = useState<string>();
+
   // One request per catalog, filter set and page: a page that comes back
   // empty but still reports more must not make the sentinel refetch forever.
   const requestedPage = useRef("");
@@ -213,7 +396,62 @@ export function BrowseScreen({
     requestedPage.current = key;
     void loadCatalog(catalog, nextSkip);
   };
-  const openFilter = (target: Catalog, filter: CatalogFilter) => {
+
+  // The phone and web search fields take the keyboard on arrival.
+  useEffect(() => {
+    if (screen !== "Search" || !responsive || (desktop && !webPage) || query.trim()) return;
+    field.current?.focus({ preventScroll: true });
+    // Arrival only: typing must not re-run this.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [screen]);
+
+  // ---- Discover data ----------------------------------------------------
+  const groups = discoverGroups(catalogs);
+  const group: DiscoverGroup | undefined = catalog ? discoverTypeGroup(catalog.type) : groups[0];
+  const groupCatalogs = group ? catalogsForGroup(catalogs, group) : [];
+  const catalogChoices = catalog ? groupCatalogs : catalogs.filter((c) => c.type !== "live");
+  const chipLabels = catalogChipLabels(groupCatalogs);
+  const filters = catalog ? catalogFilters(catalog) : [];
+  const requiredMissing = filters.some((f) => f.required && !catalogValues[f.name]?.trim());
+
+  const chooseGroup = (next: DiscoverGroup) => {
+    const first = catalogsForGroup(catalogs, next)[0];
+    if (first && next !== group) void loadCatalog(first);
+  };
+  const chooseCatalog = (next: Catalog) => {
+    if (!sameCatalog(next, catalog)) void loadCatalog(next);
+  };
+  const cancel: Choice = { label: "Cancel", action: () => setModal(undefined) };
+  /** A value list: phone sheet / desktop popover under `invoker` / TV right panel. */
+  const openChoices = (title: string, choices: Choice[], invoker?: Element | null, className?: string) => {
+    const current = choices.find((choice) => choice.current);
+    const anchor = desktop ? anchorUnder(invoker) : undefined;
+    setModal({
+      title,
+      // The desktop popover closes on a press outside or Esc (DeskDiscoverCatalog draws no
+      // Cancel row); the phone sheet and the TV panel end with Cancel.
+      choices: anchor ? choices : [...choices, cancel],
+      focus: current?.label,
+      view: { kind: "choices", anchor },
+      className,
+    });
+  };
+  const openCatalogs = (invoker?: Element | null) =>
+    openChoices(
+      "Catalog",
+      catalogChoices.map((cat) => ({
+        label: catalogChoiceLabel(cat),
+        current: sameCatalog(cat, catalog),
+        action: () => {
+          setModal(undefined);
+          chooseCatalog(cat);
+        },
+      })),
+      invoker,
+      "vx-browse-popover vx-browse-popover--catalog",
+    );
+  const openFilter = (target: Catalog, filter: CatalogFilter, invoker?: Element | null) => {
+    const current = catalogValues[filter.name]?.trim() ?? "";
     const apply = (value: string) => {
       setModal(undefined);
       void loadCatalog(target, 0, {
@@ -222,23 +460,15 @@ export function BrowseScreen({
       });
     };
     if (filter.options.length)
-      setModal({
-        title: catalogFilterLabel(filter.name),
-        choices: [
-          ...(!filter.required
-            ? [
-                {
-                  label: "Any",
-                  action: () => apply(""),
-                },
-              ]
-            : []),
-          ...filter.options.map((value) => ({
-            label: value,
-            action: () => apply(value),
-          })),
+      openChoices(
+        catalogFilterLabel(filter.name),
+        [
+          ...(!filter.required ? [{ label: "Any", current: !current, action: () => apply("") }] : []),
+          ...filter.options.map((value) => ({ label: value, current: value === current, action: () => apply(value) })),
         ],
-      });
+        invoker,
+        "vx-browse-popover",
+      );
     else
       setEntry({
         title: catalogFilterLabel(filter.name),
@@ -253,259 +483,513 @@ export function BrowseScreen({
         },
       });
   };
+
+  // ---- My List / Search data ----------------------------------------------
   const listItems = screen === "My List" && libraryQueue ? queue : items;
-  // Search status leads the results in the responsive shell (the TV keeps
-  // its fixed slot below them); an empty result says so once, not twice.
-  const searchStatus = screen === "Search" && (!responsive || busy || !query.trim() || items.length > 0) && (
-    <p className="search-status" role="status">
-      {busy
-        ? "Searching…"
-        : query.trim()
-          ? `${items.length} ${items.length === 1 ? "result" : "results"}`
-          : "Find your next favorite."}
-      {searchPartial ? " Some sources couldn't load." : ""}
-    </p>
-  );
-  const layout = phone ? "phone" : "desktop";
+  const sections = screen === "Search" ? searchSections(searchRows) : [];
+  const shownSections = sections.filter((section) => section.items.length > 0);
+  const filtered = desktop && searchType !== "all" ? shownSections.filter((section) => section.key === searchType) : [];
+  const visibleSections = filtered.length ? filtered : shownSections;
+  const typeGrid = filtered.length > 0;
+  const searching = busy && !!query.trim();
+  const partial = searchPartial ? " Some sources couldn't load." : "";
+  const catalogKeyOf = (cat: Catalog) => `${cat.addonId ?? ""}:${cat.type}:${cat.id}`;
+  const searchedCatalogs = new Set(searchRows.flatMap((row) => (row.catalog ? [catalogKeyOf(row.catalog)] : [])));
+  const pendingAddons = new Set(
+    catalogs
+      .filter((cat) => cat.supportsSearch && !searchedCatalogs.has(catalogKeyOf(cat)))
+      .map((cat) => String(cat.addonId ?? cat.addonName ?? cat.id)),
+  ).size;
+  const searchingLabel = pendingAddons
+    ? `Searching ${pendingAddons} more ${pendingAddons === 1 ? "addon" : "addons"}…`
+    : "Searching…";
+
   const gridShape: CardShape =
     screen === "Discover"
       ? CARD_SHAPES.discover[layout]
       : libraryQueue
         ? CARD_SHAPES.continueWatching
         : CARD_SHAPES.myList;
-  return (
-    <main className={`browse ${screen === "Search" ? "search" : ""}`}>
-      <h1>{screen}</h1>
-      {screen === "Search" && (
-        <div
-          className="keyboard"
-          onFocusCapture={(event) => {
-            const id = (event.target as HTMLElement).dataset.focusId;
-            if (id?.startsWith("key-")) searchKey.current = id;
-          }}
-          onKeyDown={(event) => {
-            const id =
-              (event.target as HTMLElement).dataset.focusId ?? "";
-            const index =
-              "ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890".indexOf(
-                id.replace("key-", ""),
-              );
-            if (
-              items.length &&
-              (["MediaPlay", "MediaPlayPause"].includes(event.key) ||
-                (event.key === "ArrowRight" &&
-                  index >= 0 &&
-                  index % 6 === 5))
-            ) {
-              event.preventDefault();
-              event.stopPropagation();
-              focusElement("result-0");
-            }
+  const gridKind = tv ? "tv" : gridShape === "poster" ? "poster" : "still";
+
+  // ---- TV focus: keep the focused control clear of its clipping viewport ----
+  const onBodyFocus = (event: FocusEvent<HTMLElement>) => {
+    if (!tv) return;
+    const target = event.target as HTMLElement;
+    const row = target.closest<HTMLElement>(".cards");
+    if (row && screen === "Search") keepInView(row, target, "x");
+    keepInView(body.current, (screen === "Search" && target.closest<HTMLElement>(".vx-browse__section")) || target, "y");
+  };
+  const onChipsFocus = (event: FocusEvent<HTMLElement>) => {
+    if (!tv) return;
+    keepInView(chips.current, event.target as HTMLElement, "x");
+    if (body.current) body.current.scrollTop = 0;
+  };
+
+  // ---- TV search keyboard -------------------------------------------------
+  const keyboardKeys = (event: KeyboardEvent<HTMLDivElement>) => {
+    const target = event.target as HTMLElement;
+    const id = target.dataset.focusId ?? "";
+    const index = KEYS.indexOf(id.replace("key-", ""));
+    const back = BACK_KEYS.includes(event.key) || BACK_CODES.includes(event.keyCode);
+    if (back && query) {
+      // BACK deletes while there is text (legend "BACK Delete"); an empty field goes back.
+      event.preventDefault();
+      event.stopPropagation();
+      setQuery((q) => q.slice(0, -1));
+      return;
+    }
+    if (
+      items.length &&
+      (["MediaPlay", "MediaPlayPause", "MediaFastForward"].includes(event.key) ||
+        [415, 10252, 417].includes(event.keyCode) ||
+        (event.key === "ArrowRight" && ((index >= 0 && index % KEY_COLUMNS === KEY_COLUMNS - 1) || id === "clear")))
+    ) {
+      event.preventDefault();
+      event.stopPropagation();
+      focusElement("result-0");
+    }
+  };
+
+  // ---- Pieces ------------------------------------------------------------------
+  const discoverControls = () => {
+    if (!groups.length) return null;
+    const typeItems = groups.map((option) => (
+      <TvButton
+        key={option}
+        id={`discover-type-${option}`}
+        className={tv ? "vx-chip" : "vx-segmented__item"}
+        aria-pressed={option === group}
+        onActivate={() => chooseGroup(option)}
+      >
+        {discoverGroupLabel(option)}
+      </TvButton>
+    ));
+    const filterChips = catalog
+      ? filters.map((filter) => {
+          const value = catalogValues[filter.name]?.trim() ?? "";
+          return (
+            <TvButton
+              key={filter.name}
+              id={`discover-filter-${filter.name}`}
+              className={`vx-chip vx-chip--dropdown${value || expanded === filter.name ? " vx-chip--set" : ""}`}
+              aria-haspopup={filter.options.length ? "menu" : "dialog"}
+              aria-expanded={desktop && filter.options.length ? expanded === filter.name : undefined}
+              aria-label={catalogFilterSummary(filter, value)}
+              onFocus={() => setExpanded(undefined)}
+              onActivate={(event?: { currentTarget?: Element }) => {
+                if (desktop && filter.options.length) setExpanded(filter.name);
+                openFilter(catalog, filter, event?.currentTarget ?? document.activeElement);
+              }}
+            >
+              <FilterChipContent filter={filter} value={value} />
+            </TvButton>
+          );
+        })
+      : [];
+    if (tv)
+      return (
+        <div className="vx-browse__chips" ref={chips} onFocus={onChipsFocus}>
+          <div className="vx-browse__chip-group" role="group" aria-label="Content type">{typeItems}</div>
+          {groupCatalogs.length > 0 && <ChipDivider />}
+          <div className="vx-browse__chip-group" role="group" aria-label="Catalog">
+            {groupCatalogs.map((cat, index) => (
+              <TvButton
+                key={`${cat.addonId ?? ""}:${cat.type}:${cat.id}`}
+                id={`discover-catalog-${index}`}
+                className="vx-chip"
+                aria-pressed={sameCatalog(cat, catalog)}
+                onActivate={() => chooseCatalog(cat)}
+              >
+                {chipLabels[index]}
+              </TvButton>
+            ))}
+          </div>
+          {filterChips.length > 0 && <ChipDivider />}
+          {filterChips.length > 0 && <div className="vx-browse__chip-group" role="group" aria-label="Filters">{filterChips}</div>}
+        </div>
+      );
+    if (phone)
+      return (
+        <>
+          <div className="vx-segmented vx-browse__segmented" role="group" aria-label="Content type">{typeItems}</div>
+          <div className="vx-browse__chips" role="group" aria-label="Catalog and filters">
+            <button
+              type="button"
+              className="vx-btn vx-btn--outline vx-btn--icon vx-browse__catalogs"
+              aria-label="Choose catalog"
+              aria-haspopup="menu"
+              onClick={(event) => openCatalogs(event.currentTarget)}
+            >
+              <SlidersHorizontal aria-hidden="true" strokeWidth={2.2} />
+            </button>
+            {groupCatalogs.map((cat, index) => (
+              <TvButton
+                key={`${cat.addonId ?? ""}:${cat.type}:${cat.id}`}
+                id={`discover-catalog-${index}`}
+                className="vx-chip"
+                aria-pressed={sameCatalog(cat, catalog)}
+                onActivate={() => chooseCatalog(cat)}
+              >
+                {chipLabels[index]}
+              </TvButton>
+            ))}
+            {filterChips.length > 0 && <ChipDivider />}
+            {filterChips}
+          </div>
+        </>
+      );
+    // Desktop app and web: type segments | one catalog control | the catalog's extras.
+    return (
+      <div className="vx-browse__controls">
+        <div className="vx-segmented" role="group" aria-label="Content type">{typeItems}</div>
+        <ChipDivider />
+        <TvButton
+          id="discover-catalog"
+          className="vx-chip vx-chip--dropdown vx-chip--set"
+          aria-haspopup="menu"
+          aria-expanded={expanded === "catalog"}
+          aria-label={`Catalog: ${catalog ? catalogChoiceLabel(catalog) : "Choose"}`}
+          onFocus={() => setExpanded(undefined)}
+          onActivate={(event?: { currentTarget?: Element }) => {
+            setExpanded("catalog");
+            openCatalogs(event?.currentTarget ?? document.activeElement);
           }}
         >
-          <input
-            tabIndex={responsive ? 0 : -1}
-            maxLength={256}
-            aria-label="Search titles"
-            placeholder="Search movies and shows"
-            onKeyDown={(e) => {
-              if (
-                (responsive ? ["Enter"] : ["Enter", "ArrowRight", "MediaPlay"]).includes(e.key) &&
-                items.length
-              ) {
-                e.preventDefault();
-                e.stopPropagation();
-                focusElement("result-0");
-              }
-            }}
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
+          <span>{catalog ? catalogChoiceLabel(catalog) : "Catalog"}</span>
+          <ChevronDown aria-hidden="true" strokeWidth={2.2} />
+        </TvButton>
+        {filterChips.length > 0 && <ChipDivider />}
+        {filterChips.length > 0 && <div className="vx-browse__chip-group" role="group" aria-label="Filters">{filterChips}</div>}
+      </div>
+    );
+  };
+
+  const libraryControls = () => {
+    const segments = [
+      { id: "library-list", label: "My List", pressed: !libraryQueue, queue: false },
+      { id: "library-queue", label: "Continue Watching", pressed: libraryQueue, queue: true },
+    ].map((segment) => (
+      <TvButton
+        key={segment.id}
+        id={segment.id}
+        className={tv ? "vx-chip" : "vx-segmented__item"}
+        aria-pressed={segment.pressed}
+        onActivate={() => setLibraryQueue(segment.queue)}
+      >
+        {segment.label}
+      </TvButton>
+    ));
+    return tv ? (
+      <div className="vx-browse__chips" ref={chips} role="group" aria-label="My List" onFocus={onChipsFocus}>{segments}</div>
+    ) : (
+      <div className={`vx-segmented${phone ? " vx-browse__segmented" : ""}`} role="group" aria-label="My List">{segments}</div>
+    );
+  };
+
+  const browseDiscoverAction = (
+    <TvButton id="browse-empty-discover" className="vx-btn vx-btn--light vx-btn--pill vx-btn--lead" onActivate={() => void navigate("Discover")}>
+      <Compass aria-hidden="true" strokeWidth={2} />
+      Browse Discover
+    </TvButton>
+  );
+
+  const emptyState = () => {
+    if (busy || listItems.length) return null;
+    if (screen === "Discover") {
+      if (catalogError || !catalog) return null;
+      if (requiredMissing)
+        return <BrowseEmpty icon={<SlidersHorizontal strokeWidth={2} />}>Choose the required filters to browse this catalog.</BrowseEmpty>;
+      return <BrowseEmpty icon={<Compass strokeWidth={2} />} title="No titles yet" />;
+    }
+    if (screen === "My List")
+      return libraryQueue ? (
+        <BrowseEmpty icon={<Bookmark strokeWidth={2} />} title="Nothing in progress.">Titles you start watching appear here.</BrowseEmpty>
+      ) : (
+        <BrowseEmpty icon={<Bookmark strokeWidth={2} />} title="Your list is empty." action={browseDiscoverAction}>
+          Add titles with the{" "}
+          <span className="vx-browse__inline-plus" role="img" aria-label="plus"><Plus aria-hidden="true" strokeWidth={2.4} /></span>{" "}
+          button.
+        </BrowseEmpty>
+      );
+    return null;
+  };
+
+  const discoverBody = () => (
+    <>
+      {catalogError && (
+        <BrowseEmpty
+          icon={<CircleAlert strokeWidth={2} />}
+          alert
+          action={
+            <TvButton id="catalog-retry" className="vx-btn vx-btn--light vx-btn--pill" onActivate={() => void navigate("Discover")}>
+              Retry catalogs
+            </TvButton>
+          }
+        >
+          {catalogError}
+        </BrowseEmpty>
+      )}
+      {!busy && !catalogError && !catalogs.length && (
+        <BrowseEmpty icon={<Compass strokeWidth={2} />} title="No catalogs are available.">
+          Add or enable a catalog addon in Settings.
+        </BrowseEmpty>
+      )}
+    </>
+  );
+
+  const grid = () => {
+    if (screen === "Discover" && responsive && busy && !listItems.length)
+      return (
+        <div className={`vx-browse__grid vx-browse__grid--${gridKind} vx-browse__skeleton`} aria-hidden="true">
+          {Array.from({ length: 12 }, (_, index) => <SkeletonTile key={index} kind={gridShape === "poster" ? "poster" : "still"} />)}
+        </div>
+      );
+    if (!listItems.length) return null;
+    return (
+      <div className={`vx-browse__grid vx-browse__grid--${gridKind}`}>
+        {cards(listItems, "result", {
+          shape: gridShape,
+          catalog: screen === "Discover" ? catalog : undefined,
+          // TV browse grids are 360 × 202 tiles (TvDiscover / TvLibrary); Continue Watching is a
+          // grid of stills with progress (PhLibraryCW 16:9 fluid, DeskLibraryCW 256 × 128).
+          kind: tv ? "grid" : screen === "My List" && libraryQueue ? "still" : undefined,
+        })}
+      </div>
+    );
+  };
+
+  const legend: LegendItem[] = screen === "Search"
+    ? [{ key: "OK", label: "Type" }, { key: "▶▶", label: "Jump to results" }, { key: "BACK", label: "Delete" }]
+    : [{ key: "OK", label: "Select" }, { key: "☰", label: "Options" }];
+
+  // ---- Search ------------------------------------------------------------------
+  if (screen === "Search") {
+    const noResults = !busy && !!query.trim() && !shownSections.length;
+    const blank = !query.trim();
+    const statusSpinner = searching && !shownSections.length;
+    const statusText = statusSpinner
+      ? "Searching…"
+      : blank
+        ? `Find your next favorite.${partial}`
+        : `${items.length} ${items.length === 1 ? "result" : "results"}${searchPartial ? "." : ""}${partial}`;
+    const showStatus = noResults
+      ? false
+      : tv
+        ? statusSpinner || searchPartial || blank
+        : phone
+          ? !blank
+          : !blank && (statusSpinner || (searchPartial && !searching));
+    const status = showStatus ? (
+      <p className="vx-status vx-browse__search-status" role="status">
+        {statusSpinner && <span className="vx-spinner" aria-hidden="true" />}
+        {statusText}
+      </p>
+    ) : null;
+    const results = (
+      <>
+        {visibleSections.map((section) => (
+          <SearchSectionView
+            key={section.key}
+            section={section}
+            index={shownSections.indexOf(section)}
+            layout={layout}
+            responsive={responsive}
+            phone={phone}
+            grid={typeGrid}
+            onSeeAll={desktop && shownSections.length > 1 ? () => setSearchType(section.key) : undefined}
+            cards={cards}
           />
-          <div>
-            {"ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890"
-              .split("")
-              .map((c) => (
+        ))}
+        {noResults && (
+          <BrowseEmpty icon={<SearchIcon strokeWidth={2} />} title="No matching titles" center={phone}>
+            {partial.trim() || undefined}
+          </BrowseEmpty>
+        )}
+        {blank && responsive && (
+          <BrowseEmpty icon={<SearchIcon strokeWidth={2} />} center={phone} className="vx-browse__blank">
+            {`Find your next favorite.${partial}`}
+          </BrowseEmpty>
+        )}
+      </>
+    );
+    if (tv)
+      return (
+        <main className="vx-browse vx-browse--search">
+          <section className="vx-browse__keyboard-panel">
+            <h1 className="vx-browse__title">Search</h1>
+            <label className="vx-search vx-browse__tv-field">
+              <input
+                className="vx-sr-only"
+                tabIndex={-1}
+                maxLength={256}
+                aria-label="Search titles"
+                placeholder="Search movies and series"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (["Enter", "ArrowRight", "MediaPlay"].includes(e.key) && items.length) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    focusElement("result-0");
+                  }
+                }}
+              />
+              <FieldValue value={query} placeholder="Search movies and series" caret />
+            </label>
+            <div
+              className="vx-keyboard__keys vx-browse__keys"
+              onFocusCapture={(event) => {
+                const id = (event.target as HTMLElement).dataset.focusId;
+                if (id?.startsWith("key-")) searchKey.current = id;
+              }}
+              onKeyDown={keyboardKeys}
+            >
+              {KEYS.split("").map((c) => (
                 <TvButton
                   id={`key-${c}`}
                   key={c}
-                  onActivate={() =>
-                    setQuery((q) => (q + c).slice(0, 256))
-                  }
+                  className="vx-key"
+                  onActivate={() => setQuery((q) => (q + c.toLowerCase()).slice(0, 256))}
                 >
                   {c.toLowerCase()}
                 </TvButton>
               ))}
-          </div>
-          <TvButton
-            id="space"
-            aria-label="Space"
-            onActivate={() =>
-              setQuery((q) => (q + " ").slice(0, 256))
-            }
-          >
-            <svg
-              aria-hidden="true"
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.5"
-            >
-              <path d="M3 12v4h18v-4" />
-            </svg>
-          </TvButton>
-          <TvButton
-            id="delete"
-            aria-label="Delete"
-            onActivate={() => setQuery((q) => q.slice(0, -1))}
-          >
-            <svg
-              aria-hidden="true"
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.5"
-            >
-              <path d="M8 6h13v12H8l-6-6zM11 9l6 6m0-6-6 6" />
-            </svg>
-          </TvButton>
-          <TvButton
-            id="clear"
-            aria-label="Clear"
-            onActivate={() => setQuery("")}
-          >
-            <svg
-              aria-hidden="true"
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.5"
-            >
-              <path d="M5 6h14M9 6V3h6v3M7 6v15h10V6M10 9v9m4-9v9" />
-            </svg>
-          </TvButton>
-          <p className="search-help">
-            Type here or use your remote app. Play/Pause opens
-            results.
-          </p>
-        </div>
-      )}
-      {screen === "Discover" && <>
-        {catalogError && <div className="catalog-status" role="alert"><p>{catalogError}</p><button onClick={() => void navigate("Discover")}>Retry catalogs</button></div>}
-        {!busy && !catalogError && !catalogs.length && <p className="catalog-status">No catalogs are available. Add or enable a catalog addon in Settings.</p>}
-      </>}
-      {screen === "Discover" && phone && (
-        <DiscoverChips
-          catalogs={catalogs}
-          catalog={catalog}
-          catalogValues={catalogValues}
-          loadCatalog={(cat) => loadCatalog(cat)}
-          openFilter={openFilter}
-        />
-      )}
-      {screen === "Discover" && !phone && (
-        <div className="filters">
-          <TvButton
-            id="discover-type"
-            onActivate={() =>
-              setModal({
-                title: "Content type",
-                choices: discoverGroups(catalogs).map((group) => ({
-                  label: discoverGroupLabel(group),
-                  action: () => {
-                    setModal(undefined);
-                    const first = catalogsForGroup(catalogs, group)[0];
-                    if (first) void loadCatalog(first);
-                  },
-                })),
-              })
-            }
-          >
-            {catalog ? discoverGroupLabel(discoverTypeGroup(catalog.type)) : "Content type"}
-          </TvButton>
-          <TvButton
-            id="discover-catalog"
-            onActivate={() =>
-              setModal({
-                title: "Catalog",
-                choices: (catalog
-                  ? catalogsForGroup(catalogs, discoverTypeGroup(catalog.type))
-                  : catalogs.filter((c) => c.type !== "live")
-                ).map((cat) => ({
-                  label: `${cat.addonName ? `${cat.addonName} · ` : ""}${cat.name}`,
-                  action: () => {
-                    setModal(undefined);
-                    void loadCatalog(cat);
-                  },
-                })),
-              })
-            }
-          >
-            {catalog ? `${catalog.addonName ? `${catalog.addonName} · ` : ""}${catalog.name}` : "Catalog"}
-          </TvButton>
-          {catalog &&
-            catalogFilters(catalog).map((filter) => (
-              <TvButton
-                key={filter.name}
-                id={`discover-filter-${filter.name}`}
-                onActivate={() => openFilter(catalog, filter)}
-              >
-                {catalogFilterLabel(filter.name)}:{" "}
-                {catalogValues[filter.name] ||
-                  (filter.required ? "Required" : "Any")}
+              <TvButton id="space" className="vx-key vx-key--span-2" aria-label="Space" onActivate={() => setQuery((q) => (q + " ").slice(0, 256))}>
+                <Space aria-hidden="true" strokeWidth={2} />
               </TvButton>
-            ))}
+              <TvButton id="delete" className="vx-key vx-key--span-2" aria-label="Delete" onActivate={() => setQuery((q) => q.slice(0, -1))}>
+                <Delete aria-hidden="true" strokeWidth={2} />
+              </TvButton>
+              <TvButton id="clear" className="vx-key vx-key--span-2" aria-label="Clear" onActivate={() => setQuery("")}>
+                <Trash2 aria-hidden="true" strokeWidth={2} />
+              </TvButton>
+            </div>
+          </section>
+          <div className="vx-browse__body vx-browse__results" ref={body} onFocus={onBodyFocus}>
+            {status}
+            {results}
+          </div>
+          <KeyLegend items={legend} corner />
+        </main>
+      );
+    return (
+      <main className={`vx-browse vx-browse--search${blank || noResults ? " is-empty" : ""}`}>
+        <div className="vx-browse__head">
+          {webPage ? (
+            <h1 className="vx-sr-only">Search</h1>
+          ) : (
+            <div className="vx-browse__heading">
+              <h1 className="vx-browse__title">Search</h1>
+            </div>
+          )}
+          {webPage && (
+            <label className="vx-search vx-search--page vx-browse__page-field">
+              <SearchIcon aria-hidden="true" strokeWidth={2} />
+              <input
+                ref={field}
+                className="vx-search__input"
+                type="search"
+                maxLength={256}
+                aria-label="Search titles"
+                placeholder="Search movies and series"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && items.length) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    focusElement("result-0");
+                  }
+                }}
+              />
+              {query && (
+                <button type="button" className="vx-search__clear" aria-label="Clear search" onClick={() => { setQuery(""); field.current?.focus(); }}>
+                  <X aria-hidden="true" strokeWidth={2.4} />
+                </button>
+              )}
+              <kbd className="vx-kbd" aria-hidden="true">Esc</kbd>
+            </label>
+          )}
+          {desktop && sections.length > 0 && (
+            <div className="vx-segmented vx-segmented--drawer vx-browse__types" role="group" aria-label="Result type">
+              <button type="button" className="vx-segmented__item" aria-pressed={!typeGrid} onClick={() => setSearchType("all")}>
+                All
+              </button>
+              {sections.map((section) => (
+                <button
+                  key={section.key}
+                  type="button"
+                  className="vx-segmented__item"
+                  aria-pressed={typeGrid && searchType === section.key}
+                  onClick={() => setSearchType(section.key)}
+                >
+                  {section.title} · {section.items.length}
+                </button>
+              ))}
+            </div>
+          )}
+          {status}
         </div>
-      )}
-      {screen === "My List" && responsive && (
-        <div className="segmented" role="group" aria-label="Library">
-          <button type="button" aria-pressed={!libraryQueue} onClick={() => setLibraryQueue(false)}>
-            My List
-          </button>
-          <button type="button" aria-pressed={libraryQueue} onClick={() => setLibraryQueue(true)}>
-            Continue Watching
-          </button>
+        <div className="vx-browse__body">{results}</div>
+        {desktop && searching && shownSections.length > 0 && (
+          <div className="vx-toast vx-browse__progress" role="status">
+            <span className="vx-spinner" aria-hidden="true" />
+            <span className="vx-toast__text">{searchingLabel}</span>
+          </div>
+        )}
+        {phone && (
+          <div className="vx-browse__dock">
+            <label className="vx-search vx-browse__dock-field">
+              <SearchIcon aria-hidden="true" strokeWidth={2} />
+              <input
+                ref={field}
+                className="vx-search__input"
+                type="search"
+                maxLength={256}
+                aria-label="Search titles"
+                placeholder="Search movies and series"
+                enterKeyHint="search"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+                }}
+              />
+              {query && (
+                <button type="button" className="vx-search__clear" aria-label="Clear search" onClick={() => { setQuery(""); field.current?.focus(); }}>
+                  <X aria-hidden="true" strokeWidth={2.4} />
+                </button>
+              )}
+            </label>
+          </div>
+        )}
+      </main>
+    );
+  }
+
+  // ---- Discover and My List ------------------------------------------------------
+  const kind = screen === "Discover" ? "discover" : "library";
+  return (
+    <main className={`vx-browse vx-browse--${kind}`}>
+      <div className="vx-browse__head">
+        <div className="vx-browse__heading">
+          <h1 className="vx-browse__title">{screen}</h1>
+          {/* Phone: Settings is not in the bottom nav; the My List header carries it (Library). */}
+          {phone && screen === "My List" && (
+            <TvButton id="library-settings" className="vx-btn vx-btn--icon vx-browse__header-action" aria-label="Settings" onActivate={() => void navigate("Settings")}>
+              <SettingsIcon aria-hidden="true" strokeWidth={2} />
+            </TvButton>
+          )}
         </div>
-      )}
-      {screen === "My List" && !responsive && (
-        <div className="filters">
-          <TvButton
-            id="library-list"
-            onActivate={() => setLibraryQueue(false)}
-          >
-            My List
-          </TvButton>
-          <TvButton
-            id="library-queue"
-            onActivate={() => setLibraryQueue(true)}
-          >
-            Continue Watching
-          </TvButton>
-        </div>
-      )}
-      {responsive && searchStatus}
-      <div className="result-grid">
-        {screen === "Search"
-          ? searchRows
-              .filter((row) => row.items.length)
-              .map((row, i) => (
-                <section key={`${row.name}-${i}`}>
-                  <h2>{row.name}</h2>
-                  {cards(
-                    row.items,
-                    i === 0 ? "result" : `search-${i}`,
-                    { shape: CARD_SHAPES.search[layout], catalog: row.catalog },
-                  )}
-                </section>
-              ))
-          : responsive && busy && !listItems.length && screen === "Discover"
-            ? <SkeletonCards shape={gridShape} />
-            : cards(listItems, "result", { shape: gridShape, catalog: screen === "Discover" ? catalog : undefined })}
+        {phone && screen === "My List" && !libraryQueue && profile && onProfiles && (
+          <ProfileSwitch profile={profile} onProfiles={onProfiles} />
+        )}
+        {screen === "Discover" ? discoverControls() : libraryControls()}
+      </div>
+      <div className="vx-browse__body" ref={body} onFocus={onBodyFocus}>
+        {screen === "Discover" && discoverBody()}
+        {grid()}
         {/* Reaching the end of a paged catalog loads its next page; there is
             no Load more control on any layout. */}
         {screen === "Discover" && catalog && nextSkip !== undefined && (
@@ -515,31 +999,10 @@ export function BrowseScreen({
             generation={items.length}
           />
         )}
-        {screen === "Discover" && busy && items.length > 0 && (
-          <p className="load-status" role="status">Loading more titles…</p>
-        )}
-        {!busy &&
-          !listItems.length &&
-          !(screen === "Discover" && catalogError) &&
-          (screen !== "Search" || !!query.trim()) && (
-            <p className="browse-empty">
-              {screen === "Discover" &&
-              catalog &&
-              catalogFilters(catalog).some(
-                (f) => f.required && !catalogValues[f.name]?.trim(),
-              )
-                ? "Choose the required filters to browse this catalog."
-                : query
-                  ? "No matching titles"
-                  : screen === "My List"
-                    ? libraryQueue
-                      ? "Nothing in progress. Titles you start watching appear here."
-                      : "Your list is empty. Add titles with the + button."
-                    : "No titles yet"}
-            </p>
-          )}
+        {screen === "Discover" && busy && items.length > 0 && <LoadingMore />}
+        {emptyState()}
       </div>
-      {!responsive && searchStatus}
+      {tv && <KeyLegend items={legend} corner />}
     </main>
   );
 }

@@ -17,7 +17,7 @@ export const CARD_SHAPES: {
 } = {
   continueWatching: "landscape",
   recentLive: "landscape",
-  myList: "landscape",
+  myList: "poster",
   homeCatalogs: ["poster", "poster", "landscape"],
   discover: { phone: "poster", desktop: "poster" },
   search: { phone: "poster", desktop: "poster" },

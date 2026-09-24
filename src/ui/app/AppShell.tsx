@@ -256,6 +256,8 @@ export function AppShell({ app }: { app: AppApi }) {
                 nextSkip={nextSkip}
                 searchPartial={searchPartial}
                 cards={cards}
+                profile={activeProfile}
+                onProfiles={openProfiles}
               />
             )}
             {/* Title family: the title page; under the Sources overlay the page it was opened from stays mounted. */}

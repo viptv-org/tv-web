@@ -10,95 +10,10 @@
     padding-top: max(var(--page-gutter), env(safe-area-inset-top));
   }
 
-  /* ---- Search result rows ------------------------------------------------- */
-  .responsive-app .search .result-grid h2 {
-    margin: 0 0 8px;
-    font-size: 17px;
-    line-height: 22px;
-    font-weight: 700;
-    text-transform: none;
-    -webkit-line-clamp: 1;
-  }
-  /* Rows bleed to the screen edges while their first card starts exactly on
-     the heading's edge. */
-  .responsive-app .search .result-grid section > .cards {
-    width: auto;
-    margin: 0 calc(-1 * var(--page-gutter));
-    padding: 0 var(--page-gutter);
-    gap: 12px;
-    scroll-padding-inline: var(--page-gutter);
-  }
-
   /* Episode progress: a 6px bar with softly rounded ends, lifted clear of the art edge. */
 
   /* ---- Detail --------------------------------------------------------------- */
   /* One 48px row: the flexible primary action, then My List and More squares. */
-
-  /* ---- Browse: Discover, My List and Search -------------------------------- */
-  .responsive-app .browse > h1 { font-size: 28px; line-height: 34px; margin: 4px 0 16px; }
-  .responsive-app .search .keyboard { margin-bottom: 20px; }
-  /* The field's look is shared (responsive-polish.css); phones size it down. */
-  .responsive-app .search .keyboard > input { height: 44px; font-size: 16px; }
-  .responsive-app .result-grid > .cards {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 16px 12px;
-    width: 100%;
-    margin: 0;
-    padding: 0;
-    overflow: visible;
-  }
-  .responsive-app .result-grid > p { color: #a6a8aa; font-size: 15px; margin-top: 8px; }
-  .responsive-app .load-status { padding: 18px 0 4px; color: #8d9093; font-size: 14px; text-align: center; }
-
-  /* Chip rows scroll sideways and bleed to the screen edges. */
-  .responsive-app .chip-row {
-    display: flex;
-    gap: 8px;
-    overflow-x: auto;
-    margin: 0 calc(-1 * var(--page-gutter));
-    padding: 0 var(--page-gutter);
-    scrollbar-width: none;
-  }
-  .responsive-app .chip-row + .chip-row { margin-top: 10px; }
-  .responsive-app .discover-chips { margin-bottom: 18px; }
-  .responsive-app .chip {
-    --responsive-control-surface: #17191b;
-    flex: 0 0 auto;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    height: 36px;
-    min-height: 36px;
-    padding: 0 14px;
-    border: 1px solid #2c2f32;
-    border-radius: 18px;
-    background: #17191b;
-    color: #c5c6c7;
-    font-size: 14px;
-    font-weight: 600;
-    white-space: nowrap;
-  }
-  /* Long catalog names truncate inside their chip instead of filling the row. */
-  .responsive-app .chip-row[aria-label="Catalog"] .chip { display: block; max-width: 240px; line-height: 34px; overflow: hidden; text-overflow: ellipsis; }
-  .responsive-app .chip[aria-pressed="true"],
-  .responsive-app .chip[aria-pressed="true"]:hover {
-    --responsive-control-surface: #f5f5f5;
-    background-color: #f5f5f5;
-    border-color: #f5f5f5;
-    color: #101112;
-  }
-  .responsive-app .chip[aria-pressed="true"]:focus { color: #101112 !important; }
-  .responsive-app .filter-chip[aria-pressed="true"],
-  .responsive-app .filter-chip[aria-pressed="true"]:hover {
-    --responsive-control-surface: #2a2c2f;
-    background-color: #2a2c2f;
-    border-color: #4a4d50;
-    color: #fff;
-  }
-  .responsive-app .filter-chip[aria-pressed="true"]:focus { color: #fff !important; }
-  .responsive-app .filter-chip.required { border-color: #7d6a45; }
-  .responsive-app .filter-chip svg { color: #8d9093; }
 
 
 }

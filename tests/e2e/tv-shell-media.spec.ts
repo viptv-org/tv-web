@@ -176,8 +176,10 @@ test('Roku visual contract keeps fixed geometry, focus ownership and proportiona
   await page.setViewportSize({ width: 1920, height: 1080 });
   await page.getByRole('button', { name: 'Search', exact: true }).press('Enter');
   await page.locator('[data-focus-id="key-A"]').focus();
-  await expectBox(page, '.search .keyboard>div', { x: 153, y: 339, width: 450 });
-  await expectBox(page, '.search .result-grid', { x: 684, y: 246, width: 1110, height: 726 });
+  // TvSearch: the keyboard column starts at the rail edge (192) and is 560 wide; the results
+  // column starts at x 850 / y 150 (its clipping viewport keeps 24 px of focus-ring room).
+  await expectBox(page, '.vx-browse__keys', { x: 192, y: 243, width: 560 });
+  await expectBox(page, '.vx-browse__results', { x: 826, y: 126, width: 1094 });
   await capture(page, testInfo, 'roku-search-empty');
   await page.getByRole('button', { name: 'Profile', exact: true }).press('Enter');
   // TvProfiles: the title at y 230; one profile + Add profile (2 × 220 + 64) centred below.

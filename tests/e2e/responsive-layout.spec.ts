@@ -112,25 +112,23 @@ for (const width of [390, 1440]) {
     expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(false);
   });
 
-  test(`discover and search results fill the shared frame at ${width}px`, async ({ page }) => {
+  test(`discover grids keep fixed tiles and search shares the page frame at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 900 });
     await installBackend(page, { activity: true, populated: true });
     await openProfile(page);
     const navigation = page.getByRole('navigation', { name: 'Main navigation' });
     await navigation.getByRole('button', { name: 'Discover', exact: true }).click();
-    await expect(page.locator('.browse .media-card')).toHaveCount(24);
+    await expect(page.locator('.vx-browse .media-card')).toHaveCount(24);
 
     // Neither browse route carries a cross-link to the other.
     await expect(page.locator('[data-focus-id="browse-search"]')).toHaveCount(0);
-    const heading = await box(page, '.browse > h1');
-    const cards = await box(page, '.result-grid > .cards');
-    expect(Math.abs(heading.x - cards.x)).toBeLessThan(2);
-    expect(Math.abs(heading.x + heading.width - (cards.x + cards.width))).toBeLessThan(2);
+    const heading = await box(page, '.vx-browse__title');
+    const cards = await box(page, '.vx-browse__grid > .cards');
 
-    const layout = await page.locator('.result-grid > .cards').evaluate(node => {
+    const layout = await page.locator('.vx-browse__grid > .cards').evaluate(node => {
       const container = node.getBoundingClientRect();
       const byRow = new Map<number, { left: number; right: number; widths: number[] }>();
-      for (const card of Array.from(node.querySelectorAll('.responsive-card'))) {
+      for (const card of Array.from(node.children)) {
         const rect = card.getBoundingClientRect();
         const row = byRow.get(Math.round(rect.y)) ?? { left: rect.left, right: rect.right, widths: [] };
         row.left = Math.min(row.left, rect.left);
@@ -145,37 +143,35 @@ for (const width of [390, 1440]) {
       };
     });
     if (width >= 600) {
+      // Desktop / web tiles keep their fixed width (web posters 164 × 246, never stretched):
+      // every row starts on the title's edge, wider windows just fit more tiles.
       expect(layout.rows.length).toBeGreaterThan(1);
-      // Every desktop row starts on the frame edge and the widest row ends on
-      // it too, so the grid is never narrower than the header above it.
+      expect(Math.abs(heading.x - cards.x)).toBeLessThan(2);
       const widths = new Set<number>();
       for (const row of layout.rows) {
-        expect(Math.abs(row.left - layout.containerLeft)).toBeLessThan(2);
-        // Discover is set to poster cards (cardShapes.ts): a 160px minimum track.
-        for (const card of row.widths) { widths.add(Math.round(card)); expect(card).toBeGreaterThanOrEqual(160); }
+        expect(Math.abs(row.left - heading.x)).toBeLessThan(2);
+        expect(row.right).toBeLessThanOrEqual(layout.containerRight + 1);
+        for (const card of row.widths) widths.add(Math.round(card));
       }
-      expect(Math.abs(Math.max(...layout.rows.map(row => row.right)) - layout.containerRight)).toBeLessThan(2);
-      expect(widths.size).toBe(1);
+      expect([...widths]).toEqual([164]);
       expect(layout.scrollWidth).toBe(layout.clientWidth);
     } else {
       // Phones browse a vertical three-column poster grid that pages itself
-      // in: every row starts and ends on the frame edges, nothing scrolls sideways.
+      // in: every row spans the 16 px gutters, nothing scrolls sideways.
       expect(layout.rows.length).toBeGreaterThan(1);
       for (const row of layout.rows) {
         expect(row.widths).toHaveLength(3);
-        expect(Math.abs(row.left - layout.containerLeft)).toBeLessThan(2);
-        expect(Math.abs(row.right - layout.containerRight)).toBeLessThan(2);
+        expect(Math.abs(row.left - heading.x)).toBeLessThan(2);
+        expect(Math.abs(row.right - (layout.containerRight - 16))).toBeLessThan(2);
       }
       expect(layout.scrollWidth).toBe(layout.clientWidth);
-      expect(Math.abs(layout.containerLeft - heading.x)).toBeLessThan(2);
-      expect(Math.abs(layout.containerRight - (heading.x + heading.width))).toBeLessThan(2);
-      await expect(page.locator('.browse .media-card').first().locator('.card-title')).toBeVisible();
     }
 
     await navigation.getByRole('button', { name: 'Search', exact: true }).click();
-    await expect(page.locator('.browse').getByRole('heading', { name: 'Search', exact: true })).toBeVisible();
+    await expect(page.locator('.vx-browse').getByRole('heading', { name: 'Search', exact: true })).toBeAttached();
+    await expect(page.getByRole('searchbox', { name: 'Search titles' })).toBeVisible();
     await expect(page.locator('[data-focus-id="browse-discover"]')).toHaveCount(0);
-    await expect(page.locator('.browse')).not.toContainText('Discover');
+    await expect(page.locator('.vx-browse')).not.toContainText('Discover');
     expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(false);
   });
 }

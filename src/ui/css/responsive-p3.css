@@ -7,23 +7,11 @@
 
 /* Min-content is never the viewport authority. Long shelves scroll locally. */
 .responsive-app main > *,
-.responsive-app .cards,
-.responsive-app .result-grid,
-.responsive-app .result-grid > section { min-width: 0; }
+.responsive-app .cards { min-width: 0; }
 
 /* Pointer/touch labels truncate explicitly instead of freezing a TV marquee. */
 .responsive-app .roku-text { text-overflow: ellipsis; }
 .responsive-app .roku-text > span { display: inline; transform: none !important; }
-@media (max-width: 599px) {
-  .responsive-app .browse > h1 { font-size: 32px; line-height: 1.2; }
-  .responsive-app .filters button { flex: 1 1 100%; width: 100%; min-width: 0; }
-  /* Phone browse results use Home's own shelf presentation: canonical 232px
-     tiles on one scrolling row with a visible next-card peek, instead of a
-     single full-width card per screen. */
-  .responsive-app .result-grid > .cards { display: flex; flex-wrap: nowrap; gap: 16px; width: 100%; overflow-x: auto; overflow-y: hidden; padding: 6px 6px 12px; scroll-snap-type: x proximity; }
-  .responsive-app .result-grid > .cards .responsive-card { flex: 0 0 232px; width: 232px; }
-}
-.responsive-app .filters button { text-overflow: ellipsis; }
 
 /* Responsive web keeps destination selection without the remote focus skin.
    DOM focus remains available for text editing and assistive technology. */
@@ -32,7 +20,6 @@
   .responsive-app :is(.card-more) {
     --responsive-control-surface: transparent;
   }
-  .responsive-app .filters button.selected { --responsive-control-surface: #303234; }
   .responsive-app button:where(:not([class*="vx-"])):focus {
     outline: none !important;
     box-shadow: none !important;

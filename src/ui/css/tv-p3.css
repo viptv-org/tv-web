@@ -3,23 +3,3 @@
     transform: rotate(360deg);
   }
 }
-.search .keyboard {
-  position: absolute;
-  left: 0;
-  top: calc(110px * var(--tv-k));
-  width: calc(304px * var(--tv-k));
-  height: calc(440px * var(--tv-k));
-}
-.search .keyboard > input {
-  position: absolute;
-  left: 0;
-  top: 0;
-  width: calc(304px * var(--tv-k));
-  height: calc(44px * var(--tv-k));
-  padding: 0;
-  background: transparent;
-  border: 0;
-  color: #f5f5f5;
-  font-size: calc(22px * var(--tv-k));
-  outline: none;
-}

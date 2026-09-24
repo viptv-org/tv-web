@@ -134,10 +134,10 @@ for (const viewport of [
       // Phone keeps Discover in the bottom navigation; the browse routes no
       // longer carry a cross-link to each other.
       await page.getByRole('navigation', { name: 'Main navigation' }).getByRole('button', { name: 'Search', exact: true }).click();
-      await expect(page.locator('.browse').getByRole('heading', { name: 'Search', exact: true })).toBeVisible();
+      await expect(page.locator('.vx-browse').getByRole('heading', { name: 'Search', exact: true })).toBeVisible();
       await expect(page.locator('[data-focus-id="browse-discover"]')).toHaveCount(0);
       await page.getByRole('navigation', { name: 'Main navigation' }).getByRole('button', { name: 'Discover', exact: true }).click();
-      await expect(page.locator('.browse').getByRole('heading', { name: 'Discover', exact: true })).toBeVisible();
+      await expect(page.locator('.vx-browse').getByRole('heading', { name: 'Discover', exact: true })).toBeVisible();
       await expect(page.locator('[data-focus-id="browse-search"]')).toHaveCount(0);
       await expectResponsiveViewport(page, viewport.width);
       await page.getByRole('navigation', { name: 'Main navigation' }).getByRole('button', { name: 'Home', exact: true }).click();
@@ -279,12 +279,13 @@ for (const width of [360, 390, 768, 1024, 1280, 1440, 2560]) {
     if (width === 390 || width === 1440) {
       const navigation = page.getByRole('navigation', { name: 'Main navigation' });
       await navigation.getByRole('button', { name: 'Search', exact: true }).click();
-      await expect(page.locator('.browse').getByRole('heading', { name: 'Search', exact: true })).toBeVisible();
+      // Web: the page field names the page; its heading is for assistive technology only.
+      await expect(page.locator('.vx-browse').getByRole('heading', { name: 'Search', exact: true })).toBeAttached();
       await navigation.getByRole('button', { name: 'Discover', exact: true }).click();
-      await expect(page.locator('.browse .media-card')).toHaveCount(24);
+      await expect(page.locator('.vx-browse .media-card')).toHaveCount(24);
       await expectResponsiveViewport(page, width);
-      const browse = await page.locator('.browse').boundingBox();
-      const results = await page.locator('.browse .result-grid').boundingBox();
+      const browse = await page.locator('.vx-browse').boundingBox();
+      const results = await page.locator('.vx-browse .vx-browse__grid').boundingBox();
       expect(browse!.height).toBeGreaterThan(results!.height);
       expect(results!.width).toBeLessThanOrEqual(width);
       await page.screenshot({ path: testInfo.outputPath(`populated-${width}-discover.png`) });

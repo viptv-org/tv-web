@@ -1,6 +1,2 @@
-.result-grid > button {
-  margin-top: calc(20px * var(--tv-k));
-  width: calc(256px * var(--tv-k));
-  height: calc(48px * var(--tv-k));
-}
+
 

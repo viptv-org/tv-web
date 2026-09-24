@@ -7,7 +7,7 @@
 }
 .responsive-app { --skeleton-base: #191b1d; --skeleton-shine: #24272a; }
 :root[data-oled] .responsive-app { --skeleton-base: #101112; --skeleton-shine: #1b1c1e; }
-.responsive-app :is(.skeleton-block, .skeleton-line, .card-skeleton) {
+.responsive-app :is(.skeleton-block, .skeleton-line) {
   background: linear-gradient(100deg, var(--skeleton-base) 30%, var(--skeleton-shine) 50%, var(--skeleton-base) 70%) !important;
   background-size: 300% 100% !important;
   border-color: transparent !important;
@@ -24,10 +24,7 @@
 /* End-of-list and pending-shelf sentinels (AutoLoad). */
 .responsive-app .auto-load { height: 1px; }
 
-/* Grid placeholders while a browse route waits for its first page. */
-.responsive-app .card-skeleton { aspect-ratio: 16 / 9; border-radius: 8px; }
-.responsive-app .poster-grid .card-skeleton { aspect-ratio: 2 / 3; }
 
 @media (prefers-reduced-motion: reduce) {
-  .responsive-app :is(.skeleton-block, .skeleton-line, .card-skeleton) { animation: none; }
+  .responsive-app :is(.skeleton-block, .skeleton-line) { animation: none; }
 }
