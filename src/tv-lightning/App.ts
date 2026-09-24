@@ -1,6 +1,6 @@
 import Blits from "@lightningjs/blits";
 import QRCode from "qrcode";
-import type { TvApi, DevicePairing, TvProfile, MediaItem } from "../api";
+import type { TvApi, DevicePairing, TvProfile, MediaItem, MediaSource } from "../api";
 import { tokens } from "../theme/viptv-tokens.generated";
 import { ProfileTile, ManageProfilesButton, addProfileTile, emptyProfileTile, profileTileData } from "./ProfileTile";
 import { emptyHome, enrichHomeHero, loadHomeView, type HomeView } from "./homeModel";
@@ -9,6 +9,9 @@ import { HomeAction, HomeCard } from "./HomeFocus";
 import { emptyHomeCard } from "./homeModel";
 import { emptyDetail, emptyDetailEpisode, loadDetailView, type DetailView } from "./detailModel";
 import { TitleAction, EpisodeTile } from "./TitleFocus";
+import { emptySources, emptySourceRow, projectSources, type SourcesView } from "./sourceModel";
+import { SourceChip, SourceProvider, SourceRow, ProviderOption, SourceDetailsClose, emptySourceChip, emptyProviderChoice } from "./SourceFocus";
+import { noteSourceFilter, noteSourceIntent } from "./focusDebug";
 
 type TvPlatform = "tizen" | "vizio" | "webos";
 const px = (name: keyof typeof tokens) => Number.parseFloat(String(tokens[name]));
@@ -82,9 +85,12 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
   let homeScope: ReturnType<TvApi["createScope"]> | undefined;
   let detailGeneration = 0;
   let detailScope: ReturnType<TvApi["createScope"]> | undefined;
+  let sourceGeneration = 0;
+  let sourceScope: ReturnType<TvApi["createScope"]> | undefined;
+  let sourceTimer: ReturnType<typeof setTimeout> | undefined;
   let disposeSession: (() => void) | undefined;
   return Blits.Application({
-    components: { ProfileTile, ManageProfilesButton, HomeAction, HomeCard, TitleAction, EpisodeTile },
+    components: { ProfileTile, ManageProfilesButton, HomeAction, HomeCard, TitleAction, EpisodeTile, SourceChip, SourceProvider, SourceRow, ProviderOption, SourceDetailsClose },
     template: `
       <Element w="1920" h="1080" color="$background">
         <Element x="260" y="86" w="1400" h="800" src="$pairingGlow" :show="$phase === 'pairing' || $phase === 'expired' || $phase === 'error'" />
@@ -179,7 +185,7 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
           <Text x="1693" y="65" :content="$optionsIcon" font="Onest" size="19" color="$primary" />
           <Text x="1730" y="66" :content="$optionsLabel" font="Onest" size="20" color="$body" />
         </Element>
-        <Element :show="$phase === 'detail'">
+        <Element :show="$phase === 'detail' || $phase === 'sources' || $phase === 'provider' || $phase === 'sourceDetails'">
           <Element x="1120" y="0" w="800" h="720" :src="$detail.heroImage" :show="$detail.heroImage !== ''" alpha="0.75" />
           <Element w="1920" h="1080" src="$homeScrim" />
           <Element x="44" y="54" w="56" h="56" rounded="28" color="$surface" />
@@ -209,6 +215,56 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
           <EpisodeTile ref="titleEpisode4" position="4" :episode="$detailEpisodes[4]" x="1776" y="682" />
           <Text x="700" y="54" maxwidth="600" align="center" :content="$detailNotice" font="Onest" size="22" color="$primary" />
         </Element>
+        <Element :show="$phase === 'sources' || $phase === 'sourceDetails'">
+          <Element w="1920" h="1080" color="$sourceScrim" />
+          <Element x="1100" y="0" w="820" h="1080" color="$sourcePanelGround" />
+          <Text x="1164" y="64" :content="$sourcePanelTitle" font="Bricolage700" size="44" color="$primary" />
+          <Text x="1164" y="132" maxwidth="660" maxlines="1" :content="$source.status" font="Onest" size="22" color="$secondary" />
+          <SourceChip ref="sourceChip0" position="0" :chip="$sourceChips[0]" chipWidth="104" x="1164" y="188" />
+          <SourceChip ref="sourceChip1" position="1" :chip="$sourceChips[1]" chipWidth="80" x="1280" y="188" />
+          <SourceChip ref="sourceChip2" position="2" :chip="$sourceChips[2]" chipWidth="145" x="1372" y="188" />
+          <SourceChip ref="sourceChip3" position="3" :chip="$sourceChips[3]" chipWidth="125" x="1529" y="188" />
+          <SourceChip ref="sourceChip4" position="4" :chip="$sourceChips[4]" chipWidth="95" x="1666" y="188" />
+          <SourceProvider ref="sourceProvider" :label="$sourceProviderLabel" x="1164" y="255" />
+          <SourceRow ref="sourceRow0" position="0" :row="$sourceRows[0]" x="1164" y="326" />
+          <SourceRow ref="sourceRow1" position="1" :row="$sourceRows[1]" x="1164" y="444" />
+          <SourceRow ref="sourceRow2" position="2" :row="$sourceRows[2]" x="1164" y="562" />
+          <SourceRow ref="sourceRow3" position="3" :row="$sourceRows[3]" x="1164" y="680" />
+          <SourceRow ref="sourceRow4" position="4" :row="$sourceRows[4]" x="1164" y="798" />
+          <SourceRow ref="sourceRow5" position="5" :row="$sourceRows[5]" x="1164" y="916" />
+          <Text x="1164" y="1034" maxwidth="640" :content="$sourceNotice" font="Onest" size="20" color="$secondary" />
+          <Element x="1392" y="993" w="45" h="33" rounded="8" color="$keyBorder" />
+          <Element x="1394" y="995" w="41" h="29" rounded="6" color="$sourcePanelGround" />
+          <Text x="1403" y="999" :content="$sourceOkLabel" font="Onest700" size="16" color="$primary" />
+          <Text x="1448" y="998" :content="$sourcePlayLabel" font="Onest" size="20" color="$secondary" />
+          <Element x="1526" y="993" w="60" h="33" rounded="8" color="$keyBorder" />
+          <Element x="1528" y="995" w="56" h="29" rounded="6" color="$sourcePanelGround" />
+          <Text x="1534" y="999" :content="$sourceArrowLabel" font="Onest" size="16" color="$primary" />
+          <Text x="1592" y="998" :content="$sourceQualityLabel" font="Onest" size="20" color="$secondary" />
+          <Element x="1693" y="993" w="66" h="33" rounded="8" color="$keyBorder" />
+          <Element x="1695" y="995" w="62" h="29" rounded="6" color="$sourcePanelGround" />
+          <Text x="1702" y="999" :content="$sourceBackLabel" font="Onest700" size="16" color="$primary" />
+          <Text x="1768" y="998" :content="$sourceCloseLabel" font="Onest" size="20" color="$secondary" />
+        </Element>
+        <Element :show="$phase === 'provider'">
+          <Element w="1920" h="1080" color="$sourceScrim" />
+          <Element x="1100" y="0" w="820" h="1080" color="$sourcePanelGround" />
+          <Text x="1164" y="64" :content="$providerPanelTitle" font="Bricolage700" size="44" color="$primary" />
+          <ProviderOption ref="providerOption0" position="0" :choice="$providerChoices[0]" x="1164" y="126" />
+          <ProviderOption ref="providerOption1" position="1" :choice="$providerChoices[1]" x="1164" y="220" />
+          <ProviderOption ref="providerOption2" position="2" :choice="$providerChoices[2]" x="1164" y="314" />
+          <ProviderOption ref="providerOption3" position="3" :choice="$providerChoices[3]" x="1164" y="408" />
+          <ProviderOption ref="providerOption4" position="4" :choice="$providerChoices[4]" x="1164" y="502" />
+          <ProviderOption ref="providerOption5" position="5" :choice="$providerChoices[5]" x="1164" y="596" />
+        </Element>
+        <Element :show="$phase === 'sourceDetails'">
+          <Element w="1920" h="1080" color="$sourceDetailsScrim" />
+          <Text x="192" y="95" :content="$sourceDetailsHeading" font="Bricolage700" size="56" color="$primary" />
+          <Element x="192" y="173" w="1536" h="759" rounded="24" color="$sourcePanelGround" />
+          <Text x="226" y="210" maxwidth="1440" maxheight="690" lineheight="65" :content="$sourceDetailsBody" font="Onest" size="28" color="$body" />
+          <Element x="1704" y="204" w="6" h="222" rounded="3" color="$scrollbar" />
+          <SourceDetailsClose ref="sourceDetailsClose" x="185" y="949" />
+        </Element>
         <Text x="96" y="54" :show="$phase === 'ready'" :content="$startingLabel" font="Onest" size="28" color="$primary" />
       </Element>
     `,
@@ -230,6 +286,36 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
         homeScrim: homeScrim(),
         home: emptyHome as HomeView,
         detail: emptyDetail as DetailView,
+        source: emptySources as SourcesView,
+        sourceChips: Array.from({ length: 5 }, () => ({ ...emptySourceChip })),
+        sourceRows: Array.from({ length: 6 }, () => ({ ...emptySourceRow })),
+        sourcePanelTitle: "",
+        sourceOkLabel: "",
+        sourcePlayLabel: "",
+        sourceArrowLabel: "",
+        sourceQualityLabel: "",
+        sourceBackLabel: "",
+        sourceCloseLabel: "",
+        providerPanelTitle: "",
+        providerChoices: Array.from({ length: 6 }, () => ({ ...emptyProviderChoice })),
+        providerChoiceIndex: 0,
+        sourceProviderLabel: "",
+        sourceNotice: "",
+        sourceSelectedId: "",
+        sourceFocusZone: "chip" as "chip" | "provider" | "row",
+        sourceChipIndex: 0,
+        sourceRowIndex: 0,
+        sourceWindowStart: 0,
+        sourceReturnZone: "action" as "action" | "episode",
+        sourceReturnIndex: 0,
+        sourceResume: false,
+        sourceScrim: tokens["color.scrim.tv-panel"],
+        sourcePanelGround: tokens["color.surface.1"],
+        sourceDetailsScrim: tokens["color.scrim.tv-fullscreen"],
+        sourceDetailsHeading: "",
+        sourceDetailsBody: "",
+        sourceDetailsReturnIndex: 0,
+        scrollbar: tokens["color.fill.scrollbar"],
         detailEpisodes: Array.from({ length: 5 }, () => ({ ...emptyDetailEpisode })),
         detailSaveIcon: "",
         detailSeasonLabel: "",
@@ -263,7 +349,7 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
         danger: tokens["color.status.danger-tv"],
         codeSize: pairCodeSize,
         codeLetterSpacing: pairCodeSize * 0.08,
-        phase: "starting" as "starting" | "pairing" | "expired" | "error" | "profiles" | "ready" | "home" | "detail",
+        phase: "starting" as "starting" | "pairing" | "expired" | "error" | "profiles" | "ready" | "home" | "detail" | "sources" | "provider" | "sourceDetails",
         address: "Connecting…",
         code: "••••••",
         qr: "",
@@ -363,8 +449,26 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
           if (count) this.focusTitleEpisode(Math.max(0, Math.min(count - 1, this.detailEpisodeIndex + Number(delta))));
         });
         this.$listen("title-action-activate", () => void this.activateTitleAction());
-        this.$listen("title-action-hold", () => { this.detailNotice = "Choose source is not available yet."; });
-        this.$listen("title-episode-activate", () => { this.detailNotice = "Choose source is not available yet."; });
+        this.$listen("title-action-hold", () => {
+          if (this.phase === "detail" && this.detail.target) void this.openSources(this.detail.target, false);
+        });
+        this.$listen("title-episode-activate", () => {
+          const episode = this.detail.episodes[this.detailEpisodeIndex]?.item;
+          if (this.phase === "detail" && episode) void this.openSources(episode, false);
+        });
+        this.$listen("source-chip-move", (delta: number) => this.focusSourceChip(Math.max(0, Math.min(4, this.sourceChipIndex + Number(delta)))));
+        this.$listen("source-chip-activate", (position: number) => this.chooseSourceQuality(Number(position)));
+        this.$listen("source-provider-focus", () => this.focusSourceProvider());
+        this.$listen("source-chip-restore", () => this.focusSourceChip(this.sourceChipIndex));
+        this.$listen("source-rows-enter", () => this.focusSourceRow(0));
+        this.$listen("source-provider-activate", () => this.openProviderPicker());
+        this.$listen("provider-option-move", (delta: number) => this.moveProviderOption(Number(delta)));
+        this.$listen("provider-option-activate", () => this.selectProviderOption());
+        this.$listen("source-row-move", (delta: number) => this.moveSourceRow(Number(delta)));
+        this.$listen("source-quality-step", (delta: number) => this.stepSourceQuality(Number(delta)));
+        this.$listen("source-row-activate", () => this.selectSourceRow());
+        this.$listen("source-row-hold", () => this.openSourceDetails());
+        this.$listen("source-detail-close", () => this.closeSourceDetails());
         void session.dispatch({ Begin: {
           origin: api.serverOrigin,
           allowInsecurePreview: import.meta.env.DEV && api.serverOrigin === location.origin,
@@ -377,6 +481,9 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
         ++homeGeneration;
         detailScope?.abort();
         ++detailGeneration;
+        sourceScope?.abort();
+        ++sourceGeneration;
+        clearTimeout(sourceTimer);
         clearTimeout(pairingTimer);
         disposeSession?.();
       },
@@ -529,7 +636,245 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
           }
           return;
         }
+        if ((action === "play" || action === "source") && this.detail.target) {
+          void this.openSources(this.detail.target, action === "play" && !!this.detail.target.position);
+          return;
+        }
         this.detailNotice = action === "info" ? this.detail.synopsis : "Choose source is not available yet.";
+      },
+      async openSources(item: MediaItem, resume: boolean) {
+        if (this.phase !== "detail") return;
+        const generation = ++sourceGeneration;
+        sourceScope?.abort();
+        clearTimeout(sourceTimer);
+        const scope = api.createScope();
+        sourceScope = scope;
+        this.sourceReturnZone = this.detailFocusZone;
+        this.sourceReturnIndex = this.detailFocusZone === "episode" ? this.detailEpisodeIndex : this.detailActionIndex;
+        this.sourceResume = resume;
+        this.sourceRowIndex = 0;
+        this.sourceWindowStart = 0;
+        this.sourceNotice = "";
+        this.source = projectSources(item, [], true, false);
+        this.sourceChips = Array.from({ length: 5 }, (_, index) => this.source.chips[index] ?? { ...emptySourceChip });
+        this.sourceRows = Array.from({ length: 6 }, () => ({ ...emptySourceRow }));
+        this.phase = "sources";
+        setTimeout(() => {
+          if (generation !== sourceGeneration) return;
+          this.sourcePanelTitle = "Choose a source";
+          this.sourceProviderLabel = "All providers";
+          this.sourceOkLabel = "OK";
+          this.sourcePlayLabel = "Play";
+          this.sourceArrowLabel = "◀ ▶";
+          this.sourceQualityLabel = "Quality";
+          this.sourceBackLabel = "BACK";
+          this.sourceCloseLabel = "Close";
+          this.revealSourceControls();
+          this.focusSourceChip(0);
+        }, 50);
+        try {
+          const discovery = await api.sources(item, { signal: scope.signal });
+          let state = { after: 0, sources: [] as readonly MediaSource[], polls: 0 };
+          while (generation === sourceGeneration && !scope.signal.aborted) {
+            const step = await api.pollSourcesStep(discovery.id, state, { signal: scope.signal });
+            if (generation !== sourceGeneration || scope.signal.aborted) return;
+            state = step.state;
+            const hadRows = this.source.sources.length > 0;
+            this.updateSources(state.sources, !step.done, step.done);
+            if (!hadRows && state.sources.length) setTimeout(() => {
+              if (generation === sourceGeneration && this.phase === "sources") this.focusSourceRow(0);
+            }, 50);
+            if (step.done) break;
+            await new Promise<void>(resolve => {
+              const finish = () => { clearTimeout(sourceTimer); scope.signal.removeEventListener("abort", finish); resolve(); };
+              sourceTimer = setTimeout(finish, 1500);
+              scope.signal.addEventListener("abort", finish, { once: true });
+            });
+          }
+        } catch (cause) {
+          if (generation !== sourceGeneration || scope.signal.aborted) return;
+          this.sourceNotice = cause instanceof Error ? cause.message : "Could not find sources.";
+          this.updateSources(this.source.sources, false, true);
+        }
+      },
+      updateSources(sources: readonly MediaSource[], busy: boolean, done: boolean) {
+        const item = this.source.item;
+        if (!item) return;
+        this.source = projectSources(item, sources, busy, done, this.source.quality, this.source.provider);
+        noteSourceFilter(this.source.quality, this.source.provider, this.source.rows.length);
+        this.sourceChips = Array.from({ length: 5 }, (_, index) => this.source.chips[index] ?? { ...emptySourceChip });
+        this.sourceWindowStart = Math.min(this.sourceWindowStart, Math.max(0, this.source.rows.length - 6));
+        this.sourceRowIndex = Math.min(this.sourceRowIndex, Math.max(0, this.source.rows.length - 1));
+        this.sourceRows = Array.from({ length: 6 }, (_, index) => this.source.rows[this.sourceWindowStart + index] ?? { ...emptySourceRow });
+        setTimeout(() => { if (this.phase === "sources") this.revealSourceControls(); }, 60);
+      },
+      revealSourceControls() {
+        for (let index = 0; index < 5; index++)
+          (this.$select(`sourceChip${index}`) as unknown as { reveal?: () => void })?.reveal?.();
+        (this.$select("sourceProvider") as unknown as { reveal?: () => void })?.reveal?.();
+        for (let index = 0; index < 6; index++)
+          (this.$select(`sourceRow${index}`) as unknown as { reveal?: () => void })?.reveal?.();
+      },
+      focusSourceChip(index: number) {
+        if (this.phase !== "sources") return;
+        this.sourceFocusZone = "chip";
+        this.sourceChipIndex = index;
+        this.$select(`sourceChip${index}`)?.$focus();
+      },
+      focusSourceProvider() {
+        if (this.phase !== "sources") return;
+        this.sourceFocusZone = "provider";
+        this.$select("sourceProvider")?.$focus();
+      },
+      focusSourceRow(index: number) {
+        if (this.phase !== "sources" || !this.source.rows.length) return;
+        this.sourceFocusZone = "row";
+        this.sourceRowIndex = Math.max(0, Math.min(this.source.rows.length - 1, index));
+        const previousStart = this.sourceWindowStart;
+        if (this.sourceRowIndex < this.sourceWindowStart) this.sourceWindowStart = this.sourceRowIndex;
+        else if (this.sourceRowIndex >= this.sourceWindowStart + 6) this.sourceWindowStart = this.sourceRowIndex - 5;
+        if (this.sourceWindowStart !== previousStart) {
+          this.sourceRows = Array.from({ length: 6 }, (_, slot) => this.source.rows[this.sourceWindowStart + slot] ?? { ...emptySourceRow });
+          setTimeout(() => { if (this.phase === "sources") this.revealSourceControls(); }, 60);
+        }
+        const slot = this.sourceRowIndex - this.sourceWindowStart;
+        this.$select(`sourceRow${slot}`)?.$focus();
+        setTimeout(() => {
+          if (this.phase === "sources")
+            (this.$select(`sourceRow${this.sourceRowIndex - this.sourceWindowStart}`) as unknown as { reveal?: () => void })?.reveal?.();
+        }, 60);
+      },
+      moveSourceRow(delta: number) {
+        if (this.phase !== "sources") return;
+        if (this.sourceRowIndex === 0 && delta < 0) this.focusSourceProvider();
+        else this.focusSourceRow(this.sourceRowIndex + delta);
+      },
+      selectSourceRow() {
+        if (this.phase !== "sources") return;
+        const row = this.source.rows[this.sourceRowIndex];
+        const item = this.source.item;
+        if (!row?.source || !item) return;
+        this.sourceSelectedId = row.source.id;
+        noteSourceIntent(item.id, row.source.id, item.position ?? 0, this.sourceResume);
+        this.sourceNotice = "Playback is unavailable.";
+      },
+      openSourceDetails() {
+        if (this.phase !== "sources") return;
+        const source = this.source.rows[this.sourceRowIndex]?.source;
+        if (!source) return;
+        this.sourceDetailsReturnIndex = this.sourceRowIndex;
+        this.phase = "sourceDetails";
+        setTimeout(() => {
+          if (this.phase !== "sourceDetails") return;
+          this.sourceDetailsHeading = "Source details";
+          this.sourceDetailsBody = [source.name, source.title, source.filename, source.sourceName]
+            .filter(Boolean).join("\n");
+          this.$select("sourceDetailsClose")?.$focus();
+        }, 50);
+      },
+      closeSourceDetails() {
+        if (this.phase !== "sourceDetails") return;
+        this.phase = "sources";
+        setTimeout(() => {
+          if (this.phase !== "sources") return;
+          this.revealSourceControls();
+          this.focusSourceRow(this.sourceDetailsReturnIndex);
+        }, 0);
+      },
+      chooseSourceQuality(index: number) {
+        const quality = this.source.chips[index]?.quality;
+        if (this.phase !== "sources" || !quality || !this.source.item) return;
+        this.source = projectSources(this.source.item, this.source.sources, this.source.busy, this.source.done, quality, this.source.provider);
+        noteSourceFilter(this.source.quality, this.source.provider, this.source.rows.length);
+        this.sourceRowIndex = 0;
+        this.sourceWindowStart = 0;
+        this.sourceChips = Array.from({ length: 5 }, (_, slot) => this.source.chips[slot] ?? { ...emptySourceChip });
+        this.sourceRows = Array.from({ length: 6 }, (_, slot) => this.source.rows[slot] ?? { ...emptySourceRow });
+        this.sourceChipIndex = index;
+        setTimeout(() => {
+          if (this.phase !== "sources") return;
+          this.revealSourceControls();
+          // Do not steal focus if the user already moved into the rows.
+          if (this.sourceFocusZone === "chip" && this.sourceChipIndex === index) this.focusSourceChip(index);
+        }, 60);
+      },
+      stepSourceQuality(delta: number) {
+        const count = this.source.chips.length;
+        if (this.phase !== "sources" || !count) return;
+        const index = this.source.chips.findIndex(chip => chip.quality === this.source.quality);
+        const next = (index + delta + count) % count;
+        this.chooseSourceQuality(next);
+        if (this.source.rows.length) setTimeout(() => this.focusSourceRow(0), 0);
+        else this.focusSourceChip(next);
+      },
+      closeSources() {
+        if (this.phase !== "sources") return;
+        sourceScope?.abort();
+        ++sourceGeneration;
+        clearTimeout(sourceTimer);
+        this.phase = "detail";
+        this.sourceNotice = "";
+        setTimeout(() => {
+          if (this.sourceReturnZone === "episode") this.focusTitleEpisode(this.sourceReturnIndex);
+          else this.focusTitleAction(this.sourceReturnIndex);
+        }, 0);
+      },
+      openProviderPicker() {
+        if (this.phase !== "sources") return;
+        const labels = ["All", ...new Set(this.source.sources.map(source => source.sourceName ?? source.name)), "Cancel"];
+        this.providerChoices = Array.from({ length: 6 }, (_, index) => ({
+          label: labels[index] ?? "",
+          current: labels[index] === this.source.provider,
+          visible: index < labels.length,
+        }));
+        this.providerChoiceIndex = Math.max(0, Math.min(5, labels.indexOf(this.source.provider)));
+        this.phase = "provider";
+        setTimeout(() => {
+          if (this.phase !== "provider") return;
+          this.providerPanelTitle = "Source provider";
+          for (let index = 0; index < 6; index++)
+            (this.$select(`providerOption${index}`) as unknown as { reveal?: () => void })?.reveal?.();
+          this.focusProviderOption(this.providerChoiceIndex);
+        }, 50);
+      },
+      focusProviderOption(index: number) {
+        if (this.phase !== "provider") return;
+        this.providerChoiceIndex = index;
+        this.$select(`providerOption${index}`)?.$focus();
+      },
+      moveProviderOption(delta: number) {
+        const count = this.providerChoices.filter(choice => choice.visible).length;
+        if (this.phase !== "provider" || !count) return;
+        this.focusProviderOption(Math.max(0, Math.min(count - 1, this.providerChoiceIndex + delta)));
+      },
+      selectProviderOption() {
+        if (this.phase !== "provider") return;
+        const choice = this.providerChoices[this.providerChoiceIndex];
+        if (!choice?.visible || choice.label === "Cancel") { this.closeProviderPicker(); return; }
+        const item = this.source.item;
+        if (!item) { this.closeProviderPicker(); return; }
+        this.source = projectSources(item, this.source.sources, this.source.busy, this.source.done, this.source.quality, choice.label);
+        noteSourceFilter(this.source.quality, this.source.provider, this.source.rows.length);
+        this.sourceRowIndex = 0;
+        this.sourceWindowStart = 0;
+        this.sourceChips = Array.from({ length: 5 }, (_, index) => this.source.chips[index] ?? { ...emptySourceChip });
+        this.sourceRows = Array.from({ length: 6 }, (_, index) => this.source.rows[index] ?? { ...emptySourceRow });
+        this.sourceProviderLabel = choice.label === "All" ? "All providers" : choice.label;
+        this.phase = "sources";
+        setTimeout(() => {
+          if (this.phase !== "sources") return;
+          this.revealSourceControls();
+          this.focusSourceProvider();
+        }, 60);
+      },
+      closeProviderPicker() {
+        if (this.phase !== "provider") return;
+        this.phase = "sources";
+        setTimeout(() => {
+          if (this.phase !== "sources") return;
+          this.revealSourceControls();
+          this.focusSourceProvider();
+        }, 0);
       },
       returnFromDetail() {
         detailScope?.abort();
@@ -683,6 +1028,9 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
       },
       back() {
         if (this.phase === "profiles" && this.managing) this.toggleManageProfiles();
+        else if (this.phase === "sourceDetails") this.closeSourceDetails();
+        else if (this.phase === "provider") this.closeProviderPicker();
+        else if (this.phase === "sources") this.closeSources();
         else if (this.phase === "detail") this.returnFromDetail();
         else if (this.phase === "home" && this.profiles.length) this.showProfiles(this.profiles);
       },

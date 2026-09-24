@@ -540,14 +540,46 @@ actual Blits component focus instead of an arbitrary delay.
 The 1920×1080 Lightning `TvTitle` capture against matched React content has
 1,474,821 changed pixels (71.1237%), MAE 8.2731, RMSE 27.3696, SSIM
 0.793883. The ambient backdrop, source pill, focus shadow, episode details
-and typography remain open visual differences. Source discovery/selection,
-playback, More info and episode activation still need their intended flows;
+and typography remain open visual differences. Playback, More info and full
+episode activation still need their intended flows;
 the visible staged controls do not qualify those behaviors or a TV launcher.
 The production `/tv/` preview reproduced the Title capture and metric, and
 the existing React `TvTitle` recapture had zero changed pixels. At
 this checkpoint 169/169 unit tests passed; targeted responsive-layout and TV
 shell Playwright acceptance passed 24 scenarios with 10 deliberate skips;
 design/core/video checks, TypeScript and production build passed.
+
+## Source panel continuation
+
+The title's Play and Choose source actions now preserve distinct Resume intent
+and open a Lightning source panel. Discovery uses `TvApi.sources()` plus
+`pollSourcesStep()` so the pinned Rust reducer owns cursor, deduplication and
+completion. Blits components own focus for quality chips, provider choices,
+source rows and the source-details Close button. Browser fixtures verified
+12 normalized sources, choosing source 2 with its original item ID and
+position, paging to source 7, 4K empty → 1080p filtering, a LordStreams
+provider filter with three rows, Back restoring the title's source focus, and
+no further poll after close. Play carried `resume=true`; Choose source carried
+`resume=false`. Holding OK for 750 ms opened source details and suppressed
+row activation on release. Tizen, Vizio and webOS browser-configuration
+`TvSources` captures were byte-equal under the same fixture.
+
+At 1920×1080, matched-content Lightning versus React measurements remain
+open failures: `TvSources` 1,525,612 changed pixels (73.5731%), MAE 5.7584,
+RMSE 22.7721, SSIM 0.887465; `TvSourceProvider` 1,267,892 changed pixels
+(61.1445%), MAE 6.2317, RMSE 22.8690, SSIM 0.847848;
+`TvSourceDetails` 184,921 changed pixels (8.9179%), MAE 2.4859, RMSE
+20.9487, SSIM 0.627974. Background ambience, text metrics, panel/footer
+geometry and focus shadows need correction. Source selection currently records
+the exact intent in the staged UI; it does not start playback. Physical TV
+input/decoder behavior and the TV launcher remain unqualified.
+The staged panel currently mounts five quality chips and six provider-choice
+slots; additional custom qualities/providers still need navigable overflow.
+The production `/tv/` preview reproduced all three source-state captures and
+their pixel metrics. The unchanged React `TvSources` recapture had zero
+changed pixels. Checkpoint validation passed 169/169 unit tests, 24 targeted
+responsive/TV Playwright scenarios with 10 deliberate skips, and the
+design/core/video integrity, TypeScript and production-build checks.
 
 Design pin `aa2a1d69935fc07a97bd37d5fa0f78ab8d1c7b47`. A separate
 `lightning.html` entry now builds with LightningJS Blits 2.10 and the shared
