@@ -106,5 +106,6 @@ baseline `6f335d7631e1334be398b7aa5977ce4ce51ac50a`.
 | TV state / path | Lightning browser evidence | 1:1 visual evidence | Device evidence / disposition |
 | --- | --- | --- | --- |
 | Pairing, loading, expiry, retry | Shared device API/QR mocked at 1920×1080; expiry Enter release caused a new device-code request. Tizen/Vizio/webOS browser captures were byte-equal. | Pairing vs current React: 331,807 pixels changed (16.0015%), MAE 3.7149, RMSE 25.1868, SSIM 0.911408. Open deviation. | Physical Tizen/Vizio/webOS unverified; staged entry only. |
-| Profiles, Home and all other TV states | Staging placeholders only; no acceptance result. | Unmeasured. | Not migrated or qualified. |
+| Profiles / Manage / hold | Blits focused tile components consume shared API data. Right+Enter selected profile 2; Down+Enter entered Manage; held Enter suppressed release selection. | `TvProfiles`: 292,096 changed pixels (14.0864%), MAE 3.4131, RMSE 24.6169, SSIM 0.721367. `TvProfilesManage`: 301,406 changed pixels (14.5354%), MAE 4.0433, RMSE 26.802, SSIM 0.684476. Both open deviations. | Browser fixture only; profile editing, PIN and paging incomplete. |
+| Home and all other TV states | Staging placeholders only; no acceptance result. | Unmeasured. | Not migrated or qualified. |
 | React TV launch path | `TvPairing` capture remains exactly equal to saved React baseline (0 changed pixels). | Existing path unchanged for that state. | Current Tizen/Vizio launcher retained. |

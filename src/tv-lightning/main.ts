@@ -6,6 +6,7 @@ import { createLightningTvApp } from "./App";
 import bricolage700Url from "@fontsource/bricolage-grotesque/files/bricolage-grotesque-latin-700-normal.woff2?url";
 import bricolage800Url from "@fontsource/bricolage-grotesque/files/bricolage-grotesque-latin-800-normal.woff2?url";
 import onestUrl from "@fontsource/onest/files/onest-latin-400-normal.woff2?url";
+import onest500Url from "@fontsource/onest/files/onest-latin-500-normal.woff2?url";
 import onest600Url from "@fontsource/onest/files/onest-latin-600-normal.woff2?url";
 import onest700Url from "@fontsource/onest/files/onest-latin-700-normal.woff2?url";
 
@@ -39,6 +40,7 @@ async function start() {
     new FontFace("Bricolage700", `url(${bricolage700Url})`).load(),
     new FontFace("Bricolage800", `url(${bricolage800Url})`).load(),
     new FontFace("Onest", `url(${onestUrl})`).load(),
+    new FontFace("Onest500", `url(${onest500Url})`).load(),
     new FontFace("Onest600", `url(${onest600Url})`).load(),
     new FontFace("Onest700", `url(${onest700Url})`).load(),
   ]).then(faces => faces.forEach(face => document.fonts.add(face)));
@@ -52,6 +54,7 @@ async function start() {
       { family: "Bricolage700", type: "web", file: bricolage700Url },
       { family: "Bricolage800", type: "web", file: bricolage800Url },
       { family: "Onest", type: "web", file: onestUrl },
+      { family: "Onest500", type: "web", file: onest500Url },
       { family: "Onest600", type: "web", file: onest600Url },
       { family: "Onest700", type: "web", file: onest700Url },
     ],

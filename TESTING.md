@@ -478,6 +478,27 @@ Implements LOCAL_MODE.md LM-001–LM-003 (status: proposed): account-free operat
 **Evidence:** 141 vitest cases passed (20 new local data-layer tests, 8 LocalApp component tests, 1 sign-in entry test) against the real vendored wasm; production build with design/core/video integrity checks passed; a headless-Chromium script (VITE flag on, manifest/catalog routes mocked, backend aborted) verified entry → empty state → install → shelves → browse + genre filter → exit with no page errors. Physical TV, Tauri packaging and real addon hosts remain unverified; browser CORS governs which addon hosts a web fat build can reach (design LM-006).
 # LightningJS TV-only migration checkpoint — 2026-09-24
 
+## Profile screen continuation
+
+The staged Lightning entry now uses focused Blits profile-tile components
+with real `/api/auth/me` data, packaged avatar images, a letter fallback,
+the Manage/Done control and a 700 ms hold that suppresses release selection.
+The profile fixture verified Right then Enter selects profile 2, including
+the rapid key sequence before Blits paints the new focus. Down then Enter
+enters Manage, and held Enter does not select a profile. A 1920×1080
+`TvProfiles` capture versus the unchanged React TV baseline has 292,096
+changed pixels (14.0864%), MAE 3.4131, RMSE 24.6169, SSIM 0.721367.
+`TvProfilesManage` has 301,406 changed pixels (14.5354%), MAE 4.0433,
+RMSE 26.802 and SSIM 0.684476. These are open visual failures against 1:1.
+Profile editing, PIN, paging beyond the first five, Home and downstream TV
+screens remain to migrate; the current TV launcher has not switched.
+The profile capture from the production `/tv/` preview matched the development
+metric above. The existing React `TvPairing` and `TvProfiles` screens were
+recaptured and each matched its saved baseline exactly on the final repeat.
+Checkpoint checks: 169 unit tests passed; the targeted existing TV shell
+Playwright suite passed 10 scenarios with 8 deliberate skips; the Lightning
+pairing/profile/hold browser fixtures and production build passed.
+
 Design pin `aa2a1d69935fc07a97bd37d5fa0f78ab8d1c7b47`. A separate
 `lightning.html` entry now builds with LightningJS Blits 2.10 and the shared
 `TvApi`/Rust session driver. Its first real screen requests a device code,
