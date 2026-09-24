@@ -3,6 +3,8 @@ import QRCode from "qrcode";
 import type { TvApi, DevicePairing, TvProfile } from "../api";
 import { tokens } from "../theme/viptv-tokens.generated";
 import { ProfileTile, ManageProfilesButton, addProfileTile, emptyProfileTile, profileTileData } from "./ProfileTile";
+import { emptyHome, enrichHomeHero, loadHomeView, type HomeView } from "./homeModel";
+import { railIcon } from "./railIcons";
 
 type TvPlatform = "tizen" | "vizio" | "webos";
 const px = (name: keyof typeof tokens) => Number.parseFloat(String(tokens[name]));
@@ -28,6 +30,28 @@ function gatewayGlow(height: number) {
   return canvas.toDataURL("image/png");
 }
 
+function homeScrim() {
+  const canvas = document.createElement("canvas");
+  canvas.width = 1920;
+  canvas.height = 1080;
+  const context = canvas.getContext("2d")!;
+  // The React TV Home masks the sharp art in from the left and fades it
+  // beneath the shelf. This texture is rendered by Lightning over that art.
+  const ground = tokens["color.bg"];
+  const transparentGround = `rgba(${Number.parseInt(ground.slice(1, 3), 16)},${Number.parseInt(ground.slice(3, 5), 16)},${Number.parseInt(ground.slice(5, 7), 16)},0)`;
+  const left = context.createLinearGradient(1120, 0, 1500, 0);
+  left.addColorStop(0, ground);
+  left.addColorStop(1, transparentGround);
+  context.fillStyle = left;
+  context.fillRect(1120, 0, 380, 720);
+  const bottom = context.createLinearGradient(0, 550, 0, 950);
+  bottom.addColorStop(0, transparentGround);
+  bottom.addColorStop(1, ground);
+  context.fillStyle = bottom;
+  context.fillRect(0, 550, 1920, 530);
+  return canvas.toDataURL("image/png");
+}
+
 /** Native 1920×1080 positions from the pinned TvPairing reference. */
 const pairingFrame = {
   brandX: px("layout.tv.safe-x"),
@@ -50,12 +74,14 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
   let pairingGeneration = 0;
   let pairingTimer: ReturnType<typeof setTimeout> | undefined;
   let pairingScope: ReturnType<TvApi["createScope"]> | undefined;
+  let homeGeneration = 0;
+  let homeScope: ReturnType<TvApi["createScope"]> | undefined;
   let disposeSession: (() => void) | undefined;
   return Blits.Application({
     components: { ProfileTile, ManageProfilesButton },
     template: `
       <Element w="1920" h="1080" color="$background">
-        <Element x="260" y="86" w="1400" h="800" src="$pairingGlow" :show="$phase !== 'profiles'" />
+        <Element x="260" y="86" w="1400" h="800" src="$pairingGlow" :show="$phase === 'pairing' || $phase === 'expired' || $phase === 'error'" />
         <Element x="260" y="82" w="1400" h="700" src="$profilesGlow" :show="$phase === 'profiles'" />
         <Element :show="$phase === 'pairing' || $phase === 'expired' || $phase === 'error'">
           <Element x="$brandX" y="$brandY" w="52" h="52" rounded="12" color="$accent" />
@@ -105,6 +131,51 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
           <Text x="1718" y="1000" :content="$moveIcon" font="Onest" size="16" color="$primary" />
           <Text x="1770" y="999" :content="$moveLabel" font="Onest" size="20" color="$body" />
         </Element>
+        <Element :show="$phase === 'home'">
+          <Element x="1120" y="0" w="800" h="720" :src="$home.heroImage" :show="$home.heroImage !== ''" />
+          <Element w="1920" h="1080" src="$homeScrim" />
+          <Element x="44" y="54" w="56" h="56" rounded="28" color="$surface" />
+          <Element x="50" y="60" w="44" h="44" rounded="22" :src="$homeProfileAvatar" :show="$homeProfileAvatar !== ''" />
+          <Element x="60" y="202" w="24" h="24" :src="$railSearch" />
+          <Element x="40" y="262" w="64" h="64" rounded="32" color="$surface" />
+          <Element x="60" y="282" w="24" h="24" :src="$railHome" />
+          <Element x="60" y="360" w="24" h="24" :src="$railDiscover" />
+          <Element x="60" y="440" w="24" h="24" :src="$railLive" />
+          <Element x="60" y="516" w="24" h="24" :src="$railList" />
+          <Element x="60" y="978" w="24" h="24" :src="$railSettings" />
+          <Text x="192" y="150" :content="$home.eyebrow" font="Onest700" size="20" color="$secondary" />
+          <Element x="192" y="196" w="410" h="118" fit="contain" :src="$home.titleLogo" :show="$home.titleLogo !== ''" />
+          <Text x="192" y="196" maxwidth="760" :content="$home.title" font="Bricolage700" size="56" color="$primary" :show="$home.titleLogo === ''" />
+          <Text x="192" y="340" :content="$home.episodeLabel" font="Onest600" size="24" color="$primary" />
+          <Element x="431" y="349" w="180" h="6" color="$secondary" :show="$home.progress > 0" />
+          <Element x="431" y="349" :w="Math.max(0, Math.min(180, $home.progress * 180))" h="6" color="$accent" :show="$home.progress > 0" />
+          <Text x="630" y="339" :content="$home.progressText" font="Onest" size="24" color="$secondary" />
+          <Text x="192" y="390" :content="$home.meta" font="Onest" size="22" color="$secondary" />
+          <Text x="192" y="448" maxwidth="760" maxlines="2" :content="$home.synopsis" font="Onest" size="26" color="$body" />
+          <Element x="182" y="544" w="228" h="84" rounded="42" color="$white" />
+          <Element x="186" y="548" w="220" h="76" rounded="38" color="$primary" />
+          <Text x="230" y="566" :content="$homePlayIcon" font="Onest" size="27" color="$onLight" />
+          <Text x="263" y="565" :content="$home.playLabel" font="Onest700" size="26" color="$onLight" />
+          <Element x="420" y="550" w="156" h="72" rounded="36" color="$surface" />
+          <Text x="453" y="568" :content="$homeDetailsLabel" font="Onest700" size="26" color="$primary" />
+          <Element x="594" y="550" w="72" h="72" rounded="36" color="$surface" />
+          <Text x="612" y="563" :content="$homeAddLabel" font="Onest" size="38" color="$primary" />
+          <Text x="192" y="700" :content="$homeShelfLabel" font="Bricolage700" size="32" color="$primary" />
+          <Element :for="(card, index) in $home.cards" :x="192 + $index * 356" y="757">
+            <Element w="320" h="180" rounded="16" :src="$card.image" :show="$card.image !== ''" />
+            <Text y="198" maxwidth="320" maxlines="1" :content="$card.title" font="Onest700" size="24" color="$primary" />
+            <Text y="231" maxwidth="320" maxlines="1" :content="$card.subtitle" font="Onest" size="20" color="$secondary" />
+          </Element>
+          <Element x="1508" y="54" w="310" h="48" rounded="24" color="$noticeGlass" />
+          <Element x="1530" y="62" w="45" h="31" rounded="8" color="$keyBorder" />
+          <Element x="1532" y="64" w="41" h="27" rounded="6" color="$background" />
+          <Text x="1541" y="67" :content="$okLabel" font="Onest700" size="16" color="$primary" />
+          <Text x="1586" y="66" :content="$selectLabel" font="Onest" size="20" color="$body" />
+          <Element x="1680" y="62" w="40" h="31" rounded="8" color="$keyBorder" />
+          <Element x="1682" y="64" w="36" h="27" rounded="6" color="$background" />
+          <Text x="1693" y="65" :content="$optionsIcon" font="Onest" size="19" color="$primary" />
+          <Text x="1730" y="66" :content="$optionsLabel" font="Onest" size="20" color="$body" />
+        </Element>
         <Text x="96" y="54" :show="$phase === 'ready'" :content="$startingLabel" font="Onest" size="28" color="$primary" />
       </Element>
     `,
@@ -123,10 +194,28 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
         keyBorder: tokens["color.line.keycap-tv"],
         pairingGlow: gatewayGlow(800),
         profilesGlow: gatewayGlow(700),
+        homeScrim: homeScrim(),
+        home: emptyHome as HomeView,
+        homePlayIcon: "",
+        homeDetailsLabel: "",
+        homeAddLabel: "",
+        homeShelfLabel: "",
+        surface: tokens["color.surface.3"],
+        secondary: tokens["color.text.secondary"],
+        noticeGlass: tokens["color.fill.notice-glass-tv"],
+        railSearch: railIcon("search"),
+        railHome: railIcon("home", true),
+        railDiscover: railIcon("discover"),
+        railLive: railIcon("live"),
+        railList: railIcon("list"),
+        railSettings: railIcon("settings"),
+        homeProfileAvatar: "",
+        optionsIcon: "",
+        optionsLabel: "",
         danger: tokens["color.status.danger-tv"],
         codeSize: pairCodeSize,
         codeLetterSpacing: pairCodeSize * 0.08,
-        phase: "starting" as "starting" | "pairing" | "expired" | "error" | "profiles" | "ready",
+        phase: "starting" as "starting" | "pairing" | "expired" | "error" | "profiles" | "ready" | "home",
         address: "Connecting…",
         code: "••••••",
         qr: "",
@@ -158,6 +247,7 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
     hooks: {
       ready() {
         const session = api.createSessionDriver((view) => {
+          if (view.identity) this.profiles = [...view.identity.profiles];
           if (view.phase === "Pairing") void this.beginPairing();
           else if (view.phase === "Profiles") {
             if (view.identity) this.showProfiles(view.identity.profiles);
@@ -166,10 +256,7 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
               this.phase = "error";
             });
           }
-          else if (view.phase === "Ready") {
-            this.phase = "ready";
-            setTimeout(() => { this.startingLabel = "Starting VIPTV…"; }, 50);
-          }
+          else if (view.phase === "Ready" && view.selectedProfileId) void this.loadHome(view.selectedProfileId);
           else if (view.phase === "Error") {
             this.error = view.error ?? "The TV could not complete this request.";
             this.phase = "error";
@@ -208,11 +295,47 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
       destroy() {
         ++pairingGeneration;
         pairingScope?.abort();
+        homeScope?.abort();
+        ++homeGeneration;
         clearTimeout(pairingTimer);
         disposeSession?.();
       },
     },
     methods: {
+      async loadHome(profileId: string) {
+        const generation = ++homeGeneration;
+        homeScope?.abort();
+        homeScope = api.createScope();
+        const selectedProfile = this.profiles.find(profile => profile.id === profileId);
+        this.homeProfileAvatar = selectedProfile ? profileTileData(selectedProfile).image : "";
+        this.phase = "ready";
+        this.startingLabel = "Starting VIPTV…";
+        try {
+          const view = await loadHomeView(api, profileId, homeScope.signal);
+          if (generation !== homeGeneration || homeScope.signal.aborted) return;
+          this.phase = "home";
+          setTimeout(() => {
+            if (generation !== homeGeneration) return;
+            this.homePlayIcon = "▶";
+            this.homeDetailsLabel = "Details";
+            this.homeAddLabel = "+";
+            this.homeShelfLabel = "Continue watching";
+            this.okLabel = "OK";
+            this.selectLabel = "Select";
+            this.optionsIcon = "≡";
+            this.optionsLabel = "Options";
+            this.home = view;
+            this.$focus();
+          }, 50);
+          void enrichHomeHero(api, view, homeScope.signal).then(enriched => {
+            if (generation === homeGeneration && !homeScope?.signal.aborted) this.home = enriched;
+          }).catch(() => { /* Packaged queue metadata remains usable. */ });
+        } catch (cause) {
+          if (generation !== homeGeneration || homeScope.signal.aborted) return;
+          this.error = cause instanceof Error ? cause.message : "Could not load Home.";
+          this.phase = "error";
+        }
+      },
       showProfiles(profiles: readonly TvProfile[]) {
         this.profiles = [...profiles];
         this.phase = "profiles";
@@ -354,6 +477,7 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
       },
       back() {
         if (this.phase === "profiles" && this.managing) this.toggleManageProfiles();
+        else if (this.phase === "home" && this.profiles.length) this.showProfiles(this.profiles);
       },
     },
   });

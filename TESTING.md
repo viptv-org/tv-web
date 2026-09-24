@@ -490,7 +490,7 @@ enters Manage, and held Enter does not select a profile. A 1920×1080
 changed pixels (14.0864%), MAE 3.4131, RMSE 24.6169, SSIM 0.721367.
 `TvProfilesManage` has 301,406 changed pixels (14.5354%), MAE 4.0433,
 RMSE 26.802 and SSIM 0.684476. These are open visual failures against 1:1.
-Profile editing, PIN, paging beyond the first five, Home and downstream TV
+Profile editing, PIN, paging beyond the first five, Home interactions and downstream TV
 screens remain to migrate; the current TV launcher has not switched.
 The profile capture from the production `/tv/` preview matched the development
 metric above. The existing React `TvPairing` and `TvProfiles` screens were
@@ -498,6 +498,25 @@ recaptured and each matched its saved baseline exactly on the final repeat.
 Checkpoint checks: 169 unit tests passed; the targeted existing TV shell
 Playwright suite passed 10 scenarios with 8 deliberate skips; the Lightning
 pairing/profile/hold browser fixtures and production build passed.
+
+## Home data/render continuation
+
+After a profile is selected, the staged Lightning entry now loads its queue,
+catalogs, recent live channels and hero metadata through the shared API and
+Rust presentation functions. It renders the real hero image/logo, progress,
+synopsis, first Continue Watching shelf and collapsed rail rather than the
+previous placeholder. The `TvHome` fixture observed the profile queue request
+and captured this state at 1920×1080. Compared with the saved React TV Home,
+1,404,917 pixels differ (67.7526%), MAE 8.7538, RMSE 25.8279, SSIM
+0.863854. The ambient backdrop, card typography/progress, and rail geometry
+need further visual work; hero buttons, shelf cards and rail still need Blits
+focus and their routes/actions. This is an incomplete screen, not a parity
+pass or a launcher switch. Tizen, Vizio and webOS browser-configuration Home
+captures were byte-equal under the same fixture; no physical TV run occurred.
+The production `/tv/` preview reproduced the Home capture and metric. At
+this checkpoint 169/169 unit tests passed; targeted responsive-layout and TV
+shell Playwright acceptance passed 24 scenarios with 10 deliberate skips;
+design/core/video checks, TypeScript and production build passed.
 
 Design pin `aa2a1d69935fc07a97bd37d5fa0f78ab8d1c7b47`. A separate
 `lightning.html` entry now builds with LightningJS Blits 2.10 and the shared
