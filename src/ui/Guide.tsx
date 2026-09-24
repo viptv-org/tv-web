@@ -642,6 +642,8 @@ function TvLive({ props, guide }: { props: GuideProps; guide: Controller }) {
             <TextEntry
               title="Search Live TV"
               initialValue={query}
+              maxLength={128}
+              showCount
               onSubmit={async (value) => {
                 submitQuery(value.trim());
                 guide.setSearchEntry(false);

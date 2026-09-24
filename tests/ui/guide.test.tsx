@@ -288,7 +288,8 @@ describe('Guide', () => {
     fireEvent.change(screen.getByRole('textbox', { name: 'Search Live TV' }), { target: { value: entered } });
     fireEvent.click(screen.getByRole('button', { name: 'Done' }));
 
-    const expected = 'n'.repeat(128);
+    // The entry caps the raw text at 128 characters; submit trims it.
+    const expected = 'n'.repeat(126);
     await waitFor(() => expect(api.live).toHaveBeenLastCalledWith(expect.objectContaining({ search: expected, offset: 0 }), expect.anything()));
     await waitFor(() => expect(screen.queryByRole('heading', { name: 'Search Live TV' })).not.toBeInTheDocument());
 
