@@ -82,25 +82,42 @@
   background: transparent;
 }
 
-/* The body row: one vertically scrolling document under the title bar. The
-   rail and phone nav are fixed inside it. No visible scrollbar (as drawn), so
-   switching between a tall and a short route never shifts the frame. */
+/* Responsive: no canvas; the screen is the page's scrolling document. No
+   visible scrollbar (as drawn), so switching between a tall and a short
+   route never shifts the frame. */
 [data-layout="responsive"] .tv-screen.responsive-app {
-  --sidebar-width: var(--vx-shell-rail);
+  --sidebar-width: var(--vx-shell-rail, 0px);
   --canvas: var(--viptv-color-bg);
-  position: fixed;
-  left: 0;
-  right: 0;
-  top: var(--vx-shell-top);
-  bottom: 0;
+  position: relative;
+  flex: 1 1 auto;
   width: 100%;
-  height: calc(100% - var(--vx-shell-top));
+  min-height: 0;
+  height: auto;
   transform: none;
   overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
   scrollbar-width: none;
   background: var(--viptv-color-bg);
+}
+/* In the app frame it is the body row under the title bar; the rail and the
+   phone nav are fixed inside it. */
+[data-layout="responsive"] .desktop-app-frame > .tv-screen.responsive-app {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: var(--vx-shell-top);
+  bottom: 0;
+  height: calc(100% - var(--vx-shell-top));
+}
+/* Local addon mode (LocalApp) frames the same screen under its own header. */
+[data-layout="responsive"] .local-app {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
 }
 [data-layout="responsive"] .tv-screen.responsive-app.playing {
   overflow: hidden;
@@ -487,6 +504,8 @@
     bottom: 0;
     z-index: 29;
     height: var(--vx-phone-fade);
+    /* Fallback for engines without color-mix (older WebKitGTK). */
+    background: linear-gradient(to bottom, transparent 0%, var(--viptv-color-bg) 100%);
     background: linear-gradient(
       to bottom,
       transparent 0%,
