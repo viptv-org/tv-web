@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Isolated Chromium-only diagnostic for Blits Home input. Never logs API data.
+// Isolated Chromium-only diagnostic for SolidTV Home input. Never logs API data.
 import { chromium } from '@playwright/test';
 import { installBackend, installMediaStubs } from './backend.ts';
 
@@ -36,7 +36,7 @@ try {
   });
   const backend = await installBackend(page, { family: 'tv', session: 'ready' });
   await installMediaStubs(page, { frame: '63e024' });
-  await page.goto(`${origin}/lightning.html?platform=tizen&focusdebug=1&perfdebug=1`);
+  await page.goto(`${origin}/solid.html?platform=tizen&focusdebug=1&perfdebug=1`);
   await page.waitForFunction(() => window.__viptvFocus?.view === 'home-action', null, { timeout: 20000 });
   await page.waitForTimeout(Number(process.env.PERF_SETTLE_MS ?? 300));
   const glBefore = await page.evaluate(() => ({ ...window.__glOps }));

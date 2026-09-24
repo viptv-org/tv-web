@@ -1,9 +1,9 @@
 import { expect, it, vi } from "vitest";
 import type { Catalog, MediaItem } from "../../src/api";
 
-vi.mock("../../src/tv-lightning/searchKeyIcons", () => ({ searchKeyIcon: () => "" }));
+vi.mock("../../src/tv-solid/searchKeyIcons", () => ({ searchKeyIcon: () => "" }));
 
-const { projectSearch, projectSearchWindow } = await import("../../src/tv-lightning/searchModel");
+const { projectSearch, projectSearchWindow } = await import("../../src/tv-solid/searchModel");
 
 const item = (group: string, index: number): MediaItem => ({
   id: `${group}-${index}`, type: group === "live" ? "live" : "movie",

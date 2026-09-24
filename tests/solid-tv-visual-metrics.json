@@ -1,0 +1,184 @@
+{
+  "baselineCommit": "2ab0c80ca639d485d31a22d1193bb308f9e26f2d",
+  "designRef": "aa2a1d69935fc07a97bd37d5fa0f78ab8d1c7b47",
+  "viewport": [
+    1920,
+    1080
+  ],
+  "metric": "mean absolute RGB channel difference / 255; lower is closer; not a perceptual similarity score",
+  "captureSettleMs": 100,
+  "comparisons": [
+    {
+      "screen": "TvAddonManage.png",
+      "nmae": 0.000457
+    },
+    {
+      "screen": "TvAddonRemove.png",
+      "nmae": 0.000367
+    },
+    {
+      "screen": "TvAddons.png",
+      "nmae": 0.000735
+    },
+    {
+      "screen": "TvDiscover.png",
+      "nmae": 0.002083
+    },
+    {
+      "screen": "TvDiscoverFilter.png",
+      "nmae": 0.000402
+    },
+    {
+      "screen": "TvHome.card-focus-next.png",
+      "nmae": 0.001411
+    },
+    {
+      "screen": "TvHome.card-focus.png",
+      "nmae": 0.001425
+    },
+    {
+      "screen": "TvHome.png",
+      "nmae": 0.001268
+    },
+    {
+      "screen": "TvItemMenu.png",
+      "nmae": 0.001071
+    },
+    {
+      "screen": "TvItemMenu.undo.png",
+      "nmae": 0.000807
+    },
+    {
+      "screen": "TvLibrary.png",
+      "nmae": 0.002976
+    },
+    {
+      "screen": "TvLibrary.saved.png",
+      "nmae": 0.002182
+    },
+    {
+      "screen": "TvLibrary.source.png",
+      "nmae": 0.001535
+    },
+    {
+      "screen": "TvLive.png",
+      "nmae": 0.002896
+    },
+    {
+      "screen": "TvLiveDetails.png",
+      "nmae": 0.001787
+    },
+    {
+      "screen": "TvLiveSearch.png",
+      "nmae": 0.000462
+    },
+    {
+      "screen": "TvManageCue.png",
+      "nmae": 0.000327
+    },
+    {
+      "screen": "TvMenu.png",
+      "nmae": 0.000443
+    },
+    {
+      "screen": "TvPairing.png",
+      "nmae": 0.000798
+    },
+    {
+      "screen": "TvPairingExpired.png",
+      "nmae": 0.000747
+    },
+    {
+      "screen": "TvPairingLoading.png",
+      "nmae": 0.002089
+    },
+    {
+      "screen": "TvPlayback.png",
+      "nmae": 0.001064
+    },
+    {
+      "screen": "TvPlaybackChoice.png",
+      "nmae": 0.000515
+    },
+    {
+      "screen": "TvPlayer.png",
+      "nmae": 0.000598
+    },
+    {
+      "screen": "TvPlayerSeek.png",
+      "nmae": 0.000594
+    },
+    {
+      "screen": "TvPlayerSubs.audio.png",
+      "nmae": 0.000509
+    },
+    {
+      "screen": "TvPlayerSubs.png",
+      "nmae": 0.000494
+    },
+    {
+      "screen": "TvProfiles.png",
+      "nmae": 0.00039
+    },
+    {
+      "screen": "TvProfilesManage.png",
+      "nmae": 0.000321
+    },
+    {
+      "screen": "TvSearch.blank.png",
+      "nmae": 0.000279
+    },
+    {
+      "screen": "TvSearch.png",
+      "nmae": 0.00089
+    },
+    {
+      "screen": "TvSettings.png",
+      "nmae": 0.000648
+    },
+    {
+      "screen": "TvSignOut.png",
+      "nmae": 0.000381
+    },
+    {
+      "screen": "TvSourceDetails.png",
+      "nmae": 0.000994
+    },
+    {
+      "screen": "TvSourceProvider.png",
+      "nmae": 0.000779
+    },
+    {
+      "screen": "TvSources.filtered.png",
+      "nmae": 0.003801
+    },
+    {
+      "screen": "TvSources.paged.png",
+      "nmae": 0.001836
+    },
+    {
+      "screen": "TvSources.png",
+      "nmae": 0.001875
+    },
+    {
+      "screen": "TvTitle.back-home.png",
+      "nmae": 0.001268
+    },
+    {
+      "screen": "TvTitle.card-return.png",
+      "nmae": 0.001278
+    },
+    {
+      "screen": "TvTitle.card-route.png",
+      "nmae": 0.000403
+    },
+    {
+      "screen": "TvTitle.episode-focus.png",
+      "nmae": 0.001698
+    },
+    {
+      "screen": "TvTitle.png",
+      "nmae": 0.001545
+    }
+  ]
+}

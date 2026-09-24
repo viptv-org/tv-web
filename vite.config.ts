@@ -2,7 +2,7 @@ import { Agent } from "node:https";
 import { resolve } from "node:path";
 import { defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react";
-import blits from "@lightningjs/blits/vite";
+import solid from "vite-plugin-solid";
 // Opt-in LAN preview upstream; defaults to the production origin only when
 // explicitly provided, so dev configurations never silently proxy to prod.
 const upstream = process.env.VIPTV_PREVIEW_UPSTREAM ?? "https://viptv.syek.tech";
@@ -28,10 +28,10 @@ const previewProxy = () => ({
   },
 });
 export default defineConfig(({ command }) => ({
-  plugins: [react(), ...blits],
+  plugins: [react({ exclude: /src\/tv-solid\// }), solid({ include: /src\/tv-solid\/.*\.tsx$/, solid: { moduleName: "@solidtv/solid", generate: "universal" } })],
   // The player contract resolves from the pinned vendored source, not the
   // generated dist-js of a sibling checkout.
-  resolve: { alias: { "@viptv/video": new URL("./vendor/video/src/index.ts", import.meta.url).pathname } },
+  resolve: { dedupe: ["solid-js", "@solidtv/solid"], alias: { "@viptv/video": new URL("./vendor/video/src/index.ts", import.meta.url).pathname } },
   base: command === "build" ? "/tv/" : "/",
   // TV entrypoints retain ES2017. BigInt exists only in the lazily imported
   // MediaBunny chunk, gated on a modern WebCodecs runtime before import.
@@ -40,9 +40,10 @@ export default defineConfig(({ command }) => ({
     target: "es2017",
     rollupOptions: {
       // Keep the working React entry for responsive web, desktop and TV while
-      // Lightning screen/interaction parity is qualified on the separate page.
+      // SolidTV screen/interaction parity is qualified on the separate page.
       input: {
         app: resolve(import.meta.dirname, "index.html"),
+        solid: resolve(import.meta.dirname, "solid.html"),
         lightning: resolve(import.meta.dirname, "lightning.html"),
       },
     },

@@ -19,3 +19,11 @@ Before visual, input, navigation or asset changes, read `design-contract/DESIGN_
 Shared application rules are owned by ../core (viptv-org/core), pinned in CORE_REF. Change Rust and regenerate bindings/WASM there, commit, then run scripts/core-sync.mjs sync ../core. Never hand-edit vendor/core. Update Android's pin with the same revision for shared behavior changes. React owns rendering/focus and browser/player effects; provider aliases, artwork roles and continuation/source/resume rules belong in Rust. A passing hash check establishes the imported version, not device playback or visual acceptance.
 
 Before changing responsive playback, fullscreen or sign-in, read the platform host requirements in `IMPLEMENTATION.md`.
+
+## SolidTV canvas renderer
+
+The former Blits entry is now `solid.html` / `src/tv-solid`; the legacy
+`lightning.html` URL loads that same entry. JSX in this directory uses the
+SolidTV universal compiler, separately from the React entry. Preserve the
+pinned geometry and the remote controller contract when changing the adapter.
+Run `tests/preview/solid-shoot.mjs` for the migrated TV acceptance scenarios.

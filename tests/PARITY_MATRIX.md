@@ -1,3 +1,26 @@
+# SolidTV renderer adoption — 2026-09-24
+
+Pinned design: `aa2a1d69935fc07a97bd37d5fa0f78ab8d1c7b47`. The entries below
+bound the migration from the Blits canvas to `src/tv-solid`; prior platform
+coverage and outstanding product gaps are historical records below.
+
+| Surface | SolidTV browser evidence | Physical device evidence |
+| --- | --- | --- |
+| Pairing/profiles | Loading, expiry/retry, chooser, manage focus and hold scenarios passed | Unverified |
+| Home/rail/title | Navigation, paging, detail/episode focus and Back passed | Unverified |
+| Discover/library/search | Filters, paging, keyboard, menu/Undo and restoration passed | Unverified |
+| Live | Guide movement, future programme details, long hold and live search passed | Unverified |
+| Settings | Root rows, preferences/save, addon actions and cancellation, sign-out cancellation passed | Unverified |
+| Sources/player | Quality/provider/details, paging, holds, playback, seek, subtitles/audio replacement passed | Unverified |
+
+All 30 migrated scenarios passed with the Tizen browser flag. Home, Live and
+PlayerSubs additionally passed with Vizio and webOS flags. 43 before/after
+captures measured migration drift; see [metrics](solid-tv-visual-metrics.json)
+and [TESTING.md](../TESTING.md). Geometry/tokens/assets remain pinned. The
+comparison is not byte equality or complete canonical-design certification.
+
+---
+
 # VIPTV design-system overhaul — 2026-09-23
 
 Current design: `732244c79c05da9a47004dd97cdc6caf1ed534be`, with the

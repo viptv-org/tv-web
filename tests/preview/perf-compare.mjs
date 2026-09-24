@@ -24,7 +24,7 @@ const summarize = values => ({
 
 const browser = await chromium.launch({ args: ['--disable-background-timer-throttling'] });
 try {
-  for (const mode of ['react', 'blits']) {
+  for (const mode of ['react', 'solid']) {
     const latencies = [];
     const frames = [];
     const readyTimes = [];
@@ -51,7 +51,7 @@ try {
       const backend = await installBackend(page, { family: 'tv', session: 'ready' });
       await installMediaStubs(page, { frame: '63e024' });
       const start = Date.now();
-      await page.goto(`${origin}${mode === 'blits' ? '/lightning.html?platform=tizen&focusdebug=1&perfdebug=1' : '/?platform=tizen'}`);
+      await page.goto(`${origin}${mode === 'solid' ? '/solid.html?platform=tizen&focusdebug=1&perfdebug=1' : '/?platform=tizen'}`);
       if (mode === 'react') {
         const first = page.locator('[data-focus-id="hero-play"]');
         await first.waitFor({ state: 'visible', timeout: 20000 }).catch(async cause => {
@@ -62,7 +62,7 @@ try {
         await page.waitForFunction(() => window.__viptvFocus?.view === 'home-action' && window.__viptvFocus?.index === 0, null, { timeout: 20000 });
       }
       readyTimes.push(Date.now() - start);
-      if (mode === 'blits' && run === 0) {
+      if (mode === 'solid' && run === 0) {
         const marks = await page.evaluate(() => Object.fromEntries(
           performance.getEntriesByType('mark').filter(entry => entry.name.startsWith('viptv:')).map(entry => [entry.name, Number(entry.startTime.toFixed(1))])
         ));

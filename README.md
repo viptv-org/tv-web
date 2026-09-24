@@ -74,3 +74,26 @@ For the authorized LAN preview: `VITE_LAN_PREVIEW=1 NODE_OPTIONS=--max-old-space
 Copyright (C) 2026 viptv contributors.
 
 This program is free software; you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation; version 2 of the License. See [LICENSE](LICENSE). The playback adapters (`viptv-org/video`, `viptv-org/tauri-video-plugin`) and the Android repository remain under their existing MIT OR Apache-2.0 terms.
+
+## SolidTV canvas entry
+
+`solid.html` renders all of the former Lightning/Blits TV screens with
+`@solidtv/solid` and `@solidtv/renderer`. `lightning.html` remains a compatibility
+URL for existing preview links and loads the same SolidTV entry. The regular
+`index.html` entry retains its current platform selection.
+
+Screens live in `src/tv-solid`: compiled Solid JSX uses the pinned layout values,
+assets, fonts and design tokens. The small `runtime.ts` adapter retains the
+screen controller methods, parent events, refs and release-to-activate remote
+contract, with Solid signals, keyed list reconciliation and component cleanup.
+There is no Blits dependency or runtime template evaluation. Text baselines
+are adapted to the renderer's alphabetic line boxes so the existing hanging
+baseline coordinates remain valid; canvas text nodes refresh their baked color
+when focus changes.
+
+Run `node tests/preview/solid-shoot.mjs TvHome` against the preview server.
+For local HTTPS builds, set `SOLID_PREVIEW_URL` to the full `solid.html` URL and
+`PREVIEW_API_ORIGIN` to the same HTTPS origin. The harness intercepts fixture
+API/media calls and blocks unrecognised external hosts. Use `PREVIEW_OUT` for
+private captures. Browser fixture evidence and real-TV qualification are
+recorded separately in `TESTING.md`.

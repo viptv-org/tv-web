@@ -1,3 +1,72 @@
+# SolidTV migration — 2026-09-24
+
+The isolated canvas entry now uses `@solidtv/solid` 1.6.4 and
+`@solidtv/renderer` 1.9.4. `solid.html` is its canonical URL;
+`lightning.html` is a compatibility URL for the same SolidTV bundle. All
+Blits screen templates were converted programmatically to Solid JSX, retaining
+layout coordinates, assets, text, design tokens and controller methods. Solid
+signals and keyed lists preserve reactive state and focus lifetimes. The
+adapter retains key-release activation and the existing 700ms hold handlers.
+The React `index.html` entry and platform launch selection are unchanged.
+
+Design remains pinned to `aa2a1d69935fc07a97bd37d5fa0f78ab8d1c7b47`.
+No design snapshot, generated theme, shared core or video source was edited.
+This is a renderer migration, not a claim that previously incomplete screens
+now meet every design acceptance criterion. Earlier Blits limitations below
+remain applicable unless explicitly covered by the evidence here.
+
+Validation:
+
+- `npm test`: 170 passed across 28 files.
+- `npm run build`: design/core/video integrity, all typecheck groups and
+  production bundling passed.
+- `npm run test:e2e`: 126 passed, 75 deliberately skipped, one toast-flow
+  timeout in the React entry. The exact failing test passed on a focused rerun
+  and against the pre-migration production bundle; no product/test assertion
+  was weakened to make it pass. This run does not establish an entirely
+  flake-free suite.
+- SolidTV: all 30 named fixture scenarios in `solid-shoot.mjs` passed on
+  Chromium at 1920×1080, using trusted local HTTPS and intercepted API/media
+  boundaries. They cover pairing/loading/expiry/retry; profiles and manage
+  focus; Home and rail; Discover/filter/paging; My List and title menu/Undo;
+  search; live guide, future programme details and live search; settings,
+  playback choices, addon management/removal cancellation and sign-out
+  cancellation; title/episodes; source paging/filter/provider/details; and
+  player/seek/subtitle/audio changes. Back/return focus and 700ms holds are
+  exercised by the existing scenario assertions.
+- Home, Live and PlayerSubs additionally passed with Vizio and webOS browser
+  platform flags (six more scenario runs). These are platform simulations.
+- Before/after: all 30 scenarios also passed against baseline commit
+  `2ab0c80ca639d485d31a22d1193bb308f9e26f2d`. 43 corresponding captures were
+  compared; normalized mean absolute RGB error had median 0.000807 and maximum
+  0.003801. Measurements are in `tests/solid-tv-visual-metrics.json`. Pairing,
+  Home, profiles, episode focus/return and filtered sources were inspected.
+  Screen geometry and visual language are retained; text rasterization and
+  some stale-label behavior differ between renderers, so captures are not
+  byte-identical. These numbers measure migration drift, not conformance to
+  every canonical design screen.
+
+The screenshot harness waits 100ms after focus changes before capture so
+synchronous focus debug state cannot race the WebGL frame and glyph upload.
+All captures remain private temporary output, outside source and release assets.
+Reproduce a scenario with the workspace's trusted local HTTPS certificate and
+built `/tv/solid.html` entry:
+
+```sh
+PREVIEW_API_ORIGIN=https://viptv.local.test:8445 \
+SOLID_PREVIEW_URL=https://viptv.local.test:8445/tv/solid.html \
+PREVIEW_OUT=/tmp/viptv-solid-check \
+node tests/preview/solid-shoot.mjs TvHome
+```
+
+The test session used a local static HTTPS server on 8445, serving `dist`;
+8445 is not an automatically started project service. The standard local HTTPS
+stack can serve the same built entry on 8443. No production deploy, signed
+package, physical Tizen/Vizio/webOS run or new real-media qualification was
+performed for this migration.
+
+---
+
 # Lightning TV Settings and performance checkpoint — 2026-09-24
 
 The staged Blits rail now opens Settings. Browser fixtures reached the six root
