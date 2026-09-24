@@ -37,6 +37,7 @@ export const tokens = {
   "color.line.link-hover": "rgba(255,255,255,0.80)",
   "color.line.keycap-tv": "rgba(255,255,255,0.28)",
   "color.line.on-accent": "rgba(0,0,0,0.18)",
+  "color.line.selected-tv": "rgba(255,255,255,0.50)",
   "color.fill.tv-unfocused": "rgba(255,255,255,0.12)",
   "color.fill.tv-selected": "rgba(255,255,255,0.16)",
   "color.fill.glass": "rgba(32,32,35,0.94)",
@@ -58,13 +59,17 @@ export const tokens = {
   "color.fill.popover-glass": "rgba(22,22,24,0.97)",
   "color.fill.dot": "#3A3A3F",
   "color.fill.dot-over-art": "rgba(255,255,255,0.45)",
+  "color.fill.tv-switch-off": "rgba(255,255,255,0.20)",
   "color.scrim.sheet": "rgba(0,0,0,0.62)",
   "color.scrim.dialog": "rgba(0,0,0,0.55)",
   "color.scrim.tv-panel": "rgba(0,0,0,0.60)",
   "color.scrim.tv-menu": "rgba(0,0,0,0.55)",
   "color.scrim.tv-fullscreen": "rgba(11,11,12,0.94)",
+  "color.scrim.card-hover": "rgba(0,0,0,0.38)",
+  "color.scrim.card-pressed": "rgba(0,0,0,0.25)",
   "color.skeleton.ground": "#17171A",
   "color.skeleton.card": "#1E1E21",
+  "color.skeleton.shimmer": "rgba(255,255,255,0.04)",
   "font.family.display": [
     "Bricolage Grotesque",
     "Bricolage Grotesque Variable",
@@ -402,6 +407,18 @@ export const tokens = {
     "lineHeight": 1.2,
     "letterSpacing": "-0.01em"
   },
+  "type.desktop.monogram": {
+    "fontFamily": [
+      "Bricolage Grotesque",
+      "Bricolage Grotesque Variable",
+      "Helvetica Neue",
+      "sans-serif"
+    ],
+    "fontSize": "30px",
+    "fontWeight": 800,
+    "lineHeight": 1,
+    "letterSpacing": "-0.02em"
+  },
   "type.tv.screen-title": {
     "fontFamily": [
       "Bricolage Grotesque",
@@ -637,6 +654,8 @@ export const tokens = {
   "layout.phone.nav-bottom": "28px",
   "layout.phone.min-target": "44px",
   "layout.phone.bottom-clearance": "140px",
+  "layout.phone.sheet-top": "150px",
+  "layout.phone.sheet-bottom": "34px",
   "layout.desktop.frame": "1440 x 900 (web 1280 x 800, ultra-wide 2560 x 1080)",
   "layout.desktop.titlebar": "40px",
   "layout.desktop.rail": "84px",
@@ -646,6 +665,7 @@ export const tokens = {
   "layout.desktop.drawer-width": "460px",
   "layout.desktop.popup-width": "340px",
   "layout.desktop.note": "Tiles keep fixed widths; wider windows show more tiles. Never stretch low-res art.",
+  "layout.desktop.popover-width": "260px",
   "layout.tv.frame": "1920 x 1080",
   "layout.tv.safe-x": "96px",
   "layout.tv.safe-y": "54px",
@@ -828,6 +848,23 @@ export const tokens = {
   "size.source-row.phone": "76px",
   "size.source-row.desktop": "68px",
   "size.source-row.tv": "104px",
+  "size.divider.phone": "24px",
+  "size.divider.desktop": "28px",
+  "size.divider.tv": "32px",
+  "size.border.focus": "1.5px",
+  "size.border.strong": "2px",
+  "size.border.tv-strong": "3px",
+  "size.blur.glass": "20px",
+  "size.blur.notice": "16px",
+  "size.blur.badge": "12px",
+  "size.timeline.height": "20px",
+  "size.timeline.knob": "14px",
+  "size.timeline.marker": "12px",
+  "size.timeline.bubble": "26px",
+  "size.timeline.tv-height": "32px",
+  "size.timeline.tv-track-focus": "10px",
+  "size.timeline.tv-knob": "32px",
+  "size.timeline.tv-bubble": "56px",
   "focus.desktop": "0 0 0 2px #0B0B0C, 0 0 0 4px #F4F2EE",
   "focus.desktop-hover-card": "inset 0 0 0 2px #F4F2EE",
   "focus.tv-fill": "background #F4F2EE; color #111113; box-shadow 0 0 0 4px #FFFFFF, 0 24px 60px rgba(0,0,0,0.65); scale 1.05",
@@ -839,6 +876,7 @@ export const tokens = {
   "focus.tv-scale-tile": 1.06,
   "focus.tv-caption-shift": "8px",
   "focus.tv-scale-key": 1.12,
+  "focus.tv-caption-shift-profile": "10px",
   "shadow.nav": "0 12px 32px rgba(0,0,0,0.55)",
   "shadow.popover": "0 20px 60px rgba(0,0,0,0.55)",
   "shadow.toast": "0 12px 30px rgba(0,0,0,0.5)",
@@ -853,7 +891,11 @@ export const tokens = {
   "motion.toast-notice": "5000ms",
   "motion.toast-error": "4000ms",
   "motion.player-notice": "4000ms",
-  "motion.up-next-countdown": "[8] s"
+  "motion.up-next-countdown": "[8] s",
+  "motion.spinner": "800ms",
+  "motion.shimmer": "1400ms",
+  "motion.pressed-scale-row": 0.99,
+  "motion.pressed-scale-card": 0.98
 } as const;
 export type TokenName = keyof typeof tokens;
 export const accentOptions = {

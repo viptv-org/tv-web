@@ -74,11 +74,12 @@ async function ensureServer(kind) {
   const env = { ...process.env };
   for (const name of UNSAFE_ENV) delete env[name];
   if (server.local) env.VITE_VIPTV_LOCAL_MODE = '1';
-  const child = spawn(process.execPath, [join(root, 'node_modules/vite/bin/vite.js'), '--port', String(server.port), '--strictPort', '--host', '127.0.0.1'], {
+  const configArgs = server.local ? ['--config', join(here, 'vite.local.config.mjs')] : [];
+  const child = spawn(process.execPath, [join(root, 'node_modules/vite/bin/vite.js'), ...configArgs, '--port', String(server.port), '--strictPort', '--host', '127.0.0.1'], {
     cwd: root, env, stdio: 'ignore', detached: flag('--keep'),
   });
   if (flag('--keep')) child.unref(); else started.push(child);
-  for (let attempt = 0; attempt < 120; attempt++) {
+  for (let attempt = 0; attempt < 360; attempt++) {
     if (await reachable(server.port)) { await checkServer(kind); return server.port; }
     await new Promise(done => setTimeout(done, 250));
   }

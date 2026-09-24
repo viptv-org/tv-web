@@ -1,1 +1,59 @@
-/* Design-system primitive: spinner. See design/viptv-design-system/components.md. */
+/*
+ * Design-system primitive: spinner (components.md §3 / §9; CmpPhone1, CmpDesk1, CmpTv1, CmpTv3).
+ * A ring: #45454B track, accent arc. P/D 12 (2 px), inside buttons / source rows 14,
+ * TV 18 (3 px), buffering ring 48 (3 px, 0.22 track), TV preparing panel 56 (5 px).
+ * Always aria-hidden; the surrounding element carries role="status" and the words.
+ *
+ * <span class="vx-spinner" aria-hidden="true"></span>
+ * <span class="vx-spinner vx-spinner--buffering" role="status" aria-label="Buffering"></span>
+ */
+[data-layout] .vx-spinner {
+  --vx-spinner: var(--viptv-size-spinner-default);
+  --vx-spinner-stroke: var(--viptv-size-spinner-stroke);
+  --vx-spinner-track: var(--viptv-color-status-spinner-track);
+  display: inline-block;
+  flex: none;
+  box-sizing: border-box;
+  width: var(--vx-spinner);
+  height: var(--vx-spinner);
+  border: var(--vx-spinner-stroke) solid var(--vx-spinner-track);
+  border-top-color: var(--viptv-accent);
+  border-radius: 50%;
+  vertical-align: middle;
+  animation: vx-spin var(--viptv-motion-spinner) linear infinite;
+}
+[data-layout] .vx-spinner--inline {
+  --vx-spinner: var(--viptv-size-spinner-inline);
+}
+[data-layout] .vx-spinner--buffering {
+  --vx-spinner: var(--viptv-size-spinner-buffering);
+  --vx-spinner-stroke: var(--viptv-size-spinner-stroke-tv);
+  --vx-spinner-track: var(--viptv-color-line-strong);
+  display: block;
+}
+.tv-layout .vx-spinner {
+  --vx-spinner: var(--viptv-size-spinner-tv);
+  --vx-spinner-stroke: var(--viptv-size-spinner-stroke-tv);
+}
+.tv-layout .vx-spinner--buffering {
+  --vx-spinner: var(--viptv-size-spinner-buffering);
+  --vx-spinner-track: var(--viptv-color-line-strong);
+}
+.tv-layout .vx-spinner--panel {
+  --vx-spinner: var(--viptv-size-spinner-tv-panel);
+  --vx-spinner-stroke: var(--viptv-size-spinner-stroke-tv-panel);
+}
+@keyframes vx-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+/* Reduced motion: a slower turn still says "working" without a fast spin. */
+@media (prefers-reduced-motion: reduce) {
+  [data-layout] .vx-spinner {
+    animation-duration: calc(var(--viptv-motion-spinner) * 3);
+  }
+}

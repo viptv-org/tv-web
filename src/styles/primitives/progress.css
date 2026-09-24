@@ -1,1 +1,221 @@
-/* Design-system primitive: progress. See design/viptv-design-system/components.md. */
+/*
+ * Design-system primitive: progress (components.md §3 / §10; CmpPhone1/3, CmpDesk1/3, CmpTv1/3).
+ *
+ * Bar: P/D 4 px (--small 3 px), TV 6 px; track white 0.22 (phone draws 0.14), fill accent.
+ *   <span class="vx-progress" role="progressbar" aria-valuenow="58" aria-valuemin="0" aria-valuemax="100">
+ *     <span class="vx-progress__fill" style="width: 58%"></span></span>
+ * Live dot: 8 (TV 12), red. <span class="vx-live-dot" aria-hidden="true"></span>
+ * Timeline (player): played accent + buffered 0.4 + white knob, time labels, preview bubble.
+ */
+[data-layout] .vx-progress {
+  --vx-progress-h: var(--viptv-size-progress-desktop);
+  position: relative;
+  display: block;
+  width: 100%;
+  height: var(--vx-progress-h);
+  overflow: hidden;
+  border-radius: var(--vx-progress-h);
+  background: var(--viptv-color-line-strong);
+}
+[data-layout] .vx-progress__fill {
+  display: block;
+  height: 100%;
+  border-radius: var(--vx-progress-h);
+  background: var(--viptv-accent);
+}
+[data-layout] .vx-progress--small {
+  --vx-progress-h: var(--viptv-size-progress-small);
+}
+@media (max-width: 599px) {
+  [data-layout="responsive"] .vx-progress {
+    --vx-progress-h: var(--viptv-size-progress-phone);
+    background: var(--viptv-color-line-outline);
+  }
+  [data-layout="responsive"] .vx-progress--small {
+    --vx-progress-h: var(--viptv-size-progress-small);
+  }
+}
+.tv-layout .vx-progress {
+  --vx-progress-h: var(--viptv-size-progress-tv);
+}
+
+[data-layout] .vx-live-dot {
+  display: inline-block;
+  flex: none;
+  width: var(--viptv-size-live-dot-default);
+  height: var(--viptv-size-live-dot-default);
+  border-radius: 50%;
+  background: var(--viptv-color-status-live);
+}
+.tv-layout .vx-live-dot {
+  width: var(--viptv-size-live-dot-tv);
+  height: var(--viptv-size-live-dot-tv);
+}
+
+/*
+ * Timeline. <div class="vx-timeline">
+ *   <label class="vx-timeline__bar"><span class="vx-sr-only">Playback position</span>
+ *     <span class="vx-timeline__track"><span class="vx-timeline__buffered" style="width:38%"></span>
+ *       <span class="vx-timeline__played" style="width:24.5%"></span></span>
+ *     <span class="vx-timeline__knob" style="left:24.5%"></span>
+ *     [<span class="vx-timeline__marker" style="left:61%"></span>
+ *      <span class="vx-timeline__bubble" style="left:61%">31:50</span>]
+ *     <input class="vx-timeline__input" type="range" …></label>
+ *   <div class="vx-timeline__times"><span>12:48</span><span>52:10</span></div></div>
+ * TV: the bar is a focusable role="slider" element (.vx-timeline__bar tabindex=0);
+ * focused, the track thickens to 10 and a 32 knob + seek bubble show.
+ */
+[data-layout] .vx-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: var(--viptv-space-1_5);
+}
+[data-layout] .vx-timeline__bar {
+  position: relative;
+  display: block;
+  height: var(--viptv-size-timeline-height);
+  cursor: pointer;
+  outline: none;
+}
+[data-layout] .vx-timeline__track {
+  position: absolute;
+  top: calc((var(--viptv-size-timeline-height) - var(--viptv-size-progress-desktop)) / 2);
+  right: 0;
+  left: 0;
+  height: var(--viptv-size-progress-desktop);
+  overflow: hidden;
+  border-radius: var(--viptv-size-progress-desktop);
+  background: var(--viptv-color-line-strong);
+}
+[data-layout] .vx-timeline__buffered,
+[data-layout] .vx-timeline__played {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+}
+[data-layout] .vx-timeline__buffered {
+  background: var(--viptv-color-fill-buffered);
+}
+[data-layout] .vx-timeline__played {
+  border-radius: var(--viptv-size-progress-desktop);
+  background: var(--viptv-accent);
+}
+[data-layout] .vx-timeline__knob {
+  position: absolute;
+  top: calc((var(--viptv-size-timeline-height) - var(--viptv-size-timeline-knob)) / 2);
+  width: var(--viptv-size-timeline-knob);
+  height: var(--viptv-size-timeline-knob);
+  margin-left: calc(var(--viptv-size-timeline-knob) / -2);
+  border-radius: 50%;
+  background: var(--viptv-color-text-primary);
+  pointer-events: none;
+}
+[data-layout] .vx-timeline__marker {
+  position: absolute;
+  top: calc((var(--viptv-size-timeline-height) - var(--viptv-size-timeline-marker)) / 2);
+  width: var(--viptv-size-spinner-stroke);
+  height: var(--viptv-size-timeline-marker);
+  margin-left: calc(var(--viptv-size-spinner-stroke) / -2);
+  border-radius: 1px;
+  background: var(--viptv-color-text-primary);
+  pointer-events: none;
+}
+[data-layout] .vx-timeline__bubble {
+  position: absolute;
+  bottom: calc(var(--viptv-size-timeline-height) + var(--viptv-space-1));
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+  height: var(--viptv-size-timeline-bubble);
+  padding: 0 calc(var(--viptv-space-2) + 1px);
+  border: 1px solid var(--viptv-color-line-hairline);
+  border-radius: calc(var(--viptv-size-timeline-bubble) / 2);
+  background: var(--viptv-color-surface-3);
+  color: var(--viptv-color-text-primary);
+  font-size: var(--viptv-type-desktop-caption-size);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+[data-layout] .vx-timeline__input {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+@media (min-width: 600px) {
+  [data-layout="responsive"] .vx-timeline__input:focus-visible ~ .vx-timeline__knob,
+  [data-layout="responsive"] .vx-timeline__bar:focus-within .vx-timeline__knob {
+    box-shadow: var(--viptv-focus-desktop);
+  }
+}
+[data-layout] .vx-timeline__times {
+  display: flex;
+  justify-content: space-between;
+  color: var(--viptv-color-text-secondary);
+  font-size: var(--viptv-type-desktop-meta-size);
+  font-variant-numeric: tabular-nums;
+}
+.tv-layout .vx-timeline {
+  gap: var(--viptv-space-2);
+}
+.tv-layout .vx-timeline__bar {
+  height: var(--viptv-size-timeline-tv-height);
+}
+.tv-layout .vx-timeline__track {
+  top: calc((var(--viptv-size-timeline-tv-height) - var(--viptv-size-progress-tv)) / 2);
+  height: var(--viptv-size-progress-tv);
+  border-radius: var(--viptv-size-progress-tv);
+}
+.tv-layout .vx-timeline__played {
+  border-radius: 0;
+}
+.tv-layout .vx-timeline__knob,
+.tv-layout .vx-timeline__bubble {
+  display: none;
+}
+.tv-layout .vx-timeline__bar:focus .vx-timeline__track {
+  top: calc((var(--viptv-size-timeline-tv-height) - var(--viptv-size-timeline-tv-track-focus)) / 2);
+  height: var(--viptv-size-timeline-tv-track-focus);
+  border-radius: var(--viptv-size-timeline-tv-track-focus);
+}
+.tv-layout .vx-timeline__bar:focus .vx-timeline__knob {
+  display: block;
+  top: calc((var(--viptv-size-timeline-tv-height) - var(--viptv-size-timeline-tv-knob)) / 2);
+  width: var(--viptv-size-timeline-tv-knob);
+  height: var(--viptv-size-timeline-tv-knob);
+  margin-left: calc(var(--viptv-size-timeline-tv-knob) / -2);
+  box-shadow: var(--viptv-focus-tv-shadow);
+}
+.tv-layout .vx-timeline__bar:focus .vx-timeline__bubble {
+  display: flex;
+  bottom: calc(var(--viptv-size-timeline-tv-height) + var(--viptv-space-3_5));
+  height: var(--viptv-size-timeline-tv-bubble);
+  padding: 0 var(--viptv-space-5_5);
+  border: var(--viptv-size-border-strong) solid var(--viptv-color-line-outline);
+  border-radius: calc(var(--viptv-size-timeline-tv-bubble) / 2);
+  background: var(--viptv-color-surface-1);
+  box-shadow: var(--viptv-shadow-popup);
+  font-size: var(--viptv-type-tv-row-size);
+}
+/* TV seek preview segment between the played edge and the target. */
+.tv-layout .vx-timeline__seek {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: var(--viptv-color-line-selected-tv);
+}
+.tv-layout .vx-timeline__times {
+  font-size: var(--viptv-type-tv-meta-size);
+}
+.tv-layout .vx-timeline__times > :first-child {
+  color: var(--viptv-color-text-primary);
+  font-weight: 600;
+}

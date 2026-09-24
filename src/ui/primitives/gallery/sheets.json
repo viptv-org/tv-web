@@ -1,0 +1,2303 @@
+{
+ "CmpPhone1": {
+  "width": 1760,
+  "height": 3462,
+  "title": "Components — Phone",
+  "subtitle": "Buttons, chips, badges, inputs and selection at 1:1. No focus ring on phone; pressed replaces hover.",
+  "frame": {
+   "inner": "position: absolute; inset: 0; box-sizing: border-box; padding: 64px; display: flex; flex-direction: column; gap: 48px;",
+   "header": "display: flex; flex-direction: column; gap: 12px;",
+   "h1": "margin: 0; font-family: var(--viptv-font-family-display); font-size: 48px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.1;",
+   "sub": "margin: 0; font-size: 16px; color: #B6B4AF;",
+   "sections": "display: flex; flex-direction: column; gap: 72px;",
+   "section": "display: flex; flex-direction: column; gap: 24px;",
+   "h2": "margin: 0; font-family: var(--viptv-font-family-display); font-size: 28px; font-weight: 700; letter-spacing: -0.01em; line-height: 1.2;",
+   "desc": "margin: 8px 0 0; font-size: 14px; line-height: 1.5; color: #B6B4AF; max-width: 1632px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;",
+   "rows": "display: flex; flex-direction: column; gap: 28px;",
+   "caption": "font-size: 12px; line-height: 16px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: #8F8D89; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"
+  },
+  "sections": [
+   {
+    "title": "Buttons",
+    "desc": "One accent primary per screen. Pill rule: radius = height ÷ 2. Pressed scales to 0.97.",
+    "rows": [
+     {
+      "style": "display: flex; gap: 28px; align-items: flex-start;",
+      "figures": [
+       {
+        "caption": "Primary · default",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 250px; flex-shrink: 0;",
+        "stage": "position: relative; width: 250px; height: 96px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Primary · pressed",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 250px; flex-shrink: 0;",
+        "stage": "position: relative; width: 250px; height: 96px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Primary · disabled",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 250px; flex-shrink: 0;",
+        "stage": "position: relative; width: 250px; height: 96px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Primary · loading",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 250px; flex-shrink: 0;",
+        "stage": "position: relative; width: 250px; height: 96px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Primary 58 · detail",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 250px; flex-shrink: 0;",
+        "stage": "position: relative; width: 250px; height: 96px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       }
+      ]
+     },
+     {
+      "style": "display: flex; gap: 28px; align-items: flex-start;",
+      "figures": [
+       {
+        "caption": "Secondary · default",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 250px; flex-shrink: 0;",
+        "stage": "position: relative; width: 250px; height: 96px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Secondary · pressed",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 250px; flex-shrink: 0;",
+        "stage": "position: relative; width: 250px; height: 96px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Secondary · disabled",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 250px; flex-shrink: 0;",
+        "stage": "position: relative; width: 250px; height: 96px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Light pill · default",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 250px; flex-shrink: 0;",
+        "stage": "position: relative; width: 250px; height: 96px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Light pill · pressed",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 250px; flex-shrink: 0;",
+        "stage": "position: relative; width: 250px; height: 96px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       }
+      ]
+     },
+     {
+      "style": "display: flex; gap: 28px; align-items: flex-start;",
+      "figures": [
+       {
+        "caption": "Outline dropdown · default",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 250px; flex-shrink: 0;",
+        "stage": "position: relative; width: 250px; height: 96px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Outline dropdown · pressed",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 250px; flex-shrink: 0;",
+        "stage": "position: relative; width: 250px; height: 96px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Round icon 54 · states",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 250px; flex-shrink: 0;",
+        "stage": "position: relative; width: 250px; height: 96px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Round icon 58 · detail",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 250px; flex-shrink: 0;",
+        "stage": "position: relative; width: 250px; height: 96px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Text link · shelf / inline",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 250px; flex-shrink: 0;",
+        "stage": "position: relative; width: 250px; height: 96px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 24px; overflow: hidden;"
+       }
+      ]
+     },
+     {
+      "style": "display: flex; gap: 28px; align-items: flex-start;",
+      "figures": [
+       {
+        "caption": "Text link · pressed",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 250px; flex-shrink: 0;",
+        "stage": "position: relative; width: 250px; height: 96px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Destructive · default",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 250px; flex-shrink: 0;",
+        "stage": "position: relative; width: 250px; height: 96px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Destructive · pressed",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 250px; flex-shrink: 0;",
+        "stage": "position: relative; width: 250px; height: 96px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "title": "Chips and segmented controls",
+    "desc": "Selected chip: surface-3 + 1px 0.22 border. Selected segment: off-white fill.",
+    "rows": [
+     {
+      "style": "display: flex; gap: 28px; align-items: flex-start;",
+      "figures": [
+       {
+        "caption": "Filter chip · unselected",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 200px; flex-shrink: 0;",
+        "stage": "position: relative; width: 200px; height: 90px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Filter chip · selected",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 200px; flex-shrink: 0;",
+        "stage": "position: relative; width: 200px; height: 90px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Filter chip · pressed",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 200px; flex-shrink: 0;",
+        "stage": "position: relative; width: 200px; height: 90px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Filter chip · disabled",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 200px; flex-shrink: 0;",
+        "stage": "position: relative; width: 200px; height: 90px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Dropdown chip",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 240px; flex-shrink: 0;",
+        "stage": "position: relative; width: 240px; height: 90px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Dropdown chip · set",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 260px; flex-shrink: 0;",
+        "stage": "position: relative; width: 260px; height: 90px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       }
+      ]
+     },
+     {
+      "style": "display: flex; gap: 28px; align-items: flex-start;",
+      "figures": [
+       {
+        "caption": "Required chip",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 240px; flex-shrink: 0;",
+        "stage": "position: relative; width: 240px; height: 90px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Quality chips · counts",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 330px; flex-shrink: 0;",
+        "stage": "position: relative; width: 330px; height: 90px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Segmented · 4 (44 h)",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 390px; flex-shrink: 0;",
+        "stage": "position: relative; width: 390px; height: 90px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Segmented · 2",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 390px; flex-shrink: 0;",
+        "stage": "position: relative; width: 390px; height: 90px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       }
+      ]
+     },
+     {
+      "style": "display: flex; gap: 28px; align-items: flex-start;",
+      "figures": [
+       {
+        "caption": "Group divider",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 300px; flex-shrink: 0;",
+        "stage": "position: relative; width: 300px; height: 90px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "title": "Badges and indicators",
+    "desc": "Accent only for progress, spinners and the best-match label. Red only for live.",
+    "rows": [
+     {
+      "style": "display: flex; gap: 28px; align-items: flex-start;",
+      "figures": [
+       {
+        "caption": "Quality badge",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 280px; flex-shrink: 0;",
+        "stage": "position: relative; width: 280px; height: 80px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "LIVE · glass / row",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 220px; flex-shrink: 0;",
+        "stage": "position: relative; width: 220px; height: 80px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Featured · glass",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 160px; flex-shrink: 0;",
+        "stage": "position: relative; width: 160px; height: 80px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "UP NEXT",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 150px; flex-shrink: 0;",
+        "stage": "position: relative; width: 150px; height: 80px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Best match",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 150px; flex-shrink: 0;",
+        "stage": "position: relative; width: 150px; height: 80px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Progress 4 px / 3 px",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 220px; flex-shrink: 0;",
+        "stage": "position: relative; width: 220px; height: 80px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Live dot",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 110px; flex-shrink: 0;",
+        "stage": "position: relative; width: 110px; height: 80px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Carousel dots",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 130px; flex-shrink: 0;",
+        "stage": "position: relative; width: 130px; height: 80px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       }
+      ]
+     },
+     {
+      "style": "display: flex; gap: 28px; align-items: flex-start;",
+      "figures": [
+       {
+        "caption": "Spinner 12",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 110px; flex-shrink: 0;",
+        "stage": "position: relative; width: 110px; height: 80px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Buffering ring 48",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 130px; flex-shrink: 0;",
+        "stage": "position: relative; width: 130px; height: 80px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #000; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "title": "Inputs",
+    "desc": "Fields are surface-1 with a hairline; focus raises the border to 0.22 and shows the accent caret.",
+    "rows": [
+     {
+      "style": "display: flex; gap: 28px; align-items: flex-start;",
+      "figures": [
+       {
+        "caption": "Text field · default",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 340px; flex-shrink: 0;",
+        "stage": "position: relative; width: 340px; height: 118px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Text field · focus",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 340px; flex-shrink: 0;",
+        "stage": "position: relative; width: 340px; height: 118px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Text field · error",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 340px; flex-shrink: 0;",
+        "stage": "position: relative; width: 340px; height: 140px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Text field · disabled",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 340px; flex-shrink: 0;",
+        "stage": "position: relative; width: 340px; height: 118px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       }
+      ]
+     },
+     {
+      "style": "display: flex; gap: 28px; align-items: flex-start;",
+      "figures": [
+       {
+        "caption": "Password",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 340px; flex-shrink: 0;",
+        "stage": "position: relative; width: 340px; height: 118px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "PIN · entering",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 340px; flex-shrink: 0;",
+        "stage": "position: relative; width: 340px; height: 118px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "PIN · error",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 340px; flex-shrink: 0;",
+        "stage": "position: relative; width: 340px; height: 140px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "URL · prefilled",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 340px; flex-shrink: 0;",
+        "stage": "position: relative; width: 340px; height: 118px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       }
+      ]
+     },
+     {
+      "style": "display: flex; gap: 28px; align-items: flex-start;",
+      "figures": [
+       {
+        "caption": "URL · error",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 340px; flex-shrink: 0;",
+        "stage": "position: relative; width: 340px; height: 140px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Search · docked, empty",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 360px; flex-shrink: 0;",
+        "stage": "position: relative; width: 360px; height: 100px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Search · typing",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 360px; flex-shrink: 0;",
+        "stage": "position: relative; width: 360px; height: 100px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "title": "Selection and settings rows",
+    "desc": "Every choice list marks the current value with a check and “Current”.",
+    "rows": [
+     {
+      "style": "display: flex; gap: 28px; align-items: flex-start;",
+      "figures": [
+       {
+        "caption": "Toggle · on / off / disabled",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 240px; flex-shrink: 0;",
+        "stage": "position: relative; width: 240px; height: 80px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Choice list · Current marker",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 390px; flex-shrink: 0;",
+        "stage": "position: relative; width: 390px; height: 260px; box-sizing: border-box; padding: 0px; border-radius: 16px; background: #161618; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Choice rows · pressed / unavailable",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 390px; flex-shrink: 0;",
+        "stage": "position: relative; width: 390px; height: 150px; box-sizing: border-box; padding: 0px; border-radius: 16px; background: #161618; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Radio rows · settings choice",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 390px; flex-shrink: 0;",
+        "stage": "position: relative; width: 390px; height: 210px; box-sizing: border-box; padding: 0px; border-radius: 16px; background: #161618; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       }
+      ]
+     },
+     {
+      "style": "display: flex; gap: 28px; align-items: flex-start;",
+      "figures": [
+       {
+        "caption": "Settings group",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 390px; flex-shrink: 0;",
+        "stage": "position: relative; width: 390px; height: 330px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Settings row · pressed / destructive",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 390px; flex-shrink: 0;",
+        "stage": "position: relative; width: 390px; height: 160px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ },
+ "CmpPhone2": {
+  "width": 1760,
+  "height": 1986,
+  "title": "Components — Phone",
+  "subtitle": "Cards, tiles and navigation. Channel logos are always text monograms.",
+  "frame": {
+   "inner": "position: absolute; inset: 0; box-sizing: border-box; padding: 64px; display: flex; flex-direction: column; gap: 48px;",
+   "header": "display: flex; flex-direction: column; gap: 12px;",
+   "h1": "margin: 0; font-family: var(--viptv-font-family-display); font-size: 48px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.1;",
+   "sub": "margin: 0; font-size: 16px; color: #B6B4AF;",
+   "sections": "display: flex; flex-direction: column; gap: 72px;",
+   "section": "display: flex; flex-direction: column; gap: 24px;",
+   "h2": "margin: 0; font-family: var(--viptv-font-family-display); font-size: 28px; font-weight: 700; letter-spacing: -0.01em; line-height: 1.2;",
+   "desc": "margin: 8px 0 0; font-size: 14px; line-height: 1.5; color: #B6B4AF; max-width: 1632px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;",
+   "rows": "display: flex; flex-direction: column; gap: 28px;",
+   "caption": "font-size: 12px; line-height: 16px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: #8F8D89; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"
+  },
+  "sections": [
+   {
+    "title": "Cards and tiles",
+    "desc": "Fixed sizes: continue 292 × 96, live-now 200 wide, poster grid 3 columns at 4:5, avatars rounded squares (20%).",
+    "rows": [
+     {
+      "style": "display: flex; gap: 28px; align-items: flex-start;",
+      "figures": [
+       {
+        "caption": "Poster · art",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 160px; flex-shrink: 0;",
+        "stage": "position: relative; width: 160px; height: 230px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Poster · missing art",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 160px; flex-shrink: 0;",
+        "stage": "position: relative; width: 160px; height: 230px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Continue card · default",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 330px; flex-shrink: 0;",
+        "stage": "position: relative; width: 330px; height: 130px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Continue card · pressed",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 330px; flex-shrink: 0;",
+        "stage": "position: relative; width: 330px; height: 130px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Live-now card",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 240px; flex-shrink: 0;",
+        "stage": "position: relative; width: 240px; height: 150px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       }
+      ]
+     },
+     {
+      "style": "display: flex; gap: 28px; align-items: flex-start;",
+      "figures": [
+       {
+        "caption": "Channel row · default",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 400px; flex-shrink: 0;",
+        "stage": "position: relative; width: 400px; height: 120px; box-sizing: border-box; padding: 0px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Channel row · pressed",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 400px; flex-shrink: 0;",
+        "stage": "position: relative; width: 400px; height: 120px; box-sizing: border-box; padding: 0px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Source row · best match",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 390px; flex-shrink: 0;",
+        "stage": "position: relative; width: 390px; height: 120px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #161618; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       }
+      ]
+     },
+     {
+      "style": "display: flex; gap: 28px; align-items: flex-start;",
+      "figures": [
+       {
+        "caption": "Source row · default",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 390px; flex-shrink: 0;",
+        "stage": "position: relative; width: 390px; height: 120px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #161618; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Source row · pressed",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 390px; flex-shrink: 0;",
+        "stage": "position: relative; width: 390px; height: 120px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #161618; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Source row · opening",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 390px; flex-shrink: 0;",
+        "stage": "position: relative; width: 390px; height: 120px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #161618; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Profile tile · image / letter",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 300px; flex-shrink: 0;",
+        "stage": "position: relative; width: 300px; height: 190px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       }
+      ]
+     },
+     {
+      "style": "display: flex; gap: 28px; align-items: flex-start;",
+      "figures": [
+       {
+        "caption": "Profile tile · initials / pressed",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 300px; flex-shrink: 0;",
+        "stage": "position: relative; width: 300px; height: 190px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Add profile · default / disabled (12)",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 300px; flex-shrink: 0;",
+        "stage": "position: relative; width: 300px; height: 190px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Avatar tile · default / selected",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 260px; flex-shrink: 0;",
+        "stage": "position: relative; width: 260px; height: 150px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Missing-art placeholder",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 160px; flex-shrink: 0;",
+        "stage": "position: relative; width: 160px; height: 180px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "title": "Navigation",
+    "desc": "Floating 64 px glass nav with a separate search button, 28 px above the edge. Tab screens only.",
+    "rows": [
+     {
+      "style": "display: flex; gap: 28px; align-items: flex-start;",
+      "figures": [
+       {
+        "caption": "Bottom nav · Home current",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 392px; flex-shrink: 0;",
+        "stage": "position: relative; width: 392px; height: 132px; box-sizing: border-box; padding: 0px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Bottom nav · Discover current",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 392px; flex-shrink: 0;",
+        "stage": "position: relative; width: 392px; height: 132px; box-sizing: border-box; padding: 0px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Bottom nav · Live current",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 392px; flex-shrink: 0;",
+        "stage": "position: relative; width: 392px; height: 132px; box-sizing: border-box; padding: 0px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       }
+      ]
+     },
+     {
+      "style": "display: flex; gap: 28px; align-items: flex-start;",
+      "figures": [
+       {
+        "caption": "Bottom nav · My List current",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 392px; flex-shrink: 0;",
+        "stage": "position: relative; width: 392px; height: 132px; box-sizing: border-box; padding: 0px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Header · wordmark + avatar",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 392px; flex-shrink: 0;",
+        "stage": "position: relative; width: 392px; height: 80px; box-sizing: border-box; padding: 0px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Header · screen title",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 392px; flex-shrink: 0;",
+        "stage": "position: relative; width: 392px; height: 80px; box-sizing: border-box; padding: 0px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       }
+      ]
+     },
+     {
+      "style": "display: flex; gap: 28px; align-items: flex-start;",
+      "figures": [
+       {
+        "caption": "Header · back + sub-page",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 392px; flex-shrink: 0;",
+        "stage": "position: relative; width: 392px; height: 80px; box-sizing: border-box; padding: 0px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Header · glass back over art",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 392px; flex-shrink: 0;",
+        "stage": "position: relative; width: 392px; height: 122px; box-sizing: border-box; padding: 0px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ },
+ "CmpPhone3": {
+  "width": 1760,
+  "height": 4410,
+  "title": "Components — Phone",
+  "subtitle": "Overlays, feedback and player controls. Dialogs are bottom sheets at auto height; actions stacked full width.",
+  "frame": {
+   "inner": "position: absolute; inset: 0; box-sizing: border-box; padding: 64px; display: flex; flex-direction: column; gap: 48px;",
+   "header": "display: flex; flex-direction: column; gap: 12px;",
+   "h1": "margin: 0; font-family: var(--viptv-font-family-display); font-size: 48px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.1;",
+   "sub": "margin: 0; font-size: 16px; color: #B6B4AF;",
+   "sections": "display: flex; flex-direction: column; gap: 72px;",
+   "section": "display: flex; flex-direction: column; gap: 24px;",
+   "h2": "margin: 0; font-family: var(--viptv-font-family-display); font-size: 28px; font-weight: 700; letter-spacing: -0.01em; line-height: 1.2;",
+   "desc": "margin: 8px 0 0; font-size: 14px; line-height: 1.5; color: #B6B4AF; max-width: 1632px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;",
+   "rows": "display: flex; flex-direction: column; gap: 28px;",
+   "caption": "font-size: 12px; line-height: 16px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: #8F8D89; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"
+  },
+  "sections": [
+   {
+    "title": "Overlays",
+    "desc": "Sheets dim the screen with 0.62 black. Destructive actions use danger text on surface-3; Cancel stays neutral.",
+    "rows": [
+     {
+      "style": "display: flex; gap: 28px; align-items: flex-start;",
+      "figures": [
+       {
+        "caption": "List sheet",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 392px; flex-shrink: 0;",
+        "stage": "position: relative; width: 392px; height: 702px; box-sizing: border-box; padding: 0px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Dialog sheet · 1 choice",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 392px; flex-shrink: 0;",
+        "stage": "position: relative; width: 392px; height: 702px; box-sizing: border-box; padding: 0px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Dialog sheet · 2 choices",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 392px; flex-shrink: 0;",
+        "stage": "position: relative; width: 392px; height: 702px; box-sizing: border-box; padding: 0px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       }
+      ]
+     },
+     {
+      "style": "display: flex; gap: 28px; align-items: flex-start;",
+      "figures": [
+       {
+        "caption": "Dialog sheet · 3 choices",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 392px; flex-shrink: 0;",
+        "stage": "position: relative; width: 392px; height: 702px; box-sizing: border-box; padding: 0px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Dialog sheet · 7 choices",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 392px; flex-shrink: 0;",
+        "stage": "position: relative; width: 392px; height: 762px; box-sizing: border-box; padding: 0px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Dialog sheet · destructive",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 392px; flex-shrink: 0;",
+        "stage": "position: relative; width: 392px; height: 702px; box-sizing: border-box; padding: 0px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       }
+      ]
+     },
+     {
+      "style": "display: flex; gap: 28px; align-items: flex-start;",
+      "figures": [
+       {
+        "caption": "Dialog sheet · choice list",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 392px; flex-shrink: 0;",
+        "stage": "position: relative; width: 392px; height: 702px; box-sizing: border-box; padding: 0px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "title": "Feedback",
+    "desc": "Toasts sit above the nav. Loading is always a layout skeleton, never a “Loading…” screen.",
+    "rows": [
+     {
+      "style": "display: flex; gap: 28px; align-items: flex-start;",
+      "figures": [
+       {
+        "caption": "Error toast",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 390px; flex-shrink: 0;",
+        "stage": "position: relative; width: 390px; height: 100px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Notice toast · 5 s",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 300px; flex-shrink: 0;",
+        "stage": "position: relative; width: 300px; height: 100px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Player notice pill · 4 s",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 332px; flex-shrink: 0;",
+        "stage": "position: relative; width: 332px; height: 82px; box-sizing: border-box; padding: 0px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Preparing playback",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 252px; flex-shrink: 0;",
+        "stage": "position: relative; width: 252px; height: 82px; box-sizing: border-box; padding: 0px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       }
+      ]
+     },
+     {
+      "style": "display: flex; gap: 28px; align-items: flex-start;",
+      "figures": [
+       {
+        "caption": "Backend banner",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 390px; flex-shrink: 0;",
+        "stage": "position: relative; width: 390px; height: 250px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Inline error",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 300px; flex-shrink: 0;",
+        "stage": "position: relative; width: 300px; height: 80px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Status line",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 240px; flex-shrink: 0;",
+        "stage": "position: relative; width: 240px; height: 80px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Empty state",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 390px; flex-shrink: 0;",
+        "stage": "position: relative; width: 390px; height: 220px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       }
+      ]
+     },
+     {
+      "style": "display: flex; gap: 28px; align-items: flex-start;",
+      "figures": [
+       {
+        "caption": "Loading more",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 260px; flex-shrink: 0;",
+        "stage": "position: relative; width: 260px; height: 80px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Skeleton · featured card",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 360px; flex-shrink: 0;",
+        "stage": "position: relative; width: 360px; height: 360px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Skeleton · poster / continue",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 460px; flex-shrink: 0;",
+        "stage": "position: relative; width: 460px; height: 210px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Skeleton · list row",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 400px; flex-shrink: 0;",
+        "stage": "position: relative; width: 400px; height: 110px; box-sizing: border-box; padding: 0px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "title": "Player controls",
+    "desc": "Portrait player: transport row, then tools row. Play/Pause is the accent primary. Volume is hidden on phone.",
+    "rows": [
+     {
+      "style": "display: flex; gap: 28px; align-items: flex-start;",
+      "figures": [
+       {
+        "caption": "Timeline + time labels",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 390px; flex-shrink: 0;",
+        "stage": "position: relative; width: 390px; height: 90px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #000; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Transport row",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 390px; flex-shrink: 0;",
+        "stage": "position: relative; width: 390px; height: 100px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #000; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Transport · playing / pressed",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 220px; flex-shrink: 0;",
+        "stage": "position: relative; width: 220px; height: 100px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #000; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Tools row",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 390px; flex-shrink: 0;",
+        "stage": "position: relative; width: 390px; height: 90px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #000; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       }
+      ]
+     },
+     {
+      "style": "display: flex; gap: 28px; align-items: flex-start;",
+      "figures": [
+       {
+        "caption": "Track popup · Subtitles",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 390px; flex-shrink: 0;",
+        "stage": "position: relative; width: 390px; height: 300px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #000; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Track popup · empty",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 390px; flex-shrink: 0;",
+        "stage": "position: relative; width: 390px; height: 140px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #000; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Playback info",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 390px; flex-shrink: 0;",
+        "stage": "position: relative; width: 390px; height: 380px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #000; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ },
+ "CmpDesk1": {
+  "width": 2400,
+  "height": 2970,
+  "title": "Components — Desktop & web",
+  "subtitle": "Every control in default, hover, pressed, keyboard focus and disabled. Proposed :focus-visible = 2 px off-white ring with a 2 px ground gap — never accent.",
+  "frame": {
+   "inner": "position: absolute; inset: 0; box-sizing: border-box; padding: 64px; display: flex; flex-direction: column; gap: 48px;",
+   "header": "display: flex; flex-direction: column; gap: 12px;",
+   "h1": "margin: 0; font-family: var(--viptv-font-family-display); font-size: 48px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.1;",
+   "sub": "margin: 0; font-size: 16px; color: #B6B4AF;",
+   "sections": "display: flex; flex-direction: column; gap: 72px;",
+   "section": "display: flex; flex-direction: column; gap: 24px;",
+   "h2": "margin: 0; font-family: var(--viptv-font-family-display); font-size: 28px; font-weight: 700; letter-spacing: -0.01em; line-height: 1.2;",
+   "desc": "margin: 8px 0 0; font-size: 14px; line-height: 1.5; color: #B6B4AF; max-width: 2272px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;",
+   "rows": "display: flex; flex-direction: column; gap: 32px;",
+   "caption": "font-size: 12px; line-height: 16px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: #8F8D89; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"
+  },
+  "sections": [
+   {
+    "title": "Buttons",
+    "desc": "Primary 16/700; others 16/600; 48 tall. Hover lifts surface-3 to #34343A; accent brightens 8%.",
+    "rows": [
+     {
+      "style": "display: flex; gap: 32px; align-items: flex-start;",
+      "figures": [
+       {
+        "caption": "Primary · default",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 200px; flex-shrink: 0;",
+        "stage": "position: relative; width: 200px; height: 90px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Primary · hover",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 200px; flex-shrink: 0;",
+        "stage": "position: relative; width: 200px; height: 90px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Primary · pressed",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 200px; flex-shrink: 0;",
+        "stage": "position: relative; width: 200px; height: 90px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Primary · keyboard focus",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 200px; flex-shrink: 0;",
+        "stage": "position: relative; width: 200px; height: 90px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Primary · disabled",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 200px; flex-shrink: 0;",
+        "stage": "position: relative; width: 200px; height: 90px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Primary · loading",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 200px; flex-shrink: 0;",
+        "stage": "position: relative; width: 200px; height: 90px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Secondary · default",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 200px; flex-shrink: 0;",
+        "stage": "position: relative; width: 200px; height: 90px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Secondary · hover",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 200px; flex-shrink: 0;",
+        "stage": "position: relative; width: 200px; height: 90px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Secondary · pressed",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 200px; flex-shrink: 0;",
+        "stage": "position: relative; width: 200px; height: 90px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       }
+      ]
+     },
+     {
+      "style": "display: flex; gap: 32px; align-items: flex-start;",
+      "figures": [
+       {
+        "caption": "Secondary · keyboard focus",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 200px; flex-shrink: 0;",
+        "stage": "position: relative; width: 200px; height: 90px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Secondary · disabled",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 200px; flex-shrink: 0;",
+        "stage": "position: relative; width: 200px; height: 90px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Light pill · default",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 220px; flex-shrink: 0;",
+        "stage": "position: relative; width: 220px; height: 90px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Light pill · hover",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 220px; flex-shrink: 0;",
+        "stage": "position: relative; width: 220px; height: 90px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Light pill · pressed",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 220px; flex-shrink: 0;",
+        "stage": "position: relative; width: 220px; height: 90px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Light pill · keyboard focus",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 220px; flex-shrink: 0;",
+        "stage": "position: relative; width: 220px; height: 90px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Outline dropdown · default",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 200px; flex-shrink: 0;",
+        "stage": "position: relative; width: 200px; height: 90px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Outline dropdown · hover",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 200px; flex-shrink: 0;",
+        "stage": "position: relative; width: 200px; height: 90px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Outline dropdown · keyboard focus",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 200px; flex-shrink: 0;",
+        "stage": "position: relative; width: 200px; height: 90px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       }
+      ]
+     },
+     {
+      "style": "display: flex; gap: 32px; align-items: flex-start;",
+      "figures": [
+       {
+        "caption": "Round icon 48 · default",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 150px; flex-shrink: 0;",
+        "stage": "position: relative; width: 150px; height: 90px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Round icon 48 · hover",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 150px; flex-shrink: 0;",
+        "stage": "position: relative; width: 150px; height: 90px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Round icon 48 · pressed",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 150px; flex-shrink: 0;",
+        "stage": "position: relative; width: 150px; height: 90px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Round icon 48 · keyboard focus",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 150px; flex-shrink: 0;",
+        "stage": "position: relative; width: 150px; height: 90px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Round icon 48 · disabled",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 150px; flex-shrink: 0;",
+        "stage": "position: relative; width: 150px; height: 90px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Text link · default",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 300px; flex-shrink: 0;",
+        "stage": "position: relative; width: 300px; height: 90px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Text link · hover",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 300px; flex-shrink: 0;",
+        "stage": "position: relative; width: 300px; height: 90px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Text link · keyboard focus",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 300px; flex-shrink: 0;",
+        "stage": "position: relative; width: 300px; height: 90px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Destructive · default",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 200px; flex-shrink: 0;",
+        "stage": "position: relative; width: 200px; height: 90px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       }
+      ]
+     },
+     {
+      "style": "display: flex; gap: 32px; align-items: flex-start;",
+      "figures": [
+       {
+        "caption": "Destructive · hover",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 200px; flex-shrink: 0;",
+        "stage": "position: relative; width: 200px; height: 90px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Destructive · keyboard focus",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 200px; flex-shrink: 0;",
+        "stage": "position: relative; width: 200px; height: 90px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Split button · default",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 220px; flex-shrink: 0;",
+        "stage": "position: relative; width: 220px; height: 90px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Split button · hover",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 220px; flex-shrink: 0;",
+        "stage": "position: relative; width: 220px; height: 90px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Split button · source hover",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 220px; flex-shrink: 0;",
+        "stage": "position: relative; width: 220px; height: 90px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Split button · focus",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 220px; flex-shrink: 0;",
+        "stage": "position: relative; width: 220px; height: 90px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "title": "Chips and segmented controls",
+    "desc": "Chips 40 tall (drawer segments 36). Catalog chips always read “Addon · Catalog”.",
+    "rows": [
+     {
+      "style": "display: flex; gap: 32px; align-items: flex-start;",
+      "figures": [
+       {
+        "caption": "Chip · unselected",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 180px; flex-shrink: 0;",
+        "stage": "position: relative; width: 180px; height: 80px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Chip · selected",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 180px; flex-shrink: 0;",
+        "stage": "position: relative; width: 180px; height: 80px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Chip · hover",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 180px; flex-shrink: 0;",
+        "stage": "position: relative; width: 180px; height: 80px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Chip · focus",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 180px; flex-shrink: 0;",
+        "stage": "position: relative; width: 180px; height: 80px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Chip · disabled",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 180px; flex-shrink: 0;",
+        "stage": "position: relative; width: 180px; height: 80px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Dropdown chip · Any",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 230px; flex-shrink: 0;",
+        "stage": "position: relative; width: 230px; height: 80px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Dropdown chip · set",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 250px; flex-shrink: 0;",
+        "stage": "position: relative; width: 250px; height: 80px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Required chip",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 230px; flex-shrink: 0;",
+        "stage": "position: relative; width: 230px; height: 80px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Catalog chip",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 250px; flex-shrink: 0;",
+        "stage": "position: relative; width: 250px; height: 80px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       }
+      ]
+     },
+     {
+      "style": "display: flex; gap: 32px; align-items: flex-start;",
+      "figures": [
+       {
+        "caption": "Quality chips · counts",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 330px; flex-shrink: 0;",
+        "stage": "position: relative; width: 330px; height: 80px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Segmented 40 h",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 420px; flex-shrink: 0;",
+        "stage": "position: relative; width: 420px; height: 80px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Segmented · focus on item",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 420px; flex-shrink: 0;",
+        "stage": "position: relative; width: 420px; height: 80px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Segmented 36 h (drawer)",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 330px; flex-shrink: 0;",
+        "stage": "position: relative; width: 330px; height: 80px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #161618; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Group divider",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 380px; flex-shrink: 0;",
+        "stage": "position: relative; width: 380px; height: 80px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "title": "Badges, indicators and key hints",
+    "desc": "",
+    "rows": [
+     {
+      "style": "display: flex; gap: 32px; align-items: flex-start;",
+      "figures": [
+       {
+        "caption": "Quality badge",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 260px; flex-shrink: 0;",
+        "stage": "position: relative; width: 260px; height: 70px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "LIVE · glass",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 130px; flex-shrink: 0;",
+        "stage": "position: relative; width: 130px; height: 70px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #161618; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "UP NEXT",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 130px; flex-shrink: 0;",
+        "stage": "position: relative; width: 130px; height: 70px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Featured eyebrow",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 180px; flex-shrink: 0;",
+        "stage": "position: relative; width: 180px; height: 70px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Best match",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 140px; flex-shrink: 0;",
+        "stage": "position: relative; width: 140px; height: 70px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Progress 4 px",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 220px; flex-shrink: 0;",
+        "stage": "position: relative; width: 220px; height: 70px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Live dot",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 100px; flex-shrink: 0;",
+        "stage": "position: relative; width: 100px; height: 70px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Carousel dots",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 130px; flex-shrink: 0;",
+        "stage": "position: relative; width: 130px; height: 70px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Spinner 12",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 100px; flex-shrink: 0;",
+        "stage": "position: relative; width: 100px; height: 70px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Buffering ring 48",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 130px; flex-shrink: 0;",
+        "stage": "position: relative; width: 130px; height: 90px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #000; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "kbd hints",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 300px; flex-shrink: 0;",
+        "stage": "position: relative; width: 300px; height: 70px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "title": "Inputs",
+    "desc": "Title-bar search is 460 × 30, radius 9; focused state shows a clear button once there is text. No keyboard-shortcut hint (the app has none).",
+    "rows": [
+     {
+      "style": "display: flex; gap: 32px; align-items: flex-start;",
+      "figures": [
+       {
+        "caption": "Text field · default",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 360px; flex-shrink: 0;",
+        "stage": "position: relative; width: 360px; height: 110px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Text field · focus",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 360px; flex-shrink: 0;",
+        "stage": "position: relative; width: 360px; height: 110px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Text field · error",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 360px; flex-shrink: 0;",
+        "stage": "position: relative; width: 360px; height: 130px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Text field · disabled",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 360px; flex-shrink: 0;",
+        "stage": "position: relative; width: 360px; height: 110px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Password",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 360px; flex-shrink: 0;",
+        "stage": "position: relative; width: 360px; height: 110px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       }
+      ]
+     },
+     {
+      "style": "display: flex; gap: 32px; align-items: flex-start;",
+      "figures": [
+       {
+        "caption": "PIN · entering",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 380px; flex-shrink: 0;",
+        "stage": "position: relative; width: 380px; height: 110px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "PIN · error",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 380px; flex-shrink: 0;",
+        "stage": "position: relative; width: 380px; height: 130px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "URL · prefilled",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 420px; flex-shrink: 0;",
+        "stage": "position: relative; width: 420px; height: 110px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "URL · error",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 420px; flex-shrink: 0;",
+        "stage": "position: relative; width: 420px; height: 130px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Web page search",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 460px; flex-shrink: 0;",
+        "stage": "position: relative; width: 460px; height: 90px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       }
+      ]
+     },
+     {
+      "style": "display: flex; gap: 32px; align-items: flex-start;",
+      "figures": [
+       {
+        "caption": "Title-bar search · idle",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 500px; flex-shrink: 0;",
+        "stage": "position: relative; width: 500px; height: 70px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Title-bar search · focused with text",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 500px; flex-shrink: 0;",
+        "stage": "position: relative; width: 500px; height: 70px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "title": "Selection and settings rows",
+    "desc": "",
+    "rows": [
+     {
+      "style": "display: flex; gap: 32px; align-items: flex-start;",
+      "figures": [
+       {
+        "caption": "Toggle · on / off / disabled / focus",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 320px; flex-shrink: 0;",
+        "stage": "position: relative; width: 320px; height: 80px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Choice list · Current + hover",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 360px; flex-shrink: 0;",
+        "stage": "position: relative; width: 360px; height: 190px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #161618; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Choice rows · focus / unavailable",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 360px; flex-shrink: 0;",
+        "stage": "position: relative; width: 360px; height: 140px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #161618; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Radio rows",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 360px; flex-shrink: 0;",
+        "stage": "position: relative; width: 360px; height: 190px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #161618; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Settings rows · card",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 500px; flex-shrink: 0;",
+        "stage": "position: relative; width: 500px; height: 250px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       }
+      ]
+     },
+     {
+      "style": "display: flex; gap: 32px; align-items: flex-start;",
+      "figures": [
+       {
+        "caption": "Settings row · focus / destructive",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 500px; flex-shrink: 0;",
+        "stage": "position: relative; width: 500px; height: 170px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Section nav items",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 300px; flex-shrink: 0;",
+        "stage": "position: relative; width: 300px; height: 280px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ },
+ "CmpDesk2": {
+  "width": 2400,
+  "height": 3020,
+  "title": "Components — Desktop & web",
+  "subtitle": "Cards, tiles and navigation. Tiles keep fixed widths; wider windows show more of them.",
+  "frame": {
+   "inner": "position: absolute; inset: 0; box-sizing: border-box; padding: 64px; display: flex; flex-direction: column; gap: 48px;",
+   "header": "display: flex; flex-direction: column; gap: 12px;",
+   "h1": "margin: 0; font-family: var(--viptv-font-family-display); font-size: 48px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.1;",
+   "sub": "margin: 0; font-size: 16px; color: #B6B4AF;",
+   "sections": "display: flex; flex-direction: column; gap: 72px;",
+   "section": "display: flex; flex-direction: column; gap: 24px;",
+   "h2": "margin: 0; font-family: var(--viptv-font-family-display); font-size: 28px; font-weight: 700; letter-spacing: -0.01em; line-height: 1.2;",
+   "desc": "margin: 8px 0 0; font-size: 14px; line-height: 1.5; color: #B6B4AF; max-width: 2272px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;",
+   "rows": "display: flex; flex-direction: column; gap: 32px;",
+   "caption": "font-size: 12px; line-height: 16px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: #8F8D89; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"
+  },
+  "sections": [
+   {
+    "title": "Cards and tiles",
+    "desc": "Poster 172 × 258 (web 164 × 246), continue 256 × 128, episode 272 × 150, live tile 220 × 124. Hover = dim 0.38 + accent play disc + inset ring.",
+    "rows": [
+     {
+      "style": "display: flex; gap: 32px; align-items: flex-start;",
+      "figures": [
+       {
+        "caption": "Poster · default",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 210px; flex-shrink: 0;",
+        "stage": "position: relative; width: 210px; height: 340px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Poster · hover",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 210px; flex-shrink: 0;",
+        "stage": "position: relative; width: 210px; height: 340px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Poster · keyboard focus",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 210px; flex-shrink: 0;",
+        "stage": "position: relative; width: 210px; height: 340px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Poster · missing art",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 210px; flex-shrink: 0;",
+        "stage": "position: relative; width: 210px; height: 340px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Web poster 164 × 246",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 200px; flex-shrink: 0;",
+        "stage": "position: relative; width: 200px; height: 340px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Continue · default",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 290px; flex-shrink: 0;",
+        "stage": "position: relative; width: 290px; height: 200px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Continue · hover",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 290px; flex-shrink: 0;",
+        "stage": "position: relative; width: 290px; height: 200px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Continue · keyboard focus",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 290px; flex-shrink: 0;",
+        "stage": "position: relative; width: 290px; height: 200px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       }
+      ]
+     },
+     {
+      "style": "display: flex; gap: 32px; align-items: flex-start;",
+      "figures": [
+       {
+        "caption": "Continue · pressed",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 290px; flex-shrink: 0;",
+        "stage": "position: relative; width: 290px; height: 200px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Episode · UP NEXT",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 310px; flex-shrink: 0;",
+        "stage": "position: relative; width: 310px; height: 250px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Episode · hover",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 310px; flex-shrink: 0;",
+        "stage": "position: relative; width: 310px; height: 250px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Live tile · default / hover",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 500px; flex-shrink: 0;",
+        "stage": "position: relative; width: 500px; height: 200px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       }
+      ]
+     },
+     {
+      "style": "display: flex; gap: 32px; align-items: flex-start;",
+      "figures": [
+       {
+        "caption": "Guide blocks",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 880px; flex-shrink: 0;",
+        "stage": "position: relative; width: 880px; height: 100px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Source row · best match",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 440px; flex-shrink: 0;",
+        "stage": "position: relative; width: 440px; height: 100px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #161618; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Source row · hover",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 440px; flex-shrink: 0;",
+        "stage": "position: relative; width: 440px; height: 100px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #161618; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       }
+      ]
+     },
+     {
+      "style": "display: flex; gap: 32px; align-items: flex-start;",
+      "figures": [
+       {
+        "caption": "Source row · focus",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 440px; flex-shrink: 0;",
+        "stage": "position: relative; width: 440px; height: 100px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #161618; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Source row · opening",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 440px; flex-shrink: 0;",
+        "stage": "position: relative; width: 440px; height: 100px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #161618; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Profile tiles",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 720px; flex-shrink: 0;",
+        "stage": "position: relative; width: 720px; height: 220px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Add profile · disabled at 12",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 200px; flex-shrink: 0;",
+        "stage": "position: relative; width: 200px; height: 220px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       }
+      ]
+     },
+     {
+      "style": "display: flex; gap: 32px; align-items: flex-start;",
+      "figures": [
+       {
+        "caption": "Avatar tiles · default / hover / selected / focus",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 620px; flex-shrink: 0;",
+        "stage": "position: relative; width: 620px; height: 180px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Missing-art placeholder",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 210px; flex-shrink: 0;",
+        "stage": "position: relative; width: 210px; height: 290px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "title": "Title bar",
+    "desc": "40 px + hairline. Back/Forward and search live here because the desktop app has no browser chrome.",
+    "rows": [
+     {
+      "style": "display: flex; gap: 32px; align-items: flex-start;",
+      "figures": [
+       {
+        "caption": "Title bar · normal",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 1442px; flex-shrink: 0;",
+        "stage": "position: relative; width: 1442px; height: 42px; box-sizing: border-box; padding: 0px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       }
+      ]
+     },
+     {
+      "style": "display: flex; gap: 32px; align-items: flex-start;",
+      "figures": [
+       {
+        "caption": "Title bar · search focused with text",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 1442px; flex-shrink: 0;",
+        "stage": "position: relative; width: 1442px; height: 42px; box-sizing: border-box; padding: 0px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       }
+      ]
+     },
+     {
+      "style": "display: flex; gap: 32px; align-items: flex-start;",
+      "figures": [
+       {
+        "caption": "Title bar · pairing (sign-in)",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 1442px; flex-shrink: 0;",
+        "stage": "position: relative; width: 1442px; height: 42px; box-sizing: border-box; padding: 0px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Title bar · fullscreen player = hidden",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 700px; flex-shrink: 0;",
+        "stage": "position: relative; width: 700px; height: 42px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "title": "Rail",
+    "desc": "84 wide, items 64 × 58 radius 14. On TV lights up while the Watch on TV dialog is open.",
+    "rows": [
+     {
+      "style": "display: flex; gap: 32px; align-items: flex-start;",
+      "figures": [
+       {
+        "caption": "Rail · Home current",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 86px; flex-shrink: 0;",
+        "stage": "position: relative; width: 86px; height: 562px; box-sizing: border-box; padding: 0px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Rail · Discover current",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 86px; flex-shrink: 0;",
+        "stage": "position: relative; width: 86px; height: 562px; box-sizing: border-box; padding: 0px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Rail · Live current",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 86px; flex-shrink: 0;",
+        "stage": "position: relative; width: 86px; height: 562px; box-sizing: border-box; padding: 0px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Rail · My List current",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 86px; flex-shrink: 0;",
+        "stage": "position: relative; width: 86px; height: 562px; box-sizing: border-box; padding: 0px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Rail · Settings current",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 86px; flex-shrink: 0;",
+        "stage": "position: relative; width: 86px; height: 562px; box-sizing: border-box; padding: 0px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Rail · On TV current",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 86px; flex-shrink: 0;",
+        "stage": "position: relative; width: 86px; height: 562px; box-sizing: border-box; padding: 0px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Rail · hover",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 86px; flex-shrink: 0;",
+        "stage": "position: relative; width: 86px; height: 562px; box-sizing: border-box; padding: 0px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Rail · keyboard focus",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 86px; flex-shrink: 0;",
+        "stage": "position: relative; width: 86px; height: 562px; box-sizing: border-box; padding: 0px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Web rail (+ Search)",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 86px; flex-shrink: 0;",
+        "stage": "position: relative; width: 86px; height: 562px; box-sizing: border-box; padding: 0px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ },
+ "CmpDesk3": {
+  "width": 3100,
+  "height": 5010,
+  "title": "Components — Desktop & web",
+  "subtitle": "Overlays, feedback and player controls. Drawer and dialog scrims (0.55) cover the body row only; title bar and rail stay bright.",
+  "frame": {
+   "inner": "position: absolute; inset: 0; box-sizing: border-box; padding: 64px; display: flex; flex-direction: column; gap: 48px;",
+   "header": "display: flex; flex-direction: column; gap: 12px;",
+   "h1": "margin: 0; font-family: var(--viptv-font-family-display); font-size: 48px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.1;",
+   "sub": "margin: 0; font-size: 16px; color: #B6B4AF;",
+   "sections": "display: flex; flex-direction: column; gap: 72px;",
+   "section": "display: flex; flex-direction: column; gap: 24px;",
+   "h2": "margin: 0; font-family: var(--viptv-font-family-display); font-size: 28px; font-weight: 700; letter-spacing: -0.01em; line-height: 1.2;",
+   "desc": "margin: 8px 0 0; font-size: 14px; line-height: 1.5; color: #B6B4AF; max-width: 2972px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;",
+   "rows": "display: flex; flex-direction: column; gap: 32px;",
+   "caption": "font-size: 12px; line-height: 16px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: #8F8D89; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"
+  },
+  "sections": [
+   {
+    "title": "Overlays",
+    "desc": "Centred dialog 460 wide, radius 18, padding 24, stacked 48 h buttons. Popovers belong to one control and have no scrim.",
+    "rows": [
+     {
+      "style": "display: flex; gap: 32px; align-items: flex-start;",
+      "figures": [
+       {
+        "caption": "Centred dialog · 1 choice",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 1442px; flex-shrink: 0;",
+        "stage": "position: relative; width: 1442px; height: 902px; box-sizing: border-box; padding: 0px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Centred dialog · 2 choices, destructive",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 1442px; flex-shrink: 0;",
+        "stage": "position: relative; width: 1442px; height: 902px; box-sizing: border-box; padding: 0px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       }
+      ]
+     },
+     {
+      "style": "display: flex; gap: 32px; align-items: flex-start;",
+      "figures": [
+       {
+        "caption": "Centred dialog · 3 choices",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 1442px; flex-shrink: 0;",
+        "stage": "position: relative; width: 1442px; height: 902px; box-sizing: border-box; padding: 0px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Centred dialog · 7 choices",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 1442px; flex-shrink: 0;",
+        "stage": "position: relative; width: 1442px; height: 902px; box-sizing: border-box; padding: 0px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       }
+      ]
+     },
+     {
+      "style": "display: flex; gap: 32px; align-items: flex-start;",
+      "figures": [
+       {
+        "caption": "Anchored popover · menu for one control",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 1442px; flex-shrink: 0;",
+        "stage": "position: relative; width: 1442px; height: 902px; box-sizing: border-box; padding: 0px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Right drawer",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 1442px; flex-shrink: 0;",
+        "stage": "position: relative; width: 1442px; height: 902px; box-sizing: border-box; padding: 0px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "title": "Feedback",
+    "desc": "Toasts bottom-centre, 24 from the edge. Error toast 4 s with Dismiss; notices 5 s, text only.",
+    "rows": [
+     {
+      "style": "display: flex; gap: 32px; align-items: flex-start;",
+      "figures": [
+       {
+        "caption": "Error toast · 4 s",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 520px; flex-shrink: 0;",
+        "stage": "position: relative; width: 520px; height: 90px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Error toast · startup",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 400px; flex-shrink: 0;",
+        "stage": "position: relative; width: 400px; height: 90px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Notice toast · 5 s",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 260px; flex-shrink: 0;",
+        "stage": "position: relative; width: 260px; height: 90px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Player notice pill · 4 s",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 342px; flex-shrink: 0;",
+        "stage": "position: relative; width: 342px; height: 82px; box-sizing: border-box; padding: 0px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Preparing playback",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 242px; flex-shrink: 0;",
+        "stage": "position: relative; width: 242px; height: 82px; box-sizing: border-box; padding: 0px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Backend banner",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 560px; flex-shrink: 0;",
+        "stage": "position: relative; width: 560px; height: 230px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Inline error",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 360px; flex-shrink: 0;",
+        "stage": "position: relative; width: 360px; height: 70px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       }
+      ]
+     },
+     {
+      "style": "display: flex; gap: 32px; align-items: flex-start;",
+      "figures": [
+       {
+        "caption": "Status line",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 220px; flex-shrink: 0;",
+        "stage": "position: relative; width: 220px; height: 70px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Empty state",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 560px; flex-shrink: 0;",
+        "stage": "position: relative; width: 560px; height: 280px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Loading more",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 360px; flex-shrink: 0;",
+        "stage": "position: relative; width: 360px; height: 70px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Skeleton · hero",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 820px; flex-shrink: 0;",
+        "stage": "position: relative; width: 820px; height: 310px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Skeleton · poster / continue / episode",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 800px; flex-shrink: 0;",
+        "stage": "position: relative; width: 800px; height: 320px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       }
+      ]
+     },
+     {
+      "style": "display: flex; gap: 32px; align-items: flex-start;",
+      "figures": [
+       {
+        "caption": "Skeleton · list row",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 780px; flex-shrink: 0;",
+        "stage": "position: relative; width: 780px; height: 100px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "title": "Player controls",
+    "desc": "44 px transparent buttons; Play/Pause is a 52 px accent disc. Popups open above their button, 340 wide.",
+    "rows": [
+     {
+      "style": "display: flex; gap: 32px; align-items: flex-start;",
+      "figures": [
+       {
+        "caption": "Timeline · hover tooltip + buffered",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 760px; flex-shrink: 0;",
+        "stage": "position: relative; width: 760px; height: 110px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #000; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Timeline · keyboard focus",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 560px; flex-shrink: 0;",
+        "stage": "position: relative; width: 560px; height: 90px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #000; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Left group · paused",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 280px; flex-shrink: 0;",
+        "stage": "position: relative; width: 280px; height: 90px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #000; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 8px; overflow: hidden;"
+       },
+       {
+        "caption": "Left group · playing / hover",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 280px; flex-shrink: 0;",
+        "stage": "position: relative; width: 280px; height: 90px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #000; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 8px; overflow: hidden;"
+       },
+       {
+        "caption": "Right group",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 460px; flex-shrink: 0;",
+        "stage": "position: relative; width: 460px; height: 90px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #000; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 8px; overflow: hidden;"
+       },
+       {
+        "caption": "Right group · muted / exit fullscreen",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 460px; flex-shrink: 0;",
+        "stage": "position: relative; width: 460px; height: 90px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #000; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 8px; overflow: hidden;"
+       }
+      ]
+     },
+     {
+      "style": "display: flex; gap: 32px; align-items: flex-start;",
+      "figures": [
+       {
+        "caption": "Volume · engine can’t set it",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 440px; flex-shrink: 0;",
+        "stage": "position: relative; width: 440px; height: 90px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #000; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 8px; overflow: hidden;"
+       },
+       {
+        "caption": "Track popup · Audio Tracks",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 380px; flex-shrink: 0;",
+        "stage": "position: relative; width: 380px; height: 260px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #000; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Track popup · Subtitles, empty",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 380px; flex-shrink: 0;",
+        "stage": "position: relative; width: 380px; height: 170px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #000; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Playback info · desktop app (Tauri)",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 380px; flex-shrink: 0;",
+        "stage": "position: relative; width: 380px; height: 200px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #000; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Playback info · web",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 380px; flex-shrink: 0;",
+        "stage": "position: relative; width: 380px; height: 470px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: #000; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ },
+ "CmpTv1": {
+  "width": 4200,
+  "height": 3466,
+  "title": "Components — TV",
+  "subtitle": "10-foot controls at 1:1. Exactly one focused element per screen; focus = off-white fill or 4 px white ring + scale. No accent buttons on TV.",
+  "frame": {
+   "inner": "position: absolute; inset: 0; box-sizing: border-box; padding: 96px; display: flex; flex-direction: column; gap: 48px;",
+   "header": "display: flex; flex-direction: column; gap: 12px;",
+   "h1": "margin: 0; font-family: var(--viptv-font-family-display); font-size: 72px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.1;",
+   "sub": "margin: 0; font-size: 24px; color: #B6B4AF;",
+   "sections": "display: flex; flex-direction: column; gap: 110px;",
+   "section": "display: flex; flex-direction: column; gap: 24px;",
+   "h2": "margin: 0; font-family: var(--viptv-font-family-display); font-size: 44px; font-weight: 700; letter-spacing: -0.01em; line-height: 1.2;",
+   "desc": "margin: 8px 0 0; font-size: 22px; line-height: 1.5; color: #B6B4AF; max-width: 4008px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;",
+   "rows": "display: flex; flex-direction: column; gap: 48px;",
+   "caption": "font-size: 18px; line-height: 26px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: #8F8D89; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"
+  },
+  "sections": [
+   {
+    "title": "Buttons",
+    "desc": "Unfocused buttons are 0.12 white; the primary action wins by position and default focus.",
+    "rows": [
+     {
+      "style": "display: flex; gap: 48px; align-items: flex-start;",
+      "figures": [
+       {
+        "caption": "Pill · default",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 330px; flex-shrink: 0;",
+        "stage": "position: relative; width: 330px; height: 140px; box-sizing: border-box; padding: 16px; border-radius: 24px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Pill · focused",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 330px; flex-shrink: 0;",
+        "stage": "position: relative; width: 330px; height: 140px; box-sizing: border-box; padding: 16px; border-radius: 24px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Pill · pressed (OK held)",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 330px; flex-shrink: 0;",
+        "stage": "position: relative; width: 330px; height: 140px; box-sizing: border-box; padding: 16px; border-radius: 24px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Pill · disabled",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 330px; flex-shrink: 0;",
+        "stage": "position: relative; width: 330px; height: 140px; box-sizing: border-box; padding: 16px; border-radius: 24px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Pill · loading",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 330px; flex-shrink: 0;",
+        "stage": "position: relative; width: 330px; height: 140px; box-sizing: border-box; padding: 16px; border-radius: 24px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Icon pill 72 · default / focused",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 300px; flex-shrink: 0;",
+        "stage": "position: relative; width: 300px; height: 140px; box-sizing: border-box; padding: 16px; border-radius: 24px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Destructive · default / focused",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 740px; flex-shrink: 0;",
+        "stage": "position: relative; width: 740px; height: 140px; box-sizing: border-box; padding: 16px; border-radius: 24px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Source pill · default / focused",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 700px; flex-shrink: 0;",
+        "stage": "position: relative; width: 700px; height: 140px; box-sizing: border-box; padding: 16px; border-radius: 24px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       }
+      ]
+     },
+     {
+      "style": "display: flex; gap: 48px; align-items: flex-start;",
+      "figures": [
+       {
+        "caption": "Small pill 52 · season",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 400px; flex-shrink: 0;",
+        "stage": "position: relative; width: 400px; height: 140px; box-sizing: border-box; padding: 16px; border-radius: 24px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Text action · focused",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 480px; flex-shrink: 0;",
+        "stage": "position: relative; width: 480px; height: 140px; box-sizing: border-box; padding: 16px; border-radius: 24px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "title": "Chips",
+    "desc": "Selected-but-not-focused = 0.16 fill. Focused = off-white fill, dark text.",
+    "rows": [
+     {
+      "style": "display: flex; gap: 48px; align-items: flex-start;",
+      "figures": [
+       {
+        "caption": "Chip · default",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 260px; flex-shrink: 0;",
+        "stage": "position: relative; width: 260px; height: 120px; box-sizing: border-box; padding: 16px; border-radius: 24px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Chip · selected",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 260px; flex-shrink: 0;",
+        "stage": "position: relative; width: 260px; height: 120px; box-sizing: border-box; padding: 16px; border-radius: 24px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Chip · focused",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 260px; flex-shrink: 0;",
+        "stage": "position: relative; width: 260px; height: 120px; box-sizing: border-box; padding: 16px; border-radius: 24px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Quality chips · counts",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 620px; flex-shrink: 0;",
+        "stage": "position: relative; width: 620px; height: 120px; box-sizing: border-box; padding: 16px; border-radius: 24px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Filter chip · value / required",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 620px; flex-shrink: 0;",
+        "stage": "position: relative; width: 620px; height: 120px; box-sizing: border-box; padding: 16px; border-radius: 24px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Group divider",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 460px; flex-shrink: 0;",
+        "stage": "position: relative; width: 460px; height: 120px; box-sizing: border-box; padding: 16px; border-radius: 24px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "title": "Badges, indicators and key legend",
+    "desc": "Minimum text 18 px. Legend keycaps: 2 px 0.28 outline, radius 10.",
+    "rows": [
+     {
+      "style": "display: flex; gap: 48px; align-items: flex-start;",
+      "figures": [
+       {
+        "caption": "Quality badge",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 300px; flex-shrink: 0;",
+        "stage": "position: relative; width: 300px; height: 110px; box-sizing: border-box; padding: 16px; border-radius: 24px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "LIVE",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 200px; flex-shrink: 0;",
+        "stage": "position: relative; width: 200px; height: 110px; box-sizing: border-box; padding: 16px; border-radius: 24px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "WATCHING",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 240px; flex-shrink: 0;",
+        "stage": "position: relative; width: 240px; height: 110px; box-sizing: border-box; padding: 16px; border-radius: 24px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Best match",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 240px; flex-shrink: 0;",
+        "stage": "position: relative; width: 240px; height: 110px; box-sizing: border-box; padding: 16px; border-radius: 24px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Progress 6 px",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 360px; flex-shrink: 0;",
+        "stage": "position: relative; width: 360px; height: 110px; box-sizing: border-box; padding: 16px; border-radius: 24px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Live dot",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 140px; flex-shrink: 0;",
+        "stage": "position: relative; width: 140px; height: 110px; box-sizing: border-box; padding: 16px; border-radius: 24px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Spinner 18",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 140px; flex-shrink: 0;",
+        "stage": "position: relative; width: 140px; height: 110px; box-sizing: border-box; padding: 16px; border-radius: 24px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Status words",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 700px; flex-shrink: 0;",
+        "stage": "position: relative; width: 700px; height: 110px; box-sizing: border-box; padding: 16px; border-radius: 24px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Key legend",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 1000px; flex-shrink: 0;",
+        "stage": "position: relative; width: 1000px; height: 110px; box-sizing: border-box; padding: 16px; border-radius: 24px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "title": "Inputs",
+    "desc": "Text entry is full screen with the keyboard on the right; the PIN keypad replaces it for digits.",
+    "rows": [
+     {
+      "style": "display: flex; gap: 48px; align-items: flex-start;",
+      "figures": [
+       {
+        "caption": "Search field · caret",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 620px; flex-shrink: 0;",
+        "stage": "position: relative; width: 620px; height: 140px; box-sizing: border-box; padding: 16px; border-radius: 24px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Text entry field · empty / error",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 680px; flex-shrink: 0;",
+        "stage": "position: relative; width: 680px; height: 280px; box-sizing: border-box; padding: 16px; border-radius: 24px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "On-screen keyboard",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 720px; flex-shrink: 0;",
+        "stage": "position: relative; width: 720px; height: 820px; box-sizing: border-box; padding: 16px; border-radius: 24px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "PIN keypad",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 500px; flex-shrink: 0;",
+        "stage": "position: relative; width: 500px; height: 600px; box-sizing: border-box; padding: 16px; border-radius: 24px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "PIN field · entering / error",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 680px; flex-shrink: 0;",
+        "stage": "position: relative; width: 680px; height: 320px; box-sizing: border-box; padding: 16px; border-radius: 24px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "title": "Selection and settings",
+    "desc": "Focus opens on the current option. “· Current” and “· unavailable” read after the label.",
+    "rows": [
+     {
+      "style": "display: flex; gap: 48px; align-items: flex-start;",
+      "figures": [
+       {
+        "caption": "Choice rows · focused current / default / unavailable / destructive",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 700px; flex-shrink: 0;",
+        "stage": "position: relative; width: 700px; height: 440px; box-sizing: border-box; padding: 16px; border-radius: 24px; background: #161618; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Settings rows · focused / default / value / destructive",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 780px; flex-shrink: 0;",
+        "stage": "position: relative; width: 780px; height: 440px; box-sizing: border-box; padding: 16px; border-radius: 24px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Description panel (right side)",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 700px; flex-shrink: 0;",
+        "stage": "position: relative; width: 700px; height: 200px; box-sizing: border-box; padding: 16px; border-radius: 24px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ },
+ "CmpTv2": {
+  "width": 4200,
+  "height": 3153,
+  "title": "Components — TV",
+  "subtitle": "Cards, tiles and navigation. Image tiles focus with a ring and scale 1.06; the caption shifts 8 px and brightens.",
+  "frame": {
+   "inner": "position: absolute; inset: 0; box-sizing: border-box; padding: 96px; display: flex; flex-direction: column; gap: 48px;",
+   "header": "display: flex; flex-direction: column; gap: 12px;",
+   "h1": "margin: 0; font-family: var(--viptv-font-family-display); font-size: 72px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.1;",
+   "sub": "margin: 0; font-size: 24px; color: #B6B4AF;",
+   "sections": "display: flex; flex-direction: column; gap: 110px;",
+   "section": "display: flex; flex-direction: column; gap: 24px;",
+   "h2": "margin: 0; font-family: var(--viptv-font-family-display); font-size: 44px; font-weight: 700; letter-spacing: -0.01em; line-height: 1.2;",
+   "desc": "margin: 8px 0 0; font-size: 22px; line-height: 1.5; color: #B6B4AF; max-width: 4008px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;",
+   "rows": "display: flex; flex-direction: column; gap: 48px;",
+   "caption": "font-size: 18px; line-height: 26px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: #8F8D89; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"
+  },
+  "sections": [
+   {
+    "title": "Cards and tiles",
+    "desc": "Rows gap 36, heading to row 22, art to caption 16. Channel logos are text monograms.",
+    "rows": [
+     {
+      "style": "display: flex; gap: 48px; align-items: flex-start;",
+      "figures": [
+       {
+        "caption": "Still 320 × 180 · default / focused",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 800px; flex-shrink: 0;",
+        "stage": "position: relative; width: 800px; height: 330px; box-sizing: border-box; padding: 16px; border-radius: 24px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Grid 360 × 202 · default / focused",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 880px; flex-shrink: 0;",
+        "stage": "position: relative; width: 880px; height: 350px; box-sizing: border-box; padding: 16px; border-radius: 24px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Episode 360 × 200 · WATCHING / focused",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 880px; flex-shrink: 0;",
+        "stage": "position: relative; width: 880px; height: 380px; box-sizing: border-box; padding: 16px; border-radius: 24px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Missing art",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 420px; flex-shrink: 0;",
+        "stage": "position: relative; width: 420px; height: 330px; box-sizing: border-box; padding: 16px; border-radius: 24px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       }
+      ]
+     },
+     {
+      "style": "display: flex; gap: 48px; align-items: flex-start;",
+      "figures": [
+       {
+        "caption": "Guide blocks · airing / upcoming / no data / focused",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 1760px; flex-shrink: 0;",
+        "stage": "position: relative; width: 1760px; height: 160px; box-sizing: border-box; padding: 16px; border-radius: 24px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Source rows · focused best / default / opening",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 720px; flex-shrink: 0;",
+        "stage": "position: relative; width: 720px; height: 420px; box-sizing: border-box; padding: 16px; border-radius: 24px; background: #161618; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Profile tiles · focused / default / letter / add",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 1200px; flex-shrink: 0;",
+        "stage": "position: relative; width: 1200px; height: 380px; box-sizing: border-box; padding: 16px; border-radius: 24px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       }
+      ]
+     },
+     {
+      "style": "display: flex; gap: 48px; align-items: flex-start;",
+      "figures": [
+       {
+        "caption": "Avatar tiles · default / selected / focused",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 720px; flex-shrink: 0;",
+        "stage": "position: relative; width: 720px; height: 280px; box-sizing: border-box; padding: 16px; border-radius: 24px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "title": "Navigation",
+    "desc": "Collapsed rail 144 wide, icons only. On focus it expands to a 520 labelled menu over a 0.55 scrim.",
+    "rows": [
+     {
+      "style": "display: flex; gap: 48px; align-items: flex-start;",
+      "figures": [
+       {
+        "caption": "Rail · collapsed",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 146px; flex-shrink: 0;",
+        "stage": "position: relative; width: 146px; height: 1082px; box-sizing: border-box; padding: 0px; border-radius: 24px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Menu · expanded (focus on Discover, current Home)",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 522px; flex-shrink: 0;",
+        "stage": "position: relative; width: 522px; height: 1082px; box-sizing: border-box; padding: 0px; border-radius: 24px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Rail · Live TV current",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 146px; flex-shrink: 0;",
+        "stage": "position: relative; width: 146px; height: 1082px; box-sizing: border-box; padding: 0px; border-radius: 24px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ },
+ "CmpTv3": {
+  "width": 4200,
+  "height": 6358,
+  "title": "Components — TV",
+  "subtitle": "Overlays, feedback and player controls. Dialogs are the right 820 panel over a 0.6 scrim; focus opens on the current option.",
+  "frame": {
+   "inner": "position: absolute; inset: 0; box-sizing: border-box; padding: 96px; display: flex; flex-direction: column; gap: 48px;",
+   "header": "display: flex; flex-direction: column; gap: 12px;",
+   "h1": "margin: 0; font-family: var(--viptv-font-family-display); font-size: 72px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.1;",
+   "sub": "margin: 0; font-size: 24px; color: #B6B4AF;",
+   "sections": "display: flex; flex-direction: column; gap: 110px;",
+   "section": "display: flex; flex-direction: column; gap: 24px;",
+   "h2": "margin: 0; font-family: var(--viptv-font-family-display); font-size: 44px; font-weight: 700; letter-spacing: -0.01em; line-height: 1.2;",
+   "desc": "margin: 8px 0 0; font-size: 22px; line-height: 1.5; color: #B6B4AF; max-width: 4008px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;",
+   "rows": "display: flex; flex-direction: column; gap: 48px;",
+   "caption": "font-size: 18px; line-height: 26px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: #8F8D89; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"
+  },
+  "sections": [
+   {
+    "title": "Overlays",
+    "desc": "Panel padding 64 / 96 / 120 / 64. Rows 80 tall, radius 22. Text entry and long text take the whole screen.",
+    "rows": [
+     {
+      "style": "display: flex; gap: 48px; align-items: flex-start;",
+      "figures": [
+       {
+        "caption": "Panel · 1 choice",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 1922px; flex-shrink: 0;",
+        "stage": "position: relative; width: 1922px; height: 1082px; box-sizing: border-box; padding: 0px; border-radius: 24px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Panel · 2 choices, destructive",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 1922px; flex-shrink: 0;",
+        "stage": "position: relative; width: 1922px; height: 1082px; box-sizing: border-box; padding: 0px; border-radius: 24px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       }
+      ]
+     },
+     {
+      "style": "display: flex; gap: 48px; align-items: flex-start;",
+      "figures": [
+       {
+        "caption": "Panel · 3 choices",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 1922px; flex-shrink: 0;",
+        "stage": "position: relative; width: 1922px; height: 1082px; box-sizing: border-box; padding: 0px; border-radius: 24px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Panel · 7 choices",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 1922px; flex-shrink: 0;",
+        "stage": "position: relative; width: 1922px; height: 1082px; box-sizing: border-box; padding: 0px; border-radius: 24px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       }
+      ]
+     },
+     {
+      "style": "display: flex; gap: 48px; align-items: flex-start;",
+      "figures": [
+       {
+        "caption": "Full-screen text entry",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 1922px; flex-shrink: 0;",
+        "stage": "position: relative; width: 1922px; height: 1082px; box-sizing: border-box; padding: 0px; border-radius: 24px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Full-screen text panel",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 1922px; flex-shrink: 0;",
+        "stage": "position: relative; width: 1922px; height: 1082px; box-sizing: border-box; padding: 0px; border-radius: 24px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "title": "Feedback",
+    "desc": "TV has no skeletons: a “Starting VIPTV…” cover at launch, then real content.",
+    "rows": [
+     {
+      "style": "display: flex; gap: 48px; align-items: flex-start;",
+      "figures": [
+       {
+        "caption": "Error toast",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 1000px; flex-shrink: 0;",
+        "stage": "position: relative; width: 1000px; height: 140px; box-sizing: border-box; padding: 16px; border-radius: 24px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Notice toast",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 900px; flex-shrink: 0;",
+        "stage": "position: relative; width: 900px; height: 140px; box-sizing: border-box; padding: 16px; border-radius: 24px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Player notice pill",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 622px; flex-shrink: 0;",
+        "stage": "position: relative; width: 622px; height: 122px; box-sizing: border-box; padding: 0px; border-radius: 24px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Preparing playback panel",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 622px; flex-shrink: 0;",
+        "stage": "position: relative; width: 622px; height: 302px; box-sizing: border-box; padding: 0px; border-radius: 24px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       }
+      ]
+     },
+     {
+      "style": "display: flex; gap: 48px; align-items: flex-start;",
+      "figures": [
+       {
+        "caption": "Backend panel",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 1102px; flex-shrink: 0;",
+        "stage": "position: relative; width: 1102px; height: 642px; box-sizing: border-box; padding: 0px; border-radius: 24px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Inline error / status line",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 640px; flex-shrink: 0;",
+        "stage": "position: relative; width: 640px; height: 160px; box-sizing: border-box; padding: 16px; border-radius: 24px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Empty state",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 900px; flex-shrink: 0;",
+        "stage": "position: relative; width: 900px; height: 400px; box-sizing: border-box; padding: 16px; border-radius: 24px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Loading more",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 640px; flex-shrink: 0;",
+        "stage": "position: relative; width: 640px; height: 120px; box-sizing: border-box; padding: 16px; border-radius: 24px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       }
+      ]
+     },
+     {
+      "style": "display: flex; gap: 48px; align-items: flex-start;",
+      "figures": [
+       {
+        "caption": "Startup cover",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 702px; flex-shrink: 0;",
+        "stage": "position: relative; width: 702px; height: 302px; box-sizing: border-box; padding: 0px; border-radius: 24px; background: #0B0B0C; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "title": "Player controls",
+    "desc": "No volume, fullscreen or playback info on TV. Rewind/Forward drop the 10/30 numerals; Next uses skip-forward.",
+    "rows": [
+     {
+      "style": "display: flex; gap: 48px; align-items: flex-start;",
+      "figures": [
+       {
+        "caption": "Timeline · default",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 1260px; flex-shrink: 0;",
+        "stage": "position: relative; width: 1260px; height: 150px; box-sizing: border-box; padding: 16px; border-radius: 24px; background: #000; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Timeline · focused, seek preview",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 1260px; flex-shrink: 0;",
+        "stage": "position: relative; width: 1260px; height: 220px; box-sizing: border-box; padding: 16px; border-radius: 24px; background: #000; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; overflow: hidden;"
+       },
+       {
+        "caption": "Controls · focus Play",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 480px; flex-shrink: 0;",
+        "stage": "position: relative; width: 480px; height: 140px; box-sizing: border-box; padding: 16px; border-radius: 24px; background: #000; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 18px; overflow: hidden;"
+       },
+       {
+        "caption": "Controls · playing",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 480px; flex-shrink: 0;",
+        "stage": "position: relative; width: 480px; height: 140px; box-sizing: border-box; padding: 16px; border-radius: 24px; background: #000; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 18px; overflow: hidden;"
+       }
+      ]
+     },
+     {
+      "style": "display: flex; gap: 48px; align-items: flex-start;",
+      "figures": [
+       {
+        "caption": "Right group · Audio, Subtitles, Exit",
+        "fig": "margin: 0; display: flex; flex-direction: column; gap: 10px; width: 340px; flex-shrink: 0;",
+        "stage": "position: relative; width: 340px; height: 140px; box-sizing: border-box; padding: 16px; border-radius: 24px; background: #000; border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 18px; overflow: hidden;"
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ }
+}

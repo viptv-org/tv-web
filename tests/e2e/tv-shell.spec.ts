@@ -9,7 +9,7 @@ test('renders the real device-pairing handoff without storing a token before app
   await expect(page.getByRole('heading', { name: 'Sign in to VIPTV' })).toBeVisible();
   await expect(page.getByText('AB12CD34EF')).toBeVisible();
   await expect(page.getByRole('img', { name: 'Scan to link your TV' })).toBeVisible();
-  await expectBox(page, '.pairing h1', { x: 96, y: 170 });
+  await expectBox(page, '.pairing h1', { x: 144, y: 255 });
   await capture(page, testInfo, 'pairing');
   await page.getByRole('button', { name: 'Try again' }).press('Enter');
   await expect(page.getByText('AB12CD34EF')).toBeVisible();

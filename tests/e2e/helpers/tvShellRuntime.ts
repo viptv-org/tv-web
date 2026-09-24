@@ -166,11 +166,11 @@ for (const platform of ['tizen', 'vizio'] as const) {
     test.skip(test.info().project.name !== platform, 'run each platform query in its matching project');
     const assertNoPageErrors = await installPlatformRuntime(page);
     await enterHome(page, platform);
-    await expectBox(page, '.shelves', { x: 92, y: 466, width: 1188, height: 254 });
+    await expectBox(page, '.shelves', { x: 138, y: 699, width: 1782, height: 381 });
     const firstCard = await page.locator('.media-card').first().boundingBox();
     expect(firstCard).not.toBeNull();
-    expect(firstCard!.width).toBe(256);
-    expect(firstCard!.height).toBe(200);
+    expect(firstCard!.width).toBe(384);
+    expect(firstCard!.height).toBe(300);
     await expect(page.getByRole('alert')).toHaveCount(0);
     await capture(page, testInfo, `${platform}-home`);
     await page.keyboard.press('ArrowRight');
@@ -180,7 +180,7 @@ for (const platform of ['tizen', 'vizio'] as const) {
     await page.getByRole('button', { name: 'Choose source', exact: true }).press('Enter');
     await expect(page.locator('.source-context')).toContainText('Moonfall');
     await expect(page.getByText('Moonfall 1080p')).toBeVisible();
-    await expectBox(page, '.source-context', { x: 100, y: 119 });
+    await expectBox(page, '.source-context', { x: 150, y: 178.5 });
     await expect(page.getByRole('alert')).toHaveCount(0);
     await capture(page, testInfo, `${platform}-sources`);
 

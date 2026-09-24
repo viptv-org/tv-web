@@ -149,25 +149,27 @@ test('Roku visual contract keeps fixed geometry, focus ownership and proportiona
   const platform = testInfo.project.name as 'tizen' | 'vizio';
   const assertNoPageErrors = await installPlatformRuntime(page);
   await enterHome(page, platform);
-  await expectBox(page, '.tv-screen', { x: 0, y: 0, width: 1280, height: 720 });
-  await expectBox(page, 'nav', { x: 21, y: 108, width: 60 });
+  // Coordinates are on the 1920 x 1080 TV canvas (the project viewport).
+  await expectBox(page, '.tv-screen', { x: 0, y: 0, width: 1920, height: 1080 });
+  await expectBox(page, 'nav', { x: 31.5, y: 162, width: 90 });
   await page.getByRole('button', { name: 'Settings', exact: true }).press('Enter');
   await page.getByRole('button', { name: 'Switch profile', exact: true }).focus();
-  await expectBox(page, '.settings-scroll', { x: 100, y: 144, width: 536 });
-  await expectBox(page, '.settings-description', { x: 778, y: 152, width: 424 });
-  await capture(page, testInfo, 'roku-settings-focused');
-  await page.setViewportSize({ width: 1920, height: 1080 });
   await expectBox(page, '.settings-scroll', { x: 150, y: 216, width: 804 });
-  await expect(page.getByRole('button', { name: 'Switch profile', exact: true })).toBeFocused();
+  await expectBox(page, '.settings-description', { x: 1167, y: 228, width: 636 });
+  await capture(page, testInfo, 'roku-settings-focused');
+  // A 1280 x 720 panel scales the whole canvas by 2/3.
   await page.setViewportSize({ width: 1280, height: 720 });
+  await expectBox(page, '.settings-scroll', { x: 100, y: 144, width: 536 });
+  await expect(page.getByRole('button', { name: 'Switch profile', exact: true })).toBeFocused();
+  await page.setViewportSize({ width: 1920, height: 1080 });
   await page.getByRole('button', { name: 'Search', exact: true }).press('Enter');
   await page.locator('[data-focus-id="key-A"]').focus();
-  await expectBox(page, '.search .keyboard>div', { x: 102, y: 226, width: 300 });
-  await expectBox(page, '.search .result-grid', { x: 456, y: 164, width: 740, height: 484 });
+  await expectBox(page, '.search .keyboard>div', { x: 153, y: 339, width: 450 });
+  await expectBox(page, '.search .result-grid', { x: 684, y: 246, width: 1110, height: 726 });
   await capture(page, testInfo, 'roku-search-empty');
   await page.getByRole('button', { name: 'Profile', exact: true }).press('Enter');
-  await expectBox(page, '.profiles>h1', { x: 100, y: 146, width: 1080 });
-  await expectBox(page, '.profile-row', { x: 0, y: 252, width: 1280 });
+  await expectBox(page, '.profiles>h1', { x: 150, y: 219, width: 1620 });
+  await expectBox(page, '.profile-row', { x: 0, y: 378, width: 1920 });
   await capture(page, testInfo, 'roku-profiles');
   assertNoPageErrors();
 });
@@ -192,11 +194,11 @@ test('series progress selects its resumed episode and remote paging reveals one 
   await expect(page.locator('[data-focus-id="episode-0"]')).toContainText('WATCHED');
   await expect(page.locator('[data-focus-id="episode-0"] progress')).toHaveCount(0);
   await expect(page.locator('[data-focus-id="episode-1"] progress')).toHaveAttribute('value', '42');
-  await expectBox(page, '.episode-grid', { x: 112, y: 262, width: 1096, height: 330 });
+  await expectBox(page, '.episode-grid', { x: 168, y: 393, width: 1644, height: 495 });
   await capture(page, testInfo, 'roku-series-progress');
   await page.keyboard.press('ArrowDown');
   await expect(page.locator('[data-focus-id="episode-5"]')).toBeFocused();
-  await expectBox(page, '[data-focus-id="episode-5"]', { x: 392, y: 262, width: 256, height: 330 });
-  await expectBox(page, '.tv-screen', { x: 0, y: 0, width: 1280, height: 720 });
+  await expectBox(page, '[data-focus-id="episode-5"]', { x: 588, y: 393, width: 384, height: 495 });
+  await expectBox(page, '.tv-screen', { x: 0, y: 0, width: 1920, height: 1080 });
 });
 

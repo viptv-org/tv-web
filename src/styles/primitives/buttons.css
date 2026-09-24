@@ -1,1 +1,486 @@
-/* Design-system primitive: buttons. See design/viptv-design-system/components.md. */
+/*
+ * Design-system primitive: buttons (components.md §1, sheets CmpPhone1 / CmpDesk1 / CmpTv1).
+ *
+ * Scoping (shared by every primitives/*.css file):
+ *   [data-layout] .vx-…                 base = desktop / web (specificity 0,2,0 so it beats the
+ *                                       legacy global `button` / `button:focus` rules)
+ *   [data-layout="responsive"] …        responsive-only states (hover, :focus-visible ring)
+ *   @media (max-width: 599px) [data-layout="responsive"] …   phone overrides
+ *   .tv-layout .vx-…                    TV (1920×1080 canvas px, Chrome 87-safe)
+ * Sizes live in --vx-* custom properties so the platform blocks only swap values.
+ *
+ * Markup: <button class="vx-btn vx-btn--primary vx-btn--lead"><svg/>Play</button>
+ *   kinds  --primary | --secondary (default) | --light | --outline | --destructive | --quiet
+ *   sizes  --detail (P 58) | --pill (44 light pill) | --small (P/D 40, TV 52) | --icon (round)
+ *   --lead (leading icon: +4 trailing padding) | --block (full width)
+ *   states :disabled / aria-disabled="true" (0.4), aria-busy="true" (spinner replaces icon)
+ */
+
+[data-layout] .vx-btn {
+  --vx-h: var(--viptv-size-button-desktop);
+  --vx-px: var(--viptv-space-5_5);
+  --vx-icon: var(--viptv-size-icon-desktop);
+  --vx-icon-round: var(--viptv-size-icon-desktop-round);
+  --vx-fs: var(--viptv-type-desktop-button-size);
+  --vx-bg: var(--viptv-color-surface-3);
+  --vx-fg: var(--viptv-color-text-primary);
+  position: relative;
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  gap: var(--viptv-space-2);
+  box-sizing: border-box;
+  height: var(--vx-h);
+  min-height: var(--vx-h);
+  min-width: 0;
+  margin: 0;
+  padding: 0 var(--vx-px);
+  border: 0;
+  border-radius: calc(var(--vx-h) / 2);
+  outline: none;
+  background: var(--vx-bg);
+  color: var(--vx-fg);
+  font-family: var(--viptv-font-family-ui);
+  font-size: var(--vx-fs);
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0;
+  text-align: center;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    transform var(--viptv-motion-focus) ease-out,
+    background-color var(--viptv-motion-focus) ease-out,
+    color var(--viptv-motion-focus) ease-out,
+    box-shadow var(--viptv-motion-focus) ease-out,
+    filter var(--viptv-motion-focus) ease-out;
+}
+[data-layout] .vx-btn > svg,
+[data-layout] .vx-btn > .vx-icon {
+  display: block;
+  flex: none;
+  width: var(--vx-icon);
+  height: var(--vx-icon);
+}
+[data-layout] .vx-btn--lead {
+  padding-right: calc(var(--vx-px) + var(--viptv-space-1));
+}
+[data-layout] .vx-btn--block {
+  display: flex;
+  width: 100%;
+}
+[data-layout] .vx-btn--icon {
+  width: var(--vx-h);
+  padding: 0;
+}
+[data-layout] .vx-btn--icon > svg,
+[data-layout] .vx-btn--icon > .vx-icon {
+  width: var(--vx-icon-round);
+  height: var(--vx-icon-round);
+}
+
+/* Kinds */
+[data-layout] .vx-btn--primary {
+  --vx-bg: var(--viptv-accent);
+  --vx-fg: var(--viptv-color-on-accent);
+  font-weight: 700;
+}
+[data-layout] .vx-btn--light {
+  --vx-bg: var(--viptv-color-text-primary);
+  --vx-fg: var(--viptv-color-on-light);
+}
+[data-layout] .vx-btn--destructive {
+  --vx-fg: var(--viptv-color-status-danger);
+}
+[data-layout] .vx-btn--quiet {
+  --vx-bg: transparent;
+  --vx-fg: var(--viptv-color-text-secondary);
+}
+/* Outline dropdown ("All providers ⌄"): chip-sized, 0.14 outline, trailing chevron. */
+[data-layout] .vx-btn--outline {
+  --vx-h: var(--viptv-size-chip-desktop);
+  --vx-bg: transparent;
+  --vx-fg: var(--viptv-color-text-secondary);
+  --vx-icon: var(--viptv-size-icon-small);
+  --vx-fs: var(--viptv-type-desktop-row-size);
+  gap: var(--viptv-space-1_5);
+  padding: 0 var(--viptv-space-3) 0 var(--viptv-space-4);
+  border: 1px solid var(--viptv-color-line-outline);
+}
+
+/* Sizes */
+[data-layout] .vx-btn--pill {
+  --vx-h: var(--viptv-size-button-pill);
+  --vx-fs: var(--viptv-type-desktop-label-size);
+}
+[data-layout] .vx-btn--small {
+  --vx-h: var(--viptv-size-button-small);
+  --vx-fs: var(--viptv-type-desktop-row-size);
+}
+
+/* Loading: the spinner (a .vx-spinner child) replaces the icon. */
+[data-layout] .vx-btn[aria-busy="true"] {
+  cursor: progress;
+}
+[data-layout] .vx-btn > .vx-spinner {
+  --vx-spinner: var(--viptv-size-spinner-inline);
+}
+[data-layout] .vx-btn--primary > .vx-spinner {
+  --vx-spinner-track: var(--viptv-color-status-spinner-on-accent);
+}
+
+/* Disabled */
+[data-layout] .vx-btn:disabled,
+[data-layout] .vx-btn[aria-disabled="true"] {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* Pressed (phone + desktop): scale 0.97 + surface step. */
+[data-layout="responsive"] .vx-btn:active:not(:disabled):not([aria-disabled="true"]) {
+  transform: scale(var(--viptv-motion-pressed-scale));
+  --vx-bg: var(--viptv-color-surface-2);
+}
+[data-layout="responsive"] .vx-btn--primary:active:not(:disabled):not([aria-disabled="true"]) {
+  --vx-bg: var(--viptv-accent);
+  filter: brightness(0.9);
+}
+[data-layout="responsive"] .vx-btn--light:active:not(:disabled):not([aria-disabled="true"]) {
+  --vx-bg: var(--viptv-color-fill-light-pressed);
+}
+[data-layout="responsive"] .vx-btn--outline:active:not(:disabled):not([aria-disabled="true"]),
+[data-layout="responsive"] .vx-btn--quiet:active:not(:disabled):not([aria-disabled="true"]) {
+  --vx-bg: var(--viptv-color-fill-wash-pressed);
+}
+
+/* Hover (desktop pointer only). */
+@media (hover: hover) and (pointer: fine) {
+  [data-layout="responsive"] .vx-btn:hover:not(:disabled):not([aria-disabled="true"]) {
+    --vx-bg: var(--viptv-color-surface-4);
+  }
+  [data-layout="responsive"] .vx-btn--primary:hover:not(:disabled):not([aria-disabled="true"]) {
+    --vx-bg: var(--viptv-accent);
+    filter: brightness(1.08);
+  }
+  [data-layout="responsive"] .vx-btn--light:hover:not(:disabled):not([aria-disabled="true"]) {
+    --vx-bg: var(--viptv-color-fill-white);
+  }
+  [data-layout="responsive"] .vx-btn--outline:hover:not(:disabled):not([aria-disabled="true"]),
+  [data-layout="responsive"] .vx-btn--quiet:hover:not(:disabled):not([aria-disabled="true"]) {
+    --vx-bg: var(--viptv-color-fill-wash);
+  }
+  [data-layout="responsive"] .vx-btn--primary:active:not(:disabled):not([aria-disabled="true"]) {
+    filter: brightness(0.9);
+  }
+  [data-layout="responsive"] .vx-btn:active:not(:disabled):not([aria-disabled="true"]) {
+    --vx-bg: var(--viptv-color-surface-2);
+  }
+  [data-layout="responsive"] .vx-btn--primary:active:not(:disabled):not([aria-disabled="true"]) {
+    --vx-bg: var(--viptv-accent);
+  }
+  [data-layout="responsive"] .vx-btn--light:active:not(:disabled):not([aria-disabled="true"]) {
+    --vx-bg: var(--viptv-color-fill-light-pressed);
+  }
+  [data-layout="responsive"] .vx-btn--outline:active:not(:disabled):not([aria-disabled="true"]),
+  [data-layout="responsive"] .vx-btn--quiet:active:not(:disabled):not([aria-disabled="true"]) {
+    --vx-bg: var(--viptv-color-fill-wash-pressed);
+  }
+}
+
+/* Keyboard focus (desktop / web): off-white ring with a ground gap, never accent. */
+@media (min-width: 600px) {
+  [data-layout="responsive"] .vx-btn:focus-visible {
+    outline: none;
+    box-shadow: var(--viptv-focus-desktop);
+  }
+}
+
+/* Text link / quiet inline action ("See all", "Reconnect", "Create an account …"). */
+[data-layout] .vx-link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--viptv-space-1_5);
+  min-height: var(--viptv-layout-phone-min-target);
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--viptv-radius-2xs);
+  outline: none;
+  background: transparent;
+  color: var(--viptv-color-text-secondary);
+  font-family: var(--viptv-font-family-ui);
+  font-size: var(--viptv-type-desktop-row-size);
+  font-weight: 600;
+  line-height: 1.3;
+  text-decoration: underline;
+  text-decoration-color: var(--viptv-color-line-control);
+  text-underline-offset: 3px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+/* A plain link ("See all"): no underline, 500 weight. */
+[data-layout] .vx-link--plain {
+  font-weight: 500;
+  text-decoration: none;
+}
+[data-layout="responsive"] .vx-link:active {
+  color: var(--viptv-color-text-primary);
+  text-decoration-color: var(--viptv-color-line-link-hover);
+}
+@media (hover: hover) and (pointer: fine) {
+  [data-layout="responsive"] .vx-link:hover {
+    color: var(--viptv-color-text-primary);
+    text-decoration-color: var(--viptv-color-line-link-hover);
+  }
+}
+@media (min-width: 600px) {
+  [data-layout="responsive"] .vx-link:focus-visible {
+    outline: none;
+    box-shadow: var(--viptv-focus-desktop);
+  }
+}
+
+/*
+ * Split button (D): Play + a chevron that opens the source drawer. Each half hovers on its
+ * own; keyboard focus draws one ring around the pair (the ::after spans the container).
+ * <div class="vx-split"><button class="vx-split__main"><svg/>Play</button>
+ *   <button class="vx-split__more" aria-label="Choose source" aria-haspopup="dialog"><svg/></button></div>
+ */
+[data-layout] .vx-split {
+  --vx-h: var(--viptv-size-button-desktop);
+  position: relative;
+  display: inline-flex;
+  flex: none;
+  border-radius: calc(var(--vx-h) / 2);
+}
+[data-layout] .vx-split__main,
+[data-layout] .vx-split__more {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  height: var(--vx-h);
+  min-height: var(--vx-h);
+  margin: 0;
+  border: 0;
+  outline: none;
+  background: var(--viptv-accent);
+  color: var(--viptv-color-on-accent);
+  font-family: var(--viptv-font-family-ui);
+  cursor: pointer;
+  transition: filter var(--viptv-motion-focus) ease-out, background-color var(--viptv-motion-focus) ease-out;
+}
+[data-layout] .vx-split__main {
+  gap: var(--viptv-space-2_5);
+  padding: 0 var(--viptv-space-5) 0 var(--viptv-space-5_5);
+  border-radius: calc(var(--vx-h) / 2) 0 0 calc(var(--vx-h) / 2);
+  font-size: var(--viptv-type-desktop-button-size);
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+}
+[data-layout] .vx-split__more {
+  width: var(--viptv-size-button-split-chevron);
+  padding: 0;
+  border-left: 1px solid var(--viptv-color-line-on-accent);
+  border-radius: 0 calc(var(--vx-h) / 2) calc(var(--vx-h) / 2) 0;
+}
+[data-layout] .vx-split__main > svg,
+[data-layout] .vx-split__more > svg {
+  flex: none;
+  width: var(--viptv-size-icon-desktop);
+  height: var(--viptv-size-icon-desktop);
+}
+[data-layout="responsive"] .vx-split__main:active,
+[data-layout="responsive"] .vx-split__more:active {
+  filter: brightness(0.9);
+}
+@media (hover: hover) and (pointer: fine) {
+  [data-layout="responsive"] .vx-split__main:hover {
+    filter: brightness(1.08);
+  }
+  [data-layout="responsive"] .vx-split__more:hover {
+    background-image: linear-gradient(var(--viptv-color-fill-on-accent-hover), var(--viptv-color-fill-on-accent-hover));
+  }
+}
+@media (min-width: 600px) {
+  [data-layout="responsive"] .vx-split__main:focus-visible::after,
+  [data-layout="responsive"] .vx-split__more:focus-visible::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    border-radius: calc(var(--vx-h) / 2);
+    box-shadow: var(--viptv-focus-desktop);
+    pointer-events: none;
+  }
+}
+
+/* Phone */
+@media (max-width: 599px) {
+  [data-layout="responsive"] .vx-btn {
+    --vx-h: var(--viptv-size-button-phone);
+    --vx-icon: var(--viptv-size-icon-phone);
+    --vx-icon-round: var(--viptv-size-icon-phone-round);
+    --vx-fs: var(--viptv-type-phone-body-strong-size);
+  }
+  [data-layout="responsive"] .vx-btn--primary {
+    --vx-fs: var(--viptv-type-phone-button-primary-size);
+  }
+  [data-layout="responsive"] .vx-btn--detail {
+    --vx-h: var(--viptv-size-button-phone-detail);
+  }
+  [data-layout="responsive"] .vx-btn--primary.vx-btn--detail {
+    --vx-fs: var(--viptv-type-phone-button-detail-size);
+  }
+  [data-layout="responsive"] .vx-btn--pill {
+    --vx-h: var(--viptv-size-button-pill);
+    --vx-fs: var(--viptv-type-phone-body-size);
+  }
+  [data-layout="responsive"] .vx-btn--small {
+    --vx-h: var(--viptv-size-button-small);
+    --vx-fs: var(--viptv-type-phone-label-size);
+  }
+  [data-layout="responsive"] .vx-btn--outline {
+    --vx-h: var(--viptv-size-chip-phone);
+    --vx-icon: var(--viptv-size-icon-small);
+    --vx-fs: var(--viptv-type-phone-label-size);
+  }
+  [data-layout="responsive"] .vx-link {
+    font-size: var(--viptv-type-phone-body-size);
+  }
+  [data-layout="responsive"] .vx-link--plain {
+    font-size: var(--viptv-type-phone-label-size);
+  }
+}
+
+/*
+ * TV: every kind is a 0.12 white pill (no accent buttons); focus = off-white fill, dark text,
+ * 4 px white ring + lift, scale 1.05. Destructive text is danger-tv (focused: danger-on-light).
+ */
+.tv-layout .vx-btn,
+.tv-layout .vx-btn--primary,
+.tv-layout .vx-btn--light,
+.tv-layout .vx-btn--quiet {
+  --vx-bg: var(--viptv-color-fill-tv-unfocused);
+  --vx-fg: var(--viptv-color-text-primary);
+}
+.tv-layout .vx-btn {
+  --vx-h: var(--viptv-size-button-tv);
+  --vx-px: calc(var(--viptv-space-8) + var(--viptv-space-0_5)); /* 34 */
+  --vx-icon: var(--viptv-size-icon-tv);
+  --vx-icon-round: var(--viptv-size-icon-tv-round);
+  --vx-fs: var(--viptv-type-tv-button-size);
+  gap: var(--viptv-space-3);
+  font-weight: 700;
+}
+.tv-layout .vx-btn--destructive {
+  --vx-bg: var(--viptv-color-fill-tv-unfocused);
+  --vx-fg: var(--viptv-color-status-danger-tv);
+}
+.tv-layout .vx-btn--small {
+  --vx-h: var(--viptv-size-button-tv-small);
+  --vx-fs: var(--viptv-type-tv-meta-size);
+}
+.tv-layout .vx-btn--outline {
+  --vx-h: var(--viptv-size-chip-tv);
+  --vx-bg: transparent;
+  --vx-fg: var(--viptv-color-text-secondary);
+  --vx-icon: var(--viptv-size-icon-tv);
+  --vx-fs: var(--viptv-type-tv-label-size);
+  border: 0;
+  padding: 0 var(--viptv-space-3) 0 var(--viptv-space-7);
+}
+.tv-layout .vx-btn > .vx-spinner {
+  --vx-spinner: var(--viptv-size-spinner-tv);
+  --vx-spinner-stroke: var(--viptv-size-spinner-stroke-tv);
+  --vx-spinner-track: var(--viptv-color-status-spinner-track);
+}
+.tv-layout .vx-btn:active:not(:disabled) {
+  --vx-bg: var(--viptv-color-fill-light-pressed);
+  --vx-fg: var(--viptv-color-on-light);
+  transform: scale(var(--viptv-motion-pressed-scale));
+}
+.tv-layout .vx-btn:focus {
+  --vx-bg: var(--viptv-color-text-primary);
+  --vx-fg: var(--viptv-color-on-light);
+  outline: none;
+  box-shadow: var(--viptv-focus-tv-shadow);
+  transform: scale(var(--viptv-focus-tv-scale-button));
+}
+.tv-layout .vx-btn--destructive:focus {
+  --vx-fg: var(--viptv-color-status-danger-on-light);
+}
+.tv-layout .vx-btn--block:focus {
+  transform: scale(var(--viptv-focus-tv-scale-row));
+}
+/* TV text action ("Use without an account"): a 56 pill that only shows when focused. */
+.tv-layout .vx-link {
+  min-height: var(--viptv-size-chip-tv);
+  padding: 0 var(--viptv-space-5_5);
+  border-radius: calc(var(--viptv-size-chip-tv) / 2);
+  color: var(--viptv-color-text-secondary);
+  font-size: var(--viptv-type-tv-label-size);
+  font-weight: 700;
+  text-decoration: none;
+  transition: transform var(--viptv-motion-focus) ease-out, box-shadow var(--viptv-motion-focus) ease-out;
+}
+.tv-layout .vx-link:focus {
+  outline: none;
+  background: var(--viptv-color-text-primary);
+  color: var(--viptv-color-on-light);
+  box-shadow: var(--viptv-focus-tv-shadow);
+  transform: scale(var(--viptv-focus-tv-scale-button));
+}
+
+/*
+ * TV source pill: quality badge + provider ("1080p LordStreams"); opens the source panel.
+ * <button class="vx-source-pill"><span class="vx-badge vx-badge--quality">1080p</span>LordStreams</button>
+ */
+[data-layout] .vx-source-pill {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: var(--viptv-space-3_5);
+  box-sizing: border-box;
+  height: var(--viptv-size-button-tv);
+  min-height: var(--viptv-size-button-tv);
+  margin: 0;
+  padding: 0 calc(var(--viptv-space-7) + var(--viptv-space-0_5)); /* 30 */
+  border: 0;
+  border-radius: calc(var(--viptv-size-button-tv) / 2);
+  outline: none;
+  background: var(--viptv-color-fill-tv-unfocused);
+  color: var(--viptv-color-text-primary);
+  font-family: var(--viptv-font-family-ui);
+  font-size: var(--viptv-type-tv-label-size);
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: transform var(--viptv-motion-focus) ease-out, box-shadow var(--viptv-motion-focus) ease-out;
+}
+.tv-layout .vx-source-pill:focus {
+  background: var(--viptv-color-text-primary);
+  color: var(--viptv-color-on-light);
+  box-shadow: var(--viptv-focus-tv-shadow);
+  transform: scale(var(--viptv-focus-tv-scale-button));
+}
+.tv-layout .vx-source-pill:focus > .vx-badge--quality {
+  background: var(--viptv-color-fill-on-light-badge);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-layout] .vx-btn,
+  [data-layout] .vx-link,
+  [data-layout] .vx-split__main,
+  [data-layout] .vx-split__more,
+  [data-layout] .vx-source-pill {
+    transition: none;
+  }
+}
