@@ -8,7 +8,7 @@
 .responsive-app :is(.filters button, .settings-row) { text-align: left; }
 .responsive-app p { font-size: inherit; line-height: 1.5; }
 /* Dialog and filter buttons do not lift like remote-focused TV tiles. */
-.responsive-app :is(.modal-choices button, .error button, .filters button, .card-more):is(:hover, :active) { transform: none; filter: none; }
+.responsive-app :is(.filters button, .card-more):is(:hover, :active) { transform: none; filter: none; }
 /* Touch never leaves a hover frame on a tapped card or episode. */
 
 /* Headings are sentence case at every width, as on phones. */
@@ -17,8 +17,8 @@
 .responsive-app .browse-empty { margin-top: 8px; color: #a6a8aa; font-size: 15px; }
 
 /* Larger hit areas for compact controls, without changing their layout. */
-.responsive-app :is(.shelf-see-more, .chip, .rp-button, .error-dismiss-btn) { position: relative; }
-.responsive-app :is(.shelf-see-more, .chip, .error-dismiss-btn)::before { content: ""; position: absolute; inset: -6px -2px; }
+.responsive-app :is(.shelf-see-more, .chip, .rp-button) { position: relative; }
+.responsive-app :is(.shelf-see-more, .chip)::before { content: ""; position: absolute; inset: -6px -2px; }
 /* ---- Dialogs --------------------------------------------------------------- */
 /* Watch on TV: the controller panel is the dialog's content, not a box in a box. */
 .responsive-app .cast-controller p + p { margin-top: 12px; }

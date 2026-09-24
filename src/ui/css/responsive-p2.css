@@ -86,8 +86,4 @@
   .responsive-app .profile-row > button::after { width: 124px; height: 124px; }
   .responsive-app .profile-row img, .responsive-app .profile-initials { width: 112px; height: 112px; }
   .responsive-app .profile-row strong { width: 124px; top: 136px; font-size: 17px; }
-  .responsive-app .profile-actions button { font-size: 17px; }
-  .responsive-app .scrim { padding: 12px; }
-  .responsive-app .modal, .responsive-app .source-detail-panel { padding: 20px; max-height: calc(100dvh - 24px); }
-  .responsive-app .modal-choices button { font-size: 18px; }
-  .responsive-app .toast, .responsive-app .loading, .responsive-app .error { bottom: calc(88px + env(safe-area-inset-bottom)); font-size: 16px; }}
+  .responsive-app .profile-actions button { font-size: 17px; }}
