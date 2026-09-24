@@ -115,7 +115,6 @@ the printed console errors and last API calls. A missing mock route answers
 | PhUpNext, DeskUpNext, TvUpNext | the player has no Up Next card yet |
 | PhOverflowCue | cards have no touch ⋯ button yet |
 | WebLinkTv | tv-web has no "Link your TV" code-entry page |
-| DeskEngine | the Playback engine setting exists only on the Tauri platform (native player) |
 | DeskCastSearch, DeskCastManual, DeskCastBusy, DeskCastPin, DeskCastRemote, DeskCastError | Watch on TV pairing runs only in the Tauri runtime (SmartCast commands) |
 
 ## Known differences in reached screens

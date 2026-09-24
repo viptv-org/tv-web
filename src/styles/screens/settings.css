@@ -1,1 +1,512 @@
-/* Screen family: settings. Reference screens: design/viptv-design-system/reference/screens. */
+/*
+ * Screen family: settings — Settings (phone list / desktop section nav + pane / TV rows +
+ * description panel), its overlays, Watch on TV (CastController) and local mode (LocalApp).
+ * Reference screens (design/viptv-design-system/reference/screens):
+ *   phone   Settings, PhPlayback, PhPlaybackChoice, PhAddons, PhAddonInstall, PhAddonManage,
+ *           PhAddonRemove, PhSignOut, PhCastUnavailable, PhLocalHome
+ *   desktop DeskSettings, DeskPlayback, DeskEngine, DeskAddons, DeskAddonInstall, DeskAddonManage,
+ *           DeskAddonRemove, DeskSignOut, DeskCast{Search,Manual,Busy,Pin,Remote,Error},
+ *           WebCastUnavailable, WebLocal{Home,Loading,Empty,Addons,Remove}
+ *   TV      TvSettings, TvPlayback, TvPlaybackChoice, TvAddons, TvAddonInstall (TextEntry),
+ *           TvAddonManage, TvAddonRemove, TvSignOut
+ * Markup: src/ui/Settings.tsx, src/ui/SettingsOverlay.tsx, src/ui/CastController.tsx,
+ * src/ui/LocalApp.tsx. Rows, choice rows, switches, dialogs, popovers, fields and buttons are the
+ * primitives (src/styles/primitives); this file lays them out and adds family modifiers.
+ * Literal lengths are per-screen geometry from the reference HTML with no token (commented).
+ * TV rules (.tv-layout) are Chrome 87-safe.
+ */
+
+/* ---------------------------------------------------------------------------
+ * Overlay layer (SettingsOverlay.tsx): the body row on desktop (the title bar and the rail
+ * stay bright), the whole screen on phone and TV.
+ * ------------------------------------------------------------------------ */
+[data-layout="responsive"] .vx-settings-layer {
+  top: var(--vx-shell-top, 0px);
+  left: var(--vx-shell-rail, 0px);
+}
+[data-layout] .vx-settings-layer__catcher {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+}
+/* Every desktop dialog on the reference screens is centred in the body row. */
+@media (min-width: 600px) {
+  [data-layout="responsive"] .vx-settings-layer .vx-dialog:not(.vx-dialog--drawer) {
+    top: 50%;
+  }
+}
+/* DeskEngine: the engine / accent popover is 280 wide. */
+[data-layout] .vx-settings-popover {
+  width: 280px;
+}
+[data-layout] .vx-settings-popover .vx-menu__icon {
+  align-items: center;
+}
+
+/* Accent colour swatch (rows, the popover, the phone sheet). */
+[data-layout] .vx-settings-swatch {
+  display: inline-block;
+  flex: none;
+  width: var(--viptv-size-icon-xs);
+  height: var(--viptv-size-icon-xs);
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1px var(--viptv-color-line-on-accent);
+  vertical-align: middle;
+}
+[data-layout] .vx-settings-swatch--gold { background: var(--viptv-color-accent-options-gold); }
+[data-layout] .vx-settings-swatch--coral { background: var(--viptv-color-accent-options-coral); }
+[data-layout] .vx-settings-swatch--mint { background: var(--viptv-color-accent-options-mint); }
+[data-layout] .vx-settings-swatch--periwinkle { background: var(--viptv-color-accent-options-periwinkle); }
+
+/* Install dialog (phone / desktop): the form is the dialog body. */
+[data-layout] .vx-settings-install__form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--viptv-space-3_5);
+  margin: 0;
+}
+
+/* Phone choice sheet for long lists (PhPlaybackChoice): from 120 px down, the list scrolls. */
+@media (max-width: 599px) {
+  [data-layout="responsive"] .vx-settings-choice--tall {
+    top: 120px; /* PhPlaybackChoice sheet top */
+  }
+  [data-layout="responsive"] .vx-settings-choice--tall .vx-dialog__scroll {
+    margin-top: var(--viptv-space-3_5);
+  }
+  [data-layout="responsive"] .vx-settings-choice .vx-choice-list {
+    margin: 0 calc(var(--viptv-space-4) * -1);
+  }
+  [data-layout="responsive"] .vx-settings-choice .vx-choice[aria-checked="false"] {
+    font-weight: 500;
+  }
+}
+[data-layout] .vx-settings-choice .vx-settings-swatch {
+  margin-right: var(--viptv-space-1);
+}
+
+/* ---------------------------------------------------------------------------
+ * Phone (Settings, PhPlayback, PhAddons): header with back, grouped cards, Sign out.
+ * ------------------------------------------------------------------------ */
+[data-layout="responsive"] .vx-settings-list {
+  position: relative;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 100%;
+  margin: 0;
+  padding: var(--viptv-layout-phone-top-inset) 0 calc(2 * var(--viptv-space-5));
+  background: var(--viptv-color-bg);
+  color: var(--viptv-color-text-primary);
+  font-family: var(--viptv-font-family-ui);
+}
+[data-layout="responsive"] .vx-settings-list__header {
+  display: flex;
+  align-items: center;
+  gap: var(--viptv-space-1);
+  height: var(--viptv-size-button-desktop);
+  padding: 0 var(--viptv-space-2) 0 var(--viptv-space-1);
+}
+[data-layout="responsive"] .vx-settings-list__back {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: var(--viptv-layout-phone-min-target);
+  height: var(--viptv-layout-phone-min-target);
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  outline: none;
+  background: transparent;
+  color: var(--viptv-color-text-primary);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+[data-layout="responsive"] .vx-settings-list__back > svg {
+  width: var(--viptv-size-icon-large);
+  height: var(--viptv-size-icon-large);
+}
+[data-layout="responsive"] .vx-settings-list__back:active {
+  background: var(--viptv-color-surface-2);
+  transform: scale(var(--viptv-motion-pressed-scale));
+}
+[data-layout="responsive"] .vx-settings-list__title {
+  min-width: 0;
+  margin: 0;
+  font-family: var(--viptv-font-family-display);
+  font-size: var(--viptv-type-phone-subpage-title-size);
+  font-weight: var(--viptv-type-phone-subpage-title-weight);
+  line-height: var(--viptv-type-phone-subpage-title-line-height);
+  letter-spacing: var(--viptv-type-phone-subpage-title-letter-spacing);
+}
+[data-layout="responsive"] .vx-settings-list__caption {
+  margin: var(--viptv-space-2) var(--viptv-space-4) 0;
+  color: var(--viptv-color-text-secondary);
+  font-size: var(--viptv-type-phone-label-size);
+  line-height: 1.5;
+}
+[data-layout="responsive"] .vx-settings-list__groups {
+  display: flex;
+  flex-direction: column;
+  gap: var(--viptv-space-6);
+  padding: var(--viptv-space-5) var(--viptv-space-4) 0;
+}
+/* Informational rows (About) open nothing. */
+[data-layout] .vx-settings-row--info {
+  cursor: default;
+}
+[data-layout="responsive"] .vx-settings-row--info:active,
+[data-layout="responsive"] .vx-settings-row--info:hover {
+  background: transparent;
+}
+[data-layout] .vx-settings-row__end > .vx-settings-swatch {
+  order: -1;
+}
+/* Sign out: its own 56-tall surface-1 button under the groups (Settings). */
+[data-layout="responsive"] .vx-settings-list__signout {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--viptv-space-2_5);
+  box-sizing: border-box;
+  width: 100%;
+  height: var(--viptv-size-row-choice-phone);
+  min-height: 0;
+  margin: 0;
+  padding: 0 var(--viptv-space-4);
+  border: 0;
+  border-radius: var(--viptv-radius-3xl);
+  outline: none;
+  background: var(--viptv-color-surface-1);
+  color: var(--viptv-color-status-danger);
+  font-family: var(--viptv-font-family-ui);
+  font-size: var(--viptv-type-phone-body-strong-size);
+  font-weight: 600;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background-color var(--viptv-motion-focus) ease-out, transform var(--viptv-motion-focus) ease-out;
+}
+[data-layout="responsive"] .vx-settings-list__signout > svg {
+  width: var(--viptv-size-icon-desktop);
+  height: var(--viptv-size-icon-desktop);
+}
+[data-layout="responsive"] .vx-settings-list__signout:active {
+  background: var(--viptv-color-surface-2);
+  transform: scale(var(--viptv-motion-pressed-scale));
+}
+@media (min-width: 600px) {
+  [data-layout="responsive"] .vx-settings-list__signout:focus-visible,
+  [data-layout="responsive"] .vx-settings-list__back:focus-visible {
+    box-shadow: var(--viptv-focus-desktop);
+  }
+}
+
+/* ---------------------------------------------------------------------------
+ * Desktop / web (DeskSettings, DeskPlayback, DeskAddons): section nav + pane.
+ * ------------------------------------------------------------------------ */
+[data-layout="responsive"] .vx-settings-split {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--viptv-space-5);
+  box-sizing: border-box;
+  width: calc(100% - var(--vx-shell-rail, 0px));
+  min-height: 100%;
+  margin: 0 0 0 var(--vx-shell-rail, 0px);
+  padding: var(--viptv-space-9) var(--viptv-space-12) var(--viptv-space-12);
+  background: var(--viptv-color-bg);
+  color: var(--viptv-color-text-primary);
+  font-family: var(--viptv-font-family-ui);
+}
+[data-layout="responsive"] .vx-settings-split__title {
+  margin: 0;
+  font-family: var(--viptv-font-family-display);
+  font-size: var(--viptv-type-desktop-page-title-size);
+  font-weight: var(--viptv-type-desktop-page-title-weight);
+  line-height: normal; /* DeskSettings: the title sits on the font's own line box */
+  letter-spacing: var(--viptv-type-desktop-page-title-letter-spacing);
+}
+[data-layout="responsive"] .vx-settings-split__body {
+  display: flex;
+  flex: 1 1 auto;
+  gap: var(--viptv-space-12);
+  min-height: 0;
+}
+[data-layout="responsive"] .vx-settings-split__nav {
+  flex: none;
+  width: 260px; /* DeskSettings section nav width */
+}
+/* Every group label sits 16 below the item above it, the first one too (DeskSettings). */
+[data-layout="responsive"] .vx-settings-split__nav .vx-section-nav__label {
+  padding-top: var(--viptv-space-4);
+}
+[data-layout="responsive"] .vx-settings-split__spacer {
+  flex: 1 1 auto;
+  min-height: var(--viptv-space-6);
+}
+[data-layout="responsive"] .vx-settings-split__signout {
+  font-weight: 600;
+}
+[data-layout="responsive"] .vx-settings-pane {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: var(--viptv-space-4);
+  min-width: 0;
+  max-width: 720px; /* DeskSettings pane max width */
+  margin: 0;
+  padding-top: var(--viptv-space-4_5);
+}
+[data-layout="responsive"] .vx-settings-pane__title {
+  margin: 0;
+  font-family: var(--viptv-font-family-display);
+  font-size: var(--viptv-type-desktop-dialog-title-size);
+  font-weight: var(--viptv-type-desktop-dialog-title-weight);
+  line-height: var(--viptv-type-desktop-dialog-title-line-height);
+}
+[data-layout="responsive"] .vx-settings-pane__caption {
+  margin: 0;
+  color: var(--viptv-color-text-tertiary);
+  font-size: var(--viptv-type-desktop-row-size);
+  line-height: normal; /* DeskPlayback */
+}
+/* The row whose popover is open stays lit (DeskEngine). */
+[data-layout="responsive"] .vx-settings-row[aria-expanded="true"],
+[data-layout="responsive"] .vx-settings-option--button[aria-expanded="true"] {
+  background: var(--viptv-color-surface-2);
+}
+/* The pane's group label reads 12/700 (DeskPlayback "THIS DEVICE"). */
+[data-layout="responsive"] .vx-settings-pane .vx-settings-group__label {
+  font-size: var(--viptv-type-phone-group-label-size);
+  letter-spacing: var(--viptv-type-phone-group-label-letter-spacing);
+}
+[data-layout="responsive"] .vx-settings-pane .vx-settings-row__value {
+  overflow: hidden;
+  max-width: 320px; /* long values (the server URL) truncate */
+  text-overflow: ellipsis;
+}
+
+/* Appearance card options (DeskSettings OLED row; the accent row copies it). */
+[data-layout] .vx-settings-option {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--viptv-space-6);
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 0;
+  margin: 0;
+  padding: var(--viptv-space-5) var(--viptv-space-5_5);
+  border: 0;
+  border-radius: 0;
+  outline: none;
+  background: transparent;
+  color: var(--viptv-color-text-primary);
+  font-family: var(--viptv-font-family-ui);
+  font-weight: 400;
+  text-align: left;
+}
+[data-layout] .vx-settings-option + .vx-settings-option {
+  border-top: 1px solid var(--viptv-color-line-hairline);
+}
+[data-layout] .vx-settings-card > .vx-settings-option:first-child {
+  border-top-left-radius: var(--vx-card-r);
+  border-top-right-radius: var(--vx-card-r);
+}
+[data-layout] .vx-settings-card > .vx-settings-option:last-child {
+  border-bottom-left-radius: var(--vx-card-r);
+  border-bottom-right-radius: var(--vx-card-r);
+}
+[data-layout] .vx-settings-option__text {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: var(--viptv-space-1);
+  min-width: 0;
+}
+[data-layout] .vx-settings-option__title {
+  font-size: var(--viptv-type-desktop-body-size);
+  font-weight: 600;
+}
+[data-layout] .vx-settings-option__description {
+  color: var(--viptv-color-text-secondary);
+  font-size: var(--viptv-type-desktop-row-size);
+  line-height: 1.5;
+}
+[data-layout] .vx-settings-option__value {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--viptv-space-2);
+  color: var(--viptv-color-text-secondary);
+  font-size: var(--viptv-type-desktop-row-size);
+  white-space: nowrap;
+}
+[data-layout] .vx-settings-option--button {
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background-color var(--viptv-motion-focus) ease-out, box-shadow var(--viptv-motion-focus) ease-out;
+}
+[data-layout="responsive"] .vx-settings-option--button:active {
+  background: var(--viptv-color-surface-2);
+}
+@media (hover: hover) and (pointer: fine) {
+  [data-layout="responsive"] .vx-settings-option--button:hover {
+    background: var(--viptv-color-surface-2);
+  }
+}
+@media (min-width: 600px) {
+  [data-layout="responsive"] .vx-settings-option--button:focus-visible,
+  [data-layout="responsive"] .vx-settings-option .vx-switch:focus-visible {
+    z-index: 1;
+    box-shadow: var(--viptv-focus-desktop);
+  }
+}
+
+/* ---------------------------------------------------------------------------
+ * TV (TvSettings, TvPlayback, TvAddons; 1920 × 1080 canvas px): rows on the left,
+ * the focused row's description on the right.
+ * ------------------------------------------------------------------------ */
+.tv-layout .vx-settings-tv {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  color: var(--viptv-color-text-primary);
+  font-family: var(--viptv-font-family-ui);
+}
+.tv-layout .vx-settings-tv__list {
+  position: absolute;
+  top: var(--viptv-layout-tv-safe-y);
+  bottom: var(--viptv-layout-tv-safe-y);
+  left: calc(2 * var(--viptv-layout-tv-safe-x));
+  display: flex;
+  flex-direction: column;
+  width: 720px; /* TvSettings row column */
+}
+.tv-layout .vx-settings-tv__title {
+  flex: none;
+  margin: 0 0 40px; /* TvSettings title → first row */
+  font-family: var(--viptv-font-family-display);
+  font-size: var(--viptv-type-tv-screen-title-size);
+  font-weight: var(--viptv-type-tv-screen-title-weight);
+  line-height: 1.29; /* TvSettings: a 72 px line box (the reference's normal line height) */
+  letter-spacing: var(--viptv-type-tv-screen-title-letter-spacing);
+}
+/* The rows scroll when they outgrow the screen; the padding keeps the focus ring, scale and
+   shadow of an edge row inside the scroll box (negative margins cancel it out). */
+.tv-layout .vx-settings-tv__rows {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: var(--viptv-space-2_5);
+  min-height: 0;
+  margin: calc(var(--viptv-space-9) * -1) calc(var(--viptv-space-16) * -1) calc(var(--viptv-space-24) * -1);
+  padding: var(--viptv-space-9) var(--viptv-space-16) var(--viptv-space-24);
+  overflow-y: auto;
+}
+.tv-layout .vx-settings-tv__item {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+}
+.tv-layout .vx-settings-tv__divider {
+  display: block;
+  height: var(--viptv-size-border-strong);
+  margin: var(--viptv-space-3) var(--viptv-space-5) calc(var(--viptv-space-3) + var(--viptv-space-2_5));
+  background: var(--viptv-color-line-hairline);
+}
+/* The root rows are exactly 80 tall (TvSettings). */
+.tv-layout .vx-settings-tv .vx-settings-row {
+  flex: none;
+}
+/* Install addon's note: 20/500 tertiary (TvAddons). */
+.tv-layout .vx-settings-tv .vx-settings-row__note {
+  color: var(--viptv-color-text-tertiary);
+  font-size: var(--viptv-type-tv-caption-size);
+  font-weight: 500;
+}
+.tv-layout .vx-settings-tv__panel {
+  position: absolute;
+  top: 190px; /* TvSettings description panel top */
+  right: var(--viptv-layout-tv-safe-x);
+  left: 1040px; /* TvSettings description panel left */
+  display: flex;
+  flex-direction: column;
+  gap: var(--viptv-space-3_5);
+}
+.tv-layout .vx-settings-tv__description .vx-tv-description__text {
+  white-space: pre-line;
+}
+/* Sub-pages read "Current: Auto" at 26 (TvPlayback, TvAddons). */
+.tv-layout .vx-settings-tv--sub .vx-tv-description__text {
+  font-size: var(--viptv-type-tv-body-size);
+}
+.tv-layout .vx-settings-tv__caption {
+  margin: var(--viptv-space-5) 0 0;
+  color: var(--viptv-color-text-tertiary);
+  font-size: var(--viptv-type-tv-meta-size);
+  line-height: 1.5;
+}
+.tv-layout .vx-settings-tv__version {
+  margin: 60px 0 0; /* TvSettings version footer offset */
+  padding-top: var(--viptv-space-7);
+  border-top: var(--viptv-size-border-strong) solid var(--viptv-color-line-hairline);
+  color: var(--viptv-color-text-tertiary);
+  font-size: var(--viptv-type-tv-meta-size);
+}
+/* Switch profile: the profiles to pick from (Press ▶), 160 tiles. */
+.tv-layout .vx-settings-tv__profiles {
+  display: flex;
+  gap: var(--viptv-space-8);
+  margin-top: var(--viptv-space-4_5);
+}
+.tv-layout .vx-settings-tv__profile {
+  --vx-avatar: 160px; /* TvSettings profile tiles */
+  gap: var(--viptv-space-4_5);
+}
+.tv-layout .vx-settings-tv__profile .vx-profile__avatar {
+  position: relative;
+}
+.tv-layout .vx-settings-tv__profile .vx-profile__letter {
+  background: var(--viptv-color-surface-3);
+}
+.tv-layout .vx-settings-tv__profile .vx-profile__avatar > img {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+.tv-layout .vx-settings-tv__profile .vx-profile__name {
+  font-size: var(--viptv-type-tv-label-size);
+}
+.tv-layout .vx-settings-tv__profile[aria-current="true"] .vx-profile__name {
+  color: var(--viptv-color-text-primary);
+}
+.tv-layout .vx-settings-tv__watching {
+  margin-top: calc(var(--viptv-space-0_5) - var(--viptv-space-4_5));
+  color: var(--viptv-color-text-tertiary);
+  font-size: var(--viptv-type-tv-min-size);
+  transition: transform var(--viptv-motion-focus) ease-out;
+}
+.tv-layout .vx-settings-tv__profile:focus .vx-settings-tv__watching {
+  transform: translateY(var(--viptv-focus-tv-caption-shift-profile));
+}
+
+/* TV overlays: long choice lists scroll inside the panel (ring room as for the rows). */
+.tv-layout .vx-settings-choice .vx-choice-list {
+  flex: 1 1 auto;
+  min-height: 0;
+  margin: calc(var(--viptv-space-4) * -1) calc(var(--viptv-space-6) * -1);
+  padding: var(--viptv-space-4) var(--viptv-space-6);
+  overflow-y: auto;
+}
+.tv-layout .vx-settings-choice .vx-choice {
+  flex: none;
+}

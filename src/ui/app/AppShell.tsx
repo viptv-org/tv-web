@@ -14,7 +14,7 @@ import { DetailScreen } from "../../screens/DetailScreen";
 import { SourcesScreen } from "../../screens/SourcesScreen";
 import { PlayerScreen } from "../../screens/PlayerScreen";
 import type { AppApi } from "./useTvApp";
-import { isDesktopShell } from "./appShared";
+import { desktopShellPreview, isDesktopShell } from "./appShared";
 import { AppDialogs } from "./AppDialogs";
 import { enterLocalMode, localModeAvailable } from "../../local";
 import { usePhoneLayout } from "../usePhoneLayout";
@@ -378,8 +378,8 @@ export function AppShell({ app }: { app: AppApi }) {
                 profile={profile}
                 prefs={prefs}
                 appearance={responsive ? { oled, toggle: toggleOled } : undefined}
-
-                playbackEngine={platform === "tauri" ? { choice: engineChoice, select: selectEngine } : undefined}
+                // The engine is a native (Tauri) setting; the dev-only desktop-shell preview shows it too.
+                playbackEngine={platform === "tauri" || (responsive && desktopShellPreview) ? { choice: engineChoice, select: selectEngine } : undefined}
                 onPrefs={setPrefs}
                 onProfiles={() => {
                   setManaging(false);
@@ -390,38 +390,26 @@ export function AppShell({ app }: { app: AppApi }) {
                   go("profiles");
                 }}
                 onError={fail}
-                onModal={(title, choices) =>
-                  setModal(choices.length ? { title, choices } : undefined)
-                }
+                // Settings asks "Sign out of this device?" first; this is the confirmed action.
                 onSignOut={() =>
-                  setModal({
-                    title: responsive ? "Sign out of this device?" : "Sign out of this TV?",
-                    choices: [
-                      {
-                        label: "Sign out",
-                        action: () => {
-                          setModal(undefined);
-                          void authorize(
-                            "Enter parent PIN to sign out",
-                            (signal) => api.signOut({ signal }),
-                            () => {
-                              setProfile("");
-                              setProfiles([]);
-                              setScreen("pairing");
-                              void pairing();
-                            },
-                          );
-                        },
-                      },
-                      { label: "Cancel", action: () => setModal(undefined) },
-                    ],
-                  })
+                  void authorize(
+                    "Enter parent PIN to sign out",
+                    (signal) => api.signOut({ signal }),
+                    () => {
+                      setProfile("");
+                      setProfiles([]);
+                      setScreen("pairing");
+                      void pairing();
+                    },
+                  )
                 }
                 subpage={settingsSubpage}
                 onSubpageChange={setSettingsSubpage}
                 onBack={back}
                 list={responsive}
-                onWatchOnTv={phone ? openCast : undefined}
+                onWatchOnTv={responsive ? openCast : undefined}
+                profiles={profiles}
+                onChooseProfile={(id) => void chooseProfile(id)}
               />
             )}
             {screen === "player" && overlay && (
