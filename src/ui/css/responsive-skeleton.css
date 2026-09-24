@@ -1,5 +1,5 @@
-/* Loading skeletons: HomeSkeleton (the startup state), the Discover grid and
-   the phone Live TV list. Blocks take their geometry from the real layout
+/* Loading skeletons: the Discover grid and the phone Live TV list (the Home
+   skeleton is src/screens/HomeSkeleton.tsx on the vx-skel primitives). Blocks take their geometry from the real layout
    rules they share class names with; this file only paints them. */
 @keyframes skeleton-shimmer {
   from { background-position: 100% 0; }
@@ -23,22 +23,6 @@
 .responsive-app .skeleton-shell { pointer-events: none; user-select: none; }
 /* End-of-list and pending-shelf sentinels (AutoLoad). */
 .responsive-app .auto-load { height: 1px; }
-
-/* Home: text lines occupy the line boxes the loaded copy will, and the
-   title holds a title logo's slot (128px, 72px on phones). The synopsis
-   shows as many lines as the loaded preview clamps to at each width. */
-.responsive-app .home-skeleton .hero > p .skeleton-line { display: block; margin: 0.39em 0; }
-.responsive-app .home-skeleton .skeleton-logo { display: block; width: min(100%, 320px); height: 128px; border-radius: 10px; }
-@media (max-width: 899px) {
-  .responsive-app .home-skeleton .hero > p .skeleton-line:nth-child(4) { display: none; }
-}
-@media (max-width: 599px) {
-  .responsive-app .home-skeleton .hero > p .skeleton-line:nth-child(n + 3) { display: none; }
-  .responsive-app .home-skeleton .skeleton-logo { width: min(100%, 220px); height: 72px; }
-}
-.responsive-app .home-skeleton .hero .actions [data-focus-id="hero-details"] { width: 132px; }
-.responsive-app .home-skeleton .media-card > :is(strong, small) .skeleton-line { height: 0.66em; }
-.responsive-app .home-skeleton .card-caption .skeleton-line { height: 11px; }
 
 /* Grid placeholders while a browse route waits for its first page. */
 .responsive-app .card-skeleton { aspect-ratio: 16 / 9; border-radius: 8px; }

@@ -1,11 +1,18 @@
 import { memo, useCallback, useLayoutEffect, useRef, useState, type Dispatch, type MutableRefObject, type SetStateAction } from "react";
+import { Film, MoreHorizontal } from "lucide-react";
 import { cardPresentation } from "../../core/presentations";
 import { type CardPresentation, type Catalog, type MediaItem, type MediaSource } from "../../api";
-import { RokuText } from "../../ui/RokuText";
 import { TvButton } from "../../ui/remote";
-import { SharedCardThumbnail, SharedPosterThumbnail } from "../../ui/RokuArtwork";
+import { TileImage } from "../../ui/RokuArtwork";
 import type { Screen } from "../../ui/screens";
 import type { CardShape } from "../../ui/cardShapes";
+import { usePhoneLayout } from "../../ui/usePhoneLayout";
+import { LiveBadge, LiveLabel } from "../../ui/primitives/Badges";
+import { MissingArt } from "../../ui/primitives/Cards";
+import { PlayIcon } from "../../ui/primitives/icons";
+import { cardMeta, channelMonogram, continueMeta, liveSubtitle, phoneContinueMeta } from "./cardText";
+
+export { cardMeta } from "./cardText";
 
 /**
  * Latest card action closures for the memoized card row: the row reads the
@@ -18,6 +25,20 @@ export type CardActions = {
   manage: (item: MediaItem) => void;
 };
 
+/**
+ * Tile kinds (components.md §6; src/styles/primitives/cards.css):
+ *   poster    P fluid 4:5 (fills its grid cell; 111 wide in a Home shelf) · D 172 × 258 ·
+ *             web 164 × 246 · TV: a still
+ *   still     landscape still + caption: D 256 × 128 · TV 320 × 180 · P fluid 16:9 when asked
+ *             for explicitly (a shape-derived landscape row draws posters on phones)
+ *   continue  a still with progress and the hover play disc (P: the 292 × 96 continue card)
+ *   live      text monogram + LIVE: D 220 × 124 · TV still (P: the 200-wide live-now card)
+ *   grid      TV grid tile 360 × 202 (browse grids); responsive layouts draw posters
+ * Queue cards (Home queue row, My List → Continue Watching) carry progress in the art and the
+ * resume caption whatever their kind.
+ */
+export type CardKind = "poster" | "still" | "continue" | "live" | "grid";
+
 /** Per-row rendering options for the card-row helpers. */
 export type CardRowOptions = {
   shape?: CardShape;
@@ -25,54 +46,34 @@ export type CardRowOptions = {
   catalog?: Catalog;
   /** Opt-in horizontal windowing for scroller rows (Home shelves). */
   windowed?: boolean;
+  /**
+   * Tile kind for the row's non-live cards. Defaults: queue rows "continue",
+   * otherwise `shape` (poster → "poster", landscape → "still").
+   */
+  kind?: CardKind;
 };
 
-// Fallback row pitch until the real one is measured: .responsive-card is
-// 256px wide in a 24px-gap flex track. The measured pitch and gap drive the
-// window math and the spacer widths so the track's total width and every
-// card position stay identical to a fully rendered row under every
-// responsive media query — the card width and gap both change across
-// breakpoints, and a hardcoded pitch would drift and shift restored offsets.
+// Fallback row pitch until the real one is measured: a 256px desktop still
+// in a 16px-gap track. The measured pitch and gap drive the window math and
+// the spacer widths so the track's total width and every card position stay
+// identical to a fully rendered row at every width (tile widths and gaps
+// change per platform).
 const CARD_WIDTH = 256;
-const CARD_GAP = 24;
+const CARD_GAP = 16;
 const CARD_PITCH = CARD_WIDTH + CARD_GAP;
 /** Cards kept mounted beyond each viewport edge before they scroll in. */
 const WINDOW_BUFFER = 3;
-
-const QUEUE_STATUS: Readonly<Record<string, string>> = {
-  next: "Up next",
-  caught_up: "Caught up",
-  upcoming: "Coming soon",
-  pending: "Find next",
-  unavailable: "Find next",
-};
+/** Direct children of a responsive track: one slot per card (card + phone ⋯). */
+const SLOT = "vx-card-slot";
 
 /**
- * The minimal context printed under a phone card's title: the episode
- * number (or the year for a title), plus a short queue state. Genres,
- * runtimes and resume times stay out of the card; the progress bar already
- * carries the resume position.
- */
-export function cardMeta(item: MediaItem): string {
-  if (item.type === "live") return "";
-  const episode = item.episode ?? 0;
-  const context =
-    episode > 0 || item.type === "episode"
-      ? `${item.season ? `S${item.season} ` : ""}E${episode || 1}`
-      : item.year
-        ? String(item.year)
-        : "";
-  return [context, QUEUE_STATUS[item.queueStatus ?? ""]].filter(Boolean).join(" · ");
-}
-
-/**
- * Last measured row geometry per card shape and window width. A remounted
+ * Last measured row geometry per card kind and window width. A remounted
  * row (Back to Home, say) starts from it, so it neither mounts cards for the
- * landscape fallback pitch nor re-renders once it has measured itself.
+ * fallback pitch nor re-renders once it has measured itself.
  */
 const measuredMetrics = new Map<string, { pitch: number; gap: number }>();
-const metricsKey = (shape: CardShape) =>
-  `${shape}:${typeof window === "undefined" ? 0 : window.innerWidth}`;
+const metricsKey = (kind: string) =>
+  `${kind}:${typeof window === "undefined" ? 0 : window.innerWidth}`;
 
 function windowFor(
   scrollLeft: number,
@@ -89,6 +90,27 @@ function windowFor(
 }
 
 /**
+ * The kind a card renders as on this platform. `explicit` is true when the
+ * row asked for its kind (CardRowOptions.kind) rather than deriving it from
+ * the shape.
+ */
+function resolveKind(item: MediaItem, rowKind: CardKind, responsive: boolean, phone: boolean, explicit: boolean): CardKind {
+  if (item.type === "live") return "live";
+  // The TV Home is landscape throughout; TV grids ask for "grid" explicitly.
+  if (!responsive && rowKind === "poster") return "still";
+  // "grid" is the TV grid tile; responsive grids draw posters.
+  if (responsive && rowKind === "grid") return "poster";
+  // Phones draw shape-derived catalog rows as posters (reference Main /
+  // Discover / PhOverflowCue); an explicit "still" stays a fluid 16:9 still
+  // (PhLibraryCW).
+  if (phone && rowKind === "still" && !explicit) return "poster";
+  return rowKind;
+}
+
+/** The art size requested from the image pipeline per kind. */
+const ART_SIZE: Record<"tv" | "responsive", [number, number]> = { tv: [320, 180], responsive: [256, 144] };
+
+/**
  * One memoized row of media cards for every screen. Unrelated App re-renders
  * (hero swaps, busy toggles, player state) must not re-run per-card WASM
  * normalization for hundreds of cards, so this row re-renders only when its
@@ -100,8 +122,10 @@ function windowFor(
  * spacers standing in for the unmounted remainder. The TV layout keeps
  * every card mounted for its spatial navigation engine.
  *
- * `shape` selects poster or landscape art for the responsive layout; live
- * channels keep their landscape logo cards and the TV is always landscape.
+ * DOM contract: the track is `.cards` (TV reveal scrolling, e2e), every
+ * focusable card is `.media-card` with its `<prefix>-<index>` focus id; in
+ * the responsive layout each card sits in a `.vx-card-slot` beside its
+ * phone ⋯ button (touch overflow → the title menu).
  */
 export const Cards = memo(function Cards({
   list,
@@ -115,6 +139,7 @@ export const Cards = memo(function Cards({
   windowed,
   shape = "landscape",
   catalog,
+  kind,
 }: {
   list: readonly MediaItem[];
   prefix: string;
@@ -128,20 +153,22 @@ export const Cards = memo(function Cards({
   windowed?: boolean;
   shape?: CardShape;
   catalog?: Catalog;
+  kind?: CardKind;
 }) {
   const track = useRef<HTMLDivElement>(null);
-  // Live rows are short, and their phone logo tiles take each logo's own
-  // width, which a fixed-pitch window cannot address.
+  const phone = usePhoneLayout(responsive);
+  const inQueue = prefix === "queue" || (screen === "My List" && libraryQueue);
+  const rowKind: CardKind = kind ?? (inQueue ? "continue" : shape === "poster" ? "poster" : "still");
+  // A row of live channels stays a live row whatever kind was asked for.
   const liveRow = list.length > 0 && list.every((item) => item.type === "live");
+  const explicitKind = kind !== undefined;
+  const displayKind = liveRow ? "live" : resolveKind(list.find((item) => item.type !== "live") ?? list[0] ?? ({ type: "movie" } as MediaItem), rowKind, responsive, phone, explicitKind);
   const windowedRow = responsive && windowed === true && !liveRow;
   // Measured per layout: the pitch between consecutive cards and the gap
   // around the spacers. Read during render from the last measurement; every
   // measurement is followed by a re-render, so the spacers never render
   // against stale geometry for more than the pre-measure commit.
-  // A row of live channels stays a landscape row even where posters are set.
-  const posterRow = responsive && shape === "poster" && list.some((item) => item.type !== "live");
-  const rowShape: CardShape = posterRow ? "poster" : "landscape";
-  const metrics = useRef(measuredMetrics.get(metricsKey(rowShape)) ?? { pitch: CARD_PITCH, gap: CARD_GAP });
+  const metrics = useRef(measuredMetrics.get(metricsKey(displayKind)) ?? { pitch: CARD_PITCH, gap: CARD_GAP });
   // The first window covers the viewport, not a 1920px canvas: a phone row
   // mounts the few cards it can show plus the scroll buffer.
   const [range, setRange] = useState(() => ({
@@ -155,9 +182,7 @@ export const Cards = memo(function Cards({
   const read = useCallback(() => {
     const node = track.current;
     if (!node) return;
-    // Direct children only: the responsive wrapper's own inner .media-card
-    // would otherwise pair with it and measure a bogus zero-width pitch.
-    const cards = node.querySelectorAll<HTMLElement>(":scope > .responsive-card, :scope > .media-card");
+    const cards = node.querySelectorAll<HTMLElement>(`:scope > .${SLOT}`);
     const first = cards[0];
     const second = cards[1];
     const previousMetrics = metrics.current;
@@ -179,15 +204,14 @@ export const Cards = memo(function Cards({
       metrics.current.pitch,
     );
     // A changed pitch re-renders even for an unchanged window, so the
-    // spacers never keep the pre-measure fallback geometry (poster rows are
-    // far narrower than the landscape fallback).
+    // spacers never keep the pre-measure fallback geometry.
     const remeasured =
       metrics.current.pitch !== previousMetrics.pitch || metrics.current.gap !== previousMetrics.gap;
-    measuredMetrics.set(metricsKey(rowShape), metrics.current);
+    measuredMetrics.set(metricsKey(displayKind), metrics.current);
     setRange((previous) =>
       !remeasured && previous.start === next.start && previous.end === next.end ? previous : next,
     );
-  }, [list.length, rowShape]);
+  }, [list.length, displayKind]);
 
   useLayoutEffect(() => {
     if (!windowedRow) return;
@@ -217,11 +241,14 @@ export const Cards = memo(function Cards({
       : 0;
 
   return (
-    <div className={`cards ${posterRow ? "poster-grid" : ""}`} data-scroll-id={`cards-${prefix}`} ref={track}>
-      {leftSpacer > 0 && <div aria-hidden="true" style={{ flex: `0 0 ${leftSpacer}px` }} />}
+    <div
+      className={`cards vx-cards vx-cards--${displayKind} ${displayKind === "poster" ? "poster-grid" : ""}`}
+      data-scroll-id={`cards-${prefix}`}
+      ref={track}
+    >
+      {leftSpacer > 0 && <div className="vx-cards__spacer" aria-hidden="true" style={{ flex: `0 0 ${leftSpacer}px` }} />}
       {visible.map((item, localIndex) => {
         const i = offset + localIndex;
-        const inQueue = prefix === "queue" || (screen === "My List" && libraryQueue);
         const context = inQueue ? "queue" : "catalog";
         const presentation = cardPresentation(item, context);
         const current = actions.current;
@@ -233,60 +260,161 @@ export const Cards = memo(function Cards({
             default: return current.detail(item, catalog);
           }
         };
-        const meta = responsive ? cardMeta(item) : "";
-        const poster = responsive && shape === "poster" && item.type !== "live";
-        const logo = !poster && presentation.imageRole === "logo";
-        const card = <TvButton
-          className={`media-card ${poster ? "poster-card" : logo ? "logo-card" : ""} ${(presentation.progress ?? 0) > 0 ? "has-progress" : ""}`}
-          aria-label={item.name}
-          id={`${prefix}-${i}`}
-          data-nav-left={
-            i > 0
-              ? `${prefix}-${i - 1}`
-              : screen === "Search"
-                ? searchKey.current
-                : undefined
-          }
-          data-nav-right={
-            i + 1 < list.length ? `${prefix}-${i + 1}` : `${prefix}-${i}`
-          }
-          key={`${item.type}-${item.id}`}
-          onFocus={() => { if (!responsive) setHighlighted(item); }}
-          onActivate={() => void activate()}
-          onHold={() => {
-            // Only the first logical Home row is a queue-management context.
-            // Other Home cards retain their ordinary selection on a held OK;
-            // My List, search and episode-card menus remain contextual.
-            if (screen === "Home") {
-              if (inQueue && item.type !== "live") actions.current.manage(item);
-              else void activate();
-            } else actions.current.manage(item);
-          }}
-        >
-          {poster
-            ? <SharedPosterThumbnail item={item} context={context} initial={presentation} progress={presentation.progress} />
-            : <SharedCardThumbnail item={item} context={context} initial={presentation} progress={presentation.progress} />}
-          <strong>
-            <RokuText>{presentation.title}</RokuText>
-          </strong>
-          <small>
-            <RokuText speed={42}>
-              {presentation.subtitle}
-            </RokuText>
-          </small>
-          {/* Phones caption the art with the title and minimal context in
-              place of the wider layouts' text rows; live logo tiles carry
-              no caption at all. */}
-          {responsive && !logo && (
-            <span className="card-caption" aria-hidden="true">
-              <span className="card-title">{presentation.title}</span>
-              {meta && <span className="card-meta">{meta}</span>}
-            </span>
-          )}
-        </TvButton>;
-        return responsive ? <div className={`responsive-card ${poster ? "poster" : logo ? "logo" : ""}`} key={`${item.type}-${item.id}`}>{card}</div> : card;
+        const cardKind = resolveKind(item, rowKind, responsive, phone, explicitKind);
+        const key = `${item.type}-${item.id}`;
+        const card = (
+          <TvButton
+            className={cardClassFor(cardKind, phone)}
+            aria-label={item.name}
+            id={`${prefix}-${i}`}
+            data-nav-left={
+              i > 0
+                ? `${prefix}-${i - 1}`
+                : screen === "Search"
+                  ? searchKey.current
+                  : undefined
+            }
+            data-nav-right={
+              i + 1 < list.length ? `${prefix}-${i + 1}` : `${prefix}-${i}`
+            }
+            key={key}
+            onFocus={() => { if (!responsive) setHighlighted(item); }}
+            onActivate={() => void activate()}
+            onHold={() => {
+              // Only the first logical Home row is a queue-management context.
+              // Other Home cards retain their ordinary selection on a held OK;
+              // My List, search and episode-card menus remain contextual.
+              if (screen === "Home") {
+                if (inQueue && item.type !== "live") actions.current.manage(item);
+                else void activate();
+              } else actions.current.manage(item);
+            }}
+          >
+            <CardBody item={item} kind={cardKind} context={context} presentation={presentation} responsive={responsive} phone={phone} />
+          </TvButton>
+        );
+        if (!responsive) return card;
+        // Touch overflow (P): a visible ⋯ on posters and continue cards opens the
+        // title menu; long-press (the card's context menu) still does the same.
+        const overflow = phone && (cardKind === "poster" || cardKind === "continue");
+        return (
+          <div className={`${SLOT} ${SLOT}--${cardKind}`} key={key}>
+            {card}
+            {overflow && (
+              <button
+                type="button"
+                className={`vx-card-more vx-card-more--${cardKind}`}
+                aria-label={`More for ${presentation.title}`}
+                aria-haspopup="dialog"
+                onClick={() => actions.current.manage(item)}
+              >
+                <span className="vx-card-more__disc" aria-hidden="true"><MoreHorizontal /></span>
+              </button>
+            )}
+          </div>
+        );
       })}
-      {rightSpacer > 0 && <div aria-hidden="true" style={{ flex: `0 0 ${rightSpacer}px` }} />}
+      {rightSpacer > 0 && <div className="vx-cards__spacer" aria-hidden="true" style={{ flex: `0 0 ${rightSpacer}px` }} />}
     </div>
   );
 });
+
+function cardClassFor(kind: CardKind, phone: boolean) {
+  if (phone && kind === "continue") return "media-card vx-continue-card";
+  if (phone && kind === "live") return "media-card vx-live-card";
+  // TV / desktop "still" tiles share the continue geometry (D 256 × 128, TV 320 × 180).
+  const tile = kind === "still" ? "continue" : kind;
+  return `media-card vx-card vx-card--${tile}${kind === "still" ? " vx-card--still" : ""}`;
+}
+
+/** A card's inside for its kind: art (+ badge, progress, hover play) and the caption. */
+function CardBody({ item, kind, context, presentation, responsive, phone }: {
+  item: MediaItem;
+  kind: CardKind;
+  context: "queue" | "catalog";
+  presentation: CardPresentation;
+  responsive: boolean;
+  phone: boolean;
+}) {
+  const progress = presentation.progress != null && presentation.progress > 0 ? presentation.progress * 100 : undefined;
+  const size = responsive ? ART_SIZE.responsive : ART_SIZE.tv;
+  const title = presentation.title;
+  if (kind === "live") {
+    const sub = liveSubtitle(item);
+    if (phone) {
+      return (
+        <>
+          <LiveLabel>Live</LiveLabel>
+          <span className="vx-live-card__title">{title}</span>
+          {sub && <span className="vx-live-card__sub">{sub}</span>}
+        </>
+      );
+    }
+    return (
+      <>
+        <span className="vx-card__art vx-card__art--monogram">
+          <span className="vx-card__monogram" aria-hidden="true">{channelMonogram(title)}</span>
+          <span className="vx-card__badge"><LiveBadge /></span>
+        </span>
+        <span className="vx-card__caption">
+          <span className="vx-card__title">{title}</span>
+          {sub && <span className="vx-card__meta">{sub}</span>}
+        </span>
+      </>
+    );
+  }
+  if (phone && kind === "continue") {
+    return (
+      <>
+        <TileImage item={item} context={context} initial={presentation} poster size={size} className="vx-continue-card__thumb" missing={<span className="vx-continue-card__thumb" aria-hidden="true" />} />
+        <span className="vx-continue-card__body">
+          <span className="vx-continue-card__title">{title}</span>
+          <span className="vx-continue-card__meta">{phoneContinueMeta(item)}</span>
+          <ProgressTrack value={progress ?? 0} />
+        </span>
+        <span className="vx-continue-card__play" aria-hidden="true"><PlayIcon /></span>
+      </>
+    );
+  }
+  // The hover play disc (D) only where activating the card plays.
+  const plays = presentation.primaryAction !== "details" && presentation.primaryAction !== "episodes";
+  // Queue cards read "Resume from 73:46" / "S1 E1 · Pilot · 5:43"; catalog
+  // cards the year (phone) or year · runtime · genres (desktop / TV).
+  const meta = kind === "continue" || context === "queue"
+    ? continueMeta(item, presentation)
+    : phone ? cardMeta(item) : presentation.subtitle;
+  return (
+    <>
+      <span className="vx-card__art">
+        <TileImage
+          item={item}
+          context={context}
+          initial={presentation}
+          poster={kind === "poster"}
+          size={size}
+          missing={<MissingArt title={title} icon={<Film aria-hidden="true" />} />}
+        />
+        {progress !== undefined && (
+          <span className="vx-card__progress"><ProgressTrack value={progress} /></span>
+        )}
+        {responsive && !phone && plays && kind !== "poster" && (
+          <span className="vx-card__play" aria-hidden="true"><span className="vx-card__play-disc"><PlayIcon /></span></span>
+        )}
+      </span>
+      <span className="vx-card__caption">
+        <span className="vx-card__title">{title}</span>
+        {meta && <span className="vx-card__meta">{meta}</span>}
+      </span>
+    </>
+  );
+}
+
+/** Progress bar (0–100): the accent fill on the tile's track. */
+function ProgressTrack({ value }: { value: number }) {
+  const clamped = Math.max(0, Math.min(100, value));
+  return (
+    <span className="vx-progress" role="progressbar" aria-valuenow={Math.round(clamped)} aria-valuemin={0} aria-valuemax={100}>
+      <span className="vx-progress__fill" style={{ width: `${clamped}%` }} />
+    </span>
+  );
+}

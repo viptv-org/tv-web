@@ -61,50 +61,110 @@ export function CardArtwork({
     </>
   );
 }
+/**
+ * TV Home backdrop (reference TvHome): the hero art as a blurred ambient
+ * fill plus the sharp art at the top right, faded into the ground by a left
+ * mask and the left / bottom scrims. The sharp layer is the 1280 × 720
+ * derivative (retried at its origin once); the ambient layer reuses the small
+ * card derivative, which the blur hides.
+ */
 export function HeroArtwork({ uri }: { uri: string }) {
   const [retry, setRetry] = useState(false);
   return (
-    <div className="hero-art" aria-hidden="true">
+    <div className="hero-art vx-home-backdrop" aria-hidden="true">
       <ReadyImage
-        className="hero-continuity"
+        className="vx-home-backdrop__ambient"
         src={artworkUrl(uri, 256, 144)}
         alt=""
       />
       <ReadyImage
-        className="hero-sharp"
+        className="vx-home-backdrop__art"
         src={retry ? uri : artworkUrl(uri, 1280, 720, true)}
         onError={() => {
           if (!retry) setRetry(true);
         }}
         alt=""
       />
-      <img
-        className="hero-shade-left"
-        src={`${import.meta.env.BASE_URL}assets/ui-hero-left.png`}
-        alt=""
-      />
-      <img
-        className="hero-shade-bottom"
-        src={`${import.meta.env.BASE_URL}assets/ui-hero-bottom.png`}
-        alt=""
-      />
+      <span className="vx-home-backdrop__fade-bottom" />
+      <span className="vx-home-backdrop__fade-left" />
     </div>
   );
 }
 
-/** Network failures are effects; candidate choice remains shared Rust policy. */
-export function SharedCardArtwork({ item, context }: { item: MediaItem; context: "queue" | "catalog" }) {
+/**
+ * A card tile's image inside its `.vx-card__art` box: the Rust-chosen art
+ * through the shared wsrv pipeline at the tile's size, retried once at its
+ * origin before the next Rust fallback candidate. `poster` prefers the
+ * poster role at poster geometry and falls back to the landscape candidates
+ * (the box crops them). With nothing left to show, `missing` renders (the
+ * design's missing-art block: never a stretched small image).
+ */
+export function TileImage({
+  item,
+  context,
+  initial,
+  poster,
+  size,
+  missing,
+  className,
+}: {
+  item: MediaItem;
+  context: "queue" | "catalog";
+  /** Caller-computed presentation for the same item+context; recomputed only after an image failure. */
+  initial?: CardPresentation;
+  poster?: boolean;
+  /** Derivative size requested for landscape art. */
+  size: readonly [number, number];
+  missing: ReactNode;
+  className?: string;
+}) {
   const [failedImages, setFailedImages] = useState<string[]>([]);
   const [originalRetries, setOriginalRetries] = useState<string[]>([]);
-  const presentation = cardPresentation(item, context, failedImages);
-  const original = presentation.image ?? undefined;
-  const derivative = artworkUrl(original, 256, 144, false, presentation.imageRole === "logo");
+  const [posterFailed, setPosterFailed] = useState(false);
+  const [posterRetried, setPosterRetried] = useState(false);
+  const posterImage = poster ? presentation(item).posterImage ?? undefined : undefined;
+  const posterDerivative = useMemo(() => artworkUrl(posterImage, 300, 450), [posterImage]);
+  const card =
+    failedImages.length || !initial
+      ? cardPresentation(item, context, failedImages)
+      : initial;
+  const original = card.image ?? undefined;
+  const [width, height] = size;
+  const derivative = useMemo(
+    () => artworkUrl(original, width, height, false, card.imageRole === "logo"),
+    [original, card.imageRole, width, height],
+  );
+  if (posterImage && posterDerivative && !posterFailed) {
+    return (
+      <ReadyImage
+        className={className}
+        src={posterRetried ? posterImage : posterDerivative}
+        alt=""
+        loading="lazy"
+        decoding="async"
+        onError={() => {
+          if (!posterRetried && posterDerivative !== posterImage) setPosterRetried(true);
+          else setPosterFailed(true);
+        }}
+      />
+    );
+  }
   const src = original && originalRetries.includes(original) ? original : derivative;
-  return <CardArtwork src={src} fallback={presentation.title} onError={() => {
-    if (!original) return;
-    if (src !== original) setOriginalRetries(previous => previous.includes(original) ? previous : [...previous, original]);
-    else setFailedImages(previous => previous.includes(original) ? previous : [...previous, original]);
-  }} />;
+  if (!src) return <>{missing}</>;
+  return (
+    <ReadyImage
+      className={className}
+      src={src}
+      alt=""
+      loading="lazy"
+      decoding="async"
+      onError={() => {
+        if (!original) return;
+        if (src !== original) setOriginalRetries(previous => previous.includes(original) ? previous : [...previous, original]);
+        else setFailedImages(previous => previous.includes(original) ? previous : [...previous, original]);
+      }}
+    />
+  );
 }
 
 export function CardThumbnail({
@@ -130,86 +190,5 @@ export function CardThumbnail({
         <progress value={progress} max={maxProgress} />
       )}
     </>
-  );
-}
-
-export function SharedCardThumbnail({
-  item,
-  context,
-  progress,
-  maxProgress = 1,
-  watched,
-  initial,
-}: {
-  item: MediaItem;
-  context: "queue" | "catalog";
-  progress?: number | null;
-  maxProgress?: number;
-  watched?: boolean;
-  /** Caller-computed presentation for the same item+context; recomputed only after an image failure. */
-  initial?: CardPresentation;
-}) {
-  const [failedImages, setFailedImages] = useState<string[]>([]);
-  const [originalRetries, setOriginalRetries] = useState<string[]>([]);
-  const presentation =
-    failedImages.length || !initial
-      ? cardPresentation(item, context, failedImages)
-      : initial;
-  const original = presentation.image ?? undefined;
-  const derivative = useMemo(
-    () => artworkUrl(original, 256, 144, false, presentation.imageRole === "logo"),
-    [original, presentation.imageRole],
-  );
-  const src = original && originalRetries.includes(original) ? original : derivative;
-  const effectiveProgress = progress !== undefined ? progress : presentation.progress;
-  return (
-    <CardThumbnail
-      src={src}
-      fallback={presentation.title}
-      watched={watched}
-      progress={effectiveProgress}
-      maxProgress={maxProgress}
-      onError={() => {
-        if (!original) return;
-        if (src !== original) setOriginalRetries(previous => previous.includes(original) ? previous : [...previous, original]);
-        else setFailedImages(previous => previous.includes(original) ? previous : [...previous, original]);
-      }}
-    />
-  );
-}
-
-/**
- * Poster-shaped card art: the Rust-projected poster role through the shared
- * wsrv pipeline at poster geometry, retried once at its origin. A title
- * without a usable poster falls back to its ordinary landscape card art,
- * which the poster box crops.
- */
-export function SharedPosterThumbnail({
-  item,
-  context,
-  initial,
-  progress,
-}: {
-  item: MediaItem;
-  context: "queue" | "catalog";
-  initial?: CardPresentation;
-  progress?: number | null;
-}) {
-  const [failed, setFailed] = useState(false);
-  const [retried, setRetried] = useState(false);
-  const poster = presentation(item).posterImage ?? undefined;
-  const derivative = useMemo(() => artworkUrl(poster, 300, 450), [poster]);
-  if (!poster || failed)
-    return <SharedCardThumbnail item={item} context={context} initial={initial} progress={progress} />;
-  return (
-    <CardThumbnail
-      src={retried ? poster : derivative}
-      fallback={initial?.title ?? item.name}
-      progress={progress}
-      onError={() => {
-        if (!retried && derivative !== poster) setRetried(true);
-        else setFailed(true);
-      }}
-    />
   );
 }

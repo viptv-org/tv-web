@@ -122,25 +122,16 @@
 .responsive-app button:where(:not([class*="vx-"])):focus-visible:not(:disabled) { background-color: #f5f5f5; color: #101112; }
 
 /* Min-content is never the viewport authority. Long shelves scroll locally. */
-.responsive-app main > *, .responsive-app .shelves, .responsive-app .cards,
+.responsive-app main > *, .responsive-app .cards,
 .responsive-app .result-grid, .responsive-app .result-grid > section,
 .responsive-app .episode-grid { min-width: 0; }
-.responsive-app .hero-facts { white-space: normal; overflow-wrap: anywhere; }
-.responsive-app .hero .responsive-title:not(.has-logo),
 .responsive-app .detail-copy .responsive-title:not(.has-logo) { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; overflow-wrap: anywhere; }
-.responsive-app .hero > p, .responsive-app .detail-synopsis,
+.responsive-app .detail-synopsis,
 .responsive-app .episode > p { overflow-wrap: anywhere; -webkit-box-orient: vertical; overflow: hidden; }
 .responsive-app .detail-facts { overflow-wrap: anywhere; }
 .responsive-app .detail-credits, .responsive-app .series .detail-credits { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; overflow-wrap: anywhere; }
 .responsive-app .source-context { overflow-wrap: anywhere; }
 .responsive-app .roku-profile-editor .avatar-categories button { min-height: 48px; height: auto; }
-@media (max-width: 599px) {
-  .responsive-app .hero .responsive-title:not(.has-logo) { -webkit-line-clamp: 2; }
-  .responsive-app .hero > small { margin-bottom: 10px; }
-  .responsive-app .hero > p { margin-top: 12px; }
-  .responsive-app .hero-facts { margin-top: 12px; }
-  .responsive-app .shelves h2 { margin-bottom: 10px; }
-}
 
 .responsive-app .profile-row > button:focus-visible,
 .responsive-app .episode:focus-visible { outline: none; }
@@ -150,10 +141,6 @@
 @media (max-width: 599px) {
   .responsive-app .browse > h1, .responsive-app .sources > h1 { font-size: 32px; line-height: 1.2; }
   .responsive-app .filters button { flex: 1 1 100%; width: 100%; min-width: 0; }
-  .responsive-app .home { gap: 20px; }
-  .responsive-app .hero > p { -webkit-line-clamp: 2; }
-  .responsive-app .hero > small { font-size: 12px; line-height: 16px; margin-bottom: 8px; }
-  .responsive-app .hero .responsive-title > img { max-height: 72px; }
   /* Phone browse results use Home's own shelf presentation: canonical 232px
      tiles on one scrolling row with a visible next-card peek, instead of a
      single full-width card per screen. */
@@ -167,22 +154,12 @@
 .responsive-app .roku-guide .programs button:focus-visible small { color: #101112; }
 .responsive-app .roku-guide .programs button:focus:not(:focus-visible) { background: #202224; color: #f5f5f5; }
 
-/* Live logos occupy the same artwork box as every other card. The TV logo
-   inset is expressed as padding, so it cannot move the image into card text. */
-.responsive-app .media-card.logo-card > img,
-.responsive-app .result-grid > .cards .media-card.logo-card > img {
-  inset: 0;
-  padding: 18px 32px;
-  object-fit: contain;
-  border-radius: 8px;
-  background: #202224;
-}
 
 /* Responsive web keeps destination selection without the remote focus skin.
    DOM focus remains available for text editing and assistive technology. */
 
   .responsive-app button { --responsive-control-surface: #202224; }
-  .responsive-app :is(.media-card, .episode, .card-more),
+  .responsive-app :is(.episode, .card-more),
   .responsive-app .profile-row > button,
   .responsive-app .roku-profile-editor :is([data-focus-id="profile-avatar"], .avatar-grid button) {
     --responsive-control-surface: transparent;
@@ -196,7 +173,7 @@
   }
   .responsive-app button:focus img,
   .responsive-app button:focus::after { filter: none !important; }
-  .responsive-app :is(.media-card, .episode):focus::after { opacity: .35; }
+  .responsive-app .episode:focus::after { opacity: .35; }
   .responsive-app .profile-row > button:focus::after,
   .responsive-app .roku-profile-editor :is([data-focus-id="profile-avatar"], .avatar-grid button):focus {
     border-color: transparent;
@@ -306,27 +283,6 @@
   font-weight: 600;
 }
 
-/* Action buttons: hero-save-btn matches height and roundness of details button */
-.responsive-app .hero-save-btn {
-  width: 56px !important;
-  height: 56px !important;
-  min-width: 56px !important;
-  min-height: 56px !important;
-  max-width: 56px !important;
-  max-height: 56px !important;
-  border-radius: 12px !important;
-  padding: 0 !important;
-  display: inline-flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  flex-shrink: 0 !important;
-}
-.responsive-app .hero .actions [data-focus-id="hero-details"] {
-  height: 56px;
-  min-height: 56px;
-  border-radius: 12px;
-  padding: 0 24px;
-}
 /* My List and More are icon squares with the detail actions' height and
    12px corners, never a circle beside a square. */
 .responsive-app .detail-copy .actions :is(.detail-save-btn, [data-focus-id="detail-info"]) {

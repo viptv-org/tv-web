@@ -1,75 +1,115 @@
-import { homeCatalogShape, CARD_SHAPES, type CardShape } from "../ui/cardShapes";
+import { Skel, SkeletonContinue, SkeletonTile } from "../ui/primitives/Feedback";
+import type { CardShape } from "../ui/cardShapes";
 
-// Continue Watching first, then the Home catalog pattern.
-const SHELVES: CardShape[] = [CARD_SHAPES.continueWatching, homeCatalogShape(0), homeCatalogShape(1)];
+/*
+ * Home loading states (reference PhStates / DeskStates "Home skeleton"):
+ * the real layout's shapes on the page ground, with the shimmer of the
+ * skeleton primitives (src/styles/primitives/feedback.css). Geometry lives in
+ * src/styles/screens/home.css (.vx-home-skel*). TV has no skeletons: it shows
+ * the "Starting VIPTV…" cover, then real content.
+ */
 
 /**
- * A shelf's card track in placeholder form: the loaded row's wrapper and
- * card classes, so a pending shelf has the loaded shelf's exact geometry.
+ * A pending shelf's track in placeholder form: tiles of the loaded row's
+ * kind (poster or still) in the same `.cards` track, so the loaded shelf
+ * lands where its placeholder was.
  */
 export function SkeletonShelfCards({ shape, count = 8 }: { shape: CardShape; count?: number }) {
   return (
-    <div className="shelf-carousel" aria-hidden="true">
-      <div className={`cards ${shape === "poster" ? "poster-grid" : ""}`}>
-        {Array.from({ length: count }, (_, index) => (
-          <div className={`responsive-card ${shape === "poster" ? "poster" : ""}`} key={index}>
-            <div className={`media-card ${shape === "poster" ? "poster-card" : ""}`}>
-              <div className="art-fallback skeleton-block" />
-              <strong><span className="skeleton-line" style={{ width: "80%" }} /></strong>
-              <small><span className="skeleton-line" style={{ width: "55%" }} /></small>
-              <span className="card-caption">
-                <span className="card-title"><span className="skeleton-line" style={{ width: "80%" }} /></span>
-                <span className="card-meta"><span className="skeleton-line" style={{ width: "40%" }} /></span>
-              </span>
-            </div>
-          </div>
-        ))}
-      </div>
+    <div className="cards vx-cards vx-cards--skeleton" aria-hidden="true">
+      {Array.from({ length: count }, (_, index) => (
+        <SkeletonTile kind={shape === "poster" ? "poster" : "still"} key={index} />
+      ))}
     </div>
   );
 }
 
+const DESK_SHELVES = [
+  { kind: "still" as const, count: 8 },
+  { kind: "live" as const, count: 8 },
+];
+
 /**
- * The responsive shell's loading state: the navigation and Home built from
- * Home's own class names (hero art, title, synopsis, actions, shelves of
- * landscape and poster cards), so the stylesheet lays it out exactly where
- * the loaded page will be at every width. Replaces the startup cover while
- * the session restores and Home first loads. Inert and hidden from
+ * The responsive shell's loading state, drawn in Home's own geometry: phone
+ * header + featured card + continue-card rows; desktop hero (text column and
+ * art) + a row of stills and a row of live tiles. Replaces the startup cover
+ * while the session restores and Home first loads. Inert and hidden from
  * assistive technology; the status label announces the load.
  */
 export function HomeSkeleton({ phone }: { phone: boolean }) {
   return (
-    <>
-      {/* The navigation chrome behind the skeleton is drawn by the shell (AppShell). */}
-      <main className="home home-skeleton skeleton-shell" role="status" aria-label="Loading VIPTV">
-        <div className="responsive-hero-art skeleton-block" aria-hidden="true" />
-        <div className="hero" aria-hidden="true">
-          {/* Hidden with the real eyebrow where the hero stacks. */}
-          <small><span className="skeleton-line" style={{ width: "calc(112px * var(--tv-k))" }} /></small>
-          {/* Most catalog titles carry a title logo: hold its slot, not a text line. */}
-          <h1 className="responsive-title"><span className="skeleton-block skeleton-logo" /></h1>
-          <p>
-            {["100%", "96%", "100%", "64%"].map((width, index) => (
-              <span className="skeleton-line" style={{ width }} key={index} />
-            ))}
-          </p>
-          <div className="hero-facts"><span className="skeleton-line" style={{ width: "calc(132px * var(--tv-k))" }} /></div>
-          <div className="actions">
-            <button type="button" tabIndex={-1} data-focus-id="hero-details" className="skeleton-block" />
-            <button type="button" tabIndex={-1} className="compact-action hero-save-btn skeleton-block" />
+    <main className="home home-skeleton vx-home vx-home-skel skeleton-shell" role="status" aria-label="Loading VIPTV">
+      {phone ? (
+        <>
+          <header className="vx-home__header" aria-hidden="true">
+            <span className="vx-home__wordmark">VIPTV</span>
+            <Skel className="vx-skel--round vx-home-skel__avatar" />
+          </header>
+          <div className="vx-home-skel__featured vx-skel-surface" aria-hidden="true">
+            <Skel className="vx-home-skel__featured-art" />
+            <div className="vx-home-skel__featured-body">
+              <Skel className="vx-home-skel__logo" />
+              <Skel className="vx-skel--line vx-home-skel__meta" />
+              <span className="vx-skel-lines">
+                <Skel className="vx-skel--line vx-home-skel__text vx-home-skel__text--1" />
+                <Skel className="vx-skel--line vx-home-skel__text vx-home-skel__text--2" />
+              </span>
+              <span className="vx-skel-actions vx-home-skel__actions">
+                <Skel className="vx-skel--grow" />
+                <Skel className="vx-skel--round" />
+              </span>
+            </div>
           </div>
-        </div>
-        <div className="shelves" aria-hidden="true">
-          {SHELVES.map((shape, row) => (
-            <section key={row}>
-              <header className="shelf-heading">
-                <h2><span className="skeleton-line" style={{ width: `calc(${row === 0 ? 150 : 190}px * var(--tv-k))` }} /></h2>
-              </header>
-              <SkeletonShelfCards shape={shape} />
+          {[0, 1, 2].map((row) => (
+            <section className="vx-home-skel__shelf" aria-hidden="true" key={row}>
+              <Skel className={`vx-home-skel__heading vx-home-skel__heading--${row}`} />
+              <div className="vx-home-skel__row">
+                <SkeletonContinue />
+                <SkeletonContinue />
+              </div>
             </section>
           ))}
-        </div>
-      </main>
-    </>
+        </>
+      ) : (
+        <>
+          <section className="vx-home__hero" aria-hidden="true">
+            <div className="vx-home__hero-grid">
+              <div className="vx-home__copy">
+                <Skel className="vx-skel--line vx-home-skel__eyebrow" />
+                <Skel className="vx-home-skel__logo" />
+                <Skel className="vx-skel--line vx-skel--line-md vx-home-skel__meta" />
+                <span className="vx-skel-lines vx-home-skel__lines">
+                  <Skel className="vx-skel--line vx-home-skel__text vx-home-skel__text--1" />
+                  <Skel className="vx-skel--line vx-home-skel__text vx-home-skel__text--2" />
+                  <Skel className="vx-skel--line vx-home-skel__text vx-home-skel__text--3" />
+                </span>
+                <span className="vx-skel-actions vx-home-skel__actions">
+                  <Skel className="vx-skel--pill" />
+                  <Skel className="vx-skel--pill" />
+                  <Skel className="vx-skel--round" />
+                </span>
+              </div>
+              <Skel className="vx-home-skel__art" />
+            </div>
+          </section>
+          {DESK_SHELVES.map((shelf, row) => (
+            <section className="vx-home-skel__shelf" aria-hidden="true" key={row}>
+              <Skel className="vx-home-skel__heading" />
+              <div className="vx-home-skel__row">
+                {Array.from({ length: shelf.count }, (_, index) => (
+                  <span className={`vx-skel-tile vx-skel-tile--still vx-home-skel__tile vx-home-skel__tile--${shelf.kind}`} key={index}>
+                    <Skel className="vx-skel-tile__art" />
+                    <span className="vx-skel-lines">
+                      <Skel className="vx-skel--line vx-home-skel__caption" />
+                      <Skel className="vx-skel--line vx-home-skel__caption vx-home-skel__caption--short" />
+                    </span>
+                  </span>
+                ))}
+              </div>
+            </section>
+          ))}
+        </>
+      )}
+    </main>
   );
 }

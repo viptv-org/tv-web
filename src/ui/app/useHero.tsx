@@ -1,4 +1,4 @@
-import { memo, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import QRCode from "qrcode";
 import {
   TvApi,
@@ -45,15 +45,24 @@ import { presentation } from "../../core/presentations";
 import { captureScroll, desktopInvoker, initialPrefs, type BrowserSnapshot, type Choice, type ScrollAnchor } from "./appShared";
 import type { AppApi, CoreApi, DialogsApi, AuthApi, PlaybackEngineApi, PlaybackSessionApi, CatalogApi, NavigationApi, PlaybackControlsApi } from "./useTvApp";
 import { Cards, type CardActions, type CardRowOptions } from "../../components/cards/Cards";
-import { ShelfCarousel } from "../../components/cards/ShelfCarousel";
 import { firstHomeCatalog as firstCatalog } from "./homeRows";
+
+/** Titles the responsive Home hero rotates through ("Featured movie 1 of 5"). */
+const FEATURED_COUNT = 5;
+
+/** The responsive hero's rotation: the featured titles, the one shown, and a way to pick one. */
+export type HeroRotation = {
+  readonly featured: readonly MediaItem[];
+  readonly index: number;
+  readonly select: (index: number) => void;
+};
 
 export function useHero(app: PlaybackControlsApi) {
   const { api, catalogs, detail, discoverSources, heroMetadataCache, highlighted, items, libraryQueue, manage, play, profile, queue, recentLive, responsive, screen, searchKey, selected, setHighlighted } = app;
 
   const cardActions = useRef<CardActions>({ play, discoverSources, detail, manage });
   cardActions.current = { play, discoverSources, detail, manage };
-  const cards = (list: readonly MediaItem[], prefix: string, { shape, catalog, windowed = false }: CardRowOptions = {}) => (
+  const cards = (list: readonly MediaItem[], prefix: string, { shape, catalog, windowed = false, kind }: CardRowOptions = {}) => (
     <Cards
       list={list}
       prefix={prefix}
@@ -66,12 +75,29 @@ export function useHero(app: PlaybackControlsApi) {
       windowed={windowed}
       shape={shape}
       catalog={catalog}
+      kind={kind}
     />
   );
+  // Home shelves: windowed scroller rows on the responsive layout (the shelf
+  // header's See all and chevrons belong to HomeScreen's Shelf); the TV keeps
+  // every card mounted for spatial navigation.
   const shelfCards = (list: readonly MediaItem[], prefix: string, options: CardRowOptions = {}) =>
-    responsive ? <ShelfCarousel>{cards(list, prefix, { ...options, windowed: true })}</ShelfCarousel> : cards(list, prefix, { catalog: options.catalog });
+    responsive ? cards(list, prefix, { ...options, windowed: true }) : cards(list, prefix, { catalog: options.catalog, kind: options.kind });
   const firstHomeCatalog = firstCatalog(catalogs);
-  const catalogHeroItem = items.find((i) => i.type !== "live") ?? items[0];
+  // The responsive hero rotates through the first catalog's leading titles.
+  const featured = useMemo(
+    () => (responsive ? items.filter((i) => i.type !== "live").slice(0, FEATURED_COUNT) : []),
+    [responsive, items],
+  );
+  const featuredKey = featured.map((item) => `${item.type}:${item.id}`).join("|");
+  const [heroIndex, setHeroIndex] = useState(0);
+  useEffect(() => setHeroIndex(0), [featuredKey]);
+  const heroRotation: HeroRotation = {
+    featured,
+    index: featured.length ? heroIndex % featured.length : 0,
+    select: (index: number) => setHeroIndex(featured.length ? ((index % featured.length) + featured.length) % featured.length : 0),
+  };
+  const catalogHeroItem = featured[heroRotation.index] ?? items.find((i) => i.type !== "live") ?? items[0];
   const heroItem = responsive ? catalogHeroItem : (highlighted ?? queue[0] ?? recentLive[0] ?? items[0]);
   const [heroMetadata, setHeroMetadata] = useState<{ key: string; item: MediaItem }>();
   const heroKey = heroItem ? `${profile}:${heroItem.type}:${heroItem.seriesId ?? heroItem.id}` : "";
@@ -102,9 +128,9 @@ export function useHero(app: PlaybackControlsApi) {
   // The hero item is an enriched derivative whose identity changes per
   // render, so it stays a direct normalization; the selected item is stable
   // and takes the cached projection path.
-  const heroPresentation = heroItem ? normalizeCore<MediaPresentation>("presentation",
-    heroMetadata?.key === heroKey ? enrichDetail(heroItem, heroMetadata.item) : heroItem) : undefined;
+  const heroDetails = heroItem && heroMetadata?.key === heroKey ? enrichDetail(heroItem, heroMetadata.item) : heroItem;
+  const heroPresentation = heroDetails ? normalizeCore<MediaPresentation>("presentation", heroDetails) : undefined;
   const selectedPresentation = selected ? presentation(selected) : undefined;
 
-  return { cards, shelfCards, heroPresentation, heroItem, selectedPresentation, firstHomeCatalog, catalogHeroItem };
+  return { cards, shelfCards, heroPresentation, heroItem, heroDetails, heroRotation, selectedPresentation, firstHomeCatalog, catalogHeroItem };
 }

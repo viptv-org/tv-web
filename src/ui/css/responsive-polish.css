@@ -5,28 +5,22 @@
 
 /* ---- Base ------------------------------------------------------------------ */
 .responsive-app button { font-size: 16px; font-weight: 600; text-align: center; }
-.responsive-app :is(.media-card, .episode, .source, .filters button, .live-row, .settings-row, .epg-program, .epg-channel) { text-align: left; }
+.responsive-app :is(.episode, .source, .filters button, .live-row, .settings-row, .epg-program, .epg-channel) { text-align: left; }
 .responsive-app p { font-size: inherit; line-height: 1.5; }
 /* Dialog and filter buttons do not lift like remote-focused TV tiles. */
 .responsive-app :is(.modal-choices button, .error button, .source-filters button, .filters button, .card-more):is(:hover, :active) { transform: none; filter: none; }
 /* Touch never leaves a hover frame on a tapped card or episode. */
 @media (hover: none) {
-  .responsive-app :is(.media-card, .episode):hover:not(:focus-visible)::after { border-color: transparent; }
+  .responsive-app .episode:hover:not(:focus-visible)::after { border-color: transparent; }
 }
 /* Headings are sentence case at every width, as on phones. */
-.responsive-app :is(.shelves h2, .search .result-grid h2, .episode-heading) { text-transform: none; font-size: 20px; line-height: 26px; font-weight: 700; }
-.responsive-app .shelves { padding: 0; }
+.responsive-app :is(.local-app .shelves h2, .search .result-grid h2, .episode-heading) { text-transform: none; font-size: 20px; line-height: 26px; font-weight: 700; }
+.local-app .shelves { padding: 0; }
 .responsive-app .browse-empty { margin-top: 8px; color: #a6a8aa; font-size: 15px; }
 
 /* Larger hit areas for compact controls, without changing their layout. */
 .responsive-app :is(.shelf-see-more, .chip, .genre-chip, .rp-button, .error-dismiss-btn) { position: relative; }
 .responsive-app :is(.shelf-see-more, .chip, .genre-chip, .error-dismiss-btn)::before { content: ""; position: absolute; inset: -6px -2px; }
-/* ---- Desktop shelves: arrows share the heading row ---------------------------- */
-@media (hover: hover) and (min-width: 600px) {
-  .responsive-app .shelf-carousel .shelf-nav { top: -48px; bottom: auto; }
-  .responsive-app .shelf-heading { padding-right: 96px; }
-}
-
 /* ---- Dialogs --------------------------------------------------------------- */
 /* The focused choice keeps a visible surface on the dialog's own #202224. */
 .responsive-app .modal-choices button { --responsive-control-surface: #303234; min-height: 52px; font-size: 17px; }

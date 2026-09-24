@@ -17,50 +17,24 @@
   max-width: none;
 }
 /* Guide page paddings and fit live in guide-responsive.css with the page geometry. */
-.responsive-app .home { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: 40px; align-items: center; align-content: start; }
-.responsive-app .responsive-hero-art, .responsive-app .responsive-detail-art { grid-column: 2; grid-row: 1; position: relative; aspect-ratio: 16 / 9; width: 100%; max-width: 782px; max-height: 440px; min-width: 0; justify-self: end; align-self: center; overflow: hidden; border-radius: 8px; background: #202224; }
-.responsive-app .responsive-hero-art > img, .responsive-app .responsive-detail-art > img, .responsive-app .responsive-hero-art > .art-fallback, .responsive-app .responsive-detail-art > .art-fallback { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; font-size: 17px; color: #a6a8aa; }
-.responsive-app .hero { display: block; grid-column: 1; grid-row: 1; position: relative; inset: auto; width: auto; min-width: 0; height: auto; padding: 0; }
-.responsive-app .hero > small { position: static; display: block; font-size: 14px; line-height: 20px; margin-bottom: 16px; }
-.responsive-app .hero h1, .responsive-app .detail-copy h1 { position: relative; inset: auto; width: auto; height: auto; min-height: 0; font-size: 44px; line-height: 1.15; white-space: normal; overflow: visible; }
-.responsive-app .responsive-title > img { display: none; width: auto; max-width: min(100%, 420px); height: auto; max-height: 128px; object-fit: contain; object-position: left center; }
-.responsive-app .responsive-title.has-logo > img { display: block; }
-.responsive-app .responsive-title.has-logo > span { position: absolute; width: 1px; height: 1px; clip-path: inset(50%); overflow: hidden; white-space: nowrap; }
-.responsive-app .hero > p, .responsive-app .detail-synopsis { position: static; display: -webkit-box; width: auto; height: auto; max-height: none; margin-top: 24px; color: #c5c6c7; font-size: 20px; line-height: 1.5; -webkit-line-clamp: 4; }
-.responsive-app .hero-facts, .responsive-app .detail-facts { position: static; width: auto; height: auto; margin-top: 16px; font-size: 17px; line-height: 1.5; color: #a6a8aa; }
-.responsive-app .actions, .responsive-app .hero .actions, .responsive-app .detail-copy .actions { position: static; display: flex; flex-wrap: wrap; width: auto; gap: 12px; margin-top: 28px; }
-.responsive-app .hero .actions button, .responsive-app .detail-copy .actions button { flex: 0 1 auto; width: auto; max-width: none; height: 56px; min-height: 56px; padding: 0 20px; font-size: 22px; text-align: center; }
-.responsive-app .hero .actions .compact-action, .responsive-app .detail-copy [data-focus-id="detail-save"], .responsive-app .detail-copy [data-focus-id="detail-info"] { flex: 0 0 56px; width: 56px; padding: 0; }
-.responsive-app .shelves, .responsive-app .compact-home .shelves { position: static; grid-column: 1 / -1; width: 100%; height: auto; overflow: visible; }
-.responsive-app .shelves section { margin: 0 0 32px; width: 100%; min-width: 0; height: auto; }
-.responsive-app .shelves h2 { height: auto; font-size: 22px; line-height: 28px; text-transform: uppercase; margin-bottom: 12px; overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+.responsive-app .responsive-detail-art { grid-column: 2; grid-row: 1; position: relative; aspect-ratio: 16 / 9; width: 100%; max-width: 782px; max-height: 440px; min-width: 0; justify-self: end; align-self: center; overflow: hidden; border-radius: 8px; background: #202224; }
+.responsive-app .responsive-detail-art > img, .responsive-app .responsive-detail-art > .art-fallback { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; font-size: 17px; color: #a6a8aa; }
+.responsive-app .detail-copy h1 { position: relative; inset: auto; width: auto; height: auto; min-height: 0; font-size: 44px; line-height: 1.15; white-space: normal; overflow: visible; }
+.responsive-app .detail-synopsis { position: static; display: -webkit-box; width: auto; height: auto; max-height: none; margin-top: 24px; color: #c5c6c7; font-size: 20px; line-height: 1.5; -webkit-line-clamp: 4; }
+.responsive-app .detail-facts { position: static; width: auto; height: auto; margin-top: 16px; font-size: 17px; line-height: 1.5; color: #a6a8aa; }
+.responsive-app .actions, .responsive-app .detail-copy .actions { position: static; display: flex; flex-wrap: wrap; width: auto; gap: 12px; margin-top: 28px; }
+.responsive-app .detail-copy .actions button { flex: 0 1 auto; width: auto; max-width: none; height: 56px; min-height: 56px; padding: 0 20px; font-size: 22px; text-align: center; }
+.responsive-app .detail-copy [data-focus-id="detail-save"], .responsive-app .detail-copy [data-focus-id="detail-info"] { flex: 0 0 56px; width: 56px; padding: 0; }
+.local-app .shelves { position: static; grid-column: 1 / -1; width: 100%; height: auto; overflow: visible; }
+.local-app .shelves section { margin: 0 0 32px; width: 100%; min-width: 0; height: auto; }
+.local-app .shelves h2 { height: auto; font-size: 22px; line-height: 28px; text-transform: uppercase; margin-bottom: 12px; overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
 /* No inset: the first card starts on the heading's and the page's edge. */
 .responsive-app .cards { display: flex; gap: 24px; width: 100%; height: auto; overflow-x: auto; padding: 0 0 12px; overflow-anchor: none; }
-/* Desktop shelf carousels: a compact backgroundless chevron pair pinned to
-   the row's bottom-right flips one card-page; exhausted directions grey out
-   instead of unmounting, and the pair hides only when the whole row fits. */
-.responsive-app .shelf-carousel { position: relative; width: 100%; min-width: 0; }
-.responsive-app .shelf-nav { position: absolute; right: 4px; bottom: 0; z-index: 6; display: flex; gap: 2px; }
-.responsive-app .shelf-nav-btn { display: grid; place-items: center; width: 44px; height: 40px; min-height: 40px; padding: 0; border: none; border-radius: 8px; background: transparent; color: #a6a8aa; cursor: pointer; }
-.responsive-app button.shelf-nav-btn:hover:not(:disabled) { background: transparent; color: #f5f5f5; }
-.responsive-app .shelf-nav-btn:disabled { opacity: 0.35; cursor: default; }
-.responsive-app .shelf-nav-btn:focus-visible { outline: 2px solid #f5f5f5; outline-offset: -2px; }
-/* Catalog shelf headings gain a trailing plain-text See more affordance. */
-.responsive-app .shelf-heading { display: flex; align-items: baseline; gap: 16px; }
-.responsive-app .shelf-see-more { margin-left: auto; flex: 0 0 auto; display: inline-flex; align-items: center; gap: 4px; min-height: 32px; padding: 2px 2px 2px 6px; border: none; background: transparent; color: #a6a8aa; font-size: 14px; font-weight: 600; letter-spacing: 0.02em; cursor: pointer; white-space: nowrap; }
-.responsive-app button.shelf-see-more:hover { background: transparent; color: #f5f5f5; }
-.responsive-app .shelf-see-more:focus-visible { outline: 2px solid #f5f5f5; outline-offset: 2px; border-radius: 6px; }
-.responsive-app .responsive-card { position: relative; flex: 0 0 256px; width: 256px; scroll-snap-align: start; content-visibility: auto; contain-intrinsic-size: 256px auto 218px; }
-.responsive-app .media-card { display: grid; grid-template-columns: minmax(0, 1fr); width: 256px; height: auto; min-height: 218px; padding: 0; margin: 0; background: transparent !important; color: #f5f5f5 !important; transform: none !important; }
-.responsive-app .media-card > img, .responsive-app .media-card > .art-fallback { position: relative; inset: auto; grid-area: 1 / 1; width: 256px; height: 144px; border-radius: 8px; object-fit: cover; }
-.responsive-app .media-card::after { content: ""; position: absolute; grid-area: 1 / 1; left: 0; top: 0; width: 256px; height: 144px; border-radius: 8px; border: 2px solid transparent; box-sizing: border-box; pointer-events: none; background: none; transition: border-color 0.15s ease, opacity 0.15s ease; }
-.responsive-app .media-card:hover::after, .responsive-app .media-card:focus-visible::after { border-color: #f5f5f5; opacity: 1; }
-.responsive-app .media-card:focus:not(:focus-visible)::after { border-color: #f5f5f5; opacity: .35; }
-.responsive-app .media-card > strong { position: static; grid-area: 2 / 1; width: 100%; height: 25px; font-size: 21px; line-height: 25px; margin-top: 8px; }
-.responsive-app .media-card > small { position: static; grid-area: 3 / 1; width: 100%; font-size: 17px; line-height: 22px; height: 22px; margin-top: 4px; }
-.responsive-app .media-card > progress { position: relative !important; top: auto !important; bottom: auto !important; left: 8px !important; grid-area: 1 / 1 !important; align-self: end !important; width: calc(100% - 16px) !important; margin-bottom: 8px !important; margin-top: 0 !important; z-index: 2 !important; height: 6px !important; }
-.responsive-app .media-card:focus { outline: none; }
-.responsive-app .media-card:hover { background: transparent !important; }
+/* Local-mode shelf headings (LocalApp) keep the plain-text See more affordance. */
+.local-app .shelf-heading { display: flex; align-items: baseline; gap: 16px; }
+.local-app .shelf-see-more { margin-left: auto; flex: 0 0 auto; display: inline-flex; align-items: center; gap: 4px; min-height: 32px; padding: 2px 2px 2px 6px; border: none; background: transparent; color: #a6a8aa; font-size: 14px; font-weight: 600; letter-spacing: 0.02em; cursor: pointer; white-space: nowrap; }
+.local-app button.shelf-see-more:hover { background: transparent; color: #f5f5f5; }
+.local-app .shelf-see-more:focus-visible { outline: 2px solid #f5f5f5; outline-offset: 2px; border-radius: 6px; }
 .responsive-app .detail { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr); gap: 28px 40px; align-items: start; align-content: start; }
 .responsive-app .responsive-detail-art { grid-column: 1; justify-self: start; }
 .responsive-app .detail-copy, .responsive-app .series .detail-copy { position: static; grid-column: 2; grid-row: 1; width: auto; min-width: 0; }
@@ -81,27 +55,18 @@
 .responsive-app .episode::after { content: ""; position: absolute; inset: 0; top: 0; width: 100%; height: auto; aspect-ratio: 16 / 9; background: none; border: 2px solid transparent; border-radius: 8px; box-sizing: border-box; pointer-events: none; transition: border-color 0.15s ease, opacity 0.15s ease; }
 .responsive-app .episode:hover::after, .responsive-app .episode:focus-visible::after { border-color: #f5f5f5; opacity: 1; }
 .responsive-app .episode:focus:not(:focus-visible)::after { border-color: #f5f5f5; opacity: .35; }
-.responsive-app :is(.media-card, .episode) > progress { position: relative !important; top: auto !important; bottom: auto !important; left: 8px !important; grid-area: 1 / 1 !important; grid-row: 1 !important; grid-column: 1 !important; align-self: end !important; width: calc(100% - 16px) !important; margin-bottom: 8px !important; margin-top: 0 !important; z-index: 2 !important; height: 6px !important; }
+.responsive-app .episode > progress { position: relative !important; top: auto !important; bottom: auto !important; left: 8px !important; grid-area: 1 / 1 !important; grid-row: 1 !important; grid-column: 1 !important; align-self: end !important; width: calc(100% - 16px) !important; margin-bottom: 8px !important; margin-top: 0 !important; z-index: 2 !important; height: 6px !important; }
 .responsive-app .episode .watched-badge { left: auto; right: 10px; }
 .responsive-app .browse > h1 { height: auto; margin-bottom: 24px; }
 .responsive-app .filters, .responsive-app .browse > .filters { position: static; display: flex; flex-wrap: wrap; gap: 12px; width: auto; height: auto; margin-bottom: 24px; }
 .responsive-app .filters button { flex: 0 1 256px; width: auto; min-width: min(150px, 100%); max-width: 100%; font-size: 18px; }
 .responsive-app .result-grid, .responsive-app .screen-discover .browse > .result-grid, .responsive-app .browse > .result-grid { position: static; width: 100%; height: auto; overflow: visible; }
-.responsive-app .result-grid > .cards .responsive-card { margin: 0; }
 /* Browse results fill the shared content frame exactly at every step: the column
    count and the card width both resolve from the header's own width, so the grid
    never ends short of the frame edge with a ragged strip of dead space. */
 @media (min-width: 600px) {
   /* No shelf inset here: the grid must end exactly on the shared frame edge. */
   .responsive-app .result-grid > .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(232px, 1fr)); gap: 24px; padding: 0; }
-  .responsive-app .result-grid > .cards .responsive-card { width: 100%; }
-  .responsive-app .result-grid > .cards .media-card { display: grid; grid-template-columns: minmax(0, 1fr); width: 100%; height: auto; padding-bottom: 8px; }
-  .responsive-app .result-grid > .cards .media-card > img,
-  .responsive-app .result-grid > .cards .media-card > .art-fallback { position: relative; inset: auto; grid-area: 1 / 1; width: 100%; height: auto; aspect-ratio: 16 / 9; object-fit: cover; }
-  .responsive-app .result-grid > .cards .media-card::after { width: 100%; height: auto; aspect-ratio: 16 / 9; }
-  .responsive-app .result-grid > .cards .media-card > strong { position: static; grid-area: 2 / 1; width: 100%; margin-top: 8px; }
-  .responsive-app .result-grid > .cards .media-card > small { position: static; grid-area: 3 / 1; width: 100%; margin-top: 4px; }
-  .responsive-app .result-grid > .cards .media-card > progress { position: relative; top: auto; left: 8px; grid-area: 1 / 1; align-self: end; width: calc(100% - 16px); margin-bottom: 8px; }
   .responsive-app .result-grid > .cards .card-more { top: auto; bottom: 14px; }
 }
 .responsive-app .search .keyboard { position: static; width: 100%; height: auto; margin-bottom: 28px; }
@@ -152,10 +117,9 @@
 .responsive-app .playback-loading { position: fixed; left: 50%; top: 40%; width: min(90%, 420px); transform: translate(-50%, -50%); text-align: center; }
 @media (max-width: 899px) {
   .tv-screen.responsive-app { --page-gutter: 28px; }
-  .responsive-app .home, .responsive-app .detail { grid-template-columns: minmax(0, 1fr); gap: 24px; }
-  .responsive-app .responsive-hero-art, .responsive-app .responsive-detail-art { grid-column: 1; grid-row: 1; max-height: 400px; max-width: 711px; justify-self: center; }
-  .responsive-app .hero, .responsive-app .detail-copy, .responsive-app .series .detail-copy { grid-column: 1; grid-row: 2; }
-  .responsive-app .hero > p { -webkit-line-clamp: 3; }
+  .responsive-app .detail { grid-template-columns: minmax(0, 1fr); gap: 24px; }
+  .responsive-app .responsive-detail-art { grid-column: 1; grid-row: 1; max-height: 400px; max-width: 711px; justify-self: center; }
+  .responsive-app .detail-copy, .responsive-app .series .detail-copy { grid-column: 1; grid-row: 2; }
 }
 @media (max-width: 599px) {
   .tv-screen.responsive-app {
@@ -165,24 +129,15 @@
   .responsive-app main { margin-left: 0 !important; width: 100% !important; padding-top: 16px; padding-bottom: calc(104px + env(safe-area-inset-bottom)); }
   .responsive-app .roku-settings,
   .responsive-app .roku-guide { margin-left: 0 !important; width: 100% !important; }
-  .responsive-app .hero h1, .responsive-app .detail-copy h1 { font-size: 32px; }
-  .responsive-app .responsive-title > img { max-width: min(100%, 300px); max-height: 96px; }
-  .responsive-app .hero > p, .responsive-app .detail-synopsis { margin-top: 16px; font-size: 16px; line-height: 1.5; }
-  .responsive-app .hero-facts, .responsive-app .detail-facts { font-size: 14px; }
-  .responsive-app .hero .actions, .responsive-app .detail-copy .actions { gap: 8px; flex-wrap: nowrap; margin-top: 20px; }
-  .responsive-app .hero .actions button, .responsive-app .detail-copy .actions button { height: 52px; min-height: 52px; font-size: 18px; padding: 0 10px; border-radius: 10px; }
-  .responsive-app .hero .actions [data-focus-id="hero-details"], .responsive-app .detail-copy .actions [data-focus-id="detail-play"] { flex: 1 1 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .responsive-app .hero .actions .compact-action, .responsive-app .hero-save-btn { flex: 0 0 52px !important; width: 52px !important; height: 52px !important; min-height: 52px !important; border-radius: 10px !important; }
+  .responsive-app .detail-copy h1 { font-size: 32px; }
+  .responsive-app .detail-synopsis { margin-top: 16px; font-size: 16px; line-height: 1.5; }
+  .responsive-app .detail-facts { font-size: 14px; }
+  .responsive-app .detail-copy .actions { gap: 8px; flex-wrap: nowrap; margin-top: 20px; }
+  .responsive-app .detail-copy .actions button { height: 52px; min-height: 52px; font-size: 18px; padding: 0 10px; border-radius: 10px; }
+  .responsive-app .detail-copy .actions [data-focus-id="detail-play"] { flex: 1 1 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .responsive-app .detail-copy [data-focus-id="detail-save"], .responsive-app .detail-copy [data-focus-id="detail-info"] { flex: 0 0 52px; width: 52px; }
   .responsive-app [data-focus-id="detail-source"] { display: none; }
-  .responsive-app .shelves h2 { font-size: 20px; }
   .responsive-app .cards { gap: 16px; }
-  .responsive-app .responsive-card, .responsive-app .media-card { width: 232px; flex-basis: 232px; }
-  .responsive-app .media-card { height: 202px; }
-  .responsive-app .media-card > img, .responsive-app .media-card > .art-fallback, .responsive-app .media-card::after { width: 232px; height: 130.5px; }
-  .responsive-app .media-card > strong { top: 139px; font-size: 17px; line-height: 22px; }
-  .responsive-app .media-card > small { top: 165px; font-size: 14px; line-height: 20px; }
-  .responsive-app .media-card > progress { top: 117px; }
   .responsive-app .card-more { top: 138px; }
   .responsive-app .detail-credits, .responsive-app .series .detail-credits { font-size: 14px; }
   .responsive-app .episode-heading { font-size: 20px; margin-top: 8px; }

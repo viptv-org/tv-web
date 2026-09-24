@@ -2,21 +2,6 @@
    shared responsive rules so it settles their cascade; the TV canvas and the
    desktop/tablet responsive layout are untouched by anything in here. */
 
-/* Shelves scroll by swiping on touch screens; the desktop chevron pair would
-   only float under the row. */
-@media (hover: none), (max-width: 599px) {
-  .responsive-app .shelf-nav { display: none; }
-}
-
-/* Phones caption cards with their own two-line caption; wider layouts keep
-   their text rows below the art. */
-.responsive-app .card-caption { display: none; }
-
-/* A stacked hero has no room for an eyebrow between the art and the title. */
-@media (max-width: 899px) {
-  .responsive-app .hero > small { display: none; }
-}
-
 @media (max-width: 599px) {
   /* The page's top edge matches its side gutter: the hero art sits 16px
      from the top exactly as it does from each side. (The floating nav and
@@ -25,31 +10,7 @@
     padding-top: max(var(--page-gutter), env(safe-area-inset-top));
   }
 
-  /* ---- Home hero ----------------------------------------------------------- */
-  .responsive-app .home { gap: 16px; }
-  .responsive-app .hero > p:empty { display: none; }
-  .responsive-app .responsive-hero-art { border-radius: 12px; clip-path: inset(0 round 12px); }
-  .responsive-app .hero .actions { margin-top: 16px; gap: 10px; }
-  .responsive-app .hero .actions button,
-  .responsive-app .hero .actions [data-focus-id="hero-details"],
-  .responsive-app .hero .actions .hero-save-btn {
-    height: 48px !important;
-    min-height: 48px !important;
-    max-height: 48px !important;
-    border-radius: 12px !important;
-  }
-  .responsive-app .hero .actions [data-focus-id="hero-details"] { padding: 0 16px; font-size: 17px; font-weight: 600; }
-  .responsive-app .hero .actions .hero-save-btn {
-    flex: 0 0 48px !important;
-    width: 48px !important;
-    min-width: 48px !important;
-    max-width: 48px !important;
-  }
-
-  /* ---- Shelves ------------------------------------------------------------- */
-  .responsive-app .shelves { padding: 0; margin-top: 8px; }
-  .responsive-app .shelves section { margin: 0 0 22px; }
-  .responsive-app .shelves h2,
+  /* ---- Search result rows ------------------------------------------------- */
   .responsive-app .search .result-grid h2 {
     margin: 0 0 8px;
     font-size: 17px;
@@ -58,12 +19,8 @@
     text-transform: none;
     -webkit-line-clamp: 1;
   }
-  .responsive-app .shelf-heading { align-items: center; gap: 12px; margin-bottom: 8px; }
-  .responsive-app .shelf-heading h2 { margin: 0; }
-  .responsive-app .shelf-see-more { min-height: 32px; font-size: 13px; }
   /* Rows bleed to the screen edges while their first card starts exactly on
      the heading's edge. */
-  .responsive-app .shelves .cards,
   .responsive-app .search .result-grid section > .cards {
     width: auto;
     margin: 0 calc(-1 * var(--page-gutter));
@@ -72,76 +29,7 @@
     scroll-padding-inline: var(--page-gutter);
   }
 
-  /* ---- Cards: art with a two-line caption under it ------------------------ */
-  /* The caption has a fixed 40px height (6px gap, 18px title, 1px, 15px
-     context) so skipped off-screen cards keep the rendered card height and
-     restored page offsets stay exact. */
-  .responsive-app .responsive-card,
-  .responsive-app .media-card { width: 232px; flex-basis: 232px; }
-  .responsive-app .responsive-card { contain-intrinsic-size: auto 232px auto calc(130.5px + 40px); }
-  .responsive-app .media-card { height: auto; min-height: 0; transition: transform 0.12s ease; }
-  .responsive-app .responsive-card .media-card:active { transform: scale(0.97) !important; }
-  .responsive-app .media-card > strong,
-  .responsive-app .media-card > small { display: none; }
-  .responsive-app .media-card > img,
-  .responsive-app .media-card > .art-fallback,
-  .responsive-app .media-card::after {
-    width: 100%;
-    height: auto;
-    aspect-ratio: 16 / 9;
-  }
-  /* The caption names the title; the fallback is only a surface. */
-  .responsive-app .media-card > .art-fallback { font-size: 0; }
-  .responsive-app .card-caption {
-    grid-area: 2 / 1;
-    display: flex;
-    flex-direction: column;
-    gap: 1px;
-    height: 40px;
-    min-width: 0;
-    padding: 6px 2px 0;
-    text-align: left;
-  }
-  .responsive-app .card-meta,
-  .responsive-app .card-title {
-    display: block;
-    min-width: 0;
-    overflow: hidden;
-    white-space: nowrap;
-    text-overflow: ellipsis;
-  }
-  .responsive-app .card-title { font-size: 14px; line-height: 18px; font-weight: 600; color: #f5f5f5; }
-  .responsive-app .card-meta { font-size: 12px; line-height: 15px; font-weight: 500; color: #8d9093; }
-
-  /* Live channels are compact logo tiles, as wide as each logo's own aspect
-     at a fixed height (half the landscape card), with no name. */
-  .responsive-app .responsive-card.logo { flex: 0 0 auto; width: auto; contain-intrinsic-size: auto 120px auto 64px; }
-  .responsive-app .media-card.logo-card {
-    width: auto;
-    min-width: 64px;
-    height: 64px;
-    overflow: hidden;
-    border-radius: 10px;
-    background: #1c1e20;
-  }
-  .responsive-app .media-card.logo-card > img,
-  .responsive-app .result-grid > .cards .media-card.logo-card > img {
-    position: relative;
-    inset: auto;
-    width: auto;
-    max-width: 176px;
-    height: 64px;
-    padding: 12px 16px;
-    aspect-ratio: auto;
-    border-radius: 0;
-    background: transparent;
-    object-fit: contain;
-  }
-  .responsive-app .media-card.logo-card > .art-fallback,
-  .responsive-app .media-card.logo-card::after { width: 100%; height: 100%; aspect-ratio: auto; border-radius: 10px; }
-
-  /* Progress: a 6px bar with softly rounded ends, lifted clear of the art edge. */
-  .responsive-app .media-card > progress,
+  /* Episode progress: a 6px bar with softly rounded ends, lifted clear of the art edge. */
   .responsive-app .episode > progress {
     left: 10px !important;
     width: calc(100% - 20px) !important;
@@ -150,13 +38,9 @@
     border-radius: 2px;
     background: rgba(255, 255, 255, 0.3);
   }
-  .responsive-app :is(.media-card, .episode) > progress::-webkit-progress-bar { background: rgba(255, 255, 255, 0.3); border-radius: 2px; }
-  .responsive-app :is(.media-card, .episode) > progress::-webkit-progress-value { border-radius: 2px; min-width: 6px; }
-  .responsive-app :is(.media-card, .episode) > progress::-moz-progress-bar { border-radius: 2px; }
-
-  /* Touch leaves no focus or sticky-hover frame on a tapped card. */
-  .responsive-app .media-card:focus:not(:focus-visible)::after,
-  .responsive-app .media-card:hover:not(:focus-visible)::after { border-color: transparent; }
+  .responsive-app .episode > progress::-webkit-progress-bar { background: rgba(255, 255, 255, 0.3); border-radius: 2px; }
+  .responsive-app .episode > progress::-webkit-progress-value { border-radius: 2px; min-width: 6px; }
+  .responsive-app .episode > progress::-moz-progress-bar { border-radius: 2px; }
 
   /* ---- Detail --------------------------------------------------------------- */
   /* One 48px row: the flexible primary action, then My List and More squares. */
@@ -189,9 +73,6 @@
     padding: 0;
     overflow: visible;
   }
-  .responsive-app .result-grid > .cards .responsive-card { flex: none; width: auto; min-width: 0; contain-intrinsic-size: auto 100px; }
-  .responsive-app .result-grid > .cards .media-card { width: 100%; }
-  .responsive-app .result-grid > .cards .card-title { font-size: 13px; line-height: 18px; }
   .responsive-app .result-grid > p { color: #a6a8aa; font-size: 15px; margin-top: 8px; }
   .responsive-app .load-status { padding: 18px 0 4px; color: #8d9093; font-size: 14px; text-align: center; }
 
@@ -327,6 +208,3 @@
 
 }
 
-@media (max-width: 599px) and (prefers-reduced-motion: reduce) {
-  .responsive-app .media-card { transition: none; }
-}

@@ -128,157 +128,13 @@ main {
   width: calc(42px * var(--tv-k));
   height: calc(36px * var(--tv-k));
 }
-.home {
-  inset: 0;
-  width: calc(1280px * var(--tv-k));
-  height: calc(720px * var(--tv-k));
-}
-.hero-art,
-.hero-art > img {
-  position: absolute;
-  inset: 0;
-  width: calc(1280px * var(--tv-k));
-  height: calc(720px * var(--tv-k));
-}
-.hero-art > img {
-  object-fit: cover;
-}
-.hero-art .hero-shade-left,
-.hero-art .hero-shade-bottom {
-  object-fit: fill;
-}
-.hero {
-  position: absolute;
-  left: calc(100px * var(--tv-k));
-  top: calc(128px * var(--tv-k));
-  width: calc(650px * var(--tv-k));
-}
-.hero > small {
-  display: block;
-  font-size: calc(14px * var(--tv-k));
-  line-height: calc(24px * var(--tv-k));
-  color: #c5c6c7;
-}
-.hero h1 {
-  position: absolute;
-  top: calc(38px * var(--tv-k));
-  width: calc(600px * var(--tv-k));
-  height: calc(54px * var(--tv-k));
-  white-space: nowrap;
-  overflow: hidden;
-  font-size: calc(44px * var(--tv-k));
-}
-.hero > p {
-  position: absolute;
-  top: calc(100px * var(--tv-k));
-  width: calc(548px * var(--tv-k));
-  max-height: calc(80px * var(--tv-k));
-  font-size: calc(20px * var(--tv-k));
-  line-height: calc(26px * var(--tv-k));
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  color: #d5d6d7;
-}
-.hero-facts {
-  position: absolute;
-  top: calc(194px * var(--tv-k));
-  width: calc(650px * var(--tv-k));
-  font-size: calc(19px * var(--tv-k));
-  white-space: nowrap;
-  overflow: hidden;
-  color: #c5c6c7;
-}
 .actions {
   display: flex;
   gap: calc(16px * var(--tv-k));
 }
-.hero .actions {
-  position: absolute;
-  top: calc(247px * var(--tv-k));
-  gap: calc(12px * var(--tv-k));
-}
-.hero .actions button {
-  width: calc(144px * var(--tv-k));
-  height: calc(50px * var(--tv-k));
-  font-size: calc(22px * var(--tv-k));
-  text-align: center;
-  padding: 0 calc(8px * var(--tv-k));
-}
-.hero .actions .wide-action {
-  width: calc(236px * var(--tv-k));
-}
-.hero-portrait {
-  position: absolute;
-  left: calc(938px * var(--tv-k));
-  top: calc(102px * var(--tv-k));
-  width: calc(252px * var(--tv-k));
-  height: calc(378px * var(--tv-k));
-  object-fit: contain;
-}
-.compact-home .hero,
-.compact-home .hero-art,
-.compact-home .hero-portrait {
-  display: none;
-}
-.shelves {
-  position: absolute;
-  left: calc(92px * var(--tv-k));
-  top: calc(466px * var(--tv-k));
-  width: calc(1188px * var(--tv-k));
-  height: calc(254px * var(--tv-k));
-  padding: calc(8px * var(--tv-k));
-  overflow: auto;
-  scroll-padding: calc(8px * var(--tv-k));
-}
-.compact-home .shelves {
-  top: calc(100px * var(--tv-k));
-  height: calc(620px * var(--tv-k));
-}
-.shelves section {
-  height: calc(254px * var(--tv-k));
-  margin: 0;
-}
-.shelves h2 {
-  font-size: calc(22px * var(--tv-k));
-  line-height: calc(26px * var(--tv-k));
-  height: calc(38px * var(--tv-k));
-  text-transform: uppercase;
-}
-.cards {
-  display: flex;
-  gap: calc(24px * var(--tv-k));
-  overflow: auto;
-  scroll-padding: 0;
-  scroll-behavior: smooth;
-}
-.media-card {
-  position: relative;
-  flex: 0 0 calc(256px * var(--tv-k));
-  width: calc(256px * var(--tv-k));
-  height: calc(200px * var(--tv-k));
-  min-height: 0;
-  border: 0;
-  padding: 0;
-  background: transparent;
-  border-radius: 0;
-  text-align: left;
-  overflow: hidden;
-}
-.media-card:focus,
 .episode:focus {
   background: transparent;
   color: #f5f5f5;
-}
-.media-card > img,
-.media-card > .art-fallback {
-  position: absolute;
-  left: 0;
-  top: 0;
-  width: calc(256px * var(--tv-k));
-  height: calc(144px * var(--tv-k));
-  border-radius: calc(8px * var(--tv-k));
 }
 .art-fallback {
   background: #202224;
@@ -290,7 +146,6 @@ main {
   text-align: center;
   font-size: calc(21px * var(--tv-k));
 }
-.media-card::after,
 .episode::after {
   content: "";
   position: absolute;
@@ -302,32 +157,9 @@ main {
   opacity: 0.35;
   pointer-events: none;
 }
-.media-card:focus::after,
 .episode:focus::after {
   opacity: 1;
 }
-.media-card > strong {
-  position: absolute;
-  top: calc(152px * var(--tv-k));
-  left: 0;
-  width: calc(256px * var(--tv-k));
-  line-height: calc(25px * var(--tv-k));
-  font-size: calc(21px * var(--tv-k));
-  white-space: nowrap;
-  overflow: hidden;
-}
-.media-card > small {
-  position: absolute;
-  top: calc(178px * var(--tv-k));
-  left: 0;
-  width: calc(256px * var(--tv-k));
-  font-size: calc(17px * var(--tv-k));
-  line-height: calc(21px * var(--tv-k));
-  white-space: nowrap;
-  overflow: hidden;
-  font-weight: 400;
-}
-.media-card > progress,
 .episode > progress {
   position: absolute;
   left: calc(8px * var(--tv-k));

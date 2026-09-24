@@ -388,6 +388,7 @@
   color: var(--viptv-color-text-primary);
   font-family: var(--viptv-font-family-ui);
   font-weight: 400; /* legacy .responsive-app button sets 600 */
+  text-align: left; /* legacy .responsive-app button centres */
   text-decoration: none;
   -webkit-tap-highlight-color: transparent;
   transition: transform var(--viptv-motion-focus) ease-out, background-color var(--viptv-motion-focus) ease-out;
@@ -458,6 +459,7 @@
   color: var(--viptv-color-text-primary);
   font-family: var(--viptv-font-family-ui);
   font-weight: 400; /* legacy .responsive-app button sets 600 */
+  text-align: left;
   text-decoration: none;
   -webkit-tap-highlight-color: transparent;
 }
@@ -1008,6 +1010,12 @@
   --vx-card-w: var(--viptv-size-tile-tv-episode-width);
   --vx-card-h: var(--viptv-size-tile-tv-episode-height);
   gap: var(--viptv-space-3_5);
+}
+.tv-layout .vx-card__art--monogram {
+  font-size: var(--viptv-type-tv-monogram-size);
+  font-weight: var(--viptv-type-tv-monogram-weight);
+  line-height: var(--viptv-type-tv-monogram-line-height);
+  letter-spacing: var(--viptv-type-tv-monogram-letter-spacing);
 }
 .tv-layout .vx-card__badge {
   top: var(--viptv-space-3_5);
