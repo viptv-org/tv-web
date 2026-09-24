@@ -17,6 +17,8 @@ export const emptyHomeCard: HomeCardView = {
 
 export interface HomeView {
   heroItem: MediaItem | null;
+  queueItems: readonly MediaItem[];
+  favoriteItems: readonly MediaItem[];
   heroImage: string;
   titleLogo: string;
   title: string;
@@ -32,7 +34,7 @@ export interface HomeView {
 }
 
 export const emptyHome: HomeView = {
-  heroItem: null, heroImage: "", titleLogo: "", title: "", eyebrow: "",
+  heroItem: null, queueItems: [], favoriteItems: [], heroImage: "", titleLogo: "", title: "", eyebrow: "",
   episodeLabel: "", progress: 0, progressText: "", meta: "", synopsis: "",
   playLabel: "Play", saved: false, cards: [],
 };
@@ -63,6 +65,8 @@ export function projectHome(heroItem: MediaItem | undefined, queue: readonly Med
   });
   return {
     heroItem,
+    queueItems: queue,
+    favoriteItems: favorites,
     heroImage: artworkUrl(hero.heroImage ?? undefined, 1280, 720, true) ?? hero.heroImage ?? "",
     titleLogo: hero.titleLogo ?? "",
     title: item.name || hero.title,
@@ -99,5 +103,5 @@ export async function enrichHomeHero(api: TvApi, view: HomeView, signal: AbortSi
   const item = view.heroItem;
   if (!item || item.type === "live") return view;
   const detail = await api.detail({ id: item.seriesId ?? item.id, type: item.type }, { signal });
-  return { ...projectHome(item, [], enrichDetail(item, detail.item)), cards: view.cards, saved: view.saved };
+  return { ...projectHome(item, [], enrichDetail(item, detail.item)), queueItems: view.queueItems, favoriteItems: view.favoriteItems, cards: view.cards, saved: view.saved };
 }

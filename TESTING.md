@@ -524,7 +524,27 @@ Final checkpoint checks: 169/169 unit tests, 24 targeted responsive/TV
 Playwright passes with 10 deliberate skips, and the production build passed.
 The existing React `TvHome` recapture still had zero changed pixels against
 its saved baseline.
-The production `/tv/` preview reproduced the Home capture and metric. At
+
+## Title route continuation
+
+The staged Lightning Home Details action and Continue Watching cards now open
+title pages from the selected item through the shared detail API. Series
+progress is merged through the pinned Rust core before choosing the initial
+episode. The title has Blits-focused actions and episode tiles. The browser
+fixture confirmed Home Details → series title, Back restoring Details focus,
+and the second queue card → its movie title → Back restoring that card's
+focus; the title My List action reached
+the shared API. An opt-in focus marker made the D-pad/Back assertions wait for
+actual Blits component focus instead of an arbitrary delay.
+
+The 1920×1080 Lightning `TvTitle` capture against matched React content has
+1,474,821 changed pixels (71.1237%), MAE 8.2731, RMSE 27.3696, SSIM
+0.793883. The ambient backdrop, source pill, focus shadow, episode details
+and typography remain open visual differences. Source discovery/selection,
+playback, More info and episode activation still need their intended flows;
+the visible staged controls do not qualify those behaviors or a TV launcher.
+The production `/tv/` preview reproduced the Title capture and metric, and
+the existing React `TvTitle` recapture had zero changed pixels. At
 this checkpoint 169/169 unit tests passed; targeted responsive-layout and TV
 shell Playwright acceptance passed 24 scenarios with 10 deliberate skips;
 design/core/video checks, TypeScript and production build passed.

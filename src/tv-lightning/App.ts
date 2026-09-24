@@ -1,12 +1,14 @@
 import Blits from "@lightningjs/blits";
 import QRCode from "qrcode";
-import type { TvApi, DevicePairing, TvProfile } from "../api";
+import type { TvApi, DevicePairing, TvProfile, MediaItem } from "../api";
 import { tokens } from "../theme/viptv-tokens.generated";
 import { ProfileTile, ManageProfilesButton, addProfileTile, emptyProfileTile, profileTileData } from "./ProfileTile";
 import { emptyHome, enrichHomeHero, loadHomeView, type HomeView } from "./homeModel";
 import { railIcon } from "./railIcons";
 import { HomeAction, HomeCard } from "./HomeFocus";
 import { emptyHomeCard } from "./homeModel";
+import { emptyDetail, emptyDetailEpisode, loadDetailView, type DetailView } from "./detailModel";
+import { TitleAction, EpisodeTile } from "./TitleFocus";
 
 type TvPlatform = "tizen" | "vizio" | "webos";
 const px = (name: keyof typeof tokens) => Number.parseFloat(String(tokens[name]));
@@ -78,9 +80,11 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
   let pairingScope: ReturnType<TvApi["createScope"]> | undefined;
   let homeGeneration = 0;
   let homeScope: ReturnType<TvApi["createScope"]> | undefined;
+  let detailGeneration = 0;
+  let detailScope: ReturnType<TvApi["createScope"]> | undefined;
   let disposeSession: (() => void) | undefined;
   return Blits.Application({
-    components: { ProfileTile, ManageProfilesButton, HomeAction, HomeCard },
+    components: { ProfileTile, ManageProfilesButton, HomeAction, HomeCard, TitleAction, EpisodeTile },
     template: `
       <Element w="1920" h="1080" color="$background">
         <Element x="260" y="86" w="1400" h="800" src="$pairingGlow" :show="$phase === 'pairing' || $phase === 'expired' || $phase === 'error'" />
@@ -175,6 +179,36 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
           <Text x="1693" y="65" :content="$optionsIcon" font="Onest" size="19" color="$primary" />
           <Text x="1730" y="66" :content="$optionsLabel" font="Onest" size="20" color="$body" />
         </Element>
+        <Element :show="$phase === 'detail'">
+          <Element x="1120" y="0" w="800" h="720" :src="$detail.heroImage" :show="$detail.heroImage !== ''" alpha="0.75" />
+          <Element w="1920" h="1080" src="$homeScrim" />
+          <Element x="44" y="54" w="56" h="56" rounded="28" color="$surface" />
+          <Element x="50" y="60" w="44" h="44" rounded="22" :src="$homeProfileAvatar" :show="$homeProfileAvatar !== ''" />
+          <Element x="60" y="202" w="24" h="24" :src="$railSearch" />
+          <Element x="40" y="262" w="64" h="64" rounded="32" color="$surface" />
+          <Element x="60" y="282" w="24" h="24" :src="$railHome" />
+          <Element x="60" y="360" w="24" h="24" :src="$railDiscover" />
+          <Element x="60" y="440" w="24" h="24" :src="$railLive" />
+          <Element x="60" y="516" w="24" h="24" :src="$railList" />
+          <Element x="60" y="978" w="24" h="24" :src="$railSettings" />
+          <Element x="192" y="96" w="310" h="90" fit="contain" :src="$detail.titleLogo" :show="$detail.titleLogo !== ''" />
+          <Text x="192" y="96" maxwidth="850" :content="$detail.title" font="Bricolage700" size="56" color="$primary" :show="$detail.titleLogo === ''" />
+          <Text x="192" y="211" maxwidth="1300" maxlines="1" :content="$detail.facts" font="Onest" size="22" color="$secondary" />
+          <Text x="192" y="268" maxwidth="780" maxlines="2" :content="$detail.synopsis" font="Onest" size="26" color="$body" />
+          <TitleAction ref="titleAction0" position="0" action="play" :label="$detail.playLabel" icon="▶" buttonWidth="298" holdable="true" x="182" y="365" />
+          <TitleAction ref="titleAction1" position="1" action="source" :label="$detail.sourceLabel" icon="" buttonWidth="292" holdable="false" x="488" y="369" />
+          <TitleAction ref="titleAction2" position="2" action="save" label="My List" :icon="$detailSaveIcon" buttonWidth="200" holdable="false" x="800" y="369" />
+          <TitleAction ref="titleAction3" position="3" action="info" label="More info" icon="ⓘ" buttonWidth="230" holdable="false" x="1020" y="369" />
+          <Element x="192" y="604" w="160" h="52" rounded="26" color="$surface" :show="$detail.episodeCount > 0" />
+          <Text x="226" y="616" :content="$detailSeasonLabel" font="Onest700" size="22" color="$primary" :show="$detail.episodeCount > 0" />
+          <Text x="374" y="616" :content="$detailCountLabel" font="Onest" size="22" color="$tertiary" :show="$detail.episodeCount > 0" />
+          <EpisodeTile ref="titleEpisode0" position="0" :episode="$detailEpisodes[0]" x="192" y="682" />
+          <EpisodeTile ref="titleEpisode1" position="1" :episode="$detailEpisodes[1]" x="588" y="682" />
+          <EpisodeTile ref="titleEpisode2" position="2" :episode="$detailEpisodes[2]" x="984" y="682" />
+          <EpisodeTile ref="titleEpisode3" position="3" :episode="$detailEpisodes[3]" x="1380" y="682" />
+          <EpisodeTile ref="titleEpisode4" position="4" :episode="$detailEpisodes[4]" x="1776" y="682" />
+          <Text x="700" y="54" maxwidth="600" align="center" :content="$detailNotice" font="Onest" size="22" color="$primary" />
+        </Element>
         <Text x="96" y="54" :show="$phase === 'ready'" :content="$startingLabel" font="Onest" size="28" color="$primary" />
       </Element>
     `,
@@ -195,6 +229,17 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
         profilesGlow: gatewayGlow(700),
         homeScrim: homeScrim(),
         home: emptyHome as HomeView,
+        detail: emptyDetail as DetailView,
+        detailEpisodes: Array.from({ length: 5 }, () => ({ ...emptyDetailEpisode })),
+        detailSaveIcon: "",
+        detailSeasonLabel: "",
+        detailCountLabel: "",
+        detailNotice: "",
+        detailFocusZone: "action" as "action" | "episode",
+        detailActionIndex: 0,
+        detailEpisodeIndex: 0,
+        detailReturnZone: "action" as "action" | "card",
+        detailReturnIndex: 0,
         homeCards: Array.from({ length: 6 }, () => ({ ...emptyHomeCard })),
         homeFocusZone: "action" as "action" | "card",
         homeActionIndex: 0,
@@ -218,7 +263,7 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
         danger: tokens["color.status.danger-tv"],
         codeSize: pairCodeSize,
         codeLetterSpacing: pairCodeSize * 0.08,
-        phase: "starting" as "starting" | "pairing" | "expired" | "error" | "profiles" | "ready" | "home",
+        phase: "starting" as "starting" | "pairing" | "expired" | "error" | "profiles" | "ready" | "home" | "detail",
         address: "Connecting…",
         code: "••••••",
         qr: "",
@@ -306,9 +351,20 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
           this.moveHomeCard(Number(position), delta));
         this.$listen("home-action-activate", () => void this.activateHomeAction());
         this.$listen("home-action-hold", () => { this.homeNotice = "Choose a source from the title screen."; });
-        this.$listen("home-card-activate", () => {
-          this.homeNotice = "Title details are unavailable.";
+        this.$listen("home-card-activate", () => void this.openDetailByCard());
+        this.$listen("title-action-move", (delta: number) =>
+          this.focusTitleAction(Math.max(0, Math.min(3, this.detailActionIndex + Number(delta)))));
+        this.$listen("title-episodes-enter", () => {
+          if (this.detail.episodes.length) this.focusTitleEpisode(0);
         });
+        this.$listen("title-actions-return", () => this.focusTitleAction(this.detailActionIndex));
+        this.$listen("title-episode-move", (delta: number) => {
+          const count = this.detail.episodes.length;
+          if (count) this.focusTitleEpisode(Math.max(0, Math.min(count - 1, this.detailEpisodeIndex + Number(delta))));
+        });
+        this.$listen("title-action-activate", () => void this.activateTitleAction());
+        this.$listen("title-action-hold", () => { this.detailNotice = "Choose source is not available yet."; });
+        this.$listen("title-episode-activate", () => { this.detailNotice = "Choose source is not available yet."; });
         void session.dispatch({ Begin: {
           origin: api.serverOrigin,
           allowInsecurePreview: import.meta.env.DEV && api.serverOrigin === location.origin,
@@ -319,6 +375,8 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
         pairingScope?.abort();
         homeScope?.abort();
         ++homeGeneration;
+        detailScope?.abort();
+        ++detailGeneration;
         clearTimeout(pairingTimer);
         disposeSession?.();
       },
@@ -390,7 +448,10 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
         if (action === "save" && this.home.heroItem && this.currentProfileId) {
           try {
             const saved = await api.toggleFavorite(this.currentProfileId, this.home.heroItem);
-            this.home = { ...this.home, saved };
+            const favoriteItems = saved
+              ? [...this.home.favoriteItems, this.home.heroItem]
+              : this.home.favoriteItems.filter(favorite => favorite.id !== this.home.heroItem?.id);
+            this.home = { ...this.home, saved, favoriteItems };
             this.homeAddLabel = saved ? "✓" : "+";
             (this.$select("heroAction2") as unknown as { reveal?: () => void })?.reveal?.();
             this.homeNotice = saved ? "Added to My List" : "Removed from My List";
@@ -399,7 +460,87 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
           }
           return;
         }
-        this.homeNotice = action === "details" ? "Title details are unavailable." : "Playback is unavailable.";
+        if (action === "details" && this.home.heroItem) {
+          void this.openDetail(this.home.heroItem);
+          return;
+        }
+        this.homeNotice = "Playback is unavailable.";
+      },
+      openDetailByCard() {
+        const item = this.home.queueItems[this.homeCardIndex];
+        if (item) void this.openDetail(item);
+      },
+      async openDetail(item: MediaItem) {
+        if (this.phase !== "home") return;
+        const generation = ++detailGeneration;
+        detailScope?.abort();
+        detailScope = api.createScope();
+        this.detailReturnZone = this.homeFocusZone;
+        this.detailReturnIndex = this.homeFocusZone === "card" ? this.homeCardIndex : this.homeActionIndex;
+        this.homeNotice = "";
+        try {
+          const view = await loadDetailView(api, item, this.currentProfileId, this.home.favoriteItems, detailScope.signal);
+          if (generation !== detailGeneration || detailScope.signal.aborted) return;
+          this.phase = "detail";
+          setTimeout(() => {
+            if (generation !== detailGeneration) return;
+            this.detail = view;
+            this.detailEpisodes = Array.from({ length: 5 }, (_, index) => view.episodes[index] ?? { ...emptyDetailEpisode });
+            this.detailSaveIcon = view.saved ? "✓" : "+";
+            this.detailSeasonLabel = `Season ${view.season}`;
+            this.detailCountLabel = `${view.episodeCount} ${view.episodeCount === 1 ? "episode" : "episodes"}`;
+            this.detailNotice = "";
+            this.revealTitleControls();
+            this.focusTitleAction(0);
+          }, 50);
+        } catch (cause) {
+          if (generation !== detailGeneration || detailScope.signal.aborted) return;
+          this.homeNotice = cause instanceof Error ? cause.message : "Could not open title.";
+        }
+      },
+      revealTitleControls() {
+        for (let index = 0; index < 4; index++)
+          (this.$select(`titleAction${index}`) as unknown as { reveal?: () => void })?.reveal?.();
+        for (let index = 0; index < 5; index++)
+          (this.$select(`titleEpisode${index}`) as unknown as { reveal?: () => void })?.reveal?.();
+      },
+      focusTitleAction(index: number) {
+        this.detailFocusZone = "action";
+        this.detailActionIndex = index;
+        this.$select(`titleAction${index}`)?.$focus();
+      },
+      focusTitleEpisode(index: number) {
+        this.detailFocusZone = "episode";
+        this.detailEpisodeIndex = index;
+        this.$select(`titleEpisode${index}`)?.$focus();
+      },
+      async activateTitleAction() {
+        if (this.phase !== "detail" || this.detailFocusZone !== "action") return;
+        const action = ["play", "source", "save", "info"][this.detailActionIndex];
+        if (action === "save" && this.detail.item && this.currentProfileId) {
+          try {
+            const saved = await api.toggleFavorite(this.currentProfileId, this.detail.item);
+            this.detail = { ...this.detail, saved };
+            this.detailSaveIcon = saved ? "✓" : "+";
+            setTimeout(() => (this.$select("titleAction2") as unknown as { reveal?: () => void })?.reveal?.(), 0);
+            this.detailNotice = saved ? "Added to My List" : "Removed from My List";
+          } catch (cause) {
+            this.detailNotice = cause instanceof Error ? cause.message : "Could not update My List.";
+          }
+          return;
+        }
+        this.detailNotice = action === "info" ? this.detail.synopsis : "Choose source is not available yet.";
+      },
+      returnFromDetail() {
+        detailScope?.abort();
+        ++detailGeneration;
+        this.phase = "home";
+        this.detailNotice = "";
+        setTimeout(() => {
+          this.revealHomeControls();
+          if (this.detailReturnZone === "card") this.focusHomeCard(this.detailReturnIndex);
+          else this.focusHomeAction(this.detailReturnIndex);
+        }, 0);
       },
       showProfiles(profiles: readonly TvProfile[]) {
         this.profiles = [...profiles];
@@ -542,6 +683,7 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
       },
       back() {
         if (this.phase === "profiles" && this.managing) this.toggleManageProfiles();
+        else if (this.phase === "detail") this.returnFromDetail();
         else if (this.phase === "home" && this.profiles.length) this.showProfiles(this.profiles);
       },
     },
