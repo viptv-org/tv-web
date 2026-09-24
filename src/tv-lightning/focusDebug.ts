@@ -57,6 +57,13 @@ export function noteSearchState(query: string, count: number, busy: boolean, par
   };
 }
 
+export function noteLiveState(row: number, cell: number | null, channels: number, programs: number, filter: string, windowStart: number, nowX: number) {
+  if (!enabled) return;
+  (window as Window & { __viptvLive?: { row: number; cell: number | null; channels: number; programs: number; filter: string; windowStart: number; nowX: number } }).__viptvLive = {
+    row, cell, channels, programs, filter, windowStart, nowX,
+  };
+}
+
 /** Test-only player state, without session or delivery URLs. */
 export function notePlayerState(state: string, position: number) {
   if (!enabled) return;

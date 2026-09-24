@@ -748,3 +748,31 @@ the unchanged entry; the new pairing fixture checks are browser-only.
 The production bundle's separate `/tv/lightning.html` entry was also served
 through Vite preview with base `/tv/`; it rendered the same pixel metric as
 the dev capture. This does not mean the public site or TV package uses it.
+# Lightning TV Live guide — 2026-09-24
+
+The staged Blits Live rail destination now loads shared live categories, channels,
+and schedules. It renders five channel rows and guide cells using the React
+guide's shared window/cell calculations, shows the selected programme and
+live-preview placeholder, opens a programme-details panel on held OK, and opens
+sources for a current programme while future OK opens details. Browser fixtures
+checked D-pad row/filter navigation, News category requests, programme focus
+restoration, the 700 ms hold, details Back/Close, and a full-screen Live search
+entry whose Done action sends the trimmed query to `/api/live`. The route also
+supports hour-window navigation and 40-channel page requests; long real-world
+channel lists and physical remote keys remain unqualified. Current-programme
+Watch goes through the staged source picker, which differs from React's direct
+play action. Physical typing preserves the query, but its focused keyboard key
+does not consistently retain the white focus decoration after the text redraw.
+
+Matched 1920×1080 React comparison remains open: `TvLive` changed 2,007,797
+pixels (96.8266%), MAE 4.3532, RMSE 20.8231, SSIM 0.929048;
+`TvLiveDetails` changed 1,146,861 (55.3077%), MAE 2.3857, RMSE 13.3959,
+SSIM 0.954988; `TvLiveSearch` changed 2,073,317 (99.9864%), MAE 3.1263,
+RMSE 21.9524, SSIM 0.586614. These are development measurements, not parity
+acceptance. All three Blits frames were byte-equal across Tizen, Vizio, and
+webOS browser modes. No physical TV run or launcher switch was made.
+
+`npm run build`, all 169 unit tests, and the responsive/TV-shell Playwright
+suite (24 pass, 10 expected skips) passed. Matched phone `Main` and desktop
+`DeskHome` React frames were pixel-exact against the saved pre-migration
+captures after a deterministic recapture (0 changed pixels each).
