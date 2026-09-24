@@ -514,7 +514,12 @@ export function useGuideController({ api, onPlay, onError, responsive = false }:
     : undefined;
   // The responsive guide labels times in the schedule's zone; the TV keeps
   // the device clock (the panel is set to local time).
-  const guideTimezone = responsive ? guideZone(selectedGuide?.timezone) : undefined;
+  // The last known schedule zone keeps labelling the page while a filter or
+  // search has no channels (and so no selected guide).
+  const lastZone = useRef<string>();
+  const selectedZone = responsive ? guideZone(selectedGuide?.timezone) : undefined;
+  if (selectedZone) lastZone.current = selectedZone;
+  const guideTimezone = responsive ? selectedZone ?? lastZone.current : undefined;
   /** "10:30 AM" */
   const formatTime = (time: number) => clockTime(time, guideTimezone);
   /** "10:30" (blocks, "Next 11:00") */

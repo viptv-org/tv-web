@@ -96,7 +96,7 @@ function LiveDetails({ guide, details, tv }: { guide: Controller; details: Guide
     <div className="vx-overlay vx-live-details-layer">
       <div className="vx-scrim" aria-hidden="true" onClick={closeDetails} />
       <section
-        className="vx-dialog vx-live-details"
+        className={program ? "vx-dialog vx-live-details" : "vx-dialog vx-live-details vx-live-details--bare"}
         role="dialog"
         aria-modal="true"
         aria-labelledby={program ? "live-details-title" : undefined}
@@ -140,7 +140,9 @@ function LiveDetails({ guide, details, tv }: { guide: Controller; details: Guide
 }
 
 function Monogram({ name, className = "vx-live-mono" }: { name: string; className?: string }) {
-  return <span className={className} aria-hidden="true">{channelMonogram(name)}</span>;
+  const text = channelMonogram(name);
+  // Five-letter call signs ("MSNBC") tighten to stay inside the 40 px desktop tile.
+  return <span className={text.length > 4 ? `${className} vx-live-mono--long` : className} aria-hidden="true">{text}</span>;
 }
 
 /* ------------------------------------------------------------------------ */
@@ -389,7 +391,7 @@ function DesktopLive({ props, guide }: { props: GuideProps; guide: Controller })
             }}
           >
             <div className="vx-live-guide__grid" style={{ width: `calc(var(--vx-live-channel-w) + ${RESPONSIVE_TIMELINE_WIDTH}px)` }}>
-              <div className="vx-live-guide__head">
+              <div className="vx-live-guide__head" hidden={!channels.length}>
                 <span className="vx-live-guide__count">{total} channels</span>
                 <div className="vx-live-guide__times" style={{ width: RESPONSIVE_TIMELINE_WIDTH }}>
                   {halfHours(windowStart, RESPONSIVE_WINDOW_SECONDS).map((time) => (
@@ -551,7 +553,7 @@ function TvLive({ props, guide }: { props: GuideProps; guide: Controller }) {
         ))}
       </div>
       <section className="vx-live-tv__grid" aria-label="TV schedule">
-        <div className="vx-live-tv__head" aria-hidden="true">
+        <div className="vx-live-tv__head" aria-hidden="true" hidden={!channels.length}>
           {halfHours(windowStart, WINDOW_SECONDS).map((time) => (
             <span key={time} className="vx-live-tv__time" style={{ left: tvSpan(time - windowStart) }}>{timelineLabel(guide, time)}</span>
           ))}

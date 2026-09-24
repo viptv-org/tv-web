@@ -45,6 +45,9 @@
   line-height: 1;
   white-space: nowrap;
 }
+[data-layout] .vx-live-mono--long {
+  letter-spacing: -0.04em;
+}
 [data-layout] .vx-live-now-pill {
   position: absolute;
   z-index: 1;
@@ -82,8 +85,16 @@
   color: var(--viptv-color-text-body);
   line-height: 1.55; /* DeskLiveDetails.html / PhLiveDetails.html */
 }
+/* No guide information: the text starts at the top; the × disc sits in the corner (desktop). */
 [data-layout] .vx-live-details__bare {
-  justify-content: flex-end;
+  position: absolute;
+  top: var(--viptv-space-6);
+  right: var(--viptv-space-6);
+}
+@media (min-width: 600px) {
+  [data-layout="responsive"] .vx-live-details--bare > .vx-dialog__text {
+    padding-right: calc(var(--viptv-size-close-disc-default) + var(--viptv-space-3));
+  }
 }
 
 /* ---------------------------------------------------------------------------
@@ -331,6 +342,9 @@
   display: flex;
   height: var(--vx-live-head-h);
   background: var(--viptv-color-surface-1);
+}
+[data-layout="responsive"] .vx-live-guide__head[hidden] {
+  display: none;
 }
 [data-layout="responsive"] .vx-live-guide__count {
   position: sticky;
@@ -871,7 +885,8 @@
 .tv-layout .vx-live-tv__row.is-selected .vx-live-tv__channel {
   color: var(--viptv-color-text-primary);
 }
-.tv-layout .vx-live-tv__channel:focus {
+/* (0,4,0): wins over the selected row's name colour. */
+.tv-layout .vx-live-tv__row .vx-live-tv__channel:focus {
   background: var(--viptv-color-text-primary);
   color: var(--viptv-color-on-light);
   box-shadow: var(--viptv-focus-tv-shadow-block);
