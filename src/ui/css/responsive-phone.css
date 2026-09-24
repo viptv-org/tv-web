@@ -30,34 +30,9 @@
   }
 
   /* Episode progress: a 6px bar with softly rounded ends, lifted clear of the art edge. */
-  .responsive-app .episode > progress {
-    left: 10px !important;
-    width: calc(100% - 20px) !important;
-    height: 6px !important;
-    margin-bottom: 10px !important;
-    border-radius: 2px;
-    background: rgba(255, 255, 255, 0.3);
-  }
-  .responsive-app .episode > progress::-webkit-progress-bar { background: rgba(255, 255, 255, 0.3); border-radius: 2px; }
-  .responsive-app .episode > progress::-webkit-progress-value { border-radius: 2px; min-width: 6px; }
-  .responsive-app .episode > progress::-moz-progress-bar { border-radius: 2px; }
 
   /* ---- Detail --------------------------------------------------------------- */
   /* One 48px row: the flexible primary action, then My List and More squares. */
-  .responsive-app .detail-copy .actions button { height: 48px !important; min-height: 48px !important; border-radius: 12px !important; }
-  .responsive-app .detail-copy .actions :is(.detail-save-btn, [data-focus-id="detail-info"]) {
-    flex: 0 0 48px !important;
-    width: 48px !important;
-    min-width: 48px !important;
-    height: 48px !important;
-    min-height: 48px !important;
-  }
-  .responsive-app .detail-copy .actions [data-focus-id="detail-play"] { font-size: 17px; font-weight: 600; }
-  .responsive-app .genre-chip { font-size: 13px; }
-  .responsive-app .cast-row { gap: 12px; margin: 0 calc(-1 * var(--page-gutter)); padding: 0 var(--page-gutter) 4px; }
-  .responsive-app .cast-member { flex-basis: 80px; width: 80px; }
-  .responsive-app .cast-photo { width: 68px; height: 68px; font-size: 17px; }
-  .responsive-app .cast-member strong { font-size: 13px; line-height: 17px; }
 
   /* ---- Browse: Discover, My List and Search -------------------------------- */
   .responsive-app .browse > h1 { font-size: 28px; line-height: 34px; margin: 4px 0 16px; }

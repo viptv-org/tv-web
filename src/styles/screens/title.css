@@ -1,1 +1,725 @@
-/* Screen family: title. Reference screens: design/viptv-design-system/reference/screens. */
+/*
+ * Screen family: title — the title page, the Sources overlay and the title's
+ * menus / dialogs. Reference screens (design/viptv-design-system/reference/screens):
+ *   phone    Title, Sources, PhSourceProvider, PhSourceDetails, PhItemMenu, PhHidden
+ *   desktop  DeskTitle, DeskSources, DeskSourceProvider, DeskSourceDetails, DeskItemMenu, DeskHidden
+ *   TV       TvTitle, TvMoreInfo, TvSources, TvSourceProvider, TvSourceDetails, TvItemMenu, TvHidden
+ * Markup: src/screens/DetailScreen.tsx, src/screens/SourcesScreen.tsx; the title menu, Source provider,
+ * Source details, More info and Removed dialogs are generic-modal requests (useCatalog manage,
+ * SourcesScreen, DetailScreen) rendered by src/ui/app/AppDialogs.tsx (dialogs family).
+ *
+ * Built on the primitives (buttons, split, source pill, chips, segmented, badges, cards,
+ * source rows, overlays, menus, popovers, text panel, status line, empty state, keys).
+ * Literal lengths are per-screen geometry from the reference HTML with no token; each is
+ * named once below with its source. TV rules (.tv-layout) are Chrome 87-safe.
+ */
+
+/* ---------------------------------------------------------------------------
+ * Title page, desktop / web (DeskTitle, DeskSources behind the drawer).
+ * ------------------------------------------------------------------------ */
+[data-layout="responsive"] .tv-screen main.vx-title {
+  --vx-title-logo-w: 290px;  /* DeskTitle.html logo 84 tall (a 3.46:1 logo) */
+  --vx-title-logo-h: 124px;  /* DeskSources.html logo 124 tall (a 1.35:1 logo) */
+  position: relative;
+  box-sizing: border-box;
+  width: auto;
+  min-width: 0;
+  max-width: none;
+  height: auto;
+  min-height: 100%;
+  margin: 0 0 0 var(--vx-shell-rail);
+  padding: 0;
+  background: var(--viptv-color-bg);
+  color: var(--viptv-color-text-primary);
+  font-family: var(--viptv-font-family-ui);
+}
+[data-layout] .vx-title__name {
+  margin: 0;
+  color: var(--viptv-color-text-primary);
+  font-family: var(--viptv-font-family-display);
+}
+[data-layout] .vx-title__name--logo > img {
+  display: block;
+  width: auto;
+  height: auto;
+  max-width: var(--vx-title-logo-w);
+  max-height: var(--vx-title-logo-h);
+  mix-blend-mode: lighten;
+}
+[data-layout] .vx-title__text {
+  display: block;
+  font-size: var(--viptv-type-desktop-page-title-size);
+  font-weight: var(--viptv-type-desktop-page-title-weight);
+  line-height: var(--viptv-type-desktop-page-title-line-height);
+  letter-spacing: var(--viptv-type-desktop-page-title-letter-spacing);
+  overflow-wrap: anywhere;
+}
+[data-layout] .vx-title__facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--viptv-space-2);
+  margin: 0;
+  color: var(--viptv-color-text-secondary);
+  font-size: var(--viptv-type-desktop-row-size);
+  line-height: 1.4;
+}
+[data-layout] .vx-title__fact {
+  display: inline-flex;
+  gap: var(--viptv-space-2);
+}
+[data-layout] .vx-title__genre {
+  display: inline;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--viptv-radius-xs);
+  outline: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+@media (hover: hover) and (pointer: fine) {
+  [data-layout="responsive"] .vx-title__genre:hover {
+    color: var(--viptv-color-text-primary);
+    text-decoration: underline;
+    text-decoration-color: var(--viptv-color-line-control);
+    text-underline-offset: 3px; /* DeskTitle.html "Change" underline offset */
+  }
+}
+[data-layout="responsive"] .vx-title__genre:focus-visible {
+  box-shadow: var(--viptv-focus-desktop);
+}
+[data-layout] .vx-title__synopsis {
+  max-width: 540px; /* DeskTitle.html synopsis max-width */
+  margin: 0;
+  color: var(--viptv-color-text-body);
+  font-size: var(--viptv-type-desktop-body-size);
+  line-height: 1.55;
+}
+[data-layout] .vx-title__credits {
+  display: flex;
+  flex-direction: column;
+  gap: var(--viptv-space-1);
+}
+[data-layout] .vx-title__credits > p {
+  margin: 0;
+  color: var(--viptv-color-text-secondary);
+  font-size: var(--viptv-type-desktop-row-size);
+  line-height: 1.5;
+}
+[data-layout] .vx-title__credit-label {
+  margin-right: var(--viptv-space-1);
+  color: var(--viptv-color-text-tertiary);
+}
+
+[data-layout="responsive"] .vx-title__hero {
+  position: relative;
+  padding: calc(2 * var(--viptv-space-5)) var(--viptv-space-12) var(--viptv-space-8);
+}
+/* The hero art blurred behind the hero, faded into the ground (DeskTitle.html). */
+[data-layout="responsive"] .vx-title__ambient-layer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+[data-layout="responsive"] .vx-title__ambient-layer::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  background: linear-gradient(to bottom, transparent 45%, var(--viptv-color-bg) 100%);
+}
+[data-layout="responsive"] .vx-title__ambient {
+  position: absolute;
+  top: -35%;
+  right: -5%;
+  width: 75%;
+  height: 150%;
+  object-fit: cover;
+  filter: blur(var(--viptv-size-blur-ambient)) saturate(1.25); /* DeskTitle.html */
+  opacity: 0.3; /* DeskTitle.html: ambient fill at 0.3 on Title / Sources */
+}
+[data-layout="responsive"] .vx-title__grid {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(380px, 560px) minmax(0, 776px); /* DeskTitle.html hero grid */
+  column-gap: 56px; /* DeskTitle.html */
+  align-items: center;
+}
+[data-layout="responsive"] .vx-title__copy {
+  display: flex;
+  flex-direction: column;
+  gap: var(--viptv-space-4_5);
+  min-width: 0;
+}
+[data-layout="responsive"] .vx-title__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--viptv-space-2_5);
+  margin-top: var(--viptv-space-1);
+}
+[data-layout="responsive"] .vx-title__still {
+  overflow: hidden;
+  width: 100%;
+  max-width: 776px; /* DeskTitle.html still ≤ 776 */
+  aspect-ratio: 774 / 432; /* DeskTitle.html */
+  border-radius: var(--viptv-radius-3xl);
+  background: var(--viptv-color-surface-1);
+  box-shadow: var(--viptv-shadow-hero-art);
+}
+[data-layout="responsive"] .vx-title__still > img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+/* "1080p LordStreams · best of 12 sources Change" — opens the drawer. */
+[data-layout="responsive"] .vx-title__source-line {
+  display: flex;
+  align-items: center;
+  gap: var(--viptv-space-2_5);
+  width: fit-content;
+  max-width: 100%;
+  height: var(--viptv-space-8);
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--viptv-radius-sm);
+  outline: none;
+  background: none;
+  color: var(--viptv-color-text-secondary);
+  font-family: var(--viptv-font-family-ui);
+  font-size: var(--viptv-type-desktop-meta-size);
+  font-weight: 400;
+  text-align: left;
+  cursor: pointer;
+}
+[data-layout="responsive"] .vx-title__source-line .vx-badge--quality {
+  color: var(--viptv-color-text-primary);
+}
+[data-layout="responsive"] .vx-title__source-change {
+  color: var(--viptv-color-text-primary);
+  font-weight: 600;
+  text-decoration: underline;
+  text-decoration-color: var(--viptv-color-line-control);
+  text-underline-offset: 3px; /* DeskTitle.html */
+}
+@media (hover: hover) and (pointer: fine) {
+  [data-layout="responsive"] .vx-title__source-line:hover .vx-title__source-change {
+    text-decoration-color: var(--viptv-color-line-link-hover);
+  }
+}
+[data-layout="responsive"] .vx-title__source-line:focus-visible {
+  box-shadow: var(--viptv-focus-desktop);
+}
+
+/* Episodes: "Episodes" + seasons segmented; a 272 × 150 card grid (DeskTitle). */
+[data-layout="responsive"] .vx-title__episodes {
+  position: relative;
+  padding: var(--viptv-space-2) var(--viptv-space-12) var(--viptv-space-12);
+}
+[data-layout="responsive"] .vx-title__episodes-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--viptv-space-4);
+  margin-bottom: var(--viptv-space-4_5);
+}
+[data-layout] .vx-title__section {
+  margin: 0;
+  font-family: var(--viptv-font-family-display);
+  font-size: var(--viptv-type-desktop-section-size);
+  font-weight: var(--viptv-type-desktop-section-weight);
+  line-height: var(--viptv-type-desktop-section-line-height);
+}
+[data-layout="responsive"] .vx-title__episodes .vx-segmented {
+  --vx-h: var(--viptv-size-chip-desktop-drawer);
+  gap: var(--viptv-space-1);
+}
+[data-layout="responsive"] .vx-title__episodes .vx-segmented__item {
+  padding: 0 var(--viptv-space-4);
+}
+[data-layout="responsive"] .vx-title__episode-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, var(--viptv-size-tile-desktop-episode-width));
+  gap: var(--viptv-space-8) var(--viptv-space-6);
+}
+
+/* ---------------------------------------------------------------------------
+ * Title page, phone (Title): art bleeding to the top, glass Back, the dock
+ * (change-source row + round + / Play / ⋯) over a 230 px fade.
+ * ------------------------------------------------------------------------ */
+@media (max-width: 599px) {
+  [data-layout="responsive"] .tv-screen main.vx-title {
+    --vx-title-logo-w: 215px; /* the desktop logo box at the phone's 92 height */
+    --vx-title-logo-h: 92px;  /* Title.html logo 92 tall */
+    margin: 0;
+    padding: 0 0 200px; /* Title.html: scroll clearance for the dock */
+  }
+  [data-layout="responsive"] .vx-title__art {
+    position: relative;
+    height: 300px; /* Title.html art 390 × 300 */
+    overflow: hidden;
+    background: var(--viptv-color-surface-1);
+  }
+  [data-layout="responsive"] .vx-title__art > img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  [data-layout="responsive"] .vx-title__art::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    background: linear-gradient(to bottom, transparent 45%, var(--viptv-color-bg) 100%);
+  }
+  [data-layout="responsive"] .vx-title__back {
+    position: fixed;
+    top: 54px; /* Title.html back button */
+    left: var(--viptv-layout-phone-gutter);
+    z-index: 12;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    width: var(--viptv-layout-phone-min-target);
+    height: var(--viptv-layout-phone-min-target);
+    min-height: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    outline: none;
+    background: var(--viptv-color-fill-live-glass);
+    -webkit-backdrop-filter: blur(var(--viptv-size-blur-badge));
+    backdrop-filter: blur(var(--viptv-size-blur-badge));
+    color: var(--viptv-color-text-primary);
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  [data-layout="responsive"] .vx-title__back > svg {
+    width: var(--viptv-size-icon-phone-round);
+    height: var(--viptv-size-icon-phone-round);
+  }
+  [data-layout="responsive"] .vx-title__back:active {
+    transform: scale(var(--viptv-motion-pressed-scale));
+  }
+  [data-layout="responsive"] .vx-title__copy {
+    position: relative;
+    margin-top: -58px; /* Title.html: the text block rises over the art's fade */
+    padding: 0 var(--viptv-space-5);
+    gap: var(--viptv-space-3_5);
+  }
+  [data-layout="responsive"] .vx-title__text {
+    font-size: var(--viptv-type-phone-screen-title-size);
+    font-weight: var(--viptv-type-phone-screen-title-weight);
+    line-height: var(--viptv-type-phone-screen-title-line-height);
+    letter-spacing: var(--viptv-type-phone-screen-title-letter-spacing);
+  }
+  [data-layout="responsive"] .vx-title__facts {
+    font-size: var(--viptv-type-phone-label-size);
+  }
+  [data-layout="responsive"] .vx-title__synopsis {
+    max-width: none;
+    font-size: var(--viptv-type-phone-body-strong-size);
+  }
+  [data-layout="responsive"] .vx-title__credits > p {
+    font-size: var(--viptv-type-phone-label-size);
+  }
+  [data-layout="responsive"] .vx-title__dock {
+    position: fixed;
+    right: var(--viptv-layout-phone-gutter);
+    bottom: var(--viptv-layout-phone-sheet-bottom);
+    left: var(--viptv-layout-phone-gutter);
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    gap: var(--viptv-space-2_5);
+  }
+  [data-layout="responsive"] .vx-title__dock::before {
+    content: "";
+    position: fixed;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: -1;
+    height: 230px; /* Title.html dock fade */
+    background: linear-gradient(to bottom, transparent, var(--viptv-color-bg) 40%);
+    pointer-events: none;
+  }
+  [data-layout="responsive"] .vx-title__dock .vx-title__actions {
+    margin: 0;
+  }
+  [data-layout="responsive"] .vx-title__dock [data-focus-id="detail-play"] {
+    flex: 1 1 auto;
+  }
+  /* Change-source row: "1080p · Best source LordStreams · 12 sources ⌃". */
+  [data-layout="responsive"] .vx-title__source-row {
+    display: flex;
+    align-items: center;
+    gap: var(--viptv-space-3);
+    box-sizing: border-box;
+    width: 100%;
+    height: 60px; /* Title.html change-source row */
+    min-height: 0;
+    margin: 0;
+    padding: 0 var(--viptv-space-4);
+    border: 1px solid var(--viptv-color-line-hairline);
+    border-radius: var(--viptv-radius-xl-plus);
+    outline: none;
+    background: var(--viptv-color-surface-1);
+    color: var(--viptv-color-text-primary);
+    font-family: var(--viptv-font-family-ui);
+    font-weight: 400;
+    text-align: left;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  [data-layout="responsive"] .vx-title__source-row:active {
+    background: var(--viptv-color-surface-1-pressed);
+    transform: scale(var(--viptv-motion-pressed-scale));
+  }
+  [data-layout="responsive"] .vx-title__source-text {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    gap: var(--viptv-space-0_5);
+    min-width: 0;
+  }
+  [data-layout="responsive"] .vx-title__source-label {
+    color: var(--viptv-color-text-tertiary);
+    font-size: var(--viptv-type-phone-caption-size);
+  }
+  [data-layout="responsive"] .vx-title__source-name {
+    overflow: hidden;
+    font-size: var(--viptv-type-phone-body-size);
+    font-weight: 600;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  [data-layout="responsive"] .vx-title__source-count {
+    flex: none;
+    color: var(--viptv-color-text-secondary);
+    font-size: var(--viptv-type-phone-label-size);
+  }
+  [data-layout="responsive"] .vx-title__source-chevron {
+    flex: none;
+    width: var(--viptv-size-icon-desktop);
+    height: var(--viptv-size-icon-desktop);
+    color: var(--viptv-color-text-secondary);
+  }
+  /* Episodes: a list of rows (still + number, title, 2-line synopsis). */
+  [data-layout="responsive"] .vx-title__episodes {
+    padding: var(--viptv-space-8) var(--viptv-layout-phone-gutter) 0;
+  }
+  [data-layout="responsive"] .vx-title__episodes-head {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--viptv-space-3);
+    margin-bottom: var(--viptv-space-3_5);
+  }
+  [data-layout="responsive"] .vx-title__section {
+    font-size: var(--viptv-type-phone-section-size);
+    font-weight: var(--viptv-type-phone-section-weight);
+  }
+  [data-layout="responsive"] .vx-title__seasons {
+    display: flex;
+    gap: var(--viptv-space-2);
+    margin: 0 calc(var(--viptv-layout-phone-gutter) * -1);
+    padding: 0 var(--viptv-layout-phone-gutter);
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  [data-layout="responsive"] .vx-title__seasons::-webkit-scrollbar {
+    display: none;
+  }
+  [data-layout="responsive"] .vx-title__episode-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--viptv-space-3_5);
+  }
+  [data-layout="responsive"] .vx-title__episode {
+    --vx-card-w: var(--viptv-size-tile-phone-episode-width);
+    --vx-card-h: var(--viptv-size-tile-phone-episode-height);
+    --vx-card-r: var(--viptv-radius-md);
+    flex-direction: row;
+    align-items: flex-start;
+    gap: var(--viptv-space-3);
+    width: 100%;
+  }
+  [data-layout="responsive"] .vx-title__episode .vx-card__caption {
+    flex: 1 1 auto;
+    padding: var(--viptv-space-0_5) 0 0;
+  }
+  [data-layout="responsive"] .vx-title__episode .vx-card__title {
+    font-size: var(--viptv-type-phone-body-size);
+  }
+  [data-layout="responsive"] .vx-title__episode .vx-card__synopsis {
+    font-size: var(--viptv-type-phone-meta-size);
+  }
+  [data-layout="responsive"] .vx-title__episode .vx-card__badge {
+    top: var(--viptv-space-1_5);
+    left: var(--viptv-space-1_5);
+  }
+  [data-layout="responsive"] .vx-title__episode .vx-card__progress {
+    right: var(--viptv-space-1_5);
+    bottom: var(--viptv-space-1_5);
+    left: var(--viptv-space-1_5);
+  }
+}
+
+/* ---------------------------------------------------------------------------
+ * Title page, TV (TvTitle): 1920 × 1080 canvas px.
+ * ------------------------------------------------------------------------ */
+.tv-layout main.vx-title {
+  --vx-title-logo-w: 311px; /* TvTitle.html logo 90 tall (a 3.46:1 logo) */
+  --vx-title-logo-h: 133px; /* the desktop 124 box at the TV's 90 / 84 */
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 1920px;
+  height: 1080px;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  color: var(--viptv-color-text-primary);
+  font-family: var(--viptv-font-family-ui);
+}
+.tv-layout .vx-title__backdrop {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  overflow: hidden;
+}
+.tv-layout .vx-title__backdrop::before,
+.tv-layout .vx-title__backdrop::after {
+  content: "";
+  position: absolute;
+  z-index: 1;
+}
+/* TvTitle.html scrims: the bottom 520 into the ground, and the left 1100. */
+.tv-layout .vx-title__backdrop::after {
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 520px;
+  background: linear-gradient(to bottom, transparent, var(--viptv-color-bg) 70%);
+}
+.tv-layout .vx-title__backdrop::before {
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 1100px;
+  background: linear-gradient(to right, var(--viptv-color-bg) 30%, transparent);
+}
+.tv-layout .vx-title__ambient {
+  position: absolute;
+  top: -20%;
+  right: -10%;
+  width: 90%;
+  height: 120%;
+  object-fit: cover;
+  filter: blur(var(--viptv-size-blur-ambient-tv)) saturate(1.2); /* TvTitle.html */
+  opacity: 0.35; /* TvTitle.html */
+}
+.tv-layout .vx-title__sharp {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 800px;  /* TvTitle.html sharp art 800 × 720 */
+  height: 720px;
+  object-fit: cover;
+  -webkit-mask-image: linear-gradient(to right, transparent 0%, black 38%);
+  mask-image: linear-gradient(to right, transparent 0%, black 38%);
+  opacity: 0.75; /* TvTitle.html: 0.75 on Title / Sources */
+}
+.tv-layout .vx-title__hero {
+  position: absolute;
+  top: var(--viptv-space-24);
+  left: calc(var(--viptv-layout-tv-rail-collapsed) + var(--viptv-space-12));
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: var(--viptv-space-5_5);
+  width: 1500px; /* TvTitle.html hero column */
+}
+.tv-layout .vx-title__text {
+  font-size: var(--viptv-type-tv-screen-title-size);
+  font-weight: var(--viptv-type-tv-screen-title-weight);
+  line-height: 1.1;
+  letter-spacing: var(--viptv-type-tv-screen-title-letter-spacing);
+}
+.tv-layout .vx-title__facts {
+  gap: var(--viptv-space-3);
+  font-size: var(--viptv-type-tv-meta-size);
+}
+.tv-layout .vx-title__fact {
+  gap: var(--viptv-space-3);
+}
+.tv-layout .vx-title__synopsis {
+  display: -webkit-box;
+  max-width: 780px; /* TvTitle.html synopsis */
+  overflow: hidden;
+  font-size: var(--viptv-type-tv-body-size);
+  line-height: 1.45;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+.tv-layout .vx-title__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--viptv-space-4_5);
+  margin-top: var(--viptv-space-2_5);
+}
+.tv-layout .vx-title__actions .vx-btn {
+  --vx-fs: var(--viptv-type-tv-button-size);
+  font-weight: 700;
+}
+.tv-layout .vx-title__episodes {
+  position: absolute;
+  top: 604px; /* TvTitle.html episodes row */
+  right: 0;
+  left: calc(var(--viptv-layout-tv-rail-collapsed) + var(--viptv-space-12));
+  z-index: 2;
+}
+.tv-layout .vx-title__episodes-head {
+  display: flex;
+  align-items: center;
+  gap: var(--viptv-space-3_5);
+  margin-bottom: calc(var(--viptv-space-6) + var(--viptv-space-0_5)); /* 26, TvTitle.html */
+}
+.tv-layout .vx-title__episodes-head .vx-btn {
+  --vx-fs: var(--viptv-type-tv-meta-size);
+  font-weight: 700;
+}
+.tv-layout .vx-title__count {
+  padding-left: var(--viptv-space-2);
+  color: var(--viptv-color-text-tertiary);
+  font-size: var(--viptv-type-tv-meta-size);
+}
+/* One row; the focus ring and lift need room inside the clipped scroller. */
+.tv-layout .vx-title__episode-list {
+  display: flex;
+  gap: var(--viptv-layout-tv-row-gap);
+  margin: calc(var(--viptv-space-4) * -1) 0 0 calc(var(--viptv-space-4) * -1);
+  padding: var(--viptv-space-4) var(--viptv-space-24) var(--viptv-space-6) var(--viptv-space-4);
+  overflow: hidden;
+}
+
+/* ---------------------------------------------------------------------------
+ * The Sources overlay (drawer / sheet / panel). Desktop: it covers the body
+ * row only (the title bar and rail stay bright).
+ * ------------------------------------------------------------------------ */
+[data-layout="responsive"] .vx-title-overlay {
+  top: var(--vx-shell-top);
+  left: var(--vx-shell-rail);
+}
+/* DeskItemMenu.html: the title menu popover is 300 wide (the generic popover is 260). */
+[data-layout] .vx-popover.vx-title-menu {
+  width: 300px;
+}
+
+/* Sources: status line, tools (quality + Source provider), rows. */
+[data-layout] .vx-sources__status {
+  min-width: 0;
+}
+[data-layout] .vx-sources__status-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+[data-layout] .vx-sources .vx-dialog__tools .vx-segmented {
+  flex: 1 1 auto;
+}
+[data-layout] .vx-sources .vx-dialog__tools .vx-segmented__item {
+  flex: 1 1 0;
+  padding: 0 var(--viptv-space-2);
+  font-size: var(--viptv-type-desktop-meta-size);
+}
+/* DeskSources.html "All providers": 44 tall, 13/600 outline dropdown. */
+[data-layout] .vx-sources .vx-dialog__tools .vx-btn--outline {
+  --vx-h: var(--viptv-size-button-pill);
+  --vx-fs: var(--viptv-type-desktop-meta-size);
+  padding: 0 var(--viptv-space-3) 0 var(--viptv-space-3_5);
+}
+[data-layout] .vx-sources__empty {
+  padding: var(--viptv-space-6) 0;
+}
+
+@media (max-width: 599px) {
+  /* Sources.html: the sheet starts at y 196 over the dimmed title art. */
+  [data-layout="responsive"] .vx-sources.vx-dialog--drawer {
+    top: 196px;
+  }
+  /* Sources.html chips: selected = off-white, others outlined. */
+  [data-layout="responsive"] .vx-sources .vx-chip {
+    padding: 0 var(--viptv-space-4);
+    border: 1px solid var(--viptv-color-line-outline);
+    background: transparent;
+    color: var(--viptv-color-text-secondary);
+    font-weight: 600;
+  }
+  [data-layout="responsive"] .vx-sources .vx-chip[aria-pressed="true"] {
+    border-color: var(--viptv-color-text-primary);
+    background: var(--viptv-color-text-primary);
+    color: var(--viptv-color-on-light);
+  }
+  [data-layout="responsive"] .vx-sources .vx-dialog__tools .vx-btn--outline {
+    --vx-h: var(--viptv-size-chip-phone);
+    --vx-fs: var(--viptv-type-phone-label-size);
+    flex: none;
+    padding: 0 var(--viptv-space-3) 0 var(--viptv-space-4);
+  }
+}
+
+/* TV panel: status 22, quality chips 52 ("All 12 · 4K · 1080p 5"), 104 rows. */
+.tv-layout .vx-sources .vx-dialog__head {
+  gap: var(--viptv-space-4_5);
+}
+.tv-layout .vx-sources .vx-dialog__tools {
+  flex-wrap: wrap; /* Source provider follows the quality chips (a second line when they fill the panel) */
+  gap: var(--viptv-space-2);
+  margin: var(--viptv-space-2_5) 0 var(--viptv-space-2);
+}
+.tv-layout .vx-sources .vx-chip {
+  --vx-h: var(--viptv-size-button-tv-small);
+  gap: var(--viptv-space-2);
+  padding: 0 var(--viptv-space-6);
+  font-size: var(--viptv-type-tv-meta-size);
+}
+.tv-layout .vx-sources .vx-chip--dropdown {
+  padding-right: var(--viptv-space-4);
+}
+.tv-layout .vx-sources .vx-chip__count {
+  color: inherit;
+}
+.tv-layout .vx-sources .vx-dialog__scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  margin: calc(var(--viptv-space-4) * -1);
+  padding: var(--viptv-space-4);
+  overflow: hidden;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-layout="responsive"] .vx-title__back,
+  [data-layout="responsive"] .vx-title__source-row {
+    transition: none;
+  }
+}

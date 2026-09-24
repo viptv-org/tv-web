@@ -102,13 +102,8 @@
   .responsive-app .roku-profile-editor .avatar-grid button { width: 80px; height: 80px; }
   .responsive-app .roku-profile-editor .avatar-grid img { width: 72px; height: 72px; }
 }
-.responsive-app .responsive-episode { position: relative; min-width: 0; }
-.responsive-app .episode-more { display: none !important; }
-.responsive-app .responsive-episode .episode { padding-bottom: 12px; height: 100%; }
-@media (max-width: 599px) {
-  .responsive-app .responsive-episode { flex: 0 0 calc(100% - 28px); min-width: 240px; max-width: 420px; scroll-snap-align: start; }
-  .responsive-app .responsive-episode .episode { width: 100%; min-width: 0; }
-}
+
+
 .responsive-app .responsive-guide-controls { display: flex; gap: 12px; flex-wrap: wrap; width: 100%; margin: 16px 0 24px; }
 .responsive-app .responsive-guide-controls button { font-size: 17px; min-height: 48px; padding: 0 16px; }
 .responsive-app .responsive-guide-controls > span { flex-basis: 100%; color: #a6a8aa; font-size: 16px; }
@@ -122,24 +117,19 @@
 .responsive-app button:where(:not([class*="vx-"])):focus-visible:not(:disabled) { background-color: #f5f5f5; color: #101112; }
 
 /* Min-content is never the viewport authority. Long shelves scroll locally. */
-.responsive-app main > *, .responsive-app .cards,
-.responsive-app .result-grid, .responsive-app .result-grid > section,
-.responsive-app .episode-grid { min-width: 0; }
-.responsive-app .detail-copy .responsive-title:not(.has-logo) { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; overflow-wrap: anywhere; }
-.responsive-app .detail-synopsis,
-.responsive-app .episode > p { overflow-wrap: anywhere; -webkit-box-orient: vertical; overflow: hidden; }
-.responsive-app .detail-facts { overflow-wrap: anywhere; }
-.responsive-app .detail-credits, .responsive-app .series .detail-credits { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; overflow-wrap: anywhere; }
-.responsive-app .source-context { overflow-wrap: anywhere; }
+.responsive-app main > *,
+.responsive-app .cards,
+.responsive-app .result-grid,
+.responsive-app .result-grid > section { min-width: 0; }
+
 .responsive-app .roku-profile-editor .avatar-categories button { min-height: 48px; height: auto; }
 
-.responsive-app .profile-row > button:focus-visible,
-.responsive-app .episode:focus-visible { outline: none; }
+.responsive-app .profile-row > button:focus-visible { outline: none; }
 /* Pointer/touch labels truncate explicitly instead of freezing a TV marquee. */
 .responsive-app .roku-text { text-overflow: ellipsis; }
 .responsive-app .roku-text > span { display: inline; transform: none !important; }
 @media (max-width: 599px) {
-  .responsive-app .browse > h1, .responsive-app .sources > h1 { font-size: 32px; line-height: 1.2; }
+  .responsive-app .browse > h1 { font-size: 32px; line-height: 1.2; }
   .responsive-app .filters button { flex: 1 1 100%; width: 100%; min-width: 0; }
   /* Phone browse results use Home's own shelf presentation: canonical 232px
      tiles on one scrolling row with a visible next-card peek, instead of a
@@ -148,20 +138,17 @@
   .responsive-app .result-grid > .cards .responsive-card { flex: 0 0 232px; width: 232px; }
 }
 .responsive-app .filters button { text-overflow: ellipsis; }
-.responsive-app .source p, .responsive-app .source small,
 .responsive-app .roku-guide .programs button small { color: #c5c6c7; }
-.responsive-app .source:focus-visible p, .responsive-app .source:focus-visible small,
 .responsive-app .roku-guide .programs button:focus-visible small { color: #101112; }
 .responsive-app .roku-guide .programs button:focus:not(:focus-visible) { background: #202224; color: #f5f5f5; }
-
 
 /* Responsive web keeps destination selection without the remote focus skin.
    DOM focus remains available for text editing and assistive technology. */
 
   .responsive-app button { --responsive-control-surface: #202224; }
-  .responsive-app :is(.episode, .card-more),
-  .responsive-app .profile-row > button,
-  .responsive-app .roku-profile-editor :is([data-focus-id="profile-avatar"], .avatar-grid button) {
+  .responsive-app :is(.card-more),
+.responsive-app .profile-row > button,
+.responsive-app .roku-profile-editor :is([data-focus-id="profile-avatar"], .avatar-grid button) {
     --responsive-control-surface: transparent;
   }
   .responsive-app .filters button.selected { --responsive-control-surface: #303234; }
@@ -173,12 +160,11 @@
   }
   .responsive-app button:focus img,
   .responsive-app button:focus::after { filter: none !important; }
-  .responsive-app .episode:focus::after { opacity: .35; }
+
   .responsive-app .profile-row > button:focus::after,
   .responsive-app .roku-profile-editor :is([data-focus-id="profile-avatar"], .avatar-grid button):focus {
     border-color: transparent;
   }
-  .responsive-app .source:focus :is(p, small),
   .responsive-app .roku-guide .programs button:focus small { color: #c5c6c7; }
 .responsive-app .dialog-backdrop > :is(.roku-profile-editor, .roku-text-entry) {
   position: relative;
@@ -212,136 +198,11 @@
 .responsive-app .auth-link-device a { color: #f5f5f5; }
 
 /* Custom dark Season Dropdown */
-.responsive-app .custom-season-dropdown {
-  position: relative;
-  display: inline-block;
-}
-.responsive-app .season-dropdown-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  min-height: 36px;
-  height: 36px;
-  padding: 0 14px;
-  background: #1c1e20;
-  border: 1px solid #2a2d30;
-  border-radius: 8px;
-  color: #f5f5f5;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background 0.15s ease, border-color 0.15s ease;
-}
-.responsive-app .season-dropdown-btn:hover {
-  background: #25282b;
-  border-color: #383b3e;
-}
-.responsive-app .season-dropdown-btn svg {
-  transition: transform 0.2s ease;
-}
-.responsive-app .season-dropdown-btn svg.rotate-180 {
-  transform: rotate(180deg);
-}
-.responsive-app .season-dropdown-menu {
-  position: absolute;
-  top: calc(100% + 4px);
-  right: 0;
-  min-width: 140px;
-  background: #1c1e20;
-  border: 1px solid #2a2d30;
-  border-radius: 8px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
-  padding: 4px;
-  z-index: 50;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-.responsive-app .season-dropdown-item {
-  display: flex;
-  align-items: center;
-  width: 100%;
-  min-height: 32px;
-  height: 32px;
-  padding: 0 12px;
-  border-radius: 6px;
-  background: transparent;
-  border: none;
-  color: #c5c6c7;
-  font-size: 13px;
-  cursor: pointer;
-  text-align: left;
-  transition: background 0.12s ease, color 0.12s ease;
-}
-.responsive-app .season-dropdown-item:hover {
-  background: #25282b;
-  color: #f5f5f5;
-}
-.responsive-app .season-dropdown-item.is-selected {
-  background: rgba(255, 255, 255, 0.12);
-  color: #ffffff;
-  font-weight: 600;
-}
 
 /* My List and More are icon squares with the detail actions' height and
    12px corners, never a circle beside a square. */
-.responsive-app .detail-copy .actions :is(.detail-save-btn, [data-focus-id="detail-info"]) {
-  flex: 0 0 56px !important;
-  width: 56px !important;
-  min-width: 56px !important;
-  height: 56px !important;
-  min-height: 56px !important;
-  padding: 0 !important;
-  border-radius: 12px !important;
-  display: inline-flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-}
 
 /* Genres browse their catalog; a genre no catalog can list is a plain tag. */
-.responsive-app .detail-genres { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
-.responsive-app .genre-chip {
-  --responsive-control-surface: #17191b;
-  display: inline-flex;
-  align-items: center;
-  height: 32px;
-  min-height: 32px;
-  padding: 0 14px;
-  border: 1px solid #2c2f32;
-  border-radius: 16px;
-  background: #17191b;
-  color: #e0e1e2;
-  font-size: 14px;
-  font-weight: 600;
-  line-height: 1;
-  white-space: nowrap;
-}
-.responsive-app button.genre-chip { cursor: pointer; }
-.responsive-app button.genre-chip:hover:not(:disabled) { background-color: #25282b; border-color: #45484b; }
-.responsive-app .genre-chip.is-static { color: #a6a8aa; }
 
 /* Cast: a scrolling row of faces (initials until a photo decodes). */
-.responsive-app .detail-cast { grid-column: 1 / -1; min-width: 0; }
-.responsive-app .detail-cast .episode-heading { margin: 0 0 14px; }
-.responsive-app .cast-row { display: flex; gap: 16px; overflow-x: auto; overflow-y: hidden; padding-bottom: 4px; scrollbar-width: none; }
-.responsive-app .cast-member { flex: 0 0 96px; width: 96px; min-width: 0; text-align: center; }
-.responsive-app .cast-photo {
-  position: relative;
-  display: grid;
-  place-items: center;
-  width: 80px;
-  height: 80px;
-  margin: 0 auto 8px;
-  overflow: hidden;
-  border-radius: 50%;
-  background: #25282b;
-  color: #a6a8aa;
-  font-size: 20px;
-  font-weight: 700;
-}
-.responsive-app .cast-photo img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
-.responsive-app .cast-member strong,
-.responsive-app .cast-member small { display: block; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-.responsive-app .cast-member strong { font-size: 14px; line-height: 18px; font-weight: 600; color: #f5f5f5; }
-.responsive-app .cast-member small { margin-top: 2px; font-size: 12px; line-height: 16px; color: #8d9093; }
 

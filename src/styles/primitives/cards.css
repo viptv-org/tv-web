@@ -1050,6 +1050,14 @@
   font-size: var(--viptv-type-tv-body-size);
   white-space: nowrap;
 }
+/* TvTitle.html episode synopsis: 20 / 1.45, 2 lines; it moves with the caption on focus. */
+.tv-layout .vx-card--episode > .vx-card__synopsis {
+  font-size: var(--viptv-type-tv-caption-size);
+  transition: transform var(--viptv-motion-focus) ease-out;
+}
+.tv-layout .vx-card:focus > .vx-card__synopsis {
+  transform: translateY(var(--viptv-focus-tv-caption-shift));
+}
 .tv-layout .vx-card:focus {
   outline: none;
 }

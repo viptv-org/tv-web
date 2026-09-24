@@ -29,10 +29,16 @@ import "../responsive.css";
  * dialogs, all reading from the assembled app object.
  */
 export function AppShell({ app }: { app: AppApi }) {
-  const { active, activeTrackPopup, bootingHome, requestHomeRows, detailOrigin, api, audioTrackList, authorize, back, browser, busy, canvas, cards, casting, catalog, catalogError, catalogs, catalogValues, chooseProfile, closeCast, commitSeek, compactHome, detail, discoverSources, editingProfile, editProfile, engineChoice, entry, episodes, fail, favorites, firstHomeCatalog, fullscreenControl, go, heroDetails, heroItem, heroPresentation, heroRotation, highlighted, homeRows, isMaximized, items, lastControlActivity, layout, libraryQueue, loadCatalog, manage, managing, mediaKey, mediaKeyUp, modal, navigate, nextEpisode, nextSkip, oled, openCast, openingSource, overlay, pair, pairing, platform, play, player, playerInfoOpen, playerNotice, playerRoot, prefs, preparing, profile, profilePage, profiles, qr, query, queue, readBufferedRanges, recentLive, responsive, screen, searchKey, searchPartial, searchRows, season, seek, selected, selectedPresentation, selectEngine, setActiveTrackPopup, setCompactHome, setControlActivity, setEditingProfile, setEntry, setLibraryQueue, setManaging, setModal, setOverlay, setPlayerInfoOpen, setPrefs, setProfile, setProfilePage, setProfiles, setQuery, setScreen, setSeason, setSeek, setSettingsSubpage, setSourceProvider, setSourceQuality, settingsSubpage, shelfCards, snapshot, sourceFocusPending, sourceProvider, sourceQuality, sources, stop, subtitleOffOption, surfaceClick, textTrackList, toggle, toggleLiveMute, toggleOled, togglePlayback, trackChoices, video } = app;
+  const { active, activeTrackPopup, bootingHome, requestHomeRows, detailOrigin, api, audioTrackList, authorize, back, browser, busy, canvas, cards, casting, catalog, catalogError, catalogs, catalogValues, chooseProfile, closeCast, commitSeek, compactHome, detail, discoverSources, editingProfile, editProfile, engineChoice, entry, episodes, fail, favorites, firstHomeCatalog, fullscreenControl, go, heroDetails, heroItem, heroPresentation, heroRotation, highlighted, homeRows, isMaximized, items, lastControlActivity, layout, libraryQueue, loadCatalog, manage, managing, mediaKey, mediaKeyUp, modal, navigate, nextEpisode, nextSkip, oled, openCast, openingSource, overlay, pair, pairing, platform, play, player, playerInfoOpen, playerNotice, playerRoot, prefs, preparing, profile, profilePage, profiles, qr, query, queue, readBufferedRanges, recentLive, responsive, screen, searchKey, searchPartial, searchRows, season, seek, selected, selectedPresentation, selectEngine, previewSources, sourcePreview, stack, setActiveTrackPopup, setCompactHome, setControlActivity, setEditingProfile, setEntry, setLibraryQueue, setManaging, setModal, setOverlay, setPlayerInfoOpen, setPrefs, setProfile, setProfilePage, setProfiles, setQuery, setScreen, setSeason, setSeek, setSettingsSubpage, setSourceProvider, setSourceQuality, settingsSubpage, shelfCards, snapshot, sourceFocusPending, sourceProvider, sourceQuality, sources, stop, subtitleOffOption, surfaceClick, textTrackList, toggle, toggleLiveMute, toggleOled, togglePlayback, trackChoices, video } = app;
 
   const activeProfile = profiles.find((p) => p.id === profile);
   const phone = usePhoneLayout(responsive);
+  // Title family: under the Sources overlay the title page it was opened from stays
+  // mounted (the previous title when it came from one, else the sourced item).
+  const sourcesFrom = screen === "sources" ? stack.current[stack.current.length - 1] : undefined;
+  const fromTitle = sourcesFrom?.screen === "detail" && sourcesFrom.selected ? sourcesFrom.selected : undefined;
+  const titleItem = fromTitle ?? selected;
+  const titleEpisodes = screen === "sources" && !fromTitle ? [] : episodes;
   // While the session restores and Home first loads, the responsive shell
   // shows a skeleton of Home in place of the startup cover and screens.
   const booting = responsive && (bootingHome || screen === "startup");
@@ -313,12 +319,15 @@ export function AppShell({ app }: { app: AppApi }) {
                 cards={cards}
               />
             )}
-            {screen === "detail" && selected && (
+            {/* Title family: the title page; under the Sources overlay the page it was opened from stays mounted. */}
+            {(screen === "detail" || screen === "sources") && titleItem && (
               <DetailScreen
                 responsive={responsive}
-                selected={selected}
-                presentation={selectedPresentation}
-                episodes={episodes}
+                phone={phone}
+                api={api}
+                selected={titleItem}
+                presentation={titleItem === selected ? selectedPresentation : undefined}
+                episodes={titleEpisodes}
                 season={season}
                 setSeason={setSeason}
                 favorites={favorites}
@@ -330,10 +339,16 @@ export function AppShell({ app }: { app: AppApi }) {
                 catalogs={catalogs}
                 origin={detailOrigin}
                 onGenre={(target) => void navigate("Discover", target.catalog, target.values)}
+                onBack={back}
+                sourcePreview={sourcePreview}
+                previewSources={previewSources}
+                backdrop={screen === "sources"}
               />
             )}
             {screen === "sources" && (
               <SourcesScreen
+                responsive={responsive}
+                phone={phone}
                 selected={selected}
                 sources={sources}
                 sourceQuality={sourceQuality}
@@ -345,6 +360,7 @@ export function AppShell({ app }: { app: AppApi }) {
                 openingSource={openingSource}
                 play={play}
                 setModal={setModal}
+                onClose={back}
               />
             )}
             {screen === "Live TV" && (
