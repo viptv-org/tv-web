@@ -1,3 +1,28 @@
+# SolidTV performance optimization — 2026-09-24
+
+See [PERFORMANCE.md](PERFORMANCE.md) for the reproducible React comparison,
+raw-metric definitions, hardware identity and limits. At 4× CPU, six trials
+per renderer measured 11% faster Home readiness and 59% less main-thread
+work/key for SolidTV; all comparative speed/frame checks passed at 1× and 4×.
+The 8× stress check failed first guide entry (250.5ms versus 237.2ms) while
+passing the other seven checks. Post-guide JS heap is 1.113MiB higher for
+SolidTV. These are hardware-enabled desktop Chromium measurements, not TV
+hardware qualification or complete product-parity evidence.
+
+172 unit/integration tests (including two new deferred-render/paint-order
+regressions), all 30 TV fixture scenarios, and the production build with
+integrity/type checks passed. Six changed-renderer screen captures were
+pixel-identical to the pre-optimization SolidTV build. Hold timing, pinned
+design, coordinates and drawing inputs were preserved. Guide entry/reveal
+latency was reduced without changing the remote actions.
+
+The full Playwright suite with four workers had 126 passes, 75 declared skips
+and one React-entry Vizio managed-seek assertion failure (fixture position
+0s versus 10s). The exact test passed on a single-worker rerun; no assertion
+or playback logic was weakened. The aggregate run remains a recorded flake.
+
+---
+
 # SolidTV migration — 2026-09-24
 
 The isolated canvas entry now uses `@solidtv/solid` 1.6.4 and

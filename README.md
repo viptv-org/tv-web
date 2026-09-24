@@ -97,3 +97,10 @@ For local HTTPS builds, set `SOLID_PREVIEW_URL` to the full `solid.html` URL and
 API/media calls and blocks unrecognised external hosts. Use `PREVIEW_OUT` for
 private captures. Browser fixture evidence and real-TV qualification are
 recorded separately in `TESTING.md`.
+
+## TV performance checks
+
+`npm run perf:tv` compares the production SolidTV and React TV entries over
+local HTTPS. Set `PERF_ASSERT_BETTER=1` to enforce comparative speed/frame
+checks. See [PERFORMANCE.md](PERFORMANCE.md) for measured results, the 8×
+guide-entry exception, memory tradeoff and GPU requirements.

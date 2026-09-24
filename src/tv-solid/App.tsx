@@ -184,7 +184,7 @@ function gatewayGlow(height: number) {
   gradient.addColorStop(1, "rgba(255,255,255,0)");
   context.fillStyle = gradient;
   context.fillRect(-1, -1, 2, 2);
-  return canvas.toDataURL("image/png");
+  return context.getImageData(0, 0, canvas.width, canvas.height);
 }
 
 function homeScrim() {
@@ -206,7 +206,7 @@ function homeScrim() {
   bottom.addColorStop(1, ground);
   context.fillStyle = bottom;
   context.fillRect(0, 550, 1920, 530);
-  return canvas.toDataURL("image/png");
+  return context.getImageData(0, 0, canvas.width, canvas.height);
 }
 
 function menuGradient() {
@@ -220,7 +220,7 @@ function menuGradient() {
   gradient.addColorStop(1, "rgba(11,11,12,0)");
   context.fillStyle = gradient;
   context.fillRect(0, 0, 520, 1);
-  return canvas.toDataURL("image/png");
+  return context.getImageData(0, 0, canvas.width, canvas.height);
 }
 
 const searchMeasure = document.createElement("canvas").getContext("2d")!;
@@ -339,9 +339,15 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         field: tokens["color.fill.tv-field"],
         white: tokens["color.fill.white"],
         keyBorder: tokens["color.line.keycap-tv"],
-        pairingGlow: gatewayGlow(800),
-        profilesGlow: gatewayGlow(700),
-        homeScrim: homeScrim(),
+        get pairingGlow() {
+          return gatewayGlow(800);
+        },
+        get profilesGlow() {
+          return gatewayGlow(700);
+        },
+        get homeScrim() {
+          return homeScrim();
+        },
         home: emptyHome as HomeView,
         detail: emptyDetail as DetailView,
         source: emptySources as SourcesView,
@@ -2877,8 +2883,9 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
               liveCanonicalChannels.length
             )
               this.focusLiveChannel(0);
-          }, 70);
-          void this.loadLiveGuides(generation, scope);
+          }, 0);
+          // focusLiveChannel starts guide fetching. Do not start a duplicate
+          // batch here when focus is now available on the next task.
         } else {
           this.liveStatus =
             channelsResult.reason instanceof Error
@@ -2971,7 +2978,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         );
         setTimeout(() => {
           if (this.phase === "live") this.revealLiveControls();
-        }, 40);
+        }, 0);
       },
       revealLiveControls() {
         const screen = this.$select("liveScreen");

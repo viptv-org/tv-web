@@ -1,0 +1,1738 @@
+{
+  "schema": 2,
+  "sourceSha256": "ee810b0268ed1e6b569ce6e7c41b44e7b75d546e654fb41d6b624cd0cd5e242c",
+  "sourceFiles": [
+    "src/tv-solid/App.tsx",
+    "src/tv-solid/main.ts",
+    "src/tv-solid/runtime.ts",
+    "package-lock.json",
+    "vite.config.ts"
+  ],
+  "browser": "153.0.8010.12",
+  "gpu": {
+    "mode": "hardware",
+    "devices": [
+      {
+        "vendorId": 4098,
+        "deviceId": 29772,
+        "vendorString": "Google Inc. (AMD)",
+        "deviceString": "ANGLE (AMD, AMD Radeon RX 7900 XT (radeonsi navi31 ACO), OpenGL ES 3.2 Mesa 26.2.3-arch3.1)",
+        "driverVendor": "Mesa",
+        "driverVersion": "26.2.3"
+      }
+    ],
+    "features": {
+      "2d_canvas": "enabled",
+      "direct_rendering_display_compositor": "disabled_off_ok",
+      "gpu_compositing": "enabled",
+      "multiple_raster_threads": "enabled_on",
+      "opengl": "enabled_on",
+      "rasterization": "enabled",
+      "raw_draw": "disabled_off_ok",
+      "skia_graphite": "disabled_off",
+      "trees_in_viz": "disabled_off",
+      "video_decode": "enabled",
+      "video_encode": "disabled_software",
+      "vulkan": "disabled_off",
+      "webgl": "enabled",
+      "webgpu": "enabled",
+      "webgpu_on_vk_via_gl_interop": "disabled_off",
+      "webnn": "disabled_off"
+    }
+  },
+  "viewport": [
+    1920,
+    1080
+  ],
+  "fixture": "preview/backend.ts: family=tv, session=ready",
+  "startup": "navigation to Home focus available, fonts ready and two animation-frame opportunities",
+  "input": "browser-dispatched remote keys; capture-to-focus plus summed synchronous keydown listener work (including stopped propagation)",
+  "frames": "requestAnimationFrame intervals, not physical display/presentation or GPU-completion measurements",
+  "memory": "post-GC JS heap only; excludes GPU allocations and external pixel buffers",
+  "baseline": "React TV entry from cbdb369; React product code unchanged by this optimization",
+  "rates": {
+    "1": {
+      "measuredAt": "2026-09-24T20:54:34.754Z",
+      "runsPerRenderer": 3,
+      "keyIntervalMs": 80,
+      "comparison": {
+        "startupFaster": true,
+        "firstGuideEntryFaster": true,
+        "handlerP95Faster": true,
+        "mainThreadPerKeyLower": true,
+        "focusP95Faster": true,
+        "noLongTasks": true,
+        "frameP95Within60Hz": true,
+        "noFramesOver50ms": true
+      },
+      "summary": {
+        "react": {
+          "readyMs": {
+            "samples": 3,
+            "median": 189.4,
+            "p95": 242.6,
+            "max": 242.6
+          },
+          "firstGuideFocusReadyMs": {
+            "samples": 3,
+            "median": 68.1,
+            "p95": 68.9,
+            "max": 68.9
+          },
+          "inputToFocusMs": {
+            "samples": 216,
+            "median": 0.5,
+            "p95": 17.3,
+            "max": 20.2
+          },
+          "handlerMs": {
+            "samples": 216,
+            "median": 0.4,
+            "p95": 0.7,
+            "max": 1.6
+          },
+          "inputToTwoFrameOpportunitiesMs": {
+            "samples": 216,
+            "median": 31.7,
+            "p95": 66.5,
+            "max": 69.4
+          },
+          "frameIntervalMs": {
+            "samples": 1041,
+            "median": 16.7,
+            "p95": 16.7,
+            "max": 16.8
+          },
+          "framesOver33ms": 0,
+          "framesOver50ms": 0,
+          "longTasks": 0,
+          "mainThreadMsPerKey": {
+            "samples": 3,
+            "median": 3.752,
+            "p95": 3.914,
+            "max": 3.914
+          },
+          "postGcJsHeapMiB": {
+            "samples": 3,
+            "median": 5.56,
+            "p95": 5.571,
+            "max": 5.571
+          },
+          "jsDecodedKiB": {
+            "samples": 3,
+            "median": 1197.047,
+            "p95": 1197.047,
+            "max": 1197.047
+          },
+          "paths": {
+            "hero": {
+              "handlerMs": {
+                "samples": 72,
+                "median": 0.5,
+                "p95": 0.9,
+                "max": 1.6
+              },
+              "inputToFocusMs": {
+                "samples": 72,
+                "median": 0.5,
+                "p95": 0.9,
+                "max": 1.5
+              }
+            },
+            "shelf": {
+              "handlerMs": {
+                "samples": 72,
+                "median": 0.4,
+                "p95": 0.6,
+                "max": 0.7
+              },
+              "inputToFocusMs": {
+                "samples": 72,
+                "median": 0.4,
+                "p95": 0.6,
+                "max": 0.7
+              }
+            },
+            "guide": {
+              "handlerMs": {
+                "samples": 72,
+                "median": 0.1,
+                "p95": 0.2,
+                "max": 0.4
+              },
+              "inputToFocusMs": {
+                "samples": 72,
+                "median": 12.1,
+                "p95": 18.5,
+                "max": 20.2
+              }
+            }
+          }
+        },
+        "solid": {
+          "readyMs": {
+            "samples": 3,
+            "median": 175.3,
+            "p95": 235,
+            "max": 235
+          },
+          "firstGuideFocusReadyMs": {
+            "samples": 3,
+            "median": 62.9,
+            "p95": 62.9,
+            "max": 62.9
+          },
+          "inputToFocusMs": {
+            "samples": 216,
+            "median": 0,
+            "p95": 0.1,
+            "max": 0.2
+          },
+          "handlerMs": {
+            "samples": 216,
+            "median": 0.3,
+            "p95": 0.4,
+            "max": 0.5
+          },
+          "inputToTwoFrameOpportunitiesMs": {
+            "samples": 216,
+            "median": 26.9,
+            "p95": 34.1,
+            "max": 36
+          },
+          "frameIntervalMs": {
+            "samples": 1035,
+            "median": 16.7,
+            "p95": 16.7,
+            "max": 16.8
+          },
+          "framesOver33ms": 0,
+          "framesOver50ms": 0,
+          "longTasks": 0,
+          "mainThreadMsPerKey": {
+            "samples": 3,
+            "median": 1.847,
+            "p95": 1.932,
+            "max": 1.932
+          },
+          "postGcJsHeapMiB": {
+            "samples": 3,
+            "median": 6.656,
+            "p95": 6.658,
+            "max": 6.658
+          },
+          "jsDecodedKiB": {
+            "samples": 3,
+            "median": 528.422,
+            "p95": 528.422,
+            "max": 528.422
+          },
+          "paths": {
+            "hero": {
+              "handlerMs": {
+                "samples": 72,
+                "median": 0.2,
+                "p95": 0.3,
+                "max": 0.4
+              },
+              "inputToFocusMs": {
+                "samples": 72,
+                "median": 0,
+                "p95": 0.1,
+                "max": 0.2
+              }
+            },
+            "shelf": {
+              "handlerMs": {
+                "samples": 72,
+                "median": 0.2,
+                "p95": 0.3,
+                "max": 0.3
+              },
+              "inputToFocusMs": {
+                "samples": 72,
+                "median": 0,
+                "p95": 0.1,
+                "max": 0.1
+              }
+            },
+            "guide": {
+              "handlerMs": {
+                "samples": 72,
+                "median": 0.3,
+                "p95": 0.4,
+                "max": 0.5
+              },
+              "inputToFocusMs": {
+                "samples": 72,
+                "median": 0,
+                "p95": 0.1,
+                "max": 0.2
+              }
+            }
+          }
+        }
+      },
+      "trials": [
+        {
+          "mode": "react",
+          "run": 0,
+          "readyMs": 242.6,
+          "guideReadyMs": 68.1,
+          "postGcJsHeapBytes": 5841456,
+          "paths": [
+            {
+              "zone": "hero",
+              "keys": 24,
+              "mainThreadTaskMs": 54.544,
+              "scriptMs": 13.231,
+              "layoutMs": 1.951,
+              "styleMs": 2.885,
+              "frameSamples": 116,
+              "maxFrameIntervalMs": 16.8,
+              "longTasks": 0
+            },
+            {
+              "zone": "shelf",
+              "keys": 24,
+              "mainThreadTaskMs": 97.74,
+              "scriptMs": 37.193,
+              "layoutMs": 4.795,
+              "styleMs": 5.941,
+              "frameSamples": 116,
+              "maxFrameIntervalMs": 16.8,
+              "longTasks": 0
+            },
+            {
+              "zone": "guide",
+              "keys": 24,
+              "mainThreadTaskMs": 117.895,
+              "scriptMs": 56.39,
+              "layoutMs": 4.044,
+              "styleMs": 9.593,
+              "frameSamples": 115,
+              "maxFrameIntervalMs": 16.8,
+              "longTasks": 0
+            }
+          ]
+        },
+        {
+          "mode": "solid",
+          "run": 0,
+          "readyMs": 235,
+          "guideReadyMs": 62.9,
+          "postGcJsHeapBytes": 6979168,
+          "paths": [
+            {
+              "zone": "hero",
+              "keys": 24,
+              "mainThreadTaskMs": 38.628,
+              "scriptMs": 22.537,
+              "layoutMs": 0,
+              "styleMs": 0.03,
+              "frameSamples": 115,
+              "maxFrameIntervalMs": 16.8,
+              "longTasks": 0
+            },
+            {
+              "zone": "shelf",
+              "keys": 24,
+              "mainThreadTaskMs": 45.061,
+              "scriptMs": 25.683,
+              "layoutMs": 0,
+              "styleMs": 0,
+              "frameSamples": 115,
+              "maxFrameIntervalMs": 16.8,
+              "longTasks": 0
+            },
+            {
+              "zone": "guide",
+              "keys": 24,
+              "mainThreadTaskMs": 49.302,
+              "scriptMs": 32.786,
+              "layoutMs": 0,
+              "styleMs": 0,
+              "frameSamples": 115,
+              "maxFrameIntervalMs": 16.8,
+              "longTasks": 0
+            }
+          ]
+        },
+        {
+          "mode": "solid",
+          "run": 1,
+          "readyMs": 175.3,
+          "guideReadyMs": 62.9,
+          "postGcJsHeapBytes": 6981724,
+          "paths": [
+            {
+              "zone": "hero",
+              "keys": 24,
+              "mainThreadTaskMs": 47.275,
+              "scriptMs": 27.592,
+              "layoutMs": 0,
+              "styleMs": 0.04,
+              "frameSamples": 115,
+              "maxFrameIntervalMs": 16.8,
+              "longTasks": 0
+            },
+            {
+              "zone": "shelf",
+              "keys": 24,
+              "mainThreadTaskMs": 40.514,
+              "scriptMs": 23.243,
+              "layoutMs": 0,
+              "styleMs": 0,
+              "frameSamples": 115,
+              "maxFrameIntervalMs": 16.8,
+              "longTasks": 0
+            },
+            {
+              "zone": "guide",
+              "keys": 24,
+              "mainThreadTaskMs": 51.299,
+              "scriptMs": 33.329,
+              "layoutMs": 0,
+              "styleMs": 0,
+              "frameSamples": 115,
+              "maxFrameIntervalMs": 16.8,
+              "longTasks": 0
+            }
+          ]
+        },
+        {
+          "mode": "react",
+          "run": 1,
+          "readyMs": 189.4,
+          "guideReadyMs": 68.9,
+          "postGcJsHeapBytes": 5830392,
+          "paths": [
+            {
+              "zone": "hero",
+              "keys": 24,
+              "mainThreadTaskMs": 54.516,
+              "scriptMs": 12.61,
+              "layoutMs": 1.872,
+              "styleMs": 2.638,
+              "frameSamples": 116,
+              "maxFrameIntervalMs": 16.8,
+              "longTasks": 0
+            },
+            {
+              "zone": "shelf",
+              "keys": 24,
+              "mainThreadTaskMs": 110.797,
+              "scriptMs": 41.213,
+              "layoutMs": 5.35,
+              "styleMs": 6.683,
+              "frameSamples": 116,
+              "maxFrameIntervalMs": 16.8,
+              "longTasks": 0
+            },
+            {
+              "zone": "guide",
+              "keys": 24,
+              "mainThreadTaskMs": 116.476,
+              "scriptMs": 56.012,
+              "layoutMs": 4.042,
+              "styleMs": 9.435,
+              "frameSamples": 115,
+              "maxFrameIntervalMs": 16.8,
+              "longTasks": 0
+            }
+          ]
+        },
+        {
+          "mode": "react",
+          "run": 2,
+          "readyMs": 183.1,
+          "guideReadyMs": 63.6,
+          "postGcJsHeapBytes": 5829704,
+          "paths": [
+            {
+              "zone": "hero",
+              "keys": 24,
+              "mainThreadTaskMs": 45.389,
+              "scriptMs": 9.96,
+              "layoutMs": 1.568,
+              "styleMs": 2.205,
+              "frameSamples": 116,
+              "maxFrameIntervalMs": 16.8,
+              "longTasks": 0
+            },
+            {
+              "zone": "shelf",
+              "keys": 24,
+              "mainThreadTaskMs": 106.589,
+              "scriptMs": 41.186,
+              "layoutMs": 5.121,
+              "styleMs": 6.358,
+              "frameSamples": 116,
+              "maxFrameIntervalMs": 16.8,
+              "longTasks": 0
+            },
+            {
+              "zone": "guide",
+              "keys": 24,
+              "mainThreadTaskMs": 114.757,
+              "scriptMs": 53.531,
+              "layoutMs": 4.162,
+              "styleMs": 9.562,
+              "frameSamples": 115,
+              "maxFrameIntervalMs": 16.8,
+              "longTasks": 0
+            }
+          ]
+        },
+        {
+          "mode": "solid",
+          "run": 2,
+          "readyMs": 168.7,
+          "guideReadyMs": 61.9,
+          "postGcJsHeapBytes": 6977768,
+          "paths": [
+            {
+              "zone": "hero",
+              "keys": 24,
+              "mainThreadTaskMs": 43.071,
+              "scriptMs": 25.2,
+              "layoutMs": 0,
+              "styleMs": 0.029,
+              "frameSamples": 115,
+              "maxFrameIntervalMs": 16.8,
+              "longTasks": 0
+            },
+            {
+              "zone": "shelf",
+              "keys": 24,
+              "mainThreadTaskMs": 41.004,
+              "scriptMs": 23.585,
+              "layoutMs": 0,
+              "styleMs": 0,
+              "frameSamples": 115,
+              "maxFrameIntervalMs": 16.8,
+              "longTasks": 0
+            },
+            {
+              "zone": "guide",
+              "keys": 24,
+              "mainThreadTaskMs": 48.593,
+              "scriptMs": 31.762,
+              "layoutMs": 0,
+              "styleMs": 0,
+              "frameSamples": 115,
+              "maxFrameIntervalMs": 16.8,
+              "longTasks": 0
+            }
+          ]
+        }
+      ]
+    },
+    "4": {
+      "measuredAt": "2026-09-24T20:53:00.479Z",
+      "runsPerRenderer": 6,
+      "keyIntervalMs": 80,
+      "comparison": {
+        "startupFaster": true,
+        "firstGuideEntryFaster": true,
+        "handlerP95Faster": true,
+        "mainThreadPerKeyLower": true,
+        "focusP95Faster": true,
+        "noLongTasks": true,
+        "frameP95Within60Hz": true,
+        "noFramesOver50ms": true
+      },
+      "summary": {
+        "react": {
+          "readyMs": {
+            "samples": 6,
+            "median": 511.6,
+            "p95": 569,
+            "max": 569
+          },
+          "firstGuideFocusReadyMs": {
+            "samples": 6,
+            "median": 138.1,
+            "p95": 142.2,
+            "max": 142.2
+          },
+          "inputToFocusMs": {
+            "samples": 432,
+            "median": 1.5,
+            "p95": 22.7,
+            "max": 25.2
+          },
+          "handlerMs": {
+            "samples": 432,
+            "median": 1.3,
+            "p95": 2.1,
+            "max": 4.3
+          },
+          "inputToTwoFrameOpportunitiesMs": {
+            "samples": 432,
+            "median": 36.1,
+            "p95": 70.5,
+            "max": 72.8
+          },
+          "frameIntervalMs": {
+            "samples": 2086,
+            "median": 16.7,
+            "p95": 16.7,
+            "max": 16.8
+          },
+          "framesOver33ms": 0,
+          "framesOver50ms": 0,
+          "longTasks": 0,
+          "mainThreadMsPerKey": {
+            "samples": 6,
+            "median": 11.725,
+            "p95": 11.956,
+            "max": 11.956
+          },
+          "postGcJsHeapMiB": {
+            "samples": 6,
+            "median": 5.56,
+            "p95": 5.563,
+            "max": 5.563
+          },
+          "jsDecodedKiB": {
+            "samples": 6,
+            "median": 1197.047,
+            "p95": 1197.047,
+            "max": 1197.047
+          },
+          "paths": {
+            "hero": {
+              "handlerMs": {
+                "samples": 144,
+                "median": 1.6,
+                "p95": 2.4,
+                "max": 4.3
+              },
+              "inputToFocusMs": {
+                "samples": 144,
+                "median": 1.5,
+                "p95": 2.3,
+                "max": 3.8
+              }
+            },
+            "shelf": {
+              "handlerMs": {
+                "samples": 144,
+                "median": 1.5,
+                "p95": 1.9,
+                "max": 2.7
+              },
+              "inputToFocusMs": {
+                "samples": 144,
+                "median": 1.3,
+                "p95": 1.7,
+                "max": 2
+              }
+            },
+            "guide": {
+              "handlerMs": {
+                "samples": 144,
+                "median": 0.1,
+                "p95": 0.8,
+                "max": 1.1
+              },
+              "inputToFocusMs": {
+                "samples": 144,
+                "median": 16.2,
+                "p95": 24.4,
+                "max": 25.2
+              }
+            }
+          }
+        },
+        "solid": {
+          "readyMs": {
+            "samples": 6,
+            "median": 455.3,
+            "p95": 514.6,
+            "max": 514.6
+          },
+          "firstGuideFocusReadyMs": {
+            "samples": 6,
+            "median": 126.9,
+            "p95": 132.3,
+            "max": 132.3
+          },
+          "inputToFocusMs": {
+            "samples": 432,
+            "median": 0,
+            "p95": 0.5,
+            "max": 0.8
+          },
+          "handlerMs": {
+            "samples": 432,
+            "median": 0.7,
+            "p95": 1.3,
+            "max": 1.9
+          },
+          "inputToTwoFrameOpportunitiesMs": {
+            "samples": 432,
+            "median": 29,
+            "p95": 36.8,
+            "max": 38.6
+          },
+          "frameIntervalMs": {
+            "samples": 2071,
+            "median": 16.7,
+            "p95": 16.8,
+            "max": 16.8
+          },
+          "framesOver33ms": 0,
+          "framesOver50ms": 0,
+          "longTasks": 0,
+          "mainThreadMsPerKey": {
+            "samples": 6,
+            "median": 4.797,
+            "p95": 4.856,
+            "max": 4.856
+          },
+          "postGcJsHeapMiB": {
+            "samples": 6,
+            "median": 6.673,
+            "p95": 6.676,
+            "max": 6.676
+          },
+          "jsDecodedKiB": {
+            "samples": 6,
+            "median": 528.422,
+            "p95": 528.422,
+            "max": 528.422
+          },
+          "paths": {
+            "hero": {
+              "handlerMs": {
+                "samples": 144,
+                "median": 0.8,
+                "p95": 1.3,
+                "max": 1.9
+              },
+              "inputToFocusMs": {
+                "samples": 144,
+                "median": 0.1,
+                "p95": 0.6,
+                "max": 0.8
+              }
+            },
+            "shelf": {
+              "handlerMs": {
+                "samples": 144,
+                "median": 0.6,
+                "p95": 1,
+                "max": 1.6
+              },
+              "inputToFocusMs": {
+                "samples": 144,
+                "median": 0,
+                "p95": 0.5,
+                "max": 0.8
+              }
+            },
+            "guide": {
+              "handlerMs": {
+                "samples": 144,
+                "median": 0.9,
+                "p95": 1.4,
+                "max": 1.7
+              },
+              "inputToFocusMs": {
+                "samples": 144,
+                "median": 0,
+                "p95": 0.3,
+                "max": 0.7
+              }
+            }
+          }
+        }
+      },
+      "trials": [
+        {
+          "mode": "react",
+          "run": 0,
+          "readyMs": 569,
+          "guideReadyMs": 138.1,
+          "postGcJsHeapBytes": 5833184,
+          "paths": [
+            {
+              "zone": "hero",
+              "keys": 24,
+              "mainThreadTaskMs": 144.02,
+              "scriptMs": 35.227,
+              "layoutMs": 5.465,
+              "styleMs": 8.482,
+              "frameSamples": 116,
+              "maxFrameIntervalMs": 16.8,
+              "longTasks": 0
+            },
+            {
+              "zone": "shelf",
+              "keys": 24,
+              "mainThreadTaskMs": 350.912,
+              "scriptMs": 132.799,
+              "layoutMs": 17.398,
+              "styleMs": 23.285,
+              "frameSamples": 116,
+              "maxFrameIntervalMs": 16.8,
+              "longTasks": 0
+            },
+            {
+              "zone": "guide",
+              "keys": 24,
+              "mainThreadTaskMs": 363.584,
+              "scriptMs": 179.419,
+              "layoutMs": 16.083,
+              "styleMs": 27.599,
+              "frameSamples": 116,
+              "maxFrameIntervalMs": 16.8,
+              "longTasks": 0
+            }
+          ]
+        },
+        {
+          "mode": "solid",
+          "run": 0,
+          "readyMs": 514.6,
+          "guideReadyMs": 132.3,
+          "postGcJsHeapBytes": 6999996,
+          "paths": [
+            {
+              "zone": "hero",
+              "keys": 24,
+              "mainThreadTaskMs": 105.823,
+              "scriptMs": 63.666,
+              "layoutMs": 0,
+              "styleMs": 0.029,
+              "frameSamples": 115,
+              "maxFrameIntervalMs": 16.8,
+              "longTasks": 0
+            },
+            {
+              "zone": "shelf",
+              "keys": 24,
+              "mainThreadTaskMs": 99.028,
+              "scriptMs": 58.576,
+              "layoutMs": 0,
+              "styleMs": 0,
+              "frameSamples": 115,
+              "maxFrameIntervalMs": 16.8,
+              "longTasks": 0
+            },
+            {
+              "zone": "guide",
+              "keys": 24,
+              "mainThreadTaskMs": 125.804,
+              "scriptMs": 84.952,
+              "layoutMs": 0,
+              "styleMs": 0,
+              "frameSamples": 115,
+              "maxFrameIntervalMs": 16.8,
+              "longTasks": 0
+            }
+          ]
+        },
+        {
+          "mode": "solid",
+          "run": 1,
+          "readyMs": 443.3,
+          "guideReadyMs": 127.7,
+          "postGcJsHeapBytes": 6998604,
+          "paths": [
+            {
+              "zone": "hero",
+              "keys": 24,
+              "mainThreadTaskMs": 114.047,
+              "scriptMs": 71.603,
+              "layoutMs": 0,
+              "styleMs": 0.027,
+              "frameSamples": 115,
+              "maxFrameIntervalMs": 16.8,
+              "longTasks": 0
+            },
+            {
+              "zone": "shelf",
+              "keys": 24,
+              "mainThreadTaskMs": 107.541,
+              "scriptMs": 62.122,
+              "layoutMs": 0,
+              "styleMs": 0,
+              "frameSamples": 115,
+              "maxFrameIntervalMs": 16.8,
+              "longTasks": 0
+            },
+            {
+              "zone": "guide",
+              "keys": 24,
+              "mainThreadTaskMs": 128.059,
+              "scriptMs": 87.784,
+              "layoutMs": 0,
+              "styleMs": 0,
+              "frameSamples": 115,
+              "maxFrameIntervalMs": 16.8,
+              "longTasks": 0
+            }
+          ]
+        },
+        {
+          "mode": "react",
+          "run": 1,
+          "readyMs": 537.2,
+          "guideReadyMs": 141,
+          "postGcJsHeapBytes": 5831076,
+          "paths": [
+            {
+              "zone": "hero",
+              "keys": 24,
+              "mainThreadTaskMs": 141.742,
+              "scriptMs": 30.979,
+              "layoutMs": 5.442,
+              "styleMs": 9.304,
+              "frameSamples": 116,
+              "maxFrameIntervalMs": 16.8,
+              "longTasks": 0
+            },
+            {
+              "zone": "shelf",
+              "keys": 24,
+              "mainThreadTaskMs": 340.358,
+              "scriptMs": 137.395,
+              "layoutMs": 14.466,
+              "styleMs": 19.155,
+              "frameSamples": 116,
+              "maxFrameIntervalMs": 16.8,
+              "longTasks": 0
+            },
+            {
+              "zone": "guide",
+              "keys": 24,
+              "mainThreadTaskMs": 352.044,
+              "scriptMs": 172.1,
+              "layoutMs": 12.161,
+              "styleMs": 27.891,
+              "frameSamples": 115,
+              "maxFrameIntervalMs": 16.8,
+              "longTasks": 0
+            }
+          ]
+        },
+        {
+          "mode": "react",
+          "run": 2,
+          "readyMs": 503.8,
+          "guideReadyMs": 127.9,
+          "postGcJsHeapBytes": 5830380,
+          "paths": [
+            {
+              "zone": "hero",
+              "keys": 24,
+              "mainThreadTaskMs": 147.271,
+              "scriptMs": 36.829,
+              "layoutMs": 5.293,
+              "styleMs": 6.374,
+              "frameSamples": 116,
+              "maxFrameIntervalMs": 16.8,
+              "longTasks": 0
+            },
+            {
+              "zone": "shelf",
+              "keys": 24,
+              "mainThreadTaskMs": 339.035,
+              "scriptMs": 134.804,
+              "layoutMs": 17.091,
+              "styleMs": 21.85,
+              "frameSamples": 116,
+              "maxFrameIntervalMs": 16.8,
+              "longTasks": 0
+            },
+            {
+              "zone": "guide",
+              "keys": 24,
+              "mainThreadTaskMs": 348.441,
+              "scriptMs": 174.754,
+              "layoutMs": 14.389,
+              "styleMs": 27.328,
+              "frameSamples": 115,
+              "maxFrameIntervalMs": 16.8,
+              "longTasks": 0
+            }
+          ]
+        },
+        {
+          "mode": "solid",
+          "run": 2,
+          "readyMs": 463.3,
+          "guideReadyMs": 127.7,
+          "postGcJsHeapBytes": 6995936,
+          "paths": [
+            {
+              "zone": "hero",
+              "keys": 24,
+              "mainThreadTaskMs": 106.133,
+              "scriptMs": 66.861,
+              "layoutMs": 0,
+              "styleMs": 0.029,
+              "frameSamples": 115,
+              "maxFrameIntervalMs": 16.8,
+              "longTasks": 0
+            },
+            {
+              "zone": "shelf",
+              "keys": 24,
+              "mainThreadTaskMs": 100.711,
+              "scriptMs": 60.023,
+              "layoutMs": 0,
+              "styleMs": 0,
+              "frameSamples": 115,
+              "maxFrameIntervalMs": 16.8,
+              "longTasks": 0
+            },
+            {
+              "zone": "guide",
+              "keys": 24,
+              "mainThreadTaskMs": 133.536,
+              "scriptMs": 89.987,
+              "layoutMs": 0,
+              "styleMs": 0,
+              "frameSamples": 116,
+              "maxFrameIntervalMs": 16.8,
+              "longTasks": 0
+            }
+          ]
+        },
+        {
+          "mode": "solid",
+          "run": 3,
+          "readyMs": 452.5,
+          "guideReadyMs": 126.9,
+          "postGcJsHeapBytes": 6995512,
+          "paths": [
+            {
+              "zone": "hero",
+              "keys": 24,
+              "mainThreadTaskMs": 111.379,
+              "scriptMs": 67.634,
+              "layoutMs": 0,
+              "styleMs": 0.028,
+              "frameSamples": 115,
+              "maxFrameIntervalMs": 16.8,
+              "longTasks": 0
+            },
+            {
+              "zone": "shelf",
+              "keys": 24,
+              "mainThreadTaskMs": 102.541,
+              "scriptMs": 63.026,
+              "layoutMs": 0,
+              "styleMs": 0,
+              "frameSamples": 115,
+              "maxFrameIntervalMs": 16.8,
+              "longTasks": 0
+            },
+            {
+              "zone": "guide",
+              "keys": 24,
+              "mainThreadTaskMs": 131.452,
+              "scriptMs": 88.72,
+              "layoutMs": 0,
+              "styleMs": 0,
+              "frameSamples": 115,
+              "maxFrameIntervalMs": 16.8,
+              "longTasks": 0
+            }
+          ]
+        },
+        {
+          "mode": "react",
+          "run": 3,
+          "readyMs": 505.3,
+          "guideReadyMs": 138.9,
+          "postGcJsHeapBytes": 5829012,
+          "paths": [
+            {
+              "zone": "hero",
+              "keys": 24,
+              "mainThreadTaskMs": 138.147,
+              "scriptMs": 32.536,
+              "layoutMs": 7.796,
+              "styleMs": 6.738,
+              "frameSamples": 116,
+              "maxFrameIntervalMs": 16.8,
+              "longTasks": 0
+            },
+            {
+              "zone": "shelf",
+              "keys": 24,
+              "mainThreadTaskMs": 348.466,
+              "scriptMs": 139.731,
+              "layoutMs": 18.563,
+              "styleMs": 17.92,
+              "frameSamples": 116,
+              "maxFrameIntervalMs": 16.8,
+              "longTasks": 0
+            },
+            {
+              "zone": "guide",
+              "keys": 24,
+              "mainThreadTaskMs": 367.395,
+              "scriptMs": 179.11,
+              "layoutMs": 11.442,
+              "styleMs": 25.279,
+              "frameSamples": 116,
+              "maxFrameIntervalMs": 16.8,
+              "longTasks": 0
+            }
+          ]
+        },
+        {
+          "mode": "react",
+          "run": 4,
+          "readyMs": 528,
+          "guideReadyMs": 124.9,
+          "postGcJsHeapBytes": 5829900,
+          "paths": [
+            {
+              "zone": "hero",
+              "keys": 24,
+              "mainThreadTaskMs": 139.054,
+              "scriptMs": 33.493,
+              "layoutMs": 7.168,
+              "styleMs": 6.307,
+              "frameSamples": 116,
+              "maxFrameIntervalMs": 16.8,
+              "longTasks": 0
+            },
+            {
+              "zone": "shelf",
+              "keys": 24,
+              "mainThreadTaskMs": 336.139,
+              "scriptMs": 138.391,
+              "layoutMs": 14.343,
+              "styleMs": 20.238,
+              "frameSamples": 116,
+              "maxFrameIntervalMs": 16.8,
+              "longTasks": 0
+            },
+            {
+              "zone": "guide",
+              "keys": 24,
+              "mainThreadTaskMs": 369.022,
+              "scriptMs": 178.385,
+              "layoutMs": 14.035,
+              "styleMs": 28.086,
+              "frameSamples": 116,
+              "maxFrameIntervalMs": 16.8,
+              "longTasks": 0
+            }
+          ]
+        },
+        {
+          "mode": "solid",
+          "run": 4,
+          "readyMs": 465.1,
+          "guideReadyMs": 111.5,
+          "postGcJsHeapBytes": 7000356,
+          "paths": [
+            {
+              "zone": "hero",
+              "keys": 24,
+              "mainThreadTaskMs": 112.516,
+              "scriptMs": 67.446,
+              "layoutMs": 0,
+              "styleMs": 0.027,
+              "frameSamples": 115,
+              "maxFrameIntervalMs": 16.8,
+              "longTasks": 0
+            },
+            {
+              "zone": "shelf",
+              "keys": 24,
+              "mainThreadTaskMs": 102.828,
+              "scriptMs": 58.915,
+              "layoutMs": 0,
+              "styleMs": 0,
+              "frameSamples": 115,
+              "maxFrameIntervalMs": 16.8,
+              "longTasks": 0
+            },
+            {
+              "zone": "guide",
+              "keys": 24,
+              "mainThreadTaskMs": 132.008,
+              "scriptMs": 89.879,
+              "layoutMs": 0,
+              "styleMs": 0,
+              "frameSamples": 115,
+              "maxFrameIntervalMs": 16.8,
+              "longTasks": 0
+            }
+          ]
+        },
+        {
+          "mode": "solid",
+          "run": 5,
+          "readyMs": 455.3,
+          "guideReadyMs": 126.8,
+          "postGcJsHeapBytes": 6996796,
+          "paths": [
+            {
+              "zone": "hero",
+              "keys": 24,
+              "mainThreadTaskMs": 108.232,
+              "scriptMs": 69.053,
+              "layoutMs": 0,
+              "styleMs": 0.064,
+              "frameSamples": 115,
+              "maxFrameIntervalMs": 16.8,
+              "longTasks": 0
+            },
+            {
+              "zone": "shelf",
+              "keys": 24,
+              "mainThreadTaskMs": 100.003,
+              "scriptMs": 54.97,
+              "layoutMs": 0,
+              "styleMs": 0,
+              "frameSamples": 115,
+              "maxFrameIntervalMs": 16.8,
+              "longTasks": 0
+            },
+            {
+              "zone": "guide",
+              "keys": 24,
+              "mainThreadTaskMs": 137.645,
+              "scriptMs": 96.835,
+              "layoutMs": 0,
+              "styleMs": 0,
+              "frameSamples": 115,
+              "maxFrameIntervalMs": 16.8,
+              "longTasks": 0
+            }
+          ]
+        },
+        {
+          "mode": "react",
+          "run": 5,
+          "readyMs": 511.6,
+          "guideReadyMs": 142.2,
+          "postGcJsHeapBytes": 5829524,
+          "paths": [
+            {
+              "zone": "hero",
+              "keys": 24,
+              "mainThreadTaskMs": 147.389,
+              "scriptMs": 36.5,
+              "layoutMs": 10.13,
+              "styleMs": 5.375,
+              "frameSamples": 116,
+              "maxFrameIntervalMs": 16.7,
+              "longTasks": 0
+            },
+            {
+              "zone": "shelf",
+              "keys": 24,
+              "mainThreadTaskMs": 349.832,
+              "scriptMs": 142.353,
+              "layoutMs": 14.321,
+              "styleMs": 18.702,
+              "frameSamples": 116,
+              "maxFrameIntervalMs": 16.8,
+              "longTasks": 0
+            },
+            {
+              "zone": "guide",
+              "keys": 24,
+              "mainThreadTaskMs": 363.596,
+              "scriptMs": 174.8,
+              "layoutMs": 14.995,
+              "styleMs": 27.367,
+              "frameSamples": 116,
+              "maxFrameIntervalMs": 16.8,
+              "longTasks": 0
+            }
+          ]
+        }
+      ]
+    },
+    "8": {
+      "measuredAt": "2026-09-24T20:55:19.485Z",
+      "runsPerRenderer": 3,
+      "keyIntervalMs": 80,
+      "comparison": {
+        "startupFaster": true,
+        "firstGuideEntryFaster": false,
+        "handlerP95Faster": true,
+        "mainThreadPerKeyLower": true,
+        "focusP95Faster": true,
+        "noLongTasks": true,
+        "frameP95Within60Hz": true,
+        "noFramesOver50ms": true
+      },
+      "summary": {
+        "react": {
+          "readyMs": {
+            "samples": 3,
+            "median": 1007.9,
+            "p95": 1081.6,
+            "max": 1081.6
+          },
+          "firstGuideFocusReadyMs": {
+            "samples": 3,
+            "median": 237.2,
+            "p95": 242.9,
+            "max": 242.9
+          },
+          "inputToFocusMs": {
+            "samples": 216,
+            "median": 3,
+            "p95": 32.3,
+            "max": 37.2
+          },
+          "handlerMs": {
+            "samples": 216,
+            "median": 2.5,
+            "p95": 3.9,
+            "max": 8
+          },
+          "inputToTwoFrameOpportunitiesMs": {
+            "samples": 216,
+            "median": 48.2,
+            "p95": 76.8,
+            "max": 80.4
+          },
+          "frameIntervalMs": {
+            "samples": 1042,
+            "median": 16.7,
+            "p95": 16.8,
+            "max": 16.8
+          },
+          "framesOver33ms": 0,
+          "framesOver50ms": 0,
+          "longTasks": 0,
+          "mainThreadMsPerKey": {
+            "samples": 3,
+            "median": 23.403,
+            "p95": 23.645,
+            "max": 23.645
+          },
+          "postGcJsHeapMiB": {
+            "samples": 3,
+            "median": 5.56,
+            "p95": 5.56,
+            "max": 5.56
+          },
+          "jsDecodedKiB": {
+            "samples": 3,
+            "median": 1197.047,
+            "p95": 1197.047,
+            "max": 1197.047
+          },
+          "paths": {
+            "hero": {
+              "handlerMs": {
+                "samples": 72,
+                "median": 3,
+                "p95": 4.6,
+                "max": 8
+              },
+              "inputToFocusMs": {
+                "samples": 72,
+                "median": 2.9,
+                "p95": 4.7,
+                "max": 7.7
+              }
+            },
+            "shelf": {
+              "handlerMs": {
+                "samples": 72,
+                "median": 2.9,
+                "p95": 3.4,
+                "max": 4.4
+              },
+              "inputToFocusMs": {
+                "samples": 72,
+                "median": 2.4,
+                "p95": 3.2,
+                "max": 4.2
+              }
+            },
+            "guide": {
+              "handlerMs": {
+                "samples": 72,
+                "median": 0.1,
+                "p95": 1.5,
+                "max": 1.9
+              },
+              "inputToFocusMs": {
+                "samples": 72,
+                "median": 24.6,
+                "p95": 33.8,
+                "max": 37.2
+              }
+            }
+          }
+        },
+        "solid": {
+          "readyMs": {
+            "samples": 3,
+            "median": 888.2,
+            "p95": 947.6,
+            "max": 947.6
+          },
+          "firstGuideFocusReadyMs": {
+            "samples": 3,
+            "median": 250.5,
+            "p95": 267,
+            "max": 267
+          },
+          "inputToFocusMs": {
+            "samples": 216,
+            "median": 0,
+            "p95": 0.6,
+            "max": 1.4
+          },
+          "handlerMs": {
+            "samples": 216,
+            "median": 1.5,
+            "p95": 2.4,
+            "max": 3.6
+          },
+          "inputToTwoFrameOpportunitiesMs": {
+            "samples": 216,
+            "median": 32.5,
+            "p95": 40.1,
+            "max": 46
+          },
+          "frameIntervalMs": {
+            "samples": 1036,
+            "median": 16.7,
+            "p95": 16.7,
+            "max": 16.8
+          },
+          "framesOver33ms": 0,
+          "framesOver50ms": 0,
+          "longTasks": 0,
+          "mainThreadMsPerKey": {
+            "samples": 3,
+            "median": 8.43,
+            "p95": 8.597,
+            "max": 8.597
+          },
+          "postGcJsHeapMiB": {
+            "samples": 3,
+            "median": 6.689,
+            "p95": 6.694,
+            "max": 6.694
+          },
+          "jsDecodedKiB": {
+            "samples": 3,
+            "median": 528.422,
+            "p95": 528.422,
+            "max": 528.422
+          },
+          "paths": {
+            "hero": {
+              "handlerMs": {
+                "samples": 72,
+                "median": 1.5,
+                "p95": 2.4,
+                "max": 3.1
+              },
+              "inputToFocusMs": {
+                "samples": 72,
+                "median": 0,
+                "p95": 0.6,
+                "max": 1.4
+              }
+            },
+            "shelf": {
+              "handlerMs": {
+                "samples": 72,
+                "median": 1.1,
+                "p95": 1.7,
+                "max": 3.6
+              },
+              "inputToFocusMs": {
+                "samples": 72,
+                "median": 0,
+                "p95": 1.1,
+                "max": 1.4
+              }
+            },
+            "guide": {
+              "handlerMs": {
+                "samples": 72,
+                "median": 1.8,
+                "p95": 2.5,
+                "max": 3.3
+              },
+              "inputToFocusMs": {
+                "samples": 72,
+                "median": 0.1,
+                "p95": 0.5,
+                "max": 1.2
+              }
+            }
+          }
+        }
+      },
+      "trials": [
+        {
+          "mode": "react",
+          "run": 0,
+          "readyMs": 1081.6,
+          "guideReadyMs": 242.9,
+          "postGcJsHeapBytes": 5829912,
+          "paths": [
+            {
+              "zone": "hero",
+              "keys": 24,
+              "mainThreadTaskMs": 271.473,
+              "scriptMs": 66.138,
+              "layoutMs": 12.735,
+              "styleMs": 13.86,
+              "frameSamples": 116,
+              "maxFrameIntervalMs": 16.8,
+              "longTasks": 0
+            },
+            {
+              "zone": "shelf",
+              "keys": 24,
+              "mainThreadTaskMs": 696.599,
+              "scriptMs": 273.807,
+              "layoutMs": 31.27,
+              "styleMs": 45.196,
+              "frameSamples": 115,
+              "maxFrameIntervalMs": 16.8,
+              "longTasks": 0
+            },
+            {
+              "zone": "guide",
+              "keys": 24,
+              "mainThreadTaskMs": 716.915,
+              "scriptMs": 351.203,
+              "layoutMs": 31.277,
+              "styleMs": 54.924,
+              "frameSamples": 117,
+              "maxFrameIntervalMs": 16.8,
+              "longTasks": 0
+            }
+          ]
+        },
+        {
+          "mode": "solid",
+          "run": 0,
+          "readyMs": 947.6,
+          "guideReadyMs": 267,
+          "postGcJsHeapBytes": 7013840,
+          "paths": [
+            {
+              "zone": "hero",
+              "keys": 24,
+              "mainThreadTaskMs": 183.451,
+              "scriptMs": 121.69,
+              "layoutMs": 0,
+              "styleMs": 0.029,
+              "frameSamples": 115,
+              "maxFrameIntervalMs": 16.8,
+              "longTasks": 0
+            },
+            {
+              "zone": "shelf",
+              "keys": 24,
+              "mainThreadTaskMs": 170.583,
+              "scriptMs": 91.938,
+              "layoutMs": 0,
+              "styleMs": 0,
+              "frameSamples": 115,
+              "maxFrameIntervalMs": 16.8,
+              "longTasks": 0
+            },
+            {
+              "zone": "guide",
+              "keys": 24,
+              "mainThreadTaskMs": 237.702,
+              "scriptMs": 163.312,
+              "layoutMs": 0,
+              "styleMs": 0,
+              "frameSamples": 116,
+              "maxFrameIntervalMs": 16.8,
+              "longTasks": 0
+            }
+          ]
+        },
+        {
+          "mode": "solid",
+          "run": 1,
+          "readyMs": 887.6,
+          "guideReadyMs": 250.5,
+          "postGcJsHeapBytes": 7018912,
+          "paths": [
+            {
+              "zone": "hero",
+              "keys": 24,
+              "mainThreadTaskMs": 197.397,
+              "scriptMs": 116.408,
+              "layoutMs": 0,
+              "styleMs": 0.115,
+              "frameSamples": 115,
+              "maxFrameIntervalMs": 16.8,
+              "longTasks": 0
+            },
+            {
+              "zone": "shelf",
+              "keys": 24,
+              "mainThreadTaskMs": 175.1,
+              "scriptMs": 117.116,
+              "layoutMs": 0,
+              "styleMs": 0,
+              "frameSamples": 115,
+              "maxFrameIntervalMs": 16.8,
+              "longTasks": 0
+            },
+            {
+              "zone": "guide",
+              "keys": 24,
+              "mainThreadTaskMs": 234.485,
+              "scriptMs": 150.672,
+              "layoutMs": 0,
+              "styleMs": 0,
+              "frameSamples": 115,
+              "maxFrameIntervalMs": 16.8,
+              "longTasks": 0
+            }
+          ]
+        },
+        {
+          "mode": "react",
+          "run": 1,
+          "readyMs": 996.6,
+          "guideReadyMs": 224.8,
+          "postGcJsHeapBytes": 5829900,
+          "paths": [
+            {
+              "zone": "hero",
+              "keys": 24,
+              "mainThreadTaskMs": 280.091,
+              "scriptMs": 62.253,
+              "layoutMs": 13.967,
+              "styleMs": 12.865,
+              "frameSamples": 115,
+              "maxFrameIntervalMs": 16.8,
+              "longTasks": 0
+            },
+            {
+              "zone": "shelf",
+              "keys": 24,
+              "mainThreadTaskMs": 688.285,
+              "scriptMs": 269.547,
+              "layoutMs": 33.682,
+              "styleMs": 38.541,
+              "frameSamples": 115,
+              "maxFrameIntervalMs": 16.8,
+              "longTasks": 0
+            },
+            {
+              "zone": "guide",
+              "keys": 24,
+              "mainThreadTaskMs": 734.079,
+              "scriptMs": 345.891,
+              "layoutMs": 29.353,
+              "styleMs": 49.753,
+              "frameSamples": 116,
+              "maxFrameIntervalMs": 16.8,
+              "longTasks": 0
+            }
+          ]
+        },
+        {
+          "mode": "react",
+          "run": 2,
+          "readyMs": 1007.9,
+          "guideReadyMs": 237.2,
+          "postGcJsHeapBytes": 5828924,
+          "paths": [
+            {
+              "zone": "hero",
+              "keys": 24,
+              "mainThreadTaskMs": 265.603,
+              "scriptMs": 58.631,
+              "layoutMs": 14.725,
+              "styleMs": 15.485,
+              "frameSamples": 116,
+              "maxFrameIntervalMs": 16.8,
+              "longTasks": 0
+            },
+            {
+              "zone": "shelf",
+              "keys": 24,
+              "mainThreadTaskMs": 701.957,
+              "scriptMs": 274.165,
+              "layoutMs": 34.615,
+              "styleMs": 37.803,
+              "frameSamples": 116,
+              "maxFrameIntervalMs": 16.8,
+              "longTasks": 0
+            },
+            {
+              "zone": "guide",
+              "keys": 24,
+              "mainThreadTaskMs": 713.038,
+              "scriptMs": 343.693,
+              "layoutMs": 28.619,
+              "styleMs": 55.875,
+              "frameSamples": 116,
+              "maxFrameIntervalMs": 16.8,
+              "longTasks": 0
+            }
+          ]
+        },
+        {
+          "mode": "solid",
+          "run": 2,
+          "readyMs": 888.2,
+          "guideReadyMs": 234.1,
+          "postGcJsHeapBytes": 7011056,
+          "paths": [
+            {
+              "zone": "hero",
+              "keys": 24,
+              "mainThreadTaskMs": 199.214,
+              "scriptMs": 123.229,
+              "layoutMs": 0,
+              "styleMs": 0.029,
+              "frameSamples": 115,
+              "maxFrameIntervalMs": 16.8,
+              "longTasks": 0
+            },
+            {
+              "zone": "shelf",
+              "keys": 24,
+              "mainThreadTaskMs": 184.34,
+              "scriptMs": 102.739,
+              "layoutMs": 0,
+              "styleMs": 0,
+              "frameSamples": 115,
+              "maxFrameIntervalMs": 16.8,
+              "longTasks": 0
+            },
+            {
+              "zone": "guide",
+              "keys": 24,
+              "mainThreadTaskMs": 235.462,
+              "scriptMs": 173.15,
+              "layoutMs": 0,
+              "styleMs": 0,
+              "frameSamples": 115,
+              "maxFrameIntervalMs": 16.8,
+              "longTasks": 0
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

@@ -1,5 +1,6 @@
 import {
   For,
+  batch,
   createMemo,
   createContext,
   createComponent,
@@ -12,8 +13,10 @@ import {
   type Component,
   type JSX,
 } from "solid-js";
+import type { ImageTexture } from "@solidtv/renderer";
 import {
   createElement,
+  getRenderer,
   insert,
   spread,
   type ElementNode,
@@ -69,7 +72,27 @@ export function defineScreen<
     const initial = untrack(
       () => definition.state?.call(props as P & ScreenActions) ?? {},
     );
-    for (const [key, value] of Object.entries(initial)) {
+    for (const [key, descriptor] of Object.entries(
+      Object.getOwnPropertyDescriptors(initial),
+    )) {
+      // Static textures are built only when their first visible screen reads
+      // them. Preserve the getter rather than evaluating it during setup.
+      if (descriptor.get) {
+        let initialized = false;
+        let value: unknown;
+        Object.defineProperty(data, key, {
+          enumerable: true,
+          get() {
+            if (!initialized) {
+              value = untrack(() => descriptor.get!.call(initial));
+              initialized = true;
+            }
+            return value;
+          },
+        });
+        continue;
+      }
+      const value = descriptor.value;
       const [read, write] = createSignal(value);
       Object.defineProperty(data, key, {
         enumerable: true,
@@ -91,8 +114,10 @@ export function defineScreen<
         if (focused === scope) return;
         const previous = focused;
         focused = scope;
-        previous?.hooks.unfocus?.();
-        scope.hooks.focus?.();
+        batch(() => {
+          previous?.hooks.unfocus?.();
+          scope.hooks.focus?.();
+        });
       },
       $listen: (name: string, callback: (value: any) => void) => {
         if (!listeners.has(name)) listeners.set(name, new Set());
@@ -276,6 +301,19 @@ function baselineOffset(font: string, size: number): number {
   baselineCache.set(key, offset);
   return offset;
 }
+const imageTextures = new WeakMap<ImageData, ImageTexture>();
+function imageTexture(image: ImageData) {
+  let texture = imageTextures.get(image);
+  if (!texture) {
+    texture = getRenderer().createTexture("ImageTexture", {
+      src: image,
+      premultiplyAlpha: true,
+    });
+    imageTextures.set(image, texture);
+  }
+  return texture;
+}
+
 function visualNode(
   kind: "node" | "text",
   props: Record<string, any>,
@@ -295,6 +333,13 @@ function visualNode(
       ["children", "show", "alpha", "fit", "nodeRef", "onError"].includes(key)
     )
       continue;
+    if (key === "src" && props.src instanceof ImageData) {
+      Object.defineProperty(mapped, "texture", {
+        enumerable: true,
+        get: () => imageTexture(props.src),
+      });
+      continue;
+    }
     const name = names[key] ?? key;
     Object.defineProperty(mapped, name, {
       enumerable: true,
@@ -328,7 +373,13 @@ function visualNode(
     });
   if (props.onError) mapped.onEvent = { failed: () => props.onError() };
   spread(node, mapped, true);
-  insert(node, () => props.children);
+  // Keep each node's original sibling position even while invisible. Only
+  // defer its subtree; late insertion of an outline/image can cover siblings.
+  const mounted = createMemo(
+    (wasMounted) => wasMounted || props.show !== false,
+    false,
+  );
+  insert(node, () => (mounted() ? props.children : undefined));
   return node as unknown as JSX.Element;
 }
 export const TvView = (props: Record<string, any>) => visualNode("node", props);
