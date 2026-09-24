@@ -7,8 +7,52 @@ import type {
 } from "../../api";
 import type { Screen } from "../screens";
 import type { SettingsSubpage } from "../browserNavigation";
+import type { ReactNode } from "react";
 
-export type Choice = { label: string; action: () => void };
+export type Choice = {
+  label: string;
+  action: () => void;
+  /** Leading icon (title menu rows; TV hides it). */
+  icon?: ReactNode;
+  /** The current value of a choice list ("Current" marker). */
+  current?: boolean;
+  /**
+   * Dialogs family (generic modal, src/ui/app/AppDialogs.tsx; see
+   * .redesign/overhaul/dialogs-progress.md). "primary": the one accent
+   * button (phone / desktop; TV renders a plain row). "destructive": danger
+   * text (Sign out, Remove); Cancel then gets default focus on D and T.
+   */
+  tone?: "primary" | "destructive";
+  /** The dismiss choice (Cancel / Close / Done). Defaults to true for "Cancel" and "Close". */
+  dismiss?: boolean;
+  /** Second line under a list row's label. */
+  note?: string;
+  /** Not usable here: tertiary "· unavailable"; the row stays focusable and its action decides. */
+  unavailable?: boolean;
+};
+/** Dialogs family: optional presentation of the generic modal (see Choice). */
+export type ModalOptions = {
+  /** TV key legend (default: OK Select · BACK <dismiss label>). */
+  legend?: { key: string; label: string }[];
+  /** Keep the title as the dialog's accessible name only (message-only sheet). */
+  hideTitle?: boolean;
+  /** Extra class on the dialog / popover element, for a family-scoped modifier. */
+  className?: string;
+};
+/**
+ * Optional presentation hint of a modal request (title family; rendered by
+ * the generic modal, src/ui/app/AppDialogs.tsx): "menu" = the title menu
+ * (icons; desktop anchored popover), "choices" = a value list with "Current"
+ * (desktop popover under its control), "text" = long text (TV full-screen
+ * text panel), "dialog" = a short confirmation (Removed from Continue Watching).
+ */
+export type ModalView = {
+  kind: "menu" | "choices" | "text" | "dialog";
+  /** Desktop popover anchor in viewport px; "end" right-aligns it to x. */
+  anchor?: { x: number; y: number; align?: "start" | "end" };
+  /** Secondary line under the title (TV More info: year · runtime · genres). */
+  meta?: string;
+};
 export type ScrollAnchor = {
   top: number;
   regions: { id: string; top: number; left: number }[];

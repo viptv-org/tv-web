@@ -125,18 +125,23 @@ export function usePlaybackEngine(app: AuthApi) {
         .catch(() => undefined);
     };
   }, [platform, api, engineChoice]);
+  // Controls hide after 2.5 s of playing, but not while a dialog, a seek
+  // preview, a player popup or the Up Next card is up.
+  const { activeTrackPopup, playerInfoOpen, upNext } = app;
+  const holdControls = !!(activeTrackPopup || playerInfoOpen || upNext);
   useEffect(() => {
     if (
       screen !== "player" ||
       !overlay ||
       snapshot?.state !== "playing" ||
       modal ||
-      seek !== undefined
+      seek !== undefined ||
+      holdControls
     )
       return;
     const t = setTimeout(() => setOverlay(false), 2500);
     return () => clearTimeout(t);
-  }, [screen, overlay, snapshot?.state, modal, seek, controlActivity]);
+  }, [screen, overlay, snapshot?.state, modal, seek, controlActivity, holdControls]);
   useEffect(() => {
     if (!session) return;
     const t = setInterval(() => {

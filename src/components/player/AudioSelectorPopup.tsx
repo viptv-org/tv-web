@@ -1,5 +1,6 @@
-import React, { useEffect, useRef } from "react";
+import { forwardRef, useEffect, useRef, type CSSProperties, type ReactNode } from "react";
 import { Check, X } from "lucide-react";
+import { ChoiceContent } from "../../ui/primitives/Toggles";
 
 export interface TrackChoice {
   id: string;
@@ -10,42 +11,41 @@ export interface TrackChoice {
   onSelect: () => void;
 }
 
-interface AudioSelectorPopupProps {
+interface PlayerPopupProps {
   title: string;
-  tracks: TrackChoice[];
   onClose: () => void;
-  offOption?: {
-    selected: boolean;
-    onSelect: () => void;
-  };
+  children: ReactNode;
+  /** Owner placement (desktop: centred over its button, clamped to the controls). */
+  style?: CSSProperties;
+  className?: string;
 }
 
 /**
- * Anchored track selector for the desktop player: opens above the toolbar
- * icon instead of a blocking modal, marks the active track with a check and
- * an explicit "Current" label, and dismisses on outside pointer or Escape.
+ * The pointer/touch player's popup card (components.md §10 "Track popups"):
+ * phone full width above the timeline, desktop 340 wide above its button,
+ * clear of the timeline. Dismisses on an outside press or Escape; the tool
+ * button that owns it (aria-expanded) toggles it itself.
  */
-export function AudioSelectorPopup({
-  title,
-  tracks,
-  onClose,
-  offOption,
-}: AudioSelectorPopupProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
+export const PlayerPopup = forwardRef<HTMLElement, PlayerPopupProps>(function PlayerPopup(
+  { title, onClose, children, style, className },
+  forwarded,
+) {
+  const containerRef = useRef<HTMLElement | null>(null);
+  const close = useRef(onClose);
+  close.current = onClose;
 
   useEffect(() => {
     const handlePointerDown = (e: PointerEvent) => {
-      if (
-        containerRef.current &&
-        !containerRef.current.contains(e.target as Node)
-      ) {
-        onClose();
-      }
+      const target = e.target as Element | null;
+      if (!containerRef.current || containerRef.current.contains(target)) return;
+      // The owning tool button toggles the popup on its own click.
+      if (target?.closest?.('[aria-expanded="true"]')) return;
+      close.current();
     };
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         e.stopPropagation();
-        onClose();
+        close.current();
       }
     };
     window.addEventListener("pointerdown", handlePointerDown);
@@ -54,58 +54,78 @@ export function AudioSelectorPopup({
       window.removeEventListener("pointerdown", handlePointerDown);
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [onClose]);
+  }, []);
 
   return (
-    <div
-      ref={containerRef}
-      className="audio-selector-popup"
+    <section
+      ref={(element) => {
+        containerRef.current = element;
+        if (typeof forwarded === "function") forwarded(element);
+        else if (forwarded) forwarded.current = element;
+      }}
+      className={className ? `vx-player__popup ${className}` : "vx-player__popup"}
       role="dialog"
       aria-label={title}
+      style={style}
       onClick={(e) => e.stopPropagation()}
       onPointerDown={(e) => e.stopPropagation()}
     >
-      <div className="audio-selector-header">
-        <span className="audio-selector-title">{title}</span>
-        <button
-          type="button"
-          className="audio-selector-close"
-          aria-label="Close"
-          onClick={onClose}
-          tabIndex={-1}
-        >
-          <X size={16} />
+      <div className="vx-player__popup-header">
+        <h2 className="vx-player__popup-title">{title}</h2>
+        <button type="button" className="vx-close vx-player__popup-close" aria-label="Close" onClick={onClose}>
+          <X aria-hidden="true" strokeWidth={2.2} />
         </button>
       </div>
+      {children}
+    </section>
+  );
+});
 
-      <div className="audio-selector-list">
+interface AudioSelectorPopupProps {
+  title: string;
+  tracks: TrackChoice[];
+  onClose: () => void;
+  offOption?: {
+    selected: boolean;
+    onSelect: () => void;
+  };
+  style?: CSSProperties;
+}
+
+/**
+ * Track selector (Audio Tracks / Subtitles): the current track carries a
+ * check and "Current"; an unavailable track reads "(unavailable)" and cannot
+ * be chosen. Choosing a track closes the popup.
+ */
+export const AudioSelectorPopup = forwardRef<HTMLElement, AudioSelectorPopupProps>(function AudioSelectorPopup(
+  { title, tracks, onClose, offOption, style },
+  ref,
+) {
+  const check = <Check aria-hidden="true" strokeWidth={2.4} />;
+  return (
+    <PlayerPopup ref={ref} title={title} onClose={onClose} style={style}>
+      <div className="vx-choice-list vx-player__tracks" role="group" aria-label={title}>
         {offOption && (
           <button
             type="button"
-            className={`audio-selector-item ${offOption.selected ? "is-selected" : ""}`}
+            className="vx-choice"
+            aria-current={offOption.selected ? "true" : undefined}
             aria-label={offOption.selected ? "Off (current)" : "Off"}
             onClick={() => {
               offOption.onSelect();
               onClose();
             }}
-            tabIndex={-1}
           >
-            <span className="track-label">Off</span>
-            {offOption.selected && (
-              <span className="track-current">
-                <Check size={14} />
-                <small>Current</small>
-              </span>
-            )}
+            <ChoiceContent current={offOption.selected} checkIcon={check}>Off</ChoiceContent>
           </button>
         )}
-
         {tracks.map((track) => (
           <button
             key={track.id}
             type="button"
+            className="vx-choice"
             disabled={!track.available}
-            className={`audio-selector-item ${track.selected ? "is-selected" : ""} ${!track.available ? "is-disabled" : ""}`}
+            aria-current={track.selected ? "true" : undefined}
             aria-label={`${track.label}${track.selected ? " (current)" : ""}`}
             onClick={() => {
               if (track.available) {
@@ -113,25 +133,14 @@ export function AudioSelectorPopup({
                 onClose();
               }
             }}
-            tabIndex={-1}
           >
-            <span className="track-label">
+            <ChoiceContent current={track.selected} unavailable={!track.available} checkIcon={check}>
               {track.label}
-              {!track.available && <small className="track-unavailable"> (unavailable)</small>}
-            </span>
-            {track.selected && (
-              <span className="track-current">
-                <Check size={14} />
-                <small>Current</small>
-              </span>
-            )}
+            </ChoiceContent>
           </button>
         ))}
-
-        {tracks.length === 0 && !offOption && (
-          <div className="audio-selector-empty">No tracks available</div>
-        )}
+        {tracks.length === 0 && <p className="vx-player__popup-empty">No tracks available</p>}
       </div>
-    </div>
+    </PlayerPopup>
   );
-}
+});

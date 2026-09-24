@@ -149,97 +149,6 @@
 .responsive-app .error > button { position: static; display: block; margin-top: 16px; }
 .responsive-app .startup-cover { position: fixed; inset: 0; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; background: var(--canvas); }
 .responsive-app .startup-cover > img, .responsive-app .startup-cover > p, .responsive-app .startup-cover::after { position: static; margin: 16px; }
-.responsive-app.playing { background: #000; overflow: hidden; }
-/* The idle, hidden video element keeps the frame's size too; at the TV's
-   fixed 1280px it widened the shell's scrollable area on every smaller screen. */
-.responsive-app .video { width: 100%; height: 100%; }
-.responsive-app.playing .video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
-.responsive-app.playing .player-overlay {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-end;
-  padding: 24px max(24px, env(safe-area-inset-right)) 24px max(24px, env(safe-area-inset-left));
-  background: linear-gradient(#0009, transparent 30%, transparent 40%, #000e);
-  overflow: hidden;
-  box-sizing: border-box;
-}
-.responsive-app .seekbar { position: relative; inset: auto; order: 0; width: 100%; height: 40px; margin-top: 12px; cursor: pointer; }
-.responsive-app .seekbar-track { border-radius: 2px; }
-.responsive-app .seekbar-thumb { width: 12px; height: 12px; }
-.responsive-app .seekbar-tooltip { bottom: 30px; padding: 1px 7px; font-size: 13px; line-height: 20px; }
-.responsive-app .player-time { position: static; order: 1; width: 100%; font-size: 16px; }
-.responsive-app .controls { position: static; order: 2; display: flex; flex-wrap: wrap; gap: 8px; width: 100%; height: auto; margin-top: 8px; }
-.responsive-app .controls button { position: static; width: 56px; height: 56px; min-height: 56px; padding: 14px; }
-
-/* Desktop player popups: anchored above the toolbar icon instead of a blocking dialog. */
-.responsive-app .track-buttons { position: relative; display: flex; gap: 8px; }
-.responsive-app .player-info-anchor { position: relative; }
-.responsive-app .audio-selector-popup {
-  position: absolute;
-  bottom: calc(100% + 12px);
-  left: 0;
-  z-index: 30;
-  width: min(340px, calc(100vw - 48px));
-  max-height: min(420px, 60vh);
-  display: flex;
-  flex-direction: column;
-  background: rgba(17, 19, 23, 0.96);
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  border-radius: 8px;
-  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.6);
-  color: #f5f5f5;
-  text-align: left;
-  overflow: hidden;
-}
-.responsive-app .player-info-popup { left: auto; right: 0; }
-.responsive-app .audio-selector-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 10px 12px; border-bottom: 1px solid rgba(255, 255, 255, 0.12); }
-.responsive-app .audio-selector-title { font-size: 14px; font-weight: 600; }
-.responsive-app .audio-selector-popup .audio-selector-close {
-  display: grid;
-  place-items: center;
-  width: 26px;
-  height: 26px;
-  min-height: 26px;
-  padding: 4px;
-  background: transparent;
-  border: none;
-  border-radius: 6px;
-  color: #a0a3a7;
-  cursor: pointer;
-}
-.responsive-app .audio-selector-popup .audio-selector-close:hover,
-.responsive-app .audio-selector-popup .audio-selector-close:focus { background: rgba(255, 255, 255, 0.12); color: #f5f5f5; }
-.responsive-app .audio-selector-list { margin: 0; padding: 6px; overflow-y: auto; }
-.responsive-app .audio-selector-popup .audio-selector-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  width: 100%;
-  box-sizing: border-box;
-  height: auto;
-  min-height: 0;
-  padding: 10px 12px;
-  background: transparent;
-  border: none;
-  border-radius: 6px;
-  color: #d1d5db;
-  font-size: 14px;
-  line-height: 1.4;
-  cursor: pointer;
-}
-.responsive-app .audio-selector-popup .audio-selector-item:hover,
-.responsive-app .audio-selector-popup .audio-selector-item:focus { background: rgba(255, 255, 255, 0.1); color: #ffffff; outline: none; }
-.responsive-app .audio-selector-popup .audio-selector-item.is-selected { background: rgba(255, 255, 255, 0.16); color: #ffffff; }
-.responsive-app .audio-selector-popup .audio-selector-item.is-disabled { color: #6b6f74; cursor: default; }
-.responsive-app .audio-selector-popup .track-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.responsive-app .audio-selector-popup .track-unavailable { color: #6b6f74; }
-.responsive-app .audio-selector-popup .track-current { display: inline-flex; align-items: center; gap: 4px; flex: none; color: #ffffff; font-size: 12px; font-weight: 600; }
-.responsive-app .audio-selector-empty { padding: 12px; color: #a0a3a7; font-size: 14px; }
-.responsive-app .player-info-body { margin: 0; padding: 10px 14px 12px; overflow-y: auto; font-size: 13px; line-height: 1.6; color: #c5c6c7; }
-.responsive-app .player-info-body p { margin: 0; }
 .responsive-app .playback-loading { position: fixed; left: 50%; top: 40%; width: min(90%, 420px); transform: translate(-50%, -50%); text-align: center; }
 @media (max-width: 899px) {
   .tv-screen.responsive-app { --page-gutter: 28px; }
@@ -296,8 +205,4 @@
   .responsive-app .scrim { padding: 12px; }
   .responsive-app .modal, .responsive-app .source-detail-panel { padding: 20px; max-height: calc(100dvh - 24px); }
   .responsive-app .modal-choices button { font-size: 18px; }
-  .responsive-app .toast, .responsive-app .loading, .responsive-app .error { bottom: calc(88px + env(safe-area-inset-bottom)); font-size: 16px; }
-  .responsive-app .player-overlay { padding: 16px; }
-  .responsive-app .controls { gap: 4px; }
-  .responsive-app .controls button { width: 48px; min-height: 48px; height: 48px; padding: 10px; }
-}
+  .responsive-app .toast, .responsive-app .loading, .responsive-app .error { bottom: calc(88px + env(safe-area-inset-bottom)); font-size: 16px; }}

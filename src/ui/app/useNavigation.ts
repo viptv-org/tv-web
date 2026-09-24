@@ -117,6 +117,11 @@ export function useNavigation(app: CatalogApi) {
       setSeek(undefined);
       return;
     }
+    // The Up Next card: BACK is its Cancel (TvUpNext legend).
+    if (screen === "player" && app.upNext) {
+      app.cancelUpNext();
+      return;
+    }
     if (nextScope.current) {
       nextScope.current.abort();
       nextScope.current = undefined;

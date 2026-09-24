@@ -109,22 +109,7 @@ main {
   top: calc(54px * var(--tv-k));
   width: calc(1096px * var(--tv-k));
   height: calc(654px * var(--tv-k));
-}
-.video {
-  position: absolute;
-  inset: 0;
-  width: 1920px;
-  height: 1080px;
-  background: #000;
-  visibility: hidden;
-}
-.playing {
-  background: transparent;
-}
-.playing .video {
-  visibility: visible;
-}
-.brand {
+}.brand {
   position: absolute;
   left: calc(32px * var(--tv-k));
   top: calc(29px * var(--tv-k));

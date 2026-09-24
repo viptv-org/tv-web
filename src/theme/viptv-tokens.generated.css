@@ -68,6 +68,7 @@
   --viptv-color-fill-icon-disc-tv: rgba(255,255,255,0.08);
   --viptv-color-fill-cue-glass: rgba(22,22,24,0.95);
   --viptv-color-fill-profile-letter: #C24E6B;
+  --viptv-color-fill-overflow-disc: rgba(0,0,0,0.60);
   --viptv-color-scrim-sheet: rgba(0,0,0,0.62);
   --viptv-color-scrim-dialog: rgba(0,0,0,0.55);
   --viptv-color-scrim-tv-panel: rgba(0,0,0,0.60);
@@ -85,6 +86,16 @@
   --viptv-color-guide-airing-tv: rgba(255,255,255,0.11);
   --viptv-color-guide-upcoming-tv: rgba(255,255,255,0.045);
   --viptv-color-guide-empty-tv: rgba(255,255,255,0.05);
+  --viptv-color-player-back-phone: rgba(255,255,255,0.10);
+  --viptv-color-player-back-desktop: rgba(0,0,0,0.35);
+  --viptv-color-player-control-hover: rgba(255,255,255,0.12);
+  --viptv-color-player-control-active: rgba(255,255,255,0.16);
+  --viptv-color-player-shade: rgba(11,11,12,0.80);
+  --viptv-color-player-shade-mid-desktop: rgba(11,11,12,0.72);
+  --viptv-color-player-shade-end-desktop: rgba(11,11,12,0.94);
+  --viptv-color-player-shade-mid-tv: rgba(11,11,12,0.82);
+  --viptv-color-player-shade-end-tv: rgba(11,11,12,0.95);
+  --viptv-color-player-up-next: rgba(22,22,24,0.96);
   --viptv-font-family-display: 'Bricolage Grotesque', 'Bricolage Grotesque Variable', 'Helvetica Neue', sans-serif;
   --viptv-font-family-ui: Onest, system-ui, sans-serif;
   --viptv-font-family-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
@@ -106,6 +117,7 @@
   --viptv-radius-sheet-top: 30px;
   --viptv-radius-app-mark: 0.3;
   --viptv-radius-qr: 0.125;
+  --viptv-radius-player-card-tv: 26px;
   --viptv-space-0: 0px;
   --viptv-space-1: 4px;
   --viptv-space-2: 8px;
@@ -159,6 +171,7 @@
   --viptv-size-button-pill: 44px;
   --viptv-size-button-small: 40px;
   --viptv-size-button-split-chevron: 44px;
+  --viptv-size-button-row-nav: 36px;
   --viptv-size-chip-phone: 44px;
   --viptv-size-chip-desktop: 40px;
   --viptv-size-chip-desktop-drawer: 36px;
@@ -170,6 +183,7 @@
   --viptv-size-field-tv-entry: 96px;
   --viptv-size-field-search-phone: 52px;
   --viptv-size-field-search-titlebar-width: 460px;
+  --viptv-size-field-search-page: 56px;
   --viptv-size-field-radius-phone: 16px;
   --viptv-size-field-radius-desktop: 12px;
   --viptv-size-field-radius-tv: 20px;
@@ -282,6 +296,8 @@
   --viptv-size-tile-phone-avatar-height: 96px;
   --viptv-size-tile-phone-source-quality-width: 56px;
   --viptv-size-tile-phone-source-quality-height: 44px;
+  --viptv-size-tile-phone-episode-width: 128px;
+  --viptv-size-tile-phone-episode-height: 72px;
   --viptv-size-tile-desktop-poster-width: 172px;
   --viptv-size-tile-desktop-poster-height: 258px;
   --viptv-size-tile-web-poster-width: 164px;
@@ -332,6 +348,8 @@
   --viptv-size-blur-glass: 20px;
   --viptv-size-blur-notice: 16px;
   --viptv-size-blur-badge: 12px;
+  --viptv-size-blur-ambient: 90px;
+  --viptv-size-blur-ambient-tv: 80px;
   --viptv-size-timeline-height: 20px;
   --viptv-size-timeline-knob: 14px;
   --viptv-size-timeline-marker: 12px;
@@ -356,6 +374,31 @@
   --viptv-size-guide-block-tv: 88px;
   --viptv-size-guide-block-bar: 3px;
   --viptv-size-guide-block-bar-tv: 5px;
+  --viptv-size-player-control-phone: 52px;
+  --viptv-size-player-play-phone: 64px;
+  --viptv-size-player-tool-phone: 48px;
+  --viptv-size-player-control-desktop: 44px;
+  --viptv-size-player-play-desktop: 52px;
+  --viptv-size-player-icon-skip-phone: 28px;
+  --viptv-size-player-icon-skip-desktop: 26px;
+  --viptv-size-player-volume-width: 96px;
+  --viptv-size-player-volume-knob: 12px;
+  --viptv-size-player-still-phone-width: 120px;
+  --viptv-size-player-still-phone-height: 66px;
+  --viptv-size-player-still-desktop-width: 136px;
+  --viptv-size-player-still-desktop-height: 76px;
+  --viptv-size-player-still-tv-width: 240px;
+  --viptv-size-player-still-tv-height: 134px;
+  --viptv-size-player-up-next-desktop: 380px;
+  --viptv-size-player-up-next-tv: 620px;
+  --viptv-size-player-shade-top-desktop: 180px;
+  --viptv-size-player-shade-bottom-desktop: 300px;
+  --viptv-size-player-shade-top-tv: 260px;
+  --viptv-size-player-shade-bottom-tv: 700px;
+  --viptv-size-player-notice-top-phone: 160px;
+  --viptv-size-player-overlay-top-tv: 150px;
+  --viptv-size-player-bottom-tv: 130px;
+  --viptv-size-player-seek-room-tv: 52px;
   --viptv-focus-desktop: 0 0 0 2px #0B0B0C, 0 0 0 4px #F4F2EE;
   --viptv-focus-desktop-hover-card: inset 0 0 0 2px #F4F2EE;
   --viptv-focus-tv-shadow: 0 0 0 4px #FFFFFF, 0 24px 60px rgba(0,0,0,0.65);
@@ -376,6 +419,7 @@
   --viptv-shadow-banner: 0 20px 50px rgba(0,0,0,0.55);
   --viptv-shadow-popup: 0 24px 60px rgba(0,0,0,0.6);
   --viptv-shadow-tv-dialog: 0 40px 100px rgba(0,0,0,0.6);
+  --viptv-shadow-hero-art: 0 30px 80px rgba(0,0,0,0.5);
   --viptv-motion-focus: 150ms;
   --viptv-motion-pressed-scale: 0.97;
   --viptv-motion-toast-notice: 5000ms;
@@ -385,6 +429,9 @@
   --viptv-motion-shimmer: 1400ms;
   --viptv-motion-pressed-scale-row: 0.99;
   --viptv-motion-pressed-scale-card: 0.98;
+  --viptv-motion-marquee-delay: 1000ms;
+  --viptv-motion-up-next-tick: 250ms;
+  --viptv-motion-pressed-scale-control: 0.94;
   --viptv-type-phone-screen-title-size: 34px;
   --viptv-type-phone-screen-title-weight: 700;
   --viptv-type-phone-screen-title-line-height: 1.05;
@@ -453,6 +500,14 @@
   --viptv-type-phone-subpage-title-weight: 700;
   --viptv-type-phone-subpage-title-line-height: 1.1;
   --viptv-type-phone-subpage-title-letter-spacing: -0.02em;
+  --viptv-type-phone-player-title-size: 20px;
+  --viptv-type-phone-player-title-weight: 700;
+  --viptv-type-phone-player-title-line-height: 1.15;
+  --viptv-type-phone-player-title-letter-spacing: -0.01em;
+  --viptv-type-phone-mono-size: 12.5px;
+  --viptv-type-phone-mono-weight: 400;
+  --viptv-type-phone-mono-line-height: 1.5;
+  --viptv-type-phone-mono-letter-spacing: 0;
   --viptv-type-desktop-page-title-size: 40px;
   --viptv-type-desktop-page-title-weight: 700;
   --viptv-type-desktop-page-title-line-height: 1.05;
@@ -533,6 +588,18 @@
   --viptv-type-desktop-app-mark-weight: 800;
   --viptv-type-desktop-app-mark-line-height: 1;
   --viptv-type-desktop-app-mark-letter-spacing: 0em;
+  --viptv-type-desktop-player-title-size: 24px;
+  --viptv-type-desktop-player-title-weight: 700;
+  --viptv-type-desktop-player-title-line-height: 1.2;
+  --viptv-type-desktop-player-title-letter-spacing: 0;
+  --viptv-type-desktop-mono-size: 12.5px;
+  --viptv-type-desktop-mono-weight: 400;
+  --viptv-type-desktop-mono-line-height: 1.5;
+  --viptv-type-desktop-mono-letter-spacing: 0;
+  --viptv-type-desktop-search-field-size: 18px;
+  --viptv-type-desktop-search-field-weight: 400;
+  --viptv-type-desktop-search-field-line-height: 1.2;
+  --viptv-type-desktop-search-field-letter-spacing: 0em;
   --viptv-type-tv-screen-title-size: 56px;
   --viptv-type-tv-screen-title-weight: 700;
   --viptv-type-tv-screen-title-line-height: 1.05;
@@ -625,6 +692,10 @@
   --viptv-type-tv-app-mark-weight: 800;
   --viptv-type-tv-app-mark-line-height: 1;
   --viptv-type-tv-app-mark-letter-spacing: 0em;
+  --viptv-type-tv-monogram-size: 44px;
+  --viptv-type-tv-monogram-weight: 800;
+  --viptv-type-tv-monogram-line-height: 1;
+  --viptv-type-tv-monogram-letter-spacing: -0.02em;
   /* The one runtime accent the user picks (Settings). Components read only this. */
   --viptv-accent: var(--viptv-color-accent-default);
 }
@@ -656,6 +727,8 @@
 .viptv-type-phone-dialog-title { font-family: var(--viptv-font-family-display); font-size: var(--viptv-type-phone-dialog-title-size); font-weight: var(--viptv-type-phone-dialog-title-weight); line-height: var(--viptv-type-phone-dialog-title-line-height); letter-spacing: var(--viptv-type-phone-dialog-title-letter-spacing); }
 .viptv-type-phone-group-label { font-family: var(--viptv-font-family-ui); font-size: var(--viptv-type-phone-group-label-size); font-weight: var(--viptv-type-phone-group-label-weight); line-height: var(--viptv-type-phone-group-label-line-height); letter-spacing: var(--viptv-type-phone-group-label-letter-spacing); }
 .viptv-type-phone-subpage-title { font-family: var(--viptv-font-family-display); font-size: var(--viptv-type-phone-subpage-title-size); font-weight: var(--viptv-type-phone-subpage-title-weight); line-height: var(--viptv-type-phone-subpage-title-line-height); letter-spacing: var(--viptv-type-phone-subpage-title-letter-spacing); }
+.viptv-type-phone-player-title { font-family: var(--viptv-font-family-display); font-size: var(--viptv-type-phone-player-title-size); font-weight: var(--viptv-type-phone-player-title-weight); line-height: var(--viptv-type-phone-player-title-line-height); letter-spacing: var(--viptv-type-phone-player-title-letter-spacing); }
+.viptv-type-phone-mono { font-family: var(--viptv-font-family-mono); font-size: var(--viptv-type-phone-mono-size); font-weight: var(--viptv-type-phone-mono-weight); line-height: var(--viptv-type-phone-mono-line-height); letter-spacing: var(--viptv-type-phone-mono-letter-spacing); }
 .viptv-type-desktop-page-title { font-family: var(--viptv-font-family-display); font-size: var(--viptv-type-desktop-page-title-size); font-weight: var(--viptv-type-desktop-page-title-weight); line-height: var(--viptv-type-desktop-page-title-line-height); letter-spacing: var(--viptv-type-desktop-page-title-letter-spacing); }
 .viptv-type-desktop-hero-title { font-family: var(--viptv-font-family-display); font-size: var(--viptv-type-desktop-hero-title-size); font-weight: var(--viptv-type-desktop-hero-title-weight); line-height: var(--viptv-type-desktop-hero-title-line-height); letter-spacing: var(--viptv-type-desktop-hero-title-letter-spacing); }
 .viptv-type-desktop-dialog-title { font-family: var(--viptv-font-family-display); font-size: var(--viptv-type-desktop-dialog-title-size); font-weight: var(--viptv-type-desktop-dialog-title-weight); line-height: var(--viptv-type-desktop-dialog-title-line-height); letter-spacing: var(--viptv-type-desktop-dialog-title-letter-spacing); }
@@ -676,6 +749,9 @@
 .viptv-type-desktop-card-title { font-family: var(--viptv-font-family-display); font-size: var(--viptv-type-desktop-card-title-size); font-weight: var(--viptv-type-desktop-card-title-weight); line-height: var(--viptv-type-desktop-card-title-line-height); letter-spacing: var(--viptv-type-desktop-card-title-letter-spacing); }
 .viptv-type-desktop-device-code { font-family: var(--viptv-font-family-mono); font-size: var(--viptv-type-desktop-device-code-size); font-weight: var(--viptv-type-desktop-device-code-weight); line-height: var(--viptv-type-desktop-device-code-line-height); letter-spacing: var(--viptv-type-desktop-device-code-letter-spacing); }
 .viptv-type-desktop-app-mark { font-family: var(--viptv-font-family-display); font-size: var(--viptv-type-desktop-app-mark-size); font-weight: var(--viptv-type-desktop-app-mark-weight); line-height: var(--viptv-type-desktop-app-mark-line-height); letter-spacing: var(--viptv-type-desktop-app-mark-letter-spacing); }
+.viptv-type-desktop-player-title { font-family: var(--viptv-font-family-display); font-size: var(--viptv-type-desktop-player-title-size); font-weight: var(--viptv-type-desktop-player-title-weight); line-height: var(--viptv-type-desktop-player-title-line-height); letter-spacing: var(--viptv-type-desktop-player-title-letter-spacing); }
+.viptv-type-desktop-mono { font-family: var(--viptv-font-family-mono); font-size: var(--viptv-type-desktop-mono-size); font-weight: var(--viptv-type-desktop-mono-weight); line-height: var(--viptv-type-desktop-mono-line-height); letter-spacing: var(--viptv-type-desktop-mono-letter-spacing); }
+.viptv-type-desktop-search-field { font-family: var(--viptv-font-family-ui); font-size: var(--viptv-type-desktop-search-field-size); font-weight: var(--viptv-type-desktop-search-field-weight); line-height: var(--viptv-type-desktop-search-field-line-height); letter-spacing: var(--viptv-type-desktop-search-field-letter-spacing); }
 .viptv-type-tv-screen-title { font-family: var(--viptv-font-family-display); font-size: var(--viptv-type-tv-screen-title-size); font-weight: var(--viptv-type-tv-screen-title-weight); line-height: var(--viptv-type-tv-screen-title-line-height); letter-spacing: var(--viptv-type-tv-screen-title-letter-spacing); }
 .viptv-type-tv-panel-title { font-family: var(--viptv-font-family-display); font-size: var(--viptv-type-tv-panel-title-size); font-weight: var(--viptv-type-tv-panel-title-weight); line-height: var(--viptv-type-tv-panel-title-line-height); letter-spacing: var(--viptv-type-tv-panel-title-letter-spacing); }
 .viptv-type-tv-section { font-family: var(--viptv-font-family-display); font-size: var(--viptv-type-tv-section-size); font-weight: var(--viptv-type-tv-section-weight); line-height: var(--viptv-type-tv-section-line-height); letter-spacing: var(--viptv-type-tv-section-letter-spacing); }
@@ -699,3 +775,4 @@
 .viptv-type-tv-gateway-title { font-family: var(--viptv-font-family-display); font-size: var(--viptv-type-tv-gateway-title-size); font-weight: var(--viptv-type-tv-gateway-title-weight); line-height: var(--viptv-type-tv-gateway-title-line-height); letter-spacing: var(--viptv-type-tv-gateway-title-letter-spacing); }
 .viptv-type-tv-pair-code { font-family: var(--viptv-font-family-display); font-size: var(--viptv-type-tv-pair-code-size); font-weight: var(--viptv-type-tv-pair-code-weight); line-height: var(--viptv-type-tv-pair-code-line-height); letter-spacing: var(--viptv-type-tv-pair-code-letter-spacing); }
 .viptv-type-tv-app-mark { font-family: var(--viptv-font-family-display); font-size: var(--viptv-type-tv-app-mark-size); font-weight: var(--viptv-type-tv-app-mark-weight); line-height: var(--viptv-type-tv-app-mark-line-height); letter-spacing: var(--viptv-type-tv-app-mark-letter-spacing); }
+.viptv-type-tv-monogram { font-family: var(--viptv-font-family-display); font-size: var(--viptv-type-tv-monogram-size); font-weight: var(--viptv-type-tv-monogram-weight); line-height: var(--viptv-type-tv-monogram-line-height); letter-spacing: var(--viptv-type-tv-monogram-letter-spacing); }

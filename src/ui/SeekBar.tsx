@@ -159,7 +159,6 @@ export function SeekBar({
       : preview !== undefined && Number.isFinite(preview)
         ? preview
         : position;
-  const played = timelineRatio(displayed, duration);
   const secondsAtClientX = (clientX: number) => {
     // getBoundingClientRect is scale-aware, so the TV canvas transform works.
     const rect = bar.current?.getBoundingClientRect();
@@ -259,19 +258,29 @@ export function SeekBar({
     keyboardTimer.current = setTimeout(commitKeyboard, KEYBOARD_COMMIT_DELAY);
   };
 
+  // TV remote seeking previews a target without moving playback: the played
+  // fill stays at the clock, a lighter segment spans to the target, and the
+  // knob and bubble sit on the target (TvPlayerSeek). Pointer scrubbing moves
+  // the played fill with the knob instead (DeskPlayer).
+  const remoteSeek =
+    remoteKeys && scrub === undefined && preview !== undefined && Number.isFinite(preview);
+  const played = timelineRatio(remoteSeek ? position : displayed, duration);
+  const knob = timelineRatio(displayed, duration);
+  const seekStart = Math.min(played, knob);
   const tooltipSeconds =
     scrub !== undefined
       ? scrub
       : hoverSeconds !== undefined
         ? hoverSeconds
-        : focused && preview !== undefined
+        : remoteSeek || (focused && preview !== undefined)
           ? preview
           : undefined;
+  const hovering = scrub === undefined && hoverSeconds !== undefined;
 
   return (
     <div
       ref={bar}
-      className={`seekbar${scrub !== undefined ? " scrubbing" : ""}`}
+      className={`vx-timeline__bar${remoteSeek ? " vx-timeline__bar--seeking" : ""}${scrub !== undefined ? " vx-timeline__bar--scrubbing" : ""}`}
       data-focus-id={id}
       role="slider"
       aria-label="Playback position"
@@ -290,13 +299,13 @@ export function SeekBar({
       onFocus={() => setFocused(true)}
       onBlur={() => setFocused(false)}
     >
-      <div className="seekbar-track" aria-hidden="true">
+      <span className="vx-timeline__track" aria-hidden="true">
         {buffered?.map((range, i) => {
           const start = timelineRatio(range.start, duration);
           return (
             <span
               key={i}
-              className="seekbar-buffered"
+              className="vx-timeline__buffered"
               style={{
                 left: `${start * 100}%`,
                 width: `${(timelineRatio(range.end, duration) - start) * 100}%`,
@@ -304,12 +313,25 @@ export function SeekBar({
             />
           );
         })}
-        <span className="seekbar-played" style={{ width: `${played * 100}%` }} />
-      </div>
-      <span className="seekbar-thumb" aria-hidden="true" style={{ left: `${played * 100}%` }} />
+        {remoteSeek && knob !== played && (
+          <span
+            className="vx-timeline__seek"
+            style={{ left: `${seekStart * 100}%`, width: `${Math.abs(knob - played) * 100}%` }}
+          />
+        )}
+        <span className="vx-timeline__played" style={{ width: `${played * 100}%` }} />
+      </span>
+      <span className="vx-timeline__knob" aria-hidden="true" style={{ left: `${knob * 100}%` }} />
+      {hovering && (
+        <span
+          className="vx-timeline__marker"
+          aria-hidden="true"
+          style={{ left: `${timelineRatio(hoverSeconds, duration) * 100}%` }}
+        />
+      )}
       {tooltipSeconds !== undefined && (
         <span
-          className="seekbar-tooltip"
+          className="vx-timeline__bubble"
           aria-hidden="true"
           style={{ left: `${timelineRatio(tooltipSeconds, duration) * 100}%` }}
         >

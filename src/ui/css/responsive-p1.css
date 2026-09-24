@@ -12,7 +12,7 @@
    (hold is a real action here: sources, queue menus, profile editing)
    never selects text, drags the bitmap or opens the image callout. */
 .responsive-app, .responsive-app * { -webkit-tap-highlight-color: transparent; }
-.responsive-app :is(button, [role="button"], img, .media-card, .episode) {
+.responsive-app :is(button, [role="button"], img, .episode) {
   -webkit-touch-callout: none;
   -webkit-user-select: none;
   user-select: none;
@@ -28,7 +28,7 @@
 .responsive-app button:where(:not([class*="vx-"])):focus-visible { outline: 2px solid #f5f5f5; outline-offset: 3px; background: #f5f5f5; color: #101112; }
 .responsive-app .roku-text > span { animation: none !important; }
 /* Marquee activates on hover in responsive desktop mode */
-.responsive-app :is(.card, .media-card, .episode):hover .roku-text.overflows > span {
+.responsive-app :is(.card, .episode):hover .roku-text.overflows > span {
   display: inline-block;
   animation: roku-marquee var(--marquee-duration, 8s) linear 0.4s infinite alternate !important;
 }

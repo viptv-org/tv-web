@@ -14,7 +14,7 @@ import { DetailScreen } from "../../screens/DetailScreen";
 import { SourcesScreen } from "../../screens/SourcesScreen";
 import { PlayerScreen } from "../../screens/PlayerScreen";
 import type { AppApi } from "./useTvApp";
-import { desktopShellPreview, isDesktopShell } from "./appShared";
+import { isDesktopShell } from "./appShared";
 import { AppDialogs } from "./AppDialogs";
 import { enterLocalMode, localModeAvailable } from "../../local";
 import { usePhoneLayout } from "../usePhoneLayout";
@@ -29,7 +29,7 @@ import "../responsive.css";
  * dialogs, all reading from the assembled app object.
  */
 export function AppShell({ app }: { app: AppApi }) {
-  const { active, activeTrackPopup, bootingHome, requestHomeRows, detailOrigin, api, audioTrackList, authorize, back, browser, busy, canvas, cards, casting, catalog, catalogError, catalogs, catalogValues, chooseProfile, closeCast, commitSeek, compactHome, detail, discoverSources, editingProfile, editProfile, engineChoice, entry, episodes, fail, favorites, firstHomeCatalog, fullscreenControl, go, heroItem, heroPresentation, highlighted, homeRows, isMaximized, items, lastControlActivity, layout, libraryQueue, loadCatalog, manage, managing, mediaKey, mediaKeyUp, modal, navigate, nextEpisode, nextSkip, oled, openCast, openingSource, overlay, pair, pairing, platform, play, player, playerInfoLines, playerInfoOpen, playerNotice, playerRoot, prefs, preparing, profile, profilePage, profiles, qr, query, queue, readBufferedRanges, recentLive, responsive, screen, searchKey, searchPartial, searchRows, season, seek, selected, selectedPresentation, selectEngine, setActiveTrackPopup, setCompactHome, setControlActivity, setEditingProfile, setEntry, setLibraryQueue, setManaging, setModal, setOverlay, setPlayerInfoOpen, setPrefs, setProfile, setProfilePage, setProfiles, setQuery, setScreen, setSeason, setSeek, setSettingsSubpage, setSourceProvider, setSourceQuality, settingsSubpage, shelfCards, snapshot, sourceFocusPending, sourceProvider, sourceQuality, sources, stop, subtitleOffOption, surfaceClick, textTrackList, toggle, toggleLiveMute, toggleOled, togglePlayback, trackChoices, video } = app;
+  const { active, activeTrackPopup, bootingHome, requestHomeRows, detailOrigin, api, audioTrackList, authorize, back, browser, busy, canvas, cards, casting, catalog, catalogError, catalogs, catalogValues, chooseProfile, closeCast, commitSeek, compactHome, detail, discoverSources, editingProfile, editProfile, engineChoice, entry, episodes, fail, favorites, firstHomeCatalog, fullscreenControl, go, heroItem, heroPresentation, highlighted, homeRows, isMaximized, items, lastControlActivity, layout, libraryQueue, loadCatalog, manage, managing, mediaKey, mediaKeyUp, modal, navigate, nextEpisode, nextSkip, oled, openCast, openingSource, overlay, pair, pairing, platform, play, player, playerInfoOpen, playerNotice, playerRoot, prefs, preparing, profile, profilePage, profiles, qr, query, queue, readBufferedRanges, recentLive, responsive, screen, searchKey, searchPartial, searchRows, season, seek, selected, selectedPresentation, selectEngine, setActiveTrackPopup, setCompactHome, setControlActivity, setEditingProfile, setEntry, setLibraryQueue, setManaging, setModal, setOverlay, setPlayerInfoOpen, setPrefs, setProfile, setProfilePage, setProfiles, setQuery, setScreen, setSeason, setSeek, setSettingsSubpage, setSourceProvider, setSourceQuality, settingsSubpage, shelfCards, snapshot, sourceFocusPending, sourceProvider, sourceQuality, sources, stop, subtitleOffOption, surfaceClick, textTrackList, toggle, toggleLiveMute, toggleOled, togglePlayback, trackChoices, video } = app;
 
   const activeProfile = profiles.find((p) => p.id === profile);
   const phone = usePhoneLayout(responsive);
@@ -152,9 +152,6 @@ export function AppShell({ app }: { app: AppApi }) {
           onClick={surfaceClick}
           onDoubleClick={responsive && screen === "player" ? () => void fullscreenControl.toggle() : undefined}
         />
-        {responsive && screen === "player" && (busy || snapshot?.state === "buffering") && (
-          <div className="player-buffering" role="status" aria-label="Loading video" />
-        )}
         <canvas ref={canvas} className="video player-canvas" style={{ display: "none" }} onClick={surfaceClick} />
         {booting && <HomeSkeleton phone={phone} />}
         {responsive && !phone && (booting || chromeScreen) && (
@@ -378,8 +375,8 @@ export function AppShell({ app }: { app: AppApi }) {
                 profile={profile}
                 prefs={prefs}
                 appearance={responsive ? { oled, toggle: toggleOled } : undefined}
-                // The engine is a native (Tauri) setting; the dev-only desktop-shell preview shows it too.
-                playbackEngine={platform === "tauri" || (responsive && desktopShellPreview) ? { choice: engineChoice, select: selectEngine } : undefined}
+
+                playbackEngine={platform === "tauri" ? { choice: engineChoice, select: selectEngine } : undefined}
                 onPrefs={setPrefs}
                 onProfiles={() => {
                   setManaging(false);
@@ -390,31 +387,45 @@ export function AppShell({ app }: { app: AppApi }) {
                   go("profiles");
                 }}
                 onError={fail}
-                // Settings asks "Sign out of this device?" first; this is the confirmed action.
+                onModal={(title, choices) =>
+                  setModal(choices.length ? { title, choices } : undefined)
+                }
                 onSignOut={() =>
-                  void authorize(
-                    "Enter parent PIN to sign out",
-                    (signal) => api.signOut({ signal }),
-                    () => {
-                      setProfile("");
-                      setProfiles([]);
-                      setScreen("pairing");
-                      void pairing();
-                    },
-                  )
+                  setModal({
+                    title: responsive ? "Sign out of this device?" : "Sign out of this TV?",
+                    choices: [
+                      {
+                        label: "Sign out",
+                        action: () => {
+                          setModal(undefined);
+                          void authorize(
+                            "Enter parent PIN to sign out",
+                            (signal) => api.signOut({ signal }),
+                            () => {
+                              setProfile("");
+                              setProfiles([]);
+                              setScreen("pairing");
+                              void pairing();
+                            },
+                          );
+                        },
+                      },
+                      { label: "Cancel", action: () => setModal(undefined) },
+                    ],
+                  })
                 }
                 subpage={settingsSubpage}
                 onSubpageChange={setSettingsSubpage}
                 onBack={back}
                 list={responsive}
-                onWatchOnTv={responsive ? openCast : undefined}
-                profiles={profiles}
-                onChooseProfile={(id) => void chooseProfile(id)}
+                onWatchOnTv={phone ? openCast : undefined}
               />
             )}
-            {screen === "player" && overlay && (
+            {/* Player family: the controls follow `overlay`; buffering, notices and Up Next show without them. */}
+            {screen === "player" && (
               <PlayerScreen
                 responsive={responsive}
+                overlay={overlay}
                 selected={selected}
                 busy={busy}
                 snapshot={snapshot}
@@ -438,7 +449,10 @@ export function AppShell({ app }: { app: AppApi }) {
                 audioTrackList={audioTrackList}
                 textTrackList={textTrackList}
                 subtitleOffOption={subtitleOffOption}
-                playerInfoLines={playerInfoLines}
+                playerInfoRows={app.playerInfoRows}
+                upNext={app.upNext}
+                playUpNext={app.playUpNext}
+                cancelUpNext={app.cancelUpNext}
                 readBufferedRanges={readBufferedRanges}
                 lastControlActivity={lastControlActivity}
                 setControlActivity={setControlActivity}

@@ -1,6 +1,3 @@
-.browse .media-card {
-  height: calc(192px * var(--tv-k));
-}
 .result-grid > button {
   margin-top: calc(20px * var(--tv-k));
   width: calc(256px * var(--tv-k));

@@ -44,8 +44,10 @@ import type { Screen } from "../screens";
 import { normalizeCore } from "../../core";
 import { captureScroll, desktopInvoker, initialPrefs, type BrowserSnapshot, type Choice, type ScrollAnchor } from "./appShared";
 import type { AppApi, CoreApi, DialogsApi, AuthApi, PlaybackEngineApi, PlaybackSessionApi, CatalogApi, NavigationApi } from "./useTvApp";
+import { nextFromEpisodes, UP_NEXT_SECONDS, UP_NEXT_TICK_MS } from "./upNext";
 
 export function usePlaybackSession(app: PlaybackEngineApi) {
+  const { setOverlay, upNext, setUpNext } = app;
   const { active, advancedSession, api, applyBrowserRoute, autoplayEnabled, autoplayStarted, autoplayTest, browser, browserApplyGeneration, browserApplying, browserFromRoute, browserReady, browserReplace, catalog, catalogValues, controller, episodes, epoch, error, fail, homeRequestScope, homeRows, items, nextScope, nextSkip, notify, play, playbackCapabilities, player, prefs, preparing, profile, query, responsive, restoredScroll, resumeRemainder, retireBrowserPlayback, screen, season, seek, selected, session, setBrowserRevision, setBusy, setCasting, setCatalog, setCatalogValues, setEditingProfile, setEntry, setEpisodes, setError, setItems, setModal, setNextSkip, setQuery, setScreen, setSeason, setSelected, setSettingsSubpage, setSources, snapshot, sources, stack } = app;
 
   // playable title so the engine, state, position and error stream to
@@ -307,6 +309,12 @@ export function usePlaybackSession(app: PlaybackEngineApi) {
       setBusy(false);
     }
   };
+  // Auto-next (core policy canAutoNext: the final ten seconds while playing).
+  // Instead of advancing silently, the Up Next card counts down; the episode
+  // ending, the countdown reaching zero or Play now starts the next episode,
+  // and Cancel keeps this one (no auto-next for it). An explicit final-ten
+  // Resume (resumeRemainder) still waits for the end.
+  const noNextSession = useRef<string>();
   useEffect(() => {
     if (
       screen !== "player" ||
@@ -319,15 +327,27 @@ export function usePlaybackSession(app: PlaybackEngineApi) {
       return;
     const position = snapshot?.time.positionSeconds ?? 0,
       duration = snapshot?.time.durationSeconds ?? session.duration;
-    const eligible =
-      snapshot?.state === "ended" ||
-      (!resumeRemainder.current &&
-        snapshot?.state === "playing" &&
-        duration > 10 &&
-        normalizeCore<MediaPresentation>("presentation", { ...selected, position, duration }).canAutoNext);
-    if (eligible && advancedSession.current !== session.id) {
+    if (advancedSession.current === session.id) return;
+    if (snapshot?.state === "ended") {
       advancedSession.current = session.id;
+      setUpNext(undefined);
       void nextEpisode();
+      return;
+    }
+    const finalTen =
+      !resumeRemainder.current &&
+      snapshot?.state === "playing" &&
+      duration > 10 &&
+      normalizeCore<MediaPresentation>("presentation", { ...selected, position, duration }).canAutoNext;
+    if (upNext?.sessionId === session.id) {
+      // Seeking back out of the final seconds takes the card away again.
+      if (duration - position > UP_NEXT_SECONDS + 1) setUpNext(undefined);
+      return;
+    }
+    if (finalTen && noNextSession.current !== session.id) {
+      const left = Math.max(1, Math.min(UP_NEXT_SECONDS, Math.ceil(duration - position)));
+      setUpNext({ sessionId: session.id, item: nextFromEpisodes(episodes, active.current?.item ?? selected), left, total: left });
+      setOverlay(true);
     }
   }, [
     screen,
@@ -337,7 +357,55 @@ export function usePlaybackSession(app: PlaybackEngineApi) {
     snapshot?.time.positionSeconds,
     snapshot?.state,
     seek,
+    upNext?.sessionId,
   ]);
+  // A card belongs to one session on the player screen.
+  useEffect(() => {
+    if (upNext && (screen !== "player" || upNext.sessionId !== session?.id)) setUpNext(undefined);
+  }, [screen, session?.id, upNext?.sessionId]);
+  // Next episode metadata the loaded episode list does not have.
+  useEffect(() => {
+    const card = upNext;
+    const current = active.current?.item ?? selected;
+    if (!card || card.item || !current) return;
+    const scope = api.createScope();
+    void api
+      .nextEpisode(profile, current, { signal: scope.signal })
+      .then((next) => {
+        if (next.status === "next" && next.item)
+          setUpNext((value) => (value?.sessionId === card.sessionId ? { ...value, item: next.item } : value));
+        else {
+          // Nothing follows: no card; the episode's end keeps the existing path.
+          noNextSession.current = card.sessionId;
+          setUpNext((value) => (value?.sessionId === card.sessionId ? undefined : value));
+        }
+      })
+      .catch(() => undefined);
+    return () => scope.abort();
+  }, [upNext?.sessionId]);
+  // Countdown: wall-clock ticks that hold while playback is paused.
+  useEffect(() => {
+    const id = upNext?.sessionId;
+    if (!id) return;
+    const step = UP_NEXT_TICK_MS / 1000;
+    const tick = setInterval(() => {
+      if (player.current?.snapshot.state === "paused") return;
+      setUpNext((value) => (value?.sessionId === id ? { ...value, left: Math.max(0, value.left - step) } : value));
+    }, UP_NEXT_TICK_MS);
+    return () => clearInterval(tick);
+  }, [upNext?.sessionId]);
+  const playUpNext = () => {
+    if (session) advancedSession.current = session.id;
+    setUpNext(undefined);
+    void nextEpisode();
+  };
+  const cancelUpNext = () => {
+    if (session) advancedSession.current = session.id;
+    setUpNext(undefined);
+  };
+  useEffect(() => {
+    if (upNext && upNext.left <= 0) playUpNext();
+  }, [upNext?.left]);
 
-  return { stop, nextEpisode };
+  return { stop, nextEpisode, playUpNext, cancelUpNext };
 }

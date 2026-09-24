@@ -234,81 +234,49 @@ export function usePlaybackControls(app: NavigationApi) {
     }
   };
   const editProfile = (p?: TvProfile) => setEditingProfile({ profile: p });
-  const trackChoices = (kind: "audio" | "text", page = 0) => {
-    const native =
-      kind === "audio" ? snapshot?.tracks.audio : snapshot?.tracks.text;
-    const server =
-      kind === "audio" ? session?.audioTracks : session?.subtitleTracks;
-    const canNative =
-      session?.mode === "direct" &&
-      (kind === "audio"
-        ? player.current?.capabilities.canSelectAudioTrack
-        : player.current?.capabilities.canSelectTextTrack);
+  /**
+   * TV track selector: one scrolling list in the right panel (the generic
+   * modal), opened focused on the current track. Unavailable tracks stay
+   * visible and focusable; choosing one explains why it cannot play here.
+   */
+  const trackChoices = (kind: "audio" | "text") => {
+    const tracks = kind === "audio" ? audioTrackList : textTrackList;
     const choices: Choice[] = [];
-    if (
-      kind === "text" &&
-      page === 0 &&
-      (session?.subtitlesSupported ||
-        (session?.mode === "direct" &&
-          player.current?.capabilities.canDisableTextTrack))
-    )
+    if (kind === "text" && subtitlesCanTurnOff)
       choices.push({
         label: "Off",
+        current: subtitleOffOption.selected,
         action: () => {
           setModal(undefined);
-          void (
-            canNative
-              ? player.current!.selectTextTrack(null)
-              : controller.current!.replaceTracks({ subtitlesOff: true })
-          ).catch(fail);
+          subtitleOffOption.onSelect();
         },
       });
-    const currentId =
-      kind === "audio" ? snapshot?.tracks.selectedAudioId : snapshot?.tracks.selectedTextId;
-    const tracks =
-      canNative && native?.length
-        ? native.map((t) => ({
-            label: t.label + (currentId === t.id ? " · Current" : ""),
-            available: t.available,
-            run: () =>
-              kind === "audio"
-                ? player.current!.selectAudioTrack(t.id)
-                : player.current!.selectTextTrack(t.id),
-          }))
-        : (server ?? []).map((t) => ({
-            label: (t.title || t.language || `Track ${t.inputIndex + 1}`) + (t.selected ? " · Current" : ""),
-            available: t.selectable,
-            run: () =>
-              controller.current!.replaceTracks(
-                kind === "audio"
-                  ? { audioTrackIndex: t.inputIndex }
-                  : { subtitleTrackIndex: t.inputIndex, subtitlesOff: false },
-              ),
-          }));
-    for (const t of tracks.slice(page * 5, page * 5 + 5))
+    for (const track of tracks)
       choices.push({
-        label: t.available ? t.label : `${t.label} · unavailable`,
+        label: track.label,
+        current: track.selected,
+        unavailable: !track.available,
         action: () => {
-          if (!t.available) {
+          if (!track.available) {
             notify("This track is not supported on this TV.");
             return;
           }
           setModal(undefined);
-          void t.run().catch(fail);
+          track.onSelect();
         },
       });
-    if (page > 0)
-      choices.push({
-        label: "Previous",
-        action: () => trackChoices(kind, page - 1),
-      });
-    if ((page + 1) * 5 < tracks.length)
-      choices.push({
-        label: "Next",
-        action: () => trackChoices(kind, page + 1),
-      });
-    choices.push({ label: "Close", action: () => setModal(undefined) });
-    setModal({ title: kind === "audio" ? "Audio" : "Subtitles", choices });
+    const current = choices.find((choice) => choice.current);
+    setModal({
+      title: kind === "audio" ? "Audio Tracks" : "Subtitles",
+      choices,
+      focus: current?.label,
+      legend: [
+        { key: "▲ ▼", label: "Move" },
+        { key: "OK", label: "Select" },
+        { key: "BACK", label: "Close" },
+      ],
+      className: "vx-player-tracks",
+    });
   };
   // Latest card action closures for the memoized card row: the row reads the
   const nativeAudio = snapshot?.tracks.audio;
@@ -383,20 +351,37 @@ export function usePlaybackControls(app: NavigationApi) {
     },
   };
 
-  const playerInfoLines = [
-    `Decoder: ${snapshot?.diagnostics
-      ? `${snapshot.diagnostics.engine}${snapshot.diagnostics.backend ? ` (${snapshot.diagnostics.backend})` : ""}`
-      : player.current?.capabilities.engine ?? "Unknown"}`,
-    `Transport: ${snapshot?.diagnostics?.networkTransport ?? "Unknown"}`,
-    `Container: ${snapshot?.diagnostics?.transport ?? session?.format ?? "Unknown"}`,
-    `Delivery: ${session?.videoMode === "transcode" || session?.audioMode === "transcode" ? "Transcode" : session?.mode || "Unknown"}`,
-    session?.videoMode ? `Video delivery: ${session.videoMode}` : "",
-    session?.audioMode ? `Audio delivery: ${session.audioMode}` : "",
-    snapshot?.diagnostics?.videoCodec ? `Video codec: ${snapshot.diagnostics.videoCodec}` : "",
-    snapshot?.diagnostics?.audioCodec ? `Audio codec: ${snapshot.diagnostics.audioCodec}` : "",
-    snapshot?.diagnostics?.width ? `Resolution: ${snapshot.diagnostics.width} × ${snapshot.diagnostics.height}` : "",
-    snapshot?.diagnostics?.fallbackReason ? `Fallback: ${snapshot.diagnostics.fallbackReason}` : "",
-  ].filter(Boolean);
+  // The server can burn subtitles off only when it says so; direct play needs
+  // an engine that can disable a text track (TV "Off" row).
+  const subtitlesCanTurnOff = !!(
+    session?.subtitlesSupported ||
+    (session?.mode === "direct" && player.current?.capabilities.canDisableTextTrack)
+  );
 
-  return { commitSeek, togglePlayback, toggleLiveMute, readBufferedRanges, surfaceClick, mediaKey, mediaKeyUp, editProfile, trackChoices, audioTrackList, textTrackList, subtitleOffOption, playerInfoLines, playerNotice, setPlayerNotice };
+  /** Playback info as key / value rows (monospace values). */
+  const playerInfoRows: { label: string; value: string }[] = [
+    {
+      label: "Decoder",
+      value: snapshot?.diagnostics
+        ? `${snapshot.diagnostics.engine}${snapshot.diagnostics.backend ? ` (${snapshot.diagnostics.backend})` : ""}`
+        : player.current?.capabilities.engine ?? "Unknown",
+    },
+    { label: "Transport", value: snapshot?.diagnostics?.networkTransport ?? "Unknown" },
+    { label: "Container", value: snapshot?.diagnostics?.transport ?? session?.format ?? "Unknown" },
+    {
+      label: "Delivery",
+      value: session?.videoMode === "transcode" || session?.audioMode === "transcode" ? "Transcode" : session?.mode || "Unknown",
+    },
+    { label: "Video delivery", value: session?.videoMode ?? "" },
+    { label: "Audio delivery", value: session?.audioMode ?? "" },
+    { label: "Video codec", value: snapshot?.diagnostics?.videoCodec ?? "" },
+    { label: "Audio codec", value: snapshot?.diagnostics?.audioCodec ?? "" },
+    {
+      label: "Resolution",
+      value: snapshot?.diagnostics?.width ? `${snapshot.diagnostics.width} × ${snapshot.diagnostics.height}` : "",
+    },
+    { label: "Fallback", value: snapshot?.diagnostics?.fallbackReason ?? "" },
+  ].filter((row) => row.value);
+
+  return { commitSeek, togglePlayback, toggleLiveMute, readBufferedRanges, surfaceClick, mediaKey, mediaKeyUp, editProfile, trackChoices, audioTrackList, textTrackList, subtitleOffOption, subtitlesCanTurnOff, playerInfoRows, playerNotice, setPlayerNotice };
 }

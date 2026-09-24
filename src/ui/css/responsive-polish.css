@@ -21,8 +21,6 @@
 /* Larger hit areas for compact controls, without changing their layout. */
 .responsive-app :is(.shelf-see-more, .chip, .genre-chip, .rp-button, .error-dismiss-btn) { position: relative; }
 .responsive-app :is(.shelf-see-more, .chip, .genre-chip, .error-dismiss-btn)::before { content: ""; position: absolute; inset: -6px -2px; }
-.responsive-app .rp-button::before { content: ""; position: absolute; inset: -4px; border-radius: 50%; }
-
 /* ---- Desktop shelves: arrows share the heading row ---------------------------- */
 @media (hover: hover) and (min-width: 600px) {
   .responsive-app .shelf-carousel .shelf-nav { top: -48px; bottom: auto; }
@@ -238,21 +236,10 @@
 .responsive-app .responsive-epg .epg-gap > :is(span, small) { background: #17191b; }
 
 /* ---- Player popups ---------------------------------------------------------- */
-.responsive-app .player-info-body p { font-size: inherit; line-height: inherit; }
-.responsive-app .audio-selector-popup .audio-selector-close { width: 36px; height: 36px; min-height: 36px; }
 @media (max-width: 599px) {
   /* Phones: popups span the screen above the control row instead of
      hanging off a button near the edge. */
-  .responsive-app .responsive-player .rp-end .audio-selector-popup {
-    position: fixed;
-    left: 12px;
-    right: 12px;
-    bottom: calc(76px + env(safe-area-inset-bottom));
-    width: auto;
-    max-height: 55dvh;
-  }
-  .responsive-app .audio-selector-popup .audio-selector-close { width: 44px; height: 44px; min-height: 44px; }
-  .responsive-app .modal > h2 { font-size: 21px; }
+    .responsive-app .modal > h2 { font-size: 21px; }
   .responsive-app .modal-choices button { font-size: 16px; }
 }
 

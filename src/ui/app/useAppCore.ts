@@ -6,9 +6,10 @@ import { createAutoplayTestLogger, probeAutoplayTestMode, probeEngineOverride } 
 import { isTauriRuntime, resolveTauriVideoInvoker, type NativeVideoEngine, type Player, type PlayerPlatform, type PlayerSnapshot, type PlaybackSessionController } from "@viptv/video";
 import type { TvApi, MediaItem, MediaSource, Catalog, PlaybackSession, DevicePairing, TvProfile, PlaybackPreferences, PlaybackCapabilities } from "../../api";
 import type { ErrorDetail } from "../errors";
-import { captureScroll, desktopInvoker, initialPrefs, type BrowserSnapshot, type Choice, type ScrollAnchor } from "./appShared";
+import { captureScroll, desktopInvoker, initialPrefs, type BrowserSnapshot, type Choice, type ModalOptions, type ModalView, type ScrollAnchor } from "./appShared";
 import type { Screen } from "../screens";
 import type { HomeRow } from "./homeRows";
+import type { UpNextCard } from "./upNext";
 import { useAppearance } from "../../theme/appearance";
 
 /**
@@ -132,7 +133,9 @@ export function useAppCore(api: TvApi, platform: PlayerPlatform, layout: "tv" | 
       detail?: ErrorDetail;
       /** Choice label that receives focus when the dialog opens. */
       focus?: string;
-    }>(),
+      /** Title-family presentation (menu / choices / text / dialog). */
+      view?: ModalView;
+    } & ModalOptions>(),
     [snapshot, setSnapshot] = useState<PlayerSnapshot>(),
     [session, setSession] = useState<PlaybackSession>(),
     [overlay, setOverlay] = useState(true),
@@ -142,6 +145,8 @@ export function useAppCore(api: TvApi, platform: PlayerPlatform, layout: "tv" | 
   const [isMaximized, setIsMaximized] = useState(false);
   const [activeTrackPopup, setActiveTrackPopup] = useState<"audio" | "text" | null>(null);
   const [playerInfoOpen, setPlayerInfoOpen] = useState(false);
+  /** Player family: the Up Next card while an episode counts down to the next one. */
+  const [upNext, setUpNext] = useState<UpNextCard>();
   useEffect(() => {
     let unlisten: (() => void) | undefined;
     const init = async () => {
@@ -276,6 +281,7 @@ export function useAppCore(api: TvApi, platform: PlayerPlatform, layout: "tv" | 
     settingsSubpage, setSettingsSubpage,
     isMaximized, setIsMaximized,
     activeTrackPopup, setActiveTrackPopup, playerInfoOpen, setPlayerInfoOpen,
+    upNext, setUpNext,
     playerRoot, canvas, video, player, controller, playbackCapabilities, nextScope, epoch, stack, active, seekTimer, pairTimer, pairEpoch,
     fullscreenControl,
     pairingScope, engineError, autoResume, sourceFocusPending, searchKey, advancedSession, resumeRemainder, seekRepeat, seekValue, seekTarget,

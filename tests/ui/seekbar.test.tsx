@@ -139,14 +139,14 @@ it("shows a time tooltip while hovering and while scrubbing", () => {
 
 it("draws the played fill, thumb, and real buffered ranges", () => {
   const live = renderSeekBar({ position: 600, buffer: () => [{ start: 0, end: 900 }] });
-  expect((live.bar.querySelector(".seekbar-played") as HTMLElement).style.width).toBe("50%");
-  expect(live.bar.querySelector(".seekbar-thumb")).not.toBeNull();
-  expect((live.bar.querySelector(".seekbar-buffered") as HTMLElement).style.width).toBe("75%");
+  expect((live.bar.querySelector(".vx-timeline__played") as HTMLElement).style.width).toBe("50%");
+  expect(live.bar.querySelector(".vx-timeline__knob")).not.toBeNull();
+  expect((live.bar.querySelector(".vx-timeline__buffered") as HTMLElement).style.width).toBe("75%");
   live.view.unmount();
 
   const bare = renderSeekBar({ position: 600, buffer: () => null });
-  expect(bare.bar.querySelector(".seekbar-buffered")).toBeNull();
-  expect((bare.bar.querySelector(".seekbar-played") as HTMLElement).style.width).toBe("50%");
+  expect(bare.bar.querySelector(".vx-timeline__buffered")).toBeNull();
+  expect((bare.bar.querySelector(".vx-timeline__played") as HTMLElement).style.width).toBe("50%");
 });
 
 it("renders slider semantics and stays inert without a duration", () => {
@@ -215,6 +215,27 @@ it("leaves arrow keys to the app's remote layer when it owns them", () => {
   fireEvent.keyDown(bar, { key: "Enter" });
   expect(onPreview).not.toHaveBeenCalled();
   expect(onSeek).not.toHaveBeenCalled();
+});
+
+it("previews a remote seek as a segment from the clock to the target (TvPlayerSeek)", () => {
+  const { bar } = renderSeekBar({ remoteKeys: true, position: 300, preview: 600 });
+  // Playback has not moved: the played fill stays at the clock.
+  expect((bar.querySelector(".vx-timeline__played") as HTMLElement).style.width).toBe("25%");
+  const segment = bar.querySelector(".vx-timeline__seek") as HTMLElement;
+  expect(segment.style.left).toBe("25%");
+  expect(segment.style.width).toBe("25%");
+  // The knob and the bubble sit on the target.
+  expect((bar.querySelector(".vx-timeline__knob") as HTMLElement).style.left).toBe("50%");
+  expect(bar.querySelector(".vx-timeline__bubble")).toHaveTextContent("10:00");
+  expect(bar).toHaveClass("vx-timeline__bar--seeking");
+  expect(bar).toHaveAttribute("aria-valuetext", "10:00");
+});
+
+it("moves the played fill with the knob while a pointer preview is pending", () => {
+  const { bar } = renderSeekBar({ position: 300, preview: 600 });
+  expect((bar.querySelector(".vx-timeline__played") as HTMLElement).style.width).toBe("50%");
+  expect(bar.querySelector(".vx-timeline__seek")).toBeNull();
+  expect(bar).not.toHaveClass("vx-timeline__bar--seeking");
 });
 
 it("holds a committed seek target until playback lands on it", () => {

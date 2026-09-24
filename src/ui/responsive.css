@@ -7,8 +7,6 @@
 @import "./css/responsive-phone.css";
 /* Poster card shape (cardShapes.ts) on every responsive width. */
 @import "./css/responsive-cards.css";
-/* Pointer/touch player overlay. */
-@import "./css/responsive-player.css";
 /* Loading skeletons. */
 @import "./css/responsive-skeleton.css";
 /* TV-style resets and per-screen polish. */
