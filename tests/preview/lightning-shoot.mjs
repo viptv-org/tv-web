@@ -51,6 +51,33 @@ try {
   if (pairingRequests() !== (profiles || name === 'TvHome' ? 0 : 1)) throw new Error(`Unexpected device-pairing request count ${pairingRequests()}`);
   if (name === 'TvHome' && !backend.requests.some(request => request.path.endsWith('/continue/page')))
     throw new Error(`Home did not request profile data: ${JSON.stringify(backend.requests)}`);
+  if (name === 'TvHome') {
+    // Deliberately rapid input catches focus handoff lag: the third control
+    // must receive activation even before Blits paints the intermediate focus.
+    await page.keyboard.press('ArrowRight');
+    await page.keyboard.press('ArrowRight');
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(200);
+    if (!backend.requests.some(request => request.path.endsWith('/favorites/toggle')))
+      throw new Error(`Rapid Right+Right+Enter did not activate My List: ${JSON.stringify(backend.requests)}`);
+    await page.keyboard.press('ArrowDown');
+    await page.waitForTimeout(120);
+    await page.screenshot({ path: join(outDir, 'TvHome.lightning.card-focus.png') });
+    await page.keyboard.press('ArrowRight');
+    await page.waitForTimeout(120);
+    await page.screenshot({ path: join(outDir, 'TvHome.lightning.card-focus-next.png') });
+    await page.keyboard.press('ArrowUp');
+    await page.keyboard.press('ArrowLeft');
+    await page.keyboard.press('ArrowLeft');
+    await page.waitForTimeout(120);
+    const favoritesBeforeHold = backend.requests.filter(request => request.path.endsWith('/favorites/toggle')).length;
+    await page.keyboard.down('Enter');
+    await page.waitForTimeout(750);
+    await page.keyboard.up('Enter');
+    await page.waitForTimeout(100);
+    if (backend.requests.filter(request => request.path.endsWith('/favorites/toggle')).length !== favoritesBeforeHold)
+      throw new Error('Held Home OK also activated the focused action on release');
+  }
   if (name === 'TvPairingExpired') {
     await page.keyboard.press('Enter');
     await page.waitForTimeout(150);

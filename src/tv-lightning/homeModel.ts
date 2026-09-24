@@ -11,6 +11,10 @@ export interface HomeCardView {
   progress: number;
 }
 
+export const emptyHomeCard: HomeCardView = {
+  id: "", title: "", subtitle: "", image: "", progress: 0,
+};
+
 export interface HomeView {
   heroItem: MediaItem | null;
   heroImage: string;
@@ -23,13 +27,14 @@ export interface HomeView {
   meta: string;
   synopsis: string;
   playLabel: string;
+  saved: boolean;
   cards: HomeCardView[];
 }
 
 export const emptyHome: HomeView = {
   heroItem: null, heroImage: "", titleLogo: "", title: "", eyebrow: "",
   episodeLabel: "", progress: 0, progressText: "", meta: "", synopsis: "",
-  playLabel: "Play", cards: [],
+  playLabel: "Play", saved: false, cards: [],
 };
 
 const clock = (seconds: number) => {
@@ -38,7 +43,7 @@ const clock = (seconds: number) => {
 };
 
 /** Same hero priority and Rust presentation projections as the React TV Home. */
-export function projectHome(heroItem: MediaItem | undefined, queue: readonly MediaItem[], details?: MediaItem): HomeView {
+export function projectHome(heroItem: MediaItem | undefined, queue: readonly MediaItem[], details?: MediaItem, favorites: readonly MediaItem[] = []): HomeView {
   const item = details ?? heroItem;
   if (!heroItem || !item) return emptyHome;
   const hero = presentation(item);
@@ -70,6 +75,7 @@ export function projectHome(heroItem: MediaItem | undefined, queue: readonly Med
     meta,
     synopsis: item.description ?? "",
     playLabel: hero.primaryActionLabel,
+    saved: favorites.some(favorite => favorite.id === heroItem.id && favorite.type === heroItem.type),
     cards,
   };
 }
@@ -86,12 +92,12 @@ export async function loadHomeView(api: TvApi, profileId: string, signal: AbortS
     api.live({ view: "us", collection: "recent", limit: 20 }).catch(() => ({ channels: [] as readonly MediaItem[] })),
   ]);
   const heroItem = home.continueWatching[0] ?? live.channels[0] ?? page?.items[0] ?? home.myList[0];
-  return projectHome(heroItem, home.continueWatching);
+  return projectHome(heroItem, home.continueWatching, undefined, home.myList);
 }
 
 export async function enrichHomeHero(api: TvApi, view: HomeView, signal: AbortSignal): Promise<HomeView> {
   const item = view.heroItem;
   if (!item || item.type === "live") return view;
   const detail = await api.detail({ id: item.seriesId ?? item.id, type: item.type }, { signal });
-  return { ...projectHome(item, [], enrichDetail(item, detail.item)), cards: view.cards };
+  return { ...projectHome(item, [], enrichDetail(item, detail.item)), cards: view.cards, saved: view.saved };
 }

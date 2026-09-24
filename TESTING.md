@@ -507,12 +507,23 @@ Rust presentation functions. It renders the real hero image/logo, progress,
 synopsis, first Continue Watching shelf and collapsed rail rather than the
 previous placeholder. The `TvHome` fixture observed the profile queue request
 and captured this state at 1920×1080. Compared with the saved React TV Home,
-1,404,917 pixels differ (67.7526%), MAE 8.7538, RMSE 25.8279, SSIM
-0.863854. The ambient backdrop, card typography/progress, and rail geometry
-need further visual work; hero buttons, shelf cards and rail still need Blits
-focus and their routes/actions. This is an incomplete screen, not a parity
+1,406,199 pixels differ (67.8144%), MAE 8.8849, RMSE 26.6207, SSIM
+0.857713. The ambient backdrop, card typography/progress, and rail geometry
+need further visual work. This is an incomplete screen, not a parity
 pass or a launcher switch. Tizen, Vizio and webOS browser-configuration Home
 captures were byte-equal under the same fixture; no physical TV run occurred.
+Home now uses focused Blits components for its three hero actions and first
+queue shelf. The fixture's rapid Right+Right+Enter activated the shared My
+List API, Down/Right visibly moved focus to the second card, and a 750 ms
+held OK suppressed release activation. Play, Details, card routes, the
+remaining shelves and rail navigation are still pending.
+The same rapid My List activation and directional-focus fixture passed on
+the production `/tv/` preview bundle; its initial Home pixel metric was
+unchanged from the dev capture.
+Final checkpoint checks: 169/169 unit tests, 24 targeted responsive/TV
+Playwright passes with 10 deliberate skips, and the production build passed.
+The existing React `TvHome` recapture still had zero changed pixels against
+its saved baseline.
 The production `/tv/` preview reproduced the Home capture and metric. At
 this checkpoint 169/169 unit tests passed; targeted responsive-layout and TV
 shell Playwright acceptance passed 24 scenarios with 10 deliberate skips;

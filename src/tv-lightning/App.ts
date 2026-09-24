@@ -5,6 +5,8 @@ import { tokens } from "../theme/viptv-tokens.generated";
 import { ProfileTile, ManageProfilesButton, addProfileTile, emptyProfileTile, profileTileData } from "./ProfileTile";
 import { emptyHome, enrichHomeHero, loadHomeView, type HomeView } from "./homeModel";
 import { railIcon } from "./railIcons";
+import { HomeAction, HomeCard } from "./HomeFocus";
+import { emptyHomeCard } from "./homeModel";
 
 type TvPlatform = "tizen" | "vizio" | "webos";
 const px = (name: keyof typeof tokens) => Number.parseFloat(String(tokens[name]));
@@ -78,7 +80,7 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
   let homeScope: ReturnType<TvApi["createScope"]> | undefined;
   let disposeSession: (() => void) | undefined;
   return Blits.Application({
-    components: { ProfileTile, ManageProfilesButton },
+    components: { ProfileTile, ManageProfilesButton, HomeAction, HomeCard },
     template: `
       <Element w="1920" h="1080" color="$background">
         <Element x="260" y="86" w="1400" h="800" src="$pairingGlow" :show="$phase === 'pairing' || $phase === 'expired' || $phase === 'error'" />
@@ -152,20 +154,17 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
           <Text x="630" y="339" :content="$home.progressText" font="Onest" size="24" color="$secondary" />
           <Text x="192" y="390" :content="$home.meta" font="Onest" size="22" color="$secondary" />
           <Text x="192" y="448" maxwidth="760" maxlines="2" :content="$home.synopsis" font="Onest" size="26" color="$body" />
-          <Element x="182" y="544" w="228" h="84" rounded="42" color="$white" />
-          <Element x="186" y="548" w="220" h="76" rounded="38" color="$primary" />
-          <Text x="230" y="566" :content="$homePlayIcon" font="Onest" size="27" color="$onLight" />
-          <Text x="263" y="565" :content="$home.playLabel" font="Onest700" size="26" color="$onLight" />
-          <Element x="420" y="550" w="156" h="72" rounded="36" color="$surface" />
-          <Text x="453" y="568" :content="$homeDetailsLabel" font="Onest700" size="26" color="$primary" />
-          <Element x="594" y="550" w="72" h="72" rounded="36" color="$surface" />
-          <Text x="612" y="563" :content="$homeAddLabel" font="Onest" size="38" color="$primary" />
+          <HomeAction ref="heroAction0" position="0" action="play" :label="$home.playLabel" icon="▶" x="182" y="544" buttonWidth="228" buttonHeight="84" round="false" holdable="true" />
+          <HomeAction ref="heroAction1" position="1" action="details" label="Details" icon="" x="420" y="550" buttonWidth="156" buttonHeight="72" round="false" holdable="false" />
+          <HomeAction ref="heroAction2" position="2" action="save" :label="$homeAddLabel" :icon="$homeAddLabel" x="594" y="550" buttonWidth="72" buttonHeight="72" round="true" holdable="false" />
           <Text x="192" y="700" :content="$homeShelfLabel" font="Bricolage700" size="32" color="$primary" />
-          <Element :for="(card, index) in $home.cards" :x="192 + $index * 356" y="757">
-            <Element w="320" h="180" rounded="16" :src="$card.image" :show="$card.image !== ''" />
-            <Text y="198" maxwidth="320" maxlines="1" :content="$card.title" font="Onest700" size="24" color="$primary" />
-            <Text y="231" maxwidth="320" maxlines="1" :content="$card.subtitle" font="Onest" size="20" color="$secondary" />
-          </Element>
+          <HomeCard ref="homeCard0" position="0" :card="$homeCards[0]" x="192" y="757" />
+          <HomeCard ref="homeCard1" position="1" :card="$homeCards[1]" x="548" y="757" />
+          <HomeCard ref="homeCard2" position="2" :card="$homeCards[2]" x="904" y="757" />
+          <HomeCard ref="homeCard3" position="3" :card="$homeCards[3]" x="1260" y="757" />
+          <HomeCard ref="homeCard4" position="4" :card="$homeCards[4]" x="1616" y="757" />
+          <HomeCard ref="homeCard5" position="5" :card="$homeCards[5]" x="1972" y="757" />
+          <Text x="700" y="110" maxwidth="520" align="center" :content="$homeNotice" font="Onest" size="22" color="$primary" />
           <Element x="1508" y="54" w="310" h="48" rounded="24" color="$noticeGlass" />
           <Element x="1530" y="62" w="45" h="31" rounded="8" color="$keyBorder" />
           <Element x="1532" y="64" w="41" h="27" rounded="6" color="$background" />
@@ -196,8 +195,12 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
         profilesGlow: gatewayGlow(700),
         homeScrim: homeScrim(),
         home: emptyHome as HomeView,
-        homePlayIcon: "",
-        homeDetailsLabel: "",
+        homeCards: Array.from({ length: 6 }, () => ({ ...emptyHomeCard })),
+        homeFocusZone: "action" as "action" | "card",
+        homeActionIndex: 0,
+        homeCardIndex: 0,
+        currentProfileId: "",
+        homeNotice: "",
         homeAddLabel: "",
         homeShelfLabel: "",
         surface: tokens["color.surface.3"],
@@ -287,6 +290,25 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
           setTimeout(() => this.revealProfileTiles(), 0);
         });
         this.$listen("profile-activate", (slot: number) => void this.activateProfile(Number(slot)));
+        this.$listen("home-action-focused", (position: number) => {
+          if (this.homeFocusZone === "action" && Number(position) === this.homeActionIndex)
+            this.homeActionIndex = Number(position);
+        });
+        this.$listen("home-action-move", ({ position, delta }: { position: number; delta: number }) =>
+          this.moveHomeAction(Number(position), delta));
+        this.$listen("home-cards-enter", () => this.focusHomeCard(0));
+        this.$listen("home-action-return", () => this.focusHomeAction(this.homeActionIndex));
+        this.$listen("home-card-focused", (position: number) => {
+          if (this.homeFocusZone === "card" && Number(position) === this.homeCardIndex)
+            this.homeCardIndex = Number(position);
+        });
+        this.$listen("home-card-move", ({ position, delta }: { position: number; delta: number }) =>
+          this.moveHomeCard(Number(position), delta));
+        this.$listen("home-action-activate", () => void this.activateHomeAction());
+        this.$listen("home-action-hold", () => { this.homeNotice = "Choose a source from the title screen."; });
+        this.$listen("home-card-activate", () => {
+          this.homeNotice = "Title details are unavailable.";
+        });
         void session.dispatch({ Begin: {
           origin: api.serverOrigin,
           allowInsecurePreview: import.meta.env.DEV && api.serverOrigin === location.origin,
@@ -308,6 +330,8 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
         homeScope = api.createScope();
         const selectedProfile = this.profiles.find(profile => profile.id === profileId);
         this.homeProfileAvatar = selectedProfile ? profileTileData(selectedProfile).image : "";
+        this.currentProfileId = profileId;
+        this.homeNotice = "";
         this.phase = "ready";
         this.startingLabel = "Starting VIPTV…";
         try {
@@ -316,16 +340,16 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
           this.phase = "home";
           setTimeout(() => {
             if (generation !== homeGeneration) return;
-            this.homePlayIcon = "▶";
-            this.homeDetailsLabel = "Details";
-            this.homeAddLabel = "+";
+            this.homeAddLabel = view.saved ? "✓" : "+";
             this.homeShelfLabel = "Continue watching";
             this.okLabel = "OK";
             this.selectLabel = "Select";
             this.optionsIcon = "≡";
             this.optionsLabel = "Options";
             this.home = view;
-            this.$focus();
+            this.homeCards = Array.from({ length: 6 }, (_, index) => view.cards[index] ?? { ...emptyHomeCard });
+            this.revealHomeControls();
+            this.focusHomeAction(0);
           }, 50);
           void enrichHomeHero(api, view, homeScope.signal).then(enriched => {
             if (generation === homeGeneration && !homeScope?.signal.aborted) this.home = enriched;
@@ -335,6 +359,47 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
           this.error = cause instanceof Error ? cause.message : "Could not load Home.";
           this.phase = "error";
         }
+      },
+      revealHomeControls() {
+        for (let index = 0; index < 3; index++)
+          (this.$select(`heroAction${index}`) as unknown as { reveal?: () => void })?.reveal?.();
+        for (let index = 0; index < 6; index++)
+          (this.$select(`homeCard${index}`) as unknown as { reveal?: () => void })?.reveal?.();
+      },
+      focusHomeAction(index: number) {
+        this.homeFocusZone = "action";
+        this.homeActionIndex = index;
+        this.$select(`heroAction${index}`)?.$focus();
+      },
+      moveHomeAction(position: number, delta: number) {
+        this.focusHomeAction(Math.max(0, Math.min(2, this.homeActionIndex + delta)));
+      },
+      focusHomeCard(index: number) {
+        this.homeFocusZone = "card";
+        this.homeCardIndex = index;
+        this.$select(`homeCard${index}`)?.$focus();
+      },
+      moveHomeCard(position: number, delta: number) {
+        const count = this.home.cards.length;
+        if (!count) return;
+        this.focusHomeCard(Math.max(0, Math.min(count - 1, this.homeCardIndex + delta)));
+      },
+      async activateHomeAction() {
+        if (this.phase !== "home" || this.homeFocusZone !== "action") return;
+        const action = ["play", "details", "save"][this.homeActionIndex];
+        if (action === "save" && this.home.heroItem && this.currentProfileId) {
+          try {
+            const saved = await api.toggleFavorite(this.currentProfileId, this.home.heroItem);
+            this.home = { ...this.home, saved };
+            this.homeAddLabel = saved ? "✓" : "+";
+            (this.$select("heroAction2") as unknown as { reveal?: () => void })?.reveal?.();
+            this.homeNotice = saved ? "Added to My List" : "Removed from My List";
+          } catch (cause) {
+            this.homeNotice = cause instanceof Error ? cause.message : "Could not update My List.";
+          }
+          return;
+        }
+        this.homeNotice = action === "details" ? "Title details are unavailable." : "Playback is unavailable.";
       },
       showProfiles(profiles: readonly TvProfile[]) {
         this.profiles = [...profiles];
