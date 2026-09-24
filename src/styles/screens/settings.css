@@ -31,12 +31,6 @@
   bottom: 0;
   left: 0;
 }
-/* Every desktop dialog on the reference screens is centred in the body row. */
-@media (min-width: 600px) {
-  [data-layout="responsive"] .vx-settings-layer .vx-dialog:not(.vx-dialog--drawer) {
-    top: 50%;
-  }
-}
 /* DeskEngine: the engine / accent popover is 280 wide. */
 [data-layout] .vx-settings-popover {
   width: 280px;
@@ -509,4 +503,616 @@
 }
 .tv-layout .vx-settings-choice .vx-choice {
   flex: none;
+}
+
+/* ---------------------------------------------------------------------------
+ * Watch on TV (CastController): DeskCast*, WebCastUnavailable, PhCastUnavailable.
+ * ------------------------------------------------------------------------ */
+[data-layout] .vx-cast__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--viptv-space-3_5);
+  min-width: 0;
+}
+[data-layout] .vx-cast__message {
+  color: var(--viptv-color-text-secondary);
+}
+[data-layout] .vx-cast__form,
+[data-layout] .vx-cast__launch {
+  display: flex;
+  flex-direction: column;
+  gap: var(--viptv-space-3_5);
+  margin: 0;
+}
+[data-layout] .vx-cast__launch {
+  gap: var(--viptv-space-2);
+}
+[data-layout] .vx-cast__note {
+  margin: 0;
+  color: var(--viptv-color-text-tertiary);
+  font-size: var(--viptv-type-desktop-meta-size);
+  line-height: 1.5;
+}
+/* Discovered TVs (DeskCastSearch): 56-tall surface-2 rows with a monitor tile. */
+[data-layout] .vx-cast__tvs {
+  display: flex;
+  flex-direction: column;
+  gap: var(--viptv-space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+[data-layout] .vx-cast__tv {
+  display: flex;
+  align-items: center;
+  gap: var(--viptv-space-3);
+  box-sizing: border-box;
+  width: 100%;
+  min-height: var(--viptv-size-row-choice-phone);
+  margin: 0;
+  padding: var(--viptv-space-2) var(--viptv-space-3_5);
+  border: 1px solid var(--viptv-color-line-hairline);
+  border-radius: var(--viptv-radius-lg);
+  outline: none;
+  background: var(--viptv-color-surface-2);
+  color: var(--viptv-color-text-primary);
+  font-family: var(--viptv-font-family-ui);
+  text-align: left;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background-color var(--viptv-motion-focus) ease-out, box-shadow var(--viptv-motion-focus) ease-out;
+}
+[data-layout] .vx-cast__tv-icon {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: var(--viptv-size-close-disc-default);
+  height: var(--viptv-size-close-disc-default);
+  border-radius: var(--viptv-radius-sm-plus);
+  background: var(--viptv-color-surface-3);
+}
+[data-layout] .vx-cast__tv-icon > svg {
+  width: var(--viptv-size-icon-desktop);
+  height: var(--viptv-size-icon-desktop);
+}
+[data-layout] .vx-cast__tv-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  font-size: var(--viptv-type-desktop-label-size);
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+[data-layout] .vx-cast__tv-chevron {
+  flex: none;
+  width: var(--viptv-size-icon-small);
+  height: var(--viptv-size-icon-small);
+  color: var(--viptv-color-text-tertiary);
+}
+[data-layout] .vx-cast__tv:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+/* Connected: the remote panel (DeskCastRemote). */
+[data-layout] .vx-cast__remote {
+  display: flex;
+  align-items: center;
+  gap: var(--viptv-space-5_5);
+  padding: var(--viptv-space-4);
+  border-radius: var(--viptv-radius-xl);
+  background: var(--viptv-color-surface-2);
+}
+[data-layout] .vx-cast__pad {
+  --vx-pad-key: 56px; /* DeskCastRemote D-pad keys */
+  display: grid;
+  flex: none;
+  grid-template-columns: repeat(3, var(--vx-pad-key));
+  grid-template-rows: repeat(3, var(--vx-pad-key));
+  gap: var(--viptv-space-2);
+}
+[data-layout] .vx-cast__pad-key {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: var(--vx-pad-key);
+  height: var(--vx-pad-key);
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--viptv-radius-xl);
+  outline: none;
+  background: var(--viptv-color-surface-3);
+  color: var(--viptv-color-text-primary);
+  font-family: var(--viptv-font-family-ui);
+  font-size: var(--viptv-type-desktop-label-size);
+  font-weight: 700;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background-color var(--viptv-motion-focus) ease-out, transform var(--viptv-motion-focus) ease-out, box-shadow var(--viptv-motion-focus) ease-out;
+}
+[data-layout] .vx-cast__pad-key > svg {
+  width: var(--viptv-size-icon-phone-round);
+  height: var(--viptv-size-icon-phone-round);
+}
+[data-layout] .vx-cast__pad-key--up { grid-area: 1 / 2; }
+[data-layout] .vx-cast__pad-key--left { grid-area: 2 / 1; }
+[data-layout] .vx-cast__pad-key--ok {
+  grid-area: 2 / 2;
+  border-radius: 50%;
+  background: var(--viptv-color-text-primary);
+  color: var(--viptv-color-on-light);
+}
+[data-layout] .vx-cast__pad-key--right { grid-area: 2 / 3; }
+[data-layout] .vx-cast__pad-key--down { grid-area: 3 / 2; }
+[data-layout] .vx-cast__pad-key:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+[data-layout] .vx-cast__keys {
+  display: grid;
+  flex: 1 1 auto;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--viptv-space-2);
+  min-width: 0;
+}
+[data-layout] .vx-cast__keys > .vx-cast__key {
+  justify-content: flex-start;
+  padding: 0 var(--viptv-space-4_5) 0 var(--viptv-space-3_5);
+  font-size: var(--viptv-type-desktop-row-size);
+}
+[data-layout] .vx-cast__pair-actions {
+  display: flex;
+  gap: var(--viptv-space-2_5);
+}
+[data-layout] .vx-cast__pair-actions > .vx-btn {
+  flex: 1 1 0;
+  min-width: 0;
+}
+[data-layout="responsive"] .vx-cast__tv:active,
+[data-layout="responsive"] .vx-cast__pad-key:active:not(:disabled) {
+  transform: scale(var(--viptv-motion-pressed-scale));
+}
+@media (hover: hover) and (pointer: fine) {
+  [data-layout="responsive"] .vx-cast__tv:hover:not(:disabled) {
+    background: var(--viptv-color-surface-3);
+  }
+  [data-layout="responsive"] .vx-cast__pad-key:hover:not(:disabled) {
+    background: var(--viptv-color-surface-4);
+  }
+  [data-layout="responsive"] .vx-cast__pad-key--ok:hover:not(:disabled) {
+    background: var(--viptv-color-fill-white);
+  }
+}
+@media (min-width: 600px) {
+  [data-layout="responsive"] .vx-cast__tv:focus-visible,
+  [data-layout="responsive"] .vx-cast__pad-key:focus-visible {
+    box-shadow: var(--viptv-focus-desktop);
+  }
+  /* The connected dialog is 580 wide and hangs from the top of the body row (DeskCastRemote). */
+  [data-layout="responsive"] .vx-dialog.vx-cast--remote {
+    top: var(--viptv-space-6);
+    width: 580px; /* DeskCastRemote dialog width */
+    transform: translateX(-50%);
+  }
+}
+@media (max-width: 599px) {
+  [data-layout="responsive"] .vx-cast__remote {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  [data-layout="responsive"] .vx-cast__pad {
+    align-self: center;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+ * Local addon mode (LocalApp): WebLocalHome / Loading / Empty / Addons / Remove, PhLocalHome.
+ * The shell frames .local-app full-window; its screen scrolls under the header.
+ * ------------------------------------------------------------------------ */
+[data-layout="responsive"] .vx-local {
+  display: flex;
+  flex-direction: column;
+  background: var(--viptv-color-bg);
+  color: var(--viptv-color-text-primary);
+  font-family: var(--viptv-font-family-ui);
+}
+[data-layout="responsive"] .vx-local__header {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--viptv-space-4_5);
+  height: 72px; /* WebLocalHome header */
+  padding: 0 var(--viptv-space-12);
+  box-sizing: border-box;
+  border-bottom: 1px solid var(--viptv-color-line-hairline);
+}
+[data-layout="responsive"] .vx-local__wordmark {
+  margin: 0;
+  font-family: var(--viptv-font-family-display);
+  font-size: var(--viptv-type-phone-subpage-title-size);
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -0.03em; /* WebLocalHome wordmark */
+}
+[data-layout="responsive"] .vx-local__tag {
+  display: flex;
+  align-items: center;
+  height: var(--viptv-space-7);
+  margin: 0;
+  padding: 0 var(--viptv-space-3);
+  box-sizing: border-box;
+  border: 1px solid var(--viptv-color-line-hairline);
+  border-radius: var(--viptv-radius-lg);
+  background: var(--viptv-color-surface-1);
+  color: var(--viptv-color-text-secondary);
+  font-size: var(--viptv-type-desktop-caption-size);
+  font-weight: 600;
+  white-space: nowrap;
+}
+[data-layout="responsive"] .vx-local__nav {
+  display: flex;
+  gap: var(--viptv-space-1);
+  margin-left: auto;
+}
+[data-layout="responsive"] .vx-local__nav-item,
+[data-layout="responsive"] .vx-local__exit {
+  display: flex;
+  align-items: center;
+  height: var(--viptv-size-close-disc-default);
+  min-height: 0;
+  margin: 0;
+  padding: 0 var(--viptv-space-3_5);
+  border: 0;
+  border-radius: var(--viptv-radius-2xl);
+  outline: none;
+  background: transparent;
+  color: var(--viptv-color-text-secondary);
+  font-family: var(--viptv-font-family-ui);
+  font-size: var(--viptv-type-desktop-row-size);
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background-color var(--viptv-motion-focus) ease-out, color var(--viptv-motion-focus) ease-out;
+}
+[data-layout="responsive"] .vx-local__exit {
+  margin-left: calc(var(--viptv-space-1) - var(--viptv-space-4_5));
+}
+[data-layout="responsive"] .vx-local__nav-item[aria-current="page"] {
+  background: var(--viptv-color-surface-2);
+  color: var(--viptv-color-text-primary);
+}
+[data-layout="responsive"] .vx-local__screen {
+  flex: 1 1 auto;
+}
+[data-layout="responsive"] .vx-local__page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--viptv-space-9);
+  box-sizing: border-box;
+  padding: var(--viptv-space-8) var(--viptv-space-12);
+}
+[data-layout="responsive"] .vx-local__shelf {
+  display: flex;
+  flex-direction: column;
+  gap: var(--viptv-space-3_5);
+  min-width: 0;
+  margin: 0;
+}
+[data-layout="responsive"] .vx-local__shelf-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--viptv-space-4);
+}
+[data-layout="responsive"] .vx-local__shelf-title,
+[data-layout="responsive"] .vx-local__browse-title {
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  font-family: var(--viptv-font-family-display);
+  font-size: var(--viptv-type-desktop-section-size);
+  font-weight: var(--viptv-type-desktop-section-weight);
+  line-height: normal;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+[data-layout="responsive"] .vx-local__more {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--viptv-space-1);
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--viptv-color-text-secondary);
+  font-family: var(--viptv-font-family-ui);
+  font-size: var(--viptv-type-desktop-row-size);
+  font-weight: 600;
+  cursor: pointer;
+}
+[data-layout="responsive"] .vx-local__more > svg {
+  width: var(--viptv-size-icon-small);
+  height: var(--viptv-size-icon-small);
+}
+[data-layout="responsive"] .vx-local__cards {
+  --vx-local-card: 160px; /* WebLocalHome posters: 160 × 240 */
+  display: flex;
+  gap: var(--viptv-space-4);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+[data-layout="responsive"] .vx-local__cards::-webkit-scrollbar {
+  display: none;
+}
+[data-layout="responsive"] .vx-local__grid {
+  --vx-local-card: 160px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, var(--vx-local-card));
+  gap: var(--viptv-space-6) var(--viptv-space-4);
+}
+[data-layout="responsive"] .vx-local__card {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: var(--viptv-space-2);
+  width: var(--vx-local-card);
+  min-width: 0;
+  margin: 0;
+}
+[data-layout="responsive"] .vx-local__poster {
+  display: block;
+  width: var(--vx-local-card);
+  height: calc(var(--vx-local-card) * 1.5);
+  overflow: hidden;
+  border-radius: var(--viptv-radius-lg);
+  background: var(--viptv-color-surface-1);
+}
+[data-layout="responsive"] .vx-local__poster > img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+[data-layout="responsive"] .vx-local__card-title {
+  overflow: hidden;
+  font-size: var(--viptv-type-desktop-row-size);
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* Loading (WebLocalLoading): status line + skeleton shelves. */
+[data-layout="responsive"] .vx-local__skel-title {
+  width: 220px; /* WebLocalLoading shelf title bar */
+  height: var(--viptv-space-4_5);
+  border-radius: calc(var(--viptv-space-4_5) / 2);
+}
+[data-layout="responsive"] .vx-local__skel-poster {
+  width: var(--vx-local-card);
+  height: calc(var(--vx-local-card) * 1.5);
+  border-radius: var(--viptv-radius-lg);
+}
+[data-layout="responsive"] .vx-local__cards > .vx-local__skel-poster {
+  flex: none;
+}
+/* Empty / failed (WebLocalEmpty): the empty state 60 below the page top. */
+[data-layout="responsive"] .vx-local__notice {
+  padding-top: calc(var(--viptv-space-8) + 60px); /* WebLocalEmpty offset */
+}
+[data-layout="responsive"] .vx-local__notice .vx-empty {
+  max-width: 520px; /* WebLocalEmpty text column */
+}
+/* Addons (WebLocalAddons): URL field + Install, then the addon card. */
+[data-layout="responsive"] .vx-local__addons {
+  gap: var(--viptv-space-5);
+  max-width: 900px; /* WebLocalAddons column */
+}
+[data-layout="responsive"] .vx-local__install {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--viptv-space-3);
+  margin: 0;
+}
+[data-layout="responsive"] .vx-local__install > .vx-field {
+  flex: 1 1 auto;
+}
+/* The button lines up with the field under its label (label 17 + gap 8). */
+[data-layout="responsive"] .vx-local__install > .vx-btn {
+  flex: none;
+  margin-top: 25px; /* WebLocalAddons */
+}
+[data-layout="responsive"] .vx-local__list {
+  margin: var(--viptv-space-2) 0 0;
+  padding: 0;
+  list-style: none;
+}
+[data-layout="responsive"] .vx-local__addon {
+  display: flex;
+  align-items: center;
+  gap: var(--viptv-space-4);
+  padding: var(--viptv-space-3_5) var(--viptv-space-4_5);
+}
+[data-layout="responsive"] .vx-local__addon + .vx-local__addon {
+  border-top: 1px solid var(--viptv-color-line-hairline);
+}
+[data-layout="responsive"] .vx-local__addon-icon {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: var(--viptv-size-button-small);
+  height: var(--viptv-size-button-small);
+  border-radius: var(--viptv-radius-md);
+  background: var(--viptv-color-surface-3);
+}
+[data-layout="responsive"] .vx-local__addon-icon > svg {
+  width: var(--viptv-size-icon-phone);
+  height: var(--viptv-size-icon-phone);
+}
+[data-layout="responsive"] .vx-local__addon-text {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: var(--viptv-space-0_5);
+  min-width: 0;
+}
+[data-layout="responsive"] .vx-local__addon-name {
+  font-size: var(--viptv-type-desktop-body-size);
+  font-weight: 600;
+}
+[data-layout="responsive"] .vx-local__addon-id {
+  overflow: hidden;
+  color: var(--viptv-color-text-tertiary);
+  font-family: var(--viptv-font-family-mono);
+  font-size: var(--viptv-type-desktop-caption-size);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+[data-layout="responsive"] .vx-local__status {
+  margin: 0;
+  color: var(--viptv-color-text-tertiary);
+  font-size: var(--viptv-type-desktop-row-size);
+}
+/* Catalog page ("more"). */
+[data-layout="responsive"] .vx-local__browse {
+  gap: var(--viptv-space-5);
+}
+[data-layout="responsive"] .vx-local__filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--viptv-space-4) var(--viptv-space-6);
+}
+[data-layout="responsive"] .vx-local__browse-title {
+  flex: 1 1 100%;
+}
+[data-layout="responsive"] .vx-local__select,
+[data-layout="responsive"] .vx-local__search {
+  width: 260px; /* the section-nav width, for two compact filters */
+}
+[data-layout="responsive"] .vx-local__select select {
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+}
+[data-layout="responsive"] .vx-local__nav-item:active,
+[data-layout="responsive"] .vx-local__exit:active {
+  transform: scale(var(--viptv-motion-pressed-scale));
+}
+@media (hover: hover) and (pointer: fine) {
+  [data-layout="responsive"] .vx-local__nav-item:hover:not([aria-current="page"]),
+  [data-layout="responsive"] .vx-local__exit:hover {
+    background: var(--viptv-color-fill-wash);
+    color: var(--viptv-color-text-primary);
+  }
+  [data-layout="responsive"] .vx-local__more:hover {
+    color: var(--viptv-color-text-primary);
+  }
+}
+@media (min-width: 600px) {
+  [data-layout="responsive"] .vx-local__nav-item:focus-visible,
+  [data-layout="responsive"] .vx-local__exit:focus-visible,
+  [data-layout="responsive"] .vx-local__more:focus-visible {
+    box-shadow: var(--viptv-focus-desktop);
+  }
+  /* The remove dialog dims the page under the header (WebLocalRemove). */
+  [data-layout="responsive"] .vx-local__layer {
+    top: 72px; /* WebLocalHome header */
+  }
+}
+/* Phone (PhLocalHome): wordmark + sign-in link, then the tag and the nav pills. */
+@media (max-width: 599px) {
+  [data-layout="responsive"] .vx-local__header {
+    display: grid;
+    grid-template-areas: "mark exit" "tag tag" "nav nav";
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: var(--viptv-space-3) var(--viptv-space-4);
+    height: auto;
+    padding: var(--viptv-layout-phone-top-inset) var(--viptv-layout-phone-gutter) 0;
+    border-bottom: 0;
+  }
+  [data-layout="responsive"] .vx-local__wordmark {
+    grid-area: mark;
+    display: flex;
+    align-items: center;
+    height: var(--viptv-size-button-desktop);
+  }
+  [data-layout="responsive"] .vx-local__tag {
+    grid-area: tag;
+    justify-self: start;
+  }
+  [data-layout="responsive"] .vx-local__nav {
+    grid-area: nav;
+    gap: var(--viptv-space-2);
+    margin: 0;
+  }
+  [data-layout="responsive"] .vx-local__nav-item {
+    height: var(--viptv-size-button-small);
+    border: 1px solid var(--viptv-color-line-chip);
+    border-radius: var(--viptv-radius-xl-plus);
+  }
+  [data-layout="responsive"] .vx-local__nav-item[aria-current="page"] {
+    border-color: transparent;
+    background: var(--viptv-color-text-primary);
+    color: var(--viptv-color-on-light);
+  }
+  [data-layout="responsive"] .vx-local__exit {
+    grid-area: exit;
+    height: var(--viptv-layout-phone-min-target);
+    margin: 0;
+    padding: 0;
+    border-radius: 0;
+    font-size: var(--viptv-type-phone-body-size);
+    text-decoration: underline;
+    text-decoration-color: var(--viptv-color-line-control);
+    text-underline-offset: 3px;
+  }
+  [data-layout="responsive"] .vx-local__page {
+    gap: var(--viptv-space-6);
+    padding: var(--viptv-space-5_5) var(--viptv-layout-phone-gutter) var(--viptv-space-9);
+  }
+  [data-layout="responsive"] .vx-local__cards {
+    --vx-local-card: 120px; /* PhLocalHome posters: 120 × 180 */
+  }
+  [data-layout="responsive"] .vx-local__grid {
+    --vx-local-card: minmax(0, 1fr);
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  [data-layout="responsive"] .vx-local__grid .vx-local__card,
+  [data-layout="responsive"] .vx-local__grid .vx-local__poster {
+    width: auto;
+  }
+  [data-layout="responsive"] .vx-local__grid .vx-local__poster {
+    height: auto;
+    padding-top: 150%;
+    position: relative;
+  }
+  [data-layout="responsive"] .vx-local__grid .vx-local__poster > img {
+    position: absolute;
+    top: 0;
+    left: 0;
+  }
+  [data-layout="responsive"] .vx-local__install {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  [data-layout="responsive"] .vx-local__install > .vx-btn {
+    margin-top: 0;
+  }
+  [data-layout="responsive"] .vx-local__addon {
+    flex-wrap: wrap;
+    padding: var(--viptv-space-3_5) var(--viptv-space-4);
+  }
+  [data-layout="responsive"] .vx-local__select,
+  [data-layout="responsive"] .vx-local__search {
+    width: 100%;
+  }
 }

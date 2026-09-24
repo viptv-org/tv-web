@@ -1,7 +1,19 @@
-import { useEffect, useRef, useState, type FormEvent } from "react";
+/*
+ * Watch on TV (design references: DeskCastSearch, DeskCastManual, DeskCastBusy, DeskCastPin,
+ * DeskCastRemote, DeskCastError, WebCastUnavailable, PhCastUnavailable). A centred dialog on
+ * desktop (580 wide once a TV is connected, for the remote), a bottom sheet on phones. Styles:
+ * src/styles/screens/settings.css (.vx-cast-*) on the overlay / field / button primitives.
+ */
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp, ExternalLink, Monitor, Pause, Volume1, Volume2 } from "lucide-react";
 import type { VizioControllerOutput, VizioRemoteKey } from "../../vendor/core/typescript/wire";
-import "./CastController.css";
+import { DialogBackdrop } from "./DialogBackdrop";
+import { Dialog, DialogText } from "./primitives/Overlays";
+import { ButtonContent, buttonClass } from "./primitives/Button";
+import { TextField } from "./primitives/Fields";
+import { InlineError, StatusLine } from "./primitives/Feedback";
+import { PlayIcon } from "./primitives/icons";
 
 export interface CastControllerProps {
   /** Public receiver deployed by the host; never the local Tauri window origin. */
@@ -11,6 +23,15 @@ export interface CastControllerProps {
 
 type Challenge = { challengeType: number; token: number };
 type DiscoveredTv = { name: string; host: string };
+type Invoke = <T>(command: string, args?: Record<string, unknown>) => Promise<T>;
+
+/**
+ * Dev-only preview bridge (tests/preview): a scripted SmartCast in a plain browser, so the
+ * pairing states can be rendered without the Tauri runtime. Never present in builds.
+ */
+const previewBridge = import.meta.env.DEV
+  ? (globalThis as { __VIPTV_SMARTCAST_PREVIEW__?: { invoke: Invoke; receiverUrl?: string } }).__VIPTV_SMARTCAST_PREVIEW__
+  : undefined;
 
 /** Trust the native discovery list only as far as its shape: a name to show, an address to connect. */
 function parseDiscoveredTvs(payload: string): DiscoveredTv[] {
@@ -25,9 +46,25 @@ function parseDiscoveredTvs(payload: string): DiscoveredTv[] {
   });
 }
 
-/** The containing modal owns focus trapping and restoration to its opener. */
-export function CastController({ receiverUrl, onClose }: CastControllerProps) {
-  const native = "__TAURI_INTERNALS__" in window;
+const REMOTE_PAD = [
+  ["UP", "Up", <ChevronUp key="up" aria-hidden="true" strokeWidth={2.4} />],
+  ["LEFT", "Left", <ChevronLeft key="left" aria-hidden="true" strokeWidth={2.4} />],
+  ["OK", "OK", null],
+  ["RIGHT", "Right", <ChevronRight key="right" aria-hidden="true" strokeWidth={2.4} />],
+  ["DOWN", "Down", <ChevronDown key="down" aria-hidden="true" strokeWidth={2.4} />],
+] as const;
+const REMOTE_KEYS: readonly (readonly [VizioRemoteKey, string, ReactNode])[] = [
+  ["BACK", "Back on TV", <ChevronLeft key="back" aria-hidden="true" strokeWidth={2.2} />],
+  ["PLAY", "Play", <PlayIcon key="play" aria-hidden="true" />],
+  ["PAUSE", "Pause", <Pause key="pause" aria-hidden="true" strokeWidth={2.2} />],
+  ["VOL_DOWN", "Volume down", <Volume1 key="down" aria-hidden="true" strokeWidth={2.2} />],
+  ["VOL_UP", "Volume up", <Volume2 key="up" aria-hidden="true" strokeWidth={2.2} />],
+];
+
+/** Owns its overlay layer; focus returns to the opener through the app's closeCast. */
+export function CastController({ receiverUrl = previewBridge?.receiverUrl, onClose }: CastControllerProps) {
+  const native = "__TAURI_INTERNALS__" in window || previewBridge !== undefined;
+  const call: Invoke = previewBridge ? previewBridge.invoke : invoke;
   const [host, setHost] = useState("");
   const [pin, setPin] = useState("");
   const [challenge, setChallenge] = useState<Challenge | null>(null);
@@ -41,12 +78,13 @@ export function CastController({ receiverUrl, onClose }: CastControllerProps) {
   const [manual, setManual] = useState(false);
   const active = useRef(false);
   const mounted = useRef(true);
+  const field = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     mounted.current = true;
     return () => {
       mounted.current = false;
-      if (native && active.current) void invoke("smartcast_cancel").catch(() => undefined);
+      if (native && active.current) void call("smartcast_cancel").catch(() => undefined);
     };
   }, [native]);
 
@@ -57,7 +95,7 @@ export function CastController({ receiverUrl, onClose }: CastControllerProps) {
     let cancelled = false;
     setDiscovering(true);
     setDiscoveryNote("");
-    invoke<string>("smartcast_discover")
+    call<string>("smartcast_discover")
       .then(payload => {
         if (cancelled || !mounted.current) return;
         const found = parseDiscoveredTvs(payload);
@@ -74,7 +112,7 @@ export function CastController({ receiverUrl, onClose }: CastControllerProps) {
   }, [native]);
 
   async function run(operation: string, input: Record<string, unknown> = {}) {
-    const output = JSON.parse(await invoke<string>("smartcast_run", { operation, input: JSON.stringify(input) })) as VizioControllerOutput;
+    const output = JSON.parse(await call<string>("smartcast_run", { operation, input: JSON.stringify(input) })) as VizioControllerOutput;
     if (output.kind !== "complete" && output.kind !== "error") throw new Error("Native controller returned an unfinished operation");
     return output;
   }
@@ -106,7 +144,7 @@ export function CastController({ receiverUrl, onClose }: CastControllerProps) {
       // This is a vault lookup identifier, not a credential; nothing persists in the renderer.
       const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(address.toLowerCase()));
       const credentialId = `tv-${Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, "0")).join("")}`;
-      await invoke("smartcast_configure", { host: address, deviceId: "viptv-desktop", deviceName: "VIPTV desktop", credentialId });
+      await call("smartcast_configure", { host: address, deviceId: "viptv-desktop", deviceName: "VIPTV desktop", credentialId });
       if (!mounted.current) return;
       const check = await run("pingAuth");
       if (!mounted.current) return;
@@ -125,12 +163,13 @@ export function CastController({ receiverUrl, onClose }: CastControllerProps) {
 
   async function connect(event: FormEvent) {
     event.preventDefault();
+    if (!host.trim()) return;
     await connectTo(host.trim());
   }
 
   async function pair(event: FormEvent) {
     event.preventDefault();
-    if (!challenge) return;
+    if (!challenge || !pin) return;
     const submitted = pin;
     setPin("");
     await perform(async () => {
@@ -153,7 +192,7 @@ export function CastController({ receiverUrl, onClose }: CastControllerProps) {
   });
   function close() {
     mounted.current = false;
-    if (native && active.current) void invoke("smartcast_cancel").catch(() => undefined);
+    if (native && active.current) void call("smartcast_cancel").catch(() => undefined);
     active.current = false;
     onClose();
   }
@@ -168,56 +207,168 @@ export function CastController({ receiverUrl, onClose }: CastControllerProps) {
     if (mounted.current) accepted(output);
   });
   const forget = () => perform(async () => {
-    await invoke("smartcast_forget");
+    await call("smartcast_forget");
     if (mounted.current) { setConnected(false); setChallenge(null); setPin(""); setMessage("Saved TV pairing removed from this app."); }
   });
 
-  return <section className="cast-controller" aria-label="Watch on TV" aria-busy={busy}>
-    <h2>Watch on TV</h2>
-    {!native ? <>
-      <p>TV pairing is available in a VIPTV desktop app with SmartCast support. Open that app on the same network as your Vizio TV, then choose Watch on TV.</p>
-      <p>This browser cannot pair with or control your TV. Your current playback stays here.</p>
-    </> : <>
-      <p>Connect to a Vizio SmartCast TV on the same network.</p>
-      {!connected && !challenge && <>
-        {discovering && <p role="status">Searching for TVs…</p>}
-        {discovered.length > 0 && <ul className="cast-controller-tvs" aria-label="Discovered TVs">
-          {discovered.map(tv => <li key={tv.host}><button type="button" disabled={busy} onClick={() => { setHost(tv.host); void connectTo(tv.host); }}>{tv.name}</button></li>)}
-        </ul>}
-        {discoveryNote && <p role="status">{discoveryNote}</p>}
-        <button type="button" className="cast-controller-manual" aria-expanded={manual} onClick={() => setManual(value => !value)}>Enter IP address manually</button>
-        {manual && <form onSubmit={connect}>
-          <label htmlFor="cast-tv-address">TV IP address</label>
-          <div className="cast-controller-fields">
-            <input id="cast-tv-address" value={host} onChange={event => setHost(event.target.value)} placeholder="192.168.1.50" autoComplete="off" spellCheck={false} required disabled={busy} maxLength={253} />
-            <button type="submit" disabled={busy || !host.trim()}>Connect</button>
+  // With nothing discovered, the address form is the way in (DeskCastManual): no toggle then.
+  const choosing = native && !connected && !challenge;
+  const formShown = choosing && (manual || (!discovering && discovered.length === 0));
+  const toggleShown = choosing && (discovering || discovered.length > 0);
+  // The field takes focus when the form appears (the placeholder shows the expected shape).
+  useEffect(() => {
+    if ((formShown || challenge) && !busy) field.current?.focus({ preventScroll: true });
+  }, [formShown, !!challenge, busy]);
+
+  const closeButton = (
+    <button type="button" className={buttonClass({ block: true })} disabled={busy} onClick={close}>Close</button>
+  );
+  const errorLine = error ? <InlineError>{error}</InlineError> : null;
+  const status = busy
+    ? <StatusLine>Contacting your TV…</StatusLine>
+    : message && !challenge
+      ? <div className="vx-status vx-cast__message" role="status">{message}</div>
+      : null;
+
+  const body = !native ? (
+    <>
+      <DialogText>TV pairing is available in a VIPTV desktop app with SmartCast support. Open that app on the same network as your Vizio TV, then choose Watch on TV.</DialogText>
+      <DialogText>This browser cannot pair with or control your TV. Your current playback stays here.</DialogText>
+      <div className="vx-dialog__actions">{closeButton}</div>
+    </>
+  ) : (
+    <>
+      <DialogText>Connect to a Vizio SmartCast TV on the same network.</DialogText>
+      {choosing && discovering && <StatusLine>Searching for TVs…</StatusLine>}
+      {choosing && discovered.length > 0 && (
+        <ul className="vx-cast__tvs" aria-label="Discovered TVs">
+          {discovered.map(tv => (
+            <li key={tv.host}>
+              <button type="button" className="vx-cast__tv" disabled={busy} onClick={() => { setHost(tv.host); void connectTo(tv.host); }}>
+                <span className="vx-cast__tv-icon" aria-hidden="true"><Monitor strokeWidth={2} /></span>
+                <span className="vx-cast__tv-name">{tv.name}</span>
+                <ChevronRight className="vx-cast__tv-chevron" aria-hidden="true" strokeWidth={2.2} />
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      {choosing && discoveryNote && <DialogText>{discoveryNote}</DialogText>}
+      {challenge && message && <DialogText>{message}</DialogText>}
+      {formShown && (
+        <form className="vx-cast__form" onSubmit={connect} aria-label="Connect to a TV">
+          <TextField
+            ref={field}
+            label="TV IP address"
+            id="cast-tv-address"
+            value={host}
+            onChange={event => setHost(event.target.value)}
+            placeholder="192.168.1.50"
+            autoComplete="off"
+            spellCheck={false}
+            required
+            disabled={busy}
+            maxLength={253}
+          />
+          {status}
+          {errorLine}
+          <div className="vx-dialog__actions">
+            <button type="submit" className={buttonClass({ kind: "primary", block: true })} disabled={busy}>Connect</button>
+            {toggleShown && (
+              <button type="button" className={buttonClass({ block: true })} aria-expanded={manual} onClick={() => setManual(value => !value)}>Enter IP address manually</button>
+            )}
+            {closeButton}
           </div>
-        </form>}
-      </>}
-      {challenge && <form onSubmit={pair}>
-        <label htmlFor="cast-tv-pin">PIN shown on your TV</label>
-        <div className="cast-controller-fields">
-          <input id="cast-tv-pin" type="password" inputMode="numeric" autoComplete="off" value={pin} onChange={event => setPin(event.target.value)} maxLength={32} required disabled={busy} />
-          <button type="submit" disabled={busy || !pin}>Pair TV</button>
-        </div>
-      </form>}
-      {connected && <>
-        <button type="button" onClick={launch} disabled={busy || !receiverUrl}>Open VIPTV on TV</button>
-        {!receiverUrl && <p>A TV receiver has not been configured for this app. Pairing and remote controls are available; launching VIPTV is unavailable.</p>}
-        {receiverUrl && <p>Opens the VIPTV receiver. Choose your profile and content on the TV; this does not transfer the current video.</p>}
-        <div className="cast-controller-pad" aria-label="TV remote">
-          {([ ["UP", "Up"], ["LEFT", "Left"], ["OK", "OK"], ["RIGHT", "Right"], ["DOWN", "Down"] ] as const).map(([code, label]) => <button type="button" key={code} className={`cast-key-${code.toLowerCase()}`} disabled={busy} onClick={() => key(code)}>{label}</button>)}
-        </div>
-        <div className="cast-controller-actions">
-          {([ ["BACK", "Back on TV"], ["PLAY", "Play"], ["PAUSE", "Pause"], ["VOL_DOWN", "Volume down"], ["VOL_UP", "Volume up"] ] as const).map(([code, label]) => <button type="button" key={code} disabled={busy} onClick={() => key(code)}>{label}</button>)}
-          <button type="button" disabled={busy} onClick={forget}>Forget TV</button>
-        </div>
-      </>}
-      {(challenge || connected) && <button type="button" onClick={changeTv} disabled={busy}>Change TV</button>}
-      {busy && <p role="status">Contacting your TV…</p>}
-      {message && <p role="status">{message}</p>}
-      {error && <p role="alert">{error}</p>}
-    </>}
-    <button type="button" onClick={close}>Close</button>
-  </section>;
+        </form>
+      )}
+      {choosing && !formShown && (
+        <>
+          {status}
+          {errorLine}
+          <div className="vx-dialog__actions">
+            <button type="button" className={buttonClass({ block: true })} aria-expanded={manual} onClick={() => setManual(value => !value)}>Enter IP address manually</button>
+            {closeButton}
+          </div>
+        </>
+      )}
+      {challenge && (
+        <form className="vx-cast__form" onSubmit={pair} aria-label="Pair with your TV">
+          <TextField
+            ref={field}
+            label="PIN shown on your TV"
+            id="cast-tv-pin"
+            type="password"
+            inputMode="numeric"
+            autoComplete="off"
+            value={pin}
+            onChange={event => setPin(event.target.value)}
+            maxLength={32}
+            required
+            disabled={busy}
+          />
+          {status}
+          {errorLine}
+          <div className="vx-dialog__actions">
+            <button type="submit" className={buttonClass({ kind: "primary", block: true })} disabled={busy}>Pair TV</button>
+            <button type="button" className={buttonClass({ kind: "quiet", block: true })} onClick={changeTv} disabled={busy}>Change TV</button>
+            {closeButton}
+          </div>
+        </form>
+      )}
+      {connected && (
+        <>
+          {status}
+          <div className="vx-cast__launch">
+            <button type="button" className={buttonClass({ kind: "primary", block: true, icon: true })} onClick={launch} disabled={busy || !receiverUrl}>
+              <ButtonContent icon={<ExternalLink aria-hidden="true" strokeWidth={2.2} />}>Open VIPTV on TV</ButtonContent>
+            </button>
+            <p className="vx-cast__note">
+              {receiverUrl
+                ? "Opens the VIPTV receiver. Choose your profile and content on the TV; this does not transfer the current video."
+                : "A TV receiver has not been configured for this app. Pairing and remote controls are available; launching VIPTV is unavailable."}
+            </p>
+          </div>
+          {errorLine}
+          <div className="vx-cast__remote">
+            <div className="vx-cast__pad" role="group" aria-label="TV remote">
+              {REMOTE_PAD.map(([code, label, icon]) => (
+                <button
+                  type="button"
+                  key={code}
+                  className={`vx-cast__pad-key vx-cast__pad-key--${code.toLowerCase()}`}
+                  aria-label={icon ? label : undefined}
+                  disabled={busy}
+                  onClick={() => key(code)}
+                >
+                  {icon ?? label}
+                </button>
+              ))}
+            </div>
+            <div className="vx-cast__keys">
+              {REMOTE_KEYS.map(([code, label, icon]) => (
+                <button type="button" key={code} className={buttonClass({ size: "small", icon: true, className: "vx-cast__key" })} disabled={busy} onClick={() => key(code)}>
+                  <ButtonContent icon={icon}>{label}</ButtonContent>
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="vx-dialog__actions">
+            <div className="vx-cast__pair-actions">
+              <button type="button" className={buttonClass({ kind: "destructive" })} disabled={busy} onClick={forget}>Forget TV</button>
+              <button type="button" className={buttonClass()} onClick={changeTv} disabled={busy}>Change TV</button>
+            </div>
+            {closeButton}
+          </div>
+        </>
+      )}
+    </>
+  );
+
+  return (
+    <DialogBackdrop onCancel={close} scope="cast" className="vx-cast-layer">
+      <Dialog title="Watch on TV" onClose={close} className={`vx-cast${connected ? " vx-cast--remote" : ""}`}>
+        <div className="vx-cast__body" aria-busy={busy}>{body}</div>
+      </Dialog>
+    </DialogBackdrop>
+  );
 }

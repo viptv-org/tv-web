@@ -73,6 +73,18 @@ async function libraryQueue(h) {
   if (h.tv) await h.activate('library-queue');
   else await h.button('Continue Watching');
 }
+/** Watch on TV (DeskCast*): type the TV address and connect / pair (scripted by smartcastPreview). */
+async function castConnect(h) {
+  await h.activate('responsive-cast');
+  await h.fill('#cast-tv-address', '192.168.1.64');
+  await h.button('Connect');
+}
+async function castPair(h) {
+  await castConnect(h);
+  await h.fill('#cast-tv-pin', '1234');
+  await h.button('Pair TV');
+  await h.waitText('Paired with your TV');
+}
 async function settingsRow(h, id) {
   if (h.tv) await h.tvGo('Settings');
   await h.activate(id);
@@ -185,12 +197,12 @@ export const screens = {
   DeskSearchRecent: { path: '/tv/home', backend: { recentSearches: ['naruto', 'the batman', 'dune', 'fast charlie', 'lanterns', 'one night only', 're:zero', 'mayday'] }, steps: h => h.activate(h.page.getByRole('combobox').or(h.page.getByPlaceholder(/Search/)).first()) },
   DeskSearchMatches: { path: '/tv/home', steps: async h => { await h.activate(h.page.getByRole('combobox').or(h.page.getByPlaceholder(/Search/)).first()); await h.type('the'); await h.settle(); } },
   DeskLibraryCW: { path: '/tv/my-list', steps: libraryQueue },
-  DeskCastSearch: { notReachable: 'Watch on TV pairing runs only in the Tauri runtime (SmartCast commands)' },
-  DeskCastManual: { notReachable: 'Watch on TV pairing runs only in the Tauri runtime (SmartCast commands)' },
-  DeskCastBusy: { notReachable: 'Watch on TV pairing runs only in the Tauri runtime (SmartCast commands)' },
-  DeskCastPin: { notReachable: 'Watch on TV pairing runs only in the Tauri runtime (SmartCast commands)' },
-  DeskCastRemote: { notReachable: 'Watch on TV pairing runs only in the Tauri runtime (SmartCast commands)' },
-  DeskCastError: { notReachable: 'Watch on TV pairing runs only in the Tauri runtime (SmartCast commands)' },
+  DeskCastSearch: { path: '/tv/home', init: smartcastPreview, query: 'cast=search', note: 'native discovery answers once, so the list shows without the Searching line', steps: async h => { await h.activate('responsive-cast'); await h.page.getByRole('button', { name: 'Living room TV' }).hover(); await h.sleep(200); } },
+  DeskCastManual: { path: '/tv/home', init: smartcastPreview, query: 'cast=manual', steps: h => h.activate('responsive-cast') },
+  DeskCastBusy: { path: '/tv/home', init: smartcastPreview, query: 'cast=busy', steps: async h => { await castConnect(h); await h.waitText('Contacting your TV'); } },
+  DeskCastPin: { path: '/tv/home', init: smartcastPreview, query: 'cast=pin', note: 'Change TV (cancel the pairing) stays offered as a quiet button', steps: async h => { await castConnect(h); await h.wait('#cast-tv-pin'); } },
+  DeskCastRemote: { path: '/tv/home', init: smartcastPreview, query: 'cast=remote', steps: castPair },
+  DeskCastError: { path: '/tv/home', init: smartcastPreview, query: 'cast=error', steps: async h => { await castPair(h); await h.button('Volume down'); await h.waitText('could not complete'); await h.page.mouse.move(0, 0); } },
   WebCastUnavailable: { path: '/tv/home', steps: h => h.activate('responsive-cast') },
   DeskStates: { notReachable: 'composite board of many states; shoot the individual states instead' },
 
@@ -260,4 +272,25 @@ function seedLocalMode() {
     addon(2, 'org.thisiptv.addon', 'ThisIPTV', 'thisiptv.example', true),
     addon(3, 'io.lucidhosting.addon', 'LucidHosting', 'lucidhosting.example', false),
   ] }));
+}
+
+/** Watch on TV: the dev-only SmartCast bridge (CastController reads it in DEV), scripted per ?cast=. */
+function smartcastPreview() {
+  const state = new URLSearchParams(location.search).get('cast');
+  const complete = (result = {}) => JSON.stringify({ kind: 'complete', result, credentialChanged: false });
+  window.__VIPTV_SMARTCAST_PREVIEW__ = {
+    receiverUrl: 'https://viptv.syek.tech/tv/?platform=vizio',
+    async invoke(command, args) {
+      if (command === 'smartcast_discover') return state === 'search' ? JSON.stringify([{ name: 'Living room TV', host: '192.168.1.20' }, { host: '192.168.1.64' }]) : '[]';
+      if (command === 'smartcast_configure') return state === 'busy' ? new Promise(() => {}) : undefined;
+      if (command !== 'smartcast_run') return undefined;
+      switch (args && args.operation) {
+        case 'pingAuth': return JSON.stringify({ kind: 'error', error: { kind: 'authentication', message: 'TV requires pairing' } });
+        case 'beginPair': return complete({ challengeType: 1, token: 42 });
+        case 'finishPair': return complete({ paired: true });
+        case 'key': return state === 'error' ? JSON.stringify({ kind: 'error', error: { kind: 'transport', message: '' } }) : complete();
+        default: return complete();
+      }
+    },
+  };
 }

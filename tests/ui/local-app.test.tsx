@@ -114,8 +114,8 @@ it("removes an addon after confirmation and returns to the empty state", async (
   fireEvent.click(screen.getByRole("button", { name: "Addons" }));
   const remove = await screen.findByRole("button", { name: "Remove" });
   fireEvent.click(remove);
-  const dialog = screen.getByRole("dialog");
-  expect(dialog).toHaveTextContent("Remove Example? Its catalogs leave this device.");
+  const dialog = screen.getByRole("dialog", { name: "Remove Example?" });
+  expect(dialog).toHaveTextContent("Its catalogs leave this device.");
   fireEvent.click(within(dialog).getByRole("button", { name: "Remove" }));
   await waitFor(() => expect(screen.getByText("No addons installed yet.")).toBeInTheDocument());
   fireEvent.click(screen.getByRole("button", { name: "Home" }));
@@ -179,7 +179,7 @@ it("browse shows declared genre filters and filters the catalog", async () => {
   }));
   render(<LocalApp onExit={() => {}} />);
   expect(await screen.findByText("Top Movies")).toBeInTheDocument();
-  fireEvent.click(screen.getByRole("button", { name: "more >" }));
+  fireEvent.click(screen.getByRole("button", { name: "More from Top Movies" }));
   expect(await screen.findByText("Title 3")).toBeInTheDocument();
   const genre = screen.getByLabelText("Genre");
   expect(genre).toHaveValue("");

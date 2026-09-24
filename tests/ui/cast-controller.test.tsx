@@ -144,7 +144,12 @@ describe("native SmartCast controller boundary", () => {
     const view = render(<CastController onClose={onClose} />);
     enterAddress();
     await waitFor(() => expect(nativeInvoke).toHaveBeenCalledWith("smartcast_run", { operation: "pingAuth", input: "{}" }));
-    if (disposition === "close") { fireEvent.click(screen.getByRole("button", { name: "Close" })); expect(onClose).toHaveBeenCalledOnce(); }
+    // While the TV is contacted the Close action is disabled (DeskCastBusy); the × disc still closes.
+    if (disposition === "close") {
+      expect(screen.getAllByRole("button", { name: "Close" }).find(button => button.textContent === "Close")).toBeDisabled();
+      fireEvent.click(screen.getAllByRole("button", { name: "Close" }).find(button => button.classList.contains("vx-close"))!);
+      expect(onClose).toHaveBeenCalledOnce();
+    }
     else view.unmount();
     expect(nativeInvoke).toHaveBeenCalledWith("smartcast_cancel");
   });

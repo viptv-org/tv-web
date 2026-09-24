@@ -1,9 +1,12 @@
 /* Local addon mode shell (design-contract/LOCAL_MODE.md): account-free
    browsing from the on-device addon registry. Self-contained on purpose —
-   the account app's profile/queue/session ladder stays untouched. Reuses
-   the responsive shelf/grid styles; TV spatial focus is recorded pending in
-   TESTING.md. Local playback (LM-004) is not part of this revision. */
+   the account app's profile/queue/session ladder stays untouched. TV spatial
+   focus is recorded pending in TESTING.md. Local playback (LM-004) is not
+   part of this revision.
+   Design references: PhLocalHome, WebLocalHome, WebLocalLoading, WebLocalEmpty,
+   WebLocalAddons, WebLocalRemove. Styles: src/styles/screens/settings.css (.vx-local-*). */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ChevronRight, CircleAlert, Puzzle, Trash2 } from "lucide-react";
 import {
   BrowserLocalRegistryStorage,
   LocalAddonRegistry,
@@ -13,7 +16,11 @@ import {
 import type { Catalog, MediaItem } from "../api";
 import { exitLocalMode } from "../local/mode";
 import { AutoLoad } from "./AutoLoad";
-import "./local.css";
+import { EmptyState, Skel, StatusLine } from "./primitives/Feedback";
+import { TextField } from "./primitives/Fields";
+import { ButtonContent, buttonClass } from "./primitives/Button";
+import { Dialog, DialogText } from "./primitives/Overlays";
+import { SettingsLayer } from "./SettingsOverlay";
 
 type Page =
   | { kind: "home" }
@@ -94,51 +101,79 @@ export function LocalApp({ onExit, fetch: fetchImpl }: { onExit: () => void; fet
     onExit();
   };
 
+  const navItem = (kind: "home" | "addons", label: string) => (
+    <button
+      type="button"
+      className="vx-local__nav-item"
+      onClick={() => setPage({ kind })}
+      aria-current={page.kind === kind ? "page" : undefined}
+    >
+      {label}
+    </button>
+  );
+
   return (
-    <section className="responsive-app local-app" aria-label="viptv local mode">
-      <header className="local-header">
-        <h1>viptv</h1>
-        <p className="local-tag">Local mode — addons on this device only.</p>
-        <nav>
-          <button type="button" onClick={() => setPage({ kind: "home" })} aria-current={page.kind === "home" ? "page" : undefined}>Home</button>
-          <button type="button" onClick={() => setPage({ kind: "addons" })} aria-current={page.kind === "addons" ? "page" : undefined}>Addons</button>
-          <button type="button" onClick={exit}>Sign in to an account</button>
+    <section className="responsive-app local-app vx-local" aria-label="viptv local mode">
+      <header className="vx-local__header">
+        <h1 className="vx-local__wordmark">viptv</h1>
+        <p className="vx-local__tag">Local mode — addons on this device only.</p>
+        <nav className="vx-local__nav" aria-label="Local mode">
+          {navItem("home", "Home")}
+          {navItem("addons", "Addons")}
         </nav>
+        <button type="button" className="vx-local__exit" onClick={exit}>Sign in to an account</button>
       </header>
-      <div className="tv-screen responsive-app">
+      <div className="tv-screen responsive-app vx-local__screen">
         {page.kind === "addons" ? (
           <LocalAddons registry={registry} onChanged={reload} />
         ) : page.kind === "browse" ? (
           <LocalBrowse catalog={page.catalog} discovery={discovery} />
         ) : loading ? (
-          <p role="status" className="local-status">Loading your addons…</p>
+          <div className="vx-local__page vx-local__shelves">
+            <StatusLine>Loading your addons…</StatusLine>
+            {[0, 1].map(row => (
+              <section className="vx-local__shelf" key={row} aria-hidden="true">
+                <Skel className="vx-local__skel-title" />
+                <div className="vx-local__cards">
+                  {Array.from({ length: 7 }, (_, index) => <Skel key={index} className="vx-local__skel-poster" />)}
+                </div>
+              </section>
+            ))}
+          </div>
         ) : error ? (
-          <div className="local-error" role="alert">
-            <p>{error}</p>
-            <button type="button" onClick={() => void reload()}>Retry</button>
+          <div className="vx-local__page vx-local__notice">
+            <EmptyState
+              icon={<CircleAlert strokeWidth={2} />}
+              title={error}
+              action={<button type="button" className={buttonClass({ kind: "light", size: "pill" })} onClick={() => void reload()}>Try again</button>}
+            />
           </div>
         ) : shelves.length === 0 ? (
-          <div className="local-empty">
-            <p>Install an addon to start browsing.</p>
-            <button type="button" onClick={() => setPage({ kind: "addons" })}>Add an addon</button>
+          <div className="vx-local__page vx-local__notice">
+            <EmptyState
+              icon={<Puzzle strokeWidth={2} />}
+              title="Install an addon to start browsing."
+              action={<button type="button" className={buttonClass({ kind: "light", size: "pill" })} onClick={() => setPage({ kind: "addons" })}>Add an addon</button>}
+            />
           </div>
         ) : (
-          <div className="shelves">
+          <div className="vx-local__page vx-local__shelves">
             {shelves.map(row => (
-              <section key={`${row.catalog.addonId}-${row.catalog.id}-${row.catalog.type}`} className="shelf" aria-label={row.catalog.name}>
-                <div className="shelf-heading">
-                  <h2>{row.catalog.name}</h2>
-                  <button type="button" className="shelf-see-more" onClick={() => setPage({ kind: "browse", catalog: row.catalog })}>
-                    more &gt;
+              <section key={`${row.catalog.addonId}-${row.catalog.id}-${row.catalog.type}`} className="vx-local__shelf" aria-labelledby={`local-shelf-${row.catalog.addonId}-${row.catalog.id}-${row.catalog.type}`}>
+                <div className="vx-local__shelf-head">
+                  <h2 className="vx-local__shelf-title" id={`local-shelf-${row.catalog.addonId}-${row.catalog.id}-${row.catalog.type}`}>{row.catalog.name}</h2>
+                  <button
+                    type="button"
+                    className="vx-local__more"
+                    aria-label={`More from ${row.catalog.name}`}
+                    onClick={() => setPage({ kind: "browse", catalog: row.catalog })}
+                  >
+                    more
+                    <ChevronRight aria-hidden="true" strokeWidth={2.4} />
                   </button>
                 </div>
-                <div className="local-cards">
-                  {row.items.slice(0, 24).map(item => (
-                    <figure key={`${item.type}-${item.id}`} className="local-card">
-                      {item.poster ? <img src={item.poster} alt="" loading="lazy" /> : null}
-                      <figcaption>{item.name}</figcaption>
-                    </figure>
-                  ))}
+                <div className="vx-local__cards">
+                  {row.items.slice(0, 24).map(item => <LocalCard key={`${item.type}-${item.id}`} item={item} />)}
                 </div>
               </section>
             ))}
@@ -146,6 +181,16 @@ export function LocalApp({ onExit, fetch: fetchImpl }: { onExit: () => void; fet
         )}
       </div>
     </section>
+  );
+}
+
+/** A poster and its title (no local playback yet, so the card opens nothing). */
+function LocalCard({ item }: { item: MediaItem }) {
+  return (
+    <figure className="vx-local__card">
+      <span className="vx-local__poster">{item.poster ? <img src={item.poster} alt="" loading="lazy" /> : null}</span>
+      <figcaption className="vx-local__card-title">{item.name}</figcaption>
+    </figure>
   );
 }
 
@@ -202,40 +247,36 @@ function LocalBrowse({
   const supportsSearch = catalog.extras?.some(extra => extra.name === "search") ?? false;
 
   return (
-    <section className="local-browse" aria-label={catalog.name}>
-      <div className="filters">
-        <h2>{`${catalog.addonName ? `${catalog.addonName} · ` : ""}${catalog.name}`}</h2>
+    <section className="vx-local__page vx-local__browse" aria-labelledby="local-browse-title">
+      <div className="vx-local__filters">
+        <h2 className="vx-local__browse-title" id="local-browse-title">{`${catalog.addonName ? `${catalog.addonName} · ` : ""}${catalog.name}`}</h2>
         {genres.length > 0 && (
-          <label>
-            Genre
-            <select value={genre} onChange={event => setGenre(event.target.value)}>
-              <option value="">Any</option>
-              {genres.map(option => (
-                <option key={option} value={option}>{option}</option>
-              ))}
-            </select>
+          <label className="vx-field vx-local__select">
+            <span className="vx-field__label">Genre</span>
+            <span className="vx-field__control">
+              <select className="vx-field__input" value={genre} onChange={event => setGenre(event.target.value)}>
+                <option value="">Any</option>
+                {genres.map(option => (
+                  <option key={option} value={option}>{option}</option>
+                ))}
+              </select>
+            </span>
           </label>
         )}
         {supportsSearch && (
-          <label>
-            Search
-            <input
-              value={search}
-              onChange={event => setSearch(event.target.value)}
-              placeholder="Search this catalog"
-              maxLength={256}
-            />
-          </label>
+          <TextField
+            className="vx-local__search"
+            label="Search"
+            value={search}
+            onChange={event => setSearch(event.target.value)}
+            placeholder="Search this catalog"
+            maxLength={256}
+          />
         )}
       </div>
-      {status && <p role="status" className="local-status">{status}</p>}
-      <div className="result-grid local-grid">
-        {items.map(item => (
-          <figure key={`${item.type}-${item.id}`} className="local-card">
-            {item.poster ? <img src={item.poster} alt="" loading="lazy" /> : null}
-            <figcaption>{item.name}</figcaption>
-          </figure>
-        ))}
+      {status && <p role="status" className="vx-local__status">{status}</p>}
+      <div className="vx-local__grid">
+        {items.map(item => <LocalCard key={`${item.type}-${item.id}`} item={item} />)}
       </div>
       {/* The end of the grid loads the next page; there is no Load more control. */}
       {nextSkip !== undefined && (
@@ -317,17 +358,19 @@ function LocalAddons({
   };
 
   return (
-    <section className="local-addons" aria-label="Manage addons">
-      <h2>Addons</h2>
+    <section className="vx-local__page vx-local__addons" aria-label="Manage addons">
+      <h2 className="vx-sr-only">Addons</h2>
       <form
+        className="vx-local__install"
         onSubmit={event => {
           event.preventDefault();
           void install();
         }}
       >
-        <label htmlFor="local-addon-url">Addon manifest URL</label>
-        <input
+        <TextField
           id="local-addon-url"
+          label="Addon manifest URL"
+          mono={Boolean(url)}
           value={url}
           onChange={event => setUrl(event.target.value)}
           placeholder="https://example.test/manifest.json"
@@ -335,36 +378,61 @@ function LocalAddons({
           autoCapitalize="none"
           spellCheck={false}
           maxLength={2048}
+          error={entryError || undefined}
+          errorIcon={<CircleAlert aria-hidden="true" strokeWidth={2.2} />}
         />
-        <button type="submit" disabled={pending || !url.trim()}>
-          {pending ? "Installing…" : "Install addon"}
+        <button type="submit" className={buttonClass({ kind: "primary", icon: pending })} disabled={pending} aria-busy={pending || undefined}>
+          <ButtonContent loading={pending} loadingLabel="Installing…">Install addon</ButtonContent>
         </button>
       </form>
-      {entryError && <p className="local-error-text" role="alert">{entryError}</p>}
       {addons.length === 0 ? (
-        <p className="local-status">No addons installed yet.</p>
+        <p className="vx-local__status">No addons installed yet.</p>
       ) : (
-        <ul className="local-addon-list">
+        <ul className="vx-settings-card vx-local__list">
           {addons.map(addon => (
-            <li key={addon.ordinal} className={addon.enabled ? "" : "disabled"}>
-              <span className="local-addon-name">{addonName(addon)}</span>
-              <span className="local-addon-id">{addon.id}</span>
-              <button type="button" onClick={() => void toggle(addon.ordinal, !addon.enabled)}>
+            <li key={addon.ordinal} className="vx-local__addon">
+              <span className="vx-local__addon-icon" aria-hidden="true"><Puzzle strokeWidth={2} /></span>
+              <span className="vx-local__addon-text">
+                <span className="vx-local__addon-name">{addonName(addon)}</span>
+                <span className="vx-local__addon-id">{addon.id}</span>
+              </span>
+              <button type="button" className={buttonClass({ size: "small" })} onClick={() => void toggle(addon.ordinal, !addon.enabled)}>
                 {addon.enabled ? "Disable" : "Enable"}
               </button>
-              <button type="button" onClick={() => setConfirming({ ordinal: addon.ordinal, name: addonName(addon) })}>
-                Remove
+              <button
+                type="button"
+                className={buttonClass({ kind: "destructive", size: "small", icon: true })}
+                data-focus-id={`local-remove-${addon.ordinal}`}
+                onClick={() => setConfirming({ ordinal: addon.ordinal, name: addonName(addon) })}
+              >
+                <ButtonContent icon={<Trash2 aria-hidden="true" strokeWidth={2.2} />}>Remove</ButtonContent>
               </button>
             </li>
           ))}
         </ul>
       )}
       {confirming && (
-        <div className="local-confirm" role="dialog" aria-modal="true" aria-label={`Remove ${confirming.name}`}>
-          <p>{`Remove ${confirming.name}? Its catalogs leave this device.`}</p>
-          <button type="button" onClick={() => void remove(confirming.ordinal)}>Remove</button>
-          <button type="button" onClick={() => setConfirming(undefined)}>Cancel</button>
-        </div>
+        <SettingsLayer
+          className="vx-local__layer"
+          onClose={() => setConfirming(undefined)}
+          initialFocus="local-remove-cancel"
+          returnFocus={`local-remove-${confirming.ordinal}`}
+        >
+          <Dialog
+            title={`Remove ${confirming.name}?`}
+            onClose={() => setConfirming(undefined)}
+            actions={
+              <>
+                <button type="button" data-focus-id="local-remove-cancel" className={buttonClass({ block: true })} onClick={() => setConfirming(undefined)}>Cancel</button>
+                <button type="button" className={buttonClass({ kind: "destructive", block: true, icon: true })} onClick={() => void remove(confirming.ordinal)}>
+                  <ButtonContent icon={<Trash2 aria-hidden="true" strokeWidth={2.2} />}>Remove</ButtonContent>
+                </button>
+              </>
+            }
+          >
+            <DialogText>Its catalogs leave this device.</DialogText>
+          </Dialog>
+        </SettingsLayer>
       )}
     </section>
   );

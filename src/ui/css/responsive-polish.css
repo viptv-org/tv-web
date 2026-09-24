@@ -5,107 +5,20 @@
 
 /* ---- Base ------------------------------------------------------------------ */
 .responsive-app button { font-size: 16px; font-weight: 600; text-align: center; }
-.responsive-app :is(.filters button, .settings-row) { text-align: left; }
+.responsive-app :is(.filters button) { text-align: left; }
 .responsive-app p { font-size: inherit; line-height: 1.5; }
 /* Dialog and filter buttons do not lift like remote-focused TV tiles. */
 .responsive-app :is(.filters button, .card-more):is(:hover, :active) { transform: none; filter: none; }
 /* Touch never leaves a hover frame on a tapped card or episode. */
 
 /* Headings are sentence case at every width, as on phones. */
-.responsive-app :is(.local-app .shelves h2, .search .result-grid h2) { text-transform: none; font-size: 20px; line-height: 26px; font-weight: 700; }
-.local-app .shelves { padding: 0; }
+.responsive-app :is(.search .result-grid h2) { text-transform: none; font-size: 20px; line-height: 26px; font-weight: 700; }
 .responsive-app .browse-empty { margin-top: 8px; color: #a6a8aa; font-size: 15px; }
 
 /* Larger hit areas for compact controls, without changing their layout. */
-.responsive-app :is(.shelf-see-more, .chip, .rp-button) { position: relative; }
-.responsive-app :is(.shelf-see-more, .chip)::before { content: ""; position: absolute; inset: -6px -2px; }
+.responsive-app :is(.chip, .rp-button) { position: relative; }
+.responsive-app :is(.chip)::before { content: ""; position: absolute; inset: -6px -2px; }
 /* ---- Dialogs --------------------------------------------------------------- */
-/* Watch on TV: the controller panel is the dialog's content, not a box in a box. */
-.responsive-app .cast-controller p + p { margin-top: 12px; }
-.responsive-app .cast-controller > button:last-child { margin-top: 20px; }
-
-/* ---- Settings: grouped list ---------------------------------------------- */
-/* One centred column on wide screens; the full width on phones, where
-   responsive-p3's !important sidebar inset must be outranked. */
-.responsive-app .roku-settings.list-settings {
-  display: block;
-  min-height: 100%;
-  padding: 32px max(var(--page-gutter), calc((100% - 720px) / 2)) 64px;
-}
-@media (max-width: 599px) {
-  .responsive-app .roku-settings.list-settings {
-    margin: 0 !important;
-    width: 100% !important;
-    padding: max(var(--page-gutter), env(safe-area-inset-top)) var(--page-gutter) calc(84px + env(safe-area-inset-bottom));
-  }
-}
-.responsive-app .list-settings .settings-header { gap: 4px; margin: 4px 0 18px; }
-.responsive-app .list-settings .settings-header h1 { font-size: 28px; line-height: 34px; }
-.responsive-app .list-settings .settings-back-btn {
-  width: 44px !important;
-  height: 44px !important;
-  min-height: 44px !important;
-  margin-left: -8px !important;
-  border: 0 !important;
-  color: #f5f5f5 !important;
-}
-.responsive-app .list-settings .settings-caption { margin: -8px 0 18px; font-size: 14px; line-height: 20px; color: #a6a8aa; }
-.responsive-app .list-settings .settings-group { margin-bottom: 22px; }
-.responsive-app .list-settings .settings-group h2 {
-  margin: 0 4px 8px;
-  font-size: 12px;
-  line-height: 16px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: #8d9093;
-}
-.responsive-app .list-settings .settings-card { overflow: hidden; border-radius: 14px; background: #17191b; }
-:root[data-oled] .responsive-app .list-settings .settings-card { background: #121314; }
-.responsive-app .list-settings .settings-row {
-  --responsive-control-surface: transparent;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  width: 100%;
-  min-height: 56px;
-  height: auto;
-  margin: 0;
-  padding: 10px 14px 10px 16px;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-  color: #f5f5f5;
-  font-size: 16px;
-  font-weight: 400;
-  text-align: left;
-}
-.responsive-app .list-settings .settings-row + .settings-row { box-shadow: inset 0 1px 0 #25282b; }
-@media (hover: hover) and (pointer: fine) {
-  .responsive-app .list-settings .settings-row:hover:not(:disabled) { background-color: #1d1f22; }
-}
-.responsive-app .list-settings .settings-row:active { background-color: #222427 !important; }
-.responsive-app .list-settings .settings-row.info { cursor: default; }
-.responsive-app .settings-row-text { display: flex; flex: 1 1 auto; flex-direction: column; gap: 2px; min-width: 0; }
-.responsive-app .settings-row-text strong { font-size: 16px; line-height: 21px; font-weight: 600; }
-.responsive-app .settings-row-text small { overflow: hidden; font-size: 13px; line-height: 18px; color: #8d9093; white-space: nowrap; text-overflow: ellipsis; }
-.responsive-app .settings-row.danger .settings-row-text strong { color: #ff8a80; }
-.responsive-app .settings-value { flex: 0 0 auto; max-width: 48%; overflow: hidden; font-size: 15px; color: #a6a8aa; white-space: nowrap; text-overflow: ellipsis; }
-.responsive-app .settings-chevron { flex: 0 0 auto; color: #6b6e71; }
-.responsive-app .settings-switch { position: relative; flex: 0 0 44px; width: 44px; height: 26px; border-radius: 13px; background: #3a3d40; transition: background-color 0.2s ease; }
-.responsive-app .settings-switch::after {
-  content: "";
-  position: absolute;
-  top: 3px;
-  left: 3px;
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  background: #f5f5f5;
-  transition: transform 0.2s ease, background-color 0.2s ease;
-}
-.responsive-app .settings-row[aria-pressed="true"] .settings-switch { background: #f5f5f5; }
-.responsive-app .settings-row[aria-pressed="true"] .settings-switch::after { transform: translateX(18px); background: #101112; }
 
 /* My List / Continue Watching is one segmented switch. */
 .responsive-app .segmented {
