@@ -1,25 +1,25 @@
 .browse .media-card {
-  height: 192px;
+  height: calc(192px * var(--tv-k));
 }
 .result-grid > button {
-  margin-top: 20px;
-  width: 256px;
-  height: 48px;
+  margin-top: calc(20px * var(--tv-k));
+  width: calc(256px * var(--tv-k));
+  height: calc(48px * var(--tv-k));
 }
 .detail {
   inset: 0;
-  width: 1280px;
-  height: 720px;
+  width: calc(1280px * var(--tv-k));
+  height: calc(720px * var(--tv-k));
 }
 .detail-backdrop {
   position: absolute;
   inset: 0 0 auto;
-  height: 620px;
+  height: calc(620px * var(--tv-k));
   overflow: hidden;
 }
 .detail-backdrop > img {
-  width: 1280px;
-  height: 620px;
+  width: calc(1280px * var(--tv-k));
+  height: calc(620px * var(--tv-k));
   object-fit: cover;
 }
 .detail-backdrop::after {
@@ -33,107 +33,107 @@
 }
 .detail > .poster {
   position: absolute;
-  left: 112px;
-  top: 126px;
-  width: 236px;
-  height: 354px;
+  left: calc(112px * var(--tv-k));
+  top: calc(126px * var(--tv-k));
+  width: calc(236px * var(--tv-k));
+  height: calc(354px * var(--tv-k));
   object-fit: contain;
 }
 .detail-copy {
   position: absolute;
-  left: 380px;
-  top: 126px;
-  width: 804px;
+  left: calc(380px * var(--tv-k));
+  top: calc(126px * var(--tv-k));
+  width: calc(804px * var(--tv-k));
 }
 .detail-copy h1 {
-  font-size: 46px;
-  height: 56px;
+  font-size: calc(46px * var(--tv-k));
+  height: calc(56px * var(--tv-k));
   white-space: nowrap;
   overflow: hidden;
 }
 .detail-facts {
-  margin-top: 16px;
-  height: 48px;
-  width: 706px;
-  font-size: 19px;
+  margin-top: calc(16px * var(--tv-k));
+  height: calc(48px * var(--tv-k));
+  width: calc(706px * var(--tv-k));
+  font-size: calc(19px * var(--tv-k));
   color: #c5c6c7;
 }
 .detail-synopsis {
-  margin-top: 30px;
-  font-size: 23px;
-  line-height: 32px;
-  max-height: 128px;
+  margin-top: calc(30px * var(--tv-k));
+  font-size: calc(23px * var(--tv-k));
+  line-height: calc(32px * var(--tv-k));
+  max-height: calc(128px * var(--tv-k));
   display: -webkit-box;
   -webkit-line-clamp: 4;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
 .detail-copy .actions {
-  margin-top: 28px;
-  gap: 16px;
+  margin-top: calc(28px * var(--tv-k));
+  gap: calc(16px * var(--tv-k));
 }
 .detail-copy .actions button {
   flex: 1;
-  max-width: 256px;
-  height: 56px;
-  font-size: 22px;
+  max-width: calc(256px * var(--tv-k));
+  height: calc(56px * var(--tv-k));
+  font-size: calc(22px * var(--tv-k));
   text-align: center;
-  padding: 0 10px;
+  padding: 0 calc(10px * var(--tv-k));
 }
 .detail.series > .poster,
 .series .detail-synopsis {
   display: none;
 }
 .series .detail-copy {
-  left: 112px;
-  top: 74px;
-  width: 1064px;
+  left: calc(112px * var(--tv-k));
+  top: calc(74px * var(--tv-k));
+  width: calc(1064px * var(--tv-k));
 }
 .series .detail-copy h1 {
-  font-size: 36px;
-  height: 44px;
-  width: 900px;
+  font-size: calc(36px * var(--tv-k));
+  height: calc(44px * var(--tv-k));
+  width: calc(900px * var(--tv-k));
 }
 .series .detail-facts {
-  margin-top: 14px;
-  height: 28px;
+  margin-top: calc(14px * var(--tv-k));
+  height: calc(28px * var(--tv-k));
 }
 .series .detail-copy .actions {
-  margin-top: 28px;
-  gap: 24px;
+  margin-top: calc(28px * var(--tv-k));
+  gap: calc(24px * var(--tv-k));
 }
 .series .detail-copy .actions button {
-  flex: 0 0 256px;
-  height: 48px;
+  flex: 0 0 calc(256px * var(--tv-k));
+  height: calc(48px * var(--tv-k));
   text-align: left;
-  padding: 0 18px;
+  padding: 0 calc(18px * var(--tv-k));
 }
 .episode-heading {
   position: absolute;
-  left: 976px;
-  top: 198px;
-  width: 220px;
+  left: calc(976px * var(--tv-k));
+  top: calc(198px * var(--tv-k));
+  width: calc(220px * var(--tv-k));
   text-align: right;
-  font-size: 19px;
+  font-size: calc(19px * var(--tv-k));
   color: #a6a8aa;
 }
 .episode-grid {
   position: absolute;
-  left: 112px;
-  top: 262px;
-  width: 1096px;
-  height: 330px;
+  left: calc(112px * var(--tv-k));
+  top: calc(262px * var(--tv-k));
+  width: calc(1096px * var(--tv-k));
+  height: calc(330px * var(--tv-k));
   display: grid;
-  grid-template-columns: repeat(4, 256px);
-  grid-auto-rows: 330px;
-  gap: 28px 24px;
+  grid-template-columns: repeat(4, calc(256px * var(--tv-k)));
+  grid-auto-rows: calc(330px * var(--tv-k));
+  gap: calc(28px * var(--tv-k)) calc(24px * var(--tv-k));
   overflow: auto;
   scroll-snap-type: y mandatory;
 }
 .episode {
   position: relative;
-  width: 256px;
-  height: 330px;
+  width: calc(256px * var(--tv-k));
+  height: calc(330px * var(--tv-k));
   min-height: 0;
   padding: 0;
   border: 0;
@@ -147,46 +147,46 @@
   position: absolute;
   left: 0;
   top: 0;
-  width: 256px;
-  height: 144px;
+  width: calc(256px * var(--tv-k));
+  height: calc(144px * var(--tv-k));
   object-fit: cover;
-  border-radius: 8px;
+  border-radius: calc(8px * var(--tv-k));
 }
 .episode .art-fallback {
   flex-direction: column;
-  gap: 12px;
-  font-size: 17px;
+  gap: calc(12px * var(--tv-k));
+  font-size: calc(17px * var(--tv-k));
 }
 .episode .art-fallback img {
-  width: 42px;
-  height: 36px;
+  width: calc(42px * var(--tv-k));
+  height: calc(36px * var(--tv-k));
   object-fit: contain;
 }
 .episode > small {
   position: absolute;
   left: 0;
-  top: 158px;
-  font-size: 22px;
+  top: calc(158px * var(--tv-k));
+  font-size: calc(22px * var(--tv-k));
   font-weight: 400;
 }
 .episode > h2 {
   position: absolute;
-  top: 190px;
+  top: calc(190px * var(--tv-k));
   left: 0;
-  width: 256px;
+  width: calc(256px * var(--tv-k));
   white-space: nowrap;
   overflow: hidden;
-  font-size: 22px;
-  line-height: 28px;
+  font-size: calc(22px * var(--tv-k));
+  line-height: calc(28px * var(--tv-k));
 }
 .episode > p {
   position: absolute;
   left: 0;
-  top: 226px;
-  width: 256px;
-  height: 94px;
-  font-size: 19px;
-  line-height: 23px;
+  top: calc(226px * var(--tv-k));
+  width: calc(256px * var(--tv-k));
+  height: calc(94px * var(--tv-k));
+  font-size: calc(19px * var(--tv-k));
+  line-height: calc(23px * var(--tv-k));
   font-weight: 400;
   color: #a6a8aa;
   display: -webkit-box;
@@ -198,46 +198,46 @@
   color: #d5d6d7;
 }
 .episode > progress {
-  height: 4px;
+  height: calc(4px * var(--tv-k));
 }
 .watched-badge {
   position: absolute;
-  left: 160px;
-  top: 10px;
-  width: 86px;
-  height: 26px;
-  border-radius: 13px;
+  left: calc(160px * var(--tv-k));
+  top: calc(10px * var(--tv-k));
+  width: calc(86px * var(--tv-k));
+  height: calc(26px * var(--tv-k));
+  border-radius: calc(13px * var(--tv-k));
   background: #f5f5f5;
   color: #101112;
-  font-size: 14px;
-  line-height: 26px;
+  font-size: calc(14px * var(--tv-k));
+  line-height: calc(26px * var(--tv-k));
   text-align: center;
   z-index: 2;
 }
 .sources > h1 {
-  height: 64px;
+  height: calc(64px * var(--tv-k));
 }
 .source-context {
   position: absolute;
   left: 0;
-  top: 65px;
-  font-size: 20px;
+  top: calc(65px * var(--tv-k));
+  font-size: calc(20px * var(--tv-k));
   color: #c5c6c7;
 }
 .source-filters {
   position: absolute;
   left: 0;
-  top: 112px;
-  width: 1096px;
-  height: 48px;
+  top: calc(112px * var(--tv-k));
+  width: calc(1096px * var(--tv-k));
+  height: calc(48px * var(--tv-k));
   display: flex;
-  gap: 24px;
+  gap: calc(24px * var(--tv-k));
   align-items: center;
 }
 .source-filters button {
-  width: 256px;
-  height: 48px;
-  font-size: 21px;
+  width: calc(256px * var(--tv-k));
+  height: calc(48px * var(--tv-k));
+  font-size: calc(21px * var(--tv-k));
   white-space: nowrap;
   overflow: hidden;
 }
@@ -248,83 +248,83 @@
 }
 .source-filters [data-focus-id="source-quality"] {
   position: absolute;
-  left: 704px;
+  left: calc(704px * var(--tv-k));
   top: 0;
 }
 .source-filters > span {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: calc(10px * var(--tv-k));
   position: absolute;
-  left: 284px;
-  top: 12px;
-  width: 400px;
-  font-size: 19px;
+  left: calc(284px * var(--tv-k));
+  top: calc(12px * var(--tv-k));
+  width: calc(400px * var(--tv-k));
+  font-size: calc(19px * var(--tv-k));
   color: #a6a8aa;
 }
 .source-discovery-spinner {
   display: inline-block;
   flex-shrink: 0;
-  width: 26px;
-  height: 26px;
+  width: calc(26px * var(--tv-k));
+  height: calc(26px * var(--tv-k));
   box-sizing: border-box;
-  border: 3px solid #4a4c4e;
+  border: calc(3px * var(--tv-k)) solid #4a4c4e;
   border-top-color: #f5f5f5;
   border-radius: 50%;
   animation: spin 1.1s linear infinite;
 }
 
 .source.opening {
-  outline: 2px solid #f5f5f5;
-  outline-offset: -2px;
+  outline: calc(2px * var(--tv-k)) solid #f5f5f5;
+  outline-offset: calc(-2px * var(--tv-k));
 }
 .source-opening-spinner {
   position: absolute;
-  right: 24px;
+  right: calc(24px * var(--tv-k));
   top: 50%;
-  width: 22px;
-  height: 22px;
-  margin-top: -11px;
-  border-width: 2px;
+  width: calc(22px * var(--tv-k));
+  height: calc(22px * var(--tv-k));
+  margin-top: calc(-11px * var(--tv-k));
+  border-width: calc(2px * var(--tv-k));
 }
 .source-results {
   position: absolute;
   left: 0;
-  top: 180px;
-  width: 1096px;
-  height: 464px;
+  top: calc(180px * var(--tv-k));
+  width: calc(1096px * var(--tv-k));
+  height: calc(464px * var(--tv-k));
   overflow: auto;
   scroll-snap-type: y mandatory;
 }
 .source {
   position: relative;
   display: block;
-  width: 1096px;
-  height: 216px;
-  min-height: 216px;
-  margin: 0 0 16px;
+  width: calc(1096px * var(--tv-k));
+  height: calc(216px * var(--tv-k));
+  min-height: calc(216px * var(--tv-k));
+  margin: 0 0 calc(16px * var(--tv-k));
   padding: 0;
-  border-radius: 12px;
+  border-radius: calc(12px * var(--tv-k));
   scroll-snap-align: start;
 }
 .source h2 {
   position: absolute;
-  left: 20px;
-  top: 10px;
-  width: 1056px;
-  height: 28px;
-  font-size: 22px;
+  left: calc(20px * var(--tv-k));
+  top: calc(10px * var(--tv-k));
+  width: calc(1056px * var(--tv-k));
+  height: calc(28px * var(--tv-k));
+  font-size: calc(22px * var(--tv-k));
   white-space: nowrap;
   overflow: hidden;
 }
 .source p {
   position: absolute;
-  left: 20px;
-  top: 46px;
-  width: 1056px;
-  max-height: 142px;
-  font-size: 20px;
-  line-height: 23px;
+  left: calc(20px * var(--tv-k));
+  top: calc(46px * var(--tv-k));
+  width: calc(1056px * var(--tv-k));
+  max-height: calc(142px * var(--tv-k));
+  font-size: calc(20px * var(--tv-k));
+  line-height: calc(23px * var(--tv-k));
   font-weight: 400;
   white-space: pre-wrap;
   overflow: hidden;
@@ -335,9 +335,9 @@
 }
 .source small {
   position: absolute;
-  left: 20px;
-  top: 190px;
-  font-size: 14px;
+  left: calc(20px * var(--tv-k));
+  top: calc(190px * var(--tv-k));
+  font-size: calc(14px * var(--tv-k));
   font-weight: 400;
 }
 .source:focus p,
@@ -350,51 +350,51 @@
 }
 .pairing h1 {
   position: absolute;
-  left: 96px;
-  top: 170px;
-  width: 1088px;
-  font-size: 52px;
+  left: calc(96px * var(--tv-k));
+  top: calc(170px * var(--tv-k));
+  width: calc(1088px * var(--tv-k));
+  font-size: calc(52px * var(--tv-k));
 }
 .pairing > p {
   position: absolute;
-  left: 96px;
-  top: 260px;
-  width: 640px;
-  height: 84px;
-  font-size: 32px;
+  left: calc(96px * var(--tv-k));
+  top: calc(260px * var(--tv-k));
+  width: calc(640px * var(--tv-k));
+  height: calc(84px * var(--tv-k));
+  font-size: calc(32px * var(--tv-k));
 }
 .pairing h2 {
   position: absolute;
-  left: 96px;
-  top: 364px;
-  width: 640px;
-  height: 72px;
-  font-size: 28px;
+  left: calc(96px * var(--tv-k));
+  top: calc(364px * var(--tv-k));
+  width: calc(640px * var(--tv-k));
+  height: calc(72px * var(--tv-k));
+  font-size: calc(28px * var(--tv-k));
   overflow-wrap: anywhere;
 }
 .pair-code {
   position: absolute;
-  left: 96px;
-  top: 450px;
-  width: 640px;
-  font-size: 44px;
+  left: calc(96px * var(--tv-k));
+  top: calc(450px * var(--tv-k));
+  width: calc(640px * var(--tv-k));
+  font-size: calc(44px * var(--tv-k));
 }
 .pairing .qr {
   position: absolute;
-  left: 886px;
-  top: 184px;
-  width: 298px;
-  height: 298px;
-  border: 24px solid white;
+  left: calc(886px * var(--tv-k));
+  top: calc(184px * var(--tv-k));
+  width: calc(298px * var(--tv-k));
+  height: calc(298px * var(--tv-k));
+  border: calc(24px * var(--tv-k)) solid white;
   object-fit: contain;
   background: white;
 }
 .pairing > button {
   position: absolute;
-  left: 96px;
-  top: 554px;
-  width: 240px;
-  height: 56px;
+  left: calc(96px * var(--tv-k));
+  top: calc(554px * var(--tv-k));
+  width: calc(240px * var(--tv-k));
+  height: calc(56px * var(--tv-k));
 }
 .profiles {
   position: absolute;
@@ -402,25 +402,25 @@
 }
 .profiles > h1 {
   position: absolute;
-  left: 100px;
-  top: 146px;
-  width: 1080px;
+  left: calc(100px * var(--tv-k));
+  top: calc(146px * var(--tv-k));
+  width: calc(1080px * var(--tv-k));
   text-align: center;
-  font-size: 44px;
+  font-size: calc(44px * var(--tv-k));
 }
 .profile-row {
   position: absolute;
-  top: 252px;
+  top: calc(252px * var(--tv-k));
   left: 0;
-  width: 1280px;
+  width: calc(1280px * var(--tv-k));
   display: flex;
   justify-content: center;
-  gap: 34px;
+  gap: calc(34px * var(--tv-k));
 }
 .profile-row > button {
   position: relative;
-  width: 178px;
-  height: 210px;
+  width: calc(178px * var(--tv-k));
+  height: calc(210px * var(--tv-k));
   min-height: 0;
   padding: 0;
   background: transparent;
@@ -432,9 +432,9 @@
   position: absolute;
   left: 0;
   top: 0;
-  width: 178px;
-  height: 178px;
-  border: 3px solid transparent;
-  border-radius: 12px;
+  width: calc(178px * var(--tv-k));
+  height: calc(178px * var(--tv-k));
+  border: calc(3px * var(--tv-k)) solid transparent;
+  border-radius: calc(12px * var(--tv-k));
   box-sizing: border-box;
 }

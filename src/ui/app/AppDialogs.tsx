@@ -1,4 +1,5 @@
 import { TvButton } from "../remote";
+import { LEGACY_TV_SCALE } from "../tvCanvas";
 import { DialogBackdrop } from "../DialogBackdrop";
 import { CastController } from "../CastController";
 import { TextEntry } from "../TextEntry";
@@ -118,8 +119,10 @@ export function AppDialogs({ app }: { app: AppApi }) {
                     if (event.key === "ArrowDown" || event.key === "ArrowUp") {
                       event.preventDefault();
                       event.stopPropagation();
+                      // 100px per press, x1.5 on the 1920 x 1080 TV canvas.
+                      const step = event.currentTarget.closest(".responsive-app") ? 100 : 100 * LEGACY_TV_SCALE;
                       event.currentTarget.scrollBy({
-                        top: event.key === "ArrowDown" ? 100 : -100,
+                        top: event.key === "ArrowDown" ? step : -step,
                       });
                     }
                   }}

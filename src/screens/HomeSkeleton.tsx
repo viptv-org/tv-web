@@ -68,7 +68,7 @@ export function HomeSkeleton({ phone }: { phone: boolean }) {
         <div className="responsive-hero-art skeleton-block" aria-hidden="true" />
         <div className="hero" aria-hidden="true">
           {/* Hidden with the real eyebrow where the hero stacks. */}
-          <small><span className="skeleton-line" style={{ width: 112 }} /></small>
+          <small><span className="skeleton-line" style={{ width: "calc(112px * var(--tv-k))" }} /></small>
           {/* Most catalog titles carry a title logo: hold its slot, not a text line. */}
           <h1 className="responsive-title"><span className="skeleton-block skeleton-logo" /></h1>
           <p>
@@ -76,7 +76,7 @@ export function HomeSkeleton({ phone }: { phone: boolean }) {
               <span className="skeleton-line" style={{ width }} key={index} />
             ))}
           </p>
-          <div className="hero-facts"><span className="skeleton-line" style={{ width: 132 }} /></div>
+          <div className="hero-facts"><span className="skeleton-line" style={{ width: "calc(132px * var(--tv-k))" }} /></div>
           <div className="actions">
             <button type="button" tabIndex={-1} data-focus-id="hero-details" className="skeleton-block" />
             <button type="button" tabIndex={-1} className="compact-action hero-save-btn skeleton-block" />
@@ -86,7 +86,7 @@ export function HomeSkeleton({ phone }: { phone: boolean }) {
           {SHELVES.map((shape, row) => (
             <section key={row}>
               <header className="shelf-heading">
-                <h2><span className="skeleton-line" style={{ width: row === 0 ? 150 : 190 }} /></h2>
+                <h2><span className="skeleton-line" style={{ width: `calc(${row === 0 ? 150 : 190}px * var(--tv-k))` }} /></h2>
               </header>
               <SkeletonShelfCards shape={shape} />
             </section>

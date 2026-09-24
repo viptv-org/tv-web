@@ -1,3 +1,13 @@
+/* Legacy TV geometry was authored on a 1280 x 720 canvas. The TV canvas is now
+   1920 x 1080, so every legacy TV length is written as calc(<old px> * var(--tv-k)):
+   --tv-k is 1.5 inside the TV layout and 1 everywhere else, which keeps these
+   shared rules pixel-identical in the responsive (phone/desktop/web) layouts. */
+:root {
+  --tv-k: 1;
+}
+.tv-layout {
+  --tv-k: 1.5;
+}
 :root {
   font-family: Arial, sans-serif;
   color: #f5f5f5;
@@ -23,12 +33,12 @@ input {
 }
 button {
   border: 0;
-  border-radius: 12px;
+  border-radius: calc(12px * var(--tv-k));
   background: #202224;
   color: #f5f5f5;
-  padding: 0 18px;
-  min-height: 48px;
-  font-size: 22px;
+  padding: 0 calc(18px * var(--tv-k));
+  min-height: calc(48px * var(--tv-k));
+  font-size: calc(22px * var(--tv-k));
   font-weight: 700;
   text-align: left;
   cursor: pointer;
@@ -47,14 +57,14 @@ p {
   margin: 0;
 }
 h1 {
-  font-size: 44px;
+  font-size: calc(44px * var(--tv-k));
   line-height: 1.2;
 }
 h2 {
-  font-size: 26px;
+  font-size: calc(26px * var(--tv-k));
 }
 p {
-  font-size: 22px;
+  font-size: calc(22px * var(--tv-k));
   line-height: 1.35;
 }
 small,
@@ -67,9 +77,9 @@ img {
 progress {
   appearance: none;
   border: 0;
-  border-radius: 4px;
+  border-radius: calc(4px * var(--tv-k));
   background: #4a4c4e;
-  height: 6px;
+  height: calc(6px * var(--tv-k));
   overflow: hidden;
 }
 progress::-webkit-progress-bar {
@@ -77,15 +87,15 @@ progress::-webkit-progress-bar {
 }
 progress::-webkit-progress-value {
   background: #f5f5f5;
-  border-radius: 4px;
-  min-width: 6px;
+  border-radius: calc(4px * var(--tv-k));
+  min-width: calc(6px * var(--tv-k));
 }
 progress[value="0"]::-webkit-progress-value {
   min-width: 0;
 }
 progress::-moz-progress-bar {
   background: #f5f5f5;
-  border-radius: 4px;
+  border-radius: calc(4px * var(--tv-k));
 }
 * {
   scrollbar-width: none;
@@ -95,24 +105,24 @@ progress::-moz-progress-bar {
 }
 .tv-screen {
   position: absolute;
-  width: 1280px;
-  height: 720px;
+  width: 1920px;
+  height: 1080px;
   overflow: hidden;
   background: #101112;
   transform-origin: top left;
 }
 main {
   position: absolute;
-  left: 100px;
-  top: 54px;
-  width: 1096px;
-  height: 654px;
+  left: calc(100px * var(--tv-k));
+  top: calc(54px * var(--tv-k));
+  width: calc(1096px * var(--tv-k));
+  height: calc(654px * var(--tv-k));
 }
 .video {
   position: absolute;
   inset: 0;
-  width: 1280px;
-  height: 720px;
+  width: 1920px;
+  height: 1080px;
   background: #000;
   visibility: hidden;
 }
@@ -124,22 +134,22 @@ main {
 }
 .brand {
   position: absolute;
-  left: 32px;
-  top: 29px;
+  left: calc(32px * var(--tv-k));
+  top: calc(29px * var(--tv-k));
   z-index: 3;
 }
 .brand img {
-  width: 36px;
-  height: 31px;
+  width: calc(36px * var(--tv-k));
+  height: calc(31px * var(--tv-k));
   object-fit: contain;
 }
 .gateway-brand {
-  left: 96px;
-  top: 44px;
+  left: calc(96px * var(--tv-k));
+  top: calc(44px * var(--tv-k));
 }
 .gateway-brand img {
-  width: 42px;
-  height: 36px;
+  width: calc(42px * var(--tv-k));
+  height: calc(36px * var(--tv-k));
 }
 .playing .brand,
 .screen-detail .brand,
@@ -148,19 +158,19 @@ main {
 }
 nav {
   position: absolute;
-  left: 21px;
-  top: 108px;
-  width: 60px;
+  left: calc(21px * var(--tv-k));
+  top: calc(108px * var(--tv-k));
+  width: calc(60px * var(--tv-k));
   z-index: 5;
 }
 nav button {
   display: block;
   position: relative;
-  width: 60px;
-  height: 60px;
+  width: calc(60px * var(--tv-k));
+  height: calc(60px * var(--tv-k));
   padding: 0;
-  margin: 0 0 14px;
-  border-radius: 12px;
+  margin: 0 0 calc(14px * var(--tv-k));
+  border-radius: calc(12px * var(--tv-k));
   background: transparent;
 }
 nav em {
@@ -168,33 +178,33 @@ nav em {
 }
 nav .nav-icon {
   position: absolute;
-  left: 15px;
-  top: 15px;
-  width: 30px;
-  height: 30px;
+  left: calc(15px * var(--tv-k));
+  top: calc(15px * var(--tv-k));
+  width: calc(30px * var(--tv-k));
+  height: calc(30px * var(--tv-k));
   object-fit: contain;
 }
 nav .nav-avatar {
-  left: 8px;
-  top: 8px;
-  width: 44px;
-  height: 44px;
-  border-radius: 8px;
+  left: calc(8px * var(--tv-k));
+  top: calc(8px * var(--tv-k));
+  width: calc(44px * var(--tv-k));
+  height: calc(44px * var(--tv-k));
+  border-radius: calc(8px * var(--tv-k));
 }
 nav button:focus .nav-icon:not(.nav-avatar) {
   filter: brightness(0);
 }
 .home {
   inset: 0;
-  width: 1280px;
-  height: 720px;
+  width: calc(1280px * var(--tv-k));
+  height: calc(720px * var(--tv-k));
 }
 .hero-art,
 .hero-art > img {
   position: absolute;
   inset: 0;
-  width: 1280px;
-  height: 720px;
+  width: calc(1280px * var(--tv-k));
+  height: calc(720px * var(--tv-k));
 }
 .hero-art > img {
   object-fit: cover;
@@ -205,32 +215,32 @@ nav button:focus .nav-icon:not(.nav-avatar) {
 }
 .hero {
   position: absolute;
-  left: 100px;
-  top: 128px;
-  width: 650px;
+  left: calc(100px * var(--tv-k));
+  top: calc(128px * var(--tv-k));
+  width: calc(650px * var(--tv-k));
 }
 .hero > small {
   display: block;
-  font-size: 14px;
-  line-height: 24px;
+  font-size: calc(14px * var(--tv-k));
+  line-height: calc(24px * var(--tv-k));
   color: #c5c6c7;
 }
 .hero h1 {
   position: absolute;
-  top: 38px;
-  width: 600px;
-  height: 54px;
+  top: calc(38px * var(--tv-k));
+  width: calc(600px * var(--tv-k));
+  height: calc(54px * var(--tv-k));
   white-space: nowrap;
   overflow: hidden;
-  font-size: 44px;
+  font-size: calc(44px * var(--tv-k));
 }
 .hero > p {
   position: absolute;
-  top: 100px;
-  width: 548px;
-  max-height: 80px;
-  font-size: 20px;
-  line-height: 26px;
+  top: calc(100px * var(--tv-k));
+  width: calc(548px * var(--tv-k));
+  max-height: calc(80px * var(--tv-k));
+  font-size: calc(20px * var(--tv-k));
+  line-height: calc(26px * var(--tv-k));
   display: -webkit-box;
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
@@ -239,38 +249,38 @@ nav button:focus .nav-icon:not(.nav-avatar) {
 }
 .hero-facts {
   position: absolute;
-  top: 194px;
-  width: 650px;
-  font-size: 19px;
+  top: calc(194px * var(--tv-k));
+  width: calc(650px * var(--tv-k));
+  font-size: calc(19px * var(--tv-k));
   white-space: nowrap;
   overflow: hidden;
   color: #c5c6c7;
 }
 .actions {
   display: flex;
-  gap: 16px;
+  gap: calc(16px * var(--tv-k));
 }
 .hero .actions {
   position: absolute;
-  top: 247px;
-  gap: 12px;
+  top: calc(247px * var(--tv-k));
+  gap: calc(12px * var(--tv-k));
 }
 .hero .actions button {
-  width: 144px;
-  height: 50px;
-  font-size: 22px;
+  width: calc(144px * var(--tv-k));
+  height: calc(50px * var(--tv-k));
+  font-size: calc(22px * var(--tv-k));
   text-align: center;
-  padding: 0 8px;
+  padding: 0 calc(8px * var(--tv-k));
 }
 .hero .actions .wide-action {
-  width: 236px;
+  width: calc(236px * var(--tv-k));
 }
 .hero-portrait {
   position: absolute;
-  left: 938px;
-  top: 102px;
-  width: 252px;
-  height: 378px;
+  left: calc(938px * var(--tv-k));
+  top: calc(102px * var(--tv-k));
+  width: calc(252px * var(--tv-k));
+  height: calc(378px * var(--tv-k));
   object-fit: contain;
 }
 .compact-home .hero,
@@ -280,40 +290,40 @@ nav button:focus .nav-icon:not(.nav-avatar) {
 }
 .shelves {
   position: absolute;
-  left: 92px;
-  top: 466px;
-  width: 1188px;
-  height: 254px;
-  padding: 8px;
+  left: calc(92px * var(--tv-k));
+  top: calc(466px * var(--tv-k));
+  width: calc(1188px * var(--tv-k));
+  height: calc(254px * var(--tv-k));
+  padding: calc(8px * var(--tv-k));
   overflow: auto;
-  scroll-padding: 8px;
+  scroll-padding: calc(8px * var(--tv-k));
 }
 .compact-home .shelves {
-  top: 100px;
-  height: 620px;
+  top: calc(100px * var(--tv-k));
+  height: calc(620px * var(--tv-k));
 }
 .shelves section {
-  height: 254px;
+  height: calc(254px * var(--tv-k));
   margin: 0;
 }
 .shelves h2 {
-  font-size: 22px;
-  line-height: 26px;
-  height: 38px;
+  font-size: calc(22px * var(--tv-k));
+  line-height: calc(26px * var(--tv-k));
+  height: calc(38px * var(--tv-k));
   text-transform: uppercase;
 }
 .cards {
   display: flex;
-  gap: 24px;
+  gap: calc(24px * var(--tv-k));
   overflow: auto;
   scroll-padding: 0;
   scroll-behavior: smooth;
 }
 .media-card {
   position: relative;
-  flex: 0 0 256px;
-  width: 256px;
-  height: 200px;
+  flex: 0 0 calc(256px * var(--tv-k));
+  width: calc(256px * var(--tv-k));
+  height: calc(200px * var(--tv-k));
   min-height: 0;
   border: 0;
   padding: 0;
@@ -332,9 +342,9 @@ nav button:focus .nav-icon:not(.nav-avatar) {
   position: absolute;
   left: 0;
   top: 0;
-  width: 256px;
-  height: 144px;
-  border-radius: 8px;
+  width: calc(256px * var(--tv-k));
+  height: calc(144px * var(--tv-k));
+  border-radius: calc(8px * var(--tv-k));
 }
 .art-fallback {
   background: #202224;
@@ -342,9 +352,9 @@ nav button:focus .nav-icon:not(.nav-avatar) {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 16px;
+  padding: calc(16px * var(--tv-k));
   text-align: center;
-  font-size: 21px;
+  font-size: calc(21px * var(--tv-k));
 }
 .media-card::after,
 .episode::after {
@@ -352,8 +362,8 @@ nav button:focus .nav-icon:not(.nav-avatar) {
   position: absolute;
   left: 0;
   top: 0;
-  width: 256px;
-  height: 144px;
+  width: calc(256px * var(--tv-k));
+  height: calc(144px * var(--tv-k));
   background: url("/assets/ui-card-focus.png") center/100% 100% no-repeat;
   opacity: 0.35;
   pointer-events: none;
@@ -364,21 +374,21 @@ nav button:focus .nav-icon:not(.nav-avatar) {
 }
 .media-card > strong {
   position: absolute;
-  top: 152px;
+  top: calc(152px * var(--tv-k));
   left: 0;
-  width: 256px;
-  line-height: 25px;
-  font-size: 21px;
+  width: calc(256px * var(--tv-k));
+  line-height: calc(25px * var(--tv-k));
+  font-size: calc(21px * var(--tv-k));
   white-space: nowrap;
   overflow: hidden;
 }
 .media-card > small {
   position: absolute;
-  top: 178px;
+  top: calc(178px * var(--tv-k));
   left: 0;
-  width: 256px;
-  font-size: 17px;
-  line-height: 21px;
+  width: calc(256px * var(--tv-k));
+  font-size: calc(17px * var(--tv-k));
+  line-height: calc(21px * var(--tv-k));
   white-space: nowrap;
   overflow: hidden;
   font-weight: 400;
@@ -386,40 +396,40 @@ nav button:focus .nav-icon:not(.nav-avatar) {
 .media-card > progress,
 .episode > progress {
   position: absolute;
-  left: 8px;
-  top: 134px;
-  width: 240px;
-  height: 6px;
+  left: calc(8px * var(--tv-k));
+  top: calc(134px * var(--tv-k));
+  width: calc(240px * var(--tv-k));
+  height: calc(6px * var(--tv-k));
   margin: 0;
 }
 .browse > h1 {
-  height: 64px;
+  height: calc(64px * var(--tv-k));
 }
 .browse > .filters {
   position: absolute;
   left: 0;
-  top: 124px;
-  width: 1096px;
-  height: 48px;
+  top: calc(124px * var(--tv-k));
+  width: calc(1096px * var(--tv-k));
+  height: calc(48px * var(--tv-k));
   display: flex;
-  gap: 24px;
+  gap: calc(24px * var(--tv-k));
   overflow: auto;
 }
 .filters button {
   position: relative;
-  flex: 0 0 256px;
-  height: 48px;
+  flex: 0 0 calc(256px * var(--tv-k));
+  height: calc(48px * var(--tv-k));
   white-space: nowrap;
   overflow: hidden;
-  padding-right: 38px;
+  padding-right: calc(38px * var(--tv-k));
 }
 .filters button::after {
   content: "";
   position: absolute;
-  right: 16px;
-  top: 15px;
-  width: 18px;
-  height: 18px;
+  right: calc(16px * var(--tv-k));
+  top: calc(15px * var(--tv-k));
+  width: calc(18px * var(--tv-k));
+  height: calc(18px * var(--tv-k));
   background: url("/assets/ui-nav-chevron.png") center/contain no-repeat;
 }
 .filters button:focus::after {
@@ -428,20 +438,20 @@ nav button:focus .nav-icon:not(.nav-avatar) {
 .result-grid {
   position: absolute;
   left: 0;
-  top: 144px;
-  width: 1096px;
-  height: 510px;
+  top: calc(144px * var(--tv-k));
+  width: calc(1096px * var(--tv-k));
+  height: calc(510px * var(--tv-k));
   overflow: auto;
 }
 .screen-discover .browse > .result-grid,
 .screen-my-list .browse > .result-grid {
-  top: 194px;
-  height: 460px;
+  top: calc(194px * var(--tv-k));
+  height: calc(460px * var(--tv-k));
 }
 .result-grid > .cards {
   display: grid;
-  grid-template-columns: repeat(4, 256px);
-  column-gap: 24px;
-  row-gap: 28px;
+  grid-template-columns: repeat(4, calc(256px * var(--tv-k)));
+  column-gap: calc(24px * var(--tv-k));
+  row-gap: calc(28px * var(--tv-k));
   overflow: visible;
 }

@@ -11,7 +11,8 @@ export const GUIDE_CELL_LIMIT = 32;
 export const WINDOW_SECONDS = 7_200;
 export const HOUR_SECONDS = 3_600;
 export const DAY_SECONDS = 86_400;
-export const GUIDE_WIDTH = 804;
+/** TV EPG timeline width for WINDOW_SECONDS on the 1920 x 1080 canvas (804 at 1280 x 720). */
+export const GUIDE_WIDTH = 1206;
 export const RESPONSIVE_WINDOW_SECONDS = 21_600;
 export const RESPONSIVE_TIMELINE_WIDTH = 1_440;
 

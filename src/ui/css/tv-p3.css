@@ -4,11 +4,11 @@
 .profile-row img,
 .profile-initials {
   position: absolute;
-  left: 9px;
-  top: 9px;
-  width: 160px;
-  height: 160px;
-  border-radius: 12px;
+  left: calc(9px * var(--tv-k));
+  top: calc(9px * var(--tv-k));
+  width: calc(160px * var(--tv-k));
+  height: calc(160px * var(--tv-k));
+  border-radius: calc(12px * var(--tv-k));
   background: #242628;
 }
 .profile-initials {
@@ -16,15 +16,15 @@
   align-items: center;
   justify-content: center;
   color: white;
-  font-size: 44px;
+  font-size: calc(44px * var(--tv-k));
 }
 .profile-row strong {
   position: absolute;
   left: 0;
-  top: 181px;
-  width: 178px;
-  line-height: 28px;
-  font-size: 22px;
+  top: calc(181px * var(--tv-k));
+  width: calc(178px * var(--tv-k));
+  line-height: calc(28px * var(--tv-k));
+  font-size: calc(22px * var(--tv-k));
   font-weight: 400;
   color: #a6a8aa;
   text-align: center;
@@ -37,47 +37,47 @@
 .profile-actions {
   position: absolute;
   left: 0;
-  top: 530px;
-  width: 1280px;
+  top: calc(530px * var(--tv-k));
+  width: calc(1280px * var(--tv-k));
   display: flex;
   justify-content: center;
-  gap: 16px;
+  gap: calc(16px * var(--tv-k));
 }
 .profile-actions button {
-  width: 240px;
-  height: 56px;
+  width: calc(240px * var(--tv-k));
+  height: calc(56px * var(--tv-k));
   text-align: center;
 }
 .profile-pager {
   position: absolute;
   left: 0;
-  top: 612px;
-  width: 1280px;
+  top: calc(612px * var(--tv-k));
+  width: calc(1280px * var(--tv-k));
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 16px;
+  gap: calc(16px * var(--tv-k));
 }
 .profile-pager button {
-  width: 180px;
-  height: 40px;
-  min-height: 40px;
+  width: calc(180px * var(--tv-k));
+  height: calc(40px * var(--tv-k));
+  min-height: calc(40px * var(--tv-k));
   text-align: center;
 }
 .profile-pager span {
   position: absolute;
-  left: 860px;
-  top: 3px;
-  font-size: 19px;
+  left: calc(860px * var(--tv-k));
+  top: calc(3px * var(--tv-k));
+  font-size: calc(19px * var(--tv-k));
   color: #a6a8aa;
 }
 .profile-pager button:first-child {
   position: absolute;
-  left: 452px;
+  left: calc(452px * var(--tv-k));
 }
 .profile-pager button:last-child {
   position: absolute;
-  left: 648px;
+  left: calc(648px * var(--tv-k));
 }
 .scrim {
   position: absolute;
@@ -89,36 +89,36 @@
   justify-content: center;
 }
 .modal {
-  width: 880px;
-  max-height: 620px;
+  width: calc(880px * var(--tv-k));
+  max-height: calc(620px * var(--tv-k));
   background: #191b1d;
-  border-radius: 12px;
-  padding: 32px 44px 44px;
+  border-radius: calc(12px * var(--tv-k));
+  padding: calc(32px * var(--tv-k)) calc(44px * var(--tv-k)) calc(44px * var(--tv-k));
 }
 .modal > h2 {
-  height: 54px;
-  margin-bottom: 16px;
-  font-size: 30px;
-  line-height: 36px;
+  height: calc(54px * var(--tv-k));
+  margin-bottom: calc(16px * var(--tv-k));
+  font-size: calc(30px * var(--tv-k));
+  line-height: calc(36px * var(--tv-k));
   overflow: hidden;
 }
 .modal > p {
-  font-size: 20px;
-  margin: 0 0 16px;
+  font-size: calc(20px * var(--tv-k));
+  margin: 0 0 calc(16px * var(--tv-k));
 }
 .modal-choices {
-  max-height: 434px;
+  max-height: calc(434px * var(--tv-k));
   overflow: auto;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: calc(10px * var(--tv-k));
 }
 .modal-choices button {
-  flex: 0 0 52px;
-  width: 792px;
-  height: 52px;
-  min-height: 52px;
-  font-size: 22px;
+  flex: 0 0 calc(52px * var(--tv-k));
+  width: calc(792px * var(--tv-k));
+  height: calc(52px * var(--tv-k));
+  min-height: calc(52px * var(--tv-k));
+  font-size: calc(22px * var(--tv-k));
 }
 .source-detail-panel {
   position: absolute;
@@ -127,85 +127,85 @@
 }
 .source-detail-panel > h2 {
   position: absolute;
-  left: 100px;
-  top: 72px;
-  font-size: 36px;
+  left: calc(100px * var(--tv-k));
+  top: calc(72px * var(--tv-k));
+  font-size: calc(36px * var(--tv-k));
 }
 .source-detail-body {
   position: absolute;
-  left: 100px;
-  top: 158px;
-  width: 1060px;
-  height: 460px;
+  left: calc(100px * var(--tv-k));
+  top: calc(158px * var(--tv-k));
+  width: calc(1060px * var(--tv-k));
+  height: calc(460px * var(--tv-k));
   overflow: auto;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
-  font-size: 24px;
-  line-height: 34px;
+  font-size: calc(24px * var(--tv-k));
+  line-height: calc(34px * var(--tv-k));
   outline: none;
 }
 .source-detail-panel .modal-choices {
   position: absolute;
-  left: 100px;
-  top: 642px;
+  left: calc(100px * var(--tv-k));
+  top: calc(642px * var(--tv-k));
 }
 .source-detail-panel .modal-choices button {
-  width: 256px;
+  width: calc(256px * var(--tv-k));
 }
 .toast {
   position: absolute;
-  left: 320px;
-  top: 42px;
-  width: 640px;
-  min-height: 100px;
+  left: calc(320px * var(--tv-k));
+  top: calc(42px * var(--tv-k));
+  width: calc(640px * var(--tv-k));
+  min-height: calc(100px * var(--tv-k));
   z-index: 40;
-  padding: 18px 28px;
-  border-radius: 12px;
+  padding: calc(18px * var(--tv-k)) calc(28px * var(--tv-k));
+  border-radius: calc(12px * var(--tv-k));
   background: #191b1d;
-  font-size: 19px;
-  line-height: 28px;
+  font-size: calc(19px * var(--tv-k));
+  line-height: calc(28px * var(--tv-k));
 }
 .loading {
   position: absolute;
-  right: 84px;
-  top: 64px;
-  font-size: 19px;
+  right: calc(84px * var(--tv-k));
+  top: calc(64px * var(--tv-k));
+  font-size: calc(19px * var(--tv-k));
   color: #c5c6c7;
   z-index: 8;
 }
 .error {
   position: absolute;
-  left: 320px;
-  top: 260px;
-  width: 640px;
-  padding: 32px;
+  left: calc(320px * var(--tv-k));
+  top: calc(260px * var(--tv-k));
+  width: calc(640px * var(--tv-k));
+  padding: calc(32px * var(--tv-k));
   background: #191b1d;
-  border-radius: 12px;
+  border-radius: calc(12px * var(--tv-k));
   z-index: 45;
-  font-size: 22px;
+  font-size: calc(22px * var(--tv-k));
 }
 .error > button {
   display: block;
-  width: 240px;
-  height: 56px;
-  margin-top: 24px;
+  width: calc(240px * var(--tv-k));
+  height: calc(56px * var(--tv-k));
+  margin-top: calc(24px * var(--tv-k));
 }
 .startup-cover {
   position: absolute;
   inset: 0;
   z-index: 25;
-  background: #101112 url("/assets/splash-hd.jpg") center/1280px 720px no-repeat;
+  background: #101112 url("/assets/splash-hd.jpg") center/calc(1280px * var(--tv-k)) calc(720px * var(--tv-k)) no-repeat;
 }
 .startup-cover > img {
   display: none;
 }
 .startup-cover > p {
   position: absolute;
-  left: 160px;
-  top: 630px;
-  width: 960px;
+  left: calc(160px * var(--tv-k));
+  top: calc(630px * var(--tv-k));
+  width: calc(960px * var(--tv-k));
   text-align: center;
-  font-size: 22px;
+  font-size: calc(22px * var(--tv-k));
 }
 .player-overlay {
   position: absolute;
@@ -216,60 +216,60 @@
   background-repeat: no-repeat;
   background-position:
     0 0,
-    0 382px;
+    0 calc(382px * var(--tv-k));
   background-size:
-    1280px 210px,
-    1280px 338px;
+    calc(1280px * var(--tv-k)) calc(210px * var(--tv-k)),
+    calc(1280px * var(--tv-k)) calc(338px * var(--tv-k));
 }
 .player-identity {
   position: absolute;
-  left: 64px;
-  top: 36px;
-  height: 40px;
+  left: calc(64px * var(--tv-k));
+  top: calc(36px * var(--tv-k));
+  height: calc(40px * var(--tv-k));
   display: flex;
   align-items: center;
-  gap: 12px;
-  font-size: 24px;
+  gap: calc(12px * var(--tv-k));
+  font-size: calc(24px * var(--tv-k));
   font-weight: 700;
 }
 .player-identity img {
-  width: 36px;
-  height: 32px;
+  width: calc(36px * var(--tv-k));
+  height: calc(32px * var(--tv-k));
   object-fit: contain;
 }
 .player-status {
   position: absolute;
-  left: 1048px;
-  top: 36px;
-  width: 168px;
-  height: 40px;
+  left: calc(1048px * var(--tv-k));
+  top: calc(36px * var(--tv-k));
+  width: calc(168px * var(--tv-k));
+  height: calc(40px * var(--tv-k));
   text-align: right;
-  font-size: 22px;
-  line-height: 40px;
+  font-size: calc(22px * var(--tv-k));
+  line-height: calc(40px * var(--tv-k));
 }
 .player-eyebrow {
   position: absolute;
-  left: 64px;
-  top: 460px;
-  font-size: 18px;
+  left: calc(64px * var(--tv-k));
+  top: calc(460px * var(--tv-k));
+  font-size: calc(18px * var(--tv-k));
   color: #c5c6c7;
 }
 .player-overlay > h1 {
   position: absolute;
-  left: 64px;
-  top: 486px;
-  width: 1090px;
-  font-size: 32px;
-  height: 38px;
+  left: calc(64px * var(--tv-k));
+  top: calc(486px * var(--tv-k));
+  width: calc(1090px * var(--tv-k));
+  font-size: calc(32px * var(--tv-k));
+  height: calc(38px * var(--tv-k));
   white-space: nowrap;
   overflow: hidden;
 }
 .player-context {
   position: absolute;
-  left: 64px;
-  top: 524px;
-  width: 1152px;
-  font-size: 20px;
+  left: calc(64px * var(--tv-k));
+  top: calc(524px * var(--tv-k));
+  width: calc(1152px * var(--tv-k));
+  font-size: calc(20px * var(--tv-k));
   color: #bfc1c3;
 }
 .playback-bottom {
@@ -278,11 +278,11 @@
 }
 .seekbar {
   position: absolute;
-  left: 64px;
-  top: 544px;
-  width: 1152px;
-  height: 44px;
-  min-height: 44px;
+  left: calc(64px * var(--tv-k));
+  top: calc(544px * var(--tv-k));
+  width: calc(1152px * var(--tv-k));
+  height: calc(44px * var(--tv-k));
+  min-height: calc(44px * var(--tv-k));
   touch-action: none;
   cursor: pointer;
 }
@@ -294,9 +294,9 @@
   left: 0;
   right: 0;
   top: 50%;
-  height: 6px;
+  height: calc(6px * var(--tv-k));
   transform: translateY(-50%);
-  border-radius: 3px;
+  border-radius: calc(3px * var(--tv-k));
   background: rgba(245, 245, 245, 0.25);
   overflow: hidden;
   transition: height 120ms ease;
@@ -304,7 +304,7 @@
 .seekbar:hover .seekbar-track,
 .seekbar:focus .seekbar-track,
 .seekbar.scrubbing .seekbar-track {
-  height: 8px;
+  height: calc(8px * var(--tv-k));
 }
 .seekbar-buffered,
 .seekbar-played {
@@ -321,8 +321,8 @@
 .seekbar-thumb {
   position: absolute;
   top: 50%;
-  width: 14px;
-  height: 14px;
+  width: calc(14px * var(--tv-k));
+  height: calc(14px * var(--tv-k));
   border-radius: 50%;
   background: #f5f5f5;
   transform: translate(-50%, -50%);
@@ -339,54 +339,54 @@
   outline: none;
 }
 .seekbar:focus .seekbar-thumb {
-  box-shadow: 0 0 0 5px rgba(245, 245, 245, 0.35);
+  box-shadow: 0 0 0 calc(5px * var(--tv-k)) rgba(245, 245, 245, 0.35);
 }
 .seekbar-tooltip {
   position: absolute;
-  bottom: 34px;
+  bottom: calc(34px * var(--tv-k));
   transform: translateX(-50%);
-  padding: 2px 8px;
-  border-radius: 5px;
+  padding: calc(2px * var(--tv-k)) calc(8px * var(--tv-k));
+  border-radius: calc(5px * var(--tv-k));
   background: #101112;
-  font-size: 16px;
-  line-height: 22px;
+  font-size: calc(16px * var(--tv-k));
+  line-height: calc(22px * var(--tv-k));
   white-space: nowrap;
   pointer-events: none;
 }
 .player-time {
   position: absolute;
-  left: 64px;
-  top: 590px;
-  width: 1152px;
+  left: calc(64px * var(--tv-k));
+  top: calc(590px * var(--tv-k));
+  width: calc(1152px * var(--tv-k));
   display: flex;
   justify-content: space-between;
-  font-size: 19px;
-  line-height: 26px;
+  font-size: calc(19px * var(--tv-k));
+  line-height: calc(26px * var(--tv-k));
 }
 .player-time span:last-child {
   color: #a6a8aa;
 }
 .controls {
   position: absolute;
-  top: 624px;
-  left: 64px;
-  width: 1152px;
-  height: 64px;
+  top: calc(624px * var(--tv-k));
+  left: calc(64px * var(--tv-k));
+  width: calc(1152px * var(--tv-k));
+  height: calc(64px * var(--tv-k));
 }
 .controls button {
   position: absolute;
-  width: 64px;
-  height: 64px;
-  min-height: 64px;
-  padding: 18px;
+  width: calc(64px * var(--tv-k));
+  height: calc(64px * var(--tv-k));
+  min-height: calc(64px * var(--tv-k));
+  padding: calc(18px * var(--tv-k));
   background: transparent;
 }
 .controls button:focus {
   background: #f5f5f5;
 }
 .controls img {
-  width: 28px;
-  height: 28px;
+  width: calc(28px * var(--tv-k));
+  height: calc(28px * var(--tv-k));
   object-fit: contain;
 }
 .controls button:focus img {
@@ -397,25 +397,25 @@
   left: 50%;
   top: 50%;
   width: max-content;
-  max-width: calc(100% - 48px);
+  max-width: calc(100% - calc(48px * var(--tv-k)));
   transform: translate(-50%, -50%);
-  padding: 28px 36px;
+  padding: calc(28px * var(--tv-k)) calc(36px * var(--tv-k));
   text-align: center;
-  font-size: 22px;
+  font-size: calc(22px * var(--tv-k));
   background: rgba(24, 25, 27, .92);
   border: 1px solid rgba(255, 255, 255, .12);
-  border-radius: 16px;
-  box-shadow: 0 18px 60px rgba(0, 0, 0, .35);
-  backdrop-filter: blur(10px);
+  border-radius: calc(16px * var(--tv-k));
+  box-shadow: 0 calc(18px * var(--tv-k)) calc(60px * var(--tv-k)) rgba(0, 0, 0, .35);
+  backdrop-filter: blur(calc(10px * var(--tv-k)));
   z-index: 12;
 }
 .playback-loading::before {
   content: "";
   display: block;
-  width: 60px;
-  height: 60px;
-  margin: 0 auto 18px;
-  border: 5px solid #4a4c4e;
+  width: calc(60px * var(--tv-k));
+  height: calc(60px * var(--tv-k));
+  margin: 0 auto calc(18px * var(--tv-k));
+  border: calc(5px * var(--tv-k)) solid #4a4c4e;
   border-top-color: white;
   border-radius: 50%;
   animation: spin 1.1s linear infinite;
@@ -428,20 +428,20 @@
 .search .keyboard {
   position: absolute;
   left: 0;
-  top: 110px;
-  width: 304px;
-  height: 440px;
+  top: calc(110px * var(--tv-k));
+  width: calc(304px * var(--tv-k));
+  height: calc(440px * var(--tv-k));
 }
 .search .keyboard > input {
   position: absolute;
   left: 0;
   top: 0;
-  width: 304px;
-  height: 44px;
+  width: calc(304px * var(--tv-k));
+  height: calc(44px * var(--tv-k));
   padding: 0;
   background: transparent;
   border: 0;
   color: #f5f5f5;
-  font-size: 22px;
+  font-size: calc(22px * var(--tv-k));
   outline: none;
 }

@@ -1,0 +1,92 @@
+/*
+ * Foundation: design-system reset, body type and focus recipes.
+ *
+ * Loaded before the legacy stylesheets (see index.css): the reset is only a
+ * floor, so the legacy look keeps winning until each family is rebuilt, while
+ * the vx- focus utilities below are opt-in and never collide with legacy rules.
+ * TV-reachable: Chrome 87 syntax only (no :is/:where/:has, nesting or @layer).
+ */
+
+/* Base reset (mirrors the reset in design tokens/tokens.css). */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+html,
+body {
+  margin: 0;
+}
+body {
+  font-family: var(--viptv-font-family-ui);
+  background: var(--viptv-color-bg);
+  color: var(--viptv-color-text-primary);
+  font-synthesis: none;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+button {
+  font: inherit;
+  color: inherit;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+/*
+ * Desktop app and web keyboard focus: an off-white ring with a ground gap,
+ * :focus-visible only, never accent. Phones draw no focus (pressed state only),
+ * and TV focus uses the utilities below.
+ */
+@media (min-width: 600px) {
+  :root[data-layout="responsive"] :focus-visible {
+    outline: none;
+    box-shadow: var(--viptv-focus-desktop);
+  }
+}
+
+/*
+ * TV focus recipes (native DOM focus driven by the D-pad, so plain :focus).
+ * Exactly one element is focused per screen.
+ *
+ * .vx-tv-focus-fill  buttons, pills, chips: off-white fill, dark text, 4px white
+ *                    ring + lift, scale 1.05. Add .vx-tv-focus-row for
+ *                    full-width rows (scale 1.02).
+ * .vx-tv-focus-ring  image tiles: ring + lift, scale 1.06 (the tile keeps its
+ *                    art; its caption shift is owned by the card primitive).
+ */
+.tv-layout .vx-tv-focus-fill,
+.tv-layout .vx-tv-focus-ring {
+  transition:
+    transform var(--viptv-motion-focus) ease-out,
+    box-shadow var(--viptv-motion-focus) ease-out,
+    background-color var(--viptv-motion-focus) ease-out,
+    color var(--viptv-motion-focus) ease-out;
+}
+.tv-layout .vx-tv-focus-fill:focus {
+  outline: none;
+  background: var(--viptv-color-text-primary);
+  color: var(--viptv-color-on-light);
+  box-shadow: var(--viptv-focus-tv-shadow);
+  transform: scale(var(--viptv-focus-tv-scale-button));
+}
+.tv-layout .vx-tv-focus-fill.vx-tv-focus-row:focus {
+  transform: scale(var(--viptv-focus-tv-scale-row));
+}
+.tv-layout .vx-tv-focus-ring:focus {
+  outline: none;
+  box-shadow: var(--viptv-focus-tv-shadow);
+  transform: scale(var(--viptv-focus-tv-scale-tile));
+}
+@media (prefers-reduced-motion: reduce) {
+  .tv-layout .vx-tv-focus-fill,
+  .tv-layout .vx-tv-focus-ring {
+    transition: none;
+  }
+}

@@ -62,7 +62,7 @@
     backdrop-filter: saturate(160%) blur(18px);
     border-top: 1px solid rgba(255, 255, 255, 0.07) !important;
   }
-  .responsive-app.oled .desktop-sidebar nav { background: rgba(0, 0, 0, 0.9) !important; }
+  :root[data-oled] .responsive-app .desktop-sidebar nav { background: rgba(0, 0, 0, 0.9) !important; }
   .responsive-app .desktop-sidebar nav button {
     flex: 1 1 0;
     max-width: 72px;

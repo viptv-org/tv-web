@@ -6,7 +6,7 @@
   to { background-position: 0 0; }
 }
 .responsive-app { --skeleton-base: #191b1d; --skeleton-shine: #24272a; }
-.responsive-app.oled { --skeleton-base: #101112; --skeleton-shine: #1b1c1e; }
+:root[data-oled] .responsive-app { --skeleton-base: #101112; --skeleton-shine: #1b1c1e; }
 .responsive-app :is(.skeleton-block, .skeleton-line, .card-skeleton, .live-skeleton) {
   background: linear-gradient(100deg, var(--skeleton-base) 30%, var(--skeleton-shine) 50%, var(--skeleton-base) 70%) !important;
   background-size: 300% 100% !important;

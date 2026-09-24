@@ -20,6 +20,8 @@
     "video:check": "node scripts/video-sync.mjs check"
   },
   "dependencies": {
+    "@fontsource-variable/bricolage-grotesque": "^5.3.0",
+    "@fontsource/onest": "^5.3.1",
     "@mediabunny/ac3": "^1.56.2",
     "@mediabunny/dts": "^1.56.2",
     "@mediabunny/prores": "^1.56.2",

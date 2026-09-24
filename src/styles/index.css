@@ -1,0 +1,10 @@
+/*
+ * tv-web stylesheet entry (imported by main.tsx after the generated tokens and
+ * the bundled fonts). Order matters — later files win at equal specificity:
+ *   1. base.css       reset, body type, focus recipes (a floor under legacy)
+ *   2. legacy/*.css   the pre-redesign rules, split by family; each family
+ *                     agent deletes its file once the family is rebuilt
+ *   3. primitives/*   shared vx- components
+ *   4. screens/*      per-family vx-<family>- layouts
+ */
+@import "./base.css";

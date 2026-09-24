@@ -145,7 +145,7 @@ body:has(.responsive-app) { background: #101112; }
   top: 0;
   height: 100%;
 }
-.responsive-app.oled { --canvas: #000; }
+:root[data-oled] .responsive-app { --canvas: #000; }
 .responsive-app *, .responsive-app *::before, .responsive-app *::after { box-sizing: border-box; }
 /* Touch: no browser tap-highlight flash, and a held button, card or image
    (hold is a real action here: sources, queue menus, profile editing)

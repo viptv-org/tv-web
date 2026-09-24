@@ -25,6 +25,7 @@ import {
   type PlayerSnapshot,
 } from "@viptv/video";
 import { exactResumeSource, resolveNext } from "../continuation";
+import { TV_CANVAS_HEIGHT, TV_CANVAS_WIDTH } from "../tvCanvas";
 import {
   connectionSummary,
   describeApiError,
@@ -304,10 +305,11 @@ export function useAuth(app: DialogsApi) {
     const resize = () => {
       const element = document.querySelector<HTMLElement>(".tv-screen");
       if (element) {
-        const scale = Math.min(innerWidth / 1280, innerHeight / 720);
+        // The TV canvas is authored at 1920 x 1080 and letterboxed to the device.
+        const scale = Math.min(innerWidth / TV_CANVAS_WIDTH, innerHeight / TV_CANVAS_HEIGHT);
         element.style.transform = `scale(${scale})`;
-        element.style.left = `${(innerWidth - 1280 * scale) / 2}px`;
-        element.style.top = `${(innerHeight - 720 * scale) / 2}px`;
+        element.style.left = `${(innerWidth - TV_CANVAS_WIDTH * scale) / 2}px`;
+        element.style.top = `${(innerHeight - TV_CANVAS_HEIGHT * scale) / 2}px`;
       }
     };
     resize();

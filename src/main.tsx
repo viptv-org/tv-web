@@ -1,3 +1,9 @@
+// Styles first: generated design tokens, bundled fonts, then the app stylesheet
+// entry (base → legacy → primitives → screens; see styles/index.css).
+import "./theme/viptv-tokens.generated.css";
+import "./theme/fonts";
+import "./styles/index.css";
+import { initAppearance } from "./theme/appearance";
 import { initializeCore } from "./core";
 import { createRoot } from "react-dom/client";
 import { TvApi, type DeviceTokenSet } from "./api";
@@ -67,6 +73,10 @@ async function start() {
     window.addEventListener("contextmenu", (e) => e.preventDefault());
   }
   const layout = platform === "tizen" || platform === "vizio" || params.get("layout") === "tv" ? "tv" : "responsive";
+  // Root hooks for platform-scoped CSS: data-layout="tv|responsive",
+  // data-platform="tizen|vizio|tauri|html5".
+  document.documentElement.setAttribute("data-layout", layout);
+  document.documentElement.setAttribute("data-platform", platform);
   // Local addon mode is a boot-level branch (LM-001): the flag is honored
   // only when the build declares the capability.
   if (localModeAvailable && readLocalMode()) {
@@ -75,6 +85,8 @@ async function start() {
   }
   root.render(<App api={api} platform={platform} layout={layout} />);
 }
+// Device appearance (<html data-oled / data-accent>) before the first paint.
+initAppearance();
 const root = createRoot(document.getElementById("root")!);
 // TV/embedded-browser diagnosis opt-in: with ?reportboot=1 the page reports
 // boot and render failures to its own origin (/boot-error/...) so a harness

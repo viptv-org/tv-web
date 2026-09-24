@@ -135,7 +135,7 @@
   color: #8d9093;
 }
 .responsive-app .list-settings .settings-card { overflow: hidden; border-radius: 14px; background: #17191b; }
-.responsive-app.oled .list-settings .settings-card { background: #121314; }
+:root[data-oled] .responsive-app .list-settings .settings-card { background: #121314; }
 .responsive-app .list-settings .settings-row {
   --responsive-control-surface: transparent;
   display: flex;

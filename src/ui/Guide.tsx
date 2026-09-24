@@ -6,6 +6,7 @@ import { TextEntry } from "./TextEntry";
 import { AutoLoad } from "./AutoLoad";
 import "./account-roku.css";
 import "./guide-responsive.css";
+import { LEGACY_TV_SCALE } from "./tvCanvas";
 import { DAY_SECONDS, GUIDE_CACHE_LIMIT, GUIDE_CELL_LIMIT, GUIDE_WIDTH, HOUR_SECONDS, PAGE_SIZE, PREFETCH_ROWS, RESPONSIVE_TIMELINE_WIDTH, RESPONSIVE_WINDOW_SECONDS, VISIBLE_ROWS, WINDOW_SECONDS, cellAt, filterOptions, firstVisibleRow, guideCells, halfHour } from "./guide-core";
 import { useGuideController, type GuideProps } from "./useGuideController";
 export { guideCells } from "./guide-core";
@@ -273,8 +274,8 @@ export function Guide(props: GuideProps) {
                       style={{
                         position: "absolute",
                         left,
-                        width: Math.max(1, width - 3),
-                        height: 87,
+                        width: Math.max(1, width - 3 * LEGACY_TV_SCALE),
+                        height: 87 * LEGACY_TV_SCALE,
                       }}
                       id={`guide-program-${row}-${index}`}
                       key={`${cell.start}-${cell.end}-${index}`}
@@ -285,7 +286,7 @@ export function Guide(props: GuideProps) {
                       onActivate={() => activateCell(channel, cell)}
                       onHold={() => onDetails(channel, cell.program)}
                     >
-                      {width > 52 && (
+                      {width > 52 * LEGACY_TV_SCALE && (
                         <>
                           <small>
                             {cell.missing
@@ -316,7 +317,7 @@ export function Guide(props: GuideProps) {
           className="guide-now"
           style={{
             left:
-              432 +
+              432 * LEGACY_TV_SCALE +
               Math.floor(((now - windowStart) / WINDOW_SECONDS) * GUIDE_WIDTH),
           }}
         />

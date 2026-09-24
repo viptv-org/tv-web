@@ -1,0 +1,328 @@
+/*
+ * GENERATED FILE — DO NOT EDIT.
+ * Source: design/viptv-design-system/tokens/tokens.json
+ * Regenerate: node design/viptv-design-system/tools/gen-themes.mjs
+ */
+
+:root {
+  --viptv-color-bg: #0B0B0C;
+  --viptv-color-bg-oled: #000000;
+  --viptv-color-surface-1: #161618;
+  --viptv-color-surface-2: #212124;
+  --viptv-color-surface-3: #2A2A2E;
+  --viptv-color-surface-4: #34343A;
+  --viptv-color-text-primary: #F4F2EE;
+  --viptv-color-text-body: #DAD8D3;
+  --viptv-color-text-secondary: #B6B4AF;
+  --viptv-color-text-tertiary: #8F8D89;
+  --viptv-color-on-light: #111113;
+  --viptv-color-on-accent: #15130F;
+  --viptv-color-accent-default: #F5C542;
+  --viptv-color-accent-options-gold: #F5C542;
+  --viptv-color-accent-options-coral: #FF8B5C;
+  --viptv-color-accent-options-mint: #62D9BC;
+  --viptv-color-accent-options-periwinkle: #A3BCFF;
+  --viptv-color-status-live: #FF5A4E;
+  --viptv-color-status-danger: #FF7A6E;
+  --viptv-color-status-danger-tv: #FF8A7E;
+  --viptv-color-status-spinner-track: #45454B;
+  --viptv-color-line-hairline: rgba(255,255,255,0.07);
+  --viptv-color-line-chip: rgba(255,255,255,0.10);
+  --viptv-color-line-outline: rgba(255,255,255,0.14);
+  --viptv-color-line-strong: rgba(255,255,255,0.22);
+  --viptv-color-fill-tv-unfocused: rgba(255,255,255,0.12);
+  --viptv-color-fill-tv-selected: rgba(255,255,255,0.16);
+  --viptv-color-fill-glass: rgba(32,32,35,0.94);
+  --viptv-color-fill-badge-glass: rgba(0,0,0,0.55);
+  --viptv-color-scrim-sheet: rgba(0,0,0,0.62);
+  --viptv-color-scrim-dialog: rgba(0,0,0,0.55);
+  --viptv-color-scrim-tv-panel: rgba(0,0,0,0.60);
+  --viptv-color-scrim-tv-menu: rgba(0,0,0,0.55);
+  --viptv-color-scrim-tv-fullscreen: rgba(11,11,12,0.94);
+  --viptv-font-family-display: 'Bricolage Grotesque', 'Bricolage Grotesque Variable', 'Helvetica Neue', sans-serif;
+  --viptv-font-family-ui: Onest, system-ui, sans-serif;
+  --viptv-font-family-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --viptv-radius-xs: 4px;
+  --viptv-radius-sm: 8px;
+  --viptv-radius-field-titlebar: 9px;
+  --viptv-radius-md: 12px;
+  --viptv-radius-lg: 14px;
+  --viptv-radius-xl: 16px;
+  --viptv-radius-2xl: 18px;
+  --viptv-radius-3xl: 22px;
+  --viptv-radius-sheet: 28px;
+  --viptv-radius-phone-frame: 44px;
+  --viptv-radius-avatar: 0.2;
+  --viptv-space-0: 0px;
+  --viptv-space-1: 4px;
+  --viptv-space-2: 8px;
+  --viptv-space-3: 12px;
+  --viptv-space-4: 16px;
+  --viptv-space-5: 20px;
+  --viptv-space-6: 24px;
+  --viptv-space-7: 28px;
+  --viptv-space-8: 32px;
+  --viptv-space-9: 36px;
+  --viptv-space-12: 48px;
+  --viptv-space-16: 64px;
+  --viptv-space-24: 96px;
+  --viptv-space-0_5: 2px;
+  --viptv-space-1_5: 6px;
+  --viptv-space-2_5: 10px;
+  --viptv-space-3_5: 14px;
+  --viptv-space-4_5: 18px;
+  --viptv-space-5_5: 22px;
+  --viptv-layout-phone-gutter: 16px;
+  --viptv-layout-phone-top-inset: 58px;
+  --viptv-layout-phone-nav-height: 64px;
+  --viptv-layout-phone-nav-bottom: 28px;
+  --viptv-layout-phone-min-target: 44px;
+  --viptv-layout-phone-bottom-clearance: 140px;
+  --viptv-layout-desktop-titlebar: 40px;
+  --viptv-layout-desktop-rail: 84px;
+  --viptv-layout-desktop-dialog-width: 460px;
+  --viptv-layout-desktop-drawer-width: 460px;
+  --viptv-layout-desktop-popup-width: 340px;
+  --viptv-layout-tv-safe-x: 96px;
+  --viptv-layout-tv-safe-y: 54px;
+  --viptv-layout-tv-rail-collapsed: 144px;
+  --viptv-layout-tv-menu-expanded: 520px;
+  --viptv-layout-tv-panel-width: 820px;
+  --viptv-layout-tv-row-gap: 36px;
+  --viptv-layout-tv-heading-to-row: 22px;
+  --viptv-layout-tv-art-to-caption: 16px;
+  --viptv-size-button-phone: 54px;
+  --viptv-size-button-phone-detail: 58px;
+  --viptv-size-button-desktop: 48px;
+  --viptv-size-button-tv: 72px;
+  --viptv-size-button-tv-small: 52px;
+  --viptv-size-chip-phone: 44px;
+  --viptv-size-chip-desktop: 40px;
+  --viptv-size-chip-desktop-drawer: 36px;
+  --viptv-size-chip-tv: 56px;
+  --viptv-size-field-phone: 54px;
+  --viptv-size-field-desktop: 48px;
+  --viptv-size-field-desktop-titlebar: 30px;
+  --viptv-size-field-tv: 80px;
+  --viptv-size-field-radius-phone: 16px;
+  --viptv-size-field-radius-desktop: 12px;
+  --viptv-size-field-radius-tv: 20px;
+  --viptv-size-row-tv: 80px;
+  --viptv-size-progress-phone: 4px;
+  --viptv-size-progress-desktop: 4px;
+  --viptv-size-progress-tv: 6px;
+  --viptv-focus-desktop: 0 0 0 2px #0B0B0C, 0 0 0 4px #F4F2EE;
+  --viptv-focus-desktop-hover-card: inset 0 0 0 2px #F4F2EE;
+  --viptv-focus-tv-shadow: 0 0 0 4px #FFFFFF, 0 24px 60px rgba(0,0,0,0.65);
+  --viptv-focus-tv-scale-button: 1.05;
+  --viptv-focus-tv-scale-row: 1.02;
+  --viptv-focus-tv-scale-tile: 1.06;
+  --viptv-focus-tv-caption-shift: 8px;
+  --viptv-shadow-nav: 0 12px 32px rgba(0,0,0,0.55);
+  --viptv-shadow-popover: 0 20px 60px rgba(0,0,0,0.55);
+  --viptv-shadow-toast: 0 12px 30px rgba(0,0,0,0.5);
+  --viptv-shadow-tv-panel: -40px 0 100px rgba(0,0,0,0.6);
+  --viptv-motion-focus: 150ms;
+  --viptv-motion-pressed-scale: 0.97;
+  --viptv-motion-toast-notice: 5000ms;
+  --viptv-motion-toast-error: 4000ms;
+  --viptv-motion-player-notice: 4000ms;
+  --viptv-type-phone-screen-title-size: 34px;
+  --viptv-type-phone-screen-title-weight: 700;
+  --viptv-type-phone-screen-title-line-height: 1.05;
+  --viptv-type-phone-screen-title-letter-spacing: -0.02em;
+  --viptv-type-phone-sheet-title-size: 24px;
+  --viptv-type-phone-sheet-title-weight: 700;
+  --viptv-type-phone-sheet-title-line-height: 1.2;
+  --viptv-type-phone-sheet-title-letter-spacing: -0.01em;
+  --viptv-type-phone-wordmark-size: 24px;
+  --viptv-type-phone-wordmark-weight: 800;
+  --viptv-type-phone-wordmark-line-height: 1;
+  --viptv-type-phone-wordmark-letter-spacing: -0.03em;
+  --viptv-type-phone-section-size: 20px;
+  --viptv-type-phone-section-weight: 650;
+  --viptv-type-phone-section-line-height: 1.15;
+  --viptv-type-phone-section-letter-spacing: -0.01em;
+  --viptv-type-phone-button-primary-size: 17px;
+  --viptv-type-phone-button-primary-weight: 700;
+  --viptv-type-phone-button-primary-line-height: 1;
+  --viptv-type-phone-button-primary-letter-spacing: 0em;
+  --viptv-type-phone-body-strong-size: 16px;
+  --viptv-type-phone-body-strong-weight: 600;
+  --viptv-type-phone-body-strong-line-height: 1.35;
+  --viptv-type-phone-body-strong-letter-spacing: 0em;
+  --viptv-type-phone-body-size: 15px;
+  --viptv-type-phone-body-weight: 400;
+  --viptv-type-phone-body-line-height: 1.45;
+  --viptv-type-phone-body-letter-spacing: 0em;
+  --viptv-type-phone-label-size: 14px;
+  --viptv-type-phone-label-weight: 600;
+  --viptv-type-phone-label-line-height: 1.3;
+  --viptv-type-phone-label-letter-spacing: 0em;
+  --viptv-type-phone-meta-size: 13px;
+  --viptv-type-phone-meta-weight: 400;
+  --viptv-type-phone-meta-line-height: 1.35;
+  --viptv-type-phone-meta-letter-spacing: 0em;
+  --viptv-type-phone-caption-size: 12px;
+  --viptv-type-phone-caption-weight: 400;
+  --viptv-type-phone-caption-line-height: 1.35;
+  --viptv-type-phone-caption-letter-spacing: 0em;
+  --viptv-type-phone-eyebrow-size: 11px;
+  --viptv-type-phone-eyebrow-weight: 700;
+  --viptv-type-phone-eyebrow-line-height: 1.2;
+  --viptv-type-phone-eyebrow-letter-spacing: 0.08em;
+  --viptv-type-phone-nav-label-size: 11px;
+  --viptv-type-phone-nav-label-weight: 600;
+  --viptv-type-phone-nav-label-line-height: 1;
+  --viptv-type-phone-nav-label-letter-spacing: 0.01em;
+  --viptv-type-desktop-page-title-size: 40px;
+  --viptv-type-desktop-page-title-weight: 700;
+  --viptv-type-desktop-page-title-line-height: 1.05;
+  --viptv-type-desktop-page-title-letter-spacing: -0.02em;
+  --viptv-type-desktop-hero-title-size: 30px;
+  --viptv-type-desktop-hero-title-weight: 800;
+  --viptv-type-desktop-hero-title-line-height: 1.05;
+  --viptv-type-desktop-hero-title-letter-spacing: -0.02em;
+  --viptv-type-desktop-dialog-title-size: 24px;
+  --viptv-type-desktop-dialog-title-weight: 700;
+  --viptv-type-desktop-dialog-title-line-height: 1.2;
+  --viptv-type-desktop-dialog-title-letter-spacing: -0.01em;
+  --viptv-type-desktop-section-size: 22px;
+  --viptv-type-desktop-section-weight: 650;
+  --viptv-type-desktop-section-line-height: 1.15;
+  --viptv-type-desktop-section-letter-spacing: -0.01em;
+  --viptv-type-desktop-wordmark-size: 13px;
+  --viptv-type-desktop-wordmark-weight: 700;
+  --viptv-type-desktop-wordmark-line-height: 1;
+  --viptv-type-desktop-wordmark-letter-spacing: 0.02em;
+  --viptv-type-desktop-button-size: 16px;
+  --viptv-type-desktop-button-weight: 600;
+  --viptv-type-desktop-button-line-height: 1;
+  --viptv-type-desktop-button-letter-spacing: 0em;
+  --viptv-type-desktop-body-size: 16px;
+  --viptv-type-desktop-body-weight: 400;
+  --viptv-type-desktop-body-line-height: 1.5;
+  --viptv-type-desktop-body-letter-spacing: 0em;
+  --viptv-type-desktop-label-size: 15px;
+  --viptv-type-desktop-label-weight: 600;
+  --viptv-type-desktop-label-line-height: 1.3;
+  --viptv-type-desktop-label-letter-spacing: 0em;
+  --viptv-type-desktop-row-size: 14px;
+  --viptv-type-desktop-row-weight: 600;
+  --viptv-type-desktop-row-line-height: 1.3;
+  --viptv-type-desktop-row-letter-spacing: 0em;
+  --viptv-type-desktop-meta-size: 13px;
+  --viptv-type-desktop-meta-weight: 400;
+  --viptv-type-desktop-meta-line-height: 1.35;
+  --viptv-type-desktop-meta-letter-spacing: 0em;
+  --viptv-type-desktop-caption-size: 12px;
+  --viptv-type-desktop-caption-weight: 400;
+  --viptv-type-desktop-caption-line-height: 1.35;
+  --viptv-type-desktop-caption-letter-spacing: 0em;
+  --viptv-type-desktop-eyebrow-size: 12px;
+  --viptv-type-desktop-eyebrow-weight: 700;
+  --viptv-type-desktop-eyebrow-line-height: 1.2;
+  --viptv-type-desktop-eyebrow-letter-spacing: 0.06em;
+  --viptv-type-desktop-rail-label-size: 11px;
+  --viptv-type-desktop-rail-label-weight: 600;
+  --viptv-type-desktop-rail-label-line-height: 1;
+  --viptv-type-desktop-rail-label-letter-spacing: 0em;
+  --viptv-type-tv-screen-title-size: 56px;
+  --viptv-type-tv-screen-title-weight: 700;
+  --viptv-type-tv-screen-title-line-height: 1.05;
+  --viptv-type-tv-screen-title-letter-spacing: -0.02em;
+  --viptv-type-tv-panel-title-size: 44px;
+  --viptv-type-tv-panel-title-weight: 700;
+  --viptv-type-tv-panel-title-line-height: 1.1;
+  --viptv-type-tv-panel-title-letter-spacing: -0.01em;
+  --viptv-type-tv-section-size: 32px;
+  --viptv-type-tv-section-weight: 650;
+  --viptv-type-tv-section-line-height: 1.1;
+  --viptv-type-tv-section-letter-spacing: -0.01em;
+  --viptv-type-tv-wordmark-size: 40px;
+  --viptv-type-tv-wordmark-weight: 800;
+  --viptv-type-tv-wordmark-line-height: 1;
+  --viptv-type-tv-wordmark-letter-spacing: -0.02em;
+  --viptv-type-tv-row-size: 28px;
+  --viptv-type-tv-row-weight: 600;
+  --viptv-type-tv-row-line-height: 1.3;
+  --viptv-type-tv-row-letter-spacing: 0em;
+  --viptv-type-tv-button-size: 26px;
+  --viptv-type-tv-button-weight: 700;
+  --viptv-type-tv-button-line-height: 1;
+  --viptv-type-tv-button-letter-spacing: 0em;
+  --viptv-type-tv-body-size: 26px;
+  --viptv-type-tv-body-weight: 400;
+  --viptv-type-tv-body-line-height: 1.45;
+  --viptv-type-tv-body-letter-spacing: 0em;
+  --viptv-type-tv-label-size: 24px;
+  --viptv-type-tv-label-weight: 600;
+  --viptv-type-tv-label-line-height: 1.3;
+  --viptv-type-tv-label-letter-spacing: 0em;
+  --viptv-type-tv-meta-size: 22px;
+  --viptv-type-tv-meta-weight: 400;
+  --viptv-type-tv-meta-line-height: 1.35;
+  --viptv-type-tv-meta-letter-spacing: 0em;
+  --viptv-type-tv-caption-size: 20px;
+  --viptv-type-tv-caption-weight: 400;
+  --viptv-type-tv-caption-line-height: 1.35;
+  --viptv-type-tv-caption-letter-spacing: 0em;
+  --viptv-type-tv-eyebrow-size: 18px;
+  --viptv-type-tv-eyebrow-weight: 700;
+  --viptv-type-tv-eyebrow-line-height: 1.2;
+  --viptv-type-tv-eyebrow-letter-spacing: 0.08em;
+  --viptv-type-tv-min-size: 18px;
+  --viptv-type-tv-min-weight: 400;
+  --viptv-type-tv-min-line-height: 1.3;
+  --viptv-type-tv-min-letter-spacing: 0em;
+  /* The one runtime accent the user picks (Settings). Components read only this. */
+  --viptv-accent: var(--viptv-color-accent-default);
+}
+
+/* OLED mode (device setting) */
+:root[data-oled] { --viptv-color-bg: var(--viptv-color-bg-oled); }
+
+/* Accent choices: <html data-accent="gold|coral|mint|periwinkle"> */
+:root[data-accent="gold"] { --viptv-accent: var(--viptv-color-accent-options-gold); }
+:root[data-accent="coral"] { --viptv-accent: var(--viptv-color-accent-options-coral); }
+:root[data-accent="mint"] { --viptv-accent: var(--viptv-color-accent-options-mint); }
+:root[data-accent="periwinkle"] { --viptv-accent: var(--viptv-color-accent-options-periwinkle); }
+
+/* Type roles: .viptv-type-<platform>-<role> */
+.viptv-type-phone-screen-title { font-family: var(--viptv-font-family-display); font-size: var(--viptv-type-phone-screen-title-size); font-weight: var(--viptv-type-phone-screen-title-weight); line-height: var(--viptv-type-phone-screen-title-line-height); letter-spacing: var(--viptv-type-phone-screen-title-letter-spacing); }
+.viptv-type-phone-sheet-title { font-family: var(--viptv-font-family-display); font-size: var(--viptv-type-phone-sheet-title-size); font-weight: var(--viptv-type-phone-sheet-title-weight); line-height: var(--viptv-type-phone-sheet-title-line-height); letter-spacing: var(--viptv-type-phone-sheet-title-letter-spacing); }
+.viptv-type-phone-wordmark { font-family: var(--viptv-font-family-display); font-size: var(--viptv-type-phone-wordmark-size); font-weight: var(--viptv-type-phone-wordmark-weight); line-height: var(--viptv-type-phone-wordmark-line-height); letter-spacing: var(--viptv-type-phone-wordmark-letter-spacing); }
+.viptv-type-phone-section { font-family: var(--viptv-font-family-display); font-size: var(--viptv-type-phone-section-size); font-weight: var(--viptv-type-phone-section-weight); line-height: var(--viptv-type-phone-section-line-height); letter-spacing: var(--viptv-type-phone-section-letter-spacing); }
+.viptv-type-phone-button-primary { font-family: var(--viptv-font-family-ui); font-size: var(--viptv-type-phone-button-primary-size); font-weight: var(--viptv-type-phone-button-primary-weight); line-height: var(--viptv-type-phone-button-primary-line-height); letter-spacing: var(--viptv-type-phone-button-primary-letter-spacing); }
+.viptv-type-phone-body-strong { font-family: var(--viptv-font-family-ui); font-size: var(--viptv-type-phone-body-strong-size); font-weight: var(--viptv-type-phone-body-strong-weight); line-height: var(--viptv-type-phone-body-strong-line-height); letter-spacing: var(--viptv-type-phone-body-strong-letter-spacing); }
+.viptv-type-phone-body { font-family: var(--viptv-font-family-ui); font-size: var(--viptv-type-phone-body-size); font-weight: var(--viptv-type-phone-body-weight); line-height: var(--viptv-type-phone-body-line-height); letter-spacing: var(--viptv-type-phone-body-letter-spacing); }
+.viptv-type-phone-label { font-family: var(--viptv-font-family-ui); font-size: var(--viptv-type-phone-label-size); font-weight: var(--viptv-type-phone-label-weight); line-height: var(--viptv-type-phone-label-line-height); letter-spacing: var(--viptv-type-phone-label-letter-spacing); }
+.viptv-type-phone-meta { font-family: var(--viptv-font-family-ui); font-size: var(--viptv-type-phone-meta-size); font-weight: var(--viptv-type-phone-meta-weight); line-height: var(--viptv-type-phone-meta-line-height); letter-spacing: var(--viptv-type-phone-meta-letter-spacing); }
+.viptv-type-phone-caption { font-family: var(--viptv-font-family-ui); font-size: var(--viptv-type-phone-caption-size); font-weight: var(--viptv-type-phone-caption-weight); line-height: var(--viptv-type-phone-caption-line-height); letter-spacing: var(--viptv-type-phone-caption-letter-spacing); }
+.viptv-type-phone-eyebrow { font-family: var(--viptv-font-family-ui); font-size: var(--viptv-type-phone-eyebrow-size); font-weight: var(--viptv-type-phone-eyebrow-weight); line-height: var(--viptv-type-phone-eyebrow-line-height); letter-spacing: var(--viptv-type-phone-eyebrow-letter-spacing); text-transform: uppercase; }
+.viptv-type-phone-nav-label { font-family: var(--viptv-font-family-ui); font-size: var(--viptv-type-phone-nav-label-size); font-weight: var(--viptv-type-phone-nav-label-weight); line-height: var(--viptv-type-phone-nav-label-line-height); letter-spacing: var(--viptv-type-phone-nav-label-letter-spacing); }
+.viptv-type-desktop-page-title { font-family: var(--viptv-font-family-display); font-size: var(--viptv-type-desktop-page-title-size); font-weight: var(--viptv-type-desktop-page-title-weight); line-height: var(--viptv-type-desktop-page-title-line-height); letter-spacing: var(--viptv-type-desktop-page-title-letter-spacing); }
+.viptv-type-desktop-hero-title { font-family: var(--viptv-font-family-display); font-size: var(--viptv-type-desktop-hero-title-size); font-weight: var(--viptv-type-desktop-hero-title-weight); line-height: var(--viptv-type-desktop-hero-title-line-height); letter-spacing: var(--viptv-type-desktop-hero-title-letter-spacing); }
+.viptv-type-desktop-dialog-title { font-family: var(--viptv-font-family-display); font-size: var(--viptv-type-desktop-dialog-title-size); font-weight: var(--viptv-type-desktop-dialog-title-weight); line-height: var(--viptv-type-desktop-dialog-title-line-height); letter-spacing: var(--viptv-type-desktop-dialog-title-letter-spacing); }
+.viptv-type-desktop-section { font-family: var(--viptv-font-family-display); font-size: var(--viptv-type-desktop-section-size); font-weight: var(--viptv-type-desktop-section-weight); line-height: var(--viptv-type-desktop-section-line-height); letter-spacing: var(--viptv-type-desktop-section-letter-spacing); }
+.viptv-type-desktop-wordmark { font-family: var(--viptv-font-family-display); font-size: var(--viptv-type-desktop-wordmark-size); font-weight: var(--viptv-type-desktop-wordmark-weight); line-height: var(--viptv-type-desktop-wordmark-line-height); letter-spacing: var(--viptv-type-desktop-wordmark-letter-spacing); }
+.viptv-type-desktop-button { font-family: var(--viptv-font-family-ui); font-size: var(--viptv-type-desktop-button-size); font-weight: var(--viptv-type-desktop-button-weight); line-height: var(--viptv-type-desktop-button-line-height); letter-spacing: var(--viptv-type-desktop-button-letter-spacing); }
+.viptv-type-desktop-body { font-family: var(--viptv-font-family-ui); font-size: var(--viptv-type-desktop-body-size); font-weight: var(--viptv-type-desktop-body-weight); line-height: var(--viptv-type-desktop-body-line-height); letter-spacing: var(--viptv-type-desktop-body-letter-spacing); }
+.viptv-type-desktop-label { font-family: var(--viptv-font-family-ui); font-size: var(--viptv-type-desktop-label-size); font-weight: var(--viptv-type-desktop-label-weight); line-height: var(--viptv-type-desktop-label-line-height); letter-spacing: var(--viptv-type-desktop-label-letter-spacing); }
+.viptv-type-desktop-row { font-family: var(--viptv-font-family-ui); font-size: var(--viptv-type-desktop-row-size); font-weight: var(--viptv-type-desktop-row-weight); line-height: var(--viptv-type-desktop-row-line-height); letter-spacing: var(--viptv-type-desktop-row-letter-spacing); }
+.viptv-type-desktop-meta { font-family: var(--viptv-font-family-ui); font-size: var(--viptv-type-desktop-meta-size); font-weight: var(--viptv-type-desktop-meta-weight); line-height: var(--viptv-type-desktop-meta-line-height); letter-spacing: var(--viptv-type-desktop-meta-letter-spacing); }
+.viptv-type-desktop-caption { font-family: var(--viptv-font-family-ui); font-size: var(--viptv-type-desktop-caption-size); font-weight: var(--viptv-type-desktop-caption-weight); line-height: var(--viptv-type-desktop-caption-line-height); letter-spacing: var(--viptv-type-desktop-caption-letter-spacing); }
+.viptv-type-desktop-eyebrow { font-family: var(--viptv-font-family-ui); font-size: var(--viptv-type-desktop-eyebrow-size); font-weight: var(--viptv-type-desktop-eyebrow-weight); line-height: var(--viptv-type-desktop-eyebrow-line-height); letter-spacing: var(--viptv-type-desktop-eyebrow-letter-spacing); text-transform: uppercase; }
+.viptv-type-desktop-rail-label { font-family: var(--viptv-font-family-ui); font-size: var(--viptv-type-desktop-rail-label-size); font-weight: var(--viptv-type-desktop-rail-label-weight); line-height: var(--viptv-type-desktop-rail-label-line-height); letter-spacing: var(--viptv-type-desktop-rail-label-letter-spacing); }
+.viptv-type-tv-screen-title { font-family: var(--viptv-font-family-display); font-size: var(--viptv-type-tv-screen-title-size); font-weight: var(--viptv-type-tv-screen-title-weight); line-height: var(--viptv-type-tv-screen-title-line-height); letter-spacing: var(--viptv-type-tv-screen-title-letter-spacing); }
+.viptv-type-tv-panel-title { font-family: var(--viptv-font-family-display); font-size: var(--viptv-type-tv-panel-title-size); font-weight: var(--viptv-type-tv-panel-title-weight); line-height: var(--viptv-type-tv-panel-title-line-height); letter-spacing: var(--viptv-type-tv-panel-title-letter-spacing); }
+.viptv-type-tv-section { font-family: var(--viptv-font-family-display); font-size: var(--viptv-type-tv-section-size); font-weight: var(--viptv-type-tv-section-weight); line-height: var(--viptv-type-tv-section-line-height); letter-spacing: var(--viptv-type-tv-section-letter-spacing); }
+.viptv-type-tv-wordmark { font-family: var(--viptv-font-family-display); font-size: var(--viptv-type-tv-wordmark-size); font-weight: var(--viptv-type-tv-wordmark-weight); line-height: var(--viptv-type-tv-wordmark-line-height); letter-spacing: var(--viptv-type-tv-wordmark-letter-spacing); }
+.viptv-type-tv-row { font-family: var(--viptv-font-family-ui); font-size: var(--viptv-type-tv-row-size); font-weight: var(--viptv-type-tv-row-weight); line-height: var(--viptv-type-tv-row-line-height); letter-spacing: var(--viptv-type-tv-row-letter-spacing); }
+.viptv-type-tv-button { font-family: var(--viptv-font-family-ui); font-size: var(--viptv-type-tv-button-size); font-weight: var(--viptv-type-tv-button-weight); line-height: var(--viptv-type-tv-button-line-height); letter-spacing: var(--viptv-type-tv-button-letter-spacing); }
+.viptv-type-tv-body { font-family: var(--viptv-font-family-ui); font-size: var(--viptv-type-tv-body-size); font-weight: var(--viptv-type-tv-body-weight); line-height: var(--viptv-type-tv-body-line-height); letter-spacing: var(--viptv-type-tv-body-letter-spacing); }
+.viptv-type-tv-label { font-family: var(--viptv-font-family-ui); font-size: var(--viptv-type-tv-label-size); font-weight: var(--viptv-type-tv-label-weight); line-height: var(--viptv-type-tv-label-line-height); letter-spacing: var(--viptv-type-tv-label-letter-spacing); }
+.viptv-type-tv-meta { font-family: var(--viptv-font-family-ui); font-size: var(--viptv-type-tv-meta-size); font-weight: var(--viptv-type-tv-meta-weight); line-height: var(--viptv-type-tv-meta-line-height); letter-spacing: var(--viptv-type-tv-meta-letter-spacing); }
+.viptv-type-tv-caption { font-family: var(--viptv-font-family-ui); font-size: var(--viptv-type-tv-caption-size); font-weight: var(--viptv-type-tv-caption-weight); line-height: var(--viptv-type-tv-caption-line-height); letter-spacing: var(--viptv-type-tv-caption-letter-spacing); }
+.viptv-type-tv-eyebrow { font-family: var(--viptv-font-family-ui); font-size: var(--viptv-type-tv-eyebrow-size); font-weight: var(--viptv-type-tv-eyebrow-weight); line-height: var(--viptv-type-tv-eyebrow-line-height); letter-spacing: var(--viptv-type-tv-eyebrow-letter-spacing); text-transform: uppercase; }
+.viptv-type-tv-min { font-family: var(--viptv-font-family-ui); font-size: var(--viptv-type-tv-min-size); font-weight: var(--viptv-type-tv-min-weight); line-height: var(--viptv-type-tv-min-line-height); letter-spacing: var(--viptv-type-tv-min-letter-spacing); }

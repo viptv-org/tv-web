@@ -1,12 +1,12 @@
-/* Account and guide coordinates use the native 1280 × 720 Roku canvas. */
+/* Account and guide coordinates fill the 1920 × 1080 TV canvas (authored at 1280 × 720, scaled by --tv-k). */
 .roku-settings,
 .roku-guide,
 .roku-profile-editor,
 .roku-text-entry {
   position: absolute;
   inset: 0;
-  width: 1280px;
-  height: 720px;
+  width: calc(1280px * var(--tv-k));
+  height: calc(720px * var(--tv-k));
   margin: 0;
   padding: 0;
   background: #101112;
@@ -17,69 +17,69 @@
 .roku-text-entry h1 {
   position: absolute;
   margin: 0;
-  font-size: 42px;
-  line-height: 64px;
+  font-size: calc(42px * var(--tv-k));
+  line-height: calc(64px * var(--tv-k));
   font-weight: 700;
 }
 .roku-settings h1 {
-  left: 100px;
-  top: 54px;
+  left: calc(100px * var(--tv-k));
+  top: calc(54px * var(--tv-k));
 }
 .roku-settings .settings-scroll {
   position: absolute;
-  left: 100px;
-  top: 144px;
-  width: 536px;
-  height: 476px;
+  left: calc(100px * var(--tv-k));
+  top: calc(144px * var(--tv-k));
+  width: calc(536px * var(--tv-k));
+  height: calc(476px * var(--tv-k));
   padding: 0;
   overflow-y: auto;
   scrollbar-width: none;
 }
 .roku-settings.has-caption .settings-scroll {
-  top: 176px;
+  top: calc(176px * var(--tv-k));
 }
 .roku-settings .settings-scroll > button {
   display: block;
-  width: 536px;
-  min-height: 56px;
-  height: 56px;
-  margin: 0 0 12px;
-  padding: 0 20px;
-  border-radius: 8px;
+  width: calc(536px * var(--tv-k));
+  min-height: calc(56px * var(--tv-k));
+  height: calc(56px * var(--tv-k));
+  margin: 0 0 calc(12px * var(--tv-k));
+  padding: 0 calc(20px * var(--tv-k));
+  border-radius: calc(8px * var(--tv-k));
   text-align: center;
-  font-size: 22px;
+  font-size: calc(22px * var(--tv-k));
 }
 .roku-settings .settings-caption {
   position: absolute;
-  left: 100px;
-  top: 126px;
-  width: 1096px;
+  left: calc(100px * var(--tv-k));
+  top: calc(126px * var(--tv-k));
+  width: calc(1096px * var(--tv-k));
   margin: 0;
-  font-size: 19px;
-  line-height: 28px;
+  font-size: calc(19px * var(--tv-k));
+  line-height: calc(28px * var(--tv-k));
   color: #a6a8aa;
 }
 .roku-settings .settings-description {
   position: absolute;
-  left: 778px;
-  top: 152px;
-  width: 424px;
+  left: calc(778px * var(--tv-k));
+  top: calc(152px * var(--tv-k));
+  width: calc(424px * var(--tv-k));
 }
 .roku-settings.has-caption .settings-description {
-  top: 184px;
+  top: calc(184px * var(--tv-k));
 }
 .roku-settings .settings-description h2 {
   margin: 0;
-  font-size: 28px;
-  line-height: 36px;
+  font-size: calc(28px * var(--tv-k));
+  line-height: calc(36px * var(--tv-k));
 }
 .roku-settings .settings-description p {
-  margin: 8px 0 0;
-  height: 208px;
+  margin: calc(8px * var(--tv-k)) 0 0;
+  height: calc(208px * var(--tv-k));
   white-space: pre-line;
   overflow: hidden;
-  font-size: 22px;
-  line-height: 30px;
+  font-size: calc(22px * var(--tv-k));
+  line-height: calc(30px * var(--tv-k));
   color: #c5c6c7;
 }
 .roku-profile-editor,
@@ -88,16 +88,16 @@
 }
 .account-mark {
   position: absolute;
-  left: 96px;
-  top: 44px;
-  width: 42px;
-  height: 36px;
+  left: calc(96px * var(--tv-k));
+  top: calc(44px * var(--tv-k));
+  width: calc(42px * var(--tv-k));
+  height: calc(36px * var(--tv-k));
   object-fit: contain;
 }
 .roku-profile-editor h1 {
-  left: 256px;
-  top: 148px;
-  width: 850px;
+  left: calc(256px * var(--tv-k));
+  top: calc(148px * var(--tv-k));
+  width: calc(850px * var(--tv-k));
 }
 .roku-profile-editor .profile-form {
   margin: 0;
@@ -109,132 +109,132 @@
   color: #a6a8aa;
 }
 .roku-profile-editor .profile-introduction {
-  left: 256px;
-  top: 222px;
-  width: 850px;
-  font-size: 26px;
-  line-height: 40px;
+  left: calc(256px * var(--tv-k));
+  top: calc(222px * var(--tv-k));
+  width: calc(850px * var(--tv-k));
+  font-size: calc(26px * var(--tv-k));
+  line-height: calc(40px * var(--tv-k));
 }
 .roku-profile-editor .profile-avatar-label {
-  left: 256px;
-  top: 486px;
-  width: 176px;
+  left: calc(256px * var(--tv-k));
+  top: calc(486px * var(--tv-k));
+  width: calc(176px * var(--tv-k));
   text-align: center;
-  font-size: 19px;
-  line-height: 32px;
+  font-size: calc(19px * var(--tv-k));
+  line-height: calc(32px * var(--tv-k));
 }
 .roku-profile-editor .profile-name-label {
-  left: 464px;
-  top: 292px;
-  font-size: 19px;
-  line-height: 36px;
+  left: calc(464px * var(--tv-k));
+  top: calc(292px * var(--tv-k));
+  font-size: calc(19px * var(--tv-k));
+  line-height: calc(36px * var(--tv-k));
 }
 .roku-profile-editor .profile-input-help {
-  left: 464px;
-  top: 420px;
-  width: 560px;
-  font-size: 19px;
-  line-height: 27px;
+  left: calc(464px * var(--tv-k));
+  top: calc(420px * var(--tv-k));
+  width: calc(560px * var(--tv-k));
+  font-size: calc(19px * var(--tv-k));
+  line-height: calc(27px * var(--tv-k));
 }
 .roku-profile-editor [data-focus-id="profile-avatar"] {
   position: absolute;
-  left: 256px;
-  top: 302px;
-  width: 176px;
-  height: 176px;
-  padding: 5px;
-  border-radius: 12px;
+  left: calc(256px * var(--tv-k));
+  top: calc(302px * var(--tv-k));
+  width: calc(176px * var(--tv-k));
+  height: calc(176px * var(--tv-k));
+  padding: calc(5px * var(--tv-k));
+  border-radius: calc(12px * var(--tv-k));
   background: transparent;
-  border: 3px solid transparent;
+  border: calc(3px * var(--tv-k)) solid transparent;
 }
 .roku-profile-editor [data-focus-id="profile-avatar"]:focus {
   border-color: #f5f5f5;
   outline: none;
 }
 .roku-profile-editor [data-focus-id="profile-avatar"] img {
-  width: 160px;
-  height: 160px;
+  width: calc(160px * var(--tv-k));
+  height: calc(160px * var(--tv-k));
   object-fit: contain;
-  border-radius: 12px;
+  border-radius: calc(12px * var(--tv-k));
 }
 .roku-profile-editor [data-focus-id="profile-name"] {
   position: absolute;
-  left: 464px;
-  top: 338px;
-  width: 560px;
-  height: 64px;
+  left: calc(464px * var(--tv-k));
+  top: calc(338px * var(--tv-k));
+  width: calc(560px * var(--tv-k));
+  height: calc(64px * var(--tv-k));
   text-align: left;
-  padding: 0 20px;
+  padding: 0 calc(20px * var(--tv-k));
 }
 .roku-profile-editor .profile-form .actions {
   position: absolute;
-  left: 256px;
-  top: 574px;
+  left: calc(256px * var(--tv-k));
+  top: calc(574px * var(--tv-k));
   display: flex;
-  gap: 16px;
+  gap: calc(16px * var(--tv-k));
   margin: 0;
 }
 .roku-profile-editor .actions button {
-  width: 240px;
-  height: 56px;
+  width: calc(240px * var(--tv-k));
+  height: calc(56px * var(--tv-k));
 }
 .roku-profile-editor > [role="alert"],
 .roku-profile-editor > [role="status"] {
   position: absolute;
-  left: 464px;
-  top: 484px;
-  width: 560px;
-  font-size: 19px;
-  line-height: 27px;
+  left: calc(464px * var(--tv-k));
+  top: calc(484px * var(--tv-k));
+  width: calc(560px * var(--tv-k));
+  font-size: calc(19px * var(--tv-k));
+  line-height: calc(27px * var(--tv-k));
   margin: 0;
 }
 .roku-profile-editor.mode-avatar h1 {
-  left: 96px;
-  top: 112px;
+  left: calc(96px * var(--tv-k));
+  top: calc(112px * var(--tv-k));
 }
 .roku-profile-editor .picker-hint {
   position: absolute;
-  left: 96px;
-  top: 178px;
+  left: calc(96px * var(--tv-k));
+  top: calc(178px * var(--tv-k));
   margin: 0;
-  font-size: 26px;
-  line-height: 36px;
+  font-size: calc(26px * var(--tv-k));
+  line-height: calc(36px * var(--tv-k));
   color: #a6a8aa;
 }
 .roku-profile-editor .avatar-categories {
   position: absolute;
-  left: 96px;
-  top: 238px;
-  width: 216px;
-  height: 408px;
+  left: calc(96px * var(--tv-k));
+  top: calc(238px * var(--tv-k));
+  width: calc(216px * var(--tv-k));
+  height: calc(408px * var(--tv-k));
   overflow-y: auto;
   scrollbar-width: none;
 }
 .roku-profile-editor .avatar-categories button {
   display: block;
-  width: 216px;
-  height: 44px;
-  min-height: 44px;
-  margin: 0 0 8px;
-  padding: 0 12px;
-  font-size: 19px;
+  width: calc(216px * var(--tv-k));
+  height: calc(44px * var(--tv-k));
+  min-height: calc(44px * var(--tv-k));
+  margin: 0 0 calc(8px * var(--tv-k));
+  padding: 0 calc(12px * var(--tv-k));
+  font-size: calc(19px * var(--tv-k));
   text-align: left;
 }
 .roku-profile-editor .avatar-grid {
   position: absolute;
-  left: 360px;
-  top: 238px;
+  left: calc(360px * var(--tv-k));
+  top: calc(238px * var(--tv-k));
   display: grid;
-  grid-template-columns: repeat(6, 128px);
-  grid-template-rows: repeat(3, 128px);
-  gap: 12px;
+  grid-template-columns: repeat(6, calc(128px * var(--tv-k)));
+  grid-template-rows: repeat(3, calc(128px * var(--tv-k)));
+  gap: calc(12px * var(--tv-k));
 }
 .roku-profile-editor .avatar-grid button {
-  width: 128px;
-  height: 128px;
-  padding: 5px;
-  border: 3px solid transparent;
-  border-radius: 12px;
+  width: calc(128px * var(--tv-k));
+  height: calc(128px * var(--tv-k));
+  padding: calc(5px * var(--tv-k));
+  border: calc(3px * var(--tv-k)) solid transparent;
+  border-radius: calc(12px * var(--tv-k));
   background: transparent;
 }
 .roku-profile-editor .avatar-grid button:focus {
@@ -242,147 +242,147 @@
   outline: none;
 }
 .roku-profile-editor .avatar-grid img {
-  width: 112px;
-  height: 112px;
-  border-radius: 12px;
+  width: calc(112px * var(--tv-k));
+  height: calc(112px * var(--tv-k));
+  border-radius: calc(12px * var(--tv-k));
   object-fit: contain;
 }
 .roku-profile-editor .avatar-pager {
   position: absolute;
-  left: 360px;
-  top: 662px;
+  left: calc(360px * var(--tv-k));
+  top: calc(662px * var(--tv-k));
   display: flex;
-  gap: 12px;
+  gap: calc(12px * var(--tv-k));
 }
 .roku-profile-editor .avatar-pager button {
-  width: 180px;
-  height: 40px;
-  min-height: 40px;
-  font-size: 19px;
+  width: calc(180px * var(--tv-k));
+  height: calc(40px * var(--tv-k));
+  min-height: calc(40px * var(--tv-k));
+  font-size: calc(19px * var(--tv-k));
 }
 .roku-profile-editor .avatar-page-label {
   position: absolute;
-  left: 812px;
-  top: 664px;
-  width: 372px;
+  left: calc(812px * var(--tv-k));
+  top: calc(664px * var(--tv-k));
+  width: calc(372px * var(--tv-k));
   margin: 0;
-  font-size: 19px;
-  line-height: 36px;
+  font-size: calc(19px * var(--tv-k));
+  line-height: calc(36px * var(--tv-k));
   text-align: right;
   color: #a6a8aa;
 }
 .roku-profile-editor .profile-delete-confirmation {
   position: absolute;
-  left: 256px;
-  top: 270px;
-  width: 768px;
-  font-size: 26px;
-  line-height: 38px;
+  left: calc(256px * var(--tv-k));
+  top: calc(270px * var(--tv-k));
+  width: calc(768px * var(--tv-k));
+  font-size: calc(26px * var(--tv-k));
+  line-height: calc(38px * var(--tv-k));
 }
 .roku-profile-editor .profile-delete-confirmation button {
-  width: 240px;
-  margin: 30px 16px 0 0;
+  width: calc(240px * var(--tv-k));
+  margin: calc(30px * var(--tv-k)) calc(16px * var(--tv-k)) 0 0;
 }
 .roku-text-entry h1 {
-  left: 180px;
-  top: 112px;
-  width: 860px;
+  left: calc(180px * var(--tv-k));
+  top: calc(112px * var(--tv-k));
+  width: calc(860px * var(--tv-k));
 }
 .roku-text-entry .entry-instruction {
   position: absolute;
-  left: 180px;
-  top: 182px;
-  width: 860px;
+  left: calc(180px * var(--tv-k));
+  top: calc(182px * var(--tv-k));
+  width: calc(860px * var(--tv-k));
   margin: 0;
-  line-height: 40px;
-  font-size: 19px;
+  line-height: calc(40px * var(--tv-k));
+  font-size: calc(19px * var(--tv-k));
   color: #a6a8aa;
 }
 .roku-text-entry input {
   position: absolute;
-  left: 180px;
-  top: 242px;
-  width: 860px;
-  height: 44px;
+  left: calc(180px * var(--tv-k));
+  top: calc(242px * var(--tv-k));
+  width: calc(860px * var(--tv-k));
+  height: calc(44px * var(--tv-k));
   padding: 0;
   margin: 0;
   color: #f5f5f5;
   background: transparent;
   border: none;
-  font-size: 26px;
-  line-height: 44px;
+  font-size: calc(26px * var(--tv-k));
+  line-height: calc(44px * var(--tv-k));
 }
 .roku-text-entry input:focus {
-  outline: 2px solid #f5f5f5;
-  outline-offset: 4px;
+  outline: calc(2px * var(--tv-k)) solid #f5f5f5;
+  outline-offset: calc(4px * var(--tv-k));
 }
 .roku-text-entry .entry-keys {
   position: absolute;
-  left: 180px;
-  top: 300px;
+  left: calc(180px * var(--tv-k));
+  top: calc(300px * var(--tv-k));
   display: grid;
-  grid-template-columns: repeat(10, 64px);
-  grid-auto-rows: 48px;
-  gap: 6px;
+  grid-template-columns: repeat(10, calc(64px * var(--tv-k)));
+  grid-auto-rows: calc(48px * var(--tv-k));
+  gap: calc(6px * var(--tv-k));
   margin: 0;
 }
 .roku-text-entry .entry-keys button {
-  width: 64px;
+  width: calc(64px * var(--tv-k));
   min-width: 0;
-  height: 48px;
-  min-height: 48px;
+  height: calc(48px * var(--tv-k));
+  min-height: calc(48px * var(--tv-k));
   padding: 0;
   text-align: center;
-  font-size: 22px;
-  border-radius: 4px;
+  font-size: calc(22px * var(--tv-k));
+  border-radius: calc(4px * var(--tv-k));
   background: #242628;
 }
 .roku-text-entry .entry-keys button:focus {
-  outline: 3px solid #f5f5f5;
-  outline-offset: 2px;
+  outline: calc(3px * var(--tv-k)) solid #f5f5f5;
+  outline-offset: calc(2px * var(--tv-k));
   color: #f5f5f5;
   z-index: 1;
 }
 .roku-text-entry .entry-keys [data-focus-id="text-delete"],
 .roku-text-entry .entry-keys [data-focus-id="text-space"] {
-  font-size: 17px;
+  font-size: calc(17px * var(--tv-k));
 }
 .roku-text-entry .entry-keys.pin-keys {
-  grid-template-columns: repeat(5, 64px);
+  grid-template-columns: repeat(5, calc(64px * var(--tv-k)));
 }
 .roku-text-entry .actions {
   position: absolute;
-  left: 180px;
-  top: 608px;
+  left: calc(180px * var(--tv-k));
+  top: calc(608px * var(--tv-k));
   display: flex;
-  gap: 16px;
+  gap: calc(16px * var(--tv-k));
 }
 .roku-text-entry .actions button {
-  width: 240px;
-  height: 56px;
+  width: calc(240px * var(--tv-k));
+  height: calc(56px * var(--tv-k));
 }
 .roku-text-entry .entry-error {
   position: absolute;
-  left: 180px;
-  top: 674px;
-  width: 1000px;
+  left: calc(180px * var(--tv-k));
+  top: calc(674px * var(--tv-k));
+  width: calc(1000px * var(--tv-k));
   margin: 0;
-  font-size: 19px;
+  font-size: calc(19px * var(--tv-k));
 }
 .roku-guide > h1 {
   position: absolute;
-  left: 112px;
-  top: 34px;
+  left: calc(112px * var(--tv-k));
+  top: calc(34px * var(--tv-k));
   margin: 0;
-  font-size: 26px;
-  line-height: 38px;
+  font-size: calc(26px * var(--tv-k));
+  line-height: calc(38px * var(--tv-k));
 }
 .roku-guide .guide-filters {
   position: absolute;
-  left: 104px;
-  top: 163px;
-  width: 184px;
-  height: 384px;
+  left: calc(104px * var(--tv-k));
+  top: calc(163px * var(--tv-k));
+  width: calc(184px * var(--tv-k));
+  height: calc(384px * var(--tv-k));
   display: block;
   overflow-y: auto;
   scrollbar-width: none;
@@ -390,12 +390,12 @@
 }
 .roku-guide .guide-filters button {
   display: block;
-  width: 184px;
-  height: 42px;
-  min-height: 42px;
-  margin: 0 0 6px;
-  padding: 0 8px;
-  font-size: 19px;
+  width: calc(184px * var(--tv-k));
+  height: calc(42px * var(--tv-k));
+  min-height: calc(42px * var(--tv-k));
+  margin: 0 0 calc(6px * var(--tv-k));
+  padding: 0 calc(8px * var(--tv-k));
+  font-size: calc(19px * var(--tv-k));
   text-align: left;
   white-space: nowrap;
   overflow: hidden;
@@ -412,33 +412,33 @@
 }
 .roku-guide .guide-header {
   position: absolute;
-  left: 432px;
-  top: 116px;
-  width: 804px;
-  height: 28px;
+  left: calc(432px * var(--tv-k));
+  top: calc(116px * var(--tv-k));
+  width: calc(804px * var(--tv-k));
+  height: calc(28px * var(--tv-k));
   display: flex;
   margin: 0;
-  font-size: 19px;
-  line-height: 28px;
+  font-size: calc(19px * var(--tv-k));
+  line-height: calc(28px * var(--tv-k));
 }
 .roku-guide .guide-header span {
   display: block;
-  width: 201px;
+  width: calc(201px * var(--tv-k));
   flex-shrink: 0;
 }
 .roku-guide::after {
   content: "";
   position: absolute;
-  left: 112px;
-  top: 149px;
-  width: 1124px;
+  left: calc(112px * var(--tv-k));
+  top: calc(149px * var(--tv-k));
+  width: calc(1124px * var(--tv-k));
   height: 1px;
   background: #303234;
 }
 .roku-guide .guide-rows {
   position: absolute;
-  left: 300px;
-  top: 166px;
-  width: 936px;
-  height: 455px;
+  left: calc(300px * var(--tv-k));
+  top: calc(166px * var(--tv-k));
+  width: calc(936px * var(--tv-k));
+  height: calc(455px * var(--tv-k));
 }

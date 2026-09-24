@@ -9,6 +9,7 @@ import type { ErrorDetail } from "../errors";
 import { captureScroll, desktopInvoker, initialPrefs, type BrowserSnapshot, type Choice, type ScrollAnchor } from "./appShared";
 import type { Screen } from "../screens";
 import type { HomeRow } from "./homeRows";
+import { useAppearance } from "../../theme/appearance";
 
 /**
  * The complete application state cell: every useState/useRef declaration the
@@ -23,8 +24,8 @@ export function useAppCore(api: TvApi, platform: PlayerPlatform, layout: "tv" | 
   const castFocus = useRef<HTMLElement | null>(null);
   const openCast = () => { castFocus.current = document.activeElement as HTMLElement; setCasting(true); };
   const closeCast = () => { setCasting(false); requestAnimationFrame(() => castFocus.current?.focus()); };
-  const [oled, setOled] = useState(() => { try { return localStorage.getItem("viptv:appearance:oled") === "true"; } catch { return false; } });
-  const toggleOled = () => setOled((previous) => { const next = !previous; try { localStorage.setItem("viptv:appearance:oled", String(next)); } catch { /* Appearance remains usable without storage. */ } return next; });
+  // OLED is a device appearance setting reflected as <html data-oled> (theme/appearance.ts).
+  const { oled, setOled, toggleOled } = useAppearance();
 
   const [engineChoice, setEngineChoice] = useState(readStoredEngine);
   const selectEngine = (engine: NativeVideoEngine) => {

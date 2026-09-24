@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { TvApi, DevicePairing } from '../api';
+import { desktopShellPreview } from './app/appShared';
 
 export function ResponsiveSignIn({ api, pair, qr, onRetry, onUseWithoutAccount }: { api: TvApi; pair?: DevicePairing; qr: string; onRetry: () => void; onUseWithoutAccount?: () => void }) {
   const [username, setUsername] = useState('');
@@ -10,7 +11,7 @@ export function ResponsiveSignIn({ api, pair, qr, onRetry, onUseWithoutAccount }
   const [otherDevice, setOtherDevice] = useState(false);
   const [localFocused, setLocalFocused] = useState(false);
   const scope = useRef<AbortController>();
-  const native = '__TAURI_INTERNALS__' in window;
+  const native = '__TAURI_INTERNALS__' in window || desktopShellPreview;
   const rawUrl = pair?.verificationUriComplete || pair?.verificationUri;
   const authUrl = rawUrl && /^https:\/\//i.test(rawUrl) ? rawUrl : undefined;
   useEffect(() => () => scope.current?.abort(), []);
