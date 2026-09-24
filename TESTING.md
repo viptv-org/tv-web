@@ -51,6 +51,15 @@ latency and physical-TV decode cost have not been measured.
 
 # Lightning TV Search — 2026-09-24
 
+Search now keeps all result identities in a non-reactive navigation index but
+mounts only cards intersecting its 1920×1080 viewport. A 120-result model
+check showed nine mounted views and wsrv artwork URLs only for those nine;
+offscreen cards retain their original positions for D-pad paging. The existing
+browser scenario still moved through offscreen results, held a result menu,
+restored focus and returned to Home. Its `TvSearch` frame was pixel-identical
+to the prior Blits capture. This reduces component and image work during
+Search; input latency and physical-TV frame rate have not been remeasured.
+
 The staged Blits rail now opens Search. Its 39-key TV keyboard owns D-pad
 focus, accepts physical keyboard letters, and searches normalized catalogs and
 Live TV after 650 ms. Browser fixtures exercised a replaced query without a

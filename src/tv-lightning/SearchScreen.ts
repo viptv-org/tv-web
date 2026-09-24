@@ -39,7 +39,7 @@ export const SearchScreen = Blits.Component("SearchScreen", {
       <Element x="850" y="150" w="1070" h="826" clipping="true">
         <Text :for="section in $headings" key="$section.id" x="0" :y="$section.y - 150" :content="$section.title" font="Bricolage700" size="30" color="$primary" />
         <Text :for="section in $headings" key="$section.id" :x="$section.countX - 850" :y="$section.y - 141" :content="$section.count" font="Onest" size="22" color="$tertiary" />
-        <SearchCard :for="(card, index) in $cards" ref="searchCard" key="$card.id" :position="$index" :card="$card" :x="$card.x - 850" :y="$card.y - 150" />
+        <SearchCard :for="card in $cards" :ref="'searchCard' + $card.position" key="$card.id" :position="$card.position" :card="$card" :x="$card.x - 850" :y="$card.y - 150" />
       </Element>
       <Text x="850" :y="$headings.length ? 113 : 155" :content="$status" font="Onest" size="24" color="$tertiary" />
       <Element x="850" y="976" w="1070" h="104" color="$background" />

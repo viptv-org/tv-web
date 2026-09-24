@@ -48,6 +48,7 @@ export interface SearchHeadingView {
 
 export interface SearchCardView {
   id: string;
+  position: number;
   item: MediaItem;
   section: SearchSectionKey;
   sectionIndex: number;
@@ -82,15 +83,18 @@ export function projectSearch(rows: readonly SearchRow[], offsets: Readonly<Reco
     for (let localIndex = 0; localIndex < section.items.length; localIndex++) {
       const item = section.items[localIndex];
       const card = cardPresentation(item, "catalog");
+      const cardY = y + 58;
+      const visible = localIndex >= start && localIndex < start + 3 && cardY < 976 && cardY + 270 > 150;
       cards.push({
         id: `${section.key}:${item.type}:${item.id}`,
+        position: cards.length,
         item, section: section.key, sectionIndex, localIndex,
         x: 850 + (localIndex - start) * 356,
-        y: y + 58,
-        visible: localIndex >= start && localIndex < start + 3,
+        y: cardY,
+        visible,
         title: card.title,
         subtitle: item.type === "live" ? liveSubtitle(item) : card.subtitle,
-        image: artworkUrl(card.image ?? undefined, 320, 180, false, card.imageRole === "logo") ?? card.image ?? "",
+        image: visible ? artworkUrl(card.image ?? undefined, 320, 180, false, card.imageRole === "logo") ?? card.image ?? "" : "",
         live: item.type === "live",
         monogram: item.type === "live" ? channelMonogram(item.name) : "",
       });

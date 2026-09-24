@@ -149,6 +149,7 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
   let searchGeneration = 0;
   let searchScope: ReturnType<TvApi["createScope"]> | undefined;
   let searchTimer: ReturnType<typeof setTimeout> | undefined;
+  let searchCanonicalCards: SearchCardView[] = [];
   let liveGeneration = 0;
   let liveScope: ReturnType<TvApi["createScope"]> | undefined;
   let liveClockTimer: ReturnType<typeof setInterval> | undefined;
@@ -272,7 +273,7 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
         <SearchScreen ref="searchScreen" :show="$phase === 'search' || ($sourceReturnOrigin === 'search' && ($phase === 'sources' || $phase === 'provider' || $phase === 'sourceDetails'))"
           :homeProfileAvatar="$homeProfileAvatar" :railSearchSelected="$railSearchSelected" :railHomeUnselected="$railHomeUnselected" :railDiscover="$railDiscover" :railLive="$railLive" :railList="$railList" :railSettings="$railSettings"
           :surface="$surface" :background="$background" :primary="$primary" :body="$body" :keyBorder="$keyBorder" :heading="$searchHeading" :query="$searchQuery" :placeholder="$searchPlaceholder" :caretX="$searchCaretX"
-          :keys="$searchKeys" :headings="$searchHeadings" :cards="$searchCards" :status="$searchStatus" :okLabel="$searchOkLabel" :typeLabel="$searchTypeLabel" :jumpIcon="$searchJumpIcon" :jumpLabel="$searchJumpLabel" :backLabel="$searchBackLabel" :deleteLabel="$searchDeleteLabel" />
+          :keys="$searchKeys" :headings="$searchHeadings" :cards="$searchVisibleCards" :status="$searchStatus" :okLabel="$searchOkLabel" :typeLabel="$searchTypeLabel" :jumpIcon="$searchJumpIcon" :jumpLabel="$searchJumpLabel" :backLabel="$searchBackLabel" :deleteLabel="$searchDeleteLabel" />
         <LiveScreen ref="liveScreen" :show="($phase === 'live' && $liveSearchOpen === false) || ($sourceReturnOrigin === 'live' && ($phase === 'sources' || $phase === 'provider' || $phase === 'sourceDetails'))"
           :chrome="$liveChrome" :hero="$liveHero" :filters="$liveFilters" :channels="$liveRows" :programs="$livePrograms" :timeline="$liveTimeline"
           :nowX="$liveNowX" :nowLabel="$liveNowLabel" :status="$liveStatus" />
@@ -596,7 +597,7 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
         searchCatalogs: [] as Catalog[],
         searchRows: [] as SearchRow[],
         searchHeadings: [] as SearchHeadingView[],
-        searchCards: [] as SearchCardView[],
+        searchVisibleCards: [] as SearchCardView[],
         searchStatus: "",
         searchBusy: false,
         searchPartial: false,
@@ -880,7 +881,7 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
         this.$listen("search-card-move", (direction: string) => this.moveSearchResult(direction));
         this.$listen("search-card-activate", () => this.activateSearchResult());
         this.$listen("search-card-hold", (position: number) => {
-          const card = this.searchCards[Number(position)];
+          const card = searchCanonicalCards[Number(position)];
           if (card) this.openTitleMenu(card.item, "search", Number(position));
         });
         this.$listen("search-card-back", () => this.returnFromSearch());
@@ -1690,7 +1691,8 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
         this.searchCaretX = 218;
         this.searchRows = [];
         this.searchHeadings = [];
-        this.searchCards = [];
+        searchCanonicalCards = [];
+        this.searchVisibleCards = [];
         this.searchSectionOffsets = {};
         this.searchVerticalOffset = 0;
         this.searchStatus = "";
@@ -1735,7 +1737,8 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
         clearTimeout(searchTimer);
         this.searchRows = [];
         this.searchHeadings = [];
-        this.searchCards = [];
+        searchCanonicalCards = [];
+        this.searchVisibleCards = [];
         this.searchSectionOffsets = {};
         this.searchVerticalOffset = 0;
         this.searchPartial = false;
@@ -1782,7 +1785,7 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
           this.searchPartial = partial;
           this.searchBusy = false;
           this.refreshSearchLayout();
-          noteSearchState(query, this.searchCards.length, false, partial, true);
+          noteSearchState(query, searchCanonicalCards.length, false, partial, true);
           this.searchStatus = this.searchHeadings.length
             ? partial ? "Some sources couldn't load." : ""
             : partial ? "No matching titles. Some sources couldn't load." : "No matching titles";
@@ -1791,17 +1794,18 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
           this.searchBusy = false;
           this.searchPartial = true;
           this.searchStatus = cause instanceof Error ? cause.message : "Search could not finish.";
-          noteSearchState(query, this.searchCards.length, false, true, true);
+          noteSearchState(query, searchCanonicalCards.length, false, true, true);
         }
       },
       refreshSearchLayout() {
         const view = projectSearch(this.searchRows, this.searchSectionOffsets, this.searchVerticalOffset);
         this.searchHeadings = view.headings;
-        this.searchCards = view.cards;
+        searchCanonicalCards = view.cards;
+        this.searchVisibleCards = view.cards.filter(card => card.visible).map(card => ({ ...card, item: { ...card.item } }));
         setTimeout(() => {
           if (this.phase !== "search") return;
-          for (let index = 0; index < this.searchCards.length; index++)
-            (this.$select("searchScreen")?.$select(`searchCard${index}`) as unknown as { reveal?: () => void })?.reveal?.();
+          for (const card of this.searchVisibleCards)
+            (this.$select("searchScreen")?.$select(`searchCard${card.position}`) as unknown as { reveal?: () => void })?.reveal?.();
         }, 40);
       },
       focusSearchKey(index: number) {
@@ -1812,7 +1816,7 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
       },
       moveSearchKey(direction: string) {
         const index = this.searchKeyIndex;
-        if (direction === "right" && ((index < 36 && index % 6 === 5) || index === 38) && this.searchCards.length) {
+        if (direction === "right" && ((index < 36 && index % 6 === 5) || index === 38) && searchCanonicalCards.length) {
           this.focusSearchResult(0); return;
         }
         if (direction === "left" && ((index < 36 && index % 6 === 0) || index === 36)) { this.openRail(); return; }
@@ -1838,7 +1842,7 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
         else this.setSearchQuery("");
       },
       focusSearchResult(index: number) {
-        const card = this.searchCards[index];
+        const card = searchCanonicalCards[index];
         if (!card) return;
         this.searchFocusZone = "result";
         this.searchResultIndex = index;
@@ -1867,21 +1871,21 @@ export function createLightningTvApp(api: TvApi, platform: TvPlatform) {
         else focusWhenReady(0);
       },
       moveSearchResult(direction: string) {
-        const current = this.searchCards[this.searchResultIndex];
+        const current = searchCanonicalCards[this.searchResultIndex];
         if (!current) return;
         if (direction === "left" && current.localIndex === 0) { this.focusSearchKey(this.searchLastKeyIndex); return; }
         let next = -1;
         if (direction === "left" || direction === "right")
-          next = this.searchCards.findIndex(card => card.section === current.section && card.localIndex === current.localIndex + (direction === "left" ? -1 : 1));
+          next = searchCanonicalCards.findIndex(card => card.section === current.section && card.localIndex === current.localIndex + (direction === "left" ? -1 : 1));
         else {
           const targetSection = current.sectionIndex + (direction === "up" ? -1 : 1);
-          const candidates = this.searchCards.map((card, index) => ({ card, index })).filter(entry => entry.card.sectionIndex === targetSection);
+          const candidates = searchCanonicalCards.map((card, index) => ({ card, index })).filter(entry => entry.card.sectionIndex === targetSection);
           next = candidates[Math.min(current.localIndex, candidates.length - 1)]?.index ?? -1;
         }
         if (next >= 0) this.focusSearchResult(next);
       },
       activateSearchResult() {
-        const card = this.searchCards[this.searchResultIndex];
+        const card = searchCanonicalCards[this.searchResultIndex];
         if (!card) return;
         if (card.item.type === "live") void this.openSources(card.item, false);
         else void this.openDetail(card.item);
