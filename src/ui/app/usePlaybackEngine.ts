@@ -252,6 +252,9 @@ export function usePlaybackEngine(app: AuthApi) {
         choices: [
           {
             label: "Retry",
+            // The dialog's one accent action (Ph/DeskPlayerError; TV: a plain row).
+            // (The drawn refresh icon waits on the generic modal: an icon makes it a menu.)
+            tone: "primary",
             action: () => {
               setModal(undefined);
               void play(item, source, position);

@@ -364,9 +364,12 @@ function CardBody({ item, kind, context, presentation, responsive, phone }: {
     );
   }
   if (phone && kind === "continue") {
+    // The portrait thumb shows a title's poster (Main); an episode keeps its
+    // Rust-chosen still (the core never swaps a series poster in for it).
+    const episode = (item.episode ?? 0) > 0 || item.type === "episode";
     return (
       <>
-        <TileImage item={item} context={context} initial={presentation} poster size={size} className="vx-continue-card__thumb" missing={<span className="vx-continue-card__thumb" aria-hidden="true" />} />
+        <TileImage item={item} context={context} initial={presentation} poster={!episode} size={size} className="vx-continue-card__thumb" missing={<span className="vx-continue-card__thumb" aria-hidden="true" />} />
         <span className="vx-continue-card__body">
           <span className="vx-continue-card__title">{title}</span>
           <span className="vx-continue-card__meta">{phoneContinueMeta(item)}</span>

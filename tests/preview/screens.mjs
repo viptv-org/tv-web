@@ -22,6 +22,7 @@
 // ---- shared step sequences ------------------------------------------------
 const MONSTER = '/tv/title/series/tt-monster';
 const OAK_SOURCES = '/tv/title/movie/tt-oak-street/sources';
+const OAK = '/tv/title/movie/tt-oak-street';
 
 /** Responsive: Monster title → S1 E1 → first source → player. */
 async function responsivePlayer(h, { pause = false } = {}) {
@@ -43,6 +44,12 @@ async function seekTo(h, fraction) {
   await h.page.mouse.click(box.x + box.width * fraction, box.y + box.height / 2);
   await h.sleep(300);
 }
+/** Responsive: the Oak Street title → its source drawer (phone change-source row / desktop split chevron). */
+async function oakSources(h) {
+  await h.activate('detail-source');
+  await h.wait('source-0', 15000);
+  await h.settle();
+}
 /** TV: Home → hero Details (Monster) → Choose source → first source. */
 async function tvToTitle(h) {
   await h.activate('hero-details');
@@ -61,6 +68,21 @@ async function tvPlayer(h, { pause = false } = {}) {
   await h.wait('pause', 15000);
   await h.settle();
   if (pause) await h.activate('pause');
+}
+/** Player family: the episode starts 10 s from its end, so the Up Next card
+    shows its countdown; `holdUpNext` (init) freezes the countdown tick so the
+    card is still up when the shot is taken. */
+function holdUpNext() {
+  const nativeSetInterval = window.setInterval;
+  window.setInterval = (handler, delay, ...rest) => (delay === 250 ? 0 : nativeSetInterval(handler, delay, ...rest));
+}
+async function upNextCard(h) {
+  if (h.tv) await tvToSources(h);
+  else { await h.activate('episode-0'); await h.wait('source-0', 15000); }
+  await h.activate('source-0');
+  await h.wait('up-next-play', 8000);
+  if (!h.tv) await h.page.mouse.move(h.frame.width / 2, h.frame.height / 2);
+  await h.sleep(1200);
 }
 async function openProfileEditor(h, name = 'zayne') {
   await h.activate('manage-profiles');
@@ -96,7 +118,7 @@ export const screens = {
   // ===== Phone 390×844 =====================================================
   Main: { path: '/tv/home' },
   Title: { path: '/tv/title/movie/tt-oak-street' },
-  Sources: { path: OAK_SOURCES, backend: { sourcesDone: false } },
+  Sources: { path: OAK, backend: { sourcesDone: false }, steps: oakSources },
   Discover: { path: '/tv/discover' },
   Live: { path: '/tv/live' },
   Library: { path: '/tv/my-list', backend: { favorites: true } },
@@ -105,10 +127,10 @@ export const screens = {
   PhPlayerSubs: { path: MONSTER, player: {}, steps: async h => { await responsivePlayer(h); await h.activate('subtitles'); } },
   PhPlayerInfo: { path: MONSTER, player: {}, steps: async h => { await responsivePlayer(h); await h.button('Playback info'); } },
   PhPlayerLive: { path: '/tv/home', player: { frame: '' }, steps: async h => { await h.activate(h.page.getByRole('button', { name: 'Cartoon Network' }).first()); await h.wait('.rp-controls, [data-focus-id="audio"]', 15000); } },
-  PhPlayerBuffering: { notReachable: 'the seek notice + ring: a refused backend seek (backend seekRefused) surfaces as an HTTP 409 error toast and a pending seek (playbackHangAfter: 1) shows neither ring nor notice in this build; retry once the player shows both' },
+  PhPlayerBuffering: { path: MONSTER, player: {}, backend: { seekRefused: true, playbackHangAfter: 2 }, steps: async h => { await responsivePlayer(h); await seekTo(h, 0.4); await h.waitText('could not seek'); await seekTo(h, 0.3); }, note: 'a refused seek (notice) followed by a pending one (ring)' },
   PhPlayerNext: { path: MONSTER, player: {}, backend: { playbackHangAfter: 1, sourcesDone: true }, steps: async h => { await responsivePlayer(h); await h.activate('next'); await h.sleep(600); } },
-  PhUpNext: { notReachable: 'no Up Next card in the app yet' },
-  PhPlayerError: { path: OAK_SOURCES, player: { stall: true }, steps: async h => { await h.activate('source-0'); await h.page.getByRole('dialog').first().waitFor({ timeout: 25000 }); } },
+  PhUpNext: { init: holdUpNext, path: MONSTER, player: { position: 3120 }, backend: { media: { position: 3120 } }, steps: h => upNextCard(h) },
+  PhPlayerError: { path: OAK_SOURCES, player: { stall: true }, steps: async h => { await h.activate('source-0'); await h.waitText('could not be played', 25000); } },
   PhSignIn: { backend: { session: 'none' } },
   PhProfiles: { backend: { session: 'profiles' }, path: '/tv/profiles' },
   PhProfilesManage: { backend: { session: 'profiles' }, path: '/tv/profiles', steps: h => h.activate('manage-profiles') },
@@ -128,12 +150,25 @@ export const screens = {
   PhLocalHome: { local: true, init: seedLocalMode, path: '/', backend: { localAddons: true } },
   PhItemMenu: { path: '/tv/home', note: 'menu for Mayday (phone Continue Watching has no Monster)', steps: h => h.hold('queue-0') },
   PhItemMenuLive: { path: '/tv/live', note: 'Recent list (Cartoon Network first); the Live list menu adds Programme details', steps: async h => { await h.activate(h.page.getByRole('button', { name: 'Recent', exact: true })); await h.settle(); await h.hold('live-channel-0'); } },
-  PhHidden: { path: '/tv/home', steps: async h => { await h.hold('queue-0'); await h.button('Hide from Continue Watching'); } },
-  PhOverflowCue: { notReachable: 'cards have no touch ⋯ button yet' },
+  PhHidden: { path: '/tv/home', steps: async h => { await h.hold('queue-0'); await h.button('Remove from Continue Watching'); } },
+  PhOverflowCue: {
+    path: '/tv/home',
+    note: 'Home keeps its featured card above Continue watching; scrolled to show the ⋯ on continue cards and posters',
+    steps: async h => {
+      await h.wait('.vx-card-more');
+      await h.settle();
+      await h.page.evaluate(() => {
+        const shelf = document.querySelector('.vx-home .vx-shelf');
+        const root = document.querySelector('.responsive-app');
+        if (shelf && root) root.scrollTop = shelf.getBoundingClientRect().top + root.scrollTop - 150;
+      });
+      await h.sleep(300);
+    },
+  },
   PhDiscoverFilter: { path: '/tv/discover', steps: h => h.activate(h.page.getByRole('button', { name: /^Genre/ })) },
   PhFilterText: { path: '/tv/discover', steps: async h => { await h.activate(h.page.getByRole('button', { name: 'Latest digital' })); await h.settle(); await h.activate(h.page.getByRole('button', { name: /^Search catalog/ })); await h.activate('text-save'); await h.waitText('required filter'); } },
-  PhSourceProvider: { path: OAK_SOURCES, steps: h => h.activate('source-provider') },
-  PhSourceDetails: { path: OAK_SOURCES, steps: h => h.hold('source-0') },
+  PhSourceProvider: { path: OAK, steps: async h => { await oakSources(h); await h.activate('source-provider'); } },
+  PhSourceDetails: { path: OAK, steps: async h => { await oakSources(h); await h.hold('source-0'); } },
   PhLiveDetails: { path: '/tv/live', steps: async h => { await h.hold('live-channel-1'); await h.choose('Programme details'); } },
   PhLiveDetailsNone: { path: '/tv/live', note: 'ESPN (no guide) stands in for Cartoon Network', steps: async h => { await h.page.locator('[data-focus-id="live-channel-11"]').scrollIntoViewIfNeeded(); await h.hold('live-channel-11'); await h.choose('Programme details'); } },
   PhSearch: { path: '/tv/search', query: 'q=naruto' },
@@ -147,7 +182,7 @@ export const screens = {
   // ===== Desktop app 1440×900 (title bar), web 1280×800, ultra-wide =========
   DeskHome: { path: '/tv/home' },
   DeskTitle: { path: '/tv/title/series/tt-monster' },
-  DeskSources: { path: OAK_SOURCES },
+  DeskSources: { path: OAK, steps: oakSources },
   DeskDiscover: { path: '/tv/discover' },
   DeskLive: { path: '/tv/live' },
   DeskLibrary: { path: '/tv/my-list' },
@@ -159,11 +194,11 @@ export const screens = {
   DeskPlayerAudio: { path: MONSTER, player: {}, steps: async h => { await responsivePlayer(h); await h.activate('audio'); } },
   DeskPlayerInfo: { path: MONSTER, player: {}, steps: async h => { await responsivePlayer(h); await h.button('Playback info'); } },
   DeskPlayerLive: { path: '/tv/home', player: { frame: '' }, steps: async h => { await h.activate(h.page.getByRole('button', { name: 'Cartoon Network' }).first()); await h.wait('[data-focus-id="audio"]', 15000); await h.page.mouse.move(700, 450); } },
-  DeskPlayerBuffering: { notReachable: 'the seek notice + ring: a refused backend seek (backend seekRefused) surfaces as an HTTP 409 error toast and a pending seek (playbackHangAfter: 1) shows neither ring nor notice in this build; retry once the player shows both' },
+  DeskPlayerBuffering: { path: MONSTER, player: {}, backend: { seekRefused: true, playbackHangAfter: 2 }, steps: async h => { await responsivePlayer(h); await seekTo(h, 0.4); await h.waitText('could not seek'); await seekTo(h, 0.3); await h.page.mouse.move(h.frame.width / 2, h.frame.height / 2); }, note: 'a refused seek (notice) followed by a pending one (ring)' },
   DeskPlayerNext: { path: MONSTER, player: {}, backend: { playbackHangAfter: 1, sourcesDone: true }, steps: async h => { await responsivePlayer(h); await h.activate('next'); await h.sleep(600); } },
-  DeskPlayerError: { path: OAK_SOURCES, player: { stall: true }, steps: async h => { await h.activate('source-0'); await h.page.getByRole('dialog').first().waitFor({ timeout: 25000 }); } },
+  DeskPlayerError: { path: OAK_SOURCES, player: { stall: true }, steps: async h => { await h.activate('source-0'); await h.waitText('could not be played', 25000); } },
   DeskPlayerRestore: { path: MONSTER, player: { failAfter: 1 }, backend: { sourcesDone: true }, steps: async h => { await responsivePlayer(h); await h.activate('next'); await h.waitText('could not be restored', 20000); } },
-  DeskUpNext: { notReachable: 'no Up Next card in the app yet' },
+  DeskUpNext: { init: holdUpNext, path: MONSTER, player: { position: 3120 }, backend: { media: { position: 3120 } }, steps: h => upNextCard(h) },
   WebSignIn: { backend: { session: 'none' } },
   WebSignInError: { backend: { session: 'none', loginError: true }, steps: async h => { await h.fill('#signin-username', 'vynxc'); await h.fill('#signin-password', 'password'); await h.button('Sign in'); await h.waitText('incorrect'); } },
   WebSignInDevice: { backend: { session: 'none' }, steps: h => h.button('Use another device') },
@@ -190,11 +225,11 @@ export const screens = {
   WebLocalAddons: { local: true, init: seedLocalMode, path: '/', backend: { localAddons: true }, steps: async h => { await h.button('Addons'); await h.fill(h.page.getByLabel('Addon manifest URL'), 'https://lordstreams.example/manifest.json'); await h.button('Install addon'); } },
   WebLocalRemove: { local: true, init: seedLocalMode, path: '/', backend: { localAddons: true }, steps: async h => { await h.button('Addons'); await h.activate(h.page.getByRole('button', { name: 'Remove' }).first()); } },
   DeskItemMenu: { path: '/tv/home', steps: h => h.hold('queue-1') },
-  DeskHidden: { path: '/tv/home', steps: async h => { await h.hold('queue-1'); await h.button('Hide from Continue Watching'); } },
+  DeskHidden: { path: '/tv/home', steps: async h => { await h.hold('queue-1'); await h.button('Remove from Continue Watching'); } },
   DeskDiscoverCatalog: { path: '/tv/discover', steps: h => h.activate('discover-catalog') },
   DeskDiscoverFilter: { path: '/tv/discover', steps: h => h.activate('discover-filter-genre') },
-  DeskSourceProvider: { path: OAK_SOURCES, steps: h => h.activate('source-provider') },
-  DeskSourceDetails: { path: OAK_SOURCES, steps: h => h.hold('source-0') },
+  DeskSourceProvider: { path: OAK, steps: async h => { await oakSources(h); await h.activate('source-provider'); } },
+  DeskSourceDetails: { path: OAK, steps: async h => { await oakSources(h); await h.hold('source-0'); } },
   DeskLiveDetails: { path: '/tv/live', steps: h => h.hold(h.page.getByRole('button', { name: /^CNBC: Squawk on the Street/ })) },
   DeskSearchRecent: { path: '/tv/home', backend: { recentSearches: ['naruto', 'the batman', 'dune', 'fast charlie', 'lanterns', 'one night only', 're:zero', 'mayday'] }, steps: h => h.activate(h.page.getByRole('combobox').or(h.page.getByPlaceholder(/Search/)).first()) },
   DeskSearchMatches: { path: '/tv/home', steps: async h => { await h.activate(h.page.getByRole('combobox').or(h.page.getByPlaceholder(/Search/)).first()); await h.type('the'); await h.settle(); } },
@@ -223,10 +258,10 @@ export const screens = {
   TvPlayerSeek: { player: {}, steps: async h => { await tvPlayer(h); await h.focus('timeline'); await h.press('ArrowRight', 3); } },
   TvPlayerSubs: { player: {}, steps: async h => { await tvPlayer(h); await h.activate('subtitles'); } },
   TvPlayerLive: { player: { live: true, frame: '' }, steps: async h => { await h.activate('recent-live-0'); await h.wait('audio', 15000); await h.focus('audio'); } },
-  TvPlayerBuffering: { notReachable: 'the seek notice + ring: a refused backend seek (backend seekRefused) surfaces as an HTTP 409 error toast and a pending seek (playbackHangAfter: 1) shows neither ring nor notice in this build; retry once the player shows both' },
+  TvPlayerBuffering: { player: {}, backend: { seekRefused: true, playbackHangAfter: 2 }, steps: async h => { await tvPlayer(h, { pause: true }); await h.focus('timeline'); await h.press('ArrowRight'); await h.press('Enter'); await h.waitText('could not seek'); await h.press('ArrowRight'); await h.press('Enter'); await h.focus('pause'); }, note: 'a refused seek (notice) followed by a pending one (BUFFERING)' },
   TvPlayerNext: { player: {}, backend: { playbackHangAfter: 1, sourcesDone: true }, steps: async h => { await tvPlayer(h); await h.activate('next'); await h.waitText('Preparing playback'); } },
-  TvUpNext: { notReachable: 'no Up Next card in the app yet' },
-  TvPlayerError: { player: { error: true }, steps: async h => { await tvToSources(h); await h.activate('source-0'); await h.page.getByRole('dialog').first().waitFor({ timeout: 25000 }); } },
+  TvUpNext: { init: holdUpNext, player: { position: 3120 }, backend: { media: { position: 3120 } }, steps: h => upNextCard(h) },
+  TvPlayerError: { player: { error: true }, steps: async h => { await tvToSources(h); await h.activate('source-0'); await h.waitText('could not be played', 25000); } },
   TvPairing: { backend: { session: 'none' } },
   TvPairingLoading: { backend: { session: 'none', pairing: 'loading' } },
   TvPairingExpired: { backend: { session: 'none', pairing: 'expired' }, clock: false, steps: h => h.waitText('expired', 8000) },
@@ -246,7 +281,7 @@ export const screens = {
   TvAddonManage: { steps: async h => { await settingsRow(h, 'settings-addons'); await h.activate('addon-2'); } },
   TvAddonRemove: { steps: async h => { await settingsRow(h, 'settings-addons'); await h.activate('addon-1'); await h.button('Remove addon'); } },
   TvItemMenu: { steps: h => h.hold('queue-0') },
-  TvHidden: { steps: async h => { await h.hold('queue-0'); await h.button('Hide from Continue Watching'); } },
+  TvHidden: { steps: async h => { await h.hold('queue-0'); await h.button('Remove from Continue Watching'); } },
   TvDiscoverFilter: { steps: async h => { await h.tvGo('Discover'); await h.activate('discover-filter-genre'); } },
   TvFilterText: { steps: async h => { await h.tvGo('Discover'); await h.button('Latest digital', { exact: false }); await h.settle(); await h.activate('discover-filter-search'); await h.activate('text-save'); await h.waitText('required filter'); } },
   TvSourceProvider: { steps: async h => { await tvToSources(h); await h.activate('source-provider'); } },

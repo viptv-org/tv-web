@@ -131,28 +131,31 @@ test('Vizio: settings persist an add-on draft, enable/remove an extension, and s
   const state = await installBackend(page);
   await enterHome(page);
   await page.getByRole('button', { name: 'Settings' }).click();
-  await expect(page.locator('.settings-scroll').getByRole('button')).toHaveText([
-    'Switch profile', 'Playback preferences', 'Manage profiles', 'About VIPTV', 'Addons', 'Sign out',
+  // TvSettings order: the profile rows, Playback preferences, Addons and About, then Sign out.
+  const rows = page.locator('.vx-settings-tv__rows').getByRole('button');
+  await expect(rows).toHaveText([
+    'Switch profile', 'Playback preferences', 'Manage profiles', 'Addons', 'About VIPTV', 'Sign out',
   ]);
   await page.getByRole('button', { name: 'Playback preferences', exact: true }).click();
-  await expect(page.locator('.settings-scroll').getByRole('button')).toHaveText([
+  // Sub-page rows read their current value after the title (TvPlayback).
+  await expect(rows).toContainText([
     'Preferred audio', 'Preferred subtitles', 'Start with subtitles', 'Subtitle size', 'Subtitle appearance', 'Maximum quality',
   ]);
   await page.keyboard.press('Escape');
   await expect(page.getByRole('button', { name: 'Playback preferences', exact: true })).toBeFocused();
   await page.getByRole('button', { name: 'Addons', exact: true }).click();
-  const fixtureAddon = page.getByRole('button', { name: 'Fixture add-on', exact: true });
+  const fixtureAddon = page.getByRole('button', { name: /^Fixture add-on/ });
   await expect(fixtureAddon).toBeVisible();
   await fixtureAddon.click();
   await page.getByRole('button', { name: 'Disable' }).click();
   await expect.poll(() => state.addons[0]?.enabled).toBe(false);
   await fixtureAddon.focus();
-  await expect(page.locator('.settings-description')).toContainText('Disabled');
+  await expect(page.locator('.vx-tv-description')).toContainText('Disabled');
 
   await page.getByRole('button', { name: 'Install addon' }).click();
   await page.getByRole('textbox', { name: 'Install addon manifest URL' }).fill('https://addons.example.test/manifest.json');
   await page.getByRole('button', { name: 'Done' }).click();
-  await expect(page.getByRole('button', { name: 'Installed add-on', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: /^Installed add-on/ })).toBeVisible();
 
   await fixtureAddon.click();
   await page.getByRole('button', { name: 'Remove addon', exact: true }).click();

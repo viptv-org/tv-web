@@ -329,7 +329,7 @@
   scroll-padding: var(--vx-live-head-h) 0 0 var(--vx-live-channel-w);
 }
 [data-layout="responsive"] .vx-live-guide__scroll:focus-visible {
-  box-shadow: inset 0 0 0 2px var(--viptv-color-text-primary);
+  box-shadow: inset 0 0 0 var(--viptv-size-border-strong) var(--viptv-color-text-primary);
 }
 [data-layout="responsive"] .vx-live-guide__grid {
   position: relative;

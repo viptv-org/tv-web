@@ -450,7 +450,7 @@
 [data-layout="responsive"] .vx-up-next__actions > .vx-btn {
   --vx-h: var(--viptv-size-button-small);
   --vx-fs: var(--viptv-type-desktop-row-size);
-  flex: 1 1 0;
+  flex: 1 1 auto;
 }
 
 /* Buffering ring and notice (with or without the controls). */

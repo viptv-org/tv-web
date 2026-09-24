@@ -59,6 +59,15 @@ export function seekPinReleased(
 }
 
 
+/** :focus-visible where the engine knows it (Chrome 86+); focus otherwise. */
+function focusVisible(element: Element) {
+  try {
+    return element.matches(":focus-visible");
+  } catch {
+    return true;
+  }
+}
+
 const SEEK_SLOP = 6;
 const KEYBOARD_STEP_SECONDS = 10;
 /** Idle window after a keyboard nudge before it commits, matching the remote. */
@@ -296,7 +305,9 @@ export function SeekBar({
       onPointerCancel={onPointerCancel}
       onPointerLeave={onPointerLeave}
       onKeyDown={onKeyDown}
-      onFocus={() => setFocused(true)}
+      // The keyboard preview bubble is for keyboard focus; a click also
+      // focuses the bar but must not leave a bubble on the pinned target.
+      onFocus={(event) => setFocused(focusVisible(event.currentTarget))}
       onBlur={() => setFocused(false)}
     >
       <span className="vx-timeline__track" aria-hidden="true">

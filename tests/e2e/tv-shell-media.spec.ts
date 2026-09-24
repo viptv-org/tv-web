@@ -46,13 +46,14 @@ test('playback preferences persist their snake-case mutation and update the shar
   await page.getByRole('button', { name: 'Alex' }).press('Enter');
   await page.getByRole('button', { name: 'Settings' }).press('Enter');
   await page.getByRole('button', { name: 'Playback preferences' }).press('Enter');
-  await page.getByRole('button', { name: 'Start with subtitles', exact: true }).press('Enter');
-  await page.getByRole('button', { name: 'On', exact: true }).press('Enter');
-  await expect(page.locator('.settings-description')).toContainText('On');
-  await page.getByRole('button', { name: 'Maximum quality', exact: true }).press('Enter');
+  // Rows read their value after the title; the choices are radio rows in the right panel (TvPlaybackChoice).
+  await page.getByRole('button', { name: /^Start with subtitles/ }).press('Enter');
+  await page.getByRole('radio', { name: 'On', exact: true }).press('Enter');
+  await expect(page.locator('.vx-tv-description')).toContainText('On');
+  await page.getByRole('button', { name: /^Maximum quality/ }).press('Enter');
   await expect(page.getByRole('heading', { name: 'Maximum quality', exact: true }).last()).toBeVisible();
-  await page.getByRole('button', { name: '720p' }).press('Enter');
-  await expect(page.locator('.settings-description')).toContainText('720p');
+  await page.getByRole('radio', { name: '720p' }).press('Enter');
+  await expect(page.locator('.vx-tv-description')).toContainText('720p');
   expect(changes).toEqual([{ subtitles_enabled: true }, { quality: '720p' }]);
   await expect(page.getByRole('alert')).toHaveCount(0);
   assertNoPageErrors();
@@ -166,12 +167,13 @@ test('Roku visual contract keeps fixed geometry, focus ownership and proportiona
   await expectBox(page, 'nav[aria-label="Main navigation"]', { x: 0, y: 0, width: 144, height: 1080 });
   await page.getByRole('button', { name: 'Settings', exact: true }).press('Enter');
   await page.getByRole('button', { name: 'Switch profile', exact: true }).focus();
-  await expectBox(page, '.settings-scroll', { x: 150, y: 216, width: 804 });
-  await expectBox(page, '.settings-description', { x: 1167, y: 228, width: 636 });
+  // TvSettings: rows from 192, 54 (720 wide), the description panel from 1040, 190 to the safe edge.
+  await expectBox(page, '.vx-settings-tv__list', { x: 192, y: 54, width: 720 });
+  await expectBox(page, '.vx-settings-tv__panel', { x: 1040, y: 190, width: 784 });
   await capture(page, testInfo, 'roku-settings-focused');
   // A 1280 x 720 panel scales the whole canvas by 2/3.
   await page.setViewportSize({ width: 1280, height: 720 });
-  await expectBox(page, '.settings-scroll', { x: 100, y: 144, width: 536 });
+  await expectBox(page, '.vx-settings-tv__list', { x: 128, y: 36, width: 480 });
   await expect(page.getByRole('button', { name: 'Switch profile', exact: true })).toBeFocused();
   await page.setViewportSize({ width: 1920, height: 1080 });
   await page.getByRole('button', { name: 'Search', exact: true }).press('Enter');

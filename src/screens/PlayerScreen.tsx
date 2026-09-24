@@ -48,11 +48,15 @@ type PlayerScreenProps = {
   responsive: boolean;
   /** The controls are up (they auto-hide while playing). */
   overlay: boolean;
+  /** A dialog (generic modal) is open over the player. */
+  dialogOpen: boolean;
   selected: MediaItem | undefined;
   busy: boolean;
   snapshot: PlayerSnapshot | undefined;
   playerNotice: { message: string; key: number } | undefined;
   seek: number | undefined;
+  /** A committed seek is still in flight (buffering ring / BUFFERING). */
+  seekPending: boolean;
   setSeek: Dispatch<SetStateAction<number | undefined>>;
   setOverlay: Dispatch<SetStateAction<boolean>>;
   commitSeek: (seconds: number) => unknown;
@@ -79,6 +83,9 @@ type PlayerScreenProps = {
   playUpNext: () => void;
   cancelUpNext: () => void;
 };
+
+/** Playback has stopped or failed: nothing for the controls to act on. */
+const INACTIVE = ["idle", "stopped", "error", "disposed"];
 
 /** "S1 · E1 · Episode One" (episodes only). */
 function episodeContext(selected: MediaItem | undefined) {
@@ -119,12 +126,14 @@ const INTERACTIVE = "button, input, [role=slider], .vx-player__popup, .vx-up-nex
  * brings them back (surfaceClick); a double-click toggles fullscreen.
  */
 function ResponsivePlayer({
-  overlay,
+  overlay: controlsUp,
+  dialogOpen,
   selected,
   busy,
   snapshot,
   playerNotice,
   seek,
+  seekPending,
   setSeek,
   setOverlay,
   commitSeek,
@@ -155,8 +164,11 @@ function ResponsivePlayer({
   const duration = snapshot?.time.durationSeconds ?? 0;
   const context = episodeContext(selected);
   const volume = snapshot?.volume;
-  const buffering = busy || snapshot?.state === "buffering";
+  const buffering = busy || seekPending || snapshot?.state === "buffering";
   const card = upNext && !busy && !live ? upNext : undefined;
+  // "Playback could not be restored" (DeskPlayerRestore): the dialog sits over
+  // the bare picture, the dead controls hide behind it.
+  const overlay = controlsUp && !(dialogOpen && INACTIVE.includes(snapshot?.state ?? ""));
 
   // Popups sit above the timeline, centred on their button and clamped to
   // the controls area (DeskPlayerAudio); the phone makes them full width.
@@ -391,12 +403,14 @@ export function PlayerScreen(props: PlayerScreenProps) {
  * the current state bottom-right. Live channels show LIVE NOW and audio + exit.
  */
 function TvPlayer({
-  overlay,
+  overlay: controlsUp,
+  dialogOpen,
   selected,
   busy,
   snapshot,
   playerNotice,
   seek,
+  seekPending,
   setSeek,
   commitSeek,
   togglePlayback,
@@ -418,6 +432,7 @@ function TvPlayer({
   const duration = snapshot?.time.durationSeconds ?? 0;
   const context = episodeContext(selected);
   const card = upNext && !busy && !live ? upNext : undefined;
+  const overlay = controlsUp && !(dialogOpen && INACTIVE.includes(snapshot?.state ?? ""));
   const [focused, setFocused] = useState<string>();
 
   // The card takes focus on Play now when it appears (TvUpNext); if it goes
@@ -435,15 +450,18 @@ function TvPlayer({
 
   const status = busy
     ? "LOADING"
-    : snapshot?.state === "buffering"
+    : seekPending || snapshot?.state === "buffering"
       ? "BUFFERING"
       : paused
         ? "PAUSED"
         : "PLAYING";
   const back = card ? "Cancel" : "Hide controls";
+  // A remote seek preview (not yet committed); a committed seek in flight is
+  // BUFFERING, not seeking (TvPlayerSeek vs TvPlayerBuffering).
+  const previewing = seek !== undefined && !seekPending;
   const legend: LegendItem[] = busy
     ? [{ key: "BACK", label: "Cancel" }]
-    : seek !== undefined
+    : previewing
       ? [
           { key: "◀ ▶", label: "Seek" },
           { key: "OK", label: "Jump" },
@@ -470,7 +488,7 @@ function TvPlayer({
     <>
       {(overlay || busy) && (
         <div
-          className={`player-overlay vx-player vx-player--tv${live ? " vx-player--live" : ""}${seek !== undefined ? " vx-player--seeking" : ""}`}
+          className={`player-overlay vx-player vx-player--tv${live ? " vx-player--live" : ""}${previewing ? " vx-player--seeking" : ""}`}
           onFocus={(event) => setFocused((event.target as HTMLElement).dataset.focusId)}
           onClick={(event) => {
             // The backdrop around the controls is the play/pause surface,
@@ -505,7 +523,7 @@ function TvPlayer({
                     position={position}
                     duration={duration}
                     seekable={snapshot?.time.seekable}
-                    preview={seek}
+                    preview={previewing ? seek : undefined}
                     onPreview={setSeek}
                     onSeek={(seconds) => void commitSeek(seconds)}
                     onActivate={togglePlayback}

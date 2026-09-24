@@ -55,6 +55,10 @@ export function usePlaybackControls(app: NavigationApi) {
     return () => clearTimeout(timer);
   }, [playerNotice]);
 
+  // A committed seek still in flight (a managed seek waits for the server):
+  // the player shows its buffering ring / BUFFERING status meanwhile.
+  const [seekPending, setSeekPending] = useState(false);
+  const seeksInFlight = useRef(0);
   const commitSeek = async (position: number) => {
     // The target stays displayed until the engine actually lands there;
     // clearing it up front teleports the thumb back to the pre-seek spot.
@@ -65,18 +69,22 @@ export function usePlaybackControls(app: NavigationApi) {
       seekTarget.current = undefined;
       return;
     }
+    seeksInFlight.current++;
+    setSeekPending(true);
     try {
       await controller.current?.seekFrom(
         () => position,
         () => snapshot?.time.positionSeconds ?? 0,
       );
-    } catch (e) {
+    } catch {
       setSeek(undefined);
       seekTarget.current = undefined;
-      setPlayerNotice({
-        message: e instanceof Error ? e.message : "The stream could not seek there.",
-        key: Date.now(),
-      });
+      // The player notice pill (copy.md): the engine / server reason is not
+      // user copy (a refused managed seek reads "VIPTV could not complete…").
+      setPlayerNotice({ message: "The stream could not seek there.", key: Date.now() });
+    } finally {
+      seeksInFlight.current--;
+      if (!seeksInFlight.current) setSeekPending(false);
     }
   };
 
@@ -383,5 +391,5 @@ export function usePlaybackControls(app: NavigationApi) {
     { label: "Fallback", value: snapshot?.diagnostics?.fallbackReason ?? "" },
   ].filter((row) => row.value);
 
-  return { commitSeek, togglePlayback, toggleLiveMute, readBufferedRanges, surfaceClick, mediaKey, mediaKeyUp, editProfile, trackChoices, audioTrackList, textTrackList, subtitleOffOption, subtitlesCanTurnOff, playerInfoRows, playerNotice, setPlayerNotice };
+  return { commitSeek, togglePlayback, toggleLiveMute, readBufferedRanges, surfaceClick, mediaKey, mediaKeyUp, editProfile, trackChoices, audioTrackList, textTrackList, subtitleOffOption, subtitlesCanTurnOff, playerInfoRows, playerNotice, setPlayerNotice, seekPending };
 }

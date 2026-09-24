@@ -49,14 +49,18 @@ for (const viewport of [
     await expect(card).toBeVisible();
     await expectResponsiveViewport(page, viewport.width);
     await page.keyboard.press('Tab');
-    const focusedAction = page.locator('[data-focus-id="hero-details"]');
+    // Desktop hero: Play / Details / +; the phone featured card: Play / + (its
+    // art opens the title). Secondary hero buttons are surface-3 with
+    // off-white text (DeskHome, Main).
+    const focusedAction = page.locator(viewport.width < 600 ? '[data-focus-id="hero-save"]' : '[data-focus-id="hero-details"]');
     await focusedAction.focus();
-    await expect(focusedAction).toHaveCSS('background-color', 'rgb(32, 34, 36)');
-    await expect(focusedAction).toHaveCSS('color', 'rgb(245, 245, 245)');
+    await expect(focusedAction).toHaveCSS('background-color', 'rgb(42, 42, 46)');
+    await expect(focusedAction).toHaveCSS('color', 'rgb(244, 242, 238)');
     const heroFontSize = await page.locator('.hero h1').evaluate(node => parseFloat(getComputedStyle(node).fontSize));
     expect(heroFontSize).toBeGreaterThanOrEqual(24);
     const cardBox = await card.boundingBox();
-    expect(cardBox?.width).toBeGreaterThanOrEqual(140);
+    // Phone Home posters are a third of the phone grid (111); desktop tiles keep fixed widths.
+    expect(cardBox?.width).toBeGreaterThanOrEqual(viewport.width < 600 ? 100 : 140);
     expect(cardBox?.width).toBeLessThanOrEqual(viewport.width);
     if (viewport.width >= 1440) {
       const rail = await page.evaluate(() => {
@@ -92,10 +96,11 @@ for (const viewport of [
       await navigation.getByRole('button', { name: 'Home', exact: true }).click();
     };
     await expect(page.locator('.responsive-toolbar').getByRole('button', { name: /OLED/ })).toHaveCount(0);
-    // Phones render OLED mode as a switch row; wider layouts keep the labelled button.
+    // Phones render OLED mode as a switch row (Settings); wider layouts show the
+    // Appearance pane's OLED switch (DeskSettings).
     const oled = (on: boolean) => viewport.width < 600
-      ? page.locator(`[data-focus-id="settings-appearance"][aria-pressed="${on}"]`)
-      : page.getByRole('button', { name: `OLED mode: ${on ? 'On' : 'Off'}`, exact: true });
+      ? page.locator(`[data-focus-id="settings-oled"][aria-checked="${on}"]`)
+      : page.locator(`[role="switch"][aria-label="OLED mode"][aria-checked="${on}"]`);
     await openSettings();
     await oled(false).click();
     await expect(oled(true)).toBeVisible();
@@ -126,7 +131,8 @@ for (const viewport of [
     await expect(castDialog).toContainText('VIPTV desktop app with SmartCast support');
     await expect(castDialog).toContainText('This browser cannot pair with or control your TV');
     await expect(castDialog.getByLabel('TV IP address')).toHaveCount(0);
-    await castDialog.getByRole('button', { name: 'Close', exact: true }).click();
+    // The last "Close" is the action button (the × disc / phone grabber carry the same label).
+    await castDialog.getByRole('button', { name: 'Close', exact: true }).last().click();
     await expect(castDialog).toHaveCount(0);
     await expect(cast).toBeFocused();
     await expectResponsiveViewport(page, viewport.width);
@@ -245,7 +251,8 @@ for (const width of [360, 390, 768, 1024, 1280, 1440, 2560]) {
     await expect(page.locator('[data-focus-id="profile-0"]')).toContainText(fixture.profileName);
     await expectResponsiveViewport(page, width);
     await page.locator('[data-focus-id="profile-0"]').click();
-    await expect(page.locator('.shelves section')).toHaveCount(3);
+    // Rows near the viewport load as it fills; at least three shelves show.
+    await expect.poll(() => page.locator('.shelves section').count()).toBeGreaterThanOrEqual(3);
     // Windowed rows mount only the visible slice of each shelf; pixel
     // spacers keep every 24-item track fully scrollable (checked via the
     // geometry scrollWidth assertions below).
@@ -268,7 +275,13 @@ for (const width of [360, 390, 768, 1024, 1280, 1440, 2560]) {
     expect(geometry.heroLeft).toBeGreaterThanOrEqual(0);
     expect(geometry.heroRight).toBeLessThanOrEqual(width);
     expect(geometry.heroHeight).toBeLessThanOrEqual(width < 600 ? 240 : 480);
-    expect(geometry.heroWidth / geometry.heroHeight).toBeCloseTo(16 / 9, 1);
+    // Phone featured art is 206 tall at every width (Main); the desktop hero
+    // art keeps 774:432 and never grows past 776 wide (DeskHome).
+    if (width < 600) expect(geometry.heroHeight).toBe(206);
+    else {
+      expect(geometry.heroWidth / geometry.heroHeight).toBeCloseTo(774 / 432, 1);
+      expect(geometry.heroWidth).toBeLessThanOrEqual(776);
+    }
     expect(geometry.imageWidth).toBeLessThanOrEqual(geometry.heroWidth + 1);
     expect(geometry.imageHeight).toBeLessThanOrEqual(geometry.heroHeight + 1);
     expect(geometry.shelfWidth).toBeLessThanOrEqual(geometry.rootWidth);
@@ -334,9 +347,15 @@ for (const width of [390, 1440]) {
     const section = page.locator('.shelves section').last();
     // Windowed rows mount only cards near the row's scroll offset, so pan
     // the row to card 12 first and address it as the 4th mounted card.
-    await section.locator('.cards').evaluate(el => { el.scrollLeft = 12 * 280; });
+    const cardId = await section.locator('.cards').evaluate(el => {
+      const slots = el.querySelectorAll<HTMLElement>(':scope > .vx-card-slot');
+      const pitch = slots[1].offsetLeft - slots[0].offsetLeft;
+      el.scrollLeft = 12 * pitch;
+      return slots[0].querySelector<HTMLElement>('.media-card')!.dataset.focusId!.replace(/-\d+$/, '-12');
+    });
     await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
-    const card = section.locator('.media-card').nth(3);
+    // Address card 12 by its focus id: the windowed row remounts its slice as it scrolls.
+    const card = page.locator(`[data-focus-id="${cardId}"]`);
     await card.scrollIntoViewIfNeeded();
     await card.focus();
     await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
@@ -367,7 +386,7 @@ for (const width of [390, 768, 1440]) {
     const fixture = await installBackend(page, { populated: true, activity: true });
     await page.goto('/');
     await page.locator('[data-focus-id="profile-0"]').click();
-    const queue = page.locator('.shelves section').filter({ has: page.getByRole('heading', { name: 'Continue Watching', exact: true }) });
+    const queue = page.locator('.shelves section').filter({ has: page.getByRole('heading', { name: 'Continue watching', exact: true }) });
     // The queue row is windowed: only the visible slice stays mounted, but
     // the full 24-item track remains scrollable behind pixel spacers. The
     // visible slice mounts asynchronously after layout measurement.
@@ -377,56 +396,41 @@ for (const width of [390, 768, 1440]) {
     expect(mountedQueue).toBeLessThan(24);
     // The whole 24-card track stays scrollable at the row's real pitch.
     const track = await queue.locator('.cards').evaluate(el => {
-      const card = el.querySelector<HTMLElement>(':scope > .responsive-card')!;
+      const card = el.querySelector<HTMLElement>(':scope > .vx-card-slot')!;
       return { scrollWidth: el.scrollWidth, pitch: card.offsetWidth + (parseFloat(getComputedStyle(el).columnGap) || 0) };
     });
     expect(track.scrollWidth).toBeGreaterThan(23 * track.pitch);
-    await expect(page.locator('.shelves section').first()).toContainText('Continue Watching');
+    await expect(page.locator('.shelves section').first()).toContainText('Continue watching');
     await expect(queue.locator('[data-focus-id="queue-0"]')).toContainText('S1');
-    // Card art is served through the shared wsrv pipeline at card geometry.
-    await expect(queue.locator('[data-focus-id="queue-0"] > img')).toHaveAttribute('src', 'https://wsrv.nl/?url=https%3A%2F%2Fart.example%2Fepisode.svg%3Fepisode%3D1&w=256&h=144&fit=cover&output=jpg&q=85&we');
-    await expect(queue.locator('[data-focus-id="queue-1"] > img')).toHaveAttribute('src', 'https://wsrv.nl/?url=https%3A%2F%2Fart.example%2Fepisode.svg%3Fepisode%3D2&w=256&h=144&fit=cover&output=jpg&q=85&we');
+    // Card art is served through the shared wsrv pipeline at card geometry
+    // (the phone continue card's thumb keeps an episode's still).
+    await expect(queue.locator('[data-focus-id="queue-0"] img')).toHaveAttribute('src', 'https://wsrv.nl/?url=https%3A%2F%2Fart.example%2Fepisode.svg%3Fepisode%3D1&w=256&h=144&fit=cover&output=jpg&q=85&we');
+    await expect(queue.locator('[data-focus-id="queue-1"] img')).toHaveAttribute('src', 'https://wsrv.nl/?url=https%3A%2F%2Fart.example%2Fepisode.svg%3Fepisode%3D2&w=256&h=144&fit=cover&output=jpg&q=85&we');
     expect(fixture.requests.some(request => request.path === '/api/meta/series/queue-series')).toBe(true);
-    expect(await queue.locator('[data-focus-id="queue-0"] progress').evaluate(node => (node as HTMLProgressElement).value / (node as HTMLProgressElement).max)).toBeCloseTo(42 / 2400, 3);
+    // 42 s of 2400 s: the accent bar reads 2 %.
+    await expect(queue.locator('[data-focus-id="queue-0"] [role="progressbar"]')).toHaveAttribute('aria-valuenow', String(Math.round(42 / 2400 * 100)));
     const live = page.locator('[data-focus-id="recent-live-0"]');
     // Lazy card art only loads once its row is on screen.
     await live.scrollIntoViewIfNeeded();
-    await expect(live).toHaveClass(/logo-card/);
-    await expect(live.locator('img')).toHaveJSProperty('naturalWidth', 7000);
-    const assertLogo = async () => {
-      const geometry = await live.evaluate(node => {
-        const art = node.querySelector('.art-fallback')!.getBoundingClientRect();
-        const image = node.querySelector('img')!;
-        const logo = image.getBoundingClientRect();
-        // Phones show the logo tile alone; wider layouts keep the channel
-        // name below the art.
-        const name = node.querySelector('strong')!;
-        const named = getComputedStyle(name).display !== 'none' || !!node.querySelector('.card-caption');
-        return { left: logo.left - art.left, top: logo.top - art.top, right: logo.right - art.right, bottom: logo.bottom - art.bottom, named, below: name.getBoundingClientRect().top - logo.bottom, fit: getComputedStyle(image).objectFit };
-      });
-      expect(geometry.left).toBeGreaterThanOrEqual(-1);
-      expect(geometry.top).toBeGreaterThanOrEqual(-1);
-      expect(geometry.right).toBeLessThanOrEqual(1);
-      expect(geometry.bottom).toBeLessThanOrEqual(1);
-      expect(geometry.named).toBe(width >= 600);
-      if (geometry.named) expect(geometry.below).toBeGreaterThanOrEqual(0);
-      expect(geometry.fit).toBe('contain');
-    };
-    await assertLogo();
-    // This is the state missed by sparse screenshots: lower-shelf focus sets
-    // compact-home. On stacked layouts it must not win over grid-row:2.
+    // Channel logos are text monograms (components.md §6): desktop live tiles
+    // draw the monogram with a LIVE badge and the name below; phones draw the
+    // live-now card (LIVE label, name, section). No logo bitmap is loaded.
+    if (width < 600) {
+      await expect(live).toHaveClass(/vx-live-card/);
+      await expect(live).toContainText('Live');
+    } else {
+      await expect(live).toHaveClass(/vx-card--live/);
+      await expect(live.locator('.vx-card__art--monogram')).toHaveText(/^IN1\s*LIVE$/);
+    }
+    await expect(live).toContainText('International News 1');
+    await expect(live).toContainText('News');
+    await expect(live.locator('img')).toHaveCount(0);
+    // Lower-shelf focus still sets compact-home (the TV hides its hero); the
+    // responsive hero keeps its place.
+    const heroBefore = await page.locator('.responsive-hero-art').boundingBox();
     await live.focus();
     await expect(page.locator('.home')).toHaveClass(/compact-home/);
-    if (width < 900) {
-      const geometry = await page.evaluate(() => {
-        const art = document.querySelector('.responsive-hero-art')!.getBoundingClientRect();
-        const copy = document.querySelector('.hero')!.getBoundingClientRect();
-        return { artBottom: art.bottom, copyTop: copy.top, artWidth: art.width };
-      });
-      expect(geometry.copyTop).toBeGreaterThanOrEqual(geometry.artBottom + 15);
-      expect(geometry.artWidth).toBeLessThanOrEqual(width);
-    }
-    await assertLogo();
+    expect(await page.locator('.responsive-hero-art').boundingBox()).toEqual(heroBefore);
     await expectResponsiveViewport(page, width);
     await page.screenshot({ path: testInfo.outputPath(`queue-live-${width}.png`) });
     await queue.locator('[data-focus-id="queue-0"]').click();
@@ -456,13 +460,15 @@ test('responsive web uses selected tabs without remote focus skin at phone and d
   await expect(home).toHaveCSS('background-color', 'rgb(244, 242, 238)');
   await expect(home).toHaveCSS('color', 'rgb(17, 17, 19)');
   await expect(page.locator('[data-focus-id="nav-Discover"]')).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+  // Phones draw no focus ring on a card (only desktop keyboard focus does).
   const card = page.locator('[data-focus-id="home-0"]');
   await card.focus();
-  expect(await card.evaluate(node => getComputedStyle(node, '::after').opacity)).toBe('0.35');
-  const action = page.locator('[data-focus-id="hero-details"]');
+  expect(await card.evaluate(node => getComputedStyle(node.querySelector('.vx-card__art')!, '::after').boxShadow)).toBe('none');
+  const action = page.locator('[data-focus-id="hero-save"]');
   await action.focus();
   await expect(action).toHaveCSS('outline-style', 'none');
-  await expect(action).toHaveCSS('background-color', 'rgb(32, 34, 36)');
+  await expect(action).toHaveCSS('box-shadow', 'none');
+  await expect(action).toHaveCSS('background-color', 'rgb(42, 42, 46)');
   // Settings is not a phone tab: the My List header carries it, and the
   // Settings page shows no bottom nav.
   await expect(page.locator('[data-focus-id="nav-Settings"]')).toHaveCount(0);

@@ -484,10 +484,16 @@ export function Settings({
         ? [...playbackRows, ...(engineRow ? [engineRow] : [])]
         : addonRows;
 
+  // TV focus on arrival: the first row, or — back from a sub-page — the row that opened it.
+  const previousPage = useRef(page);
   useEffect(() => {
+    const from = previousPage.current;
+    previousPage.current = page;
     // Touch layouts take no programmatic focus: it would only paint a
     // remote focus state on the first row.
-    if (!list) focusElement(rows[0].id);
+    if (list) return;
+    const opener = page === "Settings" && from === "Addons" ? "settings-addons" : page === "Settings" && from === "Playback preferences" ? "settings-playback" : rows[0].id;
+    focusElement(opener);
   }, [page]);
 
   const closeEntry = () => {

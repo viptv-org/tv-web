@@ -281,6 +281,9 @@ export function usePlaybackSession(app: PlaybackEngineApi) {
           choices: [
             {
               label: "Retry",
+              // The dialog's one accent action (DeskPlayerRestore; TV: a plain row).
+              // (The drawn refresh icon waits on the generic modal: an icon makes it a menu.)
+              tone: "primary",
               action: () => {
                 setModal(undefined);
                 void play(outgoing.item, outgoing.source, outgoingPosition);
