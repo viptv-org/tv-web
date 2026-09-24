@@ -180,8 +180,9 @@ test('Roku visual contract keeps fixed geometry, focus ownership and proportiona
   await expectBox(page, '.search .result-grid', { x: 684, y: 246, width: 1110, height: 726 });
   await capture(page, testInfo, 'roku-search-empty');
   await page.getByRole('button', { name: 'Profile', exact: true }).press('Enter');
-  await expectBox(page, '.profiles>h1', { x: 150, y: 219, width: 1620 });
-  await expectBox(page, '.profile-row', { x: 0, y: 378, width: 1920 });
+  // TvProfiles: the title at y 230; one profile + Add profile (2 × 220 + 64) centred below.
+  await expectBox(page, '.vx-profiles__title', { x: 727, y: 230, width: 467 }, 4);
+  await expectBox(page, '.vx-profiles__tiles', { x: 708, y: 397, width: 504 }, 4);
   await capture(page, testInfo, 'roku-profiles');
   assertNoPageErrors();
 });

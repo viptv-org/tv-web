@@ -442,7 +442,8 @@ test('responsive web uses selected tabs without remote focus skin at phone and d
   await page.goto('/');
   const profile = page.locator('[data-focus-id="profile-0"]');
   await profile.focus();
-  expect(await profile.evaluate(node => getComputedStyle(node, '::after').borderTopColor)).toBe('rgba(0, 0, 0, 0)');
+  // Phones draw no focus ring on the profile tile (no TV ring, no desktop keyboard ring).
+  expect(await profile.evaluate(node => getComputedStyle(node.querySelector('.vx-profile__avatar')!).boxShadow)).toBe('none');
   await profile.click();
   const home = page.locator('[data-focus-id="nav-Home"]');
   await home.focus();

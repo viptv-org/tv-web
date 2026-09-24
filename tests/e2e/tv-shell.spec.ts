@@ -9,7 +9,8 @@ test('renders the real device-pairing handoff without storing a token before app
   await expect(page.getByRole('heading', { name: 'Sign in to VIPTV' })).toBeVisible();
   await expect(page.getByText('AB12CD34EF')).toBeVisible();
   await expect(page.getByRole('img', { name: 'Scan to link your TV' })).toBeVisible();
-  await expectBox(page, '.pairing h1', { x: 144, y: 255 });
+  // TvPairing: the title opens the text column at 192 / 250 (1920 × 1080 canvas).
+  await expectBox(page, '.vx-pairing__title', { x: 192, y: 250 });
   await capture(page, testInfo, 'pairing');
   await page.getByRole('button', { name: 'Try again' }).press('Enter');
   await expect(page.getByText('AB12CD34EF')).toBeVisible();
@@ -46,8 +47,9 @@ test('profile management preserves avatar choice, unlocks a protected edit, and 
   await expect(page.getByRole('heading', { name: 'Add a profile' })).toBeVisible();
   await page.getByRole('button', { name: 'Change avatar' }).click();
   await expect(page.getByRole('heading', { name: 'Find your favorite' })).toBeVisible();
-  await page.getByRole('button', { name: 'critters 2' }).click();
-  await page.getByRole('button', { name: 'Enter profile name' }).click();
+  await page.getByRole('button', { name: 'Creatures 2' }).click();
+  await expect(page.getByRole('button', { name: 'Profile name: empty' })).toBeVisible();
+  await page.locator('[data-focus-id="profile-name"]').click();
   await page.getByRole('textbox', { name: 'Profile name' }).fill('Sam');
   await page.getByRole('button', { name: 'Done' }).click();
   await page.getByRole('button', { name: 'Create profile' }).click();
@@ -65,8 +67,8 @@ test('profile management preserves avatar choice, unlocks a protected edit, and 
   const protectedUpdate = page.waitForResponse(response => response.url().includes('/api/profiles/') && response.request().method() === 'PATCH');
   await page.locator('[data-focus-id="profile-save"]').click();
   await expect((await protectedUpdate).status()).toBe(403);
-  await expect(page.getByRole('heading', { name: 'Parent PIN' })).toBeVisible();
-  await page.getByLabel('Parent PIN').fill('1234');
+  await expect(page.getByRole('heading', { name: 'Enter parent PIN' })).toBeVisible();
+  await page.getByLabel('Enter parent PIN', { exact: true }).fill('1234');
   await page.getByRole('button', { name: 'Done' }).click();
   await expect(page.getByRole('button', { name: 'Sam Prime' })).toBeVisible();
   expect(fixture.requests.filter((request) => request.method === 'PATCH')).toHaveLength(2);

@@ -96,9 +96,14 @@ test("expired pairing can retry with a new code", async ({ page }) => {
   const f = await fixture(page, { expires: 1 });
   await page.goto("/?platform=vizio");
   await expect(page.getByText("CODE000001", { exact: true })).toBeVisible();
-  await expect(page.getByRole("alert")).toContainText("expired");
-  await page.getByRole("button", { name: "Dismiss" }).click();
+  // Expiry is a persistent state (TvPairingExpired): the code stays, struck through, with
+  // "This code expired." and Try again focused; no transient error toast.
+  await expect(page.getByRole("status")).toHaveText("This code expired.");
+  await expect(page.locator(".vx-pairing__code--expired")).toHaveText("CODE000001");
+  await expect(page.getByRole("button", { name: "Try again" })).toBeFocused();
+  await expect(page.getByRole("alert")).toHaveCount(0);
   await page.getByRole("button", { name: "Try again" }).click();
+  await expect(page.getByRole("status")).toHaveCount(0);
   await expect(page.getByText("CODE000002", { exact: true })).toBeVisible();
   expect(f.codes()).toBe(2);
 });

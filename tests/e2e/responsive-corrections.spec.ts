@@ -22,9 +22,12 @@ for (const width of [390, 1440]) test(`website sign-in is centered and signs in 
   });
   await page.goto('/');
   await expect(page.getByRole('heading', { name: 'Sign in to viptv' })).toBeVisible();
-  const bounds = await page.locator('.responsive-auth-card').boundingBox();
+  const bounds = await page.locator('.vx-signin__card').boundingBox();
   expect(Math.abs(bounds!.x + bounds!.width / 2 - width / 2)).toBeLessThan(2);
-  expect(Math.abs(bounds!.y + bounds!.height / 2 - 450)).toBeLessThan(2);
+  // Phones keep the card in the thumb zone, 34 px above the bottom edge (PhSignIn);
+  // wider screens centre it (WebSignIn).
+  if (width < 600) expect(Math.abs(bounds!.y + bounds!.height - (900 - 34))).toBeLessThan(2);
+  else expect(Math.abs(bounds!.y + bounds!.height / 2 - 450)).toBeLessThan(2);
   await page.getByLabel('Username', { exact: true }).fill('alex');
   await page.getByLabel('Password', { exact: true }).fill('wrong-password');
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();

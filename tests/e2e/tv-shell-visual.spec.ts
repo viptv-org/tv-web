@@ -13,7 +13,7 @@ test('restores a remembered profile without flashing pairing and retains Home af
   }, { origin:apiOrigin });
   await page.goto('/?platform=vizio');
   await expect(page.locator('.media-card').first()).toBeVisible();
-  await expect(page.locator('.profiles')).toHaveCount(0);
+  await expect(page.locator('.vx-profiles')).toHaveCount(0);
   await page.reload();
   await expect(page.locator('.media-card').first()).toBeVisible();
   expect(await page.evaluate(() => (window as unknown as {pairingFlashed:boolean}).pairingFlashed)).toBe(false);
@@ -28,13 +28,16 @@ test('profile artwork remains concentric with its focus outline at TV and deskto
   for (const viewport of [{width:1280,height:720},{width:1920,height:1080}]) {
     await page.setViewportSize(viewport);
     await card.focus();
+    // The focus ring is the avatar box's own box-shadow (ring + 1.06 scale), so the artwork
+    // must fill that box exactly, whatever the canvas scale.
     await expect(async()=> {
       const delta=await card.evaluate(element=>{
-        const b=element.getBoundingClientRect(); const img=element.querySelector('img')!.getBoundingClientRect();
-        const ring=getComputedStyle(element,'::after'); const scale=b.width/(element as HTMLElement).offsetWidth;
-        return {x:img.x+img.width/2-(b.x+(parseFloat(ring.left)+parseFloat(ring.width)/2)*scale),y:img.y+img.height/2-(b.y+(parseFloat(ring.top)+parseFloat(ring.height)/2)*scale)};
+        const box=element.querySelector('.vx-profile__avatar')!;
+        const b=box.getBoundingClientRect(); const img=box.querySelector('img')!.getBoundingClientRect();
+        return {x:img.x+img.width/2-(b.x+b.width/2),y:img.y+img.height/2-(b.y+b.height/2),ring:getComputedStyle(box).boxShadow};
       });
       expect(Math.abs(delta.x)).toBeLessThan(1);expect(Math.abs(delta.y)).toBeLessThan(1);
+      expect(delta.ring).toContain('rgb(255, 255, 255) 0px 0px 0px 4px');
     }).toPass();
   }
 });

@@ -145,7 +145,7 @@ export function initFpsHarness(): void {
           ? "Browse"
           : document.querySelector('[data-focus-id="profile-0"]')
             ? "profiles"
-            : document.querySelector(".responsive-auth-card")
+            : document.querySelector(".vx-signin__card")
               ? "signin"
               : document.querySelector(".player")
                 ? "player"
@@ -218,7 +218,7 @@ export function initFpsHarness(): void {
     setNativeValue(pass, password);
     await sleep(120);
     const submit = Array.from(
-      document.querySelectorAll<HTMLButtonElement>(".responsive-auth-card button"),
+      document.querySelectorAll<HTMLButtonElement>(".vx-signin__card button"),
     ).find((button) => /sign in/i.test(button.textContent ?? ""));
     submit?.click();
   }
