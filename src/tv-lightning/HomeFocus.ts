@@ -1,6 +1,7 @@
 import Blits from "@lightningjs/blits";
 import { tokens } from "../theme/viptv-tokens.generated";
 import type { HomeCardView } from "./homeModel";
+import { noteFocus } from "./focusDebug";
 
 /** A focus-owning Lightning action. Selection fires on remote key release. */
 export const HomeAction = Blits.Component("HomeAction", {
@@ -31,7 +32,7 @@ export const HomeAction = Blits.Component("HomeAction", {
     };
   },
   hooks: {
-    focus() { this.focused = true; this.reveal(); this.$emit("home-action-focused", this.position); },
+    focus() { this.focused = true; this.reveal(); noteFocus("home-action", this.position); this.$emit("home-action-focused", this.position); },
     unfocus() { this.focused = false; clearTimeout(this.holdTimer); },
     destroy() { clearTimeout(this.holdTimer); },
   },
@@ -89,7 +90,7 @@ export const HomeCard = Blits.Component("HomeCard", {
     };
   },
   hooks: {
-    focus() { this.focused = true; this.reveal(); this.$emit("home-card-focused", this.position); },
+    focus() { this.focused = true; this.reveal(); noteFocus("home-card", this.position); this.$emit("home-card-focused", this.position); },
     unfocus() { this.focused = false; },
   },
   methods: {
