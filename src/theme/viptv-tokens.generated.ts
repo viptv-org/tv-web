@@ -64,6 +64,7 @@ export const tokens = {
   "color.fill.grabber": "#45454B",
   "color.fill.icon-disc-tv": "rgba(255,255,255,0.08)",
   "color.fill.cue-glass": "rgba(22,22,24,0.95)",
+  "color.fill.profile-letter": "#C24E6B",
   "color.scrim.sheet": "rgba(0,0,0,0.62)",
   "color.scrim.dialog": "rgba(0,0,0,0.55)",
   "color.scrim.tv-panel": "rgba(0,0,0,0.60)",
@@ -281,6 +282,18 @@ export const tokens = {
     "lineHeight": 1.2,
     "letterSpacing": "0.08em"
   },
+  "type.phone.subpage-title": {
+    "fontFamily": [
+      "Bricolage Grotesque",
+      "Bricolage Grotesque Variable",
+      "Helvetica Neue",
+      "sans-serif"
+    ],
+    "fontSize": "28px",
+    "fontWeight": 700,
+    "lineHeight": 1.1,
+    "letterSpacing": "-0.02em"
+  },
   "type.desktop.page-title": {
     "fontFamily": [
       "Bricolage Grotesque",
@@ -472,6 +485,43 @@ export const tokens = {
     ],
     "fontSize": "11px",
     "fontWeight": 600,
+    "lineHeight": 1,
+    "letterSpacing": "0em"
+  },
+  "type.desktop.card-title": {
+    "fontFamily": [
+      "Bricolage Grotesque",
+      "Bricolage Grotesque Variable",
+      "Helvetica Neue",
+      "sans-serif"
+    ],
+    "fontSize": "30px",
+    "fontWeight": 700,
+    "lineHeight": 1.1,
+    "letterSpacing": "-0.02em"
+  },
+  "type.desktop.device-code": {
+    "fontFamily": [
+      "ui-monospace",
+      "SFMono-Regular",
+      "Menlo",
+      "Consolas",
+      "monospace"
+    ],
+    "fontSize": "24px",
+    "fontWeight": 700,
+    "lineHeight": 1.2,
+    "letterSpacing": "0.08em"
+  },
+  "type.desktop.app-mark": {
+    "fontFamily": [
+      "Bricolage Grotesque",
+      "Bricolage Grotesque Variable",
+      "Helvetica Neue",
+      "sans-serif"
+    ],
+    "fontSize": "27px",
+    "fontWeight": 800,
     "lineHeight": 1,
     "letterSpacing": "0em"
   },
@@ -701,6 +751,42 @@ export const tokens = {
     "lineHeight": 1.15,
     "letterSpacing": "0em"
   },
+  "type.tv.gateway-title": {
+    "fontFamily": [
+      "Bricolage Grotesque",
+      "Bricolage Grotesque Variable",
+      "Helvetica Neue",
+      "sans-serif"
+    ],
+    "fontSize": "64px",
+    "fontWeight": 700,
+    "lineHeight": 1.05,
+    "letterSpacing": "-0.02em"
+  },
+  "type.tv.pair-code": {
+    "fontFamily": [
+      "Bricolage Grotesque",
+      "Bricolage Grotesque Variable",
+      "Helvetica Neue",
+      "sans-serif"
+    ],
+    "fontSize": "88px",
+    "fontWeight": 800,
+    "lineHeight": 1,
+    "letterSpacing": "0.08em"
+  },
+  "type.tv.app-mark": {
+    "fontFamily": [
+      "Bricolage Grotesque",
+      "Bricolage Grotesque Variable",
+      "Helvetica Neue",
+      "sans-serif"
+    ],
+    "fontSize": "32px",
+    "fontWeight": 800,
+    "lineHeight": 1,
+    "letterSpacing": "0em"
+  },
   "radius.xs": "4px",
   "radius.sm": "8px",
   "radius.field-titlebar": "9px",
@@ -718,6 +804,8 @@ export const tokens = {
   "radius.xl-plus": "20px",
   "radius.2xl-plus": "24px",
   "radius.sheet-top": "30px",
+  "radius.app-mark": 0.3,
+  "radius.qr": 0.125,
   "space.0": "0px",
   "space.1": "4px",
   "space.2": "8px",
