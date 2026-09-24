@@ -79,17 +79,6 @@
   position: absolute;
   left: calc(648px * var(--tv-k));
 }
-.playback-loading::before {
-  content: "";
-  display: block;
-  width: calc(60px * var(--tv-k));
-  height: calc(60px * var(--tv-k));
-  margin: 0 auto calc(18px * var(--tv-k));
-  border: calc(5px * var(--tv-k)) solid #4a4c4e;
-  border-top-color: white;
-  border-radius: 50%;
-  animation: spin 1.1s linear infinite;
-}
 @keyframes spin {
   to {
     transform: rotate(360deg);
