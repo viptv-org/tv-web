@@ -74,37 +74,6 @@ export const LiveScreen = defineScreen({
   render: (s) => (
     <TvView>
       <TvView
-        x={44}
-        y={54}
-        w={56}
-        h={56}
-        rounded={28}
-        color={s.chrome.surface}
-      />
-      <TvView
-        x={50}
-        y={60}
-        w={44}
-        h={44}
-        rounded={22}
-        src={s.chrome.homeProfileAvatar}
-        show={s.chrome.homeProfileAvatar !== ""}
-      />
-      <TvView x={60} y={202} w={24} h={24} src={s.chrome.railSearch} />
-      <TvView x={60} y={282} w={24} h={24} src={s.chrome.railHomeUnselected} />
-      <TvView x={60} y={360} w={24} h={24} src={s.chrome.railDiscover} />
-      <TvView
-        x={40}
-        y={418}
-        w={64}
-        h={64}
-        rounded={32}
-        color={s.chrome.surface}
-      />
-      <TvView x={60} y={438} w={24} h={24} src={s.chrome.railLiveSelected} />
-      <TvView x={60} y={516} w={24} h={24} src={s.chrome.railList} />
-      <TvView x={60} y={978} w={24} h={24} src={s.chrome.railSettings} />
-      <TvView
         x={192}
         y={105}
         w={68}
@@ -342,30 +311,6 @@ export const LiveScreen = defineScreen({
         x={1275}
         y={1012}
         content={s.chrome.watchLabel}
-        font={"Onest"}
-        size={20}
-        color={s.chrome.body}
-      />
-      <TvView
-        x={1373}
-        y={1008}
-        w={40}
-        h={31}
-        rounded={8}
-        color={s.chrome.keyBorder}
-      />
-      <TvText
-        x={1384}
-        y={1012}
-        content={s.chrome.optionsIcon}
-        font={"Onest"}
-        size={19}
-        color={s.chrome.primary}
-      />
-      <TvText
-        x={1424}
-        y={1012}
-        content={s.chrome.detailsLabel}
         font={"Onest"}
         size={20}
         color={s.chrome.body}

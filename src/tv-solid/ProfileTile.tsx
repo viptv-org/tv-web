@@ -229,7 +229,7 @@ export const ProfileTile = defineScreen({
       />
       <TvText
         x={0}
-        y={s.focused ? 250 : 240}
+        y={240}
         maxwidth={220}
         align={"center"}
         content={s.caption}
@@ -238,21 +238,20 @@ export const ProfileTile = defineScreen({
         color={s.focused ? s.primary : s.secondary}
       />
       <TvView
-        x={174}
-        y={174}
+        x={164}
+        y={164}
         w={40}
         h={40}
         rounded={20}
         color={s.white}
         show={s.managing && !s.tile.add}
       />
-      <TvText
-        x={182}
-        y={180}
-        content={s.pencil}
-        font={"Onest"}
-        size={26}
-        color={s.onLight}
+      <TvView
+        x={173}
+        y={173}
+        w={22}
+        h={22}
+        src={actionIcon("pencil", true)}
         show={s.managing && !s.tile.add}
       />
     </TvView>

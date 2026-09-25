@@ -40,7 +40,7 @@ export class TvApi extends TvApiCatalog {
   async queue(
     profileId: string,
     offset?: number,
-    options?: RequestOptions,
+    options?: RequestOptions & { readonly onPage?: (page: Page<MediaItem>) => void },
   ): Promise<Page<MediaItem>> {
     const scope = new AbortController();
     const cancel = () => scope.abort();
@@ -54,6 +54,7 @@ export class TvApi extends TvApiCatalog {
         {}, true, { signal: scope.signal },
       ));
       const result = page(v);
+      options?.onPage?.(result);
       const enriched = [...result.items];
       const metadata = new Map<string, Promise<MediaDetail>>();
       let cursor = 0;
@@ -71,6 +72,7 @@ export class TvApi extends TvApiCatalog {
             enriched[index] = normalizeCore<MediaItem>("enrichHome", {
               original: item, metadata: { ...detail.item, episodes: detail.episodes },
             });
+            options?.onPage?.({ ...result, items: [...enriched] });
           } catch (error) {
             ensureActive();
             if (isAbort(error) || error instanceof TvApiError && [401, 403].includes(error.status)) throw error;

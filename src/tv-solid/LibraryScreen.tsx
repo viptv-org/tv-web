@@ -54,23 +54,6 @@ export const LibraryScreen = defineScreen({
 
   render: (s) => (
     <TvView>
-      <TvView x={44} y={54} w={56} h={56} rounded={28} color={s.surface} />
-      <TvView
-        x={50}
-        y={60}
-        w={44}
-        h={44}
-        rounded={22}
-        src={s.homeProfileAvatar}
-        show={s.homeProfileAvatar !== ""}
-      />
-      <TvView x={60} y={202} w={24} h={24} src={s.railSearch} />
-      <TvView x={60} y={282} w={24} h={24} src={s.railHomeUnselected} />
-      <TvView x={60} y={360} w={24} h={24} src={s.railDiscover} />
-      <TvView x={60} y={440} w={24} h={24} src={s.railLive} />
-      <TvView x={40} y={496} w={64} h={64} rounded={32} color={s.surface} />
-      <TvView x={60} y={516} w={24} h={24} src={s.railListSelected} />
-      <TvView x={60} y={978} w={24} h={24} src={s.railSettings} />
       <TvText
         x={192}
         y={54}
@@ -191,42 +174,6 @@ export const LibraryScreen = defineScreen({
         color={s.body}
       />
       <TvView x={144} y={976} w={1776} h={104} color={s.background} />
-      <TvView x={1548} y={994} w={45} h={31} rounded={8} color={s.keyBorder} />
-      <TvView x={1550} y={996} w={41} h={27} rounded={6} color={s.background} />
-      <TvText
-        x={1557}
-        y={1000}
-        content={s.libraryOkLabel}
-        font={"Onest700"}
-        size={16}
-        color={s.primary}
-      />
-      <TvText
-        x={1608}
-        y={999}
-        content={s.librarySelectLabel}
-        font={"Onest"}
-        size={20}
-        color={s.body}
-      />
-      <TvView x={1700} y={994} w={40} h={31} rounded={8} color={s.keyBorder} />
-      <TvView x={1702} y={996} w={36} h={27} rounded={6} color={s.background} />
-      <TvText
-        x={1710}
-        y={999}
-        content={s.libraryOptionsIcon}
-        font={"Onest"}
-        size={19}
-        color={s.primary}
-      />
-      <TvText
-        x={1752}
-        y={999}
-        content={s.libraryOptionsLabel}
-        font={"Onest"}
-        size={20}
-        color={s.body}
-      />
     </TvView>
   ),
 });

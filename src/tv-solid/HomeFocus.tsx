@@ -117,7 +117,9 @@ export const HomeAction = defineScreen({
         show={s.action !== "details"}
       />
       <TvText
-        x={s.action === "details" ? 33 : 82}
+        x={s.action === "details" ? 0 : 82}
+        maxwidth={s.action === "details" ? s.buttonWidth : s.buttonWidth - 94}
+        align={s.action === "details" ? "center" : "left"}
         y={(s.buttonHeight - 26) / 2}
         content={s.labelText}
         font={"Onest700"}
@@ -174,6 +176,7 @@ export const HomeCard = defineScreen({
     },
   },
   watch: {
+    position() { if (this.focused) noteFocus("home-card", this.position); },
     card(value: HomeCardView) {
       this.titleText = value.title;
       this.subtitleText = value.subtitle;
@@ -276,7 +279,7 @@ export const HomeCard = defineScreen({
 export const HomePreviewCard = defineScreen({
   props: ["card"] as unknown as { card: HomeCardView },
   render: (s) => (
-    <TvView y={688} show={s.card.id !== ""}>
+    <TvView y={574} show={s.card.id !== ""}>
       <TvView w={320} h={180} rounded={16} color={tokens["color.surface.2"]} />
       <TvView w={320} h={180} rounded={16} src={s.card.image} show={s.card.image !== ""} fit={"cover"} />
       <TvText x={16} y={62} maxwidth={288} maxlines={2} align={"center"} content={s.card.title} font={"Bricolage700"} size={30} color={tokens["color.text.secondary"]} show={s.card.image === ""} />

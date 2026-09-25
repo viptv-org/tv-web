@@ -390,13 +390,59 @@ function visualNode(
   return node as unknown as JSX.Element;
 }
 export const TvView = (props: Record<string, any>) => visualNode("node", props);
-// Canvas text colors are baked into glyph textures. Replace the text node on
-// a color change so a reused glyph texture cannot retain the previous focus tint.
-export const TvText = (props: Record<string, any>) =>
-  createMemo(() => {
-    props.color;
-    return untrack(() => visualNode("text", props));
-  }) as unknown as JSX.Element;
+// Canvas glyph uploads are asynchronous. Keep the displayed glyphs until the
+// replacement texture is ready, including when focus changes their baked tint.
+// At most one displayed and one pending node exist; stale loads cannot commit.
+export const TvText = (props: Record<string, any>): JSX.Element => {
+  type Frame = Record<string, any>;
+  const [displayed, setDisplayed] = createSignal<Frame>();
+  const [pending, setPending] = createSignal<Frame>();
+  const [frames, setFrames] = createSignal<Frame[]>([]);
+  const layout = ["content", "font", "size", "color", "maxwidth", "maxheight", "maxlines", "lineheight", "letterspacing", "align"];
+  createRenderEffect(() => {
+    const frame = Object.fromEntries(layout.filter(key => key in props).map(key => [key, props[key]]));
+    untrack(() => {
+      const previous = pending() ?? displayed();
+      if (previous && layout.every(key => previous[key] === frame[key])) return;
+      if (!frame.content) { setPending(undefined); setDisplayed(undefined); setFrames([]); }
+      else {
+        setPending(frame);
+        setFrames(displayed() ? [displayed()!, frame] : [frame]);
+      }
+    });
+  });
+  const children = createComponent(For, {
+    get each() { return frames(); },
+    children: (frame: Frame) => {
+      let alive = true;
+      onCleanup(() => { alive = false; });
+      const mapped: Record<string, any> = { ...frame };
+      for (const key of Object.keys(props)) {
+        if (layout.includes(key) || key === "alpha" || key === "onEvent") continue;
+        Object.defineProperty(mapped, key, { enumerable: true, get: () => props[key] });
+      }
+      // A near-transparent pending node stays eligible for the renderer's
+      // texture upload. Swap only on texture-ready, not the earlier layout event.
+      Object.defineProperty(mapped, "alpha", { enumerable: true, get: () => displayed() === frame ? (props.alpha ?? 1) : pending() === frame ? 0.001 : 0 });
+      mapped.onEvent = { loaded: (_node: ElementNode, event: { type?: string }) => {
+        if (event?.type !== "texture") return;
+        // The renderer emits before setting textureLoaded. Commit after that
+        // handler finishes so the next frame can draw the replacement at once.
+        queueMicrotask(() => {
+          if (alive && pending() === frame)
+            batch(() => { setDisplayed(frame); setPending(undefined); });
+        });
+      } };
+      return visualNode("text", mapped);
+    },
+  });
+  // Retain the old (now transparent) node until the next content update. Alpha
+  // swaps then reach the renderer together, instead of destroying the old node
+  // before the new node's alpha has reached its next frame.
+  // Reserve one paint-order slot while glyph nodes are replaced. Otherwise a
+  // late texture can be inserted behind a neighbouring focused button fill.
+  return TvView({ children });
+};
 
 /** Keep controller/focus lifetimes stable when a view model is reprojected. */
 export function KeyedFor<T>(props: {

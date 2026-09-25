@@ -5,7 +5,7 @@ import {
   presentation,
 } from "../core/presentations";
 import { enrichDetail } from "../ui/detailProgress";
-import { browseRequest, firstHomeCatalog } from "../ui/app/homeRows";
+import { browseRequest } from "../ui/app/homeRows";
 
 export interface HomeCardView {
   id: string;
@@ -97,31 +97,29 @@ export function initialHomeShelves(view: HomeView): HomeShelfView[] {
   ];
 }
 
-/** Load the remaining Home shelves after the first usable queue frame. */
-export async function loadHomeShelves(api: TvApi, view: HomeView, signal: AbortSignal): Promise<HomeShelfView[]> {
-  const [live, catalogs] = await Promise.all([
-    api.live({ view: "us", collection: "recent", limit: 20 }, { signal }).catch(() => ({ channels: [] as readonly MediaItem[] })),
-    api.catalogs({ signal }).catch(() => []),
-  ]);
-  if (signal.aborted) return [];
-  const browsable = catalogs.filter((catalog) => catalog.type !== "live" && !!browseRequest(catalog));
-  const pages = await Promise.all(browsable.map(async (catalog) => {
-    const request = browseRequest(catalog)!;
-    const page = await api.discover(request, { signal }).catch(() => ({ items: [] as readonly MediaItem[] }));
-    return { catalog, items: page.items };
-  }));
-  if (signal.aborted) return [];
-  return [
-    ...initialHomeShelves(view).filter((shelf) => shelf.key === "queue"),
-    ...(live.channels.length ? [{ key: "recent-live", title: "Recently watched live TV", items: live.channels, cards: homeShelfCards(live.channels, "catalog") }] : []),
-    ...pages.filter(({ items }) => items.length > 0).map(({ catalog, items }) => ({
-      key: `catalog:${catalog.addonId ?? ""}:${catalog.id}`,
-      title: catalog.addonName ? `${catalog.addonName} · ${catalog.name}` : catalog.name,
-      items,
-      cards: homeShelfCards(items, "catalog"),
-    })),
-    ...initialHomeShelves(view).filter((shelf) => shelf.key === "favorites"),
-  ];
+/** Each completed shelf is usable immediately; one slow addon cannot hold its peers. */
+export async function loadHomeShelves(api: TvApi, signal: AbortSignal, onShelf: (shelf: HomeShelfView, order: number) => void): Promise<void> {
+  const live = api.live({ view: "us", collection: "recent", limit: 20 }, { signal }).then(page => {
+    if (!signal.aborted && page.channels.length) onShelf({ key: "recent-live", title: "Recently watched live TV", items: page.channels, cards: homeShelfCards(page.channels, "catalog") }, 0);
+  }).catch(() => undefined);
+  const catalogues = api.catalogs({ signal }).then(async catalogs => {
+    const browsable = catalogs.filter(catalog => catalog.type !== "live" && !!browseRequest(catalog));
+    let next = 0;
+    await Promise.all(Array.from({ length: Math.min(6, browsable.length) }, async () => {
+      while (next < browsable.length && !signal.aborted) {
+        const order = next++;
+        const catalog = browsable[order];
+        const page = await api.discover(browseRequest(catalog)!, { signal }).catch(() => undefined);
+        if (!signal.aborted && page?.items.length) onShelf({
+          key: `catalog:${catalog.addonId ?? ""}:${catalog.type}:${catalog.id}`,
+          title: catalog.addonName ? `${catalog.addonName} · ${catalog.name}` : catalog.name,
+          items: page.items,
+          cards: homeShelfCards(page.items, "catalog"),
+        }, order + 1);
+      }
+    }));
+  }).catch(() => undefined);
+  await Promise.all([live, catalogues]);
 }
 
 const clock = (seconds: number) => {
@@ -137,7 +135,7 @@ export function projectHome(
   favorites: readonly MediaItem[] = [],
 ): HomeView {
   const item = details ?? heroItem;
-  if (!heroItem || !item) return emptyHome;
+  if (!heroItem || !item) return { ...emptyHome, queueItems: queue, favoriteItems: favorites };
   const hero = presentation(item);
   const hasProgress = heroItem.position && heroItem.position > 0;
   const eyebrow =
@@ -189,41 +187,17 @@ export async function loadHomeView(
   api: TvApi,
   profileId: string,
   signal: AbortSignal,
+  onChange?: (view: HomeView) => void,
 ): Promise<HomeView> {
-  const home = await api.home(profileId, { signal });
-  // Continue Watching already determines both hero and first shelf. Do not
-  // hold the first interactive Home frame on unrelated catalog/live requests.
-  if (home.continueWatching[0])
-    return projectHome(
-      home.continueWatching[0],
-      home.continueWatching,
-      undefined,
-      home.myList,
-    );
-  const live = await api
-    .live({ view: "us", collection: "recent", limit: 20 }, { signal })
-    .catch(() => ({ channels: [] as readonly MediaItem[] }));
-  if (live.channels[0])
-    return projectHome(
-      live.channels[0],
-      home.continueWatching,
-      undefined,
-      home.myList,
-    );
-  const catalogs = await api.catalogs({ signal }).catch(() => []);
-  const first = firstHomeCatalog(catalogs);
-  const request = first && browseRequest(first);
-  const page = request
-    ? await api
-        .discover(request, { signal })
-        .catch(() => ({ items: [] as readonly MediaItem[] }))
-    : undefined;
-  return projectHome(
-    page?.items[0] ?? home.myList[0],
-    home.continueWatching,
-    undefined,
-    home.myList,
-  );
+  let queue: readonly MediaItem[] = [];
+  let favorites: readonly MediaItem[] = [];
+  const view = () => projectHome(queue[0] ?? favorites[0], queue, undefined, favorites);
+  const publish = () => { if (!signal.aborted) onChange?.(view()); };
+  await Promise.all([
+    api.queue(profileId, undefined, { signal, onPage: page => { queue = page.items; publish(); } }).then(page => { queue = page.items; publish(); }),
+    api.favorites(profileId, { signal }).then(items => { favorites = items; publish(); }),
+  ]);
+  return view();
 }
 
 export async function enrichHomeHero(

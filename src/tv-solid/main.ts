@@ -94,6 +94,8 @@ async function start() {
     "app",
   );
   registerDefaultShaderRounded(renderer.stage.shManager);
+  if (new URLSearchParams(location.search).get("focusdebug") === "1")
+    (window as Window & { __viptvRenderer?: typeof renderer }).__viptvRenderer = renderer;
   const rendererFonts = loadFonts(
     [
       { fontFamily: "Bricolage700", fontUrl: bricolage700Url },

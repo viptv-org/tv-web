@@ -41,6 +41,7 @@ export interface DetailView {
   season: number;
   episodeCount: number;
   episodes: DetailEpisodeView[];
+  allEpisodes: DetailEpisodeView[];
 }
 
 export const emptyDetail: DetailView = {
@@ -57,6 +58,7 @@ export const emptyDetail: DetailView = {
   season: 1,
   episodeCount: 0,
   episodes: [],
+  allEpisodes: [],
 };
 
 /** Preserve the React title page's enriched episode and initial-target rules. */
@@ -67,19 +69,19 @@ export async function loadDetailView(
   favorites: readonly MediaItem[],
   signal: AbortSignal,
 ): Promise<DetailView> {
+  const historyFlight = original.type === "series" || original.seriesId
+    ? api.seriesProgress(profileId, original.seriesId ?? original.id, { signal }).catch(() => [])
+    : Promise.resolve([]);
   const value = await api.detail(original, { signal });
   let episodes = value.episodes;
   if (value.item.type === "series") {
     const seriesId = value.item.seriesId ?? value.item.id;
-    const history = await api
-      .seriesProgress(profileId, seriesId, { signal })
-      .catch(() => []);
+    const history = await historyFlight;
     episodes = mergeEpisodeProgress(episodes, history, seriesId);
   }
   const selected = enrichDetail(original, value.item);
   const first = initialEpisode(episodes, original);
   const season = first?.season ?? episodes[0]?.season ?? 1;
-  const shown = episodes.filter((episode) => episode.season === season);
   const target =
     first ??
     (selected.type === "series" && selected.episode === undefined
@@ -103,6 +105,19 @@ export async function loadDetailView(
   ]
     .filter(Boolean)
     .join(" · ");
+  const allEpisodes = episodes.map((episode, index) => {
+    const still = presentation(episode).episodeImage ?? episode.background ?? episode.poster;
+    return {
+      item: episode,
+      image: artworkUrl(still ?? undefined, 360, 200) ?? still ?? "",
+      number: `EPISODE ${episode.episode ?? index + 1}`,
+      title: episode.episodeTitle ?? episode.name,
+      synopsis: episode.description ?? "",
+      watching: !episode.watched && !!episode.position,
+      progress: episode.watched ? 1 : episode.position && episode.duration ? episode.position / episode.duration : 0,
+    };
+  });
+  const shown = allEpisodes.filter((episode) => episode.item.season === season);
   return {
     item: selected,
     target,
@@ -122,24 +137,7 @@ export async function loadDetailView(
     ),
     season,
     episodeCount: shown.length,
-    episodes: shown.map((episode, index) => {
-      const still =
-        presentation(episode).episodeImage ??
-        episode.background ??
-        episode.poster;
-      return {
-        item: episode,
-        image: artworkUrl(still ?? undefined, 360, 200) ?? still ?? "",
-        number: `EPISODE ${episode.episode ?? index + 1}`,
-        title: episode.episodeTitle ?? episode.name,
-        synopsis: episode.description ?? "",
-        watching: !episode.watched && !!episode.position,
-        progress: episode.watched
-          ? 1
-          : episode.position && episode.duration
-            ? episode.position / episode.duration
-            : 0,
-      };
-    }),
+    episodes: shown,
+    allEpisodes,
   };
 }

@@ -158,6 +158,10 @@ export const SearchCard = defineScreen({
       this.liveLabel = this.card.live ? "LIVE" : "";
     },
   },
+  watch: {
+    card() { this.reveal(); },
+    position() { if (this.focused) noteFocus("search-card", this.position); },
+  },
   input: {
     left() {
       this.$emit("search-card-move", "left");
@@ -198,8 +202,8 @@ export const SearchCard = defineScreen({
   render: (s) => (
     <TvView show={s.card.visible} w={320} h={270}>
       <TvView
-        x={s.focused ? -10 : 0}
-        y={s.focused ? -5 : 0}
+        x={0}
+        y={0}
       >
         <TvView
           x={-4}
@@ -250,7 +254,7 @@ export const SearchCard = defineScreen({
         />
       </TvView>
       <TvText
-        y={s.focused ? 215 : 200}
+        y={200}
         maxwidth={320}
         maxlines={1}
         content={s.titleText}
@@ -259,7 +263,7 @@ export const SearchCard = defineScreen({
         color={s.focused ? s.primary : s.body}
       />
       <TvText
-        y={s.focused ? 250 : 234}
+        y={234}
         maxwidth={320}
         maxlines={1}
         content={s.subtitleText}

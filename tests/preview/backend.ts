@@ -635,6 +635,7 @@ export async function installMediaStubs(page: Page, options: MediaStubOptions = 
   const frame = options.frame && assetFiles.get(options.frame) ? `${ART}${assetFiles.get(options.frame)}` : '';
   await page.addInitScript(({ duration, position, paused, error, frame, stall, failAfter }) => {
     let avplayTime = position * 1000;
+    let avplayListener: { oncurrentplaytime?: (milliseconds: number) => void } = {};
     // No WebCodecs: the responsive player takes its HTML media path (stubbed
     // below) instead of MediaBunny decoding the HLS fixture onto a canvas.
     for (const name of ['VideoDecoder', 'AudioDecoder']) Object.defineProperty(window, name, { configurable: true, writable: true, value: undefined });
@@ -655,11 +656,11 @@ export async function installMediaStubs(page: Page, options: MediaStubOptions = 
         else setTimeout(() => failure?.('PLAYER_ERROR_CONNECTION_FAILED'), 1500);
       }, play() {}, pause() {}, stop() {}, suspend() {}, restore() {},
       seekTo(milliseconds: number, success?: () => void) { avplayTime = milliseconds; success?.(); },
-      jumpForward(milliseconds: number, success?: () => void) { avplayTime += milliseconds; success?.(); },
-      jumpBackward(milliseconds: number, success?: () => void) { avplayTime -= milliseconds; success?.(); },
+      jumpForward(milliseconds: number, success?: () => void) { avplayTime += milliseconds; avplayListener.oncurrentplaytime?.(avplayTime); success?.(); },
+      jumpBackward(milliseconds: number, success?: () => void) { avplayTime -= milliseconds; avplayListener.oncurrentplaytime?.(avplayTime); success?.(); },
       getCurrentTime() { return avplayTime; }, getDuration() { return duration * 1000; }, getState() { return 'PLAYING'; },
       getTotalTrackInfo() { return []; }, getCurrentStreamInfo() { return []; },
-      setListener() {}, setDisplayRect() {}, setDisplayMethod() {}, setSelectTrack() {}, setSilentSubtitle() {}, setStreamingProperty() {},
+      setListener(listener: typeof avplayListener) { avplayListener = listener; }, setDisplayRect() {}, setDisplayMethod() {}, setSelectTrack() {}, setSilentSubtitle() {}, setStreamingProperty() {},
     } } });
     const media = HTMLMediaElement.prototype;
     const nativeCanPlay = media.canPlayType;

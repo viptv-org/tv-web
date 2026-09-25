@@ -914,6 +914,8 @@ try {
       throw new Error('Title My List action did not use the shared API');
     await focused('title-action', 2);
     await page.keyboard.press('ArrowDown');
+    await focused('title-season', 0);
+    await page.keyboard.press('ArrowDown');
     await focused('title-episode', 0);
     await page.keyboard.press('ArrowRight');
     await focused('title-episode', 1);

@@ -1,6 +1,7 @@
 /** @jsxImportSource @solidtv/solid */
-import { defineScreen, TvView, TvText } from "./runtime";
+import { defineScreen, TvView, TvText, KeyedFor } from "./runtime";
 import QRCode from "qrcode";
+import { carouselWindow } from "./carousel";
 import type {
   TvApi,
   DevicePairing,
@@ -25,6 +26,7 @@ import {
 } from "./ProfileTile";
 import {
   emptyHome,
+  projectHome,
   enrichHomeHero,
   initialHomeShelves,
   loadHomeView,
@@ -34,7 +36,7 @@ import {
   type HomeView,
 } from "./homeModel";
 import { railIcon } from "./railIcons";
-import { RailItem } from "./RailFocus";
+import { RailItem, CollapsedRail, railItems } from "./RailFocus";
 import { DiscoverFilterOption } from "./DiscoverFocus";
 import { DiscoverScreen } from "./DiscoverScreen";
 import { LibraryScreen } from "./LibraryScreen";
@@ -120,7 +122,7 @@ import {
   loadDetailView,
   type DetailView,
 } from "./detailModel";
-import { TitleAction, EpisodeTile } from "./TitleFocus";
+import { TitleAction, EpisodeTile, SeasonControl } from "./TitleFocus";
 import {
   emptySources,
   emptySourceRow,
@@ -370,6 +372,12 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         get homeScrim() {
           return homeScrim();
         },
+        selectingProfile: false,
+        homeScrollOffset: 0,
+        homeWindowX: 0,
+        detailScrollOffset: 0,
+        detailWindowStart: 0,
+        detailWindowX: 0,
         home: emptyHome as HomeView,
         detail: emptyDetail as DetailView,
         source: emptySources as SourcesView,
@@ -396,7 +404,9 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         sourceWindowStart: 0,
         sourceReturnZone: "action" as
           | "action"
+          | "card"
           | "episode"
+          | "season"
           | "channel"
           | "program",
         sourceReturnIndex: 0,
@@ -451,7 +461,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         detailSeasonLabel: "",
         detailCountLabel: "",
         detailNotice: "",
-        detailFocusZone: "action" as "action" | "episode",
+        detailFocusZone: "action" as "action" | "season" | "episode",
         detailActionIndex: 0,
         detailEpisodeIndex: 0,
         detailReturnZone: "action" as "action" | "card",
@@ -480,6 +490,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
           | "program"
           | "filter"
           | "episode"
+          | "season"
           | "row"
           | "profile",
         railReturnIndex: 0,
@@ -952,7 +963,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
           () => void this.activateHomeAction(),
         );
         this.$listen("home-action-hold", () => {
-          this.homeNotice = "Choose a source from the title screen.";
+          if (this.home.heroItem) void this.openSources(this.home.heroItem, false);
         });
         this.$listen("home-card-activate", () => void this.openDetailByCard());
         this.$listen("home-card-hold", (position: number) => {
@@ -1226,8 +1237,11 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
               ),
         );
         this.$listen("title-episodes-enter", () => {
-          if (this.detail.episodes.length) this.focusTitleEpisode(0);
+          if (this.detailFocusZone === "action") this.focusTitleSeason();
+          else if (this.detail.episodes.length) this.focusTitleEpisode(this.detailEpisodeIndex);
         });
+        this.$listen("title-season-focus", () => this.focusTitleSeason());
+        this.$listen("title-season-change", (delta: number) => this.changeTitleSeason(Number(delta)));
         this.$listen("title-actions-return", () =>
           this.focusTitleAction(this.detailActionIndex),
         );
@@ -1352,71 +1366,84 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
     },
     methods: {
       async loadHome(profileId: string) {
-        if (new URLSearchParams(location.search).has("perfdebug"))
-          performance.mark("viptv:home-start");
         const generation = ++homeGeneration;
         homeScope?.abort();
-        homeScope = api.createScope();
-        const selectedProfile = this.profiles.find(
-          (profile) => profile.id === profileId,
-        );
-        this.homeProfileAvatar = selectedProfile
-          ? profileTileData(selectedProfile).image
-          : "";
-        this.railProfileName = selectedProfile?.name ?? "Profile";
+        const scope = api.createScope();
+        homeScope = scope;
+        const current = () => generation === homeGeneration && !scope.signal.aborted;
+        const selected = this.profiles.find(profile => profile.id === profileId);
+        this.homeProfileAvatar = selected ? profileTileData(selected).image : "";
+        this.railProfileName = selected?.name ?? "Profile";
         this.railCurrent = "home";
+        this.railExpanded = false;
         this.currentProfileId = profileId;
+        this.homeFocusZone = "action";
+        this.home = { ...emptyHome };
+        this.homeShelves = [];
+        this.homeShelfIndex = 0;
+        this.homeShelfPositions = {};
+        this.homeCardIndex = 0;
+        this.homeCardWindowStart = 0;
+        this.homeScrollOffset = 0;
+        this.homeWindowX = 0;
         this.homeNotice = "";
-        this.phase = "ready";
-        this.startingLabel = "Starting VIPTV…";
-        try {
-          const view = await loadHomeView(api, profileId, homeScope.signal);
-          if (new URLSearchParams(location.search).has("perfdebug"))
-            performance.mark("viptv:home-data");
-          if (generation !== homeGeneration || homeScope.signal.aborted) return;
-          this.phase = "home";
-          if (new URLSearchParams(location.search).has("perfdebug"))
-            performance.mark("viptv:home-phase");
-          setTimeout(() => {
-            if (generation !== homeGeneration) return;
-            this.homeAddLabel = view.saved ? "✓" : "+";
-            this.okLabel = "OK";
-            this.selectLabel = "Select";
-            this.optionsIcon = "≡";
-            this.optionsLabel = "Options";
-            this.home = view;
-            this.homeShelves = initialHomeShelves(view);
-            this.homeShelfIndex = 0;
-            this.homeShelfPositions = {};
-            this.homeCardIndex = 0;
-            this.homeCardWindowStart = 0;
-            this.refreshHomeShelf();
+        this.phase = "home";
+        this.refreshHomeShelf();
+        if (new URLSearchParams(location.search).has("perfdebug")) performance.mark("viptv:home-shell");
+        setTimeout(() => {
+          if (!current() || this.phase !== "home") return;
+          this.revealHomeControls();
+          this.focusHomeAction(0);
+        }, 0);
+        let enrichedId = "";
+        let primaryLoaded = false;
+        const enrich = () => {
+          const view = this.home;
+          const id = view.heroItem?.id;
+          if (!id || enrichedId === id) return;
+          // Queue already hydrates this exact item and publishes each completion.
+          if (view.queueItems.some(item => item.id === id)) return;
+          enrichedId = id;
+          void enrichHomeHero(api, view, scope.signal).then(enriched => {
+            if (current() && this.home.heroItem?.id === id) {
+              this.home = { ...enriched, queueItems: this.home.queueItems, favoriteItems: this.home.favoriteItems, cards: this.home.cards, saved: this.home.saved };
+              this.revealHomeControls();
+            }
+          }).catch(() => undefined);
+        };
+        const loaded = new Map<number, HomeShelfView>();
+        const fallbackHero = () => {
+          const item = this.homeShelves.find(shelf => shelf.items.length)?.items[0];
+          if (current() && primaryLoaded && !this.home.heroItem && item) {
+            this.home = projectHome(item, this.home.queueItems, undefined, this.home.favoriteItems);
             this.revealHomeControls();
-            this.focusHomeAction(0);
-            if (new URLSearchParams(location.search).has("perfdebug"))
-              performance.mark("viptv:home-focus-request");
-          }, 16);
-          void enrichHomeHero(api, view, homeScope.signal)
-            .then((enriched) => {
-              if (generation === homeGeneration && !homeScope?.signal.aborted)
-                this.home = { ...enriched, queueItems: this.home.queueItems, favoriteItems: this.home.favoriteItems, cards: this.home.cards };
-            })
-            .catch(() => {
-              /* Packaged queue metadata remains usable. */
-            });
-          void loadHomeShelves(api, view, homeScope.signal)
-            .then((shelves) => {
-              if (generation !== homeGeneration || homeScope?.signal.aborted || !shelves.length) return;
-              const currentKey = this.homeShelves[this.homeShelfIndex]?.key;
-              this.homeShelves = shelves.filter((shelf) => shelf.key !== "queue" && shelf.key !== "favorites");
-              this.syncHomeLists(currentKey);
-            })
-            .catch(() => { /* The first Home shelf remains usable. */ });
+            enrich();
+          }
+        };
+        void loadHomeShelves(api, scope.signal, (shelf, order) => {
+          if (!current()) return;
+          const key = this.homeFocusZone === "card" ? this.homeShelves[this.homeShelfIndex]?.key : undefined;
+          loaded.set(order, shelf);
+          this.homeShelves = [...loaded.entries()].sort(([a], [b]) => a - b).map(([, row]) => row);
+          this.syncHomeLists(key);
+          fallbackHero();
+        });
+        try {
+          await loadHomeView(api, profileId, scope.signal, view => {
+            if (!current()) return;
+            this.home = view.heroItem ? view : { ...this.home, queueItems: view.queueItems, favoriteItems: view.favoriteItems };
+            this.homeAddLabel = this.home.saved ? "✓" : "+";
+            this.syncHomeLists();
+            this.revealHomeControls();
+            enrich();
+            if (new URLSearchParams(location.search).has("perfdebug")) performance.mark("viptv:home-data");
+          });
+          primaryLoaded = true;
+          fallbackHero();
         } catch (cause) {
-          if (generation !== homeGeneration || homeScope.signal.aborted) return;
-          this.error =
-            cause instanceof Error ? cause.message : "Could not load Home.";
-          this.phase = "error";
+          primaryLoaded = true;
+          fallbackHero();
+          if (current()) this.homeNotice = cause instanceof Error ? cause.message : "Could not load Home. Open Settings to reconnect.";
         }
       },
       revealHomeControls() {
@@ -1454,10 +1481,10 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         this.homeFocusZone = "card";
         this.homeCardIndex = index;
         this.homeShelfPositions = { ...this.homeShelfPositions, [shelf.key]: index };
-        if (index >= this.homeCardWindowStart + 4)
-          this.homeCardWindowStart = index - 3;
-        else if (index < this.homeCardWindowStart)
-          this.homeCardWindowStart = index;
+        const window = carouselWindow(index, shelf.cards.length, 320, 1632, this.homeScrollOffset);
+        this.homeScrollOffset = window.offset;
+        this.homeCardWindowStart = window.start;
+        this.homeWindowX = window.x;
         this.refreshHomeShelf();
         this.$select(`homeCard${index - this.homeCardWindowStart}`)?.$focus();
       },
@@ -1482,12 +1509,12 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         this.homeNextCards = Array.from({ length: 5 }, (_, slot) => next?.cards[slot] ?? { ...emptyHomeCard });
       },
       syncHomeLists(currentKey?: string) {
-        currentKey ??= this.homeShelves[this.homeShelfIndex]?.key;
+        currentKey ??= this.homeFocusZone === "card" ? this.homeShelves[this.homeShelfIndex]?.key : undefined;
         const own = initialHomeShelves(this.home);
         const others = this.homeShelves.filter((shelf) => shelf.key !== "queue" && shelf.key !== "favorites");
         this.homeShelves = [...own.filter((shelf) => shelf.key === "queue"), ...others, ...own.filter((shelf) => shelf.key === "favorites")];
         const matching = this.homeShelves.findIndex((shelf) => shelf.key === currentKey);
-        this.homeShelfIndex = matching >= 0 ? matching : Math.min(this.homeShelfIndex, Math.max(0, this.homeShelves.length - 1));
+        this.homeShelfIndex = matching >= 0 ? matching : 0;
         this.homeCardIndex = Math.min(this.homeCardIndex, Math.max(0, (this.homeShelves[this.homeShelfIndex]?.cards.length ?? 1) - 1));
         this.homeCardWindowStart = Math.min(this.homeCardWindowStart, Math.max(0, (this.homeShelves[this.homeShelfIndex]?.cards.length ?? 0) - 4));
         this.refreshHomeShelf();
@@ -1497,6 +1524,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         if (target < 0) { this.focusHomeAction(this.homeActionIndex); return; }
         if (target >= this.homeShelves.length) return;
         this.homeShelfIndex = target;
+        this.homeScrollOffset = 0;
         this.homeCardWindowStart = 0;
         this.focusHomeCard(this.homeShelfPositions[this.homeShelves[target].key] ?? 0);
       },
@@ -1598,6 +1626,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         } else if (this.phase === "detail") {
           if (this.railReturnZone === "episode")
             this.focusTitleEpisode(this.railReturnIndex);
+          else if (this.railReturnZone === "season") this.focusTitleSeason();
           else this.focusTitleAction(this.railReturnIndex);
         } else if (this.phase === "discover") {
           if (this.railReturnZone === "chip")
@@ -2617,49 +2646,28 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
           const searchable = catalogs
             .filter((catalog) => catalog.supportsSearch)
             .slice(0, 128);
-          for (let index = 0; index < searchable.length; index += 3) {
-            const pages = await Promise.all(
-              searchable.slice(index, index + 3).map(async (catalog) => {
-                try {
-                  const page = await api.discover(
-                    {
-                      type: catalog.type,
-                      catalog: catalog.id,
-                      addonId: catalog.addonId,
-                      search: query,
-                    },
-                    { signal: scope.signal },
-                  );
-                  return {
-                    name: catalog.name,
-                    items: page.items.slice(0, 24),
-                    catalog,
-                  } as SearchRow;
-                } catch {
-                  partial = true;
-                  return {
-                    name: catalog.name,
-                    items: [],
-                    catalog,
-                  } as SearchRow;
-                }
-              }),
-            );
+          const completed = new Map<number, SearchRow>();
+          const publish = (order: number, row: SearchRow) => {
             if (generation !== searchGeneration || scope.signal.aborted) return;
-            rows.push(...pages);
-            this.searchRows = [...rows];
+            completed.set(order, row);
+            this.searchRows = [...completed.entries()].sort(([a], [b]) => a - b).map(([, result]) => result);
             this.refreshSearchLayout();
-          }
-          try {
-            const live = await api.live(
-              { view: "us", search: query, limit: 80 },
-              { signal: scope.signal },
-            );
-            if (generation !== searchGeneration || scope.signal.aborted) return;
-            rows.push({ name: "Live TV", items: live.channels.slice(0, 24) });
-          } catch {
-            partial = true;
-          }
+          };
+          const live = api.live({ view: "us", search: query, limit: 80 }, { signal: scope.signal })
+            .then(page => publish(searchable.length, { name: "Live TV", items: page.channels.slice(0, 24) }))
+            .catch(() => { partial = true; });
+          let next = 0;
+          await Promise.all([live, ...Array.from({ length: Math.min(6, searchable.length) }, async () => {
+            while (next < searchable.length && !scope.signal.aborted) {
+              const order = next++;
+              const catalog = searchable[order];
+              try {
+                const page = await api.discover({ type: catalog.type, catalog: catalog.id, addonId: catalog.addonId, search: query }, { signal: scope.signal });
+                publish(order, { name: catalog.name, items: page.items.slice(0, 24), catalog });
+              } catch { partial = true; }
+            }
+          })]);
+          rows.push(...[...completed.entries()].sort(([a], [b]) => a - b).map(([, row]) => row));
           if (generation !== searchGeneration || scope.signal.aborted) return;
           this.searchRows = [...rows];
           this.searchPartial = partial;
@@ -2695,6 +2703,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         }
       },
       refreshSearchLayout() {
+        const focusedId = this.searchFocusZone === "result" ? searchCanonicalCards[this.searchResultIndex]?.id : undefined;
         const view = projectSearch(
           this.searchRows,
           this.searchSectionOffsets,
@@ -2709,6 +2718,10 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
           searchCanonicalSections.set(card.section, section);
         }
         this.refreshSearchWindow();
+        if (focusedId) {
+          const index = searchCanonicalCards.findIndex(card => card.id === focusedId);
+          if (index >= 0) this.focusSearchResult(index);
+        }
       },
       refreshSearchWindow() {
         const view = projectSearchWindow(
@@ -3843,6 +3856,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         if (!profile) return;
         try {
           await api.selectProfile(profile.id);
+          void this.loadHome(profile.id);
         } catch (cause) {
           this.settingsPanel = {
             ...this.settingsPanel,
@@ -4488,6 +4502,10 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
           }
           return;
         }
+        if (action === "play" && this.home.heroItem) {
+          void this.openSources(this.home.heroItem, !!this.home.heroItem.position);
+          return;
+        }
         if (action === "details" && this.home.heroItem) {
           void this.openDetail(this.home.heroItem);
           return;
@@ -4499,6 +4517,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         if (item) void this.openDetail(item);
       },
       async openDetail(item: MediaItem) {
+        if (item.type === "live") { await this.openSources(item, false); return; }
         if (
           this.phase !== "home" &&
           this.phase !== "discover" &&
@@ -4545,6 +4564,10 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
           setTimeout(() => {
             if (generation !== detailGeneration) return;
             this.detail = view;
+            this.detailEpisodeIndex = 0;
+            this.detailWindowStart = 0;
+            this.detailWindowX = 0;
+            this.detailScrollOffset = 0;
             this.detailEpisodes = Array.from(
               { length: 5 },
               (_, index) => view.episodes[index] ?? { ...emptyDetailEpisode },
@@ -4583,9 +4606,37 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         this.$select(`titleAction${index}`)?.$focus();
       },
       focusTitleEpisode(index: number) {
+        if (!this.detail.episodes.length) return;
+        index = Math.max(0, Math.min(this.detail.episodes.length - 1, index));
         this.detailFocusZone = "episode";
         this.detailEpisodeIndex = index;
-        this.$select(`titleEpisode${index}`)?.$focus();
+        const window = carouselWindow(index, this.detail.episodes.length, 360, 1632, this.detailScrollOffset);
+        this.detailScrollOffset = window.offset;
+        this.detailWindowStart = window.start;
+        this.detailWindowX = window.x;
+        this.detailEpisodes = Array.from({ length: 5 }, (_, slot) => this.detail.episodes[window.start + slot] ?? { ...emptyDetailEpisode });
+        this.revealTitleControls();
+        this.$select(`titleEpisode${index - window.start}`)?.$focus();
+      },
+      focusTitleSeason() {
+        if (!this.detail.allEpisodes.length) return;
+        this.detailFocusZone = "season";
+        this.$select("titleSeason")?.$focus();
+      },
+      changeTitleSeason(delta: number) {
+        const seasons = [...new Set(this.detail.allEpisodes.map(episode => episode.item?.season ?? 1))].sort((a, b) => a - b);
+        if (!seasons.length) return;
+        const season = seasons[(seasons.indexOf(this.detail.season) + delta + seasons.length) % seasons.length];
+        const episodes = this.detail.allEpisodes.filter(episode => (episode.item?.season ?? 1) === season);
+        this.detail = { ...this.detail, season, episodes, episodeCount: episodes.length };
+        this.detailEpisodeIndex = 0;
+        this.detailScrollOffset = 0;
+        this.detailWindowStart = 0;
+        this.detailWindowX = 0;
+        this.detailEpisodes = Array.from({ length: 5 }, (_, slot) => episodes[slot] ?? { ...emptyDetailEpisode });
+        this.detailSeasonLabel = `Season ${season}`;
+        this.detailCountLabel = `${episodes.length} ${episodes.length === 1 ? "episode" : "episodes"}`;
+        this.revealTitleControls();
       },
       async activateTitleAction() {
         if (this.phase !== "detail" || this.detailFocusZone !== "action")
@@ -4651,8 +4702,10 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         this.sourceReturnOrigin = this.phase;
         if (this.phase === "library")
           this.sourceReturnIndex = this.libraryCardIndex;
-        else if (this.phase === "home")
-          this.sourceReturnIndex = this.homeCardIndex;
+        else if (this.phase === "home") {
+          this.sourceReturnZone = this.homeFocusZone;
+          this.sourceReturnIndex = this.homeFocusZone === "card" ? this.homeCardIndex : this.homeActionIndex;
+        }
         else if (this.phase === "discover")
           this.sourceReturnIndex = this.discoverCardIndex;
         else if (this.phase === "search")
@@ -4988,7 +5041,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
       updatePlayerSnapshot(snapshot: PlayerSnapshot) {
         this.playerSnapshot = snapshot;
         notePlayerState(snapshot.state, snapshot.time.positionSeconds);
-        this.playerStatus = snapshot.state.toUpperCase();
+        this.playerStatus = this.playerItem?.type === "live" ? "LIVE" : snapshot.state.toUpperCase();
         this.playerToggleIcon = snapshot.state === "paused" ? "▶" : "Ⅱ";
         const position = snapshot.time.positionSeconds;
         const duration =
@@ -5002,7 +5055,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         this.playerDurationText = stableDuration > 0 ? playerRuntime(stableDuration) : "";
         if (snapshot.error && this.phase === "player")
           this.playerNotice = snapshot.error.message;
-        if (snapshot.state === "playing" && this.phase === "player")
+        if (snapshot.state === "playing" && this.phase === "player" && !chromeTimer)
           this.schedulePlayerChromeHide();
       },
       setPlayerShade(visible: boolean) {
@@ -5011,6 +5064,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
       },
       schedulePlayerChromeHide() {
         clearTimeout(chromeTimer);
+        chromeTimer = undefined;
         if (
           !this.playerOverlay ||
           this.trackPanelOpen ||
@@ -5018,6 +5072,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         )
           return;
         chromeTimer = setTimeout(() => {
+          chromeTimer = undefined;
           if (
             this.phase === "player" &&
             this.playerSnapshot?.state === "playing"
@@ -5038,6 +5093,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
       },
       focusPlayerControl(index: number) {
         if (this.phase !== "player") return;
+        if (this.playerItem?.type === "live") index = Math.max(4, index);
         this.playerOverlay = true;
         this.setPlayerShade(true);
         this.playerFocusIndex = index;
@@ -5045,7 +5101,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         this.schedulePlayerChromeHide();
       },
       focusPlayerTimeline() {
-        if (this.phase !== "player") return;
+        if (this.phase !== "player" || this.playerItem?.type === "live") return;
         this.playerOverlay = true;
         this.setPlayerShade(true);
         this.$select("playerTimeline")?.$focus();
@@ -5064,6 +5120,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
           "subtitles",
           "exit",
         ][this.playerFocusIndex];
+        if (this.playerItem?.type === "live" && this.playerFocusIndex < 4) return;
         try {
           if (action === "toggle") {
             if (runtime.player.snapshot.state === "paused")
@@ -5265,6 +5322,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         }, 0);
       },
       previewPlayerSeek(delta: number) {
+        if (this.playerItem?.type === "live") return;
         if (this.phase !== "player" || !playback) return;
         const current =
           this.playerSeekPreview ??
@@ -5283,6 +5341,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         clearTimeout(chromeTimer);
       },
       async commitPlayerSeek() {
+        if (this.playerItem?.type === "live") return;
         if (
           this.phase !== "player" ||
           !playback ||
@@ -5349,6 +5408,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         this.trackPanelOpen = false;
         this.playerSeekPreview = null;
         this.playerSeekLabel = "";
+        if (this.playerItem?.type === "live") { this.closeSources(); return; }
         this.updateSources(this.source.sources, false, true);
         setTimeout(() => this.focusSourceRow(this.sourceRowIndex), 0);
       },
@@ -5442,7 +5502,8 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
             this.focusLibraryCard(this.sourceReturnIndex);
           } else if (this.phase === "home") {
             this.revealHomeControls();
-            this.focusHomeCard(this.sourceReturnIndex);
+            if (this.sourceReturnZone === "action") this.focusHomeAction(this.sourceReturnIndex);
+            else this.focusHomeCard(this.sourceReturnIndex);
           } else if (this.phase === "discover") {
             this.revealDiscoverChips();
             this.refreshDiscoverCards();
@@ -5592,6 +5653,12 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         }, 0);
       },
       showProfiles(profiles: readonly TvProfile[]) {
+        homeScope?.abort();
+        ++homeGeneration;
+        detailScope?.abort();
+        ++detailGeneration;
+        settingsScope?.abort();
+        ++settingsGeneration;
         discoverScope?.abort();
         ++discoverGeneration;
         libraryScope?.abort();
@@ -5672,6 +5739,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         }, 0);
       },
       async activateProfile(_slot: number) {
+        if (this.selectingProfile) return;
         if (this.profileFocusTarget === "manage") {
           this.toggleManageProfiles();
           return;
@@ -5683,14 +5751,16 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
           return;
         }
         this.profileError = "";
+        this.selectingProfile = true;
         try {
           await api.selectProfile(tile.id);
+          void this.loadHome(tile.id);
         } catch (cause) {
           this.profileError =
             cause instanceof Error
               ? cause.message
               : "Could not open this profile.";
-        }
+        } finally { this.selectingProfile = false; }
       },
       async editProfile(id?: string) {
         if (this.phase !== "profiles" || disposeProfileEditor) return;
@@ -6060,70 +6130,6 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
             src={s.qr}
             alpha={s.phase === "expired" ? 0.18 : 1}
           />
-          <TvView
-            x={1557}
-            y={995}
-            w={45}
-            h={31}
-            rounded={8}
-            color={s.keyBorder}
-          />
-          <TvView
-            x={1559}
-            y={997}
-            w={41}
-            h={27}
-            rounded={6}
-            color={s.background}
-          />
-          <TvText
-            x={1568}
-            y={1000}
-            content={s.okLabel}
-            font={"Onest700"}
-            size={16}
-            color={s.primary}
-          />
-          <TvText
-            x={1616}
-            y={999}
-            content={s.selectLabel}
-            font={"Onest"}
-            size={20}
-            color={s.body}
-          />
-          <TvView
-            x={1709}
-            y={995}
-            w={52}
-            h={31}
-            rounded={8}
-            color={s.keyBorder}
-          />
-          <TvView
-            x={1711}
-            y={997}
-            w={48}
-            h={27}
-            rounded={6}
-            color={s.background}
-          />
-          <TvText
-            x={1718}
-            y={1000}
-            content={s.moveIcon}
-            font={"Onest"}
-            size={16}
-            color={s.primary}
-          />
-          <TvText
-            x={1770}
-            y={999}
-            content={s.moveLabel}
-            font={"Onest"}
-            size={20}
-            color={s.body}
-          />
         </TvView>
         <TvText
           x={96}
@@ -6212,70 +6218,6 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
             size={22}
             color={s.danger}
           />
-          <TvView
-            x={1557}
-            y={995}
-            w={45}
-            h={31}
-            rounded={8}
-            color={s.keyBorder}
-          />
-          <TvView
-            x={1559}
-            y={997}
-            w={41}
-            h={27}
-            rounded={6}
-            color={s.background}
-          />
-          <TvText
-            x={1568}
-            y={1000}
-            content={s.okLabel}
-            font={"Onest700"}
-            size={16}
-            color={s.primary}
-          />
-          <TvText
-            x={1616}
-            y={999}
-            content={s.selectLabel}
-            font={"Onest"}
-            size={20}
-            color={s.body}
-          />
-          <TvView
-            x={1709}
-            y={995}
-            w={52}
-            h={31}
-            rounded={8}
-            color={s.keyBorder}
-          />
-          <TvView
-            x={1711}
-            y={997}
-            w={48}
-            h={27}
-            rounded={6}
-            color={s.background}
-          />
-          <TvText
-            x={1718}
-            y={1000}
-            content={s.moveIcon}
-            font={"Onest"}
-            size={16}
-            color={s.primary}
-          />
-          <TvText
-            x={1770}
-            y={999}
-            content={s.moveLabel}
-            font={"Onest"}
-            size={20}
-            color={s.body}
-          />
         </TvView>
         <TvView
           show={
@@ -6296,23 +6238,6 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
             show={s.home.heroImage !== "" && s.homeShelfIndex === 0}
           />
           <TvView w={1920} h={1080} src={s.homeScrim} />
-          <TvView x={44} y={54} w={56} h={56} rounded={28} color={s.surface} />
-          <TvView
-            x={50}
-            y={60}
-            w={44}
-            h={44}
-            rounded={22}
-            src={s.homeProfileAvatar}
-            show={s.homeProfileAvatar !== ""}
-          />
-          <TvView x={60} y={202} w={24} h={24} src={s.railSearch} />
-          <TvView x={40} y={262} w={64} h={64} rounded={32} color={s.surface} />
-          <TvView x={60} y={282} w={24} h={24} src={s.railHome} />
-          <TvView x={60} y={360} w={24} h={24} src={s.railDiscover} />
-          <TvView x={60} y={440} w={24} h={24} src={s.railLive} />
-          <TvView x={60} y={516} w={24} h={24} src={s.railList} />
-          <TvView x={60} y={978} w={24} h={24} src={s.railSettings} />
           <TvView show={s.homeShelfIndex === 0}>
           <TvText
             x={192}
@@ -6344,13 +6269,15 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
           <TvText
             x={192}
             y={340}
+            maxwidth={420}
+            maxlines={1}
             content={s.home.episodeLabel}
             font={"Onest600"}
             size={24}
             color={s.primary}
           />
           <TvView
-            x={431}
+            x={636}
             y={349}
             w={180}
             h={6}
@@ -6358,7 +6285,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
             show={s.home.progress > 0}
           />
           <TvView
-            x={431}
+            x={636}
             y={349}
             w={Math.max(0, Math.min(180, s.home.progress * 180))}
             h={6}
@@ -6366,7 +6293,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
             show={s.home.progress > 0}
           />
           <TvText
-            x={630}
+            x={836}
             y={339}
             content={s.home.progressText}
             font={"Onest"}
@@ -6397,10 +6324,10 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
             action={"play"}
             label={s.home.playLabel}
             icon={"▶"}
-            x={182}
-            y={544}
+            x={192}
+            y={550}
             buttonWidth={228}
-            buttonHeight={84}
+            buttonHeight={72}
             round={false}
             holdable={true}
           />
@@ -6410,9 +6337,9 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
             action={"details"}
             label={"Details"}
             icon={""}
-            x={420}
+            x={438}
             y={550}
-            buttonWidth={156}
+            buttonWidth={228}
             buttonHeight={72}
             round={false}
             holdable={false}
@@ -6423,7 +6350,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
             action={"save"}
             label={s.homeAddLabel}
             icon={s.homeAddLabel}
-            x={594}
+            x={684}
             y={550}
             buttonWidth={72}
             buttonHeight={72}
@@ -6439,50 +6366,13 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
             size={32}
             color={s.primary}
           />
-          <HomeCard
-            screenRef={"homeCard0"}
-            position={s.homeCardWindowStart}
-            card={s.homeCards[0]}
-            x={192}
-            y={s.homeShelfIndex === 0 ? 757 : 218}
-          />
-          <HomeCard
-            screenRef={"homeCard1"}
-            position={s.homeCardWindowStart + 1}
-            card={s.homeCards[1]}
-            x={548}
-            y={s.homeShelfIndex === 0 ? 757 : 218}
-          />
-          <HomeCard
-            screenRef={"homeCard2"}
-            position={s.homeCardWindowStart + 2}
-            card={s.homeCards[2]}
-            x={904}
-            y={s.homeShelfIndex === 0 ? 757 : 218}
-          />
-          <HomeCard
-            screenRef={"homeCard3"}
-            position={s.homeCardWindowStart + 3}
-            card={s.homeCards[3]}
-            x={1260}
-            y={s.homeShelfIndex === 0 ? 757 : 218}
-          />
-          <HomeCard
-            screenRef={"homeCard4"}
-            position={s.homeCardWindowStart + 4}
-            card={s.homeCards[4]}
-            x={1616}
-            y={s.homeShelfIndex === 0 ? 757 : 218}
-          />
-          <HomeCard
-            screenRef={"homeCard5"}
-            position={s.homeCardWindowStart + 5}
-            card={s.homeCards[5]}
-            x={1972}
-            y={s.homeShelfIndex === 0 ? 757 : 218}
-          />
+          <TvView x={188} y={s.homeShelfIndex === 0 ? 753 : 214} w={1640} h={278} clipping={true}>
+            <KeyedFor each={s.homeCards.map((card, slot) => ({ card, slot }))} keyOf={entry => entry.slot}>
+              {(entry) => <HomeCard screenRef={`homeCard${entry().slot}`} position={s.homeCardWindowStart + entry().slot} card={entry().card} x={4 + s.homeWindowX + entry().slot * 356} y={4} />}
+            </KeyedFor>
+          </TvView>
           <TvView show={s.homeShelfIndex > 0 && s.homeNextShelfLabel !== ""}>
-            <TvText x={192} y={630} content={s.homeNextShelfLabel} font={"Bricolage700"} size={32} color={s.primary} />
+            <TvText x={192} y={516} content={s.homeNextShelfLabel} font={"Bricolage700"} size={32} color={s.primary} />
             <HomePreviewCard card={s.homeNextCards[0]} x={192} />
             <HomePreviewCard card={s.homeNextCards[1]} x={548} />
             <HomePreviewCard card={s.homeNextCards[2]} x={904} />
@@ -6649,76 +6539,6 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
             show={s.detail.heroImage !== ""}
           />
           <TvView w={1920} h={1080} src={s.homeScrim} />
-          <TvView x={44} y={54} w={56} h={56} rounded={28} color={s.surface} />
-          <TvView
-            x={50}
-            y={60}
-            w={44}
-            h={44}
-            rounded={22}
-            src={s.homeProfileAvatar}
-            show={s.homeProfileAvatar !== ""}
-          />
-          <TvView
-            x={60}
-            y={202}
-            w={24}
-            h={24}
-            src={
-              s.railCurrent === "search" ? s.railSearchSelected : s.railSearch
-            }
-          />
-          <TvView
-            x={40}
-            y={
-              s.railCurrent === "search"
-                ? 184
-                : s.railCurrent === "discover"
-                  ? 340
-                  : s.railCurrent === "live"
-                    ? 418
-                    : s.railCurrent === "library"
-                      ? 496
-                      : 262
-            }
-            w={64}
-            h={64}
-            rounded={32}
-            color={s.surface}
-          />
-          <TvView
-            x={60}
-            y={282}
-            w={24}
-            h={24}
-            src={s.railCurrent === "home" ? s.railHome : s.railHomeUnselected}
-          />
-          <TvView
-            x={60}
-            y={360}
-            w={24}
-            h={24}
-            src={
-              s.railCurrent === "discover"
-                ? s.railDiscoverSelected
-                : s.railDiscover
-            }
-          />
-          <TvView
-            x={60}
-            y={440}
-            w={24}
-            h={24}
-            src={s.railCurrent === "live" ? s.railLiveSelected : s.railLive}
-          />
-          <TvView
-            x={60}
-            y={516}
-            w={24}
-            h={24}
-            src={s.railCurrent === "library" ? s.railListSelected : s.railList}
-          />
-          <TvView x={60} y={978} w={24} h={24} src={s.railSettings} />
           <TvView
             x={192}
             y={96}
@@ -6766,8 +6586,8 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
             icon={"▶"}
             buttonWidth={298}
             holdable={true}
-            x={182}
-            y={365}
+            x={192}
+            y={369}
           />
           <TitleAction
             screenRef={"titleAction1"}
@@ -6777,7 +6597,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
             icon={""}
             buttonWidth={292}
             holdable={false}
-            x={488}
+            x={510}
             y={369}
           />
           <TitleAction
@@ -6788,7 +6608,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
             icon={s.detailSaveIcon}
             buttonWidth={200}
             holdable={false}
-            x={800}
+            x={822}
             y={369}
           />
           <TitleAction
@@ -6799,71 +6619,16 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
             icon={"ⓘ"}
             buttonWidth={230}
             holdable={false}
-            x={1020}
+            x={1042}
             y={369}
           />
-          <TvView
-            x={192}
-            y={604}
-            w={160}
-            h={52}
-            rounded={26}
-            color={s.surface}
-            show={s.detail.episodeCount > 0}
-          />
-          <TvText
-            x={226}
-            y={616}
-            content={s.detailSeasonLabel}
-            font={"Onest700"}
-            size={22}
-            color={s.primary}
-            show={s.detail.episodeCount > 0}
-          />
-          <TvText
-            x={374}
-            y={616}
-            content={s.detailCountLabel}
-            font={"Onest"}
-            size={22}
-            color={s.tertiary}
-            show={s.detail.episodeCount > 0}
-          />
-          <EpisodeTile
-            screenRef={"titleEpisode0"}
-            position={0}
-            episode={s.detailEpisodes[0]}
-            x={192}
-            y={682}
-          />
-          <EpisodeTile
-            screenRef={"titleEpisode1"}
-            position={1}
-            episode={s.detailEpisodes[1]}
-            x={588}
-            y={682}
-          />
-          <EpisodeTile
-            screenRef={"titleEpisode2"}
-            position={2}
-            episode={s.detailEpisodes[2]}
-            x={984}
-            y={682}
-          />
-          <EpisodeTile
-            screenRef={"titleEpisode3"}
-            position={3}
-            episode={s.detailEpisodes[3]}
-            x={1380}
-            y={682}
-          />
-          <EpisodeTile
-            screenRef={"titleEpisode4"}
-            position={4}
-            episode={s.detailEpisodes[4]}
-            x={1776}
-            y={682}
-          />
+          <SeasonControl screenRef={"titleSeason"} label={s.detailSeasonLabel} x={192} y={570} show={s.detail.allEpisodes.length > 0} />
+          <TvText x={416} y={582} content={s.detailCountLabel} font={"Onest"} size={22} color={s.tertiary} show={s.detail.allEpisodes.length > 0} />
+          <TvView x={188} y={642} w={1640} h={388} clipping={true}>
+            <KeyedFor each={s.detailEpisodes.map((episode, slot) => ({ episode, slot }))} keyOf={entry => entry.slot}>
+              {(entry) => <EpisodeTile screenRef={`titleEpisode${entry().slot}`} position={s.detailWindowStart + entry().slot} episode={entry().episode} x={4 + s.detailWindowX + entry().slot * 396} y={4} />}
+            </KeyedFor>
+          </TvView>
           <TvText
             x={700}
             y={54}
@@ -6875,6 +6640,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
             color={s.primary}
           />
         </TvView>
+        <CollapsedRail avatar={s.homeProfileAvatar} current={s.railCurrent} show={!s.railExpanded && ["home", "detail", "discover", "library", "search", "live", "settings", "sources", "provider", "sourceDetails"].includes(s.phase)} />
         <TvView show={s.phase === "sources" || s.phase === "sourceDetails"}>
           <TvView w={1920} h={1080} color={s.sourceScrim} />
           <TvView x={1100} y={0} w={820} h={1080} color={s.sourcePanelGround} />
@@ -7260,6 +7026,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
           />
           <PlayerTimeline
             screenRef={"playerTimeline"}
+            show={s.playerItem?.type !== "live"}
             progress={s.playerProgress}
             seeking={s.playerSeekPreview !== null}
             previewText={s.playerSeekLabel}
@@ -7270,6 +7037,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
             x={96}
             y={826}
             content={s.playerPositionText}
+            show={s.playerItem?.type !== "live"}
             font={"Onest700"}
             size={22}
             color={s.primary}
@@ -7280,12 +7048,14 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
             maxwidth={184}
             align={"right"}
             content={s.playerDurationText}
+            show={s.playerItem?.type !== "live"}
             font={"Onest"}
             size={22}
             color={s.secondary}
           />
           <PlayerControl
             screenRef={"playerControl0"}
+            show={s.playerItem?.type !== "live"}
             position={0}
             action={"back10"}
             icon={"≪"}
@@ -7295,6 +7065,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
           />
           <PlayerControl
             screenRef={"playerControl1"}
+            show={s.playerItem?.type !== "live"}
             position={1}
             action={"toggle"}
             icon={s.playerToggleIcon}
@@ -7304,6 +7075,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
           />
           <PlayerControl
             screenRef={"playerControl2"}
+            show={s.playerItem?.type !== "live"}
             position={2}
             action={"forward30"}
             icon={"≫"}
@@ -7319,7 +7091,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
             diameter={72}
             x={366}
             y={878}
-            show={s.playerItem?.season !== undefined}
+            show={s.playerItem?.type !== "live" && s.playerItem?.season !== undefined}
           />
           <PlayerControl
             screenRef={"playerControl4"}
@@ -7641,7 +7413,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
               s.phase === "discover" ||
               s.phase === "library" ||
               s.phase === "search" ||
-              s.phase === "live")
+              s.phase === "live" || s.phase === "settings")
           }
         >
           <TvView w={1920} h={1080} color={s.menuScrim} />
@@ -7658,78 +7430,9 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
             x={48}
             y={48}
           />
-          <RailItem
-            screenRef={"rail1"}
-            position={1}
-            label={"Search"}
-            icon={s.railSearch}
-            focusedIcon={s.railSearchFocus}
-            avatar={""}
-            profileName={""}
-            current={s.railCurrent === "search"}
-            x={48}
-            y={174}
-          />
-          <RailItem
-            screenRef={"rail2"}
-            position={2}
-            label={"Home"}
-            icon={s.railHome}
-            focusedIcon={s.railHomeFocus}
-            avatar={""}
-            profileName={""}
-            current={s.railCurrent === "home"}
-            x={48}
-            y={252}
-          />
-          <RailItem
-            screenRef={"rail3"}
-            position={3}
-            label={"Discover"}
-            icon={s.railDiscover}
-            focusedIcon={s.railDiscoverFocus}
-            avatar={""}
-            profileName={""}
-            current={s.railCurrent === "discover"}
-            x={48}
-            y={330}
-          />
-          <RailItem
-            screenRef={"rail4"}
-            position={4}
-            label={"Live TV"}
-            icon={s.railLive}
-            focusedIcon={s.railLiveFocus}
-            avatar={""}
-            profileName={""}
-            current={s.railCurrent === "live"}
-            x={48}
-            y={408}
-          />
-          <RailItem
-            screenRef={"rail5"}
-            position={5}
-            label={"My List"}
-            icon={s.railList}
-            focusedIcon={s.railListFocus}
-            avatar={""}
-            profileName={""}
-            current={s.railCurrent === "library"}
-            x={48}
-            y={486}
-          />
-          <RailItem
-            screenRef={"rail6"}
-            position={6}
-            label={"Settings"}
-            icon={s.railSettings}
-            focusedIcon={s.railSettingsFocus}
-            avatar={""}
-            profileName={""}
-            current={false}
-            x={48}
-            y={958}
-          />
+          <KeyedFor each={[...railItems]} keyOf={item => item.index}>
+            {item => <RailItem screenRef={`rail${item().index}`} position={item().index} label={item().label} icon={railIcon(item().icon, s.railCurrent === item().route)} focusedIcon={railIcon(item().icon, false, true)} avatar={""} profileName={""} current={s.railCurrent === item().route} x={48} y={item().y - 22} />}
+          </KeyedFor>
           <TvText
             x={48}
             y={864}

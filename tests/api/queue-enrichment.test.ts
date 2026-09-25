@@ -10,6 +10,24 @@ function fixture(count = 5) {
   return api;
 }
 describe("queue metadata hydration", () => {
+  it("publishes saved rows before metadata and updates only after each response without a duplicate request", async () => {
+    const api = fixture(1);
+    let complete!: () => void;
+    const details = vi.spyOn(api, "detail").mockImplementation(async source => {
+      await new Promise<void>(resolve => { complete = resolve; });
+      return { item: { ...item(source.id), background: "https://images.example/art.jpg" }, episodes: [] };
+    });
+    const onPage = vi.fn();
+    const pending = api.queue("profile", undefined, { onPage });
+    await vi.waitFor(() => expect(details).toHaveBeenCalledTimes(1));
+    expect(onPage).toHaveBeenCalledTimes(1);
+    expect(onPage.mock.calls[0][0].items[0]).toMatchObject({ id: "0", position: 60 });
+    complete();
+    await pending;
+    expect(onPage).toHaveBeenCalledTimes(2);
+    expect(onPage.mock.calls[1][0].items[0].background).toBe("https://images.example/art.jpg");
+    expect(details).toHaveBeenCalledTimes(1);
+  });
   it("bounds requests, keeps order and preserves resumable rows when optional metadata fails", async () => {
     const api = fixture();
     let active = 0, peak = 0;

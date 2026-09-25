@@ -13,6 +13,7 @@
 9. **Naming:** "My List" everywhere. It has two segments, My List | Continue Watching. History and counts are dropped from the tabs.
 10. **Avatars:** hide broken categories and compute the count shown in the header.
 11. **TV focus:** focused tiles, profiles, rows and controls keep their size. Use the white ring or off-white fill without scale.
+12. **TV reliability corrections:** [TV-034](../TV_POLISH.md) defines carousel bounds, stable rail geometry, profile activation, season navigation, live-only controls and progressive startup. These owner-requested corrections supersede conflicting static reference hints and spacing.
 
 ## Design decisions made during the redesign
 

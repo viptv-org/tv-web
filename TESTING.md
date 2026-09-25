@@ -1,3 +1,76 @@
+# TV reliability corrections — 2026-09-25
+
+Design pin `8ab5b6e95cdc9c6154efec2ff418a4ee1eecf55e`, contract
+[TV-034](design-contract/TV_POLISH.md), design issue #4 / tv-web issue #2.
+
+The SolidTV entry (`solid.html`, including the `lightning.html` compatibility
+entry) now selects profiles into Home, restores Settings/sidebar navigation,
+shares one collapsed rail with stable expanded icon coordinates, and uses
+packaged Lucide assets. Profile badges have a 16px inset. Browse hint legends
+are removed. Home action heights/widths match; long episode labels cannot cross
+progress. Shelf heading pitch is 356px. Shared pixel carousel bounds expose
+selected cards completely and clamp the final card to the right safe edge.
+Series retain all seasons and episodes with a focusable season control.
+Discover/My List share their card implementation; focus no longer shifts card
+artwork or captions. Search includes the first focus ring in its clip.
+
+Home Play/Resume opens sources; explicit hold retains source-choice intent.
+Live cards open sources directly, and live playback offers audio, subtitles
+and exit with no seek, duration, pause or skip controls. Exit restores the
+channel/card. VOD resume/source intent and progress remain intact.
+
+Startup publishes the saved queue before optional metadata finishes, then
+publishes each hydration result. Home reuses that hero metadata, avoids the
+unused history request, and loads live/catalogue shelves independently with
+six catalogue workers. Search uses independent workers and concurrent live
+search, preserving a focused item's identity when earlier results arrive.
+Metadata and series progress start concurrently. A shared two-buffer text
+primitive retains drawable glyphs until replacement textures are ready, with a
+stable paint-order parent and atomic opacity changes.
+
+Validation uses the production build at
+`https://viptv.local.test:8443/tv/solid.html`, with private browser captures in
+`/tmp/viptv-polish`. No screenshots are committed. Run the regressions with:
+
+```sh
+PREVIEW_API_ORIGIN=https://viptv.local.test:8443 node tests/preview/solid-regressions.mjs
+PREVIEW_API_ORIGIN=https://viptv.local.test:8443 node tests/preview/solid-regressions.mjs --tizen
+```
+
+Verified before final publication: design/core/video integrity and production
+build; 187 frontend unit/integration tests; backend 206 passing tests (two
+existing ignores) and strict Clippy. The broad React Playwright run recorded
+127 passes, 75 declared skips and two timing-sensitive Vizio player failures;
+both failing cases passed when rerun together in isolation (5.5s). This is not
+reported as an entirely clean first full run. Existing VOD/source/resume,
+series/title, search, Home and profile-management SolidTV scenarios also passed.
+
+Final delayed-data browser runs accepted remote input at 181ms (Vizio) and
+178ms (Tizen) with queue/catalogue replies delayed 1.8s; these are fixture shell
+readiness measurements, not real-device startup claims. Saved queue cards are
+separately checked before delayed metadata. Both platform clock checks observed 90 animation-frame opportunities, nine
+clock advances and zero frames without a drawable clock node; GPU scan-out
+remains outside this test. All nine regression scenarios pass in both browser
+configurations. The extended Home run traverses 20 cards and asserts the actual
+final focus outline ends at x=1828; the ten-episode run checks the same boundary.
+Search asserts its first outline begins at x=846 and retains the fast result
+when a delayed result is inserted ahead of it.
+
+Desktop comparison: the desktop shell pins tv-web `6f335d7631e1334be398b7aa5977ce4ce51ac50a`; its React Home already publishes catalogue shelves independently and caches Home for return navigation. Its shared queue client still awaits metadata. TV now uses the same independent-shelf approach and additionally publishes the raw queue before that shared hydration work finishes.
+
+The reported temporary tunnel now returns HTTP 530, so the original Naruto
+endpoint's cold upstream latency cannot be remeasured. Backend changes coalesce
+identical in-flight addon requests, preserve unrelated cache entries during
+eviction, and stop waiting for alternate metadata once episode art is complete.
+They cannot guarantee the response time of an external addon on a cache miss.
+
+Physical Tizen/Vizio hardware, TV decoder output, signing, deployment and
+production served-asset verification were not performed in this change. The
+ordinary React/desktop entry remains available; this work does not silently
+promote the staged SolidTV entry into a physical-TV-qualified release.
+
+---
+
 # TV visual refinement — 2026-09-24
 
 Design pin `fa8b20e0e63d465498b6b2af8571a4e9cdc1015f` records stable-size TV focus. The React TV entry now keeps focus in the current horizontal shelf, reveals the full trailing card, adds space between Home shelves, removes the Home key legend and focused scaling, and uses landscape detail art and a stable runtime label in the player. SolidTV preview now uses cached canvas icons for the affected Home, title, profile and player actions, shows an animated preparation spinner, avoids tile/profile scaling, reveals later queue cards, and omits empty movie episode chrome.

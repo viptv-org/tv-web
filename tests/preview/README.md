@@ -121,3 +121,19 @@ sign out"; DeskLiveDetails opens the next-up programme (clicking a current progr
 plays it); PhItemMenu uses Mayday (the phone Continue Watching set has no Monster);
 new-profile screens show the default avatar; DeskPlayback has no engine row outside
 Tauri. Player "preparing next" screens hold in next-episode source discovery.
+
+## TV-034 regression suite
+
+`solid-regressions.mjs` tests profile selection, Settings rail restoration,
+20-card and ten-episode bounds, season selection, live-only controls, delayed
+search ordering/focus, drawable clock frames, and progressive startup. It uses
+the production SolidTV entry over local HTTPS and mocks only API/media boundaries.
+
+```sh
+PREVIEW_API_ORIGIN=https://viptv.local.test:8443 node tests/preview/solid-regressions.mjs
+PREVIEW_API_ORIGIN=https://viptv.local.test:8443 node tests/preview/solid-regressions.mjs --tizen
+```
+
+Use `--scenario=vod-clock` (or another scenario name) for a targeted run.
+Private captures default to `/tmp/viptv-polish`; set `PREVIEW_OUT` to change it.
+These tests do not certify physical TVs or GPU scan-out.

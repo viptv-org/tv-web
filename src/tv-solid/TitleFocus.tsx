@@ -115,6 +115,8 @@ export const TitleAction = defineScreen({
       <TvText
         x={s.icon === "" ? 34 : 78}
         y={18}
+        maxwidth={s.buttonWidth - (s.icon === "" ? 68 : 98)}
+        maxlines={1}
         content={s.labelText}
         font={"Onest700"}
         size={26}
@@ -166,6 +168,10 @@ export const EpisodeTile = defineScreen({
       this.synopsisText = this.episode.synopsis;
     },
   },
+  watch: {
+    episode() { this.reveal(); },
+    position() { if (this.focused) noteFocus("title-episode", this.position); },
+  },
   input: {
     left() {
       this.$emit("title-episode-move", -1);
@@ -174,7 +180,7 @@ export const EpisodeTile = defineScreen({
       this.$emit("title-episode-move", 1);
     },
     up() {
-      this.$emit("title-actions-return");
+      this.$emit("title-season-focus");
     },
     enter() {
       return () => this.$emit("title-episode-activate", this.position);
@@ -259,6 +265,29 @@ export const EpisodeTile = defineScreen({
         size={20}
         color={s.secondary}
       />
+    </TvView>
+  ),
+});
+
+export const SeasonControl = defineScreen({
+  props: ["label"] as unknown as { label: string },
+  state() { return { focused: false }; },
+  hooks: {
+    focus() { this.focused = true; noteFocus("title-season", 0); },
+    unfocus() { this.focused = false; },
+  },
+  input: {
+    left() { this.$emit("title-season-change", -1); },
+    right() { this.$emit("title-season-change", 1); },
+    enter() { return () => this.$emit("title-season-change", 1); },
+    down() { this.$emit("title-episodes-enter"); },
+    up() { this.$emit("title-actions-return"); },
+  },
+  render: (s) => (
+    <TvView w={200} h={52}>
+      <TvView w={200} h={52} rounded={26} color={s.focused ? tokens["color.text.primary"] : tokens["color.surface.3"]} />
+      <TvText x={24} y={12} maxwidth={140} maxlines={1} content={s.label} font={"Onest700"} size={22} color={s.focused ? tokens["color.on.light"] : tokens["color.text.primary"]} />
+      <TvView x={162} y={14} w={24} h={24} src={actionIconFor("down", s.focused)} />
     </TvView>
   ),
 });

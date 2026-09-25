@@ -1,3 +1,21 @@
+# TV-034 corrections (2026-09-25)
+
+Design revision: `8ab5b6e95cdc9c6154efec2ff418a4ee1eecf55e`.
+The detailed current evidence and reproduction commands are in [TESTING.md](../TESTING.md).
+
+| Surface | Implemented and browser checked | Physical Tizen / Vizio |
+| --- | --- | --- |
+| Profiles / Settings / rail | Selection without restart, rail escape/return, common icon coordinates, real cog/pencil assets and padded edit badges | Unverified / Unverified |
+| Home / search / library / discover | Full selected-card visibility, bounded final card, tighter shelves, equal actions, nonoverlapping progress, stable focus geometry, shared catalogue card | Unverified / Unverified |
+| Series | Entire episode list, season changes, correct selected episode identity and Back restoration | Unverified / Unverified |
+| Live player | Live card to sources to playback; only audio/subtitles/exit, no VOD seek/pause; return to channel/card | Unverified / Unverified |
+| Startup / text | Immediate shell, progressive queue and catalogue/search results, cancellation guards, buffered glyph replacement | Unverified / Unverified |
+
+Historical measurements below remain historical; they do not override TV-034's
+owner-requested geometry corrections or imply current pixel/hardware parity.
+
+---
+
 # SolidTV renderer adoption — 2026-09-24
 
 Pinned design: `fa8b20e0e63d465498b6b2af8571a4e9cdc1015f`. The entries below

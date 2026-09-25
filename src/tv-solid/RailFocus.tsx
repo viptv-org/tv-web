@@ -2,6 +2,28 @@
 import { defineScreen, TvView, TvText } from "./runtime";
 import { tokens } from "../theme/viptv-tokens.generated";
 import { noteFocus } from "./focusDebug";
+import { railIcon } from "./railIcons";
+
+export const railItems = [
+  { index: 1, route: "search", icon: "search", label: "Search", y: 202 },
+  { index: 2, route: "home", icon: "home", label: "Home", y: 282 },
+  { index: 3, route: "discover", icon: "discover", label: "Discover", y: 360 },
+  { index: 4, route: "live", icon: "live", label: "Live TV", y: 440 },
+  { index: 5, route: "library", icon: "list", label: "My List", y: 516 },
+  { index: 6, route: "settings", icon: "settings", label: "Settings", y: 978 },
+] as const;
+
+/** One collapsed rail for every browsing route; geometry is shared with its menu. */
+export const CollapsedRail = (props: { avatar: string; current: string; show: boolean }) => (
+  <TvView show={props.show}>
+    <TvView x={44} y={54} w={56} h={56} rounded={28} color={tokens["color.surface.3"]} />
+    <TvView x={50} y={60} w={44} h={44} rounded={22} src={props.avatar} show={props.avatar !== ""} />
+    {railItems.map(item => <TvView>
+      <TvView x={40} y={item.y - 20} w={64} h={64} rounded={32} color={tokens["color.surface.3"]} show={props.current === item.route} />
+      <TvView x={60} y={item.y} w={24} h={24} src={railIcon(item.icon, props.current === item.route)} />
+    </TvView>)}
+  </TvView>
+);
 
 /** A labelled TV rail row. SolidTV owns focus and D-pad input while expanded. */
 export const RailItem = defineScreen({
@@ -91,7 +113,7 @@ export const RailItem = defineScreen({
         color={s.focused ? s.primary : s.clear}
       />
       <TvView
-        x={4}
+        x={-4}
         y={6}
         w={56}
         h={56}
@@ -100,8 +122,9 @@ export const RailItem = defineScreen({
         show={s.position === 0}
       />
       <TvView
-        x={10}
+        x={2}
         y={12}
+        zIndex={1}
         w={44}
         h={44}
         rounded={22}
@@ -109,10 +132,11 @@ export const RailItem = defineScreen({
         show={s.position === 0 && s.avatar !== ""}
       />
       <TvView
-        x={26}
-        y={20}
-        w={28}
-        h={28}
+        x={12}
+        y={22}
+        zIndex={1}
+        w={24}
+        h={24}
         src={s.focused ? s.focusedIcon : s.icon}
         show={s.position !== 0}
       />
