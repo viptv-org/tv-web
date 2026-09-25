@@ -1,6 +1,6 @@
 /** @jsxImportSource @solidtv/solid */
 import { defineScreen, TvView, TvText } from "./runtime";
-import { batch, Show } from "solid-js";
+import { batch, For, Show } from "solid-js";
 import type { ElementNode } from "@solidtv/solid";
 import { EntryButton } from "./EntryButton";
 import { TitleInfo, NativeTextPanel } from "./TitleInfo";
@@ -38,7 +38,9 @@ import {
   emptyHome,
   enrichHomeHero,
   loadHomeView,
+  loadHomeShelves,
   queueHomeCards,
+  type HomeShelfView,
   type HomeView,
 } from "./homeModel";
 import { railIcon } from "./railIcons";
@@ -474,6 +476,11 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         detailReturnZone: "action" as "action" | "card",
         detailReturnIndex: 0,
         homeCards: Array.from({ length: 6 }, () => ({ ...emptyHomeCard })),
+        homeShelves: [] as HomeShelfView[],
+        homeShelfIndex: 0,
+        homeShelfStart: 0,
+        homeShelfCardIndex: 0,
+        homeScrollY: 0,
         homeFocusZone: "action" as "action" | "card",
         homeActionIndex: 0,
         homeCardIndex: 0,
@@ -758,6 +765,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         titleMenuOrigin: "home" as "home" | "library" | "discover" | "search",
         titleMenuReturnIndex: 0,
         titleMenuReturnZone: "card" as "action" | "card",
+        titleMenuHomeShelfKey: "continue",
         titleMenuBusy: false,
         titleMenuOkLabel: "",
         titleMenuSelectLabel: "",
@@ -944,21 +952,28 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
           ({ position, delta }: { position: number; delta: number }) =>
             this.moveHomeAction(Number(position), delta),
         );
-        this.$listen("home-cards-enter", () => this.focusHomeCard(0));
+        this.$listen("home-cards-enter", () => this.focusHomeShelfCard(0, 0));
+        this.$listen("home-shelf-up", ({ shelf, position }: { shelf: number; position: number }) => {
+          if (shelf > 0) this.focusHomeShelfCard(shelf - 1, Math.min(position,Math.max(0,(this.homeShelves[shelf - 1]?.cards.length ?? 1)-1)));
+          else this.focusHomeAction(0);
+        });
+        this.$listen("home-shelf-down", ({ shelf, position }: { shelf: number; position: number }) => {
+          if (shelf + 1 < this.homeShelves.length)
+            this.focusHomeShelfCard(shelf + 1,Math.min(position,this.homeShelves[shelf + 1].cards.length - 1));
+        });
         this.$listen("home-action-return", () =>
           this.focusHomeAction(this.homeActionIndex),
         );
-        this.$listen("home-card-focused", (position: number) => {
-          if (
-            this.homeFocusZone === "card" &&
-            Number(position) === this.homeCardIndex
-          )
-            this.homeCardIndex = Number(position);
+        this.$listen("home-card-focused", (focus: number | { shelf: number; position: number }) => {
+          this.homeFocusZone = "card";
+          this.homeShelfIndex = typeof focus === "number" ? 0 : focus.shelf;
+          this.homeShelfCardIndex = typeof focus === "number" ? focus : focus.position;
+          this.homeCardIndex = this.homeShelfCardIndex;
         });
         this.$listen(
           "home-card-move",
-          ({ position, delta }: { position: number; delta: number }) =>
-            this.moveHomeCard(Number(position), delta),
+          ({ shelf, position, delta }: { shelf: number; position: number; delta: number }) =>
+            this.moveHomeShelfCard(Number(shelf), Number(position), delta),
         );
         this.$listen(
           "home-action-activate",
@@ -971,10 +986,12 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
             this.openTitleMenu(item, "home", this.homeActionIndex);
           else void this.openSources(item, false);
         });
-        this.$listen("home-card-activate", () => void this.openDetailByCard());
-        this.$listen("home-card-hold", (position: number) => {
-          const item = this.home.queueItems[Number(position)];
-          if (item) this.openTitleMenu(item, "home", Number(position));
+        this.$listen("home-card-activate", ({ shelf, position }: { shelf: number; position: number }) => void this.openHomeShelfCard(shelf, position));
+        this.$listen("home-card-hold", ({ shelf, position }: { shelf: number; position: number }) => {
+          const item = this.homeShelves[shelf]?.cards[position]?.item;
+          if (!item) return;
+          if (item.type === "live") void this.openSources(item, false);
+          else this.openTitleMenu(item, "home", position);
         });
         this.$listen("rail-focused", (position: number) => {
           this.railFocusIndex = Number(position);
@@ -1434,6 +1451,13 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
             this.optionsIcon = "≡";
             this.optionsLabel = "Options";
             this.home = view;
+            this.homeShelves = view.queueItems.length ? [{
+              key: "continue", title: "Continue watching", cards: queueHomeCards(view.queueItems), kind: "queue", loaded: true,
+            }] : [];
+            this.homeShelfIndex = 0;
+            this.homeShelfStart = 0;
+            this.homeShelfCardIndex = 0;
+            this.homeScrollY = 0;
             this.homeCards = Array.from(
               { length: 6 },
               (_, index) => view.cards[index] ?? { ...emptyHomeCard },
@@ -1443,6 +1467,23 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
             if (new URLSearchParams(location.search).has("perfdebug"))
               performance.mark("viptv:home-focus-request");
           }, 16);
+          void loadHomeShelves(api, view, homeScope.signal, (shelves) => {
+            if (generation !== homeGeneration || homeScope?.signal.aborted) return;
+            const selectedKey = this.homeShelves[this.homeShelfIndex]?.key;
+            const selectedIndex = shelves.findIndex(row => row.key === selectedKey);
+            this.homeShelves = [...shelves];
+            this.homeShelfIndex = selectedIndex < 0 ? 0 : selectedIndex;
+            this.homeShelfCardIndex = Math.min(this.homeShelfCardIndex, Math.max(0, (shelves[this.homeShelfIndex]?.cards.length ?? 1) - 1));
+            this.homeShelfStart = Math.min(this.homeShelfStart, Math.max(0, (shelves[this.homeShelfIndex]?.cards.length ?? 1) - 5));
+            this.homeScrollY = this.homeShelfIndex * 316;
+            queueMicrotask(() => {
+              for (let row = 0; row < this.homeShelves.length; row++) {
+                const start = row === this.homeShelfIndex ? this.homeShelfStart : 0;
+                for (let slot = 0; slot < Math.min(5, this.homeShelves[row].cards.length - start); slot++)
+                  (this.$select(`homeCard${row}Slot${slot}`) as unknown as { reveal?: () => void })?.reveal?.();
+              }
+            });
+          });
           void enrichHomeHero(api, view, homeScope.signal)
             .then((enriched) => {
               if (generation === homeGeneration && !homeScope?.signal.aborted)
@@ -1465,12 +1506,11 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
               reveal?: () => void;
             }
           )?.reveal?.();
-        for (let index = 0; index < 6; index++)
-          (
-            this.$select(`homeCard${index}`) as unknown as {
-              reveal?: () => void;
-            }
-          )?.reveal?.();
+        for (let shelf = 0; shelf < this.homeShelves.length; shelf++) {
+          const start = shelf === this.homeShelfIndex ? this.homeShelfStart : 0;
+          for (let slot = 0; slot < Math.min(5, this.homeShelves[shelf].cards.length - start); slot++)
+            (this.$select(`homeCard${shelf}Slot${slot}`) as unknown as { reveal?: () => void })?.reveal?.();
+        }
       },
       focusHomeAction(index: number) {
         this.homeFocusZone = "action";
@@ -1487,20 +1527,42 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         );
       },
       focusHomeCard(index: number) {
+        this.focusHomeShelfCard(this.homeShelfIndex, index);
+      },
+      focusHomeShelfCard(shelfIndex: number, index: number) {
+        const shelf = this.homeShelves[shelfIndex];
+        if (!shelf?.cards.length) return;
+        const target = Math.max(0, Math.min(shelf.cards.length - 1, index));
         this.homeFocusZone = "card";
-        this.homeCardIndex = index;
-        this.$select(`homeCard${index}`)?.$focus();
+        this.homeShelfIndex = shelfIndex;
+        this.homeShelfCardIndex = target;
+        this.homeCardIndex = target;
+        if (target < this.homeShelfStart) this.homeShelfStart = target;
+        else if (target >= this.homeShelfStart + 5) this.homeShelfStart = target - 4;
+        this.homeScrollY = shelfIndex * 316;
+        const slot = target - this.homeShelfStart;
+        queueMicrotask(() => this.$select(`homeCard${shelfIndex}Slot${slot}`)?.$focus());
+      },
+      moveHomeShelfCard(shelfIndex: number, position: number, delta: number) {
+        const shelf = this.homeShelves[shelfIndex];
+        if (!shelf?.cards.length) return;
+        const target = position + delta;
+        if (target < 0) {
+          if (shelfIndex === 0) this.openRail();
+          else this.focusHomeShelfCard(shelfIndex - 1, this.homeShelves[shelfIndex - 1].cards.length - 1);
+        } else if (target >= shelf.cards.length) {
+          if (shelfIndex + 1 < this.homeShelves.length) this.focusHomeShelfCard(shelfIndex + 1, 0);
+        } else this.focusHomeShelfCard(shelfIndex, target);
+      },
+      openHomeShelfCard(shelfIndex: number, position: number) {
+        const item = this.homeShelves[shelfIndex]?.cards[position]?.item;
+        if (!item) return;
+        if (item.type === "live") void this.openSources(item, false);
+        else if (item.type === "movie" || item.type === "series") void this.openDetail(item);
+        else void this.openSources(item, !!item.position);
       },
       moveHomeCard(position: number, delta: number) {
-        const count = this.home.cards.length;
-        if (!count) return;
-        if (delta < 0 && this.homeCardIndex === 0) {
-          this.openRail();
-          return;
-        }
-        this.focusHomeCard(
-          Math.max(0, Math.min(count - 1, this.homeCardIndex + delta)),
-        );
+        this.moveHomeShelfCard(this.homeShelfIndex, position, delta);
       },
       openRail() {
         if (
@@ -4309,6 +4371,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         this.titleMenuItem = item;
         this.titleMenuOrigin = origin;
         this.titleMenuReturnIndex = index;
+        if (origin === "home") this.titleMenuHomeShelfKey = this.homeShelves[this.homeShelfIndex]?.key ?? "continue";
         this.titleMenuReturnZone = origin === "home" ? this.homeFocusZone : "card";
         this.titleMenuKind = "actions";
         this.titleMenuChoices = titleMenuChoices(item, inQueue, saved);
@@ -4361,12 +4424,13 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         noteTitleMenu(false, this.titleMenuKind);
         if (!restore) return;
         if (this.titleMenuOrigin === "home") {
-          const last = this.home.queueItems.length - 1;
           if (this.titleMenuReturnZone === "action")
             this.focusHomeAction(this.titleMenuReturnIndex);
-          else if (last >= 0)
-            this.focusHomeCard(Math.min(this.titleMenuReturnIndex, last));
-          else this.focusHomeAction(0);
+          else {
+            const shelf = Math.max(0,this.homeShelves.findIndex(row=>row.key===this.titleMenuHomeShelfKey));
+            if(this.homeShelves[shelf]?.cards.length) this.focusHomeShelfCard(shelf,Math.min(this.titleMenuReturnIndex,this.homeShelves[shelf].cards.length-1));
+            else this.focusHomeAction(0);
+          }
         } else if (this.titleMenuOrigin === "library") {
           const last = this.libraryItems.length - 1;
           if (last >= 0)
@@ -4399,6 +4463,16 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
       },
       updateQueueLists(items: readonly MediaItem[]) {
         const cards = queueHomeCards(items);
+        const selectedKey=this.homeShelves[this.homeShelfIndex]?.key;
+        const withoutQueue=this.homeShelves.filter(row=>row.key!=="continue");
+        this.homeShelves=cards.length
+          ? [{key:"continue",title:"Continue watching",cards,kind:"queue",loaded:true},...withoutQueue]
+          : withoutQueue;
+        if(selectedKey && selectedKey!=="continue") {
+          this.homeShelfIndex=Math.max(0,this.homeShelves.findIndex(row=>row.key===selectedKey));
+        } else if(!cards.length) {
+          this.homeShelfIndex=0;this.homeFocusZone="action";this.homeScrollY=0;
+        }
         this.home = { ...this.home, queueItems: items, cards };
         this.homeCards = Array.from(
           { length: 6 },
@@ -6582,6 +6656,8 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
           <TvView x={58} y={436} w={28} h={28} src={s.railLive} />
           <TvView x={58} y={514} w={28} h={28} src={s.railList} />
           <TvView x={58} y={976} w={28} h={28} src={s.railSettings} />
+          <TvView w={1920} h={1080} clipping>
+          <TvView w={1920} h={Math.max(1080, 1080 + Math.max(0, s.homeShelves.length - 1) * 316)} y={-s.homeScrollY}>
           <TvText
             x={192}
             y={150}
@@ -6711,59 +6787,23 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
             round={true}
             holdable={false}
           />
-          <TvText
-            x={192}
-            y={700}
-            content={s.homeShelfLabel}
-            font={"Bricolage650"}
-            size={32}
-            letterspacing={-0.32}
-            cssLineBox={true}
-            lineheight={1.1}
-            color={s.primary}
-          />
-          <HomeCard
-            screenRef={"homeCard0"}
-            position={0}
-            card={s.homeCards[0]}
-            x={192}
-            y={757}
-          />
-          <HomeCard
-            screenRef={"homeCard1"}
-            position={1}
-            card={s.homeCards[1]}
-            x={548}
-            y={757}
-          />
-          <HomeCard
-            screenRef={"homeCard2"}
-            position={2}
-            card={s.homeCards[2]}
-            x={904}
-            y={757}
-          />
-          <HomeCard
-            screenRef={"homeCard3"}
-            position={3}
-            card={s.homeCards[3]}
-            x={1260}
-            y={757}
-          />
-          <HomeCard
-            screenRef={"homeCard4"}
-            position={4}
-            card={s.homeCards[4]}
-            x={1616}
-            y={757}
-          />
-          <HomeCard
-            screenRef={"homeCard5"}
-            position={5}
-            card={s.homeCards[5]}
-            x={1972}
-            y={757}
-          />
+          <For each={s.homeShelves}>{(shelf, shelfPosition) => {
+            const row = shelfPosition();
+            const first = () => s.homeShelfIndex === row ? s.homeShelfStart : 0;
+            return <Show when={shelf.cards.length > 0}>
+              <TvText x={192} y={700 + row * 316} content={shelf.title}
+                font="Bricolage650" size={32} letterspacing={-0.32} cssLineBox lineheight={1.1} color={s.primary} />
+              <TvText x={1420} y={705 + row * 316} maxwidth={308} align="right"
+                content={`${s.homeShelfIndex === row ? s.homeShelfCardIndex + 1 : "···"} / ${shelf.cards.length}`}
+                font="Onest600" size={20} color={s.secondary} />
+              <For each={shelf.cards.slice(first(), first() + 5)}>{(card, slot) => <HomeCard
+                screenRef={`homeCard${row}Slot${slot()}`} shelf={row}
+                position={first() + slot()} card={card}
+                x={192 + slot() * 356} y={757 + row * 316} />}</For>
+            </Show>;
+          }}</For>
+          </TvView>
+          </TvView>
           <TvText
             x={700}
             y={110}

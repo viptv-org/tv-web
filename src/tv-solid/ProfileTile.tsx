@@ -4,6 +4,7 @@ import type { TvProfile } from "../api";
 import { tokens } from "../theme/viptv-tokens.generated";
 import avatarCatalog from "../ui/avatars.json";
 import { noteFocus } from "./focusDebug";
+import { vectorIcon } from "./vectorIcons";
 
 export interface ProfileTileData {
   id: string;
@@ -134,7 +135,7 @@ export const ProfileTile = defineScreen({
     reveal() {
       this.caption = this.tile.name;
       this.letter = this.tile.initial;
-      this.pencil = "✎";
+      this.pencil = vectorIcon("pencil",this.onLight,24);
       if (this.tile.image !== this.lastImage) {
         this.imageFailed = false;
         this.lastImage = this.tile.image;
@@ -143,6 +144,10 @@ export const ProfileTile = defineScreen({
     onImageError() {
       this.imageFailed = true;
     },
+  },
+  watch: {
+    managing() { this.reveal(); },
+    focused() { this.reveal(); },
   },
   input: {
     left() {
@@ -247,15 +252,7 @@ export const ProfileTile = defineScreen({
         color={s.white}
         show={s.managing && !s.tile.add}
       />
-      <TvText
-        x={182}
-        y={180}
-        content={s.pencil}
-        font={"Onest"}
-        size={26}
-        color={s.onLight}
-        show={s.managing && !s.tile.add}
-      />
+      <TvView x={182} y={182} w={24} h={24} fit="contain" src={s.pencil} show={s.managing && !s.tile.add} />
     </TvView>
   ),
 });
@@ -285,8 +282,12 @@ export const ManageProfilesButton = defineScreen({
   methods: {
     reveal() {
       this.caption = this.managing ? "Done" : "Manage profiles";
-      this.icon = this.managing ? "✓" : "⚙";
+      this.icon = vectorIcon(this.managing ? "check" : "gear",this.focused?this.onLight:this.primary,24);
     },
+  },
+  watch: {
+    managing() { this.reveal(); },
+    focused() { this.reveal(); },
   },
   input: {
     up() {
@@ -306,14 +307,7 @@ export const ManageProfilesButton = defineScreen({
       rounded={30}
       color={s.focused ? s.primary : s.surface}
     >
-      <TvText
-        x={30}
-        y={13}
-        content={s.icon}
-        font={"Onest"}
-        size={25}
-        color={s.focused ? s.onLight : s.primary}
-      />
+      <TvView x={30} y={18} w={24} h={24} fit="contain" src={s.icon} />
       <TvText
         x={67}
         y={14}

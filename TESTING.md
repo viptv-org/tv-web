@@ -11,6 +11,17 @@ pagination, shared remote text entry, addon installation, required catalog
 filters, fresh pairing after sign-out, Next/recovery/Up Next, and direct guide
 channel playback with exact focus return. Home backdrop composition reuses
 wsrv derivatives; native SVG textures now render icons and key outlines.
+The active Vizio preview was refreshed from commit `1fa94d8` plus the Home/player
+fixes in this working update. On the V655-G9 Vizio, the new app loaded over
+SmartCast and authenticated successfully; its Home requests returned HTTP 200
+for the catalog index, recent-live shelf, and catalog pages. Home now builds
+Continue Watching, recent live, browsable addon catalogs (including movie and
+series rows), and My List; Left/Right traverse the full carousel with a
+position counter, and Up/Down move between shelves. The TV build now renders
+vector SVG icons for rewind, fast-forward, next, audio, captions, exit, hero
+buttons, title actions, and profile management. Mobile, desktop and the React
+entry were not changed.
+
 
 Follow-up closes season selection/long episode navigation, full More info and
 Source details scrolling (including long Unicode URLs), >8-track pagination,

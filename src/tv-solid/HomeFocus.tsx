@@ -3,6 +3,7 @@ import { defineScreen, TvView, TvText } from "./runtime";
 import { tokens } from "../theme/viptv-tokens.generated";
 import type { HomeCardView } from "./homeModel";
 import { noteFocus } from "./focusDebug";
+import { vectorIcon, type VectorIcon } from "./vectorIcons";
 
 /** A focus-owning SolidTV action. Selection fires on remote key release. */
 export const HomeAction = defineScreen({
@@ -33,7 +34,7 @@ export const HomeAction = defineScreen({
       holdFired: false,
       holdTimer: 0,
       labelText: "",
-      iconText: "",
+      iconSource: "",
       white: tokens["color.fill.white"],
       primary: tokens["color.text.primary"],
       onLight: tokens["color.on.light"],
@@ -58,9 +59,13 @@ export const HomeAction = defineScreen({
   methods: {
     reveal() {
       this.labelText = this.label;
-      this.iconText = this.icon;
+      const name: VectorIcon = this.action === "play" ? "play"
+        : this.action === "details" ? "info"
+        : this.icon === "✓" ? "check" : "plus";
+      this.iconSource = vectorIcon(name,this.focused?this.onLight:this.primary,this.round?34:30);
     },
   },
+  watch: { focused() { this.reveal(); }, icon() { this.reveal(); } },
   input: {
     left() {
       this.$emit("home-action-move", { position: this.position, delta: -1 });
@@ -110,14 +115,7 @@ export const HomeAction = defineScreen({
         rounded={s.buttonHeight / 2}
         color={s.focused ? s.primary : tokens["color.fill.tv-unfocused"]}
       />
-      <TvText
-        x={s.round ? 20 : s.action === "details" ? 33 : 34}
-        y={s.buttonHeight / 2 - 17}
-        content={s.iconText}
-        font={"Onest"}
-        size={s.round ? 38 : 27}
-        color={s.focused ? s.onLight : s.primary}
-      />
+      <TvView x={s.round ? 19 : 34} y={s.buttonHeight / 2 - (s.round ? 17 : 15)} w={s.round ? 34 : 30} h={s.round ? 34 : 30} fit="contain" src={s.iconSource} />
       <TvText
         x={s.action === "details" ? 34 : 72}
         y={s.buttonHeight / 2 - 16}
@@ -133,9 +131,10 @@ export const HomeAction = defineScreen({
 
 /** First Home shelf tile. It receives focus from SolidTV, not the DOM registry. */
 export const HomeCard = defineScreen({
-  props: ["position", "card"] as unknown as {
+  props: ["position", "card", "shelf"] as unknown as {
     position: number;
     card: HomeCardView;
+    shelf: number;
   },
 
   state() {
@@ -158,8 +157,8 @@ export const HomeCard = defineScreen({
     focus() {
       this.focused = true;
       this.reveal();
-      noteFocus("home-card", this.position);
-      this.$emit("home-card-focused", this.position);
+      noteFocus("home-card", this.shelf === 0 ? this.position : 1000 + this.shelf * 100 + this.position);
+      this.$emit("home-card-focused", { shelf: this.shelf, position: this.position });
     },
     unfocus() {
       this.focused = false;
@@ -177,16 +176,19 @@ export const HomeCard = defineScreen({
   },
   input: {
     left() {
-      this.$emit("home-card-move", { position: this.position, delta: -1 });
+      this.$emit("home-card-move", { shelf: this.shelf, position: this.position, delta: -1 });
     },
     right() {
-      this.$emit("home-card-move", { position: this.position, delta: 1 });
+      this.$emit("home-card-move", { shelf: this.shelf, position: this.position, delta: 1 });
     },
     up() {
-      this.$emit("home-action-return");
+      this.$emit("home-shelf-up", { shelf: this.shelf, position: this.position });
+    },
+    down() {
+      this.$emit("home-shelf-down", { shelf: this.shelf, position: this.position });
     },
     menu() {
-      this.$emit("home-card-hold", this.position);
+      this.$emit("home-card-hold", { shelf: this.shelf, position: this.position });
     },
     enter() {
       if (!this.pressed) {
@@ -194,14 +196,14 @@ export const HomeCard = defineScreen({
         this.holdFired = false;
         this.holdTimer = window.setTimeout(() => {
           this.holdFired = true;
-          this.$emit("home-card-hold", this.position);
+          this.$emit("home-card-hold", { shelf: this.shelf, position: this.position });
         }, 700);
       }
       return () => {
         clearTimeout(this.holdTimer);
         const activate = !this.holdFired;
         this.pressed = false;
-        if (activate) this.$emit("home-card-activate", this.position);
+        if (activate) this.$emit("home-card-activate", { shelf: this.shelf, position: this.position });
       };
     },
   },

@@ -3,6 +3,7 @@ import { defineScreen, TvView, TvText } from "./runtime";
 import { tokens } from "../theme/viptv-tokens.generated";
 import type { DetailEpisodeView } from "./detailModel";
 import { noteFocus } from "./focusDebug";
+import { vectorIcon, type VectorIcon } from "./vectorIcons";
 
 /** Focus-owning title action; Play alone has the 700 ms secondary action. */
 export const TitleAction = defineScreen({
@@ -29,7 +30,7 @@ export const TitleAction = defineScreen({
       holdFired: false,
       holdTimer: 0,
       labelText: "",
-      iconText: "",
+      iconSource: "",
       white: tokens["color.fill.white"],
       primary: tokens["color.text.primary"],
       onLight: tokens["color.on.light"],
@@ -54,9 +55,14 @@ export const TitleAction = defineScreen({
   methods: {
     reveal() {
       this.labelText = this.label;
-      this.iconText = this.icon;
+      const name: VectorIcon = this.action === "play" ? "play"
+        : this.action === "source" ? "list-video"
+        : this.action === "save" ? (this.icon === "✓" ? "check" : "plus")
+        : "info";
+      this.iconSource = vectorIcon(name,this.focused?this.onLight:this.primary,30);
     },
   },
+  watch: { focused() { this.reveal(); }, icon() { this.reveal(); } },
   input: {
     left() {
       this.$emit("title-action-move", -1);
@@ -103,16 +109,9 @@ export const TitleAction = defineScreen({
         rounded={36}
         color={s.focused ? s.primary : s.surface}
       />
+      <TvView show={s.icon !== "" || s.action === "source"} x={32} y={21} w={30} h={30} fit="contain" src={s.iconSource} />
       <TvText
-        x={32}
-        y={18}
-        content={s.iconText}
-        font={"Onest"}
-        size={28}
-        color={s.focused ? s.onLight : s.primary}
-      />
-      <TvText
-        x={s.icon === "" ? 34 : 78}
+        x={s.icon === "" && s.action !== "source" ? 34 : 78}
         y={18}
         content={s.labelText}
         font={"Onest700"}

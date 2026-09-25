@@ -5,14 +5,14 @@ Native SolidTV focus now owns the active element, focus path and remote routing.
 
 | Surface | Added browser acceptance | Remaining evidence |
 | --- | --- | --- |
-| Home | Primary Play, held menu/source actions, queued Next, stale Next after navigation | Full canonical visual inventory; physical TV |
+| Home | Primary Play, held menu/source actions, queued Next, stale Next after navigation; Vizio Home shelves, catalog rows, and carousel/vertical navigation delivered from real API feeds | Full canonical visual inventory and remote focus movement review |
 | Profiles | Edit/name/avatar/PIN, create/delete, protected selection, 12-profile paging, cancellation | Pixel-exact canonical review; physical TV |
 | Text entry | Required filters, addon URL validation/install, held Delete, sign-out PIN success/retry | Full long-input/error states on TV |
 | Player | Next, three source attempts, rollback failure and exact-source Retry, paused/cancelled Up Next, final-ten-second Resume | Physical video surface/codec checks; all canonical overlays |
 | Live | Direct channel/programme playback, exact focus return, failure Back, no live progress writes | Physical stream playback and remote |
 | Title / long lists | Season selection, tenth episode/source identity, stable Resume target, full More info/Source text scrolling, 12 audio/subtitle tracks | Complete visual comparison; physical TV |
 | Recovery | Current controller session metadata/heartbeat, terminal error callback, committed seek target, authenticated Home retry | Physical decoder failures and codec fallback |
-| Visuals | Matched Home backdrop/typography, SVG rail/key icons, profile field/keyboard geometry, non-overlapping player hints | Full exact design parity is not yet certified |
+| Visuals | Matched Home backdrop/typography, SVG rail/key/player/profile icons, profile field/keyboard geometry, non-overlapping player hints | Full exact design parity is not yet certified |
 
 Matched profile screenshot metrics are in [solid-completion-visual-metrics.json](solid-completion-visual-metrics.json): Edit mean channel error 1.1668/255 (10.6429% pixels differ), Name 1.4608/255 (5.8199% pixels differ). These are **not pixel-identical**.
 
