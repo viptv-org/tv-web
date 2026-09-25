@@ -72,13 +72,12 @@ async function start() {
     new FontFace("Onest600", `url(${onest600Url})`).load(),
     new FontFace("Onest700", `url(${onest700Url})`).load(),
   ]).then((faces) => faces.forEach((face) => document.fonts.add(face)));
-  const [appModule] = await Promise.all([
+  // Start independent module/WASM/font work before synchronous WebGL setup.
+  const dependencies = Promise.all([
     import("./App"),
     initializeCore(),
     fontsReady,
   ]);
-  if (new URLSearchParams(location.search).has("perfdebug"))
-    performance.mark("viptv:deps-ready");
   Config.fontSettings = { fontFamily: "Onest", fontSize: 32 };
   Config.animationsEnabled = false;
   const { render, renderer } = createRenderer(
@@ -95,7 +94,7 @@ async function start() {
     "app",
   );
   registerDefaultShaderRounded(renderer.stage.shManager);
-  await loadFonts(
+  const rendererFonts = loadFonts(
     [
       { fontFamily: "Bricolage700", fontUrl: bricolage700Url },
       { fontFamily: "Bricolage800", fontUrl: bricolage800Url },
@@ -108,6 +107,9 @@ async function start() {
       metrics: { ascender: 800, descender: -200, lineGap: 0, unitsPerEm: 1000 },
     })),
   );
+  const [[appModule]] = await Promise.all([dependencies, rendererFonts]);
+  if (new URLSearchParams(location.search).has("perfdebug"))
+    performance.mark("viptv:deps-ready");
   const disposeInput = installRemoteInput();
   const dispose = render(() =>
     createComponent(appModule.createSolidTvApp(api, platform), {}),

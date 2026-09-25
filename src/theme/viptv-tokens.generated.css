@@ -402,12 +402,12 @@
   --viptv-focus-desktop: 0 0 0 2px #0B0B0C, 0 0 0 4px #F4F2EE;
   --viptv-focus-desktop-hover-card: inset 0 0 0 2px #F4F2EE;
   --viptv-focus-tv-shadow: 0 0 0 4px #FFFFFF, 0 24px 60px rgba(0,0,0,0.65);
-  --viptv-focus-tv-scale-button: 1.05;
-  --viptv-focus-tv-scale-row: 1.02;
-  --viptv-focus-tv-scale-tile: 1.06;
-  --viptv-focus-tv-caption-shift: 8px;
-  --viptv-focus-tv-scale-key: 1.12;
-  --viptv-focus-tv-caption-shift-profile: 10px;
+  --viptv-focus-tv-scale-button: 1;
+  --viptv-focus-tv-scale-row: 1;
+  --viptv-focus-tv-scale-tile: 1;
+  --viptv-focus-tv-caption-shift: 0px;
+  --viptv-focus-tv-scale-key: 1;
+  --viptv-focus-tv-caption-shift-profile: 0px;
   --viptv-focus-desktop-card-inset: inset 0 0 0 2px #F4F2EE, inset 0 0 0 4px #0B0B0C;
   --viptv-focus-tv-shadow-block: 0 0 0 4px #FFFFFF, 0 20px 50px rgba(0,0,0,0.6);
   --viptv-shadow-nav: 0 12px 32px rgba(0,0,0,0.55);

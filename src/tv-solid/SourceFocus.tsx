@@ -246,7 +246,7 @@ export const SourceRow = defineScreen({
   },
 
   render: (s) => (
-    <TvView w={660} h={104} show={s.row.id !== ""} scale={s.focused ? 1.02 : 1}>
+    <TvView w={660} h={104} show={s.row.id !== ""}>
       <TvView
         x={-4}
         y={-4}

@@ -200,7 +200,6 @@ export const SearchCard = defineScreen({
       <TvView
         x={s.focused ? -10 : 0}
         y={s.focused ? -5 : 0}
-        scale={s.focused ? 1.06 : 1}
       >
         <TvView
           x={-4}

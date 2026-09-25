@@ -26,7 +26,7 @@ Platform keys: **P** = phone, **D** = desktop app and web, **T** = TV.
 - Hover (D only): secondary / destructive move to surface-4, the primary brightens 8%, light goes to pure white, outline / quiet get a 0.06 white wash.
 - Pressed: scale 0.97. The primary darkens to 90%, secondary / destructive move to surface-2, light goes to `#DDDBD6`.
 - Keyboard focus (D): `0 0 0 2px bg, 0 0 0 4px text-primary`. Never accent.
-- TV focus: off-white fill, `on-light` text (destructive: `#B42318`), 4 px white ring, 0 24 60 shadow, scale 1.05 (1.02 for full-width).
+- TV focus: off-white fill, `on-light` text (destructive: `#B42318`), 4 px white ring and 0 24 60 shadow. Geometry stays fixed.
 - TV unfocused: white at 0.12. TV pressed (OK held): `#DDDBD6`.
 - Disabled: opacity 0.4.
 - Loading: a spinner replaces the icon and the label reads "Saving…" / "Signing in…".
@@ -98,12 +98,12 @@ Platform keys: **P** = phone, **D** = desktop app and web, **T** = TV.
 | Episode | row | 272 × 150 + number, title, 2-line synopsis | 360 × 200 |
 | Live | live-now card 200 wide | live tile 220 × 124 with a text monogram | guide blocks |
 | Source row | quality badge + provider + file line + ▶ | same, in the drawer | same, in the panel (focused = off-white) |
-| Profile tile | rounded square, radius 20% | same | same, focused = ring + scale |
+| Profile tile | rounded square, radius 20% | same | same, focused = ring without scale |
 
 - **Missing art:** a surface-2 block with a film icon and the title set in display type. Never stretch a small image to fill.
 - **Channel logos** are always text monograms (CNN, CNBC, abc) in display type.
 - **Hover (D):** art dims to 0.38, an accent play disc appears, and an inset 2 px off-white ring is drawn (inset, so the card's clipping never cuts it).
-- **Focus (D):** the keyboard ring outside the tile. **Focus (T):** a 4 px white ring + scale 1.06; the caption shifts 8 px and brightens.
+- **Focus (D):** the keyboard ring outside the tile. **Focus (T):** a 4 px white ring without scale; the caption brightens.
 - **Touch overflow (P):** a ⋯ button (44 target) on posters and continue cards opens the title menu. Long-press does the same.
 - **Profile tiles:** a lock badge on PIN-protected profiles. "Add profile" shows as a dashed tile and is disabled at 12 profiles.
 - **Avatar tiles:** the selected tile shows a check badge. Worlds are shown as chips, one grid page at a time (P 15, D and T 18) with Previous / Next.

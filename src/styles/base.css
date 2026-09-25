@@ -66,6 +66,13 @@ a {
  * .vx-tv-focus-ring  image tiles: ring + lift, scale 1.06 (the tile keeps its
  *                    art; its caption shift is owned by the card primitive).
  */
+.tv-layout {
+  /* TV focus is a stable outline/fill; focused controls keep their geometry. */
+  --viptv-focus-tv-scale-button: 1;
+  --viptv-focus-tv-scale-row: 1;
+  --viptv-focus-tv-scale-tile: 1;
+  --viptv-focus-tv-scale-key: 1;
+}
 .tv-layout .vx-tv-focus-fill,
 .tv-layout .vx-tv-focus-ring {
   transition:

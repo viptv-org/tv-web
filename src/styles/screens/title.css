@@ -546,7 +546,7 @@
   object-fit: cover;
   -webkit-mask-image: linear-gradient(to right, transparent 0%, black 38%);
   mask-image: linear-gradient(to right, transparent 0%, black 38%);
-  opacity: 0.75; /* TvTitle.html: 0.75 on Title / Sources */
+  opacity: 1;
 }
 .tv-layout .vx-title__hero {
   position: absolute;

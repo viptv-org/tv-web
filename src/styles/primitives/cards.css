@@ -1063,7 +1063,7 @@
 }
 .tv-layout .vx-card:focus .vx-card__art {
   box-shadow: var(--viptv-focus-tv-shadow);
-  transform: scale(var(--viptv-focus-tv-scale-tile));
+  transform: none;
 }
 .tv-layout .vx-card:focus .vx-card__caption,
 .tv-layout .vx-card:focus > .vx-card__eyebrow,
@@ -1192,7 +1192,7 @@
 }
 .tv-layout .vx-profile:focus .vx-profile__avatar {
   box-shadow: var(--viptv-focus-tv-shadow);
-  transform: scale(var(--viptv-focus-tv-scale-tile));
+  transform: none;
 }
 .tv-layout .vx-profile:focus .vx-profile__name {
   color: var(--viptv-color-text-primary);

@@ -37,6 +37,13 @@ import type { UpNextCard as UpNextState } from "../ui/app/upNext";
 import type { Player, PlayerSnapshot } from "@viptv/video";
 import type { MediaItem } from "../api";
 
+function durationLabel(seconds: number): string {
+  if (!Number.isFinite(seconds) || seconds <= 0) return "";
+  const minutes = Math.max(1, Math.round(seconds / 60));
+  const hours = Math.floor(minutes / 60);
+  return hours ? `${hours} h ${minutes % 60} min` : `${minutes} min`;
+}
+
 /**
  * The player (components.md §10; Ph/Desk/TvPlayer*, Ph/Desk/TvUpNext). All
  * playback state and engine access stay owned by the app's hooks; this renders
@@ -265,7 +272,7 @@ function ResponsivePlayer({
                 />
                 <p className="vx-timeline__times player-time">
                   <span>{formatPlaybackTime(seek ?? position)}</span>
-                  <span>{formatPlaybackTime(duration)}</span>
+                  <span>{durationLabel(duration)}</span>
                 </p>
               </div>
             )}
@@ -539,7 +546,7 @@ function TvPlayer({
                   />
                   <p className="vx-timeline__times player-time">
                     <span>{formatPlaybackTime(position)}</span>
-                    <span>{formatPlaybackTime(duration)}</span>
+                    <span>{durationLabel(duration)}</span>
                   </p>
                 </div>
               )}

@@ -1,3 +1,42 @@
+# TV visual refinement — 2026-09-24
+
+Design pin `fa8b20e0e63d465498b6b2af8571a4e9cdc1015f` records stable-size TV focus. The React TV entry now keeps focus in the current horizontal shelf, reveals the full trailing card, adds space between Home shelves, removes the Home key legend and focused scaling, and uses landscape detail art and a stable runtime label in the player. SolidTV preview now uses cached canvas icons for the affected Home, title, profile and player actions, shows an animated preparation spinner, avoids tile/profile scaling, reveals later queue cards, and omits empty movie episode chrome.
+
+Evidence: design validation passed; `npm run build`, `npm test` (172 tests), TypeScript, five React preview captures (`TvHome`, `TvTitle`, `TvProfiles`, `TvPlayer`, `TvPlayerNext`), and SolidTV captures (`TvHome`, `TvProfiles`, `TvProfilesManage`, `TvTitle`, `TvPlayer`) passed in desktop Chromium at 1920×1080. The targeted Tizen browser test for trailing-card visibility, shelf-bound Right and hiding the hero artwork after moving down passed. A broader Tizen E2E run had seven passes, twelve declared skips and one search timing failure; that exact search case passed alone. Browser captures are visual evidence, not physical TV or real-media qualification.
+
+SolidTV follow-through: Home now reveals all loaded live/catalog/My List shelves after the first queue frame, preserves each shelf's horizontal cursor, and keeps the featured artwork out of the scrolled view. Browser fixture navigation reached the final queue card, stayed there on Right, moved to the next shelf on Down, restored the saved card on Up, and returned from a lower-shelf detail page to the originating card. Profile edit uses the existing design-matched React editor as a lazy modal above the SolidTV canvas; the SolidTV remote is suspended only while that modal owns focus. Browser fixtures exercised create, rename, avatar selection, save, delete and return focus, plus profile paging to page two. Explicit series Next prepared the next episode on Tizen and Vizio browser stubs; Back cancelled a hanging Vizio replacement without stopping the outgoing session. These are browser simulations, not real media or device qualification. The staged SolidTV renderer still needs physical TV qualification before replacing the React entry.
+
+Final validation batch: all 30 original SolidTV preview scenarios passed, along with the five editor states, twelve-profile paging, explicit Next on Tizen/Vizio, and cancellation of a hanging Vizio Next. `npm test` passed 172 tests; `npm run build` passed the design/core/video integrity checks, TypeScript and production bundling. The full Playwright run passed 129 tests with 75 declared skips. Its first run found an assertion expecting the old `2:00` duration label; the assertion now checks the intended `2 min` runtime, passed alone, and the full rerun passed. A six-trial local HTTPS Chromium performance comparison at 4× CPU recorded SolidTV median Home readiness 537.3 ms versus React 557.6 ms and main-thread work per key 5.307 ms versus 12.372 ms; all eight comparative checks passed. Browser and benchmark evidence does not certify physical Tizen/Vizio decoding or signing.
+
+The design-wide generated-theme check reports Android and Roku as stale because those apps remain on older design pins; their generated files were left at those revisions. The tv-web design snapshot and its generated theme pass the app build checks.
+
+---
+
+# SolidTV performance optimization — 2026-09-24
+
+See [PERFORMANCE.md](PERFORMANCE.md) for the reproducible React comparison,
+raw-metric definitions, hardware identity and limits. At 4× CPU, six trials
+per renderer measured 11% faster Home readiness and 59% less main-thread
+work/key for SolidTV; all comparative speed/frame checks passed at 1× and 4×.
+The 8× stress check failed first guide entry (250.5ms versus 237.2ms) while
+passing the other seven checks. Post-guide JS heap is 1.113MiB higher for
+SolidTV. These are hardware-enabled desktop Chromium measurements, not TV
+hardware qualification or complete product-parity evidence.
+
+172 unit/integration tests (including two new deferred-render/paint-order
+regressions), all 30 TV fixture scenarios, and the production build with
+integrity/type checks passed. Six changed-renderer screen captures were
+pixel-identical to the pre-optimization SolidTV build. Hold timing, pinned
+design, coordinates and drawing inputs were preserved. Guide entry/reveal
+latency was reduced without changing the remote actions.
+
+The full Playwright suite with four workers had 126 passes, 75 declared skips
+and one React-entry Vizio managed-seek assertion failure (fixture position
+0s versus 10s). The exact test passed on a single-worker rerun; no assertion
+or playback logic was weakened. The aggregate run remains a recorded flake.
+
+---
+
 # SolidTV migration — 2026-09-24
 
 The isolated canvas entry now uses `@solidtv/solid` 1.6.4 and

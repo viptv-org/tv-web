@@ -19,7 +19,6 @@ import { presentation } from "../core/presentations";
 import { buttonClass } from "../ui/primitives/Button";
 import { CarouselDots, Eyebrow } from "../ui/primitives/Badges";
 import { PlayIcon } from "../ui/primitives/icons";
-import { KeyLegend } from "../ui/primitives/Keys";
 import { ProgressBar } from "../ui/primitives/Progress";
 import { SkeletonShelfCards } from "./HomeSkeleton";
 
@@ -242,13 +241,6 @@ export function HomeScreen({
           </Shelf>
         )}
       </div>
-      {!responsive && (
-        <KeyLegend
-          corner
-          className="vx-home__legend"
-          items={[{ key: "OK", label: "Select" }, { key: "☰", label: "Options" }]}
-        />
-      )}
     </main>
   );
 }

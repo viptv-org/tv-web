@@ -11,14 +11,18 @@ const name = process.argv[2] ?? 'TvPairing';
 const viaPlay = process.argv.includes('--via-play');
 const searchFailure = process.argv.includes('--search-fail');
 const emptySearch = process.argv.includes('--empty-search');
+const manyProfiles = process.argv.includes('--many-profiles');
+const nextCase = process.argv.includes('--next');
+const nextCancel = process.argv.includes('--next-cancel');
 const platform = process.argv.find(arg => arg.startsWith('--platform='))?.slice('--platform='.length) ?? 'tizen';
 const settingsNames = ['TvSettings', 'TvPlayback', 'TvPlaybackChoice', 'TvAddons', 'TvAddonManage', 'TvAddonRemove', 'TvSignOut'];
-if (!['TvPairing', 'TvPairingLoading', 'TvPairingExpired', 'TvProfiles', 'TvProfilesManage', 'TvManageCue', 'TvHome', 'TvMenu', 'TvDiscover', 'TvDiscoverFilter', 'TvLibrary', 'TvItemMenu', 'TvSearch', 'TvLive', 'TvLiveDetails', 'TvLiveSearch', ...settingsNames, 'TvTitle', 'TvSources', 'TvSourceProvider', 'TvSourceDetails', 'TvPlayer', 'TvPlayerSeek', 'TvPlayerSubs'].includes(name)) {
+const profileEditorNames = ['TvProfileEdit', 'TvProfileAdd', 'TvProfileName', 'TvAvatars', 'TvProfileDelete'];
+if (!['TvPairing', 'TvPairingLoading', 'TvPairingExpired', 'TvProfiles', 'TvProfilesManage', 'TvManageCue', ...profileEditorNames, 'TvHome', 'TvMenu', 'TvDiscover', 'TvDiscoverFilter', 'TvLibrary', 'TvItemMenu', 'TvSearch', 'TvLive', 'TvLiveDetails', 'TvLiveSearch', ...settingsNames, 'TvTitle', 'TvSources', 'TvSourceProvider', 'TvSourceDetails', 'TvPlayer', 'TvPlayerSeek', 'TvPlayerSubs'].includes(name)) {
   console.error('Usage: node tests/preview/solid-shoot.mjs [TvPairing|TvPairingLoading|TvPairingExpired|TvProfiles|TvProfilesManage|TvManageCue|TvHome|TvMenu|TvDiscover|TvDiscoverFilter|TvLibrary|TvItemMenu|TvSearch|TvLive|TvLiveDetails|TvLiveSearch|TvTitle|TvSources|TvSourceProvider|TvSourceDetails|TvPlayer|TvPlayerSeek|TvPlayerSubs] [--platform=tizen|vizio|webos]');
   process.exit(2);
 }
 if (!['tizen', 'vizio', 'webos'].includes(platform)) throw new Error(`Unsupported TV platform ${platform}`);
-const entry = reference(name);
+const entry = reference(name === 'TvProfileAdd' ? 'TvProfileEdit' : name);
 if (!entry) throw new Error(`Missing design reference ${name}`);
 const browser = await chromium.launch();
 try {
@@ -36,8 +40,8 @@ try {
   const logs = [];
   page.on('pageerror', error => errors.push(error.stack ?? error.message));
   page.on('console', message => { if (message.type() === 'error') errors.push(message.text()); else logs.push(message.text()); });
-  const profiles = name.startsWith('TvProfiles') || name === 'TvManageCue';
-  const backend = await installBackend(page, { family: 'tv', session: settingsNames.includes(name) || name === 'TvHome' || name === 'TvMenu' || name === 'TvDiscover' || name === 'TvDiscoverFilter' || name === 'TvLibrary' || name === 'TvItemMenu' || name === 'TvSearch' || name === 'TvLive' || name === 'TvLiveDetails' || name === 'TvLiveSearch' || name === 'TvTitle' || name === 'TvSources' || name === 'TvSourceProvider' || name === 'TvSourceDetails' || name === 'TvPlayer' || name === 'TvPlayerSeek' || name === 'TvPlayerSubs' ? 'ready' : profiles ? 'profiles' : 'none', pairing: name === 'TvPairingLoading' ? 'loading' : name === 'TvPairingExpired' ? 'expired' : undefined, favorites: name === 'TvLibrary', searchFail: searchFailure });
+  const profiles = name.startsWith('TvProfiles') || name === 'TvManageCue' || profileEditorNames.includes(name);
+  const backend = await installBackend(page, { family: 'tv', session: settingsNames.includes(name) || name === 'TvHome' || name === 'TvMenu' || name === 'TvDiscover' || name === 'TvDiscoverFilter' || name === 'TvLibrary' || name === 'TvItemMenu' || name === 'TvSearch' || name === 'TvLive' || name === 'TvLiveDetails' || name === 'TvLiveSearch' || name === 'TvTitle' || name === 'TvSources' || name === 'TvSourceProvider' || name === 'TvSourceDetails' || name === 'TvPlayer' || name === 'TvPlayerSeek' || name === 'TvPlayerSubs' ? 'ready' : profiles ? 'profiles' : 'none', pairing: name === 'TvPairingLoading' ? 'loading' : name === 'TvPairingExpired' ? 'expired' : undefined, favorites: name === 'TvLibrary', searchFail: searchFailure, manyProfiles, sourcesDone: nextCase || nextCancel, playbackHangAfter: nextCancel ? 1 : undefined });
   if (name === 'TvPlayer' || name === 'TvPlayerSeek' || name === 'TvPlayerSubs' || name === 'TvLibrary' || name === 'TvItemMenu') await installMediaStubs(page, { frame: '63e024', paused: name === 'TvPlayer' });
   const url = process.env.SOLID_PREVIEW_URL ?? process.env.LIGHTNING_PREVIEW_URL ?? 'http://127.0.0.1:4180/solid.html';
   await page.goto(`${url}?platform=${platform}&focusdebug=1`);
@@ -306,6 +310,33 @@ try {
     await page.keyboard.press('Enter');
     await page.waitForTimeout(100);
   }
+  if (profileEditorNames.includes(name)) {
+    await page.waitForFunction(() => window.__viptvFocus?.view === 'profile-tile' && window.__viptvFocus?.index === 0);
+    if (name === 'TvProfileAdd') {
+      for (let index = 0; index < 3; index++) await page.keyboard.press('ArrowRight');
+    } else {
+      await page.keyboard.press('ArrowDown');
+      await page.keyboard.press('Enter');
+      await page.waitForFunction(() => window.__viptvFocus?.view === 'profile-tile' && window.__viptvFocus?.index === 0);
+      await page.waitForTimeout(120);
+      await page.keyboard.press('ArrowRight');
+      await page.waitForFunction(() => window.__viptvFocus?.view === 'profile-tile' && window.__viptvFocus?.index === 1, null, { timeout: 3000 }).catch(async cause => {
+        throw new Error(`${cause.message}; focus ${JSON.stringify(await page.evaluate(() => window.__viptvFocus))}; errors ${JSON.stringify(errors)}`);
+      });
+    }
+    await page.keyboard.press('Enter');
+    await page.getByRole('dialog', { name: name === 'TvProfileAdd' ? 'Add a profile' : 'Edit profile' }).waitFor({ timeout: 10000 });
+    if (name === 'TvProfileName') {
+      await page.getByRole('button', { name: /Profile name:/ }).press('Enter');
+      await page.getByRole('dialog', { name: 'Text entry' }).waitFor();
+    } else if (name === 'TvAvatars') {
+      await page.getByRole('button', { name: 'Change avatar' }).press('Enter');
+      await page.getByRole('dialog', { name: 'Find your favorite' }).waitFor();
+    } else if (name === 'TvProfileDelete') {
+      await page.getByRole('button', { name: 'Delete profile' }).first().press('Enter');
+      await page.getByRole('dialog', { name: 'Delete profile' }).waitFor();
+    }
+  }
   if (name === 'TvManageCue') {
     await page.keyboard.down('Enter');
     await page.waitForTimeout(750);
@@ -315,8 +346,88 @@ try {
       throw new Error('Held Enter also selected a profile on release');
   }
   mkdirSync(outDir, { recursive: true });
-  const file = join(outDir, `${name}.solid${viaPlay ? '.resume' : ''}${searchFailure ? '.failure' : emptySearch ? '.empty' : ''}${platform === 'tizen' ? '' : `.${platform}`}.png`);
+  const file = join(outDir, `${name}.solid${viaPlay ? '.resume' : ''}${manyProfiles ? '.many' : ''}${nextCase ? '.next' : nextCancel ? '.next-cancel' : ''}${searchFailure ? '.failure' : emptySearch ? '.empty' : ''}${platform === 'tizen' ? '' : `.${platform}`}.png`);
   await page.screenshot({ path: file });
+  if (name === 'TvPlayer' && (nextCase || nextCancel)) {
+    await page.keyboard.press('ArrowRight');
+    await page.keyboard.press('ArrowRight');
+    await page.waitForFunction(() => window.__viptvFocus?.view === 'player-control' && window.__viptvFocus?.index === 3);
+    const replacement = nextCancel ? page.waitForRequest(request => new URL(request.url()).pathname === '/api/playback' && request.method() === 'POST' && Number(request.postDataJSON()?.position) === 0) : null;
+    await page.keyboard.press('Enter');
+    if (nextCancel) {
+      await replacement.catch(async cause => { throw new Error(`${cause.message}; requests ${JSON.stringify(backend.requests.slice(-15))}; player ${JSON.stringify(await page.evaluate(() => window.__viptvPlayer))}; errors ${JSON.stringify(errors)}`); });
+      await page.keyboard.press('Escape');
+      await page.waitForFunction(() => getComputedStyle(document.getElementById('solid-preparing-spinner')).display === 'none');
+      if (backend.requests.some(request => request.method === 'DELETE' && request.path.startsWith('/api/playback/')))
+        throw new Error('Cancelling Next stopped the outgoing playback session');
+    } else {
+    await page.waitForFunction(() => window.__viptvFocus?.view === 'player-control' && window.__viptvFocus?.index === 1, null, { timeout: 15000 }).catch(async cause => {
+      throw new Error(`${cause.message}; player ${JSON.stringify(await page.evaluate(() => window.__viptvPlayer))}; focus ${JSON.stringify(await page.evaluate(() => window.__viptvFocus))}; requests ${JSON.stringify(backend.requests.slice(-12))}; errors ${JSON.stringify(errors)}`);
+    });
+    if (!backend.requests.some(request => request.path.endsWith('/continue/next')) || backend.requests.filter(request => request.path === '/api/playback' && request.method === 'POST').length < 2)
+      throw new Error(`Next did not prepare the following episode: ${JSON.stringify(backend.requests.slice(-12))}`);
+    }
+  }
+  if (name === 'TvProfiles' && manyProfiles) {
+    await page.keyboard.press('ArrowDown');
+    await page.waitForFunction(() => window.__viptvFocus?.view === 'profile-tile' || window.__viptvFocus?.view === 'profile-pager');
+    await page.keyboard.press('ArrowDown');
+    await page.waitForFunction(() => window.__viptvFocus?.view === 'profile-pager' && window.__viptvFocus?.index === 1);
+    await page.keyboard.press('Enter');
+    await page.waitForFunction(() => window.__viptvFocus?.view === 'profile-tile' && window.__viptvFocus?.index === 0);
+    const selected = page.waitForRequest(request => new URL(request.url()).pathname === '/api/auth/profile');
+    await page.keyboard.press('Enter');
+    const request = await selected;
+    if (String(request.postDataJSON()?.profile_id) !== '6') throw new Error('Profile pager selected the wrong person');
+  }
+  if (name === 'TvHome') {
+    await page.waitForFunction(() => window.__viptvHome?.shelves > 1, null, { timeout: 10000 });
+    await page.keyboard.press('ArrowDown');
+    await page.waitForFunction(() => window.__viptvFocus?.view === 'home-card' && window.__viptvHome?.shelf === 0);
+    const firstCount = await page.evaluate(() => window.__viptvHome?.count ?? 0);
+    for (let index = 1; index < firstCount; index++) await page.keyboard.press('ArrowRight');
+    await page.waitForFunction((index) => window.__viptvHome?.card === index, firstCount - 1);
+    await page.keyboard.press('ArrowRight');
+    if ((await page.evaluate(() => window.__viptvHome?.card)) !== firstCount - 1)
+      throw new Error('Right escaped the final Continue Watching card');
+    await page.keyboard.press('ArrowDown');
+    await page.waitForFunction(() => window.__viptvHome?.shelf === 1 && window.__viptvFocus?.view === 'home-card');
+    await page.screenshot({ path: join(outDir, 'TvHome.lower.solid.png') });
+    await page.keyboard.press('ArrowDown');
+    await page.waitForFunction(() => window.__viptvHome?.shelf === 2 && window.__viptvFocus?.view === 'home-card');
+    await page.keyboard.press('Enter');
+    await page.waitForFunction(() => window.__viptvFocus?.view === 'title-action' && window.__viptvFocus?.index === 0);
+    await page.keyboard.press('Escape');
+    await page.waitForFunction(() => window.__viptvHome?.shelf === 2 && window.__viptvFocus?.view === 'home-card' && window.__viptvHome?.card === 0);
+    await page.keyboard.press('ArrowUp');
+    await page.waitForFunction(() => window.__viptvHome?.shelf === 1 && window.__viptvFocus?.view === 'home-card');
+    await page.keyboard.press('ArrowUp');
+    await page.waitForFunction((index) => window.__viptvHome?.shelf === 0 && window.__viptvHome?.card === index, firstCount - 1);
+    await page.keyboard.press('ArrowUp');
+    await page.waitForFunction(() => window.__viptvFocus?.view === 'home-action');
+  }
+  if (profileEditorNames.includes(name)) {
+    if (name === 'TvProfileName' || name === 'TvProfileAdd') {
+      if (name === 'TvProfileAdd') await page.getByRole('button', { name: /Profile name:/ }).press('Enter');
+      const field = page.getByRole('dialog', { name: 'Text entry' }).getByRole('textbox').first();
+      await field.fill('sam');
+      await page.getByRole('dialog', { name: 'Text entry' }).getByRole('button', { name: 'Done' }).press('Enter');
+    }
+    if (name === 'TvProfileDelete')
+      await page.getByRole('dialog', { name: 'Delete profile' }).getByRole('button', { name: 'Delete profile' }).press('Enter');
+    else if (name !== 'TvAvatars')
+      await page.getByRole('button', { name: name === 'TvProfileAdd' ? 'Create profile' : 'Save', exact: true }).press('Enter');
+    else {
+      await page.locator('.vx-avatar-tile').nth(1).press('Enter');
+      await page.getByRole('button', { name: 'Save', exact: true }).press('Enter');
+    }
+    const expectedMethod = name === 'TvProfileAdd' ? 'POST' : name === 'TvProfileDelete' ? 'DELETE' : 'PATCH';
+    const expectedPath = name === 'TvProfileAdd' ? '/api/profiles' : '/api/profiles/2';
+    await page.locator('.vx-account-editor').waitFor({ state: 'detached', timeout: 10000 });
+    await page.waitForFunction(() => window.__viptvFocus?.view === 'profile-tile', null, { timeout: 10000 });
+    if (!backend.requests.some(request => request.method === expectedMethod && request.path === expectedPath))
+      throw new Error(`Profile ${name} did not issue ${expectedMethod} ${expectedPath}: ${JSON.stringify(backend.requests.slice(-8))}`);
+  }
   if (settingsNames.includes(name)) {
     const focused = (view, index) => page.waitForFunction(
       ({ view, index }) => window.__viptvFocus?.view === view && window.__viptvFocus?.index === index,
@@ -890,7 +1001,7 @@ try {
     await page.keyboard.press('Escape');
     await focused('title-action', 1);
   }
-  if (name === 'TvPlayer') {
+  if (name === 'TvPlayer' && !nextCase && !nextCancel) {
     const focused = (view, index) => page.waitForFunction(
       ({ view, index }) => window.__viptvFocus?.view === view && window.__viptvFocus?.index === index,
       { view, index }, { timeout: 5000 });
@@ -980,7 +1091,7 @@ try {
     await page.waitForTimeout(150);
     if (pairingRequests() !== 2) throw new Error('Enter release did not request a fresh pairing code');
   }
-  if (name === 'TvProfiles') {
+  if (name === 'TvProfiles' && !manyProfiles) {
     await page.keyboard.press('ArrowRight');
     await page.keyboard.press('Enter');
     await page.waitForTimeout(150);

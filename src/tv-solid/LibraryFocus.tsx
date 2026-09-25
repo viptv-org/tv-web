@@ -168,7 +168,6 @@ export const LibraryCard = defineScreen({
       <TvView
         x={s.focused ? -11 : 0}
         y={s.focused ? -6 : 0}
-        scale={s.focused ? 1.06 : 1}
       >
         <TvView
           x={-4}

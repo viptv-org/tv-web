@@ -3,6 +3,7 @@ import { defineScreen, TvView, TvText } from "./runtime";
 import { tokens } from "../theme/viptv-tokens.generated";
 import type { DetailEpisodeView } from "./detailModel";
 import { noteFocus } from "./focusDebug";
+import { actionIconFor } from "./actionIcons";
 
 /** Focus-owning title action; Play alone has the 700 ms secondary action. */
 export const TitleAction = defineScreen({
@@ -103,13 +104,13 @@ export const TitleAction = defineScreen({
         rounded={36}
         color={s.focused ? s.primary : s.surface}
       />
-      <TvText
+      <TvView
         x={32}
-        y={18}
-        content={s.iconText}
-        font={"Onest"}
-        size={28}
-        color={s.focused ? s.onLight : s.primary}
+        y={20}
+        w={28}
+        h={28}
+        src={actionIconFor(s.action === "save" ? (s.iconText === "✓" ? "check" : "plus") : s.action, s.focused)}
+        show={s.action !== "source"}
       />
       <TvText
         x={s.icon === "" ? 34 : 78}
@@ -181,7 +182,7 @@ export const EpisodeTile = defineScreen({
   },
 
   render: (s) => (
-    <TvView show={s.episode.item !== null} scale={s.focused ? 1.06 : 1}>
+    <TvView show={s.episode.item !== null}>
       <TvView
         x={-4}
         y={-4}

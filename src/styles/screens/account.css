@@ -608,10 +608,13 @@
 }
 .tv-layout .vx-profiles__manage {
   --vx-h: 60px; /* TvProfiles manage button */
-  --vx-px: calc(var(--viptv-space-7) + var(--viptv-space-0_5)); /* 30 */
+  --vx-px: 26px;
   --vx-fs: var(--viptv-type-tv-meta-size);
   --vx-icon: var(--viptv-size-icon-large);
   gap: var(--viptv-space-3);
+  width: auto;
+  align-self: center;
+  line-height: 1;
 }
 
 /* ---------------------------------------------------------------------------

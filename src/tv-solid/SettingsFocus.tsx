@@ -194,7 +194,7 @@ export const SettingsProfile = defineScreen({
   },
 
   render: (s) => (
-    <TvView show={s.tile.visible} w={160} h={240} scale={s.focused ? 1.04 : 1}>
+    <TvView show={s.tile.visible} w={160} h={240}>
       <TvView
         x={-4}
         y={-4}

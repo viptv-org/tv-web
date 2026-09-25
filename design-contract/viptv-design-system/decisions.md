@@ -12,6 +12,7 @@
 8. **Desktop keyboard focus:** an off-white 2 px ring with a 2 px ground-coloured gap, shown on `:focus-visible` only. Never accent.
 9. **Naming:** "My List" everywhere. It has two segments, My List | Continue Watching. History and counts are dropped from the tabs.
 10. **Avatars:** hide broken categories and compute the count shown in the header.
+11. **TV focus:** focused tiles, profiles, rows and controls keep their size. Use the white ring or off-white fill without scale.
 
 ## Design decisions made during the redesign
 

@@ -202,7 +202,8 @@ test.describe('Vizio remote player contract', () => {
         window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
       window.dispatchEvent(new KeyboardEvent('keyup', { key: 'ArrowRight', bubbles: true }));
     });
-    await expect(page.locator('.player-time').filter({ hasText: /^2:002:00$/ })).toBeVisible();
+    await expect(page.locator('.player-time span').first()).toHaveText('2:00');
+    await expect(page.locator('.player-time span').last()).toHaveText('2 min');
     noPageErrors();
   });
 

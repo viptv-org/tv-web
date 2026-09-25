@@ -193,6 +193,20 @@ export function moveFocus(key: string, current: HTMLElement | null) {
     focusElement(explicit);
     return;
   }
+  // Horizontal movement in a shelf stays in that shelf. Spatial distance to
+  // an off-screen card is misleading and used to jump to the next row.
+  if (direction === "right" || direction === "left") {
+    const slot = current.closest<HTMLElement>(".cards > .vx-card-slot");
+    if (slot) {
+      const sibling = direction === "right" ? slot.nextElementSibling : slot.previousElementSibling;
+      const card = sibling?.querySelector<HTMLElement>("[data-focus-id]:not([disabled])");
+      if (card) {
+        card.focus();
+        return;
+      }
+      if (direction === "right") return;
+    }
+  }
   const rect = current.getBoundingClientRect();
   const cx = rect.left + rect.width / 2,
     cy = rect.top + rect.height / 2;
@@ -297,14 +311,11 @@ function revealFocusedControl(element: HTMLElement) {
         if (parent.classList.contains("cards")) {
           if (target.left < rect.left || target.right > rect.right) {
             const anchor = target.left < rect.left ? 0.33 : 0.67;
-            const desired = Math.max(
-              0,
-              (element.closest(".responsive-app")
-                ? parent.scrollLeft + (target.left - rect.left) / scaleX
-                : element.offsetLeft) +
-                element.offsetWidth / 2 -
-                parent.clientWidth * anchor,
-            );
+            const slot = element.closest<HTMLElement>(".vx-card-slot");
+            const contentLeft = slot && !element.closest(".responsive-app")
+              ? slot.offsetLeft
+              : parent.scrollLeft + (target.left - rect.left) / scaleX;
+            const desired = Math.max(0, contentLeft + element.offsetWidth / 2 - parent.clientWidth * anchor);
             try {
               parent.scrollTo({ left: desired, behavior: "smooth" });
             } catch {

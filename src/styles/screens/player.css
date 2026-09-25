@@ -713,6 +713,7 @@
 }
 .tv-layout .vx-player__timeline .vx-timeline__times {
   margin: 0;
+  font-variant-numeric: tabular-nums;
 }
 /* A remote seek preview shows the knob, the thick track and the bubble even
    when the bar itself does not hold focus (arrows with the controls hidden). */

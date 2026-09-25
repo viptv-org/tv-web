@@ -877,7 +877,7 @@
 }
 .tv-layout .vx-home .vx-shelf {
   margin: 0;
-  padding: 0 0 var(--viptv-layout-tv-row-gap);
+  padding: 0 0 112px;
 }
 .tv-layout .vx-shelf__head {
   /* heading-to-row 22 = 6 here + the track's 16 focus headroom. */
@@ -892,7 +892,7 @@
 }
 .tv-layout .vx-cards {
   gap: var(--viptv-layout-tv-row-gap);
-  /* Room for the focused tile's 1.06 scale, ring and 8 px caption drop. */
+  /* Keep the trailing tile fully reachable before focus moves vertically. */
   padding: var(--viptv-space-4) var(--viptv-space-24) var(--viptv-space-6) var(--vx-home-inset, var(--viptv-space-12));
   scroll-behavior: smooth;
 }

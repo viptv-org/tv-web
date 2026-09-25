@@ -3,6 +3,7 @@ import { defineScreen, TvView, TvText } from "./runtime";
 import { tokens } from "../theme/viptv-tokens.generated";
 import { noteFocus } from "./focusDebug";
 import type { TrackChoiceView } from "./trackModel";
+import { actionIconFor } from "./actionIcons";
 
 export const PlayerControl = defineScreen({
   props: ["position", "action", "icon", "diameter"] as unknown as {
@@ -74,13 +75,12 @@ export const PlayerControl = defineScreen({
         rounded={s.diameter / 2}
         color={s.focused ? s.primary : s.surface}
       />
-      <TvText
-        x={s.diameter / 2 - 18}
-        y={s.diameter / 2 - 23}
-        content={s.iconText}
-        font={"Onest700"}
-        size={36}
-        color={s.focused ? s.onLight : s.primary}
+      <TvView
+        x={(s.diameter - 32) / 2}
+        y={(s.diameter - 32) / 2}
+        w={32}
+        h={32}
+        src={actionIconFor(s.action === "toggle" ? (s.iconText === "▶" ? "play" : "pause") : s.action === "subtitles" ? "captions" : s.action, s.focused)}
       />
     </TvView>
   ),

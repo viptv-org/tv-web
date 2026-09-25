@@ -93,7 +93,7 @@ export async function loadDetailView(
         ? "Resume"
         : "Play";
   const present = presentation(selected);
-  const art = present.heroImage ?? selected.background ?? selected.poster;
+  const art = present.heroImage ?? selected.background;
   const facts = [
     episodes.length ? "Series" : selected.type === "movie" ? "Movie" : "",
     selected.year ? String(selected.year) : "",

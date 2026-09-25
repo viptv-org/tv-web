@@ -105,7 +105,7 @@ export function DetailScreen({
   const selected = loaded && loaded.id === given.id && !given.name ? loaded : given;
   const presentation = givenPresentation && selected === given ? givenPresentation : selected.name ? itemPresentation(selected) : undefined;
   const series = selected.type === "series" && !selected.episode;
-  const art = presentation?.heroImage ?? selected.background ?? selected.poster;
+  const art = presentation?.heroImage ?? selected.background;
   // Genre targets cost a catalog-filter projection per catalog: resolve them
   // once per title, not per render.
   const genres = useMemo(

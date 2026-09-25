@@ -1,7 +1,7 @@
 {
   "version": 1,
   "repository": "viptv-org/design",
-  "commit": "aa2a1d69935fc07a97bd37d5fa0f78ab8d1c7b47",
+  "commit": "fa8b20e0e63d465498b6b2af8571a4e9cdc1015f",
   "files": {
     "design-contract/.github/pull_request_template.md": {
       "source": ".github/pull_request_template.md",
@@ -81,7 +81,7 @@
     },
     "design-contract/TV_IMPLEMENTATION.md": {
       "source": "TV_IMPLEMENTATION.md",
-      "sha256": "07d051e040a1d0b45e040962f01db1b595074210ac405bb08d6107393180d65a"
+      "sha256": "55b0e0b40fd8bde93f520817155cbf49bd757770ece9a5dc52ab36684d53b2e9"
     },
     "design-contract/docs/adr/0001-design-owned-assets.md": {
       "source": "docs/adr/0001-design-owned-assets.md",
@@ -109,7 +109,7 @@
     },
     "design-contract/viptv-design-system/README.md": {
       "source": "viptv-design-system/README.md",
-      "sha256": "20b2b9619be75a00cf195583dbdae7d92bbfaf45d9f8d97f1855d1e2afa99b72"
+      "sha256": "46e5b8e84b9a4ca8dd45f31439488495ef372a774ea64202b68417f54e4865c7"
     },
     "design-contract/viptv-design-system/claude-code/.claude/skills/viptv-ui/SKILL.md": {
       "source": "viptv-design-system/claude-code/.claude/skills/viptv-ui/SKILL.md",
@@ -117,7 +117,7 @@
     },
     "design-contract/viptv-design-system/components.md": {
       "source": "viptv-design-system/components.md",
-      "sha256": "3c17d413e9d673c4b9d4eff37a106491d451354b02f7824a90bc151e4542d206"
+      "sha256": "f9566958d430d44feb0456c403c9051aade96e250558ba39f2862b515891feda"
     },
     "design-contract/viptv-design-system/copy.md": {
       "source": "viptv-design-system/copy.md",
@@ -125,7 +125,7 @@
     },
     "design-contract/viptv-design-system/decisions.md": {
       "source": "viptv-design-system/decisions.md",
-      "sha256": "689d512fdda192a50fc3d68b28ab28c0ff7ce47d368709a69909b2ead00fa7d7"
+      "sha256": "bc7f25839af875b0df1413c75acce8eda06b64bc98ac292e6bbe7fda0ae0e8e7"
     },
     "design-contract/viptv-design-system/reference/screens/index.json": {
       "source": "viptv-design-system/reference/screens/index.json",
@@ -133,7 +133,7 @@
     },
     "design-contract/viptv-design-system/tokens/tokens.json": {
       "source": "viptv-design-system/tokens/tokens.json",
-      "sha256": "ebce6279e2f40575f9b5dca9fca112674e60ae13a5dd1f208acc0db527ffaa6d"
+      "sha256": "3c502ddf30eb838d0de2955a319716bf309f062c0ee420771b5d4a36688ffd10"
     },
     "design-contract/viptv-design-system/tools/targets.json": {
       "source": "viptv-design-system/tools/targets.json",

@@ -192,6 +192,41 @@ test('Roku visual contract keeps fixed geometry, focus ownership and proportiona
   assertNoPageErrors();
 });
 
+test('Home keeps the last queue card fully visible and Right stays in its shelf', async ({ page }) => {
+  await installPlatformRuntime(page);
+  await installBackend(page);
+  const queue = Array.from({ length: 7 }, (_, index) => ({
+    ...movie,
+    id: `tt-queue-${index}`,
+    name: `Queue ${index}`,
+    title: `Queue ${index}`,
+    position: 20,
+    duration: 120,
+  }));
+  await page.route(`${apiOrigin}/api/profiles/1/continue/page**`, route =>
+    json(route, { items: queue, offset: 0, total: queue.length, next_offset: null }),
+  );
+  await page.addInitScript(({ key, token }) => localStorage.setItem(key, JSON.stringify(token)), { key: `viptv-device:${apiOrigin}`, token: { sessionId: 'device-1', accountId: '7', profileId: null, accessToken: 'access', refreshToken: 'refresh', expiresIn: 900 } });
+  await page.goto('/?platform=tizen');
+  await page.getByRole('button', { name: 'Alex' }).press('Enter');
+  const last = page.locator('[data-focus-id="queue-6"]');
+  await expect(last).toBeVisible();
+  await page.locator('[data-focus-id="queue-0"]').focus();
+  for (let index = 0; index < 6; index++) await page.keyboard.press('ArrowRight');
+  await expect(last).toBeFocused();
+  await expect(async () => {
+    const box = await last.boundingBox();
+    expect(box).not.toBeNull();
+    expect(box!.x).toBeGreaterThanOrEqual(192);
+    expect(box!.x + box!.width).toBeLessThanOrEqual(1920);
+  }).toPass();
+  await page.keyboard.press('ArrowRight');
+  await expect(last).toBeFocused();
+  await page.keyboard.press('ArrowDown');
+  await expect(page.locator('.vx-home')).toHaveClass(/compact-home/);
+  await expect(page.locator('.vx-home-backdrop')).toBeHidden();
+});
+
 test('series progress marks watched and resumed episodes while remote paging reveals the row', async ({ page }, testInfo) => {
   const platform = testInfo.project.name as 'tizen' | 'vizio';
   await installPlatformRuntime(page);

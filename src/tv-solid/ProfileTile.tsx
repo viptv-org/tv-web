@@ -4,6 +4,7 @@ import type { TvProfile } from "../api";
 import { tokens } from "../theme/viptv-tokens.generated";
 import avatarCatalog from "../ui/avatars.json";
 import { noteFocus } from "./focusDebug";
+import { actionIcon } from "./actionIcons";
 
 export interface ProfileTileData {
   id: string;
@@ -172,7 +173,7 @@ export const ProfileTile = defineScreen({
   },
 
   render: (s) => (
-    <TvView y={398} show={s.tile.visible} scale={s.focused ? 1.06 : 1}>
+    <TvView y={398} show={s.tile.visible}>
       <TvView
         x={-4}
         y={-4}
@@ -290,6 +291,9 @@ export const ManageProfilesButton = defineScreen({
     up() {
       this.$emit("profile-restore-focus");
     },
+    down() {
+      this.$emit("profile-pager-focus");
+    },
     enter() {
       return () => this.$emit("profile-manage-toggle");
     },
@@ -297,29 +301,58 @@ export const ManageProfilesButton = defineScreen({
 
   render: (s) => (
     <TvView
-      x={824}
+      x={828}
       y={761}
-      w={272}
+      w={264}
       h={60}
       rounded={30}
       color={s.focused ? s.primary : s.surface}
     >
-      <TvText
+      <TvView
         x={30}
-        y={13}
-        content={s.icon}
-        font={"Onest"}
-        size={25}
-        color={s.focused ? s.onLight : s.primary}
+        y={16}
+        w={28}
+        h={28}
+        src={actionIcon(s.managing ? "check" : "settings", s.focused)}
       />
       <TvText
         x={67}
-        y={14}
+        y={17}
         content={s.caption}
         font={"Onest700"}
         size={22}
         color={s.focused ? s.onLight : s.primary}
       />
+    </TvView>
+  ),
+});
+
+export const ProfilePagerButton = defineScreen({
+  props: ["position", "label", "disabled"] as unknown as { position: number; label: string; disabled: boolean },
+  state() {
+    return {
+      focused: false,
+      primary: tokens["color.text.primary"],
+      onLight: tokens["color.on.light"],
+      surface: tokens["color.surface.3"],
+      white: tokens["color.fill.white"],
+    };
+  },
+  hooks: {
+    focus() { this.focused = true; noteFocus("profile-pager", this.position); },
+    unfocus() { this.focused = false; },
+  },
+  input: {
+    left() { this.$emit("profile-pager-move", -1); },
+    right() { this.$emit("profile-pager-move", 1); },
+    up() { this.$emit("profile-manage-focus"); },
+    enter() { return () => { if (!this.disabled) this.$emit("profile-page-change", this.position === 0 ? -1 : 1); }; },
+  },
+  render: (s) => (
+    <TvView w={220} h={56} alpha={s.disabled ? .4 : 1}>
+      <TvView x={-4} y={-4} w={228} h={64} rounded={32} color={s.white} show={s.focused} />
+      <TvView w={220} h={56} rounded={28} color={s.focused ? s.primary : s.surface} />
+      <TvText x={0} y={14} maxwidth={220} align={"center"} content={s.label} font={"Onest700"} size={22} color={s.focused ? s.onLight : s.primary} />
     </TvView>
   ),
 });

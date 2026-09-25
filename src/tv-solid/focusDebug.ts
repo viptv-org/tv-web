@@ -13,6 +13,13 @@ export function noteFocus(view: string, index: number) {
   };
 }
 
+/** Test-only Home shelf/window marker for remote navigation assertions. */
+export function noteHomeShelf(shelf: number, card: number, count: number, windowStart: number, shelves: number) {
+  if (!enabled) return;
+  (window as Window & { __viptvHome?: { shelf: number; card: number; count: number; windowStart: number; shelves: number } }).__viptvHome =
+    { shelf, card, count, windowStart, shelves };
+}
+
 /** Test-only identity marker; never includes source URLs or credentials. */
 export function noteSourceIntent(
   itemId: string,

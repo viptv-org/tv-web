@@ -3,6 +3,7 @@ import { defineScreen, TvView, TvText } from "./runtime";
 import { tokens } from "../theme/viptv-tokens.generated";
 import type { HomeCardView } from "./homeModel";
 import { noteFocus } from "./focusDebug";
+import { actionIconFor } from "./actionIcons";
 
 /** A focus-owning SolidTV action. Selection fires on remote key release. */
 export const HomeAction = defineScreen({
@@ -107,17 +108,17 @@ export const HomeAction = defineScreen({
         rounded={s.buttonHeight / 2}
         color={s.focused ? s.primary : s.surface}
       />
-      <TvText
-        x={s.round ? 20 : s.action === "details" ? 33 : 45}
-        y={s.buttonHeight / 2 - 17}
-        content={s.iconText}
-        font={"Onest"}
-        size={s.round ? 38 : 27}
-        color={s.focused ? s.onLight : s.primary}
+      <TvView
+        x={s.round ? 20 : 38}
+        y={(s.buttonHeight - 32) / 2}
+        w={32}
+        h={32}
+        src={actionIconFor(s.action === "save" ? (s.iconText === "✓" ? "check" : "plus") : s.action, s.focused)}
+        show={s.action !== "details"}
       />
       <TvText
-        x={s.action === "details" ? 33 : 81}
-        y={s.buttonHeight / 2 - 16}
+        x={s.action === "details" ? 33 : 82}
+        y={(s.buttonHeight - 26) / 2}
         content={s.labelText}
         font={"Onest700"}
         size={26}
@@ -172,6 +173,12 @@ export const HomeCard = defineScreen({
       this.subtitleText = this.card.subtitle;
     },
   },
+  watch: {
+    card(value: HomeCardView) {
+      this.titleText = value.title;
+      this.subtitleText = value.subtitle;
+    },
+  },
   input: {
     left() {
       this.$emit("home-card-move", { position: this.position, delta: -1 });
@@ -180,7 +187,10 @@ export const HomeCard = defineScreen({
       this.$emit("home-card-move", { position: this.position, delta: 1 });
     },
     up() {
-      this.$emit("home-action-return");
+      this.$emit("home-card-up");
+    },
+    down() {
+      this.$emit("home-card-down");
     },
     menu() {
       this.$emit("home-card-hold", this.position);
@@ -204,7 +214,7 @@ export const HomeCard = defineScreen({
   },
 
   render: (s) => (
-    <TvView show={s.card.id !== ""} scale={s.focused ? 1.06 : 1}>
+    <TvView show={s.card.id !== ""}>
       <TvView
         x={-4}
         y={-4}
@@ -220,8 +230,10 @@ export const HomeCard = defineScreen({
         h={180}
         rounded={16}
         src={s.card.image}
+        fit={"cover"}
         show={s.card.image !== ""}
       />
+      <TvText x={16} y={62} maxwidth={288} maxlines={2} align={"center"} content={s.card.title} font={"Bricolage700"} size={30} color={s.secondary} show={s.card.image === ""} />
       <TvView
         x={14}
         y={164}
@@ -248,7 +260,7 @@ export const HomeCard = defineScreen({
         color={s.focused ? s.primary : s.primary}
       />
       <TvText
-        y={s.focused ? 239 : 231}
+        y={231}
         maxwidth={320}
         maxlines={1}
         content={s.subtitleText}
@@ -256,6 +268,20 @@ export const HomeCard = defineScreen({
         size={20}
         color={s.secondary}
       />
+    </TvView>
+  ),
+});
+
+/** Unfocused glimpse of the following shelf once Home has scrolled down. */
+export const HomePreviewCard = defineScreen({
+  props: ["card"] as unknown as { card: HomeCardView },
+  render: (s) => (
+    <TvView y={688} show={s.card.id !== ""}>
+      <TvView w={320} h={180} rounded={16} color={tokens["color.surface.2"]} />
+      <TvView w={320} h={180} rounded={16} src={s.card.image} show={s.card.image !== ""} fit={"cover"} />
+      <TvText x={16} y={62} maxwidth={288} maxlines={2} align={"center"} content={s.card.title} font={"Bricolage700"} size={30} color={tokens["color.text.secondary"]} show={s.card.image === ""} />
+      <TvText y={198} maxwidth={320} maxlines={1} content={s.card.title} font={"Onest700"} size={24} color={tokens["color.text.primary"]} />
+      <TvText y={231} maxwidth={320} maxlines={1} content={s.card.subtitle} font={"Onest"} size={20} color={tokens["color.text.secondary"]} />
     </TvView>
   ),
 });
