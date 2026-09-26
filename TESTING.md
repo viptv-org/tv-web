@@ -1,3 +1,7 @@
+# Shared native source contract — 2026-09-26
+
+Adopts core `2cfd963e5cf9178d93e8bbb7462bcccb92b152f3` with stable producer keys/labels and bounded private playback headers. Android adopts the same revision. TV-web unit suite passed (187 tests), and the pinned design/core/video checks, typecheck and production build passed. This shared-contract import does not add physical Tizen/Vizio qualification.
+
 # TV reliability corrections — 2026-09-25
 
 Design pin `8ab5b6e95cdc9c6154efec2ff418a4ee1eecf55e`, contract
