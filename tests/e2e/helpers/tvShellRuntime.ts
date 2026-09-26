@@ -166,7 +166,7 @@ for (const platform of ['tizen', 'vizio'] as const) {
     test.skip(test.info().project.name !== platform, 'run each platform query in its matching project');
     const assertNoPageErrors = await installPlatformRuntime(page);
     await enterHome(page, platform);
-    await expectBox(page, '.shelves', { x: 144, y: 700, width: 1776 });
+    await expectBox(page, '.shelves', { x: 192, y: 700, width: 1632 });
     const firstCard = await page.locator('.media-card').first().boundingBox();
     expect(firstCard).not.toBeNull();
     expect(firstCard!.width).toBe(320);

@@ -680,7 +680,7 @@
  * viewport (BrowseScreen keepInView), so viewports are widened by 24 with matching padding.
  * ------------------------------------------------------------------------ */
 .tv-layout main.vx-browse {
-  --vx-browse-room: var(--viptv-space-6);
+  --vx-browse-room: 4px;
   position: absolute;
   left: 0;
   top: 0;
@@ -691,22 +691,24 @@
   height: 100%;
   margin: 0;
   padding: var(--viptv-layout-tv-safe-y) var(--viptv-layout-tv-safe-x)
-    calc(var(--viptv-layout-tv-safe-y) + var(--viptv-size-keycap-tv-height) + var(--viptv-space-4))
+    var(--viptv-layout-tv-safe-y)
     calc(var(--viptv-layout-tv-rail-collapsed) + var(--viptv-space-12));
   overflow: hidden;
   color: var(--viptv-color-text-primary);
   font-family: var(--viptv-font-family-ui);
 }
 .tv-layout .vx-browse__head {
-  gap: var(--viptv-space-5_5);
+  gap: 32px;
 }
 .tv-layout .vx-browse__title {
   font-size: var(--viptv-type-tv-screen-title-size);
   font-weight: var(--viptv-type-tv-screen-title-weight);
-  line-height: var(--viptv-type-tv-screen-title-line-height);
+  line-height: 1.35;
   letter-spacing: var(--viptv-type-tv-screen-title-letter-spacing);
 }
-/* One chip row (types | catalogs | extras) that scrolls sideways under focus (TvDiscover). */
+/* TV-038: types above a separately scrollable catalog/filter row. */
+.tv-layout .vx-browse__tv-controls { display: flex; flex-direction: column; gap: 24px; }
+.tv-layout .vx-browse__types { display: flex; flex-wrap: nowrap; flex: none; gap: 12px; padding: 4px; margin: -4px; overflow-x: auto; }
 .tv-layout .vx-browse__chips {
   display: flex;
   flex-wrap: nowrap;
@@ -714,7 +716,8 @@
   gap: var(--viptv-space-2);
   margin: calc(var(--vx-browse-room) * -1);
   padding: var(--vx-browse-room);
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: hidden;
 }
 .tv-layout .vx-browse__chip-group {
   flex: none;
@@ -729,14 +732,21 @@
   position: relative;
   flex: 1 1 auto;
   min-height: 0;
-  margin: calc(var(--viptv-space-5_5) + var(--viptv-space-6) + var(--viptv-space-0_5) - var(--vx-browse-room)) calc(var(--vx-browse-room) * -1) 0;
+  margin: 24px -4px 0;
   padding: var(--vx-browse-room);
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 .tv-layout .vx-browse__grid > .cards {
-  column-gap: 44px; /* TvDiscover.html / TvLibrary.html: 4 × 360 tiles, gaps 44 */
-  row-gap: 44px;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 40px 36px;
+  padding: 0;
 }
+.tv-layout .vx-browse__grid .vx-card { --vx-card-w: 100%; }
+.tv-layout .vx-browse__grid .vx-card__art { width: 100%; height: 0; padding-top: 56.25%; }
+.tv-layout .vx-browse__grid .vx-card__art > img,
+.tv-layout .vx-browse__grid .vx-card__art > .tile-art { position: absolute; inset: 0; width: 100%; height: 100%; }
 .tv-layout .vx-browse__empty {
   margin-top: 0;
 }
@@ -773,7 +783,7 @@
   left: calc(850px - var(--vx-browse-room)); /* TvSearch.html: results from x 850 */
   right: 0;
   top: calc(150px - var(--vx-browse-room)); /* TvSearch.html: first heading at y 150 */
-  bottom: calc(var(--viptv-layout-tv-safe-y) + var(--viptv-size-keycap-tv-height) + var(--viptv-space-4));
+  bottom: var(--viptv-layout-tv-safe-y);
   display: flex;
   flex-direction: column;
   gap: 44px; /* TvSearch.html: sections 44 apart */

@@ -1,3 +1,32 @@
+# Hosted Vizio navigation aligned with Android TV — 2026-09-26
+
+TV-038 (`0322985`) applies to the normal hosted `?platform=vizio` DOM entry.
+The rail has explicit neighbors through Settings; focus scrolling uses nearest
+edges with native browser jumps suppressed; Home scrolls hero and shelves in one
+viewport and retains the full hero for its first row. Season is reachable from
+all episode positions. Discover uses two outlined chip rows and four fitting
+16:9 grid columns. Decorative TV legends and native scrollbars are removed.
+Resume retains the selected accent, and the hero uses Android TV's 664px stage,
+1120px artwork width and 72px ambient blur. Android adopts the same Resume rule.
+
+Validation: **191 unit tests** passed; typecheck and production build passed.
+Trusted local HTTPS browser acceptance passed five scenarios, including rail and
+18-card scrolling at 1920×1080 and 1280×720, upward scroll direction, episode
+Season restoration, empty/repeated catalog pages, selected chip borders, grid
+bounds, Resume color and blur geometry. The existing Vizio browse/shell/dialog
+regression selection passed **14 tests**, with eight pre-existing platform/layout
+skips. Screenshots were inspected privately; no capture is a design asset.
+
+A bounded read-only production check reproduced the reported TVDB Collections
+search problem: pages 0 and 3 returned the same three items, while the second
+page advertised has_more and cursor 6. The client now stops on duplicate-only,
+empty or non-advancing pages, retains filter values, coalesces in-flight requests
+and cancels stale work. No backend or production database change is required.
+
+This evidence covers Chromium's Vizio browser boundary and Android's API 36 TV
+emulator, not a new physical Vizio firmware/codec qualification. The separate
+SolidTV canvas entry is outside this DOM navigation change.
+
 # Shared native source contract — 2026-09-26
 
 Adopts core `2cfd963e5cf9178d93e8bbb7462bcccb92b152f3` with stable producer keys/labels and bounded private playback headers. Android adopts the same revision. TV-web unit suite passed (187 tests), and the pinned design/core/video checks, typecheck and production build passed. This shared-contract import does not add physical Tizen/Vizio qualification.

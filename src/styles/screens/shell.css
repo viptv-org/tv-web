@@ -809,3 +809,7 @@
   display: block;
   z-index: 33;
 }
+
+/* TV focus/remote scrolling stays available without desktop scrollbar chrome. */
+.tv-layout, .tv-layout * { scrollbar-width: none; scrollbar-gutter: auto; -ms-overflow-style: none; }
+.tv-layout::-webkit-scrollbar, .tv-layout *::-webkit-scrollbar { display: none; width: 0; height: 0; }

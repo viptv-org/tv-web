@@ -173,7 +173,7 @@ test('TV: the title menu is a right panel with its legend; BACK closes it and re
   expect(Math.round(box.x + box.width)).toBe(1920);
   expect(Math.round(box.width)).toBe(820);
   await expect(page.locator('[data-focus-id="modal-0"]')).toBeFocused();
-  await expect(panel.locator('.vx-legend')).toContainText('Select');
+  await expect(panel.locator('.vx-legend')).toHaveCount(0);
   await page.keyboard.press('Escape');
   await expect(panel).toHaveCount(0);
   await expect(card).toBeFocused();

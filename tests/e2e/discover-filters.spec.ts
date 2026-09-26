@@ -60,18 +60,20 @@ test('Discover applies declared defaults and resets pagination for genre, input 
   await page.getByRole('button', { name: 'Discover' }).click();
   await expect(page.getByRole('button', { name: 'Year: 2024' })).toBeVisible();
   // TvDiscover geometry on the 1920 x 1080 canvas: the title at the rail edge (144 + 48) and the
-  // 54 safe line, one chip row (types | catalogs | extras) under it, the grid 48 below the chips.
+  // 54 safe line, types above catalog/extras, with the grid 28 below the second row.
   const header = await page.getByRole('heading', { name: 'Discover', exact: true }).boundingBox();
   expect(header?.x).toBe(192);
   expect(header?.y).toBe(54);
   // (The group, not a chip: remote focus may be scaling a chip.)
-  const typeChip = await page.getByRole('group', { name: 'Content type' }).boundingBox();
-  expect(typeChip?.height).toBe(56);
+  const typeChip = await page.getByRole('group', { name: 'Content type' }).getByRole('button').first().boundingBox();
+  expect(typeChip?.height).toBe(52);
   expect(typeChip?.x).toBe(192);
   const grid = await page.locator('.vx-browse__grid').boundingBox();
   expect(grid?.x).toBe(192);
-  expect(Math.abs((grid?.y ?? 0) - ((typeChip?.y ?? 0) + (typeChip?.height ?? 0) + 48))).toBeLessThan(4);
-  // The catalog's extras are dropdown chips in the same row; a required one reads "Year  Required" until set.
+  const catalogRow = await page.getByRole('group', { name: 'Catalog', exact: true }).boundingBox();
+  expect(catalogRow!.y).toBeGreaterThan(typeChip!.y + typeChip!.height);
+  expect(Math.abs((grid?.y ?? 0) - (catalogRow!.y + catalogRow!.height + 28))).toBeLessThan(4);
+  // The catalog's extras share the second row; a required one reads "Year  Required" until set.
   await expect(page.getByRole('button', { name: 'Calendar', exact: true })).toHaveAttribute('aria-pressed', 'true');
   await expect(page.getByRole('button', { name: 'Genre: Any' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Country: Any' })).toBeVisible();

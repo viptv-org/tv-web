@@ -41,6 +41,7 @@ import { enrichDetail, mergeEpisodeProgress, initialEpisode } from "../detailPro
 import { readStoredEngine, storeEngine } from "../enginePreference";
 import { createAutoplayTestLogger, probeAutoplayTestMode, probeEngineOverride } from "../../testing/autoplay-harness";
 import { catalogFilters, catalogDefaults } from "../catalogFilters";
+import { appendCatalogPage } from "../catalogPaging";
 import { BrowserNavigation, readBrowserRoute, safeRestoredRoute, type BrowserRoute, type SettingsSubpage } from "../browserNavigation";
 import { seekPinReleased, type BufferedRange } from "../SeekBar";
 import type { Screen } from "../screens";
@@ -386,57 +387,49 @@ export function useCatalog(app: PlaybackSessionApi) {
       ],
     });
   };
+  const catalogRequest = useRef<{ key: string; profile: string; scope: ReturnType<TvApi["createScope"]> }>();
+  const catalogItems = useRef(items);
+  catalogItems.current = items;
+  useEffect(() => {
+    if (screen !== "Discover" || (catalogRequest.current && catalogRequest.current.profile !== profile)) {
+      catalogRequest.current?.scope.abort(); catalogRequest.current = undefined;
+    }
+  }, [screen, profile]);
+  useEffect(() => () => { catalogRequest.current?.scope.abort(); }, []);
   const loadCatalog = async (
     cat: Catalog,
     skip = 0,
     values = skip ? catalogValues : catalogDefaults(cat),
   ) => {
+    const key = JSON.stringify([profile, cat.addonId, cat.type, cat.id, skip, Object.entries(values).sort()]);
+    if (catalogRequest.current?.key === key) return;
+    catalogRequest.current?.scope.abort();
+    const scope = api.createScope();
+    catalogRequest.current = { key, profile, scope };
     const ticket = ++epoch.current;
     setCatalog(cat);
     setCatalogValues(values);
-    if (!skip) setNextSkip(undefined);
-    const missing = catalogFilters(cat).find(
-      (f) => f.required && !values[f.name]?.trim(),
-    );
-    if (missing) {
-      setItems([]);
-      setBusy(false);
-      return;
-    }
+    if (!skip) { setNextSkip(undefined); setItems([]); catalogItems.current = []; }
+    const missing = catalogFilters(cat).find(f => f.required && !values[f.name]?.trim());
+    if (missing) { catalogRequest.current = undefined; setItems([]); setBusy(false); return; }
     setBusy(true);
     try {
       const page = await api.discover({
-        type: cat.type,
-        catalog: cat.id,
-        addonId: cat.addonId,
-        search: values.search || undefined,
-        genre: values.genre || undefined,
-        extras: Object.fromEntries(
-          Object.entries(values).filter(
-            ([key, value]) =>
-              key !== "search" && key !== "genre" && value !== "",
-          ),
-        ),
+        type: cat.type, catalog: cat.id, addonId: cat.addonId,
+        search: values.search || undefined, genre: values.genre || undefined,
+        extras: Object.fromEntries(Object.entries(values).filter(([name, value]) => name !== "search" && name !== "genre" && value !== "")),
         skip,
-      });
-      if (ticket !== epoch.current) return;
+      }, scope.request());
+      if (ticket !== epoch.current || scope.signal.aborted) return;
       if (page.unsupportedCount) notify("Some catalog items use an unsupported media type.");
-      setItems((old) =>
-        skip
-          ? [
-              ...old,
-              ...page.items.filter(
-                (i) => !old.some((o) => o.type === i.type && o.id === i.id),
-              ),
-            ]
-          : page.items,
-      );
-      setNextSkip(
-        page.hasMore ? (page.nextSkip ?? skip + page.items.length) : undefined,
-      );
-    } catch (e) {
-      fail(e);
+      const result = appendCatalogPage(catalogItems.current, page.items, skip, page.hasMore, page.nextSkip);
+      catalogItems.current = result.items;
+      setItems(result.items);
+      setNextSkip(result.nextSkip);
+    } catch (error) {
+      if (ticket === epoch.current && !scope.signal.aborted) { setNextSkip(undefined); fail(error); }
     } finally {
+      if (catalogRequest.current?.scope === scope) catalogRequest.current = undefined;
       if (ticket === epoch.current) setBusy(false);
     }
   };

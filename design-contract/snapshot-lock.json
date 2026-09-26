@@ -1,7 +1,7 @@
 {
   "version": 1,
   "repository": "viptv-org/design",
-  "commit": "8ab5b6e95cdc9c6154efec2ff418a4ee1eecf55e",
+  "commit": "03229857686d103d178577e804cc171108ab569f",
   "files": {
     "design-contract/.github/pull_request_template.md": {
       "source": ".github/pull_request_template.md",
@@ -10,6 +10,10 @@
     "design-contract/AGENTS.md": {
       "source": "AGENTS.md",
       "sha256": "1848b6a99d0180212691e934e63d9f10e1d48f8ce56c09f50f8a6e8a8c155d2f"
+    },
+    "design-contract/ANDROID_DESIGN.md": {
+      "source": "ANDROID_DESIGN.md",
+      "sha256": "613bb8cf4c0d571b898549e3452ff8160bd9b63195eb5cdbf8caf104b8afadf9"
     },
     "design-contract/ANDROID_DEVELOPMENT.md": {
       "source": "ANDROID_DEVELOPMENT.md",
@@ -85,7 +89,7 @@
     },
     "design-contract/TV_POLISH.md": {
       "source": "TV_POLISH.md",
-      "sha256": "b72c4fb5b95a7eecdb3b2404556012ba711c052921ae4b9ca49865416a72512a"
+      "sha256": "ff72c75a3c0996f177425ab97e080d59c1a94001ede32619c90ab15571ee756d"
     },
     "design-contract/docs/adr/0001-design-owned-assets.md": {
       "source": "docs/adr/0001-design-owned-assets.md",
@@ -129,7 +133,7 @@
     },
     "design-contract/viptv-design-system/decisions.md": {
       "source": "viptv-design-system/decisions.md",
-      "sha256": "c091ae1324cab58bca0a178107505afc09b239978880ec4b663e4399e8b3e366"
+      "sha256": "ac4580362125ff2c86380964e3f8d873636254c9b1441b5fcf132aa45a273e21"
     },
     "design-contract/viptv-design-system/reference/screens/index.json": {
       "source": "viptv-design-system/reference/screens/index.json",
@@ -145,7 +149,7 @@
     },
     "design-contract/assets/FILES.json": {
       "source": "assets/FILES.json",
-      "sha256": "0a05222a249e2344883426dcc3e97979da086a0ae4dc4c4068c5603fe9f216ae"
+      "sha256": "19dff545f8f5205b88ce80c7b195c56d2da28470b529dc8c44e82df8cb9eec49"
     },
     "design-contract/assets/roku/roku/data/avatar-catalog.json": {
       "source": "assets/roku/roku/data/avatar-catalog.json",

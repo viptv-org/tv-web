@@ -3,7 +3,6 @@ import {
   useRef,
   useState,
   type Dispatch,
-  type FocusEvent,
   type KeyboardEvent,
   type MutableRefObject,
   type ReactNode,
@@ -99,7 +98,6 @@ const KEY_COLUMNS = 6;
 const BACK_KEYS = ["Escape", "BrowserBack", "GoBack"];
 const BACK_CODES = [10009, 461];
 /** Room kept around a TV-focused control inside a clipping viewport (4 px ring + scale). */
-const TV_FOCUS_ROOM = 24;
 
 /** A desktop popover anchored under its control (DeskDiscoverCatalog / DeskDiscoverFilter: 8 px below). */
 function anchorUnder(element: Element | null | undefined): ModalView["anchor"] {
@@ -107,26 +105,6 @@ function anchorUnder(element: Element | null | undefined): ModalView["anchor"] {
   const rect = element.getBoundingClientRect();
   if (!rect.width && !rect.height) return undefined;
   return { x: rect.left, y: rect.bottom + 8, align: "start" };
-}
-
-/** TV: keep a focused control inside its clipping viewport with room for its focus ring. */
-function keepInView(viewport: HTMLElement | null, unit: HTMLElement, axis: "x" | "y") {
-  if (!viewport || !viewport.contains(unit)) return;
-  const box = viewport.getBoundingClientRect();
-  const size = axis === "y" ? viewport.offsetHeight : viewport.offsetWidth;
-  const scale = (axis === "y" ? box.height : box.width) / (size || 1) || 1;
-  const rect = unit.getBoundingClientRect();
-  const scroll = axis === "y" ? viewport.scrollTop : viewport.scrollLeft;
-  const view = axis === "y" ? viewport.clientHeight : viewport.clientWidth;
-  const start = ((axis === "y" ? rect.top - box.top : rect.left - box.left) / scale) + scroll;
-  const end = start + (axis === "y" ? rect.height : rect.width) / scale;
-  let next = scroll;
-  if (start - TV_FOCUS_ROOM < scroll) next = start - TV_FOCUS_ROOM;
-  else if (end + TV_FOCUS_ROOM > scroll + view) next = end + TV_FOCUS_ROOM - view;
-  next = Math.max(0, next);
-  if (next === scroll) return;
-  if (axis === "y") viewport.scrollTop = next;
-  else viewport.scrollLeft = next;
 }
 
 /** Empty / status block (feedback primitive markup): 52 / 60 / 88 icon disc, optional title, one line. */
@@ -376,7 +354,6 @@ export function BrowseScreen({
   const webPage = desktop && !isDesktopShell;
   const layout = phone ? "phone" : "desktop";
   const body = useRef<HTMLDivElement>(null);
-  const chips = useRef<HTMLDivElement>(null);
   const field = useRef<HTMLInputElement>(null);
   const [searchType, setSearchType] = useState<SearchSectionKey | "all">("all");
   // Desktop: the chip whose popover is open draws as pressed (DeskDiscoverFilter). Focus
@@ -394,7 +371,7 @@ export function BrowseScreen({
     const key = `${catalogKey}@${nextSkip}`;
     if (requestedPage.current === key) return;
     requestedPage.current = key;
-    void loadCatalog(catalog, nextSkip);
+    void loadCatalog(catalog, nextSkip, catalogValues);
   };
 
   // The phone and web search fields take the keyboard on arrival.
@@ -512,20 +489,6 @@ export function BrowseScreen({
         : CARD_SHAPES.myList;
   const gridKind = tv ? "tv" : gridShape === "poster" ? "poster" : "still";
 
-  // ---- TV focus: keep the focused control clear of its clipping viewport ----
-  const onBodyFocus = (event: FocusEvent<HTMLElement>) => {
-    if (!tv) return;
-    const target = event.target as HTMLElement;
-    const row = target.closest<HTMLElement>(".cards");
-    if (row && screen === "Search") keepInView(row, target, "x");
-    keepInView(body.current, (screen === "Search" && target.closest<HTMLElement>(".vx-browse__section")) || target, "y");
-  };
-  const onChipsFocus = (event: FocusEvent<HTMLElement>) => {
-    if (!tv) return;
-    keepInView(chips.current, event.target as HTMLElement, "x");
-    if (body.current) body.current.scrollTop = 0;
-  };
-
   // ---- TV search keyboard -------------------------------------------------
   const keyboardKeys = (event: KeyboardEvent<HTMLDivElement>) => {
     const target = event.target as HTMLElement;
@@ -589,9 +552,9 @@ export function BrowseScreen({
       : [];
     if (tv)
       return (
-        <div className="vx-browse__chips" ref={chips} onFocus={onChipsFocus}>
-          <div className="vx-browse__chip-group" role="group" aria-label="Content type">{typeItems}</div>
-          {groupCatalogs.length > 0 && <ChipDivider />}
+        <div className="vx-browse__tv-controls">
+          <div className="vx-browse__types" role="group" aria-label="Content type">{typeItems}</div>
+          <div className="vx-browse__chips">
           <div className="vx-browse__chip-group" role="group" aria-label="Catalog">
             {groupCatalogs.map((cat, index) => (
               <TvButton
@@ -607,6 +570,7 @@ export function BrowseScreen({
           </div>
           {filterChips.length > 0 && <ChipDivider />}
           {filterChips.length > 0 && <div className="vx-browse__chip-group" role="group" aria-label="Filters">{filterChips}</div>}
+          </div>
         </div>
       );
     if (phone)
@@ -681,7 +645,7 @@ export function BrowseScreen({
       </TvButton>
     ));
     return tv ? (
-      <div className="vx-browse__chips" ref={chips} role="group" aria-label="My List" onFocus={onChipsFocus}>{segments}</div>
+      <div className="vx-browse__chips" role="group" aria-label="My List">{segments}</div>
     ) : (
       <div className={`vx-segmented${phone ? " vx-browse__segmented" : ""}`} role="group" aria-label="My List">{segments}</div>
     );
@@ -866,7 +830,7 @@ export function BrowseScreen({
               </TvButton>
             </div>
           </section>
-          <div className="vx-browse__body vx-browse__results" ref={body} onFocus={onBodyFocus}>
+          <div className="vx-browse__body vx-browse__results" ref={body}>
             {status}
             {results}
           </div>
@@ -987,7 +951,7 @@ export function BrowseScreen({
         )}
         {screen === "Discover" ? discoverControls() : libraryControls()}
       </div>
-      <div className="vx-browse__body" ref={body} onFocus={onBodyFocus}>
+      <div className="vx-browse__body" ref={body}>
         {screen === "Discover" && discoverBody()}
         {grid()}
         {/* Reaching the end of a paged catalog loads its next page; there is

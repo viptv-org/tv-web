@@ -485,3 +485,9 @@
     transition: none;
   }
 }
+
+/* Resume is the owner's explicit accent exception to white TV action focus. */
+.tv-layout .vx-btn--resume, .tv-layout .vx-btn--resume:focus, .tv-layout .vx-btn--resume:active {
+  background: var(--viptv-accent); color: var(--viptv-color-on-accent);
+}
+.tv-layout .vx-btn--resume:focus { box-shadow: 0 0 0 4px var(--viptv-color-text-primary); }

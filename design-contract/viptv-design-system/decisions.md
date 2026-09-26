@@ -14,6 +14,7 @@
 10. **Avatars:** hide broken categories and compute the count shown in the header.
 11. **TV focus:** focused tiles, profiles, rows and controls keep their size. Use the white ring or off-white fill without scale.
 12. **TV reliability corrections:** [TV-034](../TV_POLISH.md) defines carousel bounds, stable rail geometry, profile activation, season navigation, live-only controls and progressive startup. These owner-requested corrections supersede conflicting static reference hints and spacing.
+13. **Native Android:** [AND-035](../ANDROID_DESIGN.md) adopts the current phone and 1920×1080 TV design, replacing the historical Android Roku reconstruction while retaining native Compose, Media3 and shared core behavior.
 
 ## Design decisions made during the redesign
 
@@ -31,3 +32,11 @@
 - `[Bracketed]` values are placeholders: times, counts, file names, track names, IP addresses, the device URL, the Up Next countdown.
 - Whether the parent PIN length is fixed or 4–8 digits (drawn with 6 boxes, error copy says 4–8).
 - The phone PIN helper copy ("Enter the parent PIN to continue.") replaces the TV-only "Use your remote or a connected keyboard." on phone and desktop.
+
+## 14. Native Android follow-up (AND-036)
+
+The 2026-09-26 owner request replaces phone device-code-only authentication with
+native username/password sign-in, keeps pairing optional, and requires original
+source playback on Android. Source feedback, player lifetime, provider groups,
+stateful library actions, insets and the scrolling/blurred TV hero are specified
+in `../../ANDROID_DESIGN.md#and-036--native-sign-in-direct-playback-and-interaction-corrections`.

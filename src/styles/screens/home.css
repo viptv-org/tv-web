@@ -719,11 +719,14 @@
   height: 1080px;
   margin: 0;
   padding: 0;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overflow-anchor: none;
   background: var(--viptv-color-bg);
   color: var(--viptv-color-text-primary);
   font-family: var(--viptv-font-family-ui);
 }
+.tv-layout .vx-home__hero-stage { position: relative; height: 664px; }
 /* Backdrop: blurred ambient fill + the sharp art top-right, faded left and down. */
 .tv-layout .vx-home-backdrop {
   position: absolute;
@@ -774,16 +777,11 @@
 }
 
 .tv-layout .vx-home__tv-hero {
-  position: absolute;
-  top: 150px;
-  left: var(--vx-home-left);
-  z-index: 2;
-  display: flex;
-  flex-direction: column;
-  gap: var(--viptv-space-5_5);
-  width: 820px;
+  position: absolute; top: 54px; left: 192px; z-index: 2;
+  width: 1536px; height: 610px;
 }
 .tv-layout .vx-home__tv-eyebrow {
+  position: absolute; top: 96px; left: 0;
   color: var(--viptv-color-text-secondary);
   font-size: var(--viptv-type-tv-status-size);
   font-weight: var(--viptv-type-tv-status-weight);
@@ -792,7 +790,7 @@
   text-transform: uppercase;
 }
 .tv-layout .vx-home .responsive-title {
-  position: relative;
+  position: absolute; top: 142px; left: 0; width: 800px; height: 118px;
   max-width: 100%;
   margin: 0;
   overflow: hidden;
@@ -807,14 +805,15 @@
 }
 .tv-layout .vx-home .responsive-title > img {
   /* TvHome title logo: 118 tall. */
-  width: auto;
-  max-width: 760px;
+  width: 410px;
+  max-width: 100%;
   height: 118px;
   object-fit: contain;
-  object-position: left center;
+  object-position: center;
   mix-blend-mode: lighten;
 }
 .tv-layout .vx-home__tv-progress {
+  position: absolute; top: 286px; left: 0; width: 1100px; height: 34px;
   display: flex;
   align-items: center;
   gap: var(--viptv-space-4_5);
@@ -836,6 +835,7 @@
   color: var(--viptv-color-text-secondary);
 }
 .tv-layout .vx-home__meta {
+  position: absolute; top: 336px; left: 0; width: 950px;
   display: flex;
   gap: var(--viptv-space-3);
   color: var(--viptv-color-text-secondary);
@@ -844,6 +844,7 @@
   white-space: nowrap;
 }
 .tv-layout .vx-home__synopsis {
+  position: absolute; top: 394px; left: 0; width: 760px;
   display: -webkit-box;
   max-width: 760px;
   margin: 0;
@@ -855,39 +856,30 @@
   -webkit-line-clamp: 2;
 }
 .tv-layout .vx-home__actions {
+  position: absolute; top: 496px; left: 0;
   display: flex;
   gap: var(--viptv-space-4_5);
-  margin-top: var(--viptv-space-3);
+  margin-top: 0;
 }
 
-/* Shelves: a vertical viewport under the hero; each row scrolls sideways under the rail. */
+/* TV-038: one scrolling page, with the complete hero above the first row. */
 .tv-layout .vx-home__shelves {
-  position: absolute;
-  top: 700px;
-  right: 0;
-  bottom: 0;
-  left: var(--viptv-layout-tv-rail-collapsed);
+  position: relative;
   z-index: 2;
-  width: auto;
-  height: auto;
-  margin: 0;
-  padding: 0;
-  overflow-x: hidden;
-  overflow-y: auto;
+  margin: 36px 96px 0 192px;
+  padding: 0 0 54px;
+  overflow: visible;
 }
-.tv-layout .vx-home .vx-shelf {
-  margin: 0;
-  padding: 0 0 112px;
-}
-.tv-layout .vx-shelf__head {
-  /* heading-to-row 22 = 6 here + the track's 16 focus headroom. */
-  margin-bottom: calc(var(--viptv-layout-tv-heading-to-row) - var(--viptv-space-4));
-  padding: 0 var(--viptv-space-24) 0 var(--vx-home-inset);
-}
+.tv-layout .vx-home .vx-shelf { margin: 0; padding: 0 0 36px; }
+.tv-layout .vx-home .vx-shelf__head { margin-bottom: 18px; padding: 0; }
+.tv-layout .vx-home .vx-cards { padding: 4px; }
+.tv-layout .vx-home .vx-card { --vx-card-w: 320px; --vx-card-h: 180px; }
+.tv-layout .vx-home__play, .tv-layout .vx-home__details { width: 228px; height: 72px; }
+.tv-layout .vx-home__tv-episode { max-width: 420px; flex: 0 1 420px; }
 .tv-layout .vx-shelf__title {
   font-size: var(--viptv-type-tv-section-size);
   font-weight: var(--viptv-type-tv-section-weight);
-  line-height: var(--viptv-type-tv-section-line-height);
+  line-height: 44px;
   letter-spacing: var(--viptv-type-tv-section-letter-spacing);
 }
 .tv-layout .vx-cards {
@@ -895,13 +887,6 @@
   /* Keep the trailing tile fully reachable before focus moves vertically. */
   padding: var(--viptv-space-4) var(--viptv-space-24) var(--viptv-space-6) var(--vx-home-inset, var(--viptv-space-12));
   scroll-behavior: smooth;
-}
-.tv-layout .compact-home .vx-home__tv-hero,
-.tv-layout .compact-home .vx-home-backdrop {
-  display: none;
-}
-.tv-layout .compact-home .vx-home__shelves {
-  top: 120px; /* a lower shelf holds focus: the rows take the screen */
 }
 /* Key legend: the bottom-right corner is under the shelf's last tile captions on Home, so the
    legend sits top-right in the safe area on a glass pill (TvHome draws none; BRIEF: every TV
@@ -1044,4 +1029,20 @@
   .tv-layout .vx-cards {
     scroll-behavior: auto;
   }
+}
+
+/* Android TV hero artwork, in the same 1920px logical frame (TV-038). */
+.tv-layout .vx-home__hero-stage { --vx-home-ground: 11, 11, 12; }
+[data-oled] .tv-layout .vx-home__hero-stage { --vx-home-ground: 0, 0, 0; }
+.tv-layout .vx-home__hero-stage .vx-home-backdrop__ambient {
+  left: 0; right: 0; top: 0; width: 100%; height: 100%; filter: blur(72px); opacity: .6;
+}
+.tv-layout .vx-home__hero-stage .vx-home-backdrop__art {
+  width: 1120px; height: 100%; -webkit-mask-image: none; mask-image: none;
+}
+.tv-layout .vx-home__hero-stage .vx-home-backdrop__fade-left {
+  width: 100%; background: linear-gradient(to right, rgb(var(--vx-home-ground)), rgba(var(--vx-home-ground), .92) 50%, transparent);
+}
+.tv-layout .vx-home__hero-stage .vx-home-backdrop__fade-bottom {
+  height: 224px; background: linear-gradient(to bottom, transparent, var(--viptv-color-bg));
 }

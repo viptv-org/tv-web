@@ -8,6 +8,8 @@ import {
   type ReactNode,
 } from "react";
 
+import { revealOffset } from "./scrollGeometry";
+
 type Action = () => void;
 type Registration = { activate: Action; hold?: Action };
 export const Registry = createContext<Map<string, Registration> | null>(null);
@@ -18,7 +20,7 @@ export function focusElement(id: string, options?: FocusOptions) {
   // Pointer-first pages retain dialog/input semantics, not remote arrival focus.
   if (element.closest(".responsive-app") && !element.closest("[data-focus-scope]")
     && !element.matches("input, textarea, select, [contenteditable=true]")) return;
-  element.focus(options);
+  element.focus(element.closest(".responsive-app") ? options : { preventScroll: true, ...options });
 }
 
 export function RemoteRoot({
@@ -184,7 +186,7 @@ export function moveFocus(key: string, current: HTMLElement | null) {
     (e) => !e.closest("[hidden]") && e.getAttribute("aria-hidden") !== "true",
   );
   if (!current || !all.includes(current)) {
-    all[0]?.focus();
+    all[0]?.focus({ preventScroll: true });
     return;
   }
   const direction = key.replace("Arrow", "").toLowerCase();
@@ -196,12 +198,13 @@ export function moveFocus(key: string, current: HTMLElement | null) {
   // Horizontal movement in a shelf stays in that shelf. Spatial distance to
   // an off-screen card is misleading and used to jump to the next row.
   if (direction === "right" || direction === "left") {
-    const slot = current.closest<HTMLElement>(".cards > .vx-card-slot");
+    const episode = current.parentElement?.classList.contains("vx-title__episode-list") ? current : null;
+    const slot = current.closest<HTMLElement>(".cards > .vx-card-slot") ?? episode;
     if (slot) {
       const sibling = direction === "right" ? slot.nextElementSibling : slot.previousElementSibling;
-      const card = sibling?.querySelector<HTMLElement>("[data-focus-id]:not([disabled])");
+      const card = sibling?.matches("[data-focus-id]:not([disabled])") ? sibling as HTMLElement : sibling?.querySelector<HTMLElement>("[data-focus-id]:not([disabled])");
       if (card) {
-        card.focus();
+        card.focus({ preventScroll: true });
         return;
       }
       if (direction === "right") return;
@@ -237,11 +240,11 @@ export function moveFocus(key: string, current: HTMLElement | null) {
     const target = entry.dataset.focusEntry;
     const landing = target ? all.find((element) => element.dataset.focusId === target) : undefined;
     if (landing && entry.contains(landing)) {
-      landing.focus();
+      landing.focus({ preventScroll: true });
       return;
     }
   }
-  best?.focus();
+  best?.focus({ preventScroll: true });
 }
 
 type TvButtonProps = Omit<
@@ -289,70 +292,36 @@ export function TvButton({
   );
 }
 
-/** Reveal inside the TV's scroll viewports without scrolling its fixed canvas. */
+/** One scroll owner for TV focus: no browser jump followed by a second animation. */
 function revealFocusedControl(element: HTMLElement) {
   requestAnimationFrame(() => {
     if (!element.isConnected || document.activeElement !== element) return;
-    for (
-      let parent = element.parentElement;
-      parent && (!parent.classList.contains("tv-screen") || parent.classList.contains("responsive-app"));
-      parent = parent.parentElement
-    ) {
+    for (let parent = element.parentElement; parent && !parent.classList.contains("tv-screen"); parent = parent.parentElement) {
       const style = getComputedStyle(parent);
       const rect = parent.getBoundingClientRect();
       if (!rect.width || !rect.height) continue;
       const target = element.getBoundingClientRect();
       const scaleX = rect.width / (parent.offsetWidth || rect.width);
       const scaleY = rect.height / (parent.offsetHeight || rect.height);
-      if (
-        ["auto", "scroll", "hidden"].includes(style.overflowX) &&
-        parent.scrollWidth > parent.clientWidth
-      ) {
-        if (parent.classList.contains("cards")) {
-          if (target.left < rect.left || target.right > rect.right) {
-            const anchor = target.left < rect.left ? 0.33 : 0.67;
-            const slot = element.closest<HTMLElement>(".vx-card-slot");
-            const contentLeft = slot && !element.closest(".responsive-app")
-              ? slot.offsetLeft
-              : parent.scrollLeft + (target.left - rect.left) / scaleX;
-            const desired = Math.max(0, contentLeft + element.offsetWidth / 2 - parent.clientWidth * anchor);
-            try {
-              parent.scrollTo({ left: desired, behavior: "smooth" });
-            } catch {
-              parent.scrollLeft = desired;
-            }
-          }
-        } else if (target.left < rect.left)
-          parent.scrollLeft += (target.left - rect.left) / scaleX;
-        else if (target.right > rect.right)
-          parent.scrollLeft += (target.right - rect.right) / scaleX;
+      let left = parent.scrollLeft;
+      let top = parent.scrollTop;
+      if (["auto", "scroll", "hidden"].includes(style.overflowX) && parent.scrollWidth > parent.clientWidth) {
+        const start = left + (target.left - rect.left) / scaleX;
+        left = revealOffset(left, start, start + target.width / scaleX, parent.clientWidth, parent.scrollWidth);
       }
-      if (
-        ["auto", "scroll", "hidden"].includes(style.overflowY) &&
-        parent.scrollHeight > parent.clientHeight
-      ) {
-        const section = element.closest("section");
-        const headroom = parseFloat(getComputedStyle(element).getPropertyValue(
-          element.closest(".responsive-app") ? "--viptv-space-2" : "--viptv-space-3",
-        ));
-        if (
-          parent.classList.contains("shelves") &&
-          section?.parentElement === parent
-        ) {
-          try {
-            parent.scrollTo({
-              top: (section as HTMLElement).offsetTop - headroom,
-              behavior: "smooth",
-            });
-          } catch {
-            parent.scrollTop = (section as HTMLElement).offsetTop - headroom;
-          }
-        } else if (target.top < rect.top)
-          parent.scrollTop += (target.top - rect.top) / scaleY;
-        else if (target.bottom > rect.bottom)
-          parent.scrollTop += (target.bottom - rect.bottom) / scaleY;
+      if (["auto", "scroll", "hidden"].includes(style.overflowY) && parent.scrollHeight > parent.clientHeight) {
+        const firstShelf = parent.classList.contains("vx-home") ? parent.querySelector(".vx-home__shelves > section") : null;
+        if (parent.classList.contains("vx-home") && (element.closest(".vx-home__hero-stage") || firstShelf?.contains(element))) top = 0;
+        else {
+          const start = top + (target.top - rect.top) / scaleY;
+          top = revealOffset(top, start, start + target.height / scaleY, parent.clientHeight, parent.scrollHeight);
+        }
       }
-      if (parent.classList.contains("responsive-app")) break;
+      if (Math.abs(left - parent.scrollLeft) > .5 || Math.abs(top - parent.scrollTop) > .5) {
+        const reduced = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+        try { parent.scrollTo({ left, top, behavior: reduced ? "auto" : "smooth" }); }
+        catch { parent.scrollLeft = left; parent.scrollTop = top; }
+      }
     }
   });
 }

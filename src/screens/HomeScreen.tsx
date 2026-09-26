@@ -116,13 +116,7 @@ export function HomeScreen({
     else void navigate("My List");
   };
   return (
-    <main className={`home vx-home ${compactHome ? "compact-home" : ""}`}>
-      {!responsive && heroPresentation?.heroImage && (
-        <HeroArtwork
-          key={heroPresentation.heroImage}
-          uri={heroPresentation.heroImage}
-        />
-      )}
+    <main className={`home vx-home ${responsive && compactHome ? "compact-home" : ""}`}>
       {phone && (
         <header className="vx-home__header">
           <span className="vx-home__wordmark">VIPTV</span>
@@ -147,19 +141,22 @@ export function HomeScreen({
         />
       )}
       {!responsive && (
-        <TvHero
-          item={heroItem}
-          details={details}
-          presentation={heroPresentation}
-          highlighted={highlighted}
-          queue={queue}
-          recentLive={recentLive}
-          items={items}
-          saved={saved}
-          setCompactHome={setCompactHome}
-          actions={actions}
-          manage={manage}
-        />
+        <div className="vx-home__hero-stage">
+          {heroPresentation?.heroImage && <HeroArtwork uri={heroPresentation.heroImage} />}
+          <TvHero
+            item={heroItem}
+            details={details}
+            presentation={heroPresentation}
+            highlighted={highlighted}
+            queue={queue}
+            recentLive={recentLive}
+            items={items}
+            saved={saved}
+            setCompactHome={setCompactHome}
+            actions={actions}
+            manage={manage}
+          />
+        </div>
       )}
       <div
         className="shelves vx-home__shelves"
@@ -474,7 +471,7 @@ function TvHero({ item, details, presentation: hero, highlighted, queue, recentL
       <div className="vx-home__actions">
         <TvButton
           id="hero-play"
-          className={buttonClass({ icon: true, className: `vx-home__play ${target?.queueStatus === "next" ? "wide-action" : ""}` })}
+          className={buttonClass({ icon: true, className: `vx-home__play ${hero?.primaryAction === "resume" ? "vx-btn--resume" : ""} ${target?.queueStatus === "next" ? "wide-action" : ""}` })}
           onFocus={() => setCompactHome(false)}
           onActivate={() => {
             if (target)

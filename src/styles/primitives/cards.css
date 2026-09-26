@@ -1056,7 +1056,7 @@
   transition: transform var(--viptv-motion-focus) ease-out;
 }
 .tv-layout .vx-card:focus > .vx-card__synopsis {
-  transform: translateY(var(--viptv-focus-tv-caption-shift));
+  transform: none;
 }
 .tv-layout .vx-card:focus {
   outline: none;
@@ -1068,7 +1068,7 @@
 .tv-layout .vx-card:focus .vx-card__caption,
 .tv-layout .vx-card:focus > .vx-card__eyebrow,
 .tv-layout .vx-card:focus > .vx-card__title {
-  transform: translateY(var(--viptv-focus-tv-caption-shift));
+  transform: none;
 }
 .tv-layout .vx-card:focus .vx-card__title {
   color: var(--viptv-color-text-primary);
@@ -1248,3 +1248,8 @@
     transition: none;
   }
 }
+
+/* Native TV caption metrics: 180px art, 14px gap, then 33px/27px text lines. */
+.tv-layout .vx-card { gap: 14px; }
+.tv-layout .vx-card__caption .vx-card__title { line-height: 33px; font-weight: 700; color: var(--viptv-color-text-primary); }
+.tv-layout .vx-card__caption .vx-card__meta { line-height: 27px; color: var(--viptv-color-text-secondary); }

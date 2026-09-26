@@ -110,13 +110,18 @@ export function TvRail({
   /** Move focus back into the page content; false when the page has nothing focusable. */
   onExit: () => boolean;
 }) {
+  const order: readonly string[] = ["nav-profiles", ...TV_ITEMS.map(value => `nav-${value}`), "nav-Settings"];
   const item = (destination: NavDestination) => {
+    const index = order.indexOf(`nav-${destination}`);
     const Icon = ICONS[destination];
     const isCurrent = destination === current;
     return (
       <TvButton
         id={`nav-${destination}`}
         key={destination}
+        data-nav-up={order[Math.max(0, index - 1)]}
+        data-nav-down={order[Math.min(order.length - 1, index + 1)]}
+        data-nav-left={`nav-${destination}`}
         aria-label={destination}
         aria-current={isCurrent ? "page" : undefined}
         className={`vx-tv-rail-item vx-tv-focus-fill vx-tv-focus-row ${isCurrent ? "is-current" : ""}`}
@@ -146,6 +151,9 @@ export function TvRail({
       >
         <TvButton
           id="nav-profiles"
+          data-nav-up="nav-profiles"
+          data-nav-down={order[1]}
+          data-nav-left="nav-profiles"
           aria-label="Profile"
           className="vx-tv-rail-profile vx-tv-focus-fill vx-tv-focus-row"
           onActivate={onProfiles}
@@ -200,7 +208,7 @@ export function useTvRail(enabled: boolean, screen: Screen) {
     if (document.querySelector("[data-focus-scope]")) return false;
     const remembered = lastContent.current;
     if (remembered?.isConnected && focusable(remembered)) {
-      remembered.focus();
+      remembered.focus({ preventScroll: true });
       return true;
     }
     const origin = (document.activeElement as HTMLElement | null)?.closest(".vx-tv-rail")
@@ -219,7 +227,7 @@ export function useTvRail(enabled: boolean, screen: Screen) {
         best = candidate;
       }
     }
-    best?.focus();
+    best?.focus({ preventScroll: true });
     return !!best;
   }, []);
 

@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useState, type Dispatch, type ReactNode, type SetStateAction } from "react";
+import { useEffect, useMemo, useRef, useState, type Dispatch, type ReactNode, type SetStateAction } from "react";
 import { Check, ChevronDown, ChevronLeft, ChevronUp, Ellipsis, Film, Info, Plus } from "lucide-react";
 import { presentation as itemPresentation } from "../core/presentations";
 import { ReadyImage, artworkUrl } from "../ui/RokuArtwork";
-import { TvButton } from "../ui/remote";
+import { TvButton, focusElement } from "../ui/remote";
+import { revealOffset } from "../ui/scrollGeometry";
 import type { Catalog, MediaItem, MediaPresentation, MediaSource, TvApi } from "../api";
 import { enrichDetail, initialEpisode } from "../ui/detailProgress";
 import { castMembers, directorNames, genreTarget, type GenreTarget } from "../ui/detailLinks";
@@ -161,13 +162,17 @@ export function DetailScreen({
   const summary = sourcePreview && sourcePreview.key === targetKey ? sourcePreview : undefined;
   // TV: the row shows the play target's episode (Play keeps the focus).
   const targetIndex = episodes.filter((e) => e.season === season).findIndex((e) => e.id === target?.id);
+  const episodeFocus = useRef(0);
   useEffect(() => {
+    episodeFocus.current = Math.max(0, targetIndex);
     if (responsive || targetIndex < 0) return;
     const card = document.querySelector<HTMLElement>(`.vx-title__episode-list [data-focus-id="episode-${targetIndex}"]`);
     const list = card?.parentElement;
     if (!card || !list) return;
-    const left = card.offsetLeft - list.offsetLeft;
-    if (left + card.offsetWidth > list.clientWidth) list.scrollLeft = left - parseFloat(getComputedStyle(list).paddingLeft);
+    const bounds = list.getBoundingClientRect();
+    const scale = bounds.width / list.offsetWidth;
+    const start = list.scrollLeft + (card.getBoundingClientRect().left - bounds.left) / scale;
+    list.scrollLeft = revealOffset(list.scrollLeft, start, start + card.offsetWidth, list.clientWidth, list.scrollWidth);
   }, [responsive, targetIndex, season, episodes.length]);
   const best = summary?.sources[0];
   const count = summary?.sources.length ?? 0;
@@ -294,6 +299,7 @@ export function DetailScreen({
             <h2 className="vx-sr-only" id="vx-title-episodes">Episodes</h2>
             <TvButton
               id="detail-season"
+              onKeyDown={(event) => { if (event.key === "ArrowDown") { event.preventDefault(); event.stopPropagation(); focusElement(`episode-${episodeFocus.current}`); } }}
               className={buttonClass({ size: "small" })}
               aria-haspopup={seasons.length > 1 ? "dialog" : undefined}
               onActivate={() => (seasons.length > 1 ? openSeasons() : undefined)}
@@ -315,6 +321,8 @@ export function DetailScreen({
             <TvButton
               className="vx-card vx-card--episode vx-title__episode"
               id={`episode-${i}`}
+              data-nav-up={!responsive ? "detail-season" : undefined}
+              onFocus={() => { episodeFocus.current = i; }}
               key={e.id}
               onActivate={() => void discoverSources(e)}
               onHold={() => manage(e)}
@@ -354,7 +362,7 @@ export function DetailScreen({
           {factsLine}
           {selected.description ? <p className="vx-title__synopsis">{selected.description}</p> : null}
           <div className="vx-title__actions">
-            <TvButton id="detail-play" className={buttonClass({ icon: true })} onActivate={startPlay} onHold={chooseSource}>
+            <TvButton id="detail-play" className={buttonClass({ icon: true, className: resume ? "vx-btn--resume" : undefined })} onActivate={startPlay} onHold={chooseSource}>
               <PlayIcon />
               {playLabel}
             </TvButton>

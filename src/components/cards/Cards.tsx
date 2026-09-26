@@ -268,15 +268,17 @@ export const Cards = memo(function Cards({
             aria-label={item.name}
             id={`${prefix}-${i}`}
             data-nav-left={
-              i > 0
+              !responsive && rowKind === "grid" && i % 4 === 0 ? `nav-${screen}` : i > 0
                 ? `${prefix}-${i - 1}`
                 : screen === "Search"
                   ? searchKey.current
                   : undefined
             }
             data-nav-right={
-              i + 1 < list.length ? `${prefix}-${i + 1}` : `${prefix}-${i}`
+              !responsive && rowKind === "grid" && i % 4 === 3 ? `${prefix}-${i}` : i + 1 < list.length ? `${prefix}-${i + 1}` : `${prefix}-${i}`
             }
+            data-nav-up={!responsive && rowKind === "grid" && i >= 4 ? `${prefix}-${i - 4}` : undefined}
+            data-nav-down={!responsive && rowKind === "grid" ? `${prefix}-${Math.min(list.length - 1, i + 4)}` : undefined}
             key={key}
             onFocus={() => { if (!responsive) setHighlighted(item); }}
             onActivate={() => void activate()}

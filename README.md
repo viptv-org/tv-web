@@ -110,3 +110,18 @@ recorded separately in `TESTING.md`.
 local HTTPS. Set `PERF_ASSERT_BETTER=1` to enforce comparative speed/frame
 checks. See [PERFORMANCE.md](PERFORMANCE.md) for measured results, the 8×
 guide-entry exception, memory tradeoff and GPU requirements.
+
+
+## Trusted HTTPS Vizio navigation checks
+
+With the workspace's local HTTPS environment running, build the viewing bundle
+and run the isolated backend/art fixture scenarios against the served app:
+
+```sh
+npm run build
+PREVIEW_API_ORIGIN=https://viptv.local.test:8443 npx playwright test --config playwright.https.config.ts
+```
+
+These checks exercise the normal `?platform=vizio` entry with trusted TLS;
+external API/art boundaries are intercepted, so they do not mutate real accounts.
+They verify full/scaled remote movement, catalog-loop prevention and TV-038 layout.

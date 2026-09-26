@@ -1,3 +1,10 @@
+## TV-038 hosted DOM follow-up — 2026-09-26
+
+| Surface | Browser evidence | Device evidence |
+| --- | --- | --- |
+| Rail, Home/carousel, episodes, Discover | Five HTTPS scenarios at full/scaled TV sizes, with exact focus/bounds and pagination assertions; 14 existing Vizio regression cases passed | Android TV Resume visually verified; physical Vizio remote/media acceptance not newly performed |
+| Hero blur, Resume, chip/grid/scrollbar/legend styling | Inspected captures and computed geometry/color checks against Android TV's layout | No universal visual/device parity claim |
+
 # TV-034 corrections (2026-09-25)
 
 Design revision: `8ab5b6e95cdc9c6154efec2ff418a4ee1eecf55e`.

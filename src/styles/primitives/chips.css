@@ -287,3 +287,8 @@
     transition: none;
   }
 }
+
+/* TV-038: Android TV outlined type/catalog controls, with stable focus geometry. */
+.tv-layout .vx-chip { height: 52px; min-height: 52px; border: 1px solid var(--viptv-color-line-chip); background: transparent; }
+.tv-layout .vx-chip[aria-pressed="true"] { border-color: var(--viptv-color-line-strong); background: var(--viptv-color-surface-3); }
+.tv-layout .vx-chip:focus { border-color: var(--viptv-color-text-primary); background: var(--viptv-color-text-primary); color: var(--viptv-color-on-light); }
