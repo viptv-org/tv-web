@@ -1,5 +1,15 @@
 # Hosted Vizio navigation aligned with Android TV — 2026-09-26
 
+Production delivery verified: `watch.syek.tech/?platform=vizio` serves the tested
+`7e0cd9775fe5d4dd12e71316e9d6af5ecad8e64d` bundle. Public HTML SHA-256 is
+`737279b3004899f59b49c9d3f1d77c177149c2d0458e766ce6d45f0f314a6149`;
+`app-kMJ1mBR1.js` and `design-DVm35TNK.css` plus every referenced entry script/style
+matched the local artifact byte-for-byte. The API health proxy returned 200/ok.
+The web host switched its static root to a versioned directory using a graceful
+nginx reload; API/media routing, backend processes and database were unchanged.
+Prior assets remain available to open tabs; the previous root/config is retained
+for rollback. Reload an existing Vizio tab to adopt the new UI.
+
 TV-038 (`0322985`) applies to the normal hosted `?platform=vizio` DOM entry.
 The rail has explicit neighbors through Settings; focus scrolling uses nearest
 edges with native browser jumps suppressed; Home scrolls hero and shelves in one
