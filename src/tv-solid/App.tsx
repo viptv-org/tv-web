@@ -1,5 +1,5 @@
 /** @jsxImportSource @solidtv/solid */
-import { defineScreen, TvView, TvText } from "./runtime";
+import { defineScreen, TvView, TvText, KeyedFor } from "./runtime";
 import { batch, For, Show } from "solid-js";
 import type { ElementNode } from "@solidtv/solid";
 import { EntryButton } from "./EntryButton";
@@ -6689,21 +6689,21 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
             round={true}
             holdable={false}
           />
-          <For each={s.homeShelves}>{(shelf, shelfPosition) => {
+          <KeyedFor each={s.homeShelves} keyOf={shelf => shelf.key}>{(shelf, shelfPosition) => {
             const row = shelfPosition();
-            const offset = () => s.homeOffsets[shelf.key] ?? 0;
+            const offset = () => s.homeOffsets[shelf().key] ?? 0;
             const first = () => Math.floor(offset() / 356);
-            return <Show when={shelf.cards.length > 0}>
-              <TvText x={192} y={700 + row * 364} content={shelf.title}
+            return <Show when={shelf().cards.length > 0}>
+              <TvText x={192} y={700 + row * 364} content={shelf().title}
                 font="Bricolage650" size={32} letterspacing={-0.32} cssLineBox lineheight={1.35} color={s.primary} />
               <TvView x={192} y={762 + row * 364} w={1632} h={268} clipping>
-              <For each={shelf.cards.slice(first(), first() + 6)}>{(card, slot) => <HomeCard
+              <KeyedFor each={shelf().cards.slice(first(), first() + 6)} keyOf={card => card.id}>{(card, slot) => <HomeCard
                 screenRef={`homeCard${row}Slot${slot()}`} shelf={row}
-                position={first() + slot()} card={card}
-                x={4 + (first() + slot()) * 356 - offset()} y={4} />}</For>
+                position={first() + slot()} card={card()}
+                x={4 + (first() + slot()) * 356 - offset()} y={4} />}</KeyedFor>
               </TvView>
             </Show>;
-          }}</For>
+          }}</KeyedFor>
           </TvView>
           </TvView>
           <TvText
