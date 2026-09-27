@@ -65,7 +65,7 @@ async function installBackend(page: Page): Promise<State> {
 }
 
 async function pairedProfiles(page: Page) {
-  await page.goto('/?platform=vizio');
+  await page.goto('/?renderer=react&platform=vizio');
   await expect(page.getByRole('heading', { name: "Who's watching?" })).toBeVisible();
 }
 

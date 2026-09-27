@@ -3,7 +3,7 @@ import { defineScreen, TvView, TvText } from "./runtime";
 import { tokens } from "../theme/viptv-tokens.generated";
 import type { DetailEpisodeView } from "./detailModel";
 import { noteFocus } from "./focusDebug";
-import { actionIconFor } from "./actionIcons";
+import { vectorIcon, type VectorIcon } from "./vectorIcons";
 
 /** Focus-owning title action; Play alone has the 700 ms secondary action. */
 export const TitleAction = defineScreen({
@@ -30,7 +30,7 @@ export const TitleAction = defineScreen({
       holdFired: false,
       holdTimer: 0,
       labelText: "",
-      iconText: "",
+      iconSource: "",
       white: tokens["color.fill.white"],
       primary: tokens["color.text.primary"],
       onLight: tokens["color.on.light"],
@@ -55,9 +55,14 @@ export const TitleAction = defineScreen({
   methods: {
     reveal() {
       this.labelText = this.label;
-      this.iconText = this.icon;
+      const name: VectorIcon = this.action === "play" ? "play"
+        : this.action === "source" ? "list-video"
+        : this.action === "save" ? (this.icon === "✓" ? "check" : "plus")
+        : "info";
+      this.iconSource = vectorIcon(name,(this.focused || this.label.startsWith("Resume"))?this.onLight:this.primary,30);
     },
   },
+  watch: { focused() { this.reveal(); }, icon() { this.reveal(); } },
   input: {
     left() {
       this.$emit("title-action-move", -1);
@@ -102,25 +107,16 @@ export const TitleAction = defineScreen({
         w={s.buttonWidth}
         h={72}
         rounded={36}
-        color={s.focused ? s.primary : s.surface}
+        color={s.label.startsWith("Resume") ? tokens["color.accent.default"] : s.focused ? s.primary : s.surface}
       />
-      <TvView
-        x={32}
-        y={20}
-        w={28}
-        h={28}
-        src={actionIconFor(s.action === "save" ? (s.iconText === "✓" ? "check" : "plus") : s.action, s.focused)}
-        show={s.action !== "source"}
-      />
+      <TvView show={s.icon !== "" || s.action === "source"} x={32} y={21} w={30} h={30} fit="contain" src={s.iconSource} />
       <TvText
-        x={s.icon === "" ? 34 : 78}
+        x={s.icon === "" && s.action !== "source" ? 34 : 78}
         y={18}
-        maxwidth={s.buttonWidth - (s.icon === "" ? 68 : 98)}
-        maxlines={1}
         content={s.labelText}
         font={"Onest700"}
         size={26}
-        color={s.focused ? s.onLight : s.primary}
+        color={s.focused || s.label.startsWith("Resume") ? s.onLight : s.primary}
       />
     </TvView>
   ),
@@ -168,10 +164,6 @@ export const EpisodeTile = defineScreen({
       this.synopsisText = this.episode.synopsis;
     },
   },
-  watch: {
-    episode() { this.reveal(); },
-    position() { if (this.focused) noteFocus("title-episode", this.position); },
-  },
   input: {
     left() {
       this.$emit("title-episode-move", -1);
@@ -180,7 +172,7 @@ export const EpisodeTile = defineScreen({
       this.$emit("title-episode-move", 1);
     },
     up() {
-      this.$emit("title-season-focus");
+      this.$emit("title-actions-return");
     },
     enter() {
       return () => this.$emit("title-episode-activate", this.position);
@@ -188,7 +180,7 @@ export const EpisodeTile = defineScreen({
   },
 
   render: (s) => (
-    <TvView show={s.episode.item !== null}>
+    <TvView show={s.episode.item !== null} scale={1}>
       <TvView
         x={-4}
         y={-4}
@@ -265,29 +257,6 @@ export const EpisodeTile = defineScreen({
         size={20}
         color={s.secondary}
       />
-    </TvView>
-  ),
-});
-
-export const SeasonControl = defineScreen({
-  props: ["label"] as unknown as { label: string },
-  state() { return { focused: false }; },
-  hooks: {
-    focus() { this.focused = true; noteFocus("title-season", 0); },
-    unfocus() { this.focused = false; },
-  },
-  input: {
-    left() { this.$emit("title-season-change", -1); },
-    right() { this.$emit("title-season-change", 1); },
-    enter() { return () => this.$emit("title-season-change", 1); },
-    down() { this.$emit("title-episodes-enter"); },
-    up() { this.$emit("title-actions-return"); },
-  },
-  render: (s) => (
-    <TvView w={200} h={52}>
-      <TvView w={200} h={52} rounded={26} color={s.focused ? tokens["color.text.primary"] : tokens["color.surface.3"]} />
-      <TvText x={24} y={12} maxwidth={140} maxlines={1} content={s.label} font={"Onest700"} size={22} color={s.focused ? tokens["color.on.light"] : tokens["color.text.primary"]} />
-      <TvView x={162} y={14} w={24} h={24} src={actionIconFor("down", s.focused)} />
     </TvView>
   ),
 });

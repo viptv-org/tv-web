@@ -175,57 +175,15 @@ export const LiveSearchScreen = defineScreen({
           )}
         </KeyedFor>
       }
-      <TvView x={1399} y={994} w={46} h={31} rounded={8} color={s.border} />
-      <TvText
-        x={1409}
-        y={1000}
-        content={s.okText}
-        font={"Onest700"}
-        size={16}
-        color={s.white}
-      />
-      <TvText
-        x={1458}
-        y={999}
-        content={s.typeText}
-        font={"Onest"}
-        size={20}
-        color={s.secondary}
-      />
-      <TvView x={1541} y={994} w={66} h={31} rounded={8} color={s.border} />
-      <TvText
-        x={1551}
-        y={1000}
-        content={s.backText}
-        font={"Onest700"}
-        size={16}
-        color={s.white}
-      />
-      <TvText
-        x={1620}
-        y={999}
-        content={s.deleteText}
-        font={"Onest"}
-        size={20}
-        color={s.secondary}
-      />
-      <TvView x={1716} y={994} w={46} h={31} rounded={8} color={s.border} />
-      <TvText
-        x={1721}
-        y={1000}
-        content={"▶▶"}
-        font={"Onest700"}
-        size={16}
-        color={s.white}
-      />
-      <TvText
-        x={1776}
-        y={999}
-        content={s.doneText}
-        font={"Onest"}
-        size={20}
-        color={s.secondary}
-      />
+
+
+
+
+
+
+
+
+
     </TvView>
   ),
 });

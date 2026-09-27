@@ -54,6 +54,23 @@ export const LibraryScreen = defineScreen({
 
   render: (s) => (
     <TvView>
+      <TvView x={44} y={54} w={56} h={56} rounded={28} color={s.surface} />
+      <TvView
+        x={44}
+        y={54}
+        w={56}
+        h={56}
+        rounded={28}
+        src={s.homeProfileAvatar}
+        show={s.homeProfileAvatar !== ""}
+      />
+      <TvView x={58} y={202} w={28} h={28} src={s.railSearch} />
+      <TvView x={58} y={280} w={28} h={28} src={s.railHomeUnselected} />
+      <TvView x={58} y={358} w={28} h={28} src={s.railDiscover} />
+      <TvView x={58} y={436} w={28} h={28} src={s.railLive} />
+      <TvView x={40} y={496} w={64} h={64} rounded={32} color={s.surface} />
+      <TvView x={58} y={514} w={28} h={28} src={s.railListSelected} />
+      <TvView x={58} y={976} w={28} h={28} src={s.railSettings} />
       <TvText
         x={192}
         y={54}
@@ -174,6 +191,14 @@ export const LibraryScreen = defineScreen({
         color={s.body}
       />
       <TvView x={144} y={976} w={1776} h={104} color={s.background} />
+
+
+
+
+
+
+
+
     </TvView>
   ),
 });

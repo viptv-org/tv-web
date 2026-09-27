@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import type { Catalog, MediaItem, TvApi } from "../../src/api";
-import { loadHomeView, loadHomeShelves } from "../../src/tv-solid/homeModel";
+import { loadHomeView, loadHomeShelves, emptyHome } from "../../src/tv-solid/homeModel";
 import { loadDetailView } from "../../src/tv-solid/detailModel";
 
 const deferred = <T>() => { let resolve!: (value: T) => void; const promise = new Promise<T>(done => { resolve = done; }); return { promise, resolve }; };
@@ -45,13 +45,13 @@ describe("TV progressive Home", () => {
     };
     const controller = new AbortController();
     const update = vi.fn();
-    const loaded = loadHomeShelves(api as unknown as TvApi, controller.signal, update);
-    await vi.waitFor(() => expect(update).toHaveBeenCalledTimes(1));
-    expect(update.mock.calls[0][0].title).toBe("fast");
+    const loaded = loadHomeShelves(api as unknown as TvApi, emptyHome, controller.signal, update);
+    await vi.waitFor(() => expect(update.mock.calls.some(([rows]) => rows.some((row: { title: string; cards: unknown[] }) => row.title === "fast" && row.cards.length))).toBe(true));
+    const published = update.mock.calls.length;
     expect(api.discover).toHaveBeenCalledTimes(2);
     controller.abort();
     stalled.resolve({ items: [item] });
     await loaded;
-    expect(update).toHaveBeenCalledTimes(1);
+    expect(update).toHaveBeenCalledTimes(published);
   });
 });

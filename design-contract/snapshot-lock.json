@@ -1,7 +1,7 @@
 {
   "version": 1,
   "repository": "viptv-org/design",
-  "commit": "03229857686d103d178577e804cc171108ab569f",
+  "commit": "9162e284581bbf82900b114e0f34c561cc17a671",
   "files": {
     "design-contract/.github/pull_request_template.md": {
       "source": ".github/pull_request_template.md",
@@ -85,7 +85,7 @@
     },
     "design-contract/TV_IMPLEMENTATION.md": {
       "source": "TV_IMPLEMENTATION.md",
-      "sha256": "55b0e0b40fd8bde93f520817155cbf49bd757770ece9a5dc52ab36684d53b2e9"
+      "sha256": "330162973021433a8bbec821a43f56978d35b36e52a92242bd503e00a008dd7d"
     },
     "design-contract/TV_POLISH.md": {
       "source": "TV_POLISH.md",

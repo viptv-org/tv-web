@@ -3,7 +3,7 @@ import { defineScreen, TvView, TvText } from "./runtime";
 import { tokens } from "../theme/viptv-tokens.generated";
 import type { HomeCardView } from "./homeModel";
 import { noteFocus } from "./focusDebug";
-import { actionIconFor } from "./actionIcons";
+import { vectorIcon, type VectorIcon } from "./vectorIcons";
 
 /** A focus-owning SolidTV action. Selection fires on remote key release. */
 export const HomeAction = defineScreen({
@@ -34,7 +34,7 @@ export const HomeAction = defineScreen({
       holdFired: false,
       holdTimer: 0,
       labelText: "",
-      iconText: "",
+      iconSource: "",
       white: tokens["color.fill.white"],
       primary: tokens["color.text.primary"],
       onLight: tokens["color.on.light"],
@@ -59,9 +59,13 @@ export const HomeAction = defineScreen({
   methods: {
     reveal() {
       this.labelText = this.label;
-      this.iconText = this.icon;
+      const name: VectorIcon = this.action === "play" ? "play"
+        : this.action === "details" ? "info"
+        : this.icon === "✓" ? "check" : "plus";
+      this.iconSource = vectorIcon(name,(this.focused || this.label.startsWith("Resume"))?this.onLight:this.primary,this.round?34:30);
     },
   },
+  watch: { focused() { this.reveal(); }, icon() { this.reveal(); } },
   input: {
     left() {
       this.$emit("home-action-move", { position: this.position, delta: -1 });
@@ -71,6 +75,9 @@ export const HomeAction = defineScreen({
     },
     down() {
       this.$emit("home-cards-enter");
+    },
+    menu() {
+      if (this.holdable) this.$emit("home-action-hold", this.action);
     },
     enter() {
       if (!this.pressed) {
@@ -92,7 +99,7 @@ export const HomeAction = defineScreen({
   },
 
   render: (s) => (
-    <TvView w={s.buttonWidth} h={s.buttonHeight}>
+    <TvView w={s.buttonWidth} h={s.buttonHeight} scale={s.focused ? tokens["focus.tv-scale-button"] : 1}>
       <TvView
         x={-4}
         y={-4}
@@ -106,25 +113,18 @@ export const HomeAction = defineScreen({
         w={s.buttonWidth}
         h={s.buttonHeight}
         rounded={s.buttonHeight / 2}
-        color={s.focused ? s.primary : s.surface}
+        color={s.label.startsWith("Resume") ? tokens["color.accent.default"] : s.focused ? s.primary : tokens["color.fill.tv-unfocused"]}
       />
-      <TvView
-        x={s.round ? 20 : 38}
-        y={(s.buttonHeight - 32) / 2}
-        w={32}
-        h={32}
-        src={actionIconFor(s.action === "save" ? (s.iconText === "✓" ? "check" : "plus") : s.action, s.focused)}
-        show={s.action !== "details"}
-      />
+      <TvView x={s.round ? 19 : 34} y={s.buttonHeight / 2 - (s.round ? 17 : 15)} w={s.round ? 34 : 30} h={s.round ? 34 : 30} fit="contain" src={s.iconSource} show={s.action !== "details"} />
       <TvText
-        x={s.action === "details" ? 0 : 82}
-        maxwidth={s.action === "details" ? s.buttonWidth : s.buttonWidth - 94}
+        x={s.action === "details" ? 0 : 72}
+        maxwidth={s.action === "details" ? s.buttonWidth : s.buttonWidth - 84}
         align={s.action === "details" ? "center" : "left"}
-        y={(s.buttonHeight - 26) / 2}
+        y={s.buttonHeight / 2 - 16}
         content={s.labelText}
         font={"Onest700"}
         size={26}
-        color={s.focused ? s.onLight : s.primary}
+        color={s.focused || s.label.startsWith("Resume") ? s.onLight : s.primary}
         show={!s.round}
       />
     </TvView>
@@ -133,9 +133,10 @@ export const HomeAction = defineScreen({
 
 /** First Home shelf tile. It receives focus from SolidTV, not the DOM registry. */
 export const HomeCard = defineScreen({
-  props: ["position", "card"] as unknown as {
+  props: ["position", "card", "shelf"] as unknown as {
     position: number;
     card: HomeCardView;
+    shelf: number;
   },
 
   state() {
@@ -158,8 +159,8 @@ export const HomeCard = defineScreen({
     focus() {
       this.focused = true;
       this.reveal();
-      noteFocus("home-card", this.position);
-      this.$emit("home-card-focused", this.position);
+      noteFocus("home-card", this.shelf === 0 ? this.position : 1000 + this.shelf * 100 + this.position);
+      this.$emit("home-card-focused", { shelf: this.shelf, position: this.position });
     },
     unfocus() {
       this.focused = false;
@@ -175,28 +176,21 @@ export const HomeCard = defineScreen({
       this.subtitleText = this.card.subtitle;
     },
   },
-  watch: {
-    position() { if (this.focused) noteFocus("home-card", this.position); },
-    card(value: HomeCardView) {
-      this.titleText = value.title;
-      this.subtitleText = value.subtitle;
-    },
-  },
   input: {
     left() {
-      this.$emit("home-card-move", { position: this.position, delta: -1 });
+      this.$emit("home-card-move", { shelf: this.shelf, position: this.position, delta: -1 });
     },
     right() {
-      this.$emit("home-card-move", { position: this.position, delta: 1 });
+      this.$emit("home-card-move", { shelf: this.shelf, position: this.position, delta: 1 });
     },
     up() {
-      this.$emit("home-card-up");
+      this.$emit("home-shelf-up", { shelf: this.shelf, position: this.position });
     },
     down() {
-      this.$emit("home-card-down");
+      this.$emit("home-shelf-down", { shelf: this.shelf, position: this.position });
     },
     menu() {
-      this.$emit("home-card-hold", this.position);
+      this.$emit("home-card-hold", { shelf: this.shelf, position: this.position });
     },
     enter() {
       if (!this.pressed) {
@@ -204,20 +198,21 @@ export const HomeCard = defineScreen({
         this.holdFired = false;
         this.holdTimer = window.setTimeout(() => {
           this.holdFired = true;
-          this.$emit("home-card-hold", this.position);
+          this.$emit("home-card-hold", { shelf: this.shelf, position: this.position });
         }, 700);
       }
       return () => {
         clearTimeout(this.holdTimer);
         const activate = !this.holdFired;
         this.pressed = false;
-        if (activate) this.$emit("home-card-activate", this.position);
+        if (activate) this.$emit("home-card-activate", { shelf: this.shelf, position: this.position });
       };
     },
   },
 
   render: (s) => (
     <TvView show={s.card.id !== ""}>
+      <TvView w={320} h={180} scale={1}>
       <TvView
         x={-4}
         y={-4}
@@ -233,15 +228,14 @@ export const HomeCard = defineScreen({
         h={180}
         rounded={16}
         src={s.card.image}
-        fit={"cover"}
         show={s.card.image !== ""}
       />
-      <TvText x={16} y={62} maxwidth={288} maxlines={2} align={"center"} content={s.card.title} font={"Bricolage700"} size={30} color={s.secondary} show={s.card.image === ""} />
       <TvView
         x={14}
         y={164}
         w={292}
         h={6}
+        rounded={3}
         color={s.progressTrack}
         show={s.card.progress > 0}
       />
@@ -250,20 +244,26 @@ export const HomeCard = defineScreen({
         y={164}
         w={Math.max(0, Math.min(292, s.card.progress * 292))}
         h={6}
+        rounded={3}
         color={s.accent}
         show={s.card.progress > 0}
       />
+      </TvView>
       <TvText
-        y={198}
+        y={s.focused ? 204 : 196}
+        lineheight={1.3}
+        cssLineBox={true}
         maxwidth={320}
         maxlines={1}
         content={s.titleText}
-        font={"Onest700"}
+        font={"Onest600"}
         size={24}
         color={s.focused ? s.primary : s.primary}
       />
       <TvText
-        y={231}
+        y={s.focused ? 239.1875 : 231.1875}
+        lineheight={1.35}
+        cssLineBox={true}
         maxwidth={320}
         maxlines={1}
         content={s.subtitleText}
@@ -271,20 +271,6 @@ export const HomeCard = defineScreen({
         size={20}
         color={s.secondary}
       />
-    </TvView>
-  ),
-});
-
-/** Unfocused glimpse of the following shelf once Home has scrolled down. */
-export const HomePreviewCard = defineScreen({
-  props: ["card"] as unknown as { card: HomeCardView },
-  render: (s) => (
-    <TvView y={574} show={s.card.id !== ""}>
-      <TvView w={320} h={180} rounded={16} color={tokens["color.surface.2"]} />
-      <TvView w={320} h={180} rounded={16} src={s.card.image} show={s.card.image !== ""} fit={"cover"} />
-      <TvText x={16} y={62} maxwidth={288} maxlines={2} align={"center"} content={s.card.title} font={"Bricolage700"} size={30} color={tokens["color.text.secondary"]} show={s.card.image === ""} />
-      <TvText y={198} maxwidth={320} maxlines={1} content={s.card.title} font={"Onest700"} size={24} color={tokens["color.text.primary"]} />
-      <TvText y={231} maxwidth={320} maxlines={1} content={s.card.subtitle} font={"Onest"} size={20} color={tokens["color.text.secondary"]} />
     </TvView>
   ),
 });

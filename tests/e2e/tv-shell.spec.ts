@@ -5,7 +5,7 @@ import { apiOrigin, capture, corsHeaders, enterHome, episode, expectBox, fixture
 test('renders the real device-pairing handoff without storing a token before approval', async ({ page }, testInfo) => {
   const assertNoPageErrors = await installPlatformRuntime(page);
   await installBackend(page);
-  await page.goto('/?platform=tizen');
+  await page.goto('/?renderer=react&platform=tizen');
   await expect(page.getByRole('heading', { name: 'Sign in to VIPTV' })).toBeVisible();
   await expect(page.getByText('AB12CD34EF')).toBeVisible();
   await expect(page.getByRole('img', { name: 'Scan to link your TV' })).toBeVisible();
@@ -23,7 +23,7 @@ test('Vizio fixture opens the same-origin server media capability through the HT
   const assertNoPageErrors = await installPlatformRuntime(page);
   await installBackend(page);
   await page.addInitScript(({ key, token }) => localStorage.setItem(key, JSON.stringify(token)), { key: `viptv-device:${apiOrigin}`, token: { sessionId: 'device-1', accountId: '7', profileId: null, accessToken: 'access', refreshToken: 'refresh', expiresIn: 900 } });
-  await page.goto('/?platform=vizio');
+  await page.goto('/?renderer=react&platform=vizio');
   await page.getByRole('button', { name: 'Alex' }).press('Enter');
   await page.getByRole('button', { name: 'Moonfall' }).press('Enter');
   await page.locator('[data-focus-id="detail-source"]').press('Enter');
@@ -39,7 +39,7 @@ test('profile management preserves avatar choice, unlocks a protected edit, and 
   const fixture: ProfileFixture = { profiles: [{ ...profile, avatar_style: 'critters', avatar_choice: 1 }], requests: [], needsPin: true };
   await installBackend(page, fixture);
   await page.addInitScript(({ key, token }) => localStorage.setItem(key, JSON.stringify(token)), { key: `viptv-device:${apiOrigin}`, token: { sessionId: 'device-1', accountId: '7', profileId: null, accessToken: 'access', refreshToken: 'refresh', expiresIn: 900 } });
-  await page.goto('/?platform=vizio');
+  await page.goto('/?renderer=react&platform=vizio');
   await page.getByRole('button', { name: 'Alex' }).press('Enter');
   await page.getByRole('button', { name: 'Profile', exact: true }).click();
   await expect(page.getByRole('heading', { name: "Who's watching?" })).toBeVisible();
@@ -94,7 +94,7 @@ test('held OK opens queue management without also activating the card, then hide
     return json(route, { ok: true });
   });
   await page.addInitScript(({ key, token }) => localStorage.setItem(key, JSON.stringify(token)), { key: `viptv-device:${apiOrigin}`, token: { sessionId: 'device-1', accountId: '7', profileId: null, accessToken: 'access', refreshToken: 'refresh', expiresIn: 900 } });
-  await page.goto('/?platform=tizen');
+  await page.goto('/?renderer=react&platform=tizen');
   await page.getByRole('button', { name: 'Alex' }).press('Enter');
   const queuedCard = page.getByRole('button', { name: 'Queued movie' });
   await expect(queuedCard).toBeVisible();
@@ -121,7 +121,7 @@ test('held queue hero opens Manage before its primary Resume action', async ({ p
   await installBackend(page);
   await page.route(`${apiOrigin}/api/profiles/1/continue/page**`, route => json(route, { items: [queued], offset: 0, total: 1, next_offset: null }));
   await page.addInitScript(({ key, token }) => localStorage.setItem(key, JSON.stringify(token)), { key: `viptv-device:${apiOrigin}`, token: { sessionId: 'device-1', accountId: '7', profileId: null, accessToken: 'access', refreshToken: 'refresh', expiresIn: 900 } });
-  await page.goto('/?platform=tizen');
+  await page.goto('/?renderer=react&platform=tizen');
   await page.getByRole('button', { name: 'Alex' }).press('Enter');
   const hero = page.getByRole('button', { name: 'Resume', exact: true });
   await expect(hero).toBeVisible();
@@ -145,7 +145,7 @@ test('held resumable non-queue hero opens explicit source choice instead of Mana
   await page.route(`${apiOrigin}/api/live**`, route => json(route, { channels: [], total: 0 }));
   await page.route(`${apiOrigin}/api/discover**`, route => json(route, { metas: [resumable], has_more: false, next_skip: null }));
   await page.addInitScript(({ key, token }) => localStorage.setItem(key, JSON.stringify(token)), { key: `viptv-device:${apiOrigin}`, token: { sessionId: 'device-1', accountId: '7', profileId: null, accessToken: 'access', refreshToken: 'refresh', expiresIn: 900 } });
-  await page.goto('/?platform=tizen');
+  await page.goto('/?renderer=react&platform=tizen');
   await page.getByRole('button', { name: 'Alex' }).press('Enter');
   const hero = page.getByRole('button', { name: 'Resume', exact: true });
   await expect(hero).toBeVisible();
@@ -166,7 +166,7 @@ test('new-movie hero hold chooses a source while its Home card hold performs ord
   await installBackend(page);
   await page.route(`${apiOrigin}/api/live**`, route => json(route, { channels: [], total: 0 }));
   await page.addInitScript(({ key, token }) => localStorage.setItem(key, JSON.stringify(token)), { key: `viptv-device:${apiOrigin}`, token: { sessionId: 'device-1', accountId: '7', profileId: null, accessToken: 'access', refreshToken: 'refresh', expiresIn: 900 } });
-  await page.goto('/?platform=tizen');
+  await page.goto('/?renderer=react&platform=tizen');
   await page.getByRole('button', { name: 'Alex' }).press('Enter');
 
   const hero = page.getByRole('button', { name: 'Play', exact: true });

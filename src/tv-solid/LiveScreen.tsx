@@ -291,78 +291,15 @@ export const LiveScreen = defineScreen({
         color={s.secondary}
       />
       <TvView x={144} y={976} w={1776} h={104} color={s.chrome.background} />
-      <TvView
-        x={1216}
-        y={1008}
-        w={44}
-        h={31}
-        rounded={8}
-        color={s.chrome.keyBorder}
-      />
-      <TvText
-        x={1226}
-        y={1013}
-        content={s.chrome.okLabel}
-        font={"Onest700"}
-        size={16}
-        color={s.chrome.primary}
-      />
-      <TvText
-        x={1275}
-        y={1012}
-        content={s.chrome.watchLabel}
-        font={"Onest"}
-        size={20}
-        color={s.chrome.body}
-      />
-      <TvView
-        x={1523}
-        y={1008}
-        w={58}
-        h={31}
-        rounded={8}
-        color={s.chrome.keyBorder}
-      />
-      <TvText
-        x={1535}
-        y={1013}
-        content={s.chrome.channelIcon}
-        font={"Onest700"}
-        size={16}
-        color={s.chrome.primary}
-      />
-      <TvText
-        x={1594}
-        y={1012}
-        content={s.chrome.channelsLabel}
-        font={"Onest"}
-        size={20}
-        color={s.chrome.body}
-      />
-      <TvView
-        x={1717}
-        y={1008}
-        w={54}
-        h={31}
-        rounded={8}
-        color={s.chrome.keyBorder}
-      />
-      <TvText
-        x={1728}
-        y={1013}
-        content={s.chrome.timeIcon}
-        font={"Onest700"}
-        size={16}
-        color={s.chrome.primary}
-      />
-      <TvText
-        x={1784}
-        y={1012}
-        content={s.chrome.timeLabel}
-        font={"Onest"}
-        size={20}
-        color={s.chrome.body}
-      />
+
+
+
+
+
+
+
+
+
     </TvView>
   ),
 });

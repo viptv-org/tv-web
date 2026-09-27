@@ -173,3 +173,182 @@ baseline `6f335d7631e1334be398b7aa5977ce4ce51ac50a`.
 | Responsive web and desktop isolation | Phone `Main` and desktop `DeskHome` from current React entry captured against isolated tv-web `de6adc1` before player wiring. | Both exact: 0 changed pixels, MAE/RMSE 0, SSIM 1 at 390×844 and 1440×900 respectively. | Installed Tauri run unverified; no responsive source changes. |
 | All other TV states | No Lightning acceptance result. | Unmeasured. | Not migrated or qualified. |
 | React TV launch path | `TvPairing` capture remains exactly equal to saved React baseline (0 changed pixels). | Existing path unchanged for that state. | Current Tizen/Vizio launcher retained. |
+
+
+---
+
+# Preserved SolidTV completion branch evidence
+
+# SolidTV completion checkpoint — 2026-09-24
+
+Design pin: `268e42c6a456f82a1e6f5b3c8893eccbcc7c1b2d`.
+Native SolidTV focus now owns the active element, focus path and remote routing.
+
+| Surface | Added browser acceptance | Remaining evidence |
+| --- | --- | --- |
+| Home | Primary Play, held menu/source actions, queued Next, stale Next after navigation; Vizio Home shelves, catalog rows, and carousel/vertical navigation delivered from real API feeds | Full canonical visual inventory and remote focus movement review |
+| Profiles | Edit/name/avatar/PIN, create/delete, protected selection, 12-profile paging, cancellation | Pixel-exact canonical review; physical TV |
+| Text entry | Required filters, addon URL validation/install, held Delete, sign-out PIN success/retry | Full long-input/error states on TV |
+| Player | Next, three source attempts, rollback failure and exact-source Retry, paused/cancelled Up Next, final-ten-second Resume | Physical video surface/codec checks; all canonical overlays |
+| Live | Direct channel/programme playback, exact focus return, failure Back, no live progress writes | Physical stream playback and remote |
+| Title / long lists | Season selection, tenth episode/source identity, stable Resume target, full More info/Source text scrolling, 12 audio/subtitle tracks | Complete visual comparison; physical TV |
+| Recovery | Current controller session metadata/heartbeat, terminal error callback, committed seek target, authenticated Home retry | Physical decoder failures and codec fallback |
+| Visuals | Matched Home backdrop/typography, SVG rail/key/player/profile icons, profile field/keyboard geometry, non-overlapping player hints | Full exact design parity is not yet certified |
+
+Matched profile screenshot metrics are in [solid-completion-visual-metrics.json](solid-completion-visual-metrics.json): Edit mean channel error 1.1668/255 (10.6429% pixels differ), Name 1.4608/255 (5.8199% pixels differ). These are **not pixel-identical**.
+
+Default launchers remain React until delivery gates pass. Current measurements
+and limitations are in [PERFORMANCE.md](../PERFORMANCE.md); earlier results below
+belong to earlier immutable checkpoints. No physical TV or production claim is
+made from browser platform flags.
+
+---
+
+# SolidTV renderer adoption — 2026-09-24
+
+Pinned design: `aa2a1d69935fc07a97bd37d5fa0f78ab8d1c7b47`. The entries below
+bound the migration from the Blits canvas to `src/tv-solid`; prior platform
+coverage and outstanding product gaps are historical records below.
+
+| Surface | SolidTV browser evidence | Physical device evidence |
+| --- | --- | --- |
+| Pairing/profiles | Loading, expiry/retry, chooser, manage focus and hold scenarios passed | Unverified |
+| Home/rail/title | Navigation, paging, detail/episode focus and Back passed | Unverified |
+| Discover/library/search | Filters, paging, keyboard, menu/Undo and restoration passed | Unverified |
+| Live | Guide movement, future programme details, long hold and live search passed | Unverified |
+| Settings | Root rows, preferences/save, addon actions and cancellation, sign-out cancellation passed | Unverified |
+| Sources/player | Quality/provider/details, paging, holds, playback, seek, subtitles/audio replacement passed | Unverified |
+
+All 30 migrated scenarios passed with the Tizen browser flag. Home, Live and
+PlayerSubs additionally passed with Vizio and webOS flags. 43 before/after
+captures measured migration drift; see [metrics](solid-tv-visual-metrics.json)
+and [TESTING.md](../TESTING.md). Geometry/tokens/assets remain pinned. The
+comparison is not byte equality or complete canonical-design certification.
+
+---
+
+# VIPTV design-system overhaul — 2026-09-23
+
+Current design: `732244c79c05da9a47004dd97cdc6caf1ed534be`, with the
+authoritative [screen index](../design-contract/viptv-design-system/reference/screens/index.json),
+[components](../design-contract/viptv-design-system/components.md),
+[copy](../design-contract/viptv-design-system/copy.md), and
+[decisions](../design-contract/viptv-design-system/decisions.md). The table
+below describes the current build. The older Roku-based record farther down
+is historical evidence for a superseded design revision.
+
+| Surface | Browser and reference evidence | Remaining limit |
+| --- | --- | --- |
+| Shell and Home | Phone, desktop app preview, browser and TV Home, rail, title bar and phone nav captured and compared; responsive Back and remote focus exercised. | Desktop app frame is a browser preview, not an installed Tauri run. |
+| Title, sources, menus | Phone/desktop/TV title, sources, provider/details and menu/Undo states captured; source identity, hold, filter and Back checked. | Reference and fixture source counts differ; TV provider control remains an explicit adaptation. |
+| Discover, My List, Search, Live | P/D/T results, filters, queue, keyboard and guide states captured; paging, stale response suppression and D-pad flow checked. | Reference uses a voice-search mic; the app has no voice input. Some fixture counts and artwork differ. |
+| Account | Sign-in, pairing expiry, profiles, edit, avatar, text and PIN states captured; auth/focus flows checked. | A protected-profile lock badge awaits a protection flag in the profile data. |
+| Settings, casting, local mode | P/D/T settings and addon states, desktop SmartCast preview and browser/local-mode states captured; local and cast unit flows checked. The desktop command paired with and launched a physical Vizio on 2026-09-24. | Accent-colour choice has no reference screen. Other cast states remain browser simulations. |
+| Player and shared states | P/D/T VOD, live, seek, tracks, Up Next, buffering and error states captured; Next, focus, rollback and notices checked in browser. | Browser media stubs and AVPlay simulation do not qualify device decoding. Composite States boards are reviewed through individual states. |
+
+All 151 tv-web-reachable reference screens produced side-by-side comparisons;
+the WebLinkTv code-entry page is implemented in `web`. Browser screenshots
+and comparison artifacts remain ignored local test output. Physical Vizio
+launch, sign-in and viewing entry were confirmed on 2026-09-24; other
+physical Vizio states, Tizen and installed Tauri evidence remain unverified.
+See TESTING.md for the scoped observation and validation commands.
+
+# Prior shared TV visual rebuild parity — 2026-09-13
+
+Design: `3ab29a63cbe6369341ee4376f69a59d4cbb38fc8`. Contract IDs refer to that revision's TV_WEB_UI_REBUILD acceptance index, now removed from the current snapshot. Local batch at the time: 43 unit tests, 49 browser passes / 33 deliberate platform skips. Implementation/CI revision is recorded in [execution issue #2](https://github.com/viptv-org/tv-web/issues/2) and TESTING.md. The evidence columns bound what was verified then.
+
+| IDs / surface | Browser evidence | Matched Roku visual evidence | Tizen hardware | Vizio hardware |
+| --- | --- | --- | --- | --- |
+| TVW-01 startup/pairing | Pending/approved/expiry/QR failure/manual/retry | Fixture inspected; full matched set pending | Unverified | Unverified |
+| TVW-02/03 profiles/avatar/text/PIN | CRUD/protection/failed draft/unlock/cancel, captured chooser | Matched set pending | Unverified | Unverified |
+| TVW-04/05 rail/Home | Routes/holds, initial shelves and focus; canonical rail geometry | Fixture inspected; real-content Home comparison pending | Unverified | Unverified |
+| TVW-06 Discover/My List | Filters/defaults/paging and queue actions | Matched set pending | Unverified | Unverified |
+| TVW-07 movie | Manual source, saved source intent and Resume failure paths | Matched set pending | Unverified | Unverified |
+| TVW-08 episodes | Real API decoding/history merge, watched/progress, initial focus and Down to complete next row | Fixture inspected; matched artwork/title set pending | Unverified | Unverified |
+| TVW-09 sources | Filter/empty/hold details/exact Resume identity, canonical list geometry | Fixture inspected; retained Quality adaptation | Unverified | Unverified |
+| TVW-10 Search | Debounce/stale/partial results, fixed keyboard and result geometry | Blank first-key state SSIM 0.923059; populated states pending | Unverified | Unverified |
+| TVW-11 Guide | Five rows/gaps/filter/40-channel page/Back/server labels | Fixture inspected; real schedule comparison pending | Unverified | Unverified |
+| TVW-12 Settings/addons | Six actions/nested preferences/return focus/addon mutations/signout; 720p/1080p scaling | Switch-profile state SSIM 0.955989; other states pending | Unverified | Unverified |
+| TVW-13/14 player/Next | Direct decoder fixture, seek/repeat/cancel/track-modal Back, controlled Next/previous Resume | Full matched overlay set pending | Unverified | Unverified |
+| TVW-15 queue menus | Hold release suppression/corrections/hide/Undo | Matched set pending | Unverified | Unverified |
+| TVW-16 lifecycle/shared states | Scoped stale-response errors, fixed-canvas focus/scaling; see scenario gaps below | Complete dialog/error/motion matrix pending | Unverified | Unverified |
+
+No row implies every branch is covered. Per-screen gaps and physical platform limits remain below; superseded old labels/layout assertions were updated to Roku controls rather than preserved as a second design.
+
+## Detailed scenario coverage
+
+# TV behavior parity matrix
+
+Audit target: `design/TV_IMPLEMENTATION.md` required scenario groups and
+`design/specs/behavior/roku-ux-contract.md`. This records automated scenario
+coverage present in this checkout on 2026-09-12. A linked test means one
+scenario exists; it is not a claim that every state in the group, or physical
+Tizen/Vizio behavior, is verified.
+
+| Required group | Existing automated scenario(s) | Explicitly missing from current suite |
+| --- | --- | --- |
+| Pairing pending, approved, expired, error, retry | `tests/e2e/tv-shell.spec.ts` — pairing page and Retry; `pairing-lifecycle.spec.ts` — pending approval, expiry/retry and QR failure with manual pairing | Slow-down/network error and stale poll cancellation |
+| Profile choose/create/edit/avatar/delete/primary protection/unlock | `tv-shell.spec.ts` — create, avatar selection, protected edit/unlock, secondary deletion and primary no-delete | Five-card paging through 12 profiles, unlock cancellation/rate-limit and profile-selection cancellation |
+| Home focus, hero, loading, Back | `tv-shell.spec.ts` — Home arrives after profile selection; canonical shelf geometry; held non-live queue hero opens Manage; held resumable/new-movie heroes enter explicit source choice; held series-root hero opens episode detail; held non-queue Home cards follow ordinary detail selection | Hero/action changes with focus, stable shelf order under delayed requests, rail/Home focus restoration, playback Back destinations and loading states |
+| Discover filters and paging | `tests/e2e/discover-filters.spec.ts` — declared defaults, filter changes and pagination reset | Type/catalog switching, failed/empty page behavior and return focus |
+| Search keyboard, debounce, results, failure | `tests/ui/text-entry.test.tsx` — rejected text draft remains editable; `tv-shell.spec.ts` — basic Search view | 650 ms replacement, blank/empty copy, result identity retention and keyboard-to-result movement; partial-source retention/status now covered in `resilience-settings.spec.ts` |
+| Movie, series, season and episode state | `tv-shell.spec.ts` — movie detail/source entry, held series-root hero detail entry, and series season/episode source entry | Episode initial-focus/progress choice, unreleased episode behavior and detail Back restoration |
+| Manual source paging/filter/explicit selection/Resume identity | `tv-shell.spec.ts` — explicit source starts and lookalike Resume returns to manual choice | Late-result focused-row stability and source paging. `next-episode.spec.ts` now covers failed exact Resume, Retry/manual source choice at retained position and Back; empty-filter focus/full source details are covered in `resilience-settings.spec.ts` |
+| Player pause/seek/repeat/debounce/cancel/rollback/tracks/exit | `tests/e2e/media-decode.spec.ts` — real DOM decode advances, pauses, seeks, ends and disposes; `tests/player/*.test.ts` — adapter/controller failures and replacement boundaries; `player-remote.spec.ts` — direct preview/repeat/debounce, managed seek/subtitle-Off, Exit/Sources progress, seven-second chrome hide, modal timer suspension, modal-first Back/focus restoration and chrome-then-exit Back order | Managed rollback recovery UI, track-dialog paging/focus transitions beyond the Audio-close path, and physical remote/decoder behavior |
+| Next scoped selection/last-ten eligibility/cancel/previous Resume | `tests/player/session-controller.test.ts` — cancellation/restoration boundaries | `next-episode.spec.ts` verifies the three-distinct-attempt bound, same-IPTV-account continuation despite a competing first result, app-level ranked Next, final-ten guards, cancellation, explicit near-end Resume and previous-episode Resume/Back. Remaining: failed native rollback recovery UI. |
+| Queue hide/undo/watched/history | `tv-shell.spec.ts` — held OK opens queue management; Hide then Undo restores visibility | `queue-progress.spec.ts` covers watched/unwatched correction, queue/history refetch, restored focus and manual restart at position zero without premature history writes. Remaining: queue paging and focus when the removed row was the final item. |
+| Live guide future OK versus Play/filters/windows/gaps | `tests/ui/guide.test.tsx` — category filters, five rows, previous page final-row focus, gap/cell cap and remote search trim/bounds/Back | Future-programme OK detail versus transport Play, details key consumption, hour bounds/follow-now, guide search copy and missing-schedule Watch |
+| Settings/source preferences/addons/signout | `tv-shell.spec.ts` — subtitle-start and quality mutation through the six-row nested preferences | Remaining preference options and account-wide add-on copy; add-on install/enable/remove and sign-out are covered in `resilience-settings.spec.ts`; parent-gated select/logout cancellation and approval are covered in `parent-auth.spec.ts` |
+| Stale request/session cancellation | `tv-shell.spec.ts` — obsolete Browse response cannot replace current search; `tests/player/*.test.ts` — stale adapter/controller callbacks | Stale pairing/profile/home/source/guide requests and focus restoration cancellation after directional input |
+| Offline and partial failures | `tv-shell.spec.ts` — sanitized Discover failure and dismissal | Pairing/profile/source/player/guide offline paths and partial cross-catalog search result retention |
+
+## Evidence limits
+
+`media-decode.spec.ts` uses Chromium's real HTML media decoder with a recorded
+WebM fixture. It does not prove a physical SmartCast decoder, Tizen AVPlay,
+codec/DRM support, signing, store submission, or backend delivery behavior.
+Those remain platform and hardware acceptance work.
+
+## Responsive production adoption (issue #3)
+
+Contract: design `2411c28a169412fbedd38a293adc1a7482dcc9c0`, RESPONSIVE_PRODUCTION and RUI-018–021. Browser default adopts responsive layout; explicit TV layout retains the prior canvas and behavior. Real controller/API integration and native command payloads are covered separately from physical decoding. Current validation evidence will be recorded in RESPONSIVE_VALIDATION.md. No measured Roku screenshot match or native packaging claim is made by moving this pin.
+
+RUI-022 populated content correction: design502dcb5. Seven populated viewport checks plus phone/desktop Back anchors and existing responsiveflows passed. Real fixed-root scrollWidth and16:9 artwork bounds are now asserted. Sparse previous checks were insufficient; do not cite them as complete responsive visual acceptance. Physical TV/native-host evidence remains unchanged.
+
+## RUI-023 correction
+
+Shared Rust CardPresentation owns shelf image roles, labels, progress and activation for Android/web. Queue image regression starts with a poster-only history row and requires metadata's exact episode still. Responsive lower-shelf focus and live logos are checked at390/768/1440px; routing tests verify Back/Forward, left-hand Back, reload without playback and no live Sources detour. Actual upstream adapter decoding is recorded separately in RESPONSIVE_VALIDATION.md. No device-wide 100% parity claim.
+
+RUI-024: mobile selected-state styling and desktop focus preservation browser-verified; mobile visual focus suppression does not remove DOM/text-input editing semantics.
+
+RUI-025 supersedes desktop keyboard focus presentation: responsive desktop/mobile use selected states without TV keyboard navigation; TV-mode input remains unchanged. Browser and remote-input regression checks pass.
+
+| RUI-026 / TVW-05, 09, 16 | Shared failed-image recovery; dismissible dialog backdrops; one local source spinner | Core b374711 / design58cc091. Phone390 and desktop1440 browser failure/dismissal/geometry scenarios pass; profile draft and stale authorization cancellation covered. Responsive/history and both TV-shell configurations pass (12 platform-specific skips). | Physical Tizen/Vizio unverified; no new Roku runtime change. |
+
+
+| RUI-027 | Responsive fullscreen/volume/decoder diagnostics; category sidebar and native-scroll guide; shared addon namespaces; centered web/native approval | Design f8ca89d / core a8ece4f. Browser viewport/scroll/fullscreen/auth boundaries and 117 app unit tests pass. Real MediaBunny live/MP4 and same-session HLS.js fallback exercised; detailed counts and rerun caveat in TESTING.md. | Installed Tauri and physical TV qualification pending; insecure LAN HTTP uses available native decoding. |
+# LightningJS TV-only migration — 2026-09-24
+
+Design pin `aa2a1d69935fc07a97bd37d5fa0f78ab8d1c7b47`; React TV
+baseline `6f335d7631e1334be398b7aa5977ce4ce51ac50a`.
+
+| TV state / path | Lightning browser evidence | 1:1 visual evidence | Device evidence / disposition |
+| --- | --- | --- | --- |
+| Pairing, loading, expiry, retry | Shared device API/QR mocked at 1920×1080; expiry Enter release caused a new device-code request. Tizen/Vizio/webOS browser captures were byte-equal. | Pairing vs current React: 331,807 pixels changed (16.0015%), MAE 3.7149, RMSE 25.1868, SSIM 0.911408. Open deviation. | Physical Tizen/Vizio/webOS unverified; staged entry only. |
+| Profiles / Manage / hold | Blits focused tile components consume shared API data. Right+Enter selected profile 2; Down+Enter entered Manage; held Enter suppressed release selection. | `TvProfiles`: 292,096 changed pixels (14.0864%), MAE 3.4131, RMSE 24.6169, SSIM 0.721367. `TvProfilesManage`: 301,406 changed pixels (14.5354%), MAE 4.0433, RMSE 26.802, SSIM 0.684476. Both open deviations. | Browser fixture only; profile editing, PIN and paging incomplete. |
+| Home first frame / action and shelf focus | Shared API/Rust hero and queue projections feed staged Home. Rapid Right+Right+Enter toggled My List; Down/Right moved Blits focus between cards; 750 ms hold suppressed release activation. Details and cards now open title; Play and other shelves remain pending. | 1,406,199 pixels changed (67.8144%), MAE 8.8849, RMSE 26.6207, SSIM 0.857713 against current React `TvHome`. Open deviation. | Browser fixture only; no launcher or device qualification. |
+| Expanded TV menu | Left from the first Home action opens seven Blits focus rows; Down focuses Discover. Right/Back restore the remembered Home action. Profile activates profile selection; Home, Search, Discover, Live TV, My List and Settings route to content. Tizen/Vizio/webOS browser captures were byte-equal. | `TvMenu` vs React: 1,625,803 changed pixels (78.4049%), MAE 3.7609, RMSE 12.2046, SSIM 0.930841. The Home background contributes to the full-frame difference; exact pixel parity remains open. | Browser fixture only; physical remote behavior unverified. |
+| TV Search | Blits on-screen keys and physical typing search the same catalog/live API after 650 ms; replacement cancels stale work. Browser fixtures exercised 14 grouped Naruto results, D-pad result/keyboard navigation including offscreen results, title/Back focus, held-card menu, Delete/Clear, no results, partial catalog failure with retained Live TV, and rail return through Discover/My List. Search keeps all result positions for navigation but mounts and reprojects at most nine viewport cards per D-pad window move; a 120-result model check confirmed only visible cards receive wsrv URLs. Populated and blank captures were byte-equal in Tizen/Vizio/webOS browser modes, and the windowing edits left the Blits `TvSearch` frame pixel-identical. | `TvSearch` populated vs React: 407,982 changed pixels (19.6751%), MAE 4.5274, RMSE 23.1041, SSIM 0.942227. Matched blank Search: 79,744 changed (3.8457%), MAE 1.3043, RMSE 13.4446, SSIM 0.827156. Both open deviations; no-result and partial-failure states lack React pixel baselines. Search input latency was not remeasured after windowing. | Browser fixtures only; physical keyboard/remote behavior unverified. Voice search is unavailable in the current React baseline too. |
+| Live guide / programme details / Live search | Shared live and schedule APIs feed Blits five-row guide, hero, category chips, schedule gaps, now line, held-OK details, and a full-screen text entry. Browser fixtures exercised future OK versus current OK, News filter request, Back/focus restoration, and typed `cnb` submission; five repeated guide runs passed after cancelling stale focus callbacks. Hour-window and channel-page code paths need longer-data/browser coverage. | Matched React comparisons: `TvLive` 561,727 changed pixels (27.0895%), MAE 4.3172, RMSE 23.3649, SSIM 0.908843; `TvLiveDetails` 1,235,755 (59.5947%), MAE 5.0488, RMSE 21.4385, SSIM 0.877160; `TvLiveSearch` 144,918 (6.9887%), MAE 1.7969, RMSE 14.4489, SSIM 0.824780. All open deviations; Live search's physical-typing focus decoration is still missing. Earlier design-WebP metrics were incorrectly labelled React. | Tizen/Vizio/webOS browser captures byte-equal for all three states. Current OK uses staged source picker versus React's direct play. Physical TV and live source playback unverified. |
+| Settings / playback choices / addons / sign-out confirmation | Blits root rows and profile tiles use current session data. Browser fixtures exercised D-pad profile focus, preference PUT/Back, addon list, Enable/Disable API request, nested Remove cancellation, sign-out cancellation and return to Home. Addon install text entry, confirmed removal, profile editing, parent-PIN sign-out and rows beyond six remain incomplete or unverified. | Matched React: `TvSettings` 172,804 changed (8.3335%, SSIM 0.894380); `TvPlayback` 197,552 (9.5270%, SSIM 0.834234); `TvPlaybackChoice` 1,148,625 (55.3928%, SSIM 0.878242); `TvAddons` 177,432 (8.5567%, SSIM 0.852570); `TvSignOut` 1,100,764 (53.0847%, SSIM 0.900069); `TvAddonManage` 1,030,417 (49.6922%, SSIM 0.891538); `TvAddonRemove` 1,029,282 (49.6374%, SSIM 0.901659). All open deviations. | Tizen/Vizio/webOS browser captures byte-equal for Settings and Playback choice; physical TV unverified. |
+| TV navigation performance | Production-bundle Chromium Home fixture measured five unthrottled and five 4× CPU-throttled runs after deferring playback import and the Home reveal delay. Home screenshot remained exact against its previous Blits frame. A three-second-settled diagnostic separates texture warmup from steady-state navigation. | Final-bundle median first interactive focus: React 201 ms versus Blits 388 ms unthrottled; 663 ms versus 1,238 ms at 4× throttle. Focus-hook timing and sampled frame intervals also favor React, but marker stages differ. Performance target not met. | Chromium used SwiftShader; no physical Tizen/Vizio/webOS latency or FPS measurement. TV launcher remains React. |
+| Discover / Genre filter | The staged Blits route loads normalized catalogs and cards from the shared API/core. Browser D-pad fixtures exercised a 4-column focus window, selected-card detail/Back restoration, Genre choice request, catalog/type switching and return to Home. The modal keeps its own focus and Back. Tizen/Vizio/webOS browser captures were byte-equal for both states. Required text entry, horizontally overflowing chips, long filter lists and physical navigation remain pending. | With landscape art fitted as React renders it, `TvDiscover` vs React: 725,162 changed pixels (34.9712%), MAE 3.1006, RMSE 16.5307, SSIM 0.952812. `TvDiscoverFilter`: 1,178,903 changed (56.8530%), MAE 3.3850, RMSE 14.9249, SSIM 0.940365. Both open deviations. | Browser fixtures only; no physical Tizen/Vizio/webOS run of Blits. |
+| My List / Continue Watching | Saved titles and queue are fetched from the shared profile API. Blits tabs, grid focus, direct queue Resume source/position, player exit and source Back restore the originating library tile; saved-title detail My List mutation refetches the grid. Held OK opens the staged action menu and suppresses release activation. Tizen/Vizio/webOS browser captures were byte-equal for queue and saved grids. | `TvLibrary` queue: 614,925 changed pixels (29.6549%), MAE 2.8698, RMSE 16.7688, SSIM 0.953726. Saved grid with six fixture favorites: 463,694 changed (22.3618%), MAE 1.9608, RMSE 14.0516, SSIM 0.951455 against a matched React browser capture. Both open deviations. | Browser fixtures with platform media stubs only; no physical TV run. |
+| Held-card title menu / queue corrections | Blits focus rows open on 700 ms OK hold or ContextMenu; Back restores the card. Browser fixtures exercised Choose source, previous episode at its saved position, restart at zero, hide/Undo API calls, favorite toggle, and watched correction through the shared API. Hide/Undo backing data is mocked and physical remote Menu/Info keys remain unverified. | `TvItemMenu` vs React: 1,223,606 changed pixels (59.0088%), MAE 4.7415, RMSE 21.5925, SSIM 0.886041. Open deviation; Home underlay and menu icon/shadow rendering differ. Undo view is unmeasured. | Tizen/Vizio/webOS browser captures byte-equal; no physical TV run. |
+| Title / episode row | Home Details and a selected card loaded distinct metadata through the shared API/core. Back restored the originating Home action/card focus; title My List reached the API. Action and episode tiles own Blits focus. | `TvTitle`: 1,474,821 pixels changed (71.1237%), MAE 8.2731, RMSE 27.3696, SSIM 0.793883. Open deviation. | Full playback controls, More info, full episode activation and physical devices unverified. |
+| Sources / provider / details | Rust-owned source polling, Blits D-pad filters, provider choices, six-row window paging, exact source ID/position and Resume intent, nested Back/focus and 700 ms details hold exercised in browser fixtures. Explicit selection now reaches the pinned playback controller. | `TvSources`: 1,525,612 changed (73.5731%), MAE 5.7584, RMSE 22.7721, SSIM 0.887465. `TvSourceProvider`: 1,267,892 changed (61.1445%), MAE 6.2317, RMSE 22.8690, SSIM 0.847848. `TvSourceDetails`: 184,921 changed (8.9179%), MAE 2.4859, RMSE 20.9487, SSIM 0.627974. All open deviations. | Tizen/Vizio/webOS browser captures byte-equal for Sources; physical remote, player and decoders unverified. |
+| Player / seek | Pinned platform adapter and session controller opened the selected source. Browser media/AVPlay stubs verified Pause, relative seek, preview cancel/commit, two-level Back, session stop and progress save across Tizen/Vizio/staged webOS configurations. | Vizio-browser `TvPlayer`: 94,978 changed (4.5803%), MAE 3.2571, RMSE 24.6134, SSIM 0.753696. `TvPlayerSeek`: 114,621 changed (5.5276%), MAE 3.4487, RMSE 24.7832, SSIM 0.737013. Open deviations. | Tizen browser AVPlay does not paint a frame; physical video layering, codecs/DRM, Next, error/recovery and live/DVR unverified. |
+| Audio/subtitles panel | Blits panel focuses the current track. Browser fixtures on Tizen/Vizio/staged webOS exercised unavailable PGS, Back restoration, managed Subtitles Off and English Stereo replacements. | Vizio-browser `TvPlayerSubs`: 380,929 changed (18.3704%), MAE 3.7155, RMSE 21.8704, SSIM 0.862725. Open deviation. | Lists longer than eight rows and physical track capabilities unverified. |
+| Responsive web and desktop isolation | Phone `Main` and desktop `DeskHome` from current React entry captured against isolated tv-web `de6adc1` before player wiring. | Both exact: 0 changed pixels, MAE/RMSE 0, SSIM 1 at 390×844 and 1440×900 respectively. | Installed Tauri run unverified; no responsive source changes. |
+| All other TV states | No Lightning acceptance result. | Unmeasured. | Not migrated or qualified. |
+| React TV launch path | `TvPairing` capture remains exactly equal to saved React baseline (0 changed pixels). | Existing path unchanged for that state. | Current Tizen/Vizio launcher retained. |

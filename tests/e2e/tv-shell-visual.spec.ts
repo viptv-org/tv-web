@@ -11,7 +11,7 @@ test('restores a remembered profile without flashing pairing and retains Home af
       if(document.body?.textContent?.includes('Sign in to VIPTV')) (window as unknown as { pairingFlashed:boolean }).pairingFlashed=true;
     }).observe(document,{childList:true,subtree:true});
   }, { origin:apiOrigin });
-  await page.goto('/?platform=vizio');
+  await page.goto('/?renderer=react&platform=vizio');
   await expect(page.locator('.media-card').first()).toBeVisible();
   await expect(page.locator('.vx-profiles')).toHaveCount(0);
   await page.reload();
@@ -22,7 +22,7 @@ test('restores a remembered profile without flashing pairing and retains Home af
 test('profile artwork remains concentric with its focus outline at TV and desktop sizes', async ({ page }) => {
   await installBackend(page);
   await page.addInitScript(({ origin }) => localStorage.setItem(`viptv-device:${origin}`,JSON.stringify({sessionId:'fixture',accountId:'7',profileId:null,accessToken:'access',refreshToken:'refresh',expiresIn:900})),{origin:apiOrigin});
-  await page.goto('/?platform=vizio');
+  await page.goto('/?renderer=react&platform=vizio');
   const card=page.locator('[data-focus-id="profile-0"]');
   await expect(card).toBeVisible();
   for (const viewport of [{width:1280,height:720},{width:1920,height:1080}]) {
@@ -61,7 +61,7 @@ test('reported TV web regressions keep episode details, loading feedback and row
     return json(route, { events: [{ seq: 1, source: 'addon:2', streams: [{ id: 'bleach-stream', name: 'Bleach 1080p', source_addon_id: 'addon:2' }] }], done: true });
   });
   await page.addInitScript(({ key, token }) => localStorage.setItem(key, JSON.stringify(token)), { key: `viptv-device:${apiOrigin}`, token: { sessionId: 'device-1', accountId: '7', profileId: null, accessToken: 'access', refreshToken: 'refresh', expiresIn: 900 } });
-  await page.goto('/?platform=vizio');
+  await page.goto('/?renderer=react&platform=vizio');
 
   const profileCard = page.locator('[data-focus-id="profile-0"]');
   await expect(profileCard).toHaveCSS('box-sizing', 'border-box');

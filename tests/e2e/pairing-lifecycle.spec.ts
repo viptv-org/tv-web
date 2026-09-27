@@ -80,7 +80,7 @@ test("pending pairing transitions to profiles after approval and stops polling",
   page,
 }) => {
   const f = await fixture(page);
-  await page.goto("/?platform=vizio");
+  await page.goto("/?renderer=react&platform=vizio");
   await expect(page.getByText("CODE000001", { exact: true })).toBeVisible();
   await expect.poll(f.polls).toBeGreaterThan(0);
   f.approve();
@@ -94,7 +94,7 @@ test("pending pairing transitions to profiles after approval and stops polling",
 });
 test("expired pairing can retry with a new code", async ({ page }) => {
   const f = await fixture(page, { expires: 1 });
-  await page.goto("/?platform=vizio");
+  await page.goto("/?renderer=react&platform=vizio");
   await expect(page.getByText("CODE000001", { exact: true })).toBeVisible();
   // Expiry is a persistent state (TvPairingExpired): the code stays, struck through, with
   // "This code expired." and Try again focused; no transient error toast.
@@ -111,7 +111,7 @@ test("QR renderer failure preserves manual pairing and approval polling", async 
   page,
 }) => {
   const f = await fixture(page, { qrFailure: true });
-  await page.goto("/?platform=vizio");
+  await page.goto("/?renderer=react&platform=vizio");
   await expect(page.getByText("CODE000001", { exact: true })).toBeVisible();
   f.approve();
   await expect(

@@ -106,40 +106,12 @@ export const SettingsDialogScreen = defineScreen({
         x={1164}
         y={787}
       />
-      <TvView x={1530} y={994} w={45} h={31} rounded={8} color={s.border} />
-      <TvText
-        x={1540}
-        y={1000}
-        content={s.okText}
-        font={"Onest700"}
-        size={16}
-        color={s.primary}
-      />
-      <TvText
-        x={1588}
-        y={999}
-        content={s.selectText}
-        font={"Onest"}
-        size={20}
-        color={s.secondary}
-      />
-      <TvView x={1682} y={994} w={66} h={31} rounded={8} color={s.border} />
-      <TvText
-        x={1691}
-        y={1000}
-        content={s.backText}
-        font={"Onest700"}
-        size={16}
-        color={s.primary}
-      />
-      <TvText
-        x={1762}
-        y={999}
-        content={s.cancelText}
-        font={"Onest"}
-        size={20}
-        color={s.secondary}
-      />
+
+
+
+
+
+
     </TvView>
   ),
 });

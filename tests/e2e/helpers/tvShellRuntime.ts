@@ -154,7 +154,7 @@ export async function installBackend(page: Page, profileFixture?: ProfileFixture
 export async function enterHome(page: Page, platform: 'tizen' | 'vizio') {
   await page.addInitScript(({ key, token }) => localStorage.setItem(key, JSON.stringify(token)), { key: `viptv-device:${apiOrigin}`, token: { sessionId: 'device-1', accountId: '7', profileId: null, accessToken: 'access', refreshToken: 'refresh', expiresIn: 900 } });
   await installBackend(page);
-  await page.goto(`/?platform=${platform}`);
+  await page.goto(`/?renderer=react&platform=${platform}`);
   await expect(page.getByRole('heading', { name: "Who's watching?" })).toBeVisible();
   await page.getByRole('button', { name: 'Alex' }).press('Enter');
   await expect(page.getByRole('button', { name: 'Home' })).toBeVisible();

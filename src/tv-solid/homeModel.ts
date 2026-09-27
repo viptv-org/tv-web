@@ -1,11 +1,12 @@
-import type { MediaItem, TvApi } from "../api";
+import type { Catalog, MediaItem, TvApi } from "../api";
 import {
   artworkUrl,
   cardPresentation,
   presentation,
 } from "../core/presentations";
 import { enrichDetail } from "../ui/detailProgress";
-import { browseRequest } from "../ui/app/homeRows";
+import { browseRequest, firstHomeCatalog, homeRowsFor, type HomeRow } from "../ui/app/homeRows";
+import { continueMeta } from "../components/cards/cardText";
 
 export interface HomeCardView {
   id: string;
@@ -13,13 +14,16 @@ export interface HomeCardView {
   subtitle: string;
   image: string;
   progress: number;
+  item?: MediaItem;
 }
 
 export interface HomeShelfView {
   key: string;
   title: string;
-  items: readonly MediaItem[];
   cards: HomeCardView[];
+  catalog?: Catalog;
+  kind: "queue" | "live" | "catalog" | "favorites";
+  loaded: boolean;
 }
 
 export const emptyHomeCard: HomeCardView = {
@@ -35,6 +39,7 @@ export interface HomeView {
   queueItems: readonly MediaItem[];
   favoriteItems: readonly MediaItem[];
   heroImage: string;
+  ambientImage: string;
   titleLogo: string;
   title: string;
   eyebrow: string;
@@ -53,6 +58,7 @@ export const emptyHome: HomeView = {
   queueItems: [],
   favoriteItems: [],
   heroImage: "",
+  ambientImage: "",
   titleLogo: "",
   title: "",
   eyebrow: "",
@@ -66,13 +72,13 @@ export const emptyHome: HomeView = {
   cards: [],
 };
 
-export function homeShelfCards(items: readonly MediaItem[], context: "queue" | "catalog"): HomeCardView[] {
-  return items.map((candidate) => {
-    const card = cardPresentation(candidate, context);
+export function queueHomeCards(queue: readonly MediaItem[]): HomeCardView[] {
+  return queue.map((candidate) => {
+    const card = cardPresentation(candidate, "queue");
     return {
       id: candidate.id,
       title: card.title,
-      subtitle: card.subtitle,
+      subtitle: continueMeta(candidate, card),
       image:
         artworkUrl(
           card.image ?? undefined,
@@ -84,42 +90,84 @@ export function homeShelfCards(items: readonly MediaItem[], context: "queue" | "
         card.image ??
         "",
       progress: card.progress ?? 0,
+      item: candidate,
     };
   });
 }
 
-export const queueHomeCards = (queue: readonly MediaItem[]) => homeShelfCards(queue, "queue");
-
-export function initialHomeShelves(view: HomeView): HomeShelfView[] {
-  return [
-    ...(view.queueItems.length ? [{ key: "queue", title: "Continue watching", items: view.queueItems, cards: queueHomeCards(view.queueItems) }] : []),
-    ...(view.favoriteItems.length ? [{ key: "favorites", title: "My List", items: view.favoriteItems, cards: homeShelfCards(view.favoriteItems, "catalog") }] : []),
-  ];
+function catalogHomeCards(items: readonly MediaItem[]): HomeCardView[] {
+  return items.map((candidate) => {
+    const card = cardPresentation(candidate, "catalog");
+    const subtitle = [candidate.year, candidate.type === "series" ? "Series" : "Movie"].filter(Boolean).join(" · ");
+    return {
+      id: candidate.id,
+      title: card.title,
+      subtitle,
+      image: artworkUrl(card.image ?? undefined, 320, 180, false, card.imageRole === "logo") ?? card.image ?? "",
+      progress: card.progress ?? 0,
+      item: candidate,
+    };
+  });
 }
 
-/** Each completed shelf is usable immediately; one slow addon cannot hold its peers. */
-export async function loadHomeShelves(api: TvApi, signal: AbortSignal, onShelf: (shelf: HomeShelfView, order: number) => void): Promise<void> {
-  const live = api.live({ view: "us", collection: "recent", limit: 20 }, { signal }).then(page => {
-    if (!signal.aborted && page.channels.length) onShelf({ key: "recent-live", title: "Recently watched live TV", items: page.channels, cards: homeShelfCards(page.channels, "catalog") }, 0);
-  }).catch(() => undefined);
-  const catalogues = api.catalogs({ signal }).then(async catalogs => {
-    const browsable = catalogs.filter(catalog => catalog.type !== "live" && !!browseRequest(catalog));
-    let next = 0;
-    await Promise.all(Array.from({ length: Math.min(6, browsable.length) }, async () => {
-      while (next < browsable.length && !signal.aborted) {
-        const order = next++;
-        const catalog = browsable[order];
-        const page = await api.discover(browseRequest(catalog)!, { signal }).catch(() => undefined);
-        if (!signal.aborted && page?.items.length) onShelf({
-          key: `catalog:${catalog.addonId ?? ""}:${catalog.type}:${catalog.id}`,
-          title: catalog.addonName ? `${catalog.addonName} · ${catalog.name}` : catalog.name,
-          items: page.items,
-          cards: homeShelfCards(page.items, "catalog"),
-        }, order + 1);
-      }
-    }));
-  }).catch(() => undefined);
-  await Promise.all([live, catalogues]);
+/** Load every TV Home rail while the first hero stays usable. At most four
+ * catalog requests run together; one broken addon does not block its peers. */
+export async function loadHomeShelves(
+  api: TvApi,
+  view: HomeView,
+  signal: AbortSignal,
+  publish: (shelves: HomeShelfView[]) => void,
+): Promise<void> {
+  const shelves: HomeShelfView[] = [];
+  const queueCards = queueHomeCards(view.queueItems);
+  if (queueCards.length) shelves.push({ key: "continue", title: "Continue watching", cards: queueCards, kind: "queue", loaded: true });
+
+  const results = await Promise.allSettled([
+    api.catalogs({ signal }),
+    api.live({ view: "us", collection: "recent", limit: 20 }, { signal }),
+  ]);
+  if (signal.aborted) return;
+  const catalogs = results[0].status === "fulfilled" ? results[0].value : [];
+  const live = results[1].status === "fulfilled" ? results[1].value.channels : [];
+  if (live.length) shelves.push({ key: "recent-live", title: "Recently watched live TV", cards: catalogHomeCards(live), kind: "live", loaded: true });
+
+  const first = firstHomeCatalog(catalogs);
+  const catalogRows: HomeRow[] = first
+    ? [{ name: first.name, catalog: first, items: [], loaded: false }, ...homeRowsFor(catalogs, first, false)]
+    : homeRowsFor(catalogs, undefined, false);
+  for (const row of catalogRows) {
+    const request = browseRequest(row.catalog);
+    if (request) shelves.push({
+      key: `catalog:${row.catalog.addonId ?? ""}:${row.catalog.type}:${row.catalog.id}`,
+      title: row.name,
+      cards: row.loaded ? catalogHomeCards(row.items) : [],
+      catalog: row.catalog,
+      kind: "catalog",
+      loaded: row.loaded,
+    });
+  }
+  const favorites = catalogHomeCards(view.favoriteItems);
+  if (favorites.length) shelves.push({ key: "my-list", title: "My List", cards: favorites, kind: "favorites", loaded: true });
+  publish(shelves);
+
+  const pending = shelves.map((shelf) => ({ shelf, request: shelf.kind === "catalog" ? browseRequest(shelf.catalog!) : undefined }))
+    .filter((value): value is { shelf: HomeShelfView; request: NonNullable<ReturnType<typeof browseRequest>> } => !!value.request && !value.shelf.loaded);
+  let next = 0;
+  const workers = Array.from({ length: Math.min(4, pending.length) }, async () => {
+    while (!signal.aborted) {
+      const index = next++;
+      if (index >= pending.length) return;
+      const { shelf, request } = pending[index];
+      let cards: HomeCardView[] = [];
+      try { cards = catalogHomeCards((await api.discover(request, { signal })).items); }
+      catch { /* Keep the other Home shelves moving when one catalog fails. */ }
+      if (signal.aborted) return;
+      const updated = shelves.map((candidate) => candidate.key === shelf.key ? { ...candidate, cards, loaded: true } : candidate);
+      shelves.splice(0, shelves.length, ...updated);
+      publish(shelves);
+    }
+  });
+  await Promise.all(workers);
 }
 
 const clock = (seconds: number) => {
@@ -135,7 +183,7 @@ export function projectHome(
   favorites: readonly MediaItem[] = [],
 ): HomeView {
   const item = details ?? heroItem;
-  if (!heroItem || !item) return { ...emptyHome, queueItems: queue, favoriteItems: favorites };
+  if (!heroItem || !item) return emptyHome;
   const hero = presentation(item);
   const hasProgress = heroItem.position && heroItem.position > 0;
   const eyebrow =
@@ -156,6 +204,7 @@ export function projectHome(
     heroItem,
     queueItems: queue,
     favoriteItems: favorites,
+    ambientImage: artworkUrl(hero.heroImage ?? undefined, 256, 144) ?? "",
     heroImage:
       artworkUrl(hero.heroImage ?? undefined, 1280, 720, true) ??
       hero.heroImage ??

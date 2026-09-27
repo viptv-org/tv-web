@@ -96,42 +96,14 @@ export const LiveDetailsScreen = defineScreen({
         y={358}
       />
       <TvView x={1100} y={976} w={820} h={104} color={s.panel} />
-      <TvView x={1542} y={994} w={45} h={31} rounded={8} color={s.keyBorder} />
-      <TvView x={1544} y={996} w={41} h={27} rounded={6} color={s.panel} />
-      <TvText
-        x={1550}
-        y={1000}
-        content={s.okLabel}
-        font={"Onest700"}
-        size={16}
-        color={s.primary}
-      />
-      <TvText
-        x={1600}
-        y={999}
-        content={s.selectLabel}
-        font={"Onest"}
-        size={20}
-        color={s.body}
-      />
-      <TvView x={1694} y={994} w={66} h={31} rounded={8} color={s.keyBorder} />
-      <TvView x={1696} y={996} w={62} h={27} rounded={6} color={s.panel} />
-      <TvText
-        x={1704}
-        y={1000}
-        content={s.backLabel}
-        font={"Onest700"}
-        size={16}
-        color={s.primary}
-      />
-      <TvText
-        x={1770}
-        y={999}
-        content={s.closeLabel}
-        font={"Onest"}
-        size={20}
-        color={s.body}
-      />
+
+
+
+
+
+
+
+
     </TvView>
   ),
 });

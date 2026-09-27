@@ -109,42 +109,14 @@ export const TitleMenuScreen = defineScreen({
         color={s.body}
       />
       <TvView x={1100} y={976} w={820} h={104} color={s.panel} />
-      <TvView x={1530} y={994} w={45} h={31} rounded={8} color={s.keyBorder} />
-      <TvView x={1532} y={996} w={41} h={27} rounded={6} color={s.panel} />
-      <TvText
-        x={1538}
-        y={1000}
-        content={s.okLabel}
-        font={"Onest700"}
-        size={16}
-        color={s.primary}
-      />
-      <TvText
-        x={1588}
-        y={999}
-        content={s.selectLabel}
-        font={"Onest"}
-        size={20}
-        color={s.body}
-      />
-      <TvView x={1682} y={994} w={66} h={31} rounded={8} color={s.keyBorder} />
-      <TvView x={1684} y={996} w={62} h={27} rounded={6} color={s.panel} />
-      <TvText
-        x={1693}
-        y={1000}
-        content={s.backLabel}
-        font={"Onest700"}
-        size={16}
-        color={s.primary}
-      />
-      <TvText
-        x={1760}
-        y={999}
-        content={s.cancelLabel}
-        font={"Onest"}
-        size={20}
-        color={s.body}
-      />
+
+
+
+
+
+
+
+
     </TvView>
   ),
 });

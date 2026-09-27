@@ -3,7 +3,7 @@
  * Sequential, alternating cold browser contexts avoid concurrent load and
  * always-running-one-renderer-first bias. This is browser evidence, not TV hardware. */
 import { chromium } from '@playwright/test';
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { createHash } from 'node:crypto';
 
@@ -27,7 +27,7 @@ const metrics = async cdp => Object.fromEntries((await cdp.send('Performance.get
 const nextFrame = () => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
 const zones = ['hero', 'shelf', 'guide'];
 const cycles = Array.from({ length: 6 }, () => [['ArrowRight', 1], ['ArrowRight', 2], ['ArrowLeft', 1], ['ArrowLeft', 0]]).flat();
-const sourceFiles = ['src/tv-solid/App.tsx', 'src/tv-solid/main.ts', 'src/tv-solid/runtime.ts', 'package-lock.json', 'vite.config.ts'];
+const sourceFiles = [...readdirSync(new URL('../../src/tv-solid/', import.meta.url)).filter(file=>/\.(ts|tsx)$/.test(file)).sort().map(file=>'src/tv-solid/'+file), 'package-lock.json', 'vite.config.ts', 'tests/preview/perf-compare.mjs', 'tests/preview/backend.ts'];
 const sourceHash = createHash('sha256');
 for (const file of sourceFiles) sourceHash.update(file).update(readFileSync(new URL('../../' + file, import.meta.url)));
 const report = { schema: 2, measuredAt: new Date().toISOString(), sourceSha256: sourceHash.digest('hex'), sourceFiles, cpuThrottle, runs, keyIntervalMs: keyInterval, viewport: [1920, 1080],
@@ -35,7 +35,7 @@ const report = { schema: 2, measuredAt: new Date().toISOString(), sourceSha256: 
   startup: 'navigation to Home focus available, fonts ready and two animation-frame opportunities',
   input: 'browser-dispatched remote keys; capture-to-focus plus summed synchronous keydown listener work (including stopped propagation)',
   frames: 'requestAnimationFrame intervals, not physical display/presentation or GPU-completion measurements',
-  memory: 'post-GC JS heap only; excludes GPU allocations and external pixel buffers',
+  memory: 'post-GC JS heap; SolidTV texture allocation reported separately, not total GPU/process memory',
   raw: [], summary: {} };
 const browser = await chromium.launch({ args: ['--disable-background-timer-throttling', ...(gpuMode === 'hardware' ? ['--use-angle=gl'] : [])] });
 const browserCdp = await browser.newBrowserCDPSession();
@@ -188,7 +188,8 @@ try {
         const after = await metrics(cdp);
         const resources = await page.evaluate(() => performance.getEntriesByType('resource').filter(e => /\.js(?:\?|$)/.test(e.name)).reduce((out, e) => ({ count: out.count + 1, decodedBytes: out.decodedBytes + e.decodedBodySize }), { count: 0, decodedBytes: 0 }));
         if (errors.length || backend.errors.length) throw new Error([...errors, ...backend.errors].join('\n'));
-        report.raw.push({ mode, run, readyMs, guideReadyMs, paths, jsHeapBeforeBytes: heapBefore, jsHeapAfterBytes: after.JSHeapUsedSize, jsResources: resources });
+        const rendererMemory = await page.evaluate(() => window.__viptvRendererMetrics?.() ?? null);
+        report.raw.push({ mode, run, readyMs, guideReadyMs, paths, jsHeapBeforeBytes: heapBefore, jsHeapAfterBytes: after.JSHeapUsedSize, rendererMemory, jsResources: resources });
         console.log(JSON.stringify({ mode, run, readyMs: +readyMs.toFixed(1), mainThreadMs: +paths.reduce((n, p) => n + p.mainThreadTaskMs, 0).toFixed(1) }));
       } finally { await context.close(); }
     }
@@ -207,6 +208,7 @@ try {
       longTasks: paths.reduce((n, p) => n + p.longTasksMs.length, 0),
       mainThreadMsPerKey: summarize(trials.map(t => t.paths.reduce((n,p) => n + p.mainThreadTaskMs,0) / (cycles.length * zones.length))),
       postGcJsHeapMiB: summarize(trials.map(t => t.jsHeapAfterBytes / 1024 / 1024)),
+      textureMiB: mode==='solid' ? summarize(trials.map(t=>t.rendererMemory.textureBytes/1024/1024)) : null,
       jsDecodedKiB: summarize(trials.map(t => t.jsResources.decodedBytes / 1024)),
       paths: Object.fromEntries(zones.map(zone => { const ps = paths.filter(p => p.zone === zone); return [zone, { handlerMs: summarize(ps.flatMap(p => p.handlerMs)), inputToFocusMs: summarize(ps.flatMap(p => p.focusMs)) }]; })) };
   }

@@ -1,11 +1,11 @@
 # VIPTV Shared Viewing Client (`tv-web`)
 
-This repository contains the canonical shared React viewing client for VIPTV across Web (`watch.syek.tech`), Smart TVs (Tizen, Vizio), and Native Desktop ([`desktop`](../desktop)). It implements unified screen navigation, remote/keyboard/mouse interaction, focus engine, source selection, responsive layouts, and catalog viewing in one shared UI codebase. Only the player adapter and packaging differ:
+This repository contains the canonical shared viewing client for VIPTV across Web (`watch.syek.tech`), Smart TVs (Tizen, Vizio), and Native Desktop ([`desktop`](../desktop)). It implements unified screen navigation, remote/keyboard/mouse interaction, focus engine, source selection, responsive layouts, and catalog viewing in one shared UI codebase. Only the player adapter and packaging differ:
 
 - **Web (`watch.syek.tech`)**: Served via static web bundle and proxy.
 - **Desktop (Linux, Windows, macOS)**: Native desktop shell lives in the dedicated [`viptv-org/desktop`](../desktop) repository, embedding this UI with native video decoding via [`tauri-video-plugin`](../tauri-video-plugin).
 - **Tizen**: Prepares an unsigned launcher candidate that opens the hosted TV application with AVPlay.
-- **Vizio**: Receives the static React bundle at `/tv/` with HTML media adapter.
+- **Vizio**: Receives the SolidTV canvas bundle at `/tv/` with HTML media adapter.
 
 The hosted bundle should use the VIPTV backend as its **same HTTPS origin**. The backend supports this when `VIPTV_TV_DIST` points to the built distribution. It serves the dashboard at `/` and the TV SPA at `/tv/`, including client-route fallback. This avoids credentialed wildcard CORS and keeps device Bearer requests and short-lived media capabilities same-origin.
 
@@ -79,8 +79,9 @@ This program is free software; you can redistribute it and/or modify it under th
 
 `solid.html` renders all of the former Lightning/Blits TV screens with
 `@solidtv/solid` and `@solidtv/renderer`. `lightning.html` remains a compatibility
-URL for existing preview links and loads the same SolidTV entry. The regular
-`index.html` entry retains its current platform selection.
+URL for existing preview links and loads the same SolidTV entry. The regular `index.html` dispatches TV platform queries to this SolidTV entry;
+responsive web and Tauri dispatch to React. `renderer=react` is an explicit
+legacy diagnostic mode only.
 
 Screens live in `src/tv-solid`: compiled Solid JSX uses the pinned layout values,
 assets, fonts and design tokens. The small `runtime.ts` adapter retains the
@@ -92,10 +93,8 @@ baseline coordinates remain valid; canvas text nodes refresh their baked color
 when focus changes.
 
 Home loads all browsable shelves after its first queue frame and keeps a separate
-cursor for each row. Profile create/edit/delete uses the existing TV React editor
-as an on-demand overlay over the SolidTV canvas, so the name keyboard, avatar
-picker, parent PIN and deletion flow keep one implementation. SolidTV remote
-dispatch pauses while that editor owns focus and resumes when it closes.
+cursor for each row. Profile create/edit/delete, text entry and playback overlays use the reconciled
+native SolidTV focus manager and screen components.
 
 Run `node tests/preview/solid-shoot.mjs TvHome` against the preview server.
 For local HTTPS builds, set `SOLID_PREVIEW_URL` to the full `solid.html` URL and

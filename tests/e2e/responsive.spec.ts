@@ -351,6 +351,7 @@ for (const width of [390, 1440]) {
     // The loading skeleton shares Home's layout classes; wait for Home itself.
     await expect(page.locator('.home-skeleton')).toHaveCount(0);
     const section = page.locator('.shelves section').last();
+    await expect(section.locator('.vx-card-slot').nth(1)).toBeVisible();
     // Windowed rows mount only cards near the row's scroll offset, so pan
     // the row to card 12 first and address it as the 4th mounted card.
     const cardId = await section.locator('.cards').evaluate(el => {

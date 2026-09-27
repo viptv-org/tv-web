@@ -62,3 +62,24 @@ The user authorized work without questions. Test interfaces are the public app r
 Required scenario groups: pairing pending/approved/expired/error/retry; profile choose/create/edit/avatar/delete/primary protection/unlock; Home focus/hero/loading/back; Discover filters/paging; search keyboard/debounce/results/failure; movie/series/season/episode state; manual source paging/filter/explicit selection/Resume exact identity; player pause/seek/repeat/debounce/cancel/rollback/tracks/exit; Next scoped selection/last-ten eligibility/cancel/previous Resume; queue hide/undo/watched/history; live guide future OK versus Play/filters/windows/gaps; settings/source preferences/addons/signout; stale request/session cancellation; offline and partial failures.
 
 Measure actual automated results against each group. A passing simulation is not a claim of 100% physical Tizen/Vizio/Android TV compatibility. Report untested hardware codec/DRM/signing/store constraints with the artifact. The owner deferred emulators after server OOM, then resumed testing on real hardware and bounded browser workers; keep emulator and browser-worker use bounded. Screenshots may be created under ignored test-results/artifacts for inspection, never in design or packaged application artifacts.
+
+## TV-039 — Consolidated renderer delivery
+
+Owner authorized consolidation on 2026-09-26. The canonical hosted Vizio,
+Tizen and webOS entries (`?platform=vizio|tizen|webos`, and `?layout=tv`) load
+SolidTV. Regular web and the native desktop shell retain the responsive React
+renderer. `solid.html` remains a compatible direct TV entry. Existing pairing
+storage stays at the same HTTPS origin/key. An explicit `renderer=react` is a
+legacy diagnostic entry only; packaging/casting must never use it implicitly.
+
+Reconcile the native SolidTV focus/account/playback completion branch with the
+later progressive loading, stable cards/profile geometry, live routing and
+carousel corrections. Carry TV-038 Resume, blur, no passive key legends and
+nearest-edge scrolling into the canvas renderer before promotion. Maintain
+current shared core/video pins and regenerate design snapshots from this commit.
+
+Promotion includes source ancestry, main branches, consumer gitlinks, exact
+native core pins, built artifacts and served renderer verification. A branch
+merge alone is not a deployment. Keep immutable history backups before removing
+superseded branch names. Earlier responsive prototype branches are historical
+studies superseded by the committed design system, not alternate production UIs.

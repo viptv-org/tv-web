@@ -110,7 +110,7 @@ async function enterTvHome(page: Page) {
   const errors: string[] = [];
   page.on('pageerror', error => errors.push(error.message));
   await installBackend(page, { activity: true });
-  await page.goto('/?platform=tizen');
+  await page.goto('/?renderer=react&platform=tizen');
   await page.getByRole('button', { name: 'Alex' }).press('Enter');
   const card = page.locator('[data-focus-id="queue-0"]');
   await expect(card).toBeVisible();

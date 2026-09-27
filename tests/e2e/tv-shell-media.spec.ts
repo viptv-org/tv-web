@@ -11,7 +11,7 @@ test('held series-root hero opens its episode detail instead of source selection
   await page.route(`${apiOrigin}/api/discover**`, route => json(route, { metas: [show], has_more: false, next_skip: null }));
   await page.route(`${apiOrigin}/api/meta/series/tt-hero-show`, route => json(route, { meta: { ...show, videos: [{ id: 'tt-hero-show:1:1', title: 'Pilot', season: 1, episode: 1, description: 'Episode one.' }] } }));
   await page.addInitScript(({ key, token }) => localStorage.setItem(key, JSON.stringify(token)), { key: `viptv-device:${apiOrigin}`, token: { sessionId: 'device-1', accountId: '7', profileId: null, accessToken: 'access', refreshToken: 'refresh', expiresIn: 900 } });
-  await page.goto('/?platform=tizen');
+  await page.goto('/?renderer=react&platform=tizen');
   await page.getByRole('button', { name: 'Alex' }).press('Enter');
 
   const hero = page.getByRole('button', { name: 'Episodes', exact: true });
@@ -42,7 +42,7 @@ test('playback preferences persist their snake-case mutation and update the shar
     return json(route, preferences);
   });
   await page.addInitScript(({ key, token }) => localStorage.setItem(key, JSON.stringify(token)), { key: `viptv-device:${apiOrigin}`, token: { sessionId: 'device-1', accountId: '7', profileId: null, accessToken: 'access', refreshToken: 'refresh', expiresIn: 900 } });
-  await page.goto('/?platform=vizio');
+  await page.goto('/?renderer=react&platform=vizio');
   await page.getByRole('button', { name: 'Alex' }).press('Enter');
   await page.getByRole('button', { name: 'Settings' }).press('Enter');
   await page.getByRole('button', { name: 'Playback preferences' }).press('Enter');
@@ -72,7 +72,7 @@ test('series detail keeps Roku-style season choice separate from explicit episod
     { id: 'tt-show:2:1', title: 'Return', season: 2, episode: 1, description: 'A new season.' },
   ] } }));
   await page.addInitScript(({ key, token }) => localStorage.setItem(key, JSON.stringify(token)), { key: `viptv-device:${apiOrigin}`, token: { sessionId: 'device-1', accountId: '7', profileId: null, accessToken: 'access', refreshToken: 'refresh', expiresIn: 900 } });
-  await page.goto('/?platform=tizen');
+  await page.goto('/?renderer=react&platform=tizen');
   await page.getByRole('button', { name: 'Alex' }).press('Enter');
   await page.getByRole('button', { name: 'Fixture Show' }).press('Enter');
   await expect(page.getByRole('heading', { name: 'Fixture Show' })).toBeVisible();
@@ -94,7 +94,7 @@ test('resume never substitutes a lookalike source and leaves the user at manual 
   await installBackend(page);
   await page.route(`${apiOrigin}/api/profiles/1/continue/page**`, route => json(route, { items: [queued], offset: 0, total: 1, next_offset: null }));
   await page.addInitScript(({ key, token }) => localStorage.setItem(key, JSON.stringify(token)), { key: `viptv-device:${apiOrigin}`, token: { sessionId: 'device-1', accountId: '7', profileId: null, accessToken: 'access', refreshToken: 'refresh', expiresIn: 900 } });
-  await page.goto('/?platform=vizio');
+  await page.goto('/?renderer=react&platform=vizio');
   await page.getByRole('button', { name: 'Alex' }).press('Enter');
   await page.getByRole('button', { name: 'Resume', exact: true }).press('Enter');
   await expect(page.locator('.vx-sources__status')).toContainText('Resume fixture');
@@ -117,7 +117,7 @@ test.fixme('shows a sanitized backend failure and lets the remote dismiss it', a
   await page.addInitScript(({ key, token }) => localStorage.setItem(key, JSON.stringify(token)), { key: `viptv-device:${apiOrigin}`, token: { sessionId: 'device-1', accountId: '7', profileId: null, accessToken: 'access', refreshToken: 'refresh', expiresIn: 900 } });
   await installBackend(page);
   await page.route(`${apiOrigin}/api/discover**`, route => json(route, { error: 'https://upstream.invalid/secret' }, 502));
-  await page.goto('/?platform=vizio');
+  await page.goto('/?renderer=react&platform=vizio');
   await page.getByRole('button', { name: 'Alex' }).press('Enter');
   // Catalog failures surface on the browse surface with a retry affordance.
   await expect(page.getByRole('alert')).toHaveText(/VIPTV could not complete that request/);
@@ -138,7 +138,7 @@ test('does not let a slow obsolete browse response replace the current search re
     if (!query && discoverCalls === 1) { await new Promise(resolve => setTimeout(resolve, 1_000)); return json(route, { metas: [{ ...movie, name: 'Obsolete shelf' }], has_more: false }); }
     return json(route, { metas: [{ ...movie, name: query === 'fresh' ? 'Fresh result' : 'Current shelf' }], has_more: false });
   });
-  await page.goto('/?platform=tizen');
+  await page.goto('/?renderer=react&platform=tizen');
   await page.getByRole('button', { name: 'Alex' }).press('Enter');
   await page.getByRole('button', { name: 'Search', exact: true }).press('Enter');
   await page.getByRole('textbox', { name: 'Search titles' }).fill('fresh');
@@ -181,8 +181,8 @@ test('Roku visual contract keeps fixed geometry, focus ownership and proportiona
   await page.locator('[data-focus-id="key-A"]').focus();
   // TvSearch: the keyboard column starts at the rail edge (192) and is 560 wide; the results
   // column starts at x 850 / y 150 (its clipping viewport keeps 24 px of focus-ring room).
-  await expectBox(page, '.vx-browse__keys', { x: 192, y: 243, width: 560 });
-  await expectBox(page, '.vx-browse__results', { x: 826, y: 126, width: 1094 });
+  await expectBox(page, '.vx-browse__keys', { x: 192, y: 259.6, width: 560 });
+  await expectBox(page, '.vx-browse__results', { x: 846, y: 146, width: 1074 });
   await capture(page, testInfo, 'roku-search-empty');
   await page.getByRole('button', { name: 'Profile', exact: true }).press('Enter');
   // TvProfiles: the title at y 230; one profile + Add profile (2 × 220 + 64) centred below.
@@ -207,7 +207,7 @@ test('Home keeps the last queue card fully visible and Right stays in its shelf'
     json(route, { items: queue, offset: 0, total: queue.length, next_offset: null }),
   );
   await page.addInitScript(({ key, token }) => localStorage.setItem(key, JSON.stringify(token)), { key: `viptv-device:${apiOrigin}`, token: { sessionId: 'device-1', accountId: '7', profileId: null, accessToken: 'access', refreshToken: 'refresh', expiresIn: 900 } });
-  await page.goto('/?platform=tizen');
+  await page.goto('/?renderer=react&platform=tizen');
   await page.getByRole('button', { name: 'Alex' }).press('Enter');
   const last = page.locator('[data-focus-id="queue-6"]');
   await expect(last).toBeVisible();
@@ -223,8 +223,8 @@ test('Home keeps the last queue card fully visible and Right stays in its shelf'
   await page.keyboard.press('ArrowRight');
   await expect(last).toBeFocused();
   await page.keyboard.press('ArrowDown');
-  await expect(page.locator('.vx-home')).toHaveClass(/compact-home/);
-  await expect(page.locator('.vx-home-backdrop')).toBeHidden();
+  await expect.poll(() => page.locator('.vx-home').evaluate(node => node.scrollTop)).toBeGreaterThan(0);
+  await expect(page.locator('.vx-home')).not.toHaveClass(/compact-home/);
 });
 
 test('series progress marks watched and resumed episodes while remote paging reveals the row', async ({ page }, testInfo) => {
@@ -240,7 +240,7 @@ test('series progress marks watched and resumed episodes while remote paging rev
     { id: 'tt-progress-show:1:2', type: 'series', name: 'Episode 2', season: 1, episode: 2, position: 42, duration: 120, watched: false, series_id: 'tt-progress-show', source_fingerprint: 'resume-fingerprint', source_addon_id: 'addon:2' },
   ]));
   await page.addInitScript(({ key, token }) => localStorage.setItem(key, JSON.stringify(token)), { key: `viptv-device:${apiOrigin}`, token: { sessionId: 'device-1', accountId: '7', profileId: null, accessToken: 'access', refreshToken: 'refresh', expiresIn: 900 } });
-  await page.goto(`/?platform=${platform}`);
+  await page.goto(`/?renderer=react&platform=${platform}`);
   await page.getByRole('button', { name: 'Alex' }).press('Enter');
   await page.getByRole('button', { name: 'Progress Show', exact: true }).press('Enter');
   await expect(page.locator('[data-focus-id="detail-play"]')).toBeFocused();

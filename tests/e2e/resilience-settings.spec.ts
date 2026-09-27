@@ -79,7 +79,7 @@ async function installBackend(page: Page): Promise<State> {
 }
 
 async function enterHome(page: Page) {
-  await page.goto('/?platform=vizio');
+  await page.goto('/?renderer=react&platform=vizio');
   await page.getByRole('button', { name: 'Alex' }).press('Enter');
   await expect(page.getByRole('button', { name: 'Home' })).toBeVisible();
 }

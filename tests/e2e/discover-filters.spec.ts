@@ -55,7 +55,7 @@ test('Discover applies declared defaults and resets pagination for genre, input 
     token: { sessionId: 'device-1', accountId: '7', profileId: null, accessToken: 'access', refreshToken: 'refresh', expiresIn: 900 },
   });
 
-  await page.goto('/?platform=vizio');
+  await page.goto('/?renderer=react&platform=vizio');
   await page.getByRole('button', { name: 'Alex' }).press('Enter');
   await page.getByRole('button', { name: 'Discover' }).click();
   await expect(page.getByRole('button', { name: 'Year: 2024' })).toBeVisible();

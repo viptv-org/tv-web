@@ -26,7 +26,7 @@ const VIDEO_PACKAGE_MODULE = '/@fs/mnt/ALPH/code/viptv-org/video/dist-js/index.j
  */
 test('Vizio HTML adapter drives a browser-decoded WebM through pause, seek, end, and cleanup', async ({ page }) => {
   test.skip(test.info().project.name !== 'vizio', 'exercise the native HTML media boundary once in the Vizio project');
-  await page.goto('/?platform=vizio');
+  await page.goto('/?renderer=react&platform=vizio');
 
   const result = await page.evaluate<DecodeResult, string>(async (adapterModulePath) => {
     // Vite transforms this source-module request in the test server. Keeping
@@ -159,7 +159,7 @@ for (const deliveryPath of ['runtime-default', 'forced-mse'] as const) {
       }
       await route.fulfill({ contentType: name.endsWith('.m3u8') ? 'application/vnd.apple.mpegurl' : 'video/mp2t', body: await readFile(`${fixtureRoot}${name.replace(/\.ts$/, '.bin')}`) });
     });
-    await page.goto('/?platform=vizio');
+    await page.goto('/?renderer=react&platform=vizio');
     const result = await page.evaluate(async ({ adapterModulePath, deliveryPath }) => {
       const { VizioHtml5Adapter } = await import(/* @vite-ignore */ adapterModulePath);
       const probePath = adapterModulePath;

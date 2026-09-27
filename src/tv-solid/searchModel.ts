@@ -1,6 +1,6 @@
 import type { Catalog, MediaItem } from "../api";
 import { artworkUrl, cardPresentation } from "../core/presentations";
-import { searchSections, type SearchSectionKey } from "../ui/catalogFilters";
+type SearchSectionKey = string;
 import { searchKeyIcon } from "./searchKeyIcons";
 import { channelMonogram, liveSubtitle } from "../components/cards/cardText";
 
@@ -79,9 +79,11 @@ export function projectSearch(
   headings: SearchHeadingView[];
   cards: SearchCardView[];
 } {
-  const sections = searchSections(rows).filter(
-    (section) => section.items.length > 0,
-  );
+  const sections = rows.map(row => ({
+    key: row.catalog ? `${row.catalog.addonId ?? ""}:${row.catalog.type}:${row.catalog.id}` : `live:${row.name}`,
+    title: row.catalog?.addonName ? `${row.catalog.addonName} · ${row.name}` : row.name,
+    items: row.items.filter((item, index, list) => list.findIndex(other => other.id === item.id && other.type === item.type) === index),
+  })).filter(section => section.items.length > 0);
   const headings: SearchHeadingView[] = [];
   const cards: SearchCardView[] = [];
   for (let sectionIndex = 0; sectionIndex < sections.length; sectionIndex++) {
@@ -91,15 +93,11 @@ export function projectSearch(
       id: section.key,
       title: section.title,
       count: `${section.items.length} ${section.items.length === 1 ? "result" : "results"}`,
-      countX:
-        section.title === "Movies"
-          ? 975
-          : section.title === "Series"
-            ? 960
-            : 970,
+      countX: 1640,
       y,
     });
-    const start = offsets[section.key] ?? 0;
+    const offset = offsets[section.key] ?? 0;
+    const start = Math.floor(offset / 356);
     for (let localIndex = 0; localIndex < section.items.length; localIndex++) {
       const item = section.items[localIndex];
       const card = cardPresentation(item, "catalog");
@@ -116,7 +114,7 @@ export function projectSearch(
         section: section.key,
         sectionIndex,
         localIndex,
-        x: 850 + (localIndex - start) * 356,
+        x: 850 + localIndex * 356 - offset,
         y: cardY,
         visible,
         title: card.title,
@@ -157,7 +155,8 @@ export function projectSearchWindow(
     const y = heading.y + 58;
     if (y >= 976 || y + 270 <= 150) continue;
     const section = bySection.get(heading.id) ?? [];
-    const start = offsets[heading.id] ?? 0;
+    const offset = offsets[heading.id] ?? 0;
+    const start = Math.floor(offset / 356);
     for (
       let localIndex = start;
       localIndex < Math.min(section.length, start + 3);
@@ -167,7 +166,7 @@ export function projectSearchWindow(
       const art = cardPresentation(card.item, "catalog");
       cards.push({
         ...card,
-        x: 850 + (localIndex - start) * 356,
+        x: 850 + localIndex * 356 - offset,
         y,
         visible: true,
         image:

@@ -51,7 +51,7 @@ async function packageVizioBundle() {
   await cp(dist, stage, { recursive: true });
   await writeFile(join(stage, 'HOSTING.txt'), [
     'Deploy this static bundle at the same HTTPS origin as the VIPTV API, under /tv.',
-    'Serve index.html for client routes. Do not add upstream media credentials in browser code.',
+    'Serve index.html for client routes; TV platform queries dispatch to SolidTV. Do not add upstream media credentials in browser code.',
     'Playback URLs are short-lived same-origin backend capabilities.',
     '',
   ].join('\n'));

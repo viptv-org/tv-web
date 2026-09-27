@@ -197,23 +197,9 @@ export const SettingsScreen = defineScreen({
         color={s.tertiary}
         show={s.view.page === "Settings"}
       />
-      <TvView x={1700} y={994} w={66} h={31} rounded={8} color={s.border} />
-      <TvText
-        x={1709}
-        y={1000}
-        content={s.backText}
-        font={"Onest700"}
-        size={16}
-        color={s.primary}
-      />
-      <TvText
-        x={1779}
-        y={999}
-        content={s.backLabel}
-        font={"Onest"}
-        size={20}
-        color={s.secondary}
-      />
+
+
+
       <SettingsDialogScreen
         screenRef={"settingsDialogScreen"}
         show={s.dialogOpen}

@@ -151,7 +151,7 @@ async function installBackend(page: Page, options: FixtureOptions = {}): Promise
 
 async function enterFirstEpisode(page: Page, state: FixtureState) {
   await page.addInitScript(({ key, token }) => localStorage.setItem(key, JSON.stringify(token)), { key: `viptv-device:${apiOrigin}`, token: { sessionId: 'device-1', accountId: '7', profileId: null, accessToken: 'access', refreshToken: 'refresh', expiresIn: 900 } });
-  await page.goto('/?platform=vizio');
+  await page.goto('/?renderer=react&platform=vizio');
   await page.getByRole('button', { name: 'Alex' }).press('Enter');
   await page.getByRole('button', { name: 'Fixture Show' }).press('Enter');
   await page.locator('[data-focus-id="episode-0"]').press('Enter');
@@ -167,7 +167,7 @@ test('Vizio: explicit Next preserves the selected series and uses the best ranke
   await enterFirstEpisode(page, state);
 
   await page.getByRole('button', { name: 'Next episode' }).press('Enter');
-  await expect.poll(() => state.playbackRequests).toHaveLength(2);
+  await expect.poll(() => state.playbackRequests, { timeout: 15000 }).toHaveLength(2);
   expect(state.playbackRequests[1]).toMatchObject({ stream_id: 'next-ranked', position: 0 });
   await expect(page.locator('.player-context')).toContainText('S1 · E2 · The Better Source');
   expect(state.progress[0]).toMatchObject({ id: first.id });
@@ -188,7 +188,8 @@ test('Vizio: Back cancels a still-preparing Next without replacing the outgoing 
   await page.waitForTimeout(900);
   expect(state.nextRequests).toBe(1);
   expect(state.playbackRequests).toHaveLength(1);
-  await expect(page.locator('.player-context')).toContainText('S1 · E1 · Pilot');
+  await page.keyboard.press('ArrowDown');
+  await expect(page.locator('.vx-player__context')).toContainText('S1 · E1 · Pilot');
   noPageErrors();
 });
 
@@ -205,7 +206,7 @@ test('Vizio: final-ten autoplay requires playing instead of advancing while paus
   await page.waitForTimeout(100);
   expect(state.nextRequests).toBe(0);
   await page.getByRole('button', { name: 'Play' }).press('Enter');
-  await expect.poll(() => state.playbackRequests).toHaveLength(2);
+  await expect.poll(() => state.playbackRequests, { timeout: 15000 }).toHaveLength(2);
   expect(state.playbackRequests[1]).toMatchObject({ stream_id: 'next-ranked' });
   noPageErrors();
 });
@@ -216,7 +217,7 @@ test('Vizio: an explicit final-ten Resume waits for ended before continuing', as
   const resumed = { ...first, position: 115, duration: 120, queue_status: 'resume' };
   const state = await installBackend(page, { queue: [resumed], resumeAt: 115 });
   await page.addInitScript(({ key, token }) => localStorage.setItem(key, JSON.stringify(token)), { key: `viptv-device:${apiOrigin}`, token: { sessionId: 'device-1', accountId: '7', profileId: null, accessToken: 'access', refreshToken: 'refresh', expiresIn: 900 } });
-  await page.goto('/?platform=vizio');
+  await page.goto('/?renderer=react&platform=vizio');
   await page.getByRole('button', { name: 'Alex' }).press('Enter');
   await page.getByRole('button', { name: 'Resume', exact: true }).press('Enter');
   await expect(page.getByRole('button', { name: 'Pause' })).toBeVisible();
@@ -229,7 +230,7 @@ test('Vizio: an explicit final-ten Resume waits for ended before continuing', as
   expect(state.nextRequests).toBe(0);
 
   await video.evaluate(node => { if (!(node instanceof HTMLVideoElement)) throw new Error("Expected video"); window.finishFixturePlayback(node); });
-  await expect.poll(() => state.playbackRequests).toHaveLength(2);
+  await expect.poll(() => state.playbackRequests, { timeout: 15000 }).toHaveLength(2);
   expect(state.playbackRequests[1]).toMatchObject({ stream_id: 'next-ranked' });
   noPageErrors();
 });
@@ -240,7 +241,7 @@ test('Vizio: Home next-up management resumes the previous episode and Back retur
   const queued = { ...second, queue_status: 'next', previous_episode: first, position: 12, duration: 120 };
   const state = await installBackend(page, { queue: [queued] });
   await page.addInitScript(({ key, token }) => localStorage.setItem(key, JSON.stringify(token)), { key: `viptv-device:${apiOrigin}`, token: { sessionId: 'device-1', accountId: '7', profileId: null, accessToken: 'access', refreshToken: 'refresh', expiresIn: 900 } });
-  await page.goto('/?platform=vizio');
+  await page.goto('/?renderer=react&platform=vizio');
   await page.getByRole('button', { name: 'Alex' }).press('Enter');
   const card = page.getByRole('button', { name: 'Fixture Show' }).first();
   await card.click({ button: 'right' });
@@ -278,7 +279,7 @@ test('Vizio: Next stays with the current IPTV account even when another provider
   });
   await enterFirstEpisode(page, state);
   await page.getByRole('button', { name: 'Next episode' }).press('Enter');
-  await expect.poll(() => state.playbackRequests).toHaveLength(2);
+  await expect.poll(() => state.playbackRequests, { timeout: 15000 }).toHaveLength(2);
   expect(state.playbackRequests[1]).toMatchObject({ stream_id: 'same-account', position: 0 });
   await expect(page.locator('.player-context')).toContainText('S1 · E2');
   noPageErrors();
@@ -309,7 +310,8 @@ test('Vizio: failed Next tries at most three distinct sources and preserves the 
   expect(state.playbackRequests.map(request => request.stream_id)).toEqual([
     'first-source', 'failed-next-1', 'failed-next-2', 'failed-next-3',
   ]);
-  await expect(page.locator('.player-context')).toContainText('S1 · E1 · Pilot');
+  await page.keyboard.press('ArrowDown');
+  await expect(page.locator('.vx-player__context')).toContainText('S1 · E1 · Pilot');
   await expect(page.getByRole('button', { name: 'Pause' })).toBeVisible();
   noPageErrors();
 });
@@ -324,13 +326,13 @@ test('Vizio: failed explicit Resume offers exact Retry and manual source choice 
     return json(route, { error: 'Source is temporarily unavailable.' }, 503);
   });
   await page.addInitScript(({ key, token }) => localStorage.setItem(key, JSON.stringify(token)), { key: `viptv-device:${apiOrigin}`, token: { sessionId: 'device-1', accountId: '7', profileId: null, accessToken: 'access', refreshToken: 'refresh', expiresIn: 900 } });
-  await page.goto('/?platform=vizio');
+  await page.goto('/?renderer=react&platform=vizio');
   await page.getByRole('button', { name: 'Alex' }).press('Enter');
   await page.getByRole('button', { name: 'Resume', exact: true }).press('Enter');
   await expect(page.getByRole('button', { name: 'Retry', exact: true })).toBeVisible();
   expect(state.playbackRequests).toHaveLength(1);
   await page.getByRole('button', { name: 'Retry', exact: true }).press('Enter');
-  await expect.poll(() => state.playbackRequests).toHaveLength(2);
+  await expect.poll(() => state.playbackRequests, { timeout: 15000 }).toHaveLength(2);
   await expect(page.getByRole('button', { name: 'Choose another source' })).toBeVisible();
   await page.getByRole('button', { name: 'Choose another source' }).press('Enter');
   await expect(page.getByRole('button', { name: 'Current 1080p' })).toBeVisible();

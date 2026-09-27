@@ -128,7 +128,7 @@ async function enterHome(page: Page, watched = false) {
     key: `viptv-device:${apiOrigin}`,
     token: { sessionId: 'device-1', accountId: '7', profileId: null, accessToken: 'access', refreshToken: 'refresh', expiresIn: 900 },
   });
-  await page.goto('/?platform=vizio');
+  await page.goto('/?renderer=react&platform=vizio');
   await page.getByRole('button', { name: 'Alex' }).press('Enter');
   await expect(page.getByRole('button', { name: 'Queue Show' })).toBeVisible();
   return { state, assertNoPageErrors: () => expect(pageErrors).toEqual([]) };

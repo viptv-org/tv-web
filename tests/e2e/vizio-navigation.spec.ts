@@ -9,7 +9,7 @@ async function setup(page: Page, longQueue = false) {
   if (longQueue) await page.route(`${apiOrigin}/api/profiles/1/continue/page*`, route => route.fulfill({ json: {
     items: Array.from({ length: 18 }, (_, i) => ({ id: `queue-${i}`, type: 'movie', name: `Queue ${i}`, position: 60, duration: 120, genres: [] })), total: 18, offset: 0, next_offset: null,
   } }));
-  await page.goto('/tv/?platform=vizio');
+  await page.goto('/tv/?renderer=react&platform=vizio');
   await expect(byId(page, 'hero-play')).toBeVisible();
 }
 
@@ -83,7 +83,7 @@ test('Other catalog search stops empty and repeated upstream pages', async ({ pa
     requests.push({ query, skip });
     await route.fulfill({ json: { metas: query === 'empty' ? [] : [{ id: 'same', type: 'movie', name: 'Collection result' }], has_more: true, next_skip: skip + 20 } });
   });
-  await page.goto('/tv/?platform=vizio');
+  await page.goto('/tv/?renderer=react&platform=vizio');
   await byId(page, 'nav-Discover').click();
   await byId(page, 'discover-type-other').click();
   expect(requests).toEqual([]);

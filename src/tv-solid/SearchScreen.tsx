@@ -77,6 +77,23 @@ export const SearchScreen = defineScreen({
 
   render: (s) => (
     <TvView>
+      <TvView x={44} y={54} w={56} h={56} rounded={28} color={s.surface} />
+      <TvView
+        x={44}
+        y={54}
+        w={56}
+        h={56}
+        rounded={28}
+        src={s.homeProfileAvatar}
+        show={s.homeProfileAvatar !== ""}
+      />
+      <TvView x={40} y={184} w={64} h={64} rounded={32} color={s.surface} />
+      <TvView x={58} y={204} w={28} h={28} src={s.railSearchSelected} />
+      <TvView x={58} y={280} w={28} h={28} src={s.railHomeUnselected} />
+      <TvView x={58} y={358} w={28} h={28} src={s.railDiscover} />
+      <TvView x={58} y={436} w={28} h={28} src={s.railLive} />
+      <TvView x={58} y={514} w={28} h={28} src={s.railList} />
+      <TvView x={58} y={976} w={28} h={28} src={s.railSettings} />
       <TvText
         x={192}
         y={54}
@@ -109,13 +126,13 @@ export const SearchScreen = defineScreen({
           )}
         </KeyedFor>
       }
-      <TvView x={846} y={146} w={1074} h={830} clipping={true}>
+      <TvView x={850} y={150} w={1070} h={826} clipping={true}>
         {
           <KeyedFor each={s.headings} keyOf={(item) => item.id}>
             {(section, index) => (
               <TvText
-                x={4}
-                y={section().y - 146}
+                x={0}
+                y={section().y - 150}
                 content={section().title}
                 font={"Bricolage700"}
                 size={30}
@@ -128,8 +145,8 @@ export const SearchScreen = defineScreen({
           <KeyedFor each={s.headings} keyOf={(item) => item.id}>
             {(section, index) => (
               <TvText
-                x={section().countX - 846}
-                y={section().y - 137}
+                x={section().countX - 850}
+                y={section().y - 141}
                 content={section().count}
                 font={"Onest"}
                 size={22}
@@ -145,8 +162,8 @@ export const SearchScreen = defineScreen({
                 screenRef={"searchCard" + card().position}
                 position={card().position}
                 card={card()}
-                x={card().x - 846}
-                y={card().y - 146}
+                x={card().x - 850}
+                y={card().y - 150}
               />
             )}
           </KeyedFor>
@@ -161,6 +178,18 @@ export const SearchScreen = defineScreen({
         color={s.tertiary}
       />
       <TvView x={850} y={976} w={1070} h={104} color={s.background} />
+
+
+
+
+
+
+
+
+
+
+
+
     </TvView>
   ),
 });

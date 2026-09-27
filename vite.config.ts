@@ -39,8 +39,8 @@ export default defineConfig(({ command }) => ({
   build: {
     target: "es2017",
     rollupOptions: {
-      // Keep the working React entry for responsive web, desktop and TV while
-      // SolidTV screen/interaction parity is qualified on the separate page.
+      // The bootstrap selects SolidTV for TV queries and React for web/desktop.
+      // Direct SolidTV/legacy URLs remain compatible.
       input: {
         app: resolve(import.meta.dirname, "index.html"),
         solid: resolve(import.meta.dirname, "solid.html"),

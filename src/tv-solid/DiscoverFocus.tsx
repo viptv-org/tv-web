@@ -66,11 +66,13 @@ export const DiscoverChip = defineScreen({
         color={s.white}
         show={s.focused}
       />
+      <TvView w={s.chip.width} h={56} rounded={28} color={s.chip.selected ? tokens["color.line.strong"] : tokens["color.line.chip"]} />
       <TvView
-        w={s.chip.width}
-        h={56}
+        x={1} y={1}
+        w={s.chip.width - 2}
+        h={54}
         rounded={28}
-        color={s.focused ? s.primary : s.chip.selected ? s.selected : s.clear}
+        color={s.focused ? s.primary : s.chip.selected ? s.selected : tokens["color.bg"]}
       />
       <TvText
         x={28}

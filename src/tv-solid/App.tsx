@@ -1,7 +1,20 @@
 /** @jsxImportSource @solidtv/solid */
-import { defineScreen, TvView, TvText, KeyedFor } from "./runtime";
+import { defineScreen, TvView, TvText } from "./runtime";
+import { batch, For, Show } from "solid-js";
+import type { ElementNode } from "@solidtv/solid";
+import { EntryButton } from "./EntryButton";
+import { TitleInfo, NativeTextPanel } from "./TitleInfo";
+import { ProfileEditor } from "./ProfileEditor";
+import { ProfilePageButton } from "./ProfilePagination";
+import { TextEntry, type TextEntryProps } from "./TextEntry";
+import { UpNextOverlay, PlayerDialog, type PlayerDialogProps } from "./PlayerOverlays";
+import { nextFromEpisodes, UP_NEXT_SECONDS, UP_NEXT_TICK_MS, type UpNextCard } from "../ui/app/upNext";
+import type { createSolidTVContinuation, SolidTVContinuationResult } from "./continuationRuntime";
+import { catalogFilterLabel } from "../ui/catalogFilters";
+import { HomeBackdrop } from "./HomeBackdrop";
 import QRCode from "qrcode";
 import { carouselWindow } from "./carousel";
+import { appendCatalogPage } from "../ui/catalogPaging";
 import type {
   TvApi,
   DevicePairing,
@@ -19,16 +32,13 @@ import { tokens } from "../theme/viptv-tokens.generated";
 import {
   ProfileTile,
   ManageProfilesButton,
-  ProfilePagerButton,
   addProfileTile,
   emptyProfileTile,
   profileTileData,
 } from "./ProfileTile";
 import {
   emptyHome,
-  projectHome,
   enrichHomeHero,
-  initialHomeShelves,
   loadHomeView,
   loadHomeShelves,
   queueHomeCards,
@@ -36,7 +46,7 @@ import {
   type HomeView,
 } from "./homeModel";
 import { railIcon } from "./railIcons";
-import { RailItem, CollapsedRail, railItems } from "./RailFocus";
+import { RailItem } from "./RailFocus";
 import { DiscoverFilterOption } from "./DiscoverFocus";
 import { DiscoverScreen } from "./DiscoverScreen";
 import { LibraryScreen } from "./LibraryScreen";
@@ -97,7 +107,7 @@ import {
   halfHour,
   timeRange,
 } from "../ui/guide-core";
-import { cardPresentation } from "../core/presentations";
+import { cardPresentation, presentation } from "../core/presentations";
 import {
   catalogDefaults,
   catalogFilters,
@@ -114,15 +124,16 @@ import {
   type DiscoverCardView,
   type DiscoverChipView,
 } from "./discoverModel";
-import { HomeAction, HomeCard, HomePreviewCard } from "./HomeFocus";
+import { HomeAction, HomeCard } from "./HomeFocus";
 import { emptyHomeCard } from "./homeModel";
 import {
   emptyDetail,
   emptyDetailEpisode,
   loadDetailView,
+  selectDetailSeason,
   type DetailView,
 } from "./detailModel";
-import { TitleAction, EpisodeTile, SeasonControl } from "./TitleFocus";
+import { TitleAction, EpisodeTile } from "./TitleFocus";
 import {
   emptySources,
   emptySourceRow,
@@ -134,7 +145,6 @@ import {
   SourceProvider,
   SourceRow,
   ProviderOption,
-  SourceDetailsClose,
   emptySourceChip,
   emptyProviderChoice,
 } from "./SourceFocus";
@@ -142,10 +152,11 @@ import {
   noteDiscoverFilter,
   noteDiscoverWindow,
   noteFocus,
-  noteHomeShelf,
   noteLibraryState,
   noteLiveState,
   notePlayerState,
+  noteUpNext,
+  noteSeekState,
   noteSearchState,
   noteSourceFilter,
   noteSourceIntent,
@@ -160,13 +171,13 @@ import {
   PlayerTimeline,
   PlayerTrackOption,
 } from "./PlayerFocus";
-import type { PlayerSnapshot } from "@viptv/video";
+import type { PlayerSnapshot, PlaybackControllerActive } from "@viptv/video";
 import {
   emptyTrackChoice,
   trackChoicesFor,
   type TrackChoiceView,
 } from "./trackModel";
-import { exactResumeSource, resolveNext } from "../ui/continuation";
+import { exactResumeSource } from "../ui/continuation";
 
 type TvPlatform = "tizen" | "vizio" | "webos";
 const px = (name: keyof typeof tokens) =>
@@ -241,22 +252,8 @@ function searchCaretPosition(query: string) {
 
 const playerClock = (seconds: number) => {
   const total = Math.max(0, Math.floor(seconds));
-  const hours = Math.floor(total / 3600);
-  const minutes = Math.floor((total % 3600) / 60);
-  const clock = `${minutes}:${String(total % 60).padStart(2, "0")}`;
-  return hours ? `${hours}:${String(minutes).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}` : clock;
+  return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, "0")}`;
 };
-
-const playerRuntime = (seconds: number) => {
-  const minutes = Math.max(0, Math.round(seconds / 60));
-  const hours = Math.floor(minutes / 60);
-  return hours ? `${hours} h ${minutes % 60} min` : `${minutes} min`;
-};
-
-function showPreparingSpinner(visible: boolean) {
-  const spinner = document.getElementById("solid-preparing-spinner");
-  if (spinner) spinner.style.display = visible ? "block" : "none";
-}
 
 /** Native 1920×1080 positions from the pinned TvPairing reference. */
 const pairingFrame = {
@@ -277,6 +274,8 @@ const pairingFrame = {
  * The API and Rust session driver are shared; only rendering/input differ.
  */
 export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
+  let seasonNode: ElementNode | undefined;
+  let retryError: () => void = () => location.reload();
   let pairingGeneration = 0;
   let pairingTimer: ReturnType<typeof setTimeout> | undefined;
   let pairingScope: ReturnType<TvApi["createScope"]> | undefined;
@@ -315,17 +314,24 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
   let sourceScope: ReturnType<TvApi["createScope"]> | undefined;
   let sourceTimer: ReturnType<typeof setTimeout> | undefined;
   let playback: SolidTVPlaybackRuntime | undefined;
+  let lastPlayerActive: PlaybackControllerActive<MediaItem, MediaSource> | null = null;
+  let lastPlaybackPosition = 0;
   let playbackGeneration = 0;
-  let nextScope: ReturnType<TvApi["createScope"]> | undefined;
   let heartbeatTimer: ReturnType<typeof setInterval> | undefined;
   let chromeTimer: ReturnType<typeof setTimeout> | undefined;
+  let continuation: ReturnType<typeof createSolidTVContinuation> | undefined;
+  let nextGeneration = 0;
+  let nextSetupScope: ReturnType<TvApi["createScope"]> | undefined;
+  let upNextScope: ReturnType<TvApi["createScope"]> | undefined;
+  let upNextTimer: ReturnType<typeof setInterval> | undefined;
+  let advancedSession = "";
+  let resumeRemainder = false;
   let disposeSession: (() => void) | undefined;
-  let disposeProfileEditor: (() => void) | undefined;
   return defineScreen({
     components: {
       ProfileTile,
       ManageProfilesButton,
-      ProfilePagerButton,
+      ProfilePageButton,
       HomeAction,
       HomeCard,
       RailItem,
@@ -344,8 +350,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
       SourceProvider,
       SourceRow,
       ProviderOption,
-      SourceDetailsClose,
-      PlayerControl,
+          PlayerControl,
       PlayerTimeline,
       PlayerTrackOption,
     },
@@ -353,6 +358,13 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
     state() {
       return {
         ...pairingFrame,
+        profileEditorOpen: false,
+        editingProfile: null as TvProfile | null,
+        profileEditorReturnIndex: 0,
+        textEntry: null as TextEntryProps | null,
+        playerNextBusy: false,
+        upNext: null as UpNextCard | null,
+        playerDialog: null as PlayerDialogProps | null,
         background: tokens["color.bg"],
         accent: tokens["color.accent.default"],
         primary: tokens["color.text.primary"],
@@ -372,12 +384,6 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         get homeScrim() {
           return homeScrim();
         },
-        selectingProfile: false,
-        homeScrollOffset: 0,
-        homeWindowX: 0,
-        detailScrollOffset: 0,
-        detailWindowStart: 0,
-        detailWindowX: 0,
         home: emptyHome as HomeView,
         detail: emptyDetail as DetailView,
         source: emptySources as SourcesView,
@@ -440,9 +446,11 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         playerNotice: "",
         playerFocusIndex: 1,
         playerSeekPreview: null as number | null,
+        playerSeekTarget: null as number | null,
+        playerSeeksPending: 0,
         playerSeekLabel: "",
         playerItem: null as MediaItem | null,
-        playerPreparingNext: false,
+        playerDirectLive: false,
         playerSessionId: "",
         playerSessionDuration: 0,
         trackPanelOpen: false,
@@ -451,6 +459,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         trackChoices: [] as TrackChoiceView[],
         trackSlots: Array.from({ length: 8 }, () => ({ ...emptyTrackChoice })),
         trackFocusIndex: 0,
+        trackWindowStart: 0,
         trackReturnControlIndex: 5,
         trackLegend: "",
         trackNotice: "",
@@ -459,24 +468,28 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         })),
         detailSaveIcon: "",
         detailSeasonLabel: "",
+        titleInfoOpen: false,
         detailCountLabel: "",
         detailNotice: "",
-        detailFocusZone: "action" as "action" | "season" | "episode",
+        detailFocusZone: "action" as "action" | "episode" | "season",
+        detailEpisodeStart: 0,
+        detailOffset: 0,
+        detailWindowX: 0,
         detailActionIndex: 0,
         detailEpisodeIndex: 0,
         detailReturnZone: "action" as "action" | "card",
         detailReturnIndex: 0,
-        detailReturnShelfIndex: 0,
         homeCards: Array.from({ length: 6 }, () => ({ ...emptyHomeCard })),
         homeShelves: [] as HomeShelfView[],
         homeShelfIndex: 0,
-        homeShelfPositions: {} as Record<string, number>,
-        homeNextCards: Array.from({ length: 5 }, () => ({ ...emptyHomeCard })),
-        homeNextShelfLabel: "",
+        homeShelfStart: 0,
+        homeOffsets: {} as Record<string, number>,
+        homePositions: {} as Record<string, number>,
+        homeShelfCardIndex: 0,
+        homeScrollY: 0,
         homeFocusZone: "action" as "action" | "card",
         homeActionIndex: 0,
         homeCardIndex: 0,
-        homeCardWindowStart: 0,
         railExpanded: false,
         railFocusIndex: 2,
         railReturnZone: "action" as
@@ -757,6 +770,8 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         titleMenuItem: null as MediaItem | null,
         titleMenuOrigin: "home" as "home" | "library" | "discover" | "search",
         titleMenuReturnIndex: 0,
+        titleMenuReturnZone: "card" as "action" | "card",
+        titleMenuHomeShelfKey: "continue",
         titleMenuBusy: false,
         titleMenuOkLabel: "",
         titleMenuSelectLabel: "",
@@ -833,7 +848,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         profilePage: 0,
         profileFocus: 0,
         profileFocusTarget: "tile" as "tile" | "manage" | "pager",
-        profilePagerFocus: 1,
+        profilePagerIndex: 1,
         profileStartX: 424,
         managing: false,
         profileError: "",
@@ -842,6 +857,16 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         moveIcon: "",
         moveLabel: "",
       };
+    },
+    watch: {
+      phase() {
+        if (this.playerNextBusy) this.cancelNextEpisode();
+        if (this.phase !== "detail") this.titleInfoOpen=false;
+        if (this.phase === "error" || this.phase === "expired") {
+          this.$focus();
+          noteFocus(this.phase, 0);
+        }
+      },
     },
     hooks: {
       ready() {
@@ -890,39 +915,32 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
             this.moveProfile(Number(slot), delta),
         );
         this.$listen("profile-manage-focus", () => {
+          if (this.profiles.length > 5) this.focusProfilePage(this.profilePage + 1 < Math.ceil(this.profiles.length / 5) ? 1 : 0);
+          else {
+            this.profileFocusTarget = "manage";
+            this.$select("manageProfiles")?.$focus();
+          }
+        });
+        this.$listen("profile-page-manage", () => {
           this.profileFocusTarget = "manage";
           this.$select("manageProfiles")?.$focus();
+        });
+        this.$listen("profile-page-move", (delta:number) => this.focusProfilePage(Math.max(0,Math.min(1,this.profilePagerIndex+delta))));
+        this.$listen("profile-page-change", (delta:number) => {
+          this.profilePage=Math.max(0,Math.min(Math.ceil(this.profiles.length/5)-1,this.profilePage+delta));
+          this.profileFocus=0;this.profileFocusTarget="tile";
+          this.refreshProfileSlots();
+          queueMicrotask(()=>{this.revealProfileTiles();this.$select("profile0")?.$focus();});
         });
         this.$listen("profile-restore-focus", () => {
           this.profileFocusTarget = "tile";
           this.$select(`profile${this.profileFocus}`)?.$focus();
         });
-        this.$listen("profile-pager-focus", () => {
-          if (this.profiles.length <= 5) return;
-          this.profileFocusTarget = "pager";
-          this.profilePagerFocus = this.profilePage === 0 ? 1 : 0;
-          this.$select(`profilePager${this.profilePagerFocus}`)?.$focus();
-        });
-        this.$listen("profile-pager-move", (delta: number) => {
-          const next = Math.max(0, Math.min(1, this.profilePagerFocus + Number(delta)));
-          this.profilePagerFocus = next;
-          this.$select(`profilePager${next}`)?.$focus();
-        });
-        this.$listen("profile-page-change", (delta: number) => {
-          this.profilePage = Math.max(0, Math.min(Math.ceil(this.profiles.length / 5) - 1, this.profilePage + Number(delta)));
-          this.refreshProfileSlots();
-          this.profileFocus = 0;
-          this.profileFocusTarget = "tile";
-          setTimeout(() => { this.revealProfileTiles(); this.$select("profile0")?.$focus(); }, 0);
-        });
         this.$listen("profile-manage-toggle", () =>
           this.toggleManageProfiles(),
         );
         this.$listen("profile-hold", (slot: number) => {
-          this.managing = true;
-          this.profilesLabel = "Manage profiles";
-          this.profileFocus = Number(slot);
-          setTimeout(() => this.revealProfileTiles(), 0);
+          this.openProfileEditor(Number(slot));
         });
         this.$listen(
           "profile-activate",
@@ -940,37 +958,46 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
           ({ position, delta }: { position: number; delta: number }) =>
             this.moveHomeAction(Number(position), delta),
         );
-        this.$listen("home-cards-enter", () => this.focusHomeCard(0));
+        this.$listen("home-cards-enter", () => this.focusHomeShelfCard(0, 0));
+        this.$listen("home-shelf-up", ({ shelf, position }: { shelf: number; position: number }) => {
+          if (shelf > 0) this.focusHomeShelfCard(shelf - 1, Math.min(position,Math.max(0,(this.homeShelves[shelf - 1]?.cards.length ?? 1)-1)));
+          else this.focusHomeAction(0);
+        });
+        this.$listen("home-shelf-down", ({ shelf, position }: { shelf: number; position: number }) => {
+          if (shelf + 1 < this.homeShelves.length)
+            this.focusHomeShelfCard(shelf + 1,Math.min(position,this.homeShelves[shelf + 1].cards.length - 1));
+        });
         this.$listen("home-action-return", () =>
           this.focusHomeAction(this.homeActionIndex),
         );
-        this.$listen("home-card-up", () => this.moveHomeShelf(-1));
-        this.$listen("home-card-down", () => this.moveHomeShelf(1));
-        this.$listen("home-card-focused", (position: number) => {
-          if (
-            this.homeFocusZone === "card" &&
-            Number(position) === this.homeCardIndex
-          )
-            this.homeCardIndex = Number(position);
+        this.$listen("home-card-focused", (focus: number | { shelf: number; position: number }) => {
+          this.homeFocusZone = "card";
+          this.homeShelfIndex = typeof focus === "number" ? 0 : focus.shelf;
+          this.homeShelfCardIndex = typeof focus === "number" ? focus : focus.position;
+          this.homeCardIndex = this.homeShelfCardIndex;
         });
         this.$listen(
           "home-card-move",
-          ({ position, delta }: { position: number; delta: number }) =>
-            this.moveHomeCard(Number(position), delta),
+          ({ shelf, position, delta }: { shelf: number; position: number; delta: number }) =>
+            this.moveHomeShelfCard(Number(shelf), Number(position), delta),
         );
         this.$listen(
           "home-action-activate",
           () => void this.activateHomeAction(),
         );
         this.$listen("home-action-hold", () => {
-          if (this.home.heroItem) void this.openSources(this.home.heroItem, false);
+          const item = this.home.heroItem;
+          if (!item) return;
+          if (item.type !== "live" && this.home.queueItems.some(candidate => candidate.id === item.id && candidate.type === item.type))
+            this.openTitleMenu(item, "home", this.homeActionIndex);
+          else void this.openSources(item, false);
         });
-        this.$listen("home-card-activate", () => void this.openDetailByCard());
-        this.$listen("home-card-hold", (position: number) => {
-          const shelf = this.homeShelves[this.homeShelfIndex];
-          const item = shelf?.items[Number(position)];
-          if (item && shelf.key === "queue") this.openTitleMenu(item, "home", Number(position));
-          else if (item) void this.openDetail(item);
+        this.$listen("home-card-activate", ({ shelf, position }: { shelf: number; position: number }) => void this.openHomeShelfCard(shelf, position));
+        this.$listen("home-card-hold", ({ shelf, position }: { shelf: number; position: number }) => {
+          const item = this.homeShelves[shelf]?.cards[position]?.item;
+          if (!item) return;
+          if (item.type === "live") void this.openSources(item, false);
+          else this.openTitleMenu(item, "home", position);
         });
         this.$listen("rail-focused", (position: number) => {
           this.railFocusIndex = Number(position);
@@ -1237,13 +1264,10 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
               ),
         );
         this.$listen("title-episodes-enter", () => {
-          if (this.detailFocusZone === "action") this.focusTitleSeason();
-          else if (this.detail.episodes.length) this.focusTitleEpisode(this.detailEpisodeIndex);
+          if (this.detail.episodes.length) this.focusTitleSeason();
         });
-        this.$listen("title-season-focus", () => this.focusTitleSeason());
-        this.$listen("title-season-change", (delta: number) => this.changeTitleSeason(Number(delta)));
         this.$listen("title-actions-return", () =>
-          this.focusTitleAction(this.detailActionIndex),
+          this.focusTitleSeason(),
         );
         this.$listen("title-episode-move", (delta: number) => {
           const count = this.detail.episodes.length;
@@ -1301,7 +1325,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         this.$listen("source-detail-close", () => this.closeSourceDetails());
         this.$listen("player-control-move", (delta: number) =>
           this.focusPlayerControl(
-            Math.max(0, Math.min(6, this.playerFocusIndex + Number(delta) + (this.playerItem?.season === undefined && this.playerFocusIndex + Number(delta) === 3 ? Number(delta) : 0))),
+            Math.max(0, Math.min(6, this.playerFocusIndex + Number(delta))),
           ),
         );
         this.$listen("player-timeline-focus", () => this.focusPlayerTimeline());
@@ -1332,7 +1356,8 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         });
       },
       destroy() {
-        disposeProfileEditor?.();
+        continuation?.cancel(); nextSetupScope?.abort(); ++nextGeneration;
+        upNextScope?.abort(); clearInterval(upNextTimer);
         ++pairingGeneration;
         pairingScope?.abort();
         homeScope?.abort();
@@ -1355,7 +1380,6 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         clearInterval(heartbeatTimer);
         clearTimeout(chromeTimer);
         ++playbackGeneration;
-        nextScope?.abort();
         void playback?.dispose().catch(() => undefined);
         document
           .getElementById("player-shade")
@@ -1365,85 +1389,130 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
       },
     },
     methods: {
+      openTextEntry(options: Omit<TextEntryProps, "onCancel">) {
+        const request: TextEntryProps = {
+          ...options,
+          onCancel: () => {
+            if (this.textEntry === request) this.textEntry = null;
+          },
+          onSubmit: async (value, signal) => {
+            await options.onSubmit(value, signal);
+            if (signal?.aborted) return;
+            if (this.textEntry === request) this.textEntry = null;
+          },
+        };
+        this.textEntry = request;
+      },
+      requestParentPin(title: string, onUnlocked: (signal?: AbortSignal) => Promise<void>) {
+        this.openTextEntry({title, secret:true, onSubmit:async (pin,signal)=>{
+          try { await api.unlockParent(pin,{signal}); }
+          catch(error) {
+            if(signal?.aborted)return;
+            throw (error as {status?:number}).status===403 ? new Error("Incorrect PIN. Try again.") : error;
+          }
+          if(!signal?.aborted)await onUnlocked(signal);
+        }});
+      },
+      unlockProfile(profileId: string) {
+        this.requestParentPin("Enter parent PIN", async signal=>{
+          await api.selectProfile(profileId,{signal});
+          if(!signal?.aborted)await this.loadHome(profileId);
+        });
+      },
       async loadHome(profileId: string) {
+        retryError = () => { void this.loadHome(profileId); };
+        this.cancelNextEpisode();
+        this.clearUpNext();
+        if (new URLSearchParams(location.search).has("perfdebug"))
+          performance.mark("viptv:home-start");
         const generation = ++homeGeneration;
         homeScope?.abort();
-        const scope = api.createScope();
-        homeScope = scope;
-        const current = () => generation === homeGeneration && !scope.signal.aborted;
-        const selected = this.profiles.find(profile => profile.id === profileId);
-        this.homeProfileAvatar = selected ? profileTileData(selected).image : "";
-        this.railProfileName = selected?.name ?? "Profile";
+        homeScope = api.createScope();
+        const selectedProfile = this.profiles.find(
+          (profile) => profile.id === profileId,
+        );
+        this.homeProfileAvatar = selectedProfile
+          ? profileTileData(selectedProfile).image
+          : "";
+        this.railProfileName = selectedProfile?.name ?? "Profile";
         this.railCurrent = "home";
-        this.railExpanded = false;
         this.currentProfileId = profileId;
-        this.homeFocusZone = "action";
-        this.home = { ...emptyHome };
-        this.homeShelves = [];
-        this.homeShelfIndex = 0;
-        this.homeShelfPositions = {};
-        this.homeCardIndex = 0;
-        this.homeCardWindowStart = 0;
-        this.homeScrollOffset = 0;
-        this.homeWindowX = 0;
         this.homeNotice = "";
-        this.phase = "home";
-        this.refreshHomeShelf();
-        if (new URLSearchParams(location.search).has("perfdebug")) performance.mark("viptv:home-shell");
-        setTimeout(() => {
-          if (!current() || this.phase !== "home") return;
-          this.revealHomeControls();
-          this.focusHomeAction(0);
-        }, 0);
-        let enrichedId = "";
-        let primaryLoaded = false;
-        const enrich = () => {
-          const view = this.home;
-          const id = view.heroItem?.id;
-          if (!id || enrichedId === id) return;
-          // Queue already hydrates this exact item and publishes each completion.
-          if (view.queueItems.some(item => item.id === id)) return;
-          enrichedId = id;
-          void enrichHomeHero(api, view, scope.signal).then(enriched => {
-            if (current() && this.home.heroItem?.id === id) {
-              this.home = { ...enriched, queueItems: this.home.queueItems, favoriteItems: this.home.favoriteItems, cards: this.home.cards, saved: this.home.saved };
-              this.revealHomeControls();
-            }
-          }).catch(() => undefined);
-        };
-        const loaded = new Map<number, HomeShelfView>();
-        const fallbackHero = () => {
-          const item = this.homeShelves.find(shelf => shelf.items.length)?.items[0];
-          if (current() && primaryLoaded && !this.home.heroItem && item) {
-            this.home = projectHome(item, this.home.queueItems, undefined, this.home.favoriteItems);
-            this.revealHomeControls();
-            enrich();
-          }
-        };
-        void loadHomeShelves(api, scope.signal, (shelf, order) => {
-          if (!current()) return;
-          const key = this.homeFocusZone === "card" ? this.homeShelves[this.homeShelfIndex]?.key : undefined;
-          loaded.set(order, shelf);
-          this.homeShelves = [...loaded.entries()].sort(([a], [b]) => a - b).map(([, row]) => row);
-          this.syncHomeLists(key);
-          fallbackHero();
-        });
+        this.phase = "ready";
+        this.startingLabel = "Starting VIPTV…";
         try {
-          await loadHomeView(api, profileId, scope.signal, view => {
-            if (!current()) return;
-            this.home = view.heroItem ? view : { ...this.home, queueItems: view.queueItems, favoriteItems: view.favoriteItems };
-            this.homeAddLabel = this.home.saved ? "✓" : "+";
-            this.syncHomeLists();
-            this.revealHomeControls();
-            enrich();
-            if (new URLSearchParams(location.search).has("perfdebug")) performance.mark("viptv:home-data");
+          let shown = false;
+          const view = await loadHomeView(api, profileId, homeScope.signal, early => {
+            if (generation !== homeGeneration || homeScope?.signal.aborted) return;
+            this.home = early; this.homeAddLabel = early.saved ? "✓" : "+";
+            if (!shown && early.heroItem) {
+              shown = true; this.phase = "home";
+              this.homeShelves = early.queueItems.length ? [{ key: "continue", title: "Continue watching", cards: queueHomeCards(early.queueItems), kind: "queue", loaded: true }] : [];
+              setTimeout(() => { if (generation === homeGeneration && this.homeFocusZone === "action") { this.revealHomeControls(); this.focusHomeAction(0); } }, 0);
+            }
           });
-          primaryLoaded = true;
-          fallbackHero();
+          if (new URLSearchParams(location.search).has("perfdebug"))
+            performance.mark("viptv:home-data");
+          if (generation !== homeGeneration || homeScope.signal.aborted) return;
+          if (!shown) this.phase = "home";
+          if (new URLSearchParams(location.search).has("perfdebug"))
+            performance.mark("viptv:home-phase");
+          setTimeout(() => {
+            if (generation !== homeGeneration) return;
+            if (shown) { this.home = view; this.homeAddLabel = view.saved ? "✓" : "+"; return; }
+            this.homeAddLabel = view.saved ? "✓" : "+";
+            this.homeShelfLabel = "Continue watching";
+            this.okLabel = "OK";
+            this.selectLabel = "Select";
+            this.optionsIcon = "≡";
+            this.optionsLabel = "Options";
+            this.home = view;
+            this.homeShelves = view.queueItems.length ? [{
+              key: "continue", title: "Continue watching", cards: queueHomeCards(view.queueItems), kind: "queue", loaded: true,
+            }] : [];
+            this.homeShelfIndex = 0;
+            this.homeShelfStart = 0;
+            this.homeShelfCardIndex = 0;
+            this.homeScrollY = 0;
+            this.homeCards = Array.from(
+              { length: 6 },
+              (_, index) => view.cards[index] ?? { ...emptyHomeCard },
+            );
+            this.revealHomeControls();
+            if (!shown) this.focusHomeAction(0);
+            if (new URLSearchParams(location.search).has("perfdebug"))
+              performance.mark("viptv:home-focus-request");
+          }, 16);
+          void loadHomeShelves(api, view, homeScope.signal, (shelves) => {
+            if (generation !== homeGeneration || homeScope?.signal.aborted) return;
+            const selectedKey = this.homeShelves[this.homeShelfIndex]?.key;
+            const selectedIndex = shelves.findIndex(row => row.key === selectedKey);
+            this.homeShelves = [...shelves];
+            this.homeShelfIndex = selectedIndex < 0 ? 0 : selectedIndex;
+            this.homeShelfCardIndex = Math.min(this.homeShelfCardIndex, Math.max(0, (shelves[this.homeShelfIndex]?.cards.length ?? 1) - 1));
+            this.homeShelfStart = Math.min(this.homeShelfStart, Math.max(0, (shelves[this.homeShelfIndex]?.cards.length ?? 1) - 5));
+            if (this.homeFocusZone === "card" && this.homeShelfIndex > 0) this.homeScrollY = 766 + this.homeShelfIndex * 364 + 258 - 1026;
+            queueMicrotask(() => {
+              for (let row = 0; row < this.homeShelves.length; row++) {
+                const start = row === this.homeShelfIndex ? this.homeShelfStart : 0;
+                for (let slot = 0; slot < Math.min(6, this.homeShelves[row].cards.length - start); slot++)
+                  (this.$select(`homeCard${row}Slot${slot}`) as unknown as { reveal?: () => void })?.reveal?.();
+              }
+            });
+          });
+          void enrichHomeHero(api, view, homeScope.signal)
+            .then((enriched) => {
+              if (generation === homeGeneration && !homeScope?.signal.aborted)
+                this.home = enriched;
+            })
+            .catch(() => {
+              /* Packaged queue metadata remains usable. */
+            });
         } catch (cause) {
-          primaryLoaded = true;
-          fallbackHero();
-          if (current()) this.homeNotice = cause instanceof Error ? cause.message : "Could not load Home. Open Settings to reconnect.";
+          if (generation !== homeGeneration || homeScope.signal.aborted) return;
+          this.error =
+            cause instanceof Error ? cause.message : "Could not load Home.";
+          this.phase = "error";
         }
       },
       revealHomeControls() {
@@ -1453,15 +1522,15 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
               reveal?: () => void;
             }
           )?.reveal?.();
-        for (let index = 0; index < 6; index++)
-          (
-            this.$select(`homeCard${index}`) as unknown as {
-              reveal?: () => void;
-            }
-          )?.reveal?.();
+        for (let shelf = 0; shelf < this.homeShelves.length; shelf++) {
+          const start = shelf === this.homeShelfIndex ? this.homeShelfStart : 0;
+          for (let slot = 0; slot < Math.min(6, this.homeShelves[shelf].cards.length - start); slot++)
+            (this.$select(`homeCard${shelf}Slot${slot}`) as unknown as { reveal?: () => void })?.reveal?.();
+        }
       },
       focusHomeAction(index: number) {
         this.homeFocusZone = "action";
+        this.homeScrollY = 0;
         this.homeActionIndex = index;
         this.$select(`heroAction${index}`)?.$focus();
       },
@@ -1475,58 +1544,43 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         );
       },
       focusHomeCard(index: number) {
-        const shelf = this.homeShelves[this.homeShelfIndex];
+        this.focusHomeShelfCard(this.homeShelfIndex, index);
+      },
+      focusHomeShelfCard(shelfIndex: number, index: number) {
+        const shelf = this.homeShelves[shelfIndex];
         if (!shelf?.cards.length) return;
-        index = Math.max(0, Math.min(shelf.cards.length - 1, index));
+        const target = Math.max(0, Math.min(shelf.cards.length - 1, index));
         this.homeFocusZone = "card";
-        this.homeCardIndex = index;
-        this.homeShelfPositions = { ...this.homeShelfPositions, [shelf.key]: index };
-        const window = carouselWindow(index, shelf.cards.length, 320, 1632, this.homeScrollOffset);
-        this.homeScrollOffset = window.offset;
-        this.homeCardWindowStart = window.start;
-        this.homeWindowX = window.x;
-        this.refreshHomeShelf();
-        this.$select(`homeCard${index - this.homeCardWindowStart}`)?.$focus();
+        this.homeShelfIndex = shelfIndex;
+        this.homeShelfCardIndex = target;
+        this.homeCardIndex = target;
+        const window = carouselWindow(target, shelf.cards.length, 320, 1624, this.homeOffsets[shelf.key] ?? 0);
+        this.homeOffsets = { ...this.homeOffsets, [shelf.key]: window.offset };
+        this.homePositions = { ...this.homePositions, [shelf.key]: target };
+        this.homeShelfStart = window.start;
+        this.homeScrollY = shelfIndex === 0 ? 0 : 766 + shelfIndex * 364 + 258 - 1026;
+        const slot = target - this.homeShelfStart;
+        setTimeout(() => { if (this.phase === "home" && !this.titleMenuOpen && !this.railExpanded) { this.homeFocusZone = "card"; this.$select(`homeCard${shelfIndex}Slot${slot}`)?.$focus(); } }, 0);
+      },
+      moveHomeShelfCard(shelfIndex: number, position: number, delta: number) {
+        const shelf = this.homeShelves[shelfIndex];
+        if (!shelf?.cards.length) return;
+        const target = position + delta;
+        if (target < 0) {
+          this.openRail();
+        } else if (target >= shelf.cards.length) {
+          return;
+        } else this.focusHomeShelfCard(shelfIndex, target);
+      },
+      openHomeShelfCard(shelfIndex: number, position: number) {
+        const item = this.homeShelves[shelfIndex]?.cards[position]?.item;
+        if (!item) return;
+        if (item.type === "live") void this.openSources(item, false);
+        else if (item.type === "movie" || item.type === "series") void this.openDetail(item);
+        else void this.openSources(item, !!item.position);
       },
       moveHomeCard(position: number, delta: number) {
-        const count = this.homeShelves[this.homeShelfIndex]?.cards.length ?? 0;
-        if (!count) return;
-        if (delta < 0 && this.homeCardIndex === 0) {
-          this.openRail();
-          return;
-        }
-        this.focusHomeCard(
-          Math.max(0, Math.min(count - 1, this.homeCardIndex + delta)),
-        );
-      },
-      refreshHomeShelf() {
-        const shelf = this.homeShelves[this.homeShelfIndex];
-        noteHomeShelf(this.homeShelfIndex, this.homeCardIndex, shelf?.cards.length ?? 0, this.homeCardWindowStart, this.homeShelves.length);
-        this.homeShelfLabel = shelf?.title ?? "";
-        this.homeCards = Array.from({ length: 6 }, (_, slot) => shelf?.cards[this.homeCardWindowStart + slot] ?? { ...emptyHomeCard });
-        const next = this.homeShelves[this.homeShelfIndex + 1];
-        this.homeNextShelfLabel = next?.title ?? "";
-        this.homeNextCards = Array.from({ length: 5 }, (_, slot) => next?.cards[slot] ?? { ...emptyHomeCard });
-      },
-      syncHomeLists(currentKey?: string) {
-        currentKey ??= this.homeFocusZone === "card" ? this.homeShelves[this.homeShelfIndex]?.key : undefined;
-        const own = initialHomeShelves(this.home);
-        const others = this.homeShelves.filter((shelf) => shelf.key !== "queue" && shelf.key !== "favorites");
-        this.homeShelves = [...own.filter((shelf) => shelf.key === "queue"), ...others, ...own.filter((shelf) => shelf.key === "favorites")];
-        const matching = this.homeShelves.findIndex((shelf) => shelf.key === currentKey);
-        this.homeShelfIndex = matching >= 0 ? matching : 0;
-        this.homeCardIndex = Math.min(this.homeCardIndex, Math.max(0, (this.homeShelves[this.homeShelfIndex]?.cards.length ?? 1) - 1));
-        this.homeCardWindowStart = Math.min(this.homeCardWindowStart, Math.max(0, (this.homeShelves[this.homeShelfIndex]?.cards.length ?? 0) - 4));
-        this.refreshHomeShelf();
-      },
-      moveHomeShelf(delta: number) {
-        const target = this.homeShelfIndex + delta;
-        if (target < 0) { this.focusHomeAction(this.homeActionIndex); return; }
-        if (target >= this.homeShelves.length) return;
-        this.homeShelfIndex = target;
-        this.homeScrollOffset = 0;
-        this.homeCardWindowStart = 0;
-        this.focusHomeCard(this.homeShelfPositions[this.homeShelves[target].key] ?? 0);
+        this.moveHomeShelfCard(this.homeShelfIndex, position, delta);
       },
       openRail() {
         if (
@@ -1610,7 +1664,12 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
       },
       focusRail(index: number) {
         this.railFocusIndex = index;
-        this.$select(`rail${index}`)?.$focus();
+        // The first opening mounts the deferred rail in Solid's current
+        // update. Focus its native node after those refs have been installed.
+        queueMicrotask(() => {
+          if (this.railExpanded && this.railFocusIndex === index)
+            this.$select(`rail${index}`)?.$focus();
+        });
       },
       moveRail(delta: number) {
         this.focusRail(Math.max(0, Math.min(6, this.railFocusIndex + delta)));
@@ -1624,9 +1683,9 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
             this.focusHomeCard(this.railReturnIndex);
           else this.focusHomeAction(this.railReturnIndex);
         } else if (this.phase === "detail") {
-          if (this.railReturnZone === "episode")
+          if (this.railReturnZone === "season") this.focusTitleSeason();
+          else if (this.railReturnZone === "episode")
             this.focusTitleEpisode(this.railReturnIndex);
-          else if (this.railReturnZone === "season") this.focusTitleSeason();
           else this.focusTitleAction(this.railReturnIndex);
         } else if (this.phase === "discover") {
           if (this.railReturnZone === "chip")
@@ -1903,20 +1962,9 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         try {
           const page = await api.discover(request, { signal: scope.signal });
           if (generation !== discoverGeneration || scope.signal.aborted) return;
-          this.discoverItems = skip
-            ? [
-                ...this.discoverItems,
-                ...page.items.filter(
-                  (item) =>
-                    !this.discoverItems.some(
-                      (old) => old.type === item.type && old.id === item.id,
-                    ),
-                ),
-              ]
-            : [...page.items];
-          this.discoverNextSkip = page.hasMore
-            ? (page.nextSkip ?? skip + page.items.length)
-            : null;
+          const paging = appendCatalogPage(this.discoverItems, page.items, skip, page.hasMore, page.nextSkip);
+          this.discoverItems = paging.items;
+          this.discoverNextSkip = paging.nextSkip ?? null;
           this.discoverBusy = false;
           this.discoverError = this.discoverItems.length ? "" : "No titles yet";
           this.refreshDiscoverCards();
@@ -1973,6 +2021,11 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
       focusDiscoverChip(index: number) {
         this.discoverFocusZone = "chip";
         this.discoverChipIndex = index;
+        const focused = this.discoverChips[index];
+        if (focused) {
+          const shift = focused.x < 192 ? 192 - focused.x : focused.x + focused.width > 1824 ? 1824 - focused.x - focused.width : 0;
+          if (shift) this.discoverChips = this.discoverChips.map(chip => chip.y === focused.y ? { ...chip, x: chip.x + shift } : chip);
+        }
         this.$select("discoverScreen")
           ?.$select(`discoverChip${index}`)
           ?.$focus();
@@ -2111,7 +2164,20 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
           );
         if (!filter) return;
         if (!filter.options.length) {
-          this.discoverError = "Text filters are not available yet.";
+          const catalog = this.discoverCatalog;
+          if (!catalog) return;
+          this.openTextEntry({
+            title: catalogFilterLabel(name), initialValue: this.discoverValues[name] ?? "", maxLength: 256,
+            onSubmit: async (value, signal) => {
+              const trimmed = value.trim();
+              if (filter.required && !trimmed) throw new Error("Enter a value for this required filter.");
+              const loading = this.loadDiscoverCatalog(catalog, { ...this.discoverValues, [name]: trimmed }, 0, false);
+              const scope = discoverScope;
+              const cancel = () => scope?.abort();
+              signal?.addEventListener("abort", cancel, {once:true});
+              try { await loading; } finally { signal?.removeEventListener("abort", cancel); }
+            },
+          });
           return;
         }
         this.discoverFilterName = name;
@@ -2646,28 +2712,49 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
           const searchable = catalogs
             .filter((catalog) => catalog.supportsSearch)
             .slice(0, 128);
-          const completed = new Map<number, SearchRow>();
-          const publish = (order: number, row: SearchRow) => {
+          for (let index = 0; index < searchable.length; index += 3) {
+            const pages = await Promise.all(
+              searchable.slice(index, index + 3).map(async (catalog) => {
+                try {
+                  const page = await api.discover(
+                    {
+                      type: catalog.type,
+                      catalog: catalog.id,
+                      addonId: catalog.addonId,
+                      search: query,
+                    },
+                    { signal: scope.signal },
+                  );
+                  return {
+                    name: catalog.name,
+                    items: page.items.slice(0, 24),
+                    catalog,
+                  } as SearchRow;
+                } catch {
+                  partial = true;
+                  return {
+                    name: catalog.name,
+                    items: [],
+                    catalog,
+                  } as SearchRow;
+                }
+              }),
+            );
             if (generation !== searchGeneration || scope.signal.aborted) return;
-            completed.set(order, row);
-            this.searchRows = [...completed.entries()].sort(([a], [b]) => a - b).map(([, result]) => result);
+            rows.push(...pages);
+            this.searchRows = [...rows];
             this.refreshSearchLayout();
-          };
-          const live = api.live({ view: "us", search: query, limit: 80 }, { signal: scope.signal })
-            .then(page => publish(searchable.length, { name: "Live TV", items: page.channels.slice(0, 24) }))
-            .catch(() => { partial = true; });
-          let next = 0;
-          await Promise.all([live, ...Array.from({ length: Math.min(6, searchable.length) }, async () => {
-            while (next < searchable.length && !scope.signal.aborted) {
-              const order = next++;
-              const catalog = searchable[order];
-              try {
-                const page = await api.discover({ type: catalog.type, catalog: catalog.id, addonId: catalog.addonId, search: query }, { signal: scope.signal });
-                publish(order, { name: catalog.name, items: page.items.slice(0, 24), catalog });
-              } catch { partial = true; }
-            }
-          })]);
-          rows.push(...[...completed.entries()].sort(([a], [b]) => a - b).map(([, row]) => row));
+          }
+          try {
+            const live = await api.live(
+              { view: "us", search: query, limit: 80 },
+              { signal: scope.signal },
+            );
+            if (generation !== searchGeneration || scope.signal.aborted) return;
+            rows.push({ name: "Live TV", items: live.channels.slice(0, 24) });
+          } catch {
+            partial = true;
+          }
           if (generation !== searchGeneration || scope.signal.aborted) return;
           this.searchRows = [...rows];
           this.searchPartial = partial;
@@ -2703,7 +2790,6 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         }
       },
       refreshSearchLayout() {
-        const focusedId = this.searchFocusZone === "result" ? searchCanonicalCards[this.searchResultIndex]?.id : undefined;
         const view = projectSearch(
           this.searchRows,
           this.searchSectionOffsets,
@@ -2718,10 +2804,6 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
           searchCanonicalSections.set(card.section, section);
         }
         this.refreshSearchWindow();
-        if (focusedId) {
-          const index = searchCanonicalCards.findIndex(card => card.id === focusedId);
-          if (index >= 0) this.focusSearchResult(index);
-        }
       },
       refreshSearchWindow() {
         const view = projectSearchWindow(
@@ -2799,9 +2881,8 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         this.searchFocusZone = "result";
         this.searchResultIndex = index;
         const start = this.searchSectionOffsets[card.section] ?? 0;
-        let nextStart = start;
-        if (card.localIndex < start) nextStart = card.localIndex;
-        else if (card.localIndex >= start + 3) nextStart = card.localIndex - 2;
+        const count = searchCanonicalCards.filter(candidate => candidate.section === card.section).length;
+        const nextStart = carouselWindow(card.localIndex, count, 320, 974, start).offset;
         const vertical =
           card.sectionIndex > 1 ? (card.sectionIndex - 1) * 360 : 0;
         const changed =
@@ -2929,6 +3010,13 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         clearInterval(liveClockTimer);
         const scope = api.createScope();
         liveScope = scope;
+        // Fetch while the first guide subtree mounts instead of serializing
+        // network setup behind its canvas nodes and text textures.
+        const initialGuide = Promise.allSettled([
+          api.liveCategories("us", { signal: scope.signal }),
+          api.live({ view: "us", offset: 0, limit: 40 }, { signal: scope.signal }),
+        ]);
+        batch(() => {
         this.railExpanded = false;
         this.railCurrent = "live";
         this.phase = "live";
@@ -2953,7 +3041,8 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         this.liveGuides = {};
         this.liveStatus = "Loading channels…";
         this.refreshLiveView();
-        setTimeout(() => {
+        });
+        queueMicrotask(() => {
           if (this.phase !== "live") return;
           this.liveLabel = "LIVE";
           this.livePreviewLabel = "Live preview";
@@ -2966,15 +3055,10 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
           this.liveTimeIcon = "◀ ▶";
           this.liveTimeLabel = "Time";
           this.revealLiveControls();
-        }, 40);
-        const [categoriesResult, channelsResult] = await Promise.allSettled([
-          api.liveCategories("us", { signal: scope.signal }),
-          api.live(
-            { view: "us", offset: 0, limit: 40 },
-            { signal: scope.signal },
-          ),
-        ]);
+        });
+        const [categoriesResult, channelsResult] = await initialGuide;
         if (generation !== liveGeneration || scope.signal.aborted) return;
+        batch(() => {
         if (categoriesResult.status === "fulfilled")
           this.liveCategories = [...categoriesResult.value.categories];
         liveCanonicalFilters = liveFilters(this.liveCategories, "all");
@@ -3007,6 +3091,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
               : "Unable to load channels.";
           this.refreshLiveView();
         }
+        });
         liveClockTimer = setInterval(() => {
           if (this.phase !== "live") return;
           this.liveNow = Date.now() / 1000;
@@ -3573,7 +3658,11 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
       },
       watchLiveChannel(row: number) {
         const channel = liveCanonicalChannels[row];
-        if (channel) void this.openSources(channel, false);
+        if (!channel || this.phase !== "live") return;
+        this.sourceReturnOrigin = "live";
+        this.sourceReturnZone = this.liveFocusZone === "program" ? "program" : "channel";
+        this.sourceReturnIndex = this.liveFocusZone === "program" ? this.liveProgramPosition : row;
+        void this.playSource(channel, undefined, 0);
       },
       openLiveDetailsForChannel(row: number) {
         const block = liveCanonicalPrograms.findIndex(
@@ -3856,8 +3945,12 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         if (!profile) return;
         try {
           await api.selectProfile(profile.id);
-          void this.loadHome(profile.id);
+          await this.loadHome(profile.id);
         } catch (cause) {
+          if ((cause as {status?:number}).status===403) {
+            this.unlockProfile(profile.id);
+            return;
+          }
           this.settingsPanel = {
             ...this.settingsPanel,
             description:
@@ -3898,11 +3991,19 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
           if (choice)
             this.openSettingsChoice(row.title, choice.key, choice.options);
         } else if (row.id === "addon-add") {
-          this.settingsPanel = {
-            ...this.settingsPanel,
-            description:
-              "Install addon text entry is not available in this preview yet.",
-          };
+          this.openTextEntry({
+            title: "Install addon manifest URL", initialValue: "https://", mono: true,
+            onSubmit: async (value, signal) => {
+              let url: URL;
+              try { url = new URL(value.trim()); } catch { throw new Error("That does not look like an addon URL."); }
+              if (url.protocol !== "https:") throw new Error("Enter an HTTPS manifest URL.");
+              await api.addAddon(url.href, {signal});
+              const addons = await api.addons({signal});
+              if (signal?.aborted || this.phase !== "settings") return;
+              this.settingsAddons = [...addons];
+              this.refreshSettingsView();
+            },
+          });
         } else {
           const addon = this.settingsAddons[this.settingsSelectedIndex - 1];
           if (addon) this.openSettingsAddonManage(addon);
@@ -4163,7 +4264,15 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
           this.settingsDialogOpen = false;
           try {
             await api.signOut();
+            await this.beginPairing();
           } catch (cause) {
+            if ((cause as {status?:number}).status === 403) {
+              this.requestParentPin("Enter parent PIN to sign out", async signal=>{
+                await api.signOut({signal});
+                if(!signal?.aborted)await this.beginPairing();
+              });
+              return;
+            }
             this.settingsPanel = {
               ...this.settingsPanel,
               description:
@@ -4273,6 +4382,8 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         this.titleMenuItem = item;
         this.titleMenuOrigin = origin;
         this.titleMenuReturnIndex = index;
+        if (origin === "home") this.titleMenuHomeShelfKey = this.homeShelves[this.homeShelfIndex]?.key ?? "continue";
+        this.titleMenuReturnZone = origin === "home" ? this.homeFocusZone : "card";
         this.titleMenuKind = "actions";
         this.titleMenuChoices = titleMenuChoices(item, inQueue, saved);
         this.titleMenuSlots = Array.from(
@@ -4324,10 +4435,13 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         noteTitleMenu(false, this.titleMenuKind);
         if (!restore) return;
         if (this.titleMenuOrigin === "home") {
-          const last = this.home.queueItems.length - 1;
-          if (last >= 0)
-            this.focusHomeCard(Math.min(this.titleMenuReturnIndex, last));
-          else this.focusHomeAction(0);
+          if (this.titleMenuReturnZone === "action")
+            this.focusHomeAction(this.titleMenuReturnIndex);
+          else {
+            const shelf = Math.max(0,this.homeShelves.findIndex(row=>row.key===this.titleMenuHomeShelfKey));
+            if(this.homeShelves[shelf]?.cards.length) this.focusHomeShelfCard(shelf,Math.min(this.titleMenuReturnIndex,this.homeShelves[shelf].cards.length-1));
+            else this.focusHomeAction(0);
+          }
         } else if (this.titleMenuOrigin === "library") {
           const last = this.libraryItems.length - 1;
           if (last >= 0)
@@ -4360,8 +4474,21 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
       },
       updateQueueLists(items: readonly MediaItem[]) {
         const cards = queueHomeCards(items);
+        const selectedKey=this.homeShelves[this.homeShelfIndex]?.key;
+        const withoutQueue=this.homeShelves.filter(row=>row.key!=="continue");
+        this.homeShelves=cards.length
+          ? [{key:"continue",title:"Continue watching",cards,kind:"queue",loaded:true},...withoutQueue]
+          : withoutQueue;
+        if(selectedKey && selectedKey!=="continue") {
+          this.homeShelfIndex=Math.max(0,this.homeShelves.findIndex(row=>row.key===selectedKey));
+        } else if(!cards.length) {
+          this.homeShelfIndex=0;this.homeFocusZone="action";this.homeScrollY=0;
+        }
         this.home = { ...this.home, queueItems: items, cards };
-        this.syncHomeLists();
+        this.homeCards = Array.from(
+          { length: 6 },
+          (_, index) => cards[index] ?? { ...emptyHomeCard },
+        );
         this.libraryQueueItems = [...items];
         if (this.libraryMode === "queue") {
           this.libraryItems = [...items];
@@ -4419,6 +4546,8 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
           const target =
             choice.key === "previous"
               ? item.previousEpisode
+              : choice.key === "source" && item.queueStatus === "next"
+                ? item.previousEpisode ?? item
               : choice.key === "restart"
                 ? { ...item, position: 0 }
                 : item;
@@ -4454,7 +4583,6 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
             await api.toggleFavorite(this.currentProfileId, item);
             const favorites = await api.favorites(this.currentProfileId);
             this.home = { ...this.home, favoriteItems: favorites };
-            this.syncHomeLists();
             this.libraryFavorites = favorites;
             if (this.libraryMode === "favorites") {
               this.libraryItems = [...favorites];
@@ -4486,7 +4614,6 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
                   (favorite) => favorite.id !== this.home.heroItem?.id,
                 );
             this.home = { ...this.home, saved, favoriteItems };
-            this.syncHomeLists();
             this.homeAddLabel = saved ? "✓" : "+";
             (
               this.$select("heroAction2") as unknown as { reveal?: () => void }
@@ -4502,22 +4629,21 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
           }
           return;
         }
-        if (action === "play" && this.home.heroItem) {
-          void this.openSources(this.home.heroItem, !!this.home.heroItem.position);
-          return;
-        }
         if (action === "details" && this.home.heroItem) {
           void this.openDetail(this.home.heroItem);
           return;
         }
-        this.homeNotice = "Playback is unavailable.";
+        const hero = this.home.heroItem;
+        if (action !== "play" || !hero) return;
+        if (hero.type === "series" && hero.episode === undefined)
+          void this.openDetail(hero);
+        else void this.openSources(hero, !!hero.position || hero.queueStatus === "next");
       },
       openDetailByCard() {
-        const item = this.homeShelves[this.homeShelfIndex]?.items[this.homeCardIndex];
+        const item = this.home.queueItems[this.homeCardIndex];
         if (item) void this.openDetail(item);
       },
       async openDetail(item: MediaItem) {
-        if (item.type === "live") { await this.openSources(item, false); return; }
         if (
           this.phase !== "home" &&
           this.phase !== "discover" &&
@@ -4531,7 +4657,6 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         this.detailReturnPhase = this.phase;
         if (this.phase === "home") {
           this.detailReturnZone = this.homeFocusZone;
-          this.detailReturnShelfIndex = this.homeShelfIndex;
           this.detailReturnIndex =
             this.homeFocusZone === "card"
               ? this.homeCardIndex
@@ -4564,10 +4689,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
           setTimeout(() => {
             if (generation !== detailGeneration) return;
             this.detail = view;
-            this.detailEpisodeIndex = 0;
-            this.detailWindowStart = 0;
-            this.detailWindowX = 0;
-            this.detailScrollOffset = 0;
+            this.detailEpisodeStart = 0;
             this.detailEpisodes = Array.from(
               { length: 5 },
               (_, index) => view.episodes[index] ?? { ...emptyDetailEpisode },
@@ -4605,38 +4727,46 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         this.detailActionIndex = index;
         this.$select(`titleAction${index}`)?.$focus();
       },
+      focusTitleSeason() {
+        this.detailFocusZone = "season";
+        seasonNode?.setFocus();
+      },
+      openTitleSeasons() {
+        if (this.detail.seasons.length < 2) return;
+        this.playerDialog = {
+          title: "Season", initialId: `season-${this.detail.season}`,
+          choices: [...this.detail.seasons.map(season => ({id:`season-${season}`,label:`Season ${season}`,current:season===this.detail.season})), {id:"cancel",label:"Cancel"}],
+          onCancel: () => {this.playerDialog=null;queueMicrotask(()=>this.focusTitleSeason());},
+          onSelect: (id:string) => {
+            if(id!=="cancel") {
+              this.detail=selectDetailSeason(this.detail,Number(id.slice(7)));
+              this.detailEpisodeStart=0;this.detailEpisodeIndex=0;this.detailOffset=0;this.detailWindowX=0;
+              this.detailEpisodes=Array.from({length:5},(_,index)=>this.detail.episodes[index]??{...emptyDetailEpisode});
+              this.detailSeasonLabel=`Season ${this.detail.season}`;
+              this.detailCountLabel=`${this.detail.episodeCount} ${this.detail.episodeCount===1?"episode":"episodes"}`;
+              queueMicrotask(()=>this.revealTitleControls());
+            }
+            this.playerDialog=null;queueMicrotask(()=>this.focusTitleSeason());
+          },
+        };
+      },
       focusTitleEpisode(index: number) {
-        if (!this.detail.episodes.length) return;
-        index = Math.max(0, Math.min(this.detail.episodes.length - 1, index));
+        if(!this.detail.episodes.length)return;
+        index=Math.max(0,Math.min(this.detail.episodes.length-1,index));
         this.detailFocusZone = "episode";
         this.detailEpisodeIndex = index;
-        const window = carouselWindow(index, this.detail.episodes.length, 360, 1632, this.detailScrollOffset);
-        this.detailScrollOffset = window.offset;
-        this.detailWindowStart = window.start;
+        const window = carouselWindow(index, this.detail.episodes.length, 360, 1624, this.detailOffset);
+        this.detailOffset = window.offset;
+        this.detailEpisodeStart = window.start;
         this.detailWindowX = window.x;
-        this.detailEpisodes = Array.from({ length: 5 }, (_, slot) => this.detail.episodes[window.start + slot] ?? { ...emptyDetailEpisode });
-        this.revealTitleControls();
-        this.$select(`titleEpisode${index - window.start}`)?.$focus();
-      },
-      focusTitleSeason() {
-        if (!this.detail.allEpisodes.length) return;
-        this.detailFocusZone = "season";
-        this.$select("titleSeason")?.$focus();
-      },
-      changeTitleSeason(delta: number) {
-        const seasons = [...new Set(this.detail.allEpisodes.map(episode => episode.item?.season ?? 1))].sort((a, b) => a - b);
-        if (!seasons.length) return;
-        const season = seasons[(seasons.indexOf(this.detail.season) + delta + seasons.length) % seasons.length];
-        const episodes = this.detail.allEpisodes.filter(episode => (episode.item?.season ?? 1) === season);
-        this.detail = { ...this.detail, season, episodes, episodeCount: episodes.length };
-        this.detailEpisodeIndex = 0;
-        this.detailScrollOffset = 0;
-        this.detailWindowStart = 0;
-        this.detailWindowX = 0;
-        this.detailEpisodes = Array.from({ length: 5 }, (_, slot) => episodes[slot] ?? { ...emptyDetailEpisode });
-        this.detailSeasonLabel = `Season ${season}`;
-        this.detailCountLabel = `${episodes.length} ${episodes.length === 1 ? "episode" : "episodes"}`;
-        this.revealTitleControls();
+        this.detailEpisodes=Array.from({length:5},(_,slot)=>this.detail.episodes[this.detailEpisodeStart+slot]??{...emptyDetailEpisode});
+        queueMicrotask(()=>{
+          if(this.phase!=="detail"||this.detailFocusZone!=="episode")return;
+          this.revealTitleControls();
+          this.$select(`titleEpisode${index-this.detailEpisodeStart}`)?.$focus();
+          // A recycled visible slot may already own native focus.
+          noteFocus("title-episode", index);
+        });
       },
       async activateTitleAction() {
         if (this.phase !== "detail" || this.detailFocusZone !== "action")
@@ -4679,12 +4809,14 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
           );
           return;
         }
-        this.detailNotice =
-          action === "info"
-            ? this.detail.synopsis
-            : "Choose source is not available yet.";
+        if(action === "info") this.titleInfoOpen=true;
+        else this.detailNotice="No playable episode is available.";
       },
       async openSources(item: MediaItem, resume: boolean) {
+        if (resume && item.queueStatus === "next" && item.previousEpisode) {
+          void this.nextEpisode(item.previousEpisode, item.previousEpisode.position ?? 0);
+          return;
+        }
         if (
           this.phase !== "detail" &&
           this.phase !== "library" &&
@@ -4704,7 +4836,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
           this.sourceReturnIndex = this.libraryCardIndex;
         else if (this.phase === "home") {
           this.sourceReturnZone = this.homeFocusZone;
-          this.sourceReturnIndex = this.homeFocusZone === "card" ? this.homeCardIndex : this.homeActionIndex;
+          this.sourceReturnIndex = this.homeFocusZone === "action" ? this.homeActionIndex : this.homeCardIndex;
         }
         else if (this.phase === "discover")
           this.sourceReturnIndex = this.discoverCardIndex;
@@ -4943,11 +5075,52 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
           platform,
           video,
           (snapshot) => this.updatePlayerSnapshot(snapshot),
+          {
+            onControllerState: state => {
+              if(!state.active) {
+                this.playerSessionId="";this.playerSessionDuration=0;
+                return;
+              }
+              lastPlayerActive=state.active;
+              this.playerItem=state.active.intent.item;
+              this.playerSessionId=state.active.session.id;
+              this.playerSessionDuration=state.active.session.duration;
+            },
+            onTerminalError: (error) => {
+              if(!["player","playerTracks"].includes(this.phase) || this.playerNextBusy)return;
+              const outgoing=lastPlayerActive, item=outgoing?.intent.item??this.playerItem;
+              if(!item)return;
+              const position=lastPlaybackPosition;
+              this.clearUpNext();clearTimeout(chromeTimer);
+              this.playerSeekTarget=null;this.playerSeeksPending=0;
+              this.trackPanelOpen=false;this.phase="player";
+              this.playerDialog={title:"Playback stopped",message:error.message,
+                choices:[{id:"retry",label:"Retry"},{id:"source",label:"Choose source"},{id:"back",label:"Back"}],
+                onCancel:()=>{this.playerDialog=null;void this.exitPlayer();},
+                onSelect:id=>{
+                  this.playerDialog=null;
+                  void (async()=>{
+                    await this.exitPlayer();
+                    if(id==="retry")void this.playSource(item,outgoing?.intent.source,position);
+                    else if(id==="source"){
+                      if(this.phase==="sources")this.phase=this.sourceReturnOrigin;
+                      void this.openSources({...item,position},false);
+                    }
+                  })();
+                },
+              };
+            },
+          },
         );
         return playback;
       },
-      async playSource(item: MediaItem, source: MediaSource, position: number) {
-        if (this.phase !== "sources") return;
+      async playSource(item: MediaItem, source: MediaSource | undefined, position: number) {
+        if (!["sources", "home", "library", "discover", "search", "detail", "live"].includes(this.phase)) return;
+        this.cancelNextEpisode();
+        this.playerDirectLive = item.type === "live" && !source;
+        this.playerSeekPreview=null;this.playerSeekTarget=null;this.playerSeeksPending=0;
+        this.clearUpNext();
+        this.playerDialog = null;
         const generation = ++playbackGeneration;
         sourceScope?.abort();
         ++sourceGeneration;
@@ -4963,23 +5136,24 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         this.preparingText = "Preparing playback…";
         this.playerNotice = "";
         this.phase = "preparing";
-        showPreparingSpinner(true);
         const layer = document.getElementById("video-layer")!;
         this.setPlayerShade(false);
         if (platform === "tizen")
           document.body.style.background = "transparent";
         else layer.style.display = "block";
         try {
-          const runtime = await this.ensurePlaybackRuntime();
+          const [runtime, preferences] = await Promise.all([
+            this.ensurePlaybackRuntime(),
+            api.preferences(this.currentProfileId).catch(() => ({...this.settingsPrefs, autoplay:false})),
+          ]);
           if (generation !== playbackGeneration || this.phase !== "preparing")
             return;
+          this.settingsPrefs = preferences;
           const started = await runtime.start(item, source, position);
           if (generation !== playbackGeneration) {
-            if (
-              runtime.controller.snapshot.active?.session.id ===
-              started.session.id
-            )
-              await runtime.stop();
+            // The controller owns stale-start cleanup. A cancelled start may
+            // return its new current owner; stopping it here would kill that
+            // newer playback session.
             return;
           }
           // Persist the controller's enriched item so progress retains the
@@ -4987,8 +5161,9 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
           this.playerItem = started.intent.item;
           this.playerSessionId = started.session.id;
           this.playerSessionDuration = started.session.duration;
+          resumeRemainder = position > 0 && started.session.duration > 10 && position >= started.session.duration - 10;
+          advancedSession = "";
           this.phase = "player";
-          showPreparingSpinner(false);
           this.playerOverlay = true;
           this.setPlayerShade(true);
           this.nowPlayingLabel = "NOW PLAYING";
@@ -5029,8 +5204,18 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
           layer.style.display = "none";
           this.setPlayerShade(false);
           document.body.style.background = "";
+          if (this.playerDirectLive) {
+            this.phase = "live";
+            this.playerDialog = {
+              title: "This channel could not be played",
+              message: cause instanceof Error ? cause.message : "Try again or choose another source.",
+              choices: [{id:"retry",label:"Retry"},{id:"source",label:"Choose source"}],
+              onCancel: () => { this.playerDialog=null;this.phase="sources";this.closeSources(); },
+              onSelect: (id:string) => { this.playerDialog=null;if(id==="retry")void this.playSource(item,undefined,0);else void this.openSources(item,false); },
+            };
+            return;
+          }
           this.phase = "sources";
-          showPreparingSpinner(false);
           this.sourceNotice =
             cause instanceof Error
               ? cause.message
@@ -5040,23 +5225,163 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
       },
       updatePlayerSnapshot(snapshot: PlayerSnapshot) {
         this.playerSnapshot = snapshot;
+        if(snapshot.state==="playing" || snapshot.state==="paused")lastPlaybackPosition=snapshot.time.positionSeconds;
         notePlayerState(snapshot.state, snapshot.time.positionSeconds);
-        this.playerStatus = this.playerItem?.type === "live" ? "LIVE" : snapshot.state.toUpperCase();
+        this.playerStatus = this.playerSeeksPending ? "BUFFERING" : snapshot.state.toUpperCase();
         this.playerToggleIcon = snapshot.state === "paused" ? "▶" : "Ⅱ";
         const position = snapshot.time.positionSeconds;
         const duration =
           snapshot.time.durationSeconds ?? this.playerSessionDuration;
-        if (this.playerSeekPreview === null) {
-          this.playerPositionText = playerClock(position);
-          this.playerProgress =
-            duration > 0 ? Math.min(1, position / duration) : 0;
+        if(this.playerSeekTarget!==null && !this.playerSeeksPending &&
+          (["error","stopped","ended","disposed","idle"].includes(snapshot.state) ||
+           (snapshot.state==="playing" && position>=this.playerSeekTarget-0.75))) {
+          this.playerSeekTarget=null;this.playerSeekLabel="";
         }
-        const stableDuration = this.playerSessionDuration > 0 ? this.playerSessionDuration : duration;
-        this.playerDurationText = stableDuration > 0 ? playerRuntime(stableDuration) : "";
-        if (snapshot.error && this.phase === "player")
-          this.playerNotice = snapshot.error.message;
-        if (snapshot.state === "playing" && this.phase === "player" && !chromeTimer)
+        if (this.playerSeekPreview === null) {
+          const displayed=this.playerSeekTarget??position;
+          this.playerPositionText = playerClock(displayed);
+          this.playerProgress = duration > 0 ? Math.min(1, displayed / duration) : 0;
+        }
+        this.playerDurationText = duration > 0 ? playerClock(duration) : "";
+        noteSeekState(this.playerSeekTarget,this.playerSeeksPending,this.playerSeekTarget??position);
+        this.updateUpNext(snapshot);
+        if (snapshot.state === "playing" && this.phase === "player")
           this.schedulePlayerChromeHide();
+      },
+      playerSessionKey() {
+        return `${this.playerSessionId}:${this.playerItem?.id ?? ""}`;
+      },
+      clearUpNext() {
+        clearInterval(upNextTimer);
+        upNextScope?.abort();
+        this.upNext=null;
+        noteUpNext(false);
+      },
+      cancelUpNext() {
+        advancedSession=this.playerSessionKey();
+        this.clearUpNext();
+        this.focusPlayerControl(1);
+      },
+      playUpNext() {
+        advancedSession=this.playerSessionKey();
+        this.clearUpNext();
+        if(this.playerItem)void this.nextEpisode(this.playerItem,playback?.player.snapshot.time.positionSeconds ?? 0);
+      },
+      updateUpNext(snapshot: PlayerSnapshot) {
+        const item=this.playerItem;
+        if(this.phase!=="player" || !item || !this.playerSessionId || !this.settingsPrefs.autoplay ||
+          !["series","episode"].includes(item.type) || this.playerNextBusy || this.playerSeeksPending || this.playerSeekTarget!==null || this.playerSeekPreview!==null || this.playerDialog)return;
+        const key=this.playerSessionKey();
+        if(advancedSession===key)return;
+        const position=snapshot.time.positionSeconds;
+        const duration=snapshot.time.durationSeconds ?? this.playerSessionDuration;
+        if(snapshot.state==="ended") { advancedSession=key;this.clearUpNext();void this.nextEpisode(item,position);return; }
+        if(this.upNext?.sessionId===key) {
+          if(duration-position>UP_NEXT_SECONDS+1)this.clearUpNext();
+          return;
+        }
+        if(resumeRemainder || snapshot.state!=="playing" || duration<=10 || duration-position>UP_NEXT_SECONDS ||
+          !presentation({...item,position,duration}).canAutoNext)return;
+        const left=Math.max(1,Math.min(UP_NEXT_SECONDS,Math.ceil(duration-position)));
+        const next=nextFromEpisodes(this.detail.allEpisodes,item);
+        this.upNext={sessionId:key,item:next,left,total:left};
+        noteUpNext(true,left);
+        this.playerOverlay=true;this.setPlayerShade(true);clearTimeout(chromeTimer);
+        clearInterval(upNextTimer);
+        upNextTimer=setInterval(()=>{
+          if(this.upNext?.sessionId!==key || this.phase!=="player")return;
+          if(playback?.player.snapshot.state==="paused")return;
+          const remaining=Math.max(0,this.upNext.left-UP_NEXT_TICK_MS/1000);
+          this.upNext={...this.upNext,left:remaining};noteUpNext(true,remaining);
+          if(remaining===0)this.playUpNext();
+        },UP_NEXT_TICK_MS);
+        if(!next) {
+          upNextScope?.abort();const scope=api.createScope();upNextScope=scope;
+          void api.nextEpisode(this.currentProfileId,item,{signal:scope.signal}).then(result=>{
+            if(scope.signal.aborted || this.upNext?.sessionId!==key)return;
+            if(result.status==="next"&&result.item)this.upNext={...this.upNext,item:result.item};
+            else {advancedSession=key;this.clearUpNext();}
+          }).catch(()=>{if(!scope.signal.aborted&&this.upNext?.sessionId===key){advancedSession=key;this.clearUpNext();}});
+        }
+      },
+      cancelNextEpisode() {
+        ++nextGeneration;nextSetupScope?.abort();continuation?.cancel();
+        this.playerNextBusy=false;
+        if(this.playerNotice==="Preparing next episode…")this.playerNotice="";
+      },
+      async nextEpisode(previous: MediaItem, position=0) {
+        if(this.playerNextBusy || continuation?.busy)return;
+        const origin=this.phase;
+        const returnZone=origin==="home"?this.homeFocusZone:"card";
+        const returnIndex=origin==="home"?(this.homeFocusZone==="action"?this.homeActionIndex:this.homeCardIndex):origin==="library"?this.libraryCardIndex:0;
+        const ticket=++nextGeneration;
+        nextSetupScope?.abort();const scope=api.createScope();nextSetupScope=scope;
+        this.clearUpNext();this.playerDialog=null;
+        this.playerNextBusy=true;this.playerNotice="Preparing next episode…";clearTimeout(chromeTimer);
+        try {
+          const [module,prefs]=await Promise.all([
+            import("./continuationRuntime"),
+            api.preferences(this.currentProfileId,{signal:scope.signal}),
+          ]);
+          if(ticket!==nextGeneration || scope.signal.aborted)return;
+          this.settingsPrefs=prefs;
+          continuation ??= module.createSolidTVContinuation({api,platform,getRuntime:()=>playback,
+            profileId:()=>this.currentProfileId,preferences:()=>this.settingsPrefs});
+          const result=await continuation.advance(previous,position);
+          if(ticket!==nextGeneration || scope.signal.aborted)return;
+          this.playerNextBusy=false;this.playerNotice="";
+          if(result.kind==="started") {
+            const active=result.active;
+            this.playerItem=active.intent.item;
+            this.playerSessionId=active.session.id;this.playerSessionDuration=active.session.duration;
+            this.playerTitle=active.intent.item.name;
+            this.playerEpisodeLine=`S${active.intent.item.season ?? 1} · E${active.intent.item.episode ?? 1} · ${active.intent.item.episodeTitle ?? active.intent.item.name}`;
+            resumeRemainder=false;advancedSession="";
+            if(active.intent.source) {
+              this.source={...this.source,item:active.intent.item};
+              this.sourceSelectedId=active.intent.source.id;
+              this.updateSources([active.intent.source],false,true);
+              noteSourceIntent(active.intent.item.id,active.intent.source.id,0,false);
+            }
+            this.phase="player";this.playerOverlay=true;this.setPlayerShade(true);
+            this.updatePlayerSnapshot(playback!.player.snapshot);
+            this.revealPlayerControls();this.focusPlayerControl(1);
+          } else if(result.kind==="ready") {
+            const {item,source}=result.intent;
+            this.sourceReturnOrigin=origin as typeof this.sourceReturnOrigin;
+            this.sourceReturnZone=returnZone;
+            this.sourceReturnIndex=returnIndex;
+            this.source=projectSources(item,[source],false,true);
+            this.sourceSelectedId=source.id;this.sourceRowIndex=0;this.sourceWindowStart=0;
+            this.updateSources([source],false,true);
+            noteSourceIntent(item.id,source.id,0,false);
+            void this.playSource(item,source,0);
+          } else if(result.kind==="missing") {
+            const message=result.status==="caught_up"?"You're caught up.":result.status==="upcoming"?"The next episode is not available yet.":"No next episode is available.";
+            if(this.phase==="player")this.playerNotice=message;else this.homeNotice=message;
+          } else if(result.kind==="failed")this.showContinuationFailure(result,previous);
+        } catch(cause) {
+          if(ticket===nextGeneration&&!scope.signal.aborted)this.playerNotice=cause instanceof Error?cause.message:"The TV could not prepare the next episode.";
+        } finally {
+          if(ticket===nextGeneration){this.playerNextBusy=false;this.schedulePlayerChromeHide();}
+        }
+      },
+      showContinuationFailure(result: Extract<SolidTVContinuationResult,{kind:"failed"}>, previous: MediaItem) {
+        const item=result.outgoing?.intent.item ?? previous;
+        this.playerDialog={title:result.rollbackFailed?"Playback could not be restored":"This source could not be played",
+          message:result.error.message,choices:[{id:"retry",label:"Retry"},{id:"source",label:"Choose source"},{id:"back",label:"Back"}],
+          onCancel:()=>{this.playerDialog=null;if(result.rollbackFailed)void this.exitPlayer();},
+          onSelect:(id)=>{
+            this.playerDialog=null;
+            if(id==="retry") {
+              if(result.rollbackFailed&&result.outgoing?.intent.source) {
+                this.phase="sources";
+                void this.playSource(item,result.outgoing.intent.source,result.outgoingPosition);
+              } else void this.nextEpisode(item,result.outgoingPosition);
+            } else if(id==="source") {
+              void (async()=>{if(this.phase==="player")await this.exitPlayer();if(this.phase==="sources")this.phase=this.sourceReturnOrigin;void this.openSources({...item,position:result.outgoingPosition},false);})();
+            } else if(result.rollbackFailed)void this.exitPlayer();
+          }};
       },
       setPlayerShade(visible: boolean) {
         const shade = document.getElementById("player-shade");
@@ -5064,15 +5389,14 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
       },
       schedulePlayerChromeHide() {
         clearTimeout(chromeTimer);
-        chromeTimer = undefined;
         if (
           !this.playerOverlay ||
           this.trackPanelOpen ||
+          this.playerNextBusy || this.playerSeeksPending || this.playerSeekTarget!==null || this.upNext || this.playerDialog ||
           this.playerSnapshot?.state !== "playing"
         )
           return;
         chromeTimer = setTimeout(() => {
-          chromeTimer = undefined;
           if (
             this.phase === "player" &&
             this.playerSnapshot?.state === "playing"
@@ -5093,7 +5417,6 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
       },
       focusPlayerControl(index: number) {
         if (this.phase !== "player") return;
-        if (this.playerItem?.type === "live") index = Math.max(4, index);
         this.playerOverlay = true;
         this.setPlayerShade(true);
         this.playerFocusIndex = index;
@@ -5101,14 +5424,14 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         this.schedulePlayerChromeHide();
       },
       focusPlayerTimeline() {
-        if (this.phase !== "player" || this.playerItem?.type === "live") return;
+        if (this.phase !== "player") return;
         this.playerOverlay = true;
         this.setPlayerShade(true);
         this.$select("playerTimeline")?.$focus();
         this.schedulePlayerChromeHide();
       },
       async activatePlayerControl() {
-        if (this.phase !== "player") return;
+        if (this.phase !== "player" || this.playerNextBusy) return;
         const runtime = playback;
         if (!runtime) return;
         const action = [
@@ -5120,9 +5443,11 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
           "subtitles",
           "exit",
         ][this.playerFocusIndex];
-        if (this.playerItem?.type === "live" && this.playerFocusIndex < 4) return;
         try {
-          if (action === "toggle") {
+          if (action === "next") {
+            if (this.playerItem) void this.nextEpisode(this.playerItem, runtime.player.snapshot.time.positionSeconds);
+            return;
+          } else if (action === "toggle") {
             if (runtime.player.snapshot.state === "paused")
               await runtime.player.play();
             else await runtime.player.pause();
@@ -5138,18 +5463,12 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
                 current + (action === "back10" ? -10 : 30),
               ),
             );
-            await runtime.controller.seekFrom(
-              () => target,
-              () => current,
-            );
+            await this.commitPlayerSeek(target);
           } else if (action === "exit") {
             await this.exitPlayer();
             return;
           } else if (action === "audio" || action === "subtitles") {
             this.openTrackPanel(action === "audio" ? "audio" : "text");
-            return;
-          } else if (action === "next") {
-            void this.prepareNextEpisode();
             return;
           } else this.playerNotice = `${action} is unavailable.`;
         } catch (cause) {
@@ -5159,48 +5478,6 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
               : "The TV could not complete this request.";
         }
         this.schedulePlayerChromeHide();
-      },
-      async prepareNextEpisode() {
-        const runtime = playback;
-        const current = this.playerItem;
-        if (this.phase !== "player" || !runtime || !current || current.season === undefined || nextScope) return;
-        const scope = api.createScope();
-        nextScope = scope;
-        this.playerPreparingNext = true;
-        this.preparingText = "Preparing playback…";
-        showPreparingSpinner(true);
-        clearTimeout(chromeTimer);
-        let candidate: Awaited<ReturnType<typeof resolveNext>> = null;
-        try {
-          const time = runtime.player.snapshot.time;
-          await api.saveProgress(this.currentProfileId, current, time.positionSeconds, time.durationSeconds ?? this.playerSessionDuration);
-          const preferences = await api.preferences(this.currentProfileId, { signal: scope.signal }).catch(() => this.settingsPrefs);
-          await runtime.controller.prepareNext(async () => {
-            candidate = await resolveNext(api, this.currentProfileId, current, preferences, scope.signal);
-            return candidate;
-          });
-          if (scope.signal.aborted || nextScope !== scope) return;
-          const active = runtime.controller.snapshot.active;
-          if (!candidate || !active || active.intent.item.id === current.id) {
-            this.playerNotice = "No next episode is available.";
-            return;
-          }
-          this.playerItem = active.intent.item;
-          this.playerSessionId = active.session.id;
-          this.playerSessionDuration = active.session.duration;
-          this.playerTitle = active.intent.item.name;
-          this.playerEpisodeLine = `S${active.intent.item.season} · E${active.intent.item.episode ?? 1} · ${active.intent.item.episodeTitle ?? active.intent.item.name}`;
-          this.updatePlayerSnapshot(runtime.player.snapshot);
-          this.focusPlayerControl(1);
-        } catch (cause) {
-          if (!scope.signal.aborted) this.playerNotice = cause instanceof Error ? cause.message : "The next episode could not be played.";
-        } finally {
-          if (nextScope === scope) {
-            nextScope = undefined;
-            this.playerPreparingNext = false;
-            showPreparingSpinner(false);
-          }
-        }
       },
       openTrackPanel(kind: "audio" | "text") {
         if (this.phase !== "player" || !playback) return;
@@ -5217,13 +5494,14 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         this.trackPanelKind = kind;
         this.trackReturnControlIndex = this.playerFocusIndex;
         this.trackChoices = choices;
-        this.trackSlots = Array.from(
-          { length: 8 },
-          (_, index) => choices[index] ?? { ...emptyTrackChoice },
-        );
         this.trackFocusIndex = Math.max(
           0,
           choices.findIndex((choice) => choice.current),
+        );
+        this.trackWindowStart = Math.floor(this.trackFocusIndex / 8) * 8;
+        this.trackSlots = Array.from(
+          { length: 8 },
+          (_, index) => choices[this.trackWindowStart + index] ?? { ...emptyTrackChoice },
         );
         this.trackNotice = "";
         this.trackPanelOpen = true;
@@ -5248,8 +5526,17 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
       },
       focusTrackChoice(index: number) {
         if (this.phase !== "playerTracks" || !this.trackPanelOpen) return;
-        this.trackFocusIndex = index;
-        this.$select(`playerTrack${index}`)?.$focus();
+        const target = Math.max(0, Math.min(this.trackChoices.length - 1, index));
+        const start = Math.floor(target / 8) * 8;
+        batch(() => {
+          this.trackFocusIndex = target;
+          if (start !== this.trackWindowStart) {
+            this.trackWindowStart = start;
+            this.trackSlots = Array.from({ length: 8 }, (_, slot) =>
+              this.trackChoices[start + slot] ?? { ...emptyTrackChoice });
+          }
+        });
+        this.$select(`playerTrack${target - start}`)?.$focus();
       },
       moveTrackFocus(delta: number) {
         if (this.phase !== "playerTracks" || !this.trackPanelOpen) return;
@@ -5303,6 +5590,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
             this.playerSessionId = active.session.id;
             this.playerSessionDuration = active.session.duration;
           }
+          noteTrackSelection(this.trackPanelKind, choice.id, true, true);
         } catch (cause) {
           this.playerNotice =
             cause instanceof Error
@@ -5322,7 +5610,6 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         }, 0);
       },
       previewPlayerSeek(delta: number) {
-        if (this.playerItem?.type === "live") return;
         if (this.phase !== "player" || !playback) return;
         const current =
           this.playerSeekPreview ??
@@ -5340,32 +5627,27 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         this.playerLegend = "◀ ▶  Seek     OK  Jump     BACK  Cancel";
         clearTimeout(chromeTimer);
       },
-      async commitPlayerSeek() {
-        if (this.playerItem?.type === "live") return;
-        if (
-          this.phase !== "player" ||
-          !playback ||
-          this.playerSeekPreview === null
-        )
-          return;
-        const target = this.playerSeekPreview;
-        const current = playback.player.snapshot.time.positionSeconds;
-        try {
-          await playback.controller.seekFrom(
-            () => target,
-            () => current,
-          );
-        } catch (cause) {
-          this.playerNotice =
-            cause instanceof Error
-              ? cause.message
-              : "The stream could not seek there.";
+      async commitPlayerSeek(requested?: number) {
+        if(this.phase!=="player" || !playback)return;
+        const target=requested??this.playerSeekPreview;
+        if(target===null || target===undefined)return;
+        const generation=playbackGeneration, runtime=playback;
+        const current=runtime.player.snapshot.time.positionSeconds;
+        this.playerSeekPreview=null;this.playerSeekTarget=target;
+        this.playerSeeksPending++;this.playerSeekLabel=playerClock(target);
+        this.playerLegend="OK  Select     ◀ ▶  Move     BACK  Hide controls";
+        this.clearUpNext();clearTimeout(chromeTimer);
+        this.updatePlayerSnapshot(runtime.player.snapshot);
+        try { await runtime.controller.seekFrom(()=>target,()=>current); }
+        catch {
+          if(generation!==playbackGeneration)return;
+          this.playerSeekTarget=null;this.playerSeekLabel="";
+          this.playerNotice="The stream could not seek there.";
         } finally {
-          this.playerSeekPreview = null;
-          this.playerSeekLabel = "";
-          this.playerLegend =
-            "OK  Select     ◀ ▶  Move     BACK  Hide controls";
-          this.updatePlayerSnapshot(playback.player.snapshot);
+          if(generation===playbackGeneration) {
+            this.playerSeeksPending=Math.max(0,this.playerSeeksPending-1);
+            this.updatePlayerSnapshot(runtime.player.snapshot);
+          }
         }
       },
       async exitPlayer() {
@@ -5375,18 +5657,17 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
           this.phase !== "preparing"
         )
           return;
+        this.cancelNextEpisode();
+        this.clearUpNext();
+        this.playerDialog = null;
         ++playbackGeneration;
-        nextScope?.abort();
-        nextScope = undefined;
-        playback?.controller.cancelNext();
-        this.playerPreparingNext = false;
-        showPreparingSpinner(false);
+        this.playerSeekTarget=null;this.playerSeeksPending=0;
         clearInterval(heartbeatTimer);
         clearTimeout(chromeTimer);
         const runtime = playback;
         const snapshot = runtime?.player.snapshot;
         if (
-          runtime &&
+          runtime?.controller.snapshot.active &&
           this.playerItem &&
           snapshot &&
           this.playerItem.type !== "live"
@@ -5408,7 +5689,11 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         this.trackPanelOpen = false;
         this.playerSeekPreview = null;
         this.playerSeekLabel = "";
-        if (this.playerItem?.type === "live") { this.closeSources(); return; }
+        if (this.playerDirectLive) {
+          this.playerDirectLive = false;
+          this.closeSources();
+          return;
+        }
         this.updateSources(this.source.sources, false, true);
         setTimeout(() => this.focusSourceRow(this.sourceRowIndex), 0);
       },
@@ -5429,7 +5714,6 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
           ]
             .filter(Boolean)
             .join("\n");
-          this.$select("sourceDetailsClose")?.$focus();
         }, 50);
       },
       closeSourceDetails() {
@@ -5644,21 +5928,16 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
             this.focusSearchResult(this.detailReturnIndex);
           } else {
             this.revealHomeControls();
-            if (this.detailReturnZone === "card") {
-              this.homeShelfIndex = Math.min(this.detailReturnShelfIndex, Math.max(0, this.homeShelves.length - 1));
-              this.homeCardWindowStart = 0;
+            if (this.detailReturnZone === "card")
               this.focusHomeCard(this.detailReturnIndex);
-            } else this.focusHomeAction(this.detailReturnIndex);
+            else this.focusHomeAction(this.detailReturnIndex);
           }
         }, 0);
       },
       showProfiles(profiles: readonly TvProfile[]) {
-        homeScope?.abort();
-        ++homeGeneration;
-        detailScope?.abort();
-        ++detailGeneration;
-        settingsScope?.abort();
-        ++settingsGeneration;
+        this.cancelNextEpisode(); this.clearUpNext();
+        this.profileEditorOpen = false;
+        this.textEntry = null;
         discoverScope?.abort();
         ++discoverGeneration;
         libraryScope?.abort();
@@ -5705,7 +5984,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         const visible = this.profiles
           .slice(this.profilePage * 5, this.profilePage * 5 + 5)
           .map(profileTileData);
-        if (this.profiles.length < 12) visible.push(addProfileTile);
+        visible.push({...addProfileTile, disabled: this.profiles.length >= 12});
         this.profileSlots = Array.from(
           { length: 6 },
           (_, index) => visible[index] ?? { ...emptyProfileTile },
@@ -5714,13 +5993,18 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
           (1920 - (visible.length * 220 + (visible.length - 1) * 64)) / 2;
       },
       moveProfile(slot: number, delta: number) {
-        const count = this.profileSlots.filter((tile) => tile.visible).length;
+        const count = this.profileSlots.filter((tile) => tile.visible && !tile.disabled).length;
         const next = Math.max(0, Math.min(count - 1, slot + delta));
         // Record intent before SolidTV applies focus on its next frame. A fast
         // Right+Enter must activate the newly intended tile, not the old one.
         this.profileFocus = next;
         this.profileFocusTarget = "tile";
         this.$select(`profile${next}`)?.$focus();
+      },
+      focusProfilePage(index:number) {
+        if(index===0&&this.profilePage===0||index===1&&(this.profilePage+1)*5>=this.profiles.length)return;
+        this.profilePagerIndex=index;this.profileFocusTarget="pager";
+        this.$select(index===0?"profilePrevious":"profileNext")?.$focus();
       },
       toggleManageProfiles() {
         this.managing = !this.managing;
@@ -5738,8 +6022,26 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
           this.$select("profile0")?.$focus();
         }, 0);
       },
+      openProfileEditor(slot: number) {
+        const tile = this.profileSlots[slot];
+        if (!tile?.visible || tile.disabled) return;
+        this.editingProfile = tile.add ? null : this.profiles.find(profile => profile.id === tile.id) ?? null;
+        this.profileEditorReturnIndex = slot;
+        this.profileEditorOpen = true;
+      },
+      closeProfileEditor() {
+        this.profileEditorOpen = false;
+        this.profilePage = Math.min(this.profilePage, Math.max(0, Math.ceil(this.profiles.length / 5) - 1));
+        this.refreshProfileSlots();
+        this.profileFocus = Math.min(this.profileEditorReturnIndex, Math.max(0, this.profileSlots.filter(tile => tile.visible && !tile.disabled).length - 1));
+        this.profileFocusTarget = "tile";
+        queueMicrotask(() => {
+          if (this.phase !== "profiles") return;
+          this.revealProfileTiles();
+          this.$select(`profile${this.profileFocus}`)?.$focus();
+        });
+      },
       async activateProfile(_slot: number) {
-        if (this.selectingProfile) return;
         if (this.profileFocusTarget === "manage") {
           this.toggleManageProfiles();
           return;
@@ -5747,54 +6049,48 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         const tile = this.profileSlots[this.profileFocus];
         if (!tile?.visible) return;
         if (tile.add || this.managing) {
-          void this.editProfile(tile.add ? undefined : tile.id);
+          this.openProfileEditor(this.profileFocus);
           return;
         }
         this.profileError = "";
-        this.selectingProfile = true;
         try {
           await api.selectProfile(tile.id);
-          void this.loadHome(tile.id);
+          await this.loadHome(tile.id);
         } catch (cause) {
+          if ((cause as {status?:number}).status === 403) {
+            this.unlockProfile(tile.id);
+            return;
+          }
           this.profileError =
             cause instanceof Error
               ? cause.message
               : "Could not open this profile.";
-        } finally { this.selectingProfile = false; }
-      },
-      async editProfile(id?: string) {
-        if (this.phase !== "profiles" || disposeProfileEditor) return;
-        const profile = id ? this.profiles.find((candidate) => candidate.id === id) : undefined;
-        const focus = this.profileFocus;
-        this.profileError = "";
-        try {
-          const { openProfileEditor } = await import("./profileEditorBridge");
-          if (this.phase !== "profiles") return;
-          disposeProfileEditor = openProfileEditor(api, profile, profile?.id === this.profiles[0]?.id,
-            async () => {
-              this.profiles = [...await api.profiles()];
-              this.profilePage = Math.min(this.profilePage, Math.max(0, Math.ceil(this.profiles.length / 5) - 1));
-              this.refreshProfileSlots();
-            },
-            () => {
-              disposeProfileEditor = undefined;
-              this.profileFocus = Math.min(focus, this.profileSlots.filter((slot) => slot.visible).length - 1);
-              setTimeout(() => {
-                this.revealProfileTiles();
-                this.$select(`profile${this.profileFocus}`)?.$focus();
-              }, 0);
-            },
-          );
-        } catch (cause) {
-          this.profileError = cause instanceof Error ? cause.message : "Could not open profile editor.";
         }
       },
       async beginPairing() {
+        retryError = () => { void this.beginPairing(); };
+        this.cancelNextEpisode(); this.clearUpNext(); this.playerDialog = null;
+        this.profileEditorOpen = false;
+        this.textEntry = null;
+        homeScope?.abort(); ++homeGeneration;
+        detailScope?.abort(); ++detailGeneration;
+        discoverScope?.abort(); ++discoverGeneration;
+        libraryScope?.abort(); ++libraryGeneration;
+        searchScope?.abort(); ++searchGeneration; clearTimeout(searchTimer);
+        liveScope?.abort(); ++liveGeneration; clearInterval(liveClockTimer);
+        sourceScope?.abort(); ++sourceGeneration; clearTimeout(sourceTimer);
+        this.currentProfileId = "";
+        this.home = emptyHome;
+        this.detail = emptyDetail;
+        this.source = emptySources;
+        this.profiles = [];
+        this.profileSlots = Array.from({length:6},()=>({...emptyProfileTile}));
         const generation = ++pairingGeneration;
         pairingScope?.abort();
         clearTimeout(pairingTimer);
         pairingScope = api.createScope();
         this.phase = "pairing";
+        queueMicrotask(() => { if (this.phase === "pairing") this.$focus(); });
         // Initially hidden text nodes are not rasterized by the current
         // WebGL web-font path. Populate labels after the pairing tree shows.
         setTimeout(() => {
@@ -5893,9 +6189,10 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
           this.phase !== "pairing"
         )
           return;
-        return () => void this.beginPairing();
+        return () => { if(this.phase === "error")retryError();else void this.beginPairing(); };
       },
       back() {
+        if(this.playerNextBusy){this.cancelNextEpisode();return;}
         if (this.liveDetailsOpen) this.closeLiveDetails();
         else if (this.titleMenuOpen) this.closeTitleMenu();
         else if (this.railExpanded) this.closeRail();
@@ -5904,13 +6201,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
           this.toggleManageProfiles();
         else if (this.phase === "playerTracks") this.closeTrackPanel();
         else if (this.phase === "player") {
-          if (this.playerPreparingNext) {
-            nextScope?.abort();
-            nextScope = undefined;
-            playback?.controller.cancelNext();
-            this.playerPreparingNext = false;
-            showPreparingSpinner(false);
-          } else if (this.trackPanelOpen) this.closeTrackPanel();
+          if (this.trackPanelOpen) this.closeTrackPanel();
           else if (this.playerSeekPreview !== null) {
             this.playerSeekPreview = null;
             this.playerSeekLabel = "";
@@ -6130,6 +6421,14 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
             src={s.qr}
             alpha={s.phase === "expired" ? 0.18 : 1}
           />
+
+
+
+
+
+
+
+
         </TvView>
         <TvText
           x={96}
@@ -6204,13 +6503,16 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
           <ManageProfilesButton
             screenRef={"manageProfiles"}
             managing={s.managing}
+            paged={s.profiles.length>5}
           />
-          <ProfilePagerButton screenRef={"profilePager0"} position={0} label={"Previous"} disabled={s.profilePage === 0} x={710} y={852} show={s.profiles.length > 5} />
-          <TvText x={930} y={866} maxwidth={60} align={"center"} content={`${s.profilePage + 1} / ${Math.ceil(s.profiles.length / 5)}`} font={"Onest600"} size={22} color={s.secondary} show={s.profiles.length > 5} />
-          <ProfilePagerButton screenRef={"profilePager1"} position={1} label={"Next"} disabled={s.profilePage + 1 >= Math.ceil(s.profiles.length / 5)} x={1000} y={852} show={s.profiles.length > 5} />
+          <TvView show={s.profiles.length>5}>
+            <ProfilePageButton screenRef="profilePrevious" step={-1} page={s.profilePage} pages={Math.ceil(s.profiles.length/5)}/>
+            <TvText x={948} y={709} size={24} content={`${s.profilePage+1} / ${Math.ceil(s.profiles.length/5)}`} color={s.secondary}/>
+            <ProfilePageButton screenRef="profileNext" step={1} page={s.profilePage} pages={Math.ceil(s.profiles.length/5)}/>
+          </TvView>
           <TvText
             x={600}
-            y={s.profiles.length > 5 ? 940 : 852}
+            y={852}
             maxwidth={720}
             align={"center"}
             content={s.profileError}
@@ -6218,6 +6520,14 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
             size={22}
             color={s.danger}
           />
+
+
+
+
+
+
+
+
         </TvView>
         <TvView
           show={
@@ -6228,23 +6538,35 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
                 s.phase === "sourceDetails"))
           }
         >
+          <TvView y={-s.homeScrollY}><HomeBackdrop sharp={s.home.heroImage} ambient={s.home.ambientImage} /></TvView>
+          <TvView x={44} y={54} w={56} h={56} rounded={28} color={s.surface} />
           <TvView
-            x={1120}
-            y={0}
-            w={800}
-            h={720}
-            src={s.home.heroImage}
-            fit={"cover"}
-            show={s.home.heroImage !== "" && s.homeShelfIndex === 0}
+            x={44}
+            y={54}
+            w={56}
+            h={56}
+            rounded={28}
+            src={s.homeProfileAvatar}
+            show={s.homeProfileAvatar !== ""}
           />
-          <TvView w={1920} h={1080} src={s.homeScrim} />
-          <TvView show={s.homeShelfIndex === 0}>
+          <TvView x={58} y={202} w={28} h={28} src={s.railSearch} />
+          <TvView x={40} y={262} w={64} h={64} rounded={32} color={s.surface} />
+          <TvView x={58} y={280} w={28} h={28} src={s.railHome} />
+          <TvView x={58} y={358} w={28} h={28} src={s.railDiscover} />
+          <TvView x={58} y={436} w={28} h={28} src={s.railLive} />
+          <TvView x={58} y={514} w={28} h={28} src={s.railList} />
+          <TvView x={58} y={976} w={28} h={28} src={s.railSettings} />
+          <TvView w={1920} h={1080} clipping>
+          <TvView w={1920} h={Math.max(1080, 1080 + Math.max(0, s.homeShelves.length - 1) * 364)} y={-s.homeScrollY}>
           <TvText
             x={192}
             y={150}
             content={s.home.eyebrow}
+            cssLineBox={true}
+            lineheight={1.2}
             font={"Onest700"}
             size={20}
+            letterspacing={2}
             color={s.secondary}
           />
           <TvView
@@ -6268,52 +6590,62 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
           />
           <TvText
             x={192}
-            y={340}
+            y={336}
             maxwidth={420}
             maxlines={1}
             content={s.home.episodeLabel}
+            cssLineBox={true}
+            lineheight={1.3}
             font={"Onest600"}
             size={24}
             color={s.primary}
           />
           <TvView
             x={636}
-            y={349}
+            y={348.59375}
             w={180}
             h={6}
-            color={s.secondary}
+            rounded={3}
+            color={tokens["color.line.strong"]}
             show={s.home.progress > 0}
           />
           <TvView
             x={636}
-            y={349}
+            y={348.59375}
             w={Math.max(0, Math.min(180, s.home.progress * 180))}
             h={6}
+            rounded={3}
             color={s.accent}
             show={s.home.progress > 0}
           />
           <TvText
             x={836}
-            y={339}
+            y={336}
             content={s.home.progressText}
+            cssLineBox={true}
+            lineheight={1.3}
             font={"Onest"}
             size={24}
             color={s.secondary}
           />
           <TvText
             x={192}
-            y={390}
+            y={389.1875}
             content={s.home.meta}
+            cssLineBox={true}
+            lineheight={1.35}
             font={"Onest"}
             size={22}
             color={s.secondary}
           />
           <TvText
             x={192}
-            y={448}
+            y={440.875}
             maxwidth={760}
             maxlines={2}
             content={s.home.synopsis}
+            cssLineBox={true}
+            lineheight={1.45}
             font={"Onest"}
             size={26}
             color={s.body}
@@ -6325,7 +6657,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
             label={s.home.playLabel}
             icon={"▶"}
             x={192}
-            y={550}
+            y={550.25}
             buttonWidth={228}
             buttonHeight={72}
             round={false}
@@ -6338,7 +6670,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
             label={"Details"}
             icon={""}
             x={438}
-            y={550}
+            y={550.25}
             buttonWidth={228}
             buttonHeight={72}
             round={false}
@@ -6357,27 +6689,22 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
             round={true}
             holdable={false}
           />
+          <For each={s.homeShelves}>{(shelf, shelfPosition) => {
+            const row = shelfPosition();
+            const offset = () => s.homeOffsets[shelf.key] ?? 0;
+            const first = () => Math.floor(offset() / 356);
+            return <Show when={shelf.cards.length > 0}>
+              <TvText x={192} y={700 + row * 364} content={shelf.title}
+                font="Bricolage650" size={32} letterspacing={-0.32} cssLineBox lineheight={1.35} color={s.primary} />
+              <TvView x={192} y={762 + row * 364} w={1632} h={268} clipping>
+              <For each={shelf.cards.slice(first(), first() + 6)}>{(card, slot) => <HomeCard
+                screenRef={`homeCard${row}Slot${slot()}`} shelf={row}
+                position={first() + slot()} card={card}
+                x={4 + (first() + slot()) * 356 - offset()} y={4} />}</For>
+              </TvView>
+            </Show>;
+          }}</For>
           </TvView>
-          <TvText
-            x={192}
-            y={s.homeShelfIndex === 0 ? 700 : 160}
-            content={s.homeShelfLabel}
-            font={"Bricolage700"}
-            size={32}
-            color={s.primary}
-          />
-          <TvView x={188} y={s.homeShelfIndex === 0 ? 753 : 214} w={1640} h={278} clipping={true}>
-            <KeyedFor each={s.homeCards.map((card, slot) => ({ card, slot }))} keyOf={entry => entry.slot}>
-              {(entry) => <HomeCard screenRef={`homeCard${entry().slot}`} position={s.homeCardWindowStart + entry().slot} card={entry().card} x={4 + s.homeWindowX + entry().slot * 356} y={4} />}
-            </KeyedFor>
-          </TvView>
-          <TvView show={s.homeShelfIndex > 0 && s.homeNextShelfLabel !== ""}>
-            <TvText x={192} y={516} content={s.homeNextShelfLabel} font={"Bricolage700"} size={32} color={s.primary} />
-            <HomePreviewCard card={s.homeNextCards[0]} x={192} />
-            <HomePreviewCard card={s.homeNextCards[1]} x={548} />
-            <HomePreviewCard card={s.homeNextCards[2]} x={904} />
-            <HomePreviewCard card={s.homeNextCards[3]} x={1260} />
-            <HomePreviewCard card={s.homeNextCards[4]} x={1616} />
           </TvView>
           <TvText
             x={700}
@@ -6535,10 +6862,80 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
             w={800}
             h={720}
             src={s.detail.heroImage}
-            fit={"cover"}
             show={s.detail.heroImage !== ""}
+            alpha={0.75}
           />
           <TvView w={1920} h={1080} src={s.homeScrim} />
+          <TvView x={44} y={54} w={56} h={56} rounded={28} color={s.surface} />
+          <TvView
+            x={44}
+            y={54}
+            w={56}
+            h={56}
+            rounded={28}
+            src={s.homeProfileAvatar}
+            show={s.homeProfileAvatar !== ""}
+          />
+          <TvView
+            x={60}
+            y={202}
+            w={24}
+            h={24}
+            src={
+              s.railCurrent === "search" ? s.railSearchSelected : s.railSearch
+            }
+          />
+          <TvView
+            x={40}
+            y={
+              s.railCurrent === "search"
+                ? 184
+                : s.railCurrent === "discover"
+                  ? 340
+                  : s.railCurrent === "live"
+                    ? 418
+                    : s.railCurrent === "library"
+                      ? 496
+                      : 262
+            }
+            w={64}
+            h={64}
+            rounded={32}
+            color={s.surface}
+          />
+          <TvView
+            x={58}
+            y={280}
+            w={28}
+            h={28}
+            src={s.railCurrent === "home" ? s.railHome : s.railHomeUnselected}
+          />
+          <TvView
+            x={60}
+            y={360}
+            w={24}
+            h={24}
+            src={
+              s.railCurrent === "discover"
+                ? s.railDiscoverSelected
+                : s.railDiscover
+            }
+          />
+          <TvView
+            x={58}
+            y={436}
+            w={28}
+            h={28}
+            src={s.railCurrent === "live" ? s.railLiveSelected : s.railLive}
+          />
+          <TvView
+            x={58}
+            y={514}
+            w={28}
+            h={28}
+            src={s.railCurrent === "library" ? s.railListSelected : s.railList}
+          />
+          <TvView x={58} y={976} w={28} h={28} src={s.railSettings} />
           <TvView
             x={192}
             y={96}
@@ -6586,8 +6983,8 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
             icon={"▶"}
             buttonWidth={298}
             holdable={true}
-            x={192}
-            y={369}
+            x={182}
+            y={365}
           />
           <TitleAction
             screenRef={"titleAction1"}
@@ -6597,7 +6994,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
             icon={""}
             buttonWidth={292}
             holdable={false}
-            x={510}
+            x={488}
             y={369}
           />
           <TitleAction
@@ -6608,7 +7005,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
             icon={s.detailSaveIcon}
             buttonWidth={200}
             holdable={false}
-            x={822}
+            x={800}
             y={369}
           />
           <TitleAction
@@ -6619,15 +7016,60 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
             icon={"ⓘ"}
             buttonWidth={230}
             holdable={false}
-            x={1042}
+            x={1020}
             y={369}
           />
-          <SeasonControl screenRef={"titleSeason"} label={s.detailSeasonLabel} x={192} y={570} show={s.detail.allEpisodes.length > 0} />
-          <TvText x={416} y={582} content={s.detailCountLabel} font={"Onest"} size={22} color={s.tertiary} show={s.detail.allEpisodes.length > 0} />
-          <TvView x={188} y={642} w={1640} h={388} clipping={true}>
-            <KeyedFor each={s.detailEpisodes.map((episode, slot) => ({ episode, slot }))} keyOf={entry => entry.slot}>
-              {(entry) => <EpisodeTile screenRef={`titleEpisode${entry().slot}`} position={s.detailWindowStart + entry().slot} episode={entry().episode} x={4 + s.detailWindowX + entry().slot * 396} y={4} />}
-            </KeyedFor>
+          <Show when={s.detail.episodeCount > 0}>
+            <EntryButton id="title-season" x={192} y={604} w={160} h={52} radius={26} size={22}
+              label={s.detailSeasonLabel} background={s.surface} register={(_id,node)=>{seasonNode=node;}}
+              onMove={direction=>{if(direction==="Up")s.focusTitleAction(s.detailActionIndex);else if(direction==="Down"||direction==="Right")s.focusTitleEpisode(0);else if(direction==="Left")s.openRail();}}
+              onActivate={()=>s.openTitleSeasons()}/>
+          </Show>
+          <TvText
+            x={374}
+            y={616}
+            content={s.detailCountLabel}
+            font={"Onest"}
+            size={22}
+            color={s.tertiary}
+            show={s.detail.episodeCount > 0}
+          />
+          <TvView x={192} y={678} w={1632} h={390} clipping>
+          <EpisodeTile
+            screenRef={"titleEpisode0"}
+            position={s.detailEpisodeStart + 0}
+            episode={s.detailEpisodes[0]}
+            x={4 + s.detailWindowX}
+            y={4}
+          />
+          <EpisodeTile
+            screenRef={"titleEpisode1"}
+            position={s.detailEpisodeStart + 1}
+            episode={s.detailEpisodes[1]}
+            x={400 + s.detailWindowX}
+            y={4}
+          />
+          <EpisodeTile
+            screenRef={"titleEpisode2"}
+            position={s.detailEpisodeStart + 2}
+            episode={s.detailEpisodes[2]}
+            x={796 + s.detailWindowX}
+            y={4}
+          />
+          <EpisodeTile
+            screenRef={"titleEpisode3"}
+            position={s.detailEpisodeStart + 3}
+            episode={s.detailEpisodes[3]}
+            x={1192 + s.detailWindowX}
+            y={4}
+          />
+          <EpisodeTile
+            screenRef={"titleEpisode4"}
+            position={s.detailEpisodeStart + 4}
+            episode={s.detailEpisodes[4]}
+            x={1588 + s.detailWindowX}
+            y={4}
+          />
           </TvView>
           <TvText
             x={700}
@@ -6640,7 +7082,6 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
             color={s.primary}
           />
         </TvView>
-        <CollapsedRail avatar={s.homeProfileAvatar} current={s.railCurrent} show={!s.railExpanded && ["home", "detail", "discover", "library", "search", "live", "settings", "sources", "provider", "sourceDetails"].includes(s.phase)} />
         <TvView show={s.phase === "sources" || s.phase === "sourceDetails"}>
           <TvView w={1920} h={1080} color={s.sourceScrim} />
           <TvView x={1100} y={0} w={820} h={1080} color={s.sourcePanelGround} />
@@ -6750,111 +7191,19 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
             x={1164}
             y={916}
           />
-          <TvText
-            x={1164}
-            y={1034}
-            maxwidth={640}
-            content={s.sourceNotice}
-            font={"Onest"}
-            size={20}
-            color={s.secondary}
-          />
-          <TvView
-            x={1392}
-            y={993}
-            w={45}
-            h={33}
-            rounded={8}
-            color={s.keyBorder}
-          />
-          <TvView
-            x={1394}
-            y={995}
-            w={41}
-            h={29}
-            rounded={6}
-            color={s.sourcePanelGround}
-          />
-          <TvText
-            x={1403}
-            y={999}
-            content={s.sourceOkLabel}
-            font={"Onest700"}
-            size={16}
-            color={s.primary}
-          />
-          <TvText
-            x={1448}
-            y={998}
-            content={s.sourcePlayLabel}
-            font={"Onest"}
-            size={20}
-            color={s.secondary}
-          />
-          <TvView
-            x={1526}
-            y={993}
-            w={60}
-            h={33}
-            rounded={8}
-            color={s.keyBorder}
-          />
-          <TvView
-            x={1528}
-            y={995}
-            w={56}
-            h={29}
-            rounded={6}
-            color={s.sourcePanelGround}
-          />
-          <TvText
-            x={1534}
-            y={999}
-            content={s.sourceArrowLabel}
-            font={"Onest"}
-            size={16}
-            color={s.primary}
-          />
-          <TvText
-            x={1592}
-            y={998}
-            content={s.sourceQualityLabel}
-            font={"Onest"}
-            size={20}
-            color={s.secondary}
-          />
-          <TvView
-            x={1693}
-            y={993}
-            w={66}
-            h={33}
-            rounded={8}
-            color={s.keyBorder}
-          />
-          <TvView
-            x={1695}
-            y={995}
-            w={62}
-            h={29}
-            rounded={6}
-            color={s.sourcePanelGround}
-          />
-          <TvText
-            x={1702}
-            y={999}
-            content={s.sourceBackLabel}
-            font={"Onest700"}
-            size={16}
-            color={s.primary}
-          />
-          <TvText
-            x={1768}
-            y={998}
-            content={s.sourceCloseLabel}
-            font={"Onest"}
-            size={20}
-            color={s.secondary}
-          />
+
+
+
+
+
+
+
+
+
+
+
+
+
         </TvView>
         <TvView show={s.phase === "provider"}>
           <TvView w={1920} h={1080} color={s.sourceScrim} />
@@ -6910,50 +7259,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
             y={596}
           />
         </TvView>
-        <TvView show={s.phase === "sourceDetails"}>
-          <TvView w={1920} h={1080} color={s.sourceDetailsScrim} />
-          <TvText
-            x={192}
-            y={95}
-            content={s.sourceDetailsHeading}
-            font={"Bricolage700"}
-            size={56}
-            color={s.primary}
-          />
-          <TvView
-            x={192}
-            y={173}
-            w={1536}
-            h={759}
-            rounded={24}
-            color={s.sourcePanelGround}
-          />
-          <TvText
-            x={226}
-            y={210}
-            maxwidth={1440}
-            maxheight={690}
-            lineheight={65}
-            content={s.sourceDetailsBody}
-            font={"Onest"}
-            size={28}
-            color={s.body}
-          />
-          <TvView
-            x={1704}
-            y={204}
-            w={6}
-            h={222}
-            rounded={3}
-            color={s.scrollbar}
-          />
-          <SourceDetailsClose
-            screenRef={"sourceDetailsClose"}
-            x={185}
-            y={949}
-          />
-        </TvView>
-        <TvView show={s.phase === "preparing" || s.playerPreparingNext}>
+        <TvView show={s.phase === "preparing"}>
           <TvView
             x={682}
             y={430}
@@ -6963,10 +7269,8 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
             color={s.sourcePanelGround}
           />
           <TvText
-            x={682}
-            y={560}
-            maxwidth={556}
-            align={"center"}
+            x={746}
+            y={516}
             content={s.preparingText}
             font={"Onest700"}
             size={32}
@@ -7012,11 +7316,10 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
             font={"Onest600"}
             size={26}
             color={s.primary}
-            show={s.playerEpisodeLine !== ""}
           />
           <TvText
             x={96}
-            y={s.playerSeekPreview !== null ? (s.playerEpisodeLine ? 640 : 597) : (s.playerEpisodeLine ? 690 : 647)}
+            y={s.playerSeekPreview !== null ? 640 : 690}
             maxwidth={1300}
             maxlines={1}
             content={s.playerTitle}
@@ -7026,7 +7329,6 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
           />
           <PlayerTimeline
             screenRef={"playerTimeline"}
-            show={s.playerItem?.type !== "live"}
             progress={s.playerProgress}
             seeking={s.playerSeekPreview !== null}
             previewText={s.playerSeekLabel}
@@ -7037,7 +7339,6 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
             x={96}
             y={826}
             content={s.playerPositionText}
-            show={s.playerItem?.type !== "live"}
             font={"Onest700"}
             size={22}
             color={s.primary}
@@ -7048,14 +7349,12 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
             maxwidth={184}
             align={"right"}
             content={s.playerDurationText}
-            show={s.playerItem?.type !== "live"}
             font={"Onest"}
             size={22}
             color={s.secondary}
           />
           <PlayerControl
             screenRef={"playerControl0"}
-            show={s.playerItem?.type !== "live"}
             position={0}
             action={"back10"}
             icon={"≪"}
@@ -7065,7 +7364,6 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
           />
           <PlayerControl
             screenRef={"playerControl1"}
-            show={s.playerItem?.type !== "live"}
             position={1}
             action={"toggle"}
             icon={s.playerToggleIcon}
@@ -7075,7 +7373,6 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
           />
           <PlayerControl
             screenRef={"playerControl2"}
-            show={s.playerItem?.type !== "live"}
             position={2}
             action={"forward30"}
             icon={"≫"}
@@ -7091,7 +7388,6 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
             diameter={72}
             x={366}
             y={878}
-            show={s.playerItem?.type !== "live" && s.playerItem?.season !== undefined}
           />
           <PlayerControl
             screenRef={"playerControl4"}
@@ -7120,14 +7416,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
             x={1752}
             y={878}
           />
-          <TvText
-            x={1390}
-            y={1000}
-            content={s.playerLegend}
-            font={"Onest"}
-            size={20}
-            color={s.secondary}
-          />
+
         </TvView>
         <TvText
           x={700}
@@ -7153,56 +7442,56 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
           />
           <PlayerTrackOption
             screenRef={"playerTrack0"}
-            position={0}
+            position={s.trackWindowStart}
             choice={s.trackSlots[0]}
             x={1164}
             y={126}
           />
           <PlayerTrackOption
             screenRef={"playerTrack1"}
-            position={1}
+            position={s.trackWindowStart + 1}
             choice={s.trackSlots[1]}
             x={1164}
             y={220}
           />
           <PlayerTrackOption
             screenRef={"playerTrack2"}
-            position={2}
+            position={s.trackWindowStart + 2}
             choice={s.trackSlots[2]}
             x={1164}
             y={314}
           />
           <PlayerTrackOption
             screenRef={"playerTrack3"}
-            position={3}
+            position={s.trackWindowStart + 3}
             choice={s.trackSlots[3]}
             x={1164}
             y={408}
           />
           <PlayerTrackOption
             screenRef={"playerTrack4"}
-            position={4}
+            position={s.trackWindowStart + 4}
             choice={s.trackSlots[4]}
             x={1164}
             y={502}
           />
           <PlayerTrackOption
             screenRef={"playerTrack5"}
-            position={5}
+            position={s.trackWindowStart + 5}
             choice={s.trackSlots[5]}
             x={1164}
             y={596}
           />
           <PlayerTrackOption
             screenRef={"playerTrack6"}
-            position={6}
+            position={s.trackWindowStart + 6}
             choice={s.trackSlots[6]}
             x={1164}
             y={690}
           />
           <PlayerTrackOption
             screenRef={"playerTrack7"}
-            position={7}
+            position={s.trackWindowStart + 7}
             choice={s.trackSlots[7]}
             x={1164}
             y={784}
@@ -7216,14 +7505,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
             size={22}
             color={s.secondary}
           />
-          <TvText
-            x={1382}
-            y={998}
-            content={s.trackLegend}
-            font={"Onest"}
-            size={20}
-            color={s.secondary}
-          />
+
         </TvView>
         <TvView zIndex={10} show={s.discoverFilterOpen}>
           <TvView w={1920} h={1080} color={s.sourceScrim} />
@@ -7315,70 +7597,14 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
             h={104}
             color={s.sourcePanelGround}
           />
-          <TvView
-            x={1530}
-            y={994}
-            w={45}
-            h={31}
-            rounded={8}
-            color={s.keyBorder}
-          />
-          <TvView
-            x={1532}
-            y={996}
-            w={41}
-            h={27}
-            rounded={6}
-            color={s.sourcePanelGround}
-          />
-          <TvText
-            x={1538}
-            y={1000}
-            content={s.discoverFilterOkLabel}
-            font={"Onest700"}
-            size={16}
-            color={s.primary}
-          />
-          <TvText
-            x={1588}
-            y={999}
-            content={s.discoverFilterSelectLabel}
-            font={"Onest"}
-            size={20}
-            color={s.body}
-          />
-          <TvView
-            x={1682}
-            y={994}
-            w={66}
-            h={31}
-            rounded={8}
-            color={s.keyBorder}
-          />
-          <TvView
-            x={1684}
-            y={996}
-            w={62}
-            h={27}
-            rounded={6}
-            color={s.sourcePanelGround}
-          />
-          <TvText
-            x={1693}
-            y={1000}
-            content={s.discoverBackLabel}
-            font={"Onest700"}
-            size={16}
-            color={s.primary}
-          />
-          <TvText
-            x={1760}
-            y={999}
-            content={s.discoverCancelLabel}
-            font={"Onest"}
-            size={20}
-            color={s.body}
-          />
+
+
+
+
+
+
+
+
         </TvView>
         <LiveDetailsScreen
           screenRef={"liveDetailsScreen"}
@@ -7413,7 +7639,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
               s.phase === "discover" ||
               s.phase === "library" ||
               s.phase === "search" ||
-              s.phase === "live" || s.phase === "settings")
+              s.phase === "live")
           }
         >
           <TvView w={1920} h={1080} color={s.menuScrim} />
@@ -7430,9 +7656,78 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
             x={48}
             y={48}
           />
-          <KeyedFor each={[...railItems]} keyOf={item => item.index}>
-            {item => <RailItem screenRef={`rail${item().index}`} position={item().index} label={item().label} icon={railIcon(item().icon, s.railCurrent === item().route)} focusedIcon={railIcon(item().icon, false, true)} avatar={""} profileName={""} current={s.railCurrent === item().route} x={48} y={item().y - 22} />}
-          </KeyedFor>
+          <RailItem
+            screenRef={"rail1"}
+            position={1}
+            label={"Search"}
+            icon={s.railSearch}
+            focusedIcon={s.railSearchFocus}
+            avatar={""}
+            profileName={""}
+            current={s.railCurrent === "search"}
+            x={48}
+            y={174}
+          />
+          <RailItem
+            screenRef={"rail2"}
+            position={2}
+            label={"Home"}
+            icon={s.railHome}
+            focusedIcon={s.railHomeFocus}
+            avatar={""}
+            profileName={""}
+            current={s.railCurrent === "home"}
+            x={48}
+            y={252}
+          />
+          <RailItem
+            screenRef={"rail3"}
+            position={3}
+            label={"Discover"}
+            icon={s.railDiscover}
+            focusedIcon={s.railDiscoverFocus}
+            avatar={""}
+            profileName={""}
+            current={s.railCurrent === "discover"}
+            x={48}
+            y={330}
+          />
+          <RailItem
+            screenRef={"rail4"}
+            position={4}
+            label={"Live TV"}
+            icon={s.railLive}
+            focusedIcon={s.railLiveFocus}
+            avatar={""}
+            profileName={""}
+            current={s.railCurrent === "live"}
+            x={48}
+            y={408}
+          />
+          <RailItem
+            screenRef={"rail5"}
+            position={5}
+            label={"My List"}
+            icon={s.railList}
+            focusedIcon={s.railListFocus}
+            avatar={""}
+            profileName={""}
+            current={s.railCurrent === "library"}
+            x={48}
+            y={486}
+          />
+          <RailItem
+            screenRef={"rail6"}
+            position={6}
+            label={"Settings"}
+            icon={s.railSettings}
+            focusedIcon={s.railSettingsFocus}
+            avatar={""}
+            profileName={""}
+            current={false}
+            x={48}
+            y={958}
+          />
           <TvText
             x={48}
             y={864}
@@ -7452,6 +7747,18 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
           size={28}
           color={s.primary}
         />
+        <Show when={s.titleInfoOpen && s.detail.item}>{item=><TitleInfo item={item()} onClose={()=>{s.titleInfoOpen=false;queueMicrotask(()=>s.focusTitleAction(3));}}/>}</Show>
+        <Show when={s.phase === "sourceDetails"}><NativeTextPanel title={s.sourceDetailsHeading} body={s.sourceDetailsBody} focusPrefix="source-details" onClose={()=>s.closeSourceDetails()}/></Show>
+        <Show when={s.profileEditorOpen}>
+          <ProfileEditor api={api} profile={s.editingProfile ?? undefined}
+            primary={s.editingProfile?.id === s.profiles[0]?.id}
+            onCancel={() => s.closeProfileEditor()}
+            onDone={async () => { s.profiles = [...(await api.me()).profiles]; s.closeProfileEditor(); }} />
+        </Show>
+        <Show when={s.textEntry} keyed>{entry => <TextEntry {...entry} />}</Show>
+        <Show when={s.upNext}>{card => <UpNextOverlay item={card().item} current={s.playerItem ?? undefined}
+          left={card().left} total={card().total} onPlay={()=>s.playUpNext()} onCancel={()=>s.cancelUpNext()}/>}</Show>
+        <Show when={s.playerDialog} keyed>{dialog=><PlayerDialog {...dialog}/>}</Show>
       </TvView>
     ),
   });

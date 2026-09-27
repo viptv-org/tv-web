@@ -1,23 +1,28 @@
 /** Opt-in browser focus marker for remote timing and preview assertions. */
+import { activeElement } from "@solidtv/solid";
 const enabled = new URLSearchParams(location.search).get("focusdebug") === "1";
 export function noteFocus(view: string, index: number) {
   if (!enabled) return;
   (
     window as Window & {
-      __viptvFocus?: { view: string; index: number; at: number };
+      __viptvFocus?: { view: string; index: number; at: number; nativeFocus: boolean };
     }
   ).__viptvFocus = {
     view,
     index,
     at: performance.now(),
+    nativeFocus: activeElement() !== undefined,
   };
 }
 
-/** Test-only Home shelf/window marker for remote navigation assertions. */
-export function noteHomeShelf(shelf: number, card: number, count: number, windowStart: number, shelves: number) {
+export function noteUpNext(open: boolean, left = 0) {
   if (!enabled) return;
-  (window as Window & { __viptvHome?: { shelf: number; card: number; count: number; windowStart: number; shelves: number } }).__viptvHome =
-    { shelf, card, count, windowStart, shelves };
+  (window as Window & {__viptvUpNext?:{open:boolean;left:number}}).__viptvUpNext={open,left};
+}
+
+export function noteSeekState(target: number | null, pending: number, displayed: number) {
+  if (!enabled) return;
+  (window as Window & {__viptvSeek?:{target:number|null;pending:number;displayed:number}}).__viptvSeek={target,pending,displayed};
 }
 
 /** Test-only identity marker; never includes source URLs or credentials. */
@@ -189,15 +194,17 @@ export function noteTrackSelection(
   kind: string,
   id: string,
   available: boolean,
+  committed = false,
 ) {
   if (!enabled) return;
   (
     window as Window & {
-      __viptvTrackSelection?: { kind: string; id: string; available: boolean };
+      __viptvTrackSelection?: { kind: string; id: string; available: boolean; committed: boolean };
     }
   ).__viptvTrackSelection = {
     kind,
     id,
     available,
+    committed,
   };
 }

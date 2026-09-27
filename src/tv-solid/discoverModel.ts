@@ -32,6 +32,7 @@ export interface DiscoverChipView {
   kind: "group" | "catalog" | "filter";
   value: string;
   x: number;
+  y: number;
   width: number;
   selected: boolean;
   visible: boolean;
@@ -41,6 +42,7 @@ export const emptyDiscoverChip: DiscoverChipView = {
   kind: "group",
   value: "",
   x: 0,
+  y: 162,
   width: 0,
   selected: false,
   visible: false,
@@ -117,6 +119,7 @@ export function discoverChips(
     chips.push({
       label,
       kind: "group",
+      y: 162,
       value: candidate,
       x,
       width,
@@ -125,13 +128,14 @@ export function discoverChips(
     });
     x += width + 8;
   }
-  x += 42;
+  x = 192;
   for (let index = 0; index < inGroup.length; index++) {
     const label = names[index];
     const width = Math.max(136, Math.round(label.length * 12 + 55));
     chips.push({
       label,
       kind: "catalog",
+      y: 238,
       value: `${index}`,
       x,
       width,
@@ -149,6 +153,7 @@ export function discoverChips(
     chips.push({
       label,
       kind: "filter",
+      y: 238,
       value: filter.name,
       x,
       width,
