@@ -373,3 +373,10 @@ caption/focus restoration, five-second hiding under continuous ticks, pause/seek
 exceptions, reveal-only input, buffered gaps and focused thumb, and the lower
 1080p control geometry. See TESTING.md for measured texture-cache figures and
 commands. Physical Vizio/Tizen/webOS RAM/decoder constraints remain unverified.
+
+PB-001 browser pipeline: React and SolidTV consume the same pinned player
+contract. Local audio/server fallback, caption Off and HLS quality/Auto use the
+existing controls. Asynchronous discovery preserves Back and source identity.
+React remote behavior was tested over trusted HTTPS; SolidTV Player/Seek/Subtitle
+screens were reviewed with controlled fixtures. Actual media and physical Vizio
+qualification are separate from those UI simulations (see TESTING.md).

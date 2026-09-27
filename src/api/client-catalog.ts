@@ -190,10 +190,10 @@ export class TvApiCatalog extends TvApiClientBase {
     );
     return playback(v, this.origin);
   }
-  async heartbeat(id: string, options?: RequestOptions) {
+  async heartbeat(id: string, options?: RequestOptions, position?: number) {
     await this.raw(
       `/api/playback/${segment(id)}/heartbeat`,
-      { method: "POST", body: {} },
+      { method: "POST", body: position === undefined ? {} : { position } },
       true,
       options,
     );

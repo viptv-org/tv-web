@@ -830,3 +830,9 @@
     transition: none;
   }
 }
+/* PB-001: captions remain visible independently of the control overlay. */
+.vx-player__captions { position: absolute; left: 10%; right: 10%; bottom: 22%; z-index: 20; text-align: center; pointer-events: none; white-space: pre-line; font-size: clamp(18px, 2.2vw, 32px); color: var(--viptv-color-text-primary); text-shadow: 0 2px 3px #000, 1px 0 3px #000, -1px 0 3px #000; }
+.vx-player__captions p { display: table; margin: 2px auto; padding: 2px 8px; background: #000b; }
+.vx-player__quality { display: flex; align-items: center; justify-content: space-between; padding: 12px; }
+.vx-player__quality select { color: inherit; background: var(--viptv-color-surface-2); padding: 8px; border: 1px solid #ffffff24; border-radius: 8px; }
+.vx-timeline__bubble img { display: block; width: 160px; height: 90px; object-fit: contain; margin-bottom: 4px; }

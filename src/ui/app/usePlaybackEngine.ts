@@ -67,8 +67,12 @@ export function usePlaybackEngine(app: AuthApi) {
     playbackCapabilities.current = capabilities;
     const sessions = new PlaybackSessionController<MediaItem, MediaSource>({ player: engine, backend: api, capabilities });
     controller.current = sessions;
+    let lastPlayerNotice = '';
     const off = engine.subscribe((snapshot) => {
       setSnapshot(snapshot);
+      const noticeKey = `${snapshot.sessionId}:${snapshot.notice ?? ''}`;
+      if (snapshot.notice && noticeKey !== lastPlayerNotice) notify(snapshot.notice);
+      lastPlayerNotice = noticeKey;
 
       if (autoplayTest.current.enabled) autoplayTest.current.log?.(snapshot);
       // A committed seek stays displayed until the engine actually lands on
@@ -145,7 +149,7 @@ export function usePlaybackEngine(app: AuthApi) {
   useEffect(() => {
     if (!session) return;
     const t = setInterval(() => {
-      void api.heartbeat(session.id).catch(fail);
+      void api.heartbeat(session.id, undefined, player.current?.snapshot.time.positionSeconds).catch(fail);
       const a = active.current,
         p = player.current?.snapshot.time;
       if (a && p && a.item.type !== "live")

@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
 import { installBackend, apiOrigin, sessionKey, movie } from './helpers/responsiveBackend';
-const cors = { 'access-control-allow-origin': 'http://127.0.0.1:4173', 'access-control-allow-credentials': 'true', 'access-control-allow-headers': 'authorization, content-type, x-csrf-token', 'access-control-allow-methods': 'GET, POST, OPTIONS, DELETE' };
+const cors = { 'access-control-allow-origin': process.env.VIPTV_TEST_BROWSER_ORIGIN ?? 'http://127.0.0.1:4173', 'access-control-allow-credentials': 'true', 'access-control-allow-headers': 'authorization, content-type, x-csrf-token', 'access-control-allow-methods': 'GET, POST, OPTIONS, DELETE' };
 
 for (const width of [390, 1440]) test(`website sign-in is centered and signs in with recoverable errors at ${width}`, async ({ page }) => {
   await page.setViewportSize({ width, height: 900 });

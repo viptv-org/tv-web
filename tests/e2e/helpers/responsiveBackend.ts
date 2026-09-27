@@ -64,7 +64,7 @@ export async function installBackend(page: Page, options: { series?: boolean; in
   await page.route(`${apiOrigin}/api/**`, async route => {
     const request = route.request();
     const headers = {
-      'access-control-allow-origin': 'http://127.0.0.1:4173',
+      'access-control-allow-origin': process.env.VIPTV_TEST_BROWSER_ORIGIN ?? 'http://127.0.0.1:4173',
       'access-control-allow-methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
       'access-control-allow-headers': 'authorization, content-type',
     };

@@ -3732,6 +3732,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
             )?.reveal?.();
           this.focusLiveDetailsOption(0);
         }, 50);
+
       },
       focusLiveDetailsOption(index: number) {
         this.liveDetailsOptionIndex = index;
@@ -3878,6 +3879,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         setTimeout(() => {
           if (this.phase === "settings") this.revealSettingsControls();
         }, 50);
+
       },
       refreshSettingsPanel() {
         const row = settingsCanonicalRows[this.settingsSelectedIndex];
@@ -5201,7 +5203,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
               !this.playerItem
             )
               return;
-            void api.heartbeat(this.playerSessionId).catch(() => undefined);
+            void api.heartbeat(this.playerSessionId, undefined, playback?.player.snapshot.time.positionSeconds).catch(() => undefined);
             if (this.playerItem.type !== "live") {
               const time = runtime.player.snapshot.time;
               void api
@@ -5239,7 +5241,12 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         }
       },
       updatePlayerSnapshot(snapshot: PlayerSnapshot) {
+        const oldNotice = this.playerSnapshot?.notice;
         this.playerSnapshot = snapshot;
+        if (snapshot.notice && snapshot.notice !== oldNotice) {
+          this.playerNotice = snapshot.notice;
+          setTimeout(() => { if (this.playerNotice === snapshot.notice) this.playerNotice = ''; }, 4000);
+        }
         if(snapshot.state==="playing" || snapshot.state==="paused")lastPlaybackPosition=snapshot.time.positionSeconds;
         notePlayerState(snapshot.state, snapshot.time.positionSeconds);
         this.playerStatus = this.playerItem?.type === "live" ? "LIVE" : this.playerSeeksPending ? "BUFFERING" : snapshot.state.toUpperCase();
@@ -5500,18 +5507,13 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         }
         this.schedulePlayerChromeHide();
       },
-      openTrackPanel(kind: "audio" | "text") {
+      async openTrackPanel(kind: "audio" | "text") {
         if (this.phase !== "player" || !playback) return;
+        const owner = playback;
         const session = playback.controller.snapshot.active?.session;
         if (!session) return;
-        const choices = trackChoicesFor(kind, playback.player, session);
-        if (!choices.length) {
-          this.playerNotice =
-            kind === "audio"
-              ? "No audio tracks are available."
-              : "No subtitles are available.";
-          return;
-        }
+        const initial = trackChoicesFor(kind, playback.player, session);
+        const choices = initial.length ? initial : [{ ...emptyTrackChoice, label: "Loading tracks…" }];
         this.trackPanelKind = kind;
         this.trackReturnControlIndex = this.playerFocusIndex;
         this.trackChoices = choices;
@@ -5544,6 +5546,17 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
             )?.reveal?.();
           this.focusTrackChoice(this.trackFocusIndex);
         }, 50);
+        try {
+          if (kind === 'text') await owner.player.loadTextTracks?.(); else await owner.player.loadAudioTracks?.();
+          if (playback !== owner || this.phase !== 'playerTracks' || !this.trackPanelOpen || this.trackPanelKind !== kind) return;
+          const refreshed = trackChoicesFor(kind, owner.player, session);
+          const focusedId = this.trackChoices[this.trackFocusIndex]?.id;
+          this.trackChoices = refreshed.length ? refreshed : [{ ...emptyTrackChoice, label: "No tracks available." }];
+          this.trackWindowStart = -1;
+          this.focusTrackChoice(Math.max(0, this.trackChoices.findIndex(choice => choice.id === focusedId)));
+        } catch {
+          if (playback === owner && this.phase === 'playerTracks') this.trackNotice = 'Tracks could not be loaded.';
+        }
       },
       focusTrackChoice(index: number) {
         if (this.phase !== "playerTracks" || !this.trackPanelOpen) return;
@@ -5583,7 +5596,9 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         }
         this.closeTrackPanel();
         try {
-          if (choice.mode === "off") {
+          if (choice.mode === 'quality') {
+            await playback.player.selectQuality?.(choice.id);
+          } else if (choice.mode === "off") {
             const session = playback.controller.snapshot.active?.session;
             if (
               session?.mode === "direct" &&
@@ -7372,6 +7387,9 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
           color={s.primary}
           show={s.phase === "player" || s.phase === "playerTracks"}
         />
+        <TvText x={192} y={780} maxwidth={1536} align={"center"}
+          content={s.playerSnapshot?.captions?.join("\n") ?? ""} font={"Onest"} size={32}
+          color={s.primary} show={s.phase === "player" || s.phase === "playerTracks"} />
         <TvView show={s.phase === "playerTracks"}>
           <TvView w={1920} h={1080} color={s.sourceScrim} />
           <TvView x={1100} y={0} w={820} h={1080} color={s.sourcePanelGround} />

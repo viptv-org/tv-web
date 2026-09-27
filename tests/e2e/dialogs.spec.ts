@@ -12,7 +12,7 @@ const viewports = [
   { name: 'phone', width: 390, height: 844 },
   { name: 'desktop', width: 1440, height: 900 },
 ] as const;
-const cors = { 'access-control-allow-origin': 'http://127.0.0.1:4173' };
+const cors = { 'access-control-allow-origin': process.env.VIPTV_TEST_BROWSER_ORIGIN ?? 'http://127.0.0.1:4173' };
 const answer = (body: unknown, status = 200) => ({ status, headers: cors, contentType: 'application/json', body: JSON.stringify(body) });
 
 async function openTitle(page: Page, viewport: { width: number; height: number }) {

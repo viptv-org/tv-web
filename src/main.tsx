@@ -2,6 +2,7 @@
 // floor) → legacy CSS (imported by the UI modules) → styles/design.css
 // (primitives + screen families, below, so they win at equal specificity).
 import "./theme/viptv-tokens.generated.css";
+import "./playbackConfig";
 import "./theme/fonts";
 import "./styles/index.css";
 import { initAppearance } from "./theme/appearance";

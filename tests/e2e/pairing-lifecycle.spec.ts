@@ -15,7 +15,7 @@ async function fixture(
     });
   await page.route(`${origin}/api/**`, async (route) => {
     const headers = {
-      "access-control-allow-origin": "http://127.0.0.1:4173",
+      "access-control-allow-origin": process.env.VIPTV_TEST_BROWSER_ORIGIN ?? "http://127.0.0.1:4173",
       "access-control-allow-methods": "GET,POST,OPTIONS",
       "access-control-allow-headers": "authorization,content-type",
     };

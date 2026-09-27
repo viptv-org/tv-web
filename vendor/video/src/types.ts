@@ -37,6 +37,9 @@ export interface PlayerCapabilities {
 }
 
 export interface PlayerTrack {
+  readonly codec?: string;
+  readonly delivery?: 'local' | 'server';
+  readonly inputIndex?: number;
   readonly id: string;
   readonly label: string;
   readonly language?: string;
@@ -65,6 +68,33 @@ export interface PlayerTime {
    * track it; the duration gates seeking as before.
    */
   readonly seekable?: boolean;
+  readonly bufferedRanges?: readonly { start: number; end: number }[];
+  readonly liveWindow?: { readonly start: number; readonly end: number; readonly target: number };
+}
+
+export type MediaFailureReason = 'container' | 'video-codec' | 'audio-codec' | 'rendering' | 'performance' | 'network' | 'authorization' | 'autoplay';
+export interface PlayerQuality { readonly id: string; readonly label: string; readonly width: number; readonly height: number; readonly bitrate: number; }
+export interface PlaybackEngineEvidence {
+  readonly engine: 'webcodecs' | 'native' | 'mse';
+  readonly codec: string;
+  readonly evidence: 'unknown' | 'advertised' | 'decoded';
+  readonly maxWidth?: number;
+  readonly maxHeight?: number;
+  readonly maxFrameRate?: number;
+  readonly bitDepth?: number;
+  readonly hdr?: boolean;
+  readonly profile?: string;
+  readonly maxLevel?: number;
+  readonly containers?: readonly string[];
+  readonly maxChannels?: number;
+  readonly sampleRates?: readonly number[];
+}
+export interface BrowserMediaCapabilities {
+  readonly version: 1;
+  readonly inspectOriginal: boolean;
+  readonly localRemux: boolean;
+  readonly fmp4: boolean;
+  readonly engines: readonly PlaybackEngineEvidence[];
 }
 
 export type PlayerErrorCode =
@@ -76,16 +106,22 @@ export type PlayerErrorCode =
   | 'seek-failed'
   | 'unsupported-operation'
   | 'unsupported-format'
+  | 'autoplay-blocked'
+  | 'authorization-failed'
+  | 'expired-source'
+  | 'performance-limited'
   | 'unknown';
 
 export interface PlayerFailure {
+  readonly selection?: { readonly audioTrackIndex?: number; readonly subtitleTrackIndex?: number };
   readonly code: PlayerErrorCode;
   readonly message: string;
   readonly cause?: unknown;
+  readonly reason?: MediaFailureReason;
 }
 
 export interface PlayerDiagnostics {
-  readonly engine: 'mediabunny' | 'native-html' | 'hls.js' | 'avplay' | 'tauri-native';
+  readonly engine: 'mediabunny' | 'mediabunny-mse' | 'native-html' | 'hls.js' | 'avplay' | 'tauri-native';
   readonly transport: 'hls' | 'file';
   readonly networkTransport?: 'browser-proxy' | 'direct' | 'native-http';
 
@@ -96,9 +132,21 @@ export interface PlayerDiagnostics {
   readonly width?: number;
   readonly height?: number;
   readonly fallbackReason?: string;
+  readonly decision?: 'original' | 'local-remux' | 'server-remux' | 'audio-conversion' | 'video-conversion';
+  readonly firstFrameMs?: number;
+  readonly droppedFrames?: number;
+  readonly presentedFrames?: number;
+  readonly estimatedAvSkewMs?: number;
+  readonly presentedPositionSeconds?: number;
+  readonly frameTiming?: 'verified' | 'unavailable';
 }
 
 export interface PlayerSnapshot {
+  readonly notice?: string;
+  readonly qualities?: readonly PlayerQuality[];
+  readonly selectedQualityId?: string;
+  readonly metadata?: { readonly title?: string; readonly artist?: string };
+  readonly captions?: readonly string[];
   readonly diagnostics?: PlayerDiagnostics;
   readonly volume?: { readonly level: number; readonly muted: boolean };
   readonly sessionId: number;
@@ -117,6 +165,12 @@ export interface PlaybackAuthorization {
 }
 
 export interface OpenPlayerRequest {
+  readonly maximumHeight?: number;
+  readonly audioTrackId?: string;
+  readonly textTrackId?: string | null;
+  readonly qualityId?: string;
+  readonly preferredAudioLanguage?: string;
+  readonly preferredSubtitleLanguage?: string;
   /** The exact source/delivery result selected outside this adapter. */
   readonly url: string;
   readonly kind: PlaybackKind;
@@ -134,6 +188,7 @@ export interface OpenPlayerRequest {
   readonly deliveryMode?: 'direct' | 'managed';
   /** Container of this delivery, e.g. `hls` or `mp4`. */
   readonly deliveryFormat?: string;
+  readonly deliveryDecision?: PlayerDiagnostics['decision'];
   /**
    * The title's full length in seconds as known by the server. Managed output is
    * a rolling HLS window, so an engine duration describes only the buffered part
@@ -152,6 +207,10 @@ export interface OpenPlayerRequest {
 export type PlayerListener = (snapshot: PlayerSnapshot) => void;
 
 export interface Player {
+  loadTextTracks?(): Promise<void>;
+  loadAudioTracks?(): Promise<void>;
+  selectQuality?(id: string): Promise<void>;
+  preview?(positionSeconds: number): Promise<Blob | null>;
   readonly capabilities: PlayerCapabilities;
   readonly snapshot: PlayerSnapshot;
   setVolume?(level: number): Promise<void>;
@@ -170,14 +229,14 @@ export interface Player {
 export class PlayerOperationError extends Error {
   readonly code: PlayerErrorCode;
 
-  constructor(code: PlayerErrorCode, message: string, readonly cause?: unknown) {
+  constructor(code: PlayerErrorCode, message: string, readonly cause?: unknown, readonly reason?: MediaFailureReason, readonly selection?: PlayerFailure['selection']) {
     super(message);
     this.name = 'PlayerOperationError';
     this.code = code;
   }
 
   toFailure(): PlayerFailure {
-    return { code: this.code, message: this.message, cause: this.cause };
+    return { code: this.code, message: this.message, cause: this.cause, ...(this.reason ? { reason: this.reason } : {}), ...(this.selection ? { selection: this.selection } : {}) };
   }
 }
 
@@ -248,6 +307,7 @@ export interface DirectFileCapabilities {
 }
 
 export interface PlaybackCapabilities extends DirectFileCapabilities {
+  readonly browser?: BrowserMediaCapabilities;
   readonly maxWidth: number;
   readonly maxHeight: number;
   readonly h264: boolean;
@@ -267,6 +327,7 @@ export interface PlaybackCapabilities extends DirectFileCapabilities {
 
 /** The request that starts or restarts one server playback session. */
 export interface PlaybackStart {
+  readonly conversionReason?: MediaFailureReason;
   readonly streamId?: string;
   readonly channelId?: string;
   readonly position?: number;
@@ -294,6 +355,9 @@ export interface PlaybackMediaTrack {
 
 /** The server's opaque playback session as the controller and app consume it. */
 export interface PlaybackSessionView {
+  readonly preferredAudioLanguage?: string;
+  readonly preferredSubtitleLanguage?: string;
+  readonly maximumHeight?: number;
   readonly headers: { readonly [key: string]: string };
   readonly id: string;
   readonly url: string;

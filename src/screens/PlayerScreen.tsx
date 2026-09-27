@@ -202,6 +202,8 @@ function ResponsivePlayer({
   const popupStyle = (popupLeft === undefined ? undefined : { "--vx-popup-left": `${popupLeft}px` }) as CSSProperties | undefined;
 
   const toggleTrackPopup = (kind: "audio" | "text") => {
+    if (kind === 'text') void player.current?.loadTextTracks?.().catch(fail);
+    else void player.current?.loadAudioTracks?.().catch(fail);
     setActiveTrackPopup(activeTrackPopup === kind ? null : kind);
     setPlayerInfoOpen(false);
   };
@@ -268,6 +270,7 @@ function ResponsivePlayer({
                     setControlActivity((value) => value + 1);
                   }}
                   getBufferedRanges={readBufferedRanges}
+                  getPreview={position => player.current?.preview?.(position) ?? Promise.resolve(null)}
                   remoteKeys={false}
                 />
                 <p className="vx-timeline__times player-time">
@@ -378,6 +381,17 @@ function ResponsivePlayer({
             )}
             {playerInfoOpen && (
               <PlayerPopup ref={popup} title="Playback info" onClose={() => setPlayerInfoOpen(false)} style={popupStyle}>
+                {(snapshot?.qualities?.length ?? 0) > 1 && (
+                  <label className="vx-player__quality">Quality
+                    <select aria-label="Quality" value={snapshot?.selectedQualityId ?? 'auto'} onChange={event => {
+                      void player.current?.selectQuality?.(event.target.value).catch(fail);
+                      setPlayerInfoOpen(false);
+                    }}>
+                      <option value="auto">Auto</option>
+                      {snapshot!.qualities!.map(quality => <option key={quality.id} value={quality.id}>{quality.label}</option>)}
+                    </select>
+                  </label>
+                )}
                 <dl className="vx-player__info">
                   {playerInfoRows.map((row) => (
                     <div className="vx-player__info-row" key={row.label}>
@@ -397,8 +411,10 @@ function ResponsivePlayer({
 }
 
 export function PlayerScreen(props: PlayerScreenProps) {
-  if (props.responsive) return <ResponsivePlayer {...props} />;
-  return <TvPlayer {...props} />;
+  return <>
+    {props.responsive ? <ResponsivePlayer {...props} /> : <TvPlayer {...props} />}
+    {!!props.snapshot?.captions?.length && <div className="vx-player__captions" aria-live="off">{props.snapshot.captions.map((text, index) => <p key={index}>{text}</p>)}</div>}
+  </>;
 }
 
 /**

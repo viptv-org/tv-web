@@ -4,7 +4,7 @@ declare global { interface Window { finishFixturePlayback(video: HTMLMediaElemen
 
 const apiOrigin = 'https://viptv.syek.tech';
 const corsHeaders = {
-  'access-control-allow-origin': 'http://127.0.0.1:4173',
+  'access-control-allow-origin': process.env.VIPTV_TEST_BROWSER_ORIGIN ?? 'http://127.0.0.1:4173',
   'access-control-allow-methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
   'access-control-allow-headers': 'authorization, content-type',
 };

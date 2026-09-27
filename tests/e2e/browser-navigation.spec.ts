@@ -4,7 +4,11 @@ import { apiOrigin, installBackend, movie, sessionKey } from './helpers/responsi
 /** Only decoding and backend delivery are mocked; App, Rust and browser history are real. */
 async function installPlaybackBoundary(page: Page, requests: Awaited<ReturnType<typeof installBackend>>['requests']) {
   await page.addInitScript(() => {
+    // This suite mocks decoding; HTTPS must not activate a real WebCodecs
+    // decoder against its intentionally synthetic media URL.
+    Object.defineProperty(window, 'VideoDecoder', { configurable: true, value: undefined });
     const media = HTMLMediaElement.prototype;
+    Object.defineProperty(media, 'error', { configurable: true, get: () => null });
     const originalCanPlay = media.canPlayType;
     media.canPlayType = function(type: string) { return /mpegurl/i.test(type) ? 'probably' : originalCanPlay.call(this, type); };
     const playing = new WeakMap<HTMLMediaElement, boolean>();
@@ -14,10 +18,11 @@ async function installPlaybackBoundary(page: Page, requests: Awaited<ReturnType<
     media.play = function(this: HTMLMediaElement) { playing.set(this, true); queueMicrotask(() => this.dispatchEvent(new Event('play'))); return Promise.resolve(); };
     media.pause = function(this: HTMLMediaElement) { playing.set(this, false); this.dispatchEvent(new Event('pause')); };
   });
+  await page.route(`${apiOrigin}/media/history-playback/**`, route => route.fulfill({ status: 200, contentType: 'application/vnd.apple.mpegurl', body: '#EXTM3U\n#EXT-X-ENDLIST\n' }));
   await page.route(`${apiOrigin}/api/playback**`, async route => {
     const request = route.request();
     const headers = {
-      'access-control-allow-origin': 'http://127.0.0.1:4173',
+      'access-control-allow-origin': process.env.VIPTV_TEST_BROWSER_ORIGIN ?? 'http://127.0.0.1:4173',
       'access-control-allow-methods': 'GET, POST, PUT, DELETE, OPTIONS',
       'access-control-allow-headers': 'authorization, content-type',
     };

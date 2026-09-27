@@ -96,6 +96,7 @@ export function SeekBar({
   getBufferedRanges,
   remoteKeys = false,
   seekable,
+  getPreview,
 }: {
   id: string;
   position: number;
@@ -113,6 +114,7 @@ export function SeekBar({
   remoteKeys?: boolean;
   /** False when the engine reports the media unseekable; omitted means unknown. */
   seekable?: boolean;
+  getPreview?(seconds: number): Promise<Blob | null>;
 }) {
   const registry = useContext(Registry);
   const activate = useRef(onActivate);
@@ -285,6 +287,21 @@ export function SeekBar({
           ? preview
           : undefined;
   const hovering = scrub === undefined && hoverSeconds !== undefined;
+  const previewProvider = useRef(getPreview);
+  previewProvider.current = getPreview;
+  const [previewImage, setPreviewImage] = useState<string>();
+  useEffect(() => {
+    let cancelled = false, url: string | undefined;
+    setPreviewImage(undefined);
+    if (tooltipSeconds === undefined || !previewProvider.current) return;
+    const timer = setTimeout(() => {
+      void previewProvider.current?.(tooltipSeconds).then(blob => {
+        if (cancelled || !blob) return;
+        url = URL.createObjectURL(blob); setPreviewImage(url);
+      }).catch(() => undefined);
+    }, 200);
+    return () => { cancelled = true; clearTimeout(timer); if (url) URL.revokeObjectURL(url); };
+  }, [tooltipSeconds]);
 
   return (
     <div
@@ -346,6 +363,7 @@ export function SeekBar({
           aria-hidden="true"
           style={{ left: `${timelineRatio(tooltipSeconds, duration) * 100}%` }}
         >
+          {previewImage && <img src={previewImage} alt="" width="160" height="90" />}
           {formatPlaybackTime(tooltipSeconds)}
         </span>
       )}

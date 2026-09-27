@@ -18,7 +18,7 @@ async function openProfile(page: Page) {
 test('phone Live TV is a searchable channel list with category chips and no guide table', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   const fixture = await installBackend(page, {});
-  const cors = { 'access-control-allow-origin': 'http://127.0.0.1:4173' };
+  const cors = { 'access-control-allow-origin': process.env.VIPTV_TEST_BROWSER_ORIGIN ?? 'http://127.0.0.1:4173' };
   const now = Math.floor(Date.now() / 1000);
   const stations = Array.from({ length: 88 }, (_, index) => ({ id: `station-${index}`, type: 'live', name: `Channel ${index + 1}`, section: 'News' }));
   const searches: string[] = [];
@@ -206,7 +206,7 @@ test('phone detail and source Back controls return through the title and Home', 
 test('scrolling the responsive guide to its end loads the next channel page', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   const fixture = await installBackend(page, {});
-  const cors = { 'access-control-allow-origin': 'http://127.0.0.1:4173' };
+  const cors = { 'access-control-allow-origin': process.env.VIPTV_TEST_BROWSER_ORIGIN ?? 'http://127.0.0.1:4173' };
   const stations = Array.from({ length: 88 }, (_, index) => ({ id: `station-${index}`, type: 'live', name: `Channel ${index + 1}`, section: 'News' }));
   await page.route('**/api/live**', async route => {
     const url = new URL(route.request().url());

@@ -9,6 +9,7 @@ import { WebGlCoreRenderer } from "@solidtv/renderer/webgl";
 import { CanvasTextRenderer } from "@solidtv/renderer/canvas";
 import { displayFonts, configureDisplayFonts } from "./fonts";
 import "../theme/viptv-tokens.generated.css";
+import "../playbackConfig";
 import { TvApi, type DeviceTokenSet } from "../api";
 import { initializeCore } from "../core";
 import bricolage700Url from "@fontsource/bricolage-grotesque/files/bricolage-grotesque-latin-700-normal.woff2?url";

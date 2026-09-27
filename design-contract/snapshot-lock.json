@@ -1,7 +1,7 @@
 {
   "version": 1,
   "repository": "viptv-org/design",
-  "commit": "30e9367283389c09f255c4659ce526e1974c56e3",
+  "commit": "ca510fc7108b41d88288ad810318a3014fe2788d",
   "files": {
     "design-contract/.github/pull_request_template.md": {
       "source": ".github/pull_request_template.md",
@@ -18,6 +18,10 @@
     "design-contract/ANDROID_DEVELOPMENT.md": {
       "source": "ANDROID_DEVELOPMENT.md",
       "sha256": "f06c6c2e70dce41c15487735bc769ba4504706c51aee3e69033f876c63e3d325"
+    },
+    "design-contract/BROWSER_MEDIA_PIPELINE.md": {
+      "source": "BROWSER_MEDIA_PIPELINE.md",
+      "sha256": "41c9ebc3e10341266827ee58ceead706baf53ffb2c0c942202716210066797cd"
     },
     "design-contract/BROWSER_PLAYBACK.md": {
       "source": "BROWSER_PLAYBACK.md",
@@ -37,7 +41,7 @@
     },
     "design-contract/DESIGN.md": {
       "source": "DESIGN.md",
-      "sha256": "ce3c8206bc2b2b8750e4b97134ae603c83b3053d8923f8177047a6fbd40edacc"
+      "sha256": "f40190febdcdee3c4b59fa69af89bcff1e0e6dff625061af6b486129d44a8396"
     },
     "design-contract/DESIGN_SYNC.md": {
       "source": "DESIGN_SYNC.md",

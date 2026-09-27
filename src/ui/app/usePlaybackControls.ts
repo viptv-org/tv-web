@@ -103,6 +103,7 @@ export function usePlaybackControls(app: NavigationApi) {
   // element exposes its buffered ranges directly, and MediaBunny / Tauri native reports its
   // decoded-ahead window on the snapshot. Nothing is ever fabricated.
   const readBufferedRanges = () => {
+    if (snapshot?.time.bufferedRanges) return snapshot.time.bufferedRanges.map(range => ({ ...range }));
     const end = snapshot?.time.bufferedEndSeconds;
     const duration = snapshot?.time.durationSeconds ?? 0;
     const position = snapshot?.time.positionSeconds ?? 0;
@@ -247,8 +248,15 @@ export function usePlaybackControls(app: NavigationApi) {
    * modal), opened focused on the current track. Unavailable tracks stay
    * visible and focusable; choosing one explains why it cannot play here.
    */
-  const trackChoices = (kind: "audio" | "text") => {
-    const tracks = kind === "audio" ? audioTrackList : textTrackList;
+  const trackChoices = async (kind: "audio" | "text") => {
+    const owner = player.current;
+    const makePanel = () => {
+    const local = player.current?.snapshot;
+    const tracks = kind === 'text' && player.current?.capabilities.canSelectTextTrack && local?.tracks.text.length
+      ? local.tracks.text.map(t => ({ id: t.id, label: t.label, language: t.language, available: t.available, selected: local.tracks.selectedTextId === t.id, onSelect: () => void player.current!.selectTextTrack(t.id).catch(fail) }))
+      : kind === 'audio' && player.current?.capabilities.canSelectAudioTrack && local?.tracks.audio.length
+        ? local.tracks.audio.map(t => ({ id: t.id, label: t.label, language: t.language, available: t.available, selected: local.tracks.selectedAudioId === t.id, onSelect: () => void (t.delivery === 'server' && t.inputIndex !== undefined ? controller.current!.replaceTracks({ audioTrackIndex: t.inputIndex }) : player.current!.selectAudioTrack(t.id)).catch(fail) }))
+        : kind === "audio" ? audioTrackList : textTrackList;
     const choices: Choice[] = [];
     if (kind === "text" && subtitlesCanTurnOff)
       choices.push({
@@ -274,10 +282,16 @@ export function usePlaybackControls(app: NavigationApi) {
         },
       });
     const current = choices.find((choice) => choice.current);
-    setModal({
+    if (kind === 'audio' && (player.current?.snapshot.qualities?.length ?? 0) > 1) {
+      for (const quality of [{ id: 'auto', label: 'Auto' }, ...player.current!.snapshot.qualities!]) choices.push({
+        label: `Quality · ${quality.label}`, current: (player.current!.snapshot.selectedQualityId ?? 'auto') === quality.id,
+        action: () => { setModal(undefined); void player.current!.selectQuality?.(quality.id).catch(fail); },
+      });
+    }
+    return {
       title: kind === "audio" ? "Audio Tracks" : "Subtitles",
-      view: { kind: "choices" },
-      choices,
+      view: { kind: "choices" as const },
+      choices: choices.length ? choices : [{ label: "Loading tracks…", unavailable: true, action: () => {} }],
       focus: current?.label,
       legend: [
         { key: "▲ ▼", label: "Move" },
@@ -285,7 +299,16 @@ export function usePlaybackControls(app: NavigationApi) {
         { key: "BACK", label: "Close" },
       ],
       className: "vx-player-tracks",
-    });
+    };
+    };
+    const panel = makePanel();
+    setModal(panel);
+    try {
+      if (kind === 'text') await owner?.loadTextTracks?.(); else await owner?.loadAudioTracks?.();
+      setModal(current => current === panel && player.current === owner ? makePanel() : current);
+    } catch {
+      setModal(current => current === panel && player.current === owner ? { ...current, message: "Tracks could not be loaded." } : current);
+    }
   };
   // Latest card action closures for the memoized card row: the row reads the
   const nativeAudio = snapshot?.tracks.audio;
@@ -303,7 +326,9 @@ export function usePlaybackControls(app: NavigationApi) {
           language: t.language,
           available: t.available,
           selected: currentAudioId === t.id,
-          onSelect: () => void player.current!.selectAudioTrack(t.id).catch(fail),
+          onSelect: () => void (t.delivery === 'server' && t.inputIndex !== undefined
+            ? controller.current!.replaceTracks({ audioTrackIndex: t.inputIndex })
+            : player.current!.selectAudioTrack(t.id)).catch(fail),
         }))
       : (serverAudio ?? []).map((t) => ({
           id: String(t.inputIndex),

@@ -1,5 +1,7 @@
 import Hls from 'hls.js';
 import type { PlaybackCapabilities } from './types';
+import { browserPlaybackPolicy } from './browser-policy';
+import { qualifiedVizioEvidence } from './vizio-evidence';
 
 export const BROWSER_CODECS = {
   h264: 'video/mp4; codecs="avc1.640029"',
@@ -87,6 +89,18 @@ export async function probeBrowserPlaybackCapabilities(environment?: BrowserProb
   const hevc = (bunny.hevc && bunny.aac) || (nativeHevc && (nativeHls || (mseHls && mseHevc)));
   const directMp4 = bunnyBaseline || (nativeH264 && nativeAac);
   const canPlayManagedHls = h264 && aac;
+  const policy = browserPlaybackPolicy();
+  const qualified = !environment && (policy.clientInspection || policy.localRemux) ? qualifiedVizioEvidence(navigator.userAgent, env.mseTypeSupported) : [];
+  const browser = policy.clientInspection || policy.localRemux ? {
+    version: 1 as const, inspectOriginal: policy.clientInspection, localRemux: policy.localRemux,
+    fmp4: env.mseSupported && env.mseTypeSupported(BROWSER_CODECS.h264),
+    engines: [
+      ...qualified,
+      ...([['avc', nativeH264], ['hevc', nativeHevc], ['aac', nativeAac]] as const).map(([codec, supported]) => ({ engine: 'native' as const, codec, evidence: supported ? 'advertised' as const : 'unknown' as const, ...(codec === 'aac' ? { profile: 'LC', maxChannels: 2, sampleRates: [48000] } : { profile: codec === 'hevc' ? 'Main' : 'High', maxLevel: codec === 'hevc' ? 150 : 41, maxWidth: 1920, maxHeight: 1080, maxFrameRate: 30, bitDepth: 8, hdr: false }), containers: ['mp4', 'hls'] })),
+      ...([['avc', mseH264], ['hevc', mseHevc], ['aac', mseAac]] as const).map(([codec, supported]) => ({ engine: 'mse' as const, codec, evidence: supported ? 'advertised' as const : 'unknown' as const, ...(codec === 'aac' ? { profile: 'LC', maxChannels: 2, sampleRates: [48000] } : { profile: codec === 'hevc' ? 'Main' : 'High', maxLevel: codec === 'hevc' ? 150 : 41, maxWidth: 1920, maxHeight: 1080, maxFrameRate: 30, bitDepth: 8, hdr: false }), containers: ['mp4', 'cmaf'] })),
+      ...([['avc', bunny.h264], ['hevc', bunny.hevc], ['aac', bunny.aac]] as const).map(([codec, supported]) => ({ engine: 'webcodecs' as const, codec, evidence: supported ? 'advertised' as const : 'unknown' as const, ...(codec === 'aac' ? { profile: 'LC', maxChannels: 2, sampleRates: [48000] } : { profile: codec === 'hevc' ? 'Main' : 'High', maxLevel: codec === 'hevc' ? 150 : 41, maxWidth: 1920, maxHeight: 1080, maxFrameRate: 30, bitDepth: 8, hdr: false }), containers: ['mp4', 'mov', 'mkv', 'webm', 'mpegts', 'hls'] })),
+    ],
+  } : undefined;
   // A WebCodecs demuxer can read the original container (Matroska, MPEG-TS, the
   // ISO base media formats and more) instead of a server-remuxed HLS window, so
   // report that file path and the codecs it can decode.
@@ -98,8 +112,9 @@ export async function probeBrowserPlaybackCapabilities(environment?: BrowserProb
   evidence.push(`hls:${selectedHls}`, 'sample:1080p30; h264-high-4.1; hevc-main-5.0-sdr; aac-lc-stereo');
   return {
     capabilities: {
-      maxWidth: fileCodecs ? 3840 : 1920, maxHeight: fileCodecs ? 2160 : 1080,
-      h264, hevc, aac, directPlay: directMp4 || canPlayManagedHls, hevcSdr: hevc, directMp4, directHls: canPlayManagedHls,
+      ...(browser ? { browser } : {}),
+      maxWidth: fileCodecs || qualified.some(e => e.maxWidth === 3840) ? 3840 : 1920, maxHeight: fileCodecs || qualified.some(e => e.maxHeight === 2160) ? 2160 : 1080,
+      h264, hevc, aac, directPlay: directMp4 || canPlayManagedHls || !!browser?.inspectOriginal, hevcSdr: hevc, directMp4, directHls: canPlayManagedHls,
       directFiles: !!fileCodecs, directVideoCodecs: fileCodecs?.video, directAudioCodecs: fileCodecs?.audio,
     },
     canPlayManagedHls,

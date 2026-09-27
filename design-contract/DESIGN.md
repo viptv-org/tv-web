@@ -28,6 +28,8 @@ Current platform implementation scope and test interfaces: [TV_IMPLEMENTATION.md
 
 Shared data/state architecture and startup adoption: [SHARED_CORE.md](SHARED_CORE.md).
 
+Browser HTTPS playback and conversion: [BROWSER_MEDIA_PIPELINE.md](BROWSER_MEDIA_PIPELINE.md).
+
 ## Visual design system
 
 Phone, desktop (Tauri), web and TV share one design system: [viptv-design-system/](viptv-design-system/README.md). Build every screen from its reference image and HTML (`reference/screens/`), the rules in `components.md`, the strings in `copy.md` and the decisions in `decisions.md`. Platform theme files are generated from `tokens/tokens.json` by `tools/gen-themes.mjs`; never hand-edit a generated theme or hard-code a value.

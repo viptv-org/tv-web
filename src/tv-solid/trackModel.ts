@@ -5,7 +5,7 @@ export interface TrackChoiceView {
   label: string;
   current: boolean;
   available: boolean;
-  mode: "off" | "native" | "server";
+  mode: "off" | "native" | "server" | "quality";
   inputIndex: number;
 }
 
@@ -62,8 +62,8 @@ export function trackChoicesFor(
             ? snapshot.tracks.selectedAudioId
             : snapshot.tracks.selectedTextId) === track.id,
         available: track.available,
-        mode: "native",
-        inputIndex: -1,
+        mode: track.delivery === 'server' ? 'server' : 'native',
+        inputIndex: track.inputIndex ?? -1,
       });
   } else {
     for (const track of server)
@@ -75,6 +75,12 @@ export function trackChoicesFor(
         mode: "server",
         inputIndex: track.inputIndex,
       });
+  }
+  if (kind === 'audio' && (snapshot.qualities?.length ?? 0) > 1) {
+    for (const quality of [{ id: 'auto', label: 'Auto' }, ...snapshot.qualities!]) choices.push({
+      id: quality.id, label: `Quality · ${quality.label}`, current: (snapshot.selectedQualityId ?? 'auto') === quality.id,
+      available: true, mode: 'quality', inputIndex: -1,
+    });
   }
   return choices;
 }

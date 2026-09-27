@@ -2152,3 +2152,28 @@ lower control group ends at y=1004 on the 1080p canvas, inside the y=1026 safe e
 Live progress remains passive. Live end-time stability, direct play/cancel/return,
 managed seek and Home Resume/hold/return passed separately. No new physical
 low-memory television qualification is claimed.
+
+## Browser media pipeline — 2026-09-27
+
+Design PB-001, core `9c49d064`, and the pinned video source implement optional
+browser inspection and local packet copy. Both renderers expose local tracks,
+quality, captions and actual buffer ranges. Track panels open before asynchronous
+inspection; Back prevents late discovery from reopening a dismissed panel.
+
+- 217 unit tests passed; production build and all source integrity checks passed.
+- Trusted-HTTPS UI run: 136 passed, 83 intentionally skipped, one track-dialog
+  failure. That failure exposed an inspection wait and was fixed; the full
+  four-case Vizio remote contract then passed, including the failing case.
+- SolidTV production-bundle screenshots reviewed for Player, Seek and Subtitles
+  using the Vizio boundary. These use controlled media stubs, not TV hardware.
+- Actual media: nine cases each in Chromium, Firefox and Playwright WebKit;
+  continuous HTTPS MPEG-TS through WebCodecs/MSE; live HLS, upstream quality,
+  backend copy/conversion and caption extraction. Physical Vizio evidence and
+  its hardware-plane/frame-callback limitations are documented in
+  [video qualification](https://github.com/viptv-org/video/blob/main/docs/BROWSER_PIPELINE.md).
+
+`VITE_BROWSER_PREPARATION=1` and `VITE_LOCAL_MSE_REMUX=1` enable the two client
+switches. Both default off. Original browser preparation also requires the
+server switch. Binary promotion is separate; Jellyfin-FFmpeg was benchmarked
+but did not pass the software startup gate. No new Roku, Tizen hardware, native
+Safari/iOS, sustained HDR or universal provider qualification is claimed.
