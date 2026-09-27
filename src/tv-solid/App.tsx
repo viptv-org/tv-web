@@ -1450,6 +1450,12 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
           const view = await loadHomeView(api, profileId, homeScope.signal, early => {
             if (generation !== homeGeneration || homeScope?.signal.aborted) return;
             this.home = early; this.homeAddLabel = early.saved ? "✓" : "+";
+            if (shown && early.cards.length) {
+              // Publish each enriched queue item immediately, just like Android.
+              // Keyed rows/cards preserve remote focus while metadata arrives.
+              this.homeShelves = [{key:"continue",title:"Continue watching",cards:early.cards,kind:"queue",loaded:true},
+                ...this.homeShelves.filter(shelf=>shelf.key!=="continue")];
+            }
             if (!shown && early.heroItem) {
               shown = true; this.phase = "home";
               this.homeShelves = early.queueItems.length ? [{ key: "continue", title: "Continue watching", cards: queueHomeCards(early.queueItems), kind: "queue", loaded: true }] : [];

@@ -2106,3 +2106,8 @@ node tests/preview/solid-polish.mjs
 
 No new physical Vizio/Tizen/webOS firmware, codec or remote-hardware qualification
 is implied by these browser results.
+
+Production-data follow-up: partial queue hydration now updates the visible shelf
+as well as the hero. A delayed second title regression proves the first episode's
+caption paints before the second metadata request completes, without a second
+queue request or focus replacement.

@@ -176,6 +176,7 @@ export const HomeCard = defineScreen({
       this.subtitleText = this.card.subtitle;
     },
   },
+  watch: { card() { this.reveal(); } },
   input: {
     left() {
       this.$emit("home-card-move", { shelf: this.shelf, position: this.position, delta: -1 });

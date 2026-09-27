@@ -30,6 +30,16 @@ async function focusedBounds(page,height) {
 }
 try {
  {
+  let slowDone=false;
+  const {page,errors}=await fixture(1920,{},async page=>{
+   await page.route(`${origin}/api/profiles/*/continue/page*`,route=>route.fulfill({json:{items:[{id:'tt-monster:1:1',type:'series',series_id:'tt-monster',name:'Monster',season:1,episode:1,position:4,duration:3120,queue_status:'resume'},{id:'tt-obsession',type:'movie',name:'Obsession',position:16,duration:6540,queue_status:'resume'}],offset:0,total:2,next_offset:null}}));
+   await page.route(`${origin}/api/meta/movie/tt-obsession`,async route=>{await new Promise(resolve=>setTimeout(resolve,2500));slowDone=true;await route.fallback();});
+  });
+  await focus(page,'home-action',0);
+  await page.waitForFunction(()=>{let found=false;const walk=n=>{if(n.viptvText?.includes('Episode One')&&n.globalTransform.ty>900&&n.worldAlpha>.5&&n.isRenderable)found=true;for(const child of n.children??[])walk(child);};walk(window.__viptvRenderer.stage.root);return found;},null,{timeout:1500});
+  expect(slowDone).toBe(false);expect(errors).toEqual([]);await page.close();console.log('Continue Watching metadata paints per card before the slowest queue item completes');
+ }
+ {
   const {page,errors}=await fixture();await focus(page,'home-action',0);
   await page.waitForFunction(()=>{let found=false;const walk=n=>{if(n.viptvText==='Recently watched live TV')found=true;for(const child of n.children??[])walk(child);};walk(window.__viptvRenderer.stage.root);return found;});
   const headingY=()=>page.evaluate(()=>{let y;const walk=n=>{if(n.viptvText==='Continue watching'&&n.worldAlpha>.5)y=n.globalTransform.ty;for(const child of n.children??[])walk(child);};walk(window.__viptvRenderer.stage.root);return y;});
