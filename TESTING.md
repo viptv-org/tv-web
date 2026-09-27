@@ -2060,3 +2060,13 @@ webOS browser modes. No physical TV run or launcher switch was made.
 suite (24 pass, 10 expected skips) passed. Matched phone `Main` and desktop
 `DeskHome` React frames were pixel-exact against the saved pre-migration
 captures after a deterministic recapture (0 changed pixels each).
+
+### Standalone checkout checks (2026-09-26)
+
+Browser decoder tests import the pinned `vendor/video/src/index.ts`, matching
+production, rather than a workstation's sibling `dist-js` build. The preview
+backend uses deterministic SVG artwork when optional reference assets are absent;
+set `VIPTV_PREVIEW_REFERENCE_DIR` to an empty directory to reproduce a clean CI
+checkout. Reference screenshot runs still use the real design assets. The watch
+URL reload check forbids playback creation while permitting the title's existing
+background source summary discovery.

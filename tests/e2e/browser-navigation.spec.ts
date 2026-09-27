@@ -83,7 +83,9 @@ test('reloading a watch URL restores the selected profile and title without repl
   await expect(page.getByRole('heading', { name: "Who's watching?" })).toHaveCount(0);
   expect(fixture.requests.filter(request => request.path === '/api/auth/profile')).toHaveLength(1);
   expect(fixture.requests.filter(request => request.path === '/api/auth/device/code')).toHaveLength(0);
-  expect(fixture.requests.filter(request => request.path === '/api/playback' || request.path === '/api/streams')).toHaveLength(0);
+  // Detail discovers sources for its best-source summary; it must never start playback.
+  expect(fixture.requests.filter(request => request.path === '/api/playback')).toHaveLength(0);
+  await expect(page.locator('.player-overlay')).toHaveCount(0);
   expect(fixture.errors).toEqual([]);
 });
 

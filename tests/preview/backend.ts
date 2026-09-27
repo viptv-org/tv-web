@@ -14,7 +14,9 @@ import { fileURLToPath } from 'node:url';
 
 export const apiOrigin = process.env.PREVIEW_API_ORIGIN ?? 'https://viptv.syek.tech';
 export const sessionKey = `viptv-device:${apiOrigin}`;
-export const referenceDir = fileURLToPath(new URL('../../../design/viptv-design-system/reference/', import.meta.url));
+export const referenceDir = process.env.VIPTV_PREVIEW_REFERENCE_DIR
+  ? `${process.env.VIPTV_PREVIEW_REFERENCE_DIR.replace(/\/+$/, '')}/`
+  : fileURLToPath(new URL('../../../design/viptv-design-system/reference/', import.meta.url));
 const hlsDir = fileURLToPath(new URL('../fixtures/hls/', import.meta.url));
 const ART = 'https://art.example/ref/';
 
@@ -95,7 +97,9 @@ const pickArt = (art: Art | undefined, family: Family) => {
   if (!art) return undefined;
   const prefix = typeof art === 'string' ? art : art[family] ?? art.desk ?? art.phone ?? art.tv;
   const file = prefix && assetFiles.get(prefix);
-  return file ? `${ART}${file}` : undefined;
+  // A clean checkout still exercises image loading and backdrop geometry.
+  // Reference screenshots use the real artwork when the design assets exist.
+  return file ? `${ART}${file}` : prefix ? `${ART}${prefix}.svg` : undefined;
 };
 
 // ---------------------------------------------------------------------------
@@ -415,6 +419,10 @@ export async function installBackend(page: Page, options: BackendOptions): Promi
   };
   const art = (route: Route, url: string) => {
     const file = url.startsWith(ART) ? decodeURIComponent(url.slice(ART.length)).split(/[?#]/)[0] : '';
+    if (/^[0-9a-f]{6}\.svg$/.test(file)) return route.fulfill({
+      status: 200, contentType: 'image/svg+xml', headers: { 'access-control-allow-origin': '*' },
+      body: `<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720"><rect width="1280" height="720" fill="#${file.slice(0, 6)}"/></svg>`,
+    });
     if (!file || !/^[0-9a-f]{32}\.(jpg|png|webp)$/.test(file)) return route.fulfill({ status: 404, body: '' });
     return serveFile(route, `${referenceDir}assets/${file}`, file.endsWith('png') ? 'image/png' : 'image/jpeg');
   };
@@ -428,8 +436,8 @@ export async function installBackend(page: Page, options: BackendOptions): Promi
     return art(route, /^https?:/.test(inner) ? inner : `https://${inner}`);
   });
   // Reference profile photos served as the catalog avatars the fixtures pick.
-  await page.route('**/assets/avatar-catalog/lorelei-47.png', route => serveFile(route, `${referenceDir}assets/${assetFiles.get('5112cc')}`, 'image/png'));
-  await page.route('**/assets/avatar-catalog/lorelei-48.png', route => serveFile(route, `${referenceDir}assets/${assetFiles.get('e12f8d')}`, 'image/png'));
+  if (assetFiles.has('5112cc')) await page.route('**/assets/avatar-catalog/lorelei-47.png', route => serveFile(route, `${referenceDir}assets/${assetFiles.get('5112cc')}`, 'image/png'));
+  if (assetFiles.has('e12f8d')) await page.route('**/assets/avatar-catalog/lorelei-48.png', route => serveFile(route, `${referenceDir}assets/${assetFiles.get('e12f8d')}`, 'image/png'));
   if (options.localAddons) await installLocalAddons(page, family, options.localAddons === 'hang');
   await page.route(`${apiOrigin}/media/**`, route => {
     const name = new URL(route.request().url()).pathname.split('/').pop() ?? '';

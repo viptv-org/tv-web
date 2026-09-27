@@ -13,7 +13,7 @@ type DecodeResult =
       readonly sourceRemoved: boolean;
     };
 
-const VIDEO_PACKAGE_MODULE = '/@fs/mnt/ALPH/code/viptv-org/video/dist-js/index.js';
+const VIDEO_PACKAGE_MODULE = '/vendor/video/src/index.ts';
 
 /**
  * This is deliberately a browser decoder test, rather than an HTMLMediaElement
