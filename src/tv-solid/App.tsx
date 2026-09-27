@@ -41,11 +41,13 @@ import {
 import {
   emptyHome,
   loadHomeView,
-  loadHomeShelves,
+  projectHome,
   queueHomeCards,
   type HomeShelfView,
   type HomeView,
 } from "./homeModel";
+import { playerBuffer, type BufferSegment } from "./playerBuffer";
+import { HomeShelfCache, homeRowWindow, homeVisibleCards } from "./homeShelfCache";
 import { railIcon } from "./railIcons";
 import { RailItem } from "./RailFocus";
 import { DiscoverFilterOption } from "./DiscoverFocus";
@@ -281,6 +283,8 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
   let pairingTimer: ReturnType<typeof setTimeout> | undefined;
   let pairingScope: ReturnType<TvApi["createScope"]> | undefined;
   let homeGeneration = 0;
+  let homeCache: HomeShelfCache | undefined;
+  const currentHomeCache=()=>homeCache;
   let homeScope: ReturnType<TvApi["createScope"]> | undefined;
   let detailGeneration = 0;
   let detailScope: ReturnType<TvApi["createScope"]> | undefined;
@@ -320,6 +324,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
   let playbackGeneration = 0;
   let heartbeatTimer: ReturnType<typeof setInterval> | undefined;
   let chromeTimer: ReturnType<typeof setTimeout> | undefined;
+  const cancelChromeTimer=()=>{clearTimeout(chromeTimer);chromeTimer=undefined;};
   let continuation: ReturnType<typeof createSolidTVContinuation> | undefined;
   let nextGeneration = 0;
   let nextSetupScope: ReturnType<TvApi["createScope"]> | undefined;
@@ -442,6 +447,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         playerPositionText: "",
         playerDurationText: "",
         playerProgress: 0,
+        playerBuffered: [] as BufferSegment[],
         playerToggleIcon: "Ⅱ",
         playerLegend: "",
         playerNotice: "",
@@ -488,6 +494,8 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         homePositions: {} as Record<string, number>,
         homeShelfCardIndex: 0,
         homeScrollY: 0,
+        homeMountFirst: 0,
+        homeMountLast: 1,
         homeFocusZone: "action" as "action" | "card",
         homeActionIndex: 0,
         homeCardIndex: 0,
@@ -862,6 +870,8 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
     },
     watch: {
       phase() {
+        if(this.phase!=="home")homeCache?.pause();
+        else if(homeCache)queueMicrotask(()=>{if(this.phase==="home")this.updateHomeWindow();});
         const spinner=document.getElementById("solid-preparing-spinner");
         if(spinner)spinner.style.display=this.phase==="preparing"?"block":"none";
         if (this.playerNextBusy) this.cancelNextEpisode();
@@ -964,12 +974,13 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         );
         this.$listen("home-cards-enter", () => this.focusHomeShelfCard(0, 0));
         this.$listen("home-shelf-up", ({ shelf, position }: { shelf: number; position: number }) => {
-          if (shelf > 0) this.focusHomeShelfCard(shelf - 1, Math.min(position,Math.max(0,(this.homeShelves[shelf - 1]?.cards.length ?? 1)-1)));
+          if (shelf > 0) this.focusHomeShelfCard(shelf - 1, this.homePositions[this.homeShelves[shelf-1].key]??position);
           else this.focusHomeAction(0);
         });
         this.$listen("home-shelf-down", ({ shelf, position }: { shelf: number; position: number }) => {
-          if (shelf + 1 < this.homeShelves.length)
-            this.focusHomeShelfCard(shelf + 1,Math.min(position,this.homeShelves[shelf + 1].cards.length - 1));
+          const current=this.homeFocusZone==="card"?this.homeShelfIndex:shelf;
+          if (current+1 < this.homeShelves.length)
+            this.focusHomeShelfCard(current+1,this.homePositions[this.homeShelves[current+1].key]??position);
         });
         this.$listen("home-action-return", () =>
           this.focusHomeAction(this.homeActionIndex),
@@ -1365,6 +1376,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         upNextScope?.abort(); clearInterval(upNextTimer);
         ++pairingGeneration;
         pairingScope?.abort();
+        homeCache?.dispose();homeCache=undefined;
         homeScope?.abort();
         ++homeGeneration;
         detailScope?.abort();
@@ -1383,7 +1395,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         ++sourceGeneration;
         clearTimeout(sourceTimer);
         clearInterval(heartbeatTimer);
-        clearTimeout(chromeTimer);
+        cancelChromeTimer();
         ++playbackGeneration;
         void playback?.dispose().catch(() => undefined);
         document
@@ -1431,6 +1443,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         if (new URLSearchParams(location.search).has("perfdebug"))
           performance.mark("viptv:home-start");
         const generation = ++homeGeneration;
+        homeCache?.dispose();homeCache=undefined;
         homeScope?.abort();
         homeScope = api.createScope();
         const selectedProfile = this.profiles.find(
@@ -1445,79 +1458,81 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         this.homeNotice = "";
         this.phase = "ready";
         this.startingLabel = "Starting VIPTV…";
+        this.homeShelves=[];this.homeShelfIndex=0;this.homeScrollY=0;this.homeFocusZone="action";
+        const catalogs=api.catalogs({signal:homeScope.signal}).catch(()=>[]);
+        let initialized=false;
+        const startShelves=(view:HomeView)=>{
+          if(initialized)return;initialized=true;
+          homeCache=new HomeShelfCache(api,[],view,rows=>this.publishHomeShelves(rows));
+          this.publishHomeShelves(homeCache.snapshot());
+          if(this.phase==="home")this.updateHomeWindow();else homeCache.pause();
+          void catalogs.then(catalogs=>{
+            if(generation!==homeGeneration||homeScope?.signal.aborted)return;
+            homeCache?.setCatalogs(catalogs);
+            if(this.phase==="home")this.updateHomeWindow();
+          });
+        };
         try {
-          let shown = false;
-          const view = await loadHomeView(api, profileId, homeScope.signal, early => {
-            if (generation !== homeGeneration || homeScope?.signal.aborted) return;
-            this.home = early; this.homeAddLabel = early.saved ? "✓" : "+";
-            if (shown && early.cards.length) {
-              // Publish each enriched queue item immediately, just like Android.
-              // Keyed rows/cards preserve remote focus while metadata arrives.
-              this.homeShelves = [{key:"continue",title:"Continue watching",cards:early.cards,kind:"queue",loaded:true},
-                ...this.homeShelves.filter(shelf=>shelf.key!=="continue")];
-            }
-            if (!shown && early.heroItem) {
-              shown = true; this.phase = "home";
-              this.homeShelves = early.queueItems.length ? [{ key: "continue", title: "Continue watching", cards: queueHomeCards(early.queueItems), kind: "queue", loaded: true }] : [];
-              setTimeout(() => { if (generation === homeGeneration && this.homeFocusZone === "action") { this.revealHomeControls(); this.focusHomeAction(0); } }, 0);
+          let shown=false;
+          const view=await loadHomeView(api,profileId,homeScope.signal,early=>{
+            if(generation!==homeGeneration||homeScope?.signal.aborted)return;
+            this.home=early;this.homeAddLabel=early.saved?"✓":"+";
+            currentHomeCache()?.updateProfile(early);
+            if(!shown&&early.heroItem){
+              shown=true;this.phase="home";
+              startShelves(early);
+              this.focusHomeAction(0);
             }
           });
-          if (new URLSearchParams(location.search).has("perfdebug"))
-            performance.mark("viptv:home-data");
-          if (generation !== homeGeneration || homeScope.signal.aborted) return;
-          if (!shown) this.phase = "home";
-          if (new URLSearchParams(location.search).has("perfdebug"))
-            performance.mark("viptv:home-phase");
-          setTimeout(() => {
-            if (generation !== homeGeneration) return;
-            if (shown) { this.home = view; this.homeAddLabel = view.saved ? "✓" : "+"; return; }
-            this.homeAddLabel = view.saved ? "✓" : "+";
-            this.homeShelfLabel = "Continue watching";
-            this.okLabel = "OK";
-            this.selectLabel = "Select";
-            this.optionsIcon = "≡";
-            this.optionsLabel = "Options";
-            this.home = view;
-            this.homeShelves = view.queueItems.length ? [{
-              key: "continue", title: "Continue watching", cards: queueHomeCards(view.queueItems), kind: "queue", loaded: true,
-            }] : [];
-            this.homeShelfIndex = 0;
-            this.homeShelfStart = 0;
-            this.homeShelfCardIndex = 0;
-            this.homeScrollY = 0;
-            this.homeCards = Array.from(
-              { length: 6 },
-              (_, index) => view.cards[index] ?? { ...emptyHomeCard },
-            );
-            this.revealHomeControls();
-            if (!shown) this.focusHomeAction(0);
-            if (new URLSearchParams(location.search).has("perfdebug"))
-              performance.mark("viptv:home-focus-request");
-          }, 16);
-          void loadHomeShelves(api, view, homeScope.signal, (shelves) => {
-            if (generation !== homeGeneration || homeScope?.signal.aborted) return;
-            shelves=shelves.filter(shelf=>shelf.cards.length>0);
-            const selectedKey = this.homeShelves[this.homeShelfIndex]?.key;
-            const selectedIndex = shelves.findIndex(row => row.key === selectedKey);
-            this.homeShelves = [...shelves];
-            this.homeShelfIndex = selectedIndex < 0 ? 0 : selectedIndex;
-            this.homeShelfCardIndex = Math.min(this.homeShelfCardIndex, Math.max(0, (shelves[this.homeShelfIndex]?.cards.length ?? 1) - 1));
-            this.homeShelfStart = Math.min(this.homeShelfStart, Math.max(0, (shelves[this.homeShelfIndex]?.cards.length ?? 1) - 5));
-            if (this.homeFocusZone === "card" && this.homeShelfIndex > 0) this.homeScrollY = 700 + (this.homeShelfIndex - 1) * 364 - 54;
-            queueMicrotask(() => {
-              for (let row = 0; row < this.homeShelves.length; row++) {
-                const start = row === this.homeShelfIndex ? this.homeShelfStart : 0;
-                for (let slot = 0; slot < Math.min(6, this.homeShelves[row].cards.length - start); slot++)
-                  (this.$select(`homeCard${row}Slot${slot}`) as unknown as { reveal?: () => void })?.reveal?.();
-              }
-            });
-          });
+          if(generation!==homeGeneration||homeScope.signal.aborted)return;
+          this.home=view;this.homeAddLabel=view.saved?"✓":"+";
+          currentHomeCache()?.updateProfile(view);startShelves(view);
+          if(!shown){this.phase="home";this.focusHomeAction(0);}
         } catch (cause) {
           if (generation !== homeGeneration || homeScope.signal.aborted) return;
           this.error =
             cause instanceof Error ? cause.message : "Could not load Home.";
           this.phase = "error";
         }
+      },
+      publishHomeShelves(rows:HomeShelfView[]) {
+        const selected=this.homeShelves[this.homeShelfIndex]?.key;
+        const wasLoading=!!selected&&!this.homeShelves[this.homeShelfIndex]?.cards.length;
+        const oldIndex=this.homeShelfIndex;
+        this.homeShelves=rows.filter(row=>!row.loaded||row.cards.length>0);
+        const next=this.homeShelves.findIndex(row=>row.key===selected);
+        this.homeShelfIndex=next>=0?next:Math.max(0,Math.min(oldIndex,this.homeShelves.length-1));
+        if(!this.home.heroItem){
+          const item=this.homeShelves.find(row=>row.cards.length)?.cards[0]?.item;
+          if(item){this.home=projectHome(item,this.home.queueItems,undefined,this.home.favoriteItems);this.revealHomeControls();}
+        }
+        if(this.homeFocusZone==="card") {
+          const count=this.homeShelves[this.homeShelfIndex]?.cards.length??0;
+          if(count)this.homeShelfCardIndex=Math.min(this.homeShelfCardIndex,count-1);
+          if(wasLoading&&count&&(this.homePositions[selected!]??0)>0&&this.phase==="home"&&!this.railExpanded&&!this.titleMenuOpen)
+            queueMicrotask(()=>this.focusHomeShelfCard(this.homeShelfIndex,this.homePositions[selected!]));
+          this.homeScrollY=this.homeShelfIndex===0?0:700+(this.homeShelfIndex-1)*364-54;
+          if(selected&&next<0&&this.phase==="home"&&!this.railExpanded&&!this.titleMenuOpen)
+            queueMicrotask(()=>this.focusHomeShelfCard(this.homeShelfIndex,this.homeShelfCardIndex));
+        }
+        const window=homeRowWindow(this.homeScrollY,this.homeShelves.length);
+        this.homeMountFirst=window.first;this.homeMountLast=window.last;
+        this.noteHomeCache();
+      },
+      noteHomeCache() {
+        if(!new URLSearchParams(location.search).has("focusdebug"))return;
+        (window as Window & {__viptvHomeCache?:unknown}).__viptvHomeCache={
+          rows:this.homeShelves.length,cached:this.homeShelves.filter(row=>row.cards.length).length,
+          mounted:this.homeShelves.slice(this.homeMountFirst,this.homeMountLast+1).map(row=>row.key),
+          index:this.homeShelfIndex,scroll:this.homeScrollY,
+        };
+      },
+      updateHomeWindow() {
+        const window=homeRowWindow(this.homeScrollY,this.homeShelves.length);
+        this.homeMountFirst=window.first;this.homeMountLast=window.last;
+        homeCache?.setWindow(this.homeShelves.slice(window.first,window.last+1).map(row=>row.key),
+          this.homeShelves.slice(window.retainFirst,window.last+1).map(row=>row.key));
+        this.noteHomeCache();
       },
       revealHomeControls() {
         for (let index = 0; index < 3; index++)
@@ -1536,7 +1551,8 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         this.homeFocusZone = "action";
         this.homeScrollY = 0;
         this.homeActionIndex = index;
-        this.$select(`heroAction${index}`)?.$focus();
+        this.updateHomeWindow();
+        queueMicrotask(()=>{if(this.phase==="home"&&this.homeFocusZone==="action"&&!this.railExpanded){this.revealHomeControls();this.$select(`heroAction${index}`)?.$focus();}});
       },
       moveHomeAction(position: number, delta: number) {
         if (delta < 0 && this.homeActionIndex === 0) {
@@ -1552,24 +1568,25 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
       },
       focusHomeShelfCard(shelfIndex: number, index: number) {
         const shelf = this.homeShelves[shelfIndex];
-        if (!shelf?.cards.length) return;
-        const target = Math.max(0, Math.min(shelf.cards.length - 1, index));
+        if (!shelf) return;
+        const target = Math.max(0, Math.min(Math.max(0,shelf.cards.length - 1), index));
         this.homeFocusZone = "card";
         this.homeShelfIndex = shelfIndex;
         this.homeShelfCardIndex = target;
         this.homeCardIndex = target;
         const window = carouselWindow(target, shelf.cards.length, 320, 1624, this.homeOffsets[shelf.key] ?? 0);
         this.homeOffsets = { ...this.homeOffsets, [shelf.key]: window.offset };
-        this.homePositions = { ...this.homePositions, [shelf.key]: target };
+        this.homePositions = { ...this.homePositions, [shelf.key]: shelf.cards.length?target:Math.max(0,index) };
         this.homeShelfStart = window.start;
         this.homeScrollY = shelfIndex === 0 ? 0 : 700 + (shelfIndex - 1) * 364 - 54;
+        this.updateHomeWindow();
         const slot = target - this.homeShelfStart;
-        setTimeout(() => { if (this.phase === "home" && !this.titleMenuOpen && !this.railExpanded) { this.homeFocusZone = "card"; this.$select(`homeCard${shelfIndex}Slot${slot}`)?.$focus(); } }, 0);
+        setTimeout(() => { if (this.phase === "home" && this.homeFocusZone === "card" && this.homeShelfIndex===shelfIndex && this.homeShelfCardIndex===target && !this.titleMenuOpen && !this.railExpanded) { this.homeFocusZone = "card"; this.$select(`homeCard${shelfIndex}Slot${slot}`)?.$focus(); } }, 0);
       },
       moveHomeShelfCard(shelfIndex: number, position: number, delta: number) {
         const shelf = this.homeShelves[shelfIndex];
-        if (!shelf?.cards.length) return;
-        const target = position + delta;
+        if (!shelf) return;
+        const target = (this.homeShelfIndex===shelfIndex?this.homeShelfCardIndex:position) + delta;
         if (target < 0) {
           this.openRail();
         } else if (target >= shelf.cards.length) {
@@ -1578,7 +1595,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
       },
       openHomeShelfCard(shelfIndex: number, position: number) {
         const item = this.homeShelves[shelfIndex]?.cards[position]?.item;
-        if (!item) return;
+        if (!item) { const row=this.homeShelves[shelfIndex];if(row)homeCache?.retry(row.key);return; }
         if (item.type === "live") void this.openSources(item, false);
         else if (item.type === "movie" || item.type === "series") void this.openDetail(item);
         else void this.openSources(item, !!item.position);
@@ -4474,6 +4491,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
           this.homeShelfIndex=0;this.homeFocusZone="action";this.homeScrollY=0;
         }
         this.home = { ...this.home, queueItems: items, cards };
+        homeCache?.updateProfile(this.home);
         this.homeCards = Array.from(
           { length: 6 },
           (_, index) => cards[index] ?? { ...emptyHomeCard },
@@ -4572,6 +4590,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
             await api.toggleFavorite(this.currentProfileId, item);
             const favorites = await api.favorites(this.currentProfileId);
             this.home = { ...this.home, favoriteItems: favorites };
+            homeCache?.updateProfile(this.home);
             this.libraryFavorites = favorites;
             if (this.libraryMode === "favorites") {
               this.libraryItems = [...favorites];
@@ -4603,6 +4622,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
                   (favorite) => favorite.id !== this.home.heroItem?.id,
                 );
             this.home = { ...this.home, saved, favoriteItems };
+            homeCache?.updateProfile(this.home);
             this.homeAddLabel = saved ? "✓" : "+";
             (
               this.$select("heroAction2") as unknown as { reveal?: () => void }
@@ -5080,7 +5100,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
               const outgoing=lastPlayerActive, item=outgoing?.intent.item??this.playerItem;
               if(!item)return;
               const position=lastPlaybackPosition;
-              this.clearUpNext();clearTimeout(chromeTimer);
+              this.clearUpNext();cancelChromeTimer();
               this.playerSeekTarget=null;this.playerSeeksPending=0;
               this.trackPanelOpen=false;this.phase="player";
               this.playerDialog={title:"Playback stopped",message:error.message,
@@ -5241,6 +5261,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
           this.playerProgress=program ? Math.max(0,Math.min(1,(now-program.start)/(program.end-program.start))) : 1;
           this.playerEpisodeLine=program?.title??this.playerEpisodeLine;
         } else {
+          this.playerBuffered=playerBuffer(snapshot.time,duration,document.getElementById("tv-video") as HTMLVideoElement|null);
           if (this.playerSeekPreview === null) {
             const displayed=this.playerSeekTarget??position;
             this.playerPositionText = playerClock(displayed);
@@ -5250,8 +5271,8 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         }
         noteSeekState(this.playerSeekTarget,this.playerSeeksPending,this.playerSeekTarget??position);
         this.updateUpNext(snapshot);
-        if (snapshot.state === "playing" && this.phase === "player")
-          this.schedulePlayerChromeHide();
+        if (this.phase === "player")
+          this.schedulePlayerChromeHide(false);
       },
       playerSessionKey() {
         return `${this.playerSessionId}:${this.playerItem?.id ?? ""}`;
@@ -5291,7 +5312,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         const next=nextFromEpisodes(this.detail.allEpisodes,item);
         this.upNext={sessionId:key,item:next,left,total:left};
         noteUpNext(true,left);
-        this.playerOverlay=true;this.setPlayerShade(true);clearTimeout(chromeTimer);
+        this.playerOverlay=true;this.setPlayerShade(true);cancelChromeTimer();
         clearInterval(upNextTimer);
         upNextTimer=setInterval(()=>{
           if(this.upNext?.sessionId!==key || this.phase!=="player")return;
@@ -5322,7 +5343,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         const ticket=++nextGeneration;
         nextSetupScope?.abort();const scope=api.createScope();nextSetupScope=scope;
         this.clearUpNext();this.playerDialog=null;
-        this.playerNextBusy=true;this.playerNotice="Preparing next episode…";clearTimeout(chromeTimer);
+        this.playerNextBusy=true;this.playerNotice="Preparing next episode…";cancelChromeTimer();
         try {
           const [module,prefs]=await Promise.all([
             import("./continuationRuntime"),
@@ -5392,25 +5413,18 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         const shade = document.getElementById("player-shade");
         if (shade) shade.style.display = visible ? "block" : "none";
       },
-      schedulePlayerChromeHide() {
-        clearTimeout(chromeTimer);
-        if (
-          !this.playerOverlay ||
-          this.trackPanelOpen ||
-          this.playerNextBusy || this.playerSeeksPending || this.playerSeekTarget!==null || this.upNext || this.playerDialog ||
-          this.playerSnapshot?.state !== "playing"
-        )
-          return;
-        chromeTimer = setTimeout(() => {
-          if (
-            this.phase === "player" &&
-            this.playerSnapshot?.state === "playing"
-          ) {
-            this.playerOverlay = false;
-            this.setPlayerShade(false);
-            this.$focus();
-          }
-        }, 7000);
+      schedulePlayerChromeHide(reset = true) {
+        const eligible=()=>this.phase==="player"&&this.playerOverlay&&
+          !this.trackPanelOpen&&!this.playerNextBusy&&!this.playerSeeksPending&&
+          this.playerSeekPreview===null&&this.playerSeekTarget===null&&!this.upNext&&!this.playerDialog&&
+          this.playerSnapshot?.state==="playing";
+        if(!eligible()){cancelChromeTimer();return;}
+        if(reset)cancelChromeTimer();
+        if(chromeTimer!==undefined)return;
+        chromeTimer=setTimeout(()=>{
+          chromeTimer=undefined;
+          if(eligible()){this.playerOverlay=false;this.setPlayerShade(false);this.$focus();}
+        },5000);
       },
       revealPlayerControls() {
         for (let index = 0; index < 7; index++)
@@ -5516,7 +5530,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         noteTrackPanel(true, kind);
         this.playerOverlay = true;
         this.setPlayerShade(true);
-        clearTimeout(chromeTimer);
+        cancelChromeTimer();
         setTimeout(() => {
           if (!this.trackPanelOpen || this.phase !== "playerTracks") return;
           this.trackPanelTitle =
@@ -5633,7 +5647,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         this.playerProgress =
           duration > 0 ? Math.min(1, this.playerSeekPreview / duration) : 0;
         this.playerLegend = "◀ ▶  Seek     OK  Jump     BACK  Cancel";
-        clearTimeout(chromeTimer);
+        cancelChromeTimer();
       },
       async commitPlayerSeek(requested?: number) {
         if(this.phase!=="player" || !playback || this.playerItem?.type==="live")return;
@@ -5644,7 +5658,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         this.playerSeekPreview=null;this.playerSeekTarget=target;
         this.playerSeeksPending++;this.playerSeekLabel=playerClock(target);
         this.playerLegend="OK  Select     ◀ ▶  Move     BACK  Hide controls";
-        this.clearUpNext();clearTimeout(chromeTimer);
+        this.clearUpNext();cancelChromeTimer();
         this.updatePlayerSnapshot(runtime.player.snapshot);
         try { await runtime.controller.seekFrom(()=>target,()=>current); }
         catch {
@@ -5671,7 +5685,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         ++playbackGeneration;
         this.playerSeekTarget=null;this.playerSeeksPending=0;
         clearInterval(heartbeatTimer);
-        clearTimeout(chromeTimer);
+        cancelChromeTimer();
         const runtime = playback;
         const snapshot = runtime?.player.snapshot;
         if (
@@ -6080,6 +6094,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         this.cancelNextEpisode(); this.clearUpNext(); this.playerDialog = null;
         this.profileEditorOpen = false;
         this.textEntry = null;
+        homeCache?.dispose();homeCache=undefined;
         homeScope?.abort(); ++homeGeneration;
         detailScope?.abort(); ++detailGeneration;
         discoverScope?.abort(); ++discoverGeneration;
@@ -6191,6 +6206,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
       // SolidTV dispatches key-down and invokes a returned callback on key-up.
       // This keeps the existing release-to-activate semantics on this screen.
       enter() {
+        if(this.phase==="player"&&!this.playerOverlay){this.focusPlayerControl(this.playerFocusIndex);return;}
         if (
           this.phase !== "expired" &&
           this.phase !== "error" &&
@@ -6220,7 +6236,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
           } else if (this.playerOverlay) {
             this.playerOverlay = false;
             this.setPlayerShade(false);
-            clearTimeout(chromeTimer);
+            cancelChromeTimer();
             this.$focus();
           } else void this.exitPlayer();
         } else if (this.phase === "preparing") void this.exitPlayer();
@@ -6240,7 +6256,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
       },
       any() {
         if (this.phase === "player" && !this.playerOverlay)
-          this.focusPlayerControl(1);
+          this.focusPlayerControl(this.playerFocusIndex);
       },
     },
 
@@ -6537,19 +6553,20 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
 
 
         </TvView>
-        <TvView
-          show={
+        <Show
+          when={
             s.phase === "home" ||
             (s.sourceReturnOrigin === "home" &&
               (s.phase === "sources" ||
                 s.phase === "provider" ||
                 s.phase === "sourceDetails"))
           }
-        >
-          <TvView y={-s.homeScrollY}><HomeBackdrop sharp={s.home.heroImage} ambient={s.home.ambientImage} /></TvView>
+        ><TvView>
+          <Show when={s.homeScrollY<950}><TvView y={-s.homeScrollY}><HomeBackdrop sharp={s.home.heroImage} ambient={s.home.ambientImage} /></TvView></Show>
           <CollapsedRail avatar={s.homeProfileAvatar} current="home"/>
           <TvView w={1920} h={1080} clipping>
           <TvView w={1920} h={Math.max(1080, 1080 + Math.max(0, s.homeShelves.length - 1) * 364)} y={-s.homeScrollY}>
+          <Show when={s.homeScrollY<664}>
           <TvText
             x={192}
             y={150}
@@ -6681,17 +6698,18 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
             round={true}
             holdable={false}
           />
+          </Show>
           <KeyedFor each={s.homeShelves} keyOf={shelf => shelf.key}>{(shelf, shelfPosition) => {
             const row = shelfPosition;
             const offset = () => s.homeOffsets[shelf().key] ?? 0;
             const first = () => Math.floor(offset() / 356);
-            return <Show when={shelf().cards.length > 0}>
+            return <Show when={row()>=s.homeMountFirst && row()<=s.homeMountLast}>
               <TvText show={700 + row() * 364 - s.homeScrollY >= 54 && 700 + row() * 364 - s.homeScrollY <= 984} x={192} y={700 + row() * 364} content={shelf().title}
                 font="Bricolage650" size={32} letterspacing={-0.32} cssLineBox lineheight={1.35} color={s.primary} />
               <TvView x={192} y={762 + row() * 364} w={1632} h={276} clipping>
-              <KeyedFor each={shelf().cards.slice(first(), first() + 6)} keyOf={card => card.id}>{(card, slot) => <HomeCard
+              <KeyedFor each={homeVisibleCards(shelf(), first())} keyOf={entry => entry.index}>{(card, slot) => <HomeCard
                 screenRef={`homeCard${row()}Slot${slot()}`} shelf={row()}
-                position={first() + slot()} card={card()}
+                position={card().index} card={card().card}
                 x={4 + (first() + slot()) * 356 - offset()} y={4} />}</KeyedFor>
               </TvView>
             </Show>;
@@ -6708,7 +6726,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
             size={22}
             color={s.primary}
           />
-        </TvView>
+        </TvView></Show>
         <DiscoverScreen
           screenRef={"discoverScreen"}
           show={
@@ -7219,7 +7237,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
           />
           <TvText
             x={96}
-            y={s.playerSeekPreview !== null ? 560 : 610}
+            y={s.playerSeekPreview !== null ? 608 : 658}
             content={s.nowPlayingLabel}
             font={"Onest700"}
             size={20}
@@ -7227,7 +7245,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
           />
           <TvText
             x={96}
-            y={s.playerSeekPreview !== null ? 597 : 647}
+            y={s.playerSeekPreview !== null ? 645 : 695}
             content={s.playerEpisodeLine}
             font={"Onest600"}
             size={26}
@@ -7235,7 +7253,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
           />
           <TvText
             x={96}
-            y={s.playerSeekPreview !== null ? 640 : 690}
+            y={s.playerSeekPreview !== null ? 688 : 738}
             maxwidth={1300}
             maxlines={1}
             content={s.playerTitle}
@@ -7247,17 +7265,18 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
             show={s.playerItem?.type !== "live"}
             screenRef={"playerTimeline"}
             progress={s.playerProgress}
+            buffered={s.playerBuffered}
             seeking={s.playerSeekPreview !== null}
             previewText={s.playerSeekLabel}
             x={96}
-            y={780}
+            y={828}
           />
-          <TvView show={s.playerItem?.type === "live"} x={96} y={795} w={1728} h={6} rounded={3} color={tokens["color.line.strong"]}>
+          <TvView show={s.playerItem?.type === "live"} x={96} y={843} w={1728} h={6} rounded={3} color={tokens["color.line.strong"]}>
             <TvView w={1728*s.playerProgress} h={6} rounded={3} color={s.accent}/>
           </TvView>
           <TvText
             x={96}
-            y={826}
+            y={874}
             content={s.playerPositionText}
             font={"Onest700"}
             size={22}
@@ -7265,7 +7284,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
           />
           <TvText
             x={1640}
-            y={826}
+            y={874}
             maxwidth={184}
             align={"right"}
             content={s.playerDurationText}
@@ -7281,7 +7300,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
             icon={"≪"}
             diameter={72}
             x={96}
-            y={878}
+            y={926}
           />
           <PlayerControl
             show={s.playerItem?.type !== "live"}
@@ -7291,7 +7310,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
             icon={s.playerToggleIcon}
             diameter={84}
             x={181}
-            y={872}
+            y={920}
           />
           <PlayerControl
             show={s.playerItem?.type !== "live"}
@@ -7301,7 +7320,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
             icon={"≫"}
             diameter={72}
             x={276}
-            y={878}
+            y={926}
           />
           <PlayerControl
             show={s.playerItem?.type !== "live"}
@@ -7311,7 +7330,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
             icon={"▶|"}
             diameter={72}
             x={366}
-            y={878}
+            y={926}
           />
           <PlayerControl
             screenRef={"playerControl4"}
@@ -7320,7 +7339,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
             icon={"≋"}
             diameter={72}
             x={1572}
-            y={878}
+            y={926}
           />
           <PlayerControl
             screenRef={"playerControl5"}
@@ -7329,7 +7348,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
             icon={"▤"}
             diameter={72}
             x={1662}
-            y={878}
+            y={926}
           />
           <PlayerControl
             screenRef={"playerControl6"}
@@ -7338,7 +7357,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
             icon={"↪"}
             diameter={72}
             x={1752}
-            y={878}
+            y={926}
           />
 
         </TvView>

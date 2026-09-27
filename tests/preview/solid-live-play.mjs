@@ -46,7 +46,7 @@ try {
       let found=false;const walk=n=>{if(n.viptvText==='12:00 PM'&&n.worldAlpha>.5&&n.isRenderable)found=true;for(const child of n.children??[])walk(child);};walk(window.__viptvRenderer.stage.root);return found;
     });
     const stableEnd=await page.evaluate(async platform=>{
-      let label;const find=n=>{if(n.viptvText==='12:00 PM'&&n.globalTransform.ty===826&&n.worldAlpha>.5)label=n;for(const child of n.children??[])find(child);};find(window.__viptvRenderer.stage.root);
+      let label;const find=n=>{if(n.viptvText==='12:00 PM'&&n.globalTransform.ty===874&&n.worldAlpha>.5)label=n;for(const child of n.children??[])find(child);};find(window.__viptvRenderer.stage.root);
       if(!label)throw new Error('Missing live end-time label');
       const initialTexture=label.texture;
       let blankFrames=0,textureChanges=0;

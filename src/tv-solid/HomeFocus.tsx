@@ -42,6 +42,7 @@ export const HomeAction = defineScreen({
     };
   },
   hooks: {
+    ready() { this.reveal(); },
     focus() {
       this.focused = true;
       this.reveal();
@@ -156,6 +157,7 @@ export const HomeCard = defineScreen({
     };
   },
   hooks: {
+    ready() { this.reveal(); },
     focus() {
       this.focused = true;
       this.reveal();

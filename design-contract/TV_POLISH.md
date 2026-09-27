@@ -150,3 +150,41 @@ horizontal movement through program windows, and verify live Up never focuses
 or seeks the timeline. Include missing logos, long episode titles, a delayed
 addon, cancellation and Back restoration. Record browser results separately
 from physical TV qualification; never commit screenshots.
+
+# TV-041 — Bounded Home loading and player inactivity
+
+Owner requested 2026-09-27. SolidTV must fetch content only for visible Home
+shelves and one shelf ahead, with at most two shelf requests in flight. Keep the
+catalog descriptor list and profile queue/favorites, but retain catalog payloads
+only for the visible/prefetch window and one preceding row (at most five rows).
+Evict distant payloads, cancel obsolete requests, and re-fetch on return while
+restoring remembered row/card positions. Empty results are skipped; a failed row
+has an actionable retry state. No unbounded background sweep through catalogs.
+
+Mount only that small visible/prefetch row window, with at most six horizontal
+cards per mounted row. Destroy distant rows and the offscreen hero rather than
+merely clipping them, and unmount Home when leaving it. Configure a 64 MiB GPU
+texture cleanup threshold with an earlier idle target; this is a renderer cache
+budget, not a claim about total process RAM or video-decoder memory. Preserve
+focus through loading, eviction, profile changes and cancellation.
+
+Player chrome hides after five seconds of no user interaction during playback.
+Time/buffer updates never reset this deadline. Pause, active seeking, track
+selection, dialogs and Up Next keep their controls visible; resuming starts a
+fresh inactivity interval. The first remote action after hiding reveals controls
+without also activating an invisible action. Hide the player shade with chrome.
+
+VOD seekbar focus shows its round handle even before seeking. Draw actual buffered
+ranges behind played progress; keep gaps, clamp them to the title timeline and
+never invent buffering when the engine supplies none. Live progress stays passive.
+Move the lower player information, timeline and control group 48px downward on
+the 1920×1080 frame, retaining the 54px bottom safe area (largest control ends at
+1004px). Keep the top title/status fixed.
+
+Acceptance: initial idle Home with 100 catalogs must not fetch all catalogs;
+traverse twenty shelves and return, measuring request concurrency, cached rows,
+mounted nodes, image requests and GPU cache use. Slow/error/empty rows and route
+changes must not steal focus or leak pending requests. Check idle/live/VOD controls
+under continuous time updates, reset by input, paused/panel/seek exceptions,
+first-key reveal, focused thumb, real disjoint buffered ranges, and 1080p/720p
+bottom geometry. Browser measurements do not qualify physical low-memory TVs.

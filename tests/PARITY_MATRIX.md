@@ -364,3 +364,12 @@ stability, actual logo textures, preparation cancellation and passive live
 progress. Private visual captures were inspected; exact reference-image error
 metrics were not recomputed. Tizen/Vizio/webOS physical-device qualification
 remains unverified. See TESTING.md for commands and scoped frame evidence.
+
+## TV-041 — Bounded Home, idle player chrome and seek feedback
+
+Design: `30e9367` / TV_POLISH.md TV-041. Native browser checks: a 100-catalog
+fixture, twenty-shelf outward/return navigation, payload/window bounds, cancellation,
+caption/focus restoration, five-second hiding under continuous ticks, pause/seek
+exceptions, reveal-only input, buffered gaps and focused thumb, and the lower
+1080p control geometry. See TESTING.md for measured texture-cache figures and
+commands. Physical Vizio/Tizen/webOS RAM/decoder constraints remain unverified.

@@ -92,6 +92,7 @@ async function start() {
       renderEngine: WebGlCoreRenderer,
       fontEngines: [CanvasTextRenderer],
       clearColor: 0x00000000,
+      textureMemory: {criticalThreshold:64*1024*1024,targetThresholdLevel:.65,cleanupInterval:2000},
       textBaselineMode: "linebox",
     },
     "app",

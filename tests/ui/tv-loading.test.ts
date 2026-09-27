@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import type { Catalog, MediaItem, TvApi } from "../../src/api";
-import { loadHomeView, loadHomeShelves, emptyHome } from "../../src/tv-solid/homeModel";
+import { loadHomeView, emptyHome } from "../../src/tv-solid/homeModel";
 import { loadDetailView } from "../../src/tv-solid/detailModel";
 
 const deferred = <T>() => { let resolve!: (value: T) => void; const promise = new Promise<T>(done => { resolve = done; }); return { promise, resolve }; };
@@ -35,23 +35,4 @@ describe("TV progressive Home", () => {
     expect(api.favorites).toHaveBeenCalledTimes(1);
   });
 
-  it("publishes fast shelves while another catalogue is pending and ignores results after cancellation", async () => {
-    const stalled = deferred<{ items: MediaItem[] }>();
-    const catalogs = ["slow", "fast"].map(id => ({ id, type: "movie", name: id, filters: [], extras: [], genres: [] })) as unknown as Catalog[];
-    const api = {
-      catalogs: vi.fn(async () => catalogs),
-      live: vi.fn(async () => ({ channels: [] })),
-      discover: vi.fn(request => request.catalog === "slow" ? stalled.promise : Promise.resolve({ items: [item] })),
-    };
-    const controller = new AbortController();
-    const update = vi.fn();
-    const loaded = loadHomeShelves(api as unknown as TvApi, emptyHome, controller.signal, update);
-    await vi.waitFor(() => expect(update.mock.calls.some(([rows]) => rows.some((row: { title: string; cards: unknown[] }) => row.title === "fast" && row.cards.length))).toBe(true));
-    const published = update.mock.calls.length;
-    expect(api.discover).toHaveBeenCalledTimes(2);
-    controller.abort();
-    stalled.resolve({ items: [item] });
-    await loaded;
-    expect(update).toHaveBeenCalledTimes(published);
-  });
 });

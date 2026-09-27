@@ -2123,3 +2123,32 @@ Afterward Tizen, Vizio and webOS each passed 90 live frames with zero blanks and
 zero replacements of the unchanged end-time texture. The 90-frame VOD clock,
 direct live playback, cancellation and guide-return checks also passed. These
 are browser-adapter results, not new physical TV qualification.
+
+### TV-041 — bounded Home and player controls (2026-09-27)
+
+`HomeShelfCache` keeps catalog descriptors separate from demanded payloads. The
+initial queue/next shelf are the only row demand; metadata fetches run two at a
+time, distant payloads are evicted, and obsolete/route-leaving requests cancel.
+Profile queue/favorites remain shared account data. The native Home tree unmounts
+on departure, its offscreen hero unmounts, and only visible/prefetch shelves mount
+(up to four rows × six cards). A one-row back cache caps payload retention at five
+rows. Unit checks cover eviction/refetch, cancellation, empty/error/retry, profile
+queue edits after eviction, and buffer timeline offsets/gaps.
+
+`tests/preview/solid-lazy.mjs` used 100 catalog descriptors and traversed twenty
+shelves then returned. Observed: zero idle catalog-content requests, two concurrent
+shelf requests, at most five cached rows, four mounted rows, 24 catalog image nodes
+and 329 Home scene nodes. Reported texture memory peaked at 61,454,724 bytes
+(about 58.6 MiB), including the renderer's baseline accounting. The configured
+64 MiB cleanup threshold is not a process-RAM or decoder-memory measurement.
+Returning to cached/refetched rows retained card positions and captions; leaving
+Home stopped its request stream and removed its image nodes.
+
+Player checks continued emitting playback ticks while waiting for five-second
+inactivity hiding. The first Enter revealed controls without pausing; pause and
+active seeking kept controls visible. The focused VOD thumb and two actual,
+disjoint buffered ranges were inspected at their new lower coordinates. The
+lower control group ends at y=1004 on the 1080p canvas, inside the y=1026 safe edge.
+Live progress remains passive. Live end-time stability, direct play/cancel/return,
+managed seek and Home Resume/hold/return passed separately. No new physical
+low-memory television qualification is claimed.

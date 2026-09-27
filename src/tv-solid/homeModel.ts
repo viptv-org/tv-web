@@ -5,7 +5,6 @@ import {
   presentation,
 } from "../core/presentations";
 import { enrichDetail } from "../ui/detailProgress";
-import { browseRequest, firstHomeCatalog, homeRowsFor, type HomeRow } from "../ui/app/homeRows";
 import { continueMeta } from "../components/cards/cardText";
 
 export interface HomeCardView {
@@ -24,6 +23,8 @@ export interface HomeShelfView {
   catalog?: Catalog;
   kind: "queue" | "live" | "catalog" | "favorites";
   loaded: boolean;
+  loading?: boolean;
+  error?: string;
 }
 
 export const emptyHomeCard: HomeCardView = {
@@ -95,7 +96,7 @@ export function queueHomeCards(queue: readonly MediaItem[]): HomeCardView[] {
   });
 }
 
-function catalogHomeCards(items: readonly MediaItem[]): HomeCardView[] {
+export function catalogHomeCards(items: readonly MediaItem[]): HomeCardView[] {
   return items.map((candidate) => {
     const card = cardPresentation(candidate, "catalog");
     const subtitle = [candidate.year, candidate.type === "live" ? "Live TV" : candidate.type === "series" ? "Series" : "Movie"].filter(Boolean).join(" · ");
@@ -108,66 +109,6 @@ function catalogHomeCards(items: readonly MediaItem[]): HomeCardView[] {
       item: candidate,
     };
   });
-}
-
-/** Load every TV Home rail while the first hero stays usable. At most four
- * catalog requests run together; one broken addon does not block its peers. */
-export async function loadHomeShelves(
-  api: TvApi,
-  view: HomeView,
-  signal: AbortSignal,
-  publish: (shelves: HomeShelfView[]) => void,
-): Promise<void> {
-  const shelves: HomeShelfView[] = [];
-  const queueCards = queueHomeCards(view.queueItems);
-  if (queueCards.length) shelves.push({ key: "continue", title: "Continue watching", cards: queueCards, kind: "queue", loaded: true });
-
-  const results = await Promise.allSettled([
-    api.catalogs({ signal }),
-    api.live({ view: "us", collection: "recent", limit: 20 }, { signal }),
-  ]);
-  if (signal.aborted) return;
-  const catalogs = results[0].status === "fulfilled" ? results[0].value : [];
-  const live = results[1].status === "fulfilled" ? results[1].value.channels : [];
-  if (live.length) shelves.push({ key: "recent-live", title: "Recently watched live TV", cards: catalogHomeCards(live), kind: "live", loaded: true });
-
-  const first = firstHomeCatalog(catalogs);
-  const catalogRows: HomeRow[] = first
-    ? [{ name: first.name, catalog: first, items: [], loaded: false }, ...homeRowsFor(catalogs, first, false)]
-    : homeRowsFor(catalogs, undefined, false);
-  for (const row of catalogRows) {
-    const request = browseRequest(row.catalog);
-    if (request) shelves.push({
-      key: `catalog:${row.catalog.addonId ?? ""}:${row.catalog.type}:${row.catalog.id}`,
-      title: row.name,
-      cards: row.loaded ? catalogHomeCards(row.items) : [],
-      catalog: row.catalog,
-      kind: "catalog",
-      loaded: row.loaded,
-    });
-  }
-  const favorites = catalogHomeCards(view.favoriteItems);
-  if (favorites.length) shelves.push({ key: "my-list", title: "My List", cards: favorites, kind: "favorites", loaded: true });
-  publish(shelves);
-
-  const pending = shelves.map((shelf) => ({ shelf, request: shelf.kind === "catalog" ? browseRequest(shelf.catalog!) : undefined }))
-    .filter((value): value is { shelf: HomeShelfView; request: NonNullable<ReturnType<typeof browseRequest>> } => !!value.request && !value.shelf.loaded);
-  let next = 0;
-  const workers = Array.from({ length: Math.min(4, pending.length) }, async () => {
-    while (!signal.aborted) {
-      const index = next++;
-      if (index >= pending.length) return;
-      const { shelf, request } = pending[index];
-      let cards: HomeCardView[] = [];
-      try { cards = catalogHomeCards((await api.discover(request, { signal })).items); }
-      catch { /* Keep the other Home shelves moving when one catalog fails. */ }
-      if (signal.aborted) return;
-      const updated = shelves.map((candidate) => candidate.key === shelf.key ? { ...candidate, cards, loaded: true } : candidate);
-      shelves.splice(0, shelves.length, ...updated);
-      publish(shelves);
-    }
-  });
-  await Promise.all(workers);
 }
 
 const clock = (seconds: number) => {

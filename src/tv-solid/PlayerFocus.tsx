@@ -1,5 +1,5 @@
 /** @jsxImportSource @solidtv/solid */
-import { defineScreen, TvView, TvText } from "./runtime";
+import { defineScreen, TvView, TvText, KeyedFor } from "./runtime";
 import { tokens } from "../theme/viptv-tokens.generated";
 import { noteFocus } from "./focusDebug";
 import type { TrackChoiceView } from "./trackModel";
@@ -92,8 +92,9 @@ export const PlayerControl = defineScreen({
 });
 
 export const PlayerTimeline = defineScreen({
-  props: ["progress", "seeking", "previewText"] as unknown as {
+  props: ["progress", "seeking", "previewText", "buffered"] as unknown as {
     progress: number;
+    buffered: {start:number;end:number}[];
     seeking: boolean;
     previewText: string;
   },
@@ -140,6 +141,9 @@ export const PlayerTimeline = defineScreen({
         rounded={6}
         color={s.track}
       />
+      <KeyedFor each={s.buffered??[]} keyOf={range=>range.start}>{range=><TvView
+        x={range().start*1728} y={s.seeking?12:15} w={(range().end-range().start)*1728}
+        h={s.seeking?12:6} rounded={3} color={tokens["color.fill.buffered"]}/>}</KeyedFor>
       <TvView
         y={s.seeking ? 12 : 15}
         w={Math.max(0, Math.min(1728, s.progress * 1728))}
@@ -154,7 +158,7 @@ export const PlayerTimeline = defineScreen({
         h={40}
         rounded={20}
         color={s.white}
-        show={s.seeking}
+        show={s.focused || s.seeking}
       />
       <TvView
         x={Math.max(0, Math.min(1596, s.progress * 1728 - 66))}
