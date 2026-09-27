@@ -37,3 +37,12 @@ it("keeps full Search navigation positions while requesting only onscreen wsrv a
   expect(windowed.cards.map(card => [card.x, card.y])).toEqual(moved.cards.filter(card => card.visible).map(card => [card.x, card.y]));
   expect(windowed.cards.every(card => card.image.includes("wsrv.nl"))).toBe(true);
 });
+
+
+it("keeps identical media types separate by addon/catalog without result counts",()=>{
+  const rows=[1,2].map(id=>({name:"Search movies",catalog:{id:"search",type:"movie",name:"Search movies",addonId:id,addonName:`Provider ${id}`,supportsSearch:true,supportsSkip:false,extras:[],genres:[],raw:{}} as Catalog,items:[item("movie",0)]}));
+  const view=projectSearch(rows);
+  expect(view.headings.map(row=>row.title)).toEqual(["Provider 1 · Search movies","Provider 2 · Search movies"]);
+  expect(new Set(view.cards.map(card=>card.section)).size).toBe(2);
+  expect(view.headings.every(row=>!("count" in row))).toBe(true);
+});

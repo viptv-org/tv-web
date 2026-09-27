@@ -77,7 +77,7 @@ export const SourceChip = defineScreen({
       />
       <TvText
         x={24}
-        y={12}
+        centerY={26}
         content={s.caption}
         font={"Onest700"}
         size={22}
@@ -142,7 +142,7 @@ export const SourceProvider = defineScreen({
       />
       <TvText
         x={24}
-        y={12}
+        centerY={26}
         content={s.caption}
         font={"Onest700"}
         size={22}

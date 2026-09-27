@@ -196,7 +196,7 @@ const shapes = {
 export type VectorIcon = keyof typeof shapes | "play";
 const cache = new Map<string,string>();
 export function vectorIcon(name: VectorIcon, color: string, size = 28) {
-  const packaged: Partial<Record<VectorIcon, string>> = { play: "play", pause: "pause", info: "info", gear: "settings", settings: "settings", plus: "plus", check: "check", pencil: "pencil", rewind: "back10", "fast-forward": "forward30", "skip-forward": "next", "audio-lines": "audio", captions: "captions", "log-out": "exit" };
+  const packaged: Partial<Record<VectorIcon, string>> = { "list-video": "source", play: "play", pause: "pause", info: "info", gear: "settings", settings: "settings", plus: "plus", check: "check", pencil: "pencil", rewind: "back10", "fast-forward": "forward30", "skip-forward": "next", "audio-lines": "audio", captions: "captions", "log-out": "exit" };
   const asset = packaged[name];
   if (asset) return `${import.meta.env.BASE_URL}assets/lucide/${asset}-${color === tokens["color.on.light"] || color === tokens["color.on.accent"] ? "focus" : "primary"}.png`;
   const key=name+color+size;

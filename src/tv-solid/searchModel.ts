@@ -49,8 +49,6 @@ export interface SearchRow {
 export interface SearchHeadingView {
   id: SearchSectionKey;
   title: string;
-  count: string;
-  countX: number;
   y: number;
 }
 
@@ -92,8 +90,6 @@ export function projectSearch(
     headings.push({
       id: section.key,
       title: section.title,
-      count: `${section.items.length} ${section.items.length === 1 ? "result" : "results"}`,
-      countX: 1640,
       y,
     });
     const offset = offsets[section.key] ?? 0;

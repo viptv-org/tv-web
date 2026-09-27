@@ -40,7 +40,7 @@ try {
   for (const platform of ['tizen', 'vizio', 'webos']) {
     const { page, backend, errors } = await fixture(platform);
     await page.keyboard.press('ArrowDown'); await focused(page, 'guide-channel', 1);
-    await page.keyboard.press('Enter'); await focused(page, 'player-control', 1);
+    await page.keyboard.press('Enter'); await focused(page, 'player-control', 4);
     expectDirect(backend, 1);
     // Hide chrome, then leave playback. There must be no intervening source screen.
     await page.keyboard.press('Escape'); await page.keyboard.press('Escape');
@@ -50,7 +50,7 @@ try {
     // Starting from a currently airing programme restores the same programme focus.
     await page.keyboard.press('ArrowRight'); await focused(page, 'guide-program');
     const programIndex = await page.evaluate(() => window.__viptvFocus.index);
-    await page.keyboard.press('Enter'); await focused(page, 'player-control', 1);
+    await page.keyboard.press('Enter'); await focused(page, 'player-control', 4);
     expectDirect(backend, 2);
     await page.keyboard.press('Escape'); await page.keyboard.press('Escape');
     await focused(page, 'guide-program', programIndex);
@@ -86,7 +86,7 @@ try {
       await page.keyboard.press('Enter'); await expect.poll(() => intercepted).toBe(1);
       await page.keyboard.press('Escape'); await focused(page, 'guide-channel', 0);
       await page.keyboard.press('ArrowDown'); await focused(page, 'guide-channel', 1);
-      await page.keyboard.press('Enter'); await focused(page, 'player-control', 1);
+      await page.keyboard.press('Enter'); await focused(page, 'player-control', 4);
       release();
       // The controller cleans up the cancelled backend session. Its old start
       // then returns the current owner; stale UI code must not stop that owner.
@@ -94,7 +94,7 @@ try {
       await page.waitForTimeout(250);
       expect(backend.requests.filter(request => request.method === 'DELETE' && request.path === '/api/playback/preview-playback')).toHaveLength(0);
       expect(await page.evaluate(() => window.__viptvPlayer?.state)).toBe('playing');
-      await focused(page, 'player-control', 1);
+      await focused(page, 'player-control', 4);
       expect(errors).toEqual([]); expect(backend.errors).toEqual([]);
       console.log('Vizio: cancelled delayed live start cannot stop newer channel playback');
     } finally { release(); await page.close(); }

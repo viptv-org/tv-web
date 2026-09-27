@@ -386,7 +386,9 @@ try {
     await page.keyboard.press('ArrowLeft');
     await page.waitForFunction(() => window.__viptvFocus?.view === 'guide-program' && window.__viptvLive?.row === 1 && window.__viptvLive?.cell === 0, null, { timeout: 5000 });
     await page.keyboard.press('Enter');
-    await focused('player-control', 1);
+    await focused('player-control', 4);
+    await page.keyboard.press('ArrowUp');
+    await focused('player-control', 4);
     if (!backend.requests.some(request => request.path === '/api/playback' && typeof request.body?.channel_id === 'string'))
       throw new Error('Currently airing programme did not start direct live playback');
     await page.keyboard.press('Escape');
@@ -677,8 +679,8 @@ try {
     await page.keyboard.press('ArrowUp');
     await focused('discover-card', 1);
     await page.keyboard.press('ArrowUp');
-    await focused('discover-chip', 0);
-    for (let step = 0; step < 8; step++) await page.keyboard.press('ArrowRight');
+    await focused('discover-chip', 4);
+    for (let step = 0; step < 4; step++) await page.keyboard.press('ArrowRight');
     await focused('discover-chip', 8);
     await page.keyboard.press('Enter');
     await focused('discover-filter-option', 0);
@@ -694,7 +696,9 @@ try {
     await page.waitForTimeout(180);
     if (!backend.requests.some(request => request.path === '/api/discover' && request.query.includes('catalog=seasonal')))
       throw new Error('Catalog chip did not request Seasonal');
-    for (let step = 0; step < 4; step++) await page.keyboard.press('ArrowLeft');
+    await page.keyboard.press('ArrowUp');
+    await focused('discover-chip', 0);
+    await page.keyboard.press('ArrowRight');
     await focused('discover-chip', 1);
     await page.keyboard.press('Enter');
     await page.waitForTimeout(180);

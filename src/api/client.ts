@@ -50,7 +50,7 @@ export class TvApi extends TvApiCatalog {
     try {
       ensureActive();
       const v = expectObject(await this.raw(
-        `/api/profiles/${segment(profileId)}/continue/page${params({ offset })}`,
+        `/api/profiles/${segment(profileId)}/continue/page${params({ offset, limit: 40 })}`,
         {}, true, { signal: scope.signal },
       ));
       const result = page(v);

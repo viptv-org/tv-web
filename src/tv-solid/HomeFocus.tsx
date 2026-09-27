@@ -120,7 +120,7 @@ export const HomeAction = defineScreen({
         x={s.action === "details" ? 0 : 72}
         maxwidth={s.action === "details" ? s.buttonWidth : s.buttonWidth - 84}
         align={s.action === "details" ? "center" : "left"}
-        y={s.buttonHeight / 2 - 16}
+        centerY={s.buttonHeight / 2}
         content={s.labelText}
         font={"Onest700"}
         size={26}
@@ -228,6 +228,7 @@ export const HomeCard = defineScreen({
         h={180}
         rounded={16}
         src={s.card.image}
+        fit={s.card.item?.type === "live" ? "contain" : "cover"}
         show={s.card.image !== ""}
       />
       <TvView
@@ -250,7 +251,7 @@ export const HomeCard = defineScreen({
       />
       </TvView>
       <TvText
-        y={s.focused ? 204 : 196}
+        y={196}
         lineheight={1.3}
         cssLineBox={true}
         maxwidth={320}
@@ -261,7 +262,7 @@ export const HomeCard = defineScreen({
         color={s.focused ? s.primary : s.primary}
       />
       <TvText
-        y={s.focused ? 239.1875 : 231.1875}
+        y={231.1875}
         lineheight={1.35}
         cssLineBox={true}
         maxwidth={320}

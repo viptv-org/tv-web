@@ -1,5 +1,6 @@
 /** @jsxImportSource @solidtv/solid */
 import { defineScreen, TvView, TvText } from "./runtime";
+import { ChannelLogo } from "./ChannelLogo";
 import { tokens } from "../theme/viptv-tokens.generated";
 import { noteFocus } from "./focusDebug";
 import type {
@@ -76,7 +77,7 @@ export const LiveFilterChip = defineScreen({
       />
       <TvText
         x={28}
-        y={13}
+        centerY={28}
         content={s.labelText}
         font={"Onest700"}
         size={24}
@@ -210,16 +211,7 @@ export const LiveChannel = defineScreen({
         rounded={16}
         color={s.focused ? s.lightBadge : s.badge}
       />
-      <TvText
-        x={55}
-        y={31}
-        maxwidth={62}
-        align={"center"}
-        content={s.monoText}
-        font={"Onest700"}
-        size={16}
-        color={s.focused ? s.onLight : s.primary}
-      />
+      <ChannelLogo x={58} y={14} w={56} h={56} src={s.channel.channel.poster || ""} label={s.monoText} color={s.focused ? s.onLight : s.primary}/>
       <TvText
         x={140}
         y={29}

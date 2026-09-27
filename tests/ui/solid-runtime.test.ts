@@ -2,7 +2,11 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { createComponent, createRoot, createSignal } from "solid-js";
 
 type Node = { props: Record<string, unknown>; children: Node[] };
-const graphics = vi.hoisted(() => ({ nodes: [] as Node[] }));
+const graphics = vi.hoisted(() => ({ nodes: [] as Node[], textures: [] as { finish:()=>void; state:string }[], raster:vi.fn() }));
+vi.mock("@solidtv/renderer/canvas",()=>({CanvasTextRenderer:{renderText:(props:{text:string})=>{
+  graphics.raster(props);
+  return props.text ? {width:4,height:4,imageData:{width:4,height:4,data:new Uint8ClampedArray(64).fill(255)}} : {width:0,height:0};
+}}}));
 // These tests exercise deferred painting; native focus is covered by the
 // browser remote scenarios with the real SolidTV focus manager.
 vi.mock("@solidtv/solid/primitives", () => ({
@@ -30,10 +34,17 @@ vi.mock("@solidtv/solid", async () => {
         node.children = value === undefined ? [] : Array.isArray(value) ? value : [value];
       });
     },
-    getRenderer: () => ({ createTexture: vi.fn() }),
+    getRenderer: () => ({
+      createTextNodeProps:(props:unknown)=>props,
+      createTexture:()=>{
+        const listeners=new Set<()=>void>();
+        const texture={state:"freed",on:(_name:string,fn:()=>void)=>listeners.add(fn),off:(_name:string,fn:()=>void)=>listeners.delete(fn),load:()=>{},finish:()=>{texture.state="loaded";listeners.forEach(fn=>fn());}};
+        graphics.textures.push(texture);return texture;
+      },
+    }),
   };
 });
-import { TvView } from "../../src/tv-solid/runtime";
+import { TvView, TvText } from "../../src/tv-solid/runtime";
 
 const disposals: (() => void)[] = [];
 afterEach(() => { disposals.splice(0).forEach(dispose => dispose()); graphics.nodes.length = 0; });
@@ -81,5 +92,29 @@ describe("SolidTV deferred screen rendering", () => {
     expect(root.children).toEqual([ring, artwork]);
     expect(ring.props.alpha).toBe(1);
     expect(graphics.nodes).toHaveLength(3);
+  });
+});
+
+
+describe("SolidTV atomic glyph updates",()=>{
+  it("keeps the visible texture while a changed clock loads and tints focus without rerasterizing",()=>{
+    graphics.textures.length=0;graphics.raster.mockClear();
+    const [content,setContent]=createSignal("1:00"),[color,setColor]=createSignal("#ffffff");
+    const [projection,setProjection]=createSignal({});
+    let node!:Node;
+    createRoot(dispose=>{disposals.push(dispose);node=TvText({get content(){projection();return content();},get color(){return color();}}) as unknown as Node;});
+    graphics.textures[0].finish();const first=node.props.texture;
+    expect(node.props.alpha).toBe(1);
+    setProjection({});expect(graphics.textures).toHaveLength(1);
+    setContent("1:01");
+    expect(node.props.texture).toBe(first);expect(node.props.alpha).toBe(1);
+    const nodeCount=graphics.nodes.length, rasterCount=graphics.raster.mock.calls.length;
+    setColor("#111113");
+    expect(graphics.nodes).toHaveLength(nodeCount);expect(graphics.raster).toHaveBeenCalledTimes(rasterCount);
+    expect(node.props.color).toBe(0x111113ff);
+    setContent("1:02");graphics.textures[1].finish();
+    expect(node.props.texture).toBe(first);
+    graphics.textures[2].finish();expect(node.props.texture).toBe(graphics.textures[2]);expect(node.props.alpha).toBe(1);
+    setContent("");expect(node.props.alpha).toBe(0);
   });
 });

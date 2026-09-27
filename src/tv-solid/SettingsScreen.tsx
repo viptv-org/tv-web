@@ -1,4 +1,5 @@
 /** @jsxImportSource @solidtv/solid */
+import { CollapsedRail } from "./CollapsedRail";
 import { defineScreen, TvView, TvText } from "./runtime";
 import { tokens } from "../theme/viptv-tokens.generated";
 import { SettingsProfile, SettingsRow } from "./SettingsFocus";
@@ -62,6 +63,7 @@ export const SettingsScreen = defineScreen({
 
   render: (s) => (
     <TvView>
+      <CollapsedRail avatar={s.view.avatar} current="settings"/>
       <TvText
         x={192}
         y={54}

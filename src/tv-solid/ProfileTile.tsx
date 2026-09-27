@@ -310,7 +310,7 @@ export const ManageProfilesButton = defineScreen({
       <TvView x={30} y={18} w={24} h={24} fit="contain" src={s.icon} />
       <TvText
         x={67}
-        y={14}
+        centerY={30}
         content={s.caption}
         font={"Onest700"}
         size={22}

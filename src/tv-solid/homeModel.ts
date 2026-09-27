@@ -98,7 +98,7 @@ export function queueHomeCards(queue: readonly MediaItem[]): HomeCardView[] {
 function catalogHomeCards(items: readonly MediaItem[]): HomeCardView[] {
   return items.map((candidate) => {
     const card = cardPresentation(candidate, "catalog");
-    const subtitle = [candidate.year, candidate.type === "series" ? "Series" : "Movie"].filter(Boolean).join(" · ");
+    const subtitle = [candidate.year, candidate.type === "live" ? "Live TV" : candidate.type === "series" ? "Series" : "Movie"].filter(Boolean).join(" · ");
     return {
       id: candidate.id,
       title: card.title,

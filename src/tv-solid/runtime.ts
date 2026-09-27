@@ -14,6 +14,7 @@ import {
   type JSX,
 } from "solid-js";
 import type { ImageTexture } from "@solidtv/renderer";
+import { CanvasTextRenderer } from "@solidtv/renderer/canvas";
 import { canvasFont } from "./fonts";
 import {
   Config,
@@ -292,36 +293,6 @@ export function tvColor(value: string): number {
   colorCache.set(value, color);
   return color;
 }
-// The previous canvas used a hanging baseline. SolidTV uses alphabetic
-// line boxes; measure the font's baseline distance to preserve screen geometry.
-const baselineCache = new Map<string, number>();
-let measure: CanvasRenderingContext2D | null;
-function baselineOffset(font: string, size: number): number {
-  const key = `${font}:${size}`;
-  if (baselineCache.has(key)) return baselineCache.get(key)!;
-  measure ??= document.createElement("canvas").getContext("2d")!;
-  measure.font = `${size}px Unknown, ${font}`;
-  measure.textBaseline = "alphabetic";
-  const alphabetic = measure.measureText("Mg").actualBoundingBoxAscent ?? size * 0.8;
-  measure.textBaseline = "hanging";
-  const hanging = measure.measureText("Mg").actualBoundingBoxAscent ?? 0;
-  const offset = alphabetic - hanging - size * 0.8;
-  baselineCache.set(key, offset);
-  return offset;
-}
-function cssBaselineOffset(font: string, size: number): number {
-  const key = `css:${font}:${size}`;
-  if (baselineCache.has(key)) return baselineCache.get(key)!;
-  measure ??= document.createElement("canvas").getContext("2d")!;
-  measure.font = `${size}px Unknown, ${font}`;
-  measure.textBaseline = "alphabetic";
-  const metrics = measure.measureText("Mg");
-  const ascent = metrics.fontBoundingBoxAscent ?? metrics.actualBoundingBoxAscent ?? size * 0.8;
-  const descent = metrics.fontBoundingBoxDescent ?? metrics.actualBoundingBoxDescent ?? size * 0.2;
-  const offset = (ascent - descent) / 2 - size * 0.3;
-  baselineCache.set(key, offset);
-  return offset;
-}
 const imageTextures = new WeakMap<ImageData, ImageTexture>();
 function imageTexture(image: ImageData) {
   let texture = imageTextures.get(image);
@@ -336,21 +307,10 @@ function imageTexture(image: ImageData) {
 }
 
 function visualNode(
-  kind: "node" | "text",
   props: Record<string, any>,
 ): JSX.Element {
-  const node = createElement(kind) as ElementNode;
-  const mapped: Record<string, any> = { color: 0x00000000 };
-  if (kind === "node") Object.assign(mapped, { width: 0, height: 0 });
-  if (kind === "text")
-    Object.assign(mapped, {
-      color: 0xffffffff,
-      fontFamily: "Onest",
-      fontSize: 32,
-      overflowSuffix: "…",
-      wordBreak: props.maxlines === 1 ? "break-all" : "break-word",
-      contain: props.maxwidth !== undefined ? "width" : undefined,
-    });
+  const node = createElement("node") as ElementNode;
+  const mapped: Record<string, any> = { color: 0x00000000, width: 0, height: 0 };
   for (const key of Object.keys(props)) {
     if (
       ["children", "show", "alpha", "fit", "nodeRef", "onError", "cssLineBox"].includes(key)
@@ -397,14 +357,6 @@ function visualNode(
       enumerable: true,
       get: () => ({ resizeMode: { type: props.fit } }),
     });
-  if (kind === "text")
-    Object.defineProperty(mapped, "y", {
-      enumerable: true,
-      configurable: true,
-      get: () =>
-        (props.y ?? 0) +
-        (props.cssLineBox ? cssBaselineOffset : baselineOffset)(canvasFont(props.font ?? "Onest", props.size ?? 32), props.size ?? 32),
-    });
   if (props.onError) mapped.onEvent = { failed: () => props.onError() };
   spread(node, mapped, true);
   props.nodeRef?.(node);
@@ -417,14 +369,56 @@ function visualNode(
   insert(node, () => (mounted() ? props.children : undefined));
   return node as unknown as JSX.Element;
 }
-export const TvView = (props: Record<string, any>) => visualNode("node", props);
-// Canvas text colors are baked into glyph textures. Replace the text node on
-// a color change so a reused glyph texture cannot retain the previous focus tint.
-export const TvText = (props: Record<string, any>) =>
-  createMemo(() => {
-    props.color;
-    return untrack(() => visualNode("text", props));
-  }) as unknown as JSX.Element;
+export const TvView = (props: Record<string, any>) => visualNode(props);
+/** Keep one visible node. Upload a replacement before swapping; color is a
+ * quad tint, so focus changes never evict glyphs or rasterize the same label. */
+export function TvText(props: Record<string, any>): JSX.Element {
+  const [frame, setFrame] = createSignal<{texture: ImageTexture; width: number; height: number; inkCenter: number}>();
+  const layoutProps = createMemo(() => ({
+    text: String(props.content ?? ""), fontFamily: canvasFont(props.font ?? "Onest", props.size ?? 32),
+    fontSize: props.size ?? 32, color: 0xffffffff,
+    maxWidth: props.maxwidth ?? props.w ?? 0, maxHeight: props.maxheight ?? 0,
+    maxLines: props.maxlines ?? 0, textAlign: props.align ?? "left",
+    lineHeight: props.lineheight ?? 1.2, letterSpacing: props.letterspacing ?? 0,
+    overflowSuffix: "…", wordBreak: props.maxlines === 1 ? "break-all" as const : "break-word" as const,
+  }), undefined, {equals:(a,b)=>a.text===b.text&&a.fontFamily===b.fontFamily&&a.fontSize===b.fontSize
+    &&a.maxWidth===b.maxWidth&&a.maxHeight===b.maxHeight&&a.maxLines===b.maxLines
+    &&a.textAlign===b.textAlign&&a.lineHeight===b.lineHeight&&a.letterSpacing===b.letterSpacing&&a.wordBreak===b.wordBreak});
+  createRenderEffect(() => {
+    const renderer = getRenderer();
+    if (!("createTextNodeProps" in renderer)) throw new Error("SolidTV text requires its canvas renderer");
+    const layout = CanvasTextRenderer.renderText(renderer.createTextNodeProps(layoutProps()));
+    if (!layout.imageData || !layout.width || !layout.height) { setFrame(undefined); return; }
+    const pixels = layout.imageData;
+    let first = pixels.height, last = 0;
+    for (let y = 0; y < pixels.height; y++) {
+      for (let x = 0; x < pixels.width; x++) if (pixels.data[(y*pixels.width+x)*4+3]) {
+        first = Math.min(first,y); last = y; break;
+      }
+    }
+    const texture = renderer.createTexture("ImageTexture", {src:pixels, premultiplyAlpha:true});
+    let cancelled = false;
+    const ready = () => { if (!cancelled) setFrame({texture, width:layout.width, height:layout.height, inkCenter:(first+last+1)/2}); };
+    texture.on("loaded", ready);
+    texture.load();
+    if (texture.state === "loaded") ready();
+    onCleanup(() => { cancelled=true; texture.off("loaded",ready); });
+  });
+  let debugNode: ElementNode | undefined;
+  if(new URLSearchParams(location.search).get("focusdebug")==="1") onMount(()=>{
+    if(debugNode?.lng)Object.defineProperty(debugNode.lng,"viptvText",{get:()=>String(props.content??"")});
+  });
+  return TvView({
+    get x() { const width=props.maxwidth ?? props.w ?? 0; return (props.x??0)+(width>0?Math.max(0,width-(frame()?.width??0))*(props.align==="right"?1:props.align==="center"?.5:0):0); },
+    get y() { return props.centerY !== undefined ? props.centerY-(frame()?.inkCenter??0) : props.y??0; },
+    get w() { return frame()?.width??0; }, get h() { return frame()?.height??0; },
+    get texture() { return frame()?.texture??null; },
+    get color() { return props.color??"#ffffff"; },
+    get alpha() { return frame() ? props.alpha??1 : 0; },
+    get show() { return props.show??true; },
+    nodeRef: (node: ElementNode) => { debugNode=node;props.nodeRef?.(node); },
+  });
+}
 
 /** Keep controller/focus lifetimes stable when a view model is reprojected. */
 export function KeyedFor<T>(props: {

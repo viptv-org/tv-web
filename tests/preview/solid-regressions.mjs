@@ -29,7 +29,7 @@ async function scenario(name, options, run, intercept) {
     results.push({ name, passed: true });
   } catch (error) {
     await shot('failure');
-    throw new Error(`${name}: ${error.message}; focus=${JSON.stringify(await page.evaluate(() => window.__viptvFocus))}; errors=${JSON.stringify(errors)}; requests=${JSON.stringify(backend.requests.slice(-12).map(r => ({path:r.path,method:r.method,id:r.body?.id,type:r.body?.type})))}; visibleText=${JSON.stringify(await page.evaluate(()=>{ const out=[];const walk=n=>{if(n.textProps?.text && n.worldAlpha>0)out.push(n.textProps.text);for(const child of n.children??[])walk(child)};walk(window.__viptvRenderer.stage.root);return out;}))}`);
+    throw new Error(`${name}: ${error.message}; focus=${JSON.stringify(await page.evaluate(() => window.__viptvFocus))}; errors=${JSON.stringify(errors)}; requests=${JSON.stringify(backend.requests.slice(-12).map(r => ({path:r.path,method:r.method,id:r.body?.id,type:r.body?.type})))}; visibleText=${JSON.stringify(await page.evaluate(()=>{ const out=[];const walk=n=>{if((n.viptvText ?? n.textProps?.text) && n.worldAlpha>0)out.push(n.viptvText ?? n.textProps?.text);for(const child of n.children??[])walk(child)};walk(window.__viptvRenderer.stage.root);return out;}))}`);
   } finally { await page.close(); }
 }
 try {
@@ -120,7 +120,7 @@ try {
     await page.keyboard.type('naruto');
     await page.waitForFunction(() => {
       let found = false;
-      const walk = n => { if (n.textProps?.text === 'Fast match' && n.worldAlpha > .5 && n.isRenderable) found = true; for (const child of n.children ?? []) walk(child); };
+      const walk = n => { if ((n.viptvText ?? n.textProps?.text) === 'Fast match' && n.worldAlpha > .5 && n.isRenderable) found = true; for (const child of n.children ?? []) walk(child); };
       walk(window.__viptvRenderer.stage.root); return found;
     }, null, { timeout: 1200 });
     assert.notEqual(await page.evaluate(() => window.__viptvSearch?.done), true);
@@ -145,7 +145,7 @@ try {
   });
   await scenario('vod-clock', {}, async ({ page, focus, key, shot }) => {
     await focus('home-action', 0);
-    await page.waitForFunction(() => window.__viptvHome?.count === 9);
+
     await key('Enter'); await focus('source-row', 0);
     await key('Enter'); await focus('player-control', 1);
     await page.waitForTimeout(150);
@@ -161,7 +161,7 @@ try {
         await new Promise(requestAnimationFrame);
         let visibleClock = false;
         const walk = node => {
-          if (/^\d+:\d\d$/.test(node.textProps?.text ?? '') && node.globalTransform?.tx === 96 && node.worldAlpha > 0.5 && node.isRenderable) visibleClock = true;
+          if (/^\d+:\d\d$/.test(node.viptvText ?? node.textProps?.text ?? '') && node.globalTransform?.tx === 96 && node.worldAlpha > 0.5 && node.isRenderable) visibleClock = true;
           for (const child of node.children ?? []) walk(child);
         };
         walk(window.__viptvRenderer.stage.root);

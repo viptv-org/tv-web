@@ -31,30 +31,39 @@ export function HomeBackdrop(props: { sharp: string; ambient: string }) {
     void Promise.all([load(sharp), load(ambient)]).then(([art, wash]) => {
       if (cancelled) return;
       const canvas = document.createElement("canvas");
-      canvas.width = 1920; canvas.height = 664;
+      canvas.width = 1920; canvas.height = 950;
       const context = canvas.getContext("2d")!;
       const ground = tokens["color.bg"];
       context.fillStyle = ground;
-      context.fillRect(0, 0, 1920, 664);
+      context.fillRect(0, 0, 1920, 950);
       if (wash) {
         context.save(); context.globalAlpha = .6; context.filter = "blur(72px)";
-        cover(context, wash, 0, 0, 1920, 664); context.restore();
+        cover(context, wash, 0, 0, 1920, 950); context.restore();
       }
-      if (art) cover(context, art, 800, 0, 1120, 664);
+      if (art) {
+        const layer=document.createElement("canvas");layer.width=1120;layer.height=720;
+        const paint=layer.getContext("2d")!;cover(paint,art,0,0,1120,720);
+        paint.globalCompositeOperation="destination-in";
+        const horizontal=paint.createLinearGradient(0,0,320,0);horizontal.addColorStop(0,"transparent");horizontal.addColorStop(1,"#fff");
+        paint.fillStyle=horizontal;paint.fillRect(0,0,1120,720);
+        const vertical=paint.createLinearGradient(0,480,0,720);vertical.addColorStop(0,"#fff");vertical.addColorStop(1,"transparent");
+        paint.fillStyle=vertical;paint.fillRect(0,0,1120,720);
+        context.drawImage(layer,800,0);
+      }
       const left = context.createLinearGradient(0, 0, 1920, 0);
-      left.addColorStop(0, ground); left.addColorStop(.5, "rgba(11,11,12,.92)"); left.addColorStop(1, "transparent");
-      context.fillStyle = left; context.fillRect(0, 0, 1920, 664);
-      const bottom = context.createLinearGradient(0, 440, 0, 664);
+      left.addColorStop(0, ground); left.addColorStop(.5, ground + "eb"); left.addColorStop(1, "transparent");
+      context.fillStyle = left; context.fillRect(0, 0, 1920, 950);
+      const bottom = context.createLinearGradient(0, 440, 0, 950);
       bottom.addColorStop(0, "transparent"); bottom.addColorStop(1, ground);
-      context.fillStyle = bottom; context.fillRect(0, 440, 1920, 224);
-      setPixels(context.getImageData(0, 0, 1920, 664));
+      context.fillStyle = bottom; context.fillRect(0, 440, 1920, 510);
+      setPixels(context.getImageData(0, 0, 1920, 950));
     });
     onCleanup(() => {
       cancelled = true;
       images.forEach(image => { image.onload = null; image.onerror = null; });
     });
   });
-  return <TvView w={1920} h={664}>
-    <Show when={pixels()}>{image => <TvView w={1920} h={664} src={image()} />}</Show>
+  return <TvView w={1920} h={950}>
+    <Show when={pixels()}>{image => <TvView w={1920} h={950} src={image()} />}</Show>
   </TvView>;
 }

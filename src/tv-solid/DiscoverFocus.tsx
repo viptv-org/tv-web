@@ -47,9 +47,8 @@ export const DiscoverChip = defineScreen({
     right() {
       this.$emit("discover-chip-move", 1);
     },
-    down() {
-      this.$emit("discover-card-enter");
-    },
+    up() { this.$emit("discover-chip-row", -1); },
+    down() { this.$emit("discover-chip-row", 1); },
     enter() {
       return () => this.$emit("discover-chip-activate");
     },
@@ -76,7 +75,7 @@ export const DiscoverChip = defineScreen({
       />
       <TvText
         x={28}
-        y={13}
+        centerY={28}
         content={s.labelText}
         font={"Onest700"}
         size={24}

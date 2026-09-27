@@ -2070,3 +2070,39 @@ set `VIPTV_PREVIEW_REFERENCE_DIR` to an empty directory to reproduce a clean CI
 checkout. Reference screenshot runs still use the real design assets. The watch
 URL reload check forbids playback creation while permitting the title's existing
 background source summary discovery.
+
+### TV-040 native SolidTV polish audit (2026-09-26)
+
+The native text adapter uses SolidTV's CanvasTextRenderer layout, uploads a new
+texture before replacing the visible one, and tints focus colors without
+recreating glyphs. Unit coverage holds uploads, changes focus color, races two
+clock updates and checks empty-text cleanup. The local HTTPS frame observation
+reported **90 clock frames / zero blank frames**; the profile audit reported
+**90 alternating-focus frames / zero blank captions**. These are browser GPU
+observations, not physical television measurements.
+
+`tests/preview/solid-polish.mjs` exercises both Discover header rows, twenty
+catalogs at 1920×1080 and 1280×720, twenty-four guide categories, repeated guide
+time-window navigation, stable sidebar icon bounds, first-shelf scroll retention,
+whole shelf headings, real channel-logo loading/fallback and preparation/Back.
+The native live suite covers direct channel/program playback, passive live
+progress, exact guide return and cancellation on Tizen, Vizio and webOS browser
+boundaries. `solid-regressions.mjs --scenario=progressive-search` verifies that a
+fast catalog renders while a slow addon is pending and keeps focus when it lands.
+
+Private captures cover Home, profiles, detail, Discover, guide, expanded sidebar,
+preparation and player. Home/detail share the feathered 950px backdrop; button
+ink is centered in its actual control box. Continue Watching uses the same
+40-item endpoint and shared enrichment as Android; the extra hero lookup was
+removed. Search rows retain addon/catalog identity and have no result counts.
+
+Run against trusted local HTTPS, for example:
+
+```sh
+SOLID_PREVIEW_URL=https://viptv.local.test:8443/tv/solid.html \
+PREVIEW_API_ORIGIN=https://viptv.local.test:8443 \
+node tests/preview/solid-polish.mjs
+```
+
+No new physical Vizio/Tizen/webOS firmware, codec or remote-hardware qualification
+is implied by these browser results.

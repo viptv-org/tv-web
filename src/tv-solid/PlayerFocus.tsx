@@ -3,7 +3,8 @@ import { defineScreen, TvView, TvText } from "./runtime";
 import { tokens } from "../theme/viptv-tokens.generated";
 import { noteFocus } from "./focusDebug";
 import type { TrackChoiceView } from "./trackModel";
-import { vectorIcon, type VectorIcon } from "./vectorIcons";
+import { actionIcon, type ActionIcon } from "./actionIcons";
+const CONTROL_ICON = parseFloat(tokens["size.icon.tv"]);
 
 export const PlayerControl = defineScreen({
   props: ["position", "action", "icon", "diameter"] as unknown as {
@@ -35,14 +36,14 @@ export const PlayerControl = defineScreen({
   },
   methods: {
     reveal() {
-      const icon: VectorIcon = this.action === "back10" ? "rewind"
-        : this.action === "forward30" ? "fast-forward"
-        : this.action === "next" ? "skip-forward"
-        : this.action === "audio" ? "audio-lines"
+      const icon: ActionIcon = this.action === "back10" ? "back10"
+        : this.action === "forward30" ? "forward30"
+        : this.action === "next" ? "next"
+        : this.action === "audio" ? "audio"
         : this.action === "subtitles" ? "captions"
-        : this.action === "exit" ? "log-out"
+        : this.action === "exit" ? "exit"
         : this.icon === "Ⅱ" ? "pause" : "play";
-      this.iconSource = vectorIcon(icon, this.focused ? this.onLight : this.primary, 38);
+      this.iconSource = actionIcon(icon, this.focused);
     },
   },
   watch: {
@@ -85,7 +86,7 @@ export const PlayerControl = defineScreen({
         rounded={s.diameter / 2}
         color={s.focused ? s.primary : s.surface}
       />
-      <TvView x={s.diameter / 2 - 19} y={s.diameter / 2 - 19} w={38} h={38} fit="contain" src={s.iconSource} />
+      <TvView x={(s.diameter-CONTROL_ICON)/2} y={(s.diameter-CONTROL_ICON)/2} w={CONTROL_ICON} h={CONTROL_ICON} fit="contain" src={s.iconSource} />
     </TvView>
   ),
 });

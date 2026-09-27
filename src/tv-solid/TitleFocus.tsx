@@ -112,7 +112,7 @@ export const TitleAction = defineScreen({
       <TvView show={s.icon !== "" || s.action === "source"} x={32} y={21} w={30} h={30} fit="contain" src={s.iconSource} />
       <TvText
         x={s.icon === "" && s.action !== "source" ? 34 : 78}
-        y={18}
+        centerY={36}
         content={s.labelText}
         font={"Onest700"}
         size={26}

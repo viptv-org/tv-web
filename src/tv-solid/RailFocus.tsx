@@ -102,16 +102,16 @@ export const RailItem = defineScreen({
         show={s.position === 0}
       />
       <TvView
-        x={10}
-        y={12}
-        w={44}
-        h={44}
-        rounded={22}
+        x={4}
+        y={6}
+        w={56}
+        h={56}
+        rounded={28}
         src={s.avatar}
         show={s.position === 0 && s.avatar !== ""}
       />
       <TvView
-        x={26}
+        x={18}
         y={20}
         w={28}
         h={28}

@@ -352,3 +352,15 @@ baseline `6f335d7631e1334be398b7aa5977ce4ce51ac50a`.
 | Responsive web and desktop isolation | Phone `Main` and desktop `DeskHome` from current React entry captured against isolated tv-web `de6adc1` before player wiring. | Both exact: 0 changed pixels, MAE/RMSE 0, SSIM 1 at 390×844 and 1440×900 respectively. | Installed Tauri run unverified; no responsive source changes. |
 | All other TV states | No Lightning acceptance result. | Unmeasured. | Not migrated or qualified. |
 | React TV launch path | `TvPairing` capture remains exactly equal to saved React baseline (0 changed pixels). | Existing path unchanged for that state. | Current Tizen/Vizio launcher retained. |
+
+## TV-040 — Native SolidTV polish
+
+Design pin: `dec7f75` (TV_POLISH.md TV-040 and packaged Lucide source icon).
+Affected states: TvHome, TvTitle, TvProfiles, TvProfilesManage, TvDiscover,
+TvSearch, TvLive, TvMenu, TvSettings and preparation/live/VOD player overlays.
+Native browser checks cover 1080p/720p long chip rows, no-scroll first shelf,
+whole shelf headings, stable rail geometry, progressive addon rows, native frame
+stability, actual logo textures, preparation cancellation and passive live
+progress. Private visual captures were inspected; exact reference-image error
+metrics were not recomputed. Tizen/Vizio/webOS physical-device qualification
+remains unverified. See TESTING.md for commands and scoped frame evidence.

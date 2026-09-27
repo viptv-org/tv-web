@@ -1,5 +1,7 @@
 /** @jsxImportSource @solidtv/solid */
+import { CollapsedRail } from "./CollapsedRail";
 import { defineScreen, TvView, TvText, KeyedFor } from "./runtime";
+import { ChannelLogo } from "./ChannelLogo";
 import { tokens } from "../theme/viptv-tokens.generated";
 import { LiveChannel, LiveFilterChip, LiveProgram } from "./LiveFocus";
 import type {
@@ -73,6 +75,7 @@ export const LiveScreen = defineScreen({
 
   render: (s) => (
     <TvView>
+      <CollapsedRail avatar={s.chrome.homeProfileAvatar} current="live"/>
       <TvView
         x={192}
         y={105}
@@ -168,26 +171,8 @@ export const LiveScreen = defineScreen({
         rounded={18}
         color={s.previewGround}
       />
-      <TvText
-        x={1344}
-        y={156}
-        maxwidth={480}
-        align={"center"}
-        content={s.hero.monogram}
-        font={"Bricolage800"}
-        size={56}
-        color={s.secondary}
-      />
-      <TvText
-        x={1344}
-        y={231}
-        maxwidth={480}
-        align={"center"}
-        content={s.chrome.previewLabel}
-        font={"Onest"}
-        size={20}
-        color={s.tertiary}
-      />
+      <ChannelLogo x={1370} y={96} w={428} h={216} src={s.hero.channel?.poster || ""} label={s.hero.monogram} color={s.secondary}/>
+      <TvView x={188} y={370} w={1640} h={64} clipping>
       {
         <KeyedFor each={s.filters} keyOf={(item) => item.id}>
           {(entry, index) => (
@@ -195,18 +180,19 @@ export const LiveScreen = defineScreen({
               screenRef={"liveFilter" + entry().id}
               position={index()}
               filter={entry()}
-              x={entry().x}
-              y={374}
+              x={entry().x-188}
+              y={4}
             />
           )}
         </KeyedFor>
       }
-      <TvView x={192} y={460} w={1728} h={516} clipping={true}>
+      </TvView>
+      <TvView x={188} y={460} w={1640} h={566} clipping={true}>
         {
           <KeyedFor each={s.timeline} keyOf={(item) => item.x}>
             {(time, index) => (
               <TvText
-                x={time().x - 192 + 16}
+                x={time().x - 188 + 16}
                 y={12}
                 content={time().label}
                 font={"Onest600"}
@@ -220,7 +206,7 @@ export const LiveScreen = defineScreen({
           <KeyedFor each={s.timeline} keyOf={(item) => item.x}>
             {(time, index) => (
               <TvView
-                x={time().x - 192}
+                x={time().x - 188}
                 y={0}
                 w={2}
                 h={48}
@@ -236,7 +222,7 @@ export const LiveScreen = defineScreen({
                 screenRef={"liveChannel" + entry().channel.id}
                 row={entry().row}
                 channel={entry()}
-                x={0}
+                x={4}
                 y={entry().y - 460}
               />
             )}
@@ -249,14 +235,14 @@ export const LiveScreen = defineScreen({
                 screenRef={"liveProgram" + entry().id}
                 position={index()}
                 block={entry()}
-                x={entry().x - 192}
+                x={entry().x - 188}
                 y={entry().y - 460}
               />
             )}
           </KeyedFor>
         }
         <TvView
-          x={s.nowX - 192}
+          x={s.nowX - 188}
           y={48}
           w={3}
           h={468}
@@ -264,7 +250,7 @@ export const LiveScreen = defineScreen({
           show={s.nowX >= 0}
         />
         <TvView
-          x={s.nowX - 192 - 39}
+          x={s.nowX - 188 - 39}
           y={6}
           w={78}
           h={36}
@@ -273,7 +259,7 @@ export const LiveScreen = defineScreen({
           show={s.nowX >= 0}
         />
         <TvText
-          x={s.nowX - 192 - 27}
+          x={s.nowX - 188 - 27}
           y={13}
           content={s.nowLabel}
           font={"Onest700"}
@@ -290,7 +276,7 @@ export const LiveScreen = defineScreen({
         size={24}
         color={s.secondary}
       />
-      <TvView x={144} y={976} w={1776} h={104} color={s.chrome.background} />
+      <TvView x={144} y={1026} w={1776} h={54} color={s.chrome.background} />
 
 
 
