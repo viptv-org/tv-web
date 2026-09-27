@@ -2177,3 +2177,12 @@ switches. Both default off. Original browser preparation also requires the
 server switch. Binary promotion is separate; Jellyfin-FFmpeg was benchmarked
 but did not pass the software startup gate. No new Roku, Tizen hardware, native
 Safari/iOS, sustained HDR or universal provider qualification is claimed.
+
+Final rollout evidence: the browser and physical Vizio 30-minute 720p30 runs
+completed; Vizio reported 0/54,501 dropped frames. A real live-source GOP
+regression was fixed with continuous copied fMP4 and explicit HLS refusal
+handling, then checked for 45 seconds on Vizio and beyond 85 seconds on the
+production viewing site. Video now has 97 passing tests. The public entry is
+`app-DPY6ZflC.js`; renderer/player hashes match backend image
+`sha256:6f6d34ba54ad45d9dd695e77be2e67db5fe89106c5f0d264a7c68db2586d79eb`.
+Back returned to Home and the production active-session count returned to zero.
