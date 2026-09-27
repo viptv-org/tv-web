@@ -380,3 +380,12 @@ existing controls. Asynchronous discovery preserves Back and source identity.
 React remote behavior was tested over trusted HTTPS; SolidTV Player/Seek/Subtitle
 screens were reviewed with controlled fixtures. Actual media and physical Vizio
 qualification are separate from those UI simulations (see TESTING.md).
+## LG host packaging — 2026-09-27
+
+Existing visual contract retained; design@0430d90 defines host/delivery scope.
+
+| Surface | Evidence | Physical LG webOS 22+ |
+| --- | --- | --- |
+| Pairing, Home, Sources, Player | Existing shared renderer; four HTTPS Chromium fixture scenarios passed | Unverified |
+| Background/relaunch, root exit, media keys | Focus/key reuse plus three host-boundary tests | Unverified |
+| IPK and hosted ZIP | Packaged locally and uploaded by Actions 36359987582 | Install and playback unverified |

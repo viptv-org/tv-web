@@ -2186,3 +2186,23 @@ production viewing site. Video now has 97 passing tests. The public entry is
 `app-DPY6ZflC.js`; renderer/player hashes match backend image
 `sha256:6f6d34ba54ad45d9dd695e77be2e67db5fe89106c5f0d264a7c68db2586d79eb`.
 Back returned to Home and the production active-session count returned to zero.
+# LG webOS 22+ packaging checkpoint — 2026-09-27
+
+Host/delivery contract: design@0430d90, BUILD_DELIVERY.md. Existing visual
+DESIGN_REF is intentionally unchanged. The LG host selects the existing TV
+renderer and native HTML media fallback; root Back, media keys and background
+cleanup are implemented without changing browser/desktop/Tizen/Vizio visuals.
+
+Validation: 39 unit-test files passed (219 tests before the additional media-key
+case; the webOS lifecycle/key suite then passed all 3 cases), typecheck and
+production build passed. A real local HTTPS origin returned device/code 200 and
+rendered TV pairing. PREVIEW_API_ORIGIN=https://viptv.local.test:8443 and
+SOLID_PREVIEW_URL=https://viptv.local.test:8443/tv/solid.html exercised TvPairing,
+TvHome, TvSources and TvPlayer with --platform=webos in the existing preview
+harness. These are Chromium/synthetic media observations, not LG hardware.
+
+Actions run 36359987582 produced the matching hosted ZIP and webOS IPK with
+checksums. Samsung signing stopped explicitly because its four signing secrets
+are not configured. No unsigned installability claim and no production deploy.
+Actual LG/Samsung install, codec/DRM and remote-hosted AVPlay qualification remain
+unverified. Keep captures private; they are not release assets.
