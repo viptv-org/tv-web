@@ -2111,3 +2111,15 @@ Production-data follow-up: partial queue hydration now updates the visible shelf
 as well as the hero. A delayed second title regression proves the first episode's
 caption paints before the second metadata request completes, without a second
 queue request or focus replacement.
+
+### Live end-time follow-up (2026-09-27)
+
+`updatePlayerSnapshot` previously assigned VOD duration/position fields before
+replacing them with live program labels. A zero-duration live snapshot therefore
+cleared the end-time texture on every update despite the atomic text renderer.
+The new regression reproduced 22 blank frames in a 90-frame run before the fix.
+Live and VOD projections are now mutually exclusive, including the LIVE status.
+Afterward Tizen, Vizio and webOS each passed 90 live frames with zero blanks and
+zero replacements of the unchanged end-time texture. The 90-frame VOD clock,
+direct live playback, cancellation and guide-return checks also passed. These
+are browser-adapter results, not new physical TV qualification.

@@ -5222,7 +5222,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         this.playerSnapshot = snapshot;
         if(snapshot.state==="playing" || snapshot.state==="paused")lastPlaybackPosition=snapshot.time.positionSeconds;
         notePlayerState(snapshot.state, snapshot.time.positionSeconds);
-        this.playerStatus = this.playerSeeksPending ? "BUFFERING" : snapshot.state.toUpperCase();
+        this.playerStatus = this.playerItem?.type === "live" ? "LIVE" : this.playerSeeksPending ? "BUFFERING" : snapshot.state.toUpperCase();
         this.playerToggleIcon = snapshot.state === "paused" ? "▶" : "Ⅱ";
         const position = snapshot.time.positionSeconds;
         const duration =
@@ -5232,12 +5232,6 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
            (snapshot.state==="playing" && position>=this.playerSeekTarget-0.75))) {
           this.playerSeekTarget=null;this.playerSeekLabel="";
         }
-        if (this.playerSeekPreview === null) {
-          const displayed=this.playerSeekTarget??position;
-          this.playerPositionText = playerClock(displayed);
-          this.playerProgress = duration > 0 ? Math.min(1, displayed / duration) : 0;
-        }
-        this.playerDurationText = duration > 0 ? playerClock(duration) : "";
         if (this.playerItem?.type === "live") {
           const now=Date.now()/1000;
           const guide=this.liveGuides[this.playerItem.id];
@@ -5245,8 +5239,14 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
           this.playerPositionText="Now";
           this.playerDurationText=program ? new Date(program.end*1000).toLocaleTimeString([], {hour:"numeric",minute:"2-digit",timeZone:guideZone(guide?.timezone)}) : "Live";
           this.playerProgress=program ? Math.max(0,Math.min(1,(now-program.start)/(program.end-program.start))) : 1;
-          this.playerStatus="LIVE";
           this.playerEpisodeLine=program?.title??this.playerEpisodeLine;
+        } else {
+          if (this.playerSeekPreview === null) {
+            const displayed=this.playerSeekTarget??position;
+            this.playerPositionText = playerClock(displayed);
+            this.playerProgress = duration > 0 ? Math.min(1, displayed / duration) : 0;
+          }
+          this.playerDurationText = duration > 0 ? playerClock(duration) : "";
         }
         noteSeekState(this.playerSeekTarget,this.playerSeeksPending,this.playerSeekTarget??position);
         this.updateUpNext(snapshot);

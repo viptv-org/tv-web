@@ -42,6 +42,27 @@ try {
     await page.keyboard.press('ArrowDown'); await focused(page, 'guide-channel', 1);
     await page.keyboard.press('Enter'); await focused(page, 'player-control', 4);
     expectDirect(backend, 1);
+    await page.waitForFunction(()=>{
+      let found=false;const walk=n=>{if(n.viptvText==='12:00 PM'&&n.worldAlpha>.5&&n.isRenderable)found=true;for(const child of n.children??[])walk(child);};walk(window.__viptvRenderer.stage.root);return found;
+    });
+    const stableEnd=await page.evaluate(async platform=>{
+      let label;const find=n=>{if(n.viptvText==='12:00 PM'&&n.globalTransform.ty===826&&n.worldAlpha>.5)label=n;for(const child of n.children??[])find(child);};find(window.__viptvRenderer.stage.root);
+      if(!label)throw new Error('Missing live end-time label');
+      const initialTexture=label.texture;
+      let blankFrames=0,textureChanges=0;
+      const before=window.__viptvPlayer.position;
+      for(let frame=0;frame<90;frame++){
+        if(frame%6===0){if(platform==='tizen')window.webapis.avplay.jumpForward(1000);else document.getElementById('tv-video').currentTime+=1;}
+        await new Promise(requestAnimationFrame);
+        if(!label.isRenderable||!label.textureLoaded||label.worldAlpha<.5)blankFrames++;
+        if(label.texture!==initialTexture)textureChanges++;
+      }
+      return {blankFrames,textureChanges,advanced:window.__viptvPlayer.position>before};
+    },platform);
+    expect(stableEnd.advanced).toBe(true);
+    expect(stableEnd.blankFrames).toBe(0);
+    expect(stableEnd.textureChanges).toBe(0);
+    console.log(`${platform}: 90 live end-time frames, no blank frames or texture replacement`);
     // Hide chrome, then leave playback. There must be no intervening source screen.
     await page.keyboard.press('Escape'); await page.keyboard.press('Escape');
     await focused(page, 'guide-channel', 1);
