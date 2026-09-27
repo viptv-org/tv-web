@@ -1,5 +1,10 @@
 # viptv TV web development
 
+Delivery policy (owner approved 2026-09-27): only Android, desktop, Roku and TV-web
+build workflows remain, triggered by main pushes and manual dispatch. No PR
+gates, automatic releases, image publishing or deployment. Retain local checks.
+This supersedes older automation/release-gate instructions below.
+
 Read DESIGN_REF, SPEC.md and the referenced viptv-org/design visual and behavior contracts before changing product behavior. This one frontend serves web, Tizen, Vizio and the native desktop app (housed in `viptv-org/desktop`); the playback adapters and the session controller live in the viptv-org/video repository and are consumed through the hash-pinned vendored source in `vendor/video` (VIDEO_REF), resolved by the `@viptv/video` path alias. Preserve Roku action meaning, 700ms hold, focus restoration, explicit source intent and controlled Next. Platform decoder differences do not justify deleting product features.
 
 Tests exercise remote UI, backend HTTP and playback adapter interfaces. Run unit/integration tests, production build and Playwright acceptance for changes. Mock only external platform/network boundaries. Inspect screenshots locally for layout but keep screenshots out of source/design/release files. Report browser simulation, real media and actual TV evidence separately; never claim 100% device coverage from simulated AVPlay.

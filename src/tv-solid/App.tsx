@@ -14,6 +14,7 @@ import type { createSolidTVContinuation, SolidTVContinuationResult } from "./con
 import { catalogFilterLabel } from "../ui/catalogFilters";
 import { heroLabelWidth } from "./heroGeometry";
 import { HomeBackdrop } from "./HomeBackdrop";
+import { exitWebos, installWebosLifecycle } from "./webos";
 import QRCode from "qrcode";
 import { carouselWindow } from "./carousel";
 import { appendCatalogPage } from "../ui/catalogPaging";
@@ -303,6 +304,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
   let liveGeneration = 0;
   let liveScope: ReturnType<TvApi["createScope"]> | undefined;
   let liveClockTimer: ReturnType<typeof setInterval> | undefined;
+  let disposeWebos: (() => void) | undefined;
   let liveCanonicalChannels: MediaItem[] = [];
   let liveCanonicalRows: LiveChannelView[] = [];
   let liveCanonicalPrograms: LiveProgramView[] = [];
@@ -884,6 +886,19 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
     },
     hooks: {
       ready() {
+        if (platform === "webos") disposeWebos = installWebosLifecycle(
+          () => { void this.exitPlayer(); },
+          () => { this.$focus(); },
+          (action) => {
+            if (this.phase !== "player" || !playback) return;
+            if (action === "stop") { void this.exitPlayer(); return; }
+            if (this.playerItem?.type === "live") return;
+            if (action === "rewind" || action === "forward") { this.previewPlayerSeek(action === "rewind" ? -10 : 30); return; }
+            const player = playback.player;
+            const play = action === "play" || (action === "toggle" && player.snapshot.state === "paused");
+            void (play ? player.play() : player.pause()).catch(() => { this.playerNotice = "The playback command could not be completed."; });
+          },
+        );
         if (new URLSearchParams(location.search).has("perfdebug"))
           performance.mark("viptv:app-ready");
         const session = api.createSessionDriver(
@@ -1372,6 +1387,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         });
       },
       destroy() {
+        disposeWebos?.();
         continuation?.cancel(); nextSetupScope?.abort(); ++nextGeneration;
         upNextScope?.abort(); clearInterval(upNextTimer);
         ++pairingGeneration;
@@ -6268,6 +6284,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
           else this.returnFromLive();
         } else if (this.phase === "home" && this.profiles.length)
           this.showProfiles(this.profiles);
+        else if (platform === "webos") exitWebos();
       },
       any() {
         if (this.phase === "player" && !this.playerOverlay)

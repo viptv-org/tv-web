@@ -1,5 +1,10 @@
 # VIPTV Shared Viewing Client (`tv-web`)
 
+[Installer build instructions](BUILDING.md). Actions delivery: main pushes and manual builds produce sideloading artifacts
+(Android universal APK; desktop Windows/Linux installers; Roku ZIP; TV WGT/IPK).
+Other repositories have no Actions workflows. Local checks remain; previous
+CI/release-publication descriptions below are historical. No automatic deploys.
+
 This repository contains the canonical shared viewing client for VIPTV across Web (`watch.syek.tech`), Smart TVs (Tizen, Vizio), and Native Desktop ([`desktop`](../desktop)). It implements unified screen navigation, remote/keyboard/mouse interaction, focus engine, source selection, responsive layouts, and catalog viewing in one shared UI codebase. Only the player adapter and packaging differ:
 
 - **Web (`watch.syek.tech`)**: Served via static web bundle and proxy.

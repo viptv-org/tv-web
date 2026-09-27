@@ -1,0 +1,86 @@
+name: Build TV packages
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: tv-build-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  hosting:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+      - run: node scripts/package-tv.mjs hosting
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tv-hosting-${{ github.sha }}
+          path: artifacts/hosting/*
+          if-no-files-found: error
+          retention-days: 30
+  webos:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm install --global @webos-tools/cli@3.2.6
+      - run: node scripts/package-tv.mjs webos
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lg-webos22-${{ github.sha }}
+          path: artifacts/webos/*
+          if-no-files-found: error
+          retention-days: 30
+  tizen:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 25
+    env:
+      TIZEN_AUTHOR_P12: ${{ secrets.TIZEN_AUTHOR_P12 }}
+      TIZEN_AUTHOR_PASSWORD: ${{ secrets.TIZEN_AUTHOR_PASSWORD }}
+      TIZEN_DISTRIBUTOR_P12: ${{ secrets.TIZEN_DISTRIBUTOR_P12 }}
+      TIZEN_DISTRIBUTOR_PASSWORD: ${{ secrets.TIZEN_DISTRIBUTOR_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Require Samsung certificates
+        run: |
+          python3 - <<'PY'
+          import os
+          missing=[n for n in ['TIZEN_AUTHOR_P12','TIZEN_AUTHOR_PASSWORD','TIZEN_DISTRIBUTOR_P12','TIZEN_DISTRIBUTOR_PASSWORD'] if not os.environ.get(n)]
+          if missing: raise SystemExit('Configure Samsung signing secrets: '+', '.join(missing))
+          PY
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Install pinned Tizen CLI
+        run: |
+          curl --fail --location --retry 3 https://download.tizen.org/sdk/Installer/tizen-studio_6.1/web-cli_Tizen_Studio_6.1_ubuntu-64.bin -o "$RUNNER_TEMP/tizen-cli.bin"
+          chmod +x "$RUNNER_TEMP/tizen-cli.bin"
+          "$RUNNER_TEMP/tizen-cli.bin" --accept-license "$RUNNER_TEMP/tizen-studio"
+          echo "$RUNNER_TEMP/tizen-studio/tools/ide/bin" >> "$GITHUB_PATH"
+      - run: python3 scripts/tizen-signing.py
+      - run: node scripts/package-tv.mjs tizen
+        env:
+          TIZEN_PROFILE: viptv
+      - uses: actions/upload-artifact@v4
+        with:
+          name: samsung-tizen-signed-${{ github.sha }}
+          path: artifacts/tizen/*
+          if-no-files-found: error
+          retention-days: 30
