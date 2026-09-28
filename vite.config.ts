@@ -1,5 +1,6 @@
 import { Agent } from "node:https";
 import { resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react";
 import solid from "vite-plugin-solid";
@@ -31,7 +32,7 @@ export default defineConfig(({ command }) => ({
   plugins: [react({ exclude: /src\/tv-solid\// }), solid({ include: /src\/tv-solid\/.*\.tsx$/, solid: { moduleName: "@solidtv/solid", generate: "universal" } })],
   // The player contract resolves from the pinned vendored source, not the
   // generated dist-js of a sibling checkout.
-  resolve: { dedupe: ["solid-js", "@solidtv/solid"], alias: { "@viptv/video": new URL("./vendor/video/src/index.ts", import.meta.url).pathname } },
+  resolve: { dedupe: ["solid-js", "@solidtv/solid"], alias: { "@viptv/video": fileURLToPath(new URL("./vendor/video/src/index.ts", import.meta.url)) } },
   base: command === "build" ? "/tv/" : "/",
   // TV entrypoints retain ES2017. BigInt exists only in the lazily imported
   // MediaBunny chunk, gated on a modern WebCodecs runtime before import.
