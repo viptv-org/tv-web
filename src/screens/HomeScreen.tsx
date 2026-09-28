@@ -121,7 +121,7 @@ export function HomeScreen({
         <header className="vx-home__header">
           <span className="vx-home__wordmark">VIPTV</span>
           {profile && (
-            <button type="button" className="vx-home__avatar" aria-label={`Profile: ${profile.name}`} onClick={onProfiles}>
+            <button type="button" className="vx-home__avatar" aria-label={`Settings: ${profile.name}`} onClick={onProfiles}>
               <span aria-hidden="true">{profile.name.trim().slice(0, 1).toUpperCase()}</span>
               <ReadyImage src={avatarUrl(profile)} alt="" />
             </button>

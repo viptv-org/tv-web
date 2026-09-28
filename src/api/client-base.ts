@@ -301,7 +301,7 @@ export class TvApiClientBase {
         const error = objectOrEmpty(payload);
         throw new TvApiError(
           response.status,
-          clientMessage(response.status),
+          normalizeCore<{ message: string }>("apiError", { ...error, status: response.status }).message,
           optionalString(error, "error_code"),
           endpoint,
         );

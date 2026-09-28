@@ -427,9 +427,9 @@ export async function installBackend(page: Page, options: BackendOptions): Promi
     return serveFile(route, `${referenceDir}assets/${file}`, file.endsWith('png') ? 'image/png' : 'image/jpeg');
   };
   // Nothing may reach the network: unknown external hosts fail fast.
-  await page.route(url => !/^https?:\/\/(127\.0\.0\.1|localhost|viptv\.local\.test)(:\d+)?\//.test(url.href), route => route.abort('blockedbyclient'));
+  await page.route(url => !/^https?:\/\/(127\.0\.0\.1|localhost|viptv\.local\.test|watch\.local\.test)(:\d+)?\//.test(url.href), route => route.abort('blockedbyclient'));
   // A dev server must never proxy API or media calls to a real backend.
-  await page.route(/^https?:\/\/(127\.0\.0\.1|localhost|viptv\.local\.test)(:\d+)?\/(api|media)\//, route => route.abort('blockedbyclient'));
+  await page.route(/^https?:\/\/(127\.0\.0\.1|localhost|viptv\.local\.test|watch\.local\.test)(:\d+)?\/(api|media)\//, route => route.abort('blockedbyclient'));
   await page.route('https://art.example/**', route => art(route, route.request().url()));
   await page.route('https://wsrv.nl/**', route => {
     const inner = new URL(route.request().url()).searchParams.get('url') ?? '';

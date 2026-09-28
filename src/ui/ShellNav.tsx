@@ -338,7 +338,7 @@ export function DesktopRail({
         <TvButton
           id={skeleton ? "skeleton-responsive-profile" : "responsive-profile"}
           className="vx-rail-avatar"
-          aria-label={profile ? `Switch profile (${profile.name})` : "Switch profile"}
+          aria-label={profile ? `Settings (${profile.name})` : "Settings"}
           title={profile?.name}
           onActivate={onProfiles}
           {...inert}

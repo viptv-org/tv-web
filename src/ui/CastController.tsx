@@ -6,7 +6,7 @@
  */
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp, ExternalLink, Monitor, Pause, Volume1, Volume2 } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp, ExternalLink, Monitor, Pause, Volume1, Volume2, Power, VolumeX } from "lucide-react";
 import type { VizioControllerOutput, VizioRemoteKey } from "../../vendor/core/typescript/wire";
 import { DialogBackdrop } from "./DialogBackdrop";
 import { Dialog, DialogText } from "./primitives/Overlays";
@@ -14,6 +14,7 @@ import { ButtonContent, buttonClass } from "./primitives/Button";
 import { TextField } from "./primitives/Fields";
 import { InlineError, StatusLine } from "./primitives/Feedback";
 import { PlayIcon } from "./primitives/icons";
+import { vizio_deviceinfo_name } from "../../vendor/core/wasm/viptv_core";
 
 export interface CastControllerProps {
   /** Public receiver deployed by the host; never the local Tauri window origin. */
@@ -54,6 +55,8 @@ const REMOTE_PAD = [
   ["DOWN", "Down", <ChevronDown key="down" aria-hidden="true" strokeWidth={2.4} />],
 ] as const;
 const REMOTE_KEYS: readonly (readonly [VizioRemoteKey, string, ReactNode])[] = [
+  ["POW_TOGGLE", "Power", <Power key="power" aria-hidden="true" />],
+  ["MUTE_TOGGLE", "Mute", <VolumeX key="mute" aria-hidden="true" />],
   ["BACK", "Back on TV", <ChevronLeft key="back" aria-hidden="true" strokeWidth={2.2} />],
   ["PLAY", "Play", <PlayIcon key="play" aria-hidden="true" />],
   ["PAUSE", "Pause", <Pause key="pause" aria-hidden="true" strokeWidth={2.2} />],
@@ -66,6 +69,7 @@ export function CastController({ receiverUrl = previewBridge?.receiverUrl, onClo
   const native = "__TAURI_INTERNALS__" in window || previewBridge !== undefined;
   const call: Invoke = previewBridge ? previewBridge.invoke : invoke;
   const [host, setHost] = useState("");
+  const [tvName, setTvName] = useState("Vizio TV");
   const [pin, setPin] = useState("");
   const [challenge, setChallenge] = useState<Challenge | null>(null);
   const [connected, setConnected] = useState(false);
@@ -117,6 +121,37 @@ export function CastController({ receiverUrl = previewBridge?.receiverUrl, onClo
     return output;
   }
 
+  async function refreshTvName() {
+    try {
+      const info = await run("deviceInfo");
+      const name = info.kind === "complete" ? vizio_deviceinfo_name(JSON.stringify(info.result)) : undefined;
+      if (mounted.current && name) setTvName(name);
+    } catch { /* Name lookup is optional; keep the discovered name. */ }
+  }
+
+  useEffect(() => {
+    if (!native || !connected) return;
+    let cancelled = false;
+    const reconnect = async () => {
+      if (document.hidden || active.current) return;
+      active.current = true;
+      try {
+        let result = await run("pingAuth");
+        if (result.kind === "error" && result.error?.kind !== "authentication") {
+          await new Promise(resolve => setTimeout(resolve, 350));
+          if (cancelled || document.hidden) return;
+          result = await run("pingAuth");
+        }
+        if (cancelled || document.hidden || !mounted.current) return;
+        if (accepted(result)) { setError(""); await refreshTvName(); }
+      } catch { if (!cancelled && !document.hidden && mounted.current) setError("Can't reach your TV. Check its power and Wi-Fi, then try again."); }
+      finally { active.current = false; }
+    };
+    window.addEventListener("focus", reconnect);
+    document.addEventListener("visibilitychange", reconnect);
+    return () => { cancelled = true; window.removeEventListener("focus", reconnect); document.removeEventListener("visibilitychange", reconnect); };
+  }, [native, connected]);
+
   function accepted(output: VizioControllerOutput) {
     if (output.kind === "error") {
       if (mounted.current) setError(output.error?.message || "The TV could not complete this request.");
@@ -140,6 +175,7 @@ export function CastController({ receiverUrl = previewBridge?.receiverUrl, onClo
   }
 
   async function connectTo(address: string) {
+    setTvName(discovered.find(tv => tv.host === address)?.name ?? "Vizio TV");
     await perform(async () => {
       // This is a vault lookup identifier, not a credential; nothing persists in the renderer.
       const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(address.toLowerCase()));
@@ -148,7 +184,7 @@ export function CastController({ receiverUrl = previewBridge?.receiverUrl, onClo
       if (!mounted.current) return;
       const check = await run("pingAuth");
       if (!mounted.current) return;
-      if (check.kind === "complete") { setConnected(true); setMessage("Connected to your TV."); return; }
+      if (check.kind === "complete") { setConnected(true); setMessage("Connected to your TV."); await refreshTvName(); return; }
       if (check.error?.kind !== "authentication") { accepted(check); return; }
       const pairing = await run("beginPair");
       if (!mounted.current || !accepted(pairing)) return;
@@ -177,6 +213,7 @@ export function CastController({ receiverUrl = previewBridge?.receiverUrl, onClo
       if (!mounted.current || !accepted(output)) return;
       if (output.result?.paired !== true) { setError("The TV did not confirm pairing. Try again."); return; }
       setChallenge(null); setConnected(true); setMessage("Paired with your TV.");
+      await refreshTvName();
     });
   }
 
@@ -317,6 +354,7 @@ export function CastController({ receiverUrl = previewBridge?.receiverUrl, onClo
       )}
       {connected && (
         <>
+          <DialogText>{tvName}</DialogText>
           {status}
           <div className="vx-cast__launch">
             <button type="button" className={buttonClass({ kind: "primary", block: true, icon: true })} onClick={launch} disabled={busy || !receiverUrl}>

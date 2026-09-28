@@ -1,5 +1,85 @@
 # AND-035 — Native Android phone and TV design adoption
 
+## AND-039 — Phone remote reliability and responsiveness
+
+Owner feedback, 2026-09-27; supersedes AND-038's background-dismissal and
+outlined header-button treatment. No other platform UI changes.
+
+- Background/foreground and rotation retain the setup page, entered IP and
+  current pairing challenge. Returning must not start a second pairing request.
+  The screen-awake flag is released in the background. Discovery pauses there;
+  already queued remote keys are discarded, never replayed on return.
+- Explicit Cancel/Back out of a PIN challenge and New PIN send the existing
+  device-scoped cancelPair operation before another beginPair. Release a late
+  challenge too. Keep only a pending-origin marker for process-death recovery;
+  never persist the PIN or challenge. Preserve the stable phone device ID.
+- Discovery consumes the actual shared-core Result envelope and probes both
+  supported SmartCast ports. Results arrive progressively; a bad/unreachable
+  host cannot abort the scan. Network, TLS, JNI client setup and credential
+  operations run off the UI thread. No global TLS weakening.
+- Key presses never toggle the launch button's disabled/alpha state, clear its
+  label, or rebuild connection chrome. Serialize an eight-command bounded queue,
+  give immediate local press/haptic feedback, and cancel queued keys on exit.
+  Connection failures still show recovery; a rejected command alone is not an
+  offline TV. The launch button is busy only for setup/launch operations.
+- Header remote and profile use identical 44 dp touch/visual slots and circular
+  avatar-ground styling, without an outline. The remote glyph is 20 dp, centered.
+
+Acceptance: actual JNI discovery enumeration; automatic fixture discovery;
+background/resume during PIN with exactly one beginPair; Cancel/re-pair and New
+PIN against a TV that rejects overlapping challenges; delayed key responses
+without launch-button flicker; ordered rapid taps; cancellation without replay;
+native header size/appearance inspection. Physical LAN/device evidence remains
+distinct from emulator and synthetic-network evidence.
+
+## AND-038 — Android phone Vizio remote (2026-09-27)
+
+Status: approved implementation contract; device qualification remains separate.
+Source: owner's `viptv-design-system (1).zip`, exported 2026-09-27. The twelve
+PhTv*/PhRemote*/PhHomeRemote reference states and components section 11 define
+the phone remote. Existing AND-036/037 and TV corrections continue to apply.
+
+Settings → This device → Watch on TV is the only entry before pairing. Setup
+pushes native pages over the saved app route: introduction, bounded LAN search,
+manual IPv4 address, four-digit PIN (submit automatically), connected. Back
+cancels the pending operation and returns one step; leaving setup restores the
+originating screen. New PIN starts a fresh challenge. A failed PIN stays on the
+PIN page with editable input. Pairing tokens use the Android Keystore; selected
+TV and preferences are device-local, never account credentials.
+
+The target remains SDK 36: do not display a fictitious local-network permission
+prompt. Intro copy is “VIPTV searches your local network only to find your TV.”
+Actual access denial opens recovery; manual addressing cannot bypass denial.
+Discovery is user-initiated, scoped to the connected local network, cancellable,
+and falls back to manual entry. Timeouts and offline TVs have retry actions.
+
+One paired TV enables a 44 dp header remote button on Home, Discover, Live and
+My List. The bottom navigation is unchanged. Show the one-time “Your TV remote”
+tip with “Got it”. The sheet uses the 390×844 reference proportionally with safe
+insets and scrolling on smaller screens; it restores the underlying route when
+closed. Its controls are D-pad/OK, Back, separate Play/Pause and volume −/+.
+Each tap sends one key; each swipe past 32 dp sends one direction, tap sends OK.
+No background repeat or queued gesture survives dismissal. Serialize commands.
+Buttons is the initial mode, then retain the last mode. Buttons remain an
+accessible equivalent to all swipe actions. Use native labeled touch targets.
+
+“Open VIPTV on TV” launches the configured HTTPS Vizio receiver, never transfers
+the phone video. A TV acknowledgment is not proof the receiver rendered.
+Reconnect checks the saved token; authentication failure offers re-pairing.
+Network failure shows PhRemoteOffline and disables commands until retry succeeds.
+Remote button visibility, vibration, and keep-screen-on default on. Screen-on
+is active only while the sheet is visible. Change TV retains the old selection
+until a replacement pairs; Forget deletes the credential/selection and hides
+the header button. Cancelling Forget preserves both. TV mode never exposes this
+phone feature. No other platform UI adopts this update.
+
+Acceptance: first setup, empty search/manual fallback, invalid IP, wrong/new PIN,
+cancel/stale response, paired restart, every button and swipe, offline/retry,
+revoked credential/re-pair, change-TV cancellation, preferences, Forget/cancel,
+rotation/font scaling/keyboard insets, background cleanup, unchanged phone
+playback and Android TV navigation. Record functional, visual and physical TV
+evidence separately in Android TESTING.md.
+
 Status: owner requested on 2026-09-25; implementation and emulator acceptance
 must be recorded in Android TESTING.md. Related: Android issue #3, design #6.
 
@@ -176,3 +256,32 @@ player; show, pause, cancel and accept Up Next on both phone and TV; verify
 cancel/exit prevent delayed playback. Audit Home, profiles, details, sources,
 settings and search against their pinned reference screens. Keep the full hero
 visible while Continue Watching is focused, as specified by AND-036.
+# AND-040 — copy a stream URL (proposed, 2026-09-28)
+
+Owner request: add Copy stream URL to Android stream actions. Applies to the
+native phone/TV Source details sheet only; web remains unchanged. Entry remains
+the source row's overflow or existing hold/Info action. Keep source metadata and
+Close; add a full-width secondary `Copy stream URL` button above Close using
+existing 54dp phone/72dp TV buttons, 12dp gap and the existing sheet padding.
+Focus starts on Copy; Back/Close returns to the originating source without
+playing it or changing filters, progress or source selection. A press copies
+once; repeats while resolving do nothing. No new hold gesture is introduced.
+
+Resolve only the explicitly selected stream through the existing authenticated
+native direct-URL contract. Do not start the local player or fetch media. Retire
+the temporary server lease before reporting success. Show `Getting URL…` while
+resolving, disable only Copy, and leave Close available. Closing or backgrounding
+cancels delivery to the clipboard; a late response still retires its lease.
+Failure says `Could not copy the stream URL. Try again.` and permits retry.
+Success says `URL copied` without closing the sheet; announce it accessibly.
+Keep this hint visible: `Links may expire or require provider headers. Share only
+with people you trust.` Copy the exact URL, never headers/cookies or a guessed
+stream identifier. Mark clipboard contents sensitive and never log, display,
+persist or include the URL in errors or UI-state descriptions.
+
+Acceptance: copy two different sources and verify exact clipboard targets;
+repeated activation has one pending request; success leaves playback stopped;
+failure is safe/retryable; Close/Back/background during delayed resolution never
+overwrites clipboard and releases a returned lease; keyboard/remote access and
+focus return remain usable. Provider-header-dependent external playback and
+physical TV clipboard usability remain unqualified.

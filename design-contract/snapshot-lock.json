@@ -1,7 +1,7 @@
 {
   "version": 1,
   "repository": "viptv-org/design",
-  "commit": "ca510fc7108b41d88288ad810318a3014fe2788d",
+  "commit": "80e133103c8039b8822db32006907c8b361b093c",
   "files": {
     "design-contract/.github/pull_request_template.md": {
       "source": ".github/pull_request_template.md",
@@ -13,7 +13,7 @@
     },
     "design-contract/ANDROID_DESIGN.md": {
       "source": "ANDROID_DESIGN.md",
-      "sha256": "613bb8cf4c0d571b898549e3452ff8160bd9b63195eb5cdbf8caf104b8afadf9"
+      "sha256": "51f0d1a32921447e548d38d18e37dbcced2254fae4fad3d7a65dc72699244057"
     },
     "design-contract/ANDROID_DEVELOPMENT.md": {
       "source": "ANDROID_DEVELOPMENT.md",
@@ -26,6 +26,10 @@
     "design-contract/BROWSER_PLAYBACK.md": {
       "source": "BROWSER_PLAYBACK.md",
       "sha256": "aad67ba07e7ab6f58abb343b07ca3641aab4482827a70a0a3c6338c2505d2500"
+    },
+    "design-contract/BUILD_DELIVERY.md": {
+      "source": "BUILD_DELIVERY.md",
+      "sha256": "a00713be9c687049ee07a30264674b67b9ea1cccb18ed09e7f598de3605d5c57"
     },
     "design-contract/CHANGELOG.md": {
       "source": "CHANGELOG.md",
@@ -41,7 +45,7 @@
     },
     "design-contract/DESIGN.md": {
       "source": "DESIGN.md",
-      "sha256": "f40190febdcdee3c4b59fa69af89bcff1e0e6dff625061af6b486129d44a8396"
+      "sha256": "219b1573f0e9dad14deafcd4cc5245696251fbcfffcab9824175d4abb40e338c"
     },
     "design-contract/DESIGN_SYNC.md": {
       "source": "DESIGN_SYNC.md",
@@ -69,11 +73,15 @@
     },
     "design-contract/README.md": {
       "source": "README.md",
-      "sha256": "6a1c6b1a30fe19b73c9430fc7f3b2713ee8b1dd0f166544aa891cc1555790300"
+      "sha256": "2c3d9fee45f03e85041317107427f5118681d788237ad8654bc744aca4af698b"
     },
     "design-contract/REPOSITORIES.md": {
       "source": "REPOSITORIES.md",
       "sha256": "0e71e9fe41da82d8cbd483785337f47445455ee30c0e44aec550f7f625ff5202"
+    },
+    "design-contract/ROKU_DESIGN.md": {
+      "source": "ROKU_DESIGN.md",
+      "sha256": "919060d607d56604d573173ad0e75db00969be28686761e68ba0e9725c0b0554"
     },
     "design-contract/SHARED_CORE.md": {
       "source": "SHARED_CORE.md",
@@ -121,7 +129,7 @@
     },
     "design-contract/viptv-design-system/README.md": {
       "source": "viptv-design-system/README.md",
-      "sha256": "46e5b8e84b9a4ca8dd45f31439488495ef372a774ea64202b68417f54e4865c7"
+      "sha256": "f6a9e5e0da4312a8d71d0e2b2a3338088bf9a5b5a9891a783c0a859257acd7e2"
     },
     "design-contract/viptv-design-system/claude-code/.claude/skills/viptv-ui/SKILL.md": {
       "source": "viptv-design-system/claude-code/.claude/skills/viptv-ui/SKILL.md",
@@ -129,19 +137,19 @@
     },
     "design-contract/viptv-design-system/components.md": {
       "source": "viptv-design-system/components.md",
-      "sha256": "f9566958d430d44feb0456c403c9051aade96e250558ba39f2862b515891feda"
+      "sha256": "84e214655b5a2f606bb0d770b04c5a2b2c87c988b53814e1cd3376381fff5331"
     },
     "design-contract/viptv-design-system/copy.md": {
       "source": "viptv-design-system/copy.md",
-      "sha256": "a3bc0faf1c5b7e6987a7804be3eb4cf526d658009f7784425577d26d9fee50ff"
+      "sha256": "5bd9e34cd323759539a7be2d900485c3909444d5367253d01b98fa2b78c7ab58"
     },
     "design-contract/viptv-design-system/decisions.md": {
       "source": "viptv-design-system/decisions.md",
-      "sha256": "ac4580362125ff2c86380964e3f8d873636254c9b1441b5fcf132aa45a273e21"
+      "sha256": "0bc26628c89206055d45ab8f2efde6fad469cd7a5be60291553c0006bbd870c7"
     },
     "design-contract/viptv-design-system/reference/screens/index.json": {
       "source": "viptv-design-system/reference/screens/index.json",
-      "sha256": "98dbb78c3f00be474cc59a3db1672fe4ed02a9915f30b8df131f16dd02469347"
+      "sha256": "e16728033bfd2cc00a6ceddc24638a8f54c870d5299a7f88edac183216e537ff"
     },
     "design-contract/viptv-design-system/tokens/tokens.json": {
       "source": "viptv-design-system/tokens/tokens.json",
@@ -153,7 +161,7 @@
     },
     "design-contract/assets/FILES.json": {
       "source": "assets/FILES.json",
-      "sha256": "a7eedda9e65e9f42222fcdc68bc1c9b35bcd753769d11bebcc0a8f02f285fae5"
+      "sha256": "acaeff9c68b4aa74c2e5d728cdaf8935a4b29a31686c9489e8d3cad82cf6e308"
     },
     "design-contract/assets/roku/roku/data/avatar-catalog.json": {
       "source": "assets/roku/roku/data/avatar-catalog.json",
@@ -2679,6 +2687,78 @@
       "source": "assets/roku/roku/images/chip-focus.png",
       "sha256": "c4b41d150686fa901d1020a404428251b55673ec432868c2de83f2fec7c782c3"
     },
+    "public/assets/design/card-corners.png": {
+      "source": "assets/roku/roku/images/design/card-corners.png",
+      "sha256": "0bc638fd83874ce7c20622820cf657538e4c49eaa0b918b55d5031c20c65d8f3"
+    },
+    "public/assets/design/card-focus.png": {
+      "source": "assets/roku/roku/images/design/card-focus.png",
+      "sha256": "b43117e653ee87d14cab2b6e799ea7257549ac51364f5f8b48e9dee12cd6fb29"
+    },
+    "public/assets/design/card-mask.png": {
+      "source": "assets/roku/roku/images/design/card-mask.png",
+      "sha256": "24c4169879a009e40fca5677003e34127b7aed6ec25a5cd97e72b640eee540e3"
+    },
+    "public/assets/design/circle.png": {
+      "source": "assets/roku/roku/images/design/circle.png",
+      "sha256": "89fea9f218f0e0b6865577e1e671130be4b5011894acdacd6efeb8064c759ba6"
+    },
+    "public/assets/design/episode-corners.png": {
+      "source": "assets/roku/roku/images/design/episode-corners.png",
+      "sha256": "f7cbeca0a2a413d3b13e29eb4f60886b5c8dd6763554db7374ebb297bb72ab79"
+    },
+    "public/assets/design/episode-focus.png": {
+      "source": "assets/roku/roku/images/design/episode-focus.png",
+      "sha256": "474e9b13d38a7881fa5c9284f72b6aff85a8998340f6d3558c426dff90a6f568"
+    },
+    "public/assets/design/episode-mask.png": {
+      "source": "assets/roku/roku/images/design/episode-mask.png",
+      "sha256": "29c3d3c072d79ced4d889e40ae9840d80d6d8dce916f556942aa4c221e7a6f0f"
+    },
+    "public/assets/design/hero-bottom.png": {
+      "source": "assets/roku/roku/images/design/hero-bottom.png",
+      "sha256": "d04936e24955d22cd5d60fa1fa0ce16f703c15a1d38e5c0a14de5c51584a05ee"
+    },
+    "public/assets/design/hero-left.png": {
+      "source": "assets/roku/roku/images/design/hero-left.png",
+      "sha256": "19aed131566f787f5163a9d911e0980dc8167e2f4602a79ca399091c95b915f0"
+    },
+    "public/assets/design/pill-focus.9.png": {
+      "source": "assets/roku/roku/images/design/pill-focus.9.png",
+      "sha256": "f13b7dbd78237fee87e890f4958db77972202ef3165b6ccbbc25c4683e188259"
+    },
+    "public/assets/design/pill-small-focus.9.png": {
+      "source": "assets/roku/roku/images/design/pill-small-focus.9.png",
+      "sha256": "45c6508671efb69d2b3d97f8f2d9b4d674962b668e8a4b75fa3fa211b14dbbb6"
+    },
+    "public/assets/design/pill-small.9.png": {
+      "source": "assets/roku/roku/images/design/pill-small.9.png",
+      "sha256": "ae0bf7099a756632c7293765e85621af1c85f904d63b30ccd71193068f12c242"
+    },
+    "public/assets/design/pill.9.png": {
+      "source": "assets/roku/roku/images/design/pill.9.png",
+      "sha256": "8e5bfdcf21d01b872724522a55e343a1d8f64a070bdb217ffd48bcab49d65727"
+    },
+    "public/assets/design/profile-corners.png": {
+      "source": "assets/roku/roku/images/design/profile-corners.png",
+      "sha256": "f2621cc46ccd69a247b5f8a322145cca2d7bea09f50ee680373049a90a61c15f"
+    },
+    "public/assets/design/profile-focus.png": {
+      "source": "assets/roku/roku/images/design/profile-focus.png",
+      "sha256": "1e9701f0f3d4845d230f13a78a7781e6d04ba6b79cfd79e6c14b74dda313b9bb"
+    },
+    "public/assets/design/profile-mask.png": {
+      "source": "assets/roku/roku/images/design/profile-mask.png",
+      "sha256": "d921db1e01e64eaf39c2f0c1fed53fd69b6296632bed355a7b8d04efbd19b865"
+    },
+    "public/assets/design/row.9.png": {
+      "source": "assets/roku/roku/images/design/row.9.png",
+      "sha256": "1318396673201afe2fdb5627046c602367a8555700829ff7b7e4cd845baf0c57"
+    },
+    "public/assets/design/spinner.png": {
+      "source": "assets/roku/roku/images/design/spinner.png",
+      "sha256": "87c2fa02c296f351e7bab21f656101c9cb2c9c888fb18908265e89e23ae89e4d"
+    },
     "public/assets/home-focus.png": {
       "source": "assets/roku/roku/images/home-focus.png",
       "sha256": "304ff47d4ad3a74c212e9ea59358138f5c63d71a7ce81d4f13817a02bd690a8a"
@@ -2689,7 +2769,31 @@
     },
     "public/assets/lucide/README.md": {
       "source": "assets/roku/roku/images/lucide/README.md",
-      "sha256": "92de549f60899ebbac53ef54f5b224946c7a5d81f48413d06a8972892cb33a2c"
+      "sha256": "801a0efcb6c980018d720f786bd5bc790f0338e114475c8a128501869ec0a2e1"
+    },
+    "public/assets/lucide/addons-focus.png": {
+      "source": "assets/roku/roku/images/lucide/addons-focus.png",
+      "sha256": "c9fd1aa0adcfad0a38ac939f1ab44e6b0cf536560c5e6421fd9e9da81385c2ba"
+    },
+    "public/assets/lucide/addons-focus.svg": {
+      "source": "assets/roku/roku/images/lucide/addons-focus.svg",
+      "sha256": "89288dc73098ee339e99877b2a68d43577dcbe59981259b8c4fdb8e8fd638c6f"
+    },
+    "public/assets/lucide/addons-primary.png": {
+      "source": "assets/roku/roku/images/lucide/addons-primary.png",
+      "sha256": "9146d8039d1cfd040e5030b8ea4e1e9d805d29ddf81930029270eff57b624826"
+    },
+    "public/assets/lucide/addons-primary.svg": {
+      "source": "assets/roku/roku/images/lucide/addons-primary.svg",
+      "sha256": "e36afabafbb8bd0ff2c7c24494151786559d626987f900f2bc64d9e2332bf1a5"
+    },
+    "public/assets/lucide/addons-secondary.png": {
+      "source": "assets/roku/roku/images/lucide/addons-secondary.png",
+      "sha256": "07a2bdc0cdc03676c6cf9c9040e7ce300c78fb6876a3da0f92086ba3f54c5661"
+    },
+    "public/assets/lucide/addons-secondary.svg": {
+      "source": "assets/roku/roku/images/lucide/addons-secondary.svg",
+      "sha256": "7ab8bdb891fbd37118d517e8a9a54fb37af677156a8c730868197a5bbb930d01"
     },
     "public/assets/lucide/audio-focus.png": {
       "source": "assets/roku/roku/images/lucide/audio-focus.png",
@@ -2739,6 +2843,30 @@
       "source": "assets/roku/roku/images/lucide/back10-secondary.svg",
       "sha256": "32424b3e3d3e51c6912c51d3011383c64b1a4bbdf7ad33c33cf19b952ca832da"
     },
+    "public/assets/lucide/backspace-focus.png": {
+      "source": "assets/roku/roku/images/lucide/backspace-focus.png",
+      "sha256": "55c610bf4fe01e861fc09135e54b2901b692a7bf77ef5d7794b75ff9e4a4a987"
+    },
+    "public/assets/lucide/backspace-focus.svg": {
+      "source": "assets/roku/roku/images/lucide/backspace-focus.svg",
+      "sha256": "1b67fd213169c4f0eaba8e17b3d72a3f37f5f4a83d5b0961e0baa2cf8c777936"
+    },
+    "public/assets/lucide/backspace-primary.png": {
+      "source": "assets/roku/roku/images/lucide/backspace-primary.png",
+      "sha256": "fcd4dc36373494d414b06c3f04d241e71e8dac1d7108eb4f3fa4382a4379108d"
+    },
+    "public/assets/lucide/backspace-primary.svg": {
+      "source": "assets/roku/roku/images/lucide/backspace-primary.svg",
+      "sha256": "29b2e53a17312590faa23febbb9c3bacee815066695c073f357b91793ddddea4"
+    },
+    "public/assets/lucide/backspace-secondary.png": {
+      "source": "assets/roku/roku/images/lucide/backspace-secondary.png",
+      "sha256": "b53b854bcf86c812cfeba7810bab2f73d8bbf0cc61261b14090dab90b781f7cb"
+    },
+    "public/assets/lucide/backspace-secondary.svg": {
+      "source": "assets/roku/roku/images/lucide/backspace-secondary.svg",
+      "sha256": "1939cab16296aff3c9e32d3241e2f458af95e365bc9999edcc6dfeddb117666b"
+    },
     "public/assets/lucide/captions-focus.png": {
       "source": "assets/roku/roku/images/lucide/captions-focus.png",
       "sha256": "335386413d911db8e605a10d3a7cdaccd45e0127e7ded537da54236920173626"
@@ -2786,6 +2914,30 @@
     "public/assets/lucide/check-secondary.svg": {
       "source": "assets/roku/roku/images/lucide/check-secondary.svg",
       "sha256": "1e90ba9c9ef48321480f2c2fd8c00b595d9415281c3c49471cc32db1d12fb024"
+    },
+    "public/assets/lucide/delete-focus.png": {
+      "source": "assets/roku/roku/images/lucide/delete-focus.png",
+      "sha256": "66db62a18f6246ca49bd71308eeabd2c5eae35cb2ac6cbefddbf200d5c2728dd"
+    },
+    "public/assets/lucide/delete-focus.svg": {
+      "source": "assets/roku/roku/images/lucide/delete-focus.svg",
+      "sha256": "cf5436409538c137b3735d2b2ef0d7a405e90b95f3848239dd7b05ca8169040f"
+    },
+    "public/assets/lucide/delete-primary.png": {
+      "source": "assets/roku/roku/images/lucide/delete-primary.png",
+      "sha256": "5ecb6daf28b60528e1b34da2c3397973c80f487eafe4e027dd7e9f61c8810738"
+    },
+    "public/assets/lucide/delete-primary.svg": {
+      "source": "assets/roku/roku/images/lucide/delete-primary.svg",
+      "sha256": "04c0a4d23953e12efa202250ffd2e77947580cc51250453c5eac3409f07a9486"
+    },
+    "public/assets/lucide/delete-secondary.png": {
+      "source": "assets/roku/roku/images/lucide/delete-secondary.png",
+      "sha256": "a1ae6ffc9d0c399a2696c65a554de180573b6eac81a17dfa359276697dafb03a"
+    },
+    "public/assets/lucide/delete-secondary.svg": {
+      "source": "assets/roku/roku/images/lucide/delete-secondary.svg",
+      "sha256": "6a3ea0adc9726285ff80a7f905a18347e7029e391a4b8c10654604cea62fd792"
     },
     "public/assets/lucide/discover-focus.png": {
       "source": "assets/roku/roku/images/lucide/discover-focus.png",
@@ -3099,6 +3251,30 @@
       "source": "assets/roku/roku/images/lucide/plus-secondary.svg",
       "sha256": "c1e38866d28c35712b04ecf960908d79450d9285f04615ae61506540812056c5"
     },
+    "public/assets/lucide/profile-focus.png": {
+      "source": "assets/roku/roku/images/lucide/profile-focus.png",
+      "sha256": "e13001a856798716fdbd6613869cd52ef1ccd7f79aeab6c7c20d2cdb5861d31f"
+    },
+    "public/assets/lucide/profile-focus.svg": {
+      "source": "assets/roku/roku/images/lucide/profile-focus.svg",
+      "sha256": "d62b8bcb22e0d7d8879fdf2ed084f34fcdc046da32e78eb1f53a6c1b15d68546"
+    },
+    "public/assets/lucide/profile-primary.png": {
+      "source": "assets/roku/roku/images/lucide/profile-primary.png",
+      "sha256": "a9323ac3d3311a283fd5f7ff36bb368a46989ec4bce892ad42b2bdee7e6ea2ee"
+    },
+    "public/assets/lucide/profile-primary.svg": {
+      "source": "assets/roku/roku/images/lucide/profile-primary.svg",
+      "sha256": "abb3edb4ba17b46a9fa6b6183a9df9e3db150d170ac9eb750997eebf6386a329"
+    },
+    "public/assets/lucide/profile-secondary.png": {
+      "source": "assets/roku/roku/images/lucide/profile-secondary.png",
+      "sha256": "daa9b74d11ef1510c04dcec3fd7ecf8fcb660918e0b6f6016a6eadbf1a8a6534"
+    },
+    "public/assets/lucide/profile-secondary.svg": {
+      "source": "assets/roku/roku/images/lucide/profile-secondary.svg",
+      "sha256": "e744b83120a2b74aefa38879fe4c68858852f211f78b1dc68766374de5a98c23"
+    },
     "public/assets/lucide/search-focus.png": {
       "source": "assets/roku/roku/images/lucide/search-focus.png",
       "sha256": "f47ee72b118d1477630dc44c3aaeb24420df517fdbc57a1ca61e1af71330dbe8"
@@ -3170,6 +3346,30 @@
     "public/assets/lucide/source-secondary.svg": {
       "source": "assets/roku/roku/images/lucide/source-secondary.svg",
       "sha256": "33918018a1506fc12b72ac7b1a321ed7af3e3223a70de59272070c1f7ce26712"
+    },
+    "public/assets/lucide/space-focus.png": {
+      "source": "assets/roku/roku/images/lucide/space-focus.png",
+      "sha256": "e5fdb19913b59378972265ca58b9852885d1851936faef992c2f69b19cd40cf5"
+    },
+    "public/assets/lucide/space-focus.svg": {
+      "source": "assets/roku/roku/images/lucide/space-focus.svg",
+      "sha256": "af58dd4989907d155caaa6e4d11147ef64c52c8dce6ee13f03f99c997b9288c7"
+    },
+    "public/assets/lucide/space-primary.png": {
+      "source": "assets/roku/roku/images/lucide/space-primary.png",
+      "sha256": "af1cbad51e9a3bcc53846dfba3e10af98b36b68d8e334006da61b9f84f528b3e"
+    },
+    "public/assets/lucide/space-primary.svg": {
+      "source": "assets/roku/roku/images/lucide/space-primary.svg",
+      "sha256": "f88ddb7c8fbeea401d77efd0e6240b307deda856cbf23b1d2b5713e15e7240a8"
+    },
+    "public/assets/lucide/space-secondary.png": {
+      "source": "assets/roku/roku/images/lucide/space-secondary.png",
+      "sha256": "f38d4e83a44c55d6e665b9404701f1d3ac26fb647438639530df89f8af6773dd"
+    },
+    "public/assets/lucide/space-secondary.svg": {
+      "source": "assets/roku/roku/images/lucide/space-secondary.svg",
+      "sha256": "5d40b34166bd6c630aee923849034afee3a0c371e890e9dba115a2e4b5a7dbfe"
     },
     "public/assets/nav-focus.png": {
       "source": "assets/roku/roku/images/nav-focus.png",

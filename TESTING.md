@@ -2206,3 +2206,35 @@ checksums. Samsung signing stopped explicitly because its four signing secrets
 are not configured. No unsigned installability claim and no production deploy.
 Actual LG/Samsung install, codec/DRM and remote-hosted AVPlay qualification remain
 unverified. Keep captures private; they are not release assets.
+# REL-001 — actionable errors, layers and navigation (2026-09-28)
+
+Design 80e1331 and core 64f986e are pinned. TV-web, TV launchers and desktop use
+the shared safe API error projection; provider capacity is no longer collapsed
+into generic 429 text. Native desktop Power/Mute and reported TV identity use
+the SmartCast bridge. Foreground verification retains the connected layout.
+Header avatars open Settings, with Switch profile kept as an explicit action.
+Saved Home rows render before optional catalog/preferences/hero work; late
+completion is generation-guarded so it cannot replace subsequent navigation.
+
+The disappearing TV foreground reproduced over trusted local HTTPS with the
+Vizio canvas entry. A remounted backdrop rendered above its former siblings.
+Explicit background and overlay layer order fixes hero return and opaque source,
+provider and details panels without disabling batching or raising texture limits.
+`tests/preview/reliability-scroll.mjs` forces texture cleanup during three scroll
+cycles; the hero text/control region retained 11,527 bright pixels before/after,
+with no page exceptions and roughly 44 MB texture allocation. Source, provider
+and details panel visibility are checked independently. Private captures are not
+committed. `reliability-browser.mjs` confirms failed artwork does not block Home,
+header→Settings→Switch profile works, and delayed catalogs do not steal Settings.
+
+221 unit tests, full typechecking and the production build pass. Both new browser
+checks use `PREVIEW_API_ORIGIN=https://watch.local.test:4180` and a loopback HTTPS
+Vite server using the existing local CA, not production data. These are Chromium
+and mocked native boundary checks, not physical TV/desktop playback acceptance.
+The website has not been deployed by this work; packages are a separate build.
+
+Existing HTTPS `solid-shoot.mjs` TvHome, TvSourceProvider and TvSourceDetails
+regressions also pass with `--platform=vizio`. The local Vite host requires
+`allowedHosts: ["watch.local.test"]` and matching `hmr.host`/`wss`; the initial
+harness attempt reported only a dev-server WebSocket host mismatch, corrected
+before the successful rerun. No production configuration was changed.

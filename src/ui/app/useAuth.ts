@@ -112,20 +112,23 @@ export function useAuth(app: DialogsApi) {
     const ticket = ++epoch.current;
     setBusy(true);
     try {
-      const [home, cats, preferences] = await Promise.all([
-        api.home(id, { signal: scope.signal }),
-        api.catalogs().then((available) => {
+      const catalogRequest = api.catalogs().then((available) => {
           if (ticket === epoch.current) { setCatalogs(available); setCatalogError(""); }
           return available;
         }).catch((cause) => {
           if (ticket === epoch.current) setCatalogError(cause instanceof Error ? cause.message : "Unable to load catalogs.");
           return [] as readonly Catalog[];
-        }),
-        api.preferences(id).catch(() => initialPrefs),
-      ]);
+        });
+      const preferencesRequest = api.preferences(id).catch(() => initialPrefs);
+      const home = await api.home(id, { signal: scope.signal });
       if (ticket !== epoch.current) return;
       setQueue(home.continueWatching);
       setFavorites(home.myList);
+      // Saved rows are already usable. Optional hero/live work must not keep a cover up.
+      setBootingHome(false);
+      if (screen === "startup" || screen === "profiles") setScreen("Home");
+      const [cats, preferences] = await Promise.all([catalogRequest, preferencesRequest]);
+      if (ticket !== epoch.current) return;
       setCatalogs(cats);
       setPrefs(preferences);
       // Home shows as soon as its hero catalog and recent channels arrive;
@@ -233,9 +236,10 @@ export function useAuth(app: DialogsApi) {
         setBootingHome(true);
         setProfile(id);
         stack.current = [];
-        await loadHome(id);
-        finishProfileNavigation();
-        setBootingHome(false);
+        const loading = loadHome(id);
+        const navigationTicket = epoch.current;
+        await loading;
+        if (navigationTicket === epoch.current) { finishProfileNavigation(); setBootingHome(false); }
       },
     );
   };
@@ -339,8 +343,10 @@ export function useAuth(app: DialogsApi) {
         setProfile(readyProfile);
         setBootingHome(true);
         stack.current = [];
-        void loadHome(readyProfile).then(() => {
-          if (!disposed) { finishProfileNavigation(); setBootingHome(false); }
+        const loading = loadHome(readyProfile);
+        const navigationTicket = epoch.current;
+        void loading.then(() => {
+          if (!disposed && navigationTicket === epoch.current) { finishProfileNavigation(); setBootingHome(false); }
         });
       }
     }, (message) => {

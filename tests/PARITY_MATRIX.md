@@ -389,3 +389,10 @@ Existing visual contract retained; design@0430d90 defines host/delivery scope.
 | Pairing, Home, Sources, Player | Existing shared renderer; four HTTPS Chromium fixture scenarios passed | Unverified |
 | Background/relaunch, root exit, media keys | Focus/key reuse plus three host-boundary tests | Unverified |
 | IPK and hosted ZIP | Packaged locally and uploaded by Actions 36359987582 | Install and playback unverified |
+## REL-001 — 2026-09-28
+
+| Surface | Verified scope | Remaining boundary |
+| --- | --- | --- |
+| TV Home → sources/provider/details | HTTPS Chromium, repeated scroll/texture cleanup, visible foreground and opaque panels | Physical Tizen/Vizio/webOS |
+| Browser header / early Home | Settings navigation, explicit profile switching, failed art and delayed catalogs | Production deployment |
+| Desktop remote | Synthetic Power/Mute wire requests and native shell compilation/tests | Real SmartCast TV and installed Windows/Linux runtime |

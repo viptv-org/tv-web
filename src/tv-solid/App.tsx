@@ -6594,7 +6594,8 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
                 s.phase === "sourceDetails"))
           }
         ><TvView>
-          <Show when={s.homeScrollY<950}><TvView y={-s.homeScrollY}><HomeBackdrop sharp={s.home.heroImage} ambient={s.home.ambientImage} /></TvView></Show>
+          {/* A remounted backdrop must remain behind content, regardless of insertion order. */}
+          <Show when={s.homeScrollY<950}><TvView zIndex={-1} y={-s.homeScrollY}><HomeBackdrop sharp={s.home.heroImage} ambient={s.home.ambientImage} /></TvView></Show>
           <CollapsedRail avatar={s.homeProfileAvatar} current="home"/>
           <TvView w={1920} h={1080} clipping>
           <TvView w={1920} h={Math.max(1080, 1080 + Math.max(0, s.homeShelves.length - 1) * 364)} y={-s.homeScrollY}>
@@ -7046,7 +7047,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
             color={s.primary}
           />
         </TvView>
-        <TvView show={s.phase === "sources" || s.phase === "sourceDetails"}>
+        <TvView zIndex={20} show={s.phase === "sources" || s.phase === "sourceDetails"}>
           <TvView w={1920} h={1080} color={s.sourceScrim} />
           <TvView x={1100} y={0} w={820} h={1080} color={s.sourcePanelGround} />
           <TvText
@@ -7169,7 +7170,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
 
 
         </TvView>
-        <TvView show={s.phase === "provider"}>
+        <TvView zIndex={21} show={s.phase === "provider"}>
           <TvView w={1920} h={1080} color={s.sourceScrim} />
           <TvView x={1100} y={0} w={820} h={1080} color={s.sourcePanelGround} />
           <TvText

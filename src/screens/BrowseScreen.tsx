@@ -157,7 +157,7 @@ function ProfileSwitch({ profile, onProfiles }: { profile: TvProfile; onProfiles
     <button
       type="button"
       className="vx-browse__profile"
-      aria-label={`Switch profile, current: ${profile.name}`}
+      aria-label={`Settings, current profile: ${profile.name}`}
       onClick={onProfiles}
     >
       <span className="vx-browse__profile-avatar" aria-hidden="true">
@@ -166,7 +166,7 @@ function ProfileSwitch({ profile, onProfiles }: { profile: TvProfile; onProfiles
       </span>
       <span className="vx-browse__profile-text">
         <span className="vx-browse__profile-name">{profile.name}</span>
-        <span className="vx-browse__profile-note">Switch profile</span>
+        <span className="vx-browse__profile-note">Settings</span>
       </span>
       <ChevronDown aria-hidden="true" strokeWidth={2} />
     </button>

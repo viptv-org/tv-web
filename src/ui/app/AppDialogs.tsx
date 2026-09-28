@@ -69,8 +69,8 @@ export function AppDialogs({ app }: { app: AppApi }) {
 
   return (
     <>
-      {/* TV has no skeletons: a cover until Home is ready (the responsive shell renders HomeSkeleton). */}
-      {!responsive && (bootingHome || startup) && <StartupCover />}
+      {/* Account startup is separate from Home's progressive content/artwork load. */}
+      {!responsive && startup && <StartupCover />}
       {preparing && screen !== "player" && screen !== "sources" && (
         responsive ? <div className="vx-dialogs-status"><Preparing /></div> : <Preparing placement="center" />
       )}

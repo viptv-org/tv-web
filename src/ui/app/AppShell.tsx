@@ -57,6 +57,7 @@ export function AppShell({ app }: { app: AppApi }) {
   const currentNav: NavDestination = isNavDestination(screen) && (phone || inRail(screen)) ? screen : section.current;
   const tvRail = useTvRail(!responsive && chromeScreen, screen);
   const openProfiles = () => setScreen("profiles");
+  const openHeaderSettings = () => { void navigate("Settings"); };
   return (
     <RemoteRoot
       inputMode={layout}
@@ -156,7 +157,7 @@ export function AppShell({ app }: { app: AppApi }) {
             casting={casting}
             onCast={openCast}
             profile={booting ? undefined : activeProfile}
-            onProfiles={openProfiles}
+            onProfiles={openHeaderSettings}
             skeleton={booting}
           />
         )}
@@ -210,7 +211,7 @@ export function AppShell({ app }: { app: AppApi }) {
                 navigate={navigate}
                 openLibrary={(queueSegment) => { setLibraryQueue(queueSegment); void navigate("My List"); }}
                 profile={activeProfile}
-                onProfiles={openProfiles}
+                onProfiles={responsive ? openHeaderSettings : openProfiles}
                 discoverSources={discoverSources}
                 detail={detail}
                 manage={manage}
@@ -244,7 +245,7 @@ export function AppShell({ app }: { app: AppApi }) {
                 searchPartial={searchPartial}
                 cards={cards}
                 profile={activeProfile}
-                onProfiles={openProfiles}
+                onProfiles={openHeaderSettings}
               />
             )}
             {/* Title family: the title page; under the Sources overlay the page it was opened from stays mounted. */}

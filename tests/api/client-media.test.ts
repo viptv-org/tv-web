@@ -3,6 +3,11 @@ import { MemoryDeviceSessionStore, TvApi } from "../../src/api";
 import { apiFor, deviceTokens, response, scripted, type Call } from "./client-helpers";
 
 describe("TvApi device and media boundary", () => {
+  it("preserves connection capacity recovery instead of treating it as rate limiting", async () => {
+    const fake = scripted(response({error:"Provider connection limit reached",error_code:"provider_connection_limit"},429));
+    await expect(apiFor(fake.fetcher).beginPairing("TV")).rejects.toMatchObject({status:429,code:"provider_connection_limit",
+      message:"This IPTV provider has reached its connection limit. Stop another stream or choose another provider."});
+  });
   it("decodes declared catalog extras, defaults, genres and bounded option lists", async () => {
     const store = new MemoryDeviceSessionStore();
     await store.save({
@@ -332,7 +337,7 @@ describe("TvApi device and media boundary", () => {
       expect.objectContaining({
         name: "TvApiError",
         status: 502,
-        message: "VIPTV could not complete that request",
+        message: "The server or provider is temporarily unavailable. Try again or choose another source.",
         code: "source_failed",
       }),
     );

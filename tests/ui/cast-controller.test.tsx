@@ -111,6 +111,12 @@ describe("native SmartCast controller boundary", () => {
     expect(nativeInvoke).toHaveBeenCalledWith("smartcast_run", { operation: "launchConjure", input: JSON.stringify({ url: receiverUrl }) });
     fireEvent.click(screen.getByRole("button", { name: "Volume down" }));
     await waitFor(() => expect(nativeInvoke).toHaveBeenCalledWith("smartcast_run", { operation: "key", input: '{"key":"VOL_DOWN"}' }));
+    await waitFor(() => expect(screen.getByRole("button", {name:"Mute"})).toBeEnabled());
+    fireEvent.click(screen.getByRole("button", {name:"Mute"}));
+    await waitFor(() => expect(nativeInvoke).toHaveBeenCalledWith("smartcast_run", {operation:"key",input:'{"key":"MUTE_TOGGLE"}'}));
+    await waitFor(() => expect(screen.getByRole("button", {name:"Power"})).toBeEnabled());
+    fireEvent.click(screen.getByRole("button", {name:"Power"}));
+    await waitFor(() => expect(nativeInvoke).toHaveBeenCalledWith("smartcast_run", {operation:"key",input:'{"key":"POW_TOGGLE"}'}));
   });
 
   it("reuses a paired TV but disables launch until a receiver is configured", async () => {
