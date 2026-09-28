@@ -9,7 +9,8 @@ This repository contains the canonical shared viewing client for VIPTV across We
 
 - **Web (`watch.syek.tech`)**: Served via static web bundle and proxy.
 - **Desktop (Linux, Windows, macOS)**: Native desktop shell lives in the dedicated [`viptv-org/desktop`](../desktop) repository, embedding this UI with native video decoding via [`tauri-video-plugin`](../tauri-video-plugin).
-- **Tizen**: Prepares an unsigned launcher candidate that opens the hosted TV application with AVPlay.
+- **Tizen**: Builds a certificate-signed hosted launcher WGT with AVPlay selected on the TV.
+- **LG webOS 22+**: Builds a developer-mode IPK launcher for the shared TV renderer and HTML media playback.
 - **Vizio**: Receives the SolidTV canvas bundle at `/tv/` with HTML media adapter.
 
 The hosted bundle should use the VIPTV backend as its **same HTTPS origin**. The backend supports this when `VIPTV_TV_DIST` points to the built distribution. It serves the dashboard at `/` and the TV SPA at `/tv/`, including client-route fallback. This avoids credentialed wildcard CORS and keeps device Bearer requests and short-lived media capabilities same-origin.
@@ -40,7 +41,11 @@ When the machine is healthy enough for a build, use the ordinary package script:
 npm run package:tv
 ```
 
-It produces an **unsigned** Tizen launcher candidate and a Vizio static hosting candidate under `artifacts/`. It does not create an installable Samsung release. A release still requires the Samsung signing profile and a physical-TV qualification. Do not overwrite a reviewed artifact path or include a signing key.
+This builds the static hosting ZIP under `artifacts/hosting/`. Use
+`node scripts/package-tv.mjs webos` for the IPK and
+`TIZEN_PROFILE=viptv node scripts/package-tv.mjs tizen` for the signed WGT after
+installing the platform SDKs. See [BUILDING.md](BUILDING.md) for signing secrets
+and installation limits. Physical TV qualification remains separate.
 
 For the backend, build the TV distribution first, then set `VIPTV_TV_DIST` to its `dist` directory. See the backend README’s TV hosting section. Deploy the Vizio bundle under `/tv/` at that same HTTPS origin and keep the server-side SPA fallback.
 
