@@ -10,21 +10,25 @@ unreachable, backend/gateway expiry is the final cleanup bound. Renewal failures
 are authoritative and callers must stop using cached media when authorization or
 expiry is lost. Control requests never follow the returned media URL.
 
-These explicit methods are transport preparation: ordinary player calls still
-use `startPlayback` until capability/track/conversion mapping and controller lease
-ownership switch together. No completed v2 playback cutover is claimed here.
+Ordinary movie/exact-episode `startPlayback` calls now use v2 with a fresh request
+ID and shared-core capability/track/conversion mapping. Live channel starts remain
+on the explicitly tracked legacy path until raw catalog migration. Active v2
+sessions renew at the returned interval, stop on refusal/expiry, and pause for
+foreground validation before resuming. Disposal cancels renewal; late heartbeats
+cannot restore a released cache entry. Player operation cancellation reaches the
+backend admission signal. This does not complete the all-client/live cutover.
 
 BE-002 migration checkpoint: movie/exact-episode discovery now starts at
 `POST /api/v2/streams` and polls `/api/v2/streams/:id?after=N`. Closed shared-core
 error messages survive successful HTTP polling; terminal failure with no usable
 sources raises a typed error. Partial success keeps healthy sources. Live jobs
-temporarily retain the legacy route; playback, live catalog paging and account
+temporarily retain the legacy route; live playback, live catalog paging and account
 management have not yet completed the v2 cutover. The legacy description below
 is not a claim of full v2 adoption.
 
 `TvApi` is the only HTTP boundary for Tizen and Vizio. It talks to a VIPTV HTTPS origin and uses the existing device grant flow: `POST /api/auth/device/code`, poll `POST /api/auth/device/token`, then rotate through `POST /api/auth/device/refresh`. Device tokens travel only as a Bearer header. The default `MemoryDeviceSessionStore` deliberately does not persist them; each platform must opt into its platform credential store.
 
-The API normalizes server/add-on payloads into `MediaItem`, `MediaSource`, catalog, guide, library and playback types. Add-on `url`, header, authorization and token values are removed before they reach UI state. A playback `url` is a short-lived VIPTV server media capability, not an upstream source URL; the server emits it root-relative and `TvApi` validates and normalizes it to the configured same-origin HTTPS URL for AVPlay. Use it immediately in the player and never store it. Live categories are typed filter records (`id`, `name`, `count`), never playable media. Continuation preserves the server’s separate `episodeTitle` while `name` remains the series title.
+The API normalizes server/add-on payloads into `MediaItem`, `MediaSource`, catalog, guide, library and playback types. Add-on transport credentials are removed from catalog/source-card metadata. Authorized v2 direct playback deliberately carries the original HTTP(S) source URL and required headers; gateway delivery carries an absolute HTTPS capability under the registered gateway origin/base path. Treat either as sensitive transient playback state: never persist or log it, and never send backend credentials to the media origin. Live categories remain legacy typed filter records (`id`, `name`, `count`) until raw catalog migration. Continuation preserves the server’s separate `episodeTitle` while `name` remains the series title.
 
 Content routes are `GET /catalogs`, `GET /discover`, `GET /meta/:type/:id`, `POST /streams`, `GET /streams/:id`, `POST /playback`, `POST /playback/:id/heartbeat`, and `DELETE /playback/:id`. Detail is `/meta`, not an invented `/detail` route. Seek and track changes start a replacement playback session with `position` and track selection; the server has no standalone seek route. Profile-scoped routes cover favorites, progress (`action: watched|unwatched|position` for corrections), queue, preferences and the next episode. Live uses `/live`, `/live/categories`, and `/guide/:id`. Parent status returns `pin_configured`; updating an existing PIN requires both `pin` and `current_pin`.
 

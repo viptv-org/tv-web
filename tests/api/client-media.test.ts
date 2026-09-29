@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import { MemoryDeviceSessionStore, TvApi } from "../../src/api";
 import { apiFor, deviceTokens, response, scripted, type Call } from "./client-helpers";
 
+const gatewayLease = (delivery: Record<string, unknown>) => ({ id: delivery.id, status: 'ready', expires_at: Math.floor(Date.now()/1000)+60, renew_after_seconds: 20, delivery: { ...delivery, kind: 'gateway', url: String(delivery.url).startsWith('/') ? `https://gateway.example/base${delivery.url}` : delivery.url } });
+
 describe("TvApi device and media boundary", () => {
   it("preserves connection capacity recovery instead of treating it as rate limiting", async () => {
     const fake = scripted(response({error:"Provider connection limit reached",error_code:"provider_connection_limit"},429));
@@ -72,7 +74,7 @@ describe("TvApi device and media boundary", () => {
     ]);
   });
 
-  it("normalizes the backend relative media capability to same-origin HTTPS for AVPlay", async () => {
+  it("uses v2 playback and preserves a separate gateway media origin for AVPlay", async () => {
     const store = new MemoryDeviceSessionStore();
     await store.save({
       sessionId: "s1",
@@ -83,7 +85,7 @@ describe("TvApi device and media boundary", () => {
       expiresIn: 900,
     });
     const fake = scripted(
-      response({
+      response(gatewayLease({
         id: "playback-1",
         url: "/media/playback-1/capability/index.m3u8",
         format: "hls",
@@ -96,7 +98,7 @@ describe("TvApi device and media boundary", () => {
         audio_tracks: [],
         subtitle_tracks: [],
         subtitles_supported: false,
-      }),
+      })),
     );
     const api = apiFor(fake.fetcher, store);
     await api.restoreSession();
@@ -116,14 +118,15 @@ describe("TvApi device and media boundary", () => {
         },
       }),
     ).resolves.toMatchObject({
-      url: "https://viptv.example/media/playback-1/capability/index.m3u8",
+      url: "https://gateway.example/base/media/playback-1/capability/index.m3u8",
     });
-    expect(JSON.parse(String(fake.calls[0].init?.body)).capabilities).toMatchObject({
-      direct_mp4: false, direct_hls: true,
+    expect(fake.calls[0].input).toBe('https://viptv.example/api/v2/playback');
+    expect(JSON.parse(String(fake.calls[0].init?.body)).client).toMatchObject({
+      platform: 'web', can_play_direct: true, video_codecs: ['h264'], audio_codecs: ['aac'],
     });
   });
 
-  it("keeps a safe playback contract when an older server omits informational fields", async () => {
+  it("rejects an old playback envelope instead of silently bypassing the v2 lease", async () => {
     const store = new MemoryDeviceSessionStore();
     await store.save({
       sessionId: "s1",
@@ -154,13 +157,7 @@ describe("TvApi device and media boundary", () => {
           hevcSdr: false,
         },
       }),
-    ).resolves.toMatchObject({
-      format: "hls",
-      mode: "direct",
-      position: 0,
-      audioTracks: [],
-      subtitleTracks: [],
-    });
+    ).rejects.toMatchObject({ code: 'invalid_response' });
   });
 
   it("rejects a playback response URL that carries embedded credentials", async () => {
@@ -174,7 +171,7 @@ describe("TvApi device and media boundary", () => {
       expiresIn: 900,
     });
     const fake = scripted(
-      response({
+      response(gatewayLease({
         id: "playback-1",
         url: "https://user:pass@upstream.invalid/private.m3u8",
         format: "hls",
@@ -187,7 +184,7 @@ describe("TvApi device and media boundary", () => {
         audio_tracks: [],
         subtitle_tracks: [],
         subtitles_supported: false,
-      }),
+      })),
     );
     const api = apiFor(fake.fetcher, store);
     await api.restoreSession();
@@ -220,8 +217,11 @@ describe("TvApi device and media boundary", () => {
     const fake = scripted(
       response({
         id: "playback-1",
+        status: 'ready', expires_at: Math.floor(Date.now()/1000)+60, renew_after_seconds: 20,
+        delivery: {
+        kind: 'direct',
         url: "https://provider.invalid/stream.mkv",
-        format: "mkv",
+        format: "original",
         mode: "direct",
         video_mode: "copy",
         audio_mode: "copy",
@@ -231,7 +231,8 @@ describe("TvApi device and media boundary", () => {
         audio_tracks: [],
         subtitle_tracks: [],
         subtitles_supported: false,
-        authorization: { cookie: "provider-session=1", user_agent: "VIPTV Desktop" },
+        headers: { Cookie: "provider-session=1", 'User-Agent': "VIPTV Desktop" },
+        },
       }),
     );
     const api = apiFor(fake.fetcher, store);
@@ -249,7 +250,7 @@ describe("TvApi device and media boundary", () => {
       },
     });
     expect(session.url).toBe("https://provider.invalid/stream.mkv");
-    expect(session.authorization).toEqual({ cookie: "provider-session=1", userAgent: "VIPTV Desktop" });
+    expect(session.authorization).toMatchObject({ cookie: "provider-session=1", userAgent: "VIPTV Desktop" });
   });
 
   it("decodes live categories as filters rather than pretending they are playable media", async () => {

@@ -5216,10 +5216,11 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
             if (
               this.phase !== "player" ||
               !this.playerSessionId ||
-              !this.playerItem
+              !this.playerItem ||
+              runtime.controller.snapshot.active?.session.id !== this.playerSessionId
             )
               return;
-            void api.heartbeat(this.playerSessionId, undefined, playback?.player.snapshot.time.positionSeconds).catch(() => undefined);
+            if (!api.playbackLease(this.playerSessionId)) void api.heartbeat(this.playerSessionId, undefined, playback?.player.snapshot.time.positionSeconds).catch(() => undefined);
             if (this.playerItem.type !== "live") {
               const time = runtime.player.snapshot.time;
               void api

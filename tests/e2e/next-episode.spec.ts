@@ -2,7 +2,7 @@ import { expect, test, type Page, type Route } from '@playwright/test';
 
 declare global { interface Window { finishFixturePlayback(video: HTMLMediaElement): void; } }
 
-const apiOrigin = 'https://viptv.syek.tech';
+const apiOrigin = process.env.VIPTV_TEST_API_ORIGIN ?? 'https://viptv.syek.tech';
 const corsHeaders = {
   'access-control-allow-origin': process.env.VIPTV_TEST_BROWSER_ORIGIN ?? 'http://127.0.0.1:4173',
   'access-control-allow-methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
@@ -35,7 +35,7 @@ type FixtureState = {
 };
 
 async function json(route: Route, body: unknown, status = 200) {
-  await route.fulfill({ status, contentType: 'application/json', headers: corsHeaders, body: JSON.stringify(body) });
+  await route.fulfill({ status, contentType: 'application/json', headers: corsHeaders, body: JSON.stringify(playbackV2Fixture(route, body, status)) });
 }
 
 /** Controlled HTML media edge: UI/controller code receives the real DOM events. */
@@ -132,7 +132,7 @@ async function installBackend(page: Page, options: FixtureOptions = {}): Promise
       if (options.delayNext) await new Promise(resolve => setTimeout(resolve, 750));
       return json(route, { status: 'next', item: second });
     }
-    if (path === '/api/playback' && request.method() === 'POST') {
+    if (path === '/api/v2/playback' && request.method() === 'POST') {
       const body = JSON.parse(request.postData() || '{}') as Record<string, unknown>;
       state.playbackRequests.push(body);
       const id = `playback-${state.playbackRequests.length}`;
@@ -143,7 +143,7 @@ async function installBackend(page: Page, options: FixtureOptions = {}): Promise
       state.progress.push(JSON.parse(request.postData() || '{}') as Record<string, unknown>);
       return json(route, { ok: true });
     }
-    if (path.startsWith('/api/playback/') || path === '/api/live/categories' || path === '/api/addons') return json(route, path === '/api/live/categories' ? { categories: [], total: 0 } : []);
+    if (path.startsWith('/api/v2/playback/') || path === '/api/live/categories' || path === '/api/addons') return json(route, path === '/api/live/categories' ? { categories: [], total: 0 } : []);
     return json(route, { error: `unhandled ${path}` }, 404);
   });
   return state;
@@ -151,7 +151,7 @@ async function installBackend(page: Page, options: FixtureOptions = {}): Promise
 
 async function enterFirstEpisode(page: Page, state: FixtureState) {
   await page.addInitScript(({ key, token }) => localStorage.setItem(key, JSON.stringify(token)), { key: `viptv-device:${apiOrigin}`, token: { sessionId: 'device-1', accountId: '7', profileId: null, accessToken: 'access', refreshToken: 'refresh', expiresIn: 900 } });
-  await page.goto('/?renderer=react&platform=vizio');
+  await page.goto('/tv/?renderer=react&platform=vizio');
   await page.getByRole('button', { name: 'Alex' }).press('Enter');
   await page.getByRole('button', { name: 'Fixture Show' }).press('Enter');
   await page.locator('[data-focus-id="episode-0"]').press('Enter');
@@ -217,7 +217,7 @@ test('Vizio: an explicit final-ten Resume waits for ended before continuing', as
   const resumed = { ...first, position: 115, duration: 120, queue_status: 'resume' };
   const state = await installBackend(page, { queue: [resumed], resumeAt: 115 });
   await page.addInitScript(({ key, token }) => localStorage.setItem(key, JSON.stringify(token)), { key: `viptv-device:${apiOrigin}`, token: { sessionId: 'device-1', accountId: '7', profileId: null, accessToken: 'access', refreshToken: 'refresh', expiresIn: 900 } });
-  await page.goto('/?renderer=react&platform=vizio');
+  await page.goto('/tv/?renderer=react&platform=vizio');
   await page.getByRole('button', { name: 'Alex' }).press('Enter');
   await page.getByRole('button', { name: 'Resume', exact: true }).press('Enter');
   await expect(page.getByRole('button', { name: 'Pause' })).toBeVisible();
@@ -241,7 +241,7 @@ test('Vizio: Home next-up management resumes the previous episode and Back retur
   const queued = { ...second, queue_status: 'next', previous_episode: first, position: 12, duration: 120 };
   const state = await installBackend(page, { queue: [queued] });
   await page.addInitScript(({ key, token }) => localStorage.setItem(key, JSON.stringify(token)), { key: `viptv-device:${apiOrigin}`, token: { sessionId: 'device-1', accountId: '7', profileId: null, accessToken: 'access', refreshToken: 'refresh', expiresIn: 900 } });
-  await page.goto('/?renderer=react&platform=vizio');
+  await page.goto('/tv/?renderer=react&platform=vizio');
   await page.getByRole('button', { name: 'Alex' }).press('Enter');
   const card = page.getByRole('button', { name: 'Fixture Show' }).first();
   await card.click({ button: 'right' });
@@ -297,7 +297,7 @@ test('Vizio: failed Next tries at most three distinct sources and preserves the 
       id: `failed-next-${index}`, name: '1080p H.264 English', source_addon_id: 'addon:ranked', audioEvidenceScore: 8,
     })) }], done: true });
   });
-  await page.route(`${apiOrigin}/api/playback`, async route => {
+  await page.route(`${apiOrigin}/api/v2/playback`, async route => {
     if (route.request().method() !== 'POST') return route.fallback();
     const body = JSON.parse(route.request().postData() || '{}') as Record<string, unknown>;
     if (body.stream_id === 'first-source') return route.fallback();
@@ -307,9 +307,11 @@ test('Vizio: failed Next tries at most three distinct sources and preserves the 
   await enterFirstEpisode(page, state);
   await page.getByRole('button', { name: 'Next episode' }).press('Enter');
   await expect(page.getByRole('alert')).toBeVisible();
-  expect(state.playbackRequests.map(request => request.stream_id)).toEqual([
+  const unique = Array.from(new Map(state.playbackRequests.map(request => [request.request_id, request])).values());
+  expect(unique.map(request => request.stream_id)).toEqual([
     'first-source', 'failed-next-1', 'failed-next-2', 'failed-next-3',
   ]);
+  expect(state.playbackRequests.length).toBeLessThanOrEqual(7); // At most one same-id cleanup reconciliation per failed admission.
   await page.keyboard.press('ArrowDown');
   await expect(page.locator('.vx-player__context')).toContainText('S1 · E1 · Pilot');
   await expect(page.getByRole('button', { name: 'Pause' })).toBeVisible();
@@ -320,28 +322,30 @@ test('Vizio: failed explicit Resume offers exact Retry and manual source choice 
   test.skip(test.info().project.name !== 'vizio', 'source recovery intent is shared');
   const noPageErrors = await installVizioMedia(page);
   const state = await installBackend(page, { queue: [{ ...first, position: 42, queue_status: 'resume' }] });
-  await page.route(`${apiOrigin}/api/playback`, async route => {
+  const intents = () => Array.from(new Map(state.playbackRequests.map(request => [request.request_id, request])).values());
+  await page.route(`${apiOrigin}/api/v2/playback`, async route => {
     if (route.request().method() !== 'POST') return route.fallback();
     state.playbackRequests.push(JSON.parse(route.request().postData() || '{}') as Record<string, unknown>);
     return json(route, { error: 'Source is temporarily unavailable.' }, 503);
   });
   await page.addInitScript(({ key, token }) => localStorage.setItem(key, JSON.stringify(token)), { key: `viptv-device:${apiOrigin}`, token: { sessionId: 'device-1', accountId: '7', profileId: null, accessToken: 'access', refreshToken: 'refresh', expiresIn: 900 } });
-  await page.goto('/?renderer=react&platform=vizio');
+  await page.goto('/tv/?renderer=react&platform=vizio');
   await page.getByRole('button', { name: 'Alex' }).press('Enter');
   await page.getByRole('button', { name: 'Resume', exact: true }).press('Enter');
   await expect(page.getByRole('button', { name: 'Retry', exact: true })).toBeVisible();
-  expect(state.playbackRequests).toHaveLength(1);
+  expect(intents()).toHaveLength(1);
   await page.getByRole('button', { name: 'Retry', exact: true }).press('Enter');
-  await expect.poll(() => state.playbackRequests, { timeout: 15000 }).toHaveLength(2);
+  await expect.poll(intents, { timeout: 15000 }).toHaveLength(2);
   await expect(page.getByRole('button', { name: 'Choose another source' })).toBeVisible();
   await page.getByRole('button', { name: 'Choose another source' }).press('Enter');
   await expect(page.getByRole('button', { name: 'Current 1080p' })).toBeVisible();
-  expect(state.playbackRequests).toHaveLength(2);
+  expect(intents()).toHaveLength(2);
   await page.getByRole('button', { name: 'Current 1080p' }).press('Enter');
-  await expect.poll(() => state.playbackRequests).toHaveLength(3);
+  await expect.poll(intents).toHaveLength(3);
   expect(state.playbackRequests.every(request => request.stream_id === 'first-source' && request.position === 42)).toBe(true);
   await page.getByRole('button', { name: 'Back', exact: true }).press('Enter');
   await page.keyboard.press('Escape');
   await expect(page.getByRole('heading', { name: 'Continue watching', exact: true })).toBeVisible();
   noPageErrors();
 });
+import { playbackV2Fixture } from './helpers/playbackV2Fixture';

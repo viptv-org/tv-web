@@ -91,7 +91,7 @@ export type {
   PlaybackCapabilities,
   PlaybackStart,
 } from "@viptv/video";
-/** The URL is a short-lived server capability, never an upstream media URL. Do not persist it. */
+/** Authorized direct source URL or gateway media capability. Never persist or log it. */
 export type PlaybackSession = CoreView<Core.PlaybackSession>;
 
 export interface PlaybackPreferences {

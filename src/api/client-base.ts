@@ -35,6 +35,7 @@ import type {
 
 export class TvApiClientBase {
   protected readonly origin: string;
+  protected readonly playbackPlatform: NonNullable<TvApiOptions['playbackPlatform']>;
   protected readonly requestFetch: typeof fetch;
   protected readonly store: DeviceSessionStore;
   protected tokens: DeviceTokenSet | null = null;
@@ -55,6 +56,7 @@ export class TvApiClientBase {
         "VIPTV API base URL must be an HTTPS origin without a path",
       );
     this.origin = url.origin;
+    this.playbackPlatform = options.playbackPlatform ?? 'web';
     // Browser fetch is a Window method and throws "Illegal invocation" when
     // called as a detached function. Injected test/host fetches are already
     // explicit callables and retain their own receiver convention.

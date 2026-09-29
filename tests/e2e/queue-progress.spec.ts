@@ -1,6 +1,6 @@
 import { expect, test, type Page, type Route } from '@playwright/test';
 
-const apiOrigin = 'https://viptv.syek.tech';
+const apiOrigin = process.env.VIPTV_TEST_API_ORIGIN ?? 'https://viptv.syek.tech';
 const corsHeaders = {
   'access-control-allow-origin': process.env.VIPTV_TEST_BROWSER_ORIGIN ?? 'http://127.0.0.1:4173',
   'access-control-allow-methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
@@ -28,7 +28,7 @@ type FixtureState = {
 };
 
 async function json(route: Route, body: unknown, status = 200) {
-  await route.fulfill({ status, contentType: 'application/json', headers: corsHeaders, body: JSON.stringify(body) });
+  await route.fulfill({ status, contentType: 'application/json', headers: corsHeaders, body: JSON.stringify(playbackV2Fixture(route, body, status)) });
 }
 
 async function installFixture(page: Page, watched = false): Promise<FixtureState> {
@@ -92,12 +92,12 @@ async function installFixture(page: Page, watched = false): Promise<FixtureState
       events: [{ seq: 1, source: 'addon:queue', streams: [{ id: 'queue-source', name: 'Queue source', title: 'Queue source', source_addon_id: 'addon:queue', source_fingerprint: 'queue-release' }] }],
       done: true,
     });
-    if (path === '/api/playback' && request.method() === 'POST') {
+    if (path === '/api/v2/playback' && request.method() === 'POST') {
       const body = JSON.parse(request.postData() || '{}') as Record<string, unknown>;
       state.playback.push(body);
       return json(route, {
         id: `playback-${state.playback.length}`, url: `/media/playback-${state.playback.length}/capability/index.m3u8`,
-        format: 'hls', mode: 'direct', video_mode: 'copy', audio_mode: 'copy', position: Number(body.position ?? 0),
+        kind: 'gateway', format: 'hls', mode: 'direct', video_mode: 'copy', audio_mode: 'copy', position: Number(body.position ?? 0),
         duration: 120, live: false, audio_tracks: [], subtitle_tracks: [], subtitles_supported: false,
       });
     }
@@ -128,7 +128,7 @@ async function enterHome(page: Page, watched = false) {
     key: `viptv-device:${apiOrigin}`,
     token: { sessionId: 'device-1', accountId: '7', profileId: null, accessToken: 'access', refreshToken: 'refresh', expiresIn: 900 },
   });
-  await page.goto('/?renderer=react&platform=vizio');
+  await page.goto('/tv/?renderer=react&platform=vizio');
   await page.getByRole('button', { name: 'Alex' }).press('Enter');
   await expect(page.getByRole('button', { name: 'Queue Show' })).toBeVisible();
   return { state, assertNoPageErrors: () => expect(pageErrors).toEqual([]) };
@@ -183,3 +183,4 @@ test.describe('Vizio queue progress contract', () => {
     assertNoPageErrors();
   });
 });
+import { playbackV2Fixture } from './helpers/playbackV2Fixture';

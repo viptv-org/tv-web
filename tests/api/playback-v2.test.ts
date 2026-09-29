@@ -19,6 +19,37 @@ beforeEach(() => vi.useFakeTimers());
 afterEach(() => vi.useRealTimers());
 
 describe('v2 backend playback control', () => {
+  it('rejects unsolicited direct delivery when the request requires a gateway', async () => {
+    const direct = { ...lease('ready'), delivery: { kind: 'direct', url: 'http://provider.invalid/movie.mp4', headers: {}, format: 'original', position: 0, live: false } };
+    for (const input of [
+      { ...request, client: { ...request.client, canPlayDirect: false } },
+      { ...request, forceGateway: true },
+      { ...request, conversion: 'audio' as const },
+    ]) {
+      const fake = scripted(response(direct), response({}));
+      await expect(apiFor(fake.fetcher).startPlaybackV2(input)).rejects.toMatchObject({ code: 'invalid_playback_response' });
+      expect(fake.calls.at(-1)?.init?.method).toBe('DELETE');
+    }
+  });
+  it('does not resurrect a stopped lease when an earlier heartbeat finishes late', async () => {
+    let finish!: (value: Response) => void;
+    const calls: string[] = [];
+    const fetcher: typeof fetch = async (input, init) => {
+      calls.push(`${init?.method} ${input}`);
+      if (String(input).endsWith('/heartbeat')) return new Promise(resolve => { finish = resolve; });
+      return response(init?.method === 'DELETE' ? {} : lease('ready'));
+    };
+    const api = apiFor(fetcher);
+    await api.startPlaybackV2(request);
+    const renewal = api.renewPlaybackV2('pb2_one');
+    await vi.advanceTimersByTimeAsync(0);
+    await api.stopPlayback('pb2_one');
+    finish(response(lease('ready')));
+    await renewal;
+    expect(api.playbackLease('pb2_one')).toBeUndefined();
+    await api.stopPlayback('pb2_one');
+    expect(calls.at(-1)).toBe('DELETE https://viptv.example/api/v2/playback/pb2_one');
+  });
   it('sends shared mapped conversion and preferences without a profile quality cap', async () => {
     const mapped = normalizeCore<PlaybackV2Request>('playbackV2Intent', {
       requestId: 'mapped', platform: 'tauri', preferences: { audioLanguage: 'en', quality: '1080p' },

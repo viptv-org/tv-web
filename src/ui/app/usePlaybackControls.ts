@@ -313,8 +313,9 @@ export function usePlaybackControls(app: NavigationApi) {
   // Latest card action closures for the memoized card row: the row reads the
   const nativeAudio = snapshot?.tracks.audio;
   const serverAudio = session?.audioTracks;
+  const directSession = session?.deliveryKind ? session.deliveryKind === 'direct' : session?.mode === 'direct';
   const canNativeAudio =
-    session?.mode === "direct" &&
+    directSession &&
     player.current?.capabilities.canSelectAudioTrack;
   const currentAudioId = snapshot?.tracks.selectedAudioId;
 
@@ -345,7 +346,7 @@ export function usePlaybackControls(app: NavigationApi) {
   const nativeText = snapshot?.tracks.text;
   const serverText = session?.subtitleTracks;
   const canNativeText =
-    session?.mode === "direct" &&
+    directSession &&
     player.current?.capabilities.canSelectTextTrack;
   const currentTextId = snapshot?.tracks.selectedTextId;
   const subtitlesOff = canNativeText
@@ -389,7 +390,7 @@ export function usePlaybackControls(app: NavigationApi) {
   // an engine that can disable a text track (TV "Off" row).
   const subtitlesCanTurnOff = !!(
     session?.subtitlesSupported ||
-    (session?.mode === "direct" && player.current?.capabilities.canDisableTextTrack)
+    (directSession && player.current?.capabilities.canDisableTextTrack)
   );
 
   /** Playback info as key / value rows (monospace values). */

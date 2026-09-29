@@ -49,6 +49,7 @@ async function start() {
       return nativeFetch(input, { ...init, headers, maxRedirections: 0 });
     } : undefined,
     baseUrl: origin,
+    playbackPlatform: platform,
     allowInsecurePreview: lanPreview,
     sessionStore: {
       withLock: navigator.locks ? work => navigator.locks.request(key, work) : undefined,

@@ -64,7 +64,12 @@ export class PlaybackV2Transport {
       let lease = this.decode(response, id);
       for (;;) {
         throwIfAborted(controller.signal);
-        if (this.ready(lease)) return lease;
+        const session = this.ready(lease);
+        if (session) {
+          if (session.deliveryKind === 'direct' && (!request.client.canPlayDirect || request.forceGateway || request.conversion !== 'auto'))
+            throw new TvApiError(502, 'The server returned a delivery this device did not request.', 'invalid_playback_response');
+          return lease;
+        }
         await wait(controller.signal);
         lease = await this.status(id, { signal: controller.signal });
       }

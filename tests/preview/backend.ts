@@ -14,6 +14,23 @@ import { fileURLToPath } from 'node:url';
 
 export const apiOrigin = process.env.PREVIEW_API_ORIGIN ?? 'https://viptv.syek.tech';
 export const sessionKey = `viptv-device:${apiOrigin}`;
+const playbackSessions = new WeakMap<Page, Map<string, Record<string, unknown>>>();
+// Standalone Node previews intentionally keep their protocol fixture local.
+function playbackV2Fixture(route: Route, body: unknown, status = 200): unknown {
+  const request = route.request(), url = new URL(request.url());
+  if (!url.pathname.startsWith('/api/v2/playback') || status >= 400) return body;
+  const page = request.frame().page();
+  let sessions = playbackSessions.get(page);
+  if (!sessions) { sessions = new Map(); playbackSessions.set(page, sessions); }
+  const raw = body && typeof body === 'object' ? body as Record<string, unknown> : {};
+  const id = typeof raw.id === 'string' ? raw.id : url.pathname.split('/')[4];
+  if (request.method() === 'DELETE') { sessions.delete(id); return {}; }
+  if (typeof raw.url === 'string') sessions.set(id, { ...raw, kind: 'gateway', url: new URL(raw.url, url.origin).href,
+    video_mode: raw.video_mode === 'transcode' ? 'encode' : raw.video_mode,
+    audio_mode: raw.audio_mode === 'transcode' ? 'encode' : raw.audio_mode });
+  if (!sessions.has(id)) return body;
+  return { id, status: 'ready', expires_at: Math.floor(Date.now()/1000)+60, renew_after_seconds: 20, delivery: sessions.get(id) };
+}
 export const referenceDir = process.env.VIPTV_PREVIEW_REFERENCE_DIR
   ? `${process.env.VIPTV_PREVIEW_REFERENCE_DIR.replace(/\/+$/, '')}/`
   : fileURLToPath(new URL('../../../design/viptv-design-system/reference/', import.meta.url));
@@ -453,7 +470,7 @@ export async function installBackend(page: Page, options: BackendOptions): Promi
       'access-control-allow-methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
       'access-control-allow-headers': 'authorization, content-type, x-csrf-token, accept',
     };
-    const json = (body: unknown, status = 200) => route.fulfill({ status, headers, contentType: 'application/json', body: JSON.stringify(body) });
+    const json = (body: unknown, status = 200) => route.fulfill({ status, headers, contentType: 'application/json', body: JSON.stringify(playbackV2Fixture(route, body, status)) });
     if (request.method() === 'OPTIONS') return route.fulfill({ status: 204, headers });
     const url = new URL(request.url());
     const path = url.pathname, method = request.method();
@@ -588,7 +605,7 @@ export async function installBackend(page: Page, options: BackendOptions): Promi
     if (guideMatch) return json(guide(decodeURIComponent(guideMatch[1])));
 
     // Playback.
-    if (path === '/api/playback' && method === 'POST') {
+    if ((path === '/api/playback' || path === '/api/v2/playback') && method === 'POST') {
       playbackCount++;
       if (options.playbackHang || (options.playbackHangAfter !== undefined && playbackCount > options.playbackHangAfter)) return hang();
       if (options.playbackFailAfter !== undefined && playbackCount > options.playbackFailAfter) return json({ error: 'upstream unavailable', error_code: 'SOURCE_TIMEOUT' }, 504);
@@ -602,7 +619,7 @@ export async function installBackend(page: Page, options: BackendOptions): Promi
         subtitles_supported: true,
       });
     }
-    if (path.startsWith('/api/playback')) return json({ ok: true });
+    if (path.startsWith('/api/playback') || path.startsWith('/api/v2/playback')) return json({ ok: true });
     return json({ error: `Unhandled preview route ${method} ${path}` }, 404);
   });
   return { requests, errors };

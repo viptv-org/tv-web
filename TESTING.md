@@ -1,3 +1,35 @@
+# BE-002 active VOD playback — 2026-09-29
+
+Normal movie/exact-episode playback now uses v2 start/poll/renew/release through
+the shared intent mapper. Both React and SolidTV report their actual platform,
+monitor active lease renewal/expiry, and validate on foreground return. Refused
+renewal stops the decoder; network retries cannot extend the lease. A 60-second
+local ceiling bounds clock-skew effects during a control outage. Late renewals
+cannot restore released cache entries; stale controller stop acknowledgements
+cannot overwrite a newer session. Video pin f4218cb includes cancellable backend
+admission and a single gateway-proxy fallback for failed direct media transport,
+without forcing encoding for a network failure.
+
+Live channel starts remain explicitly legacy pending raw catalog migration.
+No automatic old-protocol fallback is added for VOD. Android/Roku playback
+migration, installed desktop/header parity, real gateway integration, native track
+qualification and the broader cutover checklist remain open.
+
+Validation: 243 unit tests, typechecking and production build passed. Video's
+106 tests/build passed; backend's 278 tests/strict Clippy passed with webOS HTML
+transport restrictions. Twenty-seven trusted-local-HTTPS browser cases passed
+for v2 source/playback/history, failed Next/Resume, foreground revocation, remote
+seek/track/exit, queue and responsive behavior. Decoder/API boundaries were
+synthetic, not real providers or physical TVs. Three initial broad cases failed
+because fixtures counted idempotent cleanup as new intent or treated gateway
+delivery as native direct; corrected protocol fixtures passed the full rerun.
+
+SolidTV's Home playback/exit/failure/retry harness passed for simulated Tizen,
+Vizio and webOS and asserts platform reporting plus v2 release. The required
+solid-shoot TvPlayer resume/seek flow passed for simulated Vizio; its screenshot
+was inspected privately, not committed and not claimed as full visual parity.
+No production deployment occurred.
+
 # BE-002 shared conversion/track mapping — 2026-09-29
 
 Core pin 4418f1ddb3c1640276f31b130deeb2d4ffa6873d matches Android. The generated

@@ -36,14 +36,29 @@ import type {
 
 import { TvApiClientBase } from "./client-base";
 import { PlaybackV2Transport } from "./playback-v2";
-import type { PlaybackV2Request } from "../../vendor/core/typescript/wire";
+import type { PlaybackV2Request, PlaybackLease } from "../../vendor/core/typescript/wire";
 
 export class TvApiCatalog extends TvApiClientBase {
   private readonly playbackV2 = new PlaybackV2Transport((input, options) => this.domainRequest(input, options), this.origin);
-  startPlaybackV2(request: PlaybackV2Request, options?: RequestOptions) { return this.playbackV2.start(request, options); }
+  private readonly playbackLeases = new Map<string, PlaybackLease>();
+  private readonly legacyPlaybackIds = new Set<string>();
+  async startPlaybackV2(request: PlaybackV2Request, options?: RequestOptions) {
+    const lease = await this.playbackV2.start(request, options);
+    this.playbackLeases.set(lease.id, lease);
+    return lease;
+  }
+  playbackLease(id: string) { return this.playbackLeases.get(id); }
   playbackStatusV2(id: string, options?: RequestOptions) { return this.playbackV2.status(id, options); }
-  renewPlaybackV2(id: string, options?: RequestOptions) { return this.playbackV2.renew(id, options); }
-  stopPlaybackV2(id: string, options?: RequestOptions) { return this.playbackV2.stop(id, options); }
+  async renewPlaybackV2(id: string, options?: RequestOptions) {
+    const previous = this.playbackLeases.get(id);
+    const lease = await this.playbackV2.renew(id, options);
+    if (previous && this.playbackLeases.get(id) === previous) this.playbackLeases.set(id, lease);
+    return lease;
+  }
+  async stopPlaybackV2(id: string, options?: RequestOptions) {
+    try { await this.playbackV2.stop(id, options); }
+    finally { this.playbackLeases.delete(id); }
+  }
   /** Temporary legacy live bridge until guide/playback adopts raw catalog IDs. */
   private readonly legacyLiveJobs = new Set<string>();
   async selectProfile(profileId: string, options?: RequestOptions) {
@@ -204,12 +219,21 @@ export class TvApiCatalog extends TvApiClientBase {
     request: PlaybackStart,
     options?: RequestOptions,
   ): Promise<PlaybackSession> {
+    if (!request.channelId) {
+      const requestId = Array.from(crypto.getRandomValues(new Uint8Array(16)), byte => byte.toString(16).padStart(2, '0')).join('');
+      const canonical = normalizeCore<PlaybackV2Request>('playbackV2Intent', { requestId, platform: this.playbackPlatform, playback: request });
+      const lease = await this.startPlaybackV2(canonical, options);
+      return lease.session!;
+    }
     const v = expectObject(
       await this.domainRequest({ operation: "playback", playback: request }, options),
     );
-    return playback(v, this.origin);
+    const session = playback(v, this.origin);
+    this.legacyPlaybackIds.add(session.id);
+    return session;
   }
   async heartbeat(id: string, options?: RequestOptions, position?: number) {
+    if (!this.legacyPlaybackIds.has(id)) { await this.renewPlaybackV2(id, options); return; }
     await this.raw(
       `/api/playback/${segment(id)}/heartbeat`,
       { method: "POST", body: position === undefined ? {} : { position } },
@@ -218,12 +242,14 @@ export class TvApiCatalog extends TvApiClientBase {
     );
   }
   async stopPlayback(id: string, options?: RequestOptions) {
+    if (!this.legacyPlaybackIds.has(id)) { await this.stopPlaybackV2(id, options); return; }
     await this.raw(
       `/api/playback/${segment(id)}`,
       { method: "DELETE" },
       true,
       options,
     );
+    this.legacyPlaybackIds.delete(id);
   }
   /** There is no separate seek route: restart the selected opaque stream at `position`. */
   async seek(

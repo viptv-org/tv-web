@@ -11,7 +11,7 @@ try {
     await installMediaStubs(page,{frame:'63e024'});
     const focused=(view,index)=>page.waitForFunction(({view,index})=>window.__viptvFocus?.view===view&&window.__viptvFocus?.index===index,{view,index},{timeout:10000}).catch(async cause=>{
       console.error(await page.evaluate(()=>({focus:window.__viptvFocus,player:window.__viptvPlayer})));
-      console.error(backend.requests.filter(r=>r.path.startsWith('/api/playback')).map(r=>({path:r.path,body:r.body})));
+      console.error(backend.requests.filter(r=>r.path.startsWith('/api/v2/playback')).map(r=>({path:r.path,body:r.body})));
       await page.screenshot({path:`/tmp/solid-home-play-${platform}-failed.png`});
       throw cause;
     });
@@ -20,13 +20,17 @@ try {
     await page.keyboard.down('Enter');await page.waitForTimeout(760);
     await focused('title-menu-option',0);
     await page.keyboard.up('Enter');
-    expect(backend.requests.filter(r=>r.path==='/api/playback'&&r.method==='POST')).toHaveLength(0);
+    expect(backend.requests.filter(r=>r.path==='/api/v2/playback'&&r.method==='POST')).toHaveLength(0);
     await page.keyboard.press('Escape');await focused('home-action',0);
     await page.keyboard.press('Enter');await focused('source-row',0);
     await page.keyboard.press('Enter');await focused('player-control',1);
-    expect(backend.requests.filter(r=>r.path==='/api/playback'&&r.method==='POST')).toHaveLength(1);
+    expect(backend.requests.filter(r=>r.path==='/api/v2/playback'&&r.method==='POST')).toHaveLength(1);
+    const request = backend.requests.find(r=>r.path==='/api/v2/playback'&&r.method==='POST');
+    expect(request.body.client.platform).toBe(platform);
+    if(platform==='vizio')expect(request.body.client.can_play_direct).toBe(false);
     await page.keyboard.press('Escape');await page.keyboard.press('Escape');
     await focused('source-row',0);
+    expect(backend.requests.some(r=>r.path.startsWith('/api/v2/playback/')&&r.method==='DELETE')).toBe(true);
     await page.keyboard.press('Escape');
     await focused('home-action',0);
     expect(backend.errors).toEqual([]);

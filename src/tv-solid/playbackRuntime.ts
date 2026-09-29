@@ -1,4 +1,6 @@
 import type { MediaItem, MediaSource, TvApi } from "../api";
+import { monitorPlaybackLease } from '../api/playback-lease';
+import { TvApiError } from '../api';
 import {
   createPlayer,
   deliveryCapabilitiesFor,
@@ -49,6 +51,20 @@ export function createSolidTVPlaybackRuntime(
   let disposed = false;
   let generation = 0;
   let reportedError: unknown;
+  let monitor: ReturnType<typeof monitorPlaybackLease> | undefined;
+  let monitoredId: string | undefined;
+  let activity = 0;
+  const interaction = () => { activity++; };
+  const reconnect = async () => {
+    if (disposed || document.visibilityState !== 'visible' || !monitor) return;
+    const current = monitor, id = monitoredId, revision = activity;
+    const playing = player.snapshot.state === 'playing';
+    if (playing) await player.pause().catch(() => undefined);
+    const ready = await current.refresh();
+    if (disposed || current !== monitor || id !== controller.snapshot.active?.session.id) return;
+    if (ready && playing && revision === activity) await player.play().catch(error => report(error));
+    else if (!ready && current.isActive()) report(new TvApiError(409, 'Playback could not reconnect. Retry playback.', 'playback_reconnect_failed'));
+  };
   const report = (error: Error, identity: unknown = error) => {
     if (reportedError === identity) return;
     reportedError = identity;
@@ -56,8 +72,22 @@ export function createSolidTVPlaybackRuntime(
     else console.error("TV playback recovery failed", error);
   };
   const unsubscribeController = controller.subscribe((state) => {
+    const id = state.active?.session.id;
+    if (id !== monitoredId) {
+      monitor?.dispose(); monitor = undefined; monitoredId = id;
+      const lease = id ? api.playbackLease?.(id) : undefined;
+      if (id && lease) monitor = monitorPlaybackLease(lease, options => api.renewPlaybackV2(id, options), error => {
+        if (disposed || controller.snapshot.active?.session.id !== id) return;
+        const stopping = controller.stop();
+        report(error instanceof Error ? error : new Error('Playback authorization was lost.'));
+        void stopping.catch(() => undefined);
+      });
+    }
     if (!disposed) callbacks.onControllerState?.(state);
   });
+  document.addEventListener('visibilitychange', reconnect);
+  window.addEventListener('keydown', interaction);
+  window.addEventListener('pointerdown', interaction);
   const unsubscribe = player.subscribe((snapshot) => {
     if (disposed) return;
     const ticket = generation;
@@ -105,6 +135,10 @@ export function createSolidTVPlaybackRuntime(
     async dispose() {
       if (disposed) return;
       disposed = true;
+      monitor?.dispose();
+      document.removeEventListener('visibilitychange', reconnect);
+      window.removeEventListener('keydown', interaction);
+      window.removeEventListener('pointerdown', interaction);
       generation++;
       unsubscribe();
       unsubscribeController();

@@ -852,7 +852,7 @@ try {
     if (!backend.requests.some(request => request.path === '/api/streams' && request.method === 'POST') ||
         !backend.requests.some(request => request.path.startsWith('/api/streams/')))
       throw new Error(`Source discovery did not start and poll: ${JSON.stringify(backend.requests)}`);
-    if (viaPlay && backend.requests.some(request => request.path === '/api/playback'))
+    if (viaPlay && backend.requests.some(request => request.path === '/api/v2/playback'))
       throw new Error('Resume without a saved fingerprint selected a source automatically');
     await page.keyboard.press('ArrowDown');
     await focused('source-row', 1);
@@ -907,7 +907,7 @@ try {
     const focused = (view, index) => page.waitForFunction(
       ({ view, index }) => window.__viptvFocus?.view === view && window.__viptvFocus?.index === index,
       { view, index }, { timeout: 5000 });
-    if (!backend.requests.some(request => request.path === '/api/playback' && request.method === 'POST'))
+    if (!backend.requests.some(request => request.path === '/api/v2/playback' && request.method === 'POST'))
       throw new Error('Selected source did not start a backend playback session');
     const intent = await page.evaluate(() => window.__viptvSourceIntent);
     if (intent?.sourceId !== 'source-1' || intent?.itemId !== 'tt-monster:1:1' || intent?.position !== 4 || intent?.resume !== viaPlay)
@@ -931,7 +931,7 @@ try {
     if (platform !== 'tizen' && layer === 'none') throw new Error('First Back exited playback instead of hiding controls');
     await page.keyboard.press('Escape');
     await focused('source-row', 0);
-    if (!backend.requests.some(request => request.path.startsWith('/api/playback/') && request.method !== 'GET'))
+    if (!backend.requests.some(request => request.path.startsWith('/api/v2/playback/') && request.method !== 'GET'))
       throw new Error('Exiting the player did not stop its backend session');
     if (!backend.requests.some(request => request.path.endsWith('/progress') && request.method !== 'GET'))
       throw new Error(`Exiting the player did not save progress: ${JSON.stringify(backend.requests.slice(-8))}`);
@@ -954,7 +954,7 @@ try {
     const focused = (view, index) => page.waitForFunction(
       ({ view, index }) => window.__viptvFocus?.view === view && window.__viptvFocus?.index === index,
       { view, index }, { timeout: 5000 });
-    const playbackRequests = () => backend.requests.filter(request => request.path === '/api/playback' && request.method === 'POST').length;
+    const playbackRequests = () => backend.requests.filter(request => request.path === '/api/v2/playback' && request.method === 'POST').length;
     const beforeUnsupported = playbackRequests();
     for (let step = 0; step < 4; step++) await page.keyboard.press('ArrowDown');
     await focused('player-track-option', 5);
