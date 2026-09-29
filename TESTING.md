@@ -1,3 +1,20 @@
+# BE-002 raw live API preparation — 2026-09-29
+
+Core pin b75393e matches Android and adds bounded default/override cursor pages,
+category pages without invented counts, exact-channel source resolution and v2
+guide requests. The API adapter accepts only opaque IPTV source cards and retains
+catalog/profile/parent failures; malformed/legacy data never falls back to old
+routes. A fixture resolves the exact channel, admits its id through v2 and releases
+it without a discovery job or traffic to a media origin. 2160p facts survive.
+
+All 250 unit tests, application/test typechecks and build passed. Thirty-two
+trusted-local-HTTPS browser regressions passed with all API/preview origins set
+to the local host. Backend/API/decoder boundaries in those browser scenarios are
+fixtures. No viewing layout changed and no physical/device parity is claimed.
+Ordinary Guide/SolidTV/Home live callers still use legacy offset/count APIs;
+these explicit new methods prepare, but do not complete, their cursor cutover.
+No playlist swap UI or production deployment was introduced.
+
 # BE-002 native source headers — 2026-09-29
 
 Video pin 058bfb1 preserves required Authorization/Referer plus native Cookie/

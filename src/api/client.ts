@@ -19,6 +19,10 @@ import type {
   JsonValue,
   LiveCategories,
   LivePage,
+  LiveCatalogQuery,
+  LiveCatalogPage,
+  LiveCatalogCategories,
+  MediaSource,
   MediaDetail,
   MediaItem,
   Page,
@@ -177,6 +181,32 @@ export class TvApi extends TvApiCatalog {
       await this.raw(`/api/live${params(query)}`, {}, true, options),
     );
     return normalizeCore<LivePage>("live", v);
+  }
+  async liveV2(query: LiveCatalogQuery = {}, options?: RequestOptions): Promise<LiveCatalogPage> {
+    const value = await this.liveV2Control({ ...query, operation: "livePageV2" }, options);
+    return this.liveV2Decode<LiveCatalogPage>("liveCatalogV2", value);
+  }
+  async liveCategoriesV2(query: Pick<LiveCatalogQuery, "catalogId" | "cursor" | "limit" | "search"> = {}, options?: RequestOptions): Promise<LiveCatalogCategories> {
+    const value = await this.liveV2Control({ ...query, operation: "liveCategoriesV2" }, options);
+    return this.liveV2Decode<LiveCatalogCategories>("liveCategoriesV2", value);
+  }
+  async liveSourceV2(channelId: string, options?: RequestOptions): Promise<MediaSource> {
+    const value = await this.liveV2Control({ operation: "liveSourceV2", id: channelId }, options);
+    return this.liveV2Decode<MediaSource>("liveSourceV2", value);
+  }
+  async guideV2(channelId: string, options?: RequestOptions): Promise<Guide> {
+    const value = await this.liveV2Control({ operation: "liveGuideV2", id: channelId }, options);
+    return this.liveV2Decode<Guide>("guide", value);
+  }
+  private async liveV2Control(input: unknown, options?: RequestOptions): Promise<JsonValue> {
+    let request: { method: string; path: string; body: JsonObject | null };
+    try { request = normalizeRust("request", input); }
+    catch { throw new TvApiError(400, "The live playlist request is invalid. Reload the guide.", "invalid_catalog_query"); }
+    return this.raw(request.path, { method: request.method, body: request.body ?? undefined }, true, options);
+  }
+  private liveV2Decode<T>(kind: string, value: unknown): T {
+    try { return normalizeRust<T>(kind, value); }
+    catch { throw new TvApiError(502, "The server returned invalid live playlist data. Update the app/server or reload the guide.", "invalid_catalog_response"); }
   }
   async liveCategories(
     view?: "us",

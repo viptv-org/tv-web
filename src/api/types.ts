@@ -122,6 +122,17 @@ export interface LivePage {
   readonly channels: readonly MediaItem[];
   readonly total: number;
 }
+
+export interface LiveCatalogQuery {
+  readonly catalogId?: string;
+  readonly categoryId?: string;
+  readonly collection?: "favorites" | "recent";
+  readonly search?: string;
+  readonly cursor?: string;
+  readonly limit?: number;
+}
+export type LiveCatalogPage = CoreView<Core.LiveCatalogPage>;
+export type LiveCatalogCategories = CoreView<Core.LiveCatalogCategories>;
 /** A guide category is a filter, not playable media. */
 export interface LiveCategory {
   readonly id: string;
