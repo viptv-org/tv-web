@@ -285,6 +285,7 @@ export class TvApiClientBase {
           headers,
           body: init.body ? JSON.stringify(init.body) : undefined,
           signal: options?.signal,
+          redirect: "error",
         });
       } catch (error) {
         if (isAbort(error)) throw error;

@@ -126,12 +126,12 @@ async function installBackend(page: Page, options: FixtureOptions = {}): Promise
     if (path === '/api/discover') return json(route, { metas: [show], has_more: false, next_skip: null });
     if (path === `/api/meta/series/${show.id}` || path === `/api/meta/series/${first.id}`)
       return json(route, { meta: { ...show, videos: [first, second] } });
-    if (path === '/api/streams' && request.method() === 'POST') {
+    if (path === '/api/v2/streams' && request.method() === 'POST') {
       const body = JSON.parse(request.postData() || '{}') as { id?: string };
       return json(route, { id: `streams-${body.id}` });
     }
-    if (path === `/api/streams/streams-${first.id}`) return json(route, { events: [{ seq: 1, source: 'addon:current', streams: [{ id: 'first-source', name: 'Current 1080p', title: '1080p H.264 English', source_addon_id: 'addon:current', source_fingerprint: 'first', audioEvidenceScore: 8 }] }], done: true });
-    if (path === `/api/streams/streams-${second.id}`) return json(route, { events: [{ seq: 1, source: 'addon:ranked', streams: [
+    if (path === `/api/v2/streams/streams-${first.id}`) return json(route, { events: [{ seq: 1, source: 'addon:current', streams: [{ id: 'first-source', name: 'Current 1080p', title: '1080p H.264 English', source_addon_id: 'addon:current', source_fingerprint: 'first', audioEvidenceScore: 8 }] }], done: true });
+    if (path === `/api/v2/streams/streams-${second.id}`) return json(route, { events: [{ seq: 1, source: 'addon:ranked', streams: [
       { id: 'next-incompatible', name: '2160p HEVC Spanish', title: '2160p HEVC Spanish', source_addon_id: 'addon:ranked', audioEvidenceScore: 0 },
       { id: 'next-ranked', name: '1080p H.264 English', title: '1080p H.264 English', source_addon_id: 'addon:ranked', audioEvidenceScore: 8 },
     ] }], done: true });

@@ -178,7 +178,10 @@ export function useDialogs(app: CoreApi) {
     setBootingHome(false);
     if (e instanceof DOMException && e.name === "AbortError") return;
     const detail = describeApiError(e);
-    if (detail.kind === "network" || detail.kind === "server") {
+    // An HTTP error (including an upstream/provider 5xx) is not evidence that
+    // the backend is unreachable. A successful health probe must not erase its
+    // actionable message. Only transport failures enter connectivity recovery.
+    if (detail.kind === "network") {
       setConnection((previous) => nextConnectionFailure(previous, Date.now()));
       return;
     }

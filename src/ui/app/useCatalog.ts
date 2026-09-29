@@ -151,6 +151,7 @@ export function useCatalog(app: PlaybackSessionApi) {
         }
       } catch {
         // The chooser reports discovery failures; a preview only goes quiet.
+        discoveries.current.delete(key);
       } finally {
         if (preview.current?.cancel === cancel) preview.current = undefined;
       }
@@ -227,6 +228,7 @@ export function useCatalog(app: PlaybackSessionApi) {
         await new Promise((r) => setTimeout(r, 1500));
       }
     } catch (e) {
+      discoveries.current.delete(key);
       fail(e);
     } finally {
       setBusy(false);

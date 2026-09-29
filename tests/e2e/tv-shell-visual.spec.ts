@@ -55,8 +55,8 @@ test('reported TV web regressions keep episode details, loading feedback and row
     description: 'A Soul Reaper protects the living.', genres: ['Anime', 'Action'],
     videos: [{ id: 'bleach:1:3', title: 'Episode 3', season: 1, episode: 3, description: 'The story continues.' }],
   } }));
-  await page.route(`${apiOrigin}/api/streams`, route => json(route, { id: 'bleach-job' }));
-  await page.route(`${apiOrigin}/api/streams/bleach-job**`, async route => {
+  await page.route(`${apiOrigin}/api/v2/streams`, route => json(route, { id: 'bleach-job' }));
+  await page.route(`${apiOrigin}/api/v2/streams/bleach-job**`, async route => {
     await new Promise(resolve => setTimeout(resolve, 500));
     return json(route, { events: [{ seq: 1, source: 'addon:2', streams: [{ id: 'bleach-stream', name: 'Bleach 1080p', source_addon_id: 'addon:2' }] }], done: true });
   });

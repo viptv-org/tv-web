@@ -125,7 +125,7 @@ test('a live card opens playback directly and history never restores a live sour
   await expect(page.locator('.vx-sources__status')).toHaveCount(0);
   await expect(page.locator('.detail')).toHaveCount(0);
   expect(fixture.requests.find(request => request.path === '/api/playback' && request.method === 'POST')?.body).toMatchObject({ channel_id: 'station-0' });
-  expect(fixture.requests.filter(request => request.path === '/api/streams')).toHaveLength(0);
+  expect(fixture.requests.filter(request => request.path === '/api/v2/streams')).toHaveLength(0);
   // Responsive players use the header Back control to leave playback.
   await page.locator('[data-focus-id="player-back"]').press('Enter');
   await expect(page.locator('.home')).toBeVisible();

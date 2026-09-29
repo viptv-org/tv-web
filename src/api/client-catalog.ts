@@ -37,6 +37,8 @@ import type {
 import { TvApiClientBase } from "./client-base";
 
 export class TvApiCatalog extends TvApiClientBase {
+  /** Temporary legacy live bridge until guide/playback adopts raw catalog IDs. */
+  private readonly legacyLiveJobs = new Set<string>();
   async selectProfile(profileId: string, options?: RequestOptions) {
     if (this.sessionEvent) {
       const view = await this.sessionEvent({ SelectProfile: { profileId } }, options);
@@ -149,7 +151,7 @@ export class TvApiCatalog extends TvApiClientBase {
   ): Promise<StreamDiscovery> {
     const request = normalizeCore<{ method: string; path: string; body: unknown }>(
       "request",
-      { operation: "sources", item },
+      { operation: item.type === "live" ? "sources" : "sourcesV2", item },
     );
     const v = expectObject(
       await this.raw(
@@ -159,7 +161,10 @@ export class TvApiCatalog extends TvApiClientBase {
         options,
       ),
     );
-    return { id: idAt(v, "id") };
+    const id = idAt(v, "id");
+    if (this.legacyLiveJobs.size >= 256) this.legacyLiveJobs.clear();
+    if (item.type === "live") this.legacyLiveJobs.add(id);
+    return { id };
   }
   /**
    * One polling step of stream discovery. Both the poll path (with its
@@ -174,12 +179,19 @@ export class TvApiCatalog extends TvApiClientBase {
   ): Promise<SourcesPollStep> {
     const request = normalizeCore<{ method: string; path: string }>(
       "request",
-      { operation: "sourcesPoll", id, after: state.after },
+      { operation: this.legacyLiveJobs.has(id) ? "sourcesPoll" : "sourcesPollV2", id, after: state.after },
     );
     const v = expectObject(
       await this.raw(request.path, {}, true, options),
     );
-    return normalizeCore<SourcesPollStep>("sourcesPollStep", { state, poll: v });
+    const step = normalizeCore<SourcesPollStep>("sourcesPollStep", { state, poll: v });
+    const failure = step.state.errors?.[0];
+    if (step.done && !step.sources.length && failure) {
+      this.legacyLiveJobs.delete(id);
+      throw new TvApiError(502, failure.message, failure.code ?? undefined);
+    }
+    if (step.done) this.legacyLiveJobs.delete(id);
+    return step;
   }
   async startPlayback(
     request: PlaybackStart,

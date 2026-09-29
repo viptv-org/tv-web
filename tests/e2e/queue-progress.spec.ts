@@ -87,8 +87,8 @@ async function installFixture(page: Page, watched = false): Promise<FixtureState
     if (path === '/api/live/categories') return json(route, { categories: [], total: 0 });
     if (path === '/api/addons') return json(route, []);
     if (path === '/api/parent/status') return json(route, { pin_configured: false, unlocked: false, restricted: false });
-    if (path === '/api/streams' && request.method() === 'POST') return json(route, { id: 'queue-job' });
-    if (path === '/api/streams/queue-job') return json(route, {
+    if (path === '/api/v2/streams' && request.method() === 'POST') return json(route, { id: 'queue-job' });
+    if (path === '/api/v2/streams/queue-job') return json(route, {
       events: [{ seq: 1, source: 'addon:queue', streams: [{ id: 'queue-source', name: 'Queue source', title: 'Queue source', source_addon_id: 'addon:queue', source_fingerprint: 'queue-release' }] }],
       done: true,
     });

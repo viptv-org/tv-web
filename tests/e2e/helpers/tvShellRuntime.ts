@@ -136,8 +136,8 @@ export async function installBackend(page: Page, profileFixture?: ProfileFixture
     if (path === '/api/discover') return json(route, { metas: [movie], has_more: false, next_skip: null });
     if (path === '/api/meta/movie/tt-movie') return json(route, { meta: movie });
     if (path === '/api/meta/series/tt-show') return json(route, { meta: { id: 'tt-show', type: 'series', name: 'Fixture Show', videos: [episode] } });
-    if (path === '/api/streams' && route.request().method() === 'POST') return json(route, { id: 'job-1' });
-    if (path === '/api/streams/job-1') return json(route, { events: [{ seq: 1, source: 'addon:2', streams: [{ id: 'stream-1', name: '1080p', title: 'Moonfall 1080p', filename: 'moonfall.mkv', source_addon_id: 'addon:2', source_name: 'Fixture Addon', source_quality: '1080p', url: 'https://upstream.invalid/private' }] }], done: true });
+    if (route.request().method() === 'POST' && path === (route.request().postDataJSON()?.type === 'live' ? '/api/streams' : '/api/v2/streams')) return json(route, { id: 'job-1' });
+    if (path === '/api/streams/job-1' || path === '/api/v2/streams/job-1') return json(route, { events: [{ seq: 1, source: 'addon:2', streams: [{ id: 'stream-1', name: '1080p', title: 'Moonfall 1080p', filename: 'moonfall.mkv', source_addon_id: 'addon:2', source_name: 'Fixture Addon', source_quality: '1080p', url: 'https://upstream.invalid/private' }] }], done: true });
     if (path === '/api/profiles/1/favorites/toggle') return json(route, { saved: true });
     if (path === '/api/live') return json(route, { channels: [channel], total: 1 });
     if (path === '/api/guide/family-news') return json(route, { timezone: 'UTC', programs: [{ title: 'News Now', start: 0, end: 4_102_444_800, description: 'Live fixture.' }] });

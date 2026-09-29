@@ -54,8 +54,8 @@ async function installBackend(page: Page): Promise<State> {
       return json(route, { metas: [movie], has_more: false, next_skip: null });
     }
     if (path === `/api/meta/movie/${movie.id}`) return json(route, { meta: movie });
-    if (path === '/api/streams' && request.method() === 'POST') return json(route, { id: 'sources' });
-    if (path === '/api/streams/sources') return json(route, { events: [{ seq: 1, source: 'fixture', streams: [
+    if (path === '/api/v2/streams' && request.method() === 'POST') return json(route, { id: 'sources' });
+    if (path === '/api/v2/streams/sources') return json(route, { events: [{ seq: 1, source: 'fixture', streams: [
       { id: 'good-1080', name: 'Good source', title: '1080p H.264 English', filename: 'good.mkv', source_addon_id: 'addon:2', source_name: 'Fixture provider', source_quality: '1080p' },
       { id: 'other-720', name: 'Other source', title: '720p H.264 English', filename: 'other.mkv', source_addon_id: 'addon:3', source_name: 'Other provider', source_quality: '720p' },
     ] }], done: true });

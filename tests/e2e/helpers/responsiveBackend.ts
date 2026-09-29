@@ -1,6 +1,6 @@
 import type { Page } from '@playwright/test';
 
-export const apiOrigin = 'https://viptv.syek.tech';
+export const apiOrigin = process.env.VIPTV_TEST_API_ORIGIN ?? 'https://viptv.syek.tech';
 export const sessionKey = `viptv-device:${apiOrigin}`;
 export const movie = {
   id: 'responsive-movie', type: 'movie', name: 'A Different Horizon', title: 'A Different Horizon',
@@ -95,10 +95,9 @@ export async function installBackend(page: Page, options: { series?: boolean; in
     if (path === `/api/meta/${title.type}/${title.id}`) return json({ meta: title });
     if (options.populated && /^\/api\/meta\/movie\/title-\d+$/.test(path)) return json({ meta: { ...title, id: path.split("/").at(-1), name: "The Long Journey Through the Mountains" } });
     if (path === '/api/profiles/1/progress/series') return json([]);
-    if (path === '/api/streams' && request.method() === 'POST') return json({ id: 'responsive-sources' });
-    if (path === '/api/streams/responsive-sources') return json({ events: [{ seq: 1, source: 'addon:2', streams: [{ id: 'responsive-stream', name: options.populated ? 'International Cinema Archive • High Definition • Original Language and Commentary • Extended Edition' : 'Responsive source 1080p', title: 'A Different Horizon 1080p', source_addon_id: 'addon:2', source_name: options.populated ? 'International Cinema and Television Collection — Premium Archive Provider' : 'Fixture addon' }] }], done: true });
+    if (path === '/api/v2/streams' && request.method() === 'POST') return json({ id: 'responsive-sources' });
+    if (path === '/api/v2/streams/responsive-sources') return json({ events: [{ seq: 1, source: 'addon:2', streams: [{ id: 'responsive-stream', name: options.populated ? 'International Cinema Archive • High Definition • Original Language and Commentary • Extended Edition' : 'Responsive source 1080p', title: 'A Different Horizon 1080p', source_addon_id: 'addon:2', source_name: options.populated ? 'International Cinema and Television Collection — Premium Archive Provider' : 'Fixture addon' }] }], done: true });
     return json({ error: `Unhandled fixture route ${path}` }, 404);
   });
   return { requests, errors, title, profileName };
 }
-

@@ -1,5 +1,13 @@
 # TV API contract
 
+BE-002 migration checkpoint: movie/exact-episode discovery now starts at
+`POST /api/v2/streams` and polls `/api/v2/streams/:id?after=N`. Closed shared-core
+error messages survive successful HTTP polling; terminal failure with no usable
+sources raises a typed error. Partial success keeps healthy sources. Live jobs
+temporarily retain the legacy route; playback, live catalog paging and account
+management have not yet completed the v2 cutover. The legacy description below
+is not a claim of full v2 adoption.
+
 `TvApi` is the only HTTP boundary for Tizen and Vizio. It talks to a VIPTV HTTPS origin and uses the existing device grant flow: `POST /api/auth/device/code`, poll `POST /api/auth/device/token`, then rotate through `POST /api/auth/device/refresh`. Device tokens travel only as a Bearer header. The default `MemoryDeviceSessionStore` deliberately does not persist them; each platform must opt into its platform credential store.
 
 The API normalizes server/add-on payloads into `MediaItem`, `MediaSource`, catalog, guide, library and playback types. Add-on `url`, header, authorization and token values are removed before they reach UI state. A playback `url` is a short-lived VIPTV server media capability, not an upstream source URL; the server emits it root-relative and `TvApi` validates and normalizes it to the configured same-origin HTTPS URL for AVPlay. Use it immediately in the player and never store it. Live categories are typed filter records (`id`, `name`, `count`), never playable media. Continuation preserves the server’s separate `episodeTitle` while `name` remains the series title.

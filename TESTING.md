@@ -1,3 +1,26 @@
+# BE-002 VOD discovery adoption — 2026-09-29
+
+Core pin 4817b07f985d23687ca54df888222f5af96c0cb2 supplies v2 movie/exact-episode
+source requests and safe producer failures. All 223 unit tests and the production
+build (including application/test typechecking and pin checks) passed. Terminal
+empty failed discoveries discard their cached job so retry can start a new one;
+healthy sources survive another producer's failure. Authenticated HTTP rejects
+redirects. Live source requests and playback remain legacy pending cutover.
+
+Two Chromium acceptance cases passed against the built app at trusted local
+HTTPS (curl reported 200 and ssl_verify_result 0), with synthetic API/artwork
+boundaries and all unhandled external traffic denied. They verify visible safe
+connection-limit text, fresh-job retry, healthy partial results, and no legacy
+VOD requests. This exposed and fixed server errors being misclassified as a
+connectivity outage then erased by a successful health probe. HTTP failures now
+use the existing error surface; transport failures retain reconnect behavior.
+
+Reproduce after starting the local HTTPS stack with a disposable database:
+`VIPTV_TEST_API_ORIGIN=https://viptv.local.test:8443 VIPTV_TEST_BROWSER_ORIGIN=https://viptv.local.test:8443 npx playwright test --config playwright.https.config.ts v2-discovery.spec.ts`.
+The broader browser/device matrix remains separate; no production deployment or
+hardware qualification is claimed. Existing VOD browser fixtures were migrated
+to the new paths; mixed live fixtures retain their explicitly temporary bridge.
+
 # Hosted Vizio navigation aligned with Android TV — 2026-09-26
 
 Production delivery verified: `watch.syek.tech/?platform=vizio` serves the tested

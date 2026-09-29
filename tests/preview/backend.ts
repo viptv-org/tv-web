@@ -569,11 +569,11 @@ export async function installBackend(page: Page, options: BackendOptions): Promi
       const spec = byId.get(decodeURIComponent(metaMatch[2]));
       return spec ? json({ meta: meta(spec, family) }) : json({ error: 'not found' }, 404);
     }
-    if (path === '/api/streams' && method === 'POST') {
+    if (path === (body.type === 'live' ? '/api/streams' : '/api/v2/streams') && method === 'POST') {
       const id = String(body.series_id ?? body.id ?? '');
       return json({ id: id.startsWith('tt-monster') ? 'streams-monster' : `streams-${id || 'title'}` });
     }
-    const streamMatch = /^\/api\/streams\/([^/]+)$/.exec(path);
+    const streamMatch = /^\/api\/(?:v2\/)?streams\/([^/]+)$/.exec(path);
     if (streamMatch) {
       const monster = streamMatch[1] === 'streams-monster';
       const after = Number(url.searchParams.get('after') ?? 0);

@@ -118,12 +118,12 @@ async function installBackend(page: Page, options: FixtureOptions = {}): Promise
     if (path === '/api/discover') return json(route, { metas: [show], has_more: false, next_skip: null });
     if (path === `/api/meta/series/${show.id}` || path === `/api/meta/series/${first.id}`)
       return json(route, { meta: { ...show, videos: [first, second] } });
-    if (path === '/api/streams' && request.method() === 'POST') {
+    if (path === '/api/v2/streams' && request.method() === 'POST') {
       const body = JSON.parse(request.postData() || '{}') as { id?: string };
       return json(route, { id: `streams-${body.id}` });
     }
-    if (path === `/api/streams/streams-${first.id}`) return json(route, { events: [{ seq: 1, source: 'addon:current', streams: [{ id: 'first-source', name: 'Current 1080p', title: '1080p H.264 English', source_addon_id: 'addon:current', source_fingerprint: 'first', audioEvidenceScore: 8 }] }], done: true });
-    if (path === `/api/streams/streams-${second.id}`) return json(route, { events: [{ seq: 1, source: 'addon:ranked', streams: [
+    if (path === `/api/v2/streams/streams-${first.id}`) return json(route, { events: [{ seq: 1, source: 'addon:current', streams: [{ id: 'first-source', name: 'Current 1080p', title: '1080p H.264 English', source_addon_id: 'addon:current', source_fingerprint: 'first', audioEvidenceScore: 8 }] }], done: true });
+    if (path === `/api/v2/streams/streams-${second.id}`) return json(route, { events: [{ seq: 1, source: 'addon:ranked', streams: [
       { id: 'next-incompatible', name: '2160p HEVC Spanish', title: '2160p HEVC Spanish', source_addon_id: 'addon:ranked', audioEvidenceScore: 0 },
       { id: 'next-ranked', name: '1080p H.264 English', title: '1080p H.264 English', source_addon_id: 'addon:ranked', audioEvidenceScore: 8 },
     ] }], done: true });
@@ -264,13 +264,13 @@ test('Vizio: Next stays with the current IPTV account even when another provider
   test.skip(test.info().project.name !== 'vizio', 'continuation account policy is shared');
   const noPageErrors = await installVizioMedia(page);
   const state = await installBackend(page);
-  await page.route(`${apiOrigin}/api/streams/**`, async route => {
+  await page.route(`${apiOrigin}/api/v2/streams/**`, async route => {
     const path = decodeURIComponent(new URL(route.request().url()).pathname);
     if (/^\/api\/profiles\/[^/]+\/progress\/series$/.test(path)) return json(route, []);
-    if (path === `/api/streams/streams-${first.id}`) return json(route, { events: [{ seq: 1, source: 'iptv:7', streams: [
+    if (path === `/api/v2/streams/streams-${first.id}`) return json(route, { events: [{ seq: 1, source: 'iptv:7', streams: [
       { id: 'first-source', name: 'Current 1080p', source_addon_id: 'iptv:7', source_fingerprint: 'first' },
     ] }], done: true });
-    if (path === `/api/streams/streams-${second.id}`) return json(route, { events: [{ seq: 1, source: 'iptv:8', streams: [
+    if (path === `/api/v2/streams/streams-${second.id}`) return json(route, { events: [{ seq: 1, source: 'iptv:8', streams: [
       { id: 'wrong-account', name: 'Other provider', source_addon_id: 'iptv:8' },
     ] }, { seq: 2, source: 'iptv:7', streams: [
       { id: 'same-account', name: 'Current provider', source_addon_id: 'iptv:7' },
@@ -289,10 +289,10 @@ test('Vizio: failed Next tries at most three distinct sources and preserves the 
   test.skip(test.info().project.name !== 'vizio', 'bounded continuation recovery is shared');
   const noPageErrors = await installVizioMedia(page);
   const state = await installBackend(page);
-  await page.route(`${apiOrigin}/api/streams/**`, async route => {
+  await page.route(`${apiOrigin}/api/v2/streams/**`, async route => {
     const path = decodeURIComponent(new URL(route.request().url()).pathname);
     if (/^\/api\/profiles\/[^/]+\/progress\/series$/.test(path)) return json(route, []);
-    if (path !== `/api/streams/streams-${second.id}`) return route.fallback();
+    if (path !== `/api/v2/streams/streams-${second.id}`) return route.fallback();
     return json(route, { events: [{ seq: 1, source: 'addon:ranked', streams: [1, 2, 3, 4].map(index => ({
       id: `failed-next-${index}`, name: '1080p H.264 English', source_addon_id: 'addon:ranked', audioEvidenceScore: 8,
     })) }], done: true });

@@ -82,16 +82,9 @@ export interface StreamPoll {
  * deduplication, budget and completion decisions; the platform owns only
  * transport, cancellation and the fixed poll interval.
  */
-export interface SourcesPollStep {
-  readonly state: {
-    readonly after: number;
-    readonly sources: readonly MediaSource[];
-    readonly polls: number;
-  };
-  readonly sources: readonly MediaSource[];
-  readonly done: boolean;
-}
-export type SourcesPollState = SourcesPollStep["state"];
+export type SourcesPollStep = CoreView<Core.SourcesPollStep>;
+/** The initial input may omit errors; Rust always returns the generated state. */
+export type SourcesPollState = Omit<SourcesPollStep["state"], "errors"> & Partial<Pick<SourcesPollStep["state"], "errors">>;
 
 export type {
   DirectFileCapabilities,

@@ -4,7 +4,7 @@ import { installBackend, movie, apiOrigin } from './helpers/responsiveBackend';
 for (const width of [390, 1440]) test(`source loading stays in its status row at ${width}px`, async ({ page }) => {
   await page.setViewportSize({ width, height: 900 });
   await installBackend(page);
-  await page.route(`${apiOrigin}/api/streams/responsive-sources**`, async route => {
+  await page.route(`${apiOrigin}/api/v2/streams/responsive-sources**`, async route => {
     await route.fulfill({ json: { events: [], done: false }, headers: { 'access-control-allow-origin': '*' } });
   });
   await page.goto('/');
