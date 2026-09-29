@@ -1,8 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { apiFor, response, scripted } from './client-helpers';
 import type { PlaybackV2Request } from '../../vendor/core/typescript/wire';
+import { normalizeCore } from '../../src/api/client-shared';
 
 const request: PlaybackV2Request = {
+  conversion: 'auto', audioLanguage: null, preferredAudioLanguage: null,
+  preferredSubtitleLanguage: null, subtitlesOff: false,
   requestId: 'request_1', streamId: 'source_1', position: 12, forceGateway: false,
   audioTrack: null, subtitleTrack: null,
   client: { platform: 'web', canPlayDirect: true, maxWidth: 3840, maxHeight: 2160, videoCodecs: ['h264'], audioCodecs: ['aac'] },
@@ -16,6 +19,17 @@ beforeEach(() => vi.useFakeTimers());
 afterEach(() => vi.useRealTimers());
 
 describe('v2 backend playback control', () => {
+  it('sends shared mapped conversion and preferences without a profile quality cap', async () => {
+    const mapped = normalizeCore<PlaybackV2Request>('playbackV2Intent', {
+      requestId: 'mapped', platform: 'tauri', preferences: { audioLanguage: 'en', quality: '1080p' },
+      playback: { streamId: 'source', capabilities: { maxWidth: 3840, maxHeight: 2160, h264: true, aac: true, directUrls: true }, forceTranscode: true, conversionReason: 'audio-codec' },
+    });
+    const fake = scripted(response(lease('ready')));
+    await apiFor(fake.fetcher).startPlaybackV2(mapped);
+    const body = JSON.parse(fake.calls[0].init!.body as string);
+    expect(body).toMatchObject({ conversion: 'audio', force_gateway: true, preferred_audio_language: 'en', client: { platform: 'desktop', max_height: 2160 } });
+    expect(body).not.toHaveProperty('quality');
+  });
   it('polls a pending lease and never sends control traffic to the media origin', async () => {
     const fake = scripted(response(lease(), 202), response(lease('ready')), response(lease('ready')), response({}));
     const api = apiFor(fake.fetcher);

@@ -1,3 +1,13 @@
+# BE-002 shared conversion/track mapping — 2026-09-29
+
+Core pin 4418f1ddb3c1640276f31b130deeb2d4ffa6873d matches Android. The generated
+v2 request includes conversion and bounded language/track choices. An API fixture
+passes actual WASM playbackV2Intent output through the control transport and
+verifies audio-only conversion, desktop identity, preferred language and unchanged
+2160p facts without a quality field. All 235 tests, typechecks and production build
+passed; both trusted-HTTPS discovery regressions passed. This is still explicit
+v2 API preparation, not activation of ordinary player calls or hardware evidence.
+
 # BE-002 v2 playback control transport — 2026-09-29
 
 Explicit v2 start/status/renew/release methods use shared-core request/response

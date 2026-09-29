@@ -1,14 +1,14 @@
 {
   "repository": "viptv-org/core",
-  "revision": "f48f983454b21ba637b4580b426ea8e1647ffbb8",
+  "revision": "4418f1ddb3c1640276f31b130deeb2d4ffa6873d",
   "files": {
     "wasm/viptv_core.d.ts": "34da10b557c6e980b238c5e10666c3f566566dd71d7466d51560e4cc21681f20",
     "wasm/viptv_core.js": "9d048cf8f3bce821a316b938461565aa1d5497a89938768982da59f6d738db50",
-    "wasm/viptv_core_bg.wasm": "95c2daa689340c68dc5a959fcc708a104752bcf7852d8ff766f0bcd16db9ef37",
+    "wasm/viptv_core_bg.wasm": "0e2abe77b659df1b4a1e517f98b38e8dda817d936ccd89079906bd626185c676",
     "wasm/viptv_core_bg.wasm.d.ts": "097bfe2bbe500a11c70b2e5f078d2d31e393b24964ed6b618991dfd1f4484c6f",
     "typescript/package.json": "650dd3d51aadf50038954422add6924444975666e953a28c65b6355fb6b5e41e",
-    "typescript/viptv_core_types.ts": "4bdc4980b11788055e7caf01b9bec7ee4cee740a0ef874025ffa4d52e17faa83",
-    "typescript/wire.ts": "c98ea808213ef71423b002321f56504d3fe4814242729d189a715ec6719defcf",
+    "typescript/viptv_core_types.ts": "51ac63489a778079cbc8191bd571000bc9b4e180196d66e4a294bf0969964d90",
+    "typescript/wire.ts": "1839289d2454c8cb7a7de0bf7866e7738732c6030b2dbd40213311101d44f225",
     "runtime/driver.ts": "9ab0659c60a41ee9883a1a51da269e55d9388c63201b75e022871057f1499858",
     "runtime/index.ts": "7712a39ac6323d256feaa098ed1c23170b0266fefabbccc5bf0bc3ad7a4f3430",
     "runtime/native-fetch.ts": "829cc676a53f3f15b71805d1988859997eba0b8496a8781da752ee35a4d94707",
