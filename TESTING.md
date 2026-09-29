@@ -1,3 +1,14 @@
+# BE-002 shared playback lease types — 2026-09-29
+
+Core pin f48f983454b21ba637b4580b426ea8e1647ffbb8 matches Android and adds strict
+v2 lease normalization plus canonical start/status/heartbeat/stop serialization.
+The owning core passed 57 native tests, strict Clippy and actual WASM contracts.
+TV-web passed 223 unit tests, production build/typechecks, and both trusted local-
+HTTPS discovery regressions after the pin change. Existing playback still uses
+legacy routes; client polling/renewal/cancellation and backend conversion/track
+preference parity remain required before activating this new contract. This
+checkpoint does not claim end-to-end v2 playback, devices or deployment.
+
 # BE-002 independent gateway player preparation — 2026-09-29
 
 Video pin 75d533a59a466fbe23cecc9a8883d4feece4de33 adds a delivery-kind field,
