@@ -1,6 +1,6 @@
 {
   "repository": "viptv-org/video",
-  "revision": "33509d079cab5558af729923f08a254ee65e4e23",
+  "revision": "75d533a59a466fbe23cecc9a8883d4feece4de33",
   "files": {
     "vendor/video/src/browser-capabilities.ts": "9d73f28ce8d69bf6f0ce52397c3be2add0162d3338ae7afa4397da4dca9c4ca8",
     "vendor/video/src/browser-policy.ts": "463891c85e85cf6b9b09083f99f671e882976171f07307a4d5d9569939ac311a",
@@ -11,18 +11,18 @@
     "vendor/video/src/mediabunny-mse.ts": "ebdbb1453ea493d0c2b4590e3140eb9349d0486f54c9d98d51bc4ce8943e8709",
     "vendor/video/src/mediabunny.ts": "ec35d918d25a3d76abd95cdd635f41184e999cce7aa28296b80cf02bedb69238",
     "vendor/video/src/platform-profiles.ts": "cbff66654f6bc6e95a5220ebe9360031ad8195612955c769a2f57305abfc027d",
-    "vendor/video/src/session-media-fetch.ts": "c3b456dbdf7c9d8fa963b594d84e05e8695993a3d9ba335472417f87fdd32b3a",
+    "vendor/video/src/session-media-fetch.ts": "34e85dc83549a02ec913284317c1d2c6a01e5ef029fa2a45579028c6f3ed35c4",
     "vendor/video/src/session-player.ts": "faff5dab1d8cadcc3bbfc894fd21512a3afb2e9d2809d223955b1ed9ce658b89",
-    "vendor/video/src/session-request.ts": "73bebd224b6a0966df2b47ca388e6ac18ca956e3b9069f67eece3377150ba28a",
-    "vendor/video/src/session.ts": "0ae008300e9c2ae72208a63eacb5bafaba1d3eabb5ba8bb2d80e436869b77d65",
+    "vendor/video/src/session-request.ts": "6d70d82ecad451ae3af45a123e2755b0da6744189c350e45eaba947975806982",
+    "vendor/video/src/session.ts": "82ce534464eb730276ed0f7c1d342b843b43bd04e1adfae4acbbab4e34a1bede",
     "vendor/video/src/tauri-native.ts": "36ec8ede235044c801b09c0738539e70406bf5f864c767c29d7a85f0a1a2ec3e",
     "vendor/video/src/tauri-native/aperture.ts": "dbdfd49d50406c6dd5aff95fe30636305b0550bb0b5b168498d52ce3f3f6a30e",
     "vendor/video/src/tauri-native/capabilities.ts": "40a8b6a8070bdc51f095842818fac69c8694f02beec72b22af3d86c5ea9f9702",
     "vendor/video/src/tauri-native/types.ts": "67b00f35572b4d6500a3b8c62d253665be1d5debbe16aa1006097420ee513d29",
     "vendor/video/src/tauri-native/wire.ts": "8738d5cefffe2d0feb315d42c10a4f3d3023a356178552765df1a601c6338b63",
     "vendor/video/src/tizen-avplay.ts": "008417760fd489af1fe5a59cac8ecd7db7eeb96a008b0624e8f85040446c1822",
-    "vendor/video/src/types.ts": "7e8ad2faa4323c2fd5984d2658bf05ba62eaa99be8e560d41ccc61004b901dfd",
+    "vendor/video/src/types.ts": "4ed1432aca5b56083c6f90f7db865c00a8dbfd7b4b6cc310c5ea163737c6d38c",
     "vendor/video/src/vizio-evidence.ts": "3f6135c3a6b99677d84fce70d393a6cb43ced88397cb2098ed3e0f1bcbea42e0",
-    "vendor/video/src/vizio-html5.ts": "e796e42f639e1d49c75214a8bfdcbead46c4a13b88c724c27892572080684197"
+    "vendor/video/src/vizio-html5.ts": "6f234fa2a27a52438e8740186f68bd872660a5c02b1b153795bcc26139cfab48"
   }
 }

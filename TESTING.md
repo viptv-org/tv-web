@@ -1,3 +1,15 @@
+# BE-002 independent gateway player preparation — 2026-09-29
+
+Video pin 75d533a59a466fbe23cecc9a8883d4feece4de33 adds a delivery-kind field,
+scoped cross-origin/base-path media fetching and authorized native fallback.
+The owning video repo passed 103 tests, build, and real Chromium synthetic HLS
+playback from a second trusted HTTPS origin with redirect/credential checks.
+TV-web's 223 tests, production build, and the two local-HTTPS VOD discovery
+regressions passed after importing the committed source. These browser discovery
+checks do not establish full playback integration: the API client still needs
+v2 start/status/renew/release and shared-core envelope normalization. No installed
+Tauri or TV hardware qualification and no production deployment are claimed.
+
 # BE-002 VOD discovery adoption — 2026-09-29
 
 Core pin 4817b07f985d23687ca54df888222f5af96c0cb2 supplies v2 movie/exact-episode
