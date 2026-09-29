@@ -1,3 +1,24 @@
+# BE-002 native source headers — 2026-09-29
+
+Video pin 058bfb1 preserves required Authorization/Referer plus native Cookie/
+User-Agent, with explicit refusal on unsupported transports. A v2 API fixture
+passes original HTTP delivery headers through actual WASM normalization to the
+adapter request; source authorization never becomes backend control auth.
+244 unit tests, typechecks and build passed. The owning video passed 111 tests
+and build; native plugin c7e4aa6 passed Linux real header-required MP4 and HTTP401
+fixtures. Installed desktop and Windows playback qualification remain separate.
+
+Thirty-two trusted-HTTPS browser cases passed across two runs: the first passed
+27, while five preview-fixture tests failed because PREVIEW_API_ORIGIN was not
+set to the local origin. Those five passed with it set. For the full config use
+PREVIEW_API_ORIGIN, VIPTV_TEST_API_ORIGIN and VIPTV_TEST_BROWSER_ORIGIN set to
+https://viptv.local.test:8443. No production provider or deployment was used.
+
+SolidTV Home playback/release/failure/retry passed for simulated Tizen/Vizio/
+webOS. The required Vizio TvPlayer resume/seek capture passed and was inspected
+privately: readable title/times/controls with the selected play focus ring.
+No screenshot is committed and no physical TV or full visual-parity claim is made.
+
 # BE-002 active VOD playback — 2026-09-29
 
 Normal movie/exact-episode playback now uses v2 start/poll/renew/release through

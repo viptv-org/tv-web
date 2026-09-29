@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { apiFor, response, scripted } from './client-helpers';
 import type { PlaybackV2Request } from '../../vendor/core/typescript/wire';
 import { normalizeCore } from '../../src/api/client-shared';
+import { adapterRequest } from '../../vendor/video/src/session-request';
 
 const request: PlaybackV2Request = {
   conversion: 'auto', audioLanguage: null, preferredAudioLanguage: null,
@@ -19,6 +20,16 @@ beforeEach(() => vi.useFakeTimers());
 afterEach(() => vi.useRealTimers());
 
 describe('v2 backend playback control', () => {
+  it('preserves native direct source headers from backend admission to the adapter request', async () => {
+    const headers = { Authorization: 'Bearer fixture-source', Referer: 'https://fixture.invalid/watch', Cookie: 'fixture=source', 'User-Agent': 'Native fixture' };
+    const fake = scripted(response({ ...lease('ready'), delivery: { kind: 'direct', url: 'http://provider.invalid/movie.mp4', headers, format: 'original', position: 0, live: false } }));
+    const ready = await apiFor(fake.fetcher).startPlaybackV2({ ...request, client: { ...request.client, platform: 'desktop' } });
+    const adapter = adapterRequest(ready.session!, 'vod', 12, false);
+    expect(adapter.authorization?.headers).toEqual(headers);
+    expect(adapter.url).toBe('http://provider.invalid/movie.mp4');
+    expect(adapter.startAtSeconds).toBe(12);
+    expect(new Headers(fake.calls[0].init?.headers).get('Authorization')).not.toBe(headers.Authorization);
+  });
   it('rejects unsolicited direct delivery when the request requires a gateway', async () => {
     const direct = { ...lease('ready'), delivery: { kind: 'direct', url: 'http://provider.invalid/movie.mp4', headers: {}, format: 'original', position: 0, live: false } };
     for (const input of [
