@@ -35,8 +35,15 @@ import type {
 } from "./types";
 
 import { TvApiClientBase } from "./client-base";
+import { PlaybackV2Transport } from "./playback-v2";
+import type { PlaybackV2Request } from "../../vendor/core/typescript/wire";
 
 export class TvApiCatalog extends TvApiClientBase {
+  private readonly playbackV2 = new PlaybackV2Transport((input, options) => this.domainRequest(input, options), this.origin);
+  startPlaybackV2(request: PlaybackV2Request, options?: RequestOptions) { return this.playbackV2.start(request, options); }
+  playbackStatusV2(id: string, options?: RequestOptions) { return this.playbackV2.status(id, options); }
+  renewPlaybackV2(id: string, options?: RequestOptions) { return this.playbackV2.renew(id, options); }
+  stopPlaybackV2(id: string, options?: RequestOptions) { return this.playbackV2.stop(id, options); }
   /** Temporary legacy live bridge until guide/playback adopts raw catalog IDs. */
   private readonly legacyLiveJobs = new Set<string>();
   async selectProfile(profileId: string, options?: RequestOptions) {

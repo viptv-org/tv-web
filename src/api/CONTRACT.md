@@ -1,5 +1,19 @@
 # TV API contract
 
+The explicit `startPlaybackV2`, `playbackStatusV2`, `renewPlaybackV2` and
+`stopPlaybackV2` methods now execute the generated canonical v2 contract.
+Startup waits at most 45 seconds, checks expiry and response identity, and polls
+without renewing implicitly. Cancellation/failure releases the admitted id;
+ambiguous admission is reconciled with the same immutable request id/body before
+release, under an independent five-second cleanup deadline. If control remains
+unreachable, backend/gateway expiry is the final cleanup bound. Renewal failures
+are authoritative and callers must stop using cached media when authorization or
+expiry is lost. Control requests never follow the returned media URL.
+
+These explicit methods are transport preparation: ordinary player calls still
+use `startPlayback` until capability/track/conversion mapping and controller lease
+ownership switch together. No completed v2 playback cutover is claimed here.
+
 BE-002 migration checkpoint: movie/exact-episode discovery now starts at
 `POST /api/v2/streams` and polls `/api/v2/streams/:id?after=N`. Closed shared-core
 error messages survive successful HTTP polling; terminal failure with no usable

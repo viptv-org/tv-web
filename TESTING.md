@@ -1,3 +1,20 @@
+# BE-002 v2 playback control transport — 2026-09-29
+
+Explicit v2 start/status/renew/release methods use shared-core request/response
+validation. Startup has a 45-second deadline; cleanup has an independent five-
+second deadline. Tests cover pending-to-ready, exact control origin, cancellation
+before/after admission, identical-body reconciliation after network/proxy errors,
+definitive refusal, mismatched ids, malformed deliveries, expiry and safe provider
+failures. These are API-boundary fixtures, not actual gateway/player acceptance.
+
+All 234 tests and application/test typechecking passed. The production build
+passed. Both existing trusted-HTTPS discovery regressions passed against the
+completed build. An earlier browser run overlapped the build and timed out before
+profile selection; it is not counted as passing evidence. The ordinary player
+path has not yet switched to these methods; capability/track/conversion mapping,
+renewal ownership/background recovery and all-platform cutover remain required.
+No production changes occurred.
+
 # BE-002 shared playback lease types — 2026-09-29
 
 Core pin f48f983454b21ba637b4580b426ea8e1647ffbb8 matches Android and adds strict
