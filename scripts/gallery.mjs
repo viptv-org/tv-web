@@ -40,7 +40,7 @@ let server;
 async function ensureServer() {
   if (await reachable()) return;
   const env = { ...process.env };
-  for (const name of ['VITE_LAN_PREVIEW', 'VITE_API_ORIGIN', 'VITE_VIPTV_LOCAL_MODE']) delete env[name];
+  for (const name of ['VITE_LAN_PREVIEW', 'VITE_API_ORIGIN']) delete env[name];
   server = spawn(process.execPath, [join(root, 'node_modules/vite/bin/vite.js'), '--port', String(PORT), '--strictPort', '--host', '127.0.0.1'], {
     cwd: root, env, stdio: 'ignore', detached: flag('--keep'),
   });

@@ -386,26 +386,6 @@
   width: var(--viptv-size-icon-alert);
   height: var(--viptv-size-icon-alert);
 }
-[data-layout="responsive"] .vx-signin__local {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--viptv-space-2);
-}
-/* "Use without an account": a full-width outline button at button height (WebSignInLocal). */
-[data-layout="responsive"] .vx-signin__local > .vx-btn--outline {
-  --vx-h: var(--viptv-size-button-desktop);
-  --vx-fs: var(--viptv-type-desktop-button-size);
-  justify-content: center;
-  padding: 0 var(--viptv-space-5_5);
-}
-[data-layout="responsive"] .vx-signin__local-help {
-  margin: 0;
-  color: var(--viptv-color-text-tertiary);
-  font-size: var(--viptv-type-desktop-meta-size);
-  line-height: 1.5;
-  text-align: center;
-}
 @media (max-width: 599px) {
   [data-layout="responsive"] .vx-signin {
     --vx-glow-w: 560px; /* PhSignIn glow */
@@ -425,9 +405,6 @@
   }
   [data-layout="responsive"] .vx-signin__intro {
     font-size: var(--viptv-type-phone-body-size);
-  }
-  [data-layout="responsive"] .vx-signin__local > .vx-btn--outline {
-    --vx-h: var(--viptv-size-button-phone);
   }
 }
 

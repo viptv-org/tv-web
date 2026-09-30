@@ -25,7 +25,9 @@ Read [AGENTS.md](AGENTS.md), [SPEC.md](SPEC.md), [DESIGN_REF](DESIGN_REF), and [
 
 The BE-002 client uses account-owned raw live playlists and v2 logical playback
 leases. Local-only boot/sign-in and profile maximum-quality controls are retired;
-preserved registry/storage utilities are not a supported playback entry point.
+the dormant registry/storage/discovery shell and its executable preview helpers
+are removed. Existing stored local-addon records are not read, migrated into
+accounts or deleted automatically.
 Live category and channel boundaries use opaque forward/backward cursors without
 counts, US classification or a playlist-swap control. See TESTING.md for evidence.
 

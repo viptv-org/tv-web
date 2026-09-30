@@ -313,8 +313,6 @@ register("CmpTv1", {
     <button className="vx-btn vx-btn--small">Season 1</button>
     <button className="vx-btn vx-btn--small" data-force="focus">Season 1</button>
   </>,
-  "Text action · focused": () => <a href="#" className="vx-link" data-force="focus">Use without an account</a>,
-
   "Chip · default": () => <button className="vx-chip" aria-pressed="false"><span>Seasonal</span></button>,
   "Chip · selected": () => <button className="vx-chip" aria-pressed="true"><span>Popular</span></button>,
   "Chip · focused": () => <button className="vx-chip" aria-pressed="false" data-force="focus"><span>Seasonal</span></button>,

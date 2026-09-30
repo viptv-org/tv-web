@@ -1,3 +1,31 @@
+# BE-002 local-only code retirement — 2026-09-30
+
+Core `8ae9f81bb753aaf2de53af5b594ead29845e1a8a` removes eight unused
+application-facing provider exports and rebuilds native/WASM bindings. The
+standalone backend provider parser remains. Core's baseline/candidate test
+compares 35 frozen v2/startup operations through native and actual WASM and
+verifies unchanged generated event/wire declarations.
+
+This viewing candidate removes the dormant anonymous shell, on-device addon
+registry/discovery/mode modules, executable local preview/test/env scaffolding
+and unused local-only CSS. Only the corresponding obsolete tests are retired;
+234 retained unit tests passed, as did application/test typechecks, production
+build and design/Core/video integrity. Existing stale local records are ignored,
+not read, uploaded, migrated into accounts or deleted automatically.
+
+All 36 trusted-HTTPS browser cases passed on the candidate's own loopback
+static host at port 18444, with API/art/media boundaries intercepted. New tests
+prove stale local keys cannot bypass authenticated/restored boot or sign-in and
+cause no retired-addon fetches. TLS was verified without bypass (`200 0`).
+The simulated SolidTV Home/live/category/reverse/cancellation checks passed on
+Tizen, Vizio and webOS. Desktop Home/sign-in captures were inspected privately;
+no active viewing geometry was redesigned and no physical parity is claimed.
+
+No shared HTTPS backend, real account, provider subscription, production host
+or database was changed. Android and installed desktop adoption of the new Core
+pin remains a coordinated next step. Real gateway/native/physical/signing and
+the other BE-002 integration gates remain separately unqualified.
+
 # BE-002 active raw guide and ordinary live playback — 2026-09-29
 
 Design pin `4e153a7daca300389049e5fcfd5c3bc0af5edbee`; Core pin

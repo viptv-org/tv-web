@@ -91,7 +91,6 @@ export interface BackendOptions {
   /** Discover/catalog requests never answer (skeletons). */
   catalogHang?: boolean;
   /** Local mode: serve the Stremio addon hosts (lordstreams/thisiptv/lucidhosting.example); 'hang' never answers catalogs. */
-  localAddons?: boolean | 'hang';
   /** Recent searches stored for the profile. */
   recentSearches?: string[];
   /** Media timeline for the stubbed player, seconds. */
@@ -456,7 +455,6 @@ export async function installBackend(page: Page, options: BackendOptions): Promi
   // Reference profile photos served as the catalog avatars the fixtures pick.
   if (assetFiles.has('5112cc')) await page.route('**/assets/avatar-catalog/lorelei-47.png', route => serveFile(route, `${referenceDir}assets/${assetFiles.get('5112cc')}`, 'image/png'));
   if (assetFiles.has('e12f8d')) await page.route('**/assets/avatar-catalog/lorelei-48.png', route => serveFile(route, `${referenceDir}assets/${assetFiles.get('e12f8d')}`, 'image/png'));
-  if (options.localAddons) await installLocalAddons(page, family, options.localAddons === 'hang');
   await page.route(`${apiOrigin}/media/**`, route => {
     const name = new URL(route.request().url()).pathname.split('/').pop() ?? '';
     if (name.endsWith('.m3u8')) return serveFile(route, `${hlsDir}index.m3u8`, 'application/vnd.apple.mpegurl');
@@ -626,35 +624,6 @@ export async function installBackend(page: Page, options: BackendOptions): Promi
     return json({ error: `Unhandled preview route ${method} ${path}` }, 404);
   });
   return { requests, errors };
-}
-
-/** Local addon mode: the Stremio hosts the seeded local registry points at. */
-const localCatalogs: Record<string, string[]> = {
-  popular: ['tt-oak-street', 'tt-mayday', 'tt-whisper-man', 'tt-obsession', 'tt-practical-magic', 'tt-in-the-grey', 'tt-ministry'],
-  new: ['tt-hail-mary', 'tt-pressure', 'tt-mandalorian', 'tt-one-night-only', 'tt-weapons', 'tt-wish-me-dead', 'tt-the-invite'],
-};
-export const localManifest = (id: string, name: string, catalogs: boolean) => ({
-  id, name, version: '1.0.0', resources: ['catalog', 'meta', 'stream'], types: ['movie', 'series'], idPrefixes: ['tt'],
-  catalogs: catalogs ? [{ type: 'movie', id: 'popular', name: 'Popular movies' }, { type: 'movie', id: 'new', name: 'New releases' }] : [],
-});
-async function installLocalAddons(page: Page, family: Family, hang: boolean) {
-  const hosts: Record<string, [string, string, boolean]> = {
-    'lordstreams.example': ['com.lordstreams.addon', 'LordStreams', true],
-    'thisiptv.example': ['org.thisiptv.addon', 'ThisIPTV', false],
-    'lucidhosting.example': ['io.lucidhosting.addon', 'LucidHosting', false],
-  };
-  await page.route(/^https:\/\/(lordstreams|thisiptv|lucidhosting)\.example\//, async route => {
-    const url = new URL(route.request().url());
-    const [id, name, catalogs] = hosts[url.hostname];
-    const json = (body: unknown) => route.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify(body) });
-    if (url.pathname.endsWith('/manifest.json')) return json(localManifest(id, name, catalogs));
-    const catalog = /\/catalog\/([^/]+)\/([^/.]+)/.exec(url.pathname);
-    if (catalog) {
-      if (hang) return new Promise<void>(() => undefined);
-      return json({ metas: (localCatalogs[catalog[2]] ?? []).map(entry => item(byId.get(entry)!, family)) });
-    }
-    return json({ streams: [] });
-  });
 }
 
 /**

@@ -12,7 +12,6 @@
  *   backend   installBackend options (tests/preview/backend.ts)
  *   player    install the media stubs (+ options: paused, error, position…)
  *   clock     'HH:MM' Eastern on 23 Sep 2026, or false for real time
- *   local     use the local-mode dev server (VITE_VIPTV_LOCAL_MODE=1)
  *   shell     override the desktop title bar (true/false)
  *   steps     async (h) => {…} to reach the state (see helpers in shoot.mjs)
  *   notReachable  why the app cannot show this state yet (listed by --list)
@@ -147,7 +146,6 @@ export const screens = {
   PhAddonInstall: { path: '/tv/settings/addons', steps: async h => { await h.activate('addon-add'); await h.fill('settings-install-url', 'http://addon.example/manifest.json'); await h.activate('settings-install-save'); await h.waitText('HTTPS manifest'); } },
   PhAddonManage: { path: '/tv/settings/addons', steps: h => h.activate('addon-2') },
   PhAddonRemove: { path: '/tv/settings/addons', steps: async h => { await h.activate('addon-1'); await h.button('Remove addon'); } },
-  PhLocalHome: { local: true, init: seedLocalMode, path: '/', backend: { localAddons: true } },
   PhItemMenu: { path: '/tv/home', note: 'menu for Mayday (phone Continue Watching has no Monster)', steps: h => h.hold('queue-0') },
   PhItemMenuLive: { path: '/tv/live', note: 'Recent list (Cartoon Network first); the Live list menu adds Programme details', steps: async h => { await h.activate(h.page.getByRole('button', { name: 'Recent', exact: true })); await h.settle(); await h.hold('live-channel-0'); } },
   PhHidden: { path: '/tv/home', steps: async h => { await h.hold('queue-0'); await h.button('Remove from Continue Watching'); } },
@@ -199,10 +197,9 @@ export const screens = {
   DeskPlayerError: { path: OAK_SOURCES, player: { stall: true }, steps: async h => { await h.activate('source-0'); await h.waitText('could not be played', 25000); } },
   DeskPlayerRestore: { path: MONSTER, player: { failAfter: 1 }, backend: { sourcesDone: true }, steps: async h => { await responsivePlayer(h); await h.activate('next'); await h.waitText('could not be restored', 20000); } },
   DeskUpNext: { init: holdUpNext, path: MONSTER, player: { position: 3120 }, backend: { media: { position: 3120 } }, steps: h => upNextCard(h) },
-  WebSignIn: { backend: { session: 'none' } },
+  WebSignIn: { path: '/tv/', backend: { session: 'none' } },
   WebSignInError: { backend: { session: 'none', loginError: true }, steps: async h => { await h.fill('#signin-username', 'vynxc'); await h.fill('#signin-password', 'password'); await h.button('Sign in'); await h.waitText('incorrect'); } },
   WebSignInDevice: { backend: { session: 'none' }, steps: h => h.button('Use another device') },
-  WebSignInLocal: { local: true, backend: { session: 'none' }, steps: h => h.focus(h.page.getByRole('button', { name: 'Use without an account' })) },
   DeskSignIn: { backend: { session: 'none' } },
   WebLinkTv: { notReachable: 'owned by the account web app; inspect /device there' },
   DeskProfiles: { backend: { session: 'profiles' }, path: '/tv/profiles' },
@@ -219,11 +216,6 @@ export const screens = {
   DeskAddonInstall: { path: '/tv/settings/addons', backend: { addonInstallHang: true }, steps: async h => { await h.activate('addon-add'); await h.fill('settings-install-url', 'https://lordstreams.example/manifest.json'); await h.activate('settings-install-save'); await h.waitText('Saving'); } },
   DeskAddonManage: { path: '/tv/settings/addons', steps: h => h.activate('addon-2') },
   DeskAddonRemove: { path: '/tv/settings/addons', steps: async h => { await h.activate('addon-1'); await h.button('Remove addon'); } },
-  WebLocalHome: { local: true, init: seedLocalMode, path: '/', backend: { localAddons: true } },
-  WebLocalLoading: { local: true, init: seedLocalMode, path: '/', backend: { localAddons: 'hang' } },
-  WebLocalEmpty: { local: true, init: () => { if (!sessionStorage.getItem('preview:local')) { sessionStorage.setItem('preview:local', '1'); localStorage.setItem('viptv.local.mode.v1', '1'); } }, path: '/' },
-  WebLocalAddons: { local: true, init: seedLocalMode, path: '/', backend: { localAddons: true }, steps: async h => { await h.button('Addons'); await h.fill(h.page.getByLabel('Addon manifest URL'), 'https://lordstreams.example/manifest.json'); await h.button('Install addon'); } },
-  WebLocalRemove: { local: true, init: seedLocalMode, path: '/', backend: { localAddons: true }, steps: async h => { await h.button('Addons'); await h.activate(h.page.getByRole('button', { name: 'Remove' }).first()); } },
   DeskItemMenu: { path: '/tv/home', steps: h => h.hold('queue-1') },
   DeskHidden: { path: '/tv/home', steps: async h => { await h.hold('queue-1'); await h.button('Remove from Continue Watching'); } },
   DeskDiscoverCatalog: { path: '/tv/discover', steps: h => h.activate('discover-catalog') },
@@ -292,24 +284,6 @@ export const screens = {
   TvLibrary: { steps: async h => { await h.tvGo('My List'); await h.activate('library-queue'); await h.focus('result-0'); } },
   TvStates: { notReachable: 'composite board of many states; shoot the individual states instead' },
 };
-
-/** Local mode: enter it and install three addons whose manifests the harness serves. */
-function seedLocalMode() {
-  if (sessionStorage.getItem('preview:local')) return;
-  sessionStorage.setItem('preview:local', '1');
-  localStorage.setItem('viptv.local.mode.v1', '1');
-  // Mirrors localManifest() in backend.ts (init scripts cannot import).
-  const addon = (ordinal, id, name, base, enabled) => ({
-    ordinal, id, manifestUrl: `https://${base}/manifest.json`, installedAt: 1790000000000 + ordinal, enabled,
-    manifest: { id, name, version: '1.0.0', resources: ['catalog', 'meta', 'stream'], types: ['movie', 'series'], idPrefixes: ['tt'],
-      catalogs: ordinal === 1 ? [{ type: 'movie', id: 'popular', name: 'Popular movies' }, { type: 'movie', id: 'new', name: 'New releases' }] : [] },
-  });
-  localStorage.setItem('viptv.local.registry.v1', JSON.stringify({ version: 1, nextOrdinal: 4, addons: [
-    addon(1, 'com.lordstreams.addon', 'LordStreams', 'lordstreams.example', true),
-    addon(2, 'org.thisiptv.addon', 'ThisIPTV', 'thisiptv.example', true),
-    addon(3, 'io.lucidhosting.addon', 'LucidHosting', 'lucidhosting.example', false),
-  ] }));
-}
 
 /** Watch on TV: the dev-only SmartCast bridge (CastController reads it in DEV), scripted per ?cast=. */
 function smartcastPreview() {

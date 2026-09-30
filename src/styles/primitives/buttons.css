@@ -419,7 +419,7 @@
 .tv-layout .vx-btn--block:focus {
   transform: scale(var(--viptv-focus-tv-scale-row));
 }
-/* TV text action ("Use without an account"): a 56 pill that only shows when focused. */
+/* TV text action: a 56 pill that only shows when focused. */
 .tv-layout .vx-link {
   min-height: var(--viptv-size-chip-tv);
   padding: 0 var(--viptv-space-5_5);

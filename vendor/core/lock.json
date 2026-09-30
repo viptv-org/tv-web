@@ -1,11 +1,11 @@
 {
   "repository": "viptv-org/core",
-  "revision": "fba95c8f3ba00e97fbc460acc746d23a912795bc",
+  "revision": "8ae9f81bb753aaf2de53af5b594ead29845e1a8a",
   "files": {
-    "wasm/viptv_core.d.ts": "34da10b557c6e980b238c5e10666c3f566566dd71d7466d51560e4cc21681f20",
-    "wasm/viptv_core.js": "9d048cf8f3bce821a316b938461565aa1d5497a89938768982da59f6d738db50",
-    "wasm/viptv_core_bg.wasm": "3552c9d7ec5c6756ef4ae31d4821785d9780358ce95353e3ce131251421b97e8",
-    "wasm/viptv_core_bg.wasm.d.ts": "097bfe2bbe500a11c70b2e5f078d2d31e393b24964ed6b618991dfd1f4484c6f",
+    "wasm/viptv_core.d.ts": "a8a4306ceb8913d807ab7a1d1af2b228718b1898e5cef5892e2f0fb65335dfdd",
+    "wasm/viptv_core.js": "43a6d7271625f10f5265b335e62a4e7a71a98c33328bd249bd1e6a023895180c",
+    "wasm/viptv_core_bg.wasm": "bf588624a533dd9972f7f9403eccbd32b840bddb0261e1ce965ded81d3323ec9",
+    "wasm/viptv_core_bg.wasm.d.ts": "52d9767f63057cec578cee7531436d8641c5de01892cfe77ea2feeb12a30f00b",
     "typescript/package.json": "650dd3d51aadf50038954422add6924444975666e953a28c65b6355fb6b5e41e",
     "typescript/viptv_core_types.ts": "302745ed75559aa11e4c1c11f65f4dba48712b5cbda3aee21eed944faa57b62e",
     "typescript/wire.ts": "d5d27c1d047c2e2236b798a7faf8c302aa03e20a7a9fd5308f5bc96ff3b8aec7",
