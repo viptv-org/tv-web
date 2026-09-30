@@ -1,10 +1,11 @@
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import type { Guide as GuideData, GuideProgram, LiveCategories, LivePage, MediaItem, TvApi } from '../../src/api';
+import type { Guide as GuideData, GuideProgram, LiveCatalogCategories, LiveCatalogPage, MediaItem, TvApi } from '../../src/api';
 import { Guide, guideCells } from '../../src/ui/Guide';
 import { firstVisibleRow, timeRange } from '../../src/ui/guide-core';
 import { RemoteRoot } from '../../src/ui/remote';
+import { TvApiError } from '../../src/api';
 
 const start = 1_700_000_000;
 const channels = Array.from({ length: 80 }, (_, index): MediaItem => ({
@@ -16,8 +17,12 @@ const channels = Array.from({ length: 80 }, (_, index): MediaItem => ({
   raw: {},
 }));
 
-function page(offset: number): LivePage {
-  return { channels: channels.slice(offset, offset + 40), total: channels.length };
+function page(offset: number): LiveCatalogPage {
+  return {
+    catalogId: '1', generation: '1', items: channels.slice(offset, offset + 40),
+    nextCursor: offset + 40 < channels.length ? `page_${offset + 40}` : null,
+    previousCursor: offset > 0 ? `page_${Math.max(0, offset - 40)}` : null,
+  };
 }
 
 function apiFixture(guide: (id: string) => GuideData = () => ({ programs: [], timezone: 'UTC' })) {
@@ -26,15 +31,15 @@ function apiFixture(guide: (id: string) => GuideData = () => ({ programs: [], ti
       const controller = new AbortController();
       return { signal: controller.signal, abort: () => controller.abort() };
     }),
-    live: vi.fn(async ({ offset = 0 }) => page(offset)),
-    liveCategories: vi.fn(async (): Promise<LiveCategories> => ({
-      total: 2,
-      categories: [
-        { id: 'section:news', name: 'News', count: 12, raw: {} },
-        { id: 'section:sports', name: 'Sports', count: 8, raw: {} },
+    liveV2: vi.fn(async ({ cursor }: { cursor?: string }) => page(cursor ? Number(cursor.split('_')[1]) : 0)),
+    liveCategoriesV2: vi.fn(async (): Promise<LiveCatalogCategories> => ({
+      catalogId: '1', generation: '1', nextCursor: null, previousCursor: null,
+      items: [
+        { id: 'section:news', name: 'News' },
+        { id: 'section:sports', name: 'Sports' },
       ],
     })),
-    guide: vi.fn(async (id: string) => guide(id)),
+    guideV2: vi.fn(async (id: string) => guide(id)),
   };
 }
 
@@ -82,6 +87,98 @@ describe('guide cells', () => {
 });
 
 describe('Guide', () => {
+  it('pages beyond 200 provider categories at existing remote boundaries and refetches backward without extra controls', async () => {
+    const first = Array.from({length:200},(_,index)=>({id:`raw:${index}`,name:`Category ${index+1}`}));
+    const api = {...apiFixture(),liveCategoriesV2:vi.fn(async ({cursor}:{cursor?:string}):Promise<LiveCatalogCategories>=>({
+      catalogId:'1',generation:'1',items:cursor==='next_categories' ? [{id:'raw:200',name:'Category 201'},{id:'raw:201',name:'Category 202'}] : first,
+      nextCursor:cursor==='next_categories' ? null : 'next_categories',previousCursor:cursor==='next_categories' ? 'previous_categories' : null,
+    }))};
+    render(<Guide api={api as unknown as TvApi} onPlay={vi.fn()} onError={vi.fn()}/>);
+    await screen.findByRole('button',{name:'Channel 1'});
+    const categoryGroup = screen.getByRole('group',{name:'Channel category'});
+    const last = await within(categoryGroup).findByRole('button',{name:'Category 200'});
+    last.focus(); fireEvent.keyDown(last,{key:'ArrowRight'});
+    const next = await within(categoryGroup).findByRole('button',{name:'Category 201'});
+    await waitFor(()=>expect(next).toHaveFocus());
+    expect(within(categoryGroup).queryByRole('button',{name:'Category 200'})).not.toBeInTheDocument();
+    expect(within(categoryGroup).queryByRole('button',{name:'More categories'})).not.toBeInTheDocument();
+    expect(api.liveV2).toHaveBeenCalledTimes(1);
+    fireEvent.keyDown(next,{key:'ArrowLeft'});
+    const restored = await within(categoryGroup).findByRole('button',{name:'Category 200'});
+    await waitFor(()=>expect(restored).toHaveFocus());
+    expect(api.liveCategoriesV2.mock.calls.map(([query])=>query.cursor)).toEqual([undefined,'next_categories','previous_categories']);
+    expect(within(categoryGroup).getAllByRole('button')).toHaveLength(204);
+    expect(api.liveV2).toHaveBeenCalledTimes(1);
+  });
+
+  it('rejects a changed snapshot on a category page without mixing new category rows', async () => {
+    const failure = vi.fn();
+    const api = {...apiFixture(),liveCategoriesV2:vi.fn(async ({cursor}:{cursor?:string}):Promise<LiveCatalogCategories>=>({
+      catalogId:'1',generation:cursor ? '2' : '1',items:[{id:cursor ? 'new' : 'old',name:cursor ? 'New category' : 'Old category'}],nextCursor:'next_categories',previousCursor:null,
+    }))};
+    render(<Guide api={api as unknown as TvApi} onPlay={vi.fn()} onError={failure}/>);
+    const last = await screen.findByRole('button',{name:'Old category'});
+    await screen.findByRole('button',{name:'Channel 1'});
+    fireEvent.keyDown(last,{key:'ArrowRight'});
+    await waitFor(()=>expect(failure).toHaveBeenCalledWith(expect.objectContaining({code:'catalog_changed'})));
+    expect(screen.queryByRole('button',{name:'New category'})).not.toBeInTheDocument();
+  });
+  it('requests schedules only for the initial nearby rows, not the loaded channel page', async () => {
+    const api = apiFixture();
+    render(<Guide responsive api={api as unknown as TvApi} onPlay={vi.fn()} onError={vi.fn()} />);
+    await screen.findByRole('button', { name: 'Channel 40' });
+    await waitFor(() => expect(api.guideV2).toHaveBeenCalledTimes(12));
+    expect(api.guideV2.mock.calls.map(([id]) => id)).toEqual(channels.slice(0, 12).map(channel => channel.id));
+  });
+
+  it('does not combine category and channel snapshots from different playlist generations', async () => {
+    const api = apiFixture();
+    api.liveCategoriesV2.mockResolvedValue({ catalogId: '1', generation: 'changed', items: [{ id: 'news', name: 'News' }], nextCursor: null, previousCursor: null });
+    const onError = vi.fn();
+    render(<Guide responsive api={api as unknown as TvApi} onPlay={vi.fn()} onError={onError} />);
+    await waitFor(() => expect(onError).toHaveBeenCalledWith(expect.objectContaining({ code: 'catalog_changed' })));
+    expect(screen.queryByRole('button', { name: 'News' })).not.toBeInTheDocument();
+  });
+
+  it('a superseded append cannot unlock a newer in-flight append', async () => {
+    const api = apiFixture();
+    let oldResolve!: (page: LiveCatalogPage) => void;
+    let newResolve!: (page: LiveCatalogPage) => void;
+    api.liveV2.mockImplementationOnce(async () => page(0))
+      .mockImplementationOnce(() => new Promise(resolve => { oldResolve = resolve; }))
+      .mockImplementationOnce(async () => page(0))
+      .mockImplementationOnce(() => new Promise(resolve => { newResolve = resolve; }));
+    render(<Guide responsive api={api as unknown as TvApi} onPlay={vi.fn()} onError={vi.fn()} />);
+    await screen.findByRole('button', { name: 'Channel 1' });
+    const scroll = screen.getByRole('region', { name: 'Scrollable programme guide' });
+    fireEvent.scroll(scroll);
+    await waitFor(() => expect(api.liveV2).toHaveBeenCalledTimes(2));
+    fireEvent.click(screen.getByRole('button', { name: 'News' }));
+    await waitFor(() => expect(api.liveV2).toHaveBeenCalledTimes(3));
+    await screen.findByRole('button', { name: 'Channel 1' });
+    fireEvent.scroll(scroll);
+    await waitFor(() => expect(api.liveV2).toHaveBeenCalledTimes(4));
+    await act(async () => oldResolve(page(40)));
+    fireEvent.scroll(scroll);
+    expect(api.liveV2).toHaveBeenCalledTimes(4);
+    await act(async () => newResolve(page(40)));
+    await screen.findByRole('button', { name: 'Channel 41' });
+  });
+
+  it('stops automatic paging retries after a typed catalog failure', async () => {
+    const api = apiFixture();
+    api.liveV2.mockResolvedValueOnce(page(0)).mockRejectedValue(new TvApiError(409, 'This playlist changed. Reload the guide.', 'catalog_changed'));
+    const onError = vi.fn();
+    render(<Guide responsive api={api as unknown as TvApi} onPlay={vi.fn()} onError={onError} />);
+    await screen.findByRole('button', { name: 'Channel 1' });
+    const scroll = screen.getByRole('region', { name: 'Scrollable programme guide' });
+    fireEvent.scroll(scroll);
+    await waitFor(() => expect(onError).toHaveBeenCalledTimes(1));
+    fireEvent.scroll(scroll); fireEvent.scroll(scroll);
+    expect(api.liveV2).toHaveBeenCalledTimes(2);
+    expect(screen.getByRole('button', { name: 'Channel 1' })).toBeInTheDocument();
+  });
+
   it('loads the next channel page at the end of the loaded rows and restores the current timeline', async () => {
     const api = apiFixture();
     const onPlay = vi.fn();
@@ -94,7 +191,7 @@ describe('Guide', () => {
     expect(screen.queryByRole('button', { name: 'Next channels' })).not.toBeInTheDocument();
     expect(screen.getAllByTestId(/guide-row-/)).toHaveLength(40);
     expect(screen.getByRole('button', { name: 'Channel 40' })).toBeInTheDocument();
-    expect(container.querySelector('.vx-live-guide__count')).toHaveTextContent('80 channels');
+    expect(container.querySelector('.vx-live-guide__count')).toHaveTextContent('Channels');
     const region = screen.getByRole('region', { name: 'Scrollable programme guide' });
     expect(region).toHaveAttribute('tabindex', '0');
     Object.defineProperty(region, 'scrollHeight', { value: 4000, configurable: true });
@@ -102,7 +199,7 @@ describe('Guide', () => {
     region.scrollTop = 3600;
     fireEvent.scroll(region);
     await screen.findByRole('button', { name: 'Channel 41' });
-    expect(api.live).toHaveBeenLastCalledWith(expect.objectContaining({ offset: 40 }), expect.anything());
+    expect(api.liveV2).toHaveBeenLastCalledWith(expect.objectContaining({ cursor: 'page_40' }), expect.anything());
     expect(screen.getAllByTestId(/guide-row-/)).toHaveLength(80);
     fireEvent.click(screen.getByRole('button', { name: 'Channel 42' }));
     expect(onPlay).toHaveBeenLastCalledWith(channels[41]);
@@ -145,14 +242,14 @@ describe('Guide', () => {
     fireEvent.keyDown(first, { key: 'MediaPlay' });
     expect(onPlay).not.toHaveBeenCalled();
     const categories = screen.getByRole('group', { name: 'Channel categories' });
-    fireEvent.click(await within(categories).findByRole('button', { name: 'News, 12 channels' }));
-    await waitFor(() => expect(api.live).toHaveBeenLastCalledWith(expect.objectContaining({ category: 'section:news', offset: 0 }), expect.anything()));
-    expect(within(categories).getByRole('button', { name: 'News, 12 channels' })).toHaveAttribute('aria-pressed', 'true');
+    fireEvent.click(await within(categories).findByRole('button', { name: 'News' }));
+    await waitFor(() => expect(api.liveV2).toHaveBeenLastCalledWith(expect.objectContaining({ categoryId: 'section:news', cursor: undefined }), expect.anything()));
+    expect(within(categories).getByRole('button', { name: 'News' })).toHaveAttribute('aria-pressed', 'true');
     fireEvent.click(within(categories).getByRole('button', { name: 'My channels' }));
-    await waitFor(() => expect(api.live).toHaveBeenLastCalledWith(expect.objectContaining({ collection: 'favorites', category: undefined, offset: 0 }), expect.anything()));
+    await waitFor(() => expect(api.liveV2).toHaveBeenLastCalledWith(expect.objectContaining({ collection: 'favorites', categoryId: undefined, cursor: undefined }), expect.anything()));
     expect(within(categories).getByRole('button', { name: 'My channels' })).toHaveAttribute('aria-pressed', 'true');
     fireEvent.change(screen.getByRole('searchbox', { name: 'Search Live TV' }), { target: { value: '  news  ' } });
-    await waitFor(() => expect(api.live).toHaveBeenLastCalledWith(expect.objectContaining({ search: 'news', offset: 0 }), expect.anything()));
+    await waitFor(() => expect(api.liveV2).toHaveBeenLastCalledWith(expect.objectContaining({ search: 'news', cursor: undefined }), expect.anything()));
   });
 
   it('opens programme details on the desktop (right-click) with the channel and time slot, and watches from them', async () => {
@@ -197,7 +294,7 @@ describe('Guide', () => {
     expect(screen.queryByRole('searchbox', { name: 'Search Live TV' })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Search Live TV' }));
     fireEvent.change(screen.getByRole('searchbox', { name: 'Search Live TV' }), { target: { value: 'news' } });
-    await waitFor(() => expect(api.live).toHaveBeenLastCalledWith(expect.objectContaining({ search: 'news' }), expect.anything()));
+    await waitFor(() => expect(api.liveV2).toHaveBeenLastCalledWith(expect.objectContaining({ search: 'news' }), expect.anything()));
   });
 
   it('uses real category filters and keeps five guide rows rendered', async () => {
@@ -207,11 +304,12 @@ describe('Guide', () => {
     expect(await screen.findByRole('button', { name: 'News' })).toBeInTheDocument();
     await waitFor(() => expect(screen.getAllByTestId(/guide-row-/)).toHaveLength(5));
     fireEvent.click(screen.getByRole('button', { name: 'News' }));
-    await waitFor(() => expect(api.live).toHaveBeenLastCalledWith(expect.objectContaining({ category: 'section:news', offset: 0 }), expect.anything()));
+    await waitFor(() => expect(api.liveV2).toHaveBeenLastCalledWith(expect.objectContaining({ categoryId: 'section:news', cursor: undefined }), expect.anything()));
   });
 
   it('loads the previous forty-channel page and restores focus to its final row', async () => {
-    const api = apiFixture();
+    const api = apiFixture(schedule);
+    vi.spyOn(Date,'now').mockReturnValue(start*1000);
     render(<Guide api={api as unknown as TvApi} onPlay={vi.fn()} onError={vi.fn()} />);
     await screen.findByRole('button', { name: 'Channel 1' });
     // The Roku guide pages when Down crosses its final channel, without a
@@ -222,7 +320,7 @@ describe('Guide', () => {
       fireEvent.keyDown(channel, { key: 'ArrowDown' });
       await waitFor(() => expect(screen.getByRole('button', { name: `Channel ${number + 1}` })).toHaveFocus());
     }
-    expect(api.live).toHaveBeenLastCalledWith(expect.objectContaining({ offset: 40 }), expect.anything());
+    expect(api.liveV2).toHaveBeenLastCalledWith(expect.objectContaining({ cursor: 'page_40' }), expect.anything());
     // The hero names the selected channel with its position in the full list.
     expect(screen.getByText('41 · Channel 41')).toBeInTheDocument();
 
@@ -230,6 +328,11 @@ describe('Guide', () => {
     first.focus();
     fireEvent.keyDown(first, { key: 'ArrowUp' });
     await waitFor(() => expect(screen.getByRole('button', { name: 'Channel 40' })).toHaveFocus());
+    const upcoming = await screen.findByRole('button',{name:/^Channel 40: Halftime Report/});
+    upcoming.focus(); fireEvent.keyDown(upcoming,{key:'ArrowDown'});
+    await waitFor(()=>expect(screen.getByRole('button',{name:/^Channel 41: Halftime Report/})).toHaveFocus());
+    fireEvent.keyDown(screen.getByRole('button',{name:/^Channel 41: Halftime Report/}),{key:'ArrowUp'});
+    await waitFor(()=>expect(screen.getByRole('button',{name:/^Channel 40: Halftime Report/})).toHaveFocus());
   });
 
   it('moves between the chip row and the grid, and Left at the earliest programme returns to its channel', async () => {
@@ -239,8 +342,8 @@ describe('Guide', () => {
     const channel = await screen.findByRole('button', { name: 'Channel 1' });
     await waitFor(() => expect(channel).toHaveFocus());
     fireEvent.keyDown(channel, { key: 'ArrowUp' });
-    expect(screen.getByRole('button', { name: 'All US channels' })).toHaveFocus();
-    fireEvent.keyDown(screen.getByRole('button', { name: 'All US channels' }), { key: 'ArrowDown' });
+    expect(screen.getByRole('button', { name: 'All channels' })).toHaveFocus();
+    fireEvent.keyDown(screen.getByRole('button', { name: 'All channels' }), { key: 'ArrowDown' });
     expect(channel).toHaveFocus();
 
     const [airing] = await screen.findAllByRole('button', { name: /^Channel 1: Squawk on the Street/ });
@@ -290,7 +393,7 @@ describe('Guide', () => {
 
     // The entry caps the raw text at 128 characters; submit trims it.
     const expected = 'n'.repeat(126);
-    await waitFor(() => expect(api.live).toHaveBeenLastCalledWith(expect.objectContaining({ search: expected, offset: 0 }), expect.anything()));
+    await waitFor(() => expect(api.liveV2).toHaveBeenLastCalledWith(expect.objectContaining({ search: expected, cursor: undefined }), expect.anything()));
     await waitFor(() => expect(screen.queryByRole('heading', { name: 'Search Live TV' })).not.toBeInTheDocument());
 
     const restoredSearch = screen.getByRole('button', { name: `Search Live TV: ${expected}` });

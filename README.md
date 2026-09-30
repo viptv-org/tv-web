@@ -23,6 +23,12 @@ Read [AGENTS.md](AGENTS.md), [SPEC.md](SPEC.md), [DESIGN_REF](DESIGN_REF), and [
 
 ## Local work
 
+The BE-002 client uses account-owned raw live playlists and v2 logical playback
+leases. Local-only boot/sign-in and profile maximum-quality controls are retired;
+preserved registry/storage utilities are not a supported playback entry point.
+Live category and channel boundaries use opaque forward/backward cursors without
+counts, US classification or a playlist-swap control. See TESTING.md for evidence.
+
 Use a recent Node.js release, then install the lockfile dependencies:
 
 ```sh

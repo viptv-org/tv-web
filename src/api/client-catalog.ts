@@ -20,6 +20,7 @@ import type {
   LivePage,
   MediaDetail,
   MediaItem,
+  MediaSource,
   Page,
   ParentStatus,
   ParentPinChange,
@@ -41,7 +42,6 @@ import type { PlaybackV2Request, PlaybackLease } from "../../vendor/core/typescr
 export class TvApiCatalog extends TvApiClientBase {
   private readonly playbackV2 = new PlaybackV2Transport((input, options) => this.domainRequest(input, options), this.origin);
   private readonly playbackLeases = new Map<string, PlaybackLease>();
-  private readonly legacyPlaybackIds = new Set<string>();
   async startPlaybackV2(request: PlaybackV2Request, options?: RequestOptions) {
     const lease = await this.playbackV2.start(request, options);
     this.playbackLeases.set(lease.id, lease);
@@ -59,8 +59,6 @@ export class TvApiCatalog extends TvApiClientBase {
     try { await this.playbackV2.stop(id, options); }
     finally { this.playbackLeases.delete(id); }
   }
-  /** Temporary legacy live bridge until guide/playback adopts raw catalog IDs. */
-  private readonly legacyLiveJobs = new Set<string>();
   async selectProfile(profileId: string, options?: RequestOptions) {
     if (this.sessionEvent) {
       const view = await this.sessionEvent({ SelectProfile: { profileId } }, options);
@@ -173,7 +171,7 @@ export class TvApiCatalog extends TvApiClientBase {
   ): Promise<StreamDiscovery> {
     const request = normalizeCore<{ method: string; path: string; body: unknown }>(
       "request",
-      { operation: item.type === "live" ? "sources" : "sourcesV2", item },
+      { operation: "sourcesV2", item },
     );
     const v = expectObject(
       await this.raw(
@@ -184,8 +182,6 @@ export class TvApiCatalog extends TvApiClientBase {
       ),
     );
     const id = idAt(v, "id");
-    if (this.legacyLiveJobs.size >= 256) this.legacyLiveJobs.clear();
-    if (item.type === "live") this.legacyLiveJobs.add(id);
     return { id };
   }
   /**
@@ -201,7 +197,7 @@ export class TvApiCatalog extends TvApiClientBase {
   ): Promise<SourcesPollStep> {
     const request = normalizeCore<{ method: string; path: string }>(
       "request",
-      { operation: this.legacyLiveJobs.has(id) ? "sourcesPoll" : "sourcesPollV2", id, after: state.after },
+      { operation: "sourcesPollV2", id, after: state.after },
     );
     const v = expectObject(
       await this.raw(request.path, {}, true, options),
@@ -209,47 +205,35 @@ export class TvApiCatalog extends TvApiClientBase {
     const step = normalizeCore<SourcesPollStep>("sourcesPollStep", { state, poll: v });
     const failure = step.state.errors?.[0];
     if (step.done && !step.sources.length && failure) {
-      this.legacyLiveJobs.delete(id);
       throw new TvApiError(502, failure.message, failure.code ?? undefined);
     }
-    if (step.done) this.legacyLiveJobs.delete(id);
     return step;
   }
   async startPlayback(
     request: PlaybackStart,
     options?: RequestOptions,
   ): Promise<PlaybackSession> {
-    if (!request.channelId) {
-      const requestId = Array.from(crypto.getRandomValues(new Uint8Array(16)), byte => byte.toString(16).padStart(2, '0')).join('');
-      const canonical = normalizeCore<PlaybackV2Request>('playbackV2Intent', { requestId, platform: this.playbackPlatform, playback: request });
-      const lease = await this.startPlaybackV2(canonical, options);
-      return lease.session!;
+    const {channelId,...playback}=request;
+    if (channelId) {
+      const source=await this.liveSourceV2(channelId,options);
+      playback.streamId=source.id;
+      playback.position=0;
     }
-    const v = expectObject(
-      await this.domainRequest({ operation: "playback", playback: request }, options),
-    );
-    const session = playback(v, this.origin);
-    this.legacyPlaybackIds.add(session.id);
-    return session;
+    const requestId = Array.from(crypto.getRandomValues(new Uint8Array(16)), byte => byte.toString(16).padStart(2, '0')).join('');
+    const canonical = normalizeCore<PlaybackV2Request>('playbackV2Intent', { requestId, platform: this.playbackPlatform, playback });
+    const lease = await this.startPlaybackV2(canonical, options);
+    return lease.session!;
+  }
+  async liveSourceV2(channelId: string, options?: RequestOptions): Promise<MediaSource> {
+    const value=await this.domainRequest({operation:'liveSourceV2',id:channelId},options);
+    try { return normalizeRust<MediaSource>('liveSourceV2',value); }
+    catch { throw new TvApiError(502,'The server returned invalid live source data. Update the app/server or retry.','invalid_catalog_response'); }
   }
   async heartbeat(id: string, options?: RequestOptions, position?: number) {
-    if (!this.legacyPlaybackIds.has(id)) { await this.renewPlaybackV2(id, options); return; }
-    await this.raw(
-      `/api/playback/${segment(id)}/heartbeat`,
-      { method: "POST", body: position === undefined ? {} : { position } },
-      true,
-      options,
-    );
+    await this.renewPlaybackV2(id, options);
   }
   async stopPlayback(id: string, options?: RequestOptions) {
-    if (!this.legacyPlaybackIds.has(id)) { await this.stopPlaybackV2(id, options); return; }
-    await this.raw(
-      `/api/playback/${segment(id)}`,
-      { method: "DELETE" },
-      true,
-      options,
-    );
-    this.legacyPlaybackIds.delete(id);
+    await this.stopPlaybackV2(id, options);
   }
   /** There is no separate seek route: restart the selected opaque stream at `position`. */
   async seek(

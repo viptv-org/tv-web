@@ -1,4 +1,51 @@
-# BE-002 raw live API preparation — 2026-09-29
+# BE-002 active raw guide and ordinary live playback — 2026-09-29
+
+Design pin `4e153a7daca300389049e5fcfd5c3bc0af5edbee`; Core pin
+`fba95c8f3ba00e97fbc460acc746d23a912795bc`. Imported snapshots remain verified
+and were not edited by hand. Ordinary React/Solid Home, live search, guide,
+category, exact-source and live-playback callers use v2. The guide retains its
+geometry, time window, 700ms hold, programme details and Back meaning. No swap
+control, category paging buttons, US classification or exact counts were added.
+
+React responsive browsing retains at most three 40-channel pages (120 rows),
+invisible eviction spacers and the visible scroll anchor; reverse cursors refetch
+evicted pages. Remote renderers replace one 40-channel page and preserve the
+programme time slot and backward edge focus. Categories replace one 200-item
+page at existing scroll/D-pad boundaries, with reverse refetch and no reserved
+provider IDs. Both renderers reject mixed catalog/snapshot data. EPG uses visible
+rows plus bounded lookahead; React retains at most 200 guide entries, and Solid
+retains only the current 40-row page, with a shared three-request admission limit
+even during rapid focus changes. Old filter/profile/page work cannot publish.
+
+Ordinary Watch resolves the exact raw channel to its opaque source, then starts,
+renews and releases a v2 logical lease; Vizio requires an authorized gateway.
+Cancelled delayed admission cannot stop newer live playback. Maximum-quality
+settings and local-only boot/sign-in/build entry points are retired; historical
+local registry/storage utilities and their tests remain archival. Shared Core
+types and video/gateway wire APIs were not changed by this completion pass.
+
+Final local evidence: 262 unit tests; application and all test TypeScript checks;
+design/Core/video integrity; production build; 34 trusted-HTTPS browser scenarios.
+Browser guide fixtures cross the retained-page limit, refetch backward, and cross
+200 provider categories without starting another channel request. React unit
+checks preserve a future programme slot across forward/reverse page crossings.
+Solid fixtures cover Vizio category boundary paging, exact-source live playback,
+Back focus, v2 release and 90 stable end-time frames on simulated Tizen, Vizio and
+webOS; a delayed-cancel fixture checks the newer player's progressing lifecycle
+and release ownership, rather than an intermittent cosmetic focus marker.
+Home/Live/Playback preferences captures were inspected privately at 1920x1080.
+The capture harness's obsolete sixth Maximum-quality row was updated to the
+remaining fifth row; no physical or measured reference-image parity is claimed.
+
+Reproduce browser checks with all fixture origins local:
+`VIPTV_TEST_API_ORIGIN=https://viptv.local.test:8443 VIPTV_TEST_BROWSER_ORIGIN=https://viptv.local.test:8443 PREVIEW_API_ORIGIN=https://viptv.local.test:8443 npx playwright test --config playwright.https.config.ts`.
+The existing shared HTTPS stack was retained, and TLS verified without `-k`
+(`200 0`). API/decoder/platform boundaries are fixtures. Real providers/gateway
+media, native TLS/redirect handling, physical remote/focus/4K/tracks and signed
+TV packages remain unqualified. No production deploy, device install, real
+account mutation or provider subscription occurred.
+
+# BE-002 raw live API preparation — 2026-09-29 (superseded by active cutover above)
 
 Core pin b75393e matches Android and adds bounded default/override cursor pages,
 category pages without invented counts, exact-channel source resolution and v2

@@ -83,8 +83,7 @@ async function installFixture(page: Page, watched = false): Promise<FixtureState
     });
     if (path === '/api/catalogs') return json(route, [{ id: 'popular', name: 'Popular', type: 'movie', addon_id: 2, supports_search: true, supports_skip: true }]);
     if (path === '/api/discover') return json(route, { metas: [catalogMovie], has_more: false, next_skip: null });
-    if (path === '/api/live') return json(route, { channels: [], total: 0 });
-    if (path === '/api/live/categories') return json(route, { categories: [], total: 0 });
+    if (path.startsWith('/api/v2/iptv/live/')) return json(route, { catalog_id: null, generation: null, items: [], next_cursor: null, previous_cursor: null });
     if (path === '/api/addons') return json(route, []);
     if (path === '/api/parent/status') return json(route, { pin_configured: false, unlocked: false, restricted: false });
     if (path === '/api/v2/streams' && request.method() === 'POST') return json(route, { id: 'queue-job' });

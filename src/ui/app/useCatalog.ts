@@ -500,13 +500,13 @@ export function useCatalog(app: PlaybackSessionApi) {
           setSearchRows([...rows]);
         }
         if (searchScope === "all" || searchScope === "live") {
-          const live = await api.live(
-            { view: "us", search: query.trim(), limit: 80 },
+          const live = await api.liveV2(
+            { search: query.trim(), limit: 80 },
             { signal: scope.signal },
           );
           if (ticket !== epoch.current) return;
-          rows.push({ name: "Live TV", items: live.channels.slice(0, 24) });
-          results.push(...live.channels.slice(0, 24));
+          rows.push({ name: "Live TV", items: live.items.slice(0, 24) });
+          results.push(...live.items.slice(0, 24));
           setItems([...results]);
           setSearchRows([...rows]);
         }

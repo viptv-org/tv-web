@@ -15,7 +15,6 @@ import { PlayerScreen } from "../../screens/PlayerScreen";
 import type { AppApi } from "./useTvApp";
 import { desktopShellPreview, isDesktopShell } from "./appShared";
 import { AppDialogs } from "./AppDialogs";
-import { enterLocalMode, localModeAvailable } from "../../local";
 import { usePhoneLayout } from "../usePhoneLayout";
 import { SearchPopunder } from "../SearchPopunder";
 import { HomeSkeleton } from "../../screens/HomeSkeleton";
@@ -39,12 +38,6 @@ export function AppShell({ app }: { app: AppApi }) {
   // While the session restores and Home first loads, the responsive shell
   // shows a skeleton of Home in place of the startup cover and screens.
   const booting = responsive && (bootingHome || screen === "startup");
-  // Local addon mode is offered only in local-capable builds (LM-001); the
-  // backend-hosted bundle renders no entry point.
-  const localEntry = localModeAvailable ? () => {
-    enterLocalMode();
-    location.reload();
-  } : undefined;
   // ---- Shell: app chrome (rails, phone nav, title bar) -------------------
   // Screens that show the navigation chrome (TV rail, desktop / web rail).
   const chromeScreen = !["startup", "pairing", "profiles", "player"].includes(screen);
@@ -167,8 +160,8 @@ export function AppShell({ app }: { app: AppApi }) {
         {/* ---- Account: sign-in / pairing and Who's watching (account family) ---- */}
         {booting || screen === "startup" ? null : screen === "pairing" ? (
           responsive
-            ? <ResponsiveSignIn api={api} pair={pair} qr={qr} expired={pairExpired} onRetry={() => void pairing()} onUseWithoutAccount={localEntry} />
-            : <TvPairing pair={pair} qr={qr} expired={pairExpired} onRetry={() => void pairing()} onUseWithoutAccount={localEntry} />
+            ? <ResponsiveSignIn api={api} pair={pair} qr={qr} expired={pairExpired} onRetry={() => void pairing()} />
+            : <TvPairing pair={pair} qr={qr} expired={pairExpired} onRetry={() => void pairing()} />
         ) : screen === "profiles" ? (
           <ProfilesScreen
             profiles={profiles}
@@ -294,6 +287,7 @@ export function AppShell({ app }: { app: AppApi }) {
             )}
             {screen === "Live TV" && (
               <LiveGuide
+                key={profile}
                 responsive={responsive}
                 phone={phone}
                 api={api}

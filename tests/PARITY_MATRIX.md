@@ -1,3 +1,14 @@
+## BE-002 raw live cutover — 2026-09-29
+
+Design `4e153a7daca300389049e5fcfd5c3bc0af5edbee`; application evidence and
+local reproduction are recorded in [TESTING.md](../TESTING.md).
+
+| Surface | Verified scope | Device evidence / limits |
+| --- | --- | --- |
+| React phone/desktop/TV guide | Bounded forward/back cursor window, scroll anchor/eviction, visible EPG, stale-route cancellation, >200 category boundary/reverse and snapshot mismatch; future programme slot retained on page crossings | Browser fixtures; physical remote and real provider data unverified |
+| Solid Tizen/Vizio/webOS guide and live player | Existing geometry/Back focus, v2 exact source/lease, failed and delayed-cancelled admission, 90 stable end-time frames; Vizio >200 categories and reverse boundary refetch | Simulated platform/decoder boundaries; physical TV/TLS/4K/tracks unverified |
+| Home/Live/Playback preferences | Private 1920x1080 captures inspected; profile Maximum quality and local-only boot/sign-in removed | No measured full visual parity or signed device packages claimed |
+
 ## TV-038 hosted DOM follow-up — 2026-09-26
 
 | Surface | Browser evidence | Device evidence |

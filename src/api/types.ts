@@ -137,7 +137,7 @@ export type LiveCatalogCategories = CoreView<Core.LiveCatalogCategories>;
 export interface LiveCategory {
   readonly id: string;
   readonly name: string;
-  readonly count: number;
+  readonly count?: number;
   readonly raw: JsonObject;
 }
 export interface LiveCategories {

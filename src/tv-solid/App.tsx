@@ -302,6 +302,15 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
   let searchCanonicalHeadings: SearchHeadingView[] = [];
   let searchCanonicalSections = new Map<string, SearchCardView[]>();
   let liveGeneration = 0;
+  let liveNextCursor: string | undefined;
+  let livePreviousCursor: string | undefined;
+  let liveQueryKey = '';
+  let liveCategoryNext: string | null = null;
+  let liveCategoryPrevious: string | null = null;
+  let liveCategoryPending = false;
+  let liveGuideBusy = 0;
+  const liveGuidePending = new Set<string>();
+  let liveSnapshot: { catalogId: string | null; generation: string | null } | undefined;
   let liveScope: ReturnType<TvApi["createScope"]> | undefined;
   let liveClockTimer: ReturnType<typeof setInterval> | undefined;
   let disposeWebos: (() => void) | undefined;
@@ -628,7 +637,6 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         liveNow: Date.now() / 1000,
         liveWindowStart: halfHour(),
         liveFollowing: true,
-        liveTotal: 0,
         liveOffset: 0,
         liveCategories: [] as LiveCategory[],
         liveFilterId: "all",
@@ -729,7 +737,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
           | "signout"
           | "addonManage"
           | "addonRemove",
-        settingsDialogKey: "quality" as keyof PlaybackPreferences,
+        settingsDialogKey: "audioLanguage" as keyof PlaybackPreferences,
         settingsDialogAddon: null as JsonObject | null,
         settingsChoiceIndex: 0,
         settingsDialogView: {
@@ -2762,8 +2770,8 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
               publish();
             }
           };
-          const liveTask=api.live({view:"us",search:query,limit:80},{signal:scope.signal}).then(live=>{
-            rows[searchable.length]={name:"Live TV",items:live.channels};publish();
+          const liveTask=api.liveV2({search:query,limit:80},{signal:scope.signal}).then(live=>{
+            rows[searchable.length]={name:"Live TV",items:live.items};publish();
           }).catch(()=>{partial=true;});
           await Promise.all([liveTask,...Array.from({length:Math.min(3,searchable.length)},worker)]);
           if (generation !== searchGeneration || scope.signal.aborted) return;
@@ -3026,13 +3034,15 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         const generation = ++liveGeneration;
         liveScope?.abort();
         clearInterval(liveClockTimer);
+        liveCategoryNext = null; liveCategoryPrevious = null; liveCategoryPending = false; liveSnapshot = undefined;
+        liveGuideBusy = 0; liveGuidePending.clear();
         const scope = api.createScope();
         liveScope = scope;
         // Fetch while the first guide subtree mounts instead of serializing
         // network setup behind its canvas nodes and text textures.
         const initialGuide = Promise.allSettled([
-          api.liveCategories("us", { signal: scope.signal }),
-          api.live({ view: "us", offset: 0, limit: 40 }, { signal: scope.signal }),
+          api.liveCategoriesV2({limit:200}, { signal: scope.signal }),
+          api.liveV2({limit:40}, { signal: scope.signal }),
         ]);
         batch(() => {
         this.railExpanded = false;
@@ -3055,6 +3065,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         this.liveFilterId = "all";
         this.liveFilterIndex = 1;
         this.liveOffset = 0;
+        liveNextCursor=undefined; livePreviousCursor=undefined; liveQueryKey='all\0';
         liveCanonicalChannels = [];
         this.liveGuides = {};
         this.liveStatus = "Loading channels…";
@@ -3076,18 +3087,31 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         });
         const [categoriesResult, channelsResult] = await initialGuide;
         if (generation !== liveGeneration || scope.signal.aborted) return;
+        if (categoriesResult.status === 'fulfilled' && channelsResult.status === 'fulfilled' &&
+            (categoriesResult.value.catalogId !== channelsResult.value.catalogId || categoriesResult.value.generation !== channelsResult.value.generation)) {
+          this.liveCategories = [];
+          this.liveStatus = 'This playlist changed while you were browsing. Reload the guide.';
+          this.refreshLiveView();
+          return;
+        }
         batch(() => {
-        if (categoriesResult.status === "fulfilled")
-          this.liveCategories = [...categoriesResult.value.categories];
+        if (categoriesResult.status === "fulfilled") {
+          this.liveCategories = categoriesResult.value.items.map(item=>({...item,raw:{}}));
+          liveCategoryNext = categoriesResult.value.nextCursor;
+          liveCategoryPrevious = categoriesResult.value.previousCursor;
+          liveSnapshot = categoriesResult.value;
+        }
         liveCanonicalFilters = liveFilters(this.liveCategories, "all");
         this.liveFilters = liveCanonicalFilters.map((filter) => ({
           ...filter, x:filter.x-this.liveFilterOffset,
         }));
         if (channelsResult.status === "fulfilled") {
-          liveCanonicalChannels = channelsResult.value.channels.map(
+          liveSnapshot = channelsResult.value;
+          liveCanonicalChannels = channelsResult.value.items.map(
             (channel) => ({ ...channel }),
           );
-          this.liveTotal = channelsResult.value.total;
+          liveNextCursor=channelsResult.value.nextCursor??undefined;
+          livePreviousCursor=channelsResult.value.previousCursor??undefined;
           this.liveStatus = liveCanonicalChannels.length
             ? ""
             : "No channels here yet. Choose another filter.";
@@ -3121,37 +3145,29 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         generation: number,
         scope: ReturnType<TvApi["createScope"]>,
       ) {
+        if (scope.signal.aborted || generation !== liveGeneration || liveGuideBusy >= 3) return;
         const first = Math.max(0, this.liveSelectedRow - 3);
         const needed = liveCanonicalChannels
           .slice(first, first + 7)
-          .filter((channel) => !this.liveGuides[channel.id]);
-        const gathered: Record<string, Guide> = {};
-        let cursor = 0;
-        const worker = async () => {
-          while (cursor < needed.length && !scope.signal.aborted) {
-            const channel = needed[cursor++];
+          .sort((a,b)=>Number(b.id===liveCanonicalChannels[this.liveSelectedRow]?.id)-Number(a.id===liveCanonicalChannels[this.liveSelectedRow]?.id))
+          .filter((channel) => !this.liveGuides[channel.id] && !liveGuidePending.has(channel.id))
+          .slice(0,3-liveGuideBusy);
+        await Promise.all(needed.map(async channel => {
+            liveGuideBusy++; liveGuidePending.add(channel.id);
+            let guide: Guide = {programs:[],timezone:''};
             try {
-              const guide = await api.guide(channel.id, {
+              guide = await api.guideV2(channel.id, {
                 signal: scope.signal,
               });
-              if (generation !== liveGeneration || scope.signal.aborted) return;
-              gathered[channel.id] = guide;
             } catch {
               /* A channel still has an actionable no-guide block. */
             }
-          }
-        };
-        await Promise.all(
-          Array.from({ length: Math.min(3, needed.length) }, worker),
-        );
-        if (
-          generation === liveGeneration &&
-          !scope.signal.aborted &&
-          Object.keys(gathered).length
-        ) {
-          this.liveGuides = { ...this.liveGuides, ...gathered };
-          this.refreshLiveView();
-        }
+            if (generation !== liveGeneration || scope.signal.aborted) return;
+            liveGuideBusy--; liveGuidePending.delete(channel.id);
+            this.liveGuides = Object.fromEntries(Object.entries({ ...this.liveGuides, [channel.id]:guide }).slice(-40));
+            this.refreshLiveView();
+            void this.loadLiveGuides(generation,scope);
+        }));
       },
       refreshLiveView() {
         const view = projectLiveGuide(
@@ -3248,6 +3264,13 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         focusWhenReady(0);
       },
       moveLiveFilter(delta: number) {
+        if (liveCategoryPending) return;
+        if (delta > 0 && this.liveFilterIndex === liveCanonicalFilters.length-1 && liveCategoryNext) {
+          void this.loadLiveCategories(false); return;
+        }
+        if (delta < 0 && this.liveFilterIndex === 4 && liveCategoryPrevious) {
+          void this.loadLiveCategories(true); return;
+        }
         if (delta < 0 && this.liveFilterIndex === 0) {
           this.openRail();
           return;
@@ -3271,6 +3294,28 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         }
         if (filter.id === this.liveFilterId) return;
         void this.loadLiveFilter(filter.id);
+      },
+      async loadLiveCategories(previous: boolean) {
+        const cursor = previous ? liveCategoryPrevious : liveCategoryNext;
+        const scope = liveScope;
+        if (!cursor || !scope || liveCategoryPending) return;
+        const generation = liveGeneration;
+        liveCategoryPending = true;
+        try {
+          const page = await api.liveCategoriesV2({limit:200,cursor},{signal:scope.signal});
+          if (generation !== liveGeneration || scope.signal.aborted || this.phase !== 'live') return;
+          if (liveSnapshot && (page.catalogId !== liveSnapshot.catalogId || page.generation !== liveSnapshot.generation))
+            throw new Error('This playlist changed while you were browsing. Reload the guide.');
+          liveCategoryNext = page.nextCursor; liveCategoryPrevious = page.previousCursor;
+          this.liveCategories = page.items.map(item=>({...item,raw:{}}));
+          this.liveFilterOffset = 0;
+          this.refreshLiveView();
+          this.focusLiveFilter(previous ? liveCanonicalFilters.length-1 : Math.min(4,liveCanonicalFilters.length-1));
+        } catch (cause) {
+          if (generation !== liveGeneration || scope.signal.aborted) return;
+          this.liveStatus = cause instanceof Error ? cause.message : 'Unable to load categories.';
+          this.refreshLiveView();
+        } finally { if (generation === liveGeneration) liveCategoryPending = false; }
       },
       openLiveSearch() {
         this.liveSearchOpen = true;
@@ -3437,8 +3482,11 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
             (this.liveSearchUppercase ? key.label.toUpperCase() : key.label),
         );
       },
-      async loadLiveFilter(filterId: string, offset = 0, focusRow = 0) {
+      async loadLiveFilter(filterId: string, offset = 0, focusRow = 0, focusAt?: number) {
+        const queryKey=filterId+'\0'+liveSearchCanonicalQuery.trim();
+        const cursor=queryKey===liveQueryKey && offset!==this.liveOffset ? offset>this.liveOffset ? liveNextCursor : livePreviousCursor : undefined;
         const generation = ++liveGeneration;
+        liveGuideBusy = 0; liveGuidePending.clear();
         liveScope?.abort();
         const scope = api.createScope();
         liveScope = scope;
@@ -3458,33 +3506,39 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
           ? filterId.slice(9)
           : undefined;
         try {
-          const page = await api.live(
+          const page = await api.liveV2(
             {
-              view: "us",
               collection,
-              category,
+              categoryId: category,
               search: liveSearchCanonicalQuery.trim() || undefined,
-              offset,
+              cursor,
               limit: PAGE_SIZE,
             },
             { signal: scope.signal },
           );
           if (generation !== liveGeneration || scope.signal.aborted) return;
-          liveCanonicalChannels = page.channels.map((channel) => ({
+          if (liveSnapshot && (page.catalogId !== liveSnapshot.catalogId || page.generation !== liveSnapshot.generation))
+            throw new Error('This playlist changed while you were browsing. Reload the guide.');
+          liveCanonicalChannels = page.items.map((channel) => ({
             ...channel,
           }));
           this.liveSelectedRow = Math.max(
             0,
             Math.min(focusRow, liveCanonicalChannels.length - 1),
           );
-          this.liveTotal = page.total;
-          this.liveStatus = page.channels.length
+          liveNextCursor=page.nextCursor??undefined; livePreviousCursor=page.previousCursor??undefined; liveQueryKey=queryKey;
+          this.liveStatus = page.items.length
             ? ""
-            : "No channels here yet. Choose another filter.";
+            : liveSearchCanonicalQuery.trim() ? "No channels match your search." : "No channels here yet. Choose another filter.";
           this.refreshLiveView();
+          if (focusAt !== undefined) await this.loadLiveGuides(generation,scope);
           setTimeout(() => {
             if (generation !== liveGeneration || this.phase !== "live") return;
-            if (liveCanonicalChannels.length)
+            if (liveCanonicalChannels.length && focusAt !== undefined) {
+              const position = liveCanonicalPrograms.findIndex(block=>block.row===this.liveSelectedRow && block.cell.start<=focusAt && block.cell.end>focusAt);
+              if (position >= 0) this.focusLiveProgram(position);
+              else this.focusLiveChannel(this.liveSelectedRow);
+            } else if (liveCanonicalChannels.length)
               this.focusLiveChannel(this.liveSelectedRow);
             else this.focusLiveFilter(this.liveFilterIndex);
           }, 60);
@@ -3519,7 +3573,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
       moveLiveChannel(delta: number) {
         const next = this.liveSelectedRow + delta;
         if (next < 0) {
-          if (this.liveOffset > 0)
+          if (livePreviousCursor)
             void this.loadLiveFilter(
               this.liveFilterId,
               Math.max(0, this.liveOffset - PAGE_SIZE),
@@ -3530,8 +3584,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         }
         if (next < liveCanonicalChannels.length) this.focusLiveChannel(next);
         else if (
-          this.liveOffset + liveCanonicalChannels.length <
-          this.liveTotal
+          liveNextCursor
         )
           void this.loadLiveFilter(
             this.liveFilterId,
@@ -3597,11 +3650,12 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         }
         const row = block.row + (direction === "up" ? -1 : 1);
         if (row < 0) {
-          if (this.liveOffset > 0)
+          if (livePreviousCursor)
             void this.loadLiveFilter(
               this.liveFilterId,
               Math.max(0, this.liveOffset - PAGE_SIZE),
               PAGE_SIZE - 1,
+              block.cell.start,
             );
           else this.focusLiveFilter(this.liveFilterIndex);
           return;
@@ -3609,12 +3663,13 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         if (!liveCanonicalChannels[row]) {
           if (
             direction === "down" &&
-            this.liveOffset + liveCanonicalChannels.length < this.liveTotal
+            liveNextCursor
           )
             void this.loadLiveFilter(
               this.liveFilterId,
               this.liveOffset + PAGE_SIZE,
               0,
+              block.cell.start,
             );
           return;
         }
@@ -5188,9 +5243,9 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
           this.playerItem = started.intent.item;
           this.playerSessionId = started.session.id;
           this.playerSessionDuration = started.session.duration;
-          if(item.type==="live"&&!this.liveGuides[item.id]) void api.guide(item.id).then(guide=>{
+          if(item.type==="live"&&!this.liveGuides[item.id]) void api.guideV2(item.id).then(guide=>{
             if(generation===playbackGeneration&&this.playerItem?.id===item.id) {
-              this.liveGuides={...this.liveGuides,[item.id]:guide};
+              this.liveGuides=Object.fromEntries(Object.entries({...this.liveGuides,[item.id]:guide}).slice(-40));
               if(this.playerSnapshot)this.updatePlayerSnapshot(this.playerSnapshot);
             }
           }).catch(()=>undefined);

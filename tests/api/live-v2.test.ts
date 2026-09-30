@@ -2,6 +2,7 @@ import { expect, it } from 'vitest';
 import { apiFor, response, scripted } from './client-helpers';
 import { normalizeCore } from '../../src/api/client-shared';
 import type { PlaybackV2Request } from '../../vendor/core/typescript/wire';
+import { TvApi } from '../../src/api';
 
 const card = { id: 'opaque_live', source: 'iptv:1', source_addon_id: 'iptv:1', name: 'Provider', title: 'News', source_fingerprint: 'stable' };
 const page = { catalog_id: 1, generation: 7, items: [{ id: 'iptv:1:9', name: 'Zulu', logo: 'http://images.example/logo.png' }, { id: 'iptv:1:1', name: 'Alpha' }], next_cursor: 'next_page' };
@@ -23,7 +24,7 @@ it('loads only the requested default live page and preserves its original cursor
 });
 
 it('keeps profile collections and explicit playlist overrides in canonical core requests', async () => {
-  const fake = scripted(response(page), response({ ...page, items: [{ id: 'news', name: 'News', count: 999 }] }));
+  const fake = scripted(response({ ...page, catalog_id: 2 }), response({ ...page, catalog_id: 2, items: [{ id: 'news', name: 'News', count: 999 }] }));
   const api = apiFor(fake.fetcher);
   await api.liveV2({ collection: 'favorites', catalogId: '2', search: ' News ', limit: 40 });
   const categories = await api.liveCategoriesV2({ catalogId: '2', limit: 40 });
@@ -67,4 +68,22 @@ it('preserves catalog-change and parent reasons without exposing raw errors or r
   await expect(api.liveV2({ cursor: 'old_cursor' })).rejects.toMatchObject({ code: 'catalog_changed', message: expect.stringContaining('Reload') });
   await expect(api.liveSourceV2('iptv:1:7')).rejects.toMatchObject({ status: 403, code: 'parent_required' });
   expect(fake.calls).toHaveLength(2);
+});
+
+it('rejects oversized pages and a substituted explicit playlist', async () => {
+  const fake = scripted(response(page), response(page), response({ ...page, items: [{ id: 'news', name: 'News' }] }));
+  const api = apiFor(fake.fetcher);
+  await expect(api.liveV2({ limit: 1 })).rejects.toMatchObject({ status: 502, code: 'invalid_catalog_response' });
+  await expect(api.liveV2({ catalogId: '2' })).rejects.toMatchObject({ status: 502, code: 'invalid_catalog_response' });
+  await expect(api.liveCategoriesV2({ catalogId: '2' })).rejects.toMatchObject({ status: 502, code: 'invalid_catalog_response' });
+});
+
+it('normal live playback resolves the exact channel and never invokes legacy discovery or playback', async () => {
+  const fake = scripted(response({ source: card }), response({ id: 'pb2_live', status: 'ready', expires_at: Math.floor(Date.now()/1000)+60, renew_after_seconds: 20,
+    delivery: { kind: 'gateway', url: 'https://gateway.example/media/viewer/cap/index.m3u8', format: 'hls', mode: 'direct', video_mode: 'copy', audio_mode: 'copy', position: 0, duration: 0, live: true, audio_tracks: [], subtitle_tracks: [], subtitles_supported: false } }));
+  const api = new TvApi({ baseUrl: 'https://viptv.example', fetch: fake.fetcher, playbackPlatform: 'vizio' });
+  const session = await api.startPlayback({ channelId: 'iptv:1:7', position: 88, capabilities: { maxWidth: 3840, maxHeight: 2160, h264: true, aac: true, hevc: false, directPlay: false, hevcSdr: false } });
+  expect(session.id).toBe('pb2_live');
+  expect(fake.calls.map(call => call.input)).toEqual(['https://viptv.example/api/v2/iptv/live/iptv%3A1%3A7/source', 'https://viptv.example/api/v2/playback']);
+  expect(JSON.parse(fake.calls[1].init!.body as string)).toMatchObject({ stream_id: 'opaque_live', position: 0, client: { platform: 'vizio', can_play_direct: false } });
 });

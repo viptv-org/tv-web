@@ -144,8 +144,8 @@ export function useAuth(app: DialogsApi) {
             })
           : undefined,
         api
-          .live({ view: "us", collection: "recent", limit: 20 })
-          .catch(() => ({ channels: [] })),
+          .liveV2({ collection: "recent", limit: 20 })
+          .catch(() => ({ items: [] })),
       ]);
       if (ticket !== epoch.current) return;
       const homeItems = page?.items ?? home.myList;
@@ -154,7 +154,7 @@ export function useAuth(app: DialogsApi) {
       rowQueue.current = [];
       rowsRequested.current = new Set();
       setItems(homeItems);
-      setRecentLive(live.channels);
+      setRecentLive(live.items);
       setHomeRows(rows);
       homeCache.current = {
         profile: id,
@@ -162,7 +162,7 @@ export function useAuth(app: DialogsApi) {
         favorites: home.myList,
         items: homeItems,
         homeRows: rows,
-        recentLive: live.channels,
+        recentLive: live.items,
       };
       // The TV's spatial rows all load in the background; the responsive
       // shelves load as they near the viewport.

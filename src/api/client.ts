@@ -184,15 +184,11 @@ export class TvApi extends TvApiCatalog {
   }
   async liveV2(query: LiveCatalogQuery = {}, options?: RequestOptions): Promise<LiveCatalogPage> {
     const value = await this.liveV2Control({ ...query, operation: "livePageV2" }, options);
-    return this.liveV2Decode<LiveCatalogPage>("liveCatalogV2", value);
+    return this.liveV2PageDecode<LiveCatalogPage>("liveCatalogV2", value, query);
   }
   async liveCategoriesV2(query: Pick<LiveCatalogQuery, "catalogId" | "cursor" | "limit" | "search"> = {}, options?: RequestOptions): Promise<LiveCatalogCategories> {
     const value = await this.liveV2Control({ ...query, operation: "liveCategoriesV2" }, options);
-    return this.liveV2Decode<LiveCatalogCategories>("liveCategoriesV2", value);
-  }
-  async liveSourceV2(channelId: string, options?: RequestOptions): Promise<MediaSource> {
-    const value = await this.liveV2Control({ operation: "liveSourceV2", id: channelId }, options);
-    return this.liveV2Decode<MediaSource>("liveSourceV2", value);
+    return this.liveV2PageDecode<LiveCatalogCategories>("liveCategoriesV2", value, query);
   }
   async guideV2(channelId: string, options?: RequestOptions): Promise<Guide> {
     const value = await this.liveV2Control({ operation: "liveGuideV2", id: channelId }, options);
@@ -207,6 +203,12 @@ export class TvApi extends TvApiCatalog {
   private liveV2Decode<T>(kind: string, value: unknown): T {
     try { return normalizeRust<T>(kind, value); }
     catch { throw new TvApiError(502, "The server returned invalid live playlist data. Update the app/server or reload the guide.", "invalid_catalog_response"); }
+  }
+  private liveV2PageDecode<T extends LiveCatalogPage | LiveCatalogCategories>(kind: string, value: unknown, query: Pick<LiveCatalogQuery, "catalogId" | "limit">): T {
+    const result = this.liveV2Decode<T>(kind, value);
+    if (result.items.length > (query.limit ?? 50) || query.catalogId !== undefined && result.catalogId !== query.catalogId)
+      throw new TvApiError(502, "The server returned the wrong live playlist page. Reload the guide.", "invalid_catalog_response");
+    return result;
   }
   async liveCategories(
     view?: "us",

@@ -9,14 +9,13 @@ import { PasswordField, TextField } from './primitives/Fields';
  * WebSignInDevice, WebSignInLocal, DeskSignIn): one card, bottom-aligned on phones and centred
  * on wider screens. The desktop app signs in through the system browser.
  */
-export function ResponsiveSignIn({ api, pair, qr, expired = false, onRetry, onUseWithoutAccount }: { api: TvApi; pair?: DevicePairing; qr: string; expired?: boolean; onRetry: () => void; onUseWithoutAccount?: () => void }) {
+export function ResponsiveSignIn({ api, pair, qr, expired = false, onRetry }: { api: TvApi; pair?: DevicePairing; qr: string; expired?: boolean; onRetry: () => void }) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [pending, setPending] = useState(false);
   const [approved, setApproved] = useState(false);
   const [error, setError] = useState('');
   const [otherDevice, setOtherDevice] = useState(false);
-  const [localFocused, setLocalFocused] = useState(false);
   const scope = useRef<AbortController>();
   const native = '__TAURI_INTERNALS__' in window || desktopShellPreview;
   const rawUrl = pair?.verificationUriComplete || pair?.verificationUri;
@@ -128,10 +127,6 @@ export function ResponsiveSignIn({ api, pair, qr, expired = false, onRetry, onUs
         </div>
       </div>}
       {!native && status}
-      {onUseWithoutAccount && <div className="vx-signin__local">
-        <button type="button" className="vx-btn vx-btn--outline vx-btn--block" onClick={onUseWithoutAccount} onFocus={() => setLocalFocused(true)} onBlur={() => setLocalFocused(false)}>Use without an account</button>
-        {localFocused && <p className="vx-signin__local-help" role="status">Your addons and playback stay on this device. No account, profiles, or sync.</p>}
-      </div>}
     </div>
   </section>;
 }

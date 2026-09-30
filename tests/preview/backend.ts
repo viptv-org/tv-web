@@ -16,7 +16,7 @@ export const apiOrigin = process.env.PREVIEW_API_ORIGIN ?? 'https://viptv.syek.t
 export const sessionKey = `viptv-device:${apiOrigin}`;
 const playbackSessions = new WeakMap<Page, Map<string, Record<string, unknown>>>();
 // Standalone Node previews intentionally keep their protocol fixture local.
-function playbackV2Fixture(route: Route, body: unknown, status = 200): unknown {
+export function playbackV2Fixture(route: Route, body: unknown, status = 200): unknown {
   const request = route.request(), url = new URL(request.url());
   if (!url.pathname.startsWith('/api/v2/playback') || status >= 400) return body;
   const page = request.frame().page();
@@ -341,15 +341,16 @@ const liveItem = (channel: typeof channels[number]) => ({
 function live(url: URL) {
   const search = url.searchParams.get('search')?.trim().toLowerCase();
   const collection = url.searchParams.get('collection');
-  const category = url.searchParams.get('category');
+  const category = url.searchParams.get('category_id');
   let list = channels.filter(channel => !['anime-central', 'cartoon-network-us', 'comedy-central', 'syfy'].includes(channel.id) || collection === 'recent' || !!search);
   if (collection === 'recent') list = recentLive.map(id => channels.find(channel => channel.id === id)!);
   else if (collection === 'favorites') list = [];
   if (category) list = list.filter(channel => channel.category === category);
-  if (search) list = channels.filter(channel => channel.name.toLowerCase().includes(search) || channel.programmes.some(([, , title]) => title.toLowerCase().includes(search)));
-  const offset = Number(url.searchParams.get('offset') ?? 0), limit = Number(url.searchParams.get('limit') ?? 40);
-  const total = collection || category || search ? list.length : 86;
-  return { channels: list.slice(offset, offset + limit).map(liveItem), total };
+  if (search) list = list.filter(channel => channel.name.toLowerCase().includes(search));
+  const offset = Number(url.searchParams.get('cursor')?.replace('page_', '') ?? 0), limit = Number(url.searchParams.get('limit') ?? 50);
+  return { catalog_id: 1, generation: 1, items: list.slice(offset, offset + limit).map(liveItem),
+    next_cursor: offset + limit < list.length ? `page_${offset + limit}` : null,
+    previous_cursor: offset > 0 ? `page_${Math.max(0, offset - limit)}` : null };
 }
 function guide(id: string) {
   const channel = channels.find(candidate => candidate.id === id);
@@ -586,7 +587,7 @@ export async function installBackend(page: Page, options: BackendOptions): Promi
       const spec = byId.get(decodeURIComponent(metaMatch[2]));
       return spec ? json({ meta: meta(spec, family) }) : json({ error: 'not found' }, 404);
     }
-    if (path === (body.type === 'live' ? '/api/streams' : '/api/v2/streams') && method === 'POST') {
+    if (path === '/api/v2/streams' && method === 'POST') {
       const id = String(body.series_id ?? body.id ?? '');
       return json({ id: id.startsWith('tt-monster') ? 'streams-monster' : `streams-${id || 'title'}` });
     }
@@ -599,18 +600,20 @@ export async function installBackend(page: Page, options: BackendOptions): Promi
     }
 
     // Live.
-    if (path === '/api/live/categories') return json({ categories: liveCategories, total: liveCategories.length });
-    if (path === '/api/live') return json(live(url));
-    const guideMatch = /^\/api\/guide\/([^/]+)$/.exec(path);
+    if (path === '/api/v2/iptv/live/categories') return json({ catalog_id: 1, generation: 1, items: liveCategories.map(({ id, name }) => ({ id, name })), next_cursor: null, previous_cursor: null });
+    if (path === '/api/v2/iptv/live/channels') return json(live(url));
+    const sourceMatch = /^\/api\/v2\/iptv\/live\/([^/]+)\/source$/.exec(path);
+    if (sourceMatch) return json({ source: { id: `live_source_${decodeURIComponent(sourceMatch[1])}`, name: 'Fixture IPTV', source: 'iptv:1', source_addon_id: 'iptv:1' } });
+    const guideMatch = /^\/api\/v2\/iptv\/guide\/([^/]+)$/.exec(path);
     if (guideMatch) return json(guide(decodeURIComponent(guideMatch[1])));
 
     // Playback.
-    if ((path === '/api/playback' || path === '/api/v2/playback') && method === 'POST') {
+    if (path === '/api/v2/playback' && method === 'POST') {
       playbackCount++;
       if (options.playbackHang || (options.playbackHangAfter !== undefined && playbackCount > options.playbackHangAfter)) return hang();
       if (options.playbackFailAfter !== undefined && playbackCount > options.playbackFailAfter) return json({ error: 'upstream unavailable', error_code: 'SOURCE_TIMEOUT' }, 504);
       if (options.seekRefused && playbackCount > 1) return json({ error: 'The stream could not seek there.', error_code: 'SEEK_REFUSED' }, 409);
-      const liveSession = typeof body.channel_id === 'string' || String(body.type ?? '') === 'live' || /cartoon|news|cnbc|cnn|espn/.test(String(body.id ?? ''));
+      const liveSession = String(body.stream_id ?? '').startsWith('live_source_');
       return json({
         id: options.playbackUniqueIds ? `preview-playback-${playbackCount}` : 'preview-playback', url: '/media/preview-playback/index.m3u8', format: 'hls', mode: 'remux', video_mode: 'copy', audio_mode: 'transcode',
         position: liveSession ? 0 : options.playbackPositionFromRequest ? Number(body.position ?? 0) : options.media?.position ?? 768, live: liveSession, duration: liveSession ? 0 : options.media?.duration ?? 3130,
@@ -619,7 +622,7 @@ export async function installBackend(page: Page, options: BackendOptions): Promi
         subtitles_supported: true,
       });
     }
-    if (path.startsWith('/api/playback') || path.startsWith('/api/v2/playback')) return json({ ok: true });
+    if (path.startsWith('/api/v2/playback')) return json({ ok: true });
     return json({ error: `Unhandled preview route ${method} ${path}` }, 404);
   });
   return { requests, errors };

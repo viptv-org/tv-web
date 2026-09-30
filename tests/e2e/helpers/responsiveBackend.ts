@@ -88,9 +88,10 @@ export async function installBackend(page: Page, options: { series?: boolean; in
     if (path === '/api/addons') return json([]);
     if (path === '/api/catalogs') return json(Array.from({ length: options.populated ? 4 : 1 }, (_, i) => ({ id: i ? `catalog-${i}` : 'popular', name: options.populated ? `Global Cinema Collection — ${['Popular', 'Recently Added', 'Drama', 'Adventure'][i]} Features and Award-Winning International Television` : 'Popular', type: title.type, addon_id: 2, supports_search: true, supports_skip: true })));
     if (path === '/api/discover') return json({ metas: options.populated ? Array.from({ length: 24 }, (_, i) => ({ ...title, id: i ? `title-${i}` : title.id, name: i ? `The Long Journey Through the Mountains: Chapter ${i}` : title.name })) : [title], has_more: false, next_skip: null });
-    if (path === '/api/live') return json({ channels: options.activity ? liveChannels : [], total: options.activity ? liveChannels.length : 0 });
-    if (path === '/api/live/categories') return json({ categories: [], total: 0 });
-    if (path.startsWith('/api/guide/')) return json({ programs: [], timeline: [], timezone: 'UTC' });
+    if (path === '/api/v2/iptv/live/channels') return json({ catalog_id: 1, generation: 1, items: options.activity ? liveChannels : [], next_cursor: null, previous_cursor: null });
+    if (path === '/api/v2/iptv/live/categories') return json({ catalog_id: 1, generation: 1, items: [], next_cursor: null, previous_cursor: null });
+    if (/^\/api\/v2\/iptv\/live\/[^/]+\/source$/.test(path)) return json({ source: { id: `live_source_${decodeURIComponent(path.split('/')[5])}`, name: 'Fixture IPTV', source: 'iptv:1', source_addon_id: 'iptv:1' } });
+    if (path.startsWith('/api/v2/iptv/guide/')) return json({ programs: [], timeline: [], timezone: 'UTC' });
     if (options.activity && path === '/api/meta/series/queue-series') return json({ meta: { id: 'queue-series', type: 'series', name: 'Returning Series', poster: 'https://art.example/poster.svg', background: 'https://art.example/backdrop.svg', videos: queue.map(item => ({ id: item.id, title: item.episode_title, season: item.season, episode: item.episode, thumbnail: `https://art.example/episode.svg?episode=${item.episode}` })) } });
     if (path === `/api/meta/${title.type}/${title.id}`) return json({ meta: title });
     if (options.populated && /^\/api\/meta\/movie\/title-\d+$/.test(path)) return json({ meta: { ...title, id: path.split("/").at(-1), name: "The Long Journey Through the Mountains" } });

@@ -11,12 +11,11 @@ import { KeyLegend } from "./primitives/Keys";
  * code is struck through, "This code expired." shows, Try again takes focus and
  * the QR dims (decisions.md 3).
  */
-export function TvPairing({ pair, qr, expired, onRetry, onUseWithoutAccount }: {
+export function TvPairing({ pair, qr, expired, onRetry }: {
   pair?: DevicePairing;
   qr: string;
   expired: boolean;
   onRetry: () => void;
-  onUseWithoutAccount?: () => void;
 }) {
   useEffect(() => {
     if (expired) focusElement("retry");
@@ -53,11 +52,6 @@ export function TvPairing({ pair, qr, expired, onRetry, onUseWithoutAccount }: {
               <RefreshCw aria-hidden="true" />
               Try again
             </TvButton>
-            {onUseWithoutAccount && (
-              <TvButton id="local-mode" className={buttonClass({})} onActivate={onUseWithoutAccount}>
-                Use without an account
-              </TvButton>
-            )}
           </div>
         </div>
         <div className="vx-pairing__qr-slot">

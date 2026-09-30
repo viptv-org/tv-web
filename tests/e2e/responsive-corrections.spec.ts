@@ -44,11 +44,11 @@ for (const width of [768, 1440]) test(`guide has native scrolling and pinned cha
   await page.setViewportSize({ width, height: 900 });
   await installBackend(page);
   const now = Math.floor(Date.now() / 1000);
-  await page.route(`${apiOrigin}/api/live**`, async route => {
+  await page.route(`${apiOrigin}/api/v2/iptv/live/**`, async route => {
     const path = new URL(route.request().url()).pathname;
-    return route.fulfill({ headers: cors, json: path.endsWith('/categories') ? { categories: [{ id: 'news', name: 'News', count: 40 }], total: 1 } : { channels: Array.from({ length: 40 }, (_, i) => ({ id: `channel-${i}`, name: `Channel ${i + 1}`, type: 'live' })), total: 40 } });
+    return route.fulfill({ headers: cors, json: { catalog_id: 1, generation: 1, next_cursor: null, previous_cursor: null, items: path.endsWith('/categories') ? [{ id: 'news', name: 'News' }] : Array.from({ length: 40 }, (_, i) => ({ id: `channel-${i}`, name: `Channel ${i + 1}`, type: 'live' })) } });
   });
-  await page.route(`${apiOrigin}/api/guide/**`, route => route.fulfill({ headers: cors, json: { programs: [{ title: 'Current programme', start: now - 1800, end: now + 1800 }, { title: 'Later programme', start: now + 1800, end: now + 7200 }], timezone: 'UTC' } }));
+  await page.route(`${apiOrigin}/api/v2/iptv/guide/**`, route => route.fulfill({ headers: cors, json: { programs: [{ title: 'Current programme', start: now - 1800, end: now + 1800 }, { title: 'Later programme', start: now + 1800, end: now + 7200 }], timezone: 'UTC' } }));
   await page.goto('/tv/'); await page.getByRole('button', { name: 'Alex' }).click();
   await page.getByRole('navigation', { name: 'Main navigation' }).getByRole('button', { name: 'Live TV', exact: true }).click();
   const scroll = page.getByRole('region', { name: 'Scrollable programme guide' });
@@ -67,6 +67,77 @@ for (const width of [768, 1440]) test(`guide has native scrolling and pinned cha
   expect(Math.abs(header!.y - scroller!.y)).toBeLessThan(3);
   expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(false);
   await page.screenshot({ path: testInfo.outputPath(`guide-${width}.png`) });
+});
+
+test('guide category scroll crosses 200 and refetches backward while preserving channel rows', async ({page})=>{
+  await page.setViewportSize({width:1440,height:900});
+  const backend=await installBackend(page);
+  const requests:(string|null)[]=[];
+  await page.route(`${apiOrigin}/api/v2/iptv/live/categories?*`,route=>{
+    const cursor=new URL(route.request().url()).searchParams.get('cursor'); requests.push(cursor);
+    const second=cursor==='next_categories';
+    return route.fulfill({headers:cors,json:{catalog_id:1,generation:1,
+      items:Array.from({length:second?2:200},(_,index)=>({id:`raw:${index+(second?200:0)}`,name:`Category ${index+(second?201:1)}`})),
+      next_cursor:second?null:'next_categories',previous_cursor:second?'previous_categories':null,
+    }});
+  });
+  await page.goto('/tv/'); await page.getByRole('button',{name:'Alex'}).click();
+  await page.getByRole('navigation',{name:'Main navigation'}).getByRole('button',{name:'Live TV',exact:true}).click();
+  const categories=page.getByRole('group',{name:'Channel categories'});
+  await expect(categories.getByRole('button',{name:'Category 200'})).toBeAttached();
+  const initialChannelRequests=backend.requests.filter(request=>request.path==='/api/v2/iptv/live/channels').length;
+  await categories.evaluate(node=>{node.scrollTop=node.scrollHeight;node.dispatchEvent(new Event('scroll'))});
+  await expect(categories.getByRole('button',{name:'Category 201'})).toBeVisible();
+  await categories.dispatchEvent('wheel',{deltaY:-100});
+  await expect(categories.getByRole('button',{name:'Category 200'})).toBeVisible();
+  expect(requests).toEqual([null,'next_categories','previous_categories']);
+  expect(await categories.getByRole('button').count()).toBe(203);
+  expect(backend.requests.filter(request=>request.path==='/api/v2/iptv/live/channels')).toHaveLength(initialChannelRequests);
+  expect(backend.errors).toEqual([]);
+});
+
+test('guide evicts pages, fetches only nearby schedules, and retrieves the beginning in reverse', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await installBackend(page);
+  const pageRequests: number[] = [];
+  const guides: string[] = [];
+  await page.route(`${apiOrigin}/api/v2/iptv/live/**`, route => {
+    const url = new URL(route.request().url());
+    const offset = Number(url.searchParams.get('cursor')?.replace('page_', '') ?? 0);
+    const categories = url.pathname.endsWith('/categories');
+    if (!categories) pageRequests.push(offset);
+    return route.fulfill({ headers: cors, json: {
+      catalog_id: 1, generation: 1,
+      items: categories ? [] : Array.from({ length: 40 }, (_, index) => ({ id: `channel-${offset + index}`, name: `Channel ${offset + index + 1}` })),
+      next_cursor: !categories && offset < 360 ? `page_${offset + 40}` : null,
+      previous_cursor: !categories && offset > 0 ? `page_${offset - 40}` : null,
+    } });
+  });
+  await page.route(`${apiOrigin}/api/v2/iptv/guide/**`, route => {
+    guides.push(new URL(route.request().url()).pathname.split('/').at(-1)!);
+    return route.fulfill({ headers: cors, json: { programs: [], timezone: 'UTC' } });
+  });
+  await page.goto('/tv/'); await page.getByRole('button', { name: 'Alex' }).click();
+  await page.getByRole('navigation', { name: 'Main navigation' }).getByRole('button', { name: 'Live TV', exact: true }).click();
+  const scroll = page.getByRole('region', { name: 'Scrollable programme guide' });
+  await expect(page.getByRole('button', { name: 'Channel 1', exact: true })).toBeVisible();
+  expect(new Set(guides).size).toBeLessThanOrEqual(16);
+  expect(pageRequests).not.toContain(40);
+  for (let offset = 40; offset <= 360; offset += 40) {
+    await scroll.evaluate(node => { node.scrollTop = node.scrollHeight; node.dispatchEvent(new Event('scroll')); });
+    await expect.poll(() => pageRequests.includes(offset)).toBe(true);
+    await expect(page.getByRole('button', { name: `Channel ${offset + 1}`, exact: true })).toBeAttached();
+    expect(await page.locator('[data-live-channel]').count()).toBeLessThanOrEqual(120);
+  }
+  await expect(page.getByRole('button', { name: 'Channel 1', exact: true })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Channel 400', exact: true })).toBeAttached();
+  for (let offset = 240; offset >= 0; offset -= 40) {
+    await scroll.evaluate(node => { node.scrollTop = 0; node.dispatchEvent(new Event('scroll')); });
+    await expect(page.getByRole('button', { name: `Channel ${offset + 1}`, exact: true })).toBeAttached();
+    expect(await page.locator('[data-live-channel]').count()).toBeLessThanOrEqual(120);
+  }
+  await scroll.evaluate(node => { node.scrollTop = 0; });
+  await expect(page.getByRole('button', { name: 'Channel 1', exact: true })).toBeVisible();
 });
 
 test('website fullscreen, volume and backend info operate on a decoded player', async ({ page }) => {

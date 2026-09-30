@@ -122,7 +122,7 @@ export function settingsRows(
           make(
             "settings-playback",
             "Playback preferences",
-            "Audio, subtitles and quality for this profile.",
+            "Audio and subtitles for this profile.",
             "play",
           ),
           make(
@@ -197,13 +197,6 @@ export function settingsRows(
                 : prefs.subtitleStyle === "opaque"
                   ? "White text on black"
                   : "System default",
-            ),
-            make(
-              "quality",
-              "Maximum quality",
-              `Current: ${prefs.quality === "auto" ? "Auto" : prefs.quality}`,
-              "gauge",
-              prefs.quality === "auto" ? "Auto" : prefs.quality,
             ),
           ]
         : [
@@ -283,13 +276,6 @@ export function settingsChoices(
       ["System default", "system"],
       ["Text with shadow", "shadow"],
       ["White text on black", "opaque"],
-    ]);
-  if (rowId === "quality")
-    return options("quality", [
-      ["Auto", "auto"],
-      ["1080p", "1080p"],
-      ["720p", "720p"],
-      ["480p", "480p"],
     ]);
   return null;
 }

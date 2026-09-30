@@ -140,7 +140,7 @@ export type GuideFilter = {
 
 export function filterOptions(categories: readonly LiveCategory[]): readonly GuideFilter[] {
   return [
-    { id: "all", label: "All US channels" },
+    { id: "all", label: "All channels" },
     { id: "favorites", label: "My channels", collection: "favorites" },
     { id: "recent", label: "Recent", collection: "recent" },
     ...categories.map((category) => ({
