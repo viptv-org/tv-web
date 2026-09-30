@@ -1,3 +1,35 @@
+# TV package artifact qualification — 2026-09-30
+
+Existing workflow `build.yml` (ID `368648044`) was dispatched exactly once on
+published `refactor/backend-v2`. [Run 36690591107](https://github.com/viptv-org/tv-web/actions/runs/36690591107)
+records exact head `db9c5ab2da35867e83d970763f53a10628924501`.
+Hosting job `109806614046` and webOS job `109806614353` succeeded. Hosting ran
+all 234 tests in 40 files, production build and design/Core/video integrity checks.
+The overall run is **failed**, not green: Tizen job `109806614238` stopped at
+the Samsung certificate prerequisite because the four signing secrets are absent.
+No signed WGT was produced, no secret was requested and no signing gate bypassed.
+
+Downloaded hosting ZIP and developer-mode webOS IPK match their SHA256SUMS and
+build.json source/version/target declarations:
+
+- `viptv-tv-hosting-0.1.0-db9c5ab2.zip`:
+  `bb8068dd41f994caededfefeca69d3b8fcf500c72de840c71c7fe91a24896ca9`.
+- `tech.syek.viptv_0.1.0_all.ipk`:
+  `2cf6e5bade08a0ab27e26c676668718c6844b738929e4ee61d7741f96bd38f0a`.
+
+Hosting ZIP CRC/path checks passed; index/Solid/compatibility HTML references
+resolve to included `/tv/assets/` entries. Packaged Core WASM is byte-identical
+to the pinned Core `8ae9f81` snapshot. IPK ar/tar inventory, package/app manifests,
+version `0.1.0`, `1920x1080`, Back-history declaration and credential-free HTTPS
+launcher `https://viptv.syek.tech/tv/?platform=webos` passed static verification.
+The build manifest declares minimum webOS 22; it is not measured device support.
+
+Artifacts and authoritative final run/job logs remain in a new ignored local
+directory `artifacts/tv-db9c5ab-uo65Xx`, not in this commit. No hosted bundle was
+deployed, TV package installed, browser/native/physical media exercised or
+production account accessed. This artifact gate adds no application/frozen-wire,
+Android or original-checkout changes; signing and real-TV qualification remain open.
+
 # BE-002 local-only code retirement — 2026-09-30
 
 Core `8ae9f81bb753aaf2de53af5b594ead29845e1a8a` removes eight unused
