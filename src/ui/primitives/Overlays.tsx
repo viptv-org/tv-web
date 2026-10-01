@@ -13,8 +13,7 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ButtonHTMLAttributes, type CSSProperties, type HTMLAttributes, type KeyboardEvent, type ReactNode } from "react";
 import { Check, X } from "lucide-react";
 import { KeyLegend, type LegendItem } from "./Keys";
-
-const join = (...names: (string | false | null | undefined)[]) => names.filter(Boolean).join(" ");
+import { join } from "./classNames";
 
 export function Overlay({ children, onScrimClick, fixed, scrim = "default", className }: {
   children: ReactNode;

@@ -13,7 +13,8 @@ import { Badge, QualityBadge } from "../ui/primitives/Badges";
 import { PlayIcon } from "../ui/primitives/icons";
 import { Spinner } from "../ui/primitives/Progress";
 import type { Choice, ModalView } from "../ui/app/appShared";
-import { formatRuntime, providerOf, sourceKey } from "./titleSources";
+import { providerOf, sourceKey } from "./titleSources";
+import { formatRuntime } from "../components/cards/cardText";
 
 /**
  * A modal request the screens can raise. Structurally compatible with the
@@ -21,7 +22,7 @@ import { formatRuntime, providerOf, sourceKey } from "./titleSources";
  * App's setModal passes through unchanged. `view` selects the title-family
  * presentation hint the generic modal reads (src/ui/app/AppDialogs.tsx).
  */
-export type ModalChoice = Choice;
+type ModalChoice = Choice;
 export type ModalRequest = {
   title: string;
   choices: ModalChoice[];

@@ -15,7 +15,6 @@ import { PlayerScreen } from "../../screens/PlayerScreen";
 import type { AppApi } from "./useTvApp";
 import { desktopShellPreview, isDesktopShell } from "./appShared";
 import { AppDialogs } from "./AppDialogs";
-import { enterLocalMode, localModeAvailable } from "../../local";
 import { usePhoneLayout } from "../usePhoneLayout";
 import { SearchPopunder } from "../SearchPopunder";
 import { HomeSkeleton } from "../../screens/HomeSkeleton";
@@ -26,7 +25,7 @@ import { useRef } from "react";
  * dialogs, all reading from the assembled app object.
  */
 export function AppShell({ app }: { app: AppApi }) {
-  const { active, activeTrackPopup, bootingHome, requestHomeRows, detailOrigin, api, audioTrackList, authorize, back, browser, busy, canvas, cards, casting, catalog, catalogError, catalogs, catalogValues, chooseProfile, closeCast, commitSeek, compactHome, detail, discoverSources, editingProfile, editProfile, engineChoice, entry, episodes, fail, favorites, firstHomeCatalog, fullscreenControl, go, heroDetails, heroItem, heroPresentation, heroRotation, highlighted, homeRows, isMaximized, items, lastControlActivity, layout, libraryQueue, loadCatalog, manage, managing, mediaKey, mediaKeyUp, modal, navigate, nextEpisode, nextSkip, oled, openCast, openingSource, overlay, pair, pairExpired, pairing, platform, play, player, playerInfoOpen, playerNotice, playerRoot, prefs, preparing, profile, profilePage, profiles, qr, query, queue, readBufferedRanges, recentLive, responsive, screen, searchKey, searchPartial, searchRows, season, seek, selected, selectedPresentation, selectEngine, previewSources, sourcePreview, stack, setActiveTrackPopup, setCompactHome, setControlActivity, setEditingProfile, setEntry, setLibraryQueue, setManaging, setModal, setOverlay, setPlayerInfoOpen, setPrefs, setProfile, setProfilePage, setProfiles, setQuery, setScreen, setSeason, setSeek, setSettingsSubpage, setSourceProvider, setSourceQuality, settingsSubpage, shelfCards, snapshot, sourceFocusPending, sourceProvider, sourceQuality, sources, stop, subtitleOffOption, surfaceClick, textTrackList, toggle, toggleLiveMute, toggleOled, togglePlayback, trackChoices, video } = app;
+  const { activeTrackPopup, bootingHome, requestHomeRows, detailOrigin, api, audioTrackList, authorize, back, browser, busy, canvas, cards, casting, catalog, catalogError, catalogs, catalogValues, chooseProfile, closeCast, commitSeek, compactHome, detail, discoverSources, editingProfile, editProfile, engineChoice, entry, episodes, fail, favorites, firstHomeCatalog, fullscreenControl, go, heroDetails, heroItem, heroPresentation, heroRotation, highlighted, homeRows, isMaximized, items, lastControlActivity, layout, libraryQueue, loadCatalog, manage, managing, mediaKey, mediaKeyUp, modal, navigate, nextEpisode, nextSkip, oled, openCast, openingSource, overlay, pair, pairExpired, pairing, platform, play, player, playerInfoOpen, playerNotice, playerRoot, prefs, preparing, profile, profilePage, profiles, qr, query, queue, readBufferedRanges, recentLive, responsive, screen, searchKey, searchPartial, searchRows, season, seek, selected, selectedPresentation, selectEngine, previewSources, sourcePreview, stack, setActiveTrackPopup, setCompactHome, setControlActivity, setEditingProfile, setEntry, setLibraryQueue, setManaging, setModal, setOverlay, setPlayerInfoOpen, setPrefs, setProfile, setProfilePage, setProfiles, setQuery, setScreen, setSeason, setSeek, setSettingsSubpage, setSourceProvider, setSourceQuality, settingsSubpage, shelfCards, snapshot, sourceFocusPending, sourceProvider, sourceQuality, sources, stop, subtitleOffOption, surfaceClick, textTrackList, toggle, toggleLiveMute, toggleOled, togglePlayback, trackChoices, video } = app;
 
   const activeProfile = profiles.find((p) => p.id === profile);
   const phone = usePhoneLayout(responsive);
@@ -39,12 +38,6 @@ export function AppShell({ app }: { app: AppApi }) {
   // While the session restores and Home first loads, the responsive shell
   // shows a skeleton of Home in place of the startup cover and screens.
   const booting = responsive && (bootingHome || screen === "startup");
-  // Local addon mode is offered only in local-capable builds (LM-001); the
-  // backend-hosted bundle renders no entry point.
-  const localEntry = localModeAvailable ? () => {
-    enterLocalMode();
-    location.reload();
-  } : undefined;
   // ---- Shell: app chrome (rails, phone nav, title bar) -------------------
   // Screens that show the navigation chrome (TV rail, desktop / web rail).
   const chromeScreen = !["startup", "pairing", "profiles", "player"].includes(screen);
@@ -167,8 +160,8 @@ export function AppShell({ app }: { app: AppApi }) {
         {/* ---- Account: sign-in / pairing and Who's watching (account family) ---- */}
         {booting || screen === "startup" ? null : screen === "pairing" ? (
           responsive
-            ? <ResponsiveSignIn api={api} pair={pair} qr={qr} expired={pairExpired} onRetry={() => void pairing()} onUseWithoutAccount={localEntry} />
-            : <TvPairing pair={pair} qr={qr} expired={pairExpired} onRetry={() => void pairing()} onUseWithoutAccount={localEntry} />
+            ? <ResponsiveSignIn api={api} pair={pair} qr={qr} expired={pairExpired} onRetry={() => void pairing()} />
+            : <TvPairing pair={pair} qr={qr} expired={pairExpired} onRetry={() => void pairing()} />
         ) : screen === "profiles" ? (
           <ProfilesScreen
             profiles={profiles}
@@ -294,6 +287,7 @@ export function AppShell({ app }: { app: AppApi }) {
             )}
             {screen === "Live TV" && (
               <LiveGuide
+                key={profile}
                 responsive={responsive}
                 phone={phone}
                 api={api}

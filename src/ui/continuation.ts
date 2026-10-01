@@ -1,4 +1,5 @@
 import { normalizeCore } from "../core";
+import { throwIfAborted } from "../api/client-shared";
 import type {
   MediaItem,
   MediaSource,
@@ -42,7 +43,7 @@ export async function resolveNext(
 }
 
 /** Matches Roku's default SourceMatch capability envelope. */
-export const DEFAULT_CONTINUATION_CAPABILITIES: PlaybackCapabilities = {
+const DEFAULT_CONTINUATION_CAPABILITIES: PlaybackCapabilities = {
   maxWidth: 1920,
   maxHeight: 1080,
   h264: true,
@@ -56,7 +57,7 @@ export const DEFAULT_CONTINUATION_CAPABILITIES: PlaybackCapabilities = {
  * Port of Roku `BestContinuationSource`: IPTV stays with its source account;
  * add-on candidates are ranked and discovery order resolves equal ranks.
  */
-export function bestContinuationSource(
+function bestContinuationSource(
   sources: readonly MediaSource[],
   current: Pick<MediaItem, "sourceAddonId">,
   preferences: PlaybackPreferences,
@@ -68,25 +69,6 @@ export function bestContinuationSource(
 /** Resume must never select a similarly named source from another provider. */
 export function exactResumeSource(item: MediaItem, sources: readonly MediaSource[]): MediaSource | undefined {
   return normalizeCore<MediaSource | null>("exactResumeSource", { item, sources }) ?? undefined;
-}
-
-export interface SourceMatch {
-  readonly rank: number;
-  readonly likely: boolean;
-  readonly best: boolean;
-}
-
-/**
- * Rust owns the shared source ranking policy.
- * It is recommendation only: backend inspection, not a release filename,
- * decides whether direct play is actually safe.
- */
-export function sourceMatch(
-  source: MediaSource,
-  capabilities: PlaybackCapabilities,
-  preferences: PlaybackPreferences,
-): SourceMatch {
-  return normalizeCore<SourceMatch>("sourceMatch", { source, capabilities, preferences });
 }
 
 async function collectSources(
@@ -106,12 +88,6 @@ async function collectSources(
   }
 }
 
-function throwIfAborted(signal?: AbortSignal) {
-  if (signal?.aborted)
-    throw signal.reason instanceof Error
-      ? signal.reason
-      : new DOMException("Aborted", "AbortError");
-}
 function delay(milliseconds: number, signal?: AbortSignal): Promise<void> {
   return new Promise((resolve, reject) => {
     if (signal?.aborted) {

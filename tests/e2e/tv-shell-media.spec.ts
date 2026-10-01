@@ -1,5 +1,5 @@
-import { expect, test, type Page, type Route, type TestInfo } from '@playwright/test';
-import { apiOrigin, capture, corsHeaders, enterHome, episode, expectBox, fixtureImage, installBackend, installPlatformRuntime, json, movie, profile, channel, type ProfileFixture } from './helpers/tvShellRuntime';
+import { expect, test } from '@playwright/test';
+import { apiOrigin, capture, enterHome, expectBox, installBackend, installPlatformRuntime, json, movie } from './helpers/tvShellRuntime';
 
 
 test('held series-root hero opens its episode detail instead of source selection', async ({ page }) => {

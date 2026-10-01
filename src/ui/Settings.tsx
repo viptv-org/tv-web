@@ -19,7 +19,6 @@ import {
   CircleAlert,
   CirclePlay,
   Cpu,
-  Gauge,
   Info,
   Languages,
   LogOut,
@@ -45,7 +44,7 @@ import { ReadyImage } from "./RokuArtwork";
 import { ACCENTS, useAppearance, type Accent } from "../theme/appearance";
 import { SettingsRowContent, TvDescription } from "./primitives/Rows";
 import { ChoiceContent, SwitchIndicator } from "./primitives/Toggles";
-import { Dialog, DialogText, MenuItemContent } from "./primitives/Overlays";
+import { Dialog, MenuItemContent } from "./primitives/Overlays";
 import { ButtonContent, buttonClass } from "./primitives/Button";
 import { TextField } from "./primitives/Fields";
 import { KeyLegend } from "./primitives/Keys";
@@ -305,8 +304,8 @@ export function Settings({
       id: "settings-playback",
       title: "Playback preferences",
       icon: <CirclePlay />,
-      note: "Audio, subtitles and quality",
-      description: "Audio, subtitles and quality for this profile.",
+      note: "Audio and subtitles",
+      description: "Audio and subtitles for this profile.",
       action: () => openPage("Playback preferences"),
       group: "Playback",
     },
@@ -434,20 +433,6 @@ export function Settings({
           ["System default", "system"],
           ["Text with shadow", "shadow"],
           ["White text on black", "opaque"],
-        ]),
-    },
-    {
-      id: "quality",
-      title: "Maximum quality",
-      icon: <Gauge />,
-      value: prefs.quality === "auto" ? "Auto" : prefs.quality,
-      description: "",
-      action: () =>
-        choose("quality", "Maximum quality", "quality", [
-          ["Auto", "auto"],
-          ["1080p", "1080p"],
-          ["720p", "720p"],
-          ["480p", "480p"],
         ]),
     },
   ].map((row) => ({ ...row, description: `Current: ${row.value}` }));

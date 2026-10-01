@@ -16,8 +16,12 @@ export function playbackRequest(intent: SessionStartIntent, capabilities: Playba
   return { streamId: intent.source.id, position, capabilities };
 }
 
+export function isOriginalDelivery(session: PlaybackSessionView): boolean {
+  return session.deliveryKind ? session.deliveryKind === 'direct' : session.mode === 'direct';
+}
+
 export function adapterRequest(session: PlaybackSessionView, kind: PlaybackKind, position: number, paused: boolean): Parameters<Player['open']>[0] {
-  const direct = session.mode === 'direct';
+  const direct = isOriginalDelivery(session);
   const deliveryStart = direct ? 0 : Math.max(0, session.position);
   return {
     preferredAudioLanguage: session.preferredAudioLanguage,
@@ -36,7 +40,7 @@ export function adapterRequest(session: PlaybackSessionView, kind: PlaybackKind,
     deliveryDecision: ['encode', 'transcode'].includes(session.videoMode) ? 'video-conversion'
       : ['encode', 'transcode'].includes(session.audioMode) ? 'audio-conversion' : direct ? 'original' : 'server-remux',
     paused,
-    authorization: session.authorization,
+    authorization: direct ? session.authorization : undefined,
   };
 }
 
@@ -79,10 +83,15 @@ export function recoveryRequest(
   request: PlaybackStart,
   code: PlayerFailure['code'],
 ): PlaybackStart | undefined {
-  if (!canChangeMediaPath({ code })) return undefined;
-  if (session.mode === 'direct' && !request.managedOnly)
+  // A direct media origin may be unreachable from this client (for example
+  // browser CORS). Try the authorized gateway once without forcing conversion.
+  // A control-API outage or a failure of managed delivery never takes this path.
+  if ((code === 'connection-failed' || code === 'authorization-unsupported') && isOriginalDelivery(session) && !request.managedOnly)
     return { ...request, managedOnly: true };
-  if (session.mode !== 'direct' && !request.forceTranscode)
+  if (!canChangeMediaPath({ code })) return undefined;
+  if (isOriginalDelivery(session) && !request.managedOnly)
+    return { ...request, managedOnly: true };
+  if (!isOriginalDelivery(session) && !request.forceTranscode)
     return { ...request, managedOnly: true, forceTranscode: true };
   return undefined;
 }

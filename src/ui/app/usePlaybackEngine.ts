@@ -1,51 +1,23 @@
-import { memo, useEffect, useLayoutEffect, useRef, useState } from "react";
-import QRCode from "qrcode";
+import { useEffect, useRef } from "react";
+import { monitorPlaybackLease } from '../../api/playback-lease';
 import {
-  TvApi,
   TvApiError,
   type MediaItem,
-  type MediaPresentation,
   type MediaSource,
-  type DevicePairing,
-  type TvProfile,
-  type Catalog,
-  type PlaybackSession,
-  type PlaybackPreferences,
-  type PlaybackCapabilities,
 } from "../../api";
 import {
   createPlayer,
   deliveryCapabilitiesFor,
   PlaybackSessionController,
-  isTauriRuntime,
-  resolveTauriVideoInvoker,
-  type NativeVideoEngine,
   type Player,
-  type PlayerPlatform,
-  type PlayerSnapshot,
 } from "@viptv/video";
-import { exactResumeSource, resolveNext } from "../continuation";
-import {
-  connectionSummary,
-  describeApiError,
-  nextConnectionFailure,
-  type ConnectionIssue,
-  type ErrorDetail,
-} from "../errors";
-import { focusElement } from "../remote";
-import { enrichDetail, mergeEpisodeProgress, initialEpisode } from "../detailProgress";
-import { readStoredEngine, storeEngine } from "../enginePreference";
-import { createAutoplayTestLogger, probeAutoplayTestMode, probeEngineOverride } from "../../testing/autoplay-harness";
-import { catalogFilters, catalogDefaults } from "../catalogFilters";
-import { BrowserNavigation, readBrowserRoute, safeRestoredRoute, type BrowserRoute, type SettingsSubpage } from "../browserNavigation";
-import { seekPinReleased, type BufferedRange } from "../SeekBar";
-import type { Screen } from "../screens";
-import { normalizeCore } from "../../core";
-import { captureScroll, desktopInvoker, initialPrefs, type BrowserSnapshot, type Choice, type ScrollAnchor } from "./appShared";
-import type { AppApi, CoreApi, DialogsApi, AuthApi, PlaybackEngineApi, PlaybackSessionApi, CatalogApi, NavigationApi } from "./useTvApp";
+import { describeApiError } from "../errors";
+import { seekPinReleased } from "../SeekBar";
+import { desktopInvoker } from "./appShared";
+import type { AppApi, AuthApi } from "./useTvApp";
 
 export function usePlaybackEngine(app: AuthApi) {
-  const { active, api, autoplayTest, autoResume, browser, canvas, catalog, controlActivity, controller, engineChoice, engineError, entry, episodes, epoch, error, fail, go, items, modal, nextScope, notify, overlay, platform, playbackCapabilities, player, profile, profiles, responsive, resumeRemainder, screen, season, seek, seekTarget, seekTimer, seekValue, selected, session, setBusy, setError, setModal, setOpeningSource, setOverlay, setPreparing, setScreen, setSeek, setSelected, setSession, setSnapshot, snapshot, sourceQuality, sources, stack, video } = app;
+  const { active, api, autoplayTest, autoResume, browser, canvas, controlActivity, controller, engineChoice, engineError, epoch, fail, go, items, modal, nextScope, notify, overlay, platform, playbackCapabilities, player, profile, responsive, resumeRemainder, screen, seek, seekTarget, seekTimer, seekValue, session, setBusy, setError, setModal, setOpeningSource, setOverlay, setPreparing, setScreen, setSeek, setSelected, setSession, setSnapshot, snapshot, stack, video } = app;
 
   useEffect(() => {
     let engine: Player;
@@ -133,6 +105,8 @@ export function usePlaybackEngine(app: AuthApi) {
   // preview, a player popup or the Up Next card is up.
   const { activeTrackPopup, playerInfoOpen, upNext } = app;
   const holdControls = !!(activeTrackPopup || playerInfoOpen || upNext);
+  const latestControlActivity = useRef(controlActivity);
+  latestControlActivity.current = controlActivity;
   useEffect(() => {
     if (
       screen !== "player" ||
@@ -148,8 +122,30 @@ export function usePlaybackEngine(app: AuthApi) {
   }, [screen, overlay, snapshot?.state, modal, seek, controlActivity, holdControls]);
   useEffect(() => {
     if (!session) return;
+    let cancelled = false;
+    const owner = controller.current;
+    const lease = api.playbackLease?.(session.id);
+    const retire = (error: unknown) => {
+      if (cancelled || owner?.snapshot.active?.session.id !== session.id) return;
+      fail(error);
+      void owner.stop().catch(() => undefined);
+    };
+    const monitor = lease ? monitorPlaybackLease(lease, options => api.renewPlaybackV2(session.id, options), retire) : undefined;
+    const reconnect = async () => {
+      if (document.visibilityState !== 'visible' || !monitor || cancelled) return;
+      const engine = player.current;
+      const activity = latestControlActivity.current;
+      const playing = engine?.snapshot.state === 'playing';
+      if (playing) await engine.pause().catch(() => undefined);
+      const ready = await monitor.refresh();
+      if (!cancelled && ready && playing && activity === latestControlActivity.current && engine === player.current && owner?.snapshot.active?.session.id === session.id)
+        await engine?.play().catch(fail);
+      else if (!cancelled && !ready && monitor.isActive() && owner?.snapshot.active?.session.id === session.id)
+        fail(new TvApiError(409, 'Playback could not reconnect. Retry playback.', 'playback_reconnect_failed'));
+    };
+    document.addEventListener('visibilitychange', reconnect);
     const t = setInterval(() => {
-      void api.heartbeat(session.id, undefined, player.current?.snapshot.time.positionSeconds).catch(fail);
+      if (!monitor) void api.heartbeat(session.id, undefined, player.current?.snapshot.time.positionSeconds).catch(fail);
       const a = active.current,
         p = player.current?.snapshot.time;
       if (a && p && a.item.type !== "live")
@@ -162,7 +158,7 @@ export function usePlaybackEngine(app: AuthApi) {
           )
           .catch(fail);
     }, 15000);
-    return () => clearInterval(t);
+    return () => { cancelled = true; clearInterval(t); monitor?.dispose(); document.removeEventListener('visibilitychange', reconnect); };
   }, [session, profile]);
   const play = async (item: MediaItem, source?: MediaSource, position = 0) => {
     if (!controller.current) {

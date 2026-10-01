@@ -19,7 +19,3 @@ export function ProgressBar({ value, small, label, className }: { value: number;
     </span>
   );
 }
-
-export function LiveDot() {
-  return <span className="vx-live-dot" aria-hidden="true" />;
-}

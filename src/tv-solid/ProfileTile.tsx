@@ -3,6 +3,7 @@ import { defineScreen, TvView, TvText } from "./runtime";
 import type { TvProfile } from "../api";
 import { tokens } from "../theme/viptv-tokens.generated";
 import avatarCatalog from "../ui/avatars.json";
+import { avatarSrc } from "../ui/avatarCatalog";
 import { noteFocus } from "./focusDebug";
 import { vectorIcon } from "./vectorIcons";
 
@@ -43,7 +44,7 @@ export function profileTileData(profile: TvProfile): ProfileTileData {
     id: profile.id,
     name: profile.name,
     image: available
-      ? `${import.meta.env.BASE_URL}assets/avatar-catalog/${style}-${choice}.png`
+      ? avatarSrc(style, choice)
       : "",
     initial: profile.name.trim().slice(0, 1).toUpperCase(),
     visible: true,

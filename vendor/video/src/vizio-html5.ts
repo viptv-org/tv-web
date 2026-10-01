@@ -1,4 +1,6 @@
-import Hls from 'hls.js';
+import Hls, { FetchLoader } from 'hls.js';
+import { hasSourceAuthorization } from './source-authorization';
+import { checkedMediaDelivery, sessionMediaRequest } from './session-media-fetch';
 import { supportsNativeHls } from './browser-capabilities';
 import { SessionPlayer } from './session';
 import { mediaFailure } from './browser-policy';
@@ -21,6 +23,7 @@ export interface HtmlTextTrack {
 }
 
 export interface HtmlMediaLike {
+  crossOrigin?: string | null;
   readonly audioTracks?: ArrayLike<{ label: string; language: string; enabled: boolean }>;
   src: string;
   volume?: number;
@@ -102,9 +105,11 @@ export class VizioHtml5Adapter extends SessionPlayer {
   }
 
   open(request: OpenPlayerRequest): Promise<void> {
-    if (request.authorization?.cookie || request.authorization?.userAgent) {
+    try { checkedMediaDelivery(request.url); }
+    catch (error) { return Promise.reject(error); }
+    if (hasSourceAuthorization(request.authorization)) {
       return Promise.reject(new PlayerOperationError(
-        'unsupported-operation',
+        'authorization-unsupported',
         'The Vizio HTML player cannot attach credentials. Use a backend-compatible URL instead.',
       ));
     }
@@ -123,6 +128,7 @@ export class VizioHtml5Adapter extends SessionPlayer {
     this.adoptEngineDuration = request.adoptEngineDuration === true;
     this.observedTitleDuration = null;
     this.media.pause();
+    this.media.crossOrigin = 'anonymous';
     return new Promise<void>((resolve, reject) => {
       let openingTimer: ReturnType<typeof setTimeout> | undefined;
       let targetPosition = request.startAtSeconds ?? 0;
@@ -206,16 +212,13 @@ export class VizioHtml5Adapter extends SessionPlayer {
       const startMse = () => {
         this.update(sessionId, { diagnostics: { decision: request.deliveryDecision, engine: 'hls.js', networkTransport: 'browser-proxy', transport: 'hls' } });
         if (!Hls.isSupported()) throw new PlayerOperationError('unsupported-format', 'This browser cannot play HLS. Native HLS or MediaSource support is required.');
-        const url = checkedMediaUrl(request.url);
-        const prefix = url.pathname.slice(0, url.pathname.lastIndexOf('/') + 1);
+        const url = checkedMediaDelivery(request.url);
         const hls = new Hls({
           maxBufferLength: 20,
           maxMaxBufferLength: 30,
           backBufferLength: 10,
-          xhrSetup: (_xhr, resourceUrl) => {
-            const resource = checkedMediaUrl(resourceUrl);
-            if (!resource.pathname.startsWith(prefix)) throw new Error('HLS resource is outside the playback session.');
-          },
+          loader: FetchLoader,
+          fetchSetup: (context, init) => sessionMediaRequest(url.href, context.url, init),
         });
         this.hls = hls;
         const publishTracks = () => {
@@ -492,13 +495,4 @@ function nonNegative(value: number): number {
 function mediaError(media: HtmlMediaLike, code: 'prepare-failed' | 'connection-failed'): PlayerOperationError {
   const message = media.error?.message ?? `HTML media error ${media.error?.code ?? 'unknown'}.`;
   return new PlayerOperationError(media.error?.code === 3 || media.error?.code === 4 ? 'unsupported-format' : code, message, media.error);
-}
-
-/** hls.js fetches only the backend's scoped media capability; it is never a URL proxy. */
-function checkedMediaUrl(value: string): URL {
-  const url = new URL(value, window.location.origin);
-  if (url.origin !== window.location.origin || !url.pathname.startsWith('/media/') || url.username || url.password) {
-    throw new PlayerOperationError('authorization-unsupported', 'HLS requires a same-origin backend media session.');
-  }
-  return url;
 }

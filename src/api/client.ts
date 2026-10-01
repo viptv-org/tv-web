@@ -2,37 +2,23 @@
    extending the session/profile/catalog base. The module's public
    surface is re-exported so existing importers are unchanged. */
 import { normalizeCore as normalizeRust } from "../core";
-import { CoreBridge } from "../../vendor/core/wasm/viptv_core";
-import { createCoreDriver } from "../../vendor/core/runtime/driver";
-import { createHttpTransport } from "../../vendor/core/runtime/index";
-import type { Event, ViewModel } from "../../vendor/core/typescript/wire";
-import { ApiScope, MemoryDeviceSessionStore, TvApiError, normalizeCore, safeJson, clientMessage, isAbort, tokenSet, profile, mediaItem, page, playback, preferences, itemRequest, snakePreferences, params, segment, objectOrEmpty, expectObject, objectAt, hasObject, arrayValue, isObject, stringAt, optionalString, idAt, boolAt, optionalBool, clean, minimalItem } from "./client-shared";
-import type { DeviceSessionStore, RequestOptions, TvApiOptions } from "./client-shared";
+import { TvApiError, normalizeResponse, isAbort, mediaItem, page, preferences, snakePreferences, params, segment, expectObject, objectAt, hasObject, arrayValue, stringAt, boolAt, optionalBool, clean } from "./client-shared";
+import type { RequestOptions } from "./client-shared";
 import type {
-  Catalog,
-  DevicePairing,
-  DeviceTokenSet,
-  DiscoverPage,
-  DiscoverRequest,
   Guide,
   JsonObject,
   JsonValue,
   LiveCategories,
   LivePage,
+  LiveCatalogQuery,
+  LiveCatalogPage,
+  LiveCatalogCategories,
   MediaDetail,
   MediaItem,
   Page,
   ParentStatus,
   ParentPinChange,
   PlaybackPreferences,
-  PlaybackSession,
-  PlaybackStart,
-  StreamDiscovery,
-  SourcesPollState,
-  SourcesPollStep,
-  TvApiErrorShape,
-  TvIdentity,
-  TvProfile,
 } from "./types";
 import { TvApiCatalog } from "./client-catalog";
 
@@ -69,7 +55,7 @@ export class TvApi extends TvApiCatalog {
             if (!pending) { pending = this.detail(item, { signal: scope.signal }); metadata.set(key, pending); }
             const detail = await pending;
             ensureActive();
-            enriched[index] = normalizeCore<MediaItem>("enrichHome", {
+            enriched[index] = normalizeResponse<MediaItem>("enrichHome", {
               original: item, metadata: { ...detail.item, episodes: detail.episodes },
             });
             options?.onPage?.({ ...result, items: [...enriched] });
@@ -176,7 +162,35 @@ export class TvApi extends TvApiCatalog {
     const v = expectObject(
       await this.raw(`/api/live${params(query)}`, {}, true, options),
     );
-    return normalizeCore<LivePage>("live", v);
+    return normalizeResponse<LivePage>("live", v);
+  }
+  async liveV2(query: LiveCatalogQuery = {}, options?: RequestOptions): Promise<LiveCatalogPage> {
+    const value = await this.liveV2Control({ ...query, operation: "livePageV2" }, options);
+    return this.liveV2PageDecode<LiveCatalogPage>("liveCatalogV2", value, query);
+  }
+  async liveCategoriesV2(query: Pick<LiveCatalogQuery, "catalogId" | "cursor" | "limit" | "search"> = {}, options?: RequestOptions): Promise<LiveCatalogCategories> {
+    const value = await this.liveV2Control({ ...query, operation: "liveCategoriesV2" }, options);
+    return this.liveV2PageDecode<LiveCatalogCategories>("liveCategoriesV2", value, query);
+  }
+  async guideV2(channelId: string, options?: RequestOptions): Promise<Guide> {
+    const value = await this.liveV2Control({ operation: "liveGuideV2", id: channelId }, options);
+    return this.liveV2Decode<Guide>("guide", value);
+  }
+  private async liveV2Control(input: unknown, options?: RequestOptions): Promise<JsonValue> {
+    let request: { method: string; path: string; body: JsonObject | null };
+    try { request = normalizeRust("request", input); }
+    catch { throw new TvApiError(400, "The live playlist request is invalid. Reload the guide.", "invalid_catalog_query"); }
+    return this.raw(request.path, { method: request.method, body: request.body ?? undefined }, true, options);
+  }
+  private liveV2Decode<T>(kind: string, value: unknown): T {
+    try { return normalizeRust<T>(kind, value); }
+    catch { throw new TvApiError(502, "The server returned invalid live playlist data. Update the app/server or reload the guide.", "invalid_catalog_response"); }
+  }
+  private liveV2PageDecode<T extends LiveCatalogPage | LiveCatalogCategories>(kind: string, value: unknown, query: Pick<LiveCatalogQuery, "catalogId" | "limit">): T {
+    const result = this.liveV2Decode<T>(kind, value);
+    if (result.items.length > (query.limit ?? 50) || query.catalogId !== undefined && result.catalogId !== query.catalogId)
+      throw new TvApiError(502, "The server returned the wrong live playlist page. Reload the guide.", "invalid_catalog_response");
+    return result;
   }
   async liveCategories(
     view?: "us",
@@ -190,13 +204,13 @@ export class TvApi extends TvApiCatalog {
         options,
       ),
     );
-    return normalizeCore<LiveCategories>("liveCategories", v);
+    return normalizeResponse<LiveCategories>("liveCategories", v);
   }
   async guide(channelId: string, options?: RequestOptions): Promise<Guide> {
     const v = expectObject(
       await this.raw(`/api/guide/${segment(channelId)}`, {}, true, options),
     );
-    return normalizeCore<Guide>("guide", v);
+    return normalizeResponse<Guide>("guide", v);
   }
   async preferences(profileId: string, options?: RequestOptions) {
     return preferences(
@@ -308,5 +322,5 @@ export class TvApi extends TvApiCatalog {
   }
 }
 
-export { ApiScope, MemoryDeviceSessionStore, TvApiError, isAbort, normalizeCore } from "./client-shared";
-export type { DeviceSessionStore, RequestOptions, TvApiOptions } from "./client-shared";
+export { MemoryDeviceSessionStore, TvApiError } from "./client-shared";
+export type { RequestOptions } from "./client-shared";

@@ -10,9 +10,7 @@ import { initializeCore } from "./core";
 import { createRoot } from "react-dom/client";
 import { TvApi, type DeviceTokenSet } from "./api";
 import { App } from "./ui/App";
-import { LocalApp } from "./ui/LocalApp";
-import { localModeAvailable, readLocalMode } from "./local";
-// Design-system layers load after every legacy stylesheet (imported by App/LocalApp above).
+// Design-system layers load after every legacy stylesheet imported by App above.
 import "./styles/design.css";
 import type { PlayerPlatform } from "@viptv/video";
 const params = new URLSearchParams(location.search);
@@ -49,6 +47,7 @@ async function start() {
       return nativeFetch(input, { ...init, headers, maxRedirections: 0 });
     } : undefined,
     baseUrl: origin,
+    playbackPlatform: platform,
     allowInsecurePreview: lanPreview,
     sessionStore: {
       withLock: navigator.locks ? work => navigator.locks.request(key, work) : undefined,
@@ -81,12 +80,6 @@ async function start() {
   // data-platform="tizen|vizio|tauri|html5".
   document.documentElement.setAttribute("data-layout", layout);
   document.documentElement.setAttribute("data-platform", platform);
-  // Local addon mode is a boot-level branch (LM-001): the flag is honored
-  // only when the build declares the capability.
-  if (localModeAvailable && readLocalMode()) {
-    root.render(<LocalApp onExit={() => location.reload()} fetch={nativeFetch ?? undefined} />);
-    return;
-  }
   root.render(<App api={api} platform={platform} layout={layout} />);
 }
 // Device appearance (<html data-oled / data-accent>) before the first paint.

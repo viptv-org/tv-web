@@ -1,6 +1,6 @@
 import type { Page } from '@playwright/test';
 
-export const apiOrigin = 'https://viptv.syek.tech';
+export const apiOrigin = process.env.VIPTV_TEST_API_ORIGIN ?? 'https://viptv.syek.tech';
 export const sessionKey = `viptv-device:${apiOrigin}`;
 export const movie = {
   id: 'responsive-movie', type: 'movie', name: 'A Different Horizon', title: 'A Different Horizon',
@@ -88,17 +88,17 @@ export async function installBackend(page: Page, options: { series?: boolean; in
     if (path === '/api/addons') return json([]);
     if (path === '/api/catalogs') return json(Array.from({ length: options.populated ? 4 : 1 }, (_, i) => ({ id: i ? `catalog-${i}` : 'popular', name: options.populated ? `Global Cinema Collection — ${['Popular', 'Recently Added', 'Drama', 'Adventure'][i]} Features and Award-Winning International Television` : 'Popular', type: title.type, addon_id: 2, supports_search: true, supports_skip: true })));
     if (path === '/api/discover') return json({ metas: options.populated ? Array.from({ length: 24 }, (_, i) => ({ ...title, id: i ? `title-${i}` : title.id, name: i ? `The Long Journey Through the Mountains: Chapter ${i}` : title.name })) : [title], has_more: false, next_skip: null });
-    if (path === '/api/live') return json({ channels: options.activity ? liveChannels : [], total: options.activity ? liveChannels.length : 0 });
-    if (path === '/api/live/categories') return json({ categories: [], total: 0 });
-    if (path.startsWith('/api/guide/')) return json({ programs: [], timeline: [], timezone: 'UTC' });
+    if (path === '/api/v2/iptv/live/channels') return json({ catalog_id: 1, generation: 1, items: options.activity ? liveChannels : [], next_cursor: null, previous_cursor: null });
+    if (path === '/api/v2/iptv/live/categories') return json({ catalog_id: 1, generation: 1, items: [], next_cursor: null, previous_cursor: null });
+    if (/^\/api\/v2\/iptv\/live\/[^/]+\/source$/.test(path)) return json({ source: { id: `live_source_${decodeURIComponent(path.split('/')[5])}`, name: 'Fixture IPTV', source: 'iptv:1', source_addon_id: 'iptv:1' } });
+    if (path.startsWith('/api/v2/iptv/guide/')) return json({ programs: [], timeline: [], timezone: 'UTC' });
     if (options.activity && path === '/api/meta/series/queue-series') return json({ meta: { id: 'queue-series', type: 'series', name: 'Returning Series', poster: 'https://art.example/poster.svg', background: 'https://art.example/backdrop.svg', videos: queue.map(item => ({ id: item.id, title: item.episode_title, season: item.season, episode: item.episode, thumbnail: `https://art.example/episode.svg?episode=${item.episode}` })) } });
     if (path === `/api/meta/${title.type}/${title.id}`) return json({ meta: title });
     if (options.populated && /^\/api\/meta\/movie\/title-\d+$/.test(path)) return json({ meta: { ...title, id: path.split("/").at(-1), name: "The Long Journey Through the Mountains" } });
     if (path === '/api/profiles/1/progress/series') return json([]);
-    if (path === '/api/streams' && request.method() === 'POST') return json({ id: 'responsive-sources' });
-    if (path === '/api/streams/responsive-sources') return json({ events: [{ seq: 1, source: 'addon:2', streams: [{ id: 'responsive-stream', name: options.populated ? 'International Cinema Archive • High Definition • Original Language and Commentary • Extended Edition' : 'Responsive source 1080p', title: 'A Different Horizon 1080p', source_addon_id: 'addon:2', source_name: options.populated ? 'International Cinema and Television Collection — Premium Archive Provider' : 'Fixture addon' }] }], done: true });
+    if (path === '/api/v2/streams' && request.method() === 'POST') return json({ id: 'responsive-sources' });
+    if (path === '/api/v2/streams/responsive-sources') return json({ events: [{ seq: 1, source: 'addon:2', streams: [{ id: 'responsive-stream', name: options.populated ? 'International Cinema Archive • High Definition • Original Language and Commentary • Extended Edition' : 'Responsive source 1080p', title: 'A Different Horizon 1080p', source_addon_id: 'addon:2', source_name: options.populated ? 'International Cinema and Television Collection — Premium Archive Provider' : 'Fixture addon' }] }], done: true });
     return json({ error: `Unhandled fixture route ${path}` }, 404);
   });
   return { requests, errors, title, profileName };
 }
-

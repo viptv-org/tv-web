@@ -41,13 +41,13 @@ PNG is reused; a missing one is shot), `--width <px>` sets each half's width
 (default: the reference width capped at 1200), `--stack` puts the reference above
 the app, `--all [--platform p]` composes every screen and writes `index.html`.
 
-Stop kept servers with `pkill -f 'vite.js.*--port 418[01]'`.
+Stop only the specific preview process you started; do not stop shared servers.
 
 ## How it works
 
-- `shoot.mjs` starts Vite (or reuses one it recognises) on `127.0.0.1:4180`, and a
-  local-mode build (`VITE_VIPTV_LOCAL_MODE=1`, config `vite.local.config.mjs` with its
-  own dependency cache) on `4181` for the local-mode screens. It refuses a port that
+- `shoot.mjs` starts Vite (or reuses one it recognises) on `127.0.0.1:4180` for
+  ordinary account-backed scenarios. BE-002 removes executable local-mode
+  previews; their historical captures are not current acceptance. It refuses a port that
   serves anything else (a LAN-preview or custom-API build would reach a real backend).
   Keep ports off the Fetch "bad ports" list (4190 is one): Node and Chromium refuse them.
 - The frame comes from the reference size in `index.json`: phone 390×844 (mobile,

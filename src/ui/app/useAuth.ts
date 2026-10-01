@@ -1,53 +1,19 @@
-import { memo, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import QRCode from "qrcode";
 import {
-  TvApi,
   TvApiError,
   type MediaItem,
-  type MediaPresentation,
-  type MediaSource,
-  type DevicePairing,
-  type TvProfile,
   type Catalog,
-  type PlaybackSession,
-  type PlaybackPreferences,
-  type PlaybackCapabilities,
 } from "../../api";
-import {
-  createPlayer,
-  deliveryCapabilitiesFor,
-  PlaybackSessionController,
-  isTauriRuntime,
-  resolveTauriVideoInvoker,
-  type NativeVideoEngine,
-  type Player,
-  type PlayerPlatform,
-  type PlayerSnapshot,
-} from "@viptv/video";
-import { exactResumeSource, resolveNext } from "../continuation";
 import { TV_CANVAS_HEIGHT, TV_CANVAS_WIDTH } from "../tvCanvas";
-import {
-  connectionSummary,
-  describeApiError,
-  nextConnectionFailure,
-  type ConnectionIssue,
-  type ErrorDetail,
-} from "../errors";
-import { focusElement } from "../remote";
-import { enrichDetail, mergeEpisodeProgress, initialEpisode } from "../detailProgress";
-import { readStoredEngine, storeEngine } from "../enginePreference";
-import { createAutoplayTestLogger, probeAutoplayTestMode, probeEngineOverride } from "../../testing/autoplay-harness";
-import { catalogFilters, catalogDefaults } from "../catalogFilters";
+import { describeApiError } from "../errors";
 import { browseRequest, firstHomeCatalog, homeRowsFor, type HomeRow } from "./homeRows";
-import { BrowserNavigation, readBrowserRoute, safeRestoredRoute, type BrowserRoute, type SettingsSubpage } from "../browserNavigation";
-import { seekPinReleased, type BufferedRange } from "../SeekBar";
 import type { Screen } from "../screens";
-import { normalizeCore } from "../../core";
-import { captureScroll, desktopInvoker, initialPrefs, type BrowserSnapshot, type Choice, type ScrollAnchor } from "./appShared";
-import type { AppApi, CoreApi, DialogsApi, AuthApi, PlaybackEngineApi, PlaybackSessionApi, CatalogApi, NavigationApi } from "./useTvApp";
+import { captureScroll, initialPrefs } from "./appShared";
+import type { DialogsApi } from "./useTvApp";
 
 export function useAuth(app: DialogsApi) {
-  const { api, bootingHome, browser, browserApplyGeneration, browserApplying, browserFromRoute, browserReady, captureBrowserSnapshot, catalog, catalogs, episodes, epoch, error, fail, favorites, finishProfileNavigation, heroMetadataCache, homeCache, homeRequestScope, homeRows, items, modal, modalFocus, pairEpoch, pairingScope, pairTimer, parentScope, pendingSessionRetry, platform, profile, profiles, queue, recentLive, responsive, screen, selected, setBootingHome, setBusy, setCatalogError, setCatalogs, setEntry, setError, setFavorites, setHighlighted, setHomeRows, setItems, setPair, setPrefs, setProfile, setProfiles, setQr, setQueue, setRecentLive, setScreen, setSelected, sources, stack, startupAttempt } = app;
+  const { api, bootingHome, browser, browserApplyGeneration, browserApplying, browserFromRoute, browserReady, captureBrowserSnapshot, episodes, epoch, fail, finishProfileNavigation, heroMetadataCache, homeCache, homeRequestScope, items, modal, modalFocus, pairEpoch, pairingScope, pairTimer, parentScope, pendingSessionRetry, platform, profile, responsive, screen, selected, setBootingHome, setBusy, setCatalogError, setCatalogs, setEntry, setError, setFavorites, setHighlighted, setHomeRows, setItems, setPair, setPrefs, setProfile, setProfiles, setQr, setQueue, setRecentLive, setScreen, setSelected, sources, stack, startupAttempt } = app;
 
   const go = (next: Screen) => {
     homeRequestScope.current?.abort();
@@ -144,8 +110,8 @@ export function useAuth(app: DialogsApi) {
             })
           : undefined,
         api
-          .live({ view: "us", collection: "recent", limit: 20 })
-          .catch(() => ({ channels: [] })),
+          .liveV2({ collection: "recent", limit: 20 })
+          .catch(() => ({ items: [] })),
       ]);
       if (ticket !== epoch.current) return;
       const homeItems = page?.items ?? home.myList;
@@ -154,7 +120,7 @@ export function useAuth(app: DialogsApi) {
       rowQueue.current = [];
       rowsRequested.current = new Set();
       setItems(homeItems);
-      setRecentLive(live.channels);
+      setRecentLive(live.items);
       setHomeRows(rows);
       homeCache.current = {
         profile: id,
@@ -162,7 +128,7 @@ export function useAuth(app: DialogsApi) {
         favorites: home.myList,
         items: homeItems,
         homeRows: rows,
-        recentLive: live.channels,
+        recentLive: live.items,
       };
       // The TV's spatial rows all load in the background; the responsive
       // shelves load as they near the viewport.

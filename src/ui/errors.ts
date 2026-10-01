@@ -6,7 +6,7 @@ import { TvApiError } from "../api/client";
  * (the backend's answer, the failing request) instead of a bare string.
  */
 
-export type ErrorKind = "network" | "server" | "auth" | "client" | "unknown";
+type ErrorKind = "network" | "server" | "auth" | "client" | "unknown";
 
 export interface ErrorDetail {
   readonly kind: ErrorKind;

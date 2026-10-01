@@ -69,7 +69,7 @@ try {
       await page.keyboard.press('Enter');
       await focused('settings-row', 0);
       if (name === 'TvPlayback') {
-        for (let step = 0; step < 5; step++) {
+        for (let step = 0; step < 4; step++) {
           await page.keyboard.press('ArrowDown');
           await focused('settings-row', step + 1);
         }
@@ -389,7 +389,7 @@ try {
     await focused('player-control', 4);
     await page.keyboard.press('ArrowUp');
     await focused('player-control', 4);
-    if (!backend.requests.some(request => request.path === '/api/playback' && typeof request.body?.channel_id === 'string'))
+    if (!backend.requests.some(request => request.path === '/api/v2/playback' && String(request.body?.stream_id ?? '').startsWith('live_source_')))
       throw new Error('Currently airing programme did not start direct live playback');
     await page.keyboard.press('Escape');
     await page.keyboard.press('Escape');
@@ -411,7 +411,7 @@ try {
     });
     await page.keyboard.press('Enter');
     await focused('guide-channel', 0);
-    if (!backend.requests.some(request => request.path === '/api/live' && request.query.includes('category=news')))
+    if (!backend.requests.some(request => request.path === '/api/v2/iptv/live/channels' && request.query.includes('category_id=news')))
       throw new Error('News filter did not request its channel category');
     await page.keyboard.press('Escape');
     await focused('home-action', 0);
@@ -444,8 +444,8 @@ try {
     });
     await page.keyboard.press('Enter');
     await page.waitForFunction(() => window.__viptvFocus?.view === 'guide-channel' && window.__viptvFocus?.index === 0, null, { timeout: 5000 });
-    if (!backend.requests.some(request => request.path === '/api/live' && request.query.includes('search=cnb')))
-      throw new Error(`Live search did not request matching channels: ${JSON.stringify(backend.requests.filter(request => request.path === '/api/live'))}; focus ${JSON.stringify(await page.evaluate(() => window.__viptvFocus))}`);
+    if (!backend.requests.some(request => request.path === '/api/v2/iptv/live/channels' && request.query.includes('search=cnb')))
+      throw new Error(`Live search did not request matching channels: ${JSON.stringify(backend.requests.filter(request => request.path === '/api/v2/iptv/live/channels'))}; focus ${JSON.stringify(await page.evaluate(() => window.__viptvFocus))}`);
   }
   if (name === 'TvMenu') {
     const focused = (view, index) => page.waitForFunction(
@@ -561,7 +561,7 @@ try {
       ({ view, index }) => window.__viptvFocus?.view === view && window.__viptvFocus?.index === index,
       { view, index }, { timeout: 7000 });
     if (!backend.requests.some(request => request.path === '/api/discover' && request.query.includes('search=naruto')) ||
-        !backend.requests.some(request => request.path === '/api/live' && request.query.includes('search=naruto')))
+        !backend.requests.some(request => request.path === '/api/v2/iptv/live/channels' && request.query.includes('search=naruto')))
       throw new Error('Search did not query both searchable catalogs and Live TV');
     await page.keyboard.press('Enter');
     await page.waitForFunction(() => window.__viptvSearch?.query === 'narutot', null, { timeout: 5000 });
@@ -852,7 +852,7 @@ try {
     if (!backend.requests.some(request => request.path === '/api/streams' && request.method === 'POST') ||
         !backend.requests.some(request => request.path.startsWith('/api/streams/')))
       throw new Error(`Source discovery did not start and poll: ${JSON.stringify(backend.requests)}`);
-    if (viaPlay && backend.requests.some(request => request.path === '/api/playback'))
+    if (viaPlay && backend.requests.some(request => request.path === '/api/v2/playback'))
       throw new Error('Resume without a saved fingerprint selected a source automatically');
     await page.keyboard.press('ArrowDown');
     await focused('source-row', 1);
@@ -907,7 +907,7 @@ try {
     const focused = (view, index) => page.waitForFunction(
       ({ view, index }) => window.__viptvFocus?.view === view && window.__viptvFocus?.index === index,
       { view, index }, { timeout: 5000 });
-    if (!backend.requests.some(request => request.path === '/api/playback' && request.method === 'POST'))
+    if (!backend.requests.some(request => request.path === '/api/v2/playback' && request.method === 'POST'))
       throw new Error('Selected source did not start a backend playback session');
     const intent = await page.evaluate(() => window.__viptvSourceIntent);
     if (intent?.sourceId !== 'source-1' || intent?.itemId !== 'tt-monster:1:1' || intent?.position !== 4 || intent?.resume !== viaPlay)
@@ -931,7 +931,7 @@ try {
     if (platform !== 'tizen' && layer === 'none') throw new Error('First Back exited playback instead of hiding controls');
     await page.keyboard.press('Escape');
     await focused('source-row', 0);
-    if (!backend.requests.some(request => request.path.startsWith('/api/playback/') && request.method !== 'GET'))
+    if (!backend.requests.some(request => request.path.startsWith('/api/v2/playback/') && request.method !== 'GET'))
       throw new Error('Exiting the player did not stop its backend session');
     if (!backend.requests.some(request => request.path.endsWith('/progress') && request.method !== 'GET'))
       throw new Error(`Exiting the player did not save progress: ${JSON.stringify(backend.requests.slice(-8))}`);
@@ -954,7 +954,7 @@ try {
     const focused = (view, index) => page.waitForFunction(
       ({ view, index }) => window.__viptvFocus?.view === view && window.__viptvFocus?.index === index,
       { view, index }, { timeout: 5000 });
-    const playbackRequests = () => backend.requests.filter(request => request.path === '/api/playback' && request.method === 'POST').length;
+    const playbackRequests = () => backend.requests.filter(request => request.path === '/api/v2/playback' && request.method === 'POST').length;
     const beforeUnsupported = playbackRequests();
     for (let step = 0; step < 4; step++) await page.keyboard.press('ArrowDown');
     await focused('player-track-option', 5);

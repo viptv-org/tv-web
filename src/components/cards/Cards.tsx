@@ -12,8 +12,6 @@ import { MissingArt } from "../../ui/primitives/Cards";
 import { PlayIcon } from "../../ui/primitives/icons";
 import { cardMeta, channelMonogram, continueMeta, liveSubtitle, phoneContinueMeta } from "./cardText";
 
-export { cardMeta } from "./cardText";
-
 /**
  * Latest card action closures for the memoized card row: the row reads the
  * ref at click time so prop identities stay stable while App re-renders.

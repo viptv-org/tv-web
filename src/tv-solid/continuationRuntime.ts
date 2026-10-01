@@ -21,7 +21,7 @@ export interface SolidTVContinuationOptions {
 }
 
 /** Progress/Resume identity must describe the selected source, including after Next. */
-export function enrichContinuationItem(item: MediaItem, source: MediaSource): MediaItem {
+function enrichContinuationItem(item: MediaItem, source: MediaSource): MediaItem {
   return {
     ...item,
     sourceAddonId: source.sourceAddonId ?? item.sourceAddonId,

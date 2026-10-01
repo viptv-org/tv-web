@@ -14,6 +14,23 @@ import { fileURLToPath } from 'node:url';
 
 export const apiOrigin = process.env.PREVIEW_API_ORIGIN ?? 'https://viptv.syek.tech';
 export const sessionKey = `viptv-device:${apiOrigin}`;
+const playbackSessions = new WeakMap<Page, Map<string, Record<string, unknown>>>();
+// Standalone Node previews intentionally keep their protocol fixture local.
+export function playbackV2Fixture(route: Route, body: unknown, status = 200): unknown {
+  const request = route.request(), url = new URL(request.url());
+  if (!url.pathname.startsWith('/api/v2/playback') || status >= 400) return body;
+  const page = request.frame().page();
+  let sessions = playbackSessions.get(page);
+  if (!sessions) { sessions = new Map(); playbackSessions.set(page, sessions); }
+  const raw = body && typeof body === 'object' ? body as Record<string, unknown> : {};
+  const id = typeof raw.id === 'string' ? raw.id : url.pathname.split('/')[4];
+  if (request.method() === 'DELETE') { sessions.delete(id); return {}; }
+  if (typeof raw.url === 'string') sessions.set(id, { ...raw, kind: 'gateway', url: new URL(raw.url, url.origin).href,
+    video_mode: raw.video_mode === 'transcode' ? 'encode' : raw.video_mode,
+    audio_mode: raw.audio_mode === 'transcode' ? 'encode' : raw.audio_mode });
+  if (!sessions.has(id)) return body;
+  return { id, status: 'ready', expires_at: Math.floor(Date.now()/1000)+60, renew_after_seconds: 20, delivery: sessions.get(id) };
+}
 export const referenceDir = process.env.VIPTV_PREVIEW_REFERENCE_DIR
   ? `${process.env.VIPTV_PREVIEW_REFERENCE_DIR.replace(/\/+$/, '')}/`
   : fileURLToPath(new URL('../../../design/viptv-design-system/reference/', import.meta.url));
@@ -74,7 +91,6 @@ export interface BackendOptions {
   /** Discover/catalog requests never answer (skeletons). */
   catalogHang?: boolean;
   /** Local mode: serve the Stremio addon hosts (lordstreams/thisiptv/lucidhosting.example); 'hang' never answers catalogs. */
-  localAddons?: boolean | 'hang';
   /** Recent searches stored for the profile. */
   recentSearches?: string[];
   /** Media timeline for the stubbed player, seconds. */
@@ -324,15 +340,16 @@ const liveItem = (channel: typeof channels[number]) => ({
 function live(url: URL) {
   const search = url.searchParams.get('search')?.trim().toLowerCase();
   const collection = url.searchParams.get('collection');
-  const category = url.searchParams.get('category');
+  const category = url.searchParams.get('category_id');
   let list = channels.filter(channel => !['anime-central', 'cartoon-network-us', 'comedy-central', 'syfy'].includes(channel.id) || collection === 'recent' || !!search);
   if (collection === 'recent') list = recentLive.map(id => channels.find(channel => channel.id === id)!);
   else if (collection === 'favorites') list = [];
   if (category) list = list.filter(channel => channel.category === category);
-  if (search) list = channels.filter(channel => channel.name.toLowerCase().includes(search) || channel.programmes.some(([, , title]) => title.toLowerCase().includes(search)));
-  const offset = Number(url.searchParams.get('offset') ?? 0), limit = Number(url.searchParams.get('limit') ?? 40);
-  const total = collection || category || search ? list.length : 86;
-  return { channels: list.slice(offset, offset + limit).map(liveItem), total };
+  if (search) list = list.filter(channel => channel.name.toLowerCase().includes(search));
+  const offset = Number(url.searchParams.get('cursor')?.replace('page_', '') ?? 0), limit = Number(url.searchParams.get('limit') ?? 50);
+  return { catalog_id: 1, generation: 1, items: list.slice(offset, offset + limit).map(liveItem),
+    next_cursor: offset + limit < list.length ? `page_${offset + limit}` : null,
+    previous_cursor: offset > 0 ? `page_${Math.max(0, offset - limit)}` : null };
 }
 function guide(id: string) {
   const channel = channels.find(candidate => candidate.id === id);
@@ -438,7 +455,6 @@ export async function installBackend(page: Page, options: BackendOptions): Promi
   // Reference profile photos served as the catalog avatars the fixtures pick.
   if (assetFiles.has('5112cc')) await page.route('**/assets/avatar-catalog/lorelei-47.png', route => serveFile(route, `${referenceDir}assets/${assetFiles.get('5112cc')}`, 'image/png'));
   if (assetFiles.has('e12f8d')) await page.route('**/assets/avatar-catalog/lorelei-48.png', route => serveFile(route, `${referenceDir}assets/${assetFiles.get('e12f8d')}`, 'image/png'));
-  if (options.localAddons) await installLocalAddons(page, family, options.localAddons === 'hang');
   await page.route(`${apiOrigin}/media/**`, route => {
     const name = new URL(route.request().url()).pathname.split('/').pop() ?? '';
     if (name.endsWith('.m3u8')) return serveFile(route, `${hlsDir}index.m3u8`, 'application/vnd.apple.mpegurl');
@@ -453,7 +469,7 @@ export async function installBackend(page: Page, options: BackendOptions): Promi
       'access-control-allow-methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
       'access-control-allow-headers': 'authorization, content-type, x-csrf-token, accept',
     };
-    const json = (body: unknown, status = 200) => route.fulfill({ status, headers, contentType: 'application/json', body: JSON.stringify(body) });
+    const json = (body: unknown, status = 200) => route.fulfill({ status, headers, contentType: 'application/json', body: JSON.stringify(playbackV2Fixture(route, body, status)) });
     if (request.method() === 'OPTIONS') return route.fulfill({ status: 204, headers });
     const url = new URL(request.url());
     const path = url.pathname, method = request.method();
@@ -569,11 +585,11 @@ export async function installBackend(page: Page, options: BackendOptions): Promi
       const spec = byId.get(decodeURIComponent(metaMatch[2]));
       return spec ? json({ meta: meta(spec, family) }) : json({ error: 'not found' }, 404);
     }
-    if (path === '/api/streams' && method === 'POST') {
+    if (path === '/api/v2/streams' && method === 'POST') {
       const id = String(body.series_id ?? body.id ?? '');
       return json({ id: id.startsWith('tt-monster') ? 'streams-monster' : `streams-${id || 'title'}` });
     }
-    const streamMatch = /^\/api\/streams\/([^/]+)$/.exec(path);
+    const streamMatch = /^\/api\/(?:v2\/)?streams\/([^/]+)$/.exec(path);
     if (streamMatch) {
       const monster = streamMatch[1] === 'streams-monster';
       const after = Number(url.searchParams.get('after') ?? 0);
@@ -582,18 +598,20 @@ export async function installBackend(page: Page, options: BackendOptions): Promi
     }
 
     // Live.
-    if (path === '/api/live/categories') return json({ categories: liveCategories, total: liveCategories.length });
-    if (path === '/api/live') return json(live(url));
-    const guideMatch = /^\/api\/guide\/([^/]+)$/.exec(path);
+    if (path === '/api/v2/iptv/live/categories') return json({ catalog_id: 1, generation: 1, items: liveCategories.map(({ id, name }) => ({ id, name })), next_cursor: null, previous_cursor: null });
+    if (path === '/api/v2/iptv/live/channels') return json(live(url));
+    const sourceMatch = /^\/api\/v2\/iptv\/live\/([^/]+)\/source$/.exec(path);
+    if (sourceMatch) return json({ source: { id: `live_source_${decodeURIComponent(sourceMatch[1])}`, name: 'Fixture IPTV', source: 'iptv:1', source_addon_id: 'iptv:1' } });
+    const guideMatch = /^\/api\/v2\/iptv\/guide\/([^/]+)$/.exec(path);
     if (guideMatch) return json(guide(decodeURIComponent(guideMatch[1])));
 
     // Playback.
-    if (path === '/api/playback' && method === 'POST') {
+    if (path === '/api/v2/playback' && method === 'POST') {
       playbackCount++;
       if (options.playbackHang || (options.playbackHangAfter !== undefined && playbackCount > options.playbackHangAfter)) return hang();
       if (options.playbackFailAfter !== undefined && playbackCount > options.playbackFailAfter) return json({ error: 'upstream unavailable', error_code: 'SOURCE_TIMEOUT' }, 504);
       if (options.seekRefused && playbackCount > 1) return json({ error: 'The stream could not seek there.', error_code: 'SEEK_REFUSED' }, 409);
-      const liveSession = typeof body.channel_id === 'string' || String(body.type ?? '') === 'live' || /cartoon|news|cnbc|cnn|espn/.test(String(body.id ?? ''));
+      const liveSession = String(body.stream_id ?? '').startsWith('live_source_');
       return json({
         id: options.playbackUniqueIds ? `preview-playback-${playbackCount}` : 'preview-playback', url: '/media/preview-playback/index.m3u8', format: 'hls', mode: 'remux', video_mode: 'copy', audio_mode: 'transcode',
         position: liveSession ? 0 : options.playbackPositionFromRequest ? Number(body.position ?? 0) : options.media?.position ?? 768, live: liveSession, duration: liveSession ? 0 : options.media?.duration ?? 3130,
@@ -602,39 +620,10 @@ export async function installBackend(page: Page, options: BackendOptions): Promi
         subtitles_supported: true,
       });
     }
-    if (path.startsWith('/api/playback')) return json({ ok: true });
+    if (path.startsWith('/api/v2/playback')) return json({ ok: true });
     return json({ error: `Unhandled preview route ${method} ${path}` }, 404);
   });
   return { requests, errors };
-}
-
-/** Local addon mode: the Stremio hosts the seeded local registry points at. */
-const localCatalogs: Record<string, string[]> = {
-  popular: ['tt-oak-street', 'tt-mayday', 'tt-whisper-man', 'tt-obsession', 'tt-practical-magic', 'tt-in-the-grey', 'tt-ministry'],
-  new: ['tt-hail-mary', 'tt-pressure', 'tt-mandalorian', 'tt-one-night-only', 'tt-weapons', 'tt-wish-me-dead', 'tt-the-invite'],
-};
-export const localManifest = (id: string, name: string, catalogs: boolean) => ({
-  id, name, version: '1.0.0', resources: ['catalog', 'meta', 'stream'], types: ['movie', 'series'], idPrefixes: ['tt'],
-  catalogs: catalogs ? [{ type: 'movie', id: 'popular', name: 'Popular movies' }, { type: 'movie', id: 'new', name: 'New releases' }] : [],
-});
-async function installLocalAddons(page: Page, family: Family, hang: boolean) {
-  const hosts: Record<string, [string, string, boolean]> = {
-    'lordstreams.example': ['com.lordstreams.addon', 'LordStreams', true],
-    'thisiptv.example': ['org.thisiptv.addon', 'ThisIPTV', false],
-    'lucidhosting.example': ['io.lucidhosting.addon', 'LucidHosting', false],
-  };
-  await page.route(/^https:\/\/(lordstreams|thisiptv|lucidhosting)\.example\//, async route => {
-    const url = new URL(route.request().url());
-    const [id, name, catalogs] = hosts[url.hostname];
-    const json = (body: unknown) => route.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify(body) });
-    if (url.pathname.endsWith('/manifest.json')) return json(localManifest(id, name, catalogs));
-    const catalog = /\/catalog\/([^/]+)\/([^/.]+)/.exec(url.pathname);
-    if (catalog) {
-      if (hang) return new Promise<void>(() => undefined);
-      return json({ metas: (localCatalogs[catalog[2]] ?? []).map(entry => item(byId.get(entry)!, family)) });
-    }
-    return json({ streams: [] });
-  });
 }
 
 /**

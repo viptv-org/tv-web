@@ -4,7 +4,6 @@ import {
   cardPresentation,
   presentation,
 } from "../core/presentations";
-import { enrichDetail } from "../ui/detailProgress";
 import { continueMeta } from "../components/cards/cardText";
 
 export interface HomeCardView {
@@ -188,24 +187,4 @@ export async function loadHomeView(
     api.favorites(profileId, { signal }).then(items => { favorites = items; publish(); }),
   ]);
   return view();
-}
-
-export async function enrichHomeHero(
-  api: TvApi,
-  view: HomeView,
-  signal: AbortSignal,
-): Promise<HomeView> {
-  const item = view.heroItem;
-  if (!item || item.type === "live") return view;
-  const detail = await api.detail(
-    { id: item.seriesId ?? item.id, type: item.type },
-    { signal },
-  );
-  return {
-    ...projectHome(item, [], enrichDetail(item, detail.item)),
-    queueItems: view.queueItems,
-    favoriteItems: view.favoriteItems,
-    cards: view.cards,
-    saved: view.saved,
-  };
 }

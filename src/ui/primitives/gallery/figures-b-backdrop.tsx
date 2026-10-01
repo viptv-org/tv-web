@@ -12,7 +12,7 @@ const assets = import.meta.glob("../../../../../design/viptv-design-system/refer
 const byName = new Map(Object.entries(assets).map(([path, url]) => [path.slice(path.lastIndexOf("/") + 1), url]));
 
 /** URL of a reference asset by file name (empty when the design checkout is missing). */
-export const refAsset = (name: string) => byName.get(name) ?? "";
+const refAsset = (name: string) => byName.get(name) ?? "";
 
 /* The reference pages' own base rules, re-asserted over the legacy global button skin. */
 const BASE = `.responsive-app .vx-gallery-backdrop button:not([class*="vx-"]),.tv-layout .vx-gallery-backdrop button:not([class*="vx-"]){font:inherit;color:inherit;background:transparent;border:0;min-height:0;min-width:0;margin:0;text-align:inherit;box-shadow:none;outline:none;transform:none}

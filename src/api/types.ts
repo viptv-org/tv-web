@@ -4,7 +4,7 @@ type CoreView<T> = T extends readonly (infer Item)[] ? readonly CoreView<Item>[]
   : T extends object ? { readonly [Key in keyof T]: Key extends 'raw' ? JsonObject : CoreView<T[Key]> } : T;
 
 /** JSON accepted from an add-on after the client removes transport credentials. */
-export type JsonPrimitive = string | number | boolean | null;
+type JsonPrimitive = string | number | boolean | null;
 export type JsonValue = JsonPrimitive | JsonObject | readonly JsonValue[];
 export interface JsonObject {
   readonly [key: string]: JsonValue | undefined;
@@ -67,7 +67,7 @@ export interface Page<T> {
 export interface StreamDiscovery {
   readonly id: string;
 }
-export interface StreamEvent {
+interface StreamEvent {
   readonly sequence: number;
   readonly source: string;
   readonly sources: readonly MediaSource[];
@@ -82,23 +82,16 @@ export interface StreamPoll {
  * deduplication, budget and completion decisions; the platform owns only
  * transport, cancellation and the fixed poll interval.
  */
-export interface SourcesPollStep {
-  readonly state: {
-    readonly after: number;
-    readonly sources: readonly MediaSource[];
-    readonly polls: number;
-  };
-  readonly sources: readonly MediaSource[];
-  readonly done: boolean;
-}
-export type SourcesPollState = SourcesPollStep["state"];
+export type SourcesPollStep = CoreView<Core.SourcesPollStep>;
+/** The initial input may omit errors; Rust always returns the generated state. */
+export type SourcesPollState = Omit<SourcesPollStep["state"], "errors"> & Partial<Pick<SourcesPollStep["state"], "errors">>;
 
 export type {
   DirectFileCapabilities,
   PlaybackCapabilities,
   PlaybackStart,
 } from "@viptv/video";
-/** The URL is a short-lived server capability, never an upstream media URL. Do not persist it. */
+/** Authorized direct source URL or gateway media capability. Never persist or log it. */
 export type PlaybackSession = CoreView<Core.PlaybackSession>;
 
 export interface PlaybackPreferences {
@@ -129,11 +122,22 @@ export interface LivePage {
   readonly channels: readonly MediaItem[];
   readonly total: number;
 }
+
+export interface LiveCatalogQuery {
+  readonly catalogId?: string;
+  readonly categoryId?: string;
+  readonly collection?: "favorites" | "recent";
+  readonly search?: string;
+  readonly cursor?: string;
+  readonly limit?: number;
+}
+export type LiveCatalogPage = CoreView<Core.LiveCatalogPage>;
+export type LiveCatalogCategories = CoreView<Core.LiveCatalogCategories>;
 /** A guide category is a filter, not playable media. */
 export interface LiveCategory {
   readonly id: string;
   readonly name: string;
-  readonly count: number;
+  readonly count?: number;
   readonly raw: JsonObject;
 }
 export interface LiveCategories {

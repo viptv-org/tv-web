@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { TvApi, type Guide as GuideData, type GuideProgram, type LiveCategory, type MediaItem } from "../api";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { LivePageWindow } from './live-page-window';
+import { TvApi, TvApiError, type Guide as GuideData, type GuideProgram, type LiveCategory, type MediaItem } from "../api";
 import { focusElement } from "./remote";
 import { DAY_SECONDS, GUIDE_CACHE_LIMIT, HOUR_SECONDS, PAGE_SIZE, PREFETCH_ROWS, RESPONSIVE_WINDOW_SECONDS, VISIBLE_ROWS, WINDOW_SECONDS, type GuideCell, type GuideFilter, cellAt, clockTime, filterOptions, firstVisibleRow, guideCells, guideZone, halfHour, timeRange } from "./guide-core";
 
@@ -29,14 +30,43 @@ export type GuideDetails = {
    actions; Guide.tsx renders exclusively from this controller. */
 export function useGuideController({ api, onPlay, onError, responsive = false }: GuideProps) {
   const [channels, setChannels] = useState<readonly MediaItem[]>([]);
-  const [total, setTotal] = useState(0);
+  const [hasNext, setHasNext] = useState(false);
+  const [hasPrevious, setHasPrevious] = useState(false);
+  const [cursor, setCursor] = useState<string>();
+  const [reload, setReload] = useState(0);
   const [offset, setOffset] = useState(0);
   const [collection, setCollection] = useState<string>();
   const [category, setCategory] = useState<string>();
   const [query, setQuery] = useState("");
   const [searchEntry, setSearchEntry] = useState(false);
   const [categories, setCategories] = useState<readonly LiveCategory[]>([]);
+  const [categoryCursor, setCategoryCursor] = useState<string>();
+  const [categoryReload, setCategoryReload] = useState(0);
+  const [categoryPaging, setCategoryPaging] = useState<{ next?: string | null; previous?: string | null }>({});
+  const categoryRoot = useRef<HTMLElement | null>(null);
+  const [categoryNode, setCategoryNode] = useState<HTMLElement | null>(null);
+  const bindCategoryRoot = useCallback((node: HTMLElement | null) => {categoryRoot.current=node;setCategoryNode(node)},[]);
+  const selectedFilter = useRef<GuideFilter>({id:'all',label:'All channels'});
+  const categoryPending = useRef(false);
+  const categoryDirection = useRef<-1 | 1>();
   const [loading, setLoading] = useState(false);
+  const [failure, setFailure] = useState<string>();
+  const [paddingTop, setPaddingTop] = useState(0);
+  const [paddingBottom, setPaddingBottom] = useState(0);
+  const rowsRoot = useRef<HTMLElement | null>(null);
+  const windowPages = useRef(new LivePageWindow());
+  const catalogSnapshot = useRef<{ channels?: string; categories?: string }>({});
+  const checkSnapshot = (kind: 'channels' | 'categories', catalogId: string | null, generation: string | null) => {
+    const key = JSON.stringify([catalogId, generation]);
+    const other = catalogSnapshot.current[kind === 'channels' ? 'categories' : 'channels'];
+    if ((other !== undefined && other !== key) || (catalogSnapshot.current[kind] !== undefined && catalogSnapshot.current[kind] !== key)) {
+      setCategories([]);
+      throw new TvApiError(409, 'This playlist changed while you were browsing. Reload the guide.', 'catalog_changed');
+    }
+    catalogSnapshot.current[kind] = key;
+  };
+  const [scheduleRows, setScheduleRows] = useState({ first: 0, end: 12 });
+  const anchor = useRef<{ id: string; top: number }>();
   const [selected, setSelected] = useState(0);
   const [selectedProgram, setSelectedProgram] = useState<GuideCell>();
   const [failedLogos, setFailedLogos] = useState<ReadonlySet<string>>(
@@ -47,9 +77,6 @@ export function useGuideController({ api, onPlay, onError, responsive = false }:
   const [following, setFollowing] = useState(true);
   const [guides, setGuides] = useState<Record<string, GuideData>>({});
   const [details, setDetails] = useState<GuideDetails>();
-  // The unfiltered channel count (desktop sidebar "All US channels 86"),
-  // remembered while another filter is active.
-  const [allTotal, setAllTotal] = useState<number>();
   const detailsReturn = useRef<{ element: HTMLElement | null; id: string }>({ element: null, id: "" });
   const cache = useRef(
     new Map<string, { expires: number; guide: GuideData }>(),
@@ -57,12 +84,61 @@ export function useGuideController({ api, onPlay, onError, responsive = false }:
   const loadGeneration = useRef(0);
   const focusAfterLoad = useRef<number | null>(null);
   const focusAfterTimeline = useRef<{ row: number; at: number } | null>(null);
+  const pageProgramAnchor = useRef<number>();
   const scrollViewport = useRef<HTMLDivElement>(null);
   const cellsByRow = useRef(new Map<number, readonly GuideCell[]>());
   const [appending, setAppending] = useState(false);
-  const appendCursor = useRef(PAGE_SIZE);
   const appendPending = useRef(false);
   const appendScope = useRef<ReturnType<TvApi["createScope"]> | null>(null);
+  const pageRef = useRef<{ next: string | null; previous: string | null }>({ next: null, previous: null });
+  const rowNodes = () => Array.from(rowsRoot.current?.querySelectorAll<HTMLElement>('[data-live-channel]') ?? []);
+  const scrollRoot = () => {
+    if (scrollViewport.current) return scrollViewport.current;
+    for (let node = rowsRoot.current?.parentElement; node; node = node.parentElement)
+      if (['auto','scroll'].includes(getComputedStyle(node).overflowY)) return node;
+    return null;
+  };
+  const saveAnchor = () => {
+    const root = scrollRoot();
+    const top = root?.getBoundingClientRect().top ?? 0;
+    const node = rowNodes().find(node => node.getBoundingClientRect().bottom > top);
+    anchor.current = node ? { id: node.dataset.liveChannel!, top: node.getBoundingClientRect().top } : undefined;
+  };
+  const removedHeight = (items: readonly MediaItem[]) => {
+    const ids = new Set(items.map(item => item.id));
+    const nodes=rowNodes();
+    const selected=nodes.filter(node => ids.has(node.dataset.liveChannel!));
+    const pitch=nodes.length ? nodes.reduce((sum,node)=>sum+(node.getBoundingClientRect().height || 64),0)/nodes.length : 64;
+    return selected.length ? selected.reduce((sum,node)=>sum+(node.getBoundingClientRect().height || pitch),0) : items.length*pitch;
+  };
+  const observeRows = () => {
+    const root = scrollRoot();
+    const rect = root?.getBoundingClientRect();
+    if (!rect || !rect.height) return;
+    const nodes = rowNodes();
+    const indexes = nodes.map((node,index) => ({ index,rect:node.getBoundingClientRect() }))
+      .filter(({rect:row})=>row.bottom>=rect.top-128 && row.top<=rect.bottom+128).map(item=>item.index);
+    if (indexes.length) setScheduleRows(previous => {
+      const next = {first:indexes[0],end:indexes.at(-1)!+1};
+      return previous.first===next.first && previous.end===next.end ? previous : next;
+    });
+  };
+  useLayoutEffect(() => {
+    const saved = anchor.current;
+    if (saved) {
+      const node = rowNodes().find(node => node.dataset.liveChannel===saved.id);
+      const root = scrollRoot();
+      if (node && root) root.scrollTop += node.getBoundingClientRect().top-saved.top;
+      anchor.current=undefined;
+    }
+    observeRows();
+  },[channels,paddingTop,paddingBottom]);
+  useEffect(() => {
+    if (!responsive) return;
+    const root=scrollRoot();
+    root?.addEventListener('scroll',observeRows,{passive:true});
+    return ()=>root?.removeEventListener('scroll',observeRows);
+  },[responsive,channels]);
 
   const visibleFirst = responsive ? 0 : firstVisibleRow(selected, channels.length);
   // The responsive guide scrolls one long channel list, so every loaded row is
@@ -70,6 +146,46 @@ export function useGuideController({ api, onPlay, onError, responsive = false }:
   const rowWindow = responsive ? channels.length : VISIBLE_ROWS;
   const visibleChannels = channels.slice(visibleFirst, visibleFirst + rowWindow);
   const filterItems = filterOptions(categories);
+  const pageCategories = (direction: -1 | 1) => {
+    const token = direction > 0 ? categoryPaging.next : categoryPaging.previous;
+    if (!token || categoryPending.current) return false;
+    categoryPending.current = true;
+    categoryDirection.current = direction;
+    setCategoryCursor(token);
+    setCategoryReload(value=>value+1);
+    return true;
+  };
+  useLayoutEffect(() => {
+    const direction = categoryDirection.current;
+    const root = categoryRoot.current;
+    if (!direction || !root || categoryPending.current) return;
+    categoryDirection.current = undefined;
+    const controls = Array.from(root.querySelectorAll<HTMLButtonElement>('button'));
+    if (!responsive) (direction > 0 ? controls.find(node=>node.dataset.focusId==='live-filter-3') : controls.at(-1))?.focus({preventScroll:true});
+    root.scrollLeft = direction > 0 ? 0 : root.scrollWidth;
+    root.scrollTop = direction > 0 ? 0 : root.scrollHeight;
+  }, [categories,responsive]);
+  useEffect(() => {
+    const root = categoryRoot.current;
+    if (!root || !responsive) return;
+    let previous = root.scrollLeft + root.scrollTop;
+    const boundary = (direction: -1 | 1) => {
+      const horizontal = root.scrollWidth > root.clientWidth + 1;
+      const position = horizontal ? root.scrollLeft : root.scrollTop;
+      const extent = horizontal ? root.scrollWidth-root.clientWidth : root.scrollHeight-root.clientHeight;
+      if (direction > 0 && position >= extent-24) pageCategories(1);
+      if (direction < 0 && position <= 24) pageCategories(-1);
+    };
+    const scroll = () => {
+      const position = root.scrollLeft + root.scrollTop;
+      if (position !== previous) boundary(position > previous ? 1 : -1);
+      previous = position;
+    };
+    const wheel = (event: WheelEvent) => boundary(event.deltaX + event.deltaY > 0 ? 1 : -1);
+    root.addEventListener('scroll',scroll,{passive:true});
+    root.addEventListener('wheel',wheel,{passive:true});
+    return () => { root.removeEventListener('scroll',scroll); root.removeEventListener('wheel',wheel); };
+  }, [categories,categoryPaging,responsive,categoryNode]);
 
   const visibleCells = useMemo(() => {
     const next = new Map<number, readonly GuideCell[]>();
@@ -100,19 +216,32 @@ export function useGuideController({ api, onPlay, onError, responsive = false }:
   useEffect(() => {
     const scope = api.createScope();
     let active = true;
+    categoryPending.current = true;
+    if (!categoryCursor) catalogSnapshot.current = {};
+    if (!categoryCursor) setCategories([]);
     void api
-      .liveCategories("us", { signal: scope.signal })
+      .liveCategoriesV2({limit:200,cursor:categoryCursor}, { signal: scope.signal })
       .then((result) => {
-        if (active && !scope.signal.aborted) setCategories(result.categories);
+        if (active && !scope.signal.aborted) {
+          checkSnapshot('categories', result.catalogId, result.generation);
+          setCategories(result.items.map(item=>({...item,raw:{}})));
+          setCategoryPaging({next:result.nextCursor,previous:result.previousCursor});
+          categoryPending.current = false;
+        }
       })
       .catch((error) => {
-        if (active && !scope.signal.aborted) onError(error);
+        if (active && !scope.signal.aborted) {
+          categoryPending.current = false;
+          setFailure(error instanceof Error ? error.message : 'Could not load this playlist. Try again.');
+          onError(error);
+        }
       });
     return () => {
       active = false;
       scope.abort();
+      categoryPending.current = false;
     };
-  }, [api]);
+  }, [api,category,collection,query,reload,categoryCursor,categoryReload]);
 
   useEffect(() => {
     const scope = api.createScope();
@@ -128,15 +257,15 @@ export function useGuideController({ api, onPlay, onError, responsive = false }:
     setChannels([]);
     setSelectedProgram(undefined);
     setLoading(true);
+    setFailure(undefined);
     const timer = setTimeout(() => {
       void api
-        .live(
+        .liveV2(
           {
-            view: "us",
-            collection,
-            category,
+            collection: collection as 'favorites'|'recent'|undefined,
+            categoryId: category,
             search: query.trim() || undefined,
-            offset,
+            cursor,
             limit: PAGE_SIZE,
           },
           { signal: scope.signal },
@@ -144,26 +273,34 @@ export function useGuideController({ api, onPlay, onError, responsive = false }:
         .then((page) => {
           if (scope.signal.aborted || generation !== loadGeneration.current)
             return;
+          checkSnapshot('channels', page.catalogId, page.generation);
           const target = Math.max(
             0,
-            Math.min(focusAfterLoad.current ?? 0, page.channels.length - 1),
+            Math.min(focusAfterLoad.current ?? 0, page.items.length - 1),
           );
           focusAfterLoad.current = null;
-          appendCursor.current = offset + page.channels.length;
-          setChannels(page.channels);
-          setTotal(page.total);
-          if (!collection && !category && !query.trim()) setAllTotal(page.total);
+          windowPages.current.replace(page);
+          pageRef.current={next:page.nextCursor,previous:page.previousCursor};
+          setChannels(page.items);
+          setHasNext(!!page.nextCursor); setHasPrevious(!!page.previousCursor);
+          setPaddingTop(0); setPaddingBottom(0);
+          setScheduleRows({first:0,end:12});
           setSelected(target);
-          if (!responsive && page.channels.length > 0) {
+          const programmeAnchor = pageProgramAnchor.current;
+          pageProgramAnchor.current = undefined;
+          if (programmeAnchor !== undefined) focusAfterTimeline.current = {row:target,at:programmeAnchor};
+          if (!responsive && page.items.length > 0) {
             setTimeout(() => {
-              if (generation === loadGeneration.current)
+              if (generation === loadGeneration.current && programmeAnchor === undefined)
                 focusElement(`guide-channel-${target}`);
             }, 0);
           }
         })
         .catch((error) => {
-          if (!scope.signal.aborted && generation === loadGeneration.current)
+          if (!scope.signal.aborted && generation === loadGeneration.current) {
+            setFailure(error instanceof Error ? error.message : 'Could not load this playlist. Try again.');
             onError(error);
+          }
         })
         .finally(() => {
           if (!scope.signal.aborted && generation === loadGeneration.current)
@@ -175,12 +312,12 @@ export function useGuideController({ api, onPlay, onError, responsive = false }:
       scope.abort();
       appendScope.current?.abort();
     };
-  }, [api, category, collection, offset, query, responsive]);
+  }, [api, category, collection, cursor, query, responsive,reload]);
 
   useEffect(() => {
     const scope = api.createScope();
     const needed = channels
-      .slice(visibleFirst, visibleFirst + (responsive ? channels.length : VISIBLE_ROWS + PREFETCH_ROWS))
+      .slice(responsive ? scheduleRows.first : visibleFirst, responsive ? scheduleRows.end : visibleFirst + VISIBLE_ROWS + PREFETCH_ROWS)
       .filter(
         (channel) => (cache.current.get(channel.id)?.expires ?? 0) < Date.now(),
       );
@@ -191,7 +328,7 @@ export function useGuideController({ api, onPlay, onError, responsive = false }:
         let guide: GuideData = { programs: [], timezone: "" };
         let ttl = 60_000;
         try {
-          guide = await api.guide(channel.id, { signal: scope.signal });
+          guide = await api.guideV2(channel.id, { signal: scope.signal });
           ttl = 300_000;
         } catch {
           // A missing guide is represented by generated schedule-gap cells.
@@ -216,11 +353,12 @@ export function useGuideController({ api, onPlay, onError, responsive = false }:
     )
       void worker();
     return () => scope.abort();
-  }, [api, channels, visibleFirst, responsive]);
+  }, [api, channels, visibleFirst, responsive,scheduleRows]);
 
   useEffect(() => {
     const pending = focusAfterTimeline.current;
     if (!pending) return;
+    if (!guides[channels[pending.row]?.id]) return;
     const cells = cellsByRow.current.get(pending.row);
     if (!cells?.length) return;
     focusAfterTimeline.current = null;
@@ -232,52 +370,66 @@ export function useGuideController({ api, onPlay, onError, responsive = false }:
     if (scrollViewport.current) scrollViewport.current.scrollTop = 0;
   }, [offset, category, collection, query]);
 
-  const appendChannels = () => {
-    if (!responsive || appendPending.current || loading) return;
-    if (!channels.length || appendCursor.current >= total) return;
+  const loadAdjacent = (previous = false) => {
+    if (!responsive || appendPending.current || loading || !(previous ? hasPrevious : hasNext)) return;
+    const token=previous ? pageRef.current.previous : pageRef.current.next;
+    if (!channels.length || !token) return;
     appendPending.current = true;
     setAppending(true);
     const scope = api.createScope();
     appendScope.current = scope;
     const generation = loadGeneration.current;
-    const start = appendCursor.current;
     void api
-      .live(
+      .liveV2(
         {
-          view: "us",
-          collection,
-          category,
+          collection: collection as 'favorites'|'recent'|undefined,
+          categoryId: category,
           search: query.trim() || undefined,
-          offset: start,
+          cursor: token,
           limit: PAGE_SIZE,
         },
         { signal: scope.signal },
       )
       .then((page) => {
         if (scope.signal.aborted || generation !== loadGeneration.current) return;
-        appendCursor.current = start + page.channels.length;
-        setTotal(page.total);
-        setChannels((previous) => {
-          const known = new Set(previous.map((channel) => channel.id));
-          const appended = page.channels.filter(
-            (channel) => !known.has(channel.id),
-          );
-          return appended.length ? [...previous, ...appended] : previous;
-        });
+        saveAnchor();
+        const old=windowPages.current.items;
+        if (previous) {
+          const removed=windowPages.current.prepend(page);
+          setPaddingTop(value=>Math.max(0,value-removedHeight(page.items)));
+          if (removed) setPaddingBottom(value=>value+removedHeight(old.slice(-removed)));
+        } else {
+          const removed=windowPages.current.append(page);
+          if (removed) setPaddingTop(value=>value+removedHeight(old.slice(0,removed)));
+          setPaddingBottom(value=>Math.max(0,value-removedHeight(page.items)));
+        }
+        pageRef.current={next:windowPages.current.next,previous:windowPages.current.previous};
+        setHasNext(!!pageRef.current.next); setHasPrevious(!!pageRef.current.previous);
+        setChannels(windowPages.current.items);
       })
       .catch((error) => {
-        if (!scope.signal.aborted && generation === loadGeneration.current)
+        if (!scope.signal.aborted && generation === loadGeneration.current) {
+          if (previous) setHasPrevious(false); else setHasNext(false);
+          setFailure(error instanceof Error ? error.message : 'Could not load this playlist. Try again.');
           onError(error);
+        }
       })
       .finally(() => {
+        if (appendScope.current !== scope || generation !== loadGeneration.current) return;
         appendPending.current = false;
+        appendScope.current = null;
         if (!scope.signal.aborted) setAppending(false);
       });
   };
+  const appendChannels = () => loadAdjacent(false);
+  const previousChannels = () => loadAdjacent(true);
 
   const routePage = (nextOffset: number, focusRow: number) => {
+    const match = /^guide-program-(\d+)-(\d+)$/.exec((document.activeElement as HTMLElement | null)?.dataset.focusId ?? '');
+    pageProgramAnchor.current = match ? cellsByRow.current.get(Number(match[1]))?.[Number(match[2])]?.start : undefined;
     focusAfterLoad.current = focusRow;
     setOffset(nextOffset);
+    setCursor(nextOffset>offset ? pageRef.current.next ?? undefined : pageRef.current.previous ?? undefined);
   };
 
   const moveWindow = (direction: -1 | 1, row?: number, focusAt?: number) => {
@@ -299,7 +451,7 @@ export function useGuideController({ api, onPlay, onError, responsive = false }:
     const next = visibleFirst + direction * VISIBLE_ROWS;
     setSelectedProgram(undefined);
     if (next >= 0 && next < channels.length) setSelected(next);
-    else if (direction > 0 && offset + channels.length < total) routePage(offset + PAGE_SIZE, 0);
+    else if (direction > 0 && hasNext) routePage(offset + PAGE_SIZE, 0);
     else if (direction < 0 && offset > 0) routePage(Math.max(0, offset - PAGE_SIZE), PAGE_SIZE - VISIBLE_ROWS);
   };
 
@@ -341,6 +493,14 @@ export function useGuideController({ api, onPlay, onError, responsive = false }:
     const channelMatch = /^guide-channel-(\d+)$/.exec(id);
     const programMatch = /^guide-program-(\d+)-(\d+)$/.exec(id);
     const chip = id === "guide-search" || id.startsWith("live-filter-");
+    const filterMatch = /^live-filter-(\d+)$/.exec(id);
+    if (filterMatch) {
+      const index = Number(filterMatch[1]);
+      const direction = event.key === 'ArrowRight' && index === filterItems.length-1 ? 1 : event.key === 'ArrowLeft' && index === 3 ? -1 : undefined;
+      if (direction && pageCategories(direction)) {
+        event.preventDefault(); event.stopPropagation(); return;
+      }
+    }
 
     if (event.key === "MediaPlay" || event.key === "MediaPlayPause") {
       const row = Number((channelMatch ?? programMatch)?.[1]);
@@ -395,7 +555,7 @@ export function useGuideController({ api, onPlay, onError, responsive = false }:
       (channelMatch || programMatch) &&
       event.key === "ArrowDown" &&
       selected === channels.length - 1 &&
-      offset + channels.length < total
+      hasNext
     ) {
       event.preventDefault();
       event.stopPropagation();
@@ -527,19 +687,25 @@ export function useGuideController({ api, onPlay, onError, responsive = false }:
   /** "10:30 – 12:00", or "10:30 – 12:00 PM" with `period`. */
   const formatRange = (start: number, end: number, period = false) => timeRange(start, end, guideTimezone, period);
   const selectFilter = (filter: GuideFilter) => {
+    selectedFilter.current = filter;
     focusAfterLoad.current = 0;
     setCollection(filter.collection);
     setCategory(filter.category);
     setOffset(0);
+    setCursor(undefined);
+    setCategoryCursor(undefined);
+    setReload(value=>value+1);
   };
   const submitQuery = (value: string) => {
     focusAfterLoad.current = 0;
     setOffset(0);
+    setCursor(undefined);
     setQuery(value.slice(0, 128));
+    setCategoryCursor(undefined);
   };
-  const activeFilter = filterItems.find(filter => filter.collection === collection && filter.category === category) ?? filterItems[0];
+  const activeFilter = filterItems.find(filter => filter.collection === collection && filter.category === category) ?? selectedFilter.current;
   return {
-    activateCell, allTotal, appendChannels, appending,
+    activateCell, appendChannels, previousChannels, appending,rowsRoot,bindCategoryRoot,paddingTop,paddingBottom,observeRows,failure,hasNext,hasPrevious,
     channels, closeDetails, closeSearchEntry, details,
     failedLogos, filterItems, following, formatRange,
     formatShort, formatTime, guides, key,
@@ -548,7 +714,7 @@ export function useGuideController({ api, onPlay, onError, responsive = false }:
     searchEntry, searchEntryKey, selectFilter, selected,
     selectedGuide, selectedProgram, setFailedLogos, setFollowing,
     setSearchEntry, setSelected, setSelectedProgram, submitQuery,
-    total, visibleCells, visibleChannels, visibleFirst,
+    visibleCells, visibleChannels, visibleFirst,
     watchDetails, windowStart, activeFilter, guideTimezone,
     pageChannels, focusAfterLoad, setQuery, setOffset,
   };

@@ -7,7 +7,7 @@
  */
 import type { ReactNode } from "react";
 
-export type CardKind = "poster" | "continue" | "episode" | "grid" | "live";
+type CardKind = "poster" | "continue" | "episode" | "grid" | "live";
 
 export function cardClass(kind: CardKind, className?: string) {
   return className ? `vx-card vx-card--${kind} ${className}` : `vx-card vx-card--${kind}`;
@@ -69,22 +69,6 @@ export function EpisodeCaption({ number, title, synopsis, eyebrow }: { number?: 
         ? <span className="vx-card__title">{title}</span>
         : <span className="vx-card__heading">{number ? <span className="vx-card__number">{number}</span> : null}<span className="vx-card__title">{title}</span></span>}
       {synopsis ? <span className="vx-card__synopsis">{synopsis}</span> : null}
-    </>
-  );
-}
-
-/** Phone continue card inside (292 × 96): thumb, title, meta, progress, play disc. Outer: className="vx-continue-card". */
-export function ContinueCardContent({ src, title, meta, progress, play }: { src?: string | null; title: ReactNode; meta?: ReactNode; progress: number; play: ReactNode }) {
-  const clamped = Math.max(0, Math.min(100, progress));
-  return (
-    <>
-      {src ? <img className="vx-continue-card__thumb" alt="" src={src} loading="lazy" decoding="async" /> : <span className="vx-continue-card__thumb" aria-hidden="true" />}
-      <span className="vx-continue-card__body">
-        <span className="vx-continue-card__title">{title}</span>
-        {meta ? <span className="vx-continue-card__meta">{meta}</span> : null}
-        <span className="vx-progress" role="progressbar" aria-valuenow={Math.round(clamped)} aria-valuemin={0} aria-valuemax={100}><span className="vx-progress__fill" style={{ width: `${clamped}%` }} /></span>
-      </span>
-      <span className="vx-continue-card__play" aria-hidden="true">{play}</span>
     </>
   );
 }

@@ -1,56 +1,20 @@
-import { memo, useEffect, useLayoutEffect, useRef, useState } from "react";
-import QRCode from "qrcode";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { TvApi } from "../../api";
 import {
-  TvApi,
-  TvApiError,
-  type MediaItem,
-  type MediaPresentation,
-  type MediaSource,
-  type DevicePairing,
-  type TvProfile,
-  type Catalog,
-  type PlaybackSession,
-  type PlaybackPreferences,
-  type PlaybackCapabilities,
-} from "../../api";
-import {
-  createPlayer,
-  deliveryCapabilitiesFor,
-  PlaybackSessionController,
-  isTauriRuntime,
-  resolveTauriVideoInvoker,
-  type NativeVideoEngine,
-  type Player,
-  type PlayerPlatform,
-  type PlayerSnapshot,
-} from "@viptv/video";
-import { exactResumeSource, resolveNext } from "../continuation";
-import {
-  connectionSummary,
   describeApiError,
   nextConnectionFailure,
   type ConnectionIssue,
-  type ErrorDetail,
 } from "../errors";
 import { focusElement } from "../remote";
-import { enrichDetail, mergeEpisodeProgress, initialEpisode } from "../detailProgress";
-import { readStoredEngine, storeEngine } from "../enginePreference";
-import { createAutoplayTestLogger, probeAutoplayTestMode, probeEngineOverride } from "../../testing/autoplay-harness";
-import { catalogFilters, catalogDefaults } from "../catalogFilters";
-import { BrowserNavigation, readBrowserRoute, safeRestoredRoute, type BrowserRoute, type SettingsSubpage } from "../browserNavigation";
-import { seekPinReleased, type BufferedRange } from "../SeekBar";
-import type { Screen } from "../screens";
-import { normalizeCore } from "../../core";
-import { captureScroll, desktopInvoker, initialPrefs, type BrowserSnapshot, type Choice, type ScrollAnchor } from "./appShared";
 import { initialChoiceIndex } from "./dialogModel";
 import { tokens } from "../../theme/viptv-tokens.generated";
-import type { AppApi, CoreApi, DialogsApi, AuthApi, PlaybackEngineApi, PlaybackSessionApi, CatalogApi, NavigationApi } from "./useTvApp";
+import type { CoreApi } from "./useTvApp";
 
 /** Error toasts stay 4 s (motion.toast-error); notices 5 s (useNavigation). */
 const TOAST_ERROR_MS = parseInt(tokens["motion.toast-error"], 10);
 
 export function useDialogs(app: CoreApi) {
-  const { api, entry, error, errorFocus, modal, modalFocus, screen, session, setBootingHome, setEntryState, setError, setStartupAttempt, setToast } = app;
+  const { api, entry, error, errorFocus, modal, modalFocus, screen, setBootingHome, setEntryState, setError, setStartupAttempt, setToast } = app;
 
   useLayoutEffect(() => {
     if (modal) {
@@ -178,7 +142,10 @@ export function useDialogs(app: CoreApi) {
     setBootingHome(false);
     if (e instanceof DOMException && e.name === "AbortError") return;
     const detail = describeApiError(e);
-    if (detail.kind === "network" || detail.kind === "server") {
+    // An HTTP error (including an upstream/provider 5xx) is not evidence that
+    // the backend is unreachable. A successful health probe must not erase its
+    // actionable message. Only transport failures enter connectivity recovery.
+    if (detail.kind === "network") {
       setConnection((previous) => nextConnectionFailure(previous, Date.now()));
       return;
     }

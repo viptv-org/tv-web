@@ -3,6 +3,8 @@ import { describe, expect, it, vi } from "vitest";
 
 import { TvApi, type PlaybackPreferences } from "../../src/api";
 import { Settings, checkManifestUrl } from "../../src/ui/Settings";
+import { settingsRows, settingsChoices } from "../../src/tv-solid/settingsModel";
+vi.mock("../../src/tv-solid/ProfileTile",()=>({profileTileData:vi.fn()}));
 
 const prefs: PlaybackPreferences = {
   audioLanguage: "",
@@ -46,6 +48,14 @@ function renderSettings(
 }
 
 describe("Settings playback engine", () => {
+  it("retires profile maximum quality in both renderers without removing decoder engine controls", () => {
+    renderSettings({choice:'auto',select:vi.fn()});
+    fireEvent.click(screen.getByRole('button',{name:'Playback preferences'}));
+    expect(screen.queryByRole('button',{name:/Maximum quality/})).not.toBeInTheDocument();
+    expect(screen.getByRole('button',{name:/Playback engine/})).toBeInTheDocument();
+    expect(settingsRows('Playback preferences',prefs,[],'https://viptv.example','test').some(row=>row.id==='quality')).toBe(false);
+    expect(settingsChoices('quality',prefs)).toBeNull();
+  });
   it("offers the engine choices in a menu, marks the current one and reports the selection", () => {
     const select = vi.fn();
     renderSettings({ choice: "auto", select });

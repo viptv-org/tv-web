@@ -1,40 +1,22 @@
 /* TvApiClientBase: constructor, fields, session driver, device pairing,
    profiles and the catalog/detail/source request surface. */
-import { normalizeCore as normalizeRust } from "../core";
 import { CoreBridge } from "../../vendor/core/wasm/viptv_core";
 import { createCoreDriver } from "../../vendor/core/runtime/driver";
 import { createHttpTransport } from "../../vendor/core/runtime/index";
 import type { Event, ViewModel } from "../../vendor/core/typescript/wire";
-import { ApiScope, MemoryDeviceSessionStore, TvApiError, throwIfAborted, normalizeCore, safeJson, clientMessage, isAbort, tokenSet, profile, mediaItem, page, playback, preferences, itemRequest, snakePreferences, params, segment, objectOrEmpty, expectObject, objectAt, hasObject, arrayValue, isObject, stringAt, optionalString, idAt, boolAt, optionalBool, clean, minimalItem } from "./client-shared";
+import { ApiScope, MemoryDeviceSessionStore, TvApiError, throwIfAborted, normalizeResponse, safeJson, isAbort, tokenSet, objectOrEmpty, expectObject, optionalString } from "./client-shared";
 import type { DeviceSessionStore, RequestOptions, TvApiOptions } from "./client-shared";
 import type {
-  Catalog,
   DevicePairing,
   DeviceTokenSet,
-  DiscoverPage,
-  DiscoverRequest,
-  Guide,
   JsonObject,
   JsonValue,
-  LiveCategories,
-  LivePage,
-  MediaDetail,
-  MediaItem,
-  Page,
-  ParentStatus,
-  ParentPinChange,
-  PlaybackPreferences,
-  PlaybackSession,
-  PlaybackStart,
-  StreamDiscovery,
-  StreamPoll,
-  TvApiErrorShape,
   TvIdentity,
-  TvProfile,
 } from "./types";
 
 export class TvApiClientBase {
   protected readonly origin: string;
+  protected readonly playbackPlatform: NonNullable<TvApiOptions['playbackPlatform']>;
   protected readonly requestFetch: typeof fetch;
   protected readonly store: DeviceSessionStore;
   protected tokens: DeviceTokenSet | null = null;
@@ -55,6 +37,7 @@ export class TvApiClientBase {
         "VIPTV API base URL must be an HTTPS origin without a path",
       );
     this.origin = url.origin;
+    this.playbackPlatform = options.playbackPlatform ?? 'web';
     // Browser fetch is a Window method and throws "Illegal invocation" when
     // called as a detached function. Injected test/host fetches are already
     // explicit callables and retain their own receiver convention.
@@ -157,7 +140,7 @@ export class TvApiClientBase {
         options,
       ),
     );
-    return normalizeCore<DevicePairing>("pairing", value);
+    return normalizeResponse<DevicePairing>("pairing", value);
   }
   async claimPairing(deviceCode: string, options?: RequestOptions) {
     const tokens = await this.deviceTokens("/api/auth/device/token", deviceCode, options);
@@ -186,10 +169,10 @@ export class TvApiClientBase {
     await this.store.clear();
   }
   async me(options?: RequestOptions): Promise<TvIdentity> {
-    return normalizeCore<TvIdentity>("identity", await this.raw("/api/auth/me", {}, true, options));
+    return normalizeResponse<TvIdentity>("identity", await this.raw("/api/auth/me", {}, true, options));
   }
   protected async domainRequest(input: unknown, options?: RequestOptions): Promise<JsonValue> {
-    const request = normalizeCore<{ method: string; path: string; body: JsonObject | null }>("request", input);
+    const request = normalizeResponse<{ method: string; path: string; body: JsonObject | null }>("request", input);
     return this.raw(request.path, { method: request.method, body: request.body ?? undefined }, true, options);
   }
 
@@ -285,6 +268,7 @@ export class TvApiClientBase {
           headers,
           body: init.body ? JSON.stringify(init.body) : undefined,
           signal: options?.signal,
+          redirect: "error",
         });
       } catch (error) {
         if (isAbort(error)) throw error;
@@ -301,7 +285,7 @@ export class TvApiClientBase {
         const error = objectOrEmpty(payload);
         throw new TvApiError(
           response.status,
-          normalizeCore<{ message: string }>("apiError", { ...error, status: response.status }).message,
+          normalizeResponse<{ message: string }>("apiError", { ...error, status: response.status }).message,
           optionalString(error, "error_code"),
           endpoint,
         );

@@ -5,7 +5,7 @@ import {
   initialEpisode,
   mergeEpisodeProgress,
 } from "../ui/detailProgress";
-import { formatRuntime } from "../screens/titleSources";
+import { formatRuntime } from "../components/cards/cardText";
 
 export interface DetailEpisodeView {
   item: MediaItem | null;

@@ -27,11 +27,6 @@ export function Eyebrow({ accent, children, className }: { accent?: boolean; chi
   return <span className={["vx-eyebrow", accent ? "vx-eyebrow--accent" : "", className ?? ""].filter(Boolean).join(" ")}>{children}</span>;
 }
 
-/** TV player status: PLAYING / PAUSED / BUFFERING / LOADING. */
-export function StatusWord({ children }: { children: ReactNode }) {
-  return <span className="vx-status-word">{children}</span>;
-}
-
 /** Carousel dots (decorative; the carousel announces its own position). */
 export function CarouselDots({ count, index, overArt }: { count: number; index: number; overArt?: boolean }) {
   return (

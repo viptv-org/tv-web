@@ -1,51 +1,12 @@
-import { memo, useEffect, useLayoutEffect, useRef, useState } from "react";
-import QRCode from "qrcode";
-import {
-  TvApi,
-  TvApiError,
-  type MediaItem,
-  type MediaPresentation,
-  type MediaSource,
-  type DevicePairing,
-  type TvProfile,
-  type Catalog,
-  type PlaybackSession,
-  type PlaybackPreferences,
-  type PlaybackCapabilities,
-} from "../../api";
-import {
-  createPlayer,
-  deliveryCapabilitiesFor,
-  PlaybackSessionController,
-  isTauriRuntime,
-  resolveTauriVideoInvoker,
-  type NativeVideoEngine,
-  type Player,
-  type PlayerPlatform,
-  type PlayerSnapshot,
-} from "@viptv/video";
-import { exactResumeSource, resolveNext } from "../continuation";
-import {
-  connectionSummary,
-  describeApiError,
-  nextConnectionFailure,
-  type ConnectionIssue,
-  type ErrorDetail,
-} from "../errors";
+import { useEffect, useLayoutEffect } from "react";
+import { type Catalog } from "../../api";
 import { focusElement } from "../remote";
-import { enrichDetail, mergeEpisodeProgress, initialEpisode } from "../detailProgress";
-import { readStoredEngine, storeEngine } from "../enginePreference";
-import { createAutoplayTestLogger, probeAutoplayTestMode, probeEngineOverride } from "../../testing/autoplay-harness";
-import { catalogFilters, catalogDefaults } from "../catalogFilters";
-import { BrowserNavigation, readBrowserRoute, safeRestoredRoute, type BrowserRoute, type SettingsSubpage } from "../browserNavigation";
-import { seekPinReleased, type BufferedRange } from "../SeekBar";
+import { catalogDefaults } from "../catalogFilters";
 import type { Screen } from "../screens";
-import { normalizeCore } from "../../core";
-import { captureScroll, desktopInvoker, initialPrefs, type BrowserSnapshot, type Choice, type ScrollAnchor } from "./appShared";
-import type { AppApi, CoreApi, DialogsApi, AuthApi, PlaybackEngineApi, PlaybackSessionApi, CatalogApi, NavigationApi } from "./useTvApp";
+import type { CatalogApi } from "./useTvApp";
 
 export function useNavigation(app: CatalogApi) {
-  const { active, api, applyBrowserRoute, autoResume, browser, browserReady, captureBrowserSnapshot, catalog, catalogs, controller, detail, editingProfile, entry, episodes, epoch, error, fail, favorites, go, homeCache, homeRows, items, loadCatalog, loadHome, managing, modal, nextScope, notify, overlay, pairing, play, player, preparing, profile, profilePage, profiles, queue, recentLive, responsive, restoredScroll, screen, seek, seekTimer, seekValue, selected, session, setBusy, setCatalog, setCatalogError, setCatalogs, setEditingProfile, setEntry, setEpisodes, setError, setFavorites, setHomeRows, setItems, setManaging, setModal, setOverlay, setQueue, setRecentLive, setScreen, setSeek, setSelected, setSettingsSubpage, setSources, setStartupAttempt, settingsSubpage, setToast, snapshot, sources, stack, stop, toast } = app;
+  const { api, applyBrowserRoute, autoResume, browser, browserReady, captureBrowserSnapshot, catalog, controller, editingProfile, entry, epoch, error, fail, go, homeCache, loadCatalog, loadHome, managing, modal, nextScope, notify, overlay, profile, profilePage, responsive, restoredScroll, screen, seek, seekTimer, seekValue, selected, setBusy, setCatalog, setCatalogError, setCatalogs, setEditingProfile, setEntry, setEpisodes, setError, setFavorites, setHomeRows, setItems, setManaging, setModal, setOverlay, setQueue, setRecentLive, setScreen, setSeek, setSelected, setSettingsSubpage, setSources, setStartupAttempt, settingsSubpage, setToast, stack, stop, toast } = app;
 
   useEffect(() => {
     if (screen === "profiles") setTimeout(() => focusElement("profile-0"), 30);

@@ -35,32 +35,6 @@ export function ReadyImage({
     />
   );
 }
-export function CardArtwork({
-  src,
-  fallback,
-  onError,
-}: {
-  src?: string;
-  fallback: ReactNode;
-  onError?: () => void;
-}) {
-  const [loaded, setLoaded] = useState<string>();
-  return (
-    <>
-      <div className="art-fallback" aria-hidden="true">
-        {loaded === src && src ? null : fallback}
-      </div>
-      <ReadyImage
-        src={src}
-        alt=""
-        loading="lazy"
-        decoding="async"
-        onLoad={() => setLoaded(src)}
-        onError={() => { setLoaded(undefined); onError?.(); }}
-      />
-    </>
-  );
-}
 /**
  * TV Home backdrop (reference TvHome): the hero art as a blurred ambient
  * fill plus the sharp art at the top right, faded into the ground by a left
@@ -164,31 +138,5 @@ export function TileImage({
         else setFailedImages(previous => previous.includes(original) ? previous : [...previous, original]);
       }}
     />
-  );
-}
-
-export function CardThumbnail({
-  src,
-  fallback,
-  watched,
-  progress,
-  maxProgress = 1,
-  onError,
-}: {
-  src?: string;
-  fallback: ReactNode;
-  watched?: boolean;
-  progress?: number | null;
-  maxProgress?: number;
-  onError?: () => void;
-}) {
-  return (
-    <>
-      <CardArtwork src={src} fallback={fallback} onError={onError} />
-      {watched && <span className="watched-badge">WATCHED</span>}
-      {!watched && progress != null && progress > 0 && (
-        <progress value={progress} max={maxProgress} />
-      )}
-    </>
   );
 }

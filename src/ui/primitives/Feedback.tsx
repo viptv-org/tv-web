@@ -6,14 +6,9 @@
  */
 import { CircleAlert } from "lucide-react";
 import type { CSSProperties, ReactNode } from "react";
+import { join } from "./classNames";
 
-const join = (...names: (string | false | null | undefined)[]) => names.filter(Boolean).join(" ");
 const Spinner = () => <span className="vx-spinner" aria-hidden="true" />;
-
-/** Fixed toast stack: P above the nav (116), D bottom-centre (24), TV top-centre. */
-export function ToastRegion({ children, className }: { children?: ReactNode; className?: string }) {
-  return <div className={join("vx-toast-region", className)}>{children}</div>;
-}
 
 /**
  * Notice (5 s, text only, secondary) or error (4 s, alert icon + one action: Dismiss, or

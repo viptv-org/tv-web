@@ -13,8 +13,7 @@
  */
 import { ChevronRight } from "lucide-react";
 import type { AnchorHTMLAttributes, ButtonHTMLAttributes, HTMLAttributes, ReactNode } from "react";
-
-const join = (...names: (string | false | null | undefined)[]) => names.filter(Boolean).join(" ");
+import { join } from "./classNames";
 
 export function SettingsGroup({ label, labelId, children, className }: { label?: ReactNode; labelId?: string; children: ReactNode; className?: string }) {
   return (

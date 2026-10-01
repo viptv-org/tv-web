@@ -1,3 +1,253 @@
+# TV package artifact qualification — 2026-09-30
+
+Existing workflow `build.yml` (ID `368648044`) was dispatched exactly once on
+published `refactor/backend-v2`. [Run 36690591107](https://github.com/viptv-org/tv-web/actions/runs/36690591107)
+records exact head `db9c5ab2da35867e83d970763f53a10628924501`.
+Hosting job `109806614046` and webOS job `109806614353` succeeded. Hosting ran
+all 234 tests in 40 files, production build and design/Core/video integrity checks.
+The overall run is **failed**, not green: Tizen job `109806614238` stopped at
+the Samsung certificate prerequisite because the four signing secrets are absent.
+No signed WGT was produced, no secret was requested and no signing gate bypassed.
+
+Downloaded hosting ZIP and developer-mode webOS IPK match their SHA256SUMS and
+build.json source/version/target declarations:
+
+- `viptv-tv-hosting-0.1.0-db9c5ab2.zip`:
+  `bb8068dd41f994caededfefeca69d3b8fcf500c72de840c71c7fe91a24896ca9`.
+- `tech.syek.viptv_0.1.0_all.ipk`:
+  `2cf6e5bade08a0ab27e26c676668718c6844b738929e4ee61d7741f96bd38f0a`.
+
+Hosting ZIP CRC/path checks passed; index/Solid/compatibility HTML references
+resolve to included `/tv/assets/` entries. Packaged Core WASM is byte-identical
+to the pinned Core `8ae9f81` snapshot. IPK ar/tar inventory, package/app manifests,
+version `0.1.0`, `1920x1080`, Back-history declaration and credential-free HTTPS
+launcher `https://viptv.syek.tech/tv/?platform=webos` passed static verification.
+The build manifest declares minimum webOS 22; it is not measured device support.
+
+Artifacts and authoritative final run/job logs remain in a new ignored local
+directory `artifacts/tv-db9c5ab-uo65Xx`, not in this commit. No hosted bundle was
+deployed, TV package installed, browser/native/physical media exercised or
+production account accessed. This artifact gate adds no application/frozen-wire,
+Android or original-checkout changes; signing and real-TV qualification remain open.
+
+# BE-002 local-only code retirement — 2026-09-30
+
+Core `8ae9f81bb753aaf2de53af5b594ead29845e1a8a` removes eight unused
+application-facing provider exports and rebuilds native/WASM bindings. The
+standalone backend provider parser remains. Core's baseline/candidate test
+compares 35 frozen v2/startup operations through native and actual WASM and
+verifies unchanged generated event/wire declarations.
+
+This viewing candidate removes the dormant anonymous shell, on-device addon
+registry/discovery/mode modules, executable local preview/test/env scaffolding
+and unused local-only CSS. Only the corresponding obsolete tests are retired;
+234 retained unit tests passed, as did application/test typechecks, production
+build and design/Core/video integrity. Existing stale local records are ignored,
+not read, uploaded, migrated into accounts or deleted automatically.
+
+All 36 trusted-HTTPS browser cases passed on the candidate's own loopback
+static host at port 18444, with API/art/media boundaries intercepted. New tests
+prove stale local keys cannot bypass authenticated/restored boot or sign-in and
+cause no retired-addon fetches. TLS was verified without bypass (`200 0`).
+The simulated SolidTV Home/live/category/reverse/cancellation checks passed on
+Tizen, Vizio and webOS. Desktop Home/sign-in captures were inspected privately;
+no active viewing geometry was redesigned and no physical parity is claimed.
+
+No shared HTTPS backend, real account, provider subscription, production host
+or database was changed. Android and installed desktop adoption of the new Core
+pin remains a coordinated next step. Real gateway/native/physical/signing and
+the other BE-002 integration gates remain separately unqualified.
+
+# BE-002 active raw guide and ordinary live playback — 2026-09-29
+
+Design pin `4e153a7daca300389049e5fcfd5c3bc0af5edbee`; Core pin
+`fba95c8f3ba00e97fbc460acc746d23a912795bc`. Imported snapshots remain verified
+and were not edited by hand. Ordinary React/Solid Home, live search, guide,
+category, exact-source and live-playback callers use v2. The guide retains its
+geometry, time window, 700ms hold, programme details and Back meaning. No swap
+control, category paging buttons, US classification or exact counts were added.
+
+React responsive browsing retains at most three 40-channel pages (120 rows),
+invisible eviction spacers and the visible scroll anchor; reverse cursors refetch
+evicted pages. Remote renderers replace one 40-channel page and preserve the
+programme time slot and backward edge focus. Categories replace one 200-item
+page at existing scroll/D-pad boundaries, with reverse refetch and no reserved
+provider IDs. Both renderers reject mixed catalog/snapshot data. EPG uses visible
+rows plus bounded lookahead; React retains at most 200 guide entries, and Solid
+retains only the current 40-row page, with a shared three-request admission limit
+even during rapid focus changes. Old filter/profile/page work cannot publish.
+
+Ordinary Watch resolves the exact raw channel to its opaque source, then starts,
+renews and releases a v2 logical lease; Vizio requires an authorized gateway.
+Cancelled delayed admission cannot stop newer live playback. Maximum-quality
+settings and local-only boot/sign-in/build entry points are retired; historical
+local registry/storage utilities and their tests remain archival. Shared Core
+types and video/gateway wire APIs were not changed by this completion pass.
+
+Final local evidence: 262 unit tests; application and all test TypeScript checks;
+design/Core/video integrity; production build; 34 trusted-HTTPS browser scenarios.
+Browser guide fixtures cross the retained-page limit, refetch backward, and cross
+200 provider categories without starting another channel request. React unit
+checks preserve a future programme slot across forward/reverse page crossings.
+Solid fixtures cover Vizio category boundary paging, exact-source live playback,
+Back focus, v2 release and 90 stable end-time frames on simulated Tizen, Vizio and
+webOS; a delayed-cancel fixture checks the newer player's progressing lifecycle
+and release ownership, rather than an intermittent cosmetic focus marker.
+Home/Live/Playback preferences captures were inspected privately at 1920x1080.
+The capture harness's obsolete sixth Maximum-quality row was updated to the
+remaining fifth row; no physical or measured reference-image parity is claimed.
+
+Reproduce browser checks with all fixture origins local:
+`VIPTV_TEST_API_ORIGIN=https://viptv.local.test:8443 VIPTV_TEST_BROWSER_ORIGIN=https://viptv.local.test:8443 PREVIEW_API_ORIGIN=https://viptv.local.test:8443 npx playwright test --config playwright.https.config.ts`.
+The existing shared HTTPS stack was retained, and TLS verified without `-k`
+(`200 0`). API/decoder/platform boundaries are fixtures. Real providers/gateway
+media, native TLS/redirect handling, physical remote/focus/4K/tracks and signed
+TV packages remain unqualified. No production deploy, device install, real
+account mutation or provider subscription occurred.
+
+# BE-002 raw live API preparation — 2026-09-29 (superseded by active cutover above)
+
+Core pin b75393e matches Android and adds bounded default/override cursor pages,
+category pages without invented counts, exact-channel source resolution and v2
+guide requests. The API adapter accepts only opaque IPTV source cards and retains
+catalog/profile/parent failures; malformed/legacy data never falls back to old
+routes. A fixture resolves the exact channel, admits its id through v2 and releases
+it without a discovery job or traffic to a media origin. 2160p facts survive.
+
+All 250 unit tests, application/test typechecks and build passed. Thirty-two
+trusted-local-HTTPS browser regressions passed with all API/preview origins set
+to the local host. Backend/API/decoder boundaries in those browser scenarios are
+fixtures. No viewing layout changed and no physical/device parity is claimed.
+Ordinary Guide/SolidTV/Home live callers still use legacy offset/count APIs;
+these explicit new methods prepare, but do not complete, their cursor cutover.
+No playlist swap UI or production deployment was introduced.
+
+# BE-002 native source headers — 2026-09-29
+
+Video pin 058bfb1 preserves required Authorization/Referer plus native Cookie/
+User-Agent, with explicit refusal on unsupported transports. A v2 API fixture
+passes original HTTP delivery headers through actual WASM normalization to the
+adapter request; source authorization never becomes backend control auth.
+244 unit tests, typechecks and build passed. The owning video passed 111 tests
+and build; native plugin c7e4aa6 passed Linux real header-required MP4 and HTTP401
+fixtures. Installed desktop and Windows playback qualification remain separate.
+
+Thirty-two trusted-HTTPS browser cases passed across two runs: the first passed
+27, while five preview-fixture tests failed because PREVIEW_API_ORIGIN was not
+set to the local origin. Those five passed with it set. For the full config use
+PREVIEW_API_ORIGIN, VIPTV_TEST_API_ORIGIN and VIPTV_TEST_BROWSER_ORIGIN set to
+https://viptv.local.test:8443. No production provider or deployment was used.
+
+SolidTV Home playback/release/failure/retry passed for simulated Tizen/Vizio/
+webOS. The required Vizio TvPlayer resume/seek capture passed and was inspected
+privately: readable title/times/controls with the selected play focus ring.
+No screenshot is committed and no physical TV or full visual-parity claim is made.
+
+# BE-002 active VOD playback — 2026-09-29
+
+Normal movie/exact-episode playback now uses v2 start/poll/renew/release through
+the shared intent mapper. Both React and SolidTV report their actual platform,
+monitor active lease renewal/expiry, and validate on foreground return. Refused
+renewal stops the decoder; network retries cannot extend the lease. A 60-second
+local ceiling bounds clock-skew effects during a control outage. Late renewals
+cannot restore released cache entries; stale controller stop acknowledgements
+cannot overwrite a newer session. Video pin f4218cb includes cancellable backend
+admission and a single gateway-proxy fallback for failed direct media transport,
+without forcing encoding for a network failure.
+
+Live channel starts remain explicitly legacy pending raw catalog migration.
+No automatic old-protocol fallback is added for VOD. Android/Roku playback
+migration, installed desktop/header parity, real gateway integration, native track
+qualification and the broader cutover checklist remain open.
+
+Validation: 243 unit tests, typechecking and production build passed. Video's
+106 tests/build passed; backend's 278 tests/strict Clippy passed with webOS HTML
+transport restrictions. Twenty-seven trusted-local-HTTPS browser cases passed
+for v2 source/playback/history, failed Next/Resume, foreground revocation, remote
+seek/track/exit, queue and responsive behavior. Decoder/API boundaries were
+synthetic, not real providers or physical TVs. Three initial broad cases failed
+because fixtures counted idempotent cleanup as new intent or treated gateway
+delivery as native direct; corrected protocol fixtures passed the full rerun.
+
+SolidTV's Home playback/exit/failure/retry harness passed for simulated Tizen,
+Vizio and webOS and asserts platform reporting plus v2 release. The required
+solid-shoot TvPlayer resume/seek flow passed for simulated Vizio; its screenshot
+was inspected privately, not committed and not claimed as full visual parity.
+No production deployment occurred.
+
+# BE-002 shared conversion/track mapping — 2026-09-29
+
+Core pin 4418f1ddb3c1640276f31b130deeb2d4ffa6873d matches Android. The generated
+v2 request includes conversion and bounded language/track choices. An API fixture
+passes actual WASM playbackV2Intent output through the control transport and
+verifies audio-only conversion, desktop identity, preferred language and unchanged
+2160p facts without a quality field. All 235 tests, typechecks and production build
+passed; both trusted-HTTPS discovery regressions passed. This is still explicit
+v2 API preparation, not activation of ordinary player calls or hardware evidence.
+
+# BE-002 v2 playback control transport — 2026-09-29
+
+Explicit v2 start/status/renew/release methods use shared-core request/response
+validation. Startup has a 45-second deadline; cleanup has an independent five-
+second deadline. Tests cover pending-to-ready, exact control origin, cancellation
+before/after admission, identical-body reconciliation after network/proxy errors,
+definitive refusal, mismatched ids, malformed deliveries, expiry and safe provider
+failures. These are API-boundary fixtures, not actual gateway/player acceptance.
+
+All 234 tests and application/test typechecking passed. The production build
+passed. Both existing trusted-HTTPS discovery regressions passed against the
+completed build. An earlier browser run overlapped the build and timed out before
+profile selection; it is not counted as passing evidence. The ordinary player
+path has not yet switched to these methods; capability/track/conversion mapping,
+renewal ownership/background recovery and all-platform cutover remain required.
+No production changes occurred.
+
+# BE-002 shared playback lease types — 2026-09-29
+
+Core pin f48f983454b21ba637b4580b426ea8e1647ffbb8 matches Android and adds strict
+v2 lease normalization plus canonical start/status/heartbeat/stop serialization.
+The owning core passed 57 native tests, strict Clippy and actual WASM contracts.
+TV-web passed 223 unit tests, production build/typechecks, and both trusted local-
+HTTPS discovery regressions after the pin change. Existing playback still uses
+legacy routes; client polling/renewal/cancellation and backend conversion/track
+preference parity remain required before activating this new contract. This
+checkpoint does not claim end-to-end v2 playback, devices or deployment.
+
+# BE-002 independent gateway player preparation — 2026-09-29
+
+Video pin 75d533a59a466fbe23cecc9a8883d4feece4de33 adds a delivery-kind field,
+scoped cross-origin/base-path media fetching and authorized native fallback.
+The owning video repo passed 103 tests, build, and real Chromium synthetic HLS
+playback from a second trusted HTTPS origin with redirect/credential checks.
+TV-web's 223 tests, production build, and the two local-HTTPS VOD discovery
+regressions passed after importing the committed source. These browser discovery
+checks do not establish full playback integration: the API client still needs
+v2 start/status/renew/release and shared-core envelope normalization. No installed
+Tauri or TV hardware qualification and no production deployment are claimed.
+
+# BE-002 VOD discovery adoption — 2026-09-29
+
+Core pin 4817b07f985d23687ca54df888222f5af96c0cb2 supplies v2 movie/exact-episode
+source requests and safe producer failures. All 223 unit tests and the production
+build (including application/test typechecking and pin checks) passed. Terminal
+empty failed discoveries discard their cached job so retry can start a new one;
+healthy sources survive another producer's failure. Authenticated HTTP rejects
+redirects. Live source requests and playback remain legacy pending cutover.
+
+Two Chromium acceptance cases passed against the built app at trusted local
+HTTPS (curl reported 200 and ssl_verify_result 0), with synthetic API/artwork
+boundaries and all unhandled external traffic denied. They verify visible safe
+connection-limit text, fresh-job retry, healthy partial results, and no legacy
+VOD requests. This exposed and fixed server errors being misclassified as a
+connectivity outage then erased by a successful health probe. HTTP failures now
+use the existing error surface; transport failures retain reconnect behavior.
+
+Reproduce after starting the local HTTPS stack with a disposable database:
+`VIPTV_TEST_API_ORIGIN=https://viptv.local.test:8443 VIPTV_TEST_BROWSER_ORIGIN=https://viptv.local.test:8443 npx playwright test --config playwright.https.config.ts v2-discovery.spec.ts`.
+The broader browser/device matrix remains separate; no production deployment or
+hardware qualification is claimed. Existing VOD browser fixtures were migrated
+to the new paths; mixed live fixtures retain their explicitly temporary bridge.
+
 # Hosted Vizio navigation aligned with Android TV — 2026-09-26
 
 Production delivery verified: `watch.syek.tech/?platform=vizio` serves the tested

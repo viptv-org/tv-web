@@ -1,5 +1,5 @@
 /*
- * Settings-family overlay layer (Settings, Watch on TV, local mode): the design-system overlay
+ * Settings-family overlay layer (Settings, Watch on TV): the design-system overlay
  * shells (src/ui/primitives/Overlays.tsx) plus the behaviour a modal needs.
  *
  * - Covers the body row only on desktop (under the title bar, right of the rail), the screen on

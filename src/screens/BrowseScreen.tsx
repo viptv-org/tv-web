@@ -379,7 +379,6 @@ export function BrowseScreen({
     if (screen !== "Search" || !responsive || (desktop && !webPage) || query.trim()) return;
     field.current?.focus({ preventScroll: true });
     // Arrival only: typing must not re-run this.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [screen]);
 
   // ---- Discover data ----------------------------------------------------

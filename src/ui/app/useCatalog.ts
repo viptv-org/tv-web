@@ -1,56 +1,23 @@
-import { createElement, memo, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { createElement, useEffect, useRef, useState } from "react";
 import { BookmarkMinus, BookmarkPlus, Circle, CircleCheck, CirclePlay, EyeOff, Info, List, RotateCcw, SkipBack } from "lucide-react";
 import { menuAnchor } from "../../screens/titleMenu";
 import { sourceKey } from "../../screens/titleSources";
-import QRCode from "qrcode";
 import {
   TvApi,
-  TvApiError,
   type MediaItem,
-  type MediaPresentation,
   type MediaSource,
-  type DevicePairing,
-  type TvProfile,
   type Catalog,
-  type PlaybackSession,
-  type PlaybackPreferences,
-  type PlaybackCapabilities,
   type SourcesPollState,
 } from "../../api";
-import {
-  createPlayer,
-  deliveryCapabilitiesFor,
-  PlaybackSessionController,
-  isTauriRuntime,
-  resolveTauriVideoInvoker,
-  type NativeVideoEngine,
-  type Player,
-  type PlayerPlatform,
-  type PlayerSnapshot,
-} from "@viptv/video";
-import { exactResumeSource, resolveNext } from "../continuation";
-import {
-  connectionSummary,
-  describeApiError,
-  nextConnectionFailure,
-  type ConnectionIssue,
-  type ErrorDetail,
-} from "../errors";
+import { exactResumeSource } from "../continuation";
 import { focusElement } from "../remote";
 import { enrichDetail, mergeEpisodeProgress, initialEpisode } from "../detailProgress";
-import { readStoredEngine, storeEngine } from "../enginePreference";
-import { createAutoplayTestLogger, probeAutoplayTestMode, probeEngineOverride } from "../../testing/autoplay-harness";
 import { catalogFilters, catalogDefaults } from "../catalogFilters";
 import { appendCatalogPage } from "../catalogPaging";
-import { BrowserNavigation, readBrowserRoute, safeRestoredRoute, type BrowserRoute, type SettingsSubpage } from "../browserNavigation";
-import { seekPinReleased, type BufferedRange } from "../SeekBar";
-import type { Screen } from "../screens";
-import { normalizeCore } from "../../core";
-import { captureScroll, desktopInvoker, initialPrefs, type BrowserSnapshot, type Choice, type ScrollAnchor } from "./appShared";
-import type { AppApi, CoreApi, DialogsApi, AuthApi, PlaybackEngineApi, PlaybackSessionApi, CatalogApi, NavigationApi } from "./useTvApp";
+import type { PlaybackSessionApi } from "./useTvApp";
 
 export function useCatalog(app: PlaybackSessionApi) {
-  const { api, autoResume, catalog, catalogs, catalogValues, currentScreen, episodes, epoch, error, fail, favorites, go, items, loadHome, modal, nextEpisode, nextSkip, notify, play, profile, query, queue, responsive, screen, searchScope, season, seek, session, setBusy, setCatalog, setCatalogValues, setDetailOrigin, setEpisodes, setError, setFavorites, setItems, setModal, setNextSkip, setQueue, setSearchPartial, setSearchRows, setSeason, setSelected, setSourceProvider, setSourceQuality, setSources, sourceFocusPending, sourceProvider, sourceQuality, sources } = app;
+  const { api, autoResume, catalogs, catalogValues, currentScreen, epoch, fail, favorites, go, items, loadHome, modal, nextEpisode, notify, play, profile, query, queue, responsive, screen, searchScope, setBusy, setCatalog, setCatalogValues, setDetailOrigin, setEpisodes, setError, setFavorites, setItems, setModal, setNextSkip, setQueue, setSearchPartial, setSearchRows, setSeason, setSelected, setSourceProvider, setSourceQuality, setSources, sourceFocusPending, sourceProvider, sourceQuality, sources } = app;
 
   const detail = async (item: MediaItem, origin?: Catalog) => {
     if (item.type === "live") { await play(item); return; }
@@ -151,6 +118,7 @@ export function useCatalog(app: PlaybackSessionApi) {
         }
       } catch {
         // The chooser reports discovery failures; a preview only goes quiet.
+        discoveries.current.delete(key);
       } finally {
         if (preview.current?.cancel === cancel) preview.current = undefined;
       }
@@ -227,6 +195,7 @@ export function useCatalog(app: PlaybackSessionApi) {
         await new Promise((r) => setTimeout(r, 1500));
       }
     } catch (e) {
+      discoveries.current.delete(key);
       fail(e);
     } finally {
       setBusy(false);
@@ -498,13 +467,13 @@ export function useCatalog(app: PlaybackSessionApi) {
           setSearchRows([...rows]);
         }
         if (searchScope === "all" || searchScope === "live") {
-          const live = await api.live(
-            { view: "us", search: query.trim(), limit: 80 },
+          const live = await api.liveV2(
+            { search: query.trim(), limit: 80 },
             { signal: scope.signal },
           );
           if (ticket !== epoch.current) return;
-          rows.push({ name: "Live TV", items: live.channels.slice(0, 24) });
-          results.push(...live.channels.slice(0, 24));
+          rows.push({ name: "Live TV", items: live.items.slice(0, 24) });
+          results.push(...live.items.slice(0, 24));
           setItems([...results]);
           setSearchRows([...rows]);
         }
@@ -535,10 +504,6 @@ export function useCatalog(app: PlaybackSessionApi) {
       return () => clearTimeout(timer);
     }
   }, [screen, modal, sources, sourceQuality, sourceProvider]);
-  const [playerNotice, setPlayerNotice] = useState<{ message: string; key: number }>();
-  // A refused seek is transient: the engine keeps playing, so the notice
-  // dismisses itself instead of blocking playback or re-popping from the
-  // session state.
 
   return { detail, discoverSources, previewSources, sourcePreview, toggle, manage, loadCatalog };
 }

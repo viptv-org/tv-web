@@ -8,7 +8,7 @@ import type { MediaItem, MediaSource } from "../api";
 export const sourceKey = (item: MediaItem) => `${item.type}:${item.id}`;
 
 /** The filter value of a source without a quality. */
-export const UNKNOWN_QUALITY = "Unknown";
+const UNKNOWN_QUALITY = "Unknown";
 
 export const qualityOf = (source: MediaSource) => source.quality ?? UNKNOWN_QUALITY;
 export const providerOf = (source: MediaSource) => source.sourceName ?? source.name;
@@ -32,18 +32,6 @@ export const qualityLabel = (quality: string) => (quality === UNKNOWN_QUALITY ? 
 
 export function matchesFilters(source: MediaSource, quality: string, provider: string) {
   return (quality === "All" || qualityOf(source) === quality) && (provider === "All" || providerOf(source) === provider);
-}
-
-/** "100 min" → "1 h 40 min" (the references' runtime form); other strings pass through. */
-export function formatRuntime(runtime: string | undefined) {
-  if (!runtime) return "";
-  const match = /^\s*(\d+)\s*(?:min|mins|minutes|m)?\s*$/i.exec(runtime);
-  if (!match) return runtime;
-  const minutes = Number(match[1]);
-  if (minutes < 60) return `${minutes} min`;
-  const hours = Math.floor(minutes / 60);
-  const rest = minutes % 60;
-  return rest ? `${hours} h ${rest} min` : `${hours} h`;
 }
 
 /** "S1 E2" for an episode, "" otherwise. */

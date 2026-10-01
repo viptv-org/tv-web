@@ -96,7 +96,7 @@ export class HomeShelfCache {
     try {
       const signal=controller.signal;
       const items=row.kind==="queue"?this.profile.queueItems:row.kind==="favorites"?this.profile.favoriteItems:
-        row.kind==="live"?(await this.api.live({view:"us",collection:"recent",limit:20},{signal})).channels:
+        row.kind==="live"?(await this.api.liveV2({collection:"recent",limit:20},{signal})).items:
         (await this.api.discover(browseRequest(row.catalog!)!,{signal})).items;
       if(signal.aborted||this.disposed||!this.retained.has(row.key))return;
       const cards=row.kind==="queue"?queueHomeCards(items):catalogHomeCards(items);

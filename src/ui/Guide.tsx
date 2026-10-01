@@ -10,7 +10,7 @@
 import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import { createPortal } from "react-dom";
 import { ChevronLeft, ChevronRight, Search, Tv, X } from "lucide-react";
-import { type Guide as GuideData, type MediaItem } from "../api";
+import { type Guide as GuideData } from "../api";
 import { TvButton, focusElement } from "./remote";
 import { TextEntry } from "./TextEntry";
 import { AutoLoad } from "./AutoLoad";
@@ -152,7 +152,7 @@ function PhoneLive({ props, guide }: { props: GuideProps; guide: Controller }) {
   const { onPlay, onMenu } = props;
   const {
     activeFilter, appendChannels, appending, channels, filterItems, formatShort, formatTime,
-    guides, loading, now, openDetails, query, selectFilter, submitQuery, total,
+    guides, loading, now, openDetails, query, selectFilter, submitQuery, hasNext,hasPrevious,previousChannels,paddingTop,paddingBottom,rowsRoot,failure,
   } = guide;
   const [searchOpen, setSearchOpen] = useState(false);
   const input = useRef<HTMLInputElement>(null);
@@ -182,20 +182,22 @@ function PhoneLive({ props, guide }: { props: GuideProps; guide: Controller }) {
           <Search aria-hidden="true" strokeWidth={2.2} />
         </button>
       </header>
-      <div className="vx-live-chips" role="group" aria-label="Channel category">
+      <div className="vx-live-chips" role="group" aria-label="Channel category" ref={guide.bindCategoryRoot}>
         {filterItems.map((filter) => (
           <button type="button" key={filter.id} className={chipClass()} aria-pressed={filter.id === activeFilter.id} onClick={() => selectFilter(filter)}>
             <span>{chipLabel(filter)}</span>
           </button>
         ))}
       </div>
-      <ul className="vx-live-list" aria-label="Channels">
+      <ul className="vx-live-list" aria-label="Channels" ref={node=>{rowsRoot.current=node}}>
+        {paddingTop>0 && <li aria-hidden="true" style={{height:paddingTop,flex:'none'}} />}
+        {hasPrevious && <li aria-hidden="true"><AutoLoad onLoad={previousChannels} disabled={appending||loading} generation={paddingTop} margin={0}/></li>}
         {channels.map((channel, index) => {
           const guideData = guides[channel.id];
           const { current, next } = nowNext(guideData?.programs ?? [], now);
           const details = () => openDetails(channel, current);
           return (
-            <li key={channel.id}>
+            <li key={channel.id} data-live-channel={channel.id}>
               <TvButton
                 id={`live-channel-${index}`}
                 className="vx-channel-row vx-live-item"
@@ -222,17 +224,16 @@ function PhoneLive({ props, guide }: { props: GuideProps; guide: Controller }) {
             </li>
           );
         })}
+        {channels.length>0 && hasNext && <li aria-hidden="true"><AutoLoad onLoad={appendChannels} disabled={appending||loading} generation={paddingTop+channels.length}/></li>}
+        {paddingBottom>0 && <li aria-hidden="true" style={{height:paddingBottom,flex:'none'}} />}
         {loading && !channels.length &&
           Array.from({ length: 8 }, (_, index) => <li key={`skeleton-${index}`} aria-hidden="true"><SkeletonRow variant="phone" /></li>)}
       </ul>
-      {channels.length > 0 && channels.length < total && (
-        <AutoLoad onLoad={appendChannels} disabled={appending || loading} generation={channels.length} />
-      )}
       {appending && <LoadingMore>Loading more channels…</LoadingMore>}
       {!loading && !channels.length && (
         <div className="vx-live-empty" role="status">
-          {query ? (
-            <EmptyState center icon={<Tv />} title="No channels or programmes match your search." />
+          {failure ? <EmptyState center icon={<Tv />} title={failure}/> : query ? (
+            <EmptyState center icon={<Tv />} title="No channels match your search." />
           ) : (
             <EmptyState center icon={<Tv />} title="No channels here yet.">Choose another category.</EmptyState>
           )}
@@ -247,7 +248,7 @@ function PhoneLive({ props, guide }: { props: GuideProps; guide: Controller }) {
               className="vx-search__input"
               type="search"
               aria-label="Search Live TV"
-              placeholder="Search channels or programs"
+              placeholder="Search channels"
               maxLength={128}
               value={query}
               onChange={(event) => submitQuery(event.target.value)}
@@ -305,20 +306,21 @@ function blockClass(cell: GuideCell, now: number, extra = "") {
 function DesktopLive({ props, guide }: { props: GuideProps; guide: Controller }) {
   const { onPlay, onMenu } = props;
   const {
-    activateCell, activeFilter, allTotal, appendChannels, appending, channels, filterItems, following,
+    activateCell, activeFilter, appendChannels, appending, channels, filterItems, following,
     guides, guideTimezone, loading, moveWindow, now, openDetails, query, restoreNow, scrollViewport,
-    selectFilter, setFollowing, submitQuery, total, visibleCells, visibleChannels, windowStart,
+    selectFilter, setFollowing, submitQuery, visibleCells, visibleChannels, windowStart,
+    paddingTop,paddingBottom,rowsRoot,previousChannels,hasPrevious,hasNext,failure,observeRows,
   } = guide;
   const compact = useCompact(true);
   const nowX = now >= windowStart && now < windowStart + RESPONSIVE_WINDOW_SECONDS ? deskSpan(now - windowStart) : undefined;
   const date = new Date(windowStart * 1000).toLocaleDateString([], { weekday: "long", month: "short", day: "numeric", timeZone: guideTimezone });
-  const countFor = (filter: GuideFilter) => (filter.id === "all" ? allTotal : filter.count);
+  const countFor = (filter: GuideFilter) => filter.count;
   const categoryLabel = (filter: GuideFilter) => {
     const count = countFor(filter);
     return filter.id !== "all" && count !== undefined ? `${filter.label}, ${count} channels` : filter.label;
   };
   const categories = compact ? (
-    <div className="vx-live-chips vx-live-chips--desk" role="group" aria-label="Channel categories">
+    <div className="vx-live-chips vx-live-chips--desk" role="group" aria-label="Channel categories" ref={guide.bindCategoryRoot}>
       {filterItems.map((filter) => (
         <button type="button" key={filter.id} className={chipClass()} aria-pressed={filter.id === activeFilter.id} onClick={() => selectFilter(filter)}>
           <span>{filter.label}</span>
@@ -326,7 +328,7 @@ function DesktopLive({ props, guide }: { props: GuideProps; guide: Controller })
       ))}
     </div>
   ) : (
-    <div className="vx-live-cats" role="group" aria-label="Channel categories">
+    <div className="vx-live-cats" role="group" aria-label="Channel categories" ref={guide.bindCategoryRoot}>
       {filterItems.map((filter) => {
         const count = countFor(filter);
         return (
@@ -352,7 +354,7 @@ function DesktopLive({ props, guide }: { props: GuideProps; guide: Controller })
               className="vx-search__input"
               type="search"
               aria-label="Search Live TV"
-              placeholder="Search channels or programs"
+              placeholder="Search channels"
               maxLength={128}
               value={query}
               onChange={(event) => submitQuery(event.target.value)}
@@ -387,12 +389,16 @@ function DesktopLive({ props, guide }: { props: GuideProps; guide: Controller })
             onScroll={(event) => {
               const element = event.currentTarget;
               if (element.scrollLeft > 8) setFollowing(false);
-              if (element.scrollHeight - element.scrollTop - element.clientHeight < 520) appendChannels();
+              observeRows();
+              if (hasPrevious && element.scrollTop < paddingTop+128) previousChannels();
+              const last=Array.from(rowsRoot.current?.querySelectorAll<HTMLElement>('[data-live-channel]') ?? []).at(-1);
+              if (hasNext && last && last.getBoundingClientRect().bottom-element.getBoundingClientRect().bottom<520) appendChannels();
+              if (hasNext && element.scrollHeight - element.scrollTop - element.clientHeight < 520) appendChannels();
             }}
           >
-            <div className="vx-live-guide__grid" style={{ width: `calc(var(--vx-live-channel-w) + ${RESPONSIVE_TIMELINE_WIDTH}px)` }}>
+            <div className="vx-live-guide__grid" ref={node=>{rowsRoot.current=node}} style={{ width: `calc(var(--vx-live-channel-w) + ${RESPONSIVE_TIMELINE_WIDTH}px)` }}>
               <div className="vx-live-guide__head" hidden={!channels.length}>
-                <span className="vx-live-guide__count">{total} channels</span>
+                <span className="vx-live-guide__count">Channels</span>
                 <div className="vx-live-guide__times" style={{ width: RESPONSIVE_TIMELINE_WIDTH }}>
                   {halfHours(windowStart, RESPONSIVE_WINDOW_SECONDS).map((time) => (
                     <span key={time} className="vx-live-guide__time" style={{ left: deskSpan(time - windowStart) }}>{timelineLabel(guide, time)}</span>
@@ -400,11 +406,12 @@ function DesktopLive({ props, guide }: { props: GuideProps; guide: Controller })
                   {nowX !== undefined ? <span className="vx-live-now-pill" style={{ left: nowX }}>{guide.formatShort(now)}</span> : null}
                 </div>
               </div>
+              {paddingTop>0 && <div aria-hidden="true" style={{height:paddingTop}}/>}
               {visibleChannels.map((channel, row) => {
                 const loaded = !!guides[channel.id];
                 const details = () => openDetails(channel, nowNext(guides[channel.id]?.programs ?? [], now).current);
                 return (
-                  <div className="vx-live-row" key={channel.id} data-testid={`guide-row-${row}`}>
+                  <div className="vx-live-row" key={channel.id} data-live-channel={channel.id} data-testid={`guide-row-${row}`}>
                     <button
                       type="button"
                       className="vx-live-channel"
@@ -444,11 +451,13 @@ function DesktopLive({ props, guide }: { props: GuideProps; guide: Controller })
                   </div>
                 );
               })}
+              {hasNext && <AutoLoad onLoad={appendChannels} disabled={appending||loading} generation={paddingTop+channels.length}/>}
+              {paddingBottom>0 && <div aria-hidden="true" style={{height:paddingBottom}}/>}
               {nowX !== undefined && visibleChannels.length > 0 ? (
                 <span className="vx-live-now-line" aria-hidden="true" style={{ left: `calc(var(--vx-live-grid-pad, 0px) + var(--vx-live-channel-w) + ${nowX}px)` }} />
               ) : null}
             </div>
-            {appending ? <LoadingMore>Loading more channels… {channels.length} of {total}</LoadingMore> : null}
+            {appending ? <LoadingMore>Loading more channels…</LoadingMore> : null}
             {!channels.length && (
               loading ? (
                 <div className="vx-live-guide__loading">
@@ -457,8 +466,8 @@ function DesktopLive({ props, guide }: { props: GuideProps; guide: Controller })
                 </div>
               ) : (
                 <div className="vx-live-empty" role="status">
-                  {query ? (
-                    <EmptyState icon={<Tv />} title="No matching US channels or current programmes.">Try a channel name, section, or another title.</EmptyState>
+                  {failure ? <EmptyState icon={<Tv />} title={failure}/> : query ? (
+                    <EmptyState icon={<Tv />} title="No channels match your search."/>
                   ) : (
                     <EmptyState icon={<Tv />} title="No channels here yet.">Choose another filter.</EmptyState>
                   )}
@@ -530,7 +539,7 @@ function TvLive({ props, guide }: { props: GuideProps; guide: Controller }) {
     <main className="vx-live vx-live--tv" onKeyDown={key}>
       <h1 className="vx-sr-only">Live TV</h1>
       <TvHero guide={guide} />
-      <div className="vx-live-tv__chips" role="group" aria-label="Channel category">
+      <div className="vx-live-tv__chips" role="group" aria-label="Channel category" ref={guide.bindCategoryRoot}>
         <TvButton
           id="guide-search"
           className={chipClass({ className: "vx-live-tv__search" })}
@@ -616,8 +625,8 @@ function TvLive({ props, guide }: { props: GuideProps; guide: Controller }) {
             <StatusLine className="vx-live-tv__status">Loading channels…</StatusLine>
           ) : (
             <div className="vx-live-empty" role="status">
-              {query ? (
-                <EmptyState icon={<Tv />} title="No matching US channels or current programmes.">Try a channel name, section, or another title.</EmptyState>
+              {guide.failure ? <EmptyState icon={<Tv />} title={guide.failure}/> : query ? (
+                <EmptyState icon={<Tv />} title="No channels match your search."/>
               ) : (
                 <EmptyState icon={<Tv />} title="No channels here yet.">Choose another filter.</EmptyState>
               )}

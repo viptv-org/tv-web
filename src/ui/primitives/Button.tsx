@@ -6,8 +6,8 @@
  */
 import { forwardRef, type ButtonHTMLAttributes, type ReactNode } from "react";
 
-export type ButtonKind = "primary" | "secondary" | "light" | "outline" | "destructive" | "quiet";
-export type ButtonSize = "default" | "detail" | "pill" | "small";
+type ButtonKind = "primary" | "secondary" | "light" | "outline" | "destructive" | "quiet";
+type ButtonSize = "default" | "detail" | "pill" | "small";
 
 export type ButtonClassOptions = {
   kind?: ButtonKind;
@@ -43,7 +43,7 @@ export function ButtonContent({ icon, loading, loadingLabel, children }: { icon?
   );
 }
 
-export type ButtonProps = Omit<ButtonHTMLAttributes<HTMLButtonElement>, "className"> & ButtonClassOptions & {
+type ButtonProps = Omit<ButtonHTMLAttributes<HTMLButtonElement>, "className"> & ButtonClassOptions & {
   /** Leading icon (lucide or PlayIcon). */
   leading?: ReactNode;
   /** Shows the spinner in place of the icon and sets aria-busy; label reads loadingLabel ("Saving…"). */
@@ -67,18 +67,6 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
     </button>
   );
 });
-
-/** Desktop split button: Play + a chevron that opens the source drawer (one focus ring around both). */
-export function SplitButton({ icon, label, onPlay, chevron, onChoose, chooseLabel = "Choose source", disabled }: {
-  icon?: ReactNode; label: ReactNode; onPlay: () => void; chevron: ReactNode; onChoose: () => void; chooseLabel?: string; disabled?: boolean;
-}) {
-  return (
-    <div className="vx-split">
-      <button type="button" className="vx-split__main" onClick={onPlay} disabled={disabled}>{icon}{label}</button>
-      <button type="button" className="vx-split__more" aria-label={chooseLabel} aria-haspopup="dialog" onClick={onChoose} disabled={disabled}>{chevron}</button>
-    </div>
-  );
-}
 
 /** TV source pill content ("1080p LordStreams"); put it in a TvButton with className="vx-source-pill". */
 export function SourcePillContent({ quality, provider }: { quality: ReactNode; provider: ReactNode }) {

@@ -36,6 +36,7 @@ const key = `viptv-device:${origin}`;
 
 const api = new TvApi({
   baseUrl: origin,
+  playbackPlatform: platform,
   allowInsecurePreview: preview,
   sessionStore: {
     withLock: navigator.locks

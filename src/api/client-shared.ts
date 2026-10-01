@@ -2,37 +2,19 @@
    session-store types, and the module-level decode helpers used by both
    halves of the TvApi class. */
 import { normalizeCore as normalizeRust } from "../core";
-import { CoreBridge } from "../../vendor/core/wasm/viptv_core";
-import { createCoreDriver } from "../../vendor/core/runtime/driver";
-import { createHttpTransport } from "../../vendor/core/runtime/index";
 
-export function normalizeCore<T>(kind: string, value: unknown, origin = ""): T {
+export function normalizeResponse<T>(kind: string, value: unknown, origin = ""): T {
   try { return normalizeRust<T>(kind, value, origin); }
   catch { throw new TvApiError(200, "Invalid server response", "invalid_response"); }
 }
 import type {
-  Catalog,
-  DevicePairing,
   DeviceTokenSet,
-  DiscoverPage,
-  DiscoverRequest,
-  Guide,
   JsonObject,
   JsonValue,
-  LiveCategories,
-  LivePage,
-  MediaDetail,
   MediaItem,
   Page,
-  ParentStatus,
-  ParentPinChange,
   PlaybackPreferences,
-  PlaybackSession,
-  PlaybackStart,
-  StreamDiscovery,
-  StreamPoll,
   TvApiErrorShape,
-  TvIdentity,
   TvProfile,
 } from "./types";
 
@@ -70,6 +52,7 @@ export class MemoryDeviceSessionStore implements DeviceSessionStore {
   }
 }
 export interface TvApiOptions {
+  readonly playbackPlatform?: import('../../vendor/core/typescript/wire').PlaybackPlatform | 'html5' | 'tauri';
   /** Development-only, same-origin HTTP preview on the trusted LAN. */
   readonly allowInsecurePreview?: boolean;
   readonly baseUrl: string;
@@ -130,47 +113,28 @@ export function safeJson(response: Response): Promise<JsonValue> {
     }
   });
 }
-export function clientMessage(status: number) {
-  if (status === 401) return "Pairing expired";
-  // 403 covers both a profile that cannot use this action and a request the
-  // server refused for another reason, such as an origin or lease mismatch.
-  // Say what is actually known rather than blaming the profile.
-  if (status === 403) return "VIPTV refused that request";
-  if (status === 404) return "This item is no longer available";
-  if (status === 429) return "Please try again shortly";
-  return "VIPTV could not complete that request";
-}
 export function isAbort(value: unknown): value is DOMException {
   return value instanceof DOMException && value.name === "AbortError";
 }
 export function tokenSet(v: JsonObject): DeviceTokenSet {
-  return normalizeCore("tokens", v);
+  return normalizeResponse("tokens", v);
 }
 export function profile(v: JsonObject): TvProfile {
-  return normalizeCore("profile", v);
+  return normalizeResponse("profile", v);
 }
 
 
 export function mediaItem(v: JsonObject): MediaItem {
-  return normalizeCore("media", v);
+  return normalizeResponse("media", v);
 }
 export function page(v: JsonObject): Page<MediaItem> {
-  return normalizeCore("page", v);
-}
-export function playback(v: JsonObject, origin: string): PlaybackSession {
-  return normalizeCore("playback", v, origin);
+  return normalizeResponse("page", v);
 }
 export function preferences(v: JsonObject): PlaybackPreferences {
-  return normalizeCore("preferences", v);
+  return normalizeResponse("preferences", v);
 }
-export function itemRequest(item: MediaItem): JsonObject {
-  return normalizeCore("itemRequest", item);
-}
-/** Server playback URLs are root-relative capabilities. AVPlay requires an absolute HTTPS URL. */
-
-
 export function snakePreferences(v: Partial<PlaybackPreferences>): JsonObject {
-  return normalizeCore("preferencesRequest", v);
+  return normalizeResponse("preferencesRequest", v);
 }
 export function params(entries: Record<string, string | number | undefined>) {
   const p = new URLSearchParams();
@@ -202,7 +166,7 @@ export function arrayValue(value: JsonValue) {
   if (Array.isArray(value)) return value.filter(isObject);
   throw new TvApiError(200, "Invalid server response", "invalid_response");
 }
-export function isObject(value: JsonValue): value is JsonObject {
+function isObject(value: JsonValue): value is JsonObject {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 export function stringAt(v: JsonObject, key: string) {
@@ -231,7 +195,7 @@ export function optionalBool(v: JsonObject, key: string) {
   return typeof value === "boolean" ? value : undefined;
 }
 export function clean(value: JsonObject): JsonObject {
-  return normalizeCore("clean", value);
+  return normalizeResponse("clean", value);
 }
 
 export function minimalItem(item: Pick<MediaItem, "id" | "type">): MediaItem {

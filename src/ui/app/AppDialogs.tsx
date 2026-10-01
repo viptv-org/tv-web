@@ -26,8 +26,7 @@ import { Banner, Preparing, StartupCover, StatusLine } from "../primitives/Feedb
 import type { Choice, ModalOptions } from "./appShared";
 import { isCurrentChoice, isDismissChoice, modalLayout, type ModalRequest } from "./dialogModel";
 import type { AppApi } from "./useTvApp";
-
-const join = (...names: (string | false | null | undefined)[]) => names.filter(Boolean).join(" ");
+import { join } from "../primitives/classNames";
 
 export function AppDialogs({ app }: { app: AppApi }) {
   const { api, bootingHome, busy, items, responsive, casting, closeCast, connection, editingProfile, entry, error, modal, preparing, profiles, screen, setConnection, setEditingProfile, setEntry, setError, setModal, setProfiles, setStartupAttempt, toast } = app;

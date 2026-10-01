@@ -12,7 +12,7 @@ export type ProfileFixture = {
 };
 
 export async function json(route: Route, body: unknown, status = 200) {
-  await route.fulfill({ status, contentType: 'application/json', headers: corsHeaders, body: JSON.stringify(body) });
+  await route.fulfill({ status, contentType: 'application/json', headers: corsHeaders, body: JSON.stringify(playbackV2Fixture(route, body, status)) });
 }
 
 export async function fixtureImage(route: Route) {
@@ -136,15 +136,15 @@ export async function installBackend(page: Page, profileFixture?: ProfileFixture
     if (path === '/api/discover') return json(route, { metas: [movie], has_more: false, next_skip: null });
     if (path === '/api/meta/movie/tt-movie') return json(route, { meta: movie });
     if (path === '/api/meta/series/tt-show') return json(route, { meta: { id: 'tt-show', type: 'series', name: 'Fixture Show', videos: [episode] } });
-    if (path === '/api/streams' && route.request().method() === 'POST') return json(route, { id: 'job-1' });
-    if (path === '/api/streams/job-1') return json(route, { events: [{ seq: 1, source: 'addon:2', streams: [{ id: 'stream-1', name: '1080p', title: 'Moonfall 1080p', filename: 'moonfall.mkv', source_addon_id: 'addon:2', source_name: 'Fixture Addon', source_quality: '1080p', url: 'https://upstream.invalid/private' }] }], done: true });
+    if (route.request().method() === 'POST' && path === (route.request().postDataJSON()?.type === 'live' ? '/api/streams' : '/api/v2/streams')) return json(route, { id: 'job-1' });
+    if (path === '/api/streams/job-1' || path === '/api/v2/streams/job-1') return json(route, { events: [{ seq: 1, source: 'addon:2', streams: [{ id: 'stream-1', name: '1080p', title: 'Moonfall 1080p', filename: 'moonfall.mkv', source_addon_id: 'addon:2', source_name: 'Fixture Addon', source_quality: '1080p', url: 'https://upstream.invalid/private' }] }], done: true });
     if (path === '/api/profiles/1/favorites/toggle') return json(route, { saved: true });
     if (path === '/api/live') return json(route, { channels: [channel], total: 1 });
     if (path === '/api/guide/family-news') return json(route, { timezone: 'UTC', programs: [{ title: 'News Now', start: 0, end: 4_102_444_800, description: 'Live fixture.' }] });
     if (path === '/api/parent/status') return json(route, { pin_configured: true, unlocked: false, restricted: false });
     if (path === '/api/parent/unlock') return json(route, { unlocked: true });
     if (path === '/api/addons' && route.request().method() === 'GET') return json(route, []);
-    if (path === '/api/playback' && route.request().method() === 'POST') return json(route, { id: 'playback-1', url: '/media/playback-1/capability/index.m3u8', format: 'hls', mode: 'remux', video_mode: 'copy', audio_mode: 'copy', position: 0, live: false, duration: 120, audio_tracks: [], subtitle_tracks: [], subtitles_supported: false });
+    if ((path === '/api/playback' || path === '/api/v2/playback') && route.request().method() === 'POST') return json(route, { id: 'playback-1', url: '/media/playback-1/capability/index.m3u8', format: 'hls', mode: 'remux', video_mode: 'copy', audio_mode: 'copy', position: 0, live: false, duration: 120, audio_tracks: [], subtitle_tracks: [], subtitles_supported: false });
     if (path === '/api/playback' || path.includes('/heartbeat') || path.includes('/progress') || path.includes('/continue/') || path.includes('/preferences')) return json(route, { ok: true });
     return json(route, { error: `unhandled ${path}` }, 404);
   });
@@ -215,3 +215,4 @@ for (const platform of ['tizen', 'vizio'] as const) {
     assertNoPageErrors();
   });
 }
+import { playbackV2Fixture } from './playbackV2Fixture';

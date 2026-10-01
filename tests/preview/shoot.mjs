@@ -26,12 +26,11 @@ const root = resolve(here, '../..');
 export const outDir = process.env.PREVIEW_OUT ? resolve(process.env.PREVIEW_OUT) : join(root, 'test-results/preview');
 export const referenceIndex = JSON.parse(readFileSync(join(referenceDir, 'screens/index.json'), 'utf8'));
 export const reference = name => referenceIndex.find(entry => entry.name === name);
-/** Dev servers: the normal build, and a local-mode build (VITE_VIPTV_LOCAL_MODE=1).
-    Keep off the Fetch "bad ports" list (e.g. 4190): Node and Chromium refuse them. */
-const servers = { app: { port: 4180, local: false }, local: { port: 4181, local: true } };
+/** One ordinary account-backed preview server. */
+const servers = { app: { port: 4180 } };
 /* Env a harness server must (not) have: a LAN-preview or custom API origin
    would send API calls to a real backend instead of the mock. */
-const UNSAFE_ENV = ['VITE_LAN_PREVIEW', 'VITE_API_ORIGIN', 'VITE_VIPTV_LOCAL_MODE'];
+const UNSAFE_ENV = ['VITE_LAN_PREVIEW', 'VITE_API_ORIGIN'];
 const FREEZE = '*,*::before,*::after{animation:none!important;transition:none!important;caret-color:transparent!important}';
 
 const args = process.argv.slice(2);
@@ -59,14 +58,14 @@ async function reachable(port) {
 }
 /** The Vite env the server on `port` compiled in (read from a transformed module). */
 async function serverEnv(port) {
-  const source = await (await fetch(`http://127.0.0.1:${port}/src/local/capability.ts`, { signal: AbortSignal.timeout(5000) })).text();
+  const source = await (await fetch(`http://127.0.0.1:${port}/src/main.tsx`, { signal: AbortSignal.timeout(5000) })).text();
   const match = /import\.meta\.env = (\{[^;]*\});/.exec(source);
   return match ? JSON.parse(match[1]) : undefined;
 }
 async function checkServer(kind) {
   const server = servers[kind];
   const env = await serverEnv(server.port).catch(() => undefined);
-  const ok = env && env.DEV && (env.VITE_VIPTV_LOCAL_MODE === '1') === server.local
+  const ok = env && env.DEV
     && !env.VITE_LAN_PREVIEW && !env.VITE_API_ORIGIN;
   if (!ok) throw new Error(`port ${server.port} is serving something other than the preview ${kind} dev server (env ${JSON.stringify(env)}); stop it or free the port`);
 }
@@ -78,8 +77,7 @@ async function ensureServer(kind) {
   if (await reachable(server.port)) { await checkServer(kind); return server.port; }
   const env = { ...process.env };
   for (const name of UNSAFE_ENV) delete env[name];
-  if (server.local) env.VITE_VIPTV_LOCAL_MODE = '1';
-  const configArgs = ['--config', join(here, server.local ? 'vite.local.config.mjs' : 'vite.app.config.mjs')];
+  const configArgs = ['--config', join(here, 'vite.app.config.mjs')];
   const child = spawn(process.execPath, [join(root, 'node_modules/vite/bin/vite.js'), ...configArgs, '--port', String(server.port), '--strictPort', '--host', '127.0.0.1'], {
     cwd: root, env, stdio: 'ignore', detached: flag('--keep'),
   });
@@ -173,7 +171,7 @@ export async function shoot(browser, name, { debug = false } = {}) {
   if (spec.notReachable) throw new Error(`${name} is not reachable yet: ${spec.notReachable}`);
   const frame = frameFor(entry, spec);
   const previewUrl = process.env.PREVIEW_URL;
-  const port = previewUrl ? undefined : await ensureServer(spec.local ? 'local' : 'app');
+  const port = previewUrl ? undefined : await ensureServer('app');
   const context = await browser.newContext({
     viewport: { width: frame.width, height: frame.height }, deviceScaleFactor: 1,
     ...(frame.phone ? { isMobile: true, hasTouch: true } : {}),

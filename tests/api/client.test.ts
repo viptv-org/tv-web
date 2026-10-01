@@ -1,9 +1,23 @@
 import { describe, expect, it } from "vitest";
 import { MemoryDeviceSessionStore, TvApi } from "../../src/api";
-import { apiFor, deviceTokens, response, scripted, type Call } from "./client-helpers";
+import { apiFor, response, scripted } from "./client-helpers";
+import { mediaItem } from "../../src/api/client-shared";
 
 
 describe("TvApi device and media boundary", () => {
+  it("uses account-owned v2 VOD discovery and surfaces safe producer failures", async () => {
+    const fake=scripted(response({id:"job"}),response({events:[{seq:1,source:"iptv:1",streams:[],error_code:"provider_connection_limit",error:"https://provider.invalid/private-token"}],done:true}));
+    const api=apiFor(fake.fetcher);
+    await api.sources(mediaItem({id:"tt123",type:"movie",name:"Movie"}));
+    expect(fake.calls[0].input).toBe("https://viptv.example/api/v2/streams");
+    expect(fake.calls[0].init?.redirect).toBe("error");
+    await expect(api.pollSourcesStep("job",{after:0,sources:[],polls:0})).rejects.toMatchObject({code:"provider_connection_limit",message:expect.stringContaining("Stop another stream")});
+  });
+  it("retains healthy sources when another producer fails",async()=>{
+    const fake=scripted(response({events:[{seq:1,source:"iptv:1",streams:[],error_code:"provider_rate_limited"},{seq:2,source:"addon:2",streams:[{id:"s",name:"Available"}]}],done:true}));
+    const step=await apiFor(fake.fetcher).pollSourcesStep("job",{after:0,sources:[],polls:0});
+    expect(step.sources.map(s=>s.id)).toEqual(["s"]);expect(step.state.errors?.[0].code).toBe("provider_rate_limited");
+  });
   it("uses the existing device-pairing wire contract", async () => {
     const fake = scripted(
       response({
@@ -150,7 +164,7 @@ describe("TvApi device and media boundary", () => {
     await api.restoreSession();
     const step = await api.pollSourcesStep("job/1", { after: 0, sources: [], polls: 0 });
     expect(fake.calls[0].input).toBe(
-      "https://viptv.example/api/streams/job%2F1?after=0",
+      "https://viptv.example/api/v2/streams/job%2F1?after=0",
     );
     expect(step.sources[0]).toMatchObject({
       id: "stream-1",

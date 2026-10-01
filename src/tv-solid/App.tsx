@@ -1,7 +1,7 @@
 /** @jsxImportSource @solidtv/solid */
 import { CollapsedRail } from "./CollapsedRail";
 import { defineScreen, TvView, TvText, KeyedFor } from "./runtime";
-import { batch, For, Show } from "solid-js";
+import { batch, Show } from "solid-js";
 import type { ElementNode } from "@solidtv/solid";
 import { EntryButton } from "./EntryButton";
 import { TitleInfo, NativeTextPanel } from "./TitleInfo";
@@ -184,6 +184,10 @@ import {
 import { exactResumeSource } from "../ui/continuation";
 
 type TvPlatform = "tizen" | "vizio" | "webos";
+/** Deferred TV controls expose an optional reveal() that mounts their native node. */
+type Revealable = { reveal?: () => void };
+/** Narrows a `$select` result to the optional reveal() it may expose. */
+const $selectRevealable = (node: unknown) => node as Revealable | undefined;
 const px = (name: keyof typeof tokens) =>
   Number.parseFloat(String(tokens[name]));
 // SolidTV's web-font texture is wider than the DOM glyph run at the same
@@ -302,6 +306,15 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
   let searchCanonicalHeadings: SearchHeadingView[] = [];
   let searchCanonicalSections = new Map<string, SearchCardView[]>();
   let liveGeneration = 0;
+  let liveNextCursor: string | undefined;
+  let livePreviousCursor: string | undefined;
+  let liveQueryKey = '';
+  let liveCategoryNext: string | null = null;
+  let liveCategoryPrevious: string | null = null;
+  let liveCategoryPending = false;
+  let liveGuideBusy = 0;
+  const liveGuidePending = new Set<string>();
+  let liveSnapshot: { catalogId: string | null; generation: string | null } | undefined;
   let liveScope: ReturnType<TvApi["createScope"]> | undefined;
   let liveClockTimer: ReturnType<typeof setInterval> | undefined;
   let disposeWebos: (() => void) | undefined;
@@ -628,7 +641,6 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         liveNow: Date.now() / 1000,
         liveWindowStart: halfHour(),
         liveFollowing: true,
-        liveTotal: 0,
         liveOffset: 0,
         liveCategories: [] as LiveCategory[],
         liveFilterId: "all",
@@ -729,7 +741,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
           | "signout"
           | "addonManage"
           | "addonRemove",
-        settingsDialogKey: "quality" as keyof PlaybackPreferences,
+        settingsDialogKey: "audioLanguage" as keyof PlaybackPreferences,
         settingsDialogAddon: null as JsonObject | null,
         settingsChoiceIndex: 0,
         settingsDialogView: {
@@ -1552,15 +1564,11 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
       },
       revealHomeControls() {
         for (let index = 0; index < 3; index++)
-          (
-            this.$select(`heroAction${index}`) as unknown as {
-              reveal?: () => void;
-            }
-          )?.reveal?.();
+          $selectRevealable(this.$select(`heroAction${index}`))?.reveal?.();
         for (let shelf = 0; shelf < this.homeShelves.length; shelf++) {
           const start = shelf === this.homeShelfIndex ? this.homeShelfStart : 0;
           for (let slot = 0; slot < Math.min(6, this.homeShelves[shelf].cards.length - start); slot++)
-            (this.$select(`homeCard${shelf}Slot${slot}`) as unknown as { reveal?: () => void })?.reveal?.();
+            $selectRevealable(this.$select(`homeCard${shelf}Slot${slot}`))?.reveal?.();
         }
       },
       focusHomeAction(index: number) {
@@ -1694,9 +1702,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         setTimeout(() => {
           if (!this.railExpanded) return;
           for (let index = 0; index < 7; index++)
-            (
-              this.$select(`rail${index}`) as unknown as { reveal?: () => void }
-            )?.reveal?.();
+            $selectRevealable(this.$select(`rail${index}`))?.reveal?.();
         }, 0);
       },
       focusRail(index: number) {
@@ -2035,22 +2041,14 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         setTimeout(() => {
           if (this.phase !== "discover") return;
           for (let index = 0; index < 12; index++)
-            (
-              this.$select("discoverScreen")?.$select(
-                `discoverCard${index}`,
-              ) as unknown as { reveal?: () => void }
-            )?.reveal?.();
+            $selectRevealable(this.$select("discoverScreen")?.$select(`discoverCard${index}`))?.reveal?.();
         }, 0);
       },
       revealDiscoverChips() {
         setTimeout(() => {
           if (this.phase !== "discover") return;
           for (let index = 0; index < this.discoverChips.length; index++)
-            (
-              this.$select("discoverScreen")?.$select(
-                `discoverChip${index}`,
-              ) as unknown as { reveal?: () => void }
-            )?.reveal?.();
+            $selectRevealable(this.$select("discoverScreen")?.$select(`discoverChip${index}`))?.reveal?.();
         }, 0);
       },
       focusDiscoverChip(index: number) {
@@ -2240,11 +2238,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
           this.discoverBackLabel = "BACK";
           this.discoverCancelLabel = "Cancel";
           for (let index = 0; index < 8; index++)
-            (
-              this.$select(`discoverOption${index}`) as unknown as {
-                reveal?: () => void;
-              }
-            )?.reveal?.();
+            $selectRevealable(this.$select(`discoverOption${index}`))?.reveal?.();
           this.focusDiscoverOption(
             Math.max(
               0,
@@ -2476,11 +2470,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
       },
       revealLibrarySegments() {
         for (let index = 0; index < 2; index++)
-          (
-            this.$select("libraryScreen")?.$select(
-              `librarySegment${index}`,
-            ) as unknown as { reveal?: () => void }
-          )?.reveal?.();
+          $selectRevealable(this.$select("libraryScreen")?.$select(`librarySegment${index}`))?.reveal?.();
       },
       refreshLibraryCards() {
         const visible = this.libraryItems.slice(
@@ -2496,11 +2486,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
           if (this.phase !== "library" && this.sourceReturnOrigin !== "library")
             return;
           for (let index = 0; index < 12; index++)
-            (
-              this.$select("libraryScreen")?.$select(
-                `libraryCard${index}`,
-              ) as unknown as { reveal?: () => void }
-            )?.reveal?.();
+            $selectRevealable(this.$select("libraryScreen")?.$select(`libraryCard${index}`))?.reveal?.();
         }, 0);
       },
       focusLibrarySegment(index: number) {
@@ -2696,11 +2682,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
       },
       revealSearchKeys() {
         for (let index = 0; index < searchKeys.length; index++)
-          (
-            this.$select("searchScreen")?.$select(
-              `searchKey${index}`,
-            ) as unknown as { reveal?: () => void }
-          )?.reveal?.();
+          $selectRevealable(this.$select("searchScreen")?.$select(`searchKey${index}`))?.reveal?.();
       },
       setSearchQuery(value: string) {
         const next = value.slice(0, 256);
@@ -2762,8 +2744,8 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
               publish();
             }
           };
-          const liveTask=api.live({view:"us",search:query,limit:80},{signal:scope.signal}).then(live=>{
-            rows[searchable.length]={name:"Live TV",items:live.channels};publish();
+          const liveTask=api.liveV2({search:query,limit:80},{signal:scope.signal}).then(live=>{
+            rows[searchable.length]={name:"Live TV",items:live.items};publish();
           }).catch(()=>{partial=true;});
           await Promise.all([liveTask,...Array.from({length:Math.min(3,searchable.length)},worker)]);
           if (generation !== searchGeneration || scope.signal.aborted) return;
@@ -2838,11 +2820,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         setTimeout(() => {
           if (this.phase !== "search") return;
           for (const card of this.searchVisibleCards)
-            (
-              this.$select("searchScreen")?.$select(
-                `searchCard${card.position}`,
-              ) as unknown as { reveal?: () => void }
-            )?.reveal?.();
+            $selectRevealable(this.$select("searchScreen")?.$select(`searchCard${card.position}`))?.reveal?.();
         }, 40);
       },
       focusSearchKey(index: number) {
@@ -3026,13 +3004,15 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         const generation = ++liveGeneration;
         liveScope?.abort();
         clearInterval(liveClockTimer);
+        liveCategoryNext = null; liveCategoryPrevious = null; liveCategoryPending = false; liveSnapshot = undefined;
+        liveGuideBusy = 0; liveGuidePending.clear();
         const scope = api.createScope();
         liveScope = scope;
         // Fetch while the first guide subtree mounts instead of serializing
         // network setup behind its canvas nodes and text textures.
         const initialGuide = Promise.allSettled([
-          api.liveCategories("us", { signal: scope.signal }),
-          api.live({ view: "us", offset: 0, limit: 40 }, { signal: scope.signal }),
+          api.liveCategoriesV2({limit:200}, { signal: scope.signal }),
+          api.liveV2({limit:40}, { signal: scope.signal }),
         ]);
         batch(() => {
         this.railExpanded = false;
@@ -3055,6 +3035,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         this.liveFilterId = "all";
         this.liveFilterIndex = 1;
         this.liveOffset = 0;
+        liveNextCursor=undefined; livePreviousCursor=undefined; liveQueryKey='all\0';
         liveCanonicalChannels = [];
         this.liveGuides = {};
         this.liveStatus = "Loading channels…";
@@ -3076,18 +3057,31 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         });
         const [categoriesResult, channelsResult] = await initialGuide;
         if (generation !== liveGeneration || scope.signal.aborted) return;
+        if (categoriesResult.status === 'fulfilled' && channelsResult.status === 'fulfilled' &&
+            (categoriesResult.value.catalogId !== channelsResult.value.catalogId || categoriesResult.value.generation !== channelsResult.value.generation)) {
+          this.liveCategories = [];
+          this.liveStatus = 'This playlist changed while you were browsing. Reload the guide.';
+          this.refreshLiveView();
+          return;
+        }
         batch(() => {
-        if (categoriesResult.status === "fulfilled")
-          this.liveCategories = [...categoriesResult.value.categories];
+        if (categoriesResult.status === "fulfilled") {
+          this.liveCategories = categoriesResult.value.items.map(item=>({...item,raw:{}}));
+          liveCategoryNext = categoriesResult.value.nextCursor;
+          liveCategoryPrevious = categoriesResult.value.previousCursor;
+          liveSnapshot = categoriesResult.value;
+        }
         liveCanonicalFilters = liveFilters(this.liveCategories, "all");
         this.liveFilters = liveCanonicalFilters.map((filter) => ({
           ...filter, x:filter.x-this.liveFilterOffset,
         }));
         if (channelsResult.status === "fulfilled") {
-          liveCanonicalChannels = channelsResult.value.channels.map(
+          liveSnapshot = channelsResult.value;
+          liveCanonicalChannels = channelsResult.value.items.map(
             (channel) => ({ ...channel }),
           );
-          this.liveTotal = channelsResult.value.total;
+          liveNextCursor=channelsResult.value.nextCursor??undefined;
+          livePreviousCursor=channelsResult.value.previousCursor??undefined;
           this.liveStatus = liveCanonicalChannels.length
             ? ""
             : "No channels here yet. Choose another filter.";
@@ -3121,37 +3115,29 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         generation: number,
         scope: ReturnType<TvApi["createScope"]>,
       ) {
+        if (scope.signal.aborted || generation !== liveGeneration || liveGuideBusy >= 3) return;
         const first = Math.max(0, this.liveSelectedRow - 3);
         const needed = liveCanonicalChannels
           .slice(first, first + 7)
-          .filter((channel) => !this.liveGuides[channel.id]);
-        const gathered: Record<string, Guide> = {};
-        let cursor = 0;
-        const worker = async () => {
-          while (cursor < needed.length && !scope.signal.aborted) {
-            const channel = needed[cursor++];
+          .sort((a,b)=>Number(b.id===liveCanonicalChannels[this.liveSelectedRow]?.id)-Number(a.id===liveCanonicalChannels[this.liveSelectedRow]?.id))
+          .filter((channel) => !this.liveGuides[channel.id] && !liveGuidePending.has(channel.id))
+          .slice(0,3-liveGuideBusy);
+        await Promise.all(needed.map(async channel => {
+            liveGuideBusy++; liveGuidePending.add(channel.id);
+            let guide: Guide = {programs:[],timezone:''};
             try {
-              const guide = await api.guide(channel.id, {
+              guide = await api.guideV2(channel.id, {
                 signal: scope.signal,
               });
-              if (generation !== liveGeneration || scope.signal.aborted) return;
-              gathered[channel.id] = guide;
             } catch {
               /* A channel still has an actionable no-guide block. */
             }
-          }
-        };
-        await Promise.all(
-          Array.from({ length: Math.min(3, needed.length) }, worker),
-        );
-        if (
-          generation === liveGeneration &&
-          !scope.signal.aborted &&
-          Object.keys(gathered).length
-        ) {
-          this.liveGuides = { ...this.liveGuides, ...gathered };
-          this.refreshLiveView();
-        }
+            if (generation !== liveGeneration || scope.signal.aborted) return;
+            liveGuideBusy--; liveGuidePending.delete(channel.id);
+            this.liveGuides = Object.fromEntries(Object.entries({ ...this.liveGuides, [channel.id]:guide }).slice(-40));
+            this.refreshLiveView();
+            void this.loadLiveGuides(generation,scope);
+        }));
       },
       refreshLiveView() {
         const view = projectLiveGuide(
@@ -3200,23 +3186,11 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
       revealLiveControls() {
         const screen = this.$select("liveScreen");
         for (let index = 0; index < liveCanonicalFilters.length; index++)
-          (
-            screen?.$select(
-              `liveFilter${liveCanonicalFilters[index].id}`,
-            ) as unknown as { reveal?: () => void }
-          )?.reveal?.();
+          $selectRevealable(screen?.$select(`liveFilter${liveCanonicalFilters[index].id}`))?.reveal?.();
         for (let index = 0; index < liveCanonicalRows.length; index++)
-          (
-            screen?.$select(
-              `liveChannel${liveCanonicalRows[index].channel.id}`,
-            ) as unknown as { reveal?: () => void }
-          )?.reveal?.();
+          $selectRevealable(screen?.$select(`liveChannel${liveCanonicalRows[index].channel.id}`))?.reveal?.();
         for (let index = 0; index < liveCanonicalPrograms.length; index++)
-          (
-            screen?.$select(
-              `liveProgram${liveCanonicalPrograms[index].id}`,
-            ) as unknown as { reveal?: () => void }
-          )?.reveal?.();
+          $selectRevealable(screen?.$select(`liveProgram${liveCanonicalPrograms[index].id}`))?.reveal?.();
       },
       focusLiveFilter(index: number) {
         ++liveFocusGeneration;
@@ -3248,6 +3222,13 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         focusWhenReady(0);
       },
       moveLiveFilter(delta: number) {
+        if (liveCategoryPending) return;
+        if (delta > 0 && this.liveFilterIndex === liveCanonicalFilters.length-1 && liveCategoryNext) {
+          void this.loadLiveCategories(false); return;
+        }
+        if (delta < 0 && this.liveFilterIndex === 4 && liveCategoryPrevious) {
+          void this.loadLiveCategories(true); return;
+        }
         if (delta < 0 && this.liveFilterIndex === 0) {
           this.openRail();
           return;
@@ -3271,6 +3252,28 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         }
         if (filter.id === this.liveFilterId) return;
         void this.loadLiveFilter(filter.id);
+      },
+      async loadLiveCategories(previous: boolean) {
+        const cursor = previous ? liveCategoryPrevious : liveCategoryNext;
+        const scope = liveScope;
+        if (!cursor || !scope || liveCategoryPending) return;
+        const generation = liveGeneration;
+        liveCategoryPending = true;
+        try {
+          const page = await api.liveCategoriesV2({limit:200,cursor},{signal:scope.signal});
+          if (generation !== liveGeneration || scope.signal.aborted || this.phase !== 'live') return;
+          if (liveSnapshot && (page.catalogId !== liveSnapshot.catalogId || page.generation !== liveSnapshot.generation))
+            throw new Error('This playlist changed while you were browsing. Reload the guide.');
+          liveCategoryNext = page.nextCursor; liveCategoryPrevious = page.previousCursor;
+          this.liveCategories = page.items.map(item=>({...item,raw:{}}));
+          this.liveFilterOffset = 0;
+          this.refreshLiveView();
+          this.focusLiveFilter(previous ? liveCanonicalFilters.length-1 : Math.min(4,liveCanonicalFilters.length-1));
+        } catch (cause) {
+          if (generation !== liveGeneration || scope.signal.aborted) return;
+          this.liveStatus = cause instanceof Error ? cause.message : 'Unable to load categories.';
+          this.refreshLiveView();
+        } finally { if (generation === liveGeneration) liveCategoryPending = false; }
       },
       openLiveSearch() {
         this.liveSearchOpen = true;
@@ -3300,11 +3303,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
           screen?.reveal?.();
           screen?.setQuery?.(liveSearchCanonicalQuery);
           for (const key of liveSearchKeys)
-            (
-              this.$select("liveSearchScreen")?.$select(
-                `liveSearchKey${key.id}`,
-              ) as unknown as { reveal?: () => void }
-            )?.reveal?.();
+            $selectRevealable(this.$select("liveSearchScreen")?.$select(`liveSearchKey${key.id}`))?.reveal?.();
           this.focusLiveSearchKey(0);
         }, 60);
       },
@@ -3423,11 +3422,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
           };
           setTimeout(() => {
             for (const entry of liveSearchKeys)
-              (
-                this.$select("liveSearchScreen")?.$select(
-                  `liveSearchKey${entry.id}`,
-                ) as unknown as { reveal?: () => void }
-              )?.reveal?.();
+              $selectRevealable(this.$select("liveSearchScreen")?.$select(`liveSearchKey${entry.id}`))?.reveal?.();
             this.focusLiveSearchKey(this.liveSearchKeyIndex);
           }, 30);
           return;
@@ -3437,8 +3432,11 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
             (this.liveSearchUppercase ? key.label.toUpperCase() : key.label),
         );
       },
-      async loadLiveFilter(filterId: string, offset = 0, focusRow = 0) {
+      async loadLiveFilter(filterId: string, offset = 0, focusRow = 0, focusAt?: number) {
+        const queryKey=filterId+'\0'+liveSearchCanonicalQuery.trim();
+        const cursor=queryKey===liveQueryKey && offset!==this.liveOffset ? offset>this.liveOffset ? liveNextCursor : livePreviousCursor : undefined;
         const generation = ++liveGeneration;
+        liveGuideBusy = 0; liveGuidePending.clear();
         liveScope?.abort();
         const scope = api.createScope();
         liveScope = scope;
@@ -3458,33 +3456,39 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
           ? filterId.slice(9)
           : undefined;
         try {
-          const page = await api.live(
+          const page = await api.liveV2(
             {
-              view: "us",
               collection,
-              category,
+              categoryId: category,
               search: liveSearchCanonicalQuery.trim() || undefined,
-              offset,
+              cursor,
               limit: PAGE_SIZE,
             },
             { signal: scope.signal },
           );
           if (generation !== liveGeneration || scope.signal.aborted) return;
-          liveCanonicalChannels = page.channels.map((channel) => ({
+          if (liveSnapshot && (page.catalogId !== liveSnapshot.catalogId || page.generation !== liveSnapshot.generation))
+            throw new Error('This playlist changed while you were browsing. Reload the guide.');
+          liveCanonicalChannels = page.items.map((channel) => ({
             ...channel,
           }));
           this.liveSelectedRow = Math.max(
             0,
             Math.min(focusRow, liveCanonicalChannels.length - 1),
           );
-          this.liveTotal = page.total;
-          this.liveStatus = page.channels.length
+          liveNextCursor=page.nextCursor??undefined; livePreviousCursor=page.previousCursor??undefined; liveQueryKey=queryKey;
+          this.liveStatus = page.items.length
             ? ""
-            : "No channels here yet. Choose another filter.";
+            : liveSearchCanonicalQuery.trim() ? "No channels match your search." : "No channels here yet. Choose another filter.";
           this.refreshLiveView();
+          if (focusAt !== undefined) await this.loadLiveGuides(generation,scope);
           setTimeout(() => {
             if (generation !== liveGeneration || this.phase !== "live") return;
-            if (liveCanonicalChannels.length)
+            if (liveCanonicalChannels.length && focusAt !== undefined) {
+              const position = liveCanonicalPrograms.findIndex(block=>block.row===this.liveSelectedRow && block.cell.start<=focusAt && block.cell.end>focusAt);
+              if (position >= 0) this.focusLiveProgram(position);
+              else this.focusLiveChannel(this.liveSelectedRow);
+            } else if (liveCanonicalChannels.length)
               this.focusLiveChannel(this.liveSelectedRow);
             else this.focusLiveFilter(this.liveFilterIndex);
           }, 60);
@@ -3519,7 +3523,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
       moveLiveChannel(delta: number) {
         const next = this.liveSelectedRow + delta;
         if (next < 0) {
-          if (this.liveOffset > 0)
+          if (livePreviousCursor)
             void this.loadLiveFilter(
               this.liveFilterId,
               Math.max(0, this.liveOffset - PAGE_SIZE),
@@ -3530,8 +3534,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         }
         if (next < liveCanonicalChannels.length) this.focusLiveChannel(next);
         else if (
-          this.liveOffset + liveCanonicalChannels.length <
-          this.liveTotal
+          liveNextCursor
         )
           void this.loadLiveFilter(
             this.liveFilterId,
@@ -3597,11 +3600,12 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         }
         const row = block.row + (direction === "up" ? -1 : 1);
         if (row < 0) {
-          if (this.liveOffset > 0)
+          if (livePreviousCursor)
             void this.loadLiveFilter(
               this.liveFilterId,
               Math.max(0, this.liveOffset - PAGE_SIZE),
               PAGE_SIZE - 1,
+              block.cell.start,
             );
           else this.focusLiveFilter(this.liveFilterIndex);
           return;
@@ -3609,12 +3613,13 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         if (!liveCanonicalChannels[row]) {
           if (
             direction === "down" &&
-            this.liveOffset + liveCanonicalChannels.length < this.liveTotal
+            liveNextCursor
           )
             void this.loadLiveFilter(
               this.liveFilterId,
               this.liveOffset + PAGE_SIZE,
               0,
+              block.cell.start,
             );
           return;
         }
@@ -3741,11 +3746,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
           this.liveDetailsSelectLabel = "Select";
           this.liveDetailsBackLabel = "BACK";
           for (let slot = 0; slot < 2; slot++)
-            (
-              this.$select("liveDetailsScreen")?.$select(
-                `liveDetailsOption${slot}`,
-              ) as unknown as { reveal?: () => void }
-            )?.reveal?.();
+            $selectRevealable(this.$select("liveDetailsScreen")?.$select(`liveDetailsOption${slot}`))?.reveal?.();
           this.focusLiveDetailsOption(0);
         }, 50);
 
@@ -3917,19 +3918,11 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
       },
       revealSettingsControls() {
         const screen = this.$select("settingsScreen");
-        (screen as unknown as { reveal?: () => void })?.reveal?.();
+        $selectRevealable(screen)?.reveal?.();
         for (let index = 0; index < this.settingsRowsCount; index++)
-          (
-            screen?.$select(`settingsRow${index}`) as unknown as {
-              reveal?: () => void;
-            }
-          )?.reveal?.();
+          $selectRevealable(screen?.$select(`settingsRow${index}`))?.reveal?.();
         for (let index = 0; index < Math.min(4, this.profiles.length); index++)
-          (
-            screen?.$select(`settingsProfile${index}`) as unknown as {
-              reveal?: () => void;
-            }
-          )?.reveal?.();
+          $selectRevealable(screen?.$select(`settingsProfile${index}`))?.reveal?.();
       },
       focusSettingsRow(index: number) {
         if (!settingsCanonicalRows[index]) return;
@@ -4146,23 +4139,13 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         };
         setTimeout(() => {
           if (!this.settingsDialogOpen) return;
-          (
-            this.$select("settingsScreen")?.$select(
-              "settingsDialogScreen",
-            ) as unknown as { reveal?: () => void }
-          )?.reveal?.();
+          $selectRevealable(this.$select("settingsScreen")?.$select("settingsDialogScreen"))?.reveal?.();
           for (
             let index = 0;
             index < Math.min(8, settingsCanonicalChoices.length - start);
             index++
           )
-            (
-              this.$select("settingsScreen")
-                ?.$select("settingsDialogScreen")
-                ?.$select(`settingsChoice${index}`) as unknown as {
-                reveal?: () => void;
-              }
-            )?.reveal?.();
+            $selectRevealable(this.$select("settingsScreen")?.$select("settingsDialogScreen")?.$select(`settingsChoice${index}`))?.reveal?.();
         }, 40);
       },
       focusSettingsChoice(index: number) {
@@ -4434,11 +4417,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
       },
       revealTitleMenu() {
         for (let index = 0; index < 7; index++)
-          (
-            this.$select("titleMenuScreen")?.$select(
-              `titleMenuOption${index}`,
-            ) as unknown as { reveal?: () => void }
-          )?.reveal?.();
+          $selectRevealable(this.$select("titleMenuScreen")?.$select(`titleMenuOption${index}`))?.reveal?.();
       },
       focusTitleMenu(index: number) {
         this.titleMenuFocusIndex = index;
@@ -4642,9 +4621,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
             this.home = { ...this.home, saved, favoriteItems };
             homeCache?.updateProfile(this.home);
             this.homeAddLabel = saved ? "✓" : "+";
-            (
-              this.$select("heroAction2") as unknown as { reveal?: () => void }
-            )?.reveal?.();
+            $selectRevealable(this.$select("heroAction2"))?.reveal?.();
             this.homeNotice = saved
               ? "Added to My List"
               : "Removed from My List";
@@ -4737,17 +4714,9 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
       },
       revealTitleControls() {
         for (let index = 0; index < 4; index++)
-          (
-            this.$select(`titleAction${index}`) as unknown as {
-              reveal?: () => void;
-            }
-          )?.reveal?.();
+          $selectRevealable(this.$select(`titleAction${index}`))?.reveal?.();
         for (let index = 0; index < 5; index++)
-          (
-            this.$select(`titleEpisode${index}`) as unknown as {
-              reveal?: () => void;
-            }
-          )?.reveal?.();
+          $selectRevealable(this.$select(`titleEpisode${index}`))?.reveal?.();
       },
       focusTitleAction(index: number) {
         this.detailFocusZone = "action";
@@ -4811,11 +4780,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
             this.detailSaveIcon = saved ? "✓" : "+";
             setTimeout(
               () =>
-                (
-                  this.$select("titleAction2") as unknown as {
-                    reveal?: () => void;
-                  }
-                )?.reveal?.(),
+                $selectRevealable(this.$select("titleAction2"))?.reveal?.(),
               0,
             );
             this.detailNotice = saved
@@ -5006,20 +4971,10 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
       },
       revealSourceControls() {
         for (let index = 0; index < 5; index++)
-          (
-            this.$select(`sourceChip${index}`) as unknown as {
-              reveal?: () => void;
-            }
-          )?.reveal?.();
-        (
-          this.$select("sourceProvider") as unknown as { reveal?: () => void }
-        )?.reveal?.();
+          $selectRevealable(this.$select(`sourceChip${index}`))?.reveal?.();
+        $selectRevealable(this.$select("sourceProvider"))?.reveal?.();
         for (let index = 0; index < 6; index++)
-          (
-            this.$select(`sourceRow${index}`) as unknown as {
-              reveal?: () => void;
-            }
-          )?.reveal?.();
+          $selectRevealable(this.$select(`sourceRow${index}`))?.reveal?.();
       },
       focusSourceChip(index: number) {
         if (this.phase !== "sources") return;
@@ -5061,11 +5016,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         this.$select(`sourceRow${slot}`)?.$focus();
         setTimeout(() => {
           if (this.phase === "sources")
-            (
-              this.$select(
-                `sourceRow${this.sourceRowIndex - this.sourceWindowStart}`,
-              ) as unknown as { reveal?: () => void }
-            )?.reveal?.();
+            $selectRevealable(this.$select(`sourceRow${this.sourceRowIndex - this.sourceWindowStart}`))?.reveal?.();
         }, 60);
       },
       moveSourceRow(delta: number) {
@@ -5188,9 +5139,9 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
           this.playerItem = started.intent.item;
           this.playerSessionId = started.session.id;
           this.playerSessionDuration = started.session.duration;
-          if(item.type==="live"&&!this.liveGuides[item.id]) void api.guide(item.id).then(guide=>{
+          if(item.type==="live"&&!this.liveGuides[item.id]) void api.guideV2(item.id).then(guide=>{
             if(generation===playbackGeneration&&this.playerItem?.id===item.id) {
-              this.liveGuides={...this.liveGuides,[item.id]:guide};
+              this.liveGuides=Object.fromEntries(Object.entries({...this.liveGuides,[item.id]:guide}).slice(-40));
               if(this.playerSnapshot)this.updatePlayerSnapshot(this.playerSnapshot);
             }
           }).catch(()=>undefined);
@@ -5216,10 +5167,11 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
             if (
               this.phase !== "player" ||
               !this.playerSessionId ||
-              !this.playerItem
+              !this.playerItem ||
+              runtime.controller.snapshot.active?.session.id !== this.playerSessionId
             )
               return;
-            void api.heartbeat(this.playerSessionId, undefined, playback?.player.snapshot.time.positionSeconds).catch(() => undefined);
+            if (!api.playbackLease(this.playerSessionId)) void api.heartbeat(this.playerSessionId, undefined, playback?.player.snapshot.time.positionSeconds).catch(() => undefined);
             if (this.playerItem.type !== "live") {
               const time = runtime.player.snapshot.time;
               void api
@@ -5317,120 +5269,241 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         if(this.playerItem)void this.nextEpisode(this.playerItem,playback?.player.snapshot.time.positionSeconds ?? 0);
       },
       updateUpNext(snapshot: PlayerSnapshot) {
-        const item=this.playerItem;
-        if(this.phase!=="player" || !item || !this.playerSessionId || !this.settingsPrefs.autoplay ||
-          !["series","episode"].includes(item.type) || this.playerNextBusy || this.playerSeeksPending || this.playerSeekTarget!==null || this.playerSeekPreview!==null || this.playerDialog)return;
-        const key=this.playerSessionKey();
-        if(advancedSession===key)return;
-        const position=snapshot.time.positionSeconds;
-        const duration=snapshot.time.durationSeconds ?? this.playerSessionDuration;
-        if(snapshot.state==="ended") { advancedSession=key;this.clearUpNext();void this.nextEpisode(item,position);return; }
-        if(this.upNext?.sessionId===key) {
-          if(duration-position>UP_NEXT_SECONDS+1)this.clearUpNext();
+        const item = this.playerItem;
+        if (
+          this.phase !== "player" ||
+          !item ||
+          !this.playerSessionId ||
+          !this.settingsPrefs.autoplay ||
+          !["series", "episode"].includes(item.type) ||
+          this.playerNextBusy ||
+          this.playerSeeksPending ||
+          this.playerSeekTarget !== null ||
+          this.playerSeekPreview !== null ||
+          this.playerDialog
+        )
+          return;
+        const key = this.playerSessionKey();
+        if (advancedSession === key) return;
+        const position = snapshot.time.positionSeconds;
+        const duration =
+          snapshot.time.durationSeconds ?? this.playerSessionDuration;
+        if (snapshot.state === "ended") {
+          advancedSession = key;
+          this.clearUpNext();
+          void this.nextEpisode(item, position);
           return;
         }
-        if(resumeRemainder || snapshot.state!=="playing" || duration<=10 || duration-position>UP_NEXT_SECONDS ||
-          !presentation({...item,position,duration}).canAutoNext)return;
-        const left=Math.max(1,Math.min(UP_NEXT_SECONDS,Math.ceil(duration-position)));
-        const next=nextFromEpisodes(this.detail.allEpisodes,item);
-        this.upNext={sessionId:key,item:next,left,total:left};
-        noteUpNext(true,left);
-        this.playerOverlay=true;this.setPlayerShade(true);cancelChromeTimer();
+        if (this.upNext?.sessionId === key) {
+          if (duration - position > UP_NEXT_SECONDS + 1) this.clearUpNext();
+          return;
+        }
+        if (
+          resumeRemainder ||
+          snapshot.state !== "playing" ||
+          duration <= 10 ||
+          duration - position > UP_NEXT_SECONDS ||
+          !presentation({ ...item, position, duration }).canAutoNext
+        )
+          return;
+        const left = Math.max(
+          1,
+          Math.min(UP_NEXT_SECONDS, Math.ceil(duration - position)),
+        );
+        const next = nextFromEpisodes(this.detail.allEpisodes, item);
+        this.upNext = { sessionId: key, item: next, left, total: left };
+        noteUpNext(true, left);
+        this.playerOverlay = true;
+        this.setPlayerShade(true);
+        cancelChromeTimer();
         clearInterval(upNextTimer);
-        upNextTimer=setInterval(()=>{
-          if(this.upNext?.sessionId!==key || this.phase!=="player")return;
-          if(playback?.player.snapshot.state==="paused")return;
-          const remaining=Math.max(0,this.upNext.left-UP_NEXT_TICK_MS/1000);
-          this.upNext={...this.upNext,left:remaining};noteUpNext(true,remaining);
-          if(remaining===0)this.playUpNext();
-        },UP_NEXT_TICK_MS);
-        if(!next) {
-          upNextScope?.abort();const scope=api.createScope();upNextScope=scope;
-          void api.nextEpisode(this.currentProfileId,item,{signal:scope.signal}).then(result=>{
-            if(scope.signal.aborted || this.upNext?.sessionId!==key)return;
-            if(result.status==="next"&&result.item)this.upNext={...this.upNext,item:result.item};
-            else {advancedSession=key;this.clearUpNext();}
-          }).catch(()=>{if(!scope.signal.aborted&&this.upNext?.sessionId===key){advancedSession=key;this.clearUpNext();}});
+        upNextTimer = setInterval(() => {
+          if (this.upNext?.sessionId !== key || this.phase !== "player") return;
+          if (playback?.player.snapshot.state === "paused") return;
+          const remaining = Math.max(
+            0,
+            this.upNext.left - UP_NEXT_TICK_MS / 1000,
+          );
+          this.upNext = { ...this.upNext, left: remaining };
+          noteUpNext(true, remaining);
+          if (remaining === 0) this.playUpNext();
+        }, UP_NEXT_TICK_MS);
+        if (!next) {
+          upNextScope?.abort();
+          const scope = api.createScope();
+          upNextScope = scope;
+          void api
+            .nextEpisode(this.currentProfileId, item, { signal: scope.signal })
+            .then((result) => {
+              if (scope.signal.aborted || this.upNext?.sessionId !== key)
+                return;
+              if (result.status === "next" && result.item)
+                this.upNext = { ...this.upNext, item: result.item };
+              else {
+                advancedSession = key;
+                this.clearUpNext();
+              }
+            })
+            .catch(() => {
+              if (!scope.signal.aborted && this.upNext?.sessionId === key) {
+                advancedSession = key;
+                this.clearUpNext();
+              }
+            });
         }
       },
       cancelNextEpisode() {
-        ++nextGeneration;nextSetupScope?.abort();continuation?.cancel();
-        this.playerNextBusy=false;
-        if(this.playerNotice==="Preparing next episode…")this.playerNotice="";
+        ++nextGeneration;
+        nextSetupScope?.abort();
+        continuation?.cancel();
+        this.playerNextBusy = false;
+        if (this.playerNotice === "Preparing next episode…")
+          this.playerNotice = "";
       },
-      async nextEpisode(previous: MediaItem, position=0) {
-        if(this.playerNextBusy || continuation?.busy)return;
-        const origin=this.phase;
-        const returnZone=origin==="home"?this.homeFocusZone:"card";
-        const returnIndex=origin==="home"?(this.homeFocusZone==="action"?this.homeActionIndex:this.homeCardIndex):origin==="library"?this.libraryCardIndex:0;
-        const ticket=++nextGeneration;
-        nextSetupScope?.abort();const scope=api.createScope();nextSetupScope=scope;
-        this.clearUpNext();this.playerDialog=null;
-        this.playerNextBusy=true;this.playerNotice="Preparing next episode…";cancelChromeTimer();
+      async nextEpisode(previous: MediaItem, position = 0) {
+        if (this.playerNextBusy || continuation?.busy) return;
+        const origin = this.phase;
+        const returnZone = origin === "home" ? this.homeFocusZone : "card";
+        const returnIndex =
+          origin === "home"
+            ? this.homeFocusZone === "action"
+              ? this.homeActionIndex
+              : this.homeCardIndex
+            : origin === "library"
+              ? this.libraryCardIndex
+              : 0;
+        const ticket = ++nextGeneration;
+        nextSetupScope?.abort();
+        const scope = api.createScope();
+        nextSetupScope = scope;
+        this.clearUpNext();
+        this.playerDialog = null;
+        this.playerNextBusy = true;
+        this.playerNotice = "Preparing next episode…";
+        cancelChromeTimer();
         try {
-          const [module,prefs]=await Promise.all([
+          const [module, prefs] = await Promise.all([
             import("./continuationRuntime"),
-            api.preferences(this.currentProfileId,{signal:scope.signal}),
+            api.preferences(this.currentProfileId, { signal: scope.signal }),
           ]);
-          if(ticket!==nextGeneration || scope.signal.aborted)return;
-          this.settingsPrefs=prefs;
-          continuation ??= module.createSolidTVContinuation({api,platform,getRuntime:()=>playback,
-            profileId:()=>this.currentProfileId,preferences:()=>this.settingsPrefs});
-          const result=await continuation.advance(previous,position);
-          if(ticket!==nextGeneration || scope.signal.aborted)return;
-          this.playerNextBusy=false;this.playerNotice="";
-          if(result.kind==="started") {
-            const active=result.active;
-            this.playerItem=active.intent.item;
-            this.playerSessionId=active.session.id;this.playerSessionDuration=active.session.duration;
-            this.playerTitle=active.intent.item.name;
-            this.playerEpisodeLine=`S${active.intent.item.season ?? 1} · E${active.intent.item.episode ?? 1} · ${active.intent.item.episodeTitle ?? active.intent.item.name}`;
-            resumeRemainder=false;advancedSession="";
-            if(active.intent.source) {
-              this.source={...this.source,item:active.intent.item};
-              this.sourceSelectedId=active.intent.source.id;
-              this.updateSources([active.intent.source],false,true);
-              noteSourceIntent(active.intent.item.id,active.intent.source.id,0,false);
+          if (ticket !== nextGeneration || scope.signal.aborted) return;
+          this.settingsPrefs = prefs;
+          continuation ??= module.createSolidTVContinuation({
+            api,
+            platform,
+            getRuntime: () => playback,
+            profileId: () => this.currentProfileId,
+            preferences: () => this.settingsPrefs,
+          });
+          const result = await continuation.advance(previous, position);
+          if (ticket !== nextGeneration || scope.signal.aborted) return;
+          this.playerNextBusy = false;
+          this.playerNotice = "";
+          if (result.kind === "started") {
+            const active = result.active;
+            this.playerItem = active.intent.item;
+            this.playerSessionId = active.session.id;
+            this.playerSessionDuration = active.session.duration;
+            this.playerTitle = active.intent.item.name;
+            this.playerEpisodeLine = `S${active.intent.item.season ?? 1} · E${active.intent.item.episode ?? 1} · ${active.intent.item.episodeTitle ?? active.intent.item.name}`;
+            resumeRemainder = false;
+            advancedSession = "";
+            if (active.intent.source) {
+              this.source = { ...this.source, item: active.intent.item };
+              this.sourceSelectedId = active.intent.source.id;
+              this.updateSources([active.intent.source], false, true);
+              noteSourceIntent(
+                active.intent.item.id,
+                active.intent.source.id,
+                0,
+                false,
+              );
             }
-            this.phase="player";this.playerOverlay=true;this.setPlayerShade(true);
+            this.phase = "player";
+            this.playerOverlay = true;
+            this.setPlayerShade(true);
             this.updatePlayerSnapshot(playback!.player.snapshot);
-            this.revealPlayerControls();this.focusPlayerControl(1);
-          } else if(result.kind==="ready") {
-            const {item,source}=result.intent;
-            this.sourceReturnOrigin=origin as typeof this.sourceReturnOrigin;
-            this.sourceReturnZone=returnZone;
-            this.sourceReturnIndex=returnIndex;
-            this.source=projectSources(item,[source],false,true);
-            this.sourceSelectedId=source.id;this.sourceRowIndex=0;this.sourceWindowStart=0;
-            this.updateSources([source],false,true);
-            noteSourceIntent(item.id,source.id,0,false);
-            void this.playSource(item,source,0);
-          } else if(result.kind==="missing") {
-            const message=result.status==="caught_up"?"You're caught up.":result.status==="upcoming"?"The next episode is not available yet.":"No next episode is available.";
-            if(this.phase==="player")this.playerNotice=message;else this.homeNotice=message;
-          } else if(result.kind==="failed")this.showContinuationFailure(result,previous);
-        } catch(cause) {
-          if(ticket===nextGeneration&&!scope.signal.aborted)this.playerNotice=cause instanceof Error?cause.message:"The TV could not prepare the next episode.";
+            this.revealPlayerControls();
+            this.focusPlayerControl(1);
+          } else if (result.kind === "ready") {
+            const { item, source } = result.intent;
+            this.sourceReturnOrigin = origin as typeof this.sourceReturnOrigin;
+            this.sourceReturnZone = returnZone;
+            this.sourceReturnIndex = returnIndex;
+            this.source = projectSources(item, [source], false, true);
+            this.sourceSelectedId = source.id;
+            this.sourceRowIndex = 0;
+            this.sourceWindowStart = 0;
+            this.updateSources([source], false, true);
+            noteSourceIntent(item.id, source.id, 0, false);
+            void this.playSource(item, source, 0);
+          } else if (result.kind === "missing") {
+            const message =
+              result.status === "caught_up"
+                ? "You're caught up."
+                : result.status === "upcoming"
+                  ? "The next episode is not available yet."
+                  : "No next episode is available.";
+            if (this.phase === "player") this.playerNotice = message;
+            else this.homeNotice = message;
+          } else if (result.kind === "failed")
+            this.showContinuationFailure(result, previous);
+        } catch (cause) {
+          if (ticket === nextGeneration && !scope.signal.aborted)
+            this.playerNotice =
+              cause instanceof Error
+                ? cause.message
+                : "The TV could not prepare the next episode.";
         } finally {
-          if(ticket===nextGeneration){this.playerNextBusy=false;this.schedulePlayerChromeHide();}
+          if (ticket === nextGeneration) {
+            this.playerNextBusy = false;
+            this.schedulePlayerChromeHide();
+          }
         }
       },
-      showContinuationFailure(result: Extract<SolidTVContinuationResult,{kind:"failed"}>, previous: MediaItem) {
-        const item=result.outgoing?.intent.item ?? previous;
-        this.playerDialog={title:result.rollbackFailed?"Playback could not be restored":"This source could not be played",
-          message:result.error.message,choices:[{id:"retry",label:"Retry"},{id:"source",label:"Choose source"},{id:"back",label:"Back"}],
-          onCancel:()=>{this.playerDialog=null;if(result.rollbackFailed)void this.exitPlayer();},
-          onSelect:(id)=>{
-            this.playerDialog=null;
-            if(id==="retry") {
-              if(result.rollbackFailed&&result.outgoing?.intent.source) {
-                this.phase="sources";
-                void this.playSource(item,result.outgoing.intent.source,result.outgoingPosition);
-              } else void this.nextEpisode(item,result.outgoingPosition);
-            } else if(id==="source") {
-              void (async()=>{if(this.phase==="player")await this.exitPlayer();if(this.phase==="sources")this.phase=this.sourceReturnOrigin;void this.openSources({...item,position:result.outgoingPosition},false);})();
-            } else if(result.rollbackFailed)void this.exitPlayer();
-          }};
+      showContinuationFailure(
+        result: Extract<SolidTVContinuationResult, { kind: "failed" }>,
+        previous: MediaItem,
+      ) {
+        const item = result.outgoing?.intent.item ?? previous;
+        this.playerDialog = {
+          title: result.rollbackFailed
+            ? "Playback could not be restored"
+            : "This source could not be played",
+          message: result.error.message,
+          choices: [
+            { id: "retry", label: "Retry" },
+            { id: "source", label: "Choose source" },
+            { id: "back", label: "Back" },
+          ],
+          onCancel: () => {
+            this.playerDialog = null;
+            if (result.rollbackFailed) void this.exitPlayer();
+          },
+          onSelect: (id) => {
+            this.playerDialog = null;
+            if (id === "retry") {
+              if (result.rollbackFailed && result.outgoing?.intent.source) {
+                this.phase = "sources";
+                void this.playSource(
+                  item,
+                  result.outgoing.intent.source,
+                  result.outgoingPosition,
+                );
+              } else void this.nextEpisode(item, result.outgoingPosition);
+            } else if (id === "source") {
+              void (async () => {
+                if (this.phase === "player") await this.exitPlayer();
+                if (this.phase === "sources")
+                  this.phase = this.sourceReturnOrigin;
+                void this.openSources(
+                  { ...item, position: result.outgoingPosition },
+                  false,
+                );
+              })();
+            } else if (result.rollbackFailed) void this.exitPlayer();
+          },
+        };
       },
       setPlayerShade(visible: boolean) {
         const shade = document.getElementById("player-shade");
@@ -5451,11 +5524,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
       },
       revealPlayerControls() {
         for (let index = 0; index < 7; index++)
-          (
-            this.$select(`playerControl${index}`) as unknown as {
-              reveal?: () => void;
-            }
-          )?.reveal?.();
+          $selectRevealable(this.$select(`playerControl${index}`))?.reveal?.();
       },
       focusPlayerControl(index: number) {
         if (this.phase !== "player") return;
@@ -5555,11 +5624,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
             kind === "audio" ? "Audio Tracks" : "Subtitles";
           this.trackLegend = "▲ ▼  Move     OK  Select     BACK  Close";
           for (let index = 0; index < 8; index++)
-            (
-              this.$select(`playerTrack${index}`) as unknown as {
-                reveal?: () => void;
-              }
-            )?.reveal?.();
+            $selectRevealable(this.$select(`playerTrack${index}`))?.reveal?.();
           this.focusTrackChoice(this.trackFocusIndex);
         }, 50);
         try {
@@ -5883,11 +5948,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
           if (this.phase !== "provider") return;
           this.providerPanelTitle = "Source provider";
           for (let index = 0; index < 6; index++)
-            (
-              this.$select(`providerOption${index}`) as unknown as {
-                reveal?: () => void;
-              }
-            )?.reveal?.();
+            $selectRevealable(this.$select(`providerOption${index}`))?.reveal?.();
           this.focusProviderOption(this.providerChoiceIndex);
         }, 50);
       },
@@ -6024,14 +6085,8 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
       },
       revealProfileTiles() {
         for (let index = 0; index < 6; index++)
-          (
-            this.$select(`profile${index}`) as unknown as {
-              reveal?: () => void;
-            }
-          )?.reveal?.();
-        (
-          this.$select("manageProfiles") as unknown as { reveal?: () => void }
-        )?.reveal?.();
+          $selectRevealable(this.$select(`profile${index}`))?.reveal?.();
+        $selectRevealable(this.$select("manageProfiles"))?.reveal?.();
       },
       refreshProfileSlots() {
         const visible = this.profiles
@@ -6067,9 +6122,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         this.selectLabel = this.managing ? "Edit" : "Select";
         this.profileFocusTarget = "tile";
         this.profileFocus = 0;
-        (
-          this.$select("manageProfiles") as unknown as { reveal?: () => void }
-        )?.reveal?.();
+        $selectRevealable(this.$select("manageProfiles"))?.reveal?.();
         setTimeout(() => {
           this.revealProfileTiles();
           this.$select("profile0")?.$focus();

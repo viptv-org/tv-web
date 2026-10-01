@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 
-import { apiOrigin, sessionKey, movie, installBackend } from './helpers/responsiveBackend';
+import { sessionKey, movie, installBackend } from './helpers/responsiveBackend';
 
 async function expectResponsiveViewport(page: Page, width: number) {
   const dimensions = await page.evaluate(() => {
@@ -164,7 +164,7 @@ for (const viewport of [
     await expect(page.locator('[data-focus-id="source-0"]')).toBeVisible();
     await expectResponsiveViewport(page, viewport.width);
     expect(fixture.requests.some(request => request.path === '/api/meta/movie/responsive-movie')).toBe(true);
-    expect(fixture.requests.find(request => request.path === '/api/streams' && request.method === 'POST')?.body).toMatchObject({ id: movie.id, type: 'movie' });
+    expect(fixture.requests.find(request => request.path === '/api/v2/streams' && request.method === 'POST')?.body).toMatchObject({ id: movie.id, type: 'movie' });
     expect(fixture.requests.some(request => request.path === '/api/playback')).toBe(false);
 
     await page.keyboard.press('Escape');
@@ -241,7 +241,7 @@ for (const viewport of [
     await episode.click();
     await expect(page.locator('.vx-sources__status')).toContainText(viewport.width < 600 ? 'S1 E1' : 'found');
     await expect(page.locator('[data-focus-id="source-0"]')).toBeVisible();
-    expect(fixture.requests.find(request => request.path === '/api/streams')?.body).toMatchObject({ id: 'responsive-series:1:1', series_id: 'responsive-series', season: 1, episode: 1 });
+    expect(fixture.requests.find(request => request.path === '/api/v2/streams')?.body).toMatchObject({ id: 'responsive-series:1:1', series_id: 'responsive-series', season: 1, episode: 1 });
     await expectResponsiveViewport(page, viewport.width);
     expect(fixture.errors).toEqual([]);
   });
@@ -442,7 +442,7 @@ for (const width of [390, 768, 1440]) {
     await page.screenshot({ path: testInfo.outputPath(`queue-live-${width}.png`) });
     await queue.locator('[data-focus-id="queue-0"]').click();
     await expect(page.locator('[data-focus-id="source-0"]')).toBeVisible();
-    expect(fixture.requests.find(request => request.path === '/api/streams')?.body).toMatchObject({ id: 'queue-series:1:1', series_id: 'queue-series', season: 1, episode: 1 });
+    expect(fixture.requests.find(request => request.path === '/api/v2/streams')?.body).toMatchObject({ id: 'queue-series:1:1', series_id: 'queue-series', season: 1, episode: 1 });
     expect(fixture.errors).toEqual([]);
   });
 }

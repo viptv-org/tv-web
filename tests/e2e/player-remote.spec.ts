@@ -1,8 +1,10 @@
 import { expect, test, type Page, type Route } from '@playwright/test';
+// Direct-delivery scenarios use HTML5 with the shared TV layout, not Vizio's
+// gateway-only product policy. Decoder boundaries are synthetic, not hardware.
 
 declare global { interface Window { finishFixturePlayback(video: HTMLMediaElement): void; } }
 
-const apiOrigin = 'https://viptv.syek.tech';
+const apiOrigin = process.env.VIPTV_TEST_API_ORIGIN ?? 'https://viptv.syek.tech';
 const corsHeaders = {
   'access-control-allow-origin': process.env.VIPTV_TEST_BROWSER_ORIGIN ?? 'http://127.0.0.1:4173',
   'access-control-allow-methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
@@ -41,7 +43,7 @@ type FixtureState = {
 };
 
 async function json(route: Route, body: unknown, status = 200) {
-  await route.fulfill({ status, contentType: 'application/json', headers: corsHeaders, body: JSON.stringify(body) });
+  await route.fulfill({ status, contentType: 'application/json', headers: corsHeaders, body: JSON.stringify(playbackV2Fixture(route, body, status)) });
 }
 
 /** Controlled HTML media edge: UI/controller code receives the real DOM events. */
@@ -126,12 +128,12 @@ async function installBackend(page: Page, options: FixtureOptions = {}): Promise
     if (path === '/api/discover') return json(route, { metas: [show], has_more: false, next_skip: null });
     if (path === `/api/meta/series/${show.id}` || path === `/api/meta/series/${first.id}`)
       return json(route, { meta: { ...show, videos: [first, second] } });
-    if (path === '/api/streams' && request.method() === 'POST') {
+    if (path === '/api/v2/streams' && request.method() === 'POST') {
       const body = JSON.parse(request.postData() || '{}') as { id?: string };
       return json(route, { id: `streams-${body.id}` });
     }
-    if (path === `/api/streams/streams-${first.id}`) return json(route, { events: [{ seq: 1, source: 'addon:current', streams: [{ id: 'first-source', name: 'Current 1080p', title: '1080p H.264 English', source_addon_id: 'addon:current', source_fingerprint: 'first', audioEvidenceScore: 8 }] }], done: true });
-    if (path === `/api/streams/streams-${second.id}`) return json(route, { events: [{ seq: 1, source: 'addon:ranked', streams: [
+    if (path === `/api/v2/streams/streams-${first.id}`) return json(route, { events: [{ seq: 1, source: 'addon:current', streams: [{ id: 'first-source', name: 'Current 1080p', title: '1080p H.264 English', source_addon_id: 'addon:current', source_fingerprint: 'first', audioEvidenceScore: 8 }] }], done: true });
+    if (path === `/api/v2/streams/streams-${second.id}`) return json(route, { events: [{ seq: 1, source: 'addon:ranked', streams: [
       { id: 'next-incompatible', name: '2160p HEVC Spanish', title: '2160p HEVC Spanish', source_addon_id: 'addon:ranked', audioEvidenceScore: 0 },
       { id: 'next-ranked', name: '1080p H.264 English', title: '1080p H.264 English', source_addon_id: 'addon:ranked', audioEvidenceScore: 8 },
     ] }], done: true });
@@ -140,10 +142,10 @@ async function installBackend(page: Page, options: FixtureOptions = {}): Promise
       if (options.delayNext) await new Promise(resolve => setTimeout(resolve, 750));
       return json(route, { status: 'next', item: second });
     }
-    if (path === '/api/playback' && request.method() === 'POST') {
+    if (path === '/api/v2/playback' && request.method() === 'POST') {
       const body = JSON.parse(request.postData() || '{}') as Record<string, unknown>;
       state.playbackRequests.push(body);
-      state.playbackIntents.push({ stream_id: body.stream_id, position: body.position, audio_track_index: body.audio_track_index, subtitle_track_index: body.subtitle_track_index, subtitles_off: body.subtitles_off });
+      state.playbackIntents.push({ stream_id: body.stream_id, position: body.position, audio_track_index: body.audio_track ?? undefined, subtitle_track_index: body.subtitle_track ?? undefined, subtitles_off: body.subtitles_off || undefined });
       const id = `playback-${state.playbackRequests.length}`;
       const position = state.playbackRequests.length === 1 ? options.resumeAt ?? 0 : 0;
       return json(route, { id, url: `/media/${id}/capability/index.m3u8`, format: 'hls', mode: options.playbackMode ?? 'remux', video_mode: 'copy', audio_mode: 'copy', position, live: false, duration: 120, audio_tracks: options.audioTracks ?? [], subtitle_tracks: [], subtitles_supported: false });
@@ -152,7 +154,8 @@ async function installBackend(page: Page, options: FixtureOptions = {}): Promise
       state.progress.push(JSON.parse(request.postData() || '{}') as Record<string, unknown>);
       return json(route, { ok: true });
     }
-    if (path.startsWith('/api/playback/') || path === '/api/live/categories' || path === '/api/addons') return json(route, path === '/api/live/categories' ? { categories: [], total: 0 } : []);
+    if (path.startsWith('/api/v2/iptv/live/')) return json(route, { catalog_id: null, generation: null, items: [], next_cursor: null, previous_cursor: null });
+    if (path.startsWith('/api/v2/playback/') || path === '/api/addons') return json(route, []);
     return json(route, { error: `unhandled ${path}` }, 404);
   });
   return state;
@@ -160,7 +163,8 @@ async function installBackend(page: Page, options: FixtureOptions = {}): Promise
 
 async function enterFirstEpisode(page: Page, state: FixtureState) {
   await page.addInitScript(({ key, token }) => localStorage.setItem(key, JSON.stringify(token)), { key: `viptv-device:${apiOrigin}`, token: { sessionId: 'device-1', accountId: '7', profileId: null, accessToken: 'access', refreshToken: 'refresh', expiresIn: 900 } });
-  await page.goto('/?renderer=react&platform=vizio');
+  await page.addInitScript(() => Object.defineProperty(window, 'VideoDecoder', { configurable: true, value: undefined }));
+  await page.goto('/tv/?renderer=react&layout=tv');
   await page.getByRole('button', { name: 'Alex' }).press('Enter');
   await page.getByRole('button', { name: 'Fixture Show' }).press('Enter');
   await page.locator('[data-focus-id="episode-0"]').press('Enter');
@@ -249,10 +253,10 @@ test.describe('Vizio remote player contract', () => {
     test.skip(test.info().project.name !== 'vizio', 'managed replacement is shared; exercise one web-TV platform boundary');
     const noPageErrors = await installVizioMedia(page);
     const state = await installBackend(page);
-    await page.route(`${apiOrigin}/api/playback`, async route => {
+    await page.route(`${apiOrigin}/api/v2/playback`, async route => {
       const body = JSON.parse(route.request().postData() || '{}') as Record<string, unknown>;
       state.playbackRequests.push(body);
-      state.playbackIntents.push({ stream_id: body.stream_id, position: body.position, audio_track_index: body.audio_track_index, subtitle_track_index: body.subtitle_track_index, subtitles_off: body.subtitles_off });
+      state.playbackIntents.push({ stream_id: body.stream_id, position: body.position, audio_track_index: body.audio_track ?? undefined, subtitle_track_index: body.subtitle_track ?? undefined, subtitles_off: body.subtitles_off || undefined });
       return json(route, {
         id: `managed-${state.playbackRequests.length}`, url: `/media/managed/capability/index.m3u8`, format: 'hls', mode: 'remux', video_mode: 'copy', audio_mode: 'copy', position: Number(body.position ?? 0), live: false, duration: 120,
         audio_tracks: [{ input_index: 0, title: 'Stereo', selectable: true, supported: true }, { input_index: 1, title: 'Surround', selectable: false, supported: false }],
@@ -295,3 +299,4 @@ test.describe('Vizio remote player contract', () => {
     noPageErrors();
   });
 });
+import { playbackV2Fixture } from './helpers/playbackV2Fixture';

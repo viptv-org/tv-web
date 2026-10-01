@@ -10,7 +10,7 @@ import { useSyncExternalStore } from "react";
  */
 export const ACCENTS = ["gold", "coral", "mint", "periwinkle"] as const;
 export type Accent = (typeof ACCENTS)[number];
-export const DEFAULT_ACCENT: Accent = "gold";
+const DEFAULT_ACCENT: Accent = "gold";
 
 export interface Appearance {
   readonly oled: boolean;
@@ -18,8 +18,8 @@ export interface Appearance {
 }
 
 /** Storage keys. The OLED key predates the design system; keep it stable. */
-export const OLED_STORAGE_KEY = "viptv:appearance:oled";
-export const ACCENT_STORAGE_KEY = "viptv:appearance:accent";
+const OLED_STORAGE_KEY = "viptv:appearance:oled";
+const ACCENT_STORAGE_KEY = "viptv:appearance:accent";
 
 const isAccent = (value: unknown): value is Accent =>
   typeof value === "string" && (ACCENTS as readonly string[]).includes(value);
@@ -41,7 +41,7 @@ function writeStorage(key: string, value: string) {
 }
 
 /** Reads the stored device appearance (defaults: OLED off, gold accent). */
-export function readAppearance(): Appearance {
+function readAppearance(): Appearance {
   const accent = readStorage(ACCENT_STORAGE_KEY);
   return {
     oled: readStorage(OLED_STORAGE_KEY) === "true",
@@ -50,7 +50,7 @@ export function readAppearance(): Appearance {
 }
 
 /** Reflects an appearance on the document root. */
-export function applyAppearance(appearance: Appearance, root: HTMLElement = document.documentElement) {
+function applyAppearance(appearance: Appearance, root: HTMLElement = document.documentElement) {
   if (appearance.oled) root.setAttribute("data-oled", "");
   else root.removeAttribute("data-oled");
   root.setAttribute("data-accent", appearance.accent);
@@ -66,27 +66,27 @@ function commit(next: Appearance) {
 }
 
 /** The current appearance (read from storage on first use). */
-export function getAppearance(): Appearance {
+function getAppearance(): Appearance {
   if (!current) current = readAppearance();
   return current;
 }
 
-export function setOled(oled: boolean) {
+function setOled(oled: boolean) {
   writeStorage(OLED_STORAGE_KEY, String(oled));
   commit({ ...getAppearance(), oled });
 }
 
-export function toggleOled() {
+function toggleOled() {
   setOled(!getAppearance().oled);
 }
 
-export function setAccent(accent: Accent) {
+function setAccent(accent: Accent) {
   const next = isAccent(accent) ? accent : DEFAULT_ACCENT;
   writeStorage(ACCENT_STORAGE_KEY, next);
   commit({ ...getAppearance(), accent: next });
 }
 
-export function subscribeAppearance(listener: () => void) {
+function subscribeAppearance(listener: () => void) {
   listeners.add(listener);
   return () => {
     listeners.delete(listener);

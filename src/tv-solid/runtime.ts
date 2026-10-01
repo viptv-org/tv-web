@@ -33,7 +33,7 @@ import {
 
 /** The screen controller contract keeps the existing remote actions intact.
  * Solid owns every signal, component lifetime and rendered node. */
-export interface ScreenActions {
+interface ScreenActions {
   $select(ref: string): ScreenInstance | undefined;
   $focus(): void;
   $emit(name: string, value?: unknown): void;
@@ -280,7 +280,7 @@ const names: Record<string, string> = {
   content: "text",
 };
 const colorCache = new Map<string, number>();
-export function tvColor(value: string): number {
+function tvColor(value: string): number {
   if (!value) return 0;
   if (value.startsWith("#"))
     return parseInt(value.slice(1) + (value.length === 7 ? "ff" : ""), 16);
