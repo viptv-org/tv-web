@@ -157,6 +157,8 @@ test('website fullscreen, volume and backend info operate on a decoded player', 
   await page.locator('[data-focus-id="source-0"]').click();
   await expect.poll(() => page.locator('video').evaluate((video: HTMLVideoElement) => video.videoWidth)).toBeGreaterThan(0);
   await page.getByRole('button', { name: 'Pause', exact: true }).click();
+  // DeskPlayer: both timeline ends are clocks ([12:48] / [52:10]), never a "N min" runtime.
+  await expect(page.locator('.player-time span').last()).toHaveText(/^\d+:\d{2}(:\d{2})?$/);
   await page.getByRole('slider', { name: 'Volume', exact: true }).evaluate((node: HTMLInputElement) => { Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(node, '0.35'); node.dispatchEvent(new Event('input', { bubbles: true })); });
   expect(await page.locator('video').evaluate((video: HTMLVideoElement) => video.volume)).toBeCloseTo(.35);
   await page.getByRole('button', { name: 'Mute', exact: true }).click();
