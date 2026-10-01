@@ -4,7 +4,10 @@ export const apiOrigin = 'https://viptv.syek.tech';
 export const profile = { id: '1', name: 'Alex', setup_complete: true, avatar: 'critters-1.png' };
 export const movie = { id: 'tt-movie', type: 'movie', name: 'Moonfall', title: 'Moonfall', poster: '/poster.jpg', background: '/background.jpg', description: 'A fixture movie.', year: 2026, genres: ['Drama'] };
 export const episode = { id: 'tt-show:1:2', title: 'The Signal', name: 'The Signal', season: 1, episode: 2, description: 'Episode fixture.' };
-export const channel = { id: 'family-news', type: 'live', name: 'Family News', poster: '/news.png' };
+/** A raw IPTV channel as the v2 live catalog returns it. */
+export const channel = { id: 'iptv:1:7', name: 'Family News', logo: '/news.png' };
+/** One v2 live catalog page envelope. */
+const livePage = (items: unknown[]) => ({ catalog_id: 1, generation: 1, items, next_cursor: null, previous_cursor: null });
 export type ProfileFixture = {
   profiles: Array<Record<string, unknown>>;
   requests: Array<{ method: string; path: string; body: Record<string, unknown> }>;
@@ -131,7 +134,7 @@ export async function installBackend(page: Page, profileFixture?: ProfileFixture
       if (route.request().method() === 'PUT') Object.assign(preferences, JSON.parse(route.request().postData() || '{}'));
       return json(route, preferences);
     }
-    if (path === '/api/live/categories') return json(route, { categories: [{ id: 'section:News', name: 'News', count: 1 }], total: 1 });
+    if (path === '/api/v2/iptv/live/categories') return json(route, livePage([{ id: 'news', name: 'News' }]));
     if (path === '/api/catalogs') return json(route, [{ id: 'popular', name: 'Popular', type: 'movie', addon_id: 2, supports_search: true, supports_skip: true }]);
     if (path === '/api/discover') return json(route, { metas: [movie], has_more: false, next_skip: null });
     if (path === '/api/meta/movie/tt-movie') return json(route, { meta: movie });
@@ -139,8 +142,9 @@ export async function installBackend(page: Page, profileFixture?: ProfileFixture
     if (route.request().method() === 'POST' && path === (route.request().postDataJSON()?.type === 'live' ? '/api/streams' : '/api/v2/streams')) return json(route, { id: 'job-1' });
     if (path === '/api/streams/job-1' || path === '/api/v2/streams/job-1') return json(route, { events: [{ seq: 1, source: 'addon:2', streams: [{ id: 'stream-1', name: '1080p', title: 'Moonfall 1080p', filename: 'moonfall.mkv', source_addon_id: 'addon:2', source_name: 'Fixture Addon', source_quality: '1080p', url: 'https://upstream.invalid/private' }] }], done: true });
     if (path === '/api/profiles/1/favorites/toggle') return json(route, { saved: true });
-    if (path === '/api/live') return json(route, { channels: [channel], total: 1 });
-    if (path === '/api/guide/family-news') return json(route, { timezone: 'UTC', programs: [{ title: 'News Now', start: 0, end: 4_102_444_800, description: 'Live fixture.' }] });
+    // The playlist lists the channel; profile collections (recent, favorites) start empty.
+    if (path === '/api/v2/iptv/live/channels') return json(route, livePage(url.searchParams.has('collection') ? [] : [channel]));
+    if (path === `/api/v2/iptv/guide/${encodeURIComponent(channel.id)}`) return json(route, { timezone: 'UTC', programs: [{ title: 'News Now', start: 0, end: 4_102_444_800, description: 'Live fixture.' }] });
     if (path === '/api/parent/status') return json(route, { pin_configured: true, unlocked: false, restricted: false });
     if (path === '/api/parent/unlock') return json(route, { unlocked: true });
     if (path === '/api/addons' && route.request().method() === 'GET') return json(route, []);
