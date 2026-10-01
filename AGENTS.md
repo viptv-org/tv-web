@@ -15,7 +15,11 @@ Use GitHub issues in viptv-org/tv-web and design issue #4. Keep user data/secret
 
 ## Current validation constraint
 
-The host has ample memory (32 GB) — run tests and builds with default heap settings; no worker or browser-job rationing is needed. The TV web workflow runs on pushes, pull requests and manual dispatch. Record current evidence and unexecuted scenarios in TESTING.md; distinguish browser tests from physical TV qualification.
+The development host is shared with other agents and builds, so keep test runs to a single worker: `npx vitest run --pool=forks --poolOptions.forks.singleFork` for unit tests, and Playwright stays at its configured single worker. Prefer the targeted specs for a change over the full Playwright collection, and do not run a production build alongside a browser suite. Default heap settings are fine.
+
+CI (`.github/workflows/build.yml`) runs only on pushes to `main` and manual dispatch: unit tests, `npm run build`, and hosting/webOS/Tizen packaging uploaded as workflow artifacts. It does not run Playwright, gate pull requests or deploy; the Tizen job fails until the Samsung signing secrets exist. Record current evidence and unexecuted scenarios in TESTING.md; distinguish browser tests from physical TV qualification.
+
+TypeScript enforces `noUnusedLocals` in every `npm run typecheck` group; delete unused imports and locals rather than suppressing them.
 
 ## Design synchronization
 
