@@ -184,6 +184,10 @@ import {
 import { exactResumeSource } from "../ui/continuation";
 
 type TvPlatform = "tizen" | "vizio" | "webos";
+/** Deferred TV controls expose an optional reveal() that mounts their native node. */
+type Revealable = { reveal?: () => void };
+/** Narrows a `$select` result to the optional reveal() it may expose. */
+const $selectRevealable = (node: unknown) => node as Revealable | undefined;
 const px = (name: keyof typeof tokens) =>
   Number.parseFloat(String(tokens[name]));
 // SolidTV's web-font texture is wider than the DOM glyph run at the same
@@ -1560,15 +1564,11 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
       },
       revealHomeControls() {
         for (let index = 0; index < 3; index++)
-          (
-            this.$select(`heroAction${index}`) as unknown as {
-              reveal?: () => void;
-            }
-          )?.reveal?.();
+          $selectRevealable(this.$select(`heroAction${index}`))?.reveal?.();
         for (let shelf = 0; shelf < this.homeShelves.length; shelf++) {
           const start = shelf === this.homeShelfIndex ? this.homeShelfStart : 0;
           for (let slot = 0; slot < Math.min(6, this.homeShelves[shelf].cards.length - start); slot++)
-            (this.$select(`homeCard${shelf}Slot${slot}`) as unknown as { reveal?: () => void })?.reveal?.();
+            $selectRevealable(this.$select(`homeCard${shelf}Slot${slot}`))?.reveal?.();
         }
       },
       focusHomeAction(index: number) {
@@ -1702,9 +1702,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         setTimeout(() => {
           if (!this.railExpanded) return;
           for (let index = 0; index < 7; index++)
-            (
-              this.$select(`rail${index}`) as unknown as { reveal?: () => void }
-            )?.reveal?.();
+            $selectRevealable(this.$select(`rail${index}`))?.reveal?.();
         }, 0);
       },
       focusRail(index: number) {
@@ -2043,22 +2041,14 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         setTimeout(() => {
           if (this.phase !== "discover") return;
           for (let index = 0; index < 12; index++)
-            (
-              this.$select("discoverScreen")?.$select(
-                `discoverCard${index}`,
-              ) as unknown as { reveal?: () => void }
-            )?.reveal?.();
+            $selectRevealable(this.$select("discoverScreen")?.$select(`discoverCard${index}`))?.reveal?.();
         }, 0);
       },
       revealDiscoverChips() {
         setTimeout(() => {
           if (this.phase !== "discover") return;
           for (let index = 0; index < this.discoverChips.length; index++)
-            (
-              this.$select("discoverScreen")?.$select(
-                `discoverChip${index}`,
-              ) as unknown as { reveal?: () => void }
-            )?.reveal?.();
+            $selectRevealable(this.$select("discoverScreen")?.$select(`discoverChip${index}`))?.reveal?.();
         }, 0);
       },
       focusDiscoverChip(index: number) {
@@ -2248,11 +2238,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
           this.discoverBackLabel = "BACK";
           this.discoverCancelLabel = "Cancel";
           for (let index = 0; index < 8; index++)
-            (
-              this.$select(`discoverOption${index}`) as unknown as {
-                reveal?: () => void;
-              }
-            )?.reveal?.();
+            $selectRevealable(this.$select(`discoverOption${index}`))?.reveal?.();
           this.focusDiscoverOption(
             Math.max(
               0,
@@ -2484,11 +2470,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
       },
       revealLibrarySegments() {
         for (let index = 0; index < 2; index++)
-          (
-            this.$select("libraryScreen")?.$select(
-              `librarySegment${index}`,
-            ) as unknown as { reveal?: () => void }
-          )?.reveal?.();
+          $selectRevealable(this.$select("libraryScreen")?.$select(`librarySegment${index}`))?.reveal?.();
       },
       refreshLibraryCards() {
         const visible = this.libraryItems.slice(
@@ -2504,11 +2486,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
           if (this.phase !== "library" && this.sourceReturnOrigin !== "library")
             return;
           for (let index = 0; index < 12; index++)
-            (
-              this.$select("libraryScreen")?.$select(
-                `libraryCard${index}`,
-              ) as unknown as { reveal?: () => void }
-            )?.reveal?.();
+            $selectRevealable(this.$select("libraryScreen")?.$select(`libraryCard${index}`))?.reveal?.();
         }, 0);
       },
       focusLibrarySegment(index: number) {
@@ -2704,11 +2682,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
       },
       revealSearchKeys() {
         for (let index = 0; index < searchKeys.length; index++)
-          (
-            this.$select("searchScreen")?.$select(
-              `searchKey${index}`,
-            ) as unknown as { reveal?: () => void }
-          )?.reveal?.();
+          $selectRevealable(this.$select("searchScreen")?.$select(`searchKey${index}`))?.reveal?.();
       },
       setSearchQuery(value: string) {
         const next = value.slice(0, 256);
@@ -2846,11 +2820,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         setTimeout(() => {
           if (this.phase !== "search") return;
           for (const card of this.searchVisibleCards)
-            (
-              this.$select("searchScreen")?.$select(
-                `searchCard${card.position}`,
-              ) as unknown as { reveal?: () => void }
-            )?.reveal?.();
+            $selectRevealable(this.$select("searchScreen")?.$select(`searchCard${card.position}`))?.reveal?.();
         }, 40);
       },
       focusSearchKey(index: number) {
@@ -3216,23 +3186,11 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
       revealLiveControls() {
         const screen = this.$select("liveScreen");
         for (let index = 0; index < liveCanonicalFilters.length; index++)
-          (
-            screen?.$select(
-              `liveFilter${liveCanonicalFilters[index].id}`,
-            ) as unknown as { reveal?: () => void }
-          )?.reveal?.();
+          $selectRevealable(screen?.$select(`liveFilter${liveCanonicalFilters[index].id}`))?.reveal?.();
         for (let index = 0; index < liveCanonicalRows.length; index++)
-          (
-            screen?.$select(
-              `liveChannel${liveCanonicalRows[index].channel.id}`,
-            ) as unknown as { reveal?: () => void }
-          )?.reveal?.();
+          $selectRevealable(screen?.$select(`liveChannel${liveCanonicalRows[index].channel.id}`))?.reveal?.();
         for (let index = 0; index < liveCanonicalPrograms.length; index++)
-          (
-            screen?.$select(
-              `liveProgram${liveCanonicalPrograms[index].id}`,
-            ) as unknown as { reveal?: () => void }
-          )?.reveal?.();
+          $selectRevealable(screen?.$select(`liveProgram${liveCanonicalPrograms[index].id}`))?.reveal?.();
       },
       focusLiveFilter(index: number) {
         ++liveFocusGeneration;
@@ -3345,11 +3303,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
           screen?.reveal?.();
           screen?.setQuery?.(liveSearchCanonicalQuery);
           for (const key of liveSearchKeys)
-            (
-              this.$select("liveSearchScreen")?.$select(
-                `liveSearchKey${key.id}`,
-              ) as unknown as { reveal?: () => void }
-            )?.reveal?.();
+            $selectRevealable(this.$select("liveSearchScreen")?.$select(`liveSearchKey${key.id}`))?.reveal?.();
           this.focusLiveSearchKey(0);
         }, 60);
       },
@@ -3468,11 +3422,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
           };
           setTimeout(() => {
             for (const entry of liveSearchKeys)
-              (
-                this.$select("liveSearchScreen")?.$select(
-                  `liveSearchKey${entry.id}`,
-                ) as unknown as { reveal?: () => void }
-              )?.reveal?.();
+              $selectRevealable(this.$select("liveSearchScreen")?.$select(`liveSearchKey${entry.id}`))?.reveal?.();
             this.focusLiveSearchKey(this.liveSearchKeyIndex);
           }, 30);
           return;
@@ -3796,11 +3746,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
           this.liveDetailsSelectLabel = "Select";
           this.liveDetailsBackLabel = "BACK";
           for (let slot = 0; slot < 2; slot++)
-            (
-              this.$select("liveDetailsScreen")?.$select(
-                `liveDetailsOption${slot}`,
-              ) as unknown as { reveal?: () => void }
-            )?.reveal?.();
+            $selectRevealable(this.$select("liveDetailsScreen")?.$select(`liveDetailsOption${slot}`))?.reveal?.();
           this.focusLiveDetailsOption(0);
         }, 50);
 
@@ -3972,19 +3918,11 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
       },
       revealSettingsControls() {
         const screen = this.$select("settingsScreen");
-        (screen as unknown as { reveal?: () => void })?.reveal?.();
+        $selectRevealable(screen)?.reveal?.();
         for (let index = 0; index < this.settingsRowsCount; index++)
-          (
-            screen?.$select(`settingsRow${index}`) as unknown as {
-              reveal?: () => void;
-            }
-          )?.reveal?.();
+          $selectRevealable(screen?.$select(`settingsRow${index}`))?.reveal?.();
         for (let index = 0; index < Math.min(4, this.profiles.length); index++)
-          (
-            screen?.$select(`settingsProfile${index}`) as unknown as {
-              reveal?: () => void;
-            }
-          )?.reveal?.();
+          $selectRevealable(screen?.$select(`settingsProfile${index}`))?.reveal?.();
       },
       focusSettingsRow(index: number) {
         if (!settingsCanonicalRows[index]) return;
@@ -4201,23 +4139,13 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         };
         setTimeout(() => {
           if (!this.settingsDialogOpen) return;
-          (
-            this.$select("settingsScreen")?.$select(
-              "settingsDialogScreen",
-            ) as unknown as { reveal?: () => void }
-          )?.reveal?.();
+          $selectRevealable(this.$select("settingsScreen")?.$select("settingsDialogScreen"))?.reveal?.();
           for (
             let index = 0;
             index < Math.min(8, settingsCanonicalChoices.length - start);
             index++
           )
-            (
-              this.$select("settingsScreen")
-                ?.$select("settingsDialogScreen")
-                ?.$select(`settingsChoice${index}`) as unknown as {
-                reveal?: () => void;
-              }
-            )?.reveal?.();
+            $selectRevealable(this.$select("settingsScreen")?.$select("settingsDialogScreen")?.$select(`settingsChoice${index}`))?.reveal?.();
         }, 40);
       },
       focusSettingsChoice(index: number) {
@@ -4489,11 +4417,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
       },
       revealTitleMenu() {
         for (let index = 0; index < 7; index++)
-          (
-            this.$select("titleMenuScreen")?.$select(
-              `titleMenuOption${index}`,
-            ) as unknown as { reveal?: () => void }
-          )?.reveal?.();
+          $selectRevealable(this.$select("titleMenuScreen")?.$select(`titleMenuOption${index}`))?.reveal?.();
       },
       focusTitleMenu(index: number) {
         this.titleMenuFocusIndex = index;
@@ -4697,9 +4621,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
             this.home = { ...this.home, saved, favoriteItems };
             homeCache?.updateProfile(this.home);
             this.homeAddLabel = saved ? "✓" : "+";
-            (
-              this.$select("heroAction2") as unknown as { reveal?: () => void }
-            )?.reveal?.();
+            $selectRevealable(this.$select("heroAction2"))?.reveal?.();
             this.homeNotice = saved
               ? "Added to My List"
               : "Removed from My List";
@@ -4792,17 +4714,9 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
       },
       revealTitleControls() {
         for (let index = 0; index < 4; index++)
-          (
-            this.$select(`titleAction${index}`) as unknown as {
-              reveal?: () => void;
-            }
-          )?.reveal?.();
+          $selectRevealable(this.$select(`titleAction${index}`))?.reveal?.();
         for (let index = 0; index < 5; index++)
-          (
-            this.$select(`titleEpisode${index}`) as unknown as {
-              reveal?: () => void;
-            }
-          )?.reveal?.();
+          $selectRevealable(this.$select(`titleEpisode${index}`))?.reveal?.();
       },
       focusTitleAction(index: number) {
         this.detailFocusZone = "action";
@@ -4866,11 +4780,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
             this.detailSaveIcon = saved ? "✓" : "+";
             setTimeout(
               () =>
-                (
-                  this.$select("titleAction2") as unknown as {
-                    reveal?: () => void;
-                  }
-                )?.reveal?.(),
+                $selectRevealable(this.$select("titleAction2"))?.reveal?.(),
               0,
             );
             this.detailNotice = saved
@@ -5061,20 +4971,10 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
       },
       revealSourceControls() {
         for (let index = 0; index < 5; index++)
-          (
-            this.$select(`sourceChip${index}`) as unknown as {
-              reveal?: () => void;
-            }
-          )?.reveal?.();
-        (
-          this.$select("sourceProvider") as unknown as { reveal?: () => void }
-        )?.reveal?.();
+          $selectRevealable(this.$select(`sourceChip${index}`))?.reveal?.();
+        $selectRevealable(this.$select("sourceProvider"))?.reveal?.();
         for (let index = 0; index < 6; index++)
-          (
-            this.$select(`sourceRow${index}`) as unknown as {
-              reveal?: () => void;
-            }
-          )?.reveal?.();
+          $selectRevealable(this.$select(`sourceRow${index}`))?.reveal?.();
       },
       focusSourceChip(index: number) {
         if (this.phase !== "sources") return;
@@ -5116,11 +5016,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         this.$select(`sourceRow${slot}`)?.$focus();
         setTimeout(() => {
           if (this.phase === "sources")
-            (
-              this.$select(
-                `sourceRow${this.sourceRowIndex - this.sourceWindowStart}`,
-              ) as unknown as { reveal?: () => void }
-            )?.reveal?.();
+            $selectRevealable(this.$select(`sourceRow${this.sourceRowIndex - this.sourceWindowStart}`))?.reveal?.();
         }, 60);
       },
       moveSourceRow(delta: number) {
@@ -5373,120 +5269,241 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         if(this.playerItem)void this.nextEpisode(this.playerItem,playback?.player.snapshot.time.positionSeconds ?? 0);
       },
       updateUpNext(snapshot: PlayerSnapshot) {
-        const item=this.playerItem;
-        if(this.phase!=="player" || !item || !this.playerSessionId || !this.settingsPrefs.autoplay ||
-          !["series","episode"].includes(item.type) || this.playerNextBusy || this.playerSeeksPending || this.playerSeekTarget!==null || this.playerSeekPreview!==null || this.playerDialog)return;
-        const key=this.playerSessionKey();
-        if(advancedSession===key)return;
-        const position=snapshot.time.positionSeconds;
-        const duration=snapshot.time.durationSeconds ?? this.playerSessionDuration;
-        if(snapshot.state==="ended") { advancedSession=key;this.clearUpNext();void this.nextEpisode(item,position);return; }
-        if(this.upNext?.sessionId===key) {
-          if(duration-position>UP_NEXT_SECONDS+1)this.clearUpNext();
+        const item = this.playerItem;
+        if (
+          this.phase !== "player" ||
+          !item ||
+          !this.playerSessionId ||
+          !this.settingsPrefs.autoplay ||
+          !["series", "episode"].includes(item.type) ||
+          this.playerNextBusy ||
+          this.playerSeeksPending ||
+          this.playerSeekTarget !== null ||
+          this.playerSeekPreview !== null ||
+          this.playerDialog
+        )
+          return;
+        const key = this.playerSessionKey();
+        if (advancedSession === key) return;
+        const position = snapshot.time.positionSeconds;
+        const duration =
+          snapshot.time.durationSeconds ?? this.playerSessionDuration;
+        if (snapshot.state === "ended") {
+          advancedSession = key;
+          this.clearUpNext();
+          void this.nextEpisode(item, position);
           return;
         }
-        if(resumeRemainder || snapshot.state!=="playing" || duration<=10 || duration-position>UP_NEXT_SECONDS ||
-          !presentation({...item,position,duration}).canAutoNext)return;
-        const left=Math.max(1,Math.min(UP_NEXT_SECONDS,Math.ceil(duration-position)));
-        const next=nextFromEpisodes(this.detail.allEpisodes,item);
-        this.upNext={sessionId:key,item:next,left,total:left};
-        noteUpNext(true,left);
-        this.playerOverlay=true;this.setPlayerShade(true);cancelChromeTimer();
+        if (this.upNext?.sessionId === key) {
+          if (duration - position > UP_NEXT_SECONDS + 1) this.clearUpNext();
+          return;
+        }
+        if (
+          resumeRemainder ||
+          snapshot.state !== "playing" ||
+          duration <= 10 ||
+          duration - position > UP_NEXT_SECONDS ||
+          !presentation({ ...item, position, duration }).canAutoNext
+        )
+          return;
+        const left = Math.max(
+          1,
+          Math.min(UP_NEXT_SECONDS, Math.ceil(duration - position)),
+        );
+        const next = nextFromEpisodes(this.detail.allEpisodes, item);
+        this.upNext = { sessionId: key, item: next, left, total: left };
+        noteUpNext(true, left);
+        this.playerOverlay = true;
+        this.setPlayerShade(true);
+        cancelChromeTimer();
         clearInterval(upNextTimer);
-        upNextTimer=setInterval(()=>{
-          if(this.upNext?.sessionId!==key || this.phase!=="player")return;
-          if(playback?.player.snapshot.state==="paused")return;
-          const remaining=Math.max(0,this.upNext.left-UP_NEXT_TICK_MS/1000);
-          this.upNext={...this.upNext,left:remaining};noteUpNext(true,remaining);
-          if(remaining===0)this.playUpNext();
-        },UP_NEXT_TICK_MS);
-        if(!next) {
-          upNextScope?.abort();const scope=api.createScope();upNextScope=scope;
-          void api.nextEpisode(this.currentProfileId,item,{signal:scope.signal}).then(result=>{
-            if(scope.signal.aborted || this.upNext?.sessionId!==key)return;
-            if(result.status==="next"&&result.item)this.upNext={...this.upNext,item:result.item};
-            else {advancedSession=key;this.clearUpNext();}
-          }).catch(()=>{if(!scope.signal.aborted&&this.upNext?.sessionId===key){advancedSession=key;this.clearUpNext();}});
+        upNextTimer = setInterval(() => {
+          if (this.upNext?.sessionId !== key || this.phase !== "player") return;
+          if (playback?.player.snapshot.state === "paused") return;
+          const remaining = Math.max(
+            0,
+            this.upNext.left - UP_NEXT_TICK_MS / 1000,
+          );
+          this.upNext = { ...this.upNext, left: remaining };
+          noteUpNext(true, remaining);
+          if (remaining === 0) this.playUpNext();
+        }, UP_NEXT_TICK_MS);
+        if (!next) {
+          upNextScope?.abort();
+          const scope = api.createScope();
+          upNextScope = scope;
+          void api
+            .nextEpisode(this.currentProfileId, item, { signal: scope.signal })
+            .then((result) => {
+              if (scope.signal.aborted || this.upNext?.sessionId !== key)
+                return;
+              if (result.status === "next" && result.item)
+                this.upNext = { ...this.upNext, item: result.item };
+              else {
+                advancedSession = key;
+                this.clearUpNext();
+              }
+            })
+            .catch(() => {
+              if (!scope.signal.aborted && this.upNext?.sessionId === key) {
+                advancedSession = key;
+                this.clearUpNext();
+              }
+            });
         }
       },
       cancelNextEpisode() {
-        ++nextGeneration;nextSetupScope?.abort();continuation?.cancel();
-        this.playerNextBusy=false;
-        if(this.playerNotice==="Preparing next episode…")this.playerNotice="";
+        ++nextGeneration;
+        nextSetupScope?.abort();
+        continuation?.cancel();
+        this.playerNextBusy = false;
+        if (this.playerNotice === "Preparing next episode…")
+          this.playerNotice = "";
       },
-      async nextEpisode(previous: MediaItem, position=0) {
-        if(this.playerNextBusy || continuation?.busy)return;
-        const origin=this.phase;
-        const returnZone=origin==="home"?this.homeFocusZone:"card";
-        const returnIndex=origin==="home"?(this.homeFocusZone==="action"?this.homeActionIndex:this.homeCardIndex):origin==="library"?this.libraryCardIndex:0;
-        const ticket=++nextGeneration;
-        nextSetupScope?.abort();const scope=api.createScope();nextSetupScope=scope;
-        this.clearUpNext();this.playerDialog=null;
-        this.playerNextBusy=true;this.playerNotice="Preparing next episode…";cancelChromeTimer();
+      async nextEpisode(previous: MediaItem, position = 0) {
+        if (this.playerNextBusy || continuation?.busy) return;
+        const origin = this.phase;
+        const returnZone = origin === "home" ? this.homeFocusZone : "card";
+        const returnIndex =
+          origin === "home"
+            ? this.homeFocusZone === "action"
+              ? this.homeActionIndex
+              : this.homeCardIndex
+            : origin === "library"
+              ? this.libraryCardIndex
+              : 0;
+        const ticket = ++nextGeneration;
+        nextSetupScope?.abort();
+        const scope = api.createScope();
+        nextSetupScope = scope;
+        this.clearUpNext();
+        this.playerDialog = null;
+        this.playerNextBusy = true;
+        this.playerNotice = "Preparing next episode…";
+        cancelChromeTimer();
         try {
-          const [module,prefs]=await Promise.all([
+          const [module, prefs] = await Promise.all([
             import("./continuationRuntime"),
-            api.preferences(this.currentProfileId,{signal:scope.signal}),
+            api.preferences(this.currentProfileId, { signal: scope.signal }),
           ]);
-          if(ticket!==nextGeneration || scope.signal.aborted)return;
-          this.settingsPrefs=prefs;
-          continuation ??= module.createSolidTVContinuation({api,platform,getRuntime:()=>playback,
-            profileId:()=>this.currentProfileId,preferences:()=>this.settingsPrefs});
-          const result=await continuation.advance(previous,position);
-          if(ticket!==nextGeneration || scope.signal.aborted)return;
-          this.playerNextBusy=false;this.playerNotice="";
-          if(result.kind==="started") {
-            const active=result.active;
-            this.playerItem=active.intent.item;
-            this.playerSessionId=active.session.id;this.playerSessionDuration=active.session.duration;
-            this.playerTitle=active.intent.item.name;
-            this.playerEpisodeLine=`S${active.intent.item.season ?? 1} · E${active.intent.item.episode ?? 1} · ${active.intent.item.episodeTitle ?? active.intent.item.name}`;
-            resumeRemainder=false;advancedSession="";
-            if(active.intent.source) {
-              this.source={...this.source,item:active.intent.item};
-              this.sourceSelectedId=active.intent.source.id;
-              this.updateSources([active.intent.source],false,true);
-              noteSourceIntent(active.intent.item.id,active.intent.source.id,0,false);
+          if (ticket !== nextGeneration || scope.signal.aborted) return;
+          this.settingsPrefs = prefs;
+          continuation ??= module.createSolidTVContinuation({
+            api,
+            platform,
+            getRuntime: () => playback,
+            profileId: () => this.currentProfileId,
+            preferences: () => this.settingsPrefs,
+          });
+          const result = await continuation.advance(previous, position);
+          if (ticket !== nextGeneration || scope.signal.aborted) return;
+          this.playerNextBusy = false;
+          this.playerNotice = "";
+          if (result.kind === "started") {
+            const active = result.active;
+            this.playerItem = active.intent.item;
+            this.playerSessionId = active.session.id;
+            this.playerSessionDuration = active.session.duration;
+            this.playerTitle = active.intent.item.name;
+            this.playerEpisodeLine = `S${active.intent.item.season ?? 1} · E${active.intent.item.episode ?? 1} · ${active.intent.item.episodeTitle ?? active.intent.item.name}`;
+            resumeRemainder = false;
+            advancedSession = "";
+            if (active.intent.source) {
+              this.source = { ...this.source, item: active.intent.item };
+              this.sourceSelectedId = active.intent.source.id;
+              this.updateSources([active.intent.source], false, true);
+              noteSourceIntent(
+                active.intent.item.id,
+                active.intent.source.id,
+                0,
+                false,
+              );
             }
-            this.phase="player";this.playerOverlay=true;this.setPlayerShade(true);
+            this.phase = "player";
+            this.playerOverlay = true;
+            this.setPlayerShade(true);
             this.updatePlayerSnapshot(playback!.player.snapshot);
-            this.revealPlayerControls();this.focusPlayerControl(1);
-          } else if(result.kind==="ready") {
-            const {item,source}=result.intent;
-            this.sourceReturnOrigin=origin as typeof this.sourceReturnOrigin;
-            this.sourceReturnZone=returnZone;
-            this.sourceReturnIndex=returnIndex;
-            this.source=projectSources(item,[source],false,true);
-            this.sourceSelectedId=source.id;this.sourceRowIndex=0;this.sourceWindowStart=0;
-            this.updateSources([source],false,true);
-            noteSourceIntent(item.id,source.id,0,false);
-            void this.playSource(item,source,0);
-          } else if(result.kind==="missing") {
-            const message=result.status==="caught_up"?"You're caught up.":result.status==="upcoming"?"The next episode is not available yet.":"No next episode is available.";
-            if(this.phase==="player")this.playerNotice=message;else this.homeNotice=message;
-          } else if(result.kind==="failed")this.showContinuationFailure(result,previous);
-        } catch(cause) {
-          if(ticket===nextGeneration&&!scope.signal.aborted)this.playerNotice=cause instanceof Error?cause.message:"The TV could not prepare the next episode.";
+            this.revealPlayerControls();
+            this.focusPlayerControl(1);
+          } else if (result.kind === "ready") {
+            const { item, source } = result.intent;
+            this.sourceReturnOrigin = origin as typeof this.sourceReturnOrigin;
+            this.sourceReturnZone = returnZone;
+            this.sourceReturnIndex = returnIndex;
+            this.source = projectSources(item, [source], false, true);
+            this.sourceSelectedId = source.id;
+            this.sourceRowIndex = 0;
+            this.sourceWindowStart = 0;
+            this.updateSources([source], false, true);
+            noteSourceIntent(item.id, source.id, 0, false);
+            void this.playSource(item, source, 0);
+          } else if (result.kind === "missing") {
+            const message =
+              result.status === "caught_up"
+                ? "You're caught up."
+                : result.status === "upcoming"
+                  ? "The next episode is not available yet."
+                  : "No next episode is available.";
+            if (this.phase === "player") this.playerNotice = message;
+            else this.homeNotice = message;
+          } else if (result.kind === "failed")
+            this.showContinuationFailure(result, previous);
+        } catch (cause) {
+          if (ticket === nextGeneration && !scope.signal.aborted)
+            this.playerNotice =
+              cause instanceof Error
+                ? cause.message
+                : "The TV could not prepare the next episode.";
         } finally {
-          if(ticket===nextGeneration){this.playerNextBusy=false;this.schedulePlayerChromeHide();}
+          if (ticket === nextGeneration) {
+            this.playerNextBusy = false;
+            this.schedulePlayerChromeHide();
+          }
         }
       },
-      showContinuationFailure(result: Extract<SolidTVContinuationResult,{kind:"failed"}>, previous: MediaItem) {
-        const item=result.outgoing?.intent.item ?? previous;
-        this.playerDialog={title:result.rollbackFailed?"Playback could not be restored":"This source could not be played",
-          message:result.error.message,choices:[{id:"retry",label:"Retry"},{id:"source",label:"Choose source"},{id:"back",label:"Back"}],
-          onCancel:()=>{this.playerDialog=null;if(result.rollbackFailed)void this.exitPlayer();},
-          onSelect:(id)=>{
-            this.playerDialog=null;
-            if(id==="retry") {
-              if(result.rollbackFailed&&result.outgoing?.intent.source) {
-                this.phase="sources";
-                void this.playSource(item,result.outgoing.intent.source,result.outgoingPosition);
-              } else void this.nextEpisode(item,result.outgoingPosition);
-            } else if(id==="source") {
-              void (async()=>{if(this.phase==="player")await this.exitPlayer();if(this.phase==="sources")this.phase=this.sourceReturnOrigin;void this.openSources({...item,position:result.outgoingPosition},false);})();
-            } else if(result.rollbackFailed)void this.exitPlayer();
-          }};
+      showContinuationFailure(
+        result: Extract<SolidTVContinuationResult, { kind: "failed" }>,
+        previous: MediaItem,
+      ) {
+        const item = result.outgoing?.intent.item ?? previous;
+        this.playerDialog = {
+          title: result.rollbackFailed
+            ? "Playback could not be restored"
+            : "This source could not be played",
+          message: result.error.message,
+          choices: [
+            { id: "retry", label: "Retry" },
+            { id: "source", label: "Choose source" },
+            { id: "back", label: "Back" },
+          ],
+          onCancel: () => {
+            this.playerDialog = null;
+            if (result.rollbackFailed) void this.exitPlayer();
+          },
+          onSelect: (id) => {
+            this.playerDialog = null;
+            if (id === "retry") {
+              if (result.rollbackFailed && result.outgoing?.intent.source) {
+                this.phase = "sources";
+                void this.playSource(
+                  item,
+                  result.outgoing.intent.source,
+                  result.outgoingPosition,
+                );
+              } else void this.nextEpisode(item, result.outgoingPosition);
+            } else if (id === "source") {
+              void (async () => {
+                if (this.phase === "player") await this.exitPlayer();
+                if (this.phase === "sources")
+                  this.phase = this.sourceReturnOrigin;
+                void this.openSources(
+                  { ...item, position: result.outgoingPosition },
+                  false,
+                );
+              })();
+            } else if (result.rollbackFailed) void this.exitPlayer();
+          },
+        };
       },
       setPlayerShade(visible: boolean) {
         const shade = document.getElementById("player-shade");
@@ -5507,11 +5524,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
       },
       revealPlayerControls() {
         for (let index = 0; index < 7; index++)
-          (
-            this.$select(`playerControl${index}`) as unknown as {
-              reveal?: () => void;
-            }
-          )?.reveal?.();
+          $selectRevealable(this.$select(`playerControl${index}`))?.reveal?.();
       },
       focusPlayerControl(index: number) {
         if (this.phase !== "player") return;
@@ -5611,11 +5624,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
             kind === "audio" ? "Audio Tracks" : "Subtitles";
           this.trackLegend = "▲ ▼  Move     OK  Select     BACK  Close";
           for (let index = 0; index < 8; index++)
-            (
-              this.$select(`playerTrack${index}`) as unknown as {
-                reveal?: () => void;
-              }
-            )?.reveal?.();
+            $selectRevealable(this.$select(`playerTrack${index}`))?.reveal?.();
           this.focusTrackChoice(this.trackFocusIndex);
         }, 50);
         try {
@@ -5939,11 +5948,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
           if (this.phase !== "provider") return;
           this.providerPanelTitle = "Source provider";
           for (let index = 0; index < 6; index++)
-            (
-              this.$select(`providerOption${index}`) as unknown as {
-                reveal?: () => void;
-              }
-            )?.reveal?.();
+            $selectRevealable(this.$select(`providerOption${index}`))?.reveal?.();
           this.focusProviderOption(this.providerChoiceIndex);
         }, 50);
       },
@@ -6080,14 +6085,8 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
       },
       revealProfileTiles() {
         for (let index = 0; index < 6; index++)
-          (
-            this.$select(`profile${index}`) as unknown as {
-              reveal?: () => void;
-            }
-          )?.reveal?.();
-        (
-          this.$select("manageProfiles") as unknown as { reveal?: () => void }
-        )?.reveal?.();
+          $selectRevealable(this.$select(`profile${index}`))?.reveal?.();
+        $selectRevealable(this.$select("manageProfiles"))?.reveal?.();
       },
       refreshProfileSlots() {
         const visible = this.profiles
@@ -6123,9 +6122,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         this.selectLabel = this.managing ? "Edit" : "Select";
         this.profileFocusTarget = "tile";
         this.profileFocus = 0;
-        (
-          this.$select("manageProfiles") as unknown as { reveal?: () => void }
-        )?.reveal?.();
+        $selectRevealable(this.$select("manageProfiles"))?.reveal?.();
         setTimeout(() => {
           this.revealProfileTiles();
           this.$select("profile0")?.$focus();
