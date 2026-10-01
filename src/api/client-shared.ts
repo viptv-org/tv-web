@@ -2,37 +2,20 @@
    session-store types, and the module-level decode helpers used by both
    halves of the TvApi class. */
 import { normalizeCore as normalizeRust } from "../core";
-import { CoreBridge } from "../../vendor/core/wasm/viptv_core";
-import { createCoreDriver } from "../../vendor/core/runtime/driver";
-import { createHttpTransport } from "../../vendor/core/runtime/index";
 
 export function normalizeCore<T>(kind: string, value: unknown, origin = ""): T {
   try { return normalizeRust<T>(kind, value, origin); }
   catch { throw new TvApiError(200, "Invalid server response", "invalid_response"); }
 }
 import type {
-  Catalog,
-  DevicePairing,
   DeviceTokenSet,
-  DiscoverPage,
-  DiscoverRequest,
-  Guide,
   JsonObject,
   JsonValue,
-  LiveCategories,
-  LivePage,
-  MediaDetail,
   MediaItem,
   Page,
-  ParentStatus,
-  ParentPinChange,
   PlaybackPreferences,
   PlaybackSession,
-  PlaybackStart,
-  StreamDiscovery,
-  StreamPoll,
   TvApiErrorShape,
-  TvIdentity,
   TvProfile,
 } from "./types";
 

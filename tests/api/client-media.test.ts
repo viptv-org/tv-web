@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { MemoryDeviceSessionStore, TvApi } from "../../src/api";
-import { apiFor, deviceTokens, response, scripted, type Call } from "./client-helpers";
+import { apiFor, response, scripted } from "./client-helpers";
 
 const gatewayLease = (delivery: Record<string, unknown>) => ({ id: delivery.id, status: 'ready', expires_at: Math.floor(Date.now()/1000)+60, renew_after_seconds: 20, delivery: { ...delivery, kind: 'gateway', url: String(delivery.url).startsWith('/') ? `https://gateway.example/base${delivery.url}` : delivery.url } });
 

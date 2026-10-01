@@ -1,52 +1,23 @@
-import { memo, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { monitorPlaybackLease } from '../../api/playback-lease';
-import QRCode from "qrcode";
 import {
-  TvApi,
   TvApiError,
   type MediaItem,
-  type MediaPresentation,
   type MediaSource,
-  type DevicePairing,
-  type TvProfile,
-  type Catalog,
-  type PlaybackSession,
-  type PlaybackPreferences,
-  type PlaybackCapabilities,
 } from "../../api";
 import {
   createPlayer,
   deliveryCapabilitiesFor,
   PlaybackSessionController,
-  isTauriRuntime,
-  resolveTauriVideoInvoker,
-  type NativeVideoEngine,
   type Player,
-  type PlayerPlatform,
-  type PlayerSnapshot,
 } from "@viptv/video";
-import { exactResumeSource, resolveNext } from "../continuation";
-import {
-  connectionSummary,
-  describeApiError,
-  nextConnectionFailure,
-  type ConnectionIssue,
-  type ErrorDetail,
-} from "../errors";
-import { focusElement } from "../remote";
-import { enrichDetail, mergeEpisodeProgress, initialEpisode } from "../detailProgress";
-import { readStoredEngine, storeEngine } from "../enginePreference";
-import { createAutoplayTestLogger, probeAutoplayTestMode, probeEngineOverride } from "../../testing/autoplay-harness";
-import { catalogFilters, catalogDefaults } from "../catalogFilters";
-import { BrowserNavigation, readBrowserRoute, safeRestoredRoute, type BrowserRoute, type SettingsSubpage } from "../browserNavigation";
-import { seekPinReleased, type BufferedRange } from "../SeekBar";
-import type { Screen } from "../screens";
-import { normalizeCore } from "../../core";
-import { captureScroll, desktopInvoker, initialPrefs, type BrowserSnapshot, type Choice, type ScrollAnchor } from "./appShared";
-import type { AppApi, CoreApi, DialogsApi, AuthApi, PlaybackEngineApi, PlaybackSessionApi, CatalogApi, NavigationApi } from "./useTvApp";
+import { describeApiError } from "../errors";
+import { seekPinReleased } from "../SeekBar";
+import { desktopInvoker } from "./appShared";
+import type { AppApi, AuthApi } from "./useTvApp";
 
 export function usePlaybackEngine(app: AuthApi) {
-  const { active, api, autoplayTest, autoResume, browser, canvas, catalog, controlActivity, controller, engineChoice, engineError, entry, episodes, epoch, error, fail, go, items, modal, nextScope, notify, overlay, platform, playbackCapabilities, player, profile, profiles, responsive, resumeRemainder, screen, season, seek, seekTarget, seekTimer, seekValue, selected, session, setBusy, setError, setModal, setOpeningSource, setOverlay, setPreparing, setScreen, setSeek, setSelected, setSession, setSnapshot, snapshot, sourceQuality, sources, stack, video } = app;
+  const { active, api, autoplayTest, autoResume, browser, canvas, controlActivity, controller, engineChoice, engineError, epoch, fail, go, items, modal, nextScope, notify, overlay, platform, playbackCapabilities, player, profile, responsive, resumeRemainder, screen, seek, seekTarget, seekTimer, seekValue, session, setBusy, setError, setModal, setOpeningSource, setOverlay, setPreparing, setScreen, setSeek, setSelected, setSession, setSnapshot, snapshot, stack, video } = app;
 
   useEffect(() => {
     let engine: Player;

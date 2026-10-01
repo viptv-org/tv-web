@@ -1,36 +1,17 @@
 /* TvApiClientBase: constructor, fields, session driver, device pairing,
    profiles and the catalog/detail/source request surface. */
-import { normalizeCore as normalizeRust } from "../core";
 import { CoreBridge } from "../../vendor/core/wasm/viptv_core";
 import { createCoreDriver } from "../../vendor/core/runtime/driver";
 import { createHttpTransport } from "../../vendor/core/runtime/index";
 import type { Event, ViewModel } from "../../vendor/core/typescript/wire";
-import { ApiScope, MemoryDeviceSessionStore, TvApiError, throwIfAborted, normalizeCore, safeJson, clientMessage, isAbort, tokenSet, profile, mediaItem, page, playback, preferences, itemRequest, snakePreferences, params, segment, objectOrEmpty, expectObject, objectAt, hasObject, arrayValue, isObject, stringAt, optionalString, idAt, boolAt, optionalBool, clean, minimalItem } from "./client-shared";
+import { ApiScope, MemoryDeviceSessionStore, TvApiError, throwIfAborted, normalizeCore, safeJson, isAbort, tokenSet, objectOrEmpty, expectObject, optionalString } from "./client-shared";
 import type { DeviceSessionStore, RequestOptions, TvApiOptions } from "./client-shared";
 import type {
-  Catalog,
   DevicePairing,
   DeviceTokenSet,
-  DiscoverPage,
-  DiscoverRequest,
-  Guide,
   JsonObject,
   JsonValue,
-  LiveCategories,
-  LivePage,
-  MediaDetail,
-  MediaItem,
-  Page,
-  ParentStatus,
-  ParentPinChange,
-  PlaybackPreferences,
-  PlaybackSession,
-  PlaybackStart,
-  StreamDiscovery,
-  StreamPoll,
-  TvApiErrorShape,
   TvIdentity,
-  TvProfile,
 } from "./types";
 
 export class TvApiClientBase {

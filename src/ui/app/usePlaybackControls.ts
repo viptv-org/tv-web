@@ -1,52 +1,13 @@
-import { memo, useEffect, useLayoutEffect, useRef, useState } from "react";
-import QRCode from "qrcode";
-import {
-  TvApi,
-  TvApiError,
-  type MediaItem,
-  type MediaPresentation,
-  type MediaSource,
-  type DevicePairing,
-  type TvProfile,
-  type Catalog,
-  type PlaybackSession,
-  type PlaybackPreferences,
-  type PlaybackCapabilities,
-} from "../../api";
-import {
-  createPlayer,
-  deliveryCapabilitiesFor,
-  PlaybackSessionController,
-  isTauriRuntime,
-  resolveTauriVideoInvoker,
-  type NativeVideoEngine,
-  type Player,
-  type PlayerPlatform,
-  type PlayerSnapshot,
-} from "@viptv/video";
-import { exactResumeSource, resolveNext } from "../continuation";
-import {
-  connectionSummary,
-  describeApiError,
-  nextConnectionFailure,
-  type ConnectionIssue,
-  type ErrorDetail,
-} from "../errors";
+import { useEffect, useRef, useState } from "react";
+import { type TvProfile } from "../../api";
 import { focusElement } from "../remote";
-import { enrichDetail, mergeEpisodeProgress, initialEpisode } from "../detailProgress";
-import { readStoredEngine, storeEngine } from "../enginePreference";
-import { createAutoplayTestLogger, probeAutoplayTestMode, probeEngineOverride } from "../../testing/autoplay-harness";
-import { catalogFilters, catalogDefaults } from "../catalogFilters";
-import { BrowserNavigation, readBrowserRoute, safeRestoredRoute, type BrowserRoute, type SettingsSubpage } from "../browserNavigation";
-import { seekPinReleased, type BufferedRange } from "../SeekBar";
-import type { Screen } from "../screens";
-import { normalizeCore } from "../../core";
-import { captureScroll, desktopInvoker, initialPrefs, type BrowserSnapshot, type Choice, type ScrollAnchor } from "./appShared";
-import type { AppApi, CoreApi, DialogsApi, AuthApi, PlaybackEngineApi, PlaybackSessionApi, CatalogApi, NavigationApi } from "./useTvApp";
+import { type BufferedRange } from "../SeekBar";
+import { type Choice } from "./appShared";
+import type { NavigationApi } from "./useTvApp";
 import type { TrackChoice } from "../../components/player/AudioSelectorPopup";
 
 export function usePlaybackControls(app: NavigationApi) {
-  const { active, back, controller, editingProfile, entry, fail, modal, notify, overlay, play, player, profile, responsive, screen, seek, seekRepeat, seekTarget, seekTimer, seekValue, selected, session, setEditingProfile, setModal, setOverlay, setSeek, snapshot, stop, toggle, video } = app;
+  const { controller, editingProfile, entry, fail, modal, notify, overlay, player, responsive, screen, seekRepeat, seekTarget, seekTimer, seekValue, selected, session, setEditingProfile, setModal, setOverlay, setSeek, snapshot, stop, video } = app;
   const [playerNotice, setPlayerNotice] = useState<{ message: string; key: number }>();
 
   // A refused seek is transient: the engine keeps playing, so the notice

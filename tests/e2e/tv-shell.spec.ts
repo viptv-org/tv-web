@@ -1,5 +1,5 @@
-import { expect, test, type Page, type Route, type TestInfo } from '@playwright/test';
-import { apiOrigin, capture, corsHeaders, enterHome, episode, expectBox, fixtureImage, installBackend, installPlatformRuntime, json, movie, profile, channel, type ProfileFixture } from './helpers/tvShellRuntime';
+import { expect, test } from '@playwright/test';
+import { apiOrigin, capture, expectBox, installBackend, installPlatformRuntime, json, movie, profile, type ProfileFixture } from './helpers/tvShellRuntime';
 
 
 test('renders the real device-pairing handoff without storing a token before approval', async ({ page }, testInfo) => {

@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 
-import { apiOrigin, sessionKey, movie, installBackend } from './helpers/responsiveBackend';
+import { sessionKey, movie, installBackend } from './helpers/responsiveBackend';
 
 async function expectResponsiveViewport(page: Page, width: number) {
   const dimensions = await page.evaluate(() => {

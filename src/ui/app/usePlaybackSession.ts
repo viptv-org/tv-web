@@ -1,54 +1,21 @@
-import { memo, useEffect, useLayoutEffect, useRef, useState } from "react";
-import QRCode from "qrcode";
+import { useEffect, useRef } from "react";
 import {
-  TvApi,
-  TvApiError,
   type MediaItem,
   type MediaPresentation,
-  type MediaSource,
-  type DevicePairing,
-  type TvProfile,
-  type Catalog,
-  type PlaybackSession,
-  type PlaybackPreferences,
-  type PlaybackCapabilities,
   type SourcesPollState,
 } from "../../api";
-import {
-  createPlayer,
-  deliveryCapabilitiesFor,
-  PlaybackSessionController,
-  isTauriRuntime,
-  resolveTauriVideoInvoker,
-  type NativeVideoEngine,
-  type Player,
-  type PlayerPlatform,
-  type PlayerSnapshot,
-} from "@viptv/video";
-import { exactResumeSource, resolveNext } from "../continuation";
-import {
-  connectionSummary,
-  describeApiError,
-  nextConnectionFailure,
-  type ConnectionIssue,
-  type ErrorDetail,
-} from "../errors";
+import { resolveNext } from "../continuation";
 import { focusElement } from "../remote";
 import { enrichDetail, mergeEpisodeProgress, initialEpisode } from "../detailProgress";
-import { readStoredEngine, storeEngine } from "../enginePreference";
-import { createAutoplayTestLogger, probeAutoplayTestMode, probeEngineOverride } from "../../testing/autoplay-harness";
-import { catalogFilters, catalogDefaults } from "../catalogFilters";
-import { BrowserNavigation, readBrowserRoute, safeRestoredRoute, type BrowserRoute, type SettingsSubpage } from "../browserNavigation";
-import { seekPinReleased, type BufferedRange } from "../SeekBar";
-import type { Screen } from "../screens";
+import { safeRestoredRoute } from "../browserNavigation";
 import { normalizeCore } from "../../core";
-import { captureScroll, desktopInvoker, initialPrefs, type BrowserSnapshot, type Choice, type ScrollAnchor } from "./appShared";
-import type { AppApi, CoreApi, DialogsApi, AuthApi, PlaybackEngineApi, PlaybackSessionApi, CatalogApi, NavigationApi } from "./useTvApp";
+import { desktopInvoker } from "./appShared";
+import type { AppApi, PlaybackEngineApi } from "./useTvApp";
 import { nextFromEpisodes, UP_NEXT_SECONDS, UP_NEXT_TICK_MS } from "./upNext";
 
 export function usePlaybackSession(app: PlaybackEngineApi) {
   const { setOverlay, upNext, setUpNext } = app;
-  const { active, advancedSession, api, applyBrowserRoute, autoplayEnabled, autoplayStarted, autoplayTest, browser, browserApplyGeneration, browserApplying, browserFromRoute, browserReady, browserReplace, catalog, catalogValues, controller, episodes, epoch, error, fail, homeRequestScope, homeRows, items, nextScope, nextSkip, notify, play, playbackCapabilities, player, prefs, preparing, profile, query, responsive, restoredScroll, resumeRemainder, retireBrowserPlayback, screen, season, seek, selected, session, setBrowserRevision, setBusy, setCasting, setCatalog, setCatalogValues, setEditingProfile, setEntry, setEpisodes, setError, setItems, setModal, setNextSkip, setQuery, setScreen, setSeason, setSelected, setSettingsSubpage, setSources, snapshot, sources, stack } = app;
+  const { active, advancedSession, api, applyBrowserRoute, autoplayEnabled, autoplayStarted, autoplayTest, browser, browserApplyGeneration, browserApplying, browserFromRoute, browserReady, browserReplace, controller, episodes, epoch, fail, homeRequestScope, homeRows, nextScope, notify, play, playbackCapabilities, player, prefs, profile, responsive, restoredScroll, resumeRemainder, retireBrowserPlayback, screen, seek, selected, session, setBrowserRevision, setBusy, setCasting, setCatalog, setCatalogValues, setEditingProfile, setEntry, setEpisodes, setError, setItems, setModal, setNextSkip, setQuery, setScreen, setSeason, setSelected, setSettingsSubpage, setSources, snapshot, stack } = app;
 
   // playable title so the engine, state, position and error stream to
   // stdout without anyone driving the UI.

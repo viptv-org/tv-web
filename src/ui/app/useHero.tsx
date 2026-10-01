@@ -1,49 +1,12 @@
-import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import QRCode from "qrcode";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  TvApi,
-  TvApiError,
   type MediaItem,
   type MediaPresentation,
-  type MediaSource,
-  type DevicePairing,
-  type TvProfile,
-  type Catalog,
-  type PlaybackSession,
-  type PlaybackPreferences,
-  type PlaybackCapabilities,
 } from "../../api";
-import {
-  createPlayer,
-  deliveryCapabilitiesFor,
-  PlaybackSessionController,
-  isTauriRuntime,
-  resolveTauriVideoInvoker,
-  type NativeVideoEngine,
-  type Player,
-  type PlayerPlatform,
-  type PlayerSnapshot,
-} from "@viptv/video";
-import { exactResumeSource, resolveNext } from "../continuation";
-import {
-  connectionSummary,
-  describeApiError,
-  nextConnectionFailure,
-  type ConnectionIssue,
-  type ErrorDetail,
-} from "../errors";
-import { focusElement } from "../remote";
-import { enrichDetail, mergeEpisodeProgress, initialEpisode } from "../detailProgress";
-import { readStoredEngine, storeEngine } from "../enginePreference";
-import { createAutoplayTestLogger, probeAutoplayTestMode, probeEngineOverride } from "../../testing/autoplay-harness";
-import { catalogFilters, catalogDefaults } from "../catalogFilters";
-import { BrowserNavigation, readBrowserRoute, safeRestoredRoute, type BrowserRoute, type SettingsSubpage } from "../browserNavigation";
-import { seekPinReleased, type BufferedRange } from "../SeekBar";
-import type { Screen } from "../screens";
+import { enrichDetail } from "../detailProgress";
 import { normalizeCore } from "../../core";
 import { presentation } from "../../core/presentations";
-import { captureScroll, desktopInvoker, initialPrefs, type BrowserSnapshot, type Choice, type ScrollAnchor } from "./appShared";
-import type { AppApi, CoreApi, DialogsApi, AuthApi, PlaybackEngineApi, PlaybackSessionApi, CatalogApi, NavigationApi, PlaybackControlsApi } from "./useTvApp";
+import type { PlaybackControlsApi } from "./useTvApp";
 import { Cards, type CardActions, type CardRowOptions } from "../../components/cards/Cards";
 import { firstHomeCatalog as firstCatalog } from "./homeRows";
 

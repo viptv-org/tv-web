@@ -1,5 +1,5 @@
-import { expect, test, type Page, type Route, type TestInfo } from '@playwright/test';
-import { apiOrigin, capture, corsHeaders, enterHome, episode, expectBox, fixtureImage, installBackend, installPlatformRuntime, json, movie, profile, channel, type ProfileFixture } from './helpers/tvShellRuntime';
+import { expect, test } from '@playwright/test';
+import { apiOrigin, installBackend, installPlatformRuntime, json } from './helpers/tvShellRuntime';
 
 
 test('restores a remembered profile without flashing pairing and retains Home after reload', async ({ page }) => {

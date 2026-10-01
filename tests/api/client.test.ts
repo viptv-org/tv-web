@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { MemoryDeviceSessionStore, TvApi } from "../../src/api";
-import { apiFor, deviceTokens, response, scripted, type Call } from "./client-helpers";
+import { apiFor, response, scripted } from "./client-helpers";
 import { mediaItem } from "../../src/api/client-shared";
 
 

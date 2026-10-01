@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
-import type { Catalog, MediaItem, TvApi } from "../../src/api";
-import { loadHomeView, emptyHome } from "../../src/tv-solid/homeModel";
+import type { MediaItem, TvApi } from "../../src/api";
+import { loadHomeView } from "../../src/tv-solid/homeModel";
 import { loadDetailView } from "../../src/tv-solid/detailModel";
 
 const deferred = <T>() => { let resolve!: (value: T) => void; const promise = new Promise<T>(done => { resolve = done; }); return { promise, resolve }; };
