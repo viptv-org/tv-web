@@ -26,7 +26,11 @@ function fakeApi(): TvApi {
 
 /** Desktop arrangement (jsdom has no phone media query): section nav + pane. */
 function renderSettings(
-  playbackEngine?: { choice: "auto" | "mpv" | "gstreamer"; select: (engine: "auto" | "mpv" | "gstreamer") => void },
+  playbackEngine?: {
+    choice: "auto" | "mpv" | "gstreamer";
+    choices?: readonly ("auto" | "mpv" | "gstreamer")[];
+    select: (engine: "auto" | "mpv" | "gstreamer") => void;
+  },
   extra: Partial<Parameters<typeof Settings>[0]> = {},
 ) {
   const onSignOut = vi.fn();
@@ -71,6 +75,14 @@ describe("Settings playback engine", () => {
     expect(select).toHaveBeenCalledWith("mpv");
     // The menu closes once a choice is made.
     expect(screen.queryByRole("menu")).toBeNull();
+  });
+
+  it("offers only the engines this build reports", () => {
+    renderSettings({ choice: "auto", choices: ["auto", "gstreamer"], select: vi.fn() });
+    fireEvent.click(screen.getByRole("button", { name: "Playback preferences" }));
+    fireEvent.click(screen.getByRole("button", { name: /^Playback engine/ }));
+    const menu = screen.getByRole("menu", { name: "Playback engine" });
+    expect(within(menu).getAllByRole("menuitemradio").map((option) => option.textContent)).toEqual(["AutoCurrent", "gstreamer"]);
   });
 
   it("shows the persisted choice as the row value", () => {
