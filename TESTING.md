@@ -1,3 +1,22 @@
+# Consumer follow-ups and Core/video re-pin — 2026-09-30
+
+Pins Core `1f8483e` (no-limit source quality reference; dead `maximumHeight`
+session field removed) and video `514a332` (uncapped capability profiles,
+typed `engine-unavailable` for an uncompiled explicit engine, disguised-HLS
+segment prefix stripping). The desktop engine picker offers Auto plus only the
+engines `native_diagnostics` reports and migrates a stored engine the build
+lacks back to Auto. Continuation ranks the next source against the measured
+`deliveryCapabilitiesFor` profile; the fixed 1920x1080 fallback is gone.
+
+The TV shell Playwright fixtures now answer the v2 raw-live routes
+(`/api/v2/iptv/live/channels`, `/api/v2/iptv/guide/<id>`), which fixes the
+pre-existing `guide behavior` failure; two settings flows that still drove the
+retired Maximum quality row were updated. Typecheck, 242 unit tests in 41 files
+and the production build passed; single-worker Playwright `tv-shell`,
+`tv-shell-media`, `next-episode`, `resilience-settings` and `shell-chrome`
+passed (browser simulation only). No installed desktop, real media or TV
+hardware was exercised.
+
 # TV package artifact qualification — 2026-09-30
 
 Existing workflow `build.yml` (ID `368648044`) was dispatched exactly once on

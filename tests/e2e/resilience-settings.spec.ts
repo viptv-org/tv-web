@@ -139,7 +139,7 @@ test('Vizio: settings persist an add-on draft, enable/remove an extension, and s
   await page.getByRole('button', { name: 'Playback preferences', exact: true }).click();
   // Sub-page rows read their current value after the title (TvPlayback).
   await expect(rows).toContainText([
-    'Preferred audio', 'Preferred subtitles', 'Start with subtitles', 'Subtitle size', 'Subtitle appearance', 'Maximum quality',
+    'Preferred audio', 'Preferred subtitles', 'Start with subtitles', 'Subtitle size', 'Subtitle appearance',
   ]);
   await page.keyboard.press('Escape');
   await expect(page.getByRole('button', { name: 'Playback preferences', exact: true })).toBeFocused();

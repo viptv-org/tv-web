@@ -142,7 +142,7 @@ test('held resumable non-queue hero opens explicit source choice instead of Mana
   const resumable = { ...movie, id: 'tt-hero-resume', name: 'Resume hero movie', title: 'Resume hero movie', position: 42, duration: 120, source_addon_id: 'addon:2', source_fingerprint: 'same-provider-source' };
   await installBackend(page);
   await page.route(`${apiOrigin}/api/profiles/1/continue/page**`, route => json(route, { items: [], offset: 0, total: 0, next_offset: null }));
-  await page.route(`${apiOrigin}/api/live**`, route => json(route, { channels: [], total: 0 }));
+  await page.route(`${apiOrigin}/api/v2/iptv/live/**`, route => json(route, { catalog_id: 1, generation: 1, items: [], next_cursor: null, previous_cursor: null }));
   await page.route(`${apiOrigin}/api/discover**`, route => json(route, { metas: [resumable], has_more: false, next_skip: null }));
   await page.addInitScript(({ key, token }) => localStorage.setItem(key, JSON.stringify(token)), { key: `viptv-device:${apiOrigin}`, token: { sessionId: 'device-1', accountId: '7', profileId: null, accessToken: 'access', refreshToken: 'refresh', expiresIn: 900 } });
   await page.goto('/?renderer=react&platform=tizen');
@@ -164,7 +164,7 @@ test('new-movie hero hold chooses a source while its Home card hold performs ord
   test.skip(test.info().project.name !== 'tizen', 'the shared remote hold is exercised through the AVPlay boundary once');
   const assertNoPageErrors = await installPlatformRuntime(page);
   await installBackend(page);
-  await page.route(`${apiOrigin}/api/live**`, route => json(route, { channels: [], total: 0 }));
+  await page.route(`${apiOrigin}/api/v2/iptv/live/**`, route => json(route, { catalog_id: 1, generation: 1, items: [], next_cursor: null, previous_cursor: null }));
   await page.addInitScript(({ key, token }) => localStorage.setItem(key, JSON.stringify(token)), { key: `viptv-device:${apiOrigin}`, token: { sessionId: 'device-1', accountId: '7', profileId: null, accessToken: 'access', refreshToken: 'refresh', expiresIn: 900 } });
   await page.goto('/?renderer=react&platform=tizen');
   await page.getByRole('button', { name: 'Alex' }).press('Enter');

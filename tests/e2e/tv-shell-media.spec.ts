@@ -7,7 +7,7 @@ test('held series-root hero opens its episode detail instead of source selection
   const assertNoPageErrors = await installPlatformRuntime(page);
   const show = { id: 'tt-hero-show', type: 'series', name: 'Hero fixture show', title: 'Hero fixture show', background: '/background.jpg', description: 'A series root.' };
   await installBackend(page);
-  await page.route(`${apiOrigin}/api/live**`, route => json(route, { channels: [], total: 0 }));
+  await page.route(`${apiOrigin}/api/v2/iptv/live/**`, route => json(route, { catalog_id: 1, generation: 1, items: [], next_cursor: null, previous_cursor: null }));
   await page.route(`${apiOrigin}/api/discover**`, route => json(route, { metas: [show], has_more: false, next_skip: null }));
   await page.route(`${apiOrigin}/api/meta/series/tt-hero-show`, route => json(route, { meta: { ...show, videos: [{ id: 'tt-hero-show:1:1', title: 'Pilot', season: 1, episode: 1, description: 'Episode one.' }] } }));
   await page.addInitScript(({ key, token }) => localStorage.setItem(key, JSON.stringify(token)), { key: `viptv-device:${apiOrigin}`, token: { sessionId: 'device-1', accountId: '7', profileId: null, accessToken: 'access', refreshToken: 'refresh', expiresIn: 900 } });
@@ -50,11 +50,13 @@ test('playback preferences persist their snake-case mutation and update the shar
   await page.getByRole('button', { name: /^Start with subtitles/ }).press('Enter');
   await page.getByRole('radio', { name: 'On', exact: true }).press('Enter');
   await expect(page.locator('.vx-tv-description')).toContainText('On');
-  await page.getByRole('button', { name: /^Maximum quality/ }).press('Enter');
-  await expect(page.getByRole('heading', { name: 'Maximum quality', exact: true }).last()).toBeVisible();
-  await page.getByRole('radio', { name: '720p' }).press('Enter');
-  await expect(page.locator('.vx-tv-description')).toContainText('720p');
-  expect(changes).toEqual([{ subtitles_enabled: true }, { quality: '720p' }]);
+  await page.getByRole('button', { name: /^Subtitle size/ }).press('Enter');
+  await expect(page.getByRole('heading', { name: 'Subtitle size', exact: true }).last()).toBeVisible();
+  await page.getByRole('radio', { name: 'Large', exact: true }).press('Enter');
+  await expect(page.locator('.vx-tv-description')).toContainText('Large');
+  // Maximum quality was retired (design BACKEND_V2.md); no row offers it.
+  await expect(page.getByRole('button', { name: /^Maximum quality/ })).toHaveCount(0);
+  expect(changes).toEqual([{ subtitles_enabled: true }, { subtitle_size: 'large' }]);
   await expect(page.getByRole('alert')).toHaveCount(0);
   assertNoPageErrors();
 });

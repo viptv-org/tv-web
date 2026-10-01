@@ -1,12 +1,12 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { usePlayerFullscreen } from "../../hooks/usePlayerFullscreen";
 import { BrowserNavigation, readBrowserRoute, type BrowserRoute } from "../browserNavigation";
-import { readStoredEngine, storeEngine } from "../enginePreference";
+import { ENGINE_CHOICES, offeredEngines, probeNativeEngines, readStoredEngine, reconcileStoredEngine, storeEngine } from "../enginePreference";
 import { createAutoplayTestLogger, probeAutoplayTestMode, probeEngineOverride } from "../../testing/autoplay-harness";
 import { type NativeVideoEngine, type Player, type PlayerPlatform, type PlayerSnapshot, type PlaybackSessionController } from "@viptv/video";
 import type { TvApi, MediaItem, MediaSource, Catalog, PlaybackSession, DevicePairing, TvProfile, PlaybackCapabilities } from "../../api";
 import type { ErrorDetail } from "../errors";
-import { captureScroll, desktopInvoker, initialPrefs, type BrowserSnapshot, type Choice, type ModalOptions, type ModalView, type ScrollAnchor } from "./appShared";
+import { captureScroll, desktopInvoker, desktopShellPreview, initialPrefs, type BrowserSnapshot, type Choice, type ModalOptions, type ModalView, type ScrollAnchor } from "./appShared";
 import type { Screen } from "../screens";
 import type { HomeRow } from "./homeRows";
 import type { UpNextCard } from "./upNext";
@@ -29,7 +29,15 @@ export function useAppCore(api: TvApi, platform: PlayerPlatform, layout: "tv" | 
   const { oled, setOled, toggleOled } = useAppearance();
 
   const [engineChoice, setEngineChoice] = useState(readStoredEngine);
+  // Only engines the native plugin reports are offered. Until it answers,
+  // and when it cannot, the desktop offers Auto alone; the dev-only shell
+  // preview has no plugin and shows the full menu.
+  const [engineChoices, setEngineChoices] = useState<readonly NativeVideoEngine[]>(
+    desktopInvoker || !desktopShellPreview ? ["auto"] : ENGINE_CHOICES,
+  );
+  const engineOverridden = useRef(false);
   const selectEngine = (engine: NativeVideoEngine) => {
+    engineOverridden.current = false;
     setEngineChoice(engine);
     storeEngine(engine);
   };
@@ -44,7 +52,19 @@ export function useAppCore(api: TvApi, platform: PlayerPlatform, layout: "tv" | 
     const shell = desktopInvoker;
     let cancelled = false;
     void probeEngineOverride(desktopInvoker).then((override) => {
-      if (!cancelled && override) setEngineChoice(override);
+      if (!cancelled && override) {
+        engineOverridden.current = true;
+        setEngineChoice(override);
+      }
+    });
+    void probeNativeEngines(desktopInvoker).then((reported) => {
+      if (cancelled) return;
+      const offered = offeredEngines(reported);
+      setEngineChoices(offered);
+      // A stored engine this build lacks migrates to Auto; a per-launch
+      // VIPTV_ENGINE override is the harness's own explicit request.
+      const stored = reconcileStoredEngine(offered);
+      if (!engineOverridden.current) setEngineChoice(stored);
     });
     void probeAutoplayTestMode(desktopInvoker).then((enabled) => {
       if (!cancelled) {
@@ -254,7 +274,7 @@ export function useAppCore(api: TvApi, platform: PlayerPlatform, layout: "tv" | 
     api, platform, layout, responsive,
     casting, setCasting, castFocus, openCast, closeCast,
     oled, setOled, toggleOled,
-    engineChoice, setEngineChoice, selectEngine,
+    engineChoice, setEngineChoice, engineChoices, selectEngine,
     autoplayTest, autoplayEnabled, setAutoplayEnabled, autoplayStarted,
     compactHome, setCompactHome, bootingHome, setBootingHome,
     recentLive, setRecentLive, homeRows, setHomeRows,

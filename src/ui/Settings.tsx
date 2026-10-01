@@ -161,7 +161,12 @@ export function Settings({
   serverOrigin?: string;
   /** Device appearance (OLED + accent colour): phone / desktop only. */
   appearance?: { oled: boolean; toggle: () => void };
-  playbackEngine?: { choice: NativeVideoEngine; select: (engine: NativeVideoEngine) => void };
+  /** The desktop engine picker; `choices` lists only engines this build runs. */
+  playbackEngine?: {
+    choice: NativeVideoEngine;
+    choices?: readonly NativeVideoEngine[];
+    select: (engine: NativeVideoEngine) => void;
+  };
   subpage?: Page;
   onSubpageChange?: (p: Page) => void;
   onBack?: () => void;
@@ -255,7 +260,7 @@ export function Settings({
       openChoice(
         "settings-engine",
         "Playback engine",
-        ENGINE_CHOICES.map((engine) => ({
+        (playbackEngine.choices ?? ENGINE_CHOICES).map((engine) => ({
           label: engineLabel(engine),
           current: playbackEngine.choice === engine,
           pick: () => {
