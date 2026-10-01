@@ -10,7 +10,7 @@
 import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import { createPortal } from "react-dom";
 import { ChevronLeft, ChevronRight, Search, Tv, X } from "lucide-react";
-import { type Guide as GuideData, type MediaItem } from "../api";
+import { type Guide as GuideData } from "../api";
 import { TvButton, focusElement } from "./remote";
 import { TextEntry } from "./TextEntry";
 import { AutoLoad } from "./AutoLoad";

@@ -44,7 +44,7 @@ import { ReadyImage } from "./RokuArtwork";
 import { ACCENTS, useAppearance, type Accent } from "../theme/appearance";
 import { SettingsRowContent, TvDescription } from "./primitives/Rows";
 import { ChoiceContent, SwitchIndicator } from "./primitives/Toggles";
-import { Dialog, DialogText, MenuItemContent } from "./primitives/Overlays";
+import { Dialog, MenuItemContent } from "./primitives/Overlays";
 import { ButtonContent, buttonClass } from "./primitives/Button";
 import { TextField } from "./primitives/Fields";
 import { KeyLegend } from "./primitives/Keys";

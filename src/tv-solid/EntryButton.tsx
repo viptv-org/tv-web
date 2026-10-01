@@ -1,5 +1,5 @@
 /** @jsxImportSource @solidtv/solid */
-import { For, createMemo, createSignal, onCleanup } from 'solid-js';
+import { createSignal, onCleanup } from 'solid-js';
 import { activeElement, type ElementNode } from '@solidtv/solid';
 import { suppressKeyUntilRelease, releaseKeySuppression } from '@solidtv/solid/primitives';
 import { TvText, TvView } from './runtime';
@@ -107,21 +107,5 @@ export function restoreEntryFocus(root: ElementNode | undefined, opener: Element
   });
 }
 
-
-const legendOutlineCache = new Map<number, string>();
-function legendOutline(width: number) {
-  const cached = legendOutlineCache.get(width);
-  if (cached) return cached;
-  const height = parseFloat(tokens['size.keycap.tv-height']);
-  const border = parseFloat(tokens['size.keycap.tv-border']);
-  const radius = parseFloat(tokens['size.keycap.tv-radius']);
-  const half = border / 2;
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}"><rect x="${half}" y="${half}" width="${width-border}" height="${height-border}" rx="${radius-half}" fill="none" stroke="${tokens['color.line.keycap-tv']}" stroke-width="${border}"/></svg>`;
-  const source = 'data:image/svg+xml,' + encodeURIComponent(svg);
-  legendOutlineCache.set(width, source);
-  return source;
-}
-
-/** Decorative native TV key hints, measured and anchored to the CSS safe area. */
 /** Passive remote-key legends were removed by TV-038; actions retain their labels. */
 export function EntryLegend(_props: { items: {key: string; label: string}[] }) { return null; }

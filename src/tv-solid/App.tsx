@@ -1,7 +1,7 @@
 /** @jsxImportSource @solidtv/solid */
 import { CollapsedRail } from "./CollapsedRail";
 import { defineScreen, TvView, TvText, KeyedFor } from "./runtime";
-import { batch, For, Show } from "solid-js";
+import { batch, Show } from "solid-js";
 import type { ElementNode } from "@solidtv/solid";
 import { EntryButton } from "./EntryButton";
 import { TitleInfo, NativeTextPanel } from "./TitleInfo";
