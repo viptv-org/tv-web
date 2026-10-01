@@ -49,6 +49,9 @@ export function usePlaybackControls(app: NavigationApi) {
   const { active, back, controller, editingProfile, entry, fail, modal, notify, overlay, play, player, profile, responsive, screen, seek, seekRepeat, seekTarget, seekTimer, seekValue, selected, session, setEditingProfile, setModal, setOverlay, setSeek, snapshot, stop, toggle, video } = app;
   const [playerNotice, setPlayerNotice] = useState<{ message: string; key: number }>();
 
+  // A refused seek is transient: the engine keeps playing, so the notice
+  // dismisses itself instead of blocking playback or re-popping from the
+  // session state.
   useEffect(() => {
     if (!playerNotice) return;
     const timer = setTimeout(() => setPlayerNotice(undefined), 4000);

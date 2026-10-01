@@ -537,10 +537,6 @@ export function useCatalog(app: PlaybackSessionApi) {
       return () => clearTimeout(timer);
     }
   }, [screen, modal, sources, sourceQuality, sourceProvider]);
-  const [playerNotice, setPlayerNotice] = useState<{ message: string; key: number }>();
-  // A refused seek is transient: the engine keeps playing, so the notice
-  // dismisses itself instead of blocking playback or re-popping from the
-  // session state.
 
   return { detail, discoverSources, previewSources, sourcePreview, toggle, manage, loadCatalog };
 }
