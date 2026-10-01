@@ -1,7 +1,7 @@
 /* TvApiClientBase: constructor, fields, session driver, device pairing,
    profiles and the catalog/detail/source request surface. */
 import { normalizeCore as normalizeRust } from "../core";
-import { TvApiError, normalizeCore, profile, mediaItem, params, segment, expectObject, arrayValue, idAt, minimalItem } from "./client-shared";
+import { TvApiError, normalizeResponse, profile, mediaItem, params, segment, expectObject, arrayValue, idAt, minimalItem } from "./client-shared";
 import type { RequestOptions } from "./client-shared";
 import type {
   Catalog,
@@ -100,7 +100,7 @@ export class TvApiCatalog extends TvApiClientBase {
     );
   }
   async catalogs(options?: RequestOptions) {
-    return normalizeCore<Catalog[]>("catalogs", await this.raw("/api/catalogs", {}, true, options));
+    return normalizeResponse<Catalog[]>("catalogs", await this.raw("/api/catalogs", {}, true, options));
   }
   async discover(
     request: DiscoverRequest,
@@ -118,7 +118,7 @@ export class TvApiCatalog extends TvApiClientBase {
     const v = expectObject(
       await this.raw(`/api/discover${query}`, {}, true, options),
     );
-    const page = normalizeCore<DiscoverPage>("discoverResponse", { response: v, type: request.type });
+    const page = normalizeResponse<DiscoverPage>("discoverResponse", { response: v, type: request.type });
     if (!page.items.length && page.unsupportedCount) {
       throw new TvApiError(200, "This catalog returned a media type this app does not support.", "unsupported_media_type");
     }
@@ -129,7 +129,7 @@ export class TvApiCatalog extends TvApiClientBase {
       Partial<Pick<MediaItem, "seriesId">>,
     options?: RequestOptions,
   ): Promise<MediaDetail> {
-    const request = normalizeCore<{ path: string }>("request", {
+    const request = normalizeResponse<{ path: string }>("request", {
       operation: "metadata",
       item,
     });
@@ -142,7 +142,7 @@ export class TvApiCatalog extends TvApiClientBase {
         options,
       ),
     );
-    return normalizeCore<MediaDetail>("detailResponse", {
+    return normalizeResponse<MediaDetail>("detailResponse", {
       response: envelope,
       item,
     });
@@ -152,7 +152,7 @@ export class TvApiCatalog extends TvApiClientBase {
     item: MediaItem,
     options?: RequestOptions,
   ): Promise<StreamDiscovery> {
-    const request = normalizeCore<{ method: string; path: string; body: unknown }>(
+    const request = normalizeResponse<{ method: string; path: string; body: unknown }>(
       "request",
       { operation: "sourcesV2", item },
     );
@@ -178,14 +178,14 @@ export class TvApiCatalog extends TvApiClientBase {
     state: SourcesPollState,
     options?: RequestOptions,
   ): Promise<SourcesPollStep> {
-    const request = normalizeCore<{ method: string; path: string }>(
+    const request = normalizeResponse<{ method: string; path: string }>(
       "request",
       { operation: "sourcesPollV2", id, after: state.after },
     );
     const v = expectObject(
       await this.raw(request.path, {}, true, options),
     );
-    const step = normalizeCore<SourcesPollStep>("sourcesPollStep", { state, poll: v });
+    const step = normalizeResponse<SourcesPollStep>("sourcesPollStep", { state, poll: v });
     const failure = step.state.errors?.[0];
     if (step.done && !step.sources.length && failure) {
       throw new TvApiError(502, failure.message, failure.code ?? undefined);
@@ -203,7 +203,7 @@ export class TvApiCatalog extends TvApiClientBase {
       playback.position=0;
     }
     const requestId = Array.from(crypto.getRandomValues(new Uint8Array(16)), byte => byte.toString(16).padStart(2, '0')).join('');
-    const canonical = normalizeCore<PlaybackV2Request>('playbackV2Intent', { requestId, platform: this.playbackPlatform, playback });
+    const canonical = normalizeResponse<PlaybackV2Request>('playbackV2Intent', { requestId, platform: this.playbackPlatform, playback });
     const lease = await this.startPlaybackV2(canonical, options);
     return lease.session!;
   }

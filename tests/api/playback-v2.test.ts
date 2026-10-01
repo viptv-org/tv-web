@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { apiFor, response, scripted } from './client-helpers';
 import type { PlaybackV2Request } from '../../vendor/core/typescript/wire';
-import { normalizeCore } from '../../src/api/client-shared';
+import { normalizeResponse } from '../../src/api/client-shared';
 import { adapterRequest } from '../../vendor/video/src/session-request';
 
 const request: PlaybackV2Request = {
@@ -62,7 +62,7 @@ describe('v2 backend playback control', () => {
     expect(calls.at(-1)).toBe('DELETE https://viptv.example/api/v2/playback/pb2_one');
   });
   it('sends shared mapped conversion and preferences without a profile quality cap', async () => {
-    const mapped = normalizeCore<PlaybackV2Request>('playbackV2Intent', {
+    const mapped = normalizeResponse<PlaybackV2Request>('playbackV2Intent', {
       requestId: 'mapped', platform: 'tauri', preferences: { audioLanguage: 'en', quality: '1080p' },
       playback: { streamId: 'source', capabilities: { maxWidth: 3840, maxHeight: 2160, h264: true, aac: true, directUrls: true }, forceTranscode: true, conversionReason: 'audio-codec' },
     });

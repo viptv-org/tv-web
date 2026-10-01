@@ -1,5 +1,5 @@
 import type { PlaybackLease, PlaybackSession, PlaybackV2Request } from '../../vendor/core/typescript/wire';
-import { normalizeCore, throwIfAborted, TvApiError, type RequestOptions } from './client-shared';
+import { normalizeResponse, throwIfAborted, TvApiError, type RequestOptions } from './client-shared';
 
 type Control = (input: unknown, options?: RequestOptions) => Promise<unknown>;
 const STARTUP_MS = 45_000;
@@ -22,12 +22,12 @@ export class PlaybackV2Transport {
     const id = value && typeof value === 'object' && 'id' in value ? value.id : undefined;
     // Reuse Rust's lifecycle identifier validation even when the delivery
     // envelope is malformed, so an admitted lease can still be released.
-    normalizeCore('request', { operation: 'playbackV2Stop', id });
+    normalizeResponse('request', { operation: 'playbackV2Stop', id });
     return id as string;
   }
 
   private decode(value: unknown, expectedId?: string): PlaybackLease {
-    const lease = normalizeCore<PlaybackLease>('playbackV2', value, this.origin);
+    const lease = normalizeResponse<PlaybackLease>('playbackV2', value, this.origin);
     if (expectedId !== undefined && lease.id !== expectedId)
       throw new TvApiError(502, 'The server returned a different playback session.', 'invalid_playback_response');
     return lease;
@@ -49,7 +49,7 @@ export class PlaybackV2Transport {
   async start(request: PlaybackV2Request, options?: RequestOptions): Promise<PlaybackLease> {
     throwIfAborted(options?.signal);
     request = JSON.parse(JSON.stringify(request)) as PlaybackV2Request;
-    normalizeCore('request', { operation: 'playbackV2', playback: request });
+    normalizeResponse('request', { operation: 'playbackV2', playback: request });
     const controller = new AbortController();
     const abort = () => controller.abort();
     options?.signal?.addEventListener('abort', abort, { once: true });

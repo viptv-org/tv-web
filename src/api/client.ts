@@ -2,7 +2,7 @@
    extending the session/profile/catalog base. The module's public
    surface is re-exported so existing importers are unchanged. */
 import { normalizeCore as normalizeRust } from "../core";
-import { TvApiError, normalizeCore, isAbort, mediaItem, page, preferences, snakePreferences, params, segment, expectObject, objectAt, hasObject, arrayValue, stringAt, boolAt, optionalBool, clean } from "./client-shared";
+import { TvApiError, normalizeResponse, isAbort, mediaItem, page, preferences, snakePreferences, params, segment, expectObject, objectAt, hasObject, arrayValue, stringAt, boolAt, optionalBool, clean } from "./client-shared";
 import type { RequestOptions } from "./client-shared";
 import type {
   Guide,
@@ -55,7 +55,7 @@ export class TvApi extends TvApiCatalog {
             if (!pending) { pending = this.detail(item, { signal: scope.signal }); metadata.set(key, pending); }
             const detail = await pending;
             ensureActive();
-            enriched[index] = normalizeCore<MediaItem>("enrichHome", {
+            enriched[index] = normalizeResponse<MediaItem>("enrichHome", {
               original: item, metadata: { ...detail.item, episodes: detail.episodes },
             });
             options?.onPage?.({ ...result, items: [...enriched] });
@@ -162,7 +162,7 @@ export class TvApi extends TvApiCatalog {
     const v = expectObject(
       await this.raw(`/api/live${params(query)}`, {}, true, options),
     );
-    return normalizeCore<LivePage>("live", v);
+    return normalizeResponse<LivePage>("live", v);
   }
   async liveV2(query: LiveCatalogQuery = {}, options?: RequestOptions): Promise<LiveCatalogPage> {
     const value = await this.liveV2Control({ ...query, operation: "livePageV2" }, options);
@@ -204,13 +204,13 @@ export class TvApi extends TvApiCatalog {
         options,
       ),
     );
-    return normalizeCore<LiveCategories>("liveCategories", v);
+    return normalizeResponse<LiveCategories>("liveCategories", v);
   }
   async guide(channelId: string, options?: RequestOptions): Promise<Guide> {
     const v = expectObject(
       await this.raw(`/api/guide/${segment(channelId)}`, {}, true, options),
     );
-    return normalizeCore<Guide>("guide", v);
+    return normalizeResponse<Guide>("guide", v);
   }
   async preferences(profileId: string, options?: RequestOptions) {
     return preferences(

@@ -3,6 +3,7 @@ import { For, Show, createEffect, createSignal, onCleanup } from 'solid-js';
 import { activeElement, type ElementNode } from '@solidtv/solid';
 import type { TvApi, TvProfile } from '../api';
 import catalog from '../ui/avatars.json';
+import { avatarSrc } from '../ui/avatarCatalog';
 import { TvText, TvView } from './runtime';
 import { tokens } from '../theme/viptv-tokens.generated';
 import { EntryButton, EntryLegend, entryButtonWidth, restoreEntryFocus } from './EntryButton';
@@ -10,7 +11,6 @@ import { TextEntry } from './TextEntry';
 
 const worlds = catalog.categories.filter(category => !('available' in category) || category.available !== false);
 const pageCount = Math.ceil(catalog.perCategory / 18);
-const avatarSrc = (style: string, choice: number) => `${import.meta.env.BASE_URL}assets/avatar-catalog/${style}-${choice}.png`;
 export function ProfileEditor(props: { api: TvApi; profile?: TvProfile; primary: boolean; onDone: () => Promise<void>; onCancel: () => void }) {
   const [name,setName] = createSignal(props.profile?.name ?? '');
   const [style,setStyle] = createSignal(typeof props.profile?.raw.avatar_style === 'string' ? props.profile.raw.avatar_style : 'critters');

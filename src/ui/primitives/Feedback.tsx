@@ -6,8 +6,8 @@
  */
 import { CircleAlert } from "lucide-react";
 import type { CSSProperties, ReactNode } from "react";
+import { join } from "./classNames";
 
-const join = (...names: (string | false | null | undefined)[]) => names.filter(Boolean).join(" ");
 const Spinner = () => <span className="vx-spinner" aria-hidden="true" />;
 
 /**

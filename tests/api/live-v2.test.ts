@@ -1,6 +1,6 @@
 import { expect, it } from 'vitest';
 import { apiFor, response, scripted } from './client-helpers';
-import { normalizeCore } from '../../src/api/client-shared';
+import { normalizeResponse } from '../../src/api/client-shared';
 import type { PlaybackV2Request } from '../../vendor/core/typescript/wire';
 import { TvApi } from '../../src/api';
 
@@ -38,7 +38,7 @@ it('resolves one exact live source and admits its opaque id through v2 without a
   const api = apiFor(fake.fetcher);
   const source = await api.liveSourceV2('iptv:1:7');
   expect(JSON.stringify(source)).not.toContain('private-key');
-  const input = normalizeCore<PlaybackV2Request>('playbackV2Intent', { requestId: 'live_request', platform: 'vizio', playback: { streamId: source.id, capabilities: { maxWidth: 3840, maxHeight: 2160, h264: true, aac: true, directUrls: true } } });
+  const input = normalizeResponse<PlaybackV2Request>('playbackV2Intent', { requestId: 'live_request', platform: 'vizio', playback: { streamId: source.id, capabilities: { maxWidth: 3840, maxHeight: 2160, h264: true, aac: true, directUrls: true } } });
   const ready = await api.startPlaybackV2(input);
   expect(ready.session).toMatchObject({ live: true, deliveryKind: 'gateway', mode: 'direct', position: 0 });
   await api.stopPlayback(ready.id);

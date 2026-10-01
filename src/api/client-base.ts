@@ -4,7 +4,7 @@ import { CoreBridge } from "../../vendor/core/wasm/viptv_core";
 import { createCoreDriver } from "../../vendor/core/runtime/driver";
 import { createHttpTransport } from "../../vendor/core/runtime/index";
 import type { Event, ViewModel } from "../../vendor/core/typescript/wire";
-import { ApiScope, MemoryDeviceSessionStore, TvApiError, throwIfAborted, normalizeCore, safeJson, isAbort, tokenSet, objectOrEmpty, expectObject, optionalString } from "./client-shared";
+import { ApiScope, MemoryDeviceSessionStore, TvApiError, throwIfAborted, normalizeResponse, safeJson, isAbort, tokenSet, objectOrEmpty, expectObject, optionalString } from "./client-shared";
 import type { DeviceSessionStore, RequestOptions, TvApiOptions } from "./client-shared";
 import type {
   DevicePairing,
@@ -140,7 +140,7 @@ export class TvApiClientBase {
         options,
       ),
     );
-    return normalizeCore<DevicePairing>("pairing", value);
+    return normalizeResponse<DevicePairing>("pairing", value);
   }
   async claimPairing(deviceCode: string, options?: RequestOptions) {
     const tokens = await this.deviceTokens("/api/auth/device/token", deviceCode, options);
@@ -169,10 +169,10 @@ export class TvApiClientBase {
     await this.store.clear();
   }
   async me(options?: RequestOptions): Promise<TvIdentity> {
-    return normalizeCore<TvIdentity>("identity", await this.raw("/api/auth/me", {}, true, options));
+    return normalizeResponse<TvIdentity>("identity", await this.raw("/api/auth/me", {}, true, options));
   }
   protected async domainRequest(input: unknown, options?: RequestOptions): Promise<JsonValue> {
-    const request = normalizeCore<{ method: string; path: string; body: JsonObject | null }>("request", input);
+    const request = normalizeResponse<{ method: string; path: string; body: JsonObject | null }>("request", input);
     return this.raw(request.path, { method: request.method, body: request.body ?? undefined }, true, options);
   }
 
@@ -285,7 +285,7 @@ export class TvApiClientBase {
         const error = objectOrEmpty(payload);
         throw new TvApiError(
           response.status,
-          normalizeCore<{ message: string }>("apiError", { ...error, status: response.status }).message,
+          normalizeResponse<{ message: string }>("apiError", { ...error, status: response.status }).message,
           optionalString(error, "error_code"),
           endpoint,
         );

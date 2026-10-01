@@ -1,4 +1,5 @@
 import { normalizeCore } from "../core";
+import { throwIfAborted } from "../api/client-shared";
 import type {
   MediaItem,
   MediaSource,
@@ -87,12 +88,6 @@ async function collectSources(
   }
 }
 
-function throwIfAborted(signal?: AbortSignal) {
-  if (signal?.aborted)
-    throw signal.reason instanceof Error
-      ? signal.reason
-      : new DOMException("Aborted", "AbortError");
-}
 function delay(milliseconds: number, signal?: AbortSignal): Promise<void> {
   return new Promise((resolve, reject) => {
     if (signal?.aborted) {

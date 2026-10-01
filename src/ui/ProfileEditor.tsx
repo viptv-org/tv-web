@@ -3,11 +3,13 @@ import { Check, ChevronLeft, ChevronRight, CircleAlert, Pencil, Trash2, X } from
 import { TvApi, type TvProfile } from "../api";
 import { TextEntry, isTvLayout } from "./TextEntry";
 import { DialogBackdrop } from "./DialogBackdrop";
+import { isBackKey } from "./SettingsOverlay";
 import { TvButton, focusElement } from "./remote";
 import { buttonClass } from "./primitives/Button";
 import { AvatarTileContent } from "./primitives/Cards";
 import { KeyLegend } from "./primitives/Keys";
 import catalog from "./avatars.json";
+import { avatarSrc } from "./avatarCatalog";
 
 /* ---- Avatar catalog -------------------------------------------------------
  * Categories marked "available": false (the Disney-style worlds) have no
@@ -17,7 +19,6 @@ const avatarWorlds = catalog.categories.filter((category) => !("available" in ca
 const avatarCount = avatarWorlds.length * catalog.perCategory;
 const PAGE_SIZE = 18;
 const pageCount = Math.ceil(catalog.perCategory / PAGE_SIZE);
-const avatarSrc = (style: string, choice: number) => `${import.meta.env.BASE_URL}assets/avatar-catalog/${style}-${choice}.png`;
 const worldName = (style: string) => catalog.categories.find((category) => category.style === style)?.name ?? style;
 
 export const avatarUrl = (profile: TvProfile) =>
@@ -46,9 +47,6 @@ export function ProfileAvatar({ profile }: { profile: TvProfile }) {
     <img alt="" src={src} decoding="async" onError={() => setFailed(src)} />
   );
 }
-
-const isBackKey = (event: KeyboardEvent) =>
-  event.key === "Escape" || event.key === "BrowserBack" || event.keyCode === 10009 || event.keyCode === 461;
 
 /**
  * Add / edit a profile: a full page on every platform (PhProfileEdit, DeskProfileEdit,

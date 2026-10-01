@@ -3,7 +3,7 @@
    halves of the TvApi class. */
 import { normalizeCore as normalizeRust } from "../core";
 
-export function normalizeCore<T>(kind: string, value: unknown, origin = ""): T {
+export function normalizeResponse<T>(kind: string, value: unknown, origin = ""): T {
   try { return normalizeRust<T>(kind, value, origin); }
   catch { throw new TvApiError(200, "Invalid server response", "invalid_response"); }
 }
@@ -117,24 +117,24 @@ export function isAbort(value: unknown): value is DOMException {
   return value instanceof DOMException && value.name === "AbortError";
 }
 export function tokenSet(v: JsonObject): DeviceTokenSet {
-  return normalizeCore("tokens", v);
+  return normalizeResponse("tokens", v);
 }
 export function profile(v: JsonObject): TvProfile {
-  return normalizeCore("profile", v);
+  return normalizeResponse("profile", v);
 }
 
 
 export function mediaItem(v: JsonObject): MediaItem {
-  return normalizeCore("media", v);
+  return normalizeResponse("media", v);
 }
 export function page(v: JsonObject): Page<MediaItem> {
-  return normalizeCore("page", v);
+  return normalizeResponse("page", v);
 }
 export function preferences(v: JsonObject): PlaybackPreferences {
-  return normalizeCore("preferences", v);
+  return normalizeResponse("preferences", v);
 }
 export function snakePreferences(v: Partial<PlaybackPreferences>): JsonObject {
-  return normalizeCore("preferencesRequest", v);
+  return normalizeResponse("preferencesRequest", v);
 }
 export function params(entries: Record<string, string | number | undefined>) {
   const p = new URLSearchParams();
@@ -195,7 +195,7 @@ export function optionalBool(v: JsonObject, key: string) {
   return typeof value === "boolean" ? value : undefined;
 }
 export function clean(value: JsonObject): JsonObject {
-  return normalizeCore("clean", value);
+  return normalizeResponse("clean", value);
 }
 
 export function minimalItem(item: Pick<MediaItem, "id" | "type">): MediaItem {
