@@ -1,5 +1,5 @@
 /** Browser URLs contain stable identifiers only; catalog data and credentials stay out of history. */
-export type BrowserDestination = "Home" | "Discover" | "Live TV" | "My List" | "Search" | "Settings" | "profiles" | "detail" | "sources" | "player";
+type BrowserDestination = "Home" | "Discover" | "Live TV" | "My List" | "Search" | "Settings" | "profiles" | "detail" | "sources" | "player";
 export type SettingsSubpage = "Settings" | "Playback preferences" | "Addons";
 
 export interface BrowserRoute {

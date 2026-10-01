@@ -22,7 +22,7 @@ import { formatRuntime } from "../components/cards/cardText";
  * App's setModal passes through unchanged. `view` selects the title-family
  * presentation hint the generic modal reads (src/ui/app/AppDialogs.tsx).
  */
-export type ModalChoice = Choice;
+type ModalChoice = Choice;
 export type ModalRequest = {
   title: string;
   choices: ModalChoice[];

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 
 /** The responsive phone breakpoint, mirrored by the `max-width: 599px` CSS rules. */
-export const PHONE_QUERY = "(max-width: 599px)";
+const PHONE_QUERY = "(max-width: 599px)";
 
 const matches = () =>
   typeof window !== "undefined" && typeof window.matchMedia === "function"

@@ -8,7 +8,7 @@ export const PREFETCH_ROWS = 2;
 // The responsive guide keeps a whole category's rows in one scroll, so appended
 // pages must not evict the schedules of the channels above them.
 export const GUIDE_CACHE_LIMIT = 200;
-export const GUIDE_CELL_LIMIT = 32;
+const GUIDE_CELL_LIMIT = 32;
 export const HOUR_SECONDS = 3_600;
 export const DAY_SECONDS = 86_400;
 
@@ -17,13 +17,13 @@ export const DAY_SECONDS = 86_400;
  * more hours. TvLive.html draws 300 px per half hour on the 1920 × 1080
  * canvas; DeskLive.html draws 200 px per half hour.
  */
-export const TV_MINUTE_PX = 10;
+const TV_MINUTE_PX = 10;
 /** TV timeline width: 1920 − 192 left − 96 right safe area − 300 channel column (TvLive.html). */
-export const GUIDE_WIDTH = 1_332;
+const GUIDE_WIDTH = 1_332;
 /** The TV window is exactly what the timeline shows, so no block is ever clipped by it. */
 export const WINDOW_SECONDS = (GUIDE_WIDTH / TV_MINUTE_PX) * 60;
 /** Desktop / web: 200 px per half hour (DeskLive.html). */
-export const DESKTOP_HALF_HOUR_PX = 200;
+const DESKTOP_HALF_HOUR_PX = 200;
 export const RESPONSIVE_WINDOW_SECONDS = 21_600;
 /** Px for a span of seconds on the TV / desktop timelines. */
 export const tvSpan = (seconds: number) => (seconds * TV_MINUTE_PX) / 60;

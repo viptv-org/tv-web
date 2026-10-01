@@ -71,7 +71,7 @@ export type SearchSection = {
   catalog?: Catalog;
 };
 const SEARCH_ORDER: readonly SearchSectionKey[] = ["movie", "series", "anime", "other", "live"];
-export function searchSectionTitle(key: SearchSectionKey): string {
+function searchSectionTitle(key: SearchSectionKey): string {
   return key === "live" ? "Live TV" : discoverGroupLabel(key);
 }
 /**

@@ -8,7 +8,7 @@ import type { MediaItem, MediaSource } from "../api";
 export const sourceKey = (item: MediaItem) => `${item.type}:${item.id}`;
 
 /** The filter value of a source without a quality. */
-export const UNKNOWN_QUALITY = "Unknown";
+const UNKNOWN_QUALITY = "Unknown";
 
 export const qualityOf = (source: MediaSource) => source.quality ?? UNKNOWN_QUALITY;
 export const providerOf = (source: MediaSource) => source.sourceName ?? source.name;

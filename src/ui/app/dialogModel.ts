@@ -6,7 +6,7 @@
 import type { Choice } from "./appShared";
 
 /** The loose view hint another family may attach (title family's ModalView). */
-export type ModalViewHint = {
+type ModalViewHint = {
   kind?: "menu" | "choices" | "text" | "dialog";
   anchor?: { x: number; y: number; align?: "start" | "end" };
   meta?: string;

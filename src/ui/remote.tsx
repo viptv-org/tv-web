@@ -175,7 +175,7 @@ export function RemoteRoot({
   );
 }
 
-export function moveFocus(key: string, current: HTMLElement | null) {
+function moveFocus(key: string, current: HTMLElement | null) {
   const scope =
     current?.closest("[data-focus-scope]") ??
     document.querySelector("[data-focus-scope]") ??

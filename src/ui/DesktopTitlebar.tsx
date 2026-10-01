@@ -3,9 +3,6 @@ import { invoke } from "@tauri-apps/api/core";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { isDesktopShell } from "./app/appShared";
 
-// The Watch on TV glyph lives with the rails; re-exported for existing importers.
-export { RemoteControlIcon } from "./ShellNav";
-
 interface DesktopTitlebarProps {
   /** "pairing": wordmark and window controls only (sign-in, profiles). */
   variant?: "app" | "pairing";

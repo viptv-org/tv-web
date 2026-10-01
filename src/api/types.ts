@@ -4,7 +4,7 @@ type CoreView<T> = T extends readonly (infer Item)[] ? readonly CoreView<Item>[]
   : T extends object ? { readonly [Key in keyof T]: Key extends 'raw' ? JsonObject : CoreView<T[Key]> } : T;
 
 /** JSON accepted from an add-on after the client removes transport credentials. */
-export type JsonPrimitive = string | number | boolean | null;
+type JsonPrimitive = string | number | boolean | null;
 export type JsonValue = JsonPrimitive | JsonObject | readonly JsonValue[];
 export interface JsonObject {
   readonly [key: string]: JsonValue | undefined;
@@ -67,7 +67,7 @@ export interface Page<T> {
 export interface StreamDiscovery {
   readonly id: string;
 }
-export interface StreamEvent {
+interface StreamEvent {
   readonly sequence: number;
   readonly source: string;
   readonly sources: readonly MediaSource[];

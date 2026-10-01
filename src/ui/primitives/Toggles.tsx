@@ -46,7 +46,7 @@ export function ChoiceContent({ children, sub, current, unavailable, radio, chec
   );
 }
 
-export function choiceClass({ destructive, className }: { destructive?: boolean; className?: string } = {}) {
+function choiceClass({ destructive, className }: { destructive?: boolean; className?: string } = {}) {
   return ["vx-choice", destructive ? "vx-choice--destructive" : "", className ?? ""].filter(Boolean).join(" ");
 }
 

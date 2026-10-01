@@ -13,8 +13,8 @@ import catalog from "./avatars.json";
  * Categories marked "available": false (the Disney-style worlds) have no
  * images in public/assets/avatar-catalog, so the picker hides them and the
  * "[N] avatars" count covers only the worlds it shows. */
-export const avatarWorlds = catalog.categories.filter((category) => !("available" in category) || category.available !== false);
-export const avatarCount = avatarWorlds.length * catalog.perCategory;
+const avatarWorlds = catalog.categories.filter((category) => !("available" in category) || category.available !== false);
+const avatarCount = avatarWorlds.length * catalog.perCategory;
 const PAGE_SIZE = 18;
 const pageCount = Math.ceil(catalog.perCategory / PAGE_SIZE);
 const avatarSrc = (style: string, choice: number) => `${import.meta.env.BASE_URL}assets/avatar-catalog/${style}-${choice}.png`;

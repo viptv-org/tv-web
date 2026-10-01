@@ -14,7 +14,6 @@ import type {
   MediaItem,
   Page,
   PlaybackPreferences,
-  PlaybackSession,
   TvApiErrorShape,
   TvProfile,
 } from "./types";
@@ -114,16 +113,6 @@ export function safeJson(response: Response): Promise<JsonValue> {
     }
   });
 }
-export function clientMessage(status: number) {
-  if (status === 401) return "Pairing expired";
-  // 403 covers both a profile that cannot use this action and a request the
-  // server refused for another reason, such as an origin or lease mismatch.
-  // Say what is actually known rather than blaming the profile.
-  if (status === 403) return "VIPTV refused that request";
-  if (status === 404) return "This item is no longer available";
-  if (status === 429) return "Please try again shortly";
-  return "VIPTV could not complete that request";
-}
 export function isAbort(value: unknown): value is DOMException {
   return value instanceof DOMException && value.name === "AbortError";
 }
@@ -141,18 +130,9 @@ export function mediaItem(v: JsonObject): MediaItem {
 export function page(v: JsonObject): Page<MediaItem> {
   return normalizeCore("page", v);
 }
-export function playback(v: JsonObject, origin: string): PlaybackSession {
-  return normalizeCore("playback", v, origin);
-}
 export function preferences(v: JsonObject): PlaybackPreferences {
   return normalizeCore("preferences", v);
 }
-export function itemRequest(item: MediaItem): JsonObject {
-  return normalizeCore("itemRequest", item);
-}
-/** Server playback URLs are root-relative capabilities. AVPlay requires an absolute HTTPS URL. */
-
-
 export function snakePreferences(v: Partial<PlaybackPreferences>): JsonObject {
   return normalizeCore("preferencesRequest", v);
 }
@@ -186,7 +166,7 @@ export function arrayValue(value: JsonValue) {
   if (Array.isArray(value)) return value.filter(isObject);
   throw new TvApiError(200, "Invalid server response", "invalid_response");
 }
-export function isObject(value: JsonValue): value is JsonObject {
+function isObject(value: JsonValue): value is JsonObject {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 export function stringAt(v: JsonObject, key: string) {

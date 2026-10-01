@@ -10,7 +10,7 @@ export function chipClass({ dropdown, set, drawer, className }: { dropdown?: boo
 }
 
 /** Chip label: "1080p 5" (count), "Genre: Any ⌄" (name + value + chevron), "Year Required ⌄". */
-export function ChipContent({ name, children, count, required, requiredLabel = "Required", chevron }: {
+function ChipContent({ name, children, count, required, requiredLabel = "Required", chevron }: {
   name?: ReactNode; children: ReactNode; count?: ReactNode; required?: boolean; requiredLabel?: ReactNode; chevron?: ReactNode;
 }) {
   return (
@@ -37,23 +37,12 @@ export function Chip({ selected, count, drawer, className, children, type = "but
   );
 }
 
-/** Dropdown chip: "Genre: Any ⌄"; set once it has a value ("Genre: [Comedy]"). Opens a popover / sheet. */
-export function DropdownChip({ name, value, set, required, requiredLabel, chevron, drawer, className, type = "button", ...rest }: ButtonProps & {
-  name?: ReactNode; value: ReactNode; set?: boolean; required?: boolean; requiredLabel?: ReactNode; chevron: ReactNode; drawer?: boolean; className?: string;
-}) {
-  return (
-    <button type={type} className={chipClass({ dropdown: true, set, drawer, className })} aria-haspopup="dialog" {...rest}>
-      <ChipContent name={name} required={required} requiredLabel={requiredLabel} chevron={chevron}>{value}</ChipContent>
-    </button>
-  );
-}
-
 /** 1 px vertical hairline between chip groups (type | sort). */
 export function ChipDivider() {
   return <span className="vx-chip-divider" aria-hidden="true" />;
 }
 
-export type SegmentedItem<T extends string> = { value: T; label: ReactNode };
+type SegmentedItem<T extends string> = { value: T; label: ReactNode };
 
 /** Segmented control: phone full width (44), desktop fits its content (40), drawer 36. */
 export function Segmented<T extends string>({ items, value, onChange, label, drawer, className }: {
