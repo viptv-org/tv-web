@@ -275,7 +275,8 @@ function ResponsivePlayer({
                 />
                 <p className="vx-timeline__times player-time">
                   <span>{formatPlaybackTime(seek ?? position)}</span>
-                  <span>{durationLabel(duration)}</span>
+                  {/* Phone/desktop/web label both ends as clocks ([12:48] / [52:10], components.md §10). */}
+                  <span>{Number.isFinite(duration) && duration > 0 ? formatPlaybackTime(duration) : ""}</span>
                 </p>
               </div>
             )}

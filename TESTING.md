@@ -1,3 +1,23 @@
+# Desktop parity pass (design#3) — 2026-09-30
+
+Design pin unchanged (`4e153a7`). The preview harness compared DeskHome,
+DeskTitle, DeskPlayer, DeskPlayerBuffering, DeskPlayerNext, DeskUpNext,
+DeskPlayerAudio, DeskPlayerInfo, DeskPlayerLive, DeskSearchRecent,
+DeskSearchMatches, DeskLive, DeskSettings and DeskProfiles at 1440x900 against
+the committed design export (private captures, none committed). The one
+implementation drift found was the responsive player's end label: it read
+`52 min` (runtime) where components.md §10 draws both ends as clocks
+(`[12:48]` / `[52:10]`). Phone/desktop/web now show `52:10`; the TV player
+label is unchanged. Remaining differences are fixture content, pointer-hover
+states drawn in the reference, letterboxing of the stub poster, or the
+BACKEND_V2 guide rules (no counts, `All channels`, `Search channels`).
+
+Typecheck, 242 unit tests (41 files, single fork) and the production build
+passed. Single-worker Playwright: `responsive-corrections` (new end-label
+assertion), `shell-chrome`, `tv-shell` (Tizen and Vizio) and `player-remote`
+passed; one Tizen `tv-shell` case timed out on a cold dev-server start and
+passed on rerun. Browser simulation only; no installed desktop or TV hardware.
+
 # Consumer follow-ups and Core/video re-pin — 2026-09-30
 
 Pins Core `1f8483e` (no-limit source quality reference; dead `maximumHeight`
