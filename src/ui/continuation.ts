@@ -24,8 +24,14 @@ export async function resolveNext(
   profileId: string,
   current: MediaItem,
   preferences: PlaybackPreferences,
-  signal?: AbortSignal,
-  capabilities: PlaybackCapabilities = DEFAULT_CONTINUATION_CAPABILITIES,
+  signal: AbortSignal | undefined,
+  /**
+   * The device's measured delivery capabilities, exactly as ordinary playback
+   * resolves them (`deliveryCapabilitiesFor`). There is deliberately no
+   * fixed default: profile quality caps were retired (design BACKEND_V2.md)
+   * and only real device limits may rank the next episode's source.
+   */
+  capabilities: PlaybackCapabilities,
   excludedSourceIds: ReadonlySet<string> = new Set(),
 ): Promise<SessionStartIntent<MediaItem, MediaSource> | null> {
   const next = await api.nextEpisode(profileId, current, { signal });
@@ -42,17 +48,6 @@ export async function resolveNext(
   return source ? { item: next.item, source, position: 0 } : null;
 }
 
-/** Matches Roku's default SourceMatch capability envelope. */
-const DEFAULT_CONTINUATION_CAPABILITIES: PlaybackCapabilities = {
-  maxWidth: 1920,
-  maxHeight: 1080,
-  h264: true,
-  hevc: false,
-  aac: true,
-  directPlay: true,
-  hevcSdr: false,
-};
-
 /**
  * Port of Roku `BestContinuationSource`: IPTV stays with its source account;
  * add-on candidates are ranked and discovery order resolves equal ranks.
@@ -61,7 +56,7 @@ function bestContinuationSource(
   sources: readonly MediaSource[],
   current: Pick<MediaItem, "sourceAddonId">,
   preferences: PlaybackPreferences,
-  capabilities: PlaybackCapabilities = DEFAULT_CONTINUATION_CAPABILITIES,
+  capabilities: PlaybackCapabilities,
 ): MediaSource | undefined {
   return normalizeCore<MediaSource | null>("continuationSource", { sources, current, preferences, capabilities }) ?? undefined;
 }
