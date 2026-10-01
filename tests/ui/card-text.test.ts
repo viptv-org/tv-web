@@ -18,6 +18,17 @@ describe('card text (Home reference captions)', () => {
     expect(formatRuntime(undefined)).toBe('');
   });
 
+  it('accepts every catalog runtime shape the detail and card views receive', () => {
+    expect(formatRuntime('100')).toBe('1 h 40 min');
+    expect(formatRuntime('100 minutes')).toBe('1 h 40 min');
+    expect(formatRuntime(' 65 mins ')).toBe('1 h 05 min');
+    expect(formatRuntime('120 MIN')).toBe('2 h 00 min');
+    expect(formatRuntime('45m')).toBe('45 min');
+    expect(formatRuntime('0')).toBe('0 min');
+    expect(formatRuntime(' 2h 3m ')).toBe('2h 3m');
+    expect(formatRuntime('')).toBe('');
+  });
+
   it('captions continue-watching cards for titles, episodes and queue states', () => {
     expect(continueMeta({ ...base, position: 4426, duration: 6000 }, presentation)).toBe('Resume from 73:46');
     const episode: MediaItem = { ...base, type: 'episode', name: 'Lanterns', season: 1, episode: 1, episodeTitle: 'Pilot', position: 343 };

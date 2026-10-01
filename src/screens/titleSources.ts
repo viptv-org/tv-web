@@ -34,18 +34,6 @@ export function matchesFilters(source: MediaSource, quality: string, provider: s
   return (quality === "All" || qualityOf(source) === quality) && (provider === "All" || providerOf(source) === provider);
 }
 
-/** "100 min" → "1 h 40 min" (the references' runtime form); other strings pass through. */
-export function formatRuntime(runtime: string | undefined) {
-  if (!runtime) return "";
-  const match = /^\s*(\d+)\s*(?:min|mins|minutes|m)?\s*$/i.exec(runtime);
-  if (!match) return runtime;
-  const minutes = Number(match[1]);
-  if (minutes < 60) return `${minutes} min`;
-  const hours = Math.floor(minutes / 60);
-  const rest = minutes % 60;
-  return rest ? `${hours} h ${rest} min` : `${hours} h`;
-}
-
 /** "S1 E2" for an episode, "" otherwise. */
 export function episodeCode(item: MediaItem) {
   return item.season !== undefined ? `S${item.season} E${item.episode ?? 1}` : "";

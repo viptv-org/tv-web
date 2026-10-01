@@ -20,10 +20,13 @@ export function formatMinutes(minutes: number): string {
   return `${Math.floor(whole / 60)} h ${String(whole % 60).padStart(2, "0")} min`;
 }
 
-/** Catalog runtimes arrive as "100 min"; the design reads "1 h 40 min". Other shapes pass through. */
+/**
+ * Catalog runtimes arrive as "100 min" (or "100", "100 minutes"); the design
+ * reads "1 h 40 min". Other shapes ("2h 3m") pass through trimmed.
+ */
 export function formatRuntime(runtime: string | undefined): string {
   if (!runtime) return "";
-  const match = /^\s*(\d+)\s*(?:min|mins|m)\s*$/i.exec(runtime);
+  const match = /^\s*(\d+)\s*(?:min|mins|minutes|m)?\s*$/i.exec(runtime);
   return match ? formatMinutes(Number(match[1])) : runtime.trim();
 }
 
