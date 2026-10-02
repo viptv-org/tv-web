@@ -15,8 +15,20 @@ const TOAST_ERROR_MS = parseInt(tokens["motion.toast-error"], 10);
 
 export function useDialogs(app: CoreApi) {
   const { api, entry, error, errorFocus, modal, modalFocus, screen, setBootingHome, setEntryState, setError, setStartupAttempt, setToast } = app;
+  const previousModal = useRef<typeof modal>();
 
   useLayoutEffect(() => {
+    const previous = previousModal.current;
+    previousModal.current = modal;
+    if (modal?.title === "Source provider" && previous?.title === "Source provider") {
+      const focused = (document.activeElement as HTMLElement)?.dataset.focusId ?? "";
+      const index = Number(focused.match(/^modal-(\d+)$/)?.[1]);
+      if (Number.isInteger(index) && previous.choices[index]?.label === "Cancel") {
+        const next = modal.choices.findIndex((choice) => choice.label === "Cancel");
+        if (next >= 0 && next !== index) focusElement(`modal-${next}`);
+      }
+      return;
+    }
     if (modal) {
       if (!modalFocus.current)
         modalFocus.current =

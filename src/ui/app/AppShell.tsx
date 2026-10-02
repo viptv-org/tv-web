@@ -276,6 +276,7 @@ export function AppShell({ app }: { app: AppApi }) {
                 producers={sourceProducers}
                 sourceQuality={sourceQuality}
                 sourceProvider={sourceProvider}
+                providerPickerOpen={modal?.title === "Source provider"}
                 setSourceQuality={setSourceQuality}
                 setSourceProvider={setSourceProvider}
                 busy={busy}

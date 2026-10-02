@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, type Dispatch, type KeyboardEvent, type SetStateAction } from "react";
+import { useEffect, useLayoutEffect, useRef, type Dispatch, type KeyboardEvent, type SetStateAction } from "react";
 import { ChevronDown, Film, ListFilter, Search, X } from "lucide-react";
 import { TvButton } from "../ui/remote";
 import { formatPlaybackTime } from "../ui/SeekBar";
@@ -10,7 +10,7 @@ import { EmptyState } from "../ui/primitives/Feedback";
 import { KbdHints, KeyLegend } from "../ui/primitives/Keys";
 import { PlayIcon } from "../ui/primitives/icons";
 import { episodeCode, matchesFilters, providerOf, qualityChoices, qualityLabel, qualityOf } from "./titleSources";
-import { producerStatus, sourceProviderKey, type SourceProducer } from "./sourceProducers";
+import { producerStatus, sourceDescription, sourceDetails, sourceProviderKey, type SourceProducer } from "./sourceProducers";
 
 /** The item being sourced: "The End of Oak Street" / "Monster: … · S1 E1", and its queue / resume state. */
 function presentationContext(item: MediaItem) {
@@ -65,6 +65,7 @@ export function SourcesScreen({
   producers,
   sourceQuality,
   sourceProvider,
+  providerPickerOpen,
   setSourceQuality,
   setSourceProvider,
   busy,
@@ -81,6 +82,7 @@ export function SourcesScreen({
   producers: readonly SourceProducer[];
   sourceQuality: string;
   sourceProvider: string;
+  providerPickerOpen: boolean;
   setSourceQuality: Dispatch<SetStateAction<string>>;
   setSourceProvider: Dispatch<SetStateAction<string>>;
   busy: boolean;
@@ -111,29 +113,37 @@ export function SourcesScreen({
       ? [context.title, progress || context.status || found].filter(Boolean).join(" · ")
       : count || !busy ? [found, progress || context.status].filter(Boolean).join(" · ") : "Finding sources…";
 
+  const providerChoices = () => [
+    ...[{ key: "All", label: "All" }, ...providers].map(({ key, label }) => ({
+      label: key === "All" ? label : `${label}${sources.some((source) => sourceProviderKey(source) === key) ? "" : busy ? " · Checking" : " · No playable sources"}`,
+      current: key === sourceProvider,
+      action: () => {
+        setSourceProvider(key);
+        setModal(undefined);
+      },
+    })),
+    ...(responsive && !phone ? [] : [{ label: "Cancel", action: () => setModal(undefined) }]),
+  ];
+  const producerSignature = providers.map((provider) => `${provider.key}:${provider.label}:${sources.some((source) => sourceProviderKey(source) === provider.key) ? "rows" : busy ? "pending" : "empty"}`).join("|");
+  const previousSignature = useRef(producerSignature);
+  useEffect(() => {
+    const changed = previousSignature.current !== producerSignature;
+    previousSignature.current = producerSignature;
+    if (changed && providerPickerOpen)
+      setModal((current) => current?.title === "Source provider" ? { ...current, choices: providerChoices() } : current);
+  }, [producerSignature, providerPickerOpen]);
   const chooseProvider = () =>
     setModal({
       title: "Source provider",
       view: { kind: "choices", anchor: responsive && !phone ? anchorBelow(document.querySelector('[data-focus-id="source-provider"]'), "end") : undefined },
-      focus: sourceProvider,
-      choices: [
-        ...[{ key: "All", label: "All" }, ...providers].map(({ key, label }) => ({
-          label: key === "All" ? label : `${label}${sources.some((source) => sourceProviderKey(source) === key) ? "" : busy ? " · Checking" : " · No playable sources"}`,
-          current: key === sourceProvider,
-          action: () => {
-            setSourceProvider(key);
-            setModal(undefined);
-          },
-        })),
-        // The desktop popover closes on Esc / outside press (DeskSourceProvider has no Cancel row).
-        ...(responsive && !phone ? [] : [{ label: "Cancel", action: () => setModal(undefined) }]),
-      ],
+      focus: sourceProvider === "All" ? "All" : providers.find((provider) => provider.key === sourceProvider)?.label,
+      choices: providerChoices(),
     });
   const showDetails = (s: MediaSource) =>
     setModal({
       title: "Source details",
       view: { kind: "text" },
-      body: [s.name, s.title, s.filename, s.audio, s.sourceName].filter(Boolean).join("\n\n"),
+      body: sourceDetails(s),
       choices: [{ label: "Close", action: () => setModal(undefined) }],
     });
   // TV: ◀ ▶ on a source row steps through the quality filters (the legend's "Quality").
@@ -220,7 +230,7 @@ export function SourcesScreen({
           {visible.map((s, i) => {
             const provider = producers.find((producer) => producer.key === sourceProviderKey(s))?.label ?? providerOf(s);
             const quality = s.quality ?? "";
-            const file = [s.title ?? s.filename, s.audio].filter(Boolean).join(" · ");
+            const file = sourceDescription(s);
             return (
               <TvButton
                 id={`source-${i}`}

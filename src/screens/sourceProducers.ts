@@ -11,14 +11,33 @@ export interface SourceProducer {
 }
 
 const sourceKeys = new WeakMap<MediaSource, string>();
+const sourceBodies = new WeakMap<MediaSource, string>();
+function sourceDisplay(source: MediaSource) {
+  return normalizeCore<{ providerKey: string; body: string }>("sourceDisplay", source);
+}
 export function sourceProviderKey(source: MediaSource) {
   if (!source.sourceAddonId) return "";
   let key = sourceKeys.get(source);
   if (!key) {
-    key = normalizeCore<{ providerKey: string }>("sourceDisplay", source).providerKey;
+    key = sourceDisplay(source).providerKey;
     sourceKeys.set(source, key);
   }
   return key;
+}
+
+/** Keep the complete core-owned source body; audio is an adapter fact. */
+export function sourceDescription(source: MediaSource) {
+  let body = sourceBodies.get(source);
+  if (body === undefined) {
+    body = sourceDisplay(source).body;
+    sourceBodies.set(source, body);
+  }
+  return [body.replace(/\n+/g, " · "), source.audio].filter(Boolean).join(" · ");
+}
+
+export function sourceDetails(source: MediaSource) {
+  return [sourceDisplay(source).body, source.audio, source.sourceName]
+    .filter(Boolean).join("\n\n");
 }
 
 /** Only producers actually observed in discovery belong in the picker. */

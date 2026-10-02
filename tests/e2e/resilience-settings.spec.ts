@@ -165,6 +165,44 @@ test('Vizio: observed add-ons stay distinct when two return no playable formats'
   await expect(playable).toBeVisible();
 });
 
+test('Vizio: an open provider menu gains seven late add-ons without moving focus or losing source details', async ({ page }) => {
+  test.skip(test.info().project.name !== 'vizio');
+  await installSession(page);
+  const state = await installBackend(page);
+  state.addons.splice(0, state.addons.length,
+    { id: 8, name: 'Playable add-on', enabled: true },
+    ...Array.from({ length: 7 }, (_, index) => ({ id: index + 1, name: `Provider ${index + 1}`, enabled: true })));
+  await page.route(`${apiOrigin}/api/v2/streams/sources**`, async route => {
+    const after = Number(new URL(route.request().url()).searchParams.get('after') ?? 0);
+    if (after) {
+      await new Promise(resolve => setTimeout(resolve, 1200));
+      return json(route, { events: Array.from({ length: 7 }, (_, index) => ({
+        seq: index + 2, source: `addon:${index + 1}`, streams: [], error_code: 'source_format_unsupported',
+      })), done: true });
+    }
+    return json(route, { events: [{ seq: 1, source: 'addon:8', streams: [
+      { id: 'with-description', name: 'Visible name', title: 'Visible title', description: 'Distinct torrent description', filename: 'file.mkv', source_addon_id: 'addon:8', source_quality: '1080p' },
+    ] }], done: false });
+  });
+  await enterHome(page);
+  await page.getByRole('button', { name: 'Resilient Movie' }).press('Enter');
+  await page.locator('[data-focus-id="detail-source"]').press('Enter');
+  const row = page.locator('[data-focus-id="source-0"]');
+  await expect(row).toBeVisible();
+  await page.getByRole('button', { name: 'All providers' }).click();
+  const cancel = page.getByRole('button', { name: 'Cancel', exact: true });
+  await cancel.focus();
+  await expect(page.getByRole('button', { name: /^Provider 7 · No playable sources$/ })).toBeVisible();
+  await expect(cancel).toBeFocused();
+  await page.getByRole('button', { name: /^Provider 7 · No playable sources$/ }).click();
+  await expect(page.getByText(/Provider 7 returned formats this app cannot play/)).toBeVisible();
+  await page.getByRole('button', { name: 'Provider 7', exact: true }).click();
+  await page.getByRole('button', { name: 'All', exact: true }).click();
+  await expect(row).toHaveAttribute('aria-label', /Distinct torrent description/);
+  await row.click({ button: 'right' });
+  await expect(page.getByRole('dialog', { name: 'Source details' })).toContainText('Distinct torrent description');
+});
+
 test('Vizio: settings persist an add-on draft, enable/remove an extension, and sign out', async ({ page }) => {
   test.skip(test.info().project.name !== 'vizio', 'settings mutations use the same hosted-TV client');
   await installSession(page);

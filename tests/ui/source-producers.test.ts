@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { MediaSource, StreamEvent } from "../../src/api";
-import { configuredAddonNames, observeSourceProducers, producerStatus, sourceProviderKey } from "../../src/screens/sourceProducers";
+import { configuredAddonNames, observeSourceProducers, producerStatus, sourceDescription, sourceDetails, sourceProviderKey } from "../../src/screens/sourceProducers";
 import { matchesFilters } from "../../src/screens/titleSources";
 import { normalizeCore } from "../../src/core";
 
@@ -35,5 +35,12 @@ describe("observed source add-on producers", () => {
     expect(normalizeCore<{ providerKey: string }>("sourceDisplay", row).providerKey).toBe(producers[2].key);
     expect(matchesFilters(row, "All", producers[2].key)).toBe(true);
     expect(matchesFilters(row, "All", producers[0].key)).toBe(false);
+  });
+  it("retains the core source body, including a distinct description, in the row and details", () => {
+    const described = { id: "x", name: "Name", title: "Title", filename: "File", description: "Distinct description", audio: "French", sourceAddonId: "addon:8" } as MediaSource;
+    expect(sourceDescription(described)).toContain("Distinct description");
+    expect(sourceDescription(described)).toContain("French");
+    expect(sourceDetails(described)).toContain("Distinct description");
+    expect(sourceDetails(described)).toContain("File");
   });
 });

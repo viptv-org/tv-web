@@ -64,6 +64,8 @@ export interface BackendOptions {
   liveFavorite?: boolean;
   /** Sources keep "still checking" (default true) or finish. */
   sourcesDone?: boolean;
+  /** Add observed producers with no playable HTTP(S) rows to the source fixture. */
+  sourceProducerCount?: number;
   /** Installing an addon fails (400). */
   addonInstallError?: boolean;
   /** The media element errors when playback starts. */
@@ -414,7 +416,7 @@ export async function installBackend(page: Page, options: BackendOptions): Promi
     const previous={...item,...(options.queuePosition!==undefined?{position:options.queuePosition}:{}),...(options.queueDuration!==undefined?{duration:options.queueDuration}:{})};
     return options.queueNext ? {...previous,id:'tt-monster:1:2',episode:2,episode_title:'Please Don’t Go',queue_status:'next',previous_episode:previous,position:0} : previous;
   });
-  let addonList = addons();
+  let addonList = [...addons(), ...Array.from({ length: Math.max(0, (options.sourceProducerCount ?? 4) - 4) }, (_, index) => ({ id: index + 5, name: `Provider ${index + 5}`, enabled: true, version: '1.0.0', description: 'Source producer.' }))];
   let playbackCount = 0;
 
   await page.addInitScript(({ key, token, recent }) => {
@@ -595,7 +597,10 @@ export async function installBackend(page: Page, options: BackendOptions): Promi
       const monster = streamMatch[1] === 'streams-monster';
       const after = Number(url.searchParams.get('after') ?? 0);
       const list = monster ? sources('Monster S1 E1', 'Monster.S01E01.1080p.WEB.mkv') : sources('The End of Oak Street', 'The.End.of.Oak.Street.2026.1080p.WEB.mkv');
-      return json({ events: after > 0 ? [] : [{ seq: 1, source: 'addon:1', streams: list }], done: options.sourcesDone ?? false });
+      return json({ events: after > 0 ? [] : [
+        { seq: 1, source: 'addon:1', streams: list },
+        ...Array.from({ length: Math.max(0, (options.sourceProducerCount ?? 1) - 1) }, (_, index) => ({ seq: index + 2, source: `addon:${index + 2}`, streams: [], error_code: 'source_format_unsupported' })),
+      ], done: options.sourcesDone ?? false });
     }
 
     // Live.

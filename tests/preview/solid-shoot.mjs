@@ -40,7 +40,7 @@ try {
   page.on('pageerror', error => errors.push(error.stack ?? error.message));
   page.on('console', message => { if (message.type() === 'error') errors.push(message.text()); else logs.push(message.text()); });
   const profiles = name.startsWith('TvProfiles') || name === 'TvManageCue';
-  const backend = await installBackend(page, { family: 'tv', session: settingsNames.includes(name) || name === 'TvHome' || name === 'TvMenu' || name === 'TvDiscover' || name === 'TvDiscoverFilter' || name === 'TvLibrary' || name === 'TvItemMenu' || name === 'TvSearch' || name === 'TvLive' || name === 'TvLiveDetails' || name === 'TvLiveSearch' || name === 'TvTitle' || name === 'TvSources' || name === 'TvSourceProvider' || name === 'TvSourceDetails' || name === 'TvPlayer' || name === 'TvPlayerSeek' || name === 'TvPlayerSubs' ? 'ready' : profiles ? 'profiles' : 'none', pairing: name === 'TvPairingLoading' ? 'loading' : name === 'TvPairingExpired' ? 'expired' : undefined, favorites: name === 'TvLibrary', searchFail: searchFailure });
+  const backend = await installBackend(page, { family: 'tv', session: settingsNames.includes(name) || name === 'TvHome' || name === 'TvMenu' || name === 'TvDiscover' || name === 'TvDiscoverFilter' || name === 'TvLibrary' || name === 'TvItemMenu' || name === 'TvSearch' || name === 'TvLive' || name === 'TvLiveDetails' || name === 'TvLiveSearch' || name === 'TvTitle' || name === 'TvSources' || name === 'TvSourceProvider' || name === 'TvSourceDetails' || name === 'TvPlayer' || name === 'TvPlayerSeek' || name === 'TvPlayerSubs' ? 'ready' : profiles ? 'profiles' : 'none', pairing: name === 'TvPairingLoading' ? 'loading' : name === 'TvPairingExpired' ? 'expired' : undefined, favorites: name === 'TvLibrary', searchFail: searchFailure, sourceProducerCount: name === 'TvSourceProvider' ? 7 : undefined, sourcesDone: name === 'TvSourceProvider' });
   if (name === 'TvPlayer' || name === 'TvPlayerSeek' || name === 'TvPlayerSubs' || name === 'TvLibrary' || name === 'TvItemMenu') await installMediaStubs(page, { frame: '63e024', paused: name === 'TvPlayer' });
   if (name === 'TvLive') await installMediaStubs(page, { frame: '63e024', live: true });
   const url = process.env.SOLID_PREVIEW_URL ?? process.env.LIGHTNING_PREVIEW_URL ?? 'http://127.0.0.1:4180/solid.html';
@@ -891,8 +891,18 @@ try {
     await page.keyboard.press('Enter');
     await focused('source-provider', 0);
     const filter = await page.evaluate(() => window.__viptvSourceFilter);
-    if (filter?.provider !== 'LordStreams' || filter?.rows !== 3)
+    if (filter?.provider !== 'addon:addon:1' || filter?.rows !== 3)
       throw new Error(`Wrong provider filter: ${JSON.stringify(filter)}`);
+    await page.keyboard.press('Enter');
+    await focused('provider-option', 1);
+    for (let step = 0; step < 6; step++) await page.keyboard.press('ArrowDown');
+    await focused('provider-option', 5);
+    await page.screenshot({ path: join(outDir, 'TvSourceProvider.solid.seventh.png') });
+    await page.keyboard.press('Enter');
+    await focused('source-provider', 0);
+    const seventh = await page.evaluate(() => window.__viptvSourceFilter);
+    if (seventh?.provider !== 'addon:addon:7' || seventh?.rows !== 0)
+      throw new Error(`Seventh producer was not reachable: ${JSON.stringify(seventh)}`);
     await page.keyboard.press('Escape');
     await focused('title-action', 1);
   }

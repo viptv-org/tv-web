@@ -143,9 +143,10 @@ import {
   emptySources,
   emptySourceRow,
   projectSources,
+  providerChoiceWindow,
   type SourcesView,
 } from "./sourceModel";
-import { configuredAddonNames, observeSourceProducers, producerStatus, sourceProviderKey, type SourceProducer } from "../screens/sourceProducers";
+import { configuredAddonNames, observeSourceProducers, producerStatus, sourceDetails, sourceProviderKey, type SourceProducer } from "../screens/sourceProducers";
 import { isSeriesEpisodeCursor } from "../screens/titleSources";
 import {
   SourceChip,
@@ -431,6 +432,8 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         providerChoices: Array.from({ length: 6 }, () => ({
           ...emptyProviderChoice,
         })),
+        providerOptions: [] as typeof emptyProviderChoice[],
+        providerWindowStart: 0,
         providerChoiceIndex: 0,
         sourceProviderLabel: "",
         sourceNotice: "",
@@ -4904,6 +4907,8 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         this.sourceNotice = "";
         this.sourceProducers = [];
         sourceProducerNames = new Map();
+        this.providerOptions = [];
+        this.providerWindowStart = 0;
         this.source = projectSources(item, [], true, false);
         this.sourceChips = Array.from(
           { length: 5 },
@@ -4933,6 +4938,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
             sourceProducerNames = configuredAddonNames(addons);
             this.sourceProducers = observeSourceProducers(this.sourceProducers, [], sourceProducerNames);
             this.updateSources(this.source.sources, this.source.busy, this.source.done);
+            if ((this.phase as string) === "provider") this.refreshProviderOptions();
             if (this.source.provider !== "All")
               this.sourceProviderLabel = this.sourceProducers.find((producer) => producer.key === this.source.provider)?.label ?? this.source.provider;
           }).catch(() => undefined);
@@ -4952,6 +4958,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
             this.sourceProducers = observeSourceProducers(this.sourceProducers, step.events, sourceProducerNames);
             const hadRows = this.source.sources.length > 0;
             this.updateSources(state.sources, !step.done, step.done);
+            if ((this.phase as string) === "provider") this.refreshProviderOptions();
             if (!hadRows && state.sources.length)
               setTimeout(() => {
                 if (generation === sourceGeneration && this.phase === "sources")
@@ -5889,15 +5896,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         setTimeout(() => {
           if (this.phase !== "sourceDetails") return;
           this.sourceDetailsHeading = "Source details";
-          this.sourceDetailsBody = [
-            source.name,
-            source.title,
-            source.filename,
-            source.audio,
-            source.sourceName,
-          ]
-            .filter(Boolean)
-            .join("\n");
+          this.sourceDetailsBody = sourceDetails(source);
         }, 50);
       },
       closeSourceDetails() {
@@ -6030,24 +6029,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
       },
       openProviderPicker() {
         if (this.phase !== "sources") return;
-        const choices = [
-          { key: "All", label: "All" },
-          ...this.sourceProducers.map((producer) => ({
-            key: producer.key,
-            label: `${producer.label}${this.source.sources.some((row) => sourceProviderKey(row) === producer.key) ? "" : this.source.busy ? " · Checking" : " · No playable sources"}`,
-          })),
-          { key: "Cancel", label: "Cancel" },
-        ];
-        this.providerChoices = Array.from({ length: 6 }, (_, index) => ({
-          key: choices[index]?.key ?? "",
-          label: choices[index]?.label ?? "",
-          current: choices[index]?.key === this.source.provider,
-          visible: index < choices.length,
-        }));
-        this.providerChoiceIndex = Math.max(
-          0,
-          Math.min(5, choices.findIndex((choice) => choice.key === this.source.provider)),
-        );
+        this.refreshProviderOptions();
         this.phase = "provider";
         setTimeout(() => {
           if (this.phase !== "provider") return;
@@ -6057,15 +6039,42 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
           this.focusProviderOption(this.providerChoiceIndex);
         }, 50);
       },
+      refreshProviderOptions() {
+        const focusedKey = this.phase === "provider"
+          ? this.providerOptions[this.providerChoiceIndex]?.key ?? this.source.provider
+          : this.source.provider;
+        const choices = [
+          { key: "All", label: "All" },
+          ...this.sourceProducers.map((producer) => ({
+            key: producer.key,
+            label: `${producer.label}${this.source.sources.some((row) => sourceProviderKey(row) === producer.key) ? "" : this.source.busy ? " · Checking" : " · No playable sources"}`,
+          })),
+          { key: "Cancel", label: "Cancel" },
+        ];
+        const oldIndex = this.providerChoiceIndex;
+        this.providerOptions = choices.map((choice) => ({ ...choice, current: choice.key === this.source.provider, visible: true }));
+        this.providerChoiceIndex = Math.max(0, choices.findIndex((choice) => choice.key === focusedKey));
+        this.providerWindowStart = providerChoiceWindow(this.providerOptions, this.providerWindowStart, this.providerChoiceIndex).start;
+        this.providerChoices = Array.from({ length: 6 }, (_, index) => ({
+          ...(this.providerOptions[this.providerWindowStart + index] ?? emptyProviderChoice),
+        }));
+        if (this.phase === "provider" && oldIndex !== this.providerChoiceIndex)
+          setTimeout(() => {
+            if (this.phase === "provider" && this.providerOptions[this.providerChoiceIndex]?.key === focusedKey)
+              this.focusProviderOption(this.providerChoiceIndex);
+          }, 0);
+      },
       focusProviderOption(index: number) {
         if (this.phase !== "provider") return;
         this.providerChoiceIndex = index;
-        this.$select(`providerOption${index}`)?.$focus();
+        this.providerWindowStart = providerChoiceWindow(this.providerOptions, this.providerWindowStart, index).start;
+        this.providerChoices = Array.from({ length: 6 }, (_, slot) => ({
+          ...(this.providerOptions[this.providerWindowStart + slot] ?? emptyProviderChoice),
+        }));
+        this.$select(`providerOption${index - this.providerWindowStart}`)?.$focus();
       },
       moveProviderOption(delta: number) {
-        const count = this.providerChoices.filter(
-          (choice) => choice.visible,
-        ).length;
+        const count = this.providerOptions.length;
         if (this.phase !== "provider" || !count) return;
         this.focusProviderOption(
           Math.max(0, Math.min(count - 1, this.providerChoiceIndex + delta)),
@@ -6073,7 +6082,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
       },
       selectProviderOption() {
         if (this.phase !== "provider") return;
-        const choice = this.providerChoices[this.providerChoiceIndex];
+        const choice = this.providerOptions[this.providerChoiceIndex];
         if (!choice?.visible || choice.key === "Cancel") {
           this.closeProviderPicker();
           return;

@@ -1,5 +1,5 @@
 import type { MediaItem, MediaSource } from "../api";
-import { sourceProviderKey, type SourceProducer } from "../screens/sourceProducers";
+import { sourceDescription, sourceProviderKey, type SourceProducer } from "../screens/sourceProducers";
 import {
   episodeCode,
   matchesFilters,
@@ -58,6 +58,14 @@ export const emptySources: SourcesView = {
   rows: [],
 };
 
+/** A fixed set of native focus nodes can reach every observed producer. */
+export function providerChoiceWindow<T>(choices: readonly T[], start: number, index: number, size = 6) {
+  let first = Math.min(start, Math.max(0, choices.length - size));
+  if (index < first) first = index;
+  if (index >= first + size) first = index - size + 1;
+  return { start: first, visible: choices.slice(first, first + size) };
+}
+
 /** React TV source copy/filter order, projected from the same normalized DTOs. */
 export function projectSources(
   item: MediaItem,
@@ -107,9 +115,7 @@ export function projectSources(
         provider: producers.find((producer) => producer.key === sourceProviderKey(source))?.label ?? providerOf(source),
         quality:
           qualityOf(source) === "Unknown" ? "—" : (source.quality ?? "—"),
-        file: [source.title ?? source.filename, source.audio]
-          .filter(Boolean)
-          .join(" · "),
+        file: sourceDescription(source),
         best: source === sources[0],
       })),
   };
