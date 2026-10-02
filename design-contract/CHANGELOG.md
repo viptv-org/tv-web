@@ -1,5 +1,11 @@
 # Design changes
 
+## 2026-10-01 — Distinct source producers and truthful outcomes
+
+Specified SRC-PROVIDERS-001: source filters retain each observed configured
+producer's identity and name, including zero-result and safe failed add-ons.
+The picker explains unsupported formats and keeps partial playable rows usable.
+
 ## 2026-10-01 — Continue Watching episode source return
 
 Specified CW-SOURCE-BACK-001: cancelling an episode's source picker from Continue
