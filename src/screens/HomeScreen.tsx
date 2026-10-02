@@ -1,8 +1,8 @@
-import { Fragment, useEffect, useRef, useState, type Dispatch, type ReactNode, type SetStateAction } from "react";
+import { Fragment, useEffect, useLayoutEffect, useRef, useState, type Dispatch, type ReactNode, type SetStateAction } from "react";
 import { Check, Plus } from "lucide-react";
 import { HeroArtwork, ReadyImage, artworkUrl } from "../ui/RokuArtwork";
 import { ResponsiveTitle } from "../ui/ResponsiveTitle";
-import { TvButton } from "../ui/remote";
+import { TvButton, focusElement } from "../ui/remote";
 import type { Catalog, MediaItem, MediaPresentation, TvProfile } from "../api";
 import type { Screen } from "../ui/screens";
 import { catalogShelfName } from "../ui/catalogFilters";
@@ -30,6 +30,7 @@ type HeroActions = {
   detail: (item: MediaItem) => unknown;
   toggle: (item: MediaItem) => unknown;
 };
+const homeShelfFocusKey = (catalog: Catalog) => `shelf-${encodeURIComponent(JSON.stringify([catalog.addonId ?? "", catalog.type, catalog.id]))}`;
 
 /**
  * The Home screen (reference Main / DeskHome / WebHome / WideHome / TvHome):
@@ -105,6 +106,24 @@ export function HomeScreen({
   shelfCards: (list: readonly MediaItem[], prefix: string, options?: CardRowOptions) => ReactNode;
 }) {
   const phone = usePhoneLayout(responsive);
+  const catalogKeys = homeRows.map(row => homeShelfFocusKey(row.catalog));
+  const previousKeys = useRef<string[]>([]);
+  const lastCatalogFocus = useRef<{ key: string; position: number }>();
+  useLayoutEffect(() => {
+    const previous = previousKeys.current;
+    const focus = lastCatalogFocus.current;
+    previousKeys.current = catalogKeys;
+    if (!focus || !previous.includes(focus.key) || catalogKeys.includes(focus.key) || document.activeElement !== document.body) return;
+    const oldIndex = previous.indexOf(focus.key);
+    const nearest = homeRows.map((row, index) => ({ row, index })).filter(({ row }) => row.loaded && row.items.length)
+      .sort((a, b) => Math.abs(a.index - oldIndex) - Math.abs(b.index - oldIndex))[0];
+    const target = nearest ? `${homeShelfFocusKey(nearest.row.catalog)}-${Math.min(focus.position, nearest.row.items.length - 1)}` : "hero-play";
+    const frame = requestAnimationFrame(() => {
+      if (responsive) document.querySelectorAll<HTMLElement>("[data-focus-id]").forEach(element => { if (element.dataset.focusId === target) element.focus({ preventScroll: true }); });
+      else focusElement(target);
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [homeRows, responsive]);
   // Catalog shelves alternate their card shape by position (the first
   // catalog shelf is index 0); queue, live and My List shelves keep theirs.
   const catalogOffset = items.length > 0 ? 1 : 0;
@@ -116,7 +135,11 @@ export function HomeScreen({
     else void navigate("My List");
   };
   return (
-    <main className={`home vx-home ${responsive && compactHome ? "compact-home" : ""}`}>
+    <main className={`home vx-home ${responsive && compactHome ? "compact-home" : ""}`} onFocusCapture={event => {
+      const id = (event.target as HTMLElement).dataset.focusId;
+      const key = catalogKeys.find(candidate => id?.startsWith(`${candidate}-`));
+      if (key && id) lastCatalogFocus.current = { key, position: Number(id.slice(key.length + 1)) || 0 };
+    }}>
       {phone && (
         <header className="vx-home__header">
           <span className="vx-home__wordmark">VIPTV</span>
@@ -206,9 +229,10 @@ export function HomeScreen({
           // loads every shelf itself and shows each once it has cards.
           if (row.loaded ? !row.items.length : !responsive) return null;
           const shape = homeCatalogShape(catalogOffset + i);
+          const focusKey = homeShelfFocusKey(row.catalog);
           return (
             <Shelf
-              key={`${row.name}-${i}`}
+              key={focusKey}
               title={row.name}
               link="See all"
               linkLabel={`See all ${row.name}`}
@@ -216,7 +240,7 @@ export function HomeScreen({
               controls={responsive}
             >
               {row.loaded ? (
-                shelfCards(row.items, `shelf-${i}`, { shape, catalog: row.catalog })
+                shelfCards(row.items, focusKey, { shape, catalog: row.catalog })
               ) : (
                 <>
                   <AutoLoad onLoad={() => onRowsNeeded([row])} generation={0} margin={900} />

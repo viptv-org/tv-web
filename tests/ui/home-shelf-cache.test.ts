@@ -60,6 +60,49 @@ describe("bounded Home demand",()=>{
   cache.setWindow([keys[0]],[keys[0]]);await flush();expect(cache.snapshot()[0].cards[0].id).toBe("edited");
   cache.updateProfile(emptyHome);expect(cache.snapshot().some(row=>row.key==="continue")).toBe(false);cache.dispose();
  });
+ it("reconciles catalog changes by key without blanking surviving loaded shelves",async()=>{
+  const {cache,keys,api}=fixture();
+  cache.setWindow([keys[2]],[keys[2]]);await flush();
+  const loaded=cache.snapshot().find(row=>row.key===keys[2])!;
+  expect(loaded.cards).toHaveLength(1);
+  const added={...catalogs[3],id:"new-catalog",name:"New catalog"};
+  cache.setCatalogs([catalogs[0],catalogs[2],added]);
+  expect(cache.snapshot().find(row=>row.key===keys[2])?.cards).toEqual(loaded.cards);
+  expect(cache.snapshot().some(row=>row.key===keys[3])).toBe(false);
+  expect(cache.snapshot().some(row=>row.key.endsWith(":new-catalog"))).toBe(true);
+  const before=api.discover.mock.calls.length;
+  cache.setCatalogs([catalogs[0],catalogs[2],added],true);
+  expect(cache.snapshot().find(row=>row.key===keys[2])?.cards).toEqual(loaded.cards);
+  await flush();expect(api.discover.mock.calls.length).toBeGreaterThan(before);
+  cache.setCatalogs([{...catalogs[0],name:"Changed configuration"},catalogs[2],added]);
+  expect(cache.snapshot().find(row=>row.key===keys[2])?.cards).toEqual([]);
+  cache.dispose();
+ });
+ it("drops a late old-catalog response after the same key changes configuration",async()=>{
+  let finish!:(value:{items:MediaItem[]})=>void;
+  const discover=vi.fn(()=>new Promise<{items:MediaItem[]}>(resolve=>{finish=resolve;}));
+  const {cache,keys}=fixture(discover as never);
+  cache.setWindow([keys[2]],[keys[2]]);
+  const old=finish;
+  cache.setCatalogs([{...catalogs[0],name:"Updated catalog"},...catalogs.slice(1)]);
+  old({items:[item]});await flush();
+  expect(cache.snapshot().find(row=>row.key===keys[2])?.cards).toEqual([]);
+  cache.dispose();
+ });
+ it("waits for demanded catalog refresh and retries failed content on the next revision check",async()=>{
+  let fail=true;
+  const discover=vi.fn(async()=>{if(fail)throw new Error("Unavailable");return {items:[item]};});
+  const {cache,keys}=fixture(discover as never);
+  cache.setWindow([keys[2]],[keys[2]]);
+  await expect(cache.waitForDemandedCatalogs(new AbortController().signal)).rejects.toThrow("incomplete");
+  expect(cache.snapshot().find(row=>row.key===keys[2])?.error).toBeTruthy();
+  fail=false;
+  cache.setCatalogs(catalogs,true);
+  await expect(cache.waitForDemandedCatalogs(new AbortController().signal)).resolves.toBeUndefined();
+  expect(cache.snapshot().find(row=>row.key===keys[2])?.cards).toHaveLength(1);
+  expect(discover).toHaveBeenCalledTimes(2);
+  cache.dispose();
+ });
  it("mounts two initial rows and no more than four visible/prefetch rows",()=>{
   expect(homeRowWindow(0,102)).toEqual({first:0,last:1,retainFirst:0});
   for(let row=1;row<100;row++){

@@ -27,6 +27,7 @@ export class HomeShelfCache {
   private active = true;
   private disposed = false;
   private pumping = false;
+  private changed = new Set<() => void>();
   constructor(private api: TvApi, catalogs: readonly Catalog[], private profile: HomeView,
     private publish: (rows: HomeShelfView[]) => void) {
     this.rows = [
@@ -36,12 +37,40 @@ export class HomeShelfCache {
       ...(profile.favoriteItems.length ? [{key:"my-list",title:"My List",kind:"favorites" as const,cards:[],loaded:false}] : []),
     ];
   }
-  setCatalogs(catalogs:readonly Catalog[]) {
-    this.rows=[...this.rows.filter(row=>row.kind!=="catalog"&&row.kind!=="favorites"),...catalogShelves(catalogs),...this.rows.filter(row=>row.kind==="favorites")];
-    this.emit();
+  setCatalogs(catalogs:readonly Catalog[], revalidate = false) {
+    const old = new Map(this.rows.filter(row=>row.kind==="catalog").map(row=>[row.key,row]));
+    const next = catalogShelves(catalogs).map(row=>{
+      const previous=old.get(row.key);
+      if(!previous)return row;
+      if(JSON.stringify(previous.catalog)!==JSON.stringify(row.catalog)) {
+        this.pending.get(row.key)?.abort();
+        return row;
+      }
+      if(revalidate)this.pending.get(row.key)?.abort();
+      return {...previous,title:row.title,catalog:row.catalog,loaded:revalidate?false:previous.loaded,error:revalidate?undefined:previous.error};
+    });
+    const keys=new Set(next.map(row=>row.key));
+    for(const [key,controller] of this.pending)if(key.startsWith("catalog:")&&!keys.has(key))controller.abort();
+    this.rows=[...this.rows.filter(row=>row.kind!=="catalog"&&row.kind!=="favorites"),...next,...this.rows.filter(row=>row.kind==="favorites")];
+    this.emit();this.pump();
   }
   snapshot() { return [...this.rows]; }
-  private emit() { if(!this.disposed)this.publish(this.snapshot()); }
+  private emit() { if(!this.disposed)this.publish(this.snapshot());for(const notify of this.changed)notify(); }
+  /** A revision is ready only after currently demanded catalog rows settle. */
+  waitForDemandedCatalogs(signal: AbortSignal): Promise<void> {
+    const keys=[...this.wanted].filter(key=>key.startsWith("catalog:")&&this.rows.some(row=>row.key===key));
+    return new Promise((resolve,reject)=>{
+      const done=()=>{this.changed.delete(check);signal.removeEventListener("abort",abort);};
+      const abort=()=>{done();reject(new DOMException("Cancelled","AbortError"));};
+      const check=()=>{
+        if(signal.aborted||this.disposed){abort();return;}
+        const rows=keys.map(key=>this.rows.find(row=>row.key===key)).filter((row):row is HomeShelfView=>!!row);
+        if(rows.some(row=>row.error)){done();reject(new Error("Catalog content refresh incomplete"));return;}
+        if(rows.every(row=>row.loaded)){done();resolve();}
+      };
+      this.changed.add(check);signal.addEventListener("abort",abort,{once:true});check();
+    });
+  }
   updateProfile(profile: HomeView) {
     this.profile=profile;
     for(const [key,title,kind,items] of [["continue","Continue watching","queue",profile.queueItems],["my-list","My List","favorites",profile.favoriteItems]] as const) {
@@ -68,7 +97,7 @@ export class HomeShelfCache {
     this.pump();
   }
   pause() { this.active=false;for(const controller of this.pending.values())controller.abort(); }
-  dispose() { this.disposed=true;this.pause();this.rows=[]; }
+  dispose() { this.disposed=true;this.pause();this.rows=[];for(const notify of this.changed)notify(); }
   retry(key:string) {
     this.rows=this.rows.map(row=>row.key===key?{...row,error:undefined,loaded:false}:row);
     this.wanted.add(key);this.retained.add(key);this.pump();

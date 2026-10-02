@@ -8,12 +8,14 @@ import {
 import { TV_CANVAS_HEIGHT, TV_CANVAS_WIDTH } from "../tvCanvas";
 import { describeApiError } from "../errors";
 import { browseRequest, firstHomeCatalog, homeRowsFor, type HomeRow } from "./homeRows";
+import { sameCatalog } from "../catalogFilters";
+import { CatalogRevisionMonitor } from "./catalogRevisionMonitor";
 import type { Screen } from "../screens";
 import { captureScroll, initialPrefs } from "./appShared";
 import type { DialogsApi } from "./useTvApp";
 
 export function useAuth(app: DialogsApi) {
-  const { api, bootingHome, browser, browserApplyGeneration, browserApplying, browserFromRoute, browserReady, captureBrowserSnapshot, episodes, epoch, fail, finishProfileNavigation, heroMetadataCache, homeCache, homeRequestScope, items, modal, modalFocus, pairEpoch, pairingScope, pairTimer, parentScope, pendingSessionRetry, platform, profile, responsive, screen, selected, setBootingHome, setBusy, setCatalogError, setCatalogs, setEntry, setError, setFavorites, setHighlighted, setHomeRows, setItems, setPair, setPrefs, setProfile, setProfiles, setQr, setQueue, setRecentLive, setScreen, setSelected, sources, stack, startupAttempt } = app;
+  const { api, bootingHome, browser, browserApplyGeneration, browserApplying, browserFromRoute, browserReady, captureBrowserSnapshot, currentScreen, episodes, epoch, fail, finishProfileNavigation, heroMetadataCache, homeCache, homeRequestScope, items, modal, modalFocus, pairEpoch, pairingScope, pairTimer, parentScope, pendingSessionRetry, platform, profile, responsive, screen, selected, setBootingHome, setBusy, setCatalogError, setCatalogs, setEntry, setError, setFavorites, setHighlighted, setHomeRows, setItems, setPair, setPrefs, setProfile, setProfiles, setQr, setQueue, setRecentLive, setScreen, setSelected, sources, stack, startupAttempt } = app;
 
   const go = (next: Screen) => {
     homeRequestScope.current?.abort();
@@ -38,6 +40,12 @@ export function useAuth(app: DialogsApi) {
   // the current Home generation; a profile switch starts a new generation
   // and drops late results from the previous one.
   const homeGeneration = useRef(0);
+  const revisionMonitor = useRef<CatalogRevisionMonitor>();
+  const homeLoading = useRef(false);
+  const homeRevision = useRef<{ profile: string; token?: string }>();
+  const [homeReadyTick, setHomeReadyTick] = useState(0);
+  const currentHome = useRef({ catalogs: app.catalogs, rows: app.homeRows, items: app.items });
+  currentHome.current = { catalogs: app.catalogs, rows: app.homeRows, items: app.items };
   const rowQueue = useRef<HomeRow[]>([]);
   const rowsRequested = useRef(new Set<Catalog>());
   const rowsInFlight = useRef(0);
@@ -72,12 +80,17 @@ export function useAuth(app: DialogsApi) {
     pumpHomeRows();
   };
   const loadHome = async (id = profile) => {
+    revisionMonitor.current?.stop(); revisionMonitor.current = undefined;
+    homeLoading.current = true;
     homeRequestScope.current?.abort();
     const scope = api.createScope();
     homeRequestScope.current = scope;
     const ticket = ++epoch.current;
     setBusy(true);
     try {
+      const token = await api.catalogRevision({ signal: scope.signal }).catch(() => undefined);
+      if (ticket !== epoch.current || scope.signal.aborted) return;
+      homeRevision.current = { profile: id, token };
       const catalogRequest = api.catalogs().then((available) => {
           if (ticket === epoch.current) { setCatalogs(available); setCatalogError(""); }
           return available;
@@ -136,9 +149,70 @@ export function useAuth(app: DialogsApi) {
     } catch (e) {
       if (ticket === epoch.current) fail(e);
     } finally {
-      if (ticket === epoch.current) setBusy(false);
+      if (ticket === epoch.current) { homeLoading.current = false; setBusy(false); setHomeReadyTick(value => value + 1); }
     }
   };
+  useEffect(() => {
+    if (screen !== "Home" || !profile || homeLoading.current || homeCache.current?.profile !== profile) return;
+    const monitor = new CatalogRevisionMonitor(
+      signal => api.catalogRevision({ signal }),
+      async signal => {
+        const next = await api.catalogs({ signal });
+        const cache = homeCache.current;
+        if (signal.aborted || currentScreen.current !== "Home" || cache?.profile !== profile) return;
+        const old = currentHome.current;
+        const oldFirst = firstHomeCatalog(old.catalogs);
+        const requestedFirst = firstHomeCatalog(next);
+        let firstFailed = false;
+        let firstItems: readonly MediaItem[] = [];
+        if (requestedFirst) {
+          try { firstItems = (await api.discover(browseRequest(requestedFirst)!, { signal })).items; }
+          catch (error) { if (signal.aborted) return; firstFailed = true; firstItems = old.items; }
+        }
+        const effective = firstFailed && oldFirst
+          ? [oldFirst, ...next.filter(cat => !sameCatalog(cat, oldFirst))] : next;
+        const first = firstHomeCatalog(effective);
+        const previous = old.rows.filter(row => effective.some(cat => sameCatalog(row.catalog, cat)));
+        if (oldFirst && old.items.length) previous.push({ name: oldFirst.name, catalog: oldFirst, items: old.items, loaded: true });
+        const latestCache = homeCache.current;
+        if (signal.aborted || currentScreen.current !== "Home" || latestCache?.profile !== profile) return;
+        const rows = homeRowsFor(effective, first, responsive, previous);
+        homeGeneration.current++;
+        rowQueue.current = [];
+        rowsRequested.current = new Set();
+        setCatalogs(effective); setCatalogError(""); setItems(firstItems); setHomeRows(rows);
+        homeCache.current = { ...latestCache, items: firstItems, homeRows: rows };
+        currentHome.current = { catalogs: effective, rows, items: firstItems };
+        // TV already requests every row. Responsive Home remains lazy for
+        // unchanged, offscreen shelves, but a newly added shelf must settle
+        // before this revision can be acknowledged, including when visible.
+        const loaded = rows.filter(row => (!responsive || row.loaded || !old.rows.some(previous => sameCatalog(previous.catalog, row.catalog))) && !!browseRequest(row.catalog));
+        let rowFailed = false;
+        for (let offset = 0; offset < loaded.length; offset += 4) {
+          const batch = await Promise.allSettled(loaded.slice(offset, offset + 4).map(row => api.discover(browseRequest(row.catalog)!, { signal })));
+          if (signal.aborted || currentScreen.current !== "Home" || homeCache.current?.profile !== profile) return;
+          const updates = new Map<Catalog, readonly MediaItem[]>();
+          batch.forEach((result, index) => {
+            if (result.status === "fulfilled") updates.set(loaded[offset + index].catalog, result.value.items);
+            else rowFailed = true;
+          });
+          if (updates.size) {
+            const fill = (values: readonly HomeRow[]) => values.map(row => updates.has(row.catalog) ? { ...row, items: updates.get(row.catalog)!, loaded: true } : row);
+            setHomeRows(fill);
+            if (homeCache.current) homeCache.current = { ...homeCache.current, homeRows: fill(homeCache.current.homeRows) };
+          }
+        }
+        if (firstFailed || rowFailed) throw new Error("Catalog content refresh incomplete");
+      },
+      homeRevision.current?.profile === profile ? homeRevision.current.token : undefined,
+    );
+    revisionMonitor.current = monitor;
+    monitor.start();
+    return () => {
+      if (homeRevision.current?.profile === profile) homeRevision.current.token = monitor.revisionToken;
+      monitor.stop(); if (revisionMonitor.current === monitor) revisionMonitor.current = undefined;
+    };
+  }, [api, profile, screen, homeReadyTick, responsive]);
   const authorize = async (
     title: string,
     action: (signal?: AbortSignal) => Promise<void>,

@@ -5,6 +5,15 @@ import { mediaItem } from "../../src/api/client-shared";
 
 
 describe("TvApi device and media boundary", () => {
+  it("reads a private opaque catalog revision and rejects malformed responses", async () => {
+    const fake = scripted(response({ revision: "rev_123" }), response({ revision: "https://private.invalid/token" }));
+    const api = apiFor(fake.fetcher);
+    await expect(api.catalogRevision()).resolves.toBe("rev_123");
+    await expect(api.catalogRevision()).rejects.toMatchObject({ code: "invalid_catalog_revision" });
+    expect(fake.calls.map(call => call.input)).toEqual([
+      "https://viptv.example/api/catalogs/revision", "https://viptv.example/api/catalogs/revision",
+    ]);
+  });
   it("uses account-owned v2 VOD discovery and surfaces safe producer failures", async () => {
     const fake=scripted(response({id:"job"}),response({events:[{seq:1,source:"iptv:1",streams:[],error_code:"provider_connection_limit",error:"https://provider.invalid/private-token"}],done:true}));
     const api=apiFor(fake.fetcher);

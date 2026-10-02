@@ -102,6 +102,12 @@ export class TvApiCatalog extends TvApiClientBase {
   async catalogs(options?: RequestOptions) {
     return normalizeResponse<Catalog[]>("catalogs", await this.raw("/api/catalogs", {}, true, options));
   }
+  async catalogRevision(options?: RequestOptions): Promise<string> {
+    const value = expectObject(await this.raw("/api/catalogs/revision", {}, true, options)).revision;
+    if (typeof value !== "string" || !/^[A-Za-z0-9_-]{1,128}$/.test(value))
+      throw new TvApiError(502, "The server returned an invalid catalog revision.", "invalid_catalog_revision");
+    return value;
+  }
   async discover(
     request: DiscoverRequest,
     options?: RequestOptions,

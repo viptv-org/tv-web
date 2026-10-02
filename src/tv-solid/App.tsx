@@ -49,6 +49,7 @@ import {
 } from "./homeModel";
 import { playerBuffer, type BufferSegment } from "./playerBuffer";
 import { HomeShelfCache, homeRowWindow, homeVisibleCards } from "./homeShelfCache";
+import { CatalogRevisionMonitor } from "../ui/app/catalogRevisionMonitor";
 import { railIcon } from "./railIcons";
 import { RailItem } from "./RailFocus";
 import { DiscoverFilterOption } from "./DiscoverFocus";
@@ -288,6 +289,9 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
   let pairingTimer: ReturnType<typeof setTimeout> | undefined;
   let pairingScope: ReturnType<TvApi["createScope"]> | undefined;
   let homeGeneration = 0;
+  let homeMonitor: CatalogRevisionMonitor | undefined;
+  let homeRevisionToken: string | undefined;
+  let homeLoading = false;
   let homeCache: HomeShelfCache | undefined;
   const currentHomeCache=()=>homeCache;
   let homeScope: ReturnType<TvApi["createScope"]> | undefined;
@@ -884,8 +888,8 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
     },
     watch: {
       phase() {
-        if(this.phase!=="home")homeCache?.pause();
-        else if(homeCache)queueMicrotask(()=>{if(this.phase==="home")this.updateHomeWindow();});
+        if(this.phase!=="home"){homeCache?.pause();this.stopHomeRevision();}
+        else if(homeCache){queueMicrotask(()=>{if(this.phase==="home")this.updateHomeWindow();});this.startHomeRevision();}
         const spinner=document.getElementById("solid-preparing-spinner");
         if(spinner)spinner.style.display=this.phase==="preparing"?"block":"none";
         if (this.playerNextBusy) this.cancelNextEpisode();
@@ -1399,6 +1403,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         });
       },
       destroy() {
+        this.stopHomeRevision();
         disposeWebos?.();
         continuation?.cancel(); nextSetupScope?.abort(); ++nextGeneration;
         upNextScope?.abort(); clearInterval(upNextTimer);
@@ -1465,6 +1470,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         });
       },
       async loadHome(profileId: string) {
+        this.stopHomeRevision();homeLoading=true;homeRevisionToken=undefined;
         retryError = () => { void this.loadHome(profileId); };
         this.cancelNextEpisode();
         this.clearUpNext();
@@ -1487,6 +1493,8 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         this.phase = "ready";
         this.startingLabel = "Starting VIPTV…";
         this.homeShelves=[];this.homeShelfIndex=0;this.homeScrollY=0;this.homeFocusZone="action";
+        homeRevisionToken=await api.catalogRevision({signal:homeScope.signal}).catch(()=>undefined);
+        if(generation!==homeGeneration||homeScope.signal.aborted)return;
         const catalogs=api.catalogs({signal:homeScope.signal}).catch(()=>[]);
         let initialized=false;
         const startShelves=(view:HomeView)=>{
@@ -1516,12 +1524,36 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
           this.home=view;this.homeAddLabel=view.saved?"✓":"+";
           currentHomeCache()?.updateProfile(view);startShelves(view);
           if(!shown){this.phase="home";this.focusHomeAction(0);}
+          await catalogs;
+          if(generation!==homeGeneration||homeScope.signal.aborted)return;
+          homeLoading=false;this.startHomeRevision();
         } catch (cause) {
           if (generation !== homeGeneration || homeScope.signal.aborted) return;
+          homeLoading=false;
           this.error =
             cause instanceof Error ? cause.message : "Could not load Home.";
           this.phase = "error";
         }
+      },
+      stopHomeRevision() {
+        if(homeMonitor){homeRevisionToken=homeMonitor.revisionToken;homeMonitor.stop();homeMonitor=undefined;}
+      },
+      startHomeRevision() {
+        if(homeMonitor||homeLoading||this.phase!=="home"||!this.currentProfileId||!homeCache)return;
+        const generation=homeGeneration;
+        const profileId=this.currentProfileId;
+        const monitor=new CatalogRevisionMonitor(
+          signal=>api.catalogRevision({signal}),
+          async signal=>{
+            const catalogs=await api.catalogs({signal});
+            if(signal.aborted||generation!==homeGeneration||this.currentProfileId!==profileId||this.phase!=="home")return;
+            homeCache?.setCatalogs(catalogs,true);
+            this.updateHomeWindow();
+            await homeCache?.waitForDemandedCatalogs(signal);
+          },
+          homeRevisionToken,
+        );
+        homeMonitor=monitor;monitor.start();
       },
       publishHomeShelves(rows:HomeShelfView[]) {
         const selected=this.homeShelves[this.homeShelfIndex]?.key;
