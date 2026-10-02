@@ -71,7 +71,8 @@ export function RemoteRoot({
           event.target instanceof HTMLInputElement ||
           event.target instanceof HTMLTextAreaElement ||
           Boolean((event.target as HTMLElement)?.isContentEditable);
-        if (!input && (key === " " || key === "Spacebar")) {
+        const button = event.target instanceof HTMLButtonElement;
+        if (!input && !button && (key === " " || key === "Spacebar")) {
           if (handlers.current.onMediaKey?.("MediaPlayPause")) {
             event.preventDefault();
             return;

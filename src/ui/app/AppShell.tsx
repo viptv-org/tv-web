@@ -18,7 +18,7 @@ import { AppDialogs } from "./AppDialogs";
 import { usePhoneLayout } from "../usePhoneLayout";
 import { SearchPopunder } from "../SearchPopunder";
 import { HomeSkeleton } from "../../screens/HomeSkeleton";
-import { useRef } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 
 /**
  * The application render tree: desktop frame, navigation, screens and
@@ -26,6 +26,19 @@ import { useRef } from "react";
  */
 export function AppShell({ app }: { app: AppApi }) {
   const { activeTrackPopup, bootingHome, requestHomeRows, detailOrigin, api, audioTrackList, authorize, back, browser, busy, canvas, cards, casting, catalog, catalogError, catalogs, catalogValues, chooseProfile, closeCast, commitSeek, compactHome, detail, discoverSources, editingProfile, editProfile, engineChoice, engineChoices, entry, episodes, fail, favorites, firstHomeCatalog, fullscreenControl, go, heroDetails, heroItem, heroPresentation, heroRotation, highlighted, homeRows, isMaximized, items, lastControlActivity, layout, libraryQueue, loadCatalog, manage, managing, mediaKey, mediaKeyUp, modal, navigate, nextEpisode, nextSkip, oled, openCast, openingSource, overlay, pair, pairExpired, pairing, platform, play, player, playerInfoOpen, playerNotice, playerRoot, prefs, preparing, profile, profilePage, profiles, qr, query, queue, readBufferedRanges, recentLive, responsive, screen, searchKey, searchPartial, searchRows, season, seek, selected, selectedPresentation, selectEngine, previewSources, sourcePreview, stack, setActiveTrackPopup, setCompactHome, setControlActivity, setEditingProfile, setEntry, setLibraryQueue, setManaging, setModal, setOverlay, setPlayerInfoOpen, setPrefs, setProfile, setProfilePage, setProfiles, setQuery, setScreen, setSeason, setSeek, setSettingsSubpage, setSourceProvider, setSourceQuality, settingsSubpage, shelfCards, snapshot, sourceFocusPending, sourceProvider, sourceProducers, sourceQuality, sources, stop, subtitleOffOption, surfaceClick, textTrackList, toggle, toggleLiveMute, toggleOled, togglePlayback, trackChoices, video } = app;
+
+  const [pictureMode, setPictureMode] = useState<"fit" | "fill">("fit");
+  const presentedItem = useRef("");
+  const selectedKey = selected ? `${selected.type}\0${selected.id}\0${selected.season ?? ""}\0${selected.episode ?? ""}` : "";
+  useLayoutEffect(() => {
+    if (screen === "player") {
+      if (presentedItem.current && presentedItem.current !== selectedKey) setPictureMode("fit");
+      if (selectedKey) presentedItem.current = selectedKey;
+    } else if (screen !== "sources") {
+      presentedItem.current = "";
+      setPictureMode("fit");
+    }
+  }, [screen, selectedKey]);
 
   const activeProfile = profiles.find((p) => p.id === profile);
   const phone = usePhoneLayout(responsive);
@@ -132,6 +145,7 @@ export function AppShell({ app }: { app: AppApi }) {
           onPointerMove={() => { if (responsive && screen === "player" && Date.now() - lastControlActivity.current > 1000) { lastControlActivity.current = Date.now(); setOverlay(true); setControlActivity(value => value + 1); } }}
           onPointerDownCapture={(event) => { if (responsive && screen === "player" && (event.target as HTMLElement).closest("button, input")) { setOverlay(true); setControlActivity(value => value + 1); } }}
           className={`tv-screen ${responsive ? "responsive-app" : "tv-layout"} ${isMaximized ? "is-maximized" : ""} ${fullscreenControl.fullscreen ? "is-fullscreen" : ""} screen-${screen.replace(/ /g, "-").toLowerCase()} ${screen === "player" ? "playing" : ""}`}
+          data-picture-mode={responsive ? pictureMode : undefined}
         >
         <video
           ref={video}
@@ -356,6 +370,8 @@ export function AppShell({ app }: { app: AppApi }) {
                 togglePlayback={togglePlayback}
                 toggleLiveMute={toggleLiveMute}
                 fullscreenControl={fullscreenControl}
+                pictureMode={pictureMode}
+                setPictureMode={setPictureMode}
                 player={player}
                 fail={fail}
                 nextEpisode={nextEpisode}

@@ -443,3 +443,12 @@ Design pin `d088071106e4d5479aea761469152e037f011a3c`. React and SolidTV source 
 | --- | --- | --- |
 | React TvSources | Chromium Vizio fixture: Torrentio TB HTTP row remained usable while Torrentio and TorrentsDB returned unsupported formats. A second fixture added seven producers while the menu was open; Cancel retained focus, the seventh was selectable, and a distinct source description remained accessible in the row and details. Private 1920×1080 capture inspected. | Live account add-ons and physical Vizio remote unverified. |
 | SolidTV TvSources | Model tests checked core-derived filtering, full source body and seven-producer windowing. SolidTV Vizio browser preview selected the seventh provider using six native focus nodes; a private 1920×1080 capture was inspected. | Physical Tizen/Vizio/webOS provider panel and real add-on timing unverified. |
+## WEB-PLAYER-FIT-001 — responsive player picture mode (2026-10-02)
+
+Design `02fbcdd24a5a32f0ee87e97ede83c7e30345c833`; PhPlayer and DeskPlayer reference families with the normative Fit/Fill amendment in `specs/behavior/responsive-player-fit-fill.md`.
+
+| Surface | Functional and visual evidence | Device evidence / limit |
+| --- | --- | --- |
+| Responsive website phone, 390×844 | Decoded HLS Chromium scenario: Fit full picture and centered Fill crop inspected privately; five controls fit, keyboard/touch toggle, source return retains mode, leaving and returning resets Fit | Browser simulation; physical phone unverified |
+| Responsive website desktop, 1440×900 | Decoded HLS Chromium scenario: button and both video/canvas CSS modes, paused session unchanged, Enter/Space focus, fullscreen retention and back to Fit | Browser simulation; real MediaBunny decoding and installed desktop host unverified |
+| Tizen/Vizio remote player | No Fit/Fill change; original remote actions and player geometry retained | Device playback unverified for this amendment |

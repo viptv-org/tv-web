@@ -32,6 +32,10 @@
 }
 [data-layout="responsive"] .tv-screen.responsive-app.playing > .video {
   object-fit: contain;
+  object-position: center;
+}
+[data-layout="responsive"] .tv-screen.responsive-app.playing[data-picture-mode="fill"] > .video {
+  object-fit: cover;
 }
 
 /* ---- Pointer / touch player (desktop base; phone below) -------------- */
@@ -187,6 +191,14 @@
   flex: none;
   width: var(--vx-player-icon);
   height: var(--vx-player-icon);
+}
+[data-layout="responsive"] .vx-player__picture-mode {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+[data-layout="responsive"] .vx-player__picture-mode[aria-pressed="true"] {
+  background: var(--viptv-color-player-control-active);
 }
 [data-layout="responsive"] .vx-player__control--skip {
   --vx-player-icon: var(--viptv-size-player-icon-skip-desktop);

@@ -157,6 +157,25 @@ test('website fullscreen, volume and backend info operate on a decoded player', 
   await page.locator('[data-focus-id="source-0"]').click();
   await expect.poll(() => page.locator('video').evaluate((video: HTMLVideoElement) => video.videoWidth)).toBeGreaterThan(0);
   await page.getByRole('button', { name: 'Pause', exact: true }).click();
+  const mode = page.locator('[data-focus-id="picture-mode"]');
+  const surfaces = page.locator('.tv-screen > .video');
+  await expect(mode).toHaveText('Fit');
+  await expect(mode).toHaveAttribute('aria-pressed', 'false');
+  for (const surface of await surfaces.all()) await expect(surface).toHaveCSS('object-fit', 'contain');
+  const pausedSession = await page.locator('video').evaluate((video: HTMLVideoElement) => ({ src: video.currentSrc, time: video.currentTime }));
+  await mode.click();
+  await expect(mode).toHaveText('Fill');
+  await expect(mode).toHaveAttribute('aria-label', 'Fit video');
+  await expect(mode).toHaveAttribute('aria-pressed', 'true');
+  for (const surface of await surfaces.all()) await expect(surface).toHaveCSS('object-fit', 'cover');
+  expect(await page.locator('video').evaluate((video: HTMLVideoElement) => video.currentSrc)).toBe(pausedSession.src);
+  expect(await page.locator('video').evaluate((video: HTMLVideoElement) => video.currentTime)).toBeCloseTo(pausedSession.time, 1);
+  await mode.focus();
+  await mode.press('Enter');
+  await expect(mode).toBeFocused();
+  await expect(mode).toHaveText('Fit');
+  await mode.press('Space');
+  await expect(mode).toHaveText('Fill');
   // DeskPlayer: both timeline ends are clocks ([12:48] / [52:10]), never a "N min" runtime.
   await expect(page.locator('.player-time span').last()).toHaveText(/^\d+:\d{2}(:\d{2})?$/);
   await page.getByRole('slider', { name: 'Volume', exact: true }).evaluate((node: HTMLInputElement) => { Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(node, '0.35'); node.dispatchEvent(new Event('input', { bubbles: true })); });
@@ -168,8 +187,10 @@ test('website fullscreen, volume and backend info operate on a decoded player', 
   await page.getByRole('button', { name: 'Fullscreen', exact: true }).click();
   await expect.poll(() => page.evaluate(() => !!document.fullscreenElement)).toBe(true);
   await expect(page.getByRole('button', { name: 'Exit fullscreen', exact: true })).toBeVisible();
+  await expect(surfaces.first()).toHaveCSS('object-fit', 'cover');
   await page.evaluate(() => document.exitFullscreen());
   await expect(page.getByRole('button', { name: 'Fullscreen', exact: true })).toBeVisible();
+  await expect(mode).toHaveText('Fill');
   await expect(page.locator('.player-overlay')).toBeVisible();
   await page.getByRole('button', { name: 'Playback info', exact: true }).click();
   const info = page.getByRole('dialog', { name: 'Playback info', exact: true });
@@ -177,6 +198,53 @@ test('website fullscreen, volume and backend info operate on a decoded player', 
   await expect(info).toContainText('remux');
   await expect(info).not.toContainText('/media/');
   await expect(info.locator('dt').filter({ hasText: 'Decoder' }).locator('..').locator('dd')).toContainText(/native-html|hls\.js/);
+});
+
+test('phone player fits and fills video without losing the controls', async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await installBackend(page);
+  await page.addInitScript(() => { Object.defineProperty(window, 'VideoDecoder', { value: undefined }); });
+  await page.route(`${apiOrigin}/api/v2/playback**`, route => route.fulfill({ headers: cors, json: playbackV2Fixture(route, route.request().method() === 'POST' ? { id: 'phone-mode', url: '/media/phone-mode/test/index.m3u8', mode: 'remux', format: 'hls', video_mode: 'copy', audio_mode: 'copy', duration: 5 } : {}) }));
+  await page.route(`${apiOrigin}/media/phone-mode/test/**`, async route => {
+    const name = new URL(route.request().url()).pathname.split('/').at(-1)!;
+    const file = name === 'index.m3u8' ? name : name.replace('.ts', '.bin');
+    await route.fulfill({ headers: cors, contentType: file.endsWith('.m3u8') ? 'application/vnd.apple.mpegurl' : 'video/mp2t', body: await readFile(new URL(`../fixtures/hls/${file}`, import.meta.url)) });
+  });
+  await page.goto('/tv/'); await page.getByRole('button', { name: 'Alex' }).click();
+  await page.locator('.media-card').filter({ hasText: movie.name }).click();
+  await page.locator('[data-focus-id="detail-source"]').click();
+  await page.locator('[data-focus-id="source-0"]').click();
+  await expect.poll(() => page.locator('video').evaluate((video: HTMLVideoElement) => video.videoWidth)).toBeGreaterThan(0);
+  await page.getByRole('button', { name: 'Pause', exact: true }).click();
+  const mode = page.locator('[data-focus-id="picture-mode"]');
+  await expect(mode).toHaveText('Fit');
+  await expect(page.locator('video')).toHaveCSS('object-fit', 'contain');
+  await page.screenshot({ path: testInfo.outputPath('phone-player-fit.png') });
+  await mode.click();
+  await expect(page.locator('video')).toHaveCSS('object-fit', 'cover');
+  await expect(page.locator('canvas.player-canvas')).toHaveCSS('object-fit', 'cover');
+  const buttons = await page.locator('.vx-player__tools > .vx-player__control').all();
+  expect(buttons).toHaveLength(5);
+  const boxes = await Promise.all(buttons.map(button => button.boundingBox()));
+  for (const box of boxes) {
+    expect(box).not.toBeNull();
+    expect(box!.x).toBeGreaterThanOrEqual(0);
+    expect(box!.x + box!.width).toBeLessThanOrEqual(390);
+  }
+  for (let index = 1; index < boxes.length; index++) expect(boxes[index]!.x).toBeGreaterThanOrEqual(boxes[index - 1]!.x + boxes[index - 1]!.width);
+  await page.screenshot({ path: testInfo.outputPath('phone-player-fill.png') });
+  await page.locator('[data-focus-id="player-back"]').click();
+  await expect(page.locator('.sources')).toBeVisible();
+  await page.locator('[data-focus-id="source-0"]').click();
+  await expect(mode).toHaveText('Fill');
+  await page.locator('[data-focus-id="player-back"]').click();
+  await expect(page.locator('.sources')).toBeVisible();
+  await page.goBack();
+  await expect(page.locator('.sources')).toHaveCount(0);
+  await expect(page.locator('.detail')).toBeVisible();
+  await page.locator('[data-focus-id="detail-source"]').click();
+  await page.locator('[data-focus-id="source-0"]').click();
+  await expect(mode).toHaveText('Fit');
 });
 
 test('Discover keeps all addon namespaces and loads despite an unrelated Home failure', async ({ page }) => {

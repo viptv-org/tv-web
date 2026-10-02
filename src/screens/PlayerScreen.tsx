@@ -70,6 +70,8 @@ type PlayerScreenProps = {
   togglePlayback: () => void;
   toggleLiveMute: () => void;
   fullscreenControl: ReturnType<typeof usePlayerFullscreen>;
+  pictureMode: "fit" | "fill";
+  setPictureMode: Dispatch<SetStateAction<"fit" | "fill">>;
   player: MutableRefObject<Player | undefined>;
   fail: (e: unknown) => void;
   nextEpisode: () => unknown;
@@ -146,6 +148,8 @@ function ResponsivePlayer({
   commitSeek,
   togglePlayback,
   fullscreenControl,
+  pictureMode,
+  setPictureMode,
   player,
   fail,
   nextEpisode,
@@ -358,6 +362,16 @@ function ResponsivePlayer({
                   }}
                 >
                   <Info aria-hidden="true" strokeWidth={2.2} />
+                </TvButton>
+                <TvButton
+                  id="picture-mode"
+                  className="vx-player__control vx-player__picture-mode"
+                  aria-label={pictureMode === "fit" ? "Fill video" : "Fit video"}
+                  title={pictureMode === "fit" ? "Fill video" : "Fit video"}
+                  aria-pressed={pictureMode === "fill"}
+                  onActivate={() => setPictureMode(mode => mode === "fit" ? "fill" : "fit")}
+                >
+                  {pictureMode === "fit" ? "Fit" : "Fill"}
                 </TvButton>
                 <TvButton
                   id="fullscreen"
