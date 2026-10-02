@@ -3,6 +3,27 @@ import { defineScreen, TvView, TvText } from "./runtime";
 import { tokens } from "../theme/viptv-tokens.generated";
 import { noteFocus } from "./focusDebug";
 import type { SourceChipView, SourceRowView } from "./sourceModel";
+import { canvasFont } from "./fonts";
+
+let sourceMeasure: CanvasRenderingContext2D | null;
+function wrapSourceDescription(value: string): string[] {
+  sourceMeasure ??= document.createElement("canvas").getContext("2d")!;
+  sourceMeasure.font = `20px ${canvasFont("Onest", 20)}`;
+  const lines: string[] = [];
+  let line = "";
+  for (const word of value.trim().split(/\s+/)) {
+    if (!word) continue;
+    const joined = line ? `${line} ${word}` : word;
+    if (sourceMeasure.measureText(joined).width <= 430) { line = joined; continue; }
+    if (line) { lines.push(line); line = ""; }
+    for (const point of word) {
+      if (line && sourceMeasure.measureText(line + point).width > 430) { lines.push(line); line = point; }
+      else line += point;
+    }
+  }
+  if (line) lines.push(line);
+  return lines;
+}
 
 export const emptySourceChip: SourceChipView = {
   quality: "",
@@ -169,6 +190,10 @@ export const SourceRow = defineScreen({
       bestText: "",
       providerText: "",
       fileText: "",
+      fileIdentity: "",
+      fileOffset: 0,
+      fileDistance: 0,
+      fileTimer: 0,
       playIcon: "",
       white: tokens["color.fill.white"],
       primary: tokens["color.text.primary"],
@@ -191,27 +216,53 @@ export const SourceRow = defineScreen({
     unfocus() {
       this.focused = false;
       clearTimeout(this.holdTimer);
+      this.stopDescriptionMotion();
     },
     destroy() {
       clearTimeout(this.holdTimer);
+      this.stopDescriptionMotion();
     },
   },
   methods: {
-    reveal() {
-      this.qualityText = this.row.quality;
-      this.bestText = this.row.best ? "BEST MATCH" : "";
-      this.providerText = this.row.provider;
-      this.fileText = this.row.file;
+    stopDescriptionMotion() {
+      clearInterval(this.fileTimer);
+      this.fileTimer = 0;
+      this.fileOffset = 0;
+    },
+    startDescriptionMotion() {
+      this.stopDescriptionMotion();
+      if (!this.focused || this.fileDistance <= 0 || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+      const started = performance.now();
+      const dwell = 1200;
+      const travel = this.fileDistance / 12 * 1000;
+      const cycle = 2 * (dwell + travel);
+      this.fileTimer = window.setInterval(() => {
+        const elapsed = (performance.now() - started) % cycle;
+        this.fileOffset = elapsed < dwell ? 0
+          : elapsed < dwell + travel ? (elapsed - dwell) / travel * this.fileDistance
+          : elapsed < 2 * dwell + travel ? this.fileDistance
+          : (cycle - elapsed) / travel * this.fileDistance;
+      }, 50);
+    },
+    reveal(row?: SourceRowView) {
+      const current = row ?? this.row;
+      this.qualityText = current.quality;
+      this.bestText = current.best ? "BEST MATCH" : "";
+      this.providerText = current.provider;
+      const identity = `${current.id}\u0000${current.file}`;
+      if (identity !== this.fileIdentity) {
+        this.fileIdentity = identity;
+        const lines = wrapSourceDescription(current.file);
+        this.fileText = lines.join("\n");
+        this.fileDistance = Math.max(0, (lines.length - 2) * 24);
+        this.startDescriptionMotion();
+      } else if (this.focused && !this.fileTimer) this.startDescriptionMotion();
       this.playIcon = "▶";
     },
   },
   watch: {
     row(value: SourceRowView) {
-      this.qualityText = value.quality;
-      this.bestText = value.best ? "BEST MATCH" : "";
-      this.providerText = value.provider;
-      this.fileText = value.file;
-      this.playIcon = "▶";
+      this.reveal(value);
     },
   },
   input: {
@@ -282,7 +333,7 @@ export const SourceRow = defineScreen({
       />
       <TvText
         x={140}
-        y={4}
+        y={2}
         content={s.bestText}
         font={"Onest700"}
         size={18}
@@ -290,23 +341,25 @@ export const SourceRow = defineScreen({
       />
       <TvText
         x={140}
-        y={s.row.best ? 35 : 19}
-        maxwidth={430}
-        content={s.providerText}
-        font={"Onest700"}
-        size={28}
-        color={s.focused ? s.onLight : s.primary}
-      />
-      <TvText
-        x={140}
-        y={s.row.best ? 71 : 61}
+        y={s.row.best ? 24 : 18}
         maxwidth={430}
         maxlines={1}
-        content={s.fileText}
-        font={"Onest"}
-        size={20}
-        color={s.focused ? s.onLightSecondary : s.secondary}
+        content={s.providerText}
+        font={"Onest700"}
+        size={26}
+        color={s.focused ? s.onLight : s.primary}
       />
+      <TvView x={140} y={56} w={430} h={48} clipping>
+        <TvText
+          y={-s.fileOffset}
+          maxwidth={430}
+          content={s.fileText}
+          font={"Onest"}
+          size={20}
+          lineheight={1.2}
+          color={s.focused ? s.onLightSecondary : s.secondary}
+        />
+      </TvView>
       <TvText
         x={616}
         y={34}

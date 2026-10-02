@@ -666,6 +666,47 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+/* Source pickers reserve two lines in every row, including short descriptions. */
+[data-layout] .sources .vx-source-row__file {
+  display: block;
+  height: 2.7em;
+  min-height: 2.7em;
+  text-overflow: clip;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+[data-layout="responsive"] .sources .vx-source-row { height: 100px; }
+@media (max-width: 599px) {
+  [data-layout="responsive"] .sources .vx-source-row { height: 108px; }
+}
+.tv-layout .sources .vx-source-row { height: 132px; }
+[data-layout] .sources .vx-source-row__provider {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+[data-layout] .sources .vx-source-row__file-motion {
+  display: block;
+  overflow-wrap: anywhere;
+}
+@keyframes vx-source-description-pan {
+  0%, 10%, 100% { transform: translateY(0); }
+  45%, 55% { transform: translateY(calc(-1 * var(--vx-source-description-travel))); }
+  90% { transform: translateY(0); }
+}
+[data-layout] .sources .vx-source-row:focus .vx-source-row__file-motion[data-overflow="true"] {
+  animation: vx-source-description-pan var(--vx-source-description-duration) linear infinite;
+}
+@media (hover: hover) and (pointer: fine) {
+  [data-layout="responsive"] .sources .vx-source-row:hover .vx-source-row__file-motion[data-overflow="true"] {
+    animation: vx-source-description-pan var(--vx-source-description-duration) linear infinite;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-layout] .sources .vx-source-row .vx-source-row__file-motion[data-overflow="true"] {
+    animation: none;
+  }
+}
 [data-layout] .vx-source-row__icon {
   display: flex;
   flex: none;

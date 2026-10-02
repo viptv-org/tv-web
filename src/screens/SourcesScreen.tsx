@@ -1,4 +1,4 @@
-import { type Dispatch, type KeyboardEvent, type SetStateAction } from "react";
+import { useLayoutEffect, useRef, type Dispatch, type KeyboardEvent, type SetStateAction } from "react";
 import { ChevronDown, Film, ListFilter, Search, X } from "lucide-react";
 import { TvButton } from "../ui/remote";
 import { formatPlaybackTime } from "../ui/SeekBar";
@@ -24,6 +24,28 @@ function presentationContext(item: MediaItem) {
             ? `Resume at ${formatPlaybackTime(item.position)}`
             : "";
   return { title: [item.name, episodeCode(item)].filter(Boolean).join(" · "), status };
+}
+
+/** The button keeps focus; only its clipped description moves. */
+function SourceDescription({ text }: { text: string }) {
+  const textRef = useRef<HTMLSpanElement>(null);
+  useLayoutEffect(() => {
+    const content = textRef.current;
+    const window = content?.parentElement;
+    if (!content || !window) return;
+    const measure = () => {
+      const distance = Math.max(0, content.scrollHeight - window.clientHeight);
+      content.dataset.overflow = distance > 1 ? "true" : "false";
+      content.style.setProperty("--vx-source-description-travel", `${distance}px`);
+      content.style.setProperty("--vx-source-description-duration", `${2.4 + distance / 12 * 2}s`);
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(window);
+    observer.observe(content);
+    return () => observer.disconnect();
+  }, [text]);
+  return <span ref={textRef} className="vx-source-row__file-motion">{text}</span>;
 }
 
 /**
@@ -206,7 +228,7 @@ export function SourcesScreen({
                 <SourceRowContent
                   quality={qualityOf(s) === "Unknown" ? "—" : quality}
                   provider={provider}
-                  file={file}
+                  file={<SourceDescription text={file} />}
                   best={s === sources[0]}
                   opening={s.id === openingSource}
                   icon={<PlayIcon />}
