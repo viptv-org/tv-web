@@ -1,3 +1,28 @@
+# Desktop restoration failure fixture — 2026-10-02
+
+Application baseline main `0291ed5a241e3423ccbc215fa22e1b6c036bae4b`,
+design `1742afa2b50d30638fa46f3abc8c1a76638a51e1`, Core `f66c87e`, Video
+`550ab350`. The old DeskPlayerRestore fixture reused one viewer ID and permitted
+an unstubbed MSE fallback; failed-candidate cleanup/accelerated heartbeat could
+stop the outgoing fixture instead of reaching recovery. The corrected registry
+uses distinct IDs and exhausts local paths. The existing application's explicit
+Next failure and failed restoration now reach recovery over the bare picture.
+Responsive Retry carries the drawn refresh icon through an explicit actions
+view; recovery presents one dialog without a duplicate error toast underneath.
+Three public UI/HTTP/adapter scenarios pass: Retry retains the outgoing source
+and768-second position, Choose source discovers manually without admission,
+and Back returns without a new admission. The final private 1440×900
+trusted-HTTPS comparison was inspected. The Retry icon and layout match the
+board; fixture still-image framing remains different. No vendor pin or TV
+layout changed; installed/native recovery and physical hardware stay separate.
+Review found a delayed external-video failure could republish an old dialog or
+clear a newer operation's feedback/busy state after Back. The public stage
+regression fails on the old source and passes with navigation/request ownership
+fences; a same-navigation owned deadline still offers recovery.
+All267 app tests, all TypeScript groups, design/Core/video integrity and
+production build pass; the three focused Playwright cases passed in15.6s with
+one worker and no retries.
+
 # Desktop parity pass (design#3) — 2026-09-30
 
 Design pin unchanged (`4e153a7`). The preview harness compared DeskHome,

@@ -460,5 +460,23 @@ saved Home cards remain usable, cold Discover routing completes before optional
 Home content, and browser Back reloads cancelled optional data. Four full
 React/API regressions pass. All seven DeskStates cells were reached and
 privately inspected at 1440×900 over trusted local HTTPS with API/media mocks.
-This adds a scoped composite-state inspection; native/installed, complete
-DeskPlayerRestore and uniform visual parity remain unqualified.
+This adds a scoped composite-state inspection; native/installed and uniform
+visual parity remain unqualified. DeskPlayerRestore's separate browser fixture
+qualification is recorded below.
+
+# Desktop restoration failure fixture — 2026-10-02
+
+At 1440×900 over trusted local HTTPS, explicit Next fails its candidate and
+outgoing restoration, and the existing recovery dialog presents Retry, Choose
+source and Back over the bare picture. Distinct playback lease IDs preserve
+the outgoing viewer during candidate cleanup; disabling the unstubbed MSE path
+ensures all local paths fail as requested. This corrects the old preview timeout.
+The responsive dialog also carries the drawn Retry icon and suppresses duplicate
+failure toast feedback. Retry preserves the outgoing source/position; Choose
+source and Back do not admit playback. The final board was privately
+inspected. Delayed external-video failure after Back cannot overwrite newer
+feedback/busy state, while an owned deadline still offers recovery. These two
+public-stage regressions pass; the cancelled case failed before the ownership
+fence. All47 board inspections remain scoped across their recorded revisions.
+This includes DeskStates' seven separately matched cells, and is neither uniform pixel parity
+nor installed/native failure recovery or hardware acceptance.

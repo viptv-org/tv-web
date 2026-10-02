@@ -1,4 +1,5 @@
-import { useEffect, useRef } from "react";
+import { createElement, useEffect, useRef } from "react";
+import { RotateCw } from "lucide-react";
 import {
   type MediaItem,
   type MediaPresentation,
@@ -183,6 +184,7 @@ export function usePlaybackSession(app: PlaybackEngineApi) {
     if (!previous || nextScope.current) return;
     const scope = api.createScope();
     nextScope.current = scope;
+    const ticket = epoch.current;
     setBusy(true);
     setError("");
     const outgoing = active.current;
@@ -237,25 +239,26 @@ export function usePlaybackSession(app: PlaybackEngineApi) {
           await play(next.item, next.source, 0);
       }
     } catch (e) {
+      if (ticket !== epoch.current || nextScope.current !== scope) return;
+      const recoveryRequired = outgoing &&
+        controller.current?.snapshot.state === "error" &&
+        !controller.current.snapshot.active;
       if (!scope.signal.aborted) {
         if (outgoing && controller.current?.snapshot.active)
           setError("This source could not be played");
-        else
+        else if (!recoveryRequired)
           fail(e);
       }
-      if (
-        outgoing &&
-        controller.current?.snapshot.state === "error" &&
-        !controller.current.snapshot.active
-      ) {
+      if (recoveryRequired) {
+        setError("");
         setModal({
           title: "Playback could not be restored",
+          view: responsive ? { kind: "dialog" } : undefined,
           choices: [
             {
               label: "Retry",
-              // The dialog's one accent action (DeskPlayerRestore; TV: a plain row).
-              // (The drawn refresh icon waits on the generic modal: an icon makes it a menu.)
               tone: "primary",
+              icon: responsive ? createElement(RotateCw, { "aria-hidden": true }) : undefined,
               action: () => {
                 setModal(undefined);
                 void play(outgoing.item, outgoing.source, outgoingPosition);
@@ -280,8 +283,10 @@ export function usePlaybackSession(app: PlaybackEngineApi) {
       }
     } finally {
       clearTimeout(deadline);
-      if (nextScope.current === scope) nextScope.current = undefined;
-      setBusy(false);
+      if (nextScope.current === scope) {
+        nextScope.current = undefined;
+        if (ticket === epoch.current) setBusy(false);
+      }
     }
   };
   // Auto-next (core policy canAutoNext: the final ten seconds while playing).

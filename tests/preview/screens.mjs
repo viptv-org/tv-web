@@ -195,7 +195,14 @@ export const screens = {
   DeskPlayerBuffering: { path: MONSTER, player: {}, backend: { seekRefused: true, playbackHangAfter: 2 }, steps: async h => { await responsivePlayer(h); await seekTo(h, 0.4); await h.waitText('could not seek'); await seekTo(h, 0.3); await h.page.mouse.move(h.frame.width / 2, h.frame.height / 2); }, note: 'a refused seek (notice) followed by a pending one (ring)' },
   DeskPlayerNext: { path: MONSTER, player: {}, backend: { playbackHangAfter: 1, sourcesDone: true }, steps: async h => { await responsivePlayer(h); await h.activate('next'); await h.sleep(600); } },
   DeskPlayerError: { path: OAK_SOURCES, player: { stall: true }, steps: async h => { await h.activate('source-0'); await h.waitText('could not be played', 25000); } },
-  DeskPlayerRestore: { path: MONSTER, player: { failAfter: 1 }, backend: { sourcesDone: true }, steps: async h => { await responsivePlayer(h); await h.activate('next'); await h.waitText('could not be restored', 20000); } },
+  DeskPlayerRestore: {
+    path: MONSTER, player: { failAfter: 1 },
+    // Distinct leases keep failed candidate cleanup from retiring the outgoing
+    // fixture viewer. The failure must also exhaust the unstubbed MSE path.
+    backend: { sourcesDone: true, playbackUniqueIds: true },
+    init: () => Object.defineProperty(window, 'MediaSource', { configurable: true, value: undefined }),
+    steps: async h => { await responsivePlayer(h); await h.activate('next'); await h.waitText('could not be restored', 20000); },
+  },
   DeskUpNext: { init: holdUpNext, path: MONSTER, player: { position: 3120 }, backend: { media: { position: 3120 } }, steps: h => upNextCard(h) },
   WebSignIn: { path: '/tv/', backend: { session: 'none' } },
   WebSignInError: { backend: { session: 'none', loginError: true }, steps: async h => { await h.fill('#signin-username', 'vynxc'); await h.fill('#signin-password', 'password'); await h.button('Sign in'); await h.waitText('incorrect'); } },
