@@ -79,13 +79,14 @@ export function useAuth(app: DialogsApi) {
     }
     pumpHomeRows();
   };
-  const loadHome = async (id = profile) => {
+  const loadHome = async (id = profile, ready?: () => void) => {
     revisionMonitor.current?.stop(); revisionMonitor.current = undefined;
     homeLoading.current = true;
     homeRequestScope.current?.abort();
     const scope = api.createScope();
     homeRequestScope.current = scope;
     const ticket = ++epoch.current;
+    app.setHomeCatalogPending(true);
     setBusy(true);
     try {
       const token = await api.catalogRevision({ signal: scope.signal }).catch(() => undefined);
@@ -110,6 +111,10 @@ export function useAuth(app: DialogsApi) {
       if (ticket !== epoch.current) return;
       setCatalogs(cats);
       setPrefs(preferences);
+      // Saved rows, catalog navigation and preferences are sufficient to
+      // restore the responsive route. Optional hero/live requests may stall.
+      if (responsive) ready?.();
+      if (ticket !== epoch.current || scope.signal.aborted) return;
       // Home shows as soon as its hero catalog and recent channels arrive;
       // every other shelf renders pending and loads its own catalog
       // (requestHomeRows), so the page never waits for its slowest addon.
@@ -149,11 +154,20 @@ export function useAuth(app: DialogsApi) {
     } catch (e) {
       if (ticket === epoch.current) fail(e);
     } finally {
-      if (ticket === epoch.current) { homeLoading.current = false; setBusy(false); setHomeReadyTick(value => value + 1); }
+      if (homeRequestScope.current === scope) {
+        homeLoading.current = false;
+        setHomeReadyTick(value => value + 1);
+      }
+      if (ticket === epoch.current) { app.setHomeCatalogPending(false); setBusy(false); }
     }
   };
   useEffect(() => {
-    if (screen !== "Home" || !profile || homeLoading.current || homeCache.current?.profile !== profile) return;
+    if (screen !== "Home" || !profile || homeLoading.current) return;
+    if (responsive && app.homeCatalogPending && homeRequestScope.current?.signal.aborted) {
+      void loadHome(profile);
+      return;
+    }
+    if (homeCache.current?.profile !== profile) return;
     const monitor = new CatalogRevisionMonitor(
       signal => api.catalogRevision({ signal }),
       async signal => {
@@ -276,10 +290,15 @@ export function useAuth(app: DialogsApi) {
         setBootingHome(true);
         setProfile(id);
         stack.current = [];
-        const loading = loadHome(id);
+        let navigationFinished = false;
+        const loading = loadHome(id, () => {
+          if (navigationTicket !== epoch.current) return;
+          navigationFinished = true;
+          finishProfileNavigation(true);
+        });
         const navigationTicket = epoch.current;
         await loading;
-        if (navigationTicket === epoch.current) { finishProfileNavigation(); setBootingHome(false); }
+        if (!navigationFinished && navigationTicket === epoch.current) { finishProfileNavigation(); setBootingHome(false); }
       },
     );
   };
@@ -383,10 +402,15 @@ export function useAuth(app: DialogsApi) {
         setProfile(readyProfile);
         setBootingHome(true);
         stack.current = [];
-        const loading = loadHome(readyProfile);
+        let navigationFinished = false;
+        const loading = loadHome(readyProfile, () => {
+          if (disposed || navigationTicket !== epoch.current) return;
+          navigationFinished = true;
+          finishProfileNavigation(true);
+        });
         const navigationTicket = epoch.current;
         void loading.then(() => {
-          if (!disposed && navigationTicket === epoch.current) { finishProfileNavigation(); setBootingHome(false); }
+          if (!navigationFinished && !disposed && navigationTicket === epoch.current) { finishProfileNavigation(); setBootingHome(false); }
         });
       }
     }, (message) => {

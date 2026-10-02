@@ -59,6 +59,7 @@ export function AppShell({ app }: { app: AppApi }) {
   // While the session restores and Home first loads, the responsive shell
   // shows a skeleton of Home in place of the startup cover and screens.
   const booting = responsive && (bootingHome || screen === "startup");
+  const emptyHomePending = responsive && screen === "Home" && app.homeCatalogPending && !heroItem && !queue.length && !favorites.length;
   // ---- Shell: app chrome (rails, phone nav, title bar) -------------------
   // Screens that show the navigation chrome (TV rail, desktop / web rail).
   const chromeScreen = !["startup", "pairing", "profiles", "player"].includes(screen);
@@ -163,7 +164,7 @@ export function AppShell({ app }: { app: AppApi }) {
           onDoubleClick={responsive && screen === "player" ? () => void fullscreenControl.toggle() : undefined}
         />
         <canvas ref={canvas} className="video player-canvas" style={{ display: "none" }} onClick={surfaceClick} />
-        {booting && <HomeSkeleton phone={phone} />}
+        {(booting || emptyHomePending) && <HomeSkeleton phone={phone} />}
         {responsive && !phone && (booting || chromeScreen) && (
           <DesktopRail
             current={booting ? "Home" : currentNav}
@@ -206,7 +207,7 @@ export function AppShell({ app }: { app: AppApi }) {
                 onExit={tvRail.exit}
               />
             )}
-            {screen === "Home" && (
+            {screen === "Home" && !emptyHomePending && (
               <HomeScreen
                 responsive={responsive}
                 compactHome={compactHome}

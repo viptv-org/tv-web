@@ -452,3 +452,13 @@ Design `02fbcdd24a5a32f0ee87e97ede83c7e30345c833`; PhPlayer and DeskPlayer refer
 | Responsive website phone, 390×844 | Decoded HLS Chromium scenario: Fit full picture and centered Fill crop inspected privately; five controls fit, keyboard/touch toggle, source return retains mode, leaving and returning resets Fit | Browser simulation; physical phone unverified |
 | Responsive website desktop, 1440×900 | Decoded HLS Chromium scenario: button and both video/canvas CSS modes, paused session unchanged, Enter/Space focus, fullscreen retention and back to Fit | Browser simulation; real MediaBunny decoding and installed desktop host unverified |
 | Tizen/Vizio remote player | No Fit/Fill change; original remote actions and player geometry retained | Device playback unverified for this amendment |
+# Responsive pending Home/Discover — 2026-10-02
+
+Design `1742afa`, existing DeskStates Home/Discover skeleton geometry. Slow
+catalog HTTP boundaries retain the appropriate empty Home or Discover layout,
+saved Home cards remain usable, cold Discover routing completes before optional
+Home content, and browser Back reloads cancelled optional data. Four full
+React/API regressions pass. All seven DeskStates cells were reached and
+privately inspected at 1440×900 over trusted local HTTPS with API/media mocks.
+This adds a scoped composite-state inspection; native/installed, complete
+DeskPlayerRestore and uniform visual parity remain unqualified.
