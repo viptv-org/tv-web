@@ -421,3 +421,16 @@ Design: `8b92d90842c9307df7e2daef5eeb0d9a61bbce51`.
 The full unit suite passed 250 tests and both targeted Playwright checks passed.
 No reference-image parity metrics or playback/device capability claims were
 added by this change. See TESTING.md for the qualification scope.
+
+## SRC-OVERFLOW-001 / CW-SOURCE-BACK-001 — 2026-10-01
+
+Design pin `ce7084ff80d0541257509748ea772ef0f95d8058`; implementation
+commits `61dc20c`, `faf203c`, `a906e47`, and regression follow-up `4d500a3`.
+Affected reference states: PhSources, DeskSources, TvSources, TvSourceDetails,
+and queue-origin TvTitle. Native Tizen/Vizio/webOS evidence remains unverified.
+
+| Contract/state | Browser functional evidence | Visual evidence and disposition |
+| --- | --- | --- |
+| PhSources / DeskSources / TvSources description window | Chromium responsive fixture checked equal row heights, exactly two clipped lines, long unbroken filename, full button label, focus motion, and reduced motion. SolidTV TvSources preview passed source paging, filters and Back. | Private 390 px phone and 1920×1080 SolidTV captures inspected; no matched reference metric. Implemented, browser reviewed; device unverified. |
+| PhSources / DeskSources / TvSources discovery | Chromium delayed fixture observed `Finding sources` before a row, `Still checking sources` and a usable row while pending, then spinner removal at completion. SolidTV model unit test covered empty/partial/done transitions; TvSources preview displayed the pending spinner with rows. | Stable status placement inspected in private captures; no matched reference metric. Implemented, browser reviewed; real provider timing unverified. |
+| Continue Watching episode source Back / parent title | Chromium 390 px fixture checked queue episode source → parent series detail → another episode source → detail → focused Home queue card; a forced parent-metadata 503 offered Retry and returned to the same card. SolidTV TvLibrary preview checked source Back → focused episode detail → originating library card; existing 700 ms hold and explicit source/Resume intent assertions passed. | Parent title and source captures inspected locally; focus and return exercised in fixtures. Physical remotes and installed clients unverified. |

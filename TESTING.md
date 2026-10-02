@@ -2552,3 +2552,37 @@ endpoint returned 401. Existing account/profile IDs, sessions, encrypted add-ons
 and viewing records were preserved. These are Chromium fixture and dev asset
 checks; physical Vizio/Tizen/webOS refresh and installed desktop acceptance
 remain unverified. No new playback or decoder qualification is claimed.
+
+## SRC-OVERFLOW-001 / CW-SOURCE-BACK-001 — 2026-10-01
+
+Design `ce7084ff80d0541257509748ea772ef0f95d8058` is pinned in
+`DESIGN_REF`. React phone/desktop/TV source rows and SolidTV source rows now
+reserve a fixed two-line description window. Long unbroken filenames wrap;
+overflow moves slowly only with focus or pointer hover, restarts at the top
+when interaction ends or the row changes, and stays still under reduced motion.
+The complete description is retained in the React button's accessible label
+and Source details (including the displayed audio text). Discovery shows the
+accent spinner with `Finding sources`, then `Still checking sources` as rows
+arrive, and clears it when polling completes. Partial rows stay selectable.
+
+Back from a Continue Watching episode's source picker opens its parent series
+details at that episode's season. A different episode can then open its own
+source picker; Back from details returns to the originating queue card. React
+uses the existing browser/remote history and SolidTV retains its Home/My List
+return target. Existing source choice, hold/details, and playback intent paths
+remain in place.
+
+Local validation: 251 unit tests in 43 files passed with one fork; `npm run
+build` passed design/core/video integrity, strict TypeScript, and production
+bundling. Targeted one-worker Chromium Playwright tests passed for a 390 px
+long-token row (equal row heights, two-line clip, focus motion, reduced motion,
+full accessible label), pending discovery before/after a partial result, and
+the queue episode source → parent title → another episode source → Home path.
+The queue fixture also injected one parent-metadata 503; Retry opened details
+and Back restored focus to the originating queue card.
+`solid-shoot.mjs` TvSources, TvSourceDetails, and TvLibrary scenarios passed
+against updated canonical fixture endpoints. Private captures of 390 px phone
+sources and 1920×1080 SolidTV sources were inspected locally; no matched
+pixel metric was recorded. Physical Tizen/Vizio/webOS remote and decoder
+behavior, real-provider timing, and installed desktop behavior remain
+unverified by these browser fixtures.
