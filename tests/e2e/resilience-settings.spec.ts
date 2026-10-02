@@ -23,7 +23,7 @@ async function installSession(page: Page) {
 }
 
 async function installBackend(page: Page): Promise<State> {
-  const state: State = { calls: [], addons: [{ id: 2, name: 'Fixture add-on', enabled: true }] };
+  const state: State = { calls: [], addons: [{ id: 2, name: 'Fixture add-on', enabled: true }, { id: 3, name: 'Other provider', enabled: true }] };
   await page.route('**/fixture.svg', route => route.fulfill({ status: 200, contentType: 'image/svg+xml', body: '<svg xmlns="http://www.w3.org/2000/svg" width="256" height="144" />' }));
   let selectedProfileId: string | null = null;
   await page.route(`${apiOrigin}/api/**`, async route => {
@@ -55,10 +55,10 @@ async function installBackend(page: Page): Promise<State> {
     }
     if (path === `/api/meta/movie/${movie.id}`) return json(route, { meta: movie });
     if (path === '/api/v2/streams' && request.method() === 'POST') return json(route, { id: 'sources' });
-    if (path === '/api/v2/streams/sources') return json(route, { events: [{ seq: 1, source: 'fixture', streams: [
-      { id: 'good-1080', name: 'Good source', title: '1080p H.264 English', filename: 'good.mkv', source_addon_id: 'addon:2', source_name: 'Fixture provider', source_quality: '1080p' },
-      { id: 'other-720', name: 'Other source', title: '720p H.264 English', filename: 'other.mkv', source_addon_id: 'addon:3', source_name: 'Other provider', source_quality: '720p' },
-    ] }], done: true });
+    if (path === '/api/v2/streams/sources') return json(route, { events: [
+      { seq: 1, source: 'addon:2', streams: [{ id: 'good-1080', name: 'Good source', title: '1080p H.264 English', filename: 'good.mkv', source_addon_id: 'addon:2', source_name: 'Fixture provider', source_quality: '1080p' }] },
+      { seq: 2, source: 'addon:3', streams: [{ id: 'other-720', name: 'Other source', title: '720p H.264 English', filename: 'other.mkv', source_addon_id: 'addon:3', source_name: 'Other provider', source_quality: '720p' }] },
+    ], done: true });
     if (path === '/api/live/categories') return json(route, { categories: [], total: 0 });
     if (path === '/api/addons' && request.method() === 'GET') return json(route, state.addons);
     if (path === '/api/addons' && request.method() === 'POST') {
@@ -123,6 +123,46 @@ test('Vizio: an empty source filter restores filter focus and source hold expose
   await expect(page.getByText('Choose another provider or quality.')).toBeVisible();
   await expect.poll(() => page.locator('[data-focus-id="source-provider"]').evaluate(element => document.activeElement === element)).toBe(true);
   await expect(page.getByRole('alert')).toHaveCount(0);
+});
+
+test('Vizio: observed add-ons stay distinct when two return no playable formats', async ({ page }) => {
+  test.skip(test.info().project.name !== 'vizio', 'source producer outcomes share the React picker');
+  await installSession(page);
+  const state = await installBackend(page);
+  state.addons.splice(0, state.addons.length,
+    { id: 3, name: 'Torrentio', enabled: true },
+    { id: 4, name: 'TorrentsDB', enabled: true },
+    { id: 8, name: 'Torrentio TB', enabled: true });
+  await page.route(`${apiOrigin}/api/v2/streams/sources**`, route => {
+    const after = Number(new URL(route.request().url()).searchParams.get('after') ?? 0);
+    return json(route, after ? { events: [
+      { seq: 2, source: 'addon:3', streams: [], error_code: 'source_format_unsupported' },
+      { seq: 3, source: 'addon:4', streams: [], error_code: 'source_format_unsupported' },
+    ], done: true } : { events: [{ seq: 1, source: 'addon:8', streams: [
+      { id: 'http-source', name: 'HTTP stream', title: '1080p stream', source_addon_id: 'addon:8', source_name: 'Torrentio TB', source_quality: '1080p' },
+    ] }], done: false });
+  });
+  await enterHome(page);
+  await page.getByRole('button', { name: 'Resilient Movie' }).press('Enter');
+  await page.locator('[data-focus-id="detail-source"]').press('Enter');
+  const playable = page.locator('[data-focus-id="source-0"]');
+  await expect(playable).toBeVisible();
+  await playable.focus();
+  await expect(page.getByText('Still checking sources')).toBeVisible();
+  await expect(page.locator('[data-focus-id="source-provider"]')).toContainText('All providers');
+  await expect(page.getByText('Still checking sources')).toHaveCount(0);
+  await expect(playable).toBeVisible();
+  await expect(playable).toBeFocused();
+  await page.getByRole('button', { name: 'All providers' }).click();
+  await expect(page.getByRole('button', { name: 'Torrentio TB', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: /^Torrentio · No playable sources$/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: /^TorrentsDB · No playable sources$/ })).toBeVisible();
+  await page.getByRole('button', { name: /^Torrentio · No playable sources$/ }).click();
+  await expect(page.getByText(/Torrentio returned formats this app cannot play/)).toBeVisible();
+  await page.screenshot({ path: 'test-results/source-providers-zero-result.png' });
+  await page.getByRole('button', { name: 'Torrentio', exact: true }).click();
+  await page.getByRole('button', { name: 'Torrentio TB', exact: true }).click();
+  await expect(playable).toBeVisible();
 });
 
 test('Vizio: settings persist an add-on draft, enable/remove an extension, and sign out', async ({ page }) => {

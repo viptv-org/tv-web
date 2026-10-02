@@ -27,6 +27,18 @@ describe("TvApi device and media boundary", () => {
     const step=await apiFor(fake.fetcher).pollSourcesStep("job",{after:0,sources:[],polls:0});
     expect(step.sources.map(s=>s.id)).toEqual(["s"]);expect(step.state.errors?.[0].code).toBe("provider_rate_limited");
   });
+  it("exposes safe observed producer outcomes to the picker even when all return zero playable rows", async () => {
+    const fake = scripted(response({ events: [
+      { seq: 1, source: "addon:3", streams: [], error_code: "source_format_unsupported" },
+      { seq: 2, source: "addon:4", streams: [], error_code: "source_format_unsupported" },
+    ], done: true }));
+    const step = await apiFor(fake.fetcher).pollSourcesStep("job", { after: 0, sources: [], polls: 0 }, { retainProducerFailures: true });
+    expect(step.done).toBe(true);
+    expect(step.events.map(({ source, errorCode }) => [source, errorCode])).toEqual([
+      ["addon:3", "source_format_unsupported"],
+      ["addon:4", "source_format_unsupported"],
+    ]);
+  });
   it("uses the existing device-pairing wire contract", async () => {
     const fake = scripted(
       response({

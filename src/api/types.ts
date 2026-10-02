@@ -67,11 +67,12 @@ export interface Page<T> {
 export interface StreamDiscovery {
   readonly id: string;
 }
-interface StreamEvent {
+export interface StreamEvent {
   readonly sequence: number;
   readonly source: string;
   readonly sources: readonly MediaSource[];
   readonly error?: string;
+  readonly errorCode?: string;
 }
 export interface StreamPoll {
   readonly events: readonly StreamEvent[];
@@ -83,6 +84,7 @@ export interface StreamPoll {
  * transport, cancellation and the fixed poll interval.
  */
 export type SourcesPollStep = CoreView<Core.SourcesPollStep>;
+export type SourcesPollStepWithEvents = SourcesPollStep & { readonly events: StreamPoll["events"] };
 /** The initial input may omit errors; Rust always returns the generated state. */
 export type SourcesPollState = Omit<SourcesPollStep["state"], "errors"> & Partial<Pick<SourcesPollStep["state"], "errors">>;
 

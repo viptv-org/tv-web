@@ -145,6 +145,7 @@ import {
   projectSources,
   type SourcesView,
 } from "./sourceModel";
+import { configuredAddonNames, observeSourceProducers, producerStatus, sourceProviderKey, type SourceProducer } from "../screens/sourceProducers";
 import {
   SourceChip,
   SourceProvider,
@@ -338,6 +339,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
   let sourceScope: ReturnType<TvApi["createScope"]> | undefined;
   let sourceTimer: ReturnType<typeof setTimeout> | undefined;
   let sourceSpinnerTimer: ReturnType<typeof setInterval> | undefined;
+  let sourceProducerNames = new Map<string, string>();
   const sourceSpinner = `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 22 22"><circle cx="11" cy="11" r="8" fill="none" stroke="#45454B" stroke-width="3"/><path d="M11 3a8 8 0 0 1 8 8" fill="none" stroke="#F5C542" stroke-width="3" stroke-linecap="round"/></svg>')}`;
   let playback: SolidTVPlaybackRuntime | undefined;
   let lastPlayerActive: PlaybackControllerActive<MediaItem, MediaSource> | null = null;
@@ -414,6 +416,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         home: emptyHome as HomeView,
         detail: emptyDetail as DetailView,
         source: emptySources as SourcesView,
+        sourceProducers: [] as SourceProducer[],
         sourceChips: Array.from({ length: 5 }, () => ({ ...emptySourceChip })),
         sourceRows: Array.from({ length: 6 }, () => ({ ...emptySourceRow })),
         sourcePanelTitle: "",
@@ -4898,6 +4901,8 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         this.sourceRowIndex = 0;
         this.sourceWindowStart = 0;
         this.sourceNotice = "";
+        this.sourceProducers = [];
+        sourceProducerNames = new Map();
         this.source = projectSources(item, [], true, false);
         this.sourceChips = Array.from(
           { length: 5 },
@@ -4922,6 +4927,14 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
           this.focusSourceChip(0);
         }, 50);
         try {
+          void api.addons({ signal: scope.signal }).then((addons) => {
+            if (generation !== sourceGeneration || scope.signal.aborted) return;
+            sourceProducerNames = configuredAddonNames(addons);
+            this.sourceProducers = observeSourceProducers(this.sourceProducers, [], sourceProducerNames);
+            this.updateSources(this.source.sources, this.source.busy, this.source.done);
+            if (this.source.provider !== "All")
+              this.sourceProviderLabel = this.sourceProducers.find((producer) => producer.key === this.source.provider)?.label ?? this.source.provider;
+          }).catch(() => undefined);
           const discovery = await api.sources(item, { signal: scope.signal });
           let state = {
             after: 0,
@@ -4931,9 +4944,11 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
           while (generation === sourceGeneration && !scope.signal.aborted) {
             const step = await api.pollSourcesStep(discovery.id, state, {
               signal: scope.signal,
+              retainProducerFailures: true,
             });
             if (generation !== sourceGeneration || scope.signal.aborted) return;
             state = step.state;
+            this.sourceProducers = observeSourceProducers(this.sourceProducers, step.events, sourceProducerNames);
             const hadRows = this.source.sources.length > 0;
             this.updateSources(state.sources, !step.done, step.done);
             if (!hadRows && state.sources.length)
@@ -4987,6 +5002,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
           done,
           this.source.quality,
           this.source.provider,
+          this.sourceProducers,
         );
         this.refreshSourceSpinner();
         noteSourceFilter(
@@ -5902,6 +5918,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
           this.source.done,
           quality,
           this.source.provider,
+          this.sourceProducers,
         );
         noteSourceFilter(
           this.source.quality,
@@ -6012,23 +6029,23 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
       },
       openProviderPicker() {
         if (this.phase !== "sources") return;
-        const labels = [
-          "All",
-          ...new Set(
-            this.source.sources.map(
-              (source) => source.sourceName ?? source.name,
-            ),
-          ),
-          "Cancel",
+        const choices = [
+          { key: "All", label: "All" },
+          ...this.sourceProducers.map((producer) => ({
+            key: producer.key,
+            label: `${producer.label}${this.source.sources.some((row) => sourceProviderKey(row) === producer.key) ? "" : this.source.busy ? " · Checking" : " · No playable sources"}`,
+          })),
+          { key: "Cancel", label: "Cancel" },
         ];
         this.providerChoices = Array.from({ length: 6 }, (_, index) => ({
-          label: labels[index] ?? "",
-          current: labels[index] === this.source.provider,
-          visible: index < labels.length,
+          key: choices[index]?.key ?? "",
+          label: choices[index]?.label ?? "",
+          current: choices[index]?.key === this.source.provider,
+          visible: index < choices.length,
         }));
         this.providerChoiceIndex = Math.max(
           0,
-          Math.min(5, labels.indexOf(this.source.provider)),
+          Math.min(5, choices.findIndex((choice) => choice.key === this.source.provider)),
         );
         this.phase = "provider";
         setTimeout(() => {
@@ -6056,7 +6073,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
       selectProviderOption() {
         if (this.phase !== "provider") return;
         const choice = this.providerChoices[this.providerChoiceIndex];
-        if (!choice?.visible || choice.label === "Cancel") {
+        if (!choice?.visible || choice.key === "Cancel") {
           this.closeProviderPicker();
           return;
         }
@@ -6071,7 +6088,8 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
           this.source.busy,
           this.source.done,
           this.source.quality,
-          choice.label,
+          choice.key,
+          this.sourceProducers,
         );
         noteSourceFilter(
           this.source.quality,
@@ -6089,7 +6107,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
           (_, index) => this.source.rows[index] ?? { ...emptySourceRow },
         );
         this.sourceProviderLabel =
-          choice.label === "All" ? "All providers" : choice.label;
+          choice.key === "All" ? "All providers" : this.sourceProducers.find((producer) => producer.key === choice.key)?.label ?? choice.key;
         this.phase = "sources";
         setTimeout(() => {
           if (this.phase !== "sources") return;
@@ -7261,6 +7279,16 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
             row={s.sourceRows[0]}
             x={1164}
             y={326}
+          />
+          <TvText
+            x={1164}
+            y={340}
+            maxwidth={660}
+            maxlines={4}
+            content={s.source.rows.length ? "" : s.source.provider === "All" ? "" : producerStatus(s.sourceProducers.find((producer) => producer.key === s.source.provider) ?? { key: "", source: "", label: "" }, s.source.sources, s.source.done)}
+            font={"Onest"}
+            size={24}
+            color={s.secondary}
           />
           <SourceRow
             screenRef={"sourceRow1"}

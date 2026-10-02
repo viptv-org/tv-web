@@ -3,6 +3,7 @@
  * quality ordering / labels and the title facts line.
  */
 import type { MediaItem, MediaSource } from "../api";
+import { sourceProviderKey } from "./sourceProducers";
 
 /** One source discovery per playable item (a movie or an episode). */
 export const sourceKey = (item: MediaItem) => `${item.type}:${item.id}`;
@@ -31,7 +32,7 @@ export function qualityChoices(sources: readonly MediaSource[]) {
 export const qualityLabel = (quality: string) => (quality === UNKNOWN_QUALITY ? "Other" : quality);
 
 export function matchesFilters(source: MediaSource, quality: string, provider: string) {
-  return (quality === "All" || qualityOf(source) === quality) && (provider === "All" || providerOf(source) === provider);
+  return (quality === "All" || qualityOf(source) === quality) && (provider === "All" || sourceProviderKey(source) === provider);
 }
 
 /** "S1 E2" for an episode, "" otherwise. */

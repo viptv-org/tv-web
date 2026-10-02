@@ -10,6 +10,7 @@ import { EmptyState } from "../ui/primitives/Feedback";
 import { KbdHints, KeyLegend } from "../ui/primitives/Keys";
 import { PlayIcon } from "../ui/primitives/icons";
 import { episodeCode, matchesFilters, providerOf, qualityChoices, qualityLabel, qualityOf } from "./titleSources";
+import { producerStatus, sourceProviderKey, type SourceProducer } from "./sourceProducers";
 
 /** The item being sourced: "The End of Oak Street" / "Monster: … · S1 E1", and its queue / resume state. */
 function presentationContext(item: MediaItem) {
@@ -61,6 +62,7 @@ export function SourcesScreen({
   phone = false,
   selected,
   sources,
+  producers,
   sourceQuality,
   sourceProvider,
   setSourceQuality,
@@ -76,6 +78,7 @@ export function SourcesScreen({
   phone?: boolean;
   selected: MediaItem | undefined;
   sources: readonly MediaSource[];
+  producers: readonly SourceProducer[];
   sourceQuality: string;
   sourceProvider: string;
   setSourceQuality: Dispatch<SetStateAction<string>>;
@@ -91,7 +94,7 @@ export function SourcesScreen({
   const tv = !responsive;
   const qualities = qualityChoices(sources);
   const qualityValues = ["All", ...qualities.map((q) => q.quality)];
-  const providers = Array.from(new Set(sources.map(providerOf)));
+  const providers = producers;
   const visible = sources.filter((s) => matchesFilters(s, sourceQuality, sourceProvider));
   const count = sources.length;
   const checking = busy && !preparing;
@@ -114,11 +117,11 @@ export function SourcesScreen({
       view: { kind: "choices", anchor: responsive && !phone ? anchorBelow(document.querySelector('[data-focus-id="source-provider"]'), "end") : undefined },
       focus: sourceProvider,
       choices: [
-        ...["All", ...providers].map((label) => ({
-          label,
-          current: label === sourceProvider,
+        ...[{ key: "All", label: "All" }, ...providers].map(({ key, label }) => ({
+          label: key === "All" ? label : `${label}${sources.some((source) => sourceProviderKey(source) === key) ? "" : busy ? " · Checking" : " · No playable sources"}`,
+          current: key === sourceProvider,
           action: () => {
-            setSourceProvider(label);
+            setSourceProvider(key);
             setModal(undefined);
           },
         })),
@@ -144,7 +147,9 @@ export function SourcesScreen({
     setSourceQuality(next);
   };
 
-  const providerLabel = sourceProvider === "All" ? "All providers" : sourceProvider;
+  const selectedProducer = producers.find((producer) => producer.key === sourceProvider);
+  const providerLabel = sourceProvider === "All" ? "All providers" : selectedProducer?.label ?? sourceProvider;
+  const selectedStatus = selectedProducer ? producerStatus(selectedProducer, sources, !busy) : "";
   const chips = (
     <>
       {phone || tv ? (
@@ -213,7 +218,7 @@ export function SourcesScreen({
         <div className="vx-dialog__tools">{chips}</div>
         <div className="vx-dialog__scroll" onKeyDown={stepQuality}>
           {visible.map((s, i) => {
-            const provider = providerOf(s);
+            const provider = producers.find((producer) => producer.key === sourceProviderKey(s))?.label ?? providerOf(s);
             const quality = s.quality ?? "";
             const file = [s.title ?? s.filename, s.audio].filter(Boolean).join(" · ");
             return (
@@ -238,7 +243,9 @@ export function SourcesScreen({
           })}
           {!count ? (
             <div className="vx-sources__empty" role="status">
-              {busy ? (
+              {selectedStatus ? (
+                <EmptyState icon={<Film aria-hidden="true" />} title={selectedStatus} />
+              ) : busy ? (
                 <EmptyState icon={<Search aria-hidden="true" />} title="Finding sources">Sources appear here as they arrive.</EmptyState>
               ) : (
                 <EmptyState icon={<Film aria-hidden="true" />} title="No sources available">Check your add-ons in Settings.</EmptyState>
@@ -246,7 +253,7 @@ export function SourcesScreen({
             </div>
           ) : !visible.length ? (
             <div className="vx-sources__empty" role="status">
-              <EmptyState icon={<ListFilter aria-hidden="true" />} title="No matching sources">Choose another provider or quality.</EmptyState>
+              <EmptyState icon={<ListFilter aria-hidden="true" />} title={selectedStatus || "No matching sources"}>{selectedStatus ? "" : "Choose another provider or quality."}</EmptyState>
             </div>
           ) : null}
         </div>

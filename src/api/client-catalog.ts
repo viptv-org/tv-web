@@ -16,6 +16,8 @@ import type {
   StreamDiscovery,
   SourcesPollState,
   SourcesPollStep,
+  SourcesPollStepWithEvents,
+  StreamPoll,
 } from "./types";
 
 import { TvApiClientBase } from "./client-base";
@@ -182,8 +184,8 @@ export class TvApiCatalog extends TvApiClientBase {
   async pollSourcesStep(
     id: string,
     state: SourcesPollState,
-    options?: RequestOptions,
-  ): Promise<SourcesPollStep> {
+    options?: RequestOptions & { readonly retainProducerFailures?: boolean },
+  ): Promise<SourcesPollStepWithEvents> {
     const request = normalizeResponse<{ method: string; path: string }>(
       "request",
       { operation: "sourcesPollV2", id, after: state.after },
@@ -192,11 +194,13 @@ export class TvApiCatalog extends TvApiClientBase {
       await this.raw(request.path, {}, true, options),
     );
     const step = normalizeResponse<SourcesPollStep>("sourcesPollStep", { state, poll: v });
+    const events = normalizeResponse<StreamPoll>("streamPoll", v).events;
     const failure = step.state.errors?.[0];
-    if (step.done && !step.sources.length && failure) {
+    if (step.done && !step.sources.length && failure &&
+        (!options?.retainProducerFailures || !events.some((event) => /^addon:\d+$/.test(event.source)))) {
       throw new TvApiError(502, failure.message, failure.code ?? undefined);
     }
-    return step;
+    return { ...step, events };
   }
   async startPlayback(
     request: PlaybackStart,

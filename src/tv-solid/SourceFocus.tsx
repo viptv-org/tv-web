@@ -374,12 +374,14 @@ export const SourceRow = defineScreen({
 });
 
 export interface ProviderChoice {
+  key: string;
   label: string;
   current: boolean;
   visible: boolean;
 }
 
 export const emptyProviderChoice: ProviderChoice = {
+  key: "",
   label: "",
   current: false,
   visible: false,

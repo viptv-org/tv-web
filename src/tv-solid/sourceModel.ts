@@ -1,4 +1,5 @@
 import type { MediaItem, MediaSource } from "../api";
+import { sourceProviderKey, type SourceProducer } from "../screens/sourceProducers";
 import {
   episodeCode,
   matchesFilters,
@@ -65,6 +66,7 @@ export function projectSources(
   done: boolean,
   quality = "All",
   provider = "All",
+  producers: readonly SourceProducer[] = [],
 ): SourcesView {
   const qualities = qualityChoices(sources);
   const chips = [
@@ -102,7 +104,7 @@ export function projectSources(
       .map((source) => ({
         source,
         id: source.id,
-        provider: providerOf(source),
+        provider: producers.find((producer) => producer.key === sourceProviderKey(source))?.label ?? providerOf(source),
         quality:
           qualityOf(source) === "Unknown" ? "—" : (source.quality ?? "—"),
         file: [source.title ?? source.filename, source.audio]

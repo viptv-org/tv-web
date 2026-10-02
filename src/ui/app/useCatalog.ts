@@ -2,6 +2,7 @@ import { createElement, useEffect, useRef, useState } from "react";
 import { BookmarkMinus, BookmarkPlus, Circle, CircleCheck, CirclePlay, EyeOff, Info, List, RotateCcw, SkipBack } from "lucide-react";
 import { menuAnchor } from "../../screens/titleMenu";
 import { sourceKey } from "../../screens/titleSources";
+import { configuredAddonNames, observeSourceProducers, sourceProviderKey, type SourceProducer } from "../../screens/sourceProducers";
 import {
   TvApi,
   type MediaItem,
@@ -17,7 +18,7 @@ import { appendCatalogPage } from "../catalogPaging";
 import type { PlaybackSessionApi } from "./useTvApp";
 
 export function useCatalog(app: PlaybackSessionApi) {
-  const { api, autoResume, catalogs, catalogValues, currentScreen, epoch, fail, favorites, go, items, loadHome, modal, nextEpisode, notify, play, profile, query, queue, responsive, screen, searchScope, setBusy, setCatalog, setCatalogValues, setDetailOrigin, setEpisodes, setError, setFavorites, setItems, setModal, setNextSkip, setQueue, setSearchPartial, setSearchRows, setSeason, setSelected, setSourceProvider, setSourceQuality, setSources, sourceFocusPending, sourceProvider, sourceQuality, sources } = app;
+  const { api, autoResume, catalogs, catalogValues, currentScreen, epoch, fail, favorites, go, items, loadHome, modal, nextEpisode, notify, play, profile, query, queue, responsive, screen, searchScope, setBusy, setCatalog, setCatalogValues, setDetailOrigin, setEpisodes, setError, setFavorites, setItems, setModal, setNextSkip, setQueue, setSearchPartial, setSearchRows, setSeason, setSelected, setSourceProvider, setSourceProducers, setSourceQuality, setSources, sourceFocusPending, sourceProvider, sourceQuality, sources } = app;
 
   const detail = async (item: MediaItem, origin?: Catalog, replaceRoute = false) => {
     if (item.type === "live") { await play(item); return; }
@@ -98,7 +99,7 @@ export function useCatalog(app: PlaybackSessionApi) {
   // background. Opening the chooser for the same item continues that
   // discovery instead of starting a second one; the cursor, dedup and budget
   // stay the shared Rust reducer's (pollSourcesStep).
-  const discoveries = useRef(new Map<string, { id: string; step: SourcesPollState; done: boolean; at: number }>());
+  const discoveries = useRef(new Map<string, { id: string; step: SourcesPollState; producers: SourceProducer[]; done: boolean; at: number }>());
   const preview = useRef<{ key: string; cancel: () => void }>();
   const [sourcePreview, setSourcePreview] = useState<{ key: string; sources: readonly MediaSource[]; done: boolean }>();
   const freshDiscovery = (key: string) => {
@@ -106,9 +107,9 @@ export function useCatalog(app: PlaybackSessionApi) {
     // A discovery answered within the last two minutes is still the item's list.
     return entry && Date.now() - entry.at < 120_000 ? entry : undefined;
   };
-  const remember = (key: string, id: string, step: SourcesPollState, done: boolean) => {
+  const remember = (key: string, id: string, step: SourcesPollState, producers: SourceProducer[], done: boolean) => {
     if (discoveries.current.size > 32) discoveries.current.clear();
-    discoveries.current.set(key, { id, step, done, at: Date.now() });
+    discoveries.current.set(key, { id, step, producers, done, at: Date.now() });
     setSourcePreview({ key, sources: step.sources, done });
   };
   const stopPreview = () => {
@@ -135,11 +136,13 @@ export function useCatalog(app: PlaybackSessionApi) {
       try {
         const id = known?.id ?? (await api.sources(item, scope.request())).id;
         let step: SourcesPollState = known?.step ?? { after: 0, sources: [], polls: 0 };
+        let producers = known?.producers ?? [];
         while (!cancelled) {
-          const poll = await api.pollSourcesStep(id, step, scope.request());
+          const poll = await api.pollSourcesStep(id, step, { ...scope.request(), retainProducerFailures: true });
           if (cancelled) return;
           step = poll.state;
-          remember(key, id, step, poll.done);
+          producers = observeSourceProducers(producers, poll.events, new Map());
+          remember(key, id, step, producers, poll.done);
           if (poll.done) break;
           await new Promise((r) => setTimeout(r, 1500));
         }
@@ -170,6 +173,7 @@ export function useCatalog(app: PlaybackSessionApi) {
     sourceFocusPending.current = true;
     setSelected(item);
     setSources([]);
+    setSourceProducers([]);
     setSourceQuality("All");
     setSourceProvider("All");
     setBusy(true);
@@ -183,15 +187,26 @@ export function useCatalog(app: PlaybackSessionApi) {
       // The polling policy (cursor, dedup, budget, completion) is the shared
       // Rust reducer; this loop owns only cancellation, focus and resume.
       let step: SourcesPollState = known?.step ?? { after: 0, sources: [], polls: 0 };
+      let producers = known?.producers ?? [];
+      setSourceProducers(producers);
+      let names = new Map<string, string>();
+      void api.addons().then((addons) => {
+        if (ticket !== epoch.current) return;
+        names = configuredAddonNames(addons);
+        producers = observeSourceProducers(producers, [], names);
+        setSourceProducers(producers);
+      }).catch(() => undefined);
       let done = known?.done ?? false;
       let fresh = !known;
       while (ticket === epoch.current) {
         if (fresh) {
-          const poll = await api.pollSourcesStep(id, step);
+          const poll = await api.pollSourcesStep(id, step, { retainProducerFailures: true });
           if (ticket !== epoch.current) return;
           step = poll.state;
           done = poll.done;
-          remember(key, id, step, done);
+          producers = observeSourceProducers(producers, poll.events, names);
+          setSourceProducers(producers);
+          remember(key, id, step, producers, done);
         }
         fresh = true;
         const all = step.sources;
@@ -524,7 +539,7 @@ export function useCatalog(app: PlaybackSessionApi) {
           (sourceQuality === "All" ||
             (s.quality ?? "Unknown") === sourceQuality) &&
           (sourceProvider === "All" ||
-            (s.sourceName ?? s.name) === sourceProvider),
+            sourceProviderKey(s) === sourceProvider),
       )
     ) {
       const timer = setTimeout(() => focusElement("source-provider"), 35);
