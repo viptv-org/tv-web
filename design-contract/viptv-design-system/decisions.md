@@ -107,3 +107,30 @@ works; delayed reconnect has no offline flash, eventual failure is recoverable,
 and power/mute/name work via the synthetic SmartCast boundary. Measure Android
 initial/offscreen requests and retain first-frame, device and fixture evidence
 separately. Existing typography, palette and focus/Back contracts remain in force.
+
+## Native Android TV keyboard (AND-KEYBOARD-001)
+
+The 2026-10-01 owner request replaces Android TV custom character and PIN grids
+with native Android editable fields and the installed device input method.
+Search keeps separate progressive catalog shelves; Back dismisses native input
+before leaving its screen/dialog. Roku and TV-web retain their current inputs.
+The Android contract records focus, Results, secret input and return acceptance.
+
+## Native Android TV media-row edge (AND-TV-ROW-EDGE-001)
+
+The 2026-10-02 owner request extends horizontal Android TV media card rows,
+including Popular movies and Details episodes, through the right viewport edge.
+This explicitly supersedes the general 96 px right safe inset and TV-034's
+1824 px final-card bound **for native Android TV media rows only**. Headings,
+text and non-media content keep their safe inset. The
+[media-row contract](../specs/behavior/android-tv-media-rows.md) defines the
+geometry, focus restoration and acceptance cases.
+
+## Android TV episode-number jump (AND-EPISODE-JUMP-001)
+
+The proposed compact `Episode #` chip beside the season badge opens a native
+numeric-input dialog. Exact current-season episode metadata controls the jump;
+success only scrolls and focuses the card. Invalid input remains editable in
+the dialog, and Back first hides the IME. [The behavior contract](../specs/behavior/episode-number-jump.md)
+defines the full state and acceptance scenarios. This does not change the
+shared Core hero Play/Resume rule or require Roku/TV-web adoption.

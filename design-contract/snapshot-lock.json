@@ -1,7 +1,7 @@
 {
   "version": 1,
   "repository": "viptv-org/design",
-  "commit": "d088071106e4d5479aea761469152e037f011a3c",
+  "commit": "02fbcdd24a5a32f0ee87e97ede83c7e30345c833",
   "files": {
     "design-contract/.github/pull_request_template.md": {
       "source": ".github/pull_request_template.md",
@@ -17,7 +17,7 @@
     },
     "design-contract/ANDROID_DESIGN.md": {
       "source": "ANDROID_DESIGN.md",
-      "sha256": "0ab86c80d218982dedc085515d46114b70ac0b0403d6b33cc1571fbac9560251"
+      "sha256": "e2d22df08e370d2d721ef202ff30f2eb3f7896b3149bc17c4d50aad5509504c3"
     },
     "design-contract/ANDROID_DEVELOPMENT.md": {
       "source": "ANDROID_DEVELOPMENT.md",
@@ -41,7 +41,7 @@
     },
     "design-contract/CHANGELOG.md": {
       "source": "CHANGELOG.md",
-      "sha256": "6f2a1d3eb4a86d34bbadbfbaa31e39ee28fea7b229313d8ed75eee0b50793841"
+      "sha256": "0f1dc381abb4df86bb699a1fd87d16542a50c17850ca825b2f26dd6209322e66"
     },
     "design-contract/CONTEXT.md": {
       "source": "CONTEXT.md",
@@ -131,9 +131,21 @@
       "source": "docs/branding.md",
       "sha256": "a4855b5263b985092b40a3c50b757b7494cdd576c62acfa9e3872b38880656a6"
     },
+    "design-contract/specs/behavior/android-tv-media-rows.md": {
+      "source": "specs/behavior/android-tv-media-rows.md",
+      "sha256": "4facdf42eefe2c44e19783dc33603af7d91db282fc2bca31e9fa831bbf61ed42"
+    },
+    "design-contract/specs/behavior/episode-number-jump.md": {
+      "source": "specs/behavior/episode-number-jump.md",
+      "sha256": "6672603653862286c813711572f7a27c1214c630cdfafd5c3251ececeeb5a1e6"
+    },
     "design-contract/specs/behavior/home-addon-refresh.md": {
       "source": "specs/behavior/home-addon-refresh.md",
       "sha256": "9cb9385f19c05500625c84dfe1ac36ced45fcdd8e24a4d701c22d01a5671c458"
+    },
+    "design-contract/specs/behavior/responsive-player-fit-fill.md": {
+      "source": "specs/behavior/responsive-player-fit-fill.md",
+      "sha256": "7c50298f64f98cb92ebd6cb8a7e91400c871f3771a9dc8f082953af6b00ef115"
     },
     "design-contract/specs/behavior/roku-ux-contract.md": {
       "source": "specs/behavior/roku-ux-contract.md",
@@ -157,15 +169,15 @@
     },
     "design-contract/viptv-design-system/components.md": {
       "source": "viptv-design-system/components.md",
-      "sha256": "415682da9fc69c9e141f1607ea863a9248f98a2d7c78b5764378bd45bf0d573d"
+      "sha256": "30d3588261858a6ac4e630b61d132c439b70c5e5e591aa6fadb484edebbeace6"
     },
     "design-contract/viptv-design-system/copy.md": {
       "source": "viptv-design-system/copy.md",
-      "sha256": "6f705c71fd261bb75e7d630872c4e7a6857e5984f2c9caac8c7f56bc3348a675"
+      "sha256": "1d9599b64101f3854a1c82be193e6883b5264e9bffd2c65bd50efa73819da73c"
     },
     "design-contract/viptv-design-system/decisions.md": {
       "source": "viptv-design-system/decisions.md",
-      "sha256": "0bc26628c89206055d45ab8f2efde6fad469cd7a5be60291553c0006bbd870c7"
+      "sha256": "9f319a666c88b172cad909235d5bde6f0a1c72cfb5618249dbffce9900861fd6"
     },
     "design-contract/viptv-design-system/reference/screens/index.json": {
       "source": "viptv-design-system/reference/screens/index.json",
