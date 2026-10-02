@@ -5876,6 +5876,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
             source.name,
             source.title,
             source.filename,
+            source.audio,
             source.sourceName,
           ]
             .filter(Boolean)

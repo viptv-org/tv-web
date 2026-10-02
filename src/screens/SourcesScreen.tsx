@@ -130,7 +130,7 @@ export function SourcesScreen({
     setModal({
       title: "Source details",
       view: { kind: "text" },
-      body: [s.name, s.title, s.filename, s.sourceName].filter(Boolean).join("\n\n"),
+      body: [s.name, s.title, s.filename, s.audio, s.sourceName].filter(Boolean).join("\n\n"),
       choices: [{ label: "Close", action: () => setModal(undefined) }],
     });
   // TV: ◀ ▶ on a source row steps through the quality filters (the legend's "Quality").

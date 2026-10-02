@@ -9,7 +9,7 @@ export const movie = {
   year: 2026, genres: ['Adventure', 'Drama'],
 };
 
-export async function installBackend(page: Page, options: { series?: boolean; invalidLogo?: boolean; populated?: boolean; activity?: boolean } = {}) {
+export async function installBackend(page: Page, options: { series?: boolean; invalidLogo?: boolean; populated?: boolean; activity?: boolean; longSource?: boolean; pendingSources?: boolean } = {}) {
   const title = options.series ? {
     ...movie, id: 'responsive-series', type: 'series', name: 'Beyond the Horizon', title: 'Beyond the Horizon',
     logo: `https://art.example/${options.invalidLogo ? 'invalid-logo' : 'title-logo'}.svg`,
@@ -97,7 +97,14 @@ export async function installBackend(page: Page, options: { series?: boolean; in
     if (options.populated && /^\/api\/meta\/movie\/title-\d+$/.test(path)) return json({ meta: { ...title, id: path.split("/").at(-1), name: "The Long Journey Through the Mountains" } });
     if (path === '/api/profiles/1/progress/series') return json([]);
     if (path === '/api/v2/streams' && request.method() === 'POST') return json({ id: 'responsive-sources' });
-    if (path === '/api/v2/streams/responsive-sources') return json({ events: [{ seq: 1, source: 'addon:2', streams: [{ id: 'responsive-stream', name: options.populated ? 'International Cinema Archive • High Definition • Original Language and Commentary • Extended Edition' : 'Responsive source 1080p', title: 'A Different Horizon 1080p', source_addon_id: 'addon:2', source_name: options.populated ? 'International Cinema and Television Collection — Premium Archive Provider' : 'Fixture addon' }] }], done: true });
+    if (path === '/api/v2/streams/responsive-sources') {
+      const after = Number(new URL(request.url()).searchParams.get('after') ?? 0);
+      if (options.pendingSources && !after) await new Promise(resolve => setTimeout(resolve, 400));
+      return json({ events: after ? [] : [{ seq: 1, source: 'addon:2', streams: options.longSource ? [
+      { id: 'long-source', name: 'Long source', title: 'LongUnbrokenFilename'.repeat(14), source_addon_id: 'addon:2', source_name: 'Archive provider' },
+      { id: 'short-source', name: 'Short source', title: 'Short file', source_addon_id: 'addon:2', source_name: 'Second provider' },
+    ] : [{ id: 'responsive-stream', name: options.populated ? 'International Cinema Archive • High Definition • Original Language and Commentary • Extended Edition' : 'Responsive source 1080p', title: 'A Different Horizon 1080p', source_addon_id: 'addon:2', source_name: options.populated ? 'International Cinema and Television Collection — Premium Archive Provider' : 'Fixture addon' }] }], done: options.pendingSources ? after > 0 : true });
+    }
     return json({ error: `Unhandled fixture route ${path}` }, 404);
   });
   return { requests, errors, title, profileName };

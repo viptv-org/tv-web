@@ -574,6 +574,7 @@ export async function installBackend(page: Page, options: BackendOptions): Promi
     }
 
     // Catalog, detail, sources.
+    if (path === '/api/catalogs/revision') return json({ revision: 'preview-v1' });
     if (path === '/api/catalogs') return json(options.noCatalogs ? [] : catalogs);
     if (path === '/api/discover') {
       if (options.catalogHang) return hang();

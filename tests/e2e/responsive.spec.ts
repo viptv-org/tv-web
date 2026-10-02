@@ -458,6 +458,54 @@ for (const width of [390, 768, 1440]) {
   });
 }
 
+test('source descriptions keep two lines and expose long filenames on focus', async ({ page }, info) => {
+  test.skip(info.project.name !== 'vizio');
+  await page.setViewportSize({ width: 390, height: 844 });
+  await installBackend(page, { longSource: true });
+  await page.goto('/');
+  await page.locator('[data-focus-id="profile-0"]').click();
+  await page.locator('.media-card').filter({ hasText: movie.name }).first().click();
+  await page.locator('[data-focus-id="detail-source"]').click();
+  const rows = page.locator('.sources .vx-source-row');
+  await expect(rows).toHaveCount(2);
+  const long = rows.first().locator('.vx-source-row__file');
+  await expect(long.locator('.vx-source-row__file-motion')).toHaveAttribute('data-overflow', 'true');
+  const measurements = await rows.evaluateAll(nodes => nodes.map(node => {
+    const window = node.querySelector<HTMLElement>('.vx-source-row__file')!;
+    const content = window.firstElementChild as HTMLElement;
+    return { rowHeight: node.clientHeight, windowHeight: window.clientHeight, lineHeight: parseFloat(getComputedStyle(window).lineHeight), contentHeight: content.scrollHeight };
+  }));
+  expect(measurements[0].rowHeight).toBe(measurements[1].rowHeight);
+  expect(measurements[0].windowHeight).toBeCloseTo(2 * measurements[0].lineHeight, 0);
+  expect(measurements[0].contentHeight).toBeGreaterThan(measurements[0].windowHeight);
+  await rows.first().focus();
+  await expect(long.locator('.vx-source-row__file-motion')).toHaveCSS('animation-name', 'vx-source-description-pan');
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await expect(long.locator('.vx-source-row__file-motion')).toHaveCSS('animation-name', 'none');
+  await expect(rows.first()).toHaveAttribute('aria-label', /LongUnbrokenFilename/);
+  await page.screenshot({ path: info.outputPath('long-source-two-lines.png') });
+});
+
+test('source discovery stays visible while partial rows remain selectable', async ({ page }, info) => {
+  test.skip(info.project.name !== 'vizio');
+  await page.setViewportSize({ width: 390, height: 844 });
+  await installBackend(page, { pendingSources: true });
+  await page.goto('/');
+  await page.locator('[data-focus-id="profile-0"]').click();
+  await page.locator('.media-card').filter({ hasText: movie.name }).first().click();
+  await page.locator('[data-focus-id="detail-source"]').click();
+  const status = page.locator('.vx-sources__status');
+  await expect(status).toContainText('Finding sources');
+  await expect(status.locator('.vx-spinner')).toBeVisible();
+  await expect(page.locator('[data-focus-id="source-0"]')).toBeVisible();
+  await expect(status).toContainText('Still checking sources');
+  await expect(status.locator('.vx-spinner')).toBeVisible();
+  await expect(page.locator('[data-focus-id="source-0"]')).toBeEnabled();
+  await expect(status.locator('.vx-spinner')).toHaveCount(0);
+  await page.keyboard.press('Escape');
+  await expect(page.locator('.sources')).toHaveCount(0);
+});
+
 test('responsive web uses selected tabs without remote focus skin at phone and desktop sizes', async ({ page }, info) => {
   test.skip(info.project.name !== 'vizio');
   await page.setViewportSize({ width: 390, height: 844 });

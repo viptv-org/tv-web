@@ -704,7 +704,7 @@
 }
 @media (prefers-reduced-motion: reduce) {
   [data-layout] .sources .vx-source-row .vx-source-row__file-motion[data-overflow="true"] {
-    animation: none;
+    animation: none !important;
   }
 }
 [data-layout] .vx-source-row__icon {

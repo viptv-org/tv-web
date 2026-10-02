@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+﻿#!/usr/bin/env node
 /* Capture the SolidTV entry with the same backend fixtures and
  * 1920×1080 browser frame as the React TV reference harness. */
 import { chromium } from '@playwright/test';
@@ -189,7 +189,7 @@ try {
     await page.keyboard.up('Enter');
     await page.waitForFunction(() => window.__viptvFocus?.view === 'title-menu-option' && window.__viptvFocus?.index === 0, null, { timeout: 5000 });
     await page.waitForTimeout(180);
-    if (backend.requests.some(request => request.path === '/api/streams'))
+    if (backend.requests.some(request => request.path === '/api/v2/streams'))
       throw new Error('Held Home card also opened sources on release');
   }
   if (name === 'TvLibrary') {
@@ -374,12 +374,12 @@ try {
     const focused = (view, index) => page.waitForFunction(
       ({ view, index }) => window.__viptvFocus?.view === view && window.__viptvFocus?.index === index,
       { view, index }, { timeout: 7000 });
-    const beforeStreams = backend.requests.filter(request => request.path === '/api/streams').length;
+    const beforeStreams = backend.requests.filter(request => request.path === '/api/v2/streams').length;
     await page.keyboard.press('ArrowRight');
     await page.waitForFunction(() => window.__viptvLive?.row === 1 && window.__viptvLive?.cell === 1, null, { timeout: 5000 });
     await page.keyboard.press('Enter');
     await focused('live-details-option', 0);
-    if (backend.requests.filter(request => request.path === '/api/streams').length !== beforeStreams)
+    if (backend.requests.filter(request => request.path === '/api/v2/streams').length !== beforeStreams)
       throw new Error('Future programme OK started live playback');
     await page.keyboard.press('Escape');
     await page.waitForFunction(() => window.__viptvFocus?.view === 'guide-program' && window.__viptvLive?.row === 1 && window.__viptvLive?.cell === 1, null, { timeout: 5000 });
@@ -653,12 +653,12 @@ try {
     const focused = (view, index) => page.waitForFunction(
       ({ view, index }) => window.__viptvFocus?.view === view && window.__viptvFocus?.index === index,
       { view, index }, { timeout: 5000 });
-    const beforeHold = backend.requests.filter(request => request.path === '/api/streams').length;
+    const beforeHold = backend.requests.filter(request => request.path === '/api/v2/streams').length;
     await page.keyboard.down('Enter');
     await page.waitForTimeout(750);
     await page.keyboard.up('Enter');
     await focused('title-menu-option', 0);
-    if (backend.requests.filter(request => request.path === '/api/streams').length !== beforeHold)
+    if (backend.requests.filter(request => request.path === '/api/v2/streams').length !== beforeHold)
       throw new Error('Held Discover card also opened sources on release');
     await page.keyboard.press('Escape');
     await focused('discover-card', 1);
@@ -721,12 +721,12 @@ try {
     if (!backend.requests.some(request => request.path.endsWith('/favorites')) ||
         !backend.requests.some(request => request.path.endsWith('/continue/page')))
       throw new Error('My List did not load both saved titles and Continue Watching');
-    const sourceRequestsBeforeHold = backend.requests.filter(request => request.path === '/api/streams').length;
+    const sourceRequestsBeforeHold = backend.requests.filter(request => request.path === '/api/v2/streams').length;
     await page.keyboard.down('Enter');
     await page.waitForTimeout(750);
     await page.keyboard.up('Enter');
     await page.waitForTimeout(80);
-    if (backend.requests.filter(request => request.path === '/api/streams').length !== sourceRequestsBeforeHold)
+    if (backend.requests.filter(request => request.path === '/api/v2/streams').length !== sourceRequestsBeforeHold)
       throw new Error('Held queue OK selected a source on release');
     await focused('title-menu-option', 0);
     await page.keyboard.press('Escape');
@@ -742,6 +742,8 @@ try {
     await page.keyboard.press('Escape');
     await page.keyboard.press('Escape');
     await focused('source-row', 0);
+    await page.keyboard.press('Escape');
+    await focused('title-episode', 0);
     await page.keyboard.press('Escape');
     await focused('library-card', 0);
     await page.keyboard.press('ArrowUp');
@@ -849,8 +851,8 @@ try {
     const focused = (view, index) => page.waitForFunction(
       ({ view, index }) => window.__viptvFocus?.view === view && window.__viptvFocus?.index === index,
       { view, index }, { timeout: 5000 });
-    if (!backend.requests.some(request => request.path === '/api/streams' && request.method === 'POST') ||
-        !backend.requests.some(request => request.path.startsWith('/api/streams/')))
+    if (!backend.requests.some(request => request.path === '/api/v2/streams' && request.method === 'POST') ||
+        !backend.requests.some(request => request.path.startsWith('/api/v2/streams/')))
       throw new Error(`Source discovery did not start and poll: ${JSON.stringify(backend.requests)}`);
     if (viaPlay && backend.requests.some(request => request.path === '/api/v2/playback'))
       throw new Error('Resume without a saved fingerprint selected a source automatically');
@@ -875,9 +877,9 @@ try {
     await page.screenshot({ path: join(outDir, 'TvSources.solid.filtered.png') });
     await page.keyboard.press('Escape');
     await focused('title-action', viaPlay ? 0 : 1);
-    const pollsAfterClose = backend.requests.filter(request => request.path.startsWith('/api/streams/')).length;
+    const pollsAfterClose = backend.requests.filter(request => request.path.startsWith('/api/v2/streams/')).length;
     await page.waitForTimeout(1700);
-    if (backend.requests.filter(request => request.path.startsWith('/api/streams/')).length !== pollsAfterClose)
+    if (backend.requests.filter(request => request.path.startsWith('/api/v2/streams/')).length !== pollsAfterClose)
       throw new Error('Source polling continued after Back closed the panel');
   }
   if (name === 'TvSourceProvider') {
@@ -1019,3 +1021,4 @@ const browser = await chromium.launch();
 try {
   for (const name of selectedNames) await shootSolid(browser, name);
 } finally { await browser.close(); }
+
