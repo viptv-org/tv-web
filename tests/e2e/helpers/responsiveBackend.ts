@@ -9,7 +9,7 @@ export const movie = {
   year: 2026, genres: ['Adventure', 'Drama'],
 };
 
-export async function installBackend(page: Page, options: { series?: boolean; invalidLogo?: boolean; populated?: boolean; activity?: boolean; longSource?: boolean; pendingSources?: boolean } = {}) {
+export async function installBackend(page: Page, options: { series?: boolean; invalidLogo?: boolean; populated?: boolean; activity?: boolean; longSource?: boolean; pendingSources?: boolean; parentFailOnReturn?: boolean } = {}) {
   const title = options.series ? {
     ...movie, id: 'responsive-series', type: 'series', name: 'Beyond the Horizon', title: 'Beyond the Horizon',
     logo: `https://art.example/${options.invalidLogo ? 'invalid-logo' : 'title-logo'}.svg`,
@@ -26,6 +26,7 @@ export async function installBackend(page: Page, options: { series?: boolean; in
   }));
   const profileName = options.populated ? 'Alexandria Montgomery-Jones' : 'Alex';
   let selectedProfileId: string | null = null;
+  let parentMetadataRequests = 0;
   const requests: { method: string; path: string; body: Record<string, unknown> }[] = [];
   const errors: string[] = [];
   page.on('pageerror', error => errors.push(error.message));
@@ -92,7 +93,11 @@ export async function installBackend(page: Page, options: { series?: boolean; in
     if (path === '/api/v2/iptv/live/categories') return json({ catalog_id: 1, generation: 1, items: [], next_cursor: null, previous_cursor: null });
     if (/^\/api\/v2\/iptv\/live\/[^/]+\/source$/.test(path)) return json({ source: { id: `live_source_${decodeURIComponent(path.split('/')[5])}`, name: 'Fixture IPTV', source: 'iptv:1', source_addon_id: 'iptv:1' } });
     if (path.startsWith('/api/v2/iptv/guide/')) return json({ programs: [], timeline: [], timezone: 'UTC' });
-    if (options.activity && path === '/api/meta/series/queue-series') return json({ meta: { id: 'queue-series', type: 'series', name: 'Returning Series', poster: 'https://art.example/poster.svg', background: 'https://art.example/backdrop.svg', videos: queue.map(item => ({ id: item.id, title: item.episode_title, season: item.season, episode: item.episode, thumbnail: `https://art.example/episode.svg?episode=${item.episode}` })) } });
+    if (options.activity && path === '/api/meta/series/queue-series') {
+      parentMetadataRequests++;
+      if (options.parentFailOnReturn && parentMetadataRequests === 2) return json({ error: 'Temporary failure' }, 503);
+      return json({ meta: { id: 'queue-series', type: 'series', name: 'Returning Series', poster: 'https://art.example/poster.svg', background: 'https://art.example/backdrop.svg', videos: queue.map(item => ({ id: item.id, title: item.episode_title, season: item.season, episode: item.episode, thumbnail: `https://art.example/episode.svg?episode=${item.episode}` })) } });
+    }
     if (path === `/api/meta/${title.type}/${title.id}`) return json({ meta: title });
     if (options.populated && /^\/api\/meta\/movie\/title-\d+$/.test(path)) return json({ meta: { ...title, id: path.split("/").at(-1), name: "The Long Journey Through the Mountains" } });
     if (path === '/api/profiles/1/progress/series') return json([]);

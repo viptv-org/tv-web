@@ -36,6 +36,21 @@ export function useNavigation(app: CatalogApi) {
     const t = setTimeout(() => setToast(""), 5000);
     return () => clearTimeout(t);
   }, [toast]);
+  useEffect(() => {
+    if (screen !== "Home" || !app.queueSourceReturnFocus.current) return;
+    let timer: ReturnType<typeof setTimeout>;
+    let attempts = 0;
+    const restore = () => {
+      const target = app.queueSourceReturnFocus.current;
+      if (!target || app.currentScreen.current !== "Home") return;
+      document.querySelector<HTMLElement>(`[data-focus-id="${target}"]`)?.focus({ preventScroll: true });
+      if ((document.activeElement as HTMLElement)?.dataset.focusId === target) {
+        app.queueSourceReturnFocus.current = "";
+      } else if (++attempts < 20) timer = setTimeout(restore, 50);
+    };
+    timer = setTimeout(restore, 50);
+    return () => clearTimeout(timer);
+  }, [screen]);
   const back = () => {
     if (!responsive && screen === "Settings" && settingsSubpage !== "Settings") {
       setSettingsSubpage("Settings");

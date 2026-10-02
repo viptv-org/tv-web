@@ -224,6 +224,7 @@ export function useAppCore(api: TvApi, platform: PlayerPlatform, layout: "tv" | 
     seekValue = useRef<number>(),
     seekTarget = useRef<number>();
   const restoredScroll = useRef<(ScrollAnchor & { focus: string }) | undefined>();
+  const queueSourceReturnFocus = useRef("");
   const currentScreen = useRef(screen);
   currentScreen.current = screen;
   const modalFocus = useRef(""),
@@ -305,7 +306,7 @@ export function useAppCore(api: TvApi, platform: PlayerPlatform, layout: "tv" | 
     playerRoot, canvas, video, player, controller, playbackCapabilities, nextScope, epoch, stack, active, seekTimer, pairTimer, pairEpoch,
     fullscreenControl,
     pairingScope, engineError, autoResume, sourceFocusPending, searchKey, advancedSession, resumeRemainder, seekRepeat, seekValue, seekTarget,
-    restoredScroll, currentScreen, modalFocus, errorFocus, homeRequestScope,
+    restoredScroll, queueSourceReturnFocus, currentScreen, modalFocus, errorFocus, homeRequestScope,
     browser, browserReady, browserApplying, browserReplace, browserApplyGeneration, browserFromRoute, browserInitial,
     browserRevision, setBrowserRevision,
     applyBrowserRoute, captureBrowserSnapshot, browserCapture, finishProfileNavigation,

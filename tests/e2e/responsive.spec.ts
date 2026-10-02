@@ -440,6 +440,8 @@ for (const width of [390, 768, 1440]) {
     expect(await page.locator('.responsive-hero-art').boundingBox()).toEqual(heroBefore);
     await expectResponsiveViewport(page, width);
     await page.screenshot({ path: testInfo.outputPath(`queue-live-${width}.png`) });
+    await queue.locator('[data-focus-id="queue-0"]').focus();
+    await expect(queue.locator('[data-focus-id="queue-0"]')).toBeFocused();
     await queue.locator('[data-focus-id="queue-0"]').click();
     await expect(page.locator('[data-focus-id="source-0"]')).toBeVisible();
     expect(fixture.requests.find(request => request.path === '/api/v2/streams')?.body).toMatchObject({ id: 'queue-series:1:1', series_id: 'queue-series', season: 1, episode: 1 });
@@ -454,6 +456,7 @@ for (const width of [390, 768, 1440]) {
     await expect(page.locator('.detail')).toBeVisible();
     await page.keyboard.press('Escape');
     await expect(queue.locator('[data-focus-id="queue-0"]')).toBeVisible();
+    await expect(queue.locator('[data-focus-id="queue-0"]')).toBeFocused();
     expect(fixture.errors).toEqual([]);
   });
 }
@@ -504,6 +507,25 @@ test('source discovery stays visible while partial rows remain selectable', asyn
   await expect(status.locator('.vx-spinner')).toHaveCount(0);
   await page.keyboard.press('Escape');
   await expect(page.locator('.sources')).toHaveCount(0);
+});
+
+test('queue source Back can retry a failed parent title without losing Home return', async ({ page }, info) => {
+  test.skip(info.project.name !== 'vizio');
+  await page.setViewportSize({ width: 390, height: 844 });
+  await installBackend(page, { activity: true, parentFailOnReturn: true });
+  await page.goto('/');
+  await page.locator('[data-focus-id="profile-0"]').click();
+  const queue = page.locator('[data-focus-id="queue-0"]');
+  await expect(queue).toBeVisible();
+  await queue.focus();
+  await queue.click();
+  await expect(page.locator('.sources')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('dialog', { name: 'Could not open title' })).toBeVisible();
+  await page.getByRole('button', { name: 'Retry', exact: true }).click();
+  await expect(page.locator('.detail')).toContainText('Episode 2');
+  await page.keyboard.press('Escape');
+  await expect(queue).toBeFocused();
 });
 
 test('responsive web uses selected tabs without remote focus skin at phone and desktop sizes', async ({ page }, info) => {

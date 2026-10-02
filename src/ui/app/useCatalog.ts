@@ -21,7 +21,7 @@ export function useCatalog(app: PlaybackSessionApi) {
 
   const detail = async (item: MediaItem, origin?: Catalog, replaceRoute = false) => {
     if (item.type === "live") { await play(item); return; }
-    go("detail");
+    if (currentScreen.current !== "detail") go("detail");
     setSelected(item);
     setDetailOrigin(origin);
     setEpisodes([]);
@@ -61,7 +61,20 @@ export function useCatalog(app: PlaybackSessionApi) {
         setSeason(initial?.season ?? enrichedEpisodes[0]?.season);
       }
     } catch (e) {
-      if (ticket === epoch.current) fail(e);
+      if (ticket === epoch.current) {
+        if (replaceRoute) setModal({
+          title: "Could not open title",
+          view: { kind: "choices" },
+          choices: [
+            { label: "Retry", action: () => { setModal(undefined); void detail(item, origin, true); } },
+            { label: "Back", action: () => {
+              setModal(undefined);
+              setTimeout(() => (app as PlaybackSessionApi & { back: () => void }).back(), 0);
+            } },
+          ],
+        });
+        else fail(e);
+      }
     } finally {
       if (ticket === epoch.current) setBusy(false);
     }
@@ -69,6 +82,8 @@ export function useCatalog(app: PlaybackSessionApi) {
   /** Replace a queue episode's source picker with its parent title while retaining its Home/List Back target. */
   const showQueueParentFromSources = (item: MediaItem) => {
     const previous = app.stack.current.pop();
+    const queueIndex = app.queue.findIndex((entry) => entry.id === item.id);
+    app.queueSourceReturnFocus.current = previous?.focus || (queueIndex >= 0 ? `queue-${queueIndex}` : "");
     if (responsive) app.browserReplace.current = true;
     const pending = detail(item, undefined, true);
     // detail() has synchronously pushed the picker; the queue card is the
