@@ -15,7 +15,11 @@ and Back returns without a new admission. The final private 1440×900
 trusted-HTTPS comparison was inspected. The Retry icon and layout match the
 board; fixture still-image framing remains different. No vendor pin or TV
 layout changed; installed/native recovery and physical hardware stay separate.
-All265 app tests, all TypeScript groups, design/Core/video integrity and
+Review found a delayed external-video failure could republish an old dialog or
+clear a newer operation's feedback/busy state after Back. The public stage
+regression fails on the old source and passes with navigation/request ownership
+fences; a same-navigation owned deadline still offers recovery.
+All267 app tests, all TypeScript groups, design/Core/video integrity and
 production build pass; the three focused Playwright cases passed in15.6s with
 one worker and no retries.
 

@@ -184,6 +184,7 @@ export function usePlaybackSession(app: PlaybackEngineApi) {
     if (!previous || nextScope.current) return;
     const scope = api.createScope();
     nextScope.current = scope;
+    const ticket = epoch.current;
     setBusy(true);
     setError("");
     const outgoing = active.current;
@@ -238,6 +239,7 @@ export function usePlaybackSession(app: PlaybackEngineApi) {
           await play(next.item, next.source, 0);
       }
     } catch (e) {
+      if (ticket !== epoch.current || nextScope.current !== scope) return;
       const recoveryRequired = outgoing &&
         controller.current?.snapshot.state === "error" &&
         !controller.current.snapshot.active;
@@ -281,8 +283,10 @@ export function usePlaybackSession(app: PlaybackEngineApi) {
       }
     } finally {
       clearTimeout(deadline);
-      if (nextScope.current === scope) nextScope.current = undefined;
-      setBusy(false);
+      if (nextScope.current === scope) {
+        nextScope.current = undefined;
+        if (ticket === epoch.current) setBusy(false);
+      }
     }
   };
   // Auto-next (core policy canAutoNext: the final ten seconds while playing).

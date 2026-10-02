@@ -474,6 +474,9 @@ ensures all local paths fail as requested. This corrects the old preview timeout
 The responsive dialog also carries the drawn Retry icon and suppresses duplicate
 failure toast feedback. Retry preserves the outgoing source/position; Choose
 source and Back do not admit playback. The final board was privately
-inspected; all 47 Desk boards now have scoped browser inspections, including
-DeskStates' seven separately matched cells. This is neither uniform pixel parity
+inspected. Delayed external-video failure after Back cannot overwrite newer
+feedback/busy state, while an owned deadline still offers recovery. These two
+public-stage regressions pass; the cancelled case failed before the ownership
+fence. All47 board inspections remain scoped across their recorded revisions.
+This includes DeskStates' seven separately matched cells, and is neither uniform pixel parity
 nor installed/native failure recovery or hardware acceptance.
