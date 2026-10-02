@@ -34,7 +34,7 @@ export function AppDialogs({ app }: { app: AppApi }) {
   const startup = screen === "startup";
   // The responsive shell shows skeletons (booting, Discover) and the player its
   // own buffering ring instead of a loading indicator.
-  const loading = busy && !preparing && screen !== "sources" && !(responsive && (screen === "player" || screen === "Search" || bootingHome || startup || (screen === "Discover" && !items.length)));
+  const loading = busy && !preparing && screen !== "sources" && !(responsive && (screen === "Home" || screen === "player" || screen === "Search" || bootingHome || startup || (screen === "Discover" && !items.length)));
   const dismissError = () => {
     setError("");
     if (startup) setStartupAttempt((attempt) => attempt + 1);

@@ -79,6 +79,7 @@ export function useAppCore(api: TvApi, platform: PlayerPlatform, layout: "tv" | 
   }, []);
   const [compactHome, setCompactHome] = useState(false),
     [bootingHome, setBootingHome] = useState(false),
+    [homeCatalogPending, setHomeCatalogPending] = useState(false),
     [recentLive, setRecentLive] = useState<readonly MediaItem[]>([]),
     [homeRows, setHomeRows] = useState<readonly HomeRow[]>([]);
   const homeCache = useRef<{
@@ -263,12 +264,20 @@ export function useAppCore(api: TvApi, platform: PlayerPlatform, layout: "tv" | 
     browser.current?.update(route, captureBrowserSnapshot(), browserReplace.current || searchEdit || ongoingPlayback);
     browserReplace.current = false;
   }, [responsive, screen, settingsSubpage, selected, items, episodes, sources, query, season, catalog, catalogValues, nextSkip, bootingHome, browserRevision]);
-  const finishProfileNavigation = () => {
+  const finishProfileNavigation = (preserveHomeLoad = false) => {
     if (!responsive) { setScreen("Home"); return; }
     browser.current?.clearSnapshots();
     browserReady.current = true;
     const route = browserInitial.current ?? { screen: "Home" as const };
     browserInitial.current = undefined;
+    if (preserveHomeLoad && route.screen === "Home" && !route.media) {
+      // Home is already usable. Applying its route would abort the optional
+      // catalog request that is still filling this same screen.
+      setScreen("Home");
+      browser.current?.replaceRoute(route);
+      setBrowserRevision(value => value + 1);
+      return;
+    }
     void applyBrowserRoute.current(route, undefined, true);
   };
 
@@ -278,7 +287,7 @@ export function useAppCore(api: TvApi, platform: PlayerPlatform, layout: "tv" | 
     oled, setOled, toggleOled,
     engineChoice, setEngineChoice, engineChoices, selectEngine,
     autoplayTest, autoplayEnabled, setAutoplayEnabled, autoplayStarted,
-    compactHome, setCompactHome, bootingHome, setBootingHome,
+    compactHome, setCompactHome, bootingHome, setBootingHome, homeCatalogPending, setHomeCatalogPending,
     recentLive, setRecentLive, homeRows, setHomeRows,
     homeCache, heroMetadataCache,
     editingProfile, setEditingProfile,

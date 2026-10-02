@@ -2630,3 +2630,22 @@ Two focused regressions verify acknowledgement ordering, coalescing, release
 failure and late listener cleanup. Actual window-manager/custom close, native
 decoder termination and backend DELETE evidence belongs to desktop's integrated
 qualification at its adopted exact TV/Core/plugin pins.
+# Progressive responsive Home and initial routes — 2026-10-02
+
+An indefinitely delayed first Home catalog reproduced two rendered defects:
+saved rows removed the skeleton and left a `Loading…` pill, and a Discover
+reload remained on Home until optional hero work settled. Responsive startup
+now restores navigation after saved rows, catalogs and preferences arrive.
+Empty pending Home retains its existing skeleton; saved cards stay usable.
+Browser Back retries optional Home work cancelled on leaving that snapshot.
+Four full React/API regressions cover those paths, including actual history
+Back and an enabled saved-card action while the catalog remains pending.
+
+265 app tests, all type/integrity checks and a root-base production build pass.
+The seven DeskStates cells were reached over trusted local HTTPS at 1440×900
+with mocked API/media boundaries and compared privately to design `1742afa`.
+Home and Discover now show their intended skeletons with no loading pill;
+backend banner, startup error, added/error notices and preparation remain
+separately captured states. This is scoped browser state inspection, not
+installed Tauri/native media, uniform pixel parity or physical-device proof.
+DeskPlayerRestore remains a separate incomplete preview scenario.
