@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 
-/** Release the backend lease before the native host retires its decoders. */
+/** Settle playback cleanup before the native host exits. */
 export function useNativeShutdown(controller: { current?: { stop(): Promise<void> } }) {
   useEffect(() => {
     if (!("__TAURI_INTERNALS__" in window)) return;

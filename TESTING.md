@@ -2622,6 +2622,8 @@ close requests and awaits the active playback controller's stop before
 acknowledging `app_shutdown_ready`. Failed lease release still acknowledges
 so the native host can stop decoders and exit. The host owns a bounded fallback
 for an unavailable renderer. Async listener registration is retired on unmount.
+Imported Video `b1818f9` starts lease release concurrently with native close,
+so a stalled decoder cannot prevent the backend DELETE request from starting.
 Two focused regressions verify acknowledgement ordering, coalescing, release
 failure and late listener cleanup. Actual window-manager/custom close, native
 decoder termination and backend DELETE evidence belongs to desktop's integrated
