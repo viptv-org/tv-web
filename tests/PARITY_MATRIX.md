@@ -464,6 +464,14 @@ This adds a scoped composite-state inspection; native/installed and uniform
 visual parity remain unqualified. DeskPlayerRestore's separate browser fixture
 qualification is recorded below.
 
+# Populated responsive source rows — 2026-10-02
+
+Twelve-entry source pickers preserve their existing100px desktop/108px phone
+rows without overlap at1440×900/390×844, scroll and reach the final row. Both
+public UI/HTTP cases are red before/green after the responsive-only flex fix;
+existing two-line/focus/reduced-motion behavior passes. TV layout and source
+semantics are unchanged; native/hardware and uniform pixels remain separate.
+
 # Desktop restoration failure fixture — 2026-10-02
 
 At 1440×900 over trusted local HTTPS, explicit Next fails its candidate and
