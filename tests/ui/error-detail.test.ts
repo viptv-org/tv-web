@@ -34,6 +34,13 @@ describe("describeApiError", () => {
     expect(describeApiError(new TvApiError(400, "Invalid request", "bad_request")).kind).toBe("client");
   });
 
+  it("keeps malformed successful replies out of connectivity recovery", () => {
+    const detail = describeApiError(new TvApiError(200, "Invalid server response"));
+    expect(detail.kind).toBe("protocol");
+    expect(detail.title).toBe("Invalid server response");
+    expect(detail.message).toBe("Invalid server response");
+  });
+
   it("falls back to the error name for non-API errors", () => {
     const detail = describeApiError(new Error("boom"));
     expect(detail.kind).toBe("unknown");

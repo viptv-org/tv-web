@@ -2596,3 +2596,22 @@ CW-SOURCE-BACK-001 follow-up: a Chromium Vizio phone fixture supplied a Continue
 Design pin `02fbcdd24a5a32f0ee87e97ede83c7e30345c833`, WEB-PLAYER-FIT-001. The responsive phone and desktop player adds a visible Fit/Fill control beside Fullscreen. The same presentation state sets `object-fit` on HTML video and MediaBunny canvas; it persists through fullscreen and returning to the same title from Sources, and resets on a different episode/title or leaving the player for a non-source route. It changes no playback preparation or session API.
 
 The design snapshot check, Core/video pin checks, TypeScript checks, production build, and 256 unit tests in 44 files passed. Single-worker Chromium Playwright passed the desktop decoded HLS player and 390×844 phone player scenarios. Desktop checks covered paused source identity/time, both surfaces' CSS mode, Enter/Space focus, fullscreen retention and existing playback info. Phone checks covered actual decoded frame Fit letterboxing and Fill crop, five nonoverlapping tools within the viewport, source return retention, and exit/re-entry reset. Private phone captures were inspected: Fit shows the whole 16:9 test frame with black bars; Fill crops it centrally to cover the portrait display. The fixture is decoded browser HLS with the MediaBunny canvas style asserted while hidden; real MediaBunny decoding, installed desktop and physical TV/browser devices remain unverified.
+# Bounded connectivity recovery and native picture controls — 2026-10-02
+
+A healthy health endpoint plus a failing identity request used to repeatedly
+clear/reopen the connection banner without a delay. The full React application
+regression fails against the prior hook and passes with one immediate probe and
+no further attempt before ten seconds, including outage/recovery remounts.
+Malformed HTTP200 identity data now shows one response error without background
+health polling, using immutable Core `f66c87e13a2c93b6dad3234da9694c57f8530b0a`.
+
+Responsive picture mode also reaches the native player API through reviewed
+video `0eb875b52755c4c8906e6b4b7525ac3cfa735a2a`, retaining same-item replacement
+and resetting other items through the existing presentation rule. Playback info
+shows GStreamer or MPV only when the adapter reports it; unreported native
+backends stay Unknown. The Linux native surface/picture implementation is
+qualified separately in its owning plugin and desktop records.
+
+259 app tests, strict type checks, design/Core/video integrity and the root-base
+production build pass. These checks do not substitute for actual native GTK
+overlay, paused crop, seek or audio verification.

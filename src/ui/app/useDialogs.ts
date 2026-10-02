@@ -101,6 +101,9 @@ export function useDialogs(app: CoreApi) {
   // A session-machine failure while the backend was unreachable: retry the
   // session automatically once the probe reports recovery.
   const pendingSessionRetry = useRef(false);
+  // Keep the retry cadence across outage/recovery transitions. A healthy
+  // health endpoint must not create an immediate failing-startup/probe loop.
+  const lastProbeAt = useRef<number>();
   const connected = connection !== undefined;
   // TV: the backend panel is modal (0.6 scrim, focus scope "error"), so its
   // Dismiss takes focus while it shows and the page control gets it back
@@ -123,14 +126,17 @@ export function useDialogs(app: CoreApi) {
   useEffect(() => {
     if (!connected || !api) return;
     let cancelled = false;
-    let probing = false;
+    let timer: ReturnType<typeof setTimeout>;
+    const schedule = () => {
+      const wait = lastProbeAt.current === undefined ? 0 : Math.max(0, 10000 - (Date.now() - lastProbeAt.current));
+      timer = setTimeout(probe, wait);
+    };
     const probe = () => {
-      if (probing || cancelled) return;
-      probing = true;
+      if (cancelled) return;
+      lastProbeAt.current = Date.now();
       void api
         .probeBackend()
         .then((reachable) => {
-          probing = false;
           if (!cancelled && reachable) {
             setConnection(undefined);
             if (pendingSessionRetry.current) {
@@ -139,15 +145,13 @@ export function useDialogs(app: CoreApi) {
             }
           }
         })
-        .catch(() => {
-          probing = false;
-        });
+        .catch(() => {})
+        .finally(() => { if (!cancelled) schedule(); });
     };
-    probe();
-    const timer = setInterval(probe, 10000);
+    schedule();
     return () => {
       cancelled = true;
-      clearInterval(timer);
+      clearTimeout(timer);
     };
   }, [connected, api]);
   const fail = (e: unknown) => {
