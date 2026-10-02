@@ -1,3 +1,15 @@
+# Populated responsive source rows — 2026-10-02
+
+The source drawer's flex scroll container shrank its existing fixed100px desktop
+and108px phone rows when twelve entries arrived, clipping the Best match/body
+text. Preventing responsive rows from shrinking retains the already-declared
+sizes; TV row layout, data, description motion and immutable pins are unchanged.
+Both 390×844 and1440×900 public UI/HTTP geometry cases failed before the CSS
+correction and pass after: twelve uniform rows, no content overlap, a scrollable
+list and reachable final row. The existing long-filename focus/reduced-motion
+case also passes. Three cases take2.4s with one worker/no retries. Captures stay
+private; this is browser layout evidence, not installed/native/hardware proof.
+
 # Desktop restoration failure fixture — 2026-10-02
 
 Application baseline main `0291ed5a241e3423ccbc215fa22e1b6c036bae4b`,

@@ -675,7 +675,7 @@
   white-space: normal;
   overflow-wrap: anywhere;
 }
-[data-layout="responsive"] .sources .vx-source-row { height: 100px; }
+[data-layout="responsive"] .sources .vx-source-row { height: 100px; flex-shrink: 0; }
 @media (max-width: 599px) {
   [data-layout="responsive"] .sources .vx-source-row { height: 108px; }
 }

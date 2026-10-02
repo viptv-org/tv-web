@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 
-import { sessionKey, movie, installBackend } from './helpers/responsiveBackend';
+import { sessionKey, movie, apiOrigin, installBackend } from './helpers/responsiveBackend';
 
 async function expectResponsiveViewport(page: Page, width: number) {
   const dimensions = await page.evaluate(() => {
@@ -487,6 +487,33 @@ test('source descriptions keep two lines and expose long filenames on focus', as
   await expect(long.locator('.vx-source-row__file-motion')).toHaveCSS('animation-name', 'none');
   await expect(rows.first()).toHaveAttribute('aria-label', /LongUnbrokenFilename/);
   await page.screenshot({ path: info.outputPath('long-source-two-lines.png') });
+});
+
+for (const width of [390, 1440]) test(`populated source rows retain their fixed height at ${width}`, async ({ page }, info) => {
+  test.skip(info.project.name !== 'vizio');
+  await page.setViewportSize({ width, height: width === 390 ? 844 : 900 });
+  await installBackend(page);
+  await page.route(`${apiOrigin}/api/v2/streams/responsive-sources*`, route => route.fulfill({ json: {
+    events: [{ seq: 1, source: 'addon:2', streams: Array.from({ length: 12 }, (_, index) => ({
+      id: `many-${index}`, name: 'Fixture provider', title: 'LongUnbrokenFilename.'.repeat(30), quality: '1080p',
+    })) }], done: true,
+  } }));
+  await page.goto('/');
+  await page.locator('[data-focus-id="profile-0"]').click();
+  await page.locator('.media-card').filter({ hasText: movie.name }).first().click();
+  await page.locator('[data-focus-id="detail-source"]').click();
+  const rows = page.locator('.sources .vx-source-row');
+  await expect(rows).toHaveCount(12);
+  const geometry = await rows.evaluateAll(nodes => nodes.map(node => ({
+    height: node.getBoundingClientRect().height, overflow: node.scrollHeight - node.clientHeight,
+  })));
+  expect(geometry.every(row => row.height === (width === 390 ? 108 : 100))).toBe(true);
+  expect(geometry.every(row => row.overflow <= 1)).toBe(true);
+  const scroll = page.locator('.sources .vx-dialog__scroll');
+  expect(await scroll.evaluate(node => node.scrollHeight > node.clientHeight)).toBe(true);
+  await rows.last().scrollIntoViewIfNeeded();
+  await expect(rows.last()).toBeVisible();
+  await page.screenshot({ path: info.outputPath(`source-row-fixed-${width}.png`) });
 });
 
 test('source discovery stays visible while partial rows remain selectable', async ({ page }, info) => {
