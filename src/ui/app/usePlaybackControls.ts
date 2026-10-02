@@ -360,10 +360,13 @@ export function usePlaybackControls(app: NavigationApi) {
   /** Playback info as key / value rows (monospace values). */
   const playerInfoRows: { label: string; value: string }[] = [
     {
-      label: "Decoder",
+      label: "Engine",
       value: snapshot?.diagnostics
-        ? `${snapshot.diagnostics.engine}${snapshot.diagnostics.backend ? ` (${snapshot.diagnostics.backend})` : ""}`
-        : player.current?.capabilities.engine ?? "Unknown",
+        ? snapshot.diagnostics.backend === "gstreamer" ? "GStreamer"
+          : snapshot.diagnostics.backend === "mpv" ? "MPV"
+          : snapshot.diagnostics.engine === "tauri-native" ? "Unknown"
+          : snapshot.diagnostics.engine
+        : app.platform === "tauri" ? "Unknown" : player.current?.capabilities.engine ?? "Unknown",
     },
     { label: "Transport", value: snapshot?.diagnostics?.networkTransport ?? "Unknown" },
     { label: "Container", value: snapshot?.diagnostics?.transport ?? session?.format ?? "Unknown" },

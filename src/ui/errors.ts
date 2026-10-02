@@ -6,7 +6,7 @@ import { TvApiError } from "../api/client";
  * (the backend's answer, the failing request) instead of a bare string.
  */
 
-type ErrorKind = "network" | "server" | "auth" | "client" | "unknown";
+type ErrorKind = "network" | "server" | "protocol" | "auth" | "client" | "unknown";
 
 export interface ErrorDetail {
   readonly kind: ErrorKind;
@@ -36,6 +36,14 @@ export function describeApiError(error: unknown): ErrorDetail {
         title: "Can't reach the backend",
         message:
           "The connection was refused, so the backend is down or unreachable. Browsing and playback pause until it responds again.",
+        lines: detailLines(error),
+      };
+    }
+    if (error.status >= 200 && error.status < 300) {
+      return {
+        kind: "protocol",
+        title: "Invalid server response",
+        message: error.message,
         lines: detailLines(error),
       };
     }

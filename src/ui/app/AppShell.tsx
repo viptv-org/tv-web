@@ -18,7 +18,7 @@ import { AppDialogs } from "./AppDialogs";
 import { usePhoneLayout } from "../usePhoneLayout";
 import { SearchPopunder } from "../SearchPopunder";
 import { HomeSkeleton } from "../../screens/HomeSkeleton";
-import { useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 /**
  * The application render tree: desktop frame, navigation, screens and
@@ -39,6 +39,14 @@ export function AppShell({ app }: { app: AppApi }) {
       setPictureMode("fit");
     }
   }, [screen, selectedKey]);
+  useEffect(() => {
+    if (!responsive || screen !== "player") return;
+    let cancelled = false;
+    void player.current?.setPictureMode?.(pictureMode).catch((error: unknown) => {
+      if (!cancelled) fail(error);
+    });
+    return () => { cancelled = true; };
+  }, [responsive, screen, pictureMode, snapshot?.sessionId, engineChoice]);
 
   const activeProfile = profiles.find((p) => p.id === profile);
   const phone = usePhoneLayout(responsive);

@@ -15,9 +15,11 @@ import { describeApiError } from "../errors";
 import { seekPinReleased } from "../SeekBar";
 import { desktopInvoker } from "./appShared";
 import type { AppApi, AuthApi } from "./useTvApp";
+import { useNativeShutdown } from "./useNativeShutdown";
 
 export function usePlaybackEngine(app: AuthApi) {
   const { active, api, autoplayTest, autoResume, browser, canvas, controlActivity, controller, engineChoice, engineError, epoch, fail, go, items, modal, nextScope, notify, overlay, platform, playbackCapabilities, player, profile, responsive, resumeRemainder, screen, seek, seekTarget, seekTimer, seekValue, session, setBusy, setError, setModal, setOpeningSource, setOverlay, setPreparing, setScreen, setSeek, setSelected, setSession, setSnapshot, snapshot, stack, video } = app;
+  useNativeShutdown(controller);
 
   useEffect(() => {
     let engine: Player;

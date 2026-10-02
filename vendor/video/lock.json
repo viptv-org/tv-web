@@ -1,6 +1,6 @@
 {
   "repository": "viptv-org/video",
-  "revision": "514a332b869417365bb45403d1afc2761c076d2c",
+  "revision": "550ab3503a670080a5c6f5e3ff619446c8fcd9e5",
   "files": {
     "vendor/video/src/browser-capabilities.ts": "3261889250b9ea0ea3ac33cd23dcc756ce3945f58f321fe62d54809481c5b921",
     "vendor/video/src/browser-policy.ts": "463891c85e85cf6b9b09083f99f671e882976171f07307a4d5d9569939ac311a",
@@ -15,15 +15,15 @@
     "vendor/video/src/session-media-fetch.ts": "0552979581f2b8e54298d757449896f99de4417f948863ece6efb982548b3a30",
     "vendor/video/src/session-player.ts": "faff5dab1d8cadcc3bbfc894fd21512a3afb2e9d2809d223955b1ed9ce658b89",
     "vendor/video/src/session-request.ts": "a861f622f95d66971daec41d8efde79513920ab89b9e3e7a7cf487e1c730518e",
-    "vendor/video/src/session.ts": "48452fd6a409f7f145941074f537ed89c8455050a181ef0f6296dbbf5dec3ae4",
+    "vendor/video/src/session.ts": "3159fc9d8521a3d838a38779662f83bda6953591e46239c91ca3e9125a49d3ee",
     "vendor/video/src/source-authorization.ts": "5bf2e33a9eedbf9ce253153dcefd44d0a1dcbcafa73e6fd8e459592b6c4c30f9",
-    "vendor/video/src/tauri-native.ts": "14334ac38fb050efd082f83e836146fdd44d0fde0d140255da9788880ff3a9e6",
+    "vendor/video/src/tauri-native.ts": "ece39919a23b2200c2ba3ddf4d40b767bd36b74b7f4c6578f34185677798e781",
     "vendor/video/src/tauri-native/aperture.ts": "dbdfd49d50406c6dd5aff95fe30636305b0550bb0b5b168498d52ce3f3f6a30e",
     "vendor/video/src/tauri-native/capabilities.ts": "40a8b6a8070bdc51f095842818fac69c8694f02beec72b22af3d86c5ea9f9702",
     "vendor/video/src/tauri-native/types.ts": "15b85a26beb1fda0a0922cd6a2c708afaf399978ebc660df996bf98b02d36daf",
     "vendor/video/src/tauri-native/wire.ts": "cbf28785b3c7bb90eeebcfb3e71167a4102e3f6be6d71d6cede25e3cded6ccd1",
     "vendor/video/src/tizen-avplay.ts": "e6624e60d1aedcb0c64ce15eaed471f918923f4750dc3e31b8400d5b4cf2aae2",
-    "vendor/video/src/types.ts": "a3720924f90394961b1b6c45fef83ebfc13f8748b88fea55410ecf4f5ed6c34c",
+    "vendor/video/src/types.ts": "f5d121454a469955e6fcf0d742388abe5572374e65f41cc1c62ebe7c21a77b2d",
     "vendor/video/src/vizio-evidence.ts": "3f6135c3a6b99677d84fce70d393a6cb43ced88397cb2098ed3e0f1bcbea42e0",
     "vendor/video/src/vizio-html5.ts": "304374b643c7a78f1c2068276c76f5970203de5c4855abd37fa7573cc18ce386"
   }
