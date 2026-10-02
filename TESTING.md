@@ -2527,3 +2527,28 @@ regressions also pass with `--platform=vizio`. The local Vite host requires
 `allowedHosts: ["watch.local.test"]` and matching `hmr.host`/`wss`; the initial
 harness attempt reported only a dev-server WebSocket host mismatch, corrected
 before the successful rerun. No production configuration was changed.
+
+## HOME-ADDON-001: automatic Home add-on refresh, 2026-10-01
+
+Design `8b92d90842c9307df7e2daef5eeb0d9a61bbce51` defines account add-on
+revision checks while Home is visible and foregrounded. React and SolidTV
+refresh changed catalogs, preserve usable rows during failure, and acknowledge
+the new revision only after demanded catalog loads succeed. Polling uses a
+15-second interval; unchanged revisions do not refetch catalogs. Profile and
+route changes cancel stale work. Existing focus and scroll survive refresh;
+removed content uses a surviving card fallback.
+
+The full unit suite passed (250 tests), and `npm run build` passed design,
+core, video and type checks before producing the production bundle. Targeted
+Playwright checks `tests/e2e/home-addon-refresh.spec.ts` and
+`tests/e2e/solid-home-addon-refresh.spec.ts` both passed. They cover changed
+catalogs, retained focus/scroll, unchanged polls and a synthetic catalog 502
+followed by automatic recovery under the same revision.
+
+The qualified production bundle was manually activated on dev.embedez.com
+with the matching backend revision endpoint. Public asset hashes matched the
+qualified files; `/tv/solid.html` returned 200 and the unauthenticated revision
+endpoint returned 401. Existing account/profile IDs, sessions, encrypted add-ons
+and viewing records were preserved. These are Chromium fixture and dev asset
+checks; physical Vizio/Tizen/webOS refresh and installed desktop acceptance
+remain unverified. No new playback or decoder qualification is claimed.

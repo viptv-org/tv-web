@@ -407,3 +407,17 @@ Existing visual contract retained; design@0430d90 defines host/delivery scope.
 | TV Home → sources/provider/details | HTTPS Chromium, repeated scroll/texture cleanup, visible foreground and opaque panels | Physical Tizen/Vizio/webOS |
 | Browser header / early Home | Settings navigation, explicit profile switching, failed art and delayed catalogs | Production deployment |
 | Desktop remote | Synthetic Power/Mute wire requests and native shell compilation/tests | Real SmartCast TV and installed Windows/Linux runtime |
+
+## HOME-ADDON-001: automatic Home add-on refresh, 2026-10-01
+
+Design: `8b92d90842c9307df7e2daef5eeb0d9a61bbce51`.
+
+| Surface | Verified scope | Remaining boundary |
+| --- | --- | --- |
+| React Home | Chromium fixture: add-on revision changes, retained card focus/scroll, unchanged polls and retry after a catalog 502 | Installed desktop and physical TV |
+| SolidTV Home | Chromium fixture: changed shelves, retained focus/scroll and automatic catalog retry without another revision change | Physical Vizio/Tizen/webOS |
+| Development deployment | Matching backend and production viewing assets served on dev.embedez.com; public asset hashes and Solid entry checked | Production rollout and real provider changes during an active Home session |
+
+The full unit suite passed 250 tests and both targeted Playwright checks passed.
+No reference-image parity metrics or playback/device capability claims were
+added by this change. See TESTING.md for the qualification scope.
