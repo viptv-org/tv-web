@@ -4,19 +4,223 @@ This is an execution checklist, not a completion claim. User decisions are in
 [BACKEND_V2.md](BACKEND_V2.md) and [ADMIN_V2.md](ADMIN_V2.md).
 
 - [x] Approved decisions captured; production mutation excluded.
-- [ ] Versioned public contracts and migration fixtures executable.
+- [x] Versioned public contracts and migration fixtures executable (source/fixture acceptance).
 - [x] VOD 10k/100k baseline captured and bounded query implemented.
 - [x] Independent engine extraction and container build.
 - [ ] Gateway key scopes, jobs, viewer leases and safe media ingress.
-- [ ] Backend HTTP gateway selection/affinity and encrypted secrets.
-- [ ] Account-owned Xtream, default playlist and catalog paging.
-- [ ] Advanced configuration export and reviewed migration tool.
-- [ ] Local-only and embedded engine paths removed after cutover tests.
-- [ ] Maximum-quality feature removed; actual device limits retained.
+- [x] Backend HTTP gateway selection/affinity and encrypted secrets (development fixtures).
+- [x] Account-owned Xtream, default playlist and catalog paging (backend fixtures).
+- [x] Advanced configuration export and reviewed offline migration tool.
+- [x] Local-only and embedded engine implementation paths removed after source cutover tests.
+- [x] Maximum-quality feature removed; actual device limits retained.
 - [ ] Admin website rebuilt; VOD matching stays available and bounded.
-- [ ] All client logic/contracts updated with unchanged viewing layouts.
+- [ ] All client logic/contracts updated; UI changes follow the design-first scope.
 - [ ] Cross-repository integration, browser/native checks and packages.
 - [ ] Reviewed rollback/cutover instructions ready (no production execution).
+
+## Current coordinated source checkpoint — 2026-09-30
+
+Latest owner scope update: UI changes are now allowed across affected clients,
+including Android, superseding the earlier backend/logic-only restriction.
+Use the [GitHub handoff map](https://github.com/viptv-org/workspace/issues/2)
+and design-first synchronization for affected screens/states. This is permission,
+not new implementation or parity evidence; merge/deployment approval is separate.
+The owner made no independent Android UI edits. All eight dirty files in the
+original checkout exactly match Android `02b70ae`, already included on the
+published cutover branch; the previous concurrent-UI-work assumption was incorrect.
+
+Urgent handoff after the user's request to finish rather than extend qualification:
+backend `b78aab2` publishes populated real-image/browser evidence and a tightened
+current-data engine-free image rollback fixture. Both exact rollback images
+retain newer history, precise preferences, encrypted configuration and non-null
+resume metadata without restoring an older DB. Gateway `fb15c39` is published on
+main: MPEG2 and verified FFV1/FLAC AV share bounded private replay, with actual
+late-join/eviction/audio-index/timestamp/ENOSPC/crash/restart evidence (104 tests).
+Android's separate published native-stress branch `85adc70` adds 169 host tests
+and three actual x86_64 Android JNI/MainLooper cases; the original UI checkout
+and normal `14bc969` handoff APK remain unchanged.
+
+The earlier populated admin scenarios confirmed two logic gaps: VOD retained
+data grew beyond its twenty-row DOM window, and the provider dropdown omitted
+owned connections beyond its first 200. The separately reviewed bounded-VOD
+slice below now fixes and qualifies these against synthetic data.
+The qualified Linux/SubRip sharing and narrow Android foreground/media slices
+are recorded below; other subtitle, progressive and unlisted gateway sharing,
+broader native stress, physical/signing acceptance and
+production cutover are not complete. App PiP is not implemented; its current
+background-stop contract is not a PiP claim. No new scope or production action
+was started to conceal these gaps. All owned QA resources are stopped; fixture
+APKs must not be substituted for the signed system-trust-only normal APK.
+
+The following supersedes historical statements below that ordinary live callers
+or admin management still use the legacy contracts. These are development
+branches, not production rollout evidence. Unchecked end-to-end gates remain
+unchecked deliberately.
+
+| Repository / reviewed revision | Implemented and checked | Still incomplete |
+|---|---|---|
+| Backend `27a0296` (docs `8eafe14`) | Retired engine/advanced runtime and packaging removed; strict encrypted reads/private headers; 213 tests/Clippy, executable migration/retirement and post-commit WAL-cleanup recovery; live/VOD encoders never emit over-bound tokens and preserve raw IDs; full image `5b5900c8` passed seven HTTP + sixteen trusted-browser groups and gateway212af real-media lifecycle | Coordinated rollback-image rehearsal and final populated browser/provider/native integration; production migration/deployment excluded |
+| Core `8ae9f81` (docs `a611d56`) | Retired application provider/add-on bridge and feature removed; standalone parser retained; 64 tests, generated native/WASM, 35 baseline/candidate parity cases; frozen v2 JSON/events byte-identical | Physical-device/native stress and remaining consumer integration evidence |
+| Android handoff `14bc969` | Core8/raw guide/v2 leases; 166 host tests, three ABIs, normal signed system-trust-only APK; category screen callbacks and quality-row removal; phone/TV 400-category forward/reverse, actual201/200 focus, Search/Back, full All/Search return and long-drag one-request/anchor fixtures passed | Original UI checkout deliberately untouched; handoff must be reviewed/merged separately; actual backend/gateway native media, physical/native stress/PiP remain separate gates. Hosted `36691357270` qualified earlier75bb source, not this screen slice |
+| Roku `ace7ab1` (test/docs `75176bc`) | Raw bounded guide and mandatory gateway leases; quality feature removed; live cursor4096 and exact native Integer/LongInteger metadata, floating identity refusal; 32 runtime/6 contracts/compiler/local ZIPs. Hosted `36674162488` qualified earlierd46 source | Actual firmware JSON decoding, backend/gateway/SceneGraph device, TLS, foreground, 4K/tracks remain unqualified; typed >2^53 fixtures are not universal JSON precision proof |
+| TV-web `db9c5ab` (docs `aef29cf`) | Dormant local-only code removed and Core8 adopted; 234 retained unit tests/36 HTTPS cases; hosted bundle/webOS IPK `36690591107` checksum/static checks | Overall hosted run failed only at missing Samsung signing secrets; signed Tizen, real gateway/physical TV and installed media remain unqualified |
+| Admin web `93c9316` | ADM-002 owned management/lazy VOD, page identity guards and same-scope in-memory parent drafts; 88 unit tests; twelve mocked owner routes/both viewports/20-row DOM bound; actual backend trusted-HTTPS member/auth/recovery/parent-draft revocation/device approval+revoke fixture passed at both viewports | Populated real-provider/operator integration, migrated accounts with >200 provider choices, long-traversal metadata bounds and complete auth matrix |
+| Desktop `54854cf` (docs `faf43cf`) | Core8/TVdb9 pins, retired feature removed; native/frontend checks, Linux DEB/AppImage and Windows NSIS; hosted Windows/Linux run `36690568896` passed including installed Windows eight-second loader smoke | Loader smoke is non-hermetic and may attempt unauthenticated default-origin pairing; no account/media/hardware proof; portable installed/native playback still open |
+| Gateway `c4e692d` | Independent compatible live ingest, truthful quotas, bounded tmpfs/replay, crash/slow-reader hardening; 99 tests and actual ENOSPC/restart/envelope fixtures; FFmpeg9 private-playlist reload fixed; configured 4K/5fps/40Mbps copy retained >64MiB, output advanced, two viewers/one upstream and full release/reclaim | This does not qualify default budgets, arbitrary bitrate, motion/30fps/HDR/hardware; unsupported/progressive sharing, public ingress and stalled I/O cleanup remain separate gates |
+
+Android's isolated handoff branch is `refactor/android-backend-cutover`.
+Preserve its reviewed work and frozen v2 contract while reconciling the older
+original checkout; UI implementation is permitted under the updated scope.
+Other source checkpoints are published review branches, not a claim that every
+repository's main branch has been promoted. Private QA artifacts and credentials
+are not committed here.
+
+Gateway hard allocated-media storage bounds now have actual kernel ENOSPC and
+release/reclaim evidence in the supplied Compose envelope; native/custom layouts
+do not inherit that mount automatically. Compatible shared inputs, crash/slow
+readers and the rebuilt container have separate checked fixtures. This is not
+universal format, bitrate, filesystem/RSS or hardware qualification. Sustained
+copy now passes in its explicit operator-budget envelope; exact source/image,
+packet/allocation/progress facts and boundaries are recorded in the gateway's
+`docs/CBR4K_QUALIFICATION.md`, not an inferred universal 4K claim.
+
+Backend retirement now has backup-first/private export, encryption/ownership,
+incoming-FK and active-routing refusal checks plus genuine executable acceptance.
+The test runtime never auto-migrates a production database. Current artifact
+builds and development branches do not authorize production mutation or deploy
+the public website. The large unchecked end-to-end items above intentionally
+remain open; historical sections below are not the current source state.
+
+The source/fixture checkbox milestones do not close the broader goal. Universal
+format/input-sharing and ingress/hardware tests, populated operator/provider
+flows, installed/native stress and coordinated rollback still require their own
+evidence. Tizen signing needs privately configured certificate secrets. The
+Android owner's original checkout is not switched, reset or merged automatically.
+
+## Bounded admin VOD slice — 2026-09-30
+
+Owning acceptance: [web issue 5](https://github.com/viptv-org/web/issues/5).
+Design-first contract is `1dc92f7b4a571df00f89cc3915aaf1165a42bf94`,
+ADM-002-VOD-WINDOW / VOD-WINDOW-01 through 04. Web source
+`048651e941b4aad15cea69294419600bfb8612af` adopts that exact snapshot; backend
+Rust source `8b257f91b6beb8d8aa06749099e697fb454c79c5` adds scoped reverse VOD
+cursors and transactional catalog revisions. Backend packaging `8eec3da` pins
+the same web commit. These are review branches, not merged or deployed versions.
+
+- Backend full Rust tests, strict all-target Clippy and formatting passed;
+  admin 97 tests and production build passed. Deployment configuration and nine
+  host-check tests passed. Independent Standards and Spec review found no
+  remaining code findings after geometry, refill and bounded-save fixes.
+- Actual shipped CLI/Vault sealed provider and addon configuration for a fresh
+  synthetic 100k-title catalog. Title columns and the SQLite database itself are
+  not encrypted by this evidence. Trusted HTTPS API traversed all 99,999 initial
+  unmatched titles forward and backward in 2,000 pages per direction, with no
+  omitted/duplicate identities; all 208 owned providers were available.
+- Chrome at 1440x900 and 390x844 traversed the entire unmatched catalog forward
+  and back while checking every incoming page identity. Desktop visited 99,999
+  titles; phone visited 99,998 after the desktop's selected-row save. Maximum
+  retained state was 150 rows / three pages / nine cursor slots, and DOM stayed
+  at 20 rows. Travelled extent is scalar, not a retained historical page map.
+- Phone Chrome trusted simulated touch events opened/dismissed a match dialog
+  and swiped the list by 439px. Native gesture settling was explicitly awaited
+  before the later exact modal return checks; these passed in the combined run.
+  This is input emulation, not a physical-device claim.
+- Real-backend browser checks passed provider-page retry, delayed/failed evicted
+  forward refill without a blank window or extent growth, keyboard scrolling,
+  Cancel/Escape/browser Back with exact scroll/opener focus, failed/retried save
+  and Edit match, stale-revision refresh, filter cancellation and account signout
+  during a pending read. Transport faults changed no response data. Unit tests
+  additionally cover pending-save account cancellation and the 30-second save
+  deadline/late completion; these are separate from browser evidence.
+- Private populated-list and dialog captures were inspected at both sizes:
+  desktop 540px list / 112px rows; phone 506.390625px list / 184px rows, 56px header,
+  16px gutters, readable wrapped labels and bottom-sheet controls. No horizontal
+  overflow. This is affected-state visual QA, not measured pixel parity or a
+  physical phone qualification.
+
+The tested binary SHA256 is
+`2f4899274ec3964c248aa42de81a9ae67215eb9167a6f2f620c37b8bfb8635a5`;
+served admin asset was `index-Df4Sh2lc.js`. Backend's reproducible harness and
+`docs/BOUNDED_VOD_ACCEPTANCE.md` own the final detailed evidence. Existing shared
+local runtime and production data were untouched. The broader admin/cutover,
+provider/operator, gateway, native and deployment gates remain open.
+
+## Shared SubRip replay slice — 2026-09-30
+
+[Gateway issue 2](https://github.com/viptv-org/playback-gateway/issues/2) is closed
+for its qualified generic source/image scope. Published branch
+`fix/shared-subtitle-replay` at `92b8ed55b779ee0a34b97f3cb9d31359554bb50d`,
+[review PR 3](https://github.com/viptv-org/playback-gateway/pull/3), preserves
+source/private/public track identities and carries bounded active overlapping
+cues across original-segment eviction. Compatible caption-off and late
+caption-enabled outputs use one upstream. Actual WebVTT rendition index is zero.
+
+Exact runtime source `f056a0dd31d6443c45706ac35dc08406d28a710b`, image
+`5efbd97e78573879a696f4bd3c4c22165c3a65e500bf5695e1cb4881ca95eed8`, passed actual
+HTTP and verified HTTPS source/control/media tests: decoded caption intervals,
+sparse audio content, late activation, retained seek, independent release/60s
+expiry, cache overflow, process/upstream teardown and reservation reclamation.
+The same image passed real 2-MiB tmpfs ENOSPC/readiness/reclaim/persistent-key
+restart checks. Subsequent runtime source changes are mechanical formatting only;
+the report retains the exact tested image/source identities.
+
+Default suite: 104 passed, 36 explicit opt-in fixtures separate; strict Clippy
+passed. Independent Standards and Spec review: zero outstanding findings. Scoped
+formatting passes changed Rust files; five unchanged baseline formatting failures
+remain documented. Qualified eligibility is Linux/SubRip with tested H264/AAC;
+other text/bitmap codecs/platforms retain independent fallback. No universal
+format, native caption renderer, merge, deployment or public ingress claim.
+Detailed reproduction and limits:
+[SHARED_SUBTITLES.md](https://github.com/viptv-org/playback-gateway/blob/92b8ed55b779ee0a34b97f3cb9d31359554bb50d/docs/SHARED_SUBTITLES.md).
+
+Broader gateway/cutover gates and progressive issue 1 remain open. Android's
+narrow AND-041 qualification is recorded independently below.
+
+## Android foreground/media slice — 2026-09-30
+
+[Android issue 4](https://github.com/viptv-org/android/issues/4) is qualified for
+its narrow source/emulator deliverable in
+[Android PR7](https://github.com/viptv-org/android/pull/7), branch
+`fix/android-foreground-lifecycle` at
+`3a9c57e78083936b75d475c70ccdf24feeb6a8e7` (runtime source `ce0f33b`).
+Design-first AND-041 pin is `9bb130ae80af18d41c411c137c6a515b175a5991`;
+Core8 remains unchanged. AND-036 background-stop, absolute exact-source Resume
+and no silent native gateway/transcode policies remain; no PiP was added.
+
+- Actual backend token rotation reproduced canceled foreground validation losing
+  an accepted grant. Session-owned bounded single-flight refresh fixes the same
+  phone/TV native loop: confirmed profile/Home/Resume retained, one rotation and
+  no new pairing. Rejected refresh clears protected presentation to sign-in.
+- API36 x86_64 phone/TV decoded actual required-header gateway-produced finite
+  H264/AAC provider bytes from Resume20. Source26.280/app26 and source24.480/app24
+  agree on the absolute120second timeline. Actual heartbeat/progress passed;
+  HOME/STOPPED released each exact backend lease (DELETE200), left no app codec
+  clients and retained matching-source progress. This is a normal direct backend
+  descriptor, not native-managed gateway control or a finite gateway contract.
+- The dispatch-proven held-refresh profile-choice failure was fixture connection
+  framing, not lost intent. After removing all QA-only client-header/debug
+  changes, the ordinary shell passed against explicit-close helper `7ea0c60`:
+  actual profile4 POST200/Home followed by profile2 POST200/Home, exactly one
+  rotation and no extra pairing. Private visual captures were inspected; no
+  pixel-parity or physical-device proof is implied.
+- 174 host tests, Core host/three ABI builds, Core/design integrity, normal APK
+  assembly and lint passed (existing baseline retained). Independent Standards
+  and Spec review found zero outstanding findings. Normal development-signed APK
+  SHA256 `44e2e436494f92003b973ef6f492f3b55801900718b3809f4fdf6efecd41056e`
+  has system-only trust and no fixture CA; QA artifacts are not deliverables.
+
+All dedicated emulators/backend fixtures are stopped. The separate gateway's
+old viewer lookup was404, idempotent DELETE204, reservations2/2/2 available,
+no FFmpeg child and no media-cache files before exact test-container removal.
+Private evidence remains outside Git; the original eight Android changes and
+shared HTTPS runtime are untouched. Detailed limits/reproduction are in
+Android's `qualification/FOREGROUND_ACCEPTANCE.md` and
+[backend PR6](https://github.com/viptv-org/backend/pull/6).
+
+Broader Android/native stress, ARM/physical, HDR/DRM, native opening-cancel and
+decoder-failure device stress, Tizen signing/hardware, integration/rollback and
+production rollout gates remain open. No broad checkbox, merge or deployment
+completion follows from this narrow qualification.
 
 ## Foundation checkpoint — 2026-09-29
 

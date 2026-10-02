@@ -1,22 +1,27 @@
 # Repository ownership
 
-All repositories are independent copies, not GitHub forks. Product/source repositories retain private visibility; only the organization profile is public. Local checkouts live under `/home/node/viptv-org/`.
+All repositories are independent copies, not GitHub forks. Visibility is set per repository on GitHub; a repository that needs separate access (currently `playback-gateway`) is optional in the workspace bootstrap. Local checkouts live side by side in one working directory created by the [workspace](https://github.com/viptv-org/workspace) repository's `setup.sh`.
 
-| Repository | Owns | Spec |
-|---|---|---|
-| [design](https://github.com/viptv-org/design) | UI/UX specifications, app assets, parity and design-first workflow | [SPEC.md](https://github.com/viptv-org/design/blob/main/SPEC.md) |
-| [roku](https://github.com/viptv-org/roku) | Unchanged native Roku application | [SPEC.md](https://github.com/viptv-org/roku/blob/main/SPEC.md) |
-| [backend](https://github.com/viptv-org/backend) | Rust backend, pinned web delivery bundle and deployment packaging | [SPEC.md](https://github.com/viptv-org/backend/blob/main/SPEC.md) |
-| [web](https://github.com/viptv-org/web) | React account/admin web application | [SPEC.md](https://github.com/viptv-org/web/blob/main/SPEC.md) |
-| [tv-web](https://github.com/viptv-org/tv-web) | Shared React viewing client for web, Smart TVs (Tizen/Vizio), and desktop | [SPEC.md](https://github.com/viptv-org/tv-web/blob/main/SPEC.md) |
-| [desktop](https://github.com/viptv-org/desktop) | Native Tauri v2 desktop application for Linux, Windows, macOS | [README.md](https://github.com/viptv-org/desktop/blob/main/README.md) |
-| [android](https://github.com/viptv-org/android) | Android / Android TV Media3 playback library imported from air-tv/video; future app workspace | [SPEC.md](https://github.com/viptv-org/android/blob/main/SPEC.md) |
-| [tauri-video-plugin](https://github.com/viptv-org/tauri-video-plugin) | Desktop playback plugin copied from get-air/tauri-video-plugin | [SPEC.md](https://github.com/viptv-org/tauri-video-plugin/blob/main/SPEC.md) |
-| [video](https://github.com/viptv-org/video) | Web playback library copied from get-air/video | [SPEC.md](https://github.com/viptv-org/video/blob/main/SPEC.md) |
-| [.github](https://github.com/viptv-org/.github) | Public viptv organization profile | [SPEC.md](https://github.com/viptv-org/.github/blob/main/SPEC.md) |
+The visual source for the redesign is the [VIPTV Redesign canvas](https://claude.ai/artifact/UX1E5AtPUoSKnaSLPou3Pp); its committed export is [viptv-design-system/](viptv-design-system/README.md). Apps pin an immutable design commit, never the canvas directly ([DESIGN_SYNC.md](DESIGN_SYNC.md)).
 
-Roku/server/web extraction uses the actual local source at vynxc/viptv@7d6b413, including polish commits newer than original main. The monorepo retains history and the original checkout, configuration and untracked owner files are preserved. MIGRATION.json in each extracted app maps its original files and hashes; packaging/doc/test changes are separately identified.
+| Repository | Owns | Status | Design pin | Spec |
+|---|---|---|---|---|
+| [design](https://github.com/viptv-org/design) | UI/UX specifications, canvas export, app assets, parity and design-first workflow | Current | — | [SPEC.md](https://github.com/viptv-org/design/blob/main/SPEC.md) |
+| [roku](https://github.com/viptv-org/roku) | Native Roku application | Current app; adopting the current TV design through [ROK-042](ROKU_DESIGN.md) | `DESIGN_REF` | [SPEC.md](https://github.com/viptv-org/roku/blob/main/SPEC.md) |
+| [backend](https://github.com/viptv-org/backend) | Rust backend, pinned web delivery bundle and deployment packaging | Current; BE-002 cutover in qualification | `DESIGN_REF` | [SPEC.md](https://github.com/viptv-org/backend/blob/main/SPEC.md) |
+| [playback-gateway](https://github.com/viptv-org/playback-gateway) | Independent generic media ingestion, output jobs and viewer leases | Implemented and locally qualified for documented formats; not publicly deployed | none (no UI) | [SPEC.md](https://github.com/viptv-org/playback-gateway/blob/main/SPEC.md) |
+| [web](https://github.com/viptv-org/web) | React account/admin web application | Current | `DESIGN_REF` | [SPEC.md](https://github.com/viptv-org/web/blob/main/SPEC.md) |
+| [tv-web](https://github.com/viptv-org/tv-web) | Shared React viewing client for web, Smart TVs (Tizen/Vizio) and desktop | Implemented; Tizen/Vizio device qualification in progress | `DESIGN_REF` + verified `design-contract/` snapshot | [SPEC.md](https://github.com/viptv-org/tv-web/blob/main/SPEC.md) |
+| [desktop](https://github.com/viptv-org/desktop) | Native Tauri v2 shell for Linux, Windows and macOS hosting tv-web | Implemented; Linux/Windows installers built, installed qualification pending | inherited from the `tv` submodule's `DESIGN_REF` | [SPEC.md](https://github.com/viptv-org/desktop/blob/main/SPEC.md) |
+| [core](https://github.com/viptv-org/core) | Shared Crux Rust state, normalization, generated TypeScript/Kotlin bindings, SmartCast controller | Current; adopted by Android, tv-web and desktop (Roku excluded) | `DESIGN_REF` | [SPEC.md](https://github.com/viptv-org/core/blob/main/SPEC.md) |
+| [android](https://github.com/viptv-org/android) | Android / Android TV app and Media3 playback module | Implemented; physical-device qualification pending | `DESIGN_REF` | [SPEC.md](https://github.com/viptv-org/android/blob/main/SPEC.md) |
+| [tauri-video-plugin](https://github.com/viptv-org/tauri-video-plugin) | Tauri native playback adapter (GStreamer / MPV / system decoders) | Current | `DESIGN_REF` | [SPEC.md](https://github.com/viptv-org/tauri-video-plugin/blob/main/SPEC.md) |
+| [video](https://github.com/viptv-org/video) | React/web/Tizen/Vizio video controller | Current | `DESIGN_REF` | [SPEC.md](https://github.com/viptv-org/video/blob/main/SPEC.md) |
+| [workspace](https://github.com/viptv-org/workspace) | Organization bootstrap, portable agent skills and handoff coordination | Current | — | [SPEC.md](https://github.com/viptv-org/workspace/blob/main/SPEC.md) |
+| [.github](https://github.com/viptv-org/.github) | Public viptv organization profile | Current | `meta/github/DESIGN_REF` in workspace | [meta/github/SPEC.md](https://github.com/viptv-org/workspace/blob/main/meta/github/SPEC.md) (in workspace) |
 
-Backend's dashboard gitlink pins independent web source. Its checksummed compiled bundle permits CI without cross-repository credentials because repository policy disables deploy keys. Web promotion is explicit; see backend/DELIVERY.md.
+Roku/server/web extraction uses the actual local source at vynxc/viptv@7d6b413, including polish commits newer than original main. The monorepo retains history. MIGRATION.json in each extracted app maps its original files and hashes; packaging/doc/test changes are separately identified.
 
-Desktop and TV-web app implementations are future work specified in PLATFORM_PLAN.md and design tickets. There is no claim that those apps exist merely because player libraries were copied. Imported library/application repositories have their upstream CI/CD removed as requested; replacement CI is deferred for those imports. Roku/backend/web and design have scoped validation and delivery.
+Backend's dashboard gitlink pins independent web source. Its checksummed compiled bundle permits CI without cross-repository credentials. Web promotion is explicit; see backend/DELIVERY.md.
+
+Status reflects source and recorded evidence, not deployment or universal device parity; the [implementation ledger](IMPLEMENTATION_V2.md) and each repository's tickets record exact qualification. Build workflows exist only for Android, desktop, Roku and TV-web (main pushes and manual dispatch, sideloading artifacts, no automatic deployment); other repositories rely on their documented local checks.

@@ -1,5 +1,45 @@
 # Design changes
 
+## 2026-09-30 — Android phone presentation and player track menus
+
+Specified AND-042 for design issue 6. Phone Home now opens on the rounded hero,
+the bottom navigation shows icons only, and cards carry minimal captions.
+Catalog shelves are headed by content type, phone Home shows live channels as
+logo tiles, and the bar is 6dp with lifted progress. Loading uses skeletons.
+Phone and TV player audio/subtitle menus follow PhPlayerSubs and TvPlayerSubs.
+Only AND-038's Home header remote entry changes; other TV geometry is
+unchanged. Emulator and device evidence remain separate.
+
+## 2026-09-30 — Canvas source, reference provenance and repository status
+
+Recorded the VIPTV Redesign canvas as the visual source for the redesign beside
+its committed `viptv-design-system/` export. Added `reference/FILES.json`
+(SHA-256 and canvas-export source for all 453 reference files), verified by
+`scripts/validate.py`. Clarified that canvas renders are allowed design
+artifacts while app/device captures stay forbidden. Updated REPOSITORIES.md
+with current status, design-pin mechanism and specs for every repository,
+including core, playback-gateway, workspace and desktop. No behavior change.
+
+## 2026-09-30 — Android silent foreground identity validation
+
+Specified AND-041 for Android issue 4: stable authenticated phone/TV presentation
+during bounded foreground validation, coalesced refresh, actionable recovery,
+explicit revocation and cancellation. Existing background-stop, exact-source
+absolute Resume, native playback policy, geometry and assets remain unchanged.
+Actual authenticated media and per-device/visual evidence remain required.
+
+## 2026-09-30 — Bounded bidirectional admin VOD matching
+
+Specified ADM-002-VOD-WINDOW for web issue 5: three retained title pages,
+automatic reverse reload, complete owned-provider selection, scoped cancellation,
+retry and dialog Back/scroll/focus restoration. Keeps ADM-002 tokens and row
+geometry. Synthetic encrypted 100k-title HTTPS and per-viewport evidence remain
+required; this design change alone establishes no rendered or device acceptance.
+
+Review clarification: idle/failed dialogs dismiss without saving; a submitted
+save retains the existing disabled-dismissal state until completion or a bounded
+30-second timeout. A browser Back cannot undo an already submitted server write.
+
 ## TV-only LightningJS renderer migration proposed — 2026-09-24
 Authorized a staged replacement of the React TV renderer and custom D-pad focus registry with one LightningJS Blits UI for Tizen, Vizio and LG webOS. The 1920×1080 current TV output and behavior are the 1:1 migration baseline; the pinned design images remain a separate design-parity reference. Phone web, responsive web and Tauri desktop retain their React entry. TV launchers remain on the existing renderer until matched-content pixel comparisons, remote flows and platform checks qualify the new entry. See TV_IMPLEMENTATION.md. No parity or device claim is made by this spec update.
 

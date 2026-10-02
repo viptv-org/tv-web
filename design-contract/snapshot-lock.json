@@ -1,7 +1,7 @@
 {
   "version": 1,
   "repository": "viptv-org/design",
-  "commit": "4e153a7daca300389049e5fcfd5c3bc0af5edbee",
+  "commit": "8b92d90842c9307df7e2daef5eeb0d9a61bbce51",
   "files": {
     "design-contract/.github/pull_request_template.md": {
       "source": ".github/pull_request_template.md",
@@ -9,15 +9,15 @@
     },
     "design-contract/ADMIN_V2.md": {
       "source": "ADMIN_V2.md",
-      "sha256": "a253d64655494a3780dea7f34ed67166474d0ac671c2a12ff1112e2ccd84c115"
+      "sha256": "dc3ce44dd83da52f1d7a7619a7886dd7c5fcfec796842b01481e62b7195f2cd8"
     },
     "design-contract/AGENTS.md": {
       "source": "AGENTS.md",
-      "sha256": "1848b6a99d0180212691e934e63d9f10e1d48f8ce56c09f50f8a6e8a8c155d2f"
+      "sha256": "6aba5a77fe0db4e7c0d25343d9cd8d29ff4afe7f1d6181aaa27dc0acb07962a1"
     },
     "design-contract/ANDROID_DESIGN.md": {
       "source": "ANDROID_DESIGN.md",
-      "sha256": "51f0d1a32921447e548d38d18e37dbcced2254fae4fad3d7a65dc72699244057"
+      "sha256": "a1d9c15efae3b8e1384e90252ba908f7a1957b1a5913aa59ec8ac0e701b5af7f"
     },
     "design-contract/ANDROID_DEVELOPMENT.md": {
       "source": "ANDROID_DEVELOPMENT.md",
@@ -25,7 +25,7 @@
     },
     "design-contract/BACKEND_V2.md": {
       "source": "BACKEND_V2.md",
-      "sha256": "d7074f9fb2dd481d74480ecabee00572cf5235ce82c8e3f88a79a95d5250d9f6"
+      "sha256": "8794930eeac6c0ef65f0ba2d9a3554848344c8ac922216697aadb2cf6fd625f8"
     },
     "design-contract/BROWSER_MEDIA_PIPELINE.md": {
       "source": "BROWSER_MEDIA_PIPELINE.md",
@@ -41,7 +41,7 @@
     },
     "design-contract/CHANGELOG.md": {
       "source": "CHANGELOG.md",
-      "sha256": "0304effed82471d34abd995daa83309ea34c952e3f088b71be0a468885ee4e59"
+      "sha256": "1caf04f03eb494cdd8a31fe1272df1a21643d481dbb60f4b24b7cca3b1e7d35b"
     },
     "design-contract/CONTEXT.md": {
       "source": "CONTEXT.md",
@@ -49,15 +49,15 @@
     },
     "design-contract/CONTRIBUTING.md": {
       "source": "CONTRIBUTING.md",
-      "sha256": "99b392eff8406fda0fb752b293c30c2c24e451e2c6d4cc7c3309a7879a476be4"
+      "sha256": "8cf6e78362f46cb9191f3f821af0c6cd54a8a3829001ca7740bb2a89b6508469"
     },
     "design-contract/DESIGN.md": {
       "source": "DESIGN.md",
-      "sha256": "bd4e741fff4d2033ec6d502ecac9981baadc539e8d1da0fd3d73cde3ff664912"
+      "sha256": "ede13aecbcc874553962c5aa9928e3773c25769a24e0ff0556dbcec4f77a54cc"
     },
     "design-contract/DESIGN_SYNC.md": {
       "source": "DESIGN_SYNC.md",
-      "sha256": "a9c136ab42d220842d2f6d8cf77a797905fb07e2893653a94a7bb27704e6ee61"
+      "sha256": "044b680d502ad7984bc00fb10b2a4a876d26d40956c456cef317efc7bbfff9e4"
     },
     "design-contract/DEVELOPMENT.md": {
       "source": "DEVELOPMENT.md",
@@ -65,7 +65,7 @@
     },
     "design-contract/IMPLEMENTATION_V2.md": {
       "source": "IMPLEMENTATION_V2.md",
-      "sha256": "1c4dc0dd418f101dfbf65d77fd260dcc8e6893c3732a32786b8631f821aa40ab"
+      "sha256": "fd26e278e60b25c0783c3b299a5b90a12cd34a77cd82d2639b0788f15c6216d8"
     },
     "design-contract/LOCAL_MODE.md": {
       "source": "LOCAL_MODE.md",
@@ -89,7 +89,7 @@
     },
     "design-contract/REPOSITORIES.md": {
       "source": "REPOSITORIES.md",
-      "sha256": "0e71e9fe41da82d8cbd483785337f47445455ee30c0e44aec550f7f625ff5202"
+      "sha256": "2ecdf7aa30ea1a9befc15763fe38821ea407c676ad2642427e0ffd9689b4c183"
     },
     "design-contract/ROKU_DESIGN.md": {
       "source": "ROKU_DESIGN.md",
@@ -131,9 +131,17 @@
       "source": "docs/branding.md",
       "sha256": "a4855b5263b985092b40a3c50b757b7494cdd576c62acfa9e3872b38880656a6"
     },
+    "design-contract/specs/behavior/home-addon-refresh.md": {
+      "source": "specs/behavior/home-addon-refresh.md",
+      "sha256": "9cb9385f19c05500625c84dfe1ac36ced45fcdd8e24a4d701c22d01a5671c458"
+    },
     "design-contract/specs/behavior/roku-ux-contract.md": {
       "source": "specs/behavior/roku-ux-contract.md",
       "sha256": "f78eca080c33f8c016d65a27587368851eca0f59a917e2104a5e2ccbda734d25"
+    },
+    "design-contract/specs/behavior/stremio-import.md": {
+      "source": "specs/behavior/stremio-import.md",
+      "sha256": "c3dac4d356360de041beda014f6a16283a38ef1aa3eea14dd12a93c4fb144a8e"
     },
     "design-contract/specs/repos/README.md": {
       "source": "specs/repos/README.md",

@@ -1,5 +1,127 @@
 # AND-035 — Native Android phone and TV design adoption
 
+## AND-042 — phone presentation and player track menus (2026-09-30)
+
+Status: approved implementation scope for design issue 6. Emulator visual
+evidence is recorded in Android TESTING.md; physical-device proof stays in
+Android issue 3. Phone rules apply to the phone layout only. TV changes are
+limited to the player track panel. Visual sources are the Main, Live,
+PhPlayerSubs and TvPlayerSubs canvas boards. Where the phone rules below
+differ from those boards, these rules win.
+
+- AND-042-HOME: Home has no header bar. Its first element is the Main hero
+  card: 16dp gutters, 28dp radius on every corner, starting at the system top
+  inset plus 8dp. The profile and Watch on TV entries leave Home. Settings
+  stays reachable from the Discover, Live and My List headers. Watch on TV
+  stays in Settings › This device. A paired TV's remote button stays in those
+  three headers. This replaces only AND-038's Home header remote button.
+- AND-042-NAV: the floating bar keeps the Main geometry: a 64dp glass bar,
+  52dp segments and a separate 64dp Search disc. Segments show 22dp icons
+  only, with no text, and keep accessible names (Home, Discover, Live TV,
+  My List). The active segment keeps the off-white fill.
+- AND-042-CARDS: phone media cards keep the caption under the art: the title,
+  then one line of minimal context, S1 E1 for an episode, otherwise the year.
+  They show no genres, runtime or resume times. Progress is 6dp with rounded
+  ends, lifted 10dp off the art's sides and bottom edge. The first card of a
+  row aligns with its shelf heading's 16dp edge. Shelves are 20dp apart with
+  12dp between a heading and its row.
+- AND-042-HEADINGS: a Home catalog shelf heading names the content type, then
+  the catalog ("Series · Trending"), not the addon. Continue watching, My
+  List, Live now and Recently watched live TV keep their names.
+- AND-042-LIVE-TILES: phone Home live shelves show small logo tiles: 104×72dp,
+  18dp radius, surface-1 with a hairline outline, and the channel logo fitted
+  with 12dp padding. A channel without a logo shows a monogram. Tiles show no
+  visible name; the channel name is the accessible label. Tap starts the live
+  path; long press and the ⋯ action keep the existing channel menu.
+- AND-042-SKELETON: loading uses layout-matching skeletons on surface-1 and
+  never "Loading…"/"Finding…" copy. Home shows a hero block and two shelves
+  of card placeholders until its first row arrives. Discover, catalog grids
+  and Search show poster placeholders. The phone Live list shows channel-row
+  placeholders. A grid that is appending its next page shows one row of
+  placeholders at its end. More items load automatically; there is never a
+  Load more control.
+- AND-042-TRACKS-PHONE: Audio and Subtitles open an anchored panel
+  (PhPlayerSubs), not a bottom sheet. The panel is surface-1 with a 20dp
+  radius and a hairline outline. It sits 16dp from the screen sides, its
+  bottom 12dp above the timeline, at most 360dp tall, and scrolls. The header
+  is the title (17 bold) with a 44dp close disc. Rows are 48dp tall with 16
+  text: Off first for subtitles, then the tracks. The current row ends with a
+  check and "Current" (13, secondary). An unsupported track reads
+  "<label> (unavailable)" in tertiary text. Tapping it keeps the panel open
+  and shows "This track is not supported on this device." Choosing a track
+  applies it and closes the panel. Tapping outside, close or Back closes it.
+  Playback, the controls and the subtitle layer stay visible behind it.
+- AND-042-TRACKS-TV: the right 820px panel (TvPlayerSubs) lists rows, not pill
+  buttons. Rows are 72px with a 12px radius and are transparent unless
+  focused; the focused row has the off-white fill and on-light text. The
+  current row adds " · Current". Unsupported rows use tertiary text plus
+  " · unavailable". They stay focusable, and OK shows the existing notice.
+  The footer shows key hints: ▲▼ Move, OK Select, BACK Close. Focus starts on
+  the current row; Back closes and restores focus to the control that opened
+  the panel.
+
+Acceptance AND-042-01: phone Home starts with the rounded hero under the status
+bar, shows no header, and keeps Settings and Watch on TV reachable. AND-042-02:
+icon-only nav with accessible names, content-type headings, live logo tiles,
+6dp lifted progress and year/episode captions. AND-042-03: skeletons for
+Home, Discover, Search and Live, with no loading copy and automatic paging.
+AND-042-04: on phone and TV, select, turn off and reject an unavailable
+subtitle, select audio, then Back/close and confirm focus or controls are
+restored. Emulator evidence is not physical-device parity.
+
+## AND-041 — silent foreground backend validation (2026-09-30)
+
+Status: approved implementation scope for Android issue 4; native media and
+rendered qualification must be recorded independently. Applies to an already
+authenticated phone/TV returning to the foreground. Fresh startup/sign-in and
+SmartCast remote pairing keep their existing contracts.
+
+- AND-041-PENDING: preserve the current profile, route, loaded rows, source
+  selection, scroll and focused control while validating backend identity/token
+  authorization. No global loading cover, pairing page, profile-picker flicker,
+  spinner or new focus request. Coalesce repeated foreground callbacks and token
+  refresh into one attempt; bound it to 30 seconds. Mutating network operations
+  continue to enforce current server authorization. Do not clear credentials on
+  transient network failure or replay old pairing requests.
+- AND-041-RESTORED: matching account/profile authorization leaves the existing
+  screen and focus intact. A refreshed token must not cause the ordinary startup
+  presentation or refetch all Home rows. No automatic player restart on return.
+- AND-041-RETRY: after final timeout/network failure, retain the current route,
+  profile and selections. Show the existing inline error/action pattern with
+  `Could not reconnect to VIPTV. Try again.` and `Try again`. Preserve safe server
+  reasons for explicit denials; never display URLs, headers or token values.
+  Retry validates the existing identity rather than starting pairing. Back leaves
+  this recovery normally and cancels any pending validation for the old route.
+- AND-041-REVOKED: an explicit rejected refresh/session or changed account clears
+  protected presentation and returns to existing sign-in with `Your session
+  expired. Sign in again.` A removed/unauthorized selected profile returns to the
+  existing profile chooser with `This profile is no longer available. Choose a
+  profile.` Do not retain another account's state or silently select a replacement.
+- Background, sign-out, account/profile replacement and disposal cancel the
+  pending attempt. Late validation/refresh cannot overwrite a newer route,
+  resurrect the old profile or start media. Configuration rotation retains the
+  established session; callback coalescing still prevents duplicate work.
+
+Keep AND-036's background-stop contract: capture/persist the actual absolute VOD
+clock, stop/detach Media3, retire the backend/gateway lease, and return to the
+documented originating route. Explicit later Resume retains the saved source
+fingerprint and nonzero absolute position; restarting an output does not turn
+that position into a relative clip offset. No PiP or background-audio feature.
+Native direct/copy/remux policy is unchanged; do not force transcode for testing.
+
+Geometry/assets: existing phone and TV reference screens, fonts, buttons, inline
+errors and safe insets are unchanged. Phone recovery uses 44dp minimum targets;
+TV uses its existing 72px action/focus style. Tab/D-pad follows visual action
+order; Retry does not steal focus from another control. No new hold gesture.
+
+Acceptance AND-041-01 through 04 covers silent delayed success; bounded failure
+and retry without re-pairing; refresh/revocation/profile replacement and canceled
+late responses; and actual authenticated media foreground/background/return with
+required nonempty headers, nonzero saved Resume and final lease/native cleanup.
+Record phone/TV emulator input, visible states/focus, decoded media, host/native
+regressions and normal system-trust APK identity separately. Fixture-trusting
+APKs cannot be distributed; emulator results are not ARM/physical-device proof.
+
 ## AND-039 — Phone remote reliability and responsiveness
 
 Owner feedback, 2026-09-27; supersedes AND-038's background-dismissal and
