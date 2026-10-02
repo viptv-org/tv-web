@@ -29,6 +29,7 @@ it('coalesces close requests and acknowledges only after playback release settle
   try {
     await act(async () => { requestClose(); requestClose(); });
     expect(stop).toHaveBeenCalledTimes(1);
+    expect(stop).toHaveBeenCalledWith({ releaseBeforePlayer: true });
     expect(bridge.invoke).not.toHaveBeenCalled();
     await act(async () => { released(); });
     expect(bridge.invoke).toHaveBeenCalledExactlyOnceWith('app_shutdown_ready');
