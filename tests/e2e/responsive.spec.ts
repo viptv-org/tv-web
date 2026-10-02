@@ -443,6 +443,17 @@ for (const width of [390, 768, 1440]) {
     await queue.locator('[data-focus-id="queue-0"]').click();
     await expect(page.locator('[data-focus-id="source-0"]')).toBeVisible();
     expect(fixture.requests.find(request => request.path === '/api/v2/streams')?.body).toMatchObject({ id: 'queue-series:1:1', series_id: 'queue-series', season: 1, episode: 1 });
+    await page.keyboard.press('Escape');
+    await expect(page.locator('.detail')).toBeVisible();
+    await expect(page.locator('.detail')).toContainText('Returning Series');
+    await expect(page.locator('.detail')).toContainText('Episode 2');
+    await page.locator('[data-focus-id="episode-1"]').click();
+    await expect(page.locator('[data-focus-id="source-0"]')).toBeVisible();
+    expect(fixture.requests.filter(request => request.path === '/api/v2/streams').at(-1)?.body).toMatchObject({ id: 'queue-series:1:2' });
+    await page.keyboard.press('Escape');
+    await expect(page.locator('.detail')).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(queue.locator('[data-focus-id="queue-0"]')).toBeVisible();
     expect(fixture.errors).toEqual([]);
   });
 }

@@ -19,7 +19,7 @@ import type { PlaybackSessionApi } from "./useTvApp";
 export function useCatalog(app: PlaybackSessionApi) {
   const { api, autoResume, catalogs, catalogValues, currentScreen, epoch, fail, favorites, go, items, loadHome, modal, nextEpisode, notify, play, profile, query, queue, responsive, screen, searchScope, setBusy, setCatalog, setCatalogValues, setDetailOrigin, setEpisodes, setError, setFavorites, setItems, setModal, setNextSkip, setQueue, setSearchPartial, setSearchRows, setSeason, setSelected, setSourceProvider, setSourceQuality, setSources, sourceFocusPending, sourceProvider, sourceQuality, sources } = app;
 
-  const detail = async (item: MediaItem, origin?: Catalog) => {
+  const detail = async (item: MediaItem, origin?: Catalog, replaceRoute = false) => {
     if (item.type === "live") { await play(item); return; }
     go("detail");
     setSelected(item);
@@ -52,6 +52,7 @@ export function useCatalog(app: PlaybackSessionApi) {
         );
       }
       if (ticket === epoch.current) {
+        if (replaceRoute && responsive) app.browserReplace.current = true;
         setSelected(enrichDetail(item, value.item));
         setEpisodes(enrichedEpisodes);
         const initial = initialEpisode(enrichedEpisodes, item);
@@ -64,6 +65,17 @@ export function useCatalog(app: PlaybackSessionApi) {
     } finally {
       if (ticket === epoch.current) setBusy(false);
     }
+  };
+  /** Replace a queue episode's source picker with its parent title while retaining its Home/List Back target. */
+  const showQueueParentFromSources = (item: MediaItem) => {
+    const previous = app.stack.current.pop();
+    if (responsive) app.browserReplace.current = true;
+    const pending = detail(item, undefined, true);
+    // detail() has synchronously pushed the picker; the queue card is the
+    // title's Back level, including its original scroll and focus snapshot.
+    app.stack.current.pop();
+    if (previous) app.stack.current.push(previous);
+    return pending;
   };
   // ---- Source discovery (title family) ----------------------------------
   // The title page shows its play target's best source ("1080p LordStreams ·
@@ -505,5 +517,5 @@ export function useCatalog(app: PlaybackSessionApi) {
     }
   }, [screen, modal, sources, sourceQuality, sourceProvider]);
 
-  return { detail, discoverSources, previewSources, sourcePreview, toggle, manage, loadCatalog };
+  return { detail, showQueueParentFromSources, discoverSources, previewSources, sourcePreview, toggle, manage, loadCatalog };
 }

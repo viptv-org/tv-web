@@ -41,6 +41,16 @@ export function useNavigation(app: CatalogApi) {
       setSettingsSubpage("Settings");
       return;
     }
+    const sourceOrigin = stack.current[stack.current.length - 1]?.screen;
+    if (screen === "sources" && selected?.type === "episode" && selected.seriesId &&
+      (sourceOrigin === "Home" || sourceOrigin === "My List") &&
+      app.queue.some((entry) => entry.id === selected.id)) {
+      autoResume.current = false;
+      if (controller.current?.snapshot.state === "opening")
+        void controller.current.stop().catch(fail);
+      void app.showQueueParentFromSources(selected);
+      return;
+    }
     if (screen === "sources" && autoResume.current) {
       autoResume.current = false;
       if (controller.current?.snapshot.state === "opening") {

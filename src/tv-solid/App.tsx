@@ -5943,6 +5943,13 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         sourceScope?.abort();
         ++sourceGeneration;
         clearTimeout(sourceTimer);
+        const queuedEpisode = this.source.item;
+        if (queuedEpisode?.type === "episode" && queuedEpisode.seriesId &&
+          ((this.sourceReturnOrigin === "home" && this.home.queueItems.some((entry) => entry.id === queuedEpisode.id)) ||
+            (this.sourceReturnOrigin === "library" && this.libraryMode === "queue"))) {
+          void this.showQueueParentFromSources(queuedEpisode);
+          return;
+        }
         this.phase = this.sourceReturnOrigin;
         this.sourceNotice = "";
         setTimeout(() => {
@@ -5970,6 +5977,37 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
             this.focusTitleEpisode(this.sourceReturnIndex);
           else this.focusTitleAction(this.sourceReturnIndex);
         }, 0);
+      },
+      async showQueueParentFromSources(item: MediaItem) {
+        const generation = ++detailGeneration;
+        detailScope?.abort();
+        detailScope = api.createScope();
+        this.detailReturnPhase = this.sourceReturnOrigin === "library" ? "library" : "home";
+        this.detailReturnZone = this.sourceReturnZone === "card" ? "card" : "action";
+        this.detailReturnIndex = this.sourceReturnIndex;
+        this.detail = emptyDetail;
+        this.detailNotice = "Loading title…";
+        this.phase = "detail";
+        try {
+          const view = await loadDetailView(api, item, this.currentProfileId, this.home.favoriteItems, detailScope.signal);
+          if (generation !== detailGeneration || detailScope.signal.aborted || this.phase !== "detail") return;
+          this.detail = view;
+          this.detailSeasonLabel = `Season ${view.season}`;
+          this.detailCountLabel = `${view.episodeCount} ${view.episodeCount === 1 ? "episode" : "episodes"}`;
+          this.detailSaveIcon = view.saved ? "✓" : "+";
+          this.detailNotice = "";
+          const episodeIndex = view.episodes.findIndex((episode) => episode.item?.id === item.id);
+          this.focusTitleEpisode(Math.max(0, episodeIndex));
+        } catch {
+          if (generation !== detailGeneration || detailScope.signal.aborted || this.phase !== "detail") return;
+          this.detailNotice = "Could not open title.";
+          this.playerDialog = {
+            title: "Could not open title", initialId: "retry",
+            choices: [{ id: "retry", label: "Retry" }, { id: "back", label: "Back" }],
+            onCancel: () => { this.playerDialog = null; this.returnFromDetail(); },
+            onSelect: (id: string) => { this.playerDialog = null; if (id === "retry") void this.showQueueParentFromSources(item); else this.returnFromDetail(); },
+          };
+        }
       },
       openProviderPicker() {
         if (this.phase !== "sources") return;
