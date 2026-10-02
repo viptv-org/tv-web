@@ -2586,3 +2586,6 @@ sources and 1920×1080 SolidTV sources were inspected locally; no matched
 pixel metric was recorded. Physical Tizen/Vizio/webOS remote and decoder
 behavior, real-provider timing, and installed desktop behavior remain
 unverified by these browser fixtures.
+
+SRC-PROVIDERS-001 (`d088071106e4d5479aea761469152e037f011a3c`):
+`npx vitest run --maxWorkers=1` passed 254 tests in 44 files. `npm run build` passed design/core/video integrity, strict TypeScript and the production Vite bundle. One-worker Chromium Vizio tests passed the existing source-filter and v2-discovery cases plus the three-producer fixture: an HTTP row arrived first, two distinct add-ons later returned `source_format_unsupported`, the row stayed visible and focused, and selecting an unsupported producer showed the HTTP(S)-only explanation. A private 1920×1080 screenshot of that state was inspected. The SolidTV projection unit test covered exact provider filtering; the SolidTV renderer, real upstream add-ons, and installed TV hardware were not exercised for this revision.
