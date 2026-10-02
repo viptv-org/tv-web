@@ -5,6 +5,10 @@ import { resolve, dirname, relative, join, sep } from 'node:path';
 const root = resolve(import.meta.dirname, '..');
 const destination = join(root, 'vendor/video');
 const hash = (data) => createHash('sha256').update(data).digest('hex');
+// Windows checkout may convert pinned TypeScript source to CRLF. Permit only
+// that reversible line-ending conversion when checking the recorded LF hash.
+const artifactMatches = (path, data, expected) => hash(data) === expected ||
+  (path.endsWith('.ts') && hash(Buffer.from(data.toString('utf8').replace(/\r\n/g, '\n'))) === expected);
 const git = (repo, args) => execFileSync('git', ['-C', repo, ...args], { maxBuffer: 32 * 1024 * 1024 });
 const mode = process.argv[2] ?? 'check';
 if (mode === 'sync') {
@@ -40,7 +44,7 @@ if (mode === 'sync') {
   if (lock.repository !== 'viptv-org/video' || !/^[a-f0-9]{40}$/.test(lock.revision) || readFileSync(join(root, 'VIDEO_REF'), 'utf8').trim() !== lock.revision) throw new Error('Video pin mismatch');
   for (const [path, expected] of Object.entries(lock.files)) {
     const file = resolve(root, path);
-    if (!file.startsWith(destination + sep) || !existsSync(file) || hash(readFileSync(file)) !== expected) throw new Error(`Video artifact mismatch: ${path}`);
+    if (!file.startsWith(destination + sep) || !existsSync(file) || !artifactMatches(path, readFileSync(file), expected)) throw new Error(`Video artifact mismatch: ${path}`);
   }
   const inspect = (dir) => { for (const entry of readdirSync(dir, { withFileTypes: true })) { const file = join(dir, entry.name); if (entry.isDirectory()) inspect(file); else if (entry.name !== 'lock.json' && !lock.files[relative(root, file).split(sep).join('/')]) throw new Error(`Unpinned video source: ${relative(root, file)}`); } };
   inspect(destination);

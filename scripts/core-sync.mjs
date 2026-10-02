@@ -5,6 +5,10 @@ import { resolve, relative, join, sep } from 'node:path';
 const root=resolve(import.meta.dirname,'..');
 const destination=join(root,'vendor/core');
 const hash=b=>createHash('sha256').update(b).digest('hex');
+// Git may materialize pinned text with CRLF on Windows. The lock records LF
+// bytes; accept only that line-ending conversion, never changed content.
+const artifactMatches=(path,data,expected)=>hash(data)===expected||
+ (/\.(?:ts|js|json)$/.test(path)&&hash(Buffer.from(data.toString('utf8').replace(/\r\n/g,'\n')))===expected);
 const mode=process.argv[2]??'check';
 if(mode==='sync') {
  const source=resolve(process.argv[3]??'../core');
@@ -34,7 +38,7 @@ if(mode==='sync') {
  if(readFileSync(join(root,'CORE_REF'),'utf8').trim()!==lock.revision)throw new Error('Core pin mismatch');
  for(const [path,expected] of Object.entries(lock.files)) {
   const file=resolve(destination,path);
-  if(!file.startsWith(destination+sep)||!existsSync(file)||hash(readFileSync(file))!==expected)throw new Error(`Core artifact mismatch: ${path}`);
+  if(!file.startsWith(destination+sep)||!existsSync(file)||!artifactMatches(path,readFileSync(file),expected))throw new Error(`Core artifact mismatch: ${path}`);
  }
  const inspect=dir=>{for(const entry of readdirSync(dir,{withFileTypes:true})){const file=join(dir,entry.name);if(entry.isDirectory())inspect(file);else if(!lock.files[relative(destination,file).split(sep).join('/')])throw new Error(`Unpinned core artifact: ${relative(destination,file)}`);}};
  for(const dir of ['wasm','typescript','runtime'])if(existsSync(join(destination,dir)))inspect(join(destination,dir));
