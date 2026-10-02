@@ -337,6 +337,8 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
   let sourceGeneration = 0;
   let sourceScope: ReturnType<TvApi["createScope"]> | undefined;
   let sourceTimer: ReturnType<typeof setTimeout> | undefined;
+  let sourceSpinnerTimer: ReturnType<typeof setInterval> | undefined;
+  const sourceSpinner = `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 22 22"><circle cx="11" cy="11" r="8" fill="none" stroke="#45454B" stroke-width="3"/><path d="M11 3a8 8 0 0 1 8 8" fill="none" stroke="#F5C542" stroke-width="3" stroke-linecap="round"/></svg>')}`;
   let playback: SolidTVPlaybackRuntime | undefined;
   let lastPlayerActive: PlaybackControllerActive<MediaItem, MediaSource> | null = null;
   let lastPlaybackPosition = 0;
@@ -428,6 +430,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         providerChoiceIndex: 0,
         sourceProviderLabel: "",
         sourceNotice: "",
+        sourceSpinnerAngle: 0,
         sourceSelectedId: "",
         sourceFocusZone: "chip" as "chip" | "provider" | "row",
         sourceChipIndex: 0,
@@ -888,6 +891,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
     },
     watch: {
       phase() {
+        if (this.phase !== "sources") { clearInterval(sourceSpinnerTimer); sourceSpinnerTimer = undefined; }
         if(this.phase!=="home"){homeCache?.pause();this.stopHomeRevision();}
         else if(homeCache){queueMicrotask(()=>{if(this.phase==="home")this.updateHomeWindow();});this.startHomeRevision();}
         const spinner=document.getElementById("solid-preparing-spinner");
@@ -1427,6 +1431,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         sourceScope?.abort();
         ++sourceGeneration;
         clearTimeout(sourceTimer);
+        clearInterval(sourceSpinnerTimer);
         clearInterval(heartbeatTimer);
         cancelChromeTimer();
         ++playbackGeneration;
@@ -1439,6 +1444,15 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
       },
     },
     methods: {
+      refreshSourceSpinner() {
+        if (this.phase === "sources" && this.source.busy && !sourceSpinnerTimer)
+          sourceSpinnerTimer = setInterval(() => { this.sourceSpinnerAngle = (this.sourceSpinnerAngle + 0.35) % (2 * Math.PI); }, 80);
+        else if ((this.phase !== "sources" || !this.source.busy) && sourceSpinnerTimer) {
+          clearInterval(sourceSpinnerTimer);
+          sourceSpinnerTimer = undefined;
+          this.sourceSpinnerAngle = 0;
+        }
+      },
       openTextEntry(options: Omit<TextEntryProps, "onCancel">) {
         const request: TextEntryProps = {
           ...options,
@@ -4893,6 +4907,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
           ...emptySourceRow,
         }));
         this.phase = "sources";
+        this.refreshSourceSpinner();
         setTimeout(() => {
           if (generation !== sourceGeneration) return;
           this.sourcePanelTitle = "Choose a source";
@@ -4973,6 +4988,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
           this.source.quality,
           this.source.provider,
         );
+        this.refreshSourceSpinner();
         noteSourceFilter(
           this.source.quality,
           this.source.provider,
@@ -7144,15 +7160,16 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
             color={s.primary}
           />
           <TvText
-            x={1164}
+            x={s.source.busy ? 1198 : 1164}
             y={132}
-            maxwidth={660}
+            maxwidth={s.source.busy ? 626 : 660}
             maxlines={1}
-            content={s.source.status}
+            content={s.source.busy ? (s.source.sources.length ? "Still checking sources" : "Finding sources") : s.source.status}
             font={"Onest"}
             size={22}
             color={s.secondary}
           />
+          <TvView x={1164} y={133} w={22} h={22} src={sourceSpinner} rotation={s.sourceSpinnerAngle} show={s.source.busy && s.phase === "sources"} />
           <SourceChip
             screenRef={"sourceChip0"}
             position={0}

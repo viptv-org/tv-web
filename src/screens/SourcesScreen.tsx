@@ -96,14 +96,14 @@ export function SourcesScreen({
   const count = sources.length;
   const checking = busy && !preparing;
   const context = selected ? presentationContext(selected) : { title: "", status: "" };
-  // "Still checking [2] addons": the poll step does not say how many addons are pending.
-  const progress = preparing ? "opening stream…" : checking ? "still checking addons" : "";
+  const discovery = checking ? (count ? "Still checking sources" : "Finding sources") : "";
+  const progress = preparing ? "opening stream…" : discovery;
   const found = `${count} found`;
-  // Phone: "Still checking addons · The End of Oak Street"; desktop: "12 found · still checking addons";
-  // TV: "Monster · S1 E1 · still checking addons". Once every addon answered, the resume / queue
+  // Phone: "Still checking sources · The End of Oak Street"; desktop: "12 found · Still checking sources";
+  // TV: "Monster · S1 E1 · Still checking sources". Once every addon answered, the resume / queue
   // state takes the progress slot ("Resume at 12:48").
   const status = phone
-    ? [progress ? progress[0].toUpperCase() + progress.slice(1) : context.status, context.title].filter(Boolean).join(" · ")
+    ? [progress || context.status, context.title].filter(Boolean).join(" · ")
     : tv
       ? [context.title, progress || context.status || found].filter(Boolean).join(" · ")
       : count || !busy ? [found, progress || context.status].filter(Boolean).join(" · ") : "Finding sources…";
@@ -205,7 +205,7 @@ export function SourcesScreen({
           </div>
           {status ? (
             <div className="vx-status vx-sources__status" role="status">
-              {busy ? <span className="vx-spinner" aria-hidden="true" /> : null}
+              {checking ? <span className="vx-spinner" aria-hidden="true" /> : null}
               <span className="vx-sources__status-text">{status}</span>
             </div>
           ) : null}

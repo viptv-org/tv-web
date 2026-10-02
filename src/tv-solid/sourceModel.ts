@@ -83,7 +83,7 @@ export function projectSources(
   ];
   const context = [item.name, episodeCode(item)].filter(Boolean).join(" · ");
   const state = busy
-    ? "still checking addons"
+    ? sources.length ? "Still checking sources" : "Finding sources"
     : item.position
       ? `Resume at ${Math.floor(item.position / 60)}:${String(Math.floor(item.position % 60)).padStart(2, "0")}`
       : `${sources.length} found`;
