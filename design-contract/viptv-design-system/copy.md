@@ -10,6 +10,7 @@ These are the exact strings used on the screens. Text in `[brackets]` is a place
 - Search placeholder: **"Search movies and series"** (desktop and web show no keyboard-shortcut hint).
 - Android TV native input: **"Results"**, **"Done"**, **"Unlock"**, **"Cancel"**. The device owns IME action labels; the app shows no custom keyboard or jump-to-results hint.
 - Android TV episode jump (AND-EPISODE-JUMP-001): chip **"Episode #"**; dialog **"Jump to episode"**; field **"Episode number"**; actions **"Go"**, **"Cancel"**; invalid input **"Episode not found in this season."**
+- Android completed episode (AND-EPISODE-WATCHED-001): visible and accessible badge **"Watched"**.
 
 Responsive player picture mode (WEB-PLAYER-FIT-001): visible toggle **"Fit"** / **"Fill"**; accessible actions **"Fill video"** / **"Fit video"**.
 
@@ -29,7 +30,8 @@ Responsive player picture mode (WEB-PLAYER-FIT-001): visible toggle **"Fit"** / 
 | Sources, finding | Finding sources. Sources appear here as they arrive. |
 | Sources, provider pending | Still checking [provider] |
 | Sources, provider empty | No playable sources from [provider] |
-| Sources, provider unsupported | [provider] returned formats this app cannot play. Only HTTP(S) streams are supported here. |
+| Sources, provider unsupported (proposed, SRC-TORRENT-GATEWAY-001) | [provider] returned formats this app cannot play. Choose another source. |
+| Sources, unsupported API format (proposed, SRC-TORRENT-GATEWAY-001) | This source format is not supported. Choose another source. |
 | Sources, in-progress label before rows | Finding sources |
 | Sources, in-progress label after rows | Still checking sources |
 | Sources, none | No sources available. Check your add-ons in Settings. |

@@ -1,7 +1,7 @@
 {
   "version": 1,
   "repository": "viptv-org/design",
-  "commit": "02fbcdd24a5a32f0ee87e97ede83c7e30345c833",
+  "commit": "1742afa2b50d30638fa46f3abc8c1a76638a51e1",
   "files": {
     "design-contract/.github/pull_request_template.md": {
       "source": ".github/pull_request_template.md",
@@ -17,7 +17,7 @@
     },
     "design-contract/ANDROID_DESIGN.md": {
       "source": "ANDROID_DESIGN.md",
-      "sha256": "e2d22df08e370d2d721ef202ff30f2eb3f7896b3149bc17c4d50aad5509504c3"
+      "sha256": "6d6d49eada5cdf5e0e7ff241a7ef30186985f301a967daafd008fafbc7983018"
     },
     "design-contract/ANDROID_DEVELOPMENT.md": {
       "source": "ANDROID_DEVELOPMENT.md",
@@ -25,7 +25,7 @@
     },
     "design-contract/BACKEND_V2.md": {
       "source": "BACKEND_V2.md",
-      "sha256": "8794930eeac6c0ef65f0ba2d9a3554848344c8ac922216697aadb2cf6fd625f8"
+      "sha256": "7fa9869af547c28a83a166f82f394d250fb4b0b274760bc00e26270843f245bc"
     },
     "design-contract/BROWSER_MEDIA_PIPELINE.md": {
       "source": "BROWSER_MEDIA_PIPELINE.md",
@@ -41,7 +41,7 @@
     },
     "design-contract/CHANGELOG.md": {
       "source": "CHANGELOG.md",
-      "sha256": "0f1dc381abb4df86bb699a1fd87d16542a50c17850ca825b2f26dd6209322e66"
+      "sha256": "6a87f15edc83dac972523285ec4a718b0462919f54ccf9a36fa66a8dc524356e"
     },
     "design-contract/CONTEXT.md": {
       "source": "CONTEXT.md",
@@ -65,7 +65,7 @@
     },
     "design-contract/IMPLEMENTATION_V2.md": {
       "source": "IMPLEMENTATION_V2.md",
-      "sha256": "fd26e278e60b25c0783c3b299a5b90a12cd34a77cd82d2639b0788f15c6216d8"
+      "sha256": "3759d642a1c5b805d7efe4c8cf53ee29e99496a8b9a412ca45c759dc1a17104c"
     },
     "design-contract/LOCAL_MODE.md": {
       "source": "LOCAL_MODE.md",
@@ -155,6 +155,10 @@
       "source": "specs/behavior/stremio-import.md",
       "sha256": "c3dac4d356360de041beda014f6a16283a38ef1aa3eea14dd12a93c4fb144a8e"
     },
+    "design-contract/specs/behavior/torrent-gateway-sources.md": {
+      "source": "specs/behavior/torrent-gateway-sources.md",
+      "sha256": "34dc7db8a453b626b41873dd0d49e922fbc546d81651ba945bcc74e499ef49c2"
+    },
     "design-contract/specs/repos/README.md": {
       "source": "specs/repos/README.md",
       "sha256": "37f48c8c9132d2990bc998b2560823e829d4ab685911c3580344d1818dbc8dbc"
@@ -169,15 +173,15 @@
     },
     "design-contract/viptv-design-system/components.md": {
       "source": "viptv-design-system/components.md",
-      "sha256": "30d3588261858a6ac4e630b61d132c439b70c5e5e591aa6fadb484edebbeace6"
+      "sha256": "9a282aa9d9c6d44a01cc04b1cb7349397bfa3e04175ad308d1aa153144c2c3af"
     },
     "design-contract/viptv-design-system/copy.md": {
       "source": "viptv-design-system/copy.md",
-      "sha256": "1d9599b64101f3854a1c82be193e6883b5264e9bffd2c65bd50efa73819da73c"
+      "sha256": "e812ef8b48ed62214e6b97d8535392e24b53891d1ca15b596be0420f6991ff47"
     },
     "design-contract/viptv-design-system/decisions.md": {
       "source": "viptv-design-system/decisions.md",
-      "sha256": "9f319a666c88b172cad909235d5bde6f0a1c72cfb5618249dbffce9900861fd6"
+      "sha256": "73b2e8e061b7d275b614e381e0d8a7c79c5e9d267fba349ec1674ebe140e9a93"
     },
     "design-contract/viptv-design-system/reference/screens/index.json": {
       "source": "viptv-design-system/reference/screens/index.json",

@@ -28,6 +28,13 @@ an HTTP(S) input, required headers, live/VOD semantics, position and capabilitie
 Input URLs and headers are secrets: no Debug/exception/log representation may
 contain them. Arbitrary command arguments and local file inputs are prohibited.
 
+Proposed additive source contract:
+[SRC-TORRENT-GATEWAY-001](specs/behavior/torrent-gateway-sources.md) specifies
+account-owned add-on torrent/archive inputs delivered through existing gateway
+HLS leases on web, desktop and Android. Its proposed input, selection, privacy,
+copy and qualification rules extend this HTTP(S) baseline only after review and
+explicit immutable adoption. In-process native torrent delivery remains deferred.
+
 `API_KEY` is a bootstrap administration credential. It provisions revocable
 integration keys with authorized namespaces, operation scopes and quotas.
 Viewer credentials are independent, short-lived and restricted to one session.
