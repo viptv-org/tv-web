@@ -2615,3 +2615,14 @@ qualified separately in its owning plugin and desktop records.
 259 app tests, strict type checks, design/Core/video integrity and the root-base
 production build pass. These checks do not substitute for actual native GTK
 overlay, paused crop, seek or audio verification.
+# Native close handshake — 2026-10-02
+
+The native renderer listens for `app-shutdown-requested`, coalesces repeated
+close requests and awaits the active playback controller's stop before
+acknowledging `app_shutdown_ready`. Failed lease release still acknowledges
+so the native host can stop decoders and exit. The host owns a bounded fallback
+for an unavailable renderer. Async listener registration is retired on unmount.
+Two focused regressions verify acknowledgement ordering, coalescing, release
+failure and late listener cleanup. Actual window-manager/custom close, native
+decoder termination and backend DELETE evidence belongs to desktop's integrated
+qualification at its adopted exact TV/Core/plugin pins.
