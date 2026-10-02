@@ -1,5 +1,30 @@
 # Design changes
 
+## 2026-10-02 — Proposed add-on torrent gateway sources
+
+Specified SRC-TORRENT-GATEWAY-001 for gateway issue 15: existing account-owned
+add-on discovery retains opaque source handles while opt-in authorized gateways
+prepare torrent/archive HLS for web, desktop and Android. The draft defines
+supported input normalization, file selection, capability/scope checks, private
+source metadata, safe producer copy and lease cancellation. Native peer delivery,
+progressive integration and qualification remain separate; review and adoption
+are pending.
+
+## 2026-10-02 — Narrow phone watched-caption wrapping
+
+Clarified AND-EPISODE-WATCHED-001: the complete badge wraps below the episode
+number when a narrow phone text column cannot fit both. Artwork and the
+44 dp options target retain their geometry; neither label is ellipsized.
+The 320 dp native fixture exposed the constraint before Android publication.
+
+## 2026-10-02 — Android completed episode indicators
+
+Specified proposed AND-EPISODE-WATCHED-001 for Android TV and phone episode
+cards: a readable check and Watched badge beside the episode number uses the
+current profile's saved completion fact. Partial progress retains its bar,
+completed episodes omit it, and updates cannot leak across profiles or recycled
+cards. Rendering and device acceptance remain pending.
+
 ## 2026-10-02 — Website player Fit / Fill
 
 Specified WEB-PLAYER-FIT-001 for the responsive website player. Fit shows the
@@ -167,3 +192,10 @@ Added [LOCAL_MODE.md](LOCAL_MODE.md) proposing account-free operation of the sha
 ## 2026-09-21 — Local addon mode schema amendment
 
 Amended LOCAL_MODE.md LM-002: the registry stores `nextOrdinal` and each addon a stable `ordinal` (a monotonic install counter, never reused) so addon selection survives restarts and removals. No other behavior changed.
+## 2026-10-02 — AND-043 Title source summary
+
+Specify Android Title discovery lifetime, shared Core ranking, safe source summary
+copy and manual-picker adoption, with empty/failure/cancellation acceptance. The
+TvTitle positive-progress WATCHING marker now has explicit state semantics and
+geometry; completed episodes retain the existing Watched badge. Proposed scope
+for design#6; emulator and physical parity remain independently unverified.

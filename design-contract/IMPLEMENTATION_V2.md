@@ -821,3 +821,47 @@ Initial audit: playback engine is a local crate; managed job sharing and provide
 reservations still cross the backend boundary. Providers are server-wide while
 add-ons already have account ownership. The VOD matches endpoint materializes
 the candidate set before filtering; native direct playback bypasses sharing.
+
+## Android Title and desktop qualification checkpoint — 2026-10-02
+
+- AND-043 is specified at design `85a20e9`, published in design PR14/main
+  `450e788`. Android PR13/main `3f21e41` adopts that immutable contract: bounded
+  settled source summaries shared with the manual picker, Core ranking, phone
+  300dp hero/58dp controls, TV WATCHING state and original source-control focus
+  after Back. Exact-source Resume and TV geometry are preserved.
+- Android reviewed source `fa4925b` integrates the concurrent delayed-episode and
+  pointer-return fixes. Host tests: 237 pass. Actual API36 Compose tests: 20 pass,
+  including source→picker→Back, subsequent Play return, delayed episode metadata
+  and pointer hero return. Three Core ABIs, APK/test APK, integrity and lint pass
+  with existing warnings/baseline findings. This does not establish full Title
+  discovery/picker flow or physical-device parity.
+- Android PR14/main `02f33b5`, reviewed qualification source `199eb34`, fixes the
+  local fixture's flat playback/renewal adapter drift and verifies a 240-second
+  Media3 stream with two audio/two subtitle tracks. Actual TV Back and English
+  selection return to Subtitles; immediate OK reopens that panel with the native
+  selected-track marker. The English cue was privately inspected. App source,
+  design pin and TV layout are unchanged. Managed replacements, alternate audio
+  and physical TVs remain unqualified.
+- The fresh pinned TvLive/TvLiveDetails/TvLiveSearch audit records Guide summary,
+  filter/grid dimensions, logo/programme details, progress/key hints and panel
+  differences. BACKEND_V2 supersedes old US classification/count copy. The
+  no-TV-layout-change constraint leaves presentation gaps explicit; complete
+  Guide details/search/remote acceptance remains open under design#6.
+- Desktop PR8/main `a8abcf2`, reviewed source `5fcc6c7`, fixes packaged entry
+  assets served at the wrong `/tv/` base and Core WASM CSP compilation/fetch
+  failures. Desktop-owned root-base/preflight/CSP changes preserve the pinned
+  TV-web/native dependencies. Native checks/tests, frontend checks and fresh
+  AppImage packaging pass. Native accessibility startup, authentication, retained
+  session and profile selection pass against a fresh local real backend/DB.
+- Desktop board inspection now covers 45/47 states; DeskPlayerRestore timed out
+  and DeskStates is composite. Rendered pixels/input, installed window controls
+  and authenticated native playback remain unqualified. Source artwork framing
+  and the profile-lock backend-field gap remain open. See desktop RELIABILITY.md;
+  no complete parity or physical/native matrix claim follows from browser or
+  accessibility inspection.
+
+These are scoped source/function/qualification checkpoints. Broad design#3,
+design#6 and desktop#4 acceptance, physical/signing gates, design review and the
+coordinated backend rollback/cutover remain open. Private captures and fixture
+credentials are excluded from Git; owned test resources were stopped. No
+deployment, production data access or migration occurred.

@@ -28,7 +28,7 @@ describe("observed source add-on producers", () => {
       ["addon:addon:8", "Torrentio TB"],
     ]);
     expect(producerStatus(producers[0], [row], false)).toBe("Still checking Torrentio");
-    expect(producerStatus(producers[0], [row], true)).toContain("Only HTTP(S) streams");
+    expect(producerStatus(producers[0], [row], true)).toContain("Choose another source.");
     expect(producerStatus(producers[1], [row], true)).toContain("TorrentsDB");
     expect(producerStatus(producers[2], [row], true)).toBe("");
     expect(sourceProviderKey(row)).toBe(producers[2].key);

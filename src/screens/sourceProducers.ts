@@ -82,7 +82,7 @@ export function producerStatus(
   if (rows.some((row) => sourceProviderKey(row) === producer.key)) return "";
   if (!done) return `Still checking ${producer.label}`;
   if (producer.errorCode === "source_format_unsupported")
-    return `${producer.label} returned formats this app cannot play. Only HTTP(S) streams are supported here.`;
+    return `${producer.label} returned formats this app cannot play. Choose another source.`;
   if (producer.error) return `${producer.label}: ${producer.error}`;
   return `No playable sources from ${producer.label}`;
 }
