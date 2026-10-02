@@ -9,14 +9,14 @@ export const movie = {
   year: 2026, genres: ['Adventure', 'Drama'],
 };
 
-export async function installBackend(page: Page, options: { series?: boolean; invalidLogo?: boolean; populated?: boolean; activity?: boolean; longSource?: boolean; pendingSources?: boolean; parentFailOnReturn?: boolean } = {}) {
+export async function installBackend(page: Page, options: { series?: boolean; invalidLogo?: boolean; populated?: boolean; activity?: boolean; longSource?: boolean; pendingSources?: boolean; parentFailOnReturn?: boolean; seriesShapedQueue?: boolean } = {}) {
   const title = options.series ? {
     ...movie, id: 'responsive-series', type: 'series', name: 'Beyond the Horizon', title: 'Beyond the Horizon',
     logo: `https://art.example/${options.invalidLogo ? 'invalid-logo' : 'title-logo'}.svg`,
     videos: Array.from({ length: 8 }, (_, index) => ({ id: `responsive-series:1:${index + 1}`, title: `Episode ${index + 1}`, season: 1, episode: index + 1, thumbnail: 'https://art.example/episode.svg', description: `Episode ${index + 1} brings the crew closer to the signal.` })),
   } : options.populated ? { ...movie, logo: 'https://art.example/title-logo.svg', description: `${movie.description} ${movie.description} This extended description exercises real catalog copy wrapping across phones, tablets and wide desktop displays.` } : movie;
   const queue = Array.from({ length: 24 }, (_, index) => ({
-    id: `queue-series:1:${index + 1}`, type: 'episode', series_id: 'queue-series',
+    id: `queue-series:1:${index + 1}`, type: options.seriesShapedQueue ? 'series' : 'episode', series_id: 'queue-series',
     name: 'Returning Series', title: `Episode ${index + 1}`, episode_title: `Episode ${index + 1}`,
     season: 1, episode: index + 1, position: 42 + index, duration: 2400, queue_status: 'resume',
     poster: 'https://art.example/poster.svg',

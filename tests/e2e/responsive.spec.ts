@@ -528,6 +528,23 @@ test('queue source Back can retry a failed parent title without losing Home retu
   await expect(queue).toBeFocused();
 });
 
+test('series-shaped Continue Watching episode Back opens its parent title', async ({ page }, info) => {
+  test.skip(info.project.name !== 'vizio');
+  await page.setViewportSize({ width: 390, height: 844 });
+  await installBackend(page, { activity: true, seriesShapedQueue: true });
+  await page.goto('/');
+  await page.locator('[data-focus-id="profile-0"]').click();
+  const queue = page.locator('[data-focus-id="queue-0"]');
+  await expect(queue).toBeVisible();
+  await queue.click();
+  await expect(page.locator('.sources')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(page.locator('.detail')).toContainText('Returning Series');
+  await page.keyboard.press('Escape');
+  await expect(queue).toBeVisible();
+  await expect(queue).toBeFocused();
+});
+
 test('responsive web uses selected tabs without remote focus skin at phone and desktop sizes', async ({ page }, info) => {
   test.skip(info.project.name !== 'vizio');
   await page.setViewportSize({ width: 390, height: 844 });

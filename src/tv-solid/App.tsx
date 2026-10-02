@@ -146,6 +146,7 @@ import {
   type SourcesView,
 } from "./sourceModel";
 import { configuredAddonNames, observeSourceProducers, producerStatus, sourceProviderKey, type SourceProducer } from "../screens/sourceProducers";
+import { isSeriesEpisodeCursor } from "../screens/titleSources";
 import {
   SourceChip,
   SourceProvider,
@@ -5962,7 +5963,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         ++sourceGeneration;
         clearTimeout(sourceTimer);
         const queuedEpisode = this.source.item;
-        if (queuedEpisode?.type === "episode" && queuedEpisode.seriesId &&
+        if (queuedEpisode && isSeriesEpisodeCursor(queuedEpisode) &&
           ((this.sourceReturnOrigin === "home" && this.home.queueItems.some((entry) => entry.id === queuedEpisode.id)) ||
             (this.sourceReturnOrigin === "library" && this.libraryMode === "queue"))) {
           void this.showQueueParentFromSources(queuedEpisode);

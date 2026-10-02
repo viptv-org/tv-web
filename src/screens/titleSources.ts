@@ -8,6 +8,11 @@ import { sourceProviderKey } from "./sourceProducers";
 /** One source discovery per playable item (a movie or an episode). */
 export const sourceKey = (item: MediaItem) => `${item.type}:${item.id}`;
 
+/** Some catalogs label a queued episode as a series while retaining its episode cursor. */
+export const isSeriesEpisodeCursor = (item: MediaItem) =>
+  !!item.seriesId && (item.type === "episode" ||
+    (item.type === "series" && item.season !== undefined && item.episode !== undefined));
+
 /** The filter value of a source without a quality. */
 const UNKNOWN_QUALITY = "Unknown";
 

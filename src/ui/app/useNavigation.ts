@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect } from "react";
 import { type Catalog } from "../../api";
 import { focusElement } from "../remote";
 import { catalogDefaults } from "../catalogFilters";
+import { isSeriesEpisodeCursor } from "../../screens/titleSources";
 import type { Screen } from "../screens";
 import type { CatalogApi } from "./useTvApp";
 
@@ -57,7 +58,7 @@ export function useNavigation(app: CatalogApi) {
       return;
     }
     const sourceOrigin = stack.current[stack.current.length - 1]?.screen;
-    if (screen === "sources" && selected?.type === "episode" && selected.seriesId &&
+    if (screen === "sources" && selected && isSeriesEpisodeCursor(selected) &&
       (sourceOrigin === "Home" || sourceOrigin === "My List") &&
       app.queue.some((entry) => entry.id === selected.id)) {
       autoResume.current = false;
