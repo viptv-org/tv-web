@@ -441,5 +441,5 @@ Design pin `d088071106e4d5479aea761469152e037f011a3c`. React and SolidTV source 
 
 | Surface | Browser/model evidence | Remaining boundary |
 | --- | --- | --- |
-| React TvSources | Chromium Vizio fixture: Torrentio TB HTTP row remained usable while Torrentio and TorrentsDB returned unsupported formats; all three appeared separately, the selected zero-result producer showed HTTP(S)-only copy, and late outcomes kept focus on the playable row. Private 1920×1080 capture inspected. | Live account add-ons and physical Vizio remote unverified. |
-| SolidTV TvSources | Model test checked the core-derived provider filter and configured row name; strict typecheck and production bundle passed. | Actual SolidTV renderer and physical Tizen/Vizio/webOS provider panel unverified for this revision. |
+| React TvSources | Chromium Vizio fixture: Torrentio TB HTTP row remained usable while Torrentio and TorrentsDB returned unsupported formats. A second fixture added seven producers while the menu was open; Cancel retained focus, the seventh was selectable, and a distinct source description remained accessible in the row and details. Private 1920×1080 capture inspected. | Live account add-ons and physical Vizio remote unverified. |
+| SolidTV TvSources | Model tests checked core-derived filtering, full source body and seven-producer windowing. SolidTV Vizio browser preview selected the seventh provider using six native focus nodes; a private 1920×1080 capture was inspected. | Physical Tizen/Vizio/webOS provider panel and real add-on timing unverified. |
