@@ -42,6 +42,13 @@ export function usePlaybackEngine(app: AuthApi) {
     const sessions = new PlaybackSessionController<MediaItem, MediaSource>({ player: engine, backend: api, capabilities });
     controller.current = sessions;
     let lastPlayerNotice = '';
+    let disposed = false;
+    let lastReportedFailure = '';
+    const reportFailure = (key: string, report: () => void) => {
+      if (disposed || key === lastReportedFailure) return;
+      lastReportedFailure = key;
+      report();
+    };
     const off = engine.subscribe((snapshot) => {
       setSnapshot(snapshot);
       const noticeKey = `${snapshot.sessionId}:${snapshot.notice ?? ''}`;
@@ -63,10 +70,14 @@ export function usePlaybackEngine(app: AuthApi) {
         setSeek(undefined);
       }
       void sessions.recoverPlayback(snapshot).then((handled) => {
-        if (!handled && snapshot.error && engine.snapshot.error === snapshot.error)
-          setError(snapshot.error.message);
+        if (!handled && snapshot.error && engine.snapshot.error === snapshot.error && engine.snapshot.sessionId === snapshot.sessionId)
+          reportFailure(`${snapshot.sessionId}:${snapshot.error.code}:${snapshot.error.message}`, () => setError(snapshot.error!.message));
       }).catch((cause) => {
-        if (!(cause instanceof DOMException && cause.name === "AbortError")) fail(cause);
+        if (disposed || (cause instanceof DOMException && cause.name === "AbortError")) return;
+        if (sessions.snapshot.error !== cause &&
+          !(snapshot.error && engine.snapshot.error === snapshot.error && engine.snapshot.sessionId === snapshot.sessionId)) return;
+        const message = cause instanceof Error ? cause.message : 'Playback recovery failed.';
+        reportFailure(`${snapshot.sessionId}:recovery:${message}`, () => fail(cause));
       });
     });
     const offSessions = sessions.subscribe((state) => {
@@ -94,6 +105,7 @@ export function usePlaybackEngine(app: AuthApi) {
       }
     });
     return () => {
+      disposed = true;
       off();
       offSessions();
       void sessions

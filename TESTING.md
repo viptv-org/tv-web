@@ -2718,3 +2718,27 @@ pause/resume, paused Fit/Fill, muted volume and continued playback. Alternate
 audio, rendered subtitle switching and subtitle removal use a silent generated
 fixture with both engines. JPG/GIF/PNG-prefixed HLS has separate actual-engine
 coverage. No Windows/macOS or physical TV qualification is claimed.
+
+# Native error classification and dismissal — 2026-10-03
+
+Video `bf296cfacbde25c354acb51e609787661fda2727` stops polling, layout observation and startup
+watchdogs after a terminal failure. Delayed stats cannot revive that failed
+session; opening a new source starts polling again. Generic pipeline failures
+(including misleading legacy plugin messages) no longer claim that the source
+cannot be decoded or trigger format conversion. Only explicit decoder/media
+format errors use that classification. The native plugin separately classifies
+video/audio output, protected media, source loading and runtime failures.
+
+React reports an unresolved playback error once per player session, code and
+message. Dismissing it therefore remains effective across repeated engine
+events. A new playback attempt or a different failure can still report an error;
+a disposed engine cannot publish delayed recovery failures into the current UI.
+
+38 focused Video adapter/compositor checks pass, including the former 13-error
+poll loop and late startup stats. Nine focused UI/recovery checks pass, including
+dismissal replay, new-session reporting, disposal, actual error-toast composition
+and native control rendering. The owning plugin has 45 ordinary passing checks;
+both actual GTK engines also report a missing source accurately and subsequently
+play valid silent media in the same engine. Real-provider controls on the local
+desktop display pass for both engines. These native checks do not establish that
+every configured provider endpoint is working or qualify Windows/macOS.
