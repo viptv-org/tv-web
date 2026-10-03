@@ -2742,3 +2742,20 @@ both actual GTK engines also report a missing source accurately and subsequently
 play valid silent media in the same engine. Real-provider controls on the local
 desktop display pass for both engines. These native checks do not establish that
 every configured provider endpoint is working or qualify Windows/macOS.
+
+# Responsive native volume dragging — 2026-10-03
+
+Video `9429307450cd7e7d856f57f14272acb9e4566113` publishes the requested volume immediately,
+allows only one native volume command in flight, and sends the latest pending
+value when that command settles. Intermediate drag samples do not accumulate
+in GTK's command queue. Acknowledgements do not republish unchanged UI state
+or replace current playback facts. Mute changes join the same update path;
+retired-source responses cannot affect or block the current source slider.
+
+The regression sent 100 simultaneous changes while native IPC was held. Before
+the fix it queued 100 commands; afterward it sends the first and latest values
+in two commands. All 41 focused adapter/compositor checks pass, including mute
+and source-replacement cases. The actual React player test drags through 26
+values with pending native IPC, checks the immediately rendered input/knob, and
+verifies that only the first and final native commands are sent. These tests
+control the native IPC boundary; they do not measure audio-device latency.

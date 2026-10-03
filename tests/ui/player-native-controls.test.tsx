@@ -142,12 +142,18 @@ it("renders native time, pause/resume, immediate volume feedback and picture con
     const volume = screen.getByRole("slider", {
       name: "Volume",
     }) as HTMLInputElement;
+    for (let index = 1; index <= 25; index++) {
+      fireEvent.change(volume, { target: { value: String(index / 100) } });
+    }
     fireEvent.change(volume, { target: { value: "0.37" } });
     expect(volume.value).toBe("0.37");
+    expect(volume.parentElement?.querySelector<HTMLElement>(".vx-player__slider-knob")?.style.left).toBe("37%");
+    expect(controls.filter(action => action === "volume")).toHaveLength(1);
     await act(async () => {
       release();
       await pending;
     });
+    await waitFor(() => expect(controls.filter(action => action === "volume")).toHaveLength(2));
     fireEvent.click(screen.getByRole("button", { name: "Fill video" }));
     await waitFor(() => expect(controls).toContain("crop"));
     expect(screen.getByRole("button", { name: "Fit video" })).toBeTruthy();
