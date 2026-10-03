@@ -213,7 +213,7 @@ function ResponsivePlayer({
   };
 
   return (
-    <>
+    <div data-viptv-video-controls="" style={{ display: "contents" }}>
       {buffering && (
         <div className="vx-player__buffering" role="status" aria-label="Loading video">
           <span className="vx-spinner vx-spinner--buffering" aria-hidden="true" />
@@ -224,9 +224,12 @@ function ResponsivePlayer({
           {playerNotice.message}
         </Notice>
       )}
-      {overlay && (
+      {(
         <div
           className={`player-overlay vx-player vx-player--responsive${live ? " vx-player--live" : ""}`}
+          data-viptv-video-controls=""
+          aria-hidden={!overlay || undefined}
+          style={overlay ? undefined : { visibility: "hidden", pointerEvents: "none" }}
           onClick={(event) => {
             if ((event.target as HTMLElement).closest(INTERACTIVE)) return;
             if (activeTrackPopup || playerInfoOpen) {
@@ -421,7 +424,7 @@ function ResponsivePlayer({
           </div>
         </div>
       )}
-    </>
+    </div>
   );
 }
 

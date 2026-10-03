@@ -33,7 +33,7 @@
   top: var(--vx-shell-top, 0px);
   padding: var(--viptv-space-6);
 }
-[data-layout="responsive"] .vx-rail ~ .vx-dialog-layer {
+[data-layout="responsive"] .desktop-app-frame.has-desktop-rail .vx-dialog-layer {
   left: var(--vx-shell-rail, 0px);
 }
 @media (max-width: 599px) {
