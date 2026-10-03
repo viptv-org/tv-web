@@ -1,3 +1,14 @@
+# Native initial Resume adoption — 2026-10-02
+
+Video source `2038c0f5cd69ae60dd033a16bda2d1fc46afe7de` (reviewed PR8)
+replaces `550ab350`. A newly opened GStreamer pipeline can report duration0 and
+live=true before metadata settles, even after a VOD queue/request/open target30.
+The adapter now takes startup VOD/live intent from the selected request, so
+transient native facts cannot skip Resume. Both adapter/IPC regressions are
+red before/green after; Video128 tests/typecheck/build pass. Core/design/types
+and renderer paths are unchanged. Consumer build/types/integrity pass; actual
+native replay and outstanding controls/sidebar flicker remain separate.
+
 # Populated responsive source rows — 2026-10-02
 
 The source drawer's flex scroll container shrank its existing fixed100px desktop
