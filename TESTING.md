@@ -2697,3 +2697,24 @@ backend banner, startup error, added/error notices and preparation remain
 separately captured states. This is scoped browser state inspection, not
 installed Tauri/native media, uniform pixel parity or physical-device proof.
 DeskPlayerRestore remains a separate incomplete preview scenario.
+
+# Desktop native controls and stable feedback — 2026-10-03
+
+Video `e30f6af` retains polled engine facts, publishes volume before native IPC
+settles, and keeps refused control operations from terminating playback. The
+React playback error region is protected from native aperture masking. Bare
+picture clicks reach the player screen when the native HTML anchor is hidden.
+
+24 focused React/controller regressions pass, including native time,
+pause/resume, pending volume IPC, picture-mode commands, engine identification,
+actual error-toast composition, remote navigation, engine preferences and
+shutdown. Strict application/test type checks and design/Core/video integrity
+are checked by the production build. These UI checks mock native IPC; actual
+GTK media evidence is recorded in the owning plugin and desktop repositories.
+
+The Linux plugin was also exercised through both actual native GTK surfaces
+against an authorized real-provider VOD: decoded frames, a seek to 30 seconds,
+pause/resume, paused Fit/Fill, muted volume and continued playback. Alternate
+audio, rendered subtitle switching and subtitle removal use a silent generated
+fixture with both engines. JPG/GIF/PNG-prefixed HLS has separate actual-engine
+coverage. No Windows/macOS or physical TV qualification is claimed.

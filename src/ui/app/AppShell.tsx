@@ -166,6 +166,15 @@ export function AppShell({ app }: { app: AppApi }) {
         )}
         <div
           ref={playerRoot}
+          onClick={(event) => {
+            // Native playback hides the HTML video anchor. Bare picture taps
+            // therefore land on its containing screen instead of the video.
+            if (event.target === event.currentTarget) surfaceClick();
+          }}
+          onDoubleClick={(event) => {
+            if (responsive && screen === "player" && event.target === event.currentTarget)
+              void fullscreenControl.toggle();
+          }}
           onPointerMove={(event) => {
             if (!responsive || screen !== "player") return;
             const previous = lastPointerPosition.current;

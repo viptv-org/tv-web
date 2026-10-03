@@ -90,7 +90,7 @@ export function AppDialogs({ app }: { app: AppApi }) {
         </div>
       )}
       {((banner && responsive) || errorToast || notice) && (
-        <div className="vx-toast-region">
+        <div className="vx-toast-region" data-viptv-video-controls="">
           {responsive ? banner : null}
           {errorToast}
           {notice}
