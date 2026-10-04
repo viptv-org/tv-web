@@ -1,3 +1,33 @@
+# Desktop timeline, source return and fullscreen — 2026-10-03
+
+Design `a8b5acac2f810e3d447334e64b7fc3f44c696b4d` and Video
+`f22a2a6672c01f55c2c777e27a1428bf5e998d88` are imported through the normal
+sync scripts. Selected VOD intent retains positive native duration/buffering
+before the first seek, including GStreamer live=true. Explicit desktop source
+replacement retires outgoing presentation/lease and remains empty on failure;
+managed seek/track/Next recovery stays separate.
+
+Provider and quality filters survive player, titlebar and browser Back to the
+same episode; another episode starts at All. Player-button/titlebar fullscreen
+share native ownership, including the primary command, fallback and late
+completion. Dismissing an outage hides its notice while bounded recovery probes
+continue; repeated failures keep it dismissed until recovery.
+
+Validation: 281 unit tests, all seven typecheck groups, imported-pin checks and
+production build passed. Three trusted-HTTPS browser scenarios cover filter
+return/reset, titlebar player fullscreen and outage dismissal/recovery. Native
+qualification in the desktop owner covers real GStreamer/MPV timeline/control
+facts with normal local-backend admission, plus a separate fixture-admission
+run for resizing and actual HTTP 407 failures. Both engines showed bounded
+redacted errors and an empty failed replacement. Private captures were inspected.
+Full evidence and limitations are in the desktop branch's
+[NATIVE_CONTROLS.md](https://github.com/viptv-org/desktop/blob/chore/native-final-recovery/NATIVE_CONTROLS.md).
+
+Native tests used an isolated GTK/WebKit X11 display. Ordinary-desktop Home
+smoothness, reported sidebar scrolling and exact Lanterns S1E1 reproduction
+remain open. Browser and fixture-admission evidence do not certify every
+provider, physical TV, codec, Windows or macOS. Core and Android pins are unchanged.
+
 # Native initial Resume adoption — 2026-10-02
 
 Video source `2038c0f5cd69ae60dd033a16bda2d1fc46afe7de` (reviewed PR8)
