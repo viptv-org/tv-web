@@ -18,8 +18,6 @@ import {
   Minimize,
   Pause,
   Rewind,
-  RotateCcw,
-  RotateCw,
   SkipForward,
   Volume2,
   VolumeX,
@@ -64,6 +62,7 @@ type PlayerScreenProps = {
   seek: number | undefined;
   /** A committed seek is still in flight (buffering ring / BUFFERING). */
   seekPending: boolean;
+  seekBy?: (delta: number) => Promise<void>;
   setSeek: Dispatch<SetStateAction<number | undefined>>;
   setOverlay: Dispatch<SetStateAction<boolean>>;
   commitSeek: (seconds: number) => unknown;
@@ -104,23 +103,14 @@ function episodeContext(selected: MediaItem | undefined) {
 
 /** Rewind 10 / forward 30: the circular arrow with its seconds inside (as drawn). */
 function SkipIcon({ seconds, back }: { seconds: number; back?: boolean }) {
-  const Arrow = back ? RotateCcw : RotateCw;
   return (
-    <Arrow aria-hidden="true" strokeWidth={2}>
-      {/* Icon geometry from the reference SVG (PhPlayer / DeskPlayer). */}
-      <text
-        x={back ? 12.4 : 11.6}
-        y={15.2}
-        textAnchor="middle"
-        fontSize={7.6}
-        fontWeight={700}
-        fill="currentColor"
-        stroke="none"
-        className="vx-player__skip-text"
-      >
-        {seconds}
-      </text>
-    </Arrow>
+    <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" shapeRendering="geometricPrecision">
+      <g transform={back ? undefined : "translate(32 0) scale(-1 1)"}>
+        <path d="M7 10a11 11 0 1 1-1.7 11" />
+        <path d="M7 4v6h6" />
+      </g>
+      <text x="16" y="20" textAnchor="middle" fontSize="10" fontWeight="700" fill="currentColor" stroke="none" className="vx-player__skip-text">{seconds}</text>
+    </svg>
   );
 }
 
@@ -146,6 +136,7 @@ function ResponsivePlayer({
   setSeek,
   setOverlay,
   commitSeek,
+  seekBy,
   togglePlayback,
   fullscreenControl,
   pictureMode,
@@ -237,7 +228,7 @@ function ResponsivePlayer({
               setPlayerInfoOpen(false);
               return;
             }
-            setOverlay(false);
+            setOverlay(true);
           }}
           onDoubleClick={(event) => {
             if (!(event.target as HTMLElement).closest(INTERACTIVE)) void fullscreenControl.toggle();
@@ -290,7 +281,7 @@ function ResponsivePlayer({
             <div className="vx-player__controls">
               {!live && (
                 <div className="vx-player__transport">
-                  <TvButton id="rewind" className="vx-player__control vx-player__control--skip" aria-label="Rewind 10 seconds" title="Back 10 seconds" onActivate={() => void commitSeek(Math.max(0, position - 10))}>
+                  <TvButton id="rewind" className="vx-player__control vx-player__control--skip" aria-label="Rewind 10 seconds" title="Back 10 seconds" onActivate={() => void (seekBy ? seekBy(-10) : commitSeek(Math.max(0, (seek ?? position) - 10)))}>
                     <SkipIcon seconds={10} back />
                   </TvButton>
                   <TvButton
@@ -302,7 +293,7 @@ function ResponsivePlayer({
                   >
                     {paused ? <PlayIcon /> : <Pause aria-hidden="true" strokeWidth={2.2} />}
                   </TvButton>
-                  <TvButton id="forward" className="vx-player__control vx-player__control--skip" aria-label="Forward 30 seconds" title="Forward 30 seconds" onActivate={() => void commitSeek(Math.min(duration || Infinity, position + 30))}>
+                  <TvButton id="forward" className="vx-player__control vx-player__control--skip" aria-label="Forward 30 seconds" title="Forward 30 seconds" onActivate={() => void (seekBy ? seekBy(30) : commitSeek(Math.min(duration || Infinity, (seek ?? position) + 30)))}>
                     <SkipIcon seconds={30} />
                   </TvButton>
                   {selected?.type === "series" && (

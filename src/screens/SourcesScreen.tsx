@@ -59,6 +59,7 @@ function SourceDescription({ text }: { text: string }) {
  */
 export function SourcesScreen({
   responsive,
+  desktop = false,
   phone = false,
   selected,
   sources,
@@ -76,6 +77,7 @@ export function SourcesScreen({
   onClose,
 }: {
   responsive: boolean;
+  desktop?: boolean;
   phone?: boolean;
   selected: MediaItem | undefined;
   sources: readonly MediaSource[];
@@ -206,7 +208,7 @@ export function SourcesScreen({
   );
 
   return (
-    <div className="vx-overlay vx-overlay--fixed vx-title-overlay sources" data-focus-scope="sources">
+    <div className="vx-overlay vx-overlay--fixed vx-title-overlay sources" data-viptv-video-controls="" data-focus-scope="sources">
       <div className="vx-scrim" aria-hidden="true" onClick={onClose} />
       <section className="vx-dialog vx-dialog--drawer vx-sources" role="dialog" aria-modal="true" aria-labelledby="vx-sources-title">
         <button type="button" className="vx-dialog__grabber" aria-label="Close sources" tabIndex={-1} onClick={onClose}><span /></button>
@@ -228,7 +230,8 @@ export function SourcesScreen({
         <div className="vx-dialog__tools">{chips}</div>
         <div className="vx-dialog__scroll" onKeyDown={stepQuality}>
           {visible.map((s, i) => {
-            const provider = producers.find((producer) => producer.key === sourceProviderKey(s))?.label ?? providerOf(s);
+            const producer = producers.find((producer) => producer.key === sourceProviderKey(s));
+            const provider = producer?.label ?? providerOf(s);
             const quality = s.quality ?? "";
             const file = sourceDescription(s);
             return (
@@ -241,7 +244,8 @@ export function SourcesScreen({
                 onActivate={() => selected && void play(selected, s, selected.position ?? 0)}
               >
                 <SourceRowContent
-                  quality={qualityOf(s) === "Unknown" ? "—" : quality}
+                  quality={qualityOf(s) === "Unknown" ? "" : quality}
+                  providerIcon={producer?.icon ? <img src={producer.icon} alt="" decoding="async" /> : <span>{provider.trim().slice(0, 2).toUpperCase()}</span>}
                   provider={provider}
                   file={<SourceDescription text={file} />}
                   best={s === sources[0]}
@@ -267,7 +271,7 @@ export function SourcesScreen({
             </div>
           ) : null}
         </div>
-        {responsive && !phone ? (
+        {responsive && !phone && !desktop ? (
           <div className="vx-dialog__footer">
             <KbdHints hints={[{ keys: ["↑", "↓"], label: "Move" }, { keys: ["Enter"], label: "Play" }, { keys: ["Esc"], label: "Close" }]} />
           </div>

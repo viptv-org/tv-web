@@ -14,6 +14,7 @@ type Action = () => void;
 type Registration = { activate: Action; hold?: Action };
 export const Registry = createContext<Map<string, Registration> | null>(null);
 export function focusElement(id: string, options?: FocusOptions) {
+  if (document.documentElement.dataset.desktopInput === "pointer") return;
   const element = Array.from(document.querySelectorAll<HTMLElement>("[data-focus-id]"))
     .find((element) => element.dataset.focusId === id);
   if (!element) return;
@@ -35,7 +36,7 @@ export function RemoteRoot({
   inputMode = "tv",
 }: {
   children: ReactNode;
-  inputMode?: "tv" | "responsive";
+  inputMode?: "tv" | "responsive" | "desktop";
   onBack?: Action;
   onMediaKey?: (key: string) => boolean;
   onMediaKeyUp?: (key: string) => void;
@@ -46,6 +47,7 @@ export function RemoteRoot({
   const handlers = useRef({ onBack, onMediaKey, onMediaKeyUp, onNavigate, onToggleFullscreen });
   handlers.current = { onBack, onMediaKey, onMediaKeyUp, onNavigate, onToggleFullscreen };
   useEffect(() => {
+    if (inputMode === "desktop") return;
     let lastRepeatedArrow = { key: "", at: 0 };
     let press:
       | { id: string; held: boolean; timer: ReturnType<typeof setTimeout> }
@@ -174,7 +176,7 @@ export function RemoteRoot({
     };
   }, [inputMode]);
   return (
-    <Registry.Provider value={registry.current}>{children}</Registry.Provider>
+    <Registry.Provider value={inputMode === "desktop" ? null : registry.current}>{children}</Registry.Provider>
   );
 }
 

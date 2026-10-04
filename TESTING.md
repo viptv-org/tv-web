@@ -2759,3 +2759,39 @@ and source-replacement cases. The actual React player test drags through 26
 values with pending native IPC, checks the immediately rendered input/knob, and
 verifies that only the first and final native commands are sent. These tests
 control the native IPC boundary; they do not measure audio-device latency.
+
+# Desktop pointer playback, sources and scroll corrections — 2026-10-03
+
+The owner-approved pointer-only desktop contract is imported from design
+`f879e1520c3e4c7574e04a7a00c6435c404b77eb`. Native desktop shortcuts, Tab, spatial
+navigation, arrival focus and source keyboard legends are disabled. Clicked
+text fields stay editable. Player backdrop clicks reveal controls without
+hiding them; skip icons use explicit vectors and larger integer sizes.
+
+Skip clicks accumulate from the latest requested target and coalesce pending
+work. Backward targets remain pinned through the old clock and transient zero;
+seek completion, duration and buffering use engine observations. New desktop
+source selection stops the outgoing presentation before backend preparation,
+with saved-position rollback on failure. Unknown track languages use numbered
+labels; actual titles remain intact. Both add-on and IPTV producers appear in
+All, including zero-result/error producers. Available configured logos are
+shown, with named monograms when absent. Source rows have a smooth 16px radius
+and a 3px best-match border, and are protected from native aperture masking.
+
+Home scroll reads are bounded to animation frames. Offscreen shelves use CSS
+content visibility where supported, and ambient artwork has a separate paint
+layer. A trusted local HTTPS Chromium test with synthetic populated catalogs
+measured 49 scroll frames, p95 16.8ms and one 50.1ms maximum frame; content
+visibility was active. This is browser evidence, not a measured GTK/WebKit FPS
+guarantee. A visual source-drawer check confirmed two source rows including
+IPTV, loaded provider artwork, 16px corners, 3px border, no keyboard hints and
+Tab remaining on BODY. Private captures stay outside Git.
+
+77 focused Video adapter/controller/compositor checks pass. 29 targeted UI
+checks pass, including accumulation during a zero clock, backward pinning,
+IPTV grouping, pointer-only input and the existing native controls. Strict
+application/test type checks pass. The native plugin has 45 ordinary passing
+checks; real-provider seek/pause/resume and genuine buffered-time readouts pass
+on both actual GTK engines. Separate silent media verifies tracks/subtitle
+pixels and paused picture controls. Real-display occlusion prevented an initial
+standalone MPV frame check; the isolated X11 display removes that artifact.

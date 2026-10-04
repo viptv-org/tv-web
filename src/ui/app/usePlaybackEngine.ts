@@ -39,8 +39,9 @@ export function usePlaybackEngine(app: AuthApi) {
     // profile without a browser decoder probe; only the web entry measures.
     const capabilities = deliveryCapabilitiesFor(platform);
     playbackCapabilities.current = capabilities;
-    const sessions = new PlaybackSessionController<MediaItem, MediaSource>({ player: engine, backend: api, capabilities });
+    const sessions = new PlaybackSessionController<MediaItem, MediaSource>({ player: engine, retireOnReplace: platform === "tauri", backend: api, capabilities });
     controller.current = sessions;
+    let lastPlayerSession = engine.snapshot.sessionId;
     let lastPlayerNotice = '';
     let disposed = false;
     let lastReportedFailure = '';
@@ -50,6 +51,11 @@ export function usePlaybackEngine(app: AuthApi) {
       report();
     };
     const off = engine.subscribe((snapshot) => {
+      if (snapshot.sessionId !== lastPlayerSession) {
+        lastPlayerSession = snapshot.sessionId;
+        seekTarget.current = undefined;
+        setSeek(undefined);
+      }
       setSnapshot(snapshot);
       const noticeKey = `${snapshot.sessionId}:${snapshot.notice ?? ''}`;
       if (snapshot.notice && noticeKey !== lastPlayerNotice) notify(snapshot.notice);

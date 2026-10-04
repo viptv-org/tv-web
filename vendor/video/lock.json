@@ -1,6 +1,6 @@
 {
   "repository": "viptv-org/video",
-  "revision": "9429307450cd7e7d856f57f14272acb9e4566113",
+  "revision": "521812a29ff72d4e09ae6ceaf382bc53c5a7bf74",
   "files": {
     "vendor/video/src/browser-capabilities.ts": "3261889250b9ea0ea3ac33cd23dcc756ce3945f58f321fe62d54809481c5b921",
     "vendor/video/src/browser-policy.ts": "463891c85e85cf6b9b09083f99f671e882976171f07307a4d5d9569939ac311a",
@@ -15,9 +15,9 @@
     "vendor/video/src/session-media-fetch.ts": "0552979581f2b8e54298d757449896f99de4417f948863ece6efb982548b3a30",
     "vendor/video/src/session-player.ts": "faff5dab1d8cadcc3bbfc894fd21512a3afb2e9d2809d223955b1ed9ce658b89",
     "vendor/video/src/session-request.ts": "a861f622f95d66971daec41d8efde79513920ab89b9e3e7a7cf487e1c730518e",
-    "vendor/video/src/session.ts": "3159fc9d8521a3d838a38779662f83bda6953591e46239c91ca3e9125a49d3ee",
+    "vendor/video/src/session.ts": "c7c5979fa190840ae3dc2f505ca3213096a2c80185716809cfc6a1379651037b",
     "vendor/video/src/source-authorization.ts": "5bf2e33a9eedbf9ce253153dcefd44d0a1dcbcafa73e6fd8e459592b6c4c30f9",
-    "vendor/video/src/tauri-native.ts": "394824a4c01f2dff00b8dbe312f61abdc57d63e8c9cdea75657f4d207683fcae",
+    "vendor/video/src/tauri-native.ts": "081edb9d7930824dfd3302419b047d83e731f7669de301c2d603a61ea48dae18",
     "vendor/video/src/tauri-native/aperture.ts": "860a4c36aaaf16a47ff0c97e0dc8d6326beefd86178a257664145136e6ad07d1",
     "vendor/video/src/tauri-native/capabilities.ts": "40a8b6a8070bdc51f095842818fac69c8694f02beec72b22af3d86c5ea9f9702",
     "vendor/video/src/tauri-native/native-controls.ts": "e2c66cdaf9ac5171bb5f1fb970366fd5729975ffe89483eb081e4f6e3958760c",
@@ -28,7 +28,7 @@
     "vendor/video/src/tauri-native/native-surface-paint.ts": "e7a0df356a674f4b457b22c7a5be7f49a517155e1b3731d96ac750a617c198f5",
     "vendor/video/src/tauri-native/native-surface-state.ts": "9d2a01e5f778ac84a4dc0177b201b128dcc2326108397dc4c8aa70f55b51d84b",
     "vendor/video/src/tauri-native/types.ts": "15b85a26beb1fda0a0922cd6a2c708afaf399978ebc660df996bf98b02d36daf",
-    "vendor/video/src/tauri-native/wire.ts": "4a825671d56fb9adea39a79995898c049981406d837b2ba4a11ad604ac391471",
+    "vendor/video/src/tauri-native/wire.ts": "8a7b9ab132900117ba03a2e04f910703bf9adca8c493d115162f373e988d2b67",
     "vendor/video/src/tizen-avplay.ts": "e6624e60d1aedcb0c64ce15eaed471f918923f4750dc3e31b8400d5b4cf2aae2",
     "vendor/video/src/types.ts": "f5d121454a469955e6fcf0d742388abe5572374e65f41cc1c62ebe7c21a77b2d",
     "vendor/video/src/vizio-evidence.ts": "3f6135c3a6b99677d84fce70d393a6cb43ced88397cb2098ed3e0f1bcbea42e0",

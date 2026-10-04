@@ -848,3 +848,10 @@
 .vx-player__quality { display: flex; align-items: center; justify-content: space-between; padding: 12px; }
 .vx-player__quality select { color: inherit; background: var(--viptv-color-surface-2); padding: 8px; border: 1px solid #ffffff24; border-radius: 8px; }
 .vx-timeline__bubble img { display: block; width: 160px; height: 90px; object-fit: contain; margin-bottom: 4px; }
+
+/* Keep control vectors on integer pixel sizes at desktop scale. */
+@media (min-width: 600px) {
+  [data-layout="responsive"] .vx-player__control { --vx-player-icon: 24px; }
+  [data-layout="responsive"] .vx-player__control--skip { --vx-player-icon: 30px; }
+}
+[data-layout="responsive"] .vx-player__control > svg { shape-rendering: geometricPrecision; }

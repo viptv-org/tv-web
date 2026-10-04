@@ -64,10 +64,16 @@ export function Shelf({
       detach.current = null;
       scroller.current = node;
       if (node) {
-        node.addEventListener("scroll", read, { passive: true });
+        let frame = 0;
+        const scheduleRead = () => {
+          if (frame) return;
+          frame = requestAnimationFrame(() => { frame = 0; read(); });
+        };
+        node.addEventListener("scroll", scheduleRead, { passive: true });
         node.addEventListener("scrollend", read);
         detach.current = () => {
-          node.removeEventListener("scroll", read);
+          cancelAnimationFrame(frame);
+          node.removeEventListener("scroll", scheduleRead);
           node.removeEventListener("scrollend", read);
         };
       }

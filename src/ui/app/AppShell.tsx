@@ -1,3 +1,4 @@
+import { installDesktopPointerInput } from "../desktopInput";
 import { WindowResizeBorders } from "../WindowResizeBorders";
 import { ResponsiveSignIn } from "../ResponsiveSignIn";
 import { RemoteRoot } from "../remote";
@@ -25,8 +26,9 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
  * dialogs, all reading from the assembled app object.
  */
 export function AppShell({ app }: { app: AppApi }) {
-  const { activeTrackPopup, bootingHome, requestHomeRows, detailOrigin, api, audioTrackList, authorize, back, browser, busy, canvas, cards, casting, catalog, catalogError, catalogs, catalogValues, chooseProfile, closeCast, commitSeek, compactHome, detail, discoverSources, editingProfile, editProfile, engineChoice, engineChoices, entry, episodes, fail, favorites, firstHomeCatalog, fullscreenControl, go, heroDetails, heroItem, heroPresentation, heroRotation, highlighted, homeRows, isMaximized, items, lastControlActivity, layout, libraryQueue, loadCatalog, manage, managing, mediaKey, mediaKeyUp, modal, navigate, nextEpisode, nextSkip, oled, openCast, openingSource, overlay, pair, pairExpired, pairing, platform, play, player, playerInfoOpen, playerNotice, playerRoot, prefs, preparing, profile, profilePage, profiles, qr, query, queue, readBufferedRanges, recentLive, responsive, screen, searchKey, searchPartial, searchRows, season, seek, selected, selectedPresentation, selectEngine, previewSources, sourcePreview, stack, setActiveTrackPopup, setCompactHome, setControlActivity, setEditingProfile, setEntry, setLibraryQueue, setManaging, setModal, setOverlay, setPlayerInfoOpen, setPrefs, setProfile, setProfilePage, setProfiles, setQuery, setScreen, setSeason, setSeek, setSettingsSubpage, setSourceProvider, setSourceQuality, settingsSubpage, shelfCards, snapshot, sourceFocusPending, sourceProvider, sourceProducers, sourceQuality, sources, stop, subtitleOffOption, surfaceClick, textTrackList, toggle, toggleLiveMute, toggleOled, togglePlayback, trackChoices, video } = app;
+  const { activeTrackPopup, bootingHome, requestHomeRows, detailOrigin, api, audioTrackList, authorize, back, browser, busy, canvas, cards, casting, catalog, catalogError, catalogs, catalogValues, chooseProfile, closeCast, commitSeek, seekBy, compactHome, detail, discoverSources, editingProfile, editProfile, engineChoice, engineChoices, entry, episodes, fail, favorites, firstHomeCatalog, fullscreenControl, go, heroDetails, heroItem, heroPresentation, heroRotation, highlighted, homeRows, isMaximized, items, lastControlActivity, layout, libraryQueue, loadCatalog, manage, managing, mediaKey, mediaKeyUp, modal, navigate, nextEpisode, nextSkip, oled, openCast, openingSource, overlay, pair, pairExpired, pairing, platform, play, player, playerInfoOpen, playerNotice, playerRoot, prefs, preparing, profile, profilePage, profiles, qr, query, queue, readBufferedRanges, recentLive, responsive, screen, searchKey, searchPartial, searchRows, season, seek, selected, selectedPresentation, selectEngine, previewSources, sourcePreview, stack, setActiveTrackPopup, setCompactHome, setControlActivity, setEditingProfile, setEntry, setLibraryQueue, setManaging, setModal, setOverlay, setPlayerInfoOpen, setPrefs, setProfile, setProfilePage, setProfiles, setQuery, setScreen, setSeason, setSeek, setSettingsSubpage, setSourceProvider, setSourceQuality, settingsSubpage, shelfCards, snapshot, sourceFocusPending, sourceProvider, sourceProducers, sourceQuality, sources, stop, subtitleOffOption, surfaceClick, textTrackList, toggle, toggleLiveMute, toggleOled, togglePlayback, trackChoices, video } = app;
 
+  useEffect(() => isDesktopShell ? installDesktopPointerInput() : undefined, []);
   const [pictureMode, setPictureMode] = useState<"fit" | "fill">("fit");
   const lastPointerPosition = useRef<{ x: number; y: number; id: number; type: string }>();
   useEffect(() => { lastPointerPosition.current = undefined; }, [screen]);
@@ -78,7 +80,7 @@ export function AppShell({ app }: { app: AppApi }) {
   const openHeaderSettings = () => { void navigate("Settings"); };
   return (
     <RemoteRoot
-      inputMode={layout}
+      inputMode={isDesktopShell ? "desktop" : layout}
       onToggleFullscreen={() => {
         if (activeTrackPopup) {
           setActiveTrackPopup(null);
@@ -320,6 +322,7 @@ export function AppShell({ app }: { app: AppApi }) {
                 selected={selected}
                 sources={sources}
                 producers={sourceProducers}
+                desktop={isDesktopShell}
                 sourceQuality={sourceQuality}
                 sourceProvider={sourceProvider}
                 providerPickerOpen={modal?.title === "Source provider"}
@@ -399,6 +402,7 @@ export function AppShell({ app }: { app: AppApi }) {
                 setSeek={setSeek}
                 setOverlay={setOverlay}
                 commitSeek={commitSeek}
+                seekBy={seekBy}
                 togglePlayback={togglePlayback}
                 toggleLiveMute={toggleLiveMute}
                 fullscreenControl={fullscreenControl}

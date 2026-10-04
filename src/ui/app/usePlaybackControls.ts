@@ -22,34 +22,49 @@ export function usePlaybackControls(app: NavigationApi) {
   // A committed seek still in flight (a managed seek waits for the server):
   // the player shows its buffering ring / BUFFERING status meanwhile.
   const [seekPending, setSeekPending] = useState(false);
-  const seeksInFlight = useRef(0);
-  const commitSeek = async (position: number) => {
-    // The target stays displayed until the engine actually lands there;
-    // clearing it up front teleports the thumb back to the pre-seek spot.
+  const latestSeek = useRef<{ position: number; revision: number; sessionId: number }>();
+  const seekRevision = useRef(0);
+  const seekRunner = useRef<Promise<void>>();
+  const commitSeek = (position: number): Promise<void> => {
+    latestSeek.current = { position, revision: ++seekRevision.current, sessionId: player.current?.snapshot.sessionId ?? 0 };
     setSeek(position);
     seekTarget.current = position;
-    if (Math.abs(position - (snapshot?.time.positionSeconds ?? 0)) < 0.5) {
-      setSeek(undefined);
-      seekTarget.current = undefined;
-      return;
-    }
-    seeksInFlight.current++;
+    if (seekRunner.current) return seekRunner.current;
     setSeekPending(true);
-    try {
-      await controller.current?.seekFrom(
-        () => position,
-        () => snapshot?.time.positionSeconds ?? 0,
-      );
-    } catch {
-      setSeek(undefined);
-      seekTarget.current = undefined;
-      // The player notice pill (copy.md): the engine / server reason is not
-      // user copy (a refused managed seek reads "VIPTV could not complete…").
-      setPlayerNotice({ message: "The stream could not seek there.", key: Date.now() });
-    } finally {
-      seeksInFlight.current--;
-      if (!seeksInFlight.current) setSeekPending(false);
-    }
+    const run = async () => {
+      try {
+        while (latestSeek.current) {
+          const request = latestSeek.current;
+          if (request.sessionId !== player.current?.snapshot.sessionId) {
+            latestSeek.current = undefined;
+            break;
+          }
+          try {
+            await controller.current?.seekFrom(
+              () => request.position,
+              () => player.current?.snapshot.time.positionSeconds ?? 0,
+            );
+          } catch {
+            if (latestSeek.current?.revision === request.revision && request.sessionId === player.current?.snapshot.sessionId) {
+              setSeek(undefined);
+              seekTarget.current = undefined;
+              setPlayerNotice({ message: "The stream could not seek there.", key: Date.now() });
+            }
+          }
+          if (latestSeek.current?.revision === request.revision) latestSeek.current = undefined;
+        }
+      } finally {
+        seekRunner.current = undefined;
+        setSeekPending(false);
+      }
+    };
+    seekRunner.current = run();
+    return seekRunner.current;
+  };
+  const seekBy = (delta: number) => {
+    const position = seekTarget.current ?? player.current?.snapshot.time.positionSeconds ?? snapshot?.time.positionSeconds ?? 0;
+    const duration = player.current?.snapshot.time.durationSeconds ?? snapshot?.time.durationSeconds;
+    return commitSeek(Math.max(0, Math.min(duration || Infinity, position + delta)));
   };
 
   const togglePlayback = () =>
@@ -297,7 +312,7 @@ export function usePlaybackControls(app: NavigationApi) {
         }))
       : (serverAudio ?? []).map((t) => ({
           id: String(t.inputIndex),
-          label: t.title || t.language || `Track ${t.inputIndex + 1}`,
+          label: [t.title, t.language].find(value => value && !/^(und|unknown|undefined)$/i.test(value)) || `Track ${t.inputIndex + 1}`,
           language: t.language,
           available: t.selectable,
           selected: t.selected,
@@ -329,7 +344,7 @@ export function usePlaybackControls(app: NavigationApi) {
         }))
       : (serverText ?? []).map((t) => ({
           id: String(t.inputIndex),
-          label: t.title || t.language || `Track ${t.inputIndex + 1}`,
+          label: [t.title, t.language].find(value => value && !/^(und|unknown|undefined)$/i.test(value)) || `Track ${t.inputIndex + 1}`,
           language: t.language,
           available: t.selectable,
           selected: t.selected,
@@ -385,5 +400,5 @@ export function usePlaybackControls(app: NavigationApi) {
     { label: "Fallback", value: snapshot?.diagnostics?.fallbackReason ?? "" },
   ].filter((row) => row.value);
 
-  return { commitSeek, togglePlayback, toggleLiveMute, readBufferedRanges, surfaceClick, mediaKey, mediaKeyUp, editProfile, trackChoices, audioTrackList, textTrackList, subtitleOffOption, subtitlesCanTurnOff, playerInfoRows, playerNotice, setPlayerNotice, seekPending };
+  return { commitSeek, seekBy, togglePlayback, toggleLiveMute, readBufferedRanges, surfaceClick, mediaKey, mediaKeyUp, editProfile, trackChoices, audioTrackList, textTrackList, subtitleOffOption, subtitlesCanTurnOff, playerInfoRows, playerNotice, setPlayerNotice, seekPending };
 }

@@ -14,6 +14,13 @@ import {
 
 afterEach(() => vi.useRealTimers());
 
+it('keeps backward seek targets pinned through the old clock and transient zero', () => {
+  expect(seekPinReleased(17, 27, 'playing')).toBe(false);
+  expect(seekPinReleased(17, 0, 'playing')).toBe(false);
+  expect(seekPinReleased(17, 17.2, 'playing')).toBe(true);
+  expect(seekPinReleased(17, 17, 'paused')).toBe(true);
+});
+
 it("formats the clock as m:ss and h:mm:ss across the hour boundary", () => {
   expect(formatPlaybackTime(0)).toBe("0:00");
   expect(formatPlaybackTime(59)).toBe("0:59");

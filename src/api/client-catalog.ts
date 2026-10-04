@@ -197,7 +197,7 @@ export class TvApiCatalog extends TvApiClientBase {
     const events = normalizeResponse<StreamPoll>("streamPoll", v).events;
     const failure = step.state.errors?.[0];
     if (step.done && !step.sources.length && failure &&
-        (!options?.retainProducerFailures || !events.some((event) => /^addon:\d+$/.test(event.source)))) {
+        (!options?.retainProducerFailures || !events.some((event) => /^(addon|iptv):\d+$/.test(event.source)))) {
       throw new TvApiError(502, failure.message, failure.code ?? undefined);
     }
     return { ...step, events };

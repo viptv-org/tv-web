@@ -190,10 +190,12 @@ export function useCatalog(app: PlaybackSessionApi) {
       let producers = known?.producers ?? [];
       setSourceProducers(producers);
       let names = new Map<string, string>();
+      let icons = new Map<string, string>();
       void api.addons().then((addons) => {
         if (ticket !== epoch.current) return;
         names = configuredAddonNames(addons);
-        producers = observeSourceProducers(producers, [], names);
+        icons = new Map(addons.filter(addon => typeof addon.logo === "string").map(addon => [`addon:${addon.id}`, String(addon.logo)]));
+        producers = observeSourceProducers(producers, [], names, icons);
         setSourceProducers(producers);
       }).catch(() => undefined);
       let done = known?.done ?? false;
@@ -204,7 +206,7 @@ export function useCatalog(app: PlaybackSessionApi) {
           if (ticket !== epoch.current) return;
           step = poll.state;
           done = poll.done;
-          producers = observeSourceProducers(producers, poll.events, names);
+          producers = observeSourceProducers(producers, poll.events, names, icons);
           setSourceProducers(producers);
           remember(key, id, step, producers, done);
         }
