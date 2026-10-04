@@ -157,7 +157,7 @@ export function useCatalog(app: PlaybackSessionApi) {
       if (preview.current?.cancel === cancel) stopPreview();
     };
   };
-  const discoverSources = async (item: MediaItem, resume = false) => {
+  const discoverSources = async (item: MediaItem, resume = false, filters?: { sourceProvider: string; sourceQuality: string }) => {
     if (item.type === "live") { await play(item); return; }
     if (resume && item.queueStatus === "next" && item.previousEpisode) {
       await nextEpisode(item.previousEpisode);
@@ -174,8 +174,8 @@ export function useCatalog(app: PlaybackSessionApi) {
     setSelected(item);
     setSources([]);
     setSourceProducers([]);
-    setSourceQuality("All");
-    setSourceProvider("All");
+    setSourceQuality(filters?.sourceQuality ?? "All");
+    setSourceProvider(filters?.sourceProvider ?? "All");
     setBusy(true);
     const ticket = ++epoch.current;
     const key = sourceKey(item);

@@ -92,6 +92,7 @@ export function describeApiError(error: unknown): ErrorDetail {
  * for each one.
  */
 export interface ConnectionIssue {
+  readonly dismissed?: boolean;
   readonly failedCount: number;
   readonly firstFailedAt: number;
   readonly lastFailedAt: number;
@@ -103,6 +104,7 @@ export function nextConnectionFailure(
 ): ConnectionIssue {
   return previous
     ? {
+        dismissed: previous.dismissed,
         failedCount: previous.failedCount + 1,
         firstFailedAt: previous.firstFailedAt,
         lastFailedAt: now,

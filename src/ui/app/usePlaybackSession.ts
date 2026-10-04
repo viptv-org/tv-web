@@ -9,6 +9,7 @@ import { resolveNext } from "../continuation";
 import { focusElement } from "../remote";
 import { enrichDetail, mergeEpisodeProgress, initialEpisode } from "../detailProgress";
 import { safeRestoredRoute } from "../browserNavigation";
+import { sourceKey } from "../../screens/titleSources";
 import { normalizeCore } from "../../core";
 import { desktopInvoker } from "./appShared";
 import type { AppApi, PlaybackEngineApi } from "./useTvApp";
@@ -95,7 +96,8 @@ export function usePlaybackSession(app: PlaybackEngineApi) {
         setSelected(reference); setEpisodes([]); setSources([]);
         if (route.screen === "sources") {
           browserFromRoute.current = true;
-          const pending = (app as AppApi).discoverSources(reference);
+          const filters = cached?.screen === "sources" && cached.selected && sourceKey(cached.selected) === sourceKey(reference) ? cached : undefined;
+          const pending = (app as AppApi).discoverSources(reference, false, filters);
           browserFromRoute.current = false;
           browserApplying.current = false;
           await pending;
@@ -157,6 +159,8 @@ export function usePlaybackSession(app: PlaybackEngineApi) {
       setItems(old.items);
       setEpisodes(old.episodes);
       setSources(old.sources);
+      app.setSourceProvider(old.sourceProvider ?? "All");
+      app.setSourceQuality(old.sourceQuality ?? "All");
       if (!restoredScroll.current) setTimeout(() => focusElement(old.focus), 50);
       if (old.screen === "detail" && old.selected) {
         const ticket = epoch.current;

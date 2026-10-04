@@ -129,6 +129,7 @@ export function AppShell({ app }: { app: AppApi }) {
         {responsive && isDesktopShell && !fullscreenControl.fullscreen && (
           <DesktopTitlebar
             variant={["pairing", "profiles"].includes(screen) ? "pairing" : "app"}
+            onTogglePlayerFullscreen={screen === "player" ? () => void fullscreenControl.toggle() : undefined}
             canGoForward={browser.current?.canGoForward() ?? false}
             onNavigateForward={() => void browser.current?.forward()}
             canGoBack={

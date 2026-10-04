@@ -59,6 +59,7 @@ export type ScrollAnchor = {
 };
 export type BrowserSnapshot = {
   screen: Screen; subpage?: SettingsSubpage; selected?: MediaItem; items: readonly MediaItem[]; episodes: readonly MediaItem[]; sources: readonly MediaSource[];
+  sourceProvider: string; sourceQuality: string;
   focus: string; scroll?: ScrollAnchor; query: string; season?: number; catalog?: Catalog; catalogValues: Record<string, string>; nextSkip?: number;
 };
 

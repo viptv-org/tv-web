@@ -1,3 +1,5 @@
+import { invoke } from '@tauri-apps/api/core';
+import { getCurrentWindow } from '@tauri-apps/api/window';
 import { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
 
 export interface NativeFullscreenWindow {
@@ -7,12 +9,12 @@ export interface NativeFullscreenWindow {
 /** Tracks ownership so leaving playback does not un-fullscreen somebody else's window. */
 export class PlayerFullscreen {
   private entered = false;
-  constructor(private readonly host: NativeFullscreenWindow) {}
-  async toggle() {
+  constructor(private readonly host: NativeFullscreenWindow, private readonly toggleHost?: (current: boolean) => Promise<boolean>) {}
+  async toggle(own = true) {
     const current = await this.host.isFullscreen();
-    await this.host.setFullscreen(!current);
-    this.entered = !current;
-    return !current;
+    const next = this.toggleHost ? await this.toggleHost(current) : (await this.host.setFullscreen(!current), !current);
+    this.entered = own && next;
+    return next;
   }
   async exit() {
     this.entered = false;
@@ -34,12 +36,12 @@ export function usePlayerFullscreen(active: boolean, root: RefObject<HTMLElement
   const owner = useRef(false);
   const native = useRef<PlayerFullscreen>();
   const pending = useRef(false);
+  const mounted = useRef(true);
   const activeRef = useRef(active);
   activeRef.current = active;
   const isNative = '__TAURI_INTERNALS__' in window;
   const read = useCallback(async () => {
     if (isNative) {
-      const { getCurrentWindow } = await import('@tauri-apps/api/window');
       setFullscreen(await getCurrentWindow().isFullscreen());
     } else setFullscreen(!!document.fullscreenElement || !!(video.current as LegacyVideo | null)?.webkitDisplayingFullscreen);
   }, [isNative, video]);
@@ -68,23 +70,28 @@ export function usePlayerFullscreen(active: boolean, root: RefObject<HTMLElement
     await read();
   }, [isNative, read, video]);
   useEffect(() => {
-    if (!active && !allowWindowFullscreen) void release().catch(onError);
+    if (!active) void release().catch(onError);
   }, [active, release]);
-  useEffect(() => () => { void release().catch(() => {}); }, [release]);
+  useEffect(() => {
+    mounted.current = true;
+    return () => { mounted.current = false; void release().catch(() => {}); };
+  }, [release]);
   const toggle = async () => {
     if (pending.current) return;
     pending.current = true;
+    const playerToggle = activeRef.current;
     try {
       if (isNative) {
-        try {
-          const { invoke } = await import('@tauri-apps/api/core');
-          const next = await invoke<boolean>('app_window_toggle_fullscreen');
-          setFullscreen(next);
-        } catch {
-          const { getCurrentWindow } = await import('@tauri-apps/api/window');
-          native.current ??= new PlayerFullscreen(getCurrentWindow());
-          setFullscreen(await native.current.toggle());
-        }
+          const host = getCurrentWindow();
+        native.current ??= new PlayerFullscreen(host, async current => {
+          try {
+            return await invoke<boolean>('app_window_toggle_fullscreen');
+          } catch {
+            await host.setFullscreen(!current);
+            return !current;
+          }
+        });
+        setFullscreen(await native.current.toggle(playerToggle));
       } else if (document.fullscreenElement) {
         await document.exitFullscreen(); owner.current = false;
       } else if (root.current?.requestFullscreen) {
@@ -95,7 +102,7 @@ export function usePlayerFullscreen(active: boolean, root: RefObject<HTMLElement
         if (!element?.webkitEnterFullscreen || !element.currentSrc) throw new Error('Fullscreen is not available in this browser.');
         element.webkitEnterFullscreen(); owner.current = true;
       }
-      if (!activeRef.current && !allowWindowFullscreen) await release();
+      if ((!mounted.current || !activeRef.current) && (playerToggle || !allowWindowFullscreen)) await release();
       else await read();
     } catch (error) { onError(error); }
     finally { pending.current = false; }
@@ -103,8 +110,7 @@ export function usePlayerFullscreen(active: boolean, root: RefObject<HTMLElement
   const exit = async () => {
     try {
       if (isNative) {
-        const { getCurrentWindow } = await import('@tauri-apps/api/window');
-        native.current ??= new PlayerFullscreen(getCurrentWindow());
+          native.current ??= new PlayerFullscreen(getCurrentWindow());
         await native.current.exit();
       } else {
         owner.current = false;

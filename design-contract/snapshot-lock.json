@@ -1,7 +1,7 @@
 {
   "version": 1,
   "repository": "viptv-org/design",
-  "commit": "f879e1520c3e4c7574e04a7a00c6435c404b77eb",
+  "commit": "a8b5acac2f810e3d447334e64b7fc3f44c696b4d",
   "files": {
     "design-contract/.github/pull_request_template.md": {
       "source": ".github/pull_request_template.md",
@@ -181,7 +181,7 @@
     },
     "design-contract/viptv-design-system/decisions.md": {
       "source": "viptv-design-system/decisions.md",
-      "sha256": "8a46d77c0f8385f3498cb80d0bb54bcb883f6667c4008b14f45b350aae0c06ea"
+      "sha256": "32a81e98b3fd79727b8ec79d65b066ac17d7d10928f3ebac994798642e71f1f1"
     },
     "design-contract/viptv-design-system/reference/screens/index.json": {
       "source": "viptv-design-system/reference/screens/index.json",

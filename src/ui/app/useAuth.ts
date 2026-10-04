@@ -32,6 +32,8 @@ export function useAuth(app: DialogsApi) {
       items,
       episodes,
       sources,
+      sourceProvider: app.sourceProvider,
+      sourceQuality: app.sourceQuality,
     });
     setError("");
     setScreen(next);
