@@ -1,6 +1,6 @@
 {
   "repository": "viptv-org/video",
-  "revision": "f22a2a6672c01f55c2c777e27a1428bf5e998d88",
+  "revision": "618cf9126882951398040bddcf987e4b4e1ec847",
   "files": {
     "vendor/video/src/browser-capabilities.ts": "3261889250b9ea0ea3ac33cd23dcc756ce3945f58f321fe62d54809481c5b921",
     "vendor/video/src/browser-policy.ts": "463891c85e85cf6b9b09083f99f671e882976171f07307a4d5d9569939ac311a",
@@ -17,7 +17,7 @@
     "vendor/video/src/session-request.ts": "a861f622f95d66971daec41d8efde79513920ab89b9e3e7a7cf487e1c730518e",
     "vendor/video/src/session.ts": "9aefbf22e60ce7e6cea57b7bc463b0cb0601047884e8ddd130fdef3e6a903d33",
     "vendor/video/src/source-authorization.ts": "5bf2e33a9eedbf9ce253153dcefd44d0a1dcbcafa73e6fd8e459592b6c4c30f9",
-    "vendor/video/src/tauri-native.ts": "dea65d6bd3cad4e3ab267df7dd773379ee95dfc9d4afa0e0fc2ff531e28641f9",
+    "vendor/video/src/tauri-native.ts": "3c4751b8095023c29c7499bbc83cb001d6c557eeabaac741d15100bf7b535b7d",
     "vendor/video/src/tauri-native/aperture.ts": "860a4c36aaaf16a47ff0c97e0dc8d6326beefd86178a257664145136e6ad07d1",
     "vendor/video/src/tauri-native/capabilities.ts": "40a8b6a8070bdc51f095842818fac69c8694f02beec72b22af3d86c5ea9f9702",
     "vendor/video/src/tauri-native/native-controls.ts": "e2c66cdaf9ac5171bb5f1fb970366fd5729975ffe89483eb081e4f6e3958760c",
