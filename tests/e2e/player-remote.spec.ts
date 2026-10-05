@@ -59,6 +59,12 @@ async function installVizioMedia(page: Page) {
     };
     const positions = new WeakMap<HTMLMediaElement, number>();
     const playing = new WeakMap<HTMLMediaElement, boolean>();
+    const frames = new WeakMap<HTMLMediaElement, number>();
+    HTMLVideoElement.prototype.getVideoPlaybackQuality = function() {
+      const count = (frames.get(this) ?? 0) + (playing.get(this) ? 1 : 0);
+      frames.set(this, count);
+      return { creationTime: performance.now(), totalVideoFrames: count, droppedVideoFrames: 0, corruptedVideoFrames: 0 };
+    };
     const completed = new WeakMap<HTMLMediaElement, boolean>();
     const sources = new WeakMap<HTMLMediaElement, string>();
     // The adapter is under test, not Chromium's HLS stack. Keeping the

@@ -1,7 +1,7 @@
 {
   "version": 1,
   "repository": "viptv-org/design",
-  "commit": "1742afa2b50d30638fa46f3abc8c1a76638a51e1",
+  "commit": "b64c98e3a97660fbee17aebb7c548f87a6494790",
   "files": {
     "design-contract/.github/pull_request_template.md": {
       "source": ".github/pull_request_template.md",
@@ -65,7 +65,7 @@
     },
     "design-contract/IMPLEMENTATION_V2.md": {
       "source": "IMPLEMENTATION_V2.md",
-      "sha256": "3759d642a1c5b805d7efe4c8cf53ee29e99496a8b9a412ca45c759dc1a17104c"
+      "sha256": "6b776cf83d85033637cbaebfbe20a4f1381bcd977c7c3ef819ad3e6400f1739f"
     },
     "design-contract/LOCAL_MODE.md": {
       "source": "LOCAL_MODE.md",
@@ -82,6 +82,10 @@
     "design-contract/PLAYBACK_CAPABILITIES.md": {
       "source": "PLAYBACK_CAPABILITIES.md",
       "sha256": "ecaeab7beb0b0756c45910318aaa07bc5f9b2b5df0ea640cabb1608bcc70d0e7"
+    },
+    "design-contract/PLAYBACK_ERROR_COPY.md": {
+      "source": "PLAYBACK_ERROR_COPY.md",
+      "sha256": "c50f0e769a18d13f92f0b058d87dcf6377768fcd9411221019f5ef7af89bd094"
     },
     "design-contract/README.md": {
       "source": "README.md",
@@ -181,7 +185,7 @@
     },
     "design-contract/viptv-design-system/decisions.md": {
       "source": "viptv-design-system/decisions.md",
-      "sha256": "73b2e8e061b7d275b614e381e0d8a7c79c5e9d267fba349ec1674ebe140e9a93"
+      "sha256": "32a81e98b3fd79727b8ec79d65b066ac17d7d10928f3ebac994798642e71f1f1"
     },
     "design-contract/viptv-design-system/reference/screens/index.json": {
       "source": "viptv-design-system/reference/screens/index.json",

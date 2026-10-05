@@ -77,15 +77,15 @@ export function EpisodeCaption({ number, title, synopsis, eyebrow }: { number?: 
 export function sourceRowClass(best?: boolean) {
   return best ? "vx-source-row vx-source-row--best" : "vx-source-row";
 }
-export function SourceRowContent({ quality, provider, file, best, bestLabel = "Best match", opening, openingLabel = "Opening…", icon }: {
-  quality: ReactNode; provider: ReactNode; file?: ReactNode; best?: boolean; bestLabel?: ReactNode; opening?: boolean; openingLabel?: ReactNode; icon: ReactNode;
+export function SourceRowContent({ quality, provider, providerIcon, file, best, bestLabel = "Best match", opening, openingLabel = "Opening…", icon }: {
+  quality: ReactNode; provider: ReactNode; providerIcon?: ReactNode; file?: ReactNode; best?: boolean; bestLabel?: ReactNode; opening?: boolean; openingLabel?: ReactNode; icon: ReactNode;
 }) {
   return (
     <>
-      <span className="vx-source-row__quality">{quality}</span>
+      <span className="vx-source-row__quality">{providerIcon ?? quality}</span>
       <span className="vx-source-row__body">
         {best ? <span className="vx-eyebrow vx-eyebrow--accent">{bestLabel}</span> : null}
-        <span className="vx-source-row__provider">{provider}</span>
+        <span className="vx-source-row__provider">{provider}{providerIcon && quality ? <span className="vx-source-row__quality-label">{quality}</span> : null}</span>
         {file ? <span className="vx-source-row__file">{file}</span> : null}
       </span>
       {opening

@@ -1,0 +1,31 @@
+import { act, renderHook } from '@testing-library/react';
+import { afterEach, expect, it, vi } from 'vitest';
+import { TvApiError } from '../../src/api/client';
+import { useDialogs } from '../../src/ui/app/useDialogs';
+import type { CoreApi } from '../../src/ui/app/useTvApp';
+
+afterEach(() => vi.useRealTimers());
+it('keeps outage dismissal through failures, continues bounded probes and permits a new notice after recovery', async () => {
+  vi.useFakeTimers();
+  const probeBackend = vi.fn().mockResolvedValue(false);
+  const app = { api: { probeBackend }, responsive: true, screen: 'Home', setBootingHome: vi.fn(), setEntryState: vi.fn(), setError: vi.fn(), setStartupAttempt: vi.fn(), setToast: vi.fn(), errorFocus: { current: '' }, modalFocus: { current: '' } } as unknown as CoreApi;
+  const view = renderHook(() => useDialogs(app));
+  const failure = new TvApiError(0, 'Fixture backend unavailable');
+  await act(async () => { view.result.current.fail(failure); });
+  await act(async () => { await vi.advanceTimersByTimeAsync(1); });
+  expect(probeBackend).toHaveBeenCalledTimes(1);
+  const first = view.result.current.connection?.firstFailedAt;
+  await act(async () => { view.result.current.setConnection(previous => previous ? { ...previous, dismissed: true } : previous); view.result.current.fail(failure); });
+  expect(view.result.current.connection?.dismissed).toBe(true);
+  expect(view.result.current.connection?.firstFailedAt).toBe(first);
+  await act(async () => { await vi.advanceTimersByTimeAsync(9998); });
+  expect(probeBackend).toHaveBeenCalledTimes(1);
+  probeBackend.mockResolvedValue(true);
+  await act(async () => { await vi.advanceTimersByTimeAsync(2); });
+  expect(probeBackend).toHaveBeenCalledTimes(2);
+  expect(view.result.current.connection).toBeUndefined();
+  await act(async () => { view.result.current.fail(failure); });
+  expect(view.result.current.connection?.dismissed).toBeUndefined();
+  expect(view.result.current.connection?.failedCount).toBe(1);
+  view.unmount();
+});

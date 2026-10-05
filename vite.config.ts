@@ -7,6 +7,8 @@ import solid from "vite-plugin-solid";
 // Opt-in LAN preview upstream; defaults to the production origin only when
 // explicitly provided, so dev configurations never silently proxy to prod.
 const upstream = process.env.VIPTV_PREVIEW_UPSTREAM ?? "https://viptv.syek.tech";
+const assetTag = process.env.VIPTV_ASSET_TAG ?? "";
+if (assetTag && !/^[A-Za-z0-9_-]+$/.test(assetTag)) throw new Error("Invalid deployment asset tag");
 // One pooled keep-alive agent: without it every proxied request pays a new
 // TLS handshake to the upstream, which serialises a page's API burst.
 const upstreamAgent = new Agent({ keepAlive: true, maxSockets: 32 });
@@ -40,6 +42,11 @@ export default defineConfig(({ command }) => ({
   build: {
     target: "es2017",
     rollupOptions: {
+      ...(assetTag ? { output: {
+        entryFileNames: `assets/[name]-${assetTag}-[hash].js`,
+        chunkFileNames: `assets/[name]-${assetTag}-[hash].js`,
+        assetFileNames: `assets/[name]-${assetTag}-[hash][extname]`,
+      } } : {}),
       // The bootstrap selects SolidTV for TV queries and React for web/desktop.
       // Direct SolidTV/legacy URLs remain compatible.
       input: {

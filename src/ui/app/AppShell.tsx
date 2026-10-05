@@ -1,3 +1,4 @@
+import { installDesktopPointerInput } from "../desktopInput";
 import { WindowResizeBorders } from "../WindowResizeBorders";
 import { ResponsiveSignIn } from "../ResponsiveSignIn";
 import { RemoteRoot } from "../remote";
@@ -25,9 +26,12 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
  * dialogs, all reading from the assembled app object.
  */
 export function AppShell({ app }: { app: AppApi }) {
-  const { activeTrackPopup, bootingHome, requestHomeRows, detailOrigin, api, audioTrackList, authorize, back, browser, busy, canvas, cards, casting, catalog, catalogError, catalogs, catalogValues, chooseProfile, closeCast, commitSeek, compactHome, detail, discoverSources, editingProfile, editProfile, engineChoice, engineChoices, entry, episodes, fail, favorites, firstHomeCatalog, fullscreenControl, go, heroDetails, heroItem, heroPresentation, heroRotation, highlighted, homeRows, isMaximized, items, lastControlActivity, layout, libraryQueue, loadCatalog, manage, managing, mediaKey, mediaKeyUp, modal, navigate, nextEpisode, nextSkip, oled, openCast, openingSource, overlay, pair, pairExpired, pairing, platform, play, player, playerInfoOpen, playerNotice, playerRoot, prefs, preparing, profile, profilePage, profiles, qr, query, queue, readBufferedRanges, recentLive, responsive, screen, searchKey, searchPartial, searchRows, season, seek, selected, selectedPresentation, selectEngine, previewSources, sourcePreview, stack, setActiveTrackPopup, setCompactHome, setControlActivity, setEditingProfile, setEntry, setLibraryQueue, setManaging, setModal, setOverlay, setPlayerInfoOpen, setPrefs, setProfile, setProfilePage, setProfiles, setQuery, setScreen, setSeason, setSeek, setSettingsSubpage, setSourceProvider, setSourceQuality, settingsSubpage, shelfCards, snapshot, sourceFocusPending, sourceProvider, sourceProducers, sourceQuality, sources, stop, subtitleOffOption, surfaceClick, textTrackList, toggle, toggleLiveMute, toggleOled, togglePlayback, trackChoices, video } = app;
+  const { activeTrackPopup, bootingHome, requestHomeRows, detailOrigin, api, audioTrackList, authorize, back, browser, busy, canvas, cards, casting, catalog, catalogError, catalogs, catalogValues, chooseProfile, closeCast, commitSeek, seekBy, compactHome, detail, discoverSources, editingProfile, editProfile, engineChoice, engineChoices, entry, episodes, fail, favorites, firstHomeCatalog, fullscreenControl, go, heroDetails, heroItem, heroPresentation, heroRotation, highlighted, homeRows, isMaximized, items, lastControlActivity, layout, libraryQueue, loadCatalog, manage, managing, mediaKey, mediaKeyUp, modal, navigate, nextEpisode, nextSkip, oled, openCast, openingSource, overlay, pair, pairExpired, pairing, platform, play, player, playerInfoOpen, playerNotice, playerRoot, prefs, preparing, profile, profilePage, profiles, qr, query, queue, readBufferedRanges, recentLive, responsive, screen, searchKey, searchPartial, searchRows, season, seek, selected, selectedPresentation, selectEngine, previewSources, sourcePreview, stack, setActiveTrackPopup, setCompactHome, setControlActivity, setEditingProfile, setEntry, setLibraryQueue, setManaging, setModal, setOverlay, setPlayerInfoOpen, setPrefs, setProfile, setProfilePage, setProfiles, setQuery, setScreen, setSeason, setSeek, setSettingsSubpage, setSourceProvider, setSourceQuality, settingsSubpage, shelfCards, snapshot, sourceFocusPending, sourceProvider, sourceProducers, sourceQuality, sources, stop, subtitleOffOption, surfaceClick, textTrackList, toggle, toggleLiveMute, toggleOled, togglePlayback, trackChoices, video } = app;
 
+  useEffect(() => isDesktopShell ? installDesktopPointerInput() : undefined, []);
   const [pictureMode, setPictureMode] = useState<"fit" | "fill">("fit");
+  const lastPointerPosition = useRef<{ x: number; y: number; id: number; type: string }>();
+  useEffect(() => { lastPointerPosition.current = undefined; }, [screen]);
   const presentedItem = useRef("");
   const selectedKey = selected ? `${selected.type}\0${selected.id}\0${selected.season ?? ""}\0${selected.episode ?? ""}` : "";
   useLayoutEffect(() => {
@@ -63,6 +67,7 @@ export function AppShell({ app }: { app: AppApi }) {
   // ---- Shell: app chrome (rails, phone nav, title bar) -------------------
   // Screens that show the navigation chrome (TV rail, desktop / web rail).
   const chromeScreen = !["startup", "pairing", "profiles", "player"].includes(screen);
+  const showDesktopRail = responsive && !phone && (booting || chromeScreen);
   // The desktop app searches from the title bar, so its rail has no Search.
   const inRail = (destination: NavDestination) => !(isDesktopShell && destination === "Search");
   // The rail item drawn as current: the screen's destination, or on a title /
@@ -75,7 +80,7 @@ export function AppShell({ app }: { app: AppApi }) {
   const openHeaderSettings = () => { void navigate("Settings"); };
   return (
     <RemoteRoot
-      inputMode={layout}
+      inputMode={isDesktopShell ? "desktop" : layout}
       onToggleFullscreen={() => {
         if (activeTrackPopup) {
           setActiveTrackPopup(null);
@@ -117,13 +122,14 @@ export function AppShell({ app }: { app: AppApi }) {
         sourceFocusPending.current = false;
       }}
     >
-      <div className={`desktop-app-frame ${isDesktopShell ? "desktop-shell" : "browser-shell"} ${isMaximized ? "is-maximized" : ""} ${fullscreenControl.fullscreen ? "is-fullscreen" : ""}`}>
+      <div className={`desktop-app-frame ${isDesktopShell ? "desktop-shell" : "browser-shell"} ${showDesktopRail ? "has-desktop-rail" : ""} ${isMaximized ? "is-maximized" : ""} ${fullscreenControl.fullscreen ? "is-fullscreen" : ""}`}>
         {responsive && isDesktopShell && (
           <WindowResizeBorders disabled={fullscreenControl.fullscreen || isMaximized} />
         )}
         {responsive && isDesktopShell && !fullscreenControl.fullscreen && (
           <DesktopTitlebar
             variant={["pairing", "profiles"].includes(screen) ? "pairing" : "app"}
+            onTogglePlayerFullscreen={screen === "player" ? () => void fullscreenControl.toggle() : undefined}
             canGoForward={browser.current?.canGoForward() ?? false}
             onNavigateForward={() => void browser.current?.forward()}
             canGoBack={
@@ -149,9 +155,41 @@ export function AppShell({ app }: { app: AppApi }) {
             }
           />
         )}
+        {showDesktopRail && (
+          <DesktopRail
+            current={booting ? "Home" : currentNav}
+            onNavigate={(destination) => void navigate(destination)}
+            withSearch={!isDesktopShell}
+            casting={casting}
+            onCast={openCast}
+            profile={booting ? undefined : activeProfile}
+            onProfiles={openHeaderSettings}
+            skeleton={booting}
+          />
+        )}
         <div
           ref={playerRoot}
-          onPointerMove={() => { if (responsive && screen === "player" && Date.now() - lastControlActivity.current > 1000) { lastControlActivity.current = Date.now(); setOverlay(true); setControlActivity(value => value + 1); } }}
+          onClick={(event) => {
+            // Native playback hides the HTML video anchor. Bare picture taps
+            // therefore land on its containing screen instead of the video.
+            if (event.target === event.currentTarget) surfaceClick();
+          }}
+          onDoubleClick={(event) => {
+            if (responsive && screen === "player" && event.target === event.currentTarget)
+              void fullscreenControl.toggle();
+          }}
+          onPointerMove={(event) => {
+            if (!responsive || screen !== "player") return;
+            const previous = lastPointerPosition.current;
+            const position = { x: event.clientX, y: event.clientY, id: event.pointerId, type: event.pointerType };
+            lastPointerPosition.current = position;
+            if (previous && previous.x === position.x && previous.y === position.y && previous.id === position.id && previous.type === position.type) return;
+            if (Date.now() - lastControlActivity.current > 1000) {
+              lastControlActivity.current = Date.now();
+              setOverlay(true);
+              setControlActivity(value => value + 1);
+            }
+          }}
           onPointerDownCapture={(event) => { if (responsive && screen === "player" && (event.target as HTMLElement).closest("button, input")) { setOverlay(true); setControlActivity(value => value + 1); } }}
           className={`tv-screen ${responsive ? "responsive-app" : "tv-layout"} ${isMaximized ? "is-maximized" : ""} ${fullscreenControl.fullscreen ? "is-fullscreen" : ""} screen-${screen.replace(/ /g, "-").toLowerCase()} ${screen === "player" ? "playing" : ""}`}
           data-picture-mode={responsive ? pictureMode : undefined}
@@ -165,18 +203,6 @@ export function AppShell({ app }: { app: AppApi }) {
         />
         <canvas ref={canvas} className="video player-canvas" style={{ display: "none" }} onClick={surfaceClick} />
         {(booting || emptyHomePending) && <HomeSkeleton phone={phone} />}
-        {responsive && !phone && (booting || chromeScreen) && (
-          <DesktopRail
-            current={booting ? "Home" : currentNav}
-            onNavigate={(destination) => void navigate(destination)}
-            withSearch={!isDesktopShell}
-            casting={casting}
-            onCast={openCast}
-            profile={booting ? undefined : activeProfile}
-            onProfiles={openHeaderSettings}
-            skeleton={booting}
-          />
-        )}
         {responsive && phone && (booting || (isNavDestination(screen) && screen !== "Settings")) && (
           <PhoneNav current={booting ? "Home" : currentNav} onNavigate={(destination) => void navigate(destination)} skeleton={booting} />
         )}
@@ -297,6 +323,7 @@ export function AppShell({ app }: { app: AppApi }) {
                 selected={selected}
                 sources={sources}
                 producers={sourceProducers}
+                desktop={isDesktopShell}
                 sourceQuality={sourceQuality}
                 sourceProvider={sourceProvider}
                 providerPickerOpen={modal?.title === "Source provider"}
@@ -365,6 +392,7 @@ export function AppShell({ app }: { app: AppApi }) {
             {/* Player family: the controls follow `overlay`; buffering, notices and Up Next show without them. */}
             {screen === "player" && (
               <PlayerScreen
+                desktop={isDesktopShell}
                 responsive={responsive}
                 overlay={overlay}
                 dialogOpen={!!modal}
@@ -376,6 +404,7 @@ export function AppShell({ app }: { app: AppApi }) {
                 setSeek={setSeek}
                 setOverlay={setOverlay}
                 commitSeek={commitSeek}
+                seekBy={seekBy}
                 togglePlayback={togglePlayback}
                 toggleLiveMute={toggleLiveMute}
                 fullscreenControl={fullscreenControl}

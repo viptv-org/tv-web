@@ -39,7 +39,7 @@ export function AppDialogs({ app }: { app: AppApi }) {
     setError("");
     if (startup) setStartupAttempt((attempt) => attempt + 1);
   };
-  const banner = connection ? (
+  const banner = connection && !connection.dismissed ? (
     <Banner
       title="Can’t reach the backend"
       titleId="vx-backend-banner-title"
@@ -47,7 +47,7 @@ export function AppDialogs({ app }: { app: AppApi }) {
       meta={connectionSummary(connection)}
       center={!responsive}
       actions={
-        <TvButton id="dismiss-error" className="vx-btn" onActivate={() => setConnection(undefined)}>
+        <TvButton id="dismiss-error" className="vx-btn" onActivate={() => setConnection(previous => previous ? { ...previous, dismissed: true } : previous)}>
           Dismiss
         </TvButton>
       }
@@ -90,7 +90,7 @@ export function AppDialogs({ app }: { app: AppApi }) {
         </div>
       )}
       {((banner && responsive) || errorToast || notice) && (
-        <div className="vx-toast-region">
+        <div className="vx-toast-region" data-viptv-video-controls="">
           {responsive ? banner : null}
           {errorToast}
           {notice}

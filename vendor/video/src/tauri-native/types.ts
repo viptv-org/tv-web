@@ -36,6 +36,7 @@ export interface NativeVideoSnapshot {
   readonly durationSeconds: number;
   readonly currentTimeSeconds: number;
   readonly bufferedSeconds: number;
+  readonly bufferedRanges?: readonly { start: number; end: number }[];
   readonly live?: boolean;
   readonly seekable?: boolean;
   readonly seekableStartSeconds?: number;
@@ -48,6 +49,7 @@ export interface NativeVideoSnapshot {
   readonly droppedFrames?: number;
   readonly measuredFps?: number;
   readonly hardwareBackend?: string;
+  readonly controlFailure?: 'seek' | 'track';
 
   /** The engine serving this snapshot, e.g. 'mpv' or 'gstreamer'. */
   readonly backend?: string;

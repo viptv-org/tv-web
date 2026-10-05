@@ -1,3 +1,59 @@
+# Native Recovery Integration - 2026-10-05
+
+Minimum baseline is current GitHub main, retaining the deployed direct-fetch
+retry policy, Vizio decoded-frame/pause/error safeguards and immutable asset
+tagging. Design is `b64c98e3a97660fbee17aebb7c548f87a6494790`; Video is
+`13eb9535af29023e8bb97ee444aaa18e45c40c4b`, imported with the owning sync scripts.
+
+Managed seek regressions exercise the real session controller replacing its
+decoder: rapid skips retain the latest target, while changing the selected
+source cancels stale work. Native refusals are nonterminal; source diagnostics
+redact unknown credentials inside JSON strings, including spaced labels.
+Native buffered ranges retain starts/gaps and managed timeline offsets.
+
+Current local evidence: 283 UI/API unit tests; 166 owning Video tests; seven
+typecheck groups; snapshot integrity and production build. Trusted HTTPS
+fixture acceptance covers source-filter return, titlebar fullscreen, outage
+dismissal, desktop-only backdrop behavior, browser/phone layout, restoration,
+and four remote-player scenarios. Screenshots at 1440x900 and 390x900 were
+inspected privately; synthetic media images are not native decode proof.
+
+The remote media fixture now reports advancing synthetic decoded frames. Its
+previous zero-frame report correctly triggered the retained Vizio watchdog;
+production stall detection was not disabled to make that test pass.
+Native hardware, installed-app production playback, ordinary-display scrolling,
+and Windows/macOS qualification were not rerun. Historical evidence follows.
+
+# Desktop timeline, source return and fullscreen — 2026-10-03
+
+Design `a8b5acac2f810e3d447334e64b7fc3f44c696b4d` and Video
+`f22a2a6672c01f55c2c777e27a1428bf5e998d88` are imported through the normal
+sync scripts. Selected VOD intent retains positive native duration/buffering
+before the first seek, including GStreamer live=true. Explicit desktop source
+replacement retires outgoing presentation/lease and remains empty on failure;
+managed seek/track/Next recovery stays separate.
+
+Provider and quality filters survive player, titlebar and browser Back to the
+same episode; another episode starts at All. Player-button/titlebar fullscreen
+share native ownership, including the primary command, fallback and late
+completion. Dismissing an outage hides its notice while bounded recovery probes
+continue; repeated failures keep it dismissed until recovery.
+
+Validation: 281 unit tests, all seven typecheck groups, imported-pin checks and
+production build passed. Three trusted-HTTPS browser scenarios cover filter
+return/reset, titlebar player fullscreen and outage dismissal/recovery. Native
+qualification in the desktop owner covers real GStreamer/MPV timeline/control
+facts with normal local-backend admission, plus a separate fixture-admission
+run for resizing and actual HTTP 407 failures. Both engines showed bounded
+redacted errors and an empty failed replacement. Private captures were inspected.
+Full evidence and limitations are in the desktop branch's
+[NATIVE_CONTROLS.md](https://github.com/viptv-org/desktop/blob/chore/native-final-recovery/NATIVE_CONTROLS.md).
+
+Native tests used an isolated GTK/WebKit X11 display. Ordinary-desktop Home
+smoothness, reported sidebar scrolling and exact Lanterns S1E1 reproduction
+remain open. Browser and fixture-admission evidence do not certify every
+provider, physical TV, codec, Windows or macOS. Core and Android pins are unchanged.
+
 # Native initial Resume adoption — 2026-10-02
 
 Video source `2038c0f5cd69ae60dd033a16bda2d1fc46afe7de` (reviewed PR8)
@@ -2697,3 +2753,101 @@ backend banner, startup error, added/error notices and preparation remain
 separately captured states. This is scoped browser state inspection, not
 installed Tauri/native media, uniform pixel parity or physical-device proof.
 DeskPlayerRestore remains a separate incomplete preview scenario.
+
+# Desktop native controls and stable feedback — 2026-10-03
+
+Video `e30f6af` retains polled engine facts, publishes volume before native IPC
+settles, and keeps refused control operations from terminating playback. The
+React playback error region is protected from native aperture masking. Bare
+picture clicks reach the player screen when the native HTML anchor is hidden.
+
+24 focused React/controller regressions pass, including native time,
+pause/resume, pending volume IPC, picture-mode commands, engine identification,
+actual error-toast composition, remote navigation, engine preferences and
+shutdown. Strict application/test type checks and design/Core/video integrity
+are checked by the production build. These UI checks mock native IPC; actual
+GTK media evidence is recorded in the owning plugin and desktop repositories.
+
+The Linux plugin was also exercised through both actual native GTK surfaces
+against an authorized real-provider VOD: decoded frames, a seek to 30 seconds,
+pause/resume, paused Fit/Fill, muted volume and continued playback. Alternate
+audio, rendered subtitle switching and subtitle removal use a silent generated
+fixture with both engines. JPG/GIF/PNG-prefixed HLS has separate actual-engine
+coverage. No Windows/macOS or physical TV qualification is claimed.
+
+# Native error classification and dismissal — 2026-10-03
+
+Video `bf296cfacbde25c354acb51e609787661fda2727` stops polling, layout observation and startup
+watchdogs after a terminal failure. Delayed stats cannot revive that failed
+session; opening a new source starts polling again. Generic pipeline failures
+(including misleading legacy plugin messages) no longer claim that the source
+cannot be decoded or trigger format conversion. Only explicit decoder/media
+format errors use that classification. The native plugin separately classifies
+video/audio output, protected media, source loading and runtime failures.
+
+React reports an unresolved playback error once per player session, code and
+message. Dismissing it therefore remains effective across repeated engine
+events. A new playback attempt or a different failure can still report an error;
+a disposed engine cannot publish delayed recovery failures into the current UI.
+
+38 focused Video adapter/compositor checks pass, including the former 13-error
+poll loop and late startup stats. Nine focused UI/recovery checks pass, including
+dismissal replay, new-session reporting, disposal, actual error-toast composition
+and native control rendering. The owning plugin has 45 ordinary passing checks;
+both actual GTK engines also report a missing source accurately and subsequently
+play valid silent media in the same engine. Real-provider controls on the local
+desktop display pass for both engines. These native checks do not establish that
+every configured provider endpoint is working or qualify Windows/macOS.
+
+# Responsive native volume dragging — 2026-10-03
+
+Video `9429307450cd7e7d856f57f14272acb9e4566113` publishes the requested volume immediately,
+allows only one native volume command in flight, and sends the latest pending
+value when that command settles. Intermediate drag samples do not accumulate
+in GTK's command queue. Acknowledgements do not republish unchanged UI state
+or replace current playback facts. Mute changes join the same update path;
+retired-source responses cannot affect or block the current source slider.
+
+The regression sent 100 simultaneous changes while native IPC was held. Before
+the fix it queued 100 commands; afterward it sends the first and latest values
+in two commands. All 41 focused adapter/compositor checks pass, including mute
+and source-replacement cases. The actual React player test drags through 26
+values with pending native IPC, checks the immediately rendered input/knob, and
+verifies that only the first and final native commands are sent. These tests
+control the native IPC boundary; they do not measure audio-device latency.
+
+# Desktop pointer playback, sources and scroll corrections — 2026-10-03
+
+The owner-approved pointer-only desktop contract is imported from design
+`f879e1520c3e4c7574e04a7a00c6435c404b77eb`. Native desktop shortcuts, Tab, spatial
+navigation, arrival focus and source keyboard legends are disabled. Clicked
+text fields stay editable. Player backdrop clicks reveal controls without
+hiding them; skip icons use explicit vectors and larger integer sizes.
+
+Skip clicks accumulate from the latest requested target and coalesce pending
+work. Backward targets remain pinned through the old clock and transient zero;
+seek completion, duration and buffering use engine observations. New desktop
+source selection stops the outgoing presentation before backend preparation,
+with saved-position rollback on failure. Unknown track languages use numbered
+labels; actual titles remain intact. Both add-on and IPTV producers appear in
+All, including zero-result/error producers. Available configured logos are
+shown, with named monograms when absent. Source rows have a smooth 16px radius
+and a 3px best-match border, and are protected from native aperture masking.
+
+Home scroll reads are bounded to animation frames. Offscreen shelves use CSS
+content visibility where supported, and ambient artwork has a separate paint
+layer. A trusted local HTTPS Chromium test with synthetic populated catalogs
+measured 49 scroll frames, p95 16.8ms and one 50.1ms maximum frame; content
+visibility was active. This is browser evidence, not a measured GTK/WebKit FPS
+guarantee. A visual source-drawer check confirmed two source rows including
+IPTV, loaded provider artwork, 16px corners, 3px border, no keyboard hints and
+Tab remaining on BODY. Private captures stay outside Git.
+
+77 focused Video adapter/controller/compositor checks pass. 29 targeted UI
+checks pass, including accumulation during a zero clock, backward pinning,
+IPTV grouping, pointer-only input and the existing native controls. Strict
+application/test type checks pass. The native plugin has 45 ordinary passing
+checks; real-provider seek/pause/resume and genuine buffered-time readouts pass
+on both actual GTK engines. Separate silent media verifies tracks/subtitle
+pixels and paused picture controls. Real-display occlusion prevented an initial
+standalone MPV frame check; the isolated X11 display removes that artifact.

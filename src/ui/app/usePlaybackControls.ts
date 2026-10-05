@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { type TvProfile } from "../../api";
+import { type MediaItem, type MediaSource, type TvProfile } from "../../api";
 import { focusElement } from "../remote";
 import { type BufferedRange } from "../SeekBar";
 import { type Choice } from "./appShared";
@@ -22,34 +22,55 @@ export function usePlaybackControls(app: NavigationApi) {
   // A committed seek still in flight (a managed seek waits for the server):
   // the player shows its buffering ring / BUFFERING status meanwhile.
   const [seekPending, setSeekPending] = useState(false);
-  const seeksInFlight = useRef(0);
-  const commitSeek = async (position: number) => {
-    // The target stays displayed until the engine actually lands there;
-    // clearing it up front teleports the thumb back to the pre-seek spot.
+  const latestSeek = useRef<{ position: number; revision: number; owner: typeof controller.current; item?: MediaItem; source?: MediaSource }>();
+  const seekRevision = useRef(0);
+  const seekRunner = useRef<Promise<void>>();
+  const commitSeek = (position: number): Promise<void> => {
+    const owner = controller.current;
+    const intent = owner?.snapshot.active?.intent;
+    latestSeek.current = { position, revision: ++seekRevision.current, owner, item: intent?.item, source: intent?.source };
     setSeek(position);
     seekTarget.current = position;
-    if (Math.abs(position - (snapshot?.time.positionSeconds ?? 0)) < 0.5) {
-      setSeek(undefined);
-      seekTarget.current = undefined;
-      return;
-    }
-    seeksInFlight.current++;
+    if (seekRunner.current) return seekRunner.current;
     setSeekPending(true);
-    try {
-      await controller.current?.seekFrom(
-        () => position,
-        () => snapshot?.time.positionSeconds ?? 0,
-      );
-    } catch {
-      setSeek(undefined);
-      seekTarget.current = undefined;
-      // The player notice pill (copy.md): the engine / server reason is not
-      // user copy (a refused managed seek reads "VIPTV could not complete…").
-      setPlayerNotice({ message: "The stream could not seek there.", key: Date.now() });
-    } finally {
-      seeksInFlight.current--;
-      if (!seeksInFlight.current) setSeekPending(false);
-    }
+    const run = async () => {
+      try {
+        while (latestSeek.current) {
+          const request = latestSeek.current;
+          // Managed seeks replace the decoder but retain the selected source.
+          const stillOwned = () => request.owner === controller.current
+            && request.item === controller.current?.snapshot.active?.intent.item
+            && request.source === controller.current?.snapshot.active?.intent.source;
+          if (!stillOwned()) {
+            latestSeek.current = undefined;
+            break;
+          }
+          try {
+            await request.owner?.seekFrom(
+              () => request.position,
+              () => player.current?.snapshot.time.positionSeconds ?? 0,
+            );
+          } catch {
+            if (latestSeek.current?.revision === request.revision && stillOwned()) {
+              setSeek(undefined);
+              seekTarget.current = undefined;
+              setPlayerNotice({ message: "The stream could not seek there.", key: Date.now() });
+            }
+          }
+          if (latestSeek.current?.revision === request.revision) latestSeek.current = undefined;
+        }
+      } finally {
+        seekRunner.current = undefined;
+        setSeekPending(false);
+      }
+    };
+    seekRunner.current = run();
+    return seekRunner.current;
+  };
+  const seekBy = (delta: number) => {
+    const position = seekTarget.current ?? player.current?.snapshot.time.positionSeconds ?? snapshot?.time.positionSeconds ?? 0;
+    const duration = player.current?.snapshot.time.durationSeconds ?? snapshot?.time.durationSeconds;
+    return commitSeek(Math.max(0, Math.min(duration || Infinity, position + delta)));
   };
 
   const togglePlayback = () =>
@@ -74,7 +95,7 @@ export function usePlaybackControls(app: NavigationApi) {
     if (end != null && end > 0) {
       return [
         {
-          start: 0,
+          start: position,
           end: Math.min(end, duration > 0 ? duration : end),
         },
       ];
@@ -297,7 +318,7 @@ export function usePlaybackControls(app: NavigationApi) {
         }))
       : (serverAudio ?? []).map((t) => ({
           id: String(t.inputIndex),
-          label: t.title || t.language || `Track ${t.inputIndex + 1}`,
+          label: [t.title, t.language].find(value => value && !/^(und|unknown|undefined)$/i.test(value)) || `Track ${t.inputIndex + 1}`,
           language: t.language,
           available: t.selectable,
           selected: t.selected,
@@ -329,7 +350,7 @@ export function usePlaybackControls(app: NavigationApi) {
         }))
       : (serverText ?? []).map((t) => ({
           id: String(t.inputIndex),
-          label: t.title || t.language || `Track ${t.inputIndex + 1}`,
+          label: [t.title, t.language].find(value => value && !/^(und|unknown|undefined)$/i.test(value)) || `Track ${t.inputIndex + 1}`,
           language: t.language,
           available: t.selectable,
           selected: t.selected,
@@ -385,5 +406,5 @@ export function usePlaybackControls(app: NavigationApi) {
     { label: "Fallback", value: snapshot?.diagnostics?.fallbackReason ?? "" },
   ].filter((row) => row.value);
 
-  return { commitSeek, togglePlayback, toggleLiveMute, readBufferedRanges, surfaceClick, mediaKey, mediaKeyUp, editProfile, trackChoices, audioTrackList, textTrackList, subtitleOffOption, subtitlesCanTurnOff, playerInfoRows, playerNotice, setPlayerNotice, seekPending };
+  return { commitSeek, seekBy, togglePlayback, toggleLiveMute, readBufferedRanges, surfaceClick, mediaKey, mediaKeyUp, editProfile, trackChoices, audioTrackList, textTrackList, subtitleOffOption, subtitlesCanTurnOff, playerInfoRows, playerNotice, setPlayerNotice, seekPending };
 }

@@ -12,6 +12,7 @@ interface DesktopTitlebarProps {
   onNavigateForward?: () => void;
   /** Centred on the window regardless of the side groups (the search field). */
   center?: ReactNode;
+  onTogglePlayerFullscreen?: () => void;
 }
 
 async function minimize() {
@@ -96,8 +97,8 @@ const barButton = (action: () => void) => ({
  * Back / Forward, the search field centred on the window, and the window
  * controls. The pairing variant (sign-in, profiles) keeps only the wordmark
  * and window controls. The shell hides the bar in the fullscreen player.
- * Everything that is not a control drags the window; double-click toggles
- * maximize.
+ * Everything that is not a control drags the window; double-click enters
+ * player fullscreen during playback and otherwise toggles maximize.
  */
 export function DesktopTitlebar({
   variant = "app",
@@ -106,13 +107,17 @@ export function DesktopTitlebar({
   onNavigateBack,
   onNavigateForward,
   center,
+  onTogglePlayerFullscreen,
 }: DesktopTitlebarProps) {
   return (
     <header
       className="vx-titlebar desktop-titlebar"
       data-tauri-drag-region
       onMouseDown={startDragging}
-      onDoubleClick={() => void toggleMaximize()}
+      onDoubleClick={() => {
+        if (onTogglePlayerFullscreen) onTogglePlayerFullscreen();
+        else void toggleMaximize();
+      }}
     >
       <div className="vx-titlebar-start" data-tauri-drag-region>
         <span className="vx-titlebar-brand" data-tauri-drag-region aria-label="VIPTV" role="img">

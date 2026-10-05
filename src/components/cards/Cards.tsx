@@ -218,10 +218,15 @@ export const Cards = memo(function Cards({
     if (!node) return;
     // The window follows the scroll offset synchronously: no blank spacer
     // region is ever painted and restored offsets settle exactly.
-    const onScroll = () => read();
+    let frame = 0;
+    const onScroll = () => {
+      if (frame) return;
+      frame = requestAnimationFrame(() => { frame = 0; read(); });
+    };
     node.addEventListener("scroll", onScroll, { passive: true });
     window.addEventListener("resize", onScroll);
     return () => {
+      cancelAnimationFrame(frame);
       node.removeEventListener("scroll", onScroll);
       window.removeEventListener("resize", onScroll);
     };

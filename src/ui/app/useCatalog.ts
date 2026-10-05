@@ -157,7 +157,7 @@ export function useCatalog(app: PlaybackSessionApi) {
       if (preview.current?.cancel === cancel) stopPreview();
     };
   };
-  const discoverSources = async (item: MediaItem, resume = false) => {
+  const discoverSources = async (item: MediaItem, resume = false, filters?: { sourceProvider: string; sourceQuality: string }) => {
     if (item.type === "live") { await play(item); return; }
     if (resume && item.queueStatus === "next" && item.previousEpisode) {
       await nextEpisode(item.previousEpisode);
@@ -174,8 +174,8 @@ export function useCatalog(app: PlaybackSessionApi) {
     setSelected(item);
     setSources([]);
     setSourceProducers([]);
-    setSourceQuality("All");
-    setSourceProvider("All");
+    setSourceQuality(filters?.sourceQuality ?? "All");
+    setSourceProvider(filters?.sourceProvider ?? "All");
     setBusy(true);
     const ticket = ++epoch.current;
     const key = sourceKey(item);
@@ -190,10 +190,12 @@ export function useCatalog(app: PlaybackSessionApi) {
       let producers = known?.producers ?? [];
       setSourceProducers(producers);
       let names = new Map<string, string>();
+      let icons = new Map<string, string>();
       void api.addons().then((addons) => {
         if (ticket !== epoch.current) return;
         names = configuredAddonNames(addons);
-        producers = observeSourceProducers(producers, [], names);
+        icons = new Map(addons.filter(addon => typeof addon.logo === "string").map(addon => [`addon:${addon.id}`, String(addon.logo)]));
+        producers = observeSourceProducers(producers, [], names, icons);
         setSourceProducers(producers);
       }).catch(() => undefined);
       let done = known?.done ?? false;
@@ -204,7 +206,7 @@ export function useCatalog(app: PlaybackSessionApi) {
           if (ticket !== epoch.current) return;
           step = poll.state;
           done = poll.done;
-          producers = observeSourceProducers(producers, poll.events, names);
+          producers = observeSourceProducers(producers, poll.events, names, icons);
           setSourceProducers(producers);
           remember(key, id, step, producers, done);
         }

@@ -1,3 +1,25 @@
+## Native Recovery Integration - 2026-10-05
+
+| Surface | Current evidence | Limits |
+| --- | --- | --- |
+| Managed seek identity | Real controller decoder replacement retains accumulated target; new selected source cancels old queue | Unit/controlled decoder boundary, not a physical TV |
+| Input scope and return | Trusted HTTPS desktop/browser/phone backdrop behavior, controls within viewport; filter return, fullscreen and restoration | Synthetic media; screenshots inspected privately |
+| Native control failures and buffers | Owning Video tests cover asynchronous and immediate refusal, retired-source feedback, buffer gaps/offsets and bounded startup retry | Linux native engine coverage recorded in desktop; Windows/macOS unverified |
+| Main baseline preservation | Current retry/Vizio media source and immutable asset configuration retained; design/video snapshots synchronized | Not a production deployment or refreshed hardware qualification |
+
+## Desktop playback follow-up — 2026-10-03
+
+Design `a8b5acac2f810e3d447334e64b7fc3f44c696b4d`; see
+[TESTING.md](../TESTING.md) for pin and execution details.
+
+| Surface | Verified scope | Native evidence / limits |
+| --- | --- | --- |
+| Same-selector source return | Provider/quality survive player, titlebar and browser Back; another episode resets to All | Trusted HTTPS browser fixture; TV physical input not newly qualified |
+| Player fullscreen and lifecycle | Primary command ownership, fallback, late completion, pre-existing window fullscreen and titlebar callback | Real GStreamer/MPV GTK/X11 chrome removal and viewport restoration; Windows/macOS unverified |
+| Initial VOD timeline and controls | Live-flag VOD duration/buffer, immediate stopped state, refused explicit replacement and cancellation | Normal local-backend VOD admission on both engines before any seek; first OS pointer seek and real buffer span verified |
+| Error and outage surfaces | Bounded/redacted native HTTP causes; persistent outage dismissal and recovery | Native HTTP 407 fixture plus separate fixture-admission UI run on both engines; exact Lanterns/provider failure remains open |
+| Native scrolling | Actual GTK/WebKit OS-wheel frame samples recorded on isolated X11 | Ordinary desktop smoothness and reported sidebar symptom remain open |
+
 ## BE-002 raw live cutover — 2026-09-29
 
 Design `4e153a7daca300389049e5fcfd5c3bc0af5edbee`; application evidence and

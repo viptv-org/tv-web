@@ -17,6 +17,7 @@ import {
   PlayerOperationError,
   type OpenPlayerRequest,
   type PlayerErrorCode,
+  type PlayerFailure,
   type PlayerTime,
 } from './types';
 import { delay, nonNegative } from './primitives';
@@ -92,12 +93,15 @@ export class TauriNativeAdapter extends SessionPlayer {
   private request?: OpenPlayerRequest;
   private sessionKey?: string;
   private native?: NativeVideoSnapshot;
+  private startupRetry?: { payload: Record<string, unknown>; retried: boolean; completed: boolean };
   private seekGeneration = 0;
+  private pendingSeek?: { generation: number; target: number };
   private pictureMode: 'fit' | 'fill' = 'fit';
   private requestedPlaying = false;
   private protocolVerified = false;
   private volume = 1;
   private muted = false;
+  private volumeFlush?: { sessionKey: string; promise: Promise<void> };
   private timelineOffsetSeconds = 0;
   private timelineDurationSeconds: number | undefined;
   private adoptEngineDuration = false;
@@ -105,10 +109,12 @@ export class TauriNativeAdapter extends SessionPlayer {
   private pollTimer?: ReturnType<typeof setTimeout>;
   private firstFrameTimer?: ReturnType<typeof setTimeout>;
   private resizeObserver?: ResizeObserver;
+  private stopCompositorObserver?: () => void;
   private readonly aperture: NativeAperture;
   private textureStream?: MediaStream;
   private lastLayout?: NativeLayout;
   private layoutDirty = false;
+  private compositorDirty = false;
   private layoutInFlight = false;
   private layoutTimer?: ReturnType<typeof setTimeout>;
 
@@ -186,6 +192,7 @@ export class TauriNativeAdapter extends SessionPlayer {
         ...(authorization?.headers ? { headers: authorization.headers } : {}),
         ...(backend !== undefined ? { backend } : {}),
       };
+      this.startupRetry = { payload, retried: false, completed: false };
       const snapshot = await this.openNativeSession(sessionKey, payload, sessionId);
       if (!this.isCurrent(sessionId)) return;
       established = true;
@@ -214,14 +221,17 @@ export class TauriNativeAdapter extends SessionPlayer {
           await delay(500);
           if (!this.isCurrent(sessionId)) return;
           this.acceptSnapshot(await this.control('pause'));
-          this.acceptSnapshot(await this.control('seek', boundedPosition(request.startAtSeconds ?? 0, engineDuration(snapshot))));
+          this.acceptSnapshot(await this.control('seek', boundedPosition(request.startAtSeconds ?? 0, engineDuration(snapshot, this.request?.kind))));
           this.acceptSnapshot(await this.control('volume', this.muted ? 0 : this.volume));
         }
       } else {
-        const startAt = boundedPosition(request.startAtSeconds ?? 0, engineDuration(snapshot));
+        const startAt = boundedPosition(request.startAtSeconds ?? 0, engineDuration(snapshot, this.request?.kind));
         // A newly opened native pipeline may infer live from an unknown
         // duration before preroll. The selected request owns VOD/live intent.
-        if (startAt > 0 && request.kind !== 'live') {
+        // mpv applies startAtSeconds through its native `start` option while
+        // loading. loadfile returns before file-loaded; a second seek here
+        // races demuxer initialization and fails with MPV_ERROR_COMMAND (-12).
+        if (startAt > 0 && request.kind !== 'live' && snapshot.backend !== 'mpv') {
           this.acceptSnapshot(await this.control('seek', startAt));
         }
       }
@@ -285,7 +295,7 @@ export class TauriNativeAdapter extends SessionPlayer {
     const native = this.native;
     // The engine is the authority: it reports refusal honestly, and mpv can
     // still serve seeks within its demuxer cache for unseekable media.
-    const duration = engineDuration(native);
+    const duration = engineDuration(native, this.request?.kind);
     let target = boundedPosition(positionSeconds - this.timelineOffsetSeconds, duration);
     if (native) {
       const minimum = Math.max(0, native.seekableStartSeconds ?? 0);
@@ -309,8 +319,9 @@ export class TauriNativeAdapter extends SessionPlayer {
         target = Math.max(target, minimum);
       }
     }
-    const before = native?.currentTimeSeconds ?? 0;
+    const before = this.snapshot.time.positionSeconds - this.timelineOffsetSeconds;
     const generation = ++this.seekGeneration;
+    this.pendingSeek = { generation, target };
     const sessionKey = this.sessionKey;
     // A lying origin answers the seek's range request by replaying the
     // stream from the beginning: the position lands far below both the
@@ -318,26 +329,35 @@ export class TauriNativeAdapter extends SessionPlayer {
     const restartToleranceSeconds = 2;
     try {
       let snapshot = await this.control('seek', target);
+      const checkRefusal = () => {
+        if (snapshot.controlFailure === 'seek') {
+          throw new PlayerOperationError('seek-failed', 'The native engine refused the requested seek.');
+        }
+      };
       const current = () => this.isCurrent(sessionId) && this.sessionKey === sessionKey && this.seekGeneration === generation;
       if (!current()) return;
+      checkRefusal();
       const replayed = () => snapshot.currentTimeSeconds + restartToleranceSeconds < target
         && snapshot.currentTimeSeconds + restartToleranceSeconds < before;
       // Flushing decoders can acknowledge at zero before asynchronous seek
       // completion. Confirm with bounded engine observations before reporting
       // that the origin replayed the beginning. No position is fabricated.
-      for (let attempt = 0; replayed() && attempt < 20; attempt++) {
-        await delay(50);
+      const landed = () => Math.abs(snapshot.currentTimeSeconds - target) <= 1.5;
+      for (let attempt = 0; !landed() && attempt < 80; attempt++) {
+        await delay(75);
         if (!current()) return;
         snapshot = await this.invoker.invoke<NativeVideoSnapshot>(`${COMMAND}native_stats`, { payload: { sessionKey } });
         if (!current()) return;
+        checkRefusal();
+        if (replayed() && attempt >= 19) break;
       }
-      if (replayed()) {
+      if (!landed()) {
         // The engine restarted the stream instead of landing the seek; it
         // is still playing, so this reaches the caller without failing the
         // session.
         throw new PlayerOperationError(
           'seek-failed',
-          'The stream replayed from its beginning instead of seeking; the origin cannot serve that position.',
+          replayed() ? 'The stream replayed from its beginning instead of seeking; the origin cannot serve that position.' : 'The engine did not confirm the requested seek position.',
         );
       }
       this.acceptSnapshot(snapshot);
@@ -345,6 +365,8 @@ export class TauriNativeAdapter extends SessionPlayer {
     } catch (cause) {
       if (cause instanceof PlayerOperationError) throw cause;
       this.throwOperation(sessionId, 'seek-failed', 'The native engine could not seek the selected source.', cause);
+    } finally {
+      if (this.pendingSeek?.generation === generation) this.pendingSeek = undefined;
     }
   }
 
@@ -375,8 +397,9 @@ export class TauriNativeAdapter extends SessionPlayer {
 
   async stop(): Promise<void> {
     this.invalidateSession();
-    await this.teardownNative();
+    // Clear presentation facts before native teardown can wait on the host.
     this.terminal('stopped');
+    await this.teardownNative();
   }
 
   async dispose(): Promise<void> {
@@ -501,7 +524,9 @@ export class TauriNativeAdapter extends SessionPlayer {
         'connection-failed',
         'The native video engine could not open the selected source.',
       );
-      if (error.code !== 'unsupported-format' || !this.isCurrent(sessionId)) throw cause;
+      const pipelineFailure = cause && typeof cause === 'object' && 'code' in cause && cause.code === 'PIPELINE_FAILED';
+      if ((!pipelineFailure && error.code !== 'unsupported-format') || !this.isCurrent(sessionId)) throw cause;
+      if (this.startupRetry) this.startupRetry.retried = true;
       // Release whatever the failed attempt attached, then re-open the same
       // request: the session key stays this session's correlation.
       await this.closeSession(sessionKey).catch(() => undefined);
@@ -510,13 +535,25 @@ export class TauriNativeAdapter extends SessionPlayer {
   }
 
   private async control(action: string, value = 0, index = -1): Promise<NativeVideoSnapshot> {
+    const sessionId = this.snapshot.sessionId;
+    if (action === 'seek' || action === 'track' || action === 'deselectTrack') {
+      this.update(sessionId, { notice: undefined });
+    }
     const sessionKey = this.sessionKey;
     if (sessionKey === undefined) {
       throw new PlayerOperationError('invalid-state', 'No active native playback session.');
     }
-    return this.invoker.invoke<NativeVideoSnapshot>(`${COMMAND}native_control`, {
+    const snapshot = await this.invoker.invoke<NativeVideoSnapshot>(`${COMMAND}native_control`, {
       payload: { sessionKey, action, value, index },
     });
+    if (snapshot.controlFailure && this.sessionKey === sessionKey) {
+      this.update(sessionId, { notice: snapshot.controlFailure === 'seek'
+        ? 'The stream could not seek there.' : 'The stream could not change that track.' });
+    }
+    if (snapshot.controlFailure === 'track' && (action === 'track' || action === 'deselectTrack')) {
+      throw new PlayerOperationError('unsupported-operation', 'The native engine refused the requested track.');
+    }
+    return snapshot;
   }
 
   private acceptSnapshot(snapshot: NativeVideoSnapshot): NativeVideoSnapshot {
@@ -525,6 +562,8 @@ export class TauriNativeAdapter extends SessionPlayer {
   }
 
   private publishSnapshot(sessionId: number, snapshot: NativeVideoSnapshot): void {
+    if (this.startupRetry && (snapshot.presentedFrames === undefined
+      ? snapshot.videoWidth > 0 : snapshot.presentedFrames > 0)) this.startupRetry.completed = true;
     if ((snapshot.videoWidth ?? 0) > 0) this.clearFirstFrameWatchdog();
     this.update(sessionId, {
       time: this.time(snapshot),
@@ -543,13 +582,15 @@ export class TauriNativeAdapter extends SessionPlayer {
 
   /** The seek bar's length: the server total, raised only by an original file. */
   private time(snapshot: NativeVideoSnapshot): PlayerTime {
-    const position = this.timelineOffsetSeconds + Math.max(0, snapshot.currentTimeSeconds);
-    const duration = engineDuration(snapshot);
+    const actual = this.timelineOffsetSeconds + Math.max(0, snapshot.currentTimeSeconds);
+    const position = this.pendingSeek && Math.abs(snapshot.currentTimeSeconds - this.pendingSeek.target) > 1.5
+      ? this.snapshot.time.positionSeconds : actual;
+    const duration = engineDuration(snapshot, this.request?.kind);
     const engine = duration !== null ? duration + this.timelineOffsetSeconds : null;
     const next = timelineDuration(this.timelineDurationSeconds, engine, this.adoptEngineDuration);
     this.observedTitleDuration = growOnlyDuration(this.observedTitleDuration, next);
     const lead = snapshot.bufferedSeconds - snapshot.currentTimeSeconds;
-    const bufferedEnd = snapshot.live || lead <= 0
+    const bufferedEnd = this.request?.kind === 'live' || lead <= 0
       ? null
       : Math.min(
         snapshot.bufferedSeconds + this.timelineOffsetSeconds,
@@ -559,22 +600,41 @@ export class TauriNativeAdapter extends SessionPlayer {
       positionSeconds: position,
       durationSeconds: this.observedTitleDuration,
       bufferedEndSeconds: bufferedEnd,
+      bufferedRanges: snapshot.bufferedRanges?.map(range => ({
+        start: Math.max(0, range.start + this.timelineOffsetSeconds),
+        end: Math.min(range.end + this.timelineOffsetSeconds, this.observedTitleDuration ?? Infinity),
+      })).filter(range => Number.isFinite(range.start) && Number.isFinite(range.end) && range.end > range.start),
       seekable: snapshot.seekable,
     };
   }
 
-  private async applyVolume(): Promise<void> {
+  private applyVolume(): Promise<void> {
     const sessionId = this.snapshot.sessionId;
-    if (this.sessionKey === undefined) {
-      this.update(sessionId, { volume: { level: this.volume, muted: this.muted } });
-      return;
-    }
+    // The slider reflects the user's current choice while IPC is pending.
+    this.update(sessionId, { volume: { level: this.volume, muted: this.muted } });
+    const sessionKey = this.sessionKey;
+    if (sessionKey === undefined) return Promise.resolve();
+    if (this.volumeFlush?.sessionKey === sessionKey) return this.volumeFlush.promise;
+    const flush = { sessionKey, promise: Promise.resolve() };
+    this.volumeFlush = flush;
+    flush.promise = this.flushVolume(sessionId, flush);
+    return flush.promise;
+  }
+
+  private async flushVolume(sessionId: number, flush: { sessionKey: string; promise: Promise<void> }): Promise<void> {
     try {
-      this.acceptSnapshot(await this.control('volume', this.muted ? 0 : this.volume));
-      if (!this.isCurrent(sessionId)) return;
-      this.update(sessionId, { volume: { level: this.volume, muted: this.muted } });
+      while (this.isCurrent(sessionId) && this.sessionKey === flush.sessionKey) {
+        const value = this.muted ? 0 : this.volume;
+        // Only one volume command can await native IPC. Dragging replaces the
+        // pending value rather than queuing every intermediate pointer sample.
+        await this.control('volume', value);
+        if (value === (this.muted ? 0 : this.volume)) return;
+      }
     } catch (cause) {
+      if (!this.isCurrent(sessionId) || this.sessionKey !== flush.sessionKey) return;
       this.throwOperation(sessionId, 'prepare-failed', 'The native engine could not change the volume.', cause);
+    } finally {
+      if (this.volumeFlush === flush) this.volumeFlush = undefined;
     }
   }
 
@@ -595,8 +655,11 @@ export class TauriNativeAdapter extends SessionPlayer {
   private throwOperation(sessionId: number, code: PlayerErrorCode, message: string, cause?: unknown): never {
     const error = cause instanceof PlayerOperationError
       ? cause
-      : nativeOperationError(cause, code, message);
-    this.fail(sessionId, error.toFailure());
+      : cause && typeof cause === 'object' && 'code' in cause && cause.code === 'PIPELINE_FAILED'
+        ? new PlayerOperationError(code, message, cause)
+        : nativeOperationError(cause, code, message);
+    // Refusing a control operation does not prove this delivery is undecodable.
+    // Keep the active session; actual engine failure arrives through polling.
     throw error;
   }
 
@@ -610,7 +673,7 @@ export class TauriNativeAdapter extends SessionPlayer {
     this.pollTimer = setTimeout(async () => {
       this.pollTimer = undefined;
       await this.poll();
-      if (this.sessionKey !== undefined) {
+      if (this.sessionKey !== undefined && !this.snapshot.error) {
         this.schedulePoll(this.requestedPlaying ? 250 : 1000);
       }
     }, delayMs);
@@ -631,21 +694,71 @@ export class TauriNativeAdapter extends SessionPlayer {
       const snapshot = await this.invoker.invoke<NativeVideoSnapshot>(`${COMMAND}native_stats`, {
         payload: { sessionKey },
       });
-      if (this.sessionKey !== sessionKey || !this.isCurrent(sessionId)) return;
+      if (this.sessionKey !== sessionKey || !this.isCurrent(sessionId) || this.snapshot.error) return;
       const previous = this.native;
+      if (snapshot.controlFailure && snapshot.controlFailure !== previous?.controlFailure) {
+        this.update(sessionId, { notice: snapshot.controlFailure === 'seek'
+          ? 'The stream could not seek there.' : 'The stream could not change that track.' });
+      }
+      this.acceptSnapshot(snapshot);
       this.publishSnapshot(sessionId, snapshot);
       if (previous && previous.playing !== snapshot.playing) {
         this.update(sessionId, { state: snapshot.playing ? 'playing' : 'paused' });
       }
-      if (!hasEnded(previous) && hasEnded(snapshot)) {
+      if (!hasEnded(previous, this.request?.kind) && hasEnded(snapshot, this.request?.kind)) {
         this.requestedPlaying = false;
         this.update(sessionId, { state: 'ended' });
       }
     } catch (cause) {
       if (!this.isCurrent(sessionId)) return;
-      const error = nativeOperationError(cause, 'connection-failed', 'Native playback statistics became unavailable.');
-      this.fail(sessionId, error.toFailure());
-      this.stopPolling();
+      try {
+        if (await this.retryDeferredStartup(sessionId, sessionKey, cause)) return;
+      } catch (retryCause) {
+        cause = retryCause;
+      }
+      if (!this.isCurrent(sessionId) || this.sessionKey !== sessionKey) return;
+      const error = nativeOperationError(cause, 'connection-failed', 'The desktop host could not report why playback stopped.');
+      this.failNative(sessionId, error.toFailure());
+    }
+  }
+
+  private async retryDeferredStartup(sessionId: number, sessionKey: string, cause: unknown): Promise<boolean> {
+    const retry = this.startupRetry;
+    const code = cause && typeof cause === 'object' && 'code' in cause ? cause.code : undefined;
+    if (!retry || retry.retried || retry.completed || !['PIPELINE_FAILED', 'DECODE_FAILED', 'MEDIA_FORMAT_FAILED'].includes(String(code))) return false;
+    retry.retried = true;
+    const current = () => this.isCurrent(sessionId) && this.sessionKey === sessionKey && !this.snapshot.error;
+    await this.closeSession(sessionKey).catch(() => undefined);
+    if (!current()) return true;
+    try {
+      const snapshot = await this.invoker.invoke<NativeVideoSnapshot>(`${COMMAND}native_open`, {
+        payload: { ...retry.payload, autoplay: this.requestedPlaying, volume: this.volume, muted: this.muted },
+      });
+      if (!current()) return true;
+      this.acceptSnapshot(snapshot);
+      const layout = this.measureLayout();
+      await this.invoker.invoke(`${COMMAND}native_layout`, { payload: { sessionKey, ...layout } });
+      if (!current()) return true;
+      this.lastLayout = layout;
+      this.aperture.publish(layout);
+      const startAt = Number(retry.payload.startAtSeconds ?? 0);
+      if (startAt > 0 && this.request?.kind !== 'live' && snapshot.backend !== 'mpv') {
+        const sought = await this.control('seek', startAt);
+        if (!current()) return true;
+        this.acceptSnapshot(sought);
+      }
+      if (!current()) return true;
+      if (this.pictureMode === 'fill') {
+        const cropped = await this.control('crop');
+        if (!current()) return true;
+        this.acceptSnapshot(cropped);
+      }
+      if (!current()) return true;
+      this.publishSnapshot(sessionId, this.native!);
+      return true;
+    } finally {
+      // Rejected IPC can bypass the checks above after the watchdog or Back.
+      if (!current()) await this.closeSession(sessionKey).catch(() => undefined);
     }
   }
 
@@ -660,6 +773,12 @@ export class TauriNativeAdapter extends SessionPlayer {
   }
 
   private startLayoutTracking(): void {
+    this.stopCompositorObserver = this.aperture.observe((backgroundChanged) => {
+      // Never reconstruct DOM from a MutationObserver microtask. Queue one
+      // refresh with layout so repeated notifications still yield to input.
+      this.compositorDirty ||= backgroundChanged;
+      this.requestLayout();
+    });
     if (typeof ResizeObserver === 'function') {
       this.resizeObserver = new ResizeObserver(() => this.requestLayout());
       this.resizeObserver.observe(this.anchor);
@@ -670,6 +789,8 @@ export class TauriNativeAdapter extends SessionPlayer {
   }
 
   private stopLayoutTracking(): void {
+    this.stopCompositorObserver?.();
+    this.stopCompositorObserver = undefined;
     this.resizeObserver?.disconnect();
     this.resizeObserver = undefined;
     window.removeEventListener('resize', this.handleViewportChange);
@@ -679,6 +800,7 @@ export class TauriNativeAdapter extends SessionPlayer {
       this.layoutTimer = undefined;
     }
     this.layoutDirty = false;
+    this.compositorDirty = false;
     this.layoutInFlight = false;
   }
 
@@ -702,11 +824,16 @@ export class TauriNativeAdapter extends SessionPlayer {
     this.layoutInFlight = true;
     try {
       this.layoutDirty = false;
+      if (this.compositorDirty) {
+        this.compositorDirty = false;
+        this.aperture.refresh();
+      }
       const layout = this.measureLayout();
-      if (sameLayout(layout, this.lastLayout)) return;
-      await this.invoker.invoke(`${COMMAND}native_layout`, {
-        payload: { sessionKey, x: layout.x, y: layout.y, width: layout.width, height: layout.height },
-      });
+      if (!sameLayout(layout, this.lastLayout)) {
+        await this.invoker.invoke(`${COMMAND}native_layout`, {
+          payload: { sessionKey, x: layout.x, y: layout.y, width: layout.width, height: layout.height },
+        });
+      }
       if (this.sessionKey !== sessionKey) return;
       this.lastLayout = layout;
       this.aperture.publish(layout);
@@ -714,7 +841,7 @@ export class TauriNativeAdapter extends SessionPlayer {
       const sessionId = this.snapshot.sessionId;
       if (this.isCurrent(sessionId)) {
         const error = nativeOperationError(cause, 'connection-failed', 'The native video surface could not follow its layout.');
-        this.fail(sessionId, error.toFailure());
+        this.failNative(sessionId, error.toFailure());
       }
     } finally {
       this.layoutInFlight = false;
@@ -736,7 +863,7 @@ export class TauriNativeAdapter extends SessionPlayer {
     this.firstFrameTimer = setTimeout(() => {
       this.firstFrameTimer = undefined;
       if (!this.isCurrent(sessionId) || (this.native?.videoWidth ?? 0) > 0 || this.snapshot.state === 'error') return;
-      this.fail(sessionId, { code: 'unsupported-format', message: 'The native engine did not produce a decoded video frame.' });
+      this.failNative(sessionId, { code: 'prepare-failed', message: 'The native engine did not produce a video frame before startup timed out.' });
     }, FIRST_FRAME_TIMEOUT_MS);
   }
 
@@ -745,6 +872,14 @@ export class TauriNativeAdapter extends SessionPlayer {
       clearTimeout(this.firstFrameTimer);
       this.firstFrameTimer = undefined;
     }
+  }
+
+  private failNative(sessionId: number, error: PlayerFailure): void {
+    if (!this.isCurrent(sessionId) || this.snapshot.error) return;
+    this.stopPolling();
+    this.clearFirstFrameWatchdog();
+    this.stopLayoutTracking();
+    this.fail(sessionId, error);
   }
 
   private async closeSession(sessionKey: string): Promise<void> {
@@ -762,6 +897,7 @@ export class TauriNativeAdapter extends SessionPlayer {
     const sessionKey = this.sessionKey;
     this.sessionKey = undefined;
     this.native = undefined;
+    this.pendingSeek = undefined;
     this.request = undefined;
     this.requestedPlaying = false;
     this.lastLayout = undefined;
