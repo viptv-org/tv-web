@@ -134,7 +134,7 @@ export function DetailScreen({
     : series ? undefined : selected;
   // Opened from a queued episode: that item keeps its queue fields (next-episode, exact resume source).
   const target = listed && selected.episode !== undefined && listed.id === selected.id ? selected : listed ?? (series ? selected : undefined);
-  const resume = !!target?.position && !target.watched;
+  const resume = !!target?.position && (target.resumeActive ?? !target.watched);
   const playLabel = target && target.season !== undefined && target.episode !== undefined
     ? `${resume ? "Resume" : "Play"} S${target.season} E${target.episode}`
     : resume ? "Resume" : "Play";
@@ -314,8 +314,8 @@ export function DetailScreen({
       <div className="vx-title__episode-list" data-scroll-id="episodes">
         {shown.map((e, i) => {
           const still = artworkUrl(itemPresentation(e).episodeImage ?? e.background ?? e.poster, 544, 300);
-          const watching = !e.watched && !!e.position;
-          const progress = e.watched ? 100 : watching && e.duration ? (e.position! / e.duration) * 100 : undefined;
+          const watching = !!e.position && (e.resumeActive ?? !e.watched);
+          const progress = e.watched && !e.resumeActive ? 100 : watching && e.duration ? (e.position! / e.duration) * 100 : undefined;
           const badge = watching ? <Badge kind="watching">Watching</Badge> : e.id === target?.id ? <Badge kind="up-next">Up next</Badge> : undefined;
           const number = e.episode ?? i + 1;
           return (

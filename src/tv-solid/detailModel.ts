@@ -88,7 +88,7 @@ export async function loadDetailView(
     (selected.type === "series" && selected.episode === undefined
       ? null
       : selected);
-  const resume = !!target?.position && !target.watched;
+  const resume = !!target?.position && (target.resumeActive ?? !target.watched);
   const playLabel =
     target?.season !== undefined && target.episode !== undefined
       ? `${resume ? "Resume" : "Play"} S${target.season} E${target.episode}`
@@ -150,8 +150,8 @@ export function selectDetailSeason(detail: DetailView, season: number): DetailVi
         number: `EPISODE ${episode.episode ?? index + 1}`,
         title: episode.episodeTitle ?? episode.name,
         synopsis: episode.description ?? "",
-        watching: !episode.watched && !!episode.position,
-        progress: episode.watched
+        watching: !!episode.position && (episode.resumeActive ?? !episode.watched),
+        progress: episode.watched && !episode.resumeActive
           ? 1
           : episode.position && episode.duration
             ? episode.position / episode.duration

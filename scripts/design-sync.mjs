@@ -13,6 +13,11 @@ import { fileURLToPath } from "node:url";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const digest = (bytes) => createHash("sha256").update(bytes).digest("hex");
+// Git may materialize pinned text as CRLF on Windows; binary artwork stays byte-exact.
+const matchesPinned = (path, bytes, expected) =>
+  digest(bytes) === expected ||
+  (/\.(?:md|json|svg)$/.test(path) || path.endsWith("/LICENSE")) &&
+    digest(Buffer.from(bytes.toString("utf8").replaceAll("\r\n", "\n"))) === expected;
 const read = (path) => readFileSync(resolve(root, path));
 const write = (path, bytes) => {
   mkdirSync(dirname(resolve(root, path)), { recursive: true });
@@ -129,7 +134,7 @@ if (command === "sync") {
       )
     )
       throw Error(`Invalid snapshot path: ${path}`);
-    if (digest(read(path)) !== entry.sha256)
+    if (!matchesPinned(path, read(path), entry.sha256))
       throw Error(
         `Design-owned file changed: ${path}. Update design first and sync its committed revision.`,
       );

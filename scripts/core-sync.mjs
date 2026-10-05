@@ -20,6 +20,7 @@ if(mode==='sync') {
  const copy=(from,to)=>{mkdirSync(to,{recursive:true});for(const entry of readdirSync(from,{withFileTypes:true})) {
   if(entry.isDirectory())copy(join(from,entry.name),join(to,entry.name));
   else{let data=readFileSync(join(from,entry.name));
+  if(/\.(?:ts|js|json)$/.test(entry.name))data=Buffer.from(data.toString('utf8').replace(/\r\n/g,'\n'));
   if(from.endsWith(join('runtime','src')))data=Buffer.from(data.toString().replaceAll('../../../generated/typescript/wire.js','../typescript/wire.js'));const path=join(to,entry.name);writeFileSync(path,data);entries[relative(destination,path).split(sep).join('/')]=hash(data);}
  }};
  copy(join(source,'generated/wasm'),join(destination,'wasm'));

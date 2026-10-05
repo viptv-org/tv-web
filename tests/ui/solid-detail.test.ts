@@ -26,6 +26,16 @@ describe("SolidTV season projection", () => {
     expect(api.seriesProgress).toHaveBeenCalledTimes(1);
   });
 
+  it("keeps a watched active rewatch resumable with partial progress", async () => {
+    const watched = { ...episode(1, 1), watched: true, position: 42, resumeActive: true, completionOnly: false, watchDateKnown: true };
+    const api = { detail: vi.fn(async () => ({ item: show, episodes: [watched] })), seriesProgress: vi.fn(async () => [watched]) } as unknown as TvApi;
+    const detail = await loadDetailView(api, show, "profile", [], new AbortController().signal);
+    expect(detail.target?.id).toBe(watched.id);
+    expect(detail.playLabel).toBe("Resume S1 E1");
+    expect(detail.episodes[0]).toMatchObject({ watching: true, progress: 0.35, item: { watched: true, resumeActive: true } });
+    const completed = selectDetailSeason({ ...detail, allEpisodes: [{ ...watched, resumeActive: false, position: 0 }] }, 1);
+    expect(completed.episodes[0]).toMatchObject({ watching: false, progress: 1 });
+  });
   it("offers numerically sorted seasons including specials without dropping any episodes", () => {
     const allEpisodes = [episode(0, 1), episode(1, 1), episode(2, 1), episode(2, 2)];
     const detail = { ...emptyDetail, allEpisodes, seasons: [0, 1, 2] };
