@@ -1046,3 +1046,15 @@
 .tv-layout .vx-home__hero-stage .vx-home-backdrop__fade-bottom {
   height: 224px; background: linear-gradient(to bottom, transparent, var(--viptv-color-bg));
 }
+
+/* Desktop: offscreen shelves do not participate in every wheel repaint. */
+@supports (content-visibility: auto) {
+  [data-layout="responsive"] .vx-home__shelves > section {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 380px;
+  }
+}
+[data-layout="responsive"] .vx-home__ambient {
+  contain: paint;
+  transform: translateZ(0);
+}

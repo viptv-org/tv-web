@@ -55,7 +55,7 @@ export function seekPinReleased(
 ): boolean {
   if (["error", "stopped", "ended", "disposed", "idle"].includes(state))
     return true;
-  return state === "playing" && position >= target - 0.75;
+  return ["playing", "paused", "ready"].includes(state) && position >= target - 0.75 && position <= target + 1.5;
 }
 
 

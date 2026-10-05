@@ -6,6 +6,7 @@ export interface SourceProducer {
   key: string;
   source: string;
   label: string;
+  icon?: string;
   error?: string;
   errorCode?: string;
 }
@@ -45,18 +46,20 @@ export function observeSourceProducers(
   previous: readonly SourceProducer[],
   events: StreamPoll["events"],
   names: ReadonlyMap<string, string>,
+  icons: ReadonlyMap<string, string> = new Map(),
 ): SourceProducer[] {
   const observed = new Map(previous.map((producer) => [producer.key, {
-    ...producer, label: names.get(producer.source) ?? producer.label,
+    ...producer, label: names.get(producer.source) ?? producer.label, icon: icons.get(producer.source) ?? producer.icon,
   }]));
   for (const event of events) {
-    if (!/^addon:\d+$/.test(event.source)) continue;
+    if (!/^(addon|iptv):\d+$/.test(event.source)) continue;
     const key = sourceProviderKey({ id: "", name: "", sourceAddonId: event.source } as MediaSource);
     const prior = observed.get(key);
     observed.set(key, {
       key,
       source: event.source,
-      label: names.get(event.source) ?? prior?.label ?? event.source,
+      label: names.get(event.source) ?? prior?.label ?? event.sources[0]?.sourceName ?? event.sources[0]?.name ?? event.source,
+      icon: icons.get(event.source) ?? prior?.icon,
       error: event.error ?? prior?.error,
       errorCode: event.errorCode ?? prior?.errorCode,
     });

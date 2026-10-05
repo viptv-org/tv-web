@@ -28,6 +28,7 @@ export function DialogBackdrop({ children, onCancel, scrim = "default", scope, c
     <div
       className={["vx-overlay", "vx-dialog-layer", "dialog-backdrop", className].filter(Boolean).join(" ")}
       data-focus-scope={scope}
+      data-viptv-video-controls=""
       onKeyDown={(event) => {
         if (event.key !== "Tab") return;
         // Keep Tab inside the dialog while it is open: focusable UI behind

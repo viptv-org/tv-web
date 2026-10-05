@@ -14,13 +14,16 @@ type Action = () => void;
 type Registration = { activate: Action; hold?: Action };
 export const Registry = createContext<Map<string, Registration> | null>(null);
 export function focusElement(id: string, options?: FocusOptions) {
+  if (document.documentElement.dataset.desktopInput === "pointer") return;
   const element = Array.from(document.querySelectorAll<HTMLElement>("[data-focus-id]"))
     .find((element) => element.dataset.focusId === id);
   if (!element) return;
+  if (element.closest('[hidden], [aria-hidden="true"]')) return;
   // Pointer-first pages retain dialog/input semantics, not remote arrival focus.
-  if (element.closest(".responsive-app") && !element.closest("[data-focus-scope]")
+  const responsive = element.closest(".responsive-app, .vx-rail");
+  if (responsive && !element.closest("[data-focus-scope]")
     && !element.matches("input, textarea, select, [contenteditable=true]")) return;
-  element.focus(element.closest(".responsive-app") ? options : { preventScroll: true, ...options });
+  element.focus(responsive ? options : { preventScroll: true, ...options });
 }
 
 export function RemoteRoot({
@@ -33,7 +36,7 @@ export function RemoteRoot({
   inputMode = "tv",
 }: {
   children: ReactNode;
-  inputMode?: "tv" | "responsive";
+  inputMode?: "tv" | "responsive" | "desktop";
   onBack?: Action;
   onMediaKey?: (key: string) => boolean;
   onMediaKeyUp?: (key: string) => void;
@@ -44,6 +47,7 @@ export function RemoteRoot({
   const handlers = useRef({ onBack, onMediaKey, onMediaKeyUp, onNavigate, onToggleFullscreen });
   handlers.current = { onBack, onMediaKey, onMediaKeyUp, onNavigate, onToggleFullscreen };
   useEffect(() => {
+    if (inputMode === "desktop") return;
     let lastRepeatedArrow = { key: "", at: 0 };
     let press:
       | { id: string; held: boolean; timer: ReturnType<typeof setTimeout> }
@@ -172,7 +176,7 @@ export function RemoteRoot({
     };
   }, [inputMode]);
   return (
-    <Registry.Provider value={registry.current}>{children}</Registry.Provider>
+    <Registry.Provider value={inputMode === "desktop" ? null : registry.current}>{children}</Registry.Provider>
   );
 }
 
@@ -184,7 +188,7 @@ function moveFocus(key: string, current: HTMLElement | null) {
   const all = Array.from(
     scope.querySelectorAll<HTMLElement>("[data-focus-id]:not([disabled])"),
   ).filter(
-    (e) => !e.closest("[hidden]") && e.getAttribute("aria-hidden") !== "true",
+    (e) => !e.closest('[hidden], [aria-hidden="true"]'),
   );
   if (!current || !all.includes(current)) {
     all[0]?.focus({ preventScroll: true });
@@ -285,7 +289,7 @@ export function TvButton({
       }}
       onFocus={(event) => {
         onFocus?.(event);
-        if (!event.currentTarget.closest(".responsive-app")) revealFocusedControl(event.currentTarget);
+        if (!event.currentTarget.closest(".responsive-app, .vx-rail")) revealFocusedControl(event.currentTarget);
       }}
     >
       {children}

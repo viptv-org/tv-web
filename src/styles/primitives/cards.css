@@ -1294,3 +1294,17 @@
 .tv-layout .vx-card { gap: 14px; }
 .tv-layout .vx-card__caption .vx-card__title { line-height: 33px; font-weight: 700; color: var(--viptv-color-text-primary); }
 .tv-layout .vx-card__caption .vx-card__meta { line-height: 27px; color: var(--viptv-color-text-secondary); }
+
+.desktop-shell .sources .vx-source-row {
+  border-radius: 16px;
+  background-clip: padding-box;
+}
+.desktop-shell .sources .vx-source-row--best {
+  border: 3px solid var(--viptv-accent);
+}
+[data-layout] .vx-source-row__quality > img {
+  width: 40px; height: 40px; object-fit: contain; border-radius: 8px;
+}
+[data-layout] .vx-source-row__quality-label {
+  margin-left: 8px; color: var(--viptv-color-text-secondary); font-size: 12px;
+}

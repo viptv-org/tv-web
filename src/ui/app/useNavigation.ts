@@ -155,6 +155,8 @@ export function useNavigation(app: CatalogApi) {
       setItems(previous.items);
       setEpisodes(previous.episodes);
       setSources(previous.sources);
+      app.setSourceProvider(previous.sourceProvider ?? "All");
+      app.setSourceQuality(previous.sourceQuality ?? "All");
       if (!restoredScroll.current) setTimeout(() => focusElement(previous.focus), 50);
     } else if (screen === "Settings" && settingsSubpage !== "Settings") {
       setSettingsSubpage("Settings");

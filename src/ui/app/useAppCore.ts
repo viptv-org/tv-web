@@ -204,6 +204,8 @@ export function useAppCore(api: TvApi, platform: PlayerPlatform, layout: "tv" | 
         items: readonly MediaItem[];
         episodes: readonly MediaItem[];
         sources: readonly MediaSource[];
+        sourceProvider?: string;
+        sourceQuality?: string;
       }[]
     >([]),
     active = useRef<{
@@ -238,7 +240,7 @@ export function useAppCore(api: TvApi, platform: PlayerPlatform, layout: "tv" | 
   const browserInitial = useRef<BrowserRoute | undefined>(responsive ? readBrowserRoute() : undefined);
   const [browserRevision, setBrowserRevision] = useState(0);
   const applyBrowserRoute = useRef<(route: BrowserRoute, cached?: BrowserSnapshot, reload?: boolean) => Promise<void>>(async () => {});
-  const captureBrowserSnapshot = (): BrowserSnapshot => ({ screen, subpage: screen === "Settings" ? settingsSubpage : undefined, selected, items, episodes, sources, query, season, catalog, catalogValues, nextSkip,
+  const captureBrowserSnapshot = (): BrowserSnapshot => ({ screen, subpage: screen === "Settings" ? settingsSubpage : undefined, selected, items, episodes, sources, sourceProvider, sourceQuality, query, season, catalog, catalogValues, nextSkip,
     focus: (document.activeElement as HTMLElement)?.dataset.focusId ?? "", scroll: captureScroll() });
   const browserCapture = useRef(captureBrowserSnapshot);
   browserCapture.current = captureBrowserSnapshot;
@@ -263,7 +265,7 @@ export function useAppCore(api: TvApi, platform: PlayerPlatform, layout: "tv" | 
     const ongoingPlayback = screen === "player" && currentRoute.screen === "player";
     browser.current?.update(route, captureBrowserSnapshot(), browserReplace.current || searchEdit || ongoingPlayback);
     browserReplace.current = false;
-  }, [responsive, screen, settingsSubpage, selected, items, episodes, sources, query, season, catalog, catalogValues, nextSkip, bootingHome, browserRevision]);
+  }, [responsive, screen, settingsSubpage, selected, items, episodes, sources, sourceProvider, sourceQuality, query, season, catalog, catalogValues, nextSkip, bootingHome, browserRevision]);
   const finishProfileNavigation = (preserveHomeLoad = false) => {
     if (!responsive) { setScreen("Home"); return; }
     browser.current?.clearSnapshots();

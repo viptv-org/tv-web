@@ -15,6 +15,15 @@ const event = (source: string, errorCode?: string): StreamEvent => ({
 const row = { id: "http", name: "Stream", sourceAddonId: "addon:8" } as MediaSource;
 
 describe("observed source add-on producers", () => {
+  it("includes IPTV producers and configured provider artwork in All", () => {
+    const rows = [{ id: "iptv-source", name: "IPTV One", sourceAddonId: "iptv:7", raw: {} }];
+    const producers = observeSourceProducers([], [{ sequence: 1, source: "iptv:7", sources: rows }], new Map(), new Map([["iptv:7", "https://art.example/provider.png"]]));
+    expect(producers).toHaveLength(1);
+    expect(producers[0].label).toBe("IPTV One");
+    expect(producers[0].icon).toBe("https://art.example/provider.png");
+    expect(matchesFilters(rows[0], "All", "All")).toBe(true);
+    expect(matchesFilters(rows[0], "All", producers[0].key)).toBe(true);
+  });
   it("keeps distinct configured IDs including zero-result producers and ignores generic events", () => {
     const producers = observeSourceProducers([], [
       event("addon:3", "source_format_unsupported"),

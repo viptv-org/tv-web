@@ -865,3 +865,75 @@ design#6 and desktop#4 acceptance, physical/signing gates, design review and the
 coordinated backend rollback/cutover remain open. Private captures and fixture
 credentials are excluded from Git; owned test resources were stopped. No
 deployment, production data access or migration occurred.
+
+## Integrated consumer qualification — 2026-10-02
+
+These reviewed source and local-runtime checkpoints supersede only the matching
+unqualified slices above. They do not complete broad platform, pixel, hardware,
+signing or production acceptance.
+
+- Design PR16, normative `1742afa2b50d30638fa46f3abc8c1a76638a51e1`, defines
+  private approved addon torrent inputs and authenticated gateway HLS for web,
+  desktop and Android. Backend PR7 adopts capability/scope/source fingerprint
+  checks; Core PR5, TV-web PR8 and Android PR15 adopt its source copy and pins.
+  Manual torrent entry and the in-process native facade remain deferred.
+- Gateway PR16 qualifies the actual service/API, selected file, authenticated
+  two-viewer playback, seek and renewal/release. PR17 qualifies previously-ready
+  cache ENOSPC recovery and active process crash/restart separately from
+  preparation ENOSPC. PR18 qualifies trusted-HTTPS WebCodecs decoded seek,
+  UID10001/zero-capability/NoNewPrivs service, prompt default cache/peer teardown.
+  Backend PR9 removes the account/catalog/playback projection from the browser
+  path: actual fresh account/profile/vault/addon/source/gateway APIs pass.
+- Gateway PR21 and backend PR12 add controlled DHT/BEP9 metadata bootstrap,
+  one/three-peer and repeated fresh-process cases. Final tested driver
+  `fbaac48c4628c918e4788250055d4562fd3b1270`, TV-web `ea173349`, Core `f66c87e`
+  and Video `550ab350` pass a 70.09-second case with three payload contributors,
+  decoded three-second seek, two renewals/releases, all input/output/viewer
+  capacity reclaimed, cache removal and peer retirement. This is bounded
+  generated-media qualification, not public/hostile swarm or long-duration proof.
+- Android PR18 adopts Core `f66c87e` with fresh 237 host tests, three native ABI
+  builds and system-trust normal APK/lint checks. PR19 qualifies the actual
+  Guide/controller HTTPS filter/Search/future-programme/native-Back chain with
+  identical returned node/bounds/focus and no new playback. Key/text/IME actions
+  use Compose semantics; OS keyboard UI and app-shell rail remain separate.
+- Android PR20, tested source `1007787461d6d6c088d35717cbea45d0f07f0e27`, and
+  backend observer PR11 qualify actual ApplicationShell/backend/gateway/Media3
+  HLS input replacement, immediate Audio Back/reopen, decoded managed seek and
+  four lease DELETE200 responses. Actual served TS bytes match one observed
+  FFmpeg `0:2` input map. Input descriptor spa and encoded output AAC/und are
+  distinct; identical silent samples do not establish audible Spanish. All
+  2/2/4 gateway capacity, cache and peer resources reclaim; the owned runner
+  exits zero. Synthetic session provisioning excludes login/pairing acceptance.
+- Core PR6 and TV-web PR9 preserve received-invalid HTTP status and bound
+  connectivity retries to ten seconds, avoiding the observed rapid banner loop.
+  Video PR5/6/7 qualify asynchronous native seek acknowledgement and cleanup
+  ordering. Plugin PR5/6 repairs GTK allocation/centered aspect-preserving Fill
+  and retires native engines/proxy capabilities during host shutdown. Plugin
+  PR7 `d80d0715` replaces malformed MPV header lists with a caller-owned atomic
+  node array; a real complete load/replacement regression verifies authorization,
+  commas/backslashes and prior-header retirement.
+- Desktop PR11, source `825e5c4`, pins TV-web `ea173349`, Core `f66c87e` and
+  plugin `d80d0715`. Actual authenticated GStreamer and MPV decode, +30-second
+  GStreamer seek without false failure, actual Engine Info and genuine KWin
+  Close/DELETE200/exit0/audio0 are recorded. A real blocked-GTK close releases
+  its lease at 0.183 seconds and exits at 20.104 seconds through the independent
+  watchdog. These are clean custom-protocol debug-native results; fresh Linux
+  package/HLS, playing overlay/Fit/resize input/pixels and full matrix remain
+  separate. Stale/black/wrong-window captures were excluded.
+- TV-web PR10 `ea173349` qualifies responsive pending Home skeletons, usable
+  saved cards, early cold-route restoration and cancelled Home reload on browser
+  Back through four full React/API regressions. 265 app tests/type/integrity/build
+  pass; all seven intended DeskStates were privately inspected over trusted local
+  HTTPS with API/media mocks. This adds a scoped composite-state inspection,
+  not installed decoding or uniform pixel parity; DeskPlayerRestore remains
+  incomplete. Backend PR10 and desktop PR11 adopt the reviewed UI source.
+
+Remaining safe work is tracked in the owning issues: installed Linux package
+and native gateway playback, actual shell/OS-IME Guide and phone text/inset
+qualification, and remaining per-state runtime/visual evidence. Android TV Guide
+presentation gaps remain measured under the standing layout scope. Profile
+target-PIN drawings conflict with the current session-dependent switch-away
+policy; that security-policy choice remains unresolved. Physical devices,
+clean-machine Windows/macOS/signing, private branch-protection governance/plan
+and rollback/cutover require separate evidence and authority. Original Android
+work is preserved. No production access, migration or deployment occurred.
