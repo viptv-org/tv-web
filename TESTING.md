@@ -1,3 +1,24 @@
+# Shared playback error normalization — 2026-10-06
+
+Android and TV-web adopt core `d104fd91e96ce2bdc468c7aa702222b96f90fe7b` through
+their owning core-sync scripts. Rust supplies canonical safe messages for backend
+source/gateway failures through both `apiError` and failed `playbackV2` leases;
+wire types, source selection and automatic retry policy are unchanged.
+
+The actual imported TV-web WASM passed 26 canonical vectors (104 HTTP cases and
+26 failed-lease cases), including precedence over upstream text and credential
+redaction. Single-fork Vitest passed 43 tests across playback-v2, playback-lease,
+core-session, error-detail, player-error-dismissal and solid-playback-runtime.
+`npm run build` passed design/core/video integrity, all typecheck groups and Vite
+production compilation. Mixed Tauri imports and large chunks remain nonblocking
+build warnings. The emitted WASM matches the imported binary's SHA-256.
+
+No browser/media/device checks were performed. HTTP-category dialog titles and
+synthetic 409 statuses for failed leases remain presentation limitations; native
+decoder errors still belong to their adapters. Core native/actual-WASM tests do
+not establish physical TV or installed desktop playback. No push or deployment
+was performed as part of this qualification.
+
 # Native Recovery Integration - 2026-10-05
 
 Minimum baseline is current GitHub main, retaining the deployed direct-fetch
