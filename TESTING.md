@@ -1,3 +1,25 @@
+# Shared policy contract adoption — 2026-10-06
+
+Android and TV-web pin core `246a26f4c3788397314ae3e9ffe4d5ffa5e1e74d`.
+Canonical Rust owns the shared presentation, source/progress, lifecycle and
+playback reducers; Android's migrated consumers execute their typed decisions.
+TV-web imports matching generated TypeScript/WASM through its owning sync script.
+The imported WASM SHA-256 matches the artifact verified by 37 identical
+native/actual-WASM policy vectors and the canonical WASM suite.
+
+The full single-fork Vitest suite passed 285 tests in 55 files. A final API rerun
+passed 20 tests, including the reverse-cursor contract and generated producer
+outcomes. Successful live-page fixtures explicitly include `previous_cursor`;
+a response missing that contract fails without a legacy fallback. The input
+poll-state adapter preserves Rust's default-empty outcome fields; returned state
+retains the generated producer facts.
+
+`npm run build` passed design/core/video integrity, all seven typecheck groups
+and production compilation. Existing mixed-Tauri-import and large-chunk warnings
+remain nonblocking. Root AGENTS.md records the shared decision/effect boundary.
+No browser/media/device or installed-desktop qualification was performed. Local
+commits only; nothing was pushed or deployed.
+
 # Shared playback error normalization — 2026-10-06
 
 Android and TV-web adopt core `d104fd91e96ce2bdc468c7aa702222b96f90fe7b` through

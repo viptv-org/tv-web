@@ -5,7 +5,7 @@ import type { PlaybackV2Request } from '../../vendor/core/typescript/wire';
 import { TvApi } from '../../src/api';
 
 const card = { id: 'opaque_live', source: 'iptv:1', source_addon_id: 'iptv:1', name: 'Provider', title: 'News', source_fingerprint: 'stable' };
-const page = { catalog_id: 1, generation: 7, items: [{ id: 'iptv:1:9', name: 'Zulu', logo: 'http://images.example/logo.png' }, { id: 'iptv:1:1', name: 'Alpha' }], next_cursor: 'next_page' };
+const page = { catalog_id: 1, generation: 7, items: [{ id: 'iptv:1:9', name: 'Zulu', logo: 'http://images.example/logo.png' }, { id: 'iptv:1:1', name: 'Alpha' }], next_cursor: 'next_page', previous_cursor: null };
 
 it('loads only the requested default live page and preserves its original cursor filters', async () => {
   const fake = scripted(response(page), response({ ...page, items: [], next_cursor: null }));
@@ -14,6 +14,7 @@ it('loads only the requested default live page and preserves its original cursor
   expect(first.items.map(item => item.id)).toEqual(['iptv:1:9', 'iptv:1:1']);
   expect(first.items[0].poster).toBe('http://images.example/logo.png');
   expect(first).not.toHaveProperty('total');
+  expect(first.previousCursor).toBeNull();
   expect(fake.calls).toHaveLength(1);
   await api.liveV2({ limit: 2, cursor: first.nextCursor! });
   expect(fake.calls.map(call => call.input)).toEqual([
@@ -59,6 +60,13 @@ it('rejects obsolete queries locally and old responses without falling back to l
   await expect(api.liveV2({ limit: 201 })).rejects.toMatchObject({ status: 400, code: 'invalid_catalog_query' });
   expect(fake.calls).toHaveLength(0);
   await expect(api.liveV2()).rejects.toMatchObject({ status: 502, code: 'invalid_catalog_response' });
+  expect(fake.calls).toHaveLength(1);
+});
+
+it('requires the reverse paging contract on successful channel responses', async () => {
+  const { previous_cursor: _previous, ...missingReverse } = page;
+  const fake = scripted(response(missingReverse));
+  await expect(apiFor(fake.fetcher).liveV2()).rejects.toMatchObject({ status: 502, code: 'invalid_catalog_response' });
   expect(fake.calls).toHaveLength(1);
 });
 

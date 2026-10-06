@@ -85,8 +85,8 @@ export interface StreamPoll {
  */
 export type SourcesPollStep = CoreView<Core.SourcesPollStep>;
 export type SourcesPollStepWithEvents = SourcesPollStep & { readonly events: StreamPoll["events"] };
-/** The initial input may omit errors; Rust always returns the generated state. */
-export type SourcesPollState = Omit<SourcesPollStep["state"], "errors"> & Partial<Pick<SourcesPollStep["state"], "errors">>;
+/** Initial input may omit default-empty outcomes; Rust returns the complete generated state. */
+export type SourcesPollState = Omit<SourcesPollStep["state"], "errors" | "producers"> & Partial<Pick<SourcesPollStep["state"], "errors" | "producers">>;
 
 export type {
   DirectFileCapabilities,

@@ -27,6 +27,15 @@ Before visual, input, navigation or asset changes, read `design-contract/DESIGN_
 
 Shared application rules are owned by ../core (viptv-org/core), pinned in CORE_REF. Change Rust and regenerate bindings/WASM there, commit, then run scripts/core-sync.mjs sync ../core. Never hand-edit vendor/core. Update Android's pin with the same revision for shared behavior changes. React owns rendering/focus and browser/player effects; provider aliases, artwork roles and continuation/source/resume rules belong in Rust. A passing hash check establishes the imported version, not device playback or visual acceptance.
 
+Use platform facts → Rust decision/projection → platform effects. Prefer existing
+core episode/history and metadata merges, card/hero/queue actions, source ranking
+and producer projections, and scoped lifecycle decisions over TypeScript copies.
+Preserve optional watched/active-rewatch/completion-only facts and timestamps.
+Batch collection projections; keep bridge calls off animation/input hot paths.
+Browser rendering, focus, clocks, HTTP/storage/player execution and native callback
+fences remain adapters. Backend delivery/lease/release facts remain authoritative;
+unknown observations must not become invented policy or automatic source fallback.
+
 Before changing responsive playback, fullscreen or sign-in, read the platform host requirements in `IMPLEMENTATION.md`.
 
 ## SolidTV canvas renderer

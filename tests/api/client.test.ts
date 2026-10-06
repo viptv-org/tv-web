@@ -34,6 +34,10 @@ describe("TvApi device and media boundary", () => {
     ], done: true }));
     const step = await apiFor(fake.fetcher).pollSourcesStep("job", { after: 0, sources: [], polls: 0 }, { retainProducerFailures: true });
     expect(step.done).toBe(true);
+    expect(step.state.producers.map(({ sourceId, errorCode }) => [sourceId, errorCode])).toEqual([
+      ["addon:3", "source_format_unsupported"],
+      ["addon:4", "source_format_unsupported"],
+    ]);
     expect(step.events.map(({ source, errorCode }) => [source, errorCode])).toEqual([
       ["addon:3", "source_format_unsupported"],
       ["addon:4", "source_format_unsupported"],
