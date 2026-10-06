@@ -1,3 +1,34 @@
+# Vizio on-PC SmartCast simulation + real-stream qualification — 2026-10-06
+
+Video pin `f9ce9d3` (adopted in this repo as `502ac32`): three consecutive
+non-fatal hls.js network errors now fail the session with a classified
+`connection-failed` error instead of silently draining the buffer, and the
+Vizio adapter's forward HLS buffer widened from 20 s to 45 s (75 s ceiling,
+30 s back) for SmartCast-class Wi-Fi.
+
+New committed harness `tests/preview/vizio-sim.mjs`: drives the production
+bundle at the local HTTPS stack with the physically qualified V655-G9 UA
+(Model/V655-G9 FW/2.600.596.0-10 Conjure/MTKB-7.600.259.0-prod), CDP CPU
+throttling (6x default) and network presets (fast 25 Mbps/40 ms, typical
+10 Mbps/60 ms, bad 5 Mbps/150 ms/0.5% loss), capturing per-second buffered
+ranges, frames, stall events and media throughput. PC simulation evidence
+only, labeled as such; no physical Vizio claim.
+
+Simulator results with real Torrentio/Pengu gateway streams (private evidence
+in `.local-https/vizio-sim/`): the user-reported "play 3 s, buffer, repeat"
+cycle reproduced on the old bundle (31 stalls in 60 s, median buffer-ahead
+0.07 s); after the fix the same title on the *worse* `bad` preset measured
+4 stalls and 2.23 s median buffer-ahead. Ranked retry across sources recovers
+the intermittent gateway probe failures. Playback reaching `ready` through
+`gateway.syek.tech` verified repeatedly for remux (copy/copy) 1080p sources.
+
+Known environment failures (not caused by this change): the WebM
+`media-decode` vizio case fails identically on `main` (blob-URL origin check
+in the dev server); the qualification gateway's VAAPI encoder is broken on
+the server iGPU (QSV-only), which intermittently pushes transcode starts
+past the 30 s ingress window — surfaced to clients as a classified
+`gateway_unavailable` error.
+
 # Desktop parity pass (design#3) — 2026-09-30
 
 Design pin unchanged (`4e153a7`). The preview harness compared DeskHome,
