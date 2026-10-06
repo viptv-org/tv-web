@@ -1,6 +1,6 @@
 {
   "repository": "viptv-org/video",
-  "revision": "13eb9535af29023e8bb97ee444aaa18e45c40c4b",
+  "revision": "3f1d09ff090696f13448bd84ffd35d7441d5c2a5",
   "files": {
     "vendor/video/src/browser-capabilities.ts": "3261889250b9ea0ea3ac33cd23dcc756ce3945f58f321fe62d54809481c5b921",
     "vendor/video/src/browser-policy.ts": "463891c85e85cf6b9b09083f99f671e882976171f07307a4d5d9569939ac311a",
@@ -32,6 +32,6 @@
     "vendor/video/src/tizen-avplay.ts": "e6624e60d1aedcb0c64ce15eaed471f918923f4750dc3e31b8400d5b4cf2aae2",
     "vendor/video/src/types.ts": "f5d121454a469955e6fcf0d742388abe5572374e65f41cc1c62ebe7c21a77b2d",
     "vendor/video/src/vizio-evidence.ts": "3f6135c3a6b99677d84fce70d393a6cb43ced88397cb2098ed3e0f1bcbea42e0",
-    "vendor/video/src/vizio-html5.ts": "a93cb11eac1d678addfa1ec93d5a62382b333de76c63e175753087683d0bdacd"
+    "vendor/video/src/vizio-html5.ts": "558c5af7f42146200604b080ad4da2d5cff4021d9e05f3f6dd33132d3137e8d9"
   }
 }
