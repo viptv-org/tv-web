@@ -1,3 +1,12 @@
+## Native rolling-cache shared projection — 2026-10-07
+
+Core `0f500daad567c11db9ff6608f225341a01fe4afa` supplies the revised native
+cache-capacity explanation and matching WASM artifact. The isolated app source
+at `319fa1e` passes all typecheck groups, 285 unit tests in one fork, pin integrity
+checks and the production build. This imports shared presentation; TV-web does
+not advertise native torrent delivery. No layout, Playwright, physical-device
+or deployment acceptance is claimed by this snapshot check.
+
 # Shared policy contract adoption — 2026-10-06
 
 Android and TV-web pin core `246a26f4c3788397314ae3e9ffe4d5ffa5e1e74d`.
