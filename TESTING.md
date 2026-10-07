@@ -2960,3 +2960,14 @@ core import passes typechecking, 285 tests with the required single fork, and th
 production build/integrity checks. An initial parallel run timed out in a guide
 test; the complete single-fork rerun passes. This record excludes unrelated local
 design reorganization edits and makes no Android/public-swarm/device claim.
+# Native rolling-file validation — 2026-10-07
+
+Core `df62d8a893bbfbd8c2cd471b07c40efa6a78a4aa` validates exact file lengths
+independently of rolling-cache capacity. Files above 2 GiB are eligible while
+hash/index/expected-size checks and authority invalidation remain enforced.
+The matching core passes 473 native/actual-WASM native-torrent vectors.
+
+An isolated checkout with the tracked design snapshot passes typecheck,
+285 single-fork tests and the production build. Canonical checkout owner edits
+to design documentation remain separate. This is shared-rule/import evidence,
+not browser torrent execution, physical TV or decoder qualification.
