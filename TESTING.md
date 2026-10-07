@@ -2927,14 +2927,14 @@ pixels and paused picture controls. Real-display occlusion prevented an initial
 standalone MPV frame check; the isolated X11 display removes that artifact.
 # Shared native protocol core adoption — 2026-10-07
 
-Adopted core `777448c2b1949d3eadd1a3d1b9f02162a8d7d98f` with its matching
+Adopted core `28e114949a5bef205ca0aa125d7f6fd2851b6c25` with its matching
 generated TypeScript/runtime/WASM snapshot. Android adopts the same immutable
 core revision. The core design pin is `83d338b6ffc1fc5e7f14ad4059f6159b8ee84509`;
 the existing TV-web visual contract remains unchanged.
 
 Core/source snapshot integrity, design/video integrity, application/test
 typechecks, all 285 tests in 55 files with one Vitest fork, and the production
-build passed. Core's separate native/actual-WASM suite passed 410 native grant,
+build passed. Core's separate native/actual-WASM suite passed 414 native grant,
 clock, capability, recovery and privacy vectors plus the existing protocol and
 presentation checks. TV-web's request path continues to omit native capability.
 
