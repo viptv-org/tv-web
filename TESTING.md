@@ -2951,3 +2951,12 @@ This adoption adds no peer transport, UI controls, deployment, browser device
 session or physical TV qualification. Android native artifact/control/player
 integration and native capability activation remain separate tickets. Local
 check logs are retained under `target/native-torrent-05/` in the core checkout.
+# Source failure diagnostic core adoption — 2026-10-07
+
+Core `ed83a0b9f24c6431f6ccca7c9426cb1da7f53ba5` adds closed native startup
+stage/network explanations with visible diagnostic codes. Android and TV-web
+adopt the same immutable core. An isolated checkout of tracked main plus this
+core import passes typechecking, 285 tests with the required single fork, and the
+production build/integrity checks. An initial parallel run timed out in a guide
+test; the complete single-fork rerun passes. This record excludes unrelated local
+design reorganization edits and makes no Android/public-swarm/device claim.
