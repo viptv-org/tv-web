@@ -48,6 +48,7 @@ import {
   type HomeView,
 } from "./homeModel";
 import { playerBuffer, type BufferSegment } from "./playerBuffer";
+import { playerInfoRows } from "./playerInfo";
 import { HomeShelfCache, homeRowWindow, homeVisibleCards } from "./homeShelfCache";
 import { CatalogRevisionMonitor } from "../ui/app/catalogRevisionMonitor";
 import { railIcon } from "./railIcons";
@@ -492,6 +493,8 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         trackPanelOpen: false,
         trackPanelKind: "text" as "audio" | "text",
         trackPanelTitle: "",
+        playerInfoOpen: false,
+        playerInfoRows: [] as { label: string; value: string }[],
         trackChoices: [] as TrackChoiceView[],
         trackSlots: Array.from({ length: 8 }, () => ({ ...emptyTrackChoice })),
         trackFocusIndex: 0,
@@ -864,7 +867,8 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
           | "sourceDetails"
           | "preparing"
           | "player"
-          | "playerTracks",
+          | "playerTracks"
+          | "playerInfo",
         address: "Connecting…",
         code: "••••••",
         qr: "",
@@ -1383,7 +1387,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         this.$listen("source-detail-close", () => this.closeSourceDetails());
         this.$listen("player-control-move", (delta: number) =>
           this.focusPlayerControl(
-            Math.max(this.playerItem?.type === "live" ? 4 : 0, Math.min(6, this.playerFocusIndex + Number(delta))),
+            Math.max(this.playerItem?.type === "live" ? 4 : 0, Math.min(7, this.playerFocusIndex + Number(delta))),
           ),
         );
         this.$listen("player-timeline-focus", () => this.focusPlayerTimeline());
@@ -5137,7 +5141,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
               this.playerSessionDuration=state.active.session.duration;
             },
             onTerminalError: (error) => {
-              if(!["player","playerTracks"].includes(this.phase) || this.playerNextBusy)return;
+              if(!["player","playerTracks","playerInfo"].includes(this.phase) || this.playerNextBusy)return;
               const outgoing=lastPlayerActive, item=outgoing?.intent.item??this.playerItem;
               if(!item)return;
               const position=lastPlaybackPosition;
@@ -5595,7 +5599,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         },5000);
       },
       revealPlayerControls() {
-        for (let index = 0; index < 7; index++)
+        for (let index = 0; index < 8; index++)
           $selectRevealable(this.$select(`playerControl${index}`))?.reveal?.();
       },
       focusPlayerControl(index: number) {
@@ -5627,6 +5631,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
           "audio",
           "subtitles",
           "exit",
+          "info",
         ][this.playerFocusIndex];
         try {
           if (action === "next") {
@@ -5652,6 +5657,9 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
           } else if (action === "exit") {
             await this.exitPlayer();
             return;
+          } else if (action === "info") {
+            this.openPlayerInfoPanel();
+            return;
           } else if (action === "audio" || action === "subtitles") {
             this.openTrackPanel(action === "audio" ? "audio" : "text");
             return;
@@ -5663,6 +5671,33 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
               : "The TV could not complete this request.";
         }
         this.schedulePlayerChromeHide();
+      },
+      /** Read-only playback info panel: delivery mode, engine and transport
+          straight from the player snapshot and controller session. */
+      openPlayerInfoPanel() {
+        if (this.phase !== "player" || !playback) return;
+        const snapshot = playback.player.snapshot;
+        const session = playback.controller.snapshot.active?.session;
+        this.playerInfoRows = playerInfoRows({
+          diagnostics: snapshot?.diagnostics,
+          sessionMode: session?.mode,
+          videoMode: session?.videoMode,
+          audioMode: session?.audioMode,
+          format: session?.format,
+          fallbackEngine: playback.player.capabilities.engine,
+        });
+        this.playerInfoOpen = true;
+        this.phase = "playerInfo";
+        this.playerOverlay = true;
+        this.setPlayerShade(true);
+        cancelChromeTimer();
+      },
+      closePlayerInfoPanel() {
+        if (!this.playerInfoOpen) return;
+        this.playerInfoOpen = false;
+        this.phase = "player";
+        this.focusPlayerControl(7);
+        this.schedulePlayerChromeHide(false);
       },
       async openTrackPanel(kind: "audio" | "text") {
         if (this.phase !== "player" || !playback) return;
@@ -5844,12 +5879,14 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         if (
           this.phase !== "player" &&
           this.phase !== "playerTracks" &&
+          this.phase !== "playerInfo" &&
           this.phase !== "preparing"
         )
           return;
         this.cancelNextEpisode();
         this.clearUpNext();
         this.playerDialog = null;
+        this.playerInfoOpen = false;
         ++playbackGeneration;
         this.playerSeekTarget=null;this.playerSeeksPending=0;
         clearInterval(heartbeatTimer);
@@ -5877,6 +5914,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         this.phase = "sources";
         this.playerOverlay = true;
         this.trackPanelOpen = false;
+        this.playerInfoOpen = false;
         this.playerSeekPreview = null;
         this.playerSeekLabel = "";
         if (this.playerDirectLive) {
@@ -6423,6 +6461,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         else if (this.phase === "profiles" && this.managing)
           this.toggleManageProfiles();
         else if (this.phase === "playerTracks") this.closeTrackPanel();
+        else if (this.phase === "playerInfo") this.closePlayerInfoPanel();
         else if (this.phase === "player") {
           if (this.trackPanelOpen) this.closeTrackPanel();
           else if (this.playerSeekPreview !== null) {
@@ -7425,7 +7464,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         </TvView>
         <TvView
           show={
-            (s.phase === "player" || s.phase === "playerTracks") &&
+            (s.phase === "player" || s.phase === "playerTracks" || s.phase === "playerInfo") &&
             s.playerOverlay
           }
         >
@@ -7571,6 +7610,15 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
             x={1752}
             y={926}
           />
+          <PlayerControl
+            screenRef={"playerControl7"}
+            position={7}
+            action={"info"}
+            icon={"ⓘ"}
+            diameter={72}
+            x={1842}
+            y={926}
+          />
 
         </TvView>
         <TvText
@@ -7582,11 +7630,11 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
           font={"Onest"}
           size={24}
           color={s.primary}
-          show={s.phase === "player" || s.phase === "playerTracks"}
+          show={s.phase === "player" || s.phase === "playerTracks" || s.phase === "playerInfo"}
         />
         <TvText x={192} y={780} maxwidth={1536} align={"center"}
           content={s.playerSnapshot?.captions?.join("\n") ?? ""} font={"Onest"} size={32}
-          color={s.primary} show={s.phase === "player" || s.phase === "playerTracks"} />
+          color={s.primary} show={s.phase === "player" || s.phase === "playerTracks" || s.phase === "playerInfo"} />
         <TvView show={s.phase === "playerTracks"}>
           <TvView w={1920} h={1080} color={s.sourceScrim} />
           <TvView x={1100} y={0} w={820} h={1080} color={s.sourcePanelGround} />
@@ -7664,6 +7712,34 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
             color={s.secondary}
           />
 
+        </TvView>
+        {/* Read-only playback info: delivery mode, engine, transport. */}
+        <TvView zIndex={10} show={s.phase === "playerInfo"}>
+          <TvView w={1920} h={1080} color={s.sourceScrim} />
+          <TvView x={1100} y={0} w={820} h={1080} color={s.sourcePanelGround} />
+          <TvText
+            x={1164}
+            y={64}
+            content={"Playback info"}
+            font={"Bricolage700"}
+            size={44}
+            color={s.primary}
+          />
+          <KeyedFor each={s.playerInfoRows} keyOf={(row:{label:string})=>row.label}>{(row,slot)=>
+            <TvText x={1164} y={190+slot()*64} maxwidth={340} content={row().label} font={"Onest700"} size={22} color={s.secondary}/>
+          }</KeyedFor>
+          <KeyedFor each={s.playerInfoRows} keyOf={(row:{label:string})=>row.label}>{(row,slot)=>
+            <TvText x={1524} y={190+slot()*64} maxwidth={340} content={row().value} font={"Onest"} size={22} color={s.primary}/>
+          }</KeyedFor>
+          <TvText
+            x={1164}
+            y={950}
+            maxwidth={660}
+            content={"BACK  Close"}
+            font={"Onest"}
+            size={22}
+            color={s.secondary}
+          />
         </TvView>
         <TvView zIndex={10} show={s.discoverFilterOpen}>
           <TvView w={1920} h={1080} color={s.sourceScrim} />

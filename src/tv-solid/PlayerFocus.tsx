@@ -42,6 +42,7 @@ export const PlayerControl = defineScreen({
         : this.action === "audio" ? "audio"
         : this.action === "subtitles" ? "captions"
         : this.action === "exit" ? "exit"
+        : this.action === "info" ? "info"
         : this.icon === "Ⅱ" ? "pause" : "play";
       this.iconSource = actionIcon(icon, this.focused);
     },
@@ -141,15 +142,18 @@ export const PlayerTimeline = defineScreen({
         rounded={6}
         color={s.track}
       />
+      {/* Engine-reported buffered ranges: a lighter fill under the played
+          bar, never on top of it (explicit z-order, not insertion order). */}
       <KeyedFor each={s.buffered??[]} keyOf={range=>range.start}>{range=><TvView
         x={range().start*1728} y={s.seeking?12:15} w={(range().end-range().start)*1728}
-        h={s.seeking?12:6} rounded={3} color={tokens["color.fill.buffered"]}/>}</KeyedFor>
+        h={s.seeking?12:6} rounded={s.seeking?6:3} color={tokens["color.line.control"]}/>}</KeyedFor>
       <TvView
         y={s.seeking ? 12 : 15}
         w={Math.max(0, Math.min(1728, s.progress * 1728))}
         h={s.seeking ? 12 : 6}
         rounded={6}
         color={s.accent}
+        zIndex={1}
       />
       <TvView
         x={Math.max(0, Math.min(1688, s.progress * 1728 - 20))}
@@ -159,6 +163,7 @@ export const PlayerTimeline = defineScreen({
         rounded={20}
         color={s.white}
         show={s.focused || s.seeking}
+        zIndex={2}
       />
       <TvView
         x={Math.max(0, Math.min(1596, s.progress * 1728 - 66))}
