@@ -2925,3 +2925,20 @@ checks; real-provider seek/pause/resume and genuine buffered-time readouts pass
 on both actual GTK engines. Separate silent media verifies tracks/subtitle
 pixels and paused picture controls. Real-display occlusion prevented an initial
 standalone MPV frame check; the isolated X11 display removes that artifact.
+# Shared native protocol core adoption — 2026-10-07
+
+Adopted core `777448c2b1949d3eadd1a3d1b9f02162a8d7d98f` with its matching
+generated TypeScript/runtime/WASM snapshot. Android adopts the same immutable
+core revision. The core design pin is `83d338b6ffc1fc5e7f14ad4059f6159b8ee84509`;
+the existing TV-web visual contract remains unchanged.
+
+Core/source snapshot integrity, design/video integrity, application/test
+typechecks, all 285 tests in 55 files with one Vitest fork, and the production
+build passed. Core's separate native/actual-WASM suite passed 410 native grant,
+clock, capability, recovery and privacy vectors plus the existing protocol and
+presentation checks. TV-web's request path continues to omit native capability.
+
+This adoption adds no peer transport, UI controls, deployment, browser device
+session or physical TV qualification. Android native artifact/control/player
+integration and native capability activation remain separate tickets. Local
+check logs are retained under `target/native-torrent-05/` in the core checkout.
