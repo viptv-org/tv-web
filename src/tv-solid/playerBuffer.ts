@@ -9,7 +9,12 @@ export function playerBuffer(time:PlayerTime,duration:number,media?:Pick<HTMLMed
     start=Math.max(0,start);end=Math.min(duration,end);
     if(end>start)ranges.push({start:start/duration,end:end/duration});
   };
-  if(media?.buffered?.length){
+  // Engine-published snapshot ranges are authoritative (they carry the
+  // adapter's managed timeline offset); the raw element is only a fallback
+  // for engines that do not publish ranges themselves.
+  if(time.bufferedRanges?.length){
+    for(const range of time.bufferedRanges)add(range.start,range.end);
+  } else if(media?.buffered?.length){
     const offset=Math.max(0,time.positionSeconds-media.currentTime);
     for(let i=0;i<media.buffered.length;i++)add(media.buffered.start(i)+offset,media.buffered.end(i)+offset);
   } else if(time.bufferedEndSeconds!=null)add(time.positionSeconds,time.bufferedEndSeconds);
