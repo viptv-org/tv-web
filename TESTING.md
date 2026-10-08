@@ -2982,8 +2982,11 @@ snapshot) drawn on a canvas beneath the transparent SolidTV stage; the scrims
 stay in the SolidTV scene. The WebGL 1 blur uses a power-of-two scene texture
 with generated mipmaps (each axis capped at 1024; 1024 × 1024 at 1080p) and an
 art-sized intermediate for transitions. Sources, `prefers-reduced-motion:
-reduce`, missing WebGL, context/program failure and context loss use the static
-compositor, which now follows TV-042 (1120 × 720 sharp art without edge fade).
+reduce`, missing WebGL, context/program failure and context loss use the
+existing static compositor unchanged. Design follow-up: it keeps its soft
+left/bottom art fades, while TV-042's static-compositor wording (and Android)
+specify the 1120 × 720 sharp art without an edge fade; the look is not changed
+here pending a design decision.
 
 - Single-fork unit run: 310 passed, including shuffle bags, no immediate repeat,
   empty-pool baseline, per-category bag keys, Core pools (Animation/Anime, first

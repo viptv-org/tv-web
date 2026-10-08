@@ -6,7 +6,7 @@ Design `59a9e57`, core `dac4841`; see [TESTING.md](../TESTING.md).
 | --- | --- | --- |
 | Home/Details WebGL 1 backdrop | Pinned shaders, art box, ambient, edge band, scrims, drift, Details still settle/768 px rule and transition with edge morph | Headless Chromium SwiftShader fixtures; no TV GPU timing |
 | Motion policy and Core pools | Unit-tested shuffle bags, no repeat, category keys, empty/failed pool → `linear` | Shared Core vectors; Android parity by inspection only |
-| Static fallback | Reduced motion, Sources, no WebGL/context failure | Forced program failure, context loss and OLED ground not exercised in a browser run |
+| Static fallback | Reduced motion, Sources, no WebGL/context failure | Forced program failure, context loss and OLED ground not exercised in a browser run. Design follow-up: keeps soft left/bottom art fades; TV-042 wording says no edge fade |
 
 ## Native Recovery Integration - 2026-10-05
 
