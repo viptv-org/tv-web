@@ -1,6 +1,6 @@
 # Playback capabilities and fallback contract
 
-**Status:** proposed adapter plan. This document does not claim a working web, Tizen, Vizio, Desktop, or Android player. The only implementation baseline is Roku at `vynxc/viptv@7d6b413`; its UX contract is [specs/behavior/roku-ux-contract.md](specs/behavior/roku-ux-contract.md). The existing [PLATFORM_PLAN.md](PLATFORM_PLAN.md) is correctly framed as proposed and does not promise an existing web player.
+**Status:** proposed adapter plan. This document does not claim a working web, Tizen, Vizio, Desktop, or Android player. The only implementation baseline is Roku at `vynxc/viptv@7d6b413`; its UX contract is [specs/behavior/roku-ux-contract.md](../../specs/behavior/roku-ux-contract.md). The existing [../../plans/PLATFORM_PLAN.md](../../plans/PLATFORM_PLAN.md) is correctly framed as proposed and does not promise an existing web player.
 
 Current browser implementation work is governed by [BROWSER_PLAYBACK.md](BROWSER_PLAYBACK.md); older proposed-platform statements below are historical context, not current delivery status.
 
@@ -8,7 +8,7 @@ Current browser implementation work is governed by [BROWSER_PLAYBACK.md](BROWSER
 
 Transcoding is a last resort. A player adapter must first inspect the selected stream and actual device capability, then use the cheapest path that passes a playback probe. A container suffix alone is not evidence that transcoding is required. A capability probe must account for container/demux support, video codec plus profile/level, audio codec, subtitle representation, DRM, headers/cookies, adaptive protocol, seek/range behavior, hardware/resource budget, and the actual engine/browser/TV model.
 
-No probe may override product intent. Ordinary Play/Sources remains explicit source selection; exact-source Resume and controlled next episode retain their narrowly defined automatic paths; a failed path must preserve pause/position/track intent and expose retry/Choose source rather than silently selecting a different provider. See the [Roku UX contract](specs/behavior/roku-ux-contract.md).
+No probe may override product intent. Ordinary Play/Sources remains explicit source selection; exact-source Resume and controlled next episode retain their narrowly defined automatic paths; a failed path must preserve pause/position/track intent and expose retry/Choose source rather than silently selecting a different provider. See the [Roku UX contract](../../specs/behavior/roku-ux-contract.md).
 
 ## Verified capability facts
 
@@ -55,6 +55,25 @@ This is the required ordering for a selected source; it is not a promise that ev
 | 5 | Full managed transcode | inspected capability failure has a recorded reason and no less-expensive path passes | start server conversion under existing resource/provider limits |
 
 Never retry a different provider automatically after rungs 1–5 fail. Report the underlying class to the existing recovery UI: unsupported format/track, authorization/header failure, connection failure, seek failure, preparation timeout, or playback error. A direct/managed switch preserves absolute position, pause intent and title-local audio/subtitle choice. If replacement fails, restore the old playable session; if restoration fails, show Retry and Choose source with the saved position.
+
+## Android native torrent exception
+
+[SRC-TORRENT-NATIVE-001](../../specs/behavior/torrent-native-android.md) is owner-approved
+for implementation, not qualified or baseline. Exact-index v1 VOD may use a
+separately negotiated native transport grant and selected-file loopback byte
+capability while Media3 remains the decoder. Ordinary `can_play_direct` and a
+container suffix are not native torrent admission. Archive-free artifacts,
+independent grants, cache isolation, network policy and bounded cancellation
+retain their independent qualification records. Supported Android runtimes
+advertise native torrent capability by default for every authorized account,
+without an enable setting, operator allowlist or qualification receipt;
+unsupported runtimes and other clients retain the gateway path.
+This exception changes no source-picker/player copy, geometry, remote actions,
+Back/focus return, resume/history or media-time progress. After native admission,
+existing automatic direct-to-gateway recovery must not run: a native failure uses
+safe explicit Retry / Choose another source / Back, with gateway retry requiring
+fresh backend authorization for the same opaque source/exact file. Decoder,
+physical HDR/PiP and device capability claims still require independent evidence.
 
 ## Proposed capability test contract
 

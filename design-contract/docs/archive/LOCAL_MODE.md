@@ -1,5 +1,7 @@
 # Local addon mode (proposed)
 
+Historical proposal: superseded for the v2 cutover by [BE-002](../../plans/backend-v2/BACKEND_V2.md). Retained for reference; follow the current backend contract and implementation ledger for new work.
+
 Status: **proposed**. Source revision: design `627201e898c7fa1af7deea638f201344a8862bf7` (2026-09-21). This document defines account-free operation of the shared viewing client from an on-device addon registry. It does not change the backend-hosted (thin) client, the Roku baseline, or any signed-in flow. Implementation issues must reference this document's immutable adoption commit. Identifiers below are stable (`LM-###`); acceptance scenarios are `LM-A#`.
 
 ## LM-001 — Concept and availability

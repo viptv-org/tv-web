@@ -16,7 +16,7 @@ const digest = (bytes) => createHash("sha256").update(bytes).digest("hex");
 // Git may materialize pinned text as CRLF on Windows; binary artwork stays byte-exact.
 const matchesPinned = (path, bytes, expected) =>
   digest(bytes) === expected ||
-  (/\.(?:md|json|svg)$/.test(path) || path.endsWith("/LICENSE")) &&
+  (/\.(?:md|json|svg|glsl)$/.test(path) || path.endsWith("/LICENSE")) &&
     digest(Buffer.from(bytes.toString("utf8").replaceAll("\r\n", "\n"))) === expected;
 const read = (path) => readFileSync(resolve(root, path));
 const write = (path, bytes) => {
@@ -77,13 +77,18 @@ if (command === "sync") {
     "viptv-design-system/tools/targets.json",
     "viptv-design-system/reference/screens/index.json",
   ].includes(p));
+  // The TV hero backdrop renderer bundles the shared GLSL sources, catalog and
+  // renderer contract verbatim (TV-042); clients never keep their own copies.
+  const hero = paths.filter(
+    (p) => p.startsWith("assets/hero/") && /\.(?:glsl|json|md)$/.test(p),
+  );
   const previous = existsSync(
     resolve(root, "design-contract/snapshot-lock.json"),
   )
     ? JSON.parse(read("design-contract/snapshot-lock.json")).files
     : {};
   const imports = [];
-  for (const source of [...docs, ...designSystemData, ...paths.filter(p => p.startsWith("tokens/") && p.endsWith(".json")), "assets/FILES.json", ...data, ...assets]) {
+  for (const source of [...docs, ...designSystemData, ...paths.filter(p => p.startsWith("tokens/") && p.endsWith(".json")), "assets/FILES.json", ...data, ...hero, ...assets]) {
     if (!safe(source)) throw Error(`Unsafe design path: ${source}`);
     const destination = source.startsWith(imagePrefix)
       ? `public/assets/${source.slice(imagePrefix.length)}`
@@ -145,6 +150,18 @@ if (command === "sync") {
   for (const path of list("public/assets"))
     if (!lock.files[path])
       throw Error(`App artwork is not in the design pin: ${path}`);
+  // Every hero catalog id must resolve to its pinned shader (TV-042 renderer).
+  const heroRoot = "design-contract/assets/hero/";
+  if (!lock.files[`${heroRoot}index.json`])
+    throw Error("Design pin lacks the TV hero shader catalog (assets/hero).");
+  const heroIndex = JSON.parse(read(`${heroRoot}index.json`));
+  for (const required of ["transition_common", "edge_common", "edge_main", "ambient_main"])
+    if (!lock.files[`${heroRoot}${required}.glsl`])
+      throw Error(`Hero shader missing from the design pin: ${required}.glsl`);
+  for (const [group, entries] of [["transitions", heroIndex.transitions], ["edges", heroIndex.edges]])
+    for (const { id } of entries ?? [])
+      if (!/^[a-z0-9]+$/.test(id) || !lock.files[`${heroRoot}${group}/${id}.glsl`])
+        throw Error(`Hero ${group} entry has no pinned shader: ${id}`);
   if (command === "freshness") {
     if (!repo)
       throw Error("Usage: node scripts/design-sync.mjs freshness ../design");

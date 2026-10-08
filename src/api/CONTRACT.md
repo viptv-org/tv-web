@@ -38,7 +38,7 @@ Content routes are `GET /catalogs`, `GET /discover`, `GET /meta/:type/:id`, `POS
 
 ## Browser decoding and delivery
 
-The canonical contract is pinned in `design-contract/BROWSER_PLAYBACK.md`.
+The canonical contract is pinned in `design-contract/docs/playback/BROWSER_PLAYBACK.md`.
 HTML/Vizio probes H.264 High 4.1, HEVC Main 5.0 SDR and AAC-LC using MIME support and bounded MediaCapabilities checks before creating a playback session. It distinguishes native MP4 from native HLS or hls.js/MSE; WebCodecs availability alone is not proof that this player can decode a format. Missing or timed-out MediaCapabilities falls back to MIME evidence; an explicit unsupported result does not. The current conservative envelope is 1080p. Actual TV/firmware decoding still needs device verification.
 
 The request serializes `directMp4`/`directHls` as optional `direct_mp4`/`direct_hls`. False disables that original delivery transport. Omission preserves existing native-client behavior. HTML clients require supported H.264/AAC HLS before requesting managed output; Back cancels pending preparation. AVPlay retains its native capability policy and does not use HTML decoder probes.

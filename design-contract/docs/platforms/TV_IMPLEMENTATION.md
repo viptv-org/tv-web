@@ -13,7 +13,7 @@ a separate entry until the migration qualifies for those TV launchers. Roku and
 Android TV retain their separate native implementations.
 
 The canonical TV reference frame is **1920 × 1080** with a 96 × 54 safe area,
-as specified in `viptv-design-system/`. Every TV screen and visible state keeps
+as specified in `../../viptv-design-system`. Every TV screen and visible state keeps
 the same copy, assets, color, typography, spacing, selection and focus treatment
 as the current TV UI. The new renderer may not borrow the React DOM focus
 registry or keep a separate global TV focus registry. SolidTV's active element,
@@ -41,7 +41,7 @@ TV launchers or claim hardware qualification before those checks are complete.
 
 Historical status: implementation authorized 2026-09-12. This added platform implementations of the existing Roku baseline without changing Roku behavior. Android TV uses native Jetpack Compose. Tizen and Vizio originally used one React frontend in viptv-org/tv-web with a replaceable platform player module. The proposed TV-only renderer migration above supersedes that choice for Tizen and Vizio and adds webOS as a target.
 
-The shared Tizen/Vizio presentation follows the design system in [viptv-design-system/](viptv-design-system/README.md) (TV reference screens, 10-foot rules). Design updates and per-platform acceptance follow [DESIGN_SYNC.md](DESIGN_SYNC.md). Historical functional checks do not qualify replacement visuals.
+The shared Tizen/Vizio presentation follows the design system in [viptv-design-system/](../../viptv-design-system/README.md) (TV reference screens, 10-foot rules). Design updates and per-platform acceptance follow [../process/DESIGN_SYNC.md](../process/DESIGN_SYNC.md). Historical functional checks do not qualify replacement visuals.
 
 ## Product contract
 

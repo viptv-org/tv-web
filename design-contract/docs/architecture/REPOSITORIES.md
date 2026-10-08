@@ -2,12 +2,12 @@
 
 All repositories are independent copies, not GitHub forks. Visibility is set per repository on GitHub; a repository that needs separate access (currently `playback-gateway`) is optional in the workspace bootstrap. Local checkouts live side by side in one working directory created by the [workspace](https://github.com/viptv-org/workspace) repository's `setup.sh`.
 
-The visual source for the redesign is the [VIPTV Redesign canvas](https://claude.ai/artifact/UX1E5AtPUoSKnaSLPou3Pp); its committed export is [viptv-design-system/](viptv-design-system/README.md). Apps pin an immutable design commit, never the canvas directly ([DESIGN_SYNC.md](DESIGN_SYNC.md)).
+The visual source for the redesign is the [VIPTV Redesign canvas](https://claude.ai/artifact/UX1E5AtPUoSKnaSLPou3Pp); its committed export is [viptv-design-system/](../../viptv-design-system/README.md). Apps pin an immutable design commit, never the canvas directly ([../process/DESIGN_SYNC.md](../process/DESIGN_SYNC.md)).
 
 | Repository | Owns | Status | Design pin | Spec |
 |---|---|---|---|---|
 | [design](https://github.com/viptv-org/design) | UI/UX specifications, canvas export, app assets, parity and design-first workflow | Current | — | [SPEC.md](https://github.com/viptv-org/design/blob/main/SPEC.md) |
-| [roku](https://github.com/viptv-org/roku) | Native Roku application | Current app; adopting the current TV design through [ROK-042](ROKU_DESIGN.md) | `DESIGN_REF` | [SPEC.md](https://github.com/viptv-org/roku/blob/main/SPEC.md) |
+| [roku](https://github.com/viptv-org/roku) | Native Roku application | Current app; adopting the current TV design through [ROK-042](../platforms/ROKU_DESIGN.md) | `DESIGN_REF` | [SPEC.md](https://github.com/viptv-org/roku/blob/main/SPEC.md) |
 | [backend](https://github.com/viptv-org/backend) | Rust backend, pinned web delivery bundle and deployment packaging | Current; BE-002 cutover in qualification | `DESIGN_REF` | [SPEC.md](https://github.com/viptv-org/backend/blob/main/SPEC.md) |
 | [playback-gateway](https://github.com/viptv-org/playback-gateway) | Independent generic media ingestion, output jobs and viewer leases | Implemented and locally qualified for documented formats; not publicly deployed | none (no UI) | [SPEC.md](https://github.com/viptv-org/playback-gateway/blob/main/SPEC.md) |
 | [web](https://github.com/viptv-org/web) | React account/admin web application | Current | `DESIGN_REF` | [SPEC.md](https://github.com/viptv-org/web/blob/main/SPEC.md) |
@@ -24,4 +24,4 @@ Roku/server/web extraction uses the actual local source at vynxc/viptv@7d6b413, 
 
 Backend's dashboard gitlink pins independent web source. Its checksummed compiled bundle permits CI without cross-repository credentials. Web promotion is explicit; see backend/DELIVERY.md.
 
-Status reflects source and recorded evidence, not deployment or universal device parity; the [implementation ledger](IMPLEMENTATION_V2.md) and each repository's tickets record exact qualification. Build workflows exist only for Android, desktop, Roku and TV-web (main pushes and manual dispatch, sideloading artifacts, no automatic deployment); other repositories rely on their documented local checks.
+Status reflects source and recorded evidence, not deployment or universal device parity; the [implementation ledger](../../plans/backend-v2/IMPLEMENTATION_V2.md) and each repository's tickets record exact qualification. Build workflows exist only for Android, desktop, Roku and TV-web (main pushes and manual dispatch, sideloading artifacts, no automatic deployment); other repositories rely on their documented local checks.
