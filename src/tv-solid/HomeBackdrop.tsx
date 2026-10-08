@@ -9,8 +9,9 @@ function cover(context: CanvasRenderingContext2D, image: HTMLImageElement, x: nu
   context.drawImage(image, (image.naturalWidth - sw) / 2, (image.naturalHeight - sh) / 2, sw, sh, x, y, width, height);
 }
 
-/** The pinned Home backdrop's CSS layers, composed once per artwork change.
- * Focus movement reuses the texture; it does not blur or encode images again. */
+/** The TV-042 static compositor (reduced motion, no WebGL, GL failure and the
+ * Sources screen), composed once per artwork change. Focus movement reuses
+ * the texture; it does not blur or encode images again. */
 export function HomeBackdrop(props: { sharp: string; ambient: string }) {
   const [pixels, setPixels] = createSignal<ImageData>();
   const sources = createMemo(() => ({sharp:props.sharp, ambient:props.ambient}), undefined,
@@ -41,14 +42,9 @@ export function HomeBackdrop(props: { sharp: string; ambient: string }) {
         cover(context, wash, 0, 0, 1920, 950); context.restore();
       }
       if (art) {
-        const layer=document.createElement("canvas");layer.width=1120;layer.height=720;
-        const paint=layer.getContext("2d")!;cover(paint,art,0,0,1120,720);
-        paint.globalCompositeOperation="destination-in";
-        const horizontal=paint.createLinearGradient(0,0,320,0);horizontal.addColorStop(0,"transparent");horizontal.addColorStop(1,"#fff");
-        paint.fillStyle=horizontal;paint.fillRect(0,0,1120,720);
-        const vertical=paint.createLinearGradient(0,480,0,720);vertical.addColorStop(0,"#fff");vertical.addColorStop(1,"transparent");
-        paint.fillStyle=vertical;paint.fillRect(0,0,1120,720);
-        context.drawImage(layer,800,0);
+        // TV-042 static compositor: the sharp art is centre-cropped into
+        // 1120 × 720 at x 800 with no edge fade; the scrims below blend it.
+        cover(context, art, 800, 0, 1120, 720);
       }
       const left = context.createLinearGradient(0, 0, 1920, 0);
       left.addColorStop(0, ground); left.addColorStop(.5, ground + "eb"); left.addColorStop(1, "transparent");

@@ -13,7 +13,7 @@ import { nextFromEpisodes, UP_NEXT_SECONDS, UP_NEXT_TICK_MS, type UpNextCard } f
 import type { createSolidTVContinuation, SolidTVContinuationResult } from "./continuationRuntime";
 import { catalogFilterLabel } from "../ui/catalogFilters";
 import { heroLabelWidth } from "./heroGeometry";
-import { HomeBackdrop } from "./HomeBackdrop";
+import { ShaderHeroBackdrop, heroCanvasShown, type HeroFocus } from "./ShaderHeroBackdrop";
 import { exitWebos, installWebosLifecycle } from "./webos";
 import QRCode from "qrcode";
 import { carouselWindow } from "./carousel";
@@ -113,7 +113,7 @@ import {
   halfHour,
   timeRange,
 } from "../ui/guide-core";
-import { cardPresentation, presentation } from "../core/presentations";
+import { artworkUrl, cardPresentation, presentation } from "../core/presentations";
 import {
   catalogDefaults,
   catalogFilters,
@@ -418,6 +418,10 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         },
         home: emptyHome as HomeView,
         detail: emptyDetail as DetailView,
+        /** The title whose art the Details backdrop shows; null until its view applies. */
+        detailBackdropItem: null as MediaItem | null,
+        /** The episode focus last rested on (TV-042); kept on Season/actions. */
+        detailBackdropFocus: null as HeroFocus | null,
         source: emptySources as SourcesView,
         sourceProducers: [] as SourceProducer[],
         sourceChips: Array.from({ length: 5 }, () => ({ ...emptySourceChip })),
@@ -4747,9 +4751,12 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
           if (generation !== detailGeneration || detailScope.signal.aborted)
             return;
           this.phase = "detail";
+          this.detailBackdropItem = null;
+          this.detailBackdropFocus = null;
           setTimeout(() => {
             if (generation !== detailGeneration) return;
             this.detail = view;
+            this.detailBackdropItem = view.item;
             this.detailEpisodeStart = 0;
             this.detailEpisodes = Array.from(
               { length: 5 },
@@ -4793,6 +4800,8 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
           onSelect: (id:string) => {
             if(id!=="cancel") {
               this.detail=selectDetailSeason(this.detail,Number(id.slice(7)));
+              // A season change returns to the series art without the settle delay.
+              this.detailBackdropFocus=null;
               this.detailEpisodeStart=0;this.detailEpisodeIndex=0;this.detailOffset=0;this.detailWindowX=0;
               this.detailEpisodes=Array.from({length:5},(_,index)=>this.detail.episodes[index]??{...emptyDetailEpisode});
               this.detailSeasonLabel=`Season ${this.detail.season}`;
@@ -4808,6 +4817,11 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         index=Math.max(0,Math.min(this.detail.episodes.length-1,index));
         this.detailFocusZone = "episode";
         this.detailEpisodeIndex = index;
+        const focusedEpisode = this.detail.episodes[index]?.item;
+        if (focusedEpisode && this.detailBackdropFocus?.key !== focusedEpisode.id) {
+          const still = presentation(focusedEpisode).episodeImage;
+          this.detailBackdropFocus = { key: focusedEpisode.id, image: still ? artworkUrl(still, 1280, 720, true) ?? still : "" };
+        }
         const window = carouselWindow(index, this.detail.episodes.length, 360, 1624, this.detailOffset);
         this.detailOffset = window.offset;
         this.detailEpisodeStart = window.start;
@@ -6042,12 +6056,15 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         this.detailReturnZone = this.sourceReturnZone === "card" ? "card" : "action";
         this.detailReturnIndex = this.sourceReturnIndex;
         this.detail = emptyDetail;
+        this.detailBackdropItem = null;
+        this.detailBackdropFocus = null;
         this.detailNotice = "Loading title…";
         this.phase = "detail";
         try {
           const view = await loadDetailView(api, item, this.currentProfileId, this.home.favoriteItems, detailScope.signal);
           if (generation !== detailGeneration || detailScope.signal.aborted || this.phase !== "detail") return;
           this.detail = view;
+          this.detailBackdropItem = view.item;
           this.detailSeasonLabel = `Season ${view.season}`;
           this.detailCountLabel = `${view.episodeCount} ${view.episodeCount === 1 ? "episode" : "episodes"}`;
           this.detailSaveIcon = view.saved ? "✓" : "+";
@@ -6342,6 +6359,8 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         this.currentProfileId = "";
         this.home = emptyHome;
         this.detail = emptyDetail;
+        this.detailBackdropItem = null;
+        this.detailBackdropFocus = null;
         this.source = emptySources;
         this.profiles = [];
         this.profileSlots = Array.from({length:6},()=>({...emptyProfileTile}));
@@ -6506,7 +6525,8 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         color={
           s.phase === "player" ||
           s.phase === "playerTracks" ||
-          s.phase === "preparing"
+          s.phase === "preparing" ||
+          heroCanvasShown()
             ? "rgba(0,0,0,0)"
             : s.background
         }
@@ -6802,7 +6822,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
           }
         ><TvView>
           {/* A remounted backdrop must remain behind content, regardless of insertion order. */}
-          <Show when={s.homeScrollY<950}><TvView zIndex={-1} y={-s.homeScrollY}><HomeBackdrop sharp={s.home.heroImage} ambient={s.home.ambientImage} /></TvView></Show>
+          <TvView zIndex={-1} y={-s.homeScrollY}><ShaderHeroBackdrop image={s.home.heroImage} ambient={s.home.ambientImage} mediaType={s.home.heroItem?.type ?? ""} genres={s.home.heroItem?.genres ?? []} motion={s.phase === "home"} visible={s.homeScrollY < 950} scrollY={s.homeScrollY} /></TvView>
           <CollapsedRail avatar={s.homeProfileAvatar} current="home"/>
           <TvView w={1920} h={1080} clipping>
           <TvView w={1920} h={Math.max(1080, 1080 + Math.max(0, s.homeShelves.length - 1) * 364)} y={-s.homeScrollY}>
@@ -7106,7 +7126,11 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
                 s.phase === "sourceDetails"))
           }
         >
-          <HomeBackdrop sharp={s.detail.heroImage} ambient={s.detail.heroImage} />
+          <TvView>
+            <Show when={s.detailBackdropItem && (s.phase === "detail" || (s.sourceReturnOrigin === "detail" && (s.phase === "sources" || s.phase === "provider" || s.phase === "sourceDetails")))}>
+              <ShaderHeroBackdrop image={s.detail.heroImage} ambient={s.detail.heroImage} focus={s.detailBackdropFocus} mediaType={s.detailBackdropItem?.type ?? ""} genres={s.detailBackdropItem?.genres ?? []} motion={s.phase === "detail"} />
+            </Show>
+          </TvView>
           <CollapsedRail avatar={s.homeProfileAvatar} current={s.railCurrent}/>
           <TvView
             x={192}

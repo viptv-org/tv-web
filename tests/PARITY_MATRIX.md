@@ -1,3 +1,13 @@
+## TV-042 — Shader hero backdrop — 2026-10-07
+
+Design `59a9e57`, core `dac4841`; see [TESTING.md](../TESTING.md).
+
+| Surface | Verified scope | Device evidence / limits |
+| --- | --- | --- |
+| Home/Details WebGL 1 backdrop | Pinned shaders, art box, ambient, edge band, scrims, drift, Details still settle/768 px rule and transition with edge morph | Headless Chromium SwiftShader fixtures; no TV GPU timing |
+| Motion policy and Core pools | Unit-tested shuffle bags, no repeat, category keys, empty/failed pool → `linear` | Shared Core vectors; Android parity by inspection only |
+| Static fallback | Reduced motion, Sources, no WebGL/context failure | Forced program failure, context loss and OLED ground not exercised in a browser run |
+
 ## Native Recovery Integration - 2026-10-05
 
 | Surface | Current evidence | Limits |

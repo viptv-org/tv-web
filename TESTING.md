@@ -520,7 +520,7 @@ Adopts core `2cfd963e5cf9178d93e8bbb7462bcccb92b152f3` with stable producer keys
 # TV reliability corrections — 2026-09-25
 
 Design pin `8ab5b6e95cdc9c6154efec2ff418a4ee1eecf55e`, contract
-[TV-034](design-contract/TV_POLISH.md), design issue #4 / tv-web issue #2.
+[TV-034](design-contract/docs/platforms/TV_POLISH.md), design issue #4 / tv-web issue #2.
 
 The SolidTV entry (`solid.html`, including the `lightning.html` compatibility
 entry) now selects profiles into Home, restores Settings/sidebar navigation,
@@ -2971,3 +2971,33 @@ An isolated checkout with the tracked design snapshot passes typecheck,
 285 single-fork tests and the production build. Canonical checkout owner edits
 to design documentation remain separate. This is shared-rule/import evidence,
 not browser torrent execution, physical TV or decoder qualification.
+# TV-042 shader hero backdrop — 2026-10-07
+
+Design `59a9e57e2ca96a59c4e2febace5325e01c9d012a` (TV_POLISH.md TV-042 and
+`assets/hero/**`, now vendored and integrity-checked by `design-sync.mjs`) and
+core `dac4841e618f246f2e83e5bc96a3b210553092d5` (`heroEdgePool`). The SolidTV
+Home hero and Details backdrop use a lazily loaded WebGL 1 renderer
+(`heroGlRenderer` chunk, 57 kB / 16 kB gzip, shaders bundled from the pinned
+snapshot) drawn on a canvas beneath the transparent SolidTV stage; the scrims
+stay in the SolidTV scene. The WebGL 1 blur uses a power-of-two scene texture
+with generated mipmaps (each axis capped at 1024; 1024 × 1024 at 1080p) and an
+art-sized intermediate for transitions. Sources, `prefers-reduced-motion:
+reduce`, missing WebGL, context/program failure and context loss use the static
+compositor, which now follows TV-042 (1120 × 720 sharp art without edge fade).
+
+- Single-fork unit run: 310 passed, including shuffle bags, no immediate repeat,
+  empty-pool baseline, per-category bag keys, Core pools (Animation/Anime, first
+  pooled genre, no genres, Core error → `linear`), the 350 ms / 768 px still
+  rule, decode capping and fallback selection. `npm run build` passed.
+- Trusted-HTTPS headless Chromium (SwiftShader WebGL) against the built bundle
+  and the preview fixtures: Home hero drew the art box, ambient fill, edge band
+  and scrims, and drift changed pixels between captures; Details showed the
+  series art, kept it for a 325 px episode still, and played a non-crossfade
+  transition with an edge morph to a 774 px still after the settle. Reduced
+  motion and Sources removed the canvas and showed the static compositor;
+  returning from Sources to Details restored the shader canvas. Captures were
+  inspected privately and are not committed.
+- Not executed: a >15-title Home rotation (TV-web Home keeps one hero per load),
+  forced program failure, background/return, OLED ground and frame timing.
+  No Tizen, Vizio or webOS hardware qualification is claimed; GPU cost on weak
+  TVs is unmeasured.

@@ -34,6 +34,8 @@ export type TvIdentity = CoreView<Core.Identity>;
 export type MediaItem = CoreView<Core.MediaItem>;
 export type MediaPresentation = CoreView<Core.MediaPresentation>;
 export type CardPresentation = CoreView<Core.CardPresentation>;
+/** Core-owned TV hero backdrop category and edge-style pool (TV-042). */
+export type HeroEdgePool = CoreView<Core.HeroEdgePool>;
 
 export type MediaSource = CoreView<Core.MediaSource>;
 
