@@ -2971,3 +2971,12 @@ An isolated checkout with the tracked design snapshot passes typecheck,
 285 single-fork tests and the production build. Canonical checkout owner edits
 to design documentation remain separate. This is shared-rule/import evidence,
 not browser torrent execution, physical TV or decoder qualification.
+# Exact source identity deduplication core adoption — 2026-10-08
+
+Core `af88a4895773af526661aa78356a655b94ec399a` deduplicates opaque source
+handles and exact nonempty addon/fingerprint identities in linear time. First
+handle/order, separate providers and unknown identities remain distinct. The
+core's native and actual-WASM discovery vectors pass. This worktree passes
+core integrity, nine targeted session/presentation/producer tests and the
+production build including type checking. No browser/device playback or
+deployment is claimed. Android adopts the same revision on its matching branch.
