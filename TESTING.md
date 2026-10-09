@@ -3011,3 +3011,15 @@ core's native and actual-WASM discovery vectors pass. This worktree passes
 core integrity, nine targeted session/presentation/producer tests and the
 production build including type checking. No browser/device playback or
 deployment is claimed. Android adopts the same revision on its matching branch.
+
+# Runtime v2 core adoption — 2026-10-09
+
+Core `b6606cadeea60a19fac9c91f788acb5c12d87308` provides the private v2
+holder, nullable selection, discovery hints, stable resolved media identity and
+renewal/clock checks. The shared v2 retry decision never requests gateway
+fallback. Android adopts the same source and generated native bindings.
+
+All 291 tests pass with one fork, and the production build including hash and
+type checks passes. Hosted clients still use gateway delivery; importing the
+bridge does not activate peer networking in web/TV clients. Desktop worker
+adoption, browser playback and device qualification remain separate work.
