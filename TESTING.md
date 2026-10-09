@@ -3023,3 +3023,9 @@ All 291 tests pass with one fork, and the production build including hash and
 type checks passes. Hosted clients still use gateway delivery; importing the
 bridge does not activate peer networking in web/TV clients. Desktop worker
 adoption, browser playback and device qualification remain separate work.
+
+Runtime negotiation follow-up: core
+`d1787f3910306822d68192a5d3c45f980a665234` requires an explicitly advertised
+v2 capability; an empty support list stays unavailable. Native and actual-WASM
+regressions and the complete core suite pass. The consumer's production build,
+hash checks and type checks pass. Android adopts this same revision.
