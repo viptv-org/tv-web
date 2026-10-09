@@ -197,7 +197,7 @@ test('website fullscreen, volume and backend info operate on a decoded player', 
   await expect(info).toContainText('browser-proxy');
   await expect(info).toContainText('remux');
   await expect(info).not.toContainText('/media/');
-  await expect(info.locator('dt').filter({ hasText: 'Decoder' }).locator('..').locator('dd')).toContainText(/native-html|hls\.js/);
+  await expect(info.locator('dt').filter({ hasText: /^Engine$/ }).locator('..').locator('dd')).toContainText(/native-html|hls\.js/);
 });
 
 test('phone player fits and fills video without losing the controls', async ({ page }, testInfo) => {

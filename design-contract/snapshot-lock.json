@@ -1,7 +1,7 @@
 {
   "version": 1,
   "repository": "viptv-org/design",
-  "commit": "5b68802c6f5ea91dc248defb047439f3ea96cce5",
+  "commit": "01abe2ea695ae2041742056de756e11d7d191eb5",
   "files": {
     "design-contract/.github/pull_request_template.md": {
       "source": ".github/pull_request_template.md",
@@ -13,7 +13,7 @@
     },
     "design-contract/CHANGELOG.md": {
       "source": "CHANGELOG.md",
-      "sha256": "c8ee2cfd0f0d6f956b75f708a1ef8bebff412a82a33f1f8fa60b4063762c63fa"
+      "sha256": "0cd171bd88e9fb98f828cb2ec7c333c1cfc0f009798ba328d1e024f78cd5c1cf"
     },
     "design-contract/CONTEXT.md": {
       "source": "CONTEXT.md",
@@ -177,7 +177,7 @@
     },
     "design-contract/specs/behavior/torrent-native-android.md": {
       "source": "specs/behavior/torrent-native-android.md",
-      "sha256": "9b4e11d27e0a7758661f6603e675df1ec01077bdd2bb534945dfc73278a1467b"
+      "sha256": "0ff8cda20866bdfedba94861725581379677ef2acbf4b8acfc88bc6548cfa697"
     },
     "design-contract/specs/repos/README.md": {
       "source": "specs/repos/README.md",
@@ -197,7 +197,7 @@
     },
     "design-contract/viptv-design-system/copy.md": {
       "source": "viptv-design-system/copy.md",
-      "sha256": "6a8f72fdd3ed2022788c8e6baaa6d95952c608666b1fbf730f901840cc46e662"
+      "sha256": "b5bfc142b5dac4cea5d55c578235c4ec656313caf42c809ac7b1a62bfd3e617f"
     },
     "design-contract/viptv-design-system/decisions.md": {
       "source": "viptv-design-system/decisions.md",

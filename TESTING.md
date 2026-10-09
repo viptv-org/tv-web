@@ -1,4 +1,35 @@
-## Native rolling-cache shared projection — 2026-10-07
+## SolidTV history-Back guard for hosted TV containers — 2026-10-08
+
+The owner reported full black screens on the Vizio receiver when pressing
+Back during playback (both from visible chrome and after entering from
+Continue Watching). Diagnosis combined the real receiver's request log
+(watch-web nginx: playback DELETE on exit with no further document
+requests) and a harness reproduction: hosted-TV containers such as Vizio
+SmartCast Conjure deliver the remote's BACK as **browser history
+navigation**, and the solid renderer had no history handling at all — with
+the receiver URL as the session's only history entry, an unguarded
+`history.back()` lands on `about:blank` and blanks the whole app.
+
+`src/bootstrap.ts` now installs a history sentinel for the solid renderer:
+one extra same-URL history entry, a `popstate` handler that re-arms the
+sentinel and re-dispatches the event as a `keydown` with `key: "GoBack"`
+and `keyCode: 461` (the legacy keyCode is required: old TV Chromium
+resolves key maps through it, and synthetic `KeyboardEvent` leaves it 0).
+The renderer's existing Back handling then treats it exactly like a
+remote BACK press: first press hides player chrome, second exits playback
+to the sources screen with the video layer hidden.
+
+Verification: the new `tests/e2e/vizio-back-black-screen.spec.ts`
+(4 tests, vizio project) covers key BACK exit, chrome-auto-hide exit,
+history-Back document survival and double history-Back exit — all pass.
+`tsc` typecheck and the 291-test Vitest suite pass. The full vizio
+Playwright run has 10 failures and 1 flake; a stashed-baseline rerun of
+the same files reproduced 9 of the failures identically (the tenth,
+`next-episode.spec.ts:322`, also fails on baseline), so none are
+regressions from this change. Physical TV verification on the owner's
+Vizio (Conjure `watch.syek.tech/?platform=vizio`) is still needed once
+deployed; the bundle served there predates this fix.
+
 
 Core `0f500daad567c11db9ff6608f225341a01fe4afa` supplies the revised native
 cache-capacity explanation and matching WASM artifact. The isolated app source
@@ -2971,3 +3002,27 @@ An isolated checkout with the tracked design snapshot passes typecheck,
 285 single-fork tests and the production build. Canonical checkout owner edits
 to design documentation remain separate. This is shared-rule/import evidence,
 not browser torrent execution, physical TV or decoder qualification.
+# Exact source identity deduplication core adoption — 2026-10-08
+
+Core `af88a4895773af526661aa78356a655b94ec399a` deduplicates opaque source
+handles and exact nonempty addon/fingerprint identities in linear time. First
+handle/order, separate providers and unknown identities remain distinct. The
+core's native and actual-WASM discovery vectors pass. This worktree passes
+core integrity, nine targeted session/presentation/producer tests and the
+production build including type checking. No browser/device playback or
+deployment is claimed. Android adopts the same revision on its matching branch.
+# Shared core and hosted-TV navigation merge — 2026-10-09
+
+Core `aae69de27d69f87f79ce513e47a78985cede4a39` combines exact-source
+deduplication, bounded request/render scheduling, preview expiry, playable-source
+ranking and explicit native Retry. The regenerated WASM and TypeScript snapshot
+is adopted together with design `01abe2ea695ae2041742056de756e11d7d191eb5`.
+The incoming hosted-TV history-Back guard and playback acceptance updates remain.
+
+All typecheck groups, 291 unit/integration tests with one worker, production build
+and core/design/video snapshot checks pass. The trusted-HTTPS Playwright config
+includes the four Vizio black-screen/Back regressions and their hosted `/tv/`
+entry. Listing these alongside responsive corrections discovers 13 scenarios.
+Browser execution is not qualified for this merge: the owner's private local
+HTTPS tooling is absent on this checkout and its documented hostname does not
+resolve. No physical-TV, installed desktop or production deployment claim follows.
