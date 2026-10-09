@@ -3078,3 +3078,9 @@ stop revoked the media URL immediately. Gateway stage tests cover deduplication
 and keep startup/authority deadlines independent. Current web suite: 300 tests
 and production build pass. The test page wrapped production API/controller code;
 ordinary account/catalog screens were not driven in this media probe.
+
+Pending cancellation was also exercised through the real backend/gateway and
+production browser controller before metadata/first frame. Stop restored all
+owned gateway input/output slots, and scoped cancellation tombstones prevent a
+late create from starting again. This is a synthetic unavailable source fixture
+for lifecycle qualification, separate from the real-media frame/seek trials.
