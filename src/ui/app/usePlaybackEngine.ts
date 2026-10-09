@@ -18,7 +18,7 @@ import type { AppApi, AuthApi } from "./useTvApp";
 import { useNativeShutdown } from "./useNativeShutdown";
 
 export function usePlaybackEngine(app: AuthApi) {
-  const { active, api, autoplayTest, autoResume, browser, canvas, controlActivity, controller, engineChoice, engineError, epoch, fail, go, items, modal, nextScope, notify, overlay, platform, playbackCapabilities, player, profile, responsive, resumeRemainder, screen, seek, seekTarget, seekTimer, seekValue, session, setBusy, setError, setModal, setOpeningSource, setOverlay, setPreparing, setScreen, setSeek, setSelected, setSession, setSnapshot, snapshot, stack, video } = app;
+  const { active, api, autoplayTest, autoResume, browser, canvas, controlActivity, controller, engineChoice, engineError, epoch, fail, go, items, modal, nextScope, notify, overlay, platform, playbackCapabilities, player, profile, responsive, resumeRemainder, screen, seek, seekTarget, seekTimer, seekValue, session, setBusy, setError, setModal, setOpeningSource, setOverlay, setPreparing, setPlaybackStage, setScreen, setSeek, setSelected, setSession, setSnapshot, snapshot, stack, video } = app;
   useNativeShutdown(controller);
 
   useEffect(() => {
@@ -52,6 +52,9 @@ export function usePlaybackEngine(app: AuthApi) {
     };
     const off = engine.subscribe((snapshot) => {
       setSnapshot(snapshot);
+      const nativeId = sessions.snapshot.active?.session.id;
+      if (nativeId && api.isNativePlayback?.(nativeId) && (snapshot.diagnostics?.presentedFrames ?? 0) > 0)
+        void api.nativeFirstFrame(nativeId).catch(fail);
       const noticeKey = `${snapshot.sessionId}:${snapshot.notice ?? ''}`;
       if (snapshot.notice && noticeKey !== lastPlayerNotice) notify(snapshot.notice);
       lastPlayerNotice = noticeKey;
@@ -106,14 +109,24 @@ export function usePlaybackEngine(app: AuthApi) {
           session,
         };
         setSession(session);
+        if (api.isNativePlayback?.(session.id) && (engine.snapshot.diagnostics?.presentedFrames ?? 0) > 0)
+          void api.nativeFirstFrame(session.id).catch(fail);
         setSelected(intent.item);
       } else {
         active.current = undefined;
         setSession(undefined);
       }
     });
+    const offNative = api.nativePlaybackEvents?.(event => {
+      if (disposed) return;
+      if (event.stage) setPlaybackStage(event.stage);
+      if (event.error && event.id === sessions.snapshot.active?.session.id) {
+        fail(event.error); void sessions.stop().catch(() => undefined);
+      }
+    });
     return () => {
       disposed = true;
+      offNative?.();
       off();
       offSessions();
       void sessions
@@ -152,17 +165,18 @@ export function usePlaybackEngine(app: AuthApi) {
       fail(error);
       void owner.stop().catch(() => undefined);
     };
-    const monitor = lease ? monitorPlaybackLease(lease, options => api.renewPlaybackV2(session.id, options), retire) : undefined;
+    const native = api.isNativePlayback?.(session.id) ?? false;
+    const monitor = lease && !native ? monitorPlaybackLease(lease, options => api.renewPlaybackV2(session.id, options), retire) : undefined;
     const reconnect = async () => {
-      if (document.visibilityState !== 'visible' || !monitor || cancelled) return;
+      if (document.visibilityState !== 'visible' || (!monitor && !native) || cancelled) return;
       const engine = player.current;
       const activity = latestControlActivity.current;
       const playing = engine?.snapshot.state === 'playing';
       if (playing) await engine.pause().catch(() => undefined);
-      const ready = await monitor.refresh();
+      const ready = native ? await api.renewPlaybackV2(session.id).then(()=>true,()=>false) : await monitor!.refresh();
       if (!cancelled && ready && playing && activity === latestControlActivity.current && engine === player.current && owner?.snapshot.active?.session.id === session.id)
         await engine?.play().catch(fail);
-      else if (!cancelled && !ready && monitor.isActive() && owner?.snapshot.active?.session.id === session.id)
+      else if (!cancelled && !ready && (native || monitor!.isActive()) && owner?.snapshot.active?.session.id === session.id)
         fail(new TvApiError(409, 'Playback could not reconnect. Retry playback.', 'playback_reconnect_failed'));
     };
     document.addEventListener('visibilitychange', reconnect);
@@ -201,6 +215,7 @@ export function usePlaybackEngine(app: AuthApi) {
     setError("");
     setBusy(true);
     setPreparing(true);
+    setPlaybackStage(undefined);
     setOpeningSource(source?.id);
     try {
       const enriched = {

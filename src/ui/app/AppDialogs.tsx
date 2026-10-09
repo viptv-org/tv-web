@@ -29,7 +29,7 @@ import type { AppApi } from "./useTvApp";
 import { join } from "../primitives/classNames";
 
 export function AppDialogs({ app }: { app: AppApi }) {
-  const { api, bootingHome, busy, items, responsive, casting, closeCast, connection, editingProfile, entry, error, modal, preparing, profiles, screen, setConnection, setEditingProfile, setEntry, setError, setModal, setProfiles, setStartupAttempt, toast } = app;
+  const { api, bootingHome, busy, items, responsive, casting, closeCast, connection, editingProfile, entry, error, modal, preparing, playbackStage, profiles, screen, setConnection, setEditingProfile, setEntry, setError, setModal, setProfiles, setStartupAttempt, toast } = app;
   const phone = usePhoneLayout(responsive);
   const startup = screen === "startup";
   // The responsive shell shows skeletons (booting, Discover) and the player its
@@ -71,7 +71,7 @@ export function AppDialogs({ app }: { app: AppApi }) {
       {/* Account startup is separate from Home's progressive content/artwork load. */}
       {!responsive && startup && <StartupCover />}
       {preparing && screen !== "player" && screen !== "sources" && (
-        responsive ? <div className="vx-dialogs-status"><Preparing /></div> : <Preparing placement="center" />
+        responsive ? <div className="vx-dialogs-status"><Preparing label={playbackStage} /></div> : <Preparing label={playbackStage} placement="center" />
       )}
       {loading && (
         screen === "player" ? (

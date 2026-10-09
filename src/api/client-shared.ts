@@ -52,6 +52,7 @@ export class MemoryDeviceSessionStore implements DeviceSessionStore {
   }
 }
 export interface TvApiOptions {
+  readonly torrentRuntime?: import("./torrent-runtime").TorrentRuntimePort;
   readonly playbackPlatform?: import('../../vendor/core/typescript/wire').PlaybackPlatform | 'html5' | 'tauri';
   /** Development-only, same-origin HTTP preview on the trusted LAN. */
   readonly allowInsecurePreview?: boolean;

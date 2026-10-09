@@ -3029,3 +3029,26 @@ Runtime negotiation follow-up: core
 v2 capability; an empty support list stays unavailable. Native and actual-WASM
 regressions and the complete core suite pass. The consumer's production build,
 hash checks and type checks pass. Android adopts this same revision.
+
+# Desktop shared-runtime integration — 2026-10-09
+
+The Tauri entry injects a native runtime port; hosted web/TV entries do not.
+Desktop uses separate v2 negotiation and raw bounded grant bytes, preserving
+tracker hints and optional file/archive selection through the actual WASM holder.
+The resulting player session contains a loopback media capability, without its
+private grant or source descriptor. A 120-second native-clock budget spans worker
+availability, control, acquisition and native player opening. Rendered-frame
+counters acknowledge the first frame; factual stages use the existing status line.
+
+The worker and backend authority renew during preparation. Native decoder or
+archive failures preserve native delivery instead of starting gateway conversion.
+Profile/principal changes retire current access; accepted sign-out clears content.
+Cancellation closes a late returned handle. Repeated frame observations share one
+acknowledgement. The native clock includes system suspension.
+
+All 297 tests pass with one fork; type checking, pinned design/core/video checks
+and the production build pass. Six new transport cases exercise actual WASM
+validation, auto selection and large-file descriptors, archive refusal, late
+cancellation, frame acknowledgement and cache clearing. Native Linux/Windows
+shell packaging and decoded public-source evidence are recorded in desktop;
+these browser tests do not establish hardware or production qualification.

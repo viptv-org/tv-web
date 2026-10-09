@@ -21,27 +21,36 @@ import type {
 } from "./types";
 
 import { TvApiClientBase } from "./client-base";
+import { NativeTorrentTransport, type RuntimeEvent } from "./torrent-runtime";
 import { PlaybackV2Transport } from "./playback-v2";
 import type { PlaybackV2Request, PlaybackLease } from "../../vendor/core/typescript/wire";
 
 export class TvApiCatalog extends TvApiClientBase {
   private readonly playbackV2 = new PlaybackV2Transport((input, options) => this.domainRequest(input, options), this.origin);
+  private readonly nativePlayback = this.torrentRuntimePort ? new NativeTorrentTransport(this.torrentRuntimePort,
+    (input,options)=>this.privateControl(input,options),(request,options)=>this.playbackV2.start(request,options),this.origin) : undefined;
+  protected override async revokeNative(clear=false) {await this.nativePlayback?.revoke(clear);}
+  remainingStartupBudget(id:string) {return this.nativePlayback?.remainingStartup(id)??Promise.resolve(undefined);}
+  canConvertPlayback(id:string) {return !this.isNativePlayback(id);}
+  isNativePlayback(id:string) {return this.nativePlayback?.has(id)??false;}
+  nativePlaybackEvents(listener:(event:RuntimeEvent)=>void) {return this.nativePlayback?.subscribe(listener)??(()=>{});}
+  nativeFirstFrame(id:string) {return this.nativePlayback?.firstFrame(id)??Promise.resolve();}
   private readonly playbackLeases = new Map<string, PlaybackLease>();
   async startPlaybackV2(request: PlaybackV2Request, options?: RequestOptions) {
-    const lease = await this.playbackV2.start(request, options);
+    const lease = await (this.nativePlayback ? this.nativePlayback.start(request,options) : this.playbackV2.start(request, options));
     this.playbackLeases.set(lease.id, lease);
     return lease;
   }
   playbackLease(id: string) { return this.playbackLeases.get(id); }
-  playbackStatusV2(id: string, options?: RequestOptions) { return this.playbackV2.status(id, options); }
+  playbackStatusV2(id: string, options?: RequestOptions) { return this.isNativePlayback(id) ? this.nativePlayback!.renew(id) : this.playbackV2.status(id, options); }
   async renewPlaybackV2(id: string, options?: RequestOptions) {
     const previous = this.playbackLeases.get(id);
-    const lease = await this.playbackV2.renew(id, options);
+    const lease = await (this.isNativePlayback(id) ? this.nativePlayback!.renew(id) : this.playbackV2.renew(id, options));
     if (previous && this.playbackLeases.get(id) === previous) this.playbackLeases.set(id, lease);
     return lease;
   }
   async stopPlaybackV2(id: string, options?: RequestOptions) {
-    try { await this.playbackV2.stop(id, options); }
+    try { if(this.isNativePlayback(id)) await this.nativePlayback!.stop(id); else await this.playbackV2.stop(id, options); }
     finally { this.playbackLeases.delete(id); }
   }
   async selectProfile(profileId: string, options?: RequestOptions) {
@@ -56,8 +65,7 @@ export class TvApiCatalog extends TvApiClientBase {
       true,
       options,
     );
-    this.tokens = this.tokens ? { ...this.tokens, profileId } : null;
-    if (this.tokens) await this.store.save(this.tokens);
+    if (this.tokens) await this.saveTokens({ ...this.tokens, profileId });
   }
   async profiles(options?: RequestOptions) {
     if (this.sessionEvent) {

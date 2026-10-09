@@ -1,5 +1,64 @@
 # Design changes
 
+## 2026-10-07 — Actionable source startup diagnostics
+
+NT-09 requires the measured native preparation stage to survive its first
+deadline through FFI and asynchronous completion. Cache preparation, metadata,
+initialization, local endpoint, typed control-network failures and retiring work
+have distinct closed explanations. The existing recovery dialog includes the
+validated diagnostic code. Media3 failures preserve their measured numeric code
+and HTTP status where present. No dependency text or source identifiers enter
+display/log data; recovery actions, focus and delivery authority remain intact.
+
+## 2026-10-07 — Bounded native torrent piece cache
+
+The owner approved rolling pieces for large native Android video inputs. NT-10
+requires bounded retained bytes, large-offset/backward reads, exact-file authority,
+independent grants and joined retirement. The aggregate 2 GiB ceiling remains;
+large inputs reserve 256 MiB instead of full logical payload. Capacity failure
+copy describes observed cache admission rather than source size. Existing
+recovery actions and layout remain unchanged; Android decode evidence is separate.
+
+## 2026-10-07 — Observed native playback failure explanations
+
+Amend SRC-TORRENT-NATIVE-001 with closed observed reason codes and exact safe
+copy for acquisition/metadata deadlines, full-torrent cache budget, storage/cache,
+metadata/file mismatch, grant expiry, connectivity and codec support. NT-09
+requires native/actual-WASM copy agreement and safe asynchronous preservation.
+Unknown failures remain generic; deadlines never imply absent seeders. Existing
+recovery, focus, layout and source intent remain unchanged. Adapter/engine facts
+and device acceptance require their own evidence.
+
+## 2026-10-07 — Organize plans and engineering documentation
+
+Grouped implementation plans under `plans/` and architecture, playback, platform,
+process and historical references under `docs/`. Added navigation indexes and
+updated live document links, agent pointers and validation paths. Existing
+behavior specifications, visual assets and immutable historical references
+retain their locations and meaning; this reorganization does not advance client
+design pins or establish new implementation evidence.
+
+## 2026-10-07 — Proposed episode annotations implementation plan
+
+Added EPISODE-ANNOTATIONS-001: native filler/recap badges and manual intro/outro
+skipping backed by replaceable metadata adapters, followed by separately gated
+general-media lookup, opt-in automation and optional media analysis. The plan
+defines repo ownership, proposed versioned reads, identity/applicability rules,
+budgets and acceptance. Normative geometry/canvas exports, provider permissions,
+implementation, immutable adoption and device evidence remain pending.
+
+## 2026-10-06 — Approved Android native torrent contract
+
+Owner-approved SRC-TORRENT-NATIVE-001 for local Markdown ticket 01 closes
+negotiation, native request/grant JSON, exact-index v1 VOD, metadata bounds,
+public peer/DHT privacy, lease/revocation, independent grant capabilities,
+authorization-epoch cache limits, acquisition/quiescence and archive-free gates.
+BE-002, gateway exclusions and playback capability/recovery rules reference this
+narrow Android exception. Existing UI, source/resume/history and gateway HLS
+remain unchanged. Approval is for implementation only; immutable consumer
+adoption, engine/backend/core/Android implementation and qualification remain
+pending. No production activation or physical-device claim follows.
+
 ## 2026-10-02 — Proposed add-on torrent gateway sources
 
 Specified SRC-TORRENT-GATEWAY-001 for gateway issue 15: existing account-owned
@@ -90,7 +149,7 @@ Recorded the VIPTV Redesign canvas as the visual source for the redesign beside
 its committed `viptv-design-system/` export. Added `reference/FILES.json`
 (SHA-256 and canvas-export source for all 453 reference files), verified by
 `scripts/validate.py`. Clarified that canvas renders are allowed design
-artifacts while app/device captures stay forbidden. Updated REPOSITORIES.md
+artifacts while app/device captures stay forbidden. Updated docs/architecture/REPOSITORIES.md
 with current status, design-pin mechanism and specs for every repository,
 including core, playback-gateway, workspace and desktop. No behavior change.
 
@@ -115,7 +174,7 @@ save retains the existing disabled-dismissal state until completion or a bounded
 30-second timeout. A browser Back cannot undo an already submitted server write.
 
 ## TV-only LightningJS renderer migration proposed — 2026-09-24
-Authorized a staged replacement of the React TV renderer and custom D-pad focus registry with one LightningJS Blits UI for Tizen, Vizio and LG webOS. The 1920×1080 current TV output and behavior are the 1:1 migration baseline; the pinned design images remain a separate design-parity reference. Phone web, responsive web and Tauri desktop retain their React entry. TV launchers remain on the existing renderer until matched-content pixel comparisons, remote flows and platform checks qualify the new entry. See TV_IMPLEMENTATION.md. No parity or device claim is made by this spec update.
+Authorized a staged replacement of the React TV renderer and custom D-pad focus registry with one LightningJS Blits UI for Tizen, Vizio and LG webOS. The 1920×1080 current TV output and behavior are the 1:1 migration baseline; the pinned design images remain a separate design-parity reference. Phone web, responsive web and Tauri desktop retain their React entry. TV launchers remain on the existing renderer until matched-content pixel comparisons, remote flows and platform checks qualify the new entry. See docs/platforms/TV_IMPLEMENTATION.md. No parity or device claim is made by this spec update.
 
 ## VIPTV design system — 2026-09-23
 Adopted [viptv-design-system/](viptv-design-system/README.md) as the single visual design for phone, desktop (Tauri), web and TV: `tokens/tokens.json` (source of truth), component rules, copy, settled decisions and reference screens. Removed the former visual layer (`tokens/`, `scripts/gen-tokens.mjs`, `specs/visual/`, RESPONSIVE_UI/PRODUCTION/VIPTV_ALIGNMENT, DESKTOP_LAYOUT, TV_WEB_UI_REBUILD, ANDROID_UI_REBUILD, TV_CANDIDATE_2026_09_12); they remain in git history. Behavior contracts under `specs/behavior/` are unchanged.
@@ -127,7 +186,7 @@ Captured the Roku baseline at vynxc/viptv@7d6b413 and established design-first c
 Added exact dynamic guide geometry, search debounce/focus/partial-failure behavior and server-owned queue completion/cache rules. These clarify existing behavior without changing it. Source citations use the published split runtime snapshots.
 
 ## TV platform implementation
-Authorized Android TV Compose and one shared Tizen/Vizio React frontend, with platform playback modules and design-based visual/remote testing. The baseline UX is preserved; host exit and on-screen keyboard equivalents are documented in TV_IMPLEMENTATION.md.
+Authorized Android TV Compose and one shared Tizen/Vizio React frontend, with platform playback modules and design-based visual/remote testing. The baseline UX is preserved; host exit and on-screen keyboard equivalents are documented in docs/platforms/TV_IMPLEMENTATION.md.
 
 ## 2026-09-12 TV implementation candidate
 
@@ -139,7 +198,7 @@ Corrected the behavioral contract from addon plus human source name to addon plu
 
 ## 2026-09-13 — Shared TV-web rebuild and design synchronization
 
-Authorized the Roku-matching presentation replacement for the shared Tizen/Vizio frontend. TV_WEB_UI_REBUILD.md indexes complete screen/state acceptance against the existing normative visual and interaction specs without duplicating geometry. DESIGN_SYNC.md defines immutable design adoption, vendored snapshot/asset integrity, separate freshness checks and per-platform parity evidence. Figma-first authoring is proposed for a future explicit adoption decision; the versioned design repository remains authoritative. No completed visual or device acceptance is claimed here.
+Authorized the Roku-matching presentation replacement for the shared Tizen/Vizio frontend. TV_WEB_UI_REBUILD.md indexes complete screen/state acceptance against the existing normative visual and interaction specs without duplicating geometry. docs/process/DESIGN_SYNC.md defines immutable design adoption, vendored snapshot/asset integrity, separate freshness checks and per-platform parity evidence. Figma-first authoring is proposed for a future explicit adoption decision; the versioned design repository remains authoritative. No completed visual or device acceptance is claimed here.
 
 ## 2026-09-13 — Rail and action alignment extraction precision
 
@@ -187,11 +246,11 @@ compact 60px live TV channel rows.
 
 ## 2026-09-21 — Proposed local addon mode contract
 
-Added [LOCAL_MODE.md](LOCAL_MODE.md) proposing account-free operation of the shared viewing client from an on-device addon registry: build-level availability (never in the backend-hosted flavor), sign-in-screen entry, a versioned registry schema with install/remove/error states, discover reuse of the RUI-030 hierarchy with the shared negotiation rules, direct-first playback without server sessions, and privacy rules treating manifest URLs as credentials. Watch-state is explicitly out of scope. Status: proposed; no adoption is claimed for any platform.
+Added [docs/archive/LOCAL_MODE.md](docs/archive/LOCAL_MODE.md) proposing account-free operation of the shared viewing client from an on-device addon registry: build-level availability (never in the backend-hosted flavor), sign-in-screen entry, a versioned registry schema with install/remove/error states, discover reuse of the RUI-030 hierarchy with the shared negotiation rules, direct-first playback without server sessions, and privacy rules treating manifest URLs as credentials. Watch-state is explicitly out of scope. Status: proposed; no adoption is claimed for any platform.
 
 ## 2026-09-21 — Local addon mode schema amendment
 
-Amended LOCAL_MODE.md LM-002: the registry stores `nextOrdinal` and each addon a stable `ordinal` (a monotonic install counter, never reused) so addon selection survives restarts and removals. No other behavior changed.
+Amended docs/archive/LOCAL_MODE.md LM-002: the registry stores `nextOrdinal` and each addon a stable `ordinal` (a monotonic install counter, never reused) so addon selection survives restarts and removals. No other behavior changed.
 ## 2026-10-02 — AND-043 Title source summary
 
 Specify Android Title discovery lifetime, shared Core ranking, safe source summary

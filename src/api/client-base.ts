@@ -17,6 +17,7 @@ import type {
 export class TvApiClientBase {
   protected readonly origin: string;
   protected readonly playbackPlatform: NonNullable<TvApiOptions['playbackPlatform']>;
+  protected readonly torrentRuntimePort?: import("./torrent-runtime").TorrentRuntimePort;
   protected readonly requestFetch: typeof fetch;
   protected readonly store: DeviceSessionStore;
   protected tokens: DeviceTokenSet | null = null;
@@ -37,6 +38,7 @@ export class TvApiClientBase {
         "VIPTV API base URL must be an HTTPS origin without a path",
       );
     this.origin = url.origin;
+    this.torrentRuntimePort = options.torrentRuntime;
     this.playbackPlatform = options.playbackPlatform ?? 'web';
     // Browser fetch is a Window method and throws "Illegal invocation" when
     // called as a detached function. Injected test/host fetches are already
@@ -58,7 +60,7 @@ export class TvApiClientBase {
         save: async (serialized) => {
           await this.saveTokens(JSON.parse(serialized) as DeviceTokenSet);
         },
-        clear: async () => { this.tokens = null; await this.store.clear(); },
+        clear: async () => { await this.revokeNative(true); this.tokens = null; await this.store.clear(); },
       },
       http: createHttpTransport({ allowedOrigins: [this.origin], fetch: this.requestFetch, maxResponseBytes: 2 * 1024 * 1024 }),
       render: (view) => { if (!imperative) render(view); },
@@ -165,6 +167,7 @@ export class TvApiClientBase {
       true,
       options,
     );
+    await this.revokeNative(true);
     this.tokens = null;
     await this.store.clear();
   }
@@ -197,6 +200,7 @@ export class TvApiClientBase {
     return tokenSet(v);
   }
   protected async saveTokens(tokens: DeviceTokenSet) {
+    if (this.tokens && (this.tokens.accountId !== tokens.accountId || this.tokens.profileId !== tokens.profileId)) await this.revokeNative(this.tokens.accountId !== tokens.accountId);
     this.tokens = tokens;
     await this.store.save(tokens);
     return tokens;
@@ -293,6 +297,35 @@ export class TvApiClientBase {
       return payload;
     };
     return request(true);
+  }
+
+  protected async revokeNative(_clear = false): Promise<void> {}
+
+  /** Private bytes reach the strict holder before JSON projection. */
+  protected async privateControl(input: unknown, options?: RequestOptions): Promise<import('./torrent-runtime').PrivateResponse> {
+    const wire=normalizeResponse<{method:string;path:string;body:JsonObject|null}>('request',input);
+    const send=async(retry:boolean):Promise<import('./torrent-runtime').PrivateResponse>=> {
+      throwIfAborted(options?.signal);
+      const token=this.tokens?.accessToken;
+      const headers:Record<string,string>={Accept:'application/json','Accept-Encoding':'identity'};
+      if(token)headers.Authorization=`Bearer ${token}`;
+      if(wire.body)headers['Content-Type']='application/json';
+      let response:Response;
+      try {response=await this.requestFetch(this.origin+wire.path,{method:wire.method,headers,body:wire.body?JSON.stringify(wire.body):undefined,signal:options?.signal,redirect:'error',cache:'no-store'});}
+      catch(error){if(isAbort(error))throw error;throw new TvApiError(0,'Network request failed','network');}
+      if(response.status===401&&retry) {await response.body?.cancel();if(token===this.tokens?.accessToken)await this.refreshTokens(options);return send(false);}
+      const limit=6*1024*1024;
+      if(Number(response.headers.get('content-length')??0)>limit) {await response.body?.cancel();throw new TvApiError(502,'Server response is too large','response_too_large');}
+      const chunks:Uint8Array[]=[];let length=0;
+      if(response.body) {
+        const reader=response.body.getReader();
+        try {for(;;){const {done,value}=await reader.read();if(done)break;length+=value.byteLength;if(length>limit){await reader.cancel();throw new TvApiError(502,'Server response is too large','response_too_large');}chunks.push(value);}}
+        finally{reader.releaseLock();}
+      }
+      const bytes=new Uint8Array(length);let offset=0;for(const chunk of chunks){bytes.set(chunk,offset);offset+=chunk.byteLength;}
+      return {status:response.status,bytes};
+    };
+    return send(true);
   }
 
   /**

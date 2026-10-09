@@ -36,7 +36,9 @@ const origin = lanPreview ? location.origin :
 const key = `viptv-device:${origin}`;
 async function start() {
   const nativeFetch = native ? (await import("@tauri-apps/plugin-http")).fetch : undefined;
+  const torrentRuntime = native ? await import('./api/torrent-runtime-tauri').then(module=>module.tauriTorrentRuntime()) : undefined;
   const api = new TvApi({
+    torrentRuntime,
     fetch: nativeFetch ? (input, init) => {
       // The HTTP plugin would pin Origin to this window's origin (the vite dev
       // server here), which the backend's single-browser-origin pin rejects.

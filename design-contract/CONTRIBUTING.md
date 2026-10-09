@@ -4,8 +4,8 @@ Thanks for your interest. VIPTV is a multi-repository product; this repository i
 
 ## Workflow
 
-1. Read [DESIGN.md](DESIGN.md) first; [CONTEXT.md](CONTEXT.md) defines shared product terms and [DESIGN_SYNC.md](DESIGN_SYNC.md) defines the immutable pin process every client adopts.
-2. Search this repository's GitHub Issues before opening a new one; use the five triage labels from [DEVELOPMENT.md](DEVELOPMENT.md).
+1. Read [DESIGN.md](DESIGN.md) first; [CONTEXT.md](CONTEXT.md) defines shared product terms and [docs/process/DESIGN_SYNC.md](docs/process/DESIGN_SYNC.md) defines the immutable pin process every client adopts.
+2. Search this repository's GitHub Issues before opening a new one; use the five triage labels from [docs/process/DEVELOPMENT.md](docs/process/DEVELOPMENT.md).
 3. Follow the required format for new or revised features in [DESIGN.md](DESIGN.md): stable identifier, status, source revision, user intent, entry/exit, copy, layout, focus, inputs, states, cancellation/recovery, timing, accessibility, platform equivalents and acceptance scenarios.
 4. Never commit screenshots, credentials, private notes (`DEV.local.md`, `.env`) or unprovenance'd assets. Keep [assets/FILES.json](assets/FILES.json) and `viptv-design-system/reference/FILES.json` in sync with any asset or canvas-export change.
 5. Validate before pushing: `python3 scripts/validate.py`.

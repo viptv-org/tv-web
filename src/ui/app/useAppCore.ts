@@ -114,6 +114,7 @@ export function useAppCore(api: TvApi, platform: PlayerPlatform, layout: "tv" | 
     // and the player screen does not exist yet while the server prepares.
     [preparing, setPreparing] = useState(false),
     [toast, setToast] = useState("");
+  const [playbackStage, setPlaybackStage] = useState<string>();
   const [catalogError, setCatalogError] = useState("");
   const [controlActivity, setControlActivity] = useState(0);
   const lastControlActivity = useRef(0);
@@ -296,7 +297,7 @@ export function useAppCore(api: TvApi, platform: PlayerPlatform, layout: "tv" | 
     entry, setEntryState, profilePage, setProfilePage, managing, setManaging,
     startupAttempt, setStartupAttempt,
     screen, setScreen, pair, setPair, qr, setQr, profiles, setProfiles,
-    profile, setProfile, error, setError, busy, setBusy, preparing, setPreparing, toast, setToast,
+    profile, setProfile, error, setError, busy, setBusy, preparing, setPreparing, playbackStage, setPlaybackStage, toast, setToast,
     catalogError, setCatalogError,
     controlActivity, setControlActivity, lastControlActivity,
     searchPartial, setSearchPartial,

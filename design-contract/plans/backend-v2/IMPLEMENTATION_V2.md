@@ -3,6 +3,17 @@
 This is an execution checklist, not a completion claim. User decisions are in
 [BACKEND_V2.md](BACKEND_V2.md) and [ADMIN_V2.md](ADMIN_V2.md).
 
+## Native torrent default availability — 2026-10-07
+
+The owner explicitly approved default native torrent playback for every
+authorized account on supported Android/Android TV runtimes, without a
+configurable enable setting, operator allowlist or qualification receipt.
+[SRC-TORRENT-NATIVE-001](../../specs/behavior/torrent-native-android.md) records that
+decision. Android runtime defaults and backend admission adoption are in
+progress; runtime/media evidence and actual development activation will be
+recorded by their owning repositories. No production deployment or universal
+hardware qualification follows from this approval.
+
 - [x] Approved decisions captured; production mutation excluded.
 - [x] Versioned public contracts and migration fixtures executable (source/fixture acceptance).
 - [x] VOD 10k/100k baseline captured and bounded query implemented.

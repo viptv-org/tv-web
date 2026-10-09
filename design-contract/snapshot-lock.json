@@ -1,47 +1,19 @@
 {
   "version": 1,
   "repository": "viptv-org/design",
-  "commit": "b64c98e3a97660fbee17aebb7c548f87a6494790",
+  "commit": "16277caf2c7bf16296e25da40f143666465f0d2b",
   "files": {
     "design-contract/.github/pull_request_template.md": {
       "source": ".github/pull_request_template.md",
       "sha256": "28a5fddbd1fdc0029cc10ccd3e98fadcc0b42f8bb7c943e3a5aa69fea208b4be"
     },
-    "design-contract/ADMIN_V2.md": {
-      "source": "ADMIN_V2.md",
-      "sha256": "8995f710c153eeb63b207ccaec7e547b6532f2018dafacf9be8d12431eb9a277"
-    },
     "design-contract/AGENTS.md": {
       "source": "AGENTS.md",
-      "sha256": "6aba5a77fe0db4e7c0d25343d9cd8d29ff4afe7f1d6181aaa27dc0acb07962a1"
-    },
-    "design-contract/ANDROID_DESIGN.md": {
-      "source": "ANDROID_DESIGN.md",
-      "sha256": "6d6d49eada5cdf5e0e7ff241a7ef30186985f301a967daafd008fafbc7983018"
-    },
-    "design-contract/ANDROID_DEVELOPMENT.md": {
-      "source": "ANDROID_DEVELOPMENT.md",
-      "sha256": "f06c6c2e70dce41c15487735bc769ba4504706c51aee3e69033f876c63e3d325"
-    },
-    "design-contract/BACKEND_V2.md": {
-      "source": "BACKEND_V2.md",
-      "sha256": "7fa9869af547c28a83a166f82f394d250fb4b0b274760bc00e26270843f245bc"
-    },
-    "design-contract/BROWSER_MEDIA_PIPELINE.md": {
-      "source": "BROWSER_MEDIA_PIPELINE.md",
-      "sha256": "41c9ebc3e10341266827ee58ceead706baf53ffb2c0c942202716210066797cd"
-    },
-    "design-contract/BROWSER_PLAYBACK.md": {
-      "source": "BROWSER_PLAYBACK.md",
-      "sha256": "aad67ba07e7ab6f58abb343b07ca3641aab4482827a70a0a3c6338c2505d2500"
-    },
-    "design-contract/BUILD_DELIVERY.md": {
-      "source": "BUILD_DELIVERY.md",
-      "sha256": "a00713be9c687049ee07a30264674b67b9ea1cccb18ed09e7f598de3605d5c57"
+      "sha256": "e01ac3340e19135c540552cd4274aa75a96a93851c2dca84db3b3ac46c4a5995"
     },
     "design-contract/CHANGELOG.md": {
       "source": "CHANGELOG.md",
-      "sha256": "6a87f15edc83dac972523285ec4a718b0462919f54ccf9a36fa66a8dc524356e"
+      "sha256": "0cd171bd88e9fb98f828cb2ec7c333c1cfc0f009798ba328d1e024f78cd5c1cf"
     },
     "design-contract/CONTEXT.md": {
       "source": "CONTEXT.md",
@@ -49,75 +21,23 @@
     },
     "design-contract/CONTRIBUTING.md": {
       "source": "CONTRIBUTING.md",
-      "sha256": "8cf6e78362f46cb9191f3f821af0c6cd54a8a3829001ca7740bb2a89b6508469"
+      "sha256": "f91f0baef35bce17f49917164d873e09d619387093b5d17e5f5b0edcbb518e64"
     },
     "design-contract/DESIGN.md": {
       "source": "DESIGN.md",
-      "sha256": "ede13aecbcc874553962c5aa9928e3773c25769a24e0ff0556dbcec4f77a54cc"
-    },
-    "design-contract/DESIGN_SYNC.md": {
-      "source": "DESIGN_SYNC.md",
-      "sha256": "044b680d502ad7984bc00fb10b2a4a876d26d40956c456cef317efc7bbfff9e4"
-    },
-    "design-contract/DEVELOPMENT.md": {
-      "source": "DEVELOPMENT.md",
-      "sha256": "7d1a37022d71ac4addf2931de9f90da36d6b794626928bac4a194544c3915538"
-    },
-    "design-contract/IMPLEMENTATION_V2.md": {
-      "source": "IMPLEMENTATION_V2.md",
-      "sha256": "6b776cf83d85033637cbaebfbe20a4f1381bcd977c7c3ef819ad3e6400f1739f"
-    },
-    "design-contract/LOCAL_MODE.md": {
-      "source": "LOCAL_MODE.md",
-      "sha256": "4448f519f3391920d55f9e7324874ef7c2be5ccd10d88b4753e1fc5f0c815eee"
-    },
-    "design-contract/MIGRATION.md": {
-      "source": "MIGRATION.md",
-      "sha256": "aa7879a3ed63850e0e50ee50a33acc61d8aa88874e89b907b46a9007a8a414de"
-    },
-    "design-contract/PLATFORM_PLAN.md": {
-      "source": "PLATFORM_PLAN.md",
-      "sha256": "1ffdca8da6f95d072dd43865dd97bce84840c4a8b768ad59cc8c419899050aa6"
-    },
-    "design-contract/PLAYBACK_CAPABILITIES.md": {
-      "source": "PLAYBACK_CAPABILITIES.md",
-      "sha256": "ecaeab7beb0b0756c45910318aaa07bc5f9b2b5df0ea640cabb1608bcc70d0e7"
-    },
-    "design-contract/PLAYBACK_ERROR_COPY.md": {
-      "source": "PLAYBACK_ERROR_COPY.md",
-      "sha256": "c50f0e769a18d13f92f0b058d87dcf6377768fcd9411221019f5ef7af89bd094"
+      "sha256": "81511e6a1d2b2e67df85b411aa89e759aae67b482bd629dedd12f1072ca32a42"
     },
     "design-contract/README.md": {
       "source": "README.md",
-      "sha256": "2c3d9fee45f03e85041317107427f5118681d788237ad8654bc744aca4af698b"
-    },
-    "design-contract/REPOSITORIES.md": {
-      "source": "REPOSITORIES.md",
-      "sha256": "2ecdf7aa30ea1a9befc15763fe38821ea407c676ad2642427e0ffd9689b4c183"
-    },
-    "design-contract/ROKU_DESIGN.md": {
-      "source": "ROKU_DESIGN.md",
-      "sha256": "919060d607d56604d573173ad0e75db00969be28686761e68ba0e9725c0b0554"
-    },
-    "design-contract/SHARED_CORE.md": {
-      "source": "SHARED_CORE.md",
-      "sha256": "f11fb63753848134053a66baeb470b1212e91fb907adb01d7f2b818cb2bd3bc6"
+      "sha256": "8666480f8240b3b28622e2a326e08b4b041bce84a9e0565d309319d2546523e0"
     },
     "design-contract/SPEC.md": {
       "source": "SPEC.md",
       "sha256": "56416ed9d6416fa3b652ade99b75ee05a71c807cf5843ee145062c79e00cbd77"
     },
-    "design-contract/TRACKING.md": {
-      "source": "TRACKING.md",
-      "sha256": "8ad7efb62ad473938c36a40df4d2d3ec75667cb1440a9509c65024e80e07dcef"
-    },
-    "design-contract/TV_IMPLEMENTATION.md": {
-      "source": "TV_IMPLEMENTATION.md",
-      "sha256": "330162973021433a8bbec821a43f56978d35b36e52a92242bd503e00a008dd7d"
-    },
-    "design-contract/TV_POLISH.md": {
-      "source": "TV_POLISH.md",
-      "sha256": "b6ab26a16881bf516559fd9d26d500d53f89f79dea1be37c7bdb1cc72d5633c8"
+    "design-contract/docs/README.md": {
+      "source": "docs/README.md",
+      "sha256": "2505202b5913dc56736c32f5c3b2c890ec6e17485b8efa93e38f2477b55a5ac5"
     },
     "design-contract/docs/adr/0001-design-owned-assets.md": {
       "source": "docs/adr/0001-design-owned-assets.md",
@@ -129,11 +49,103 @@
     },
     "design-contract/docs/adr/0003-shared-platform-matrix-and-playback-consolidation.md": {
       "source": "docs/adr/0003-shared-platform-matrix-and-playback-consolidation.md",
-      "sha256": "7265e352bc8fa4516390b1c791bec1a5e83bc4c8238a17aa341699f7f386a75d"
+      "sha256": "579eabae7a03d3b35ab32bb1fcad77c5c13cb7bbfca441af261386b27c36ab18"
+    },
+    "design-contract/docs/architecture/REPOSITORIES.md": {
+      "source": "docs/architecture/REPOSITORIES.md",
+      "sha256": "2634a990a5d8aac4f0dee3cd2ae4f97e73987a96b8795d120377c75eb6afb613"
+    },
+    "design-contract/docs/architecture/SHARED_CORE.md": {
+      "source": "docs/architecture/SHARED_CORE.md",
+      "sha256": "f11fb63753848134053a66baeb470b1212e91fb907adb01d7f2b818cb2bd3bc6"
+    },
+    "design-contract/docs/archive/LOCAL_MODE.md": {
+      "source": "docs/archive/LOCAL_MODE.md",
+      "sha256": "5ebee6189b3b9c9b67e644439b36dada9c38e59234255772f00740f56d10642a"
     },
     "design-contract/docs/branding.md": {
       "source": "docs/branding.md",
       "sha256": "a4855b5263b985092b40a3c50b757b7494cdd576c62acfa9e3872b38880656a6"
+    },
+    "design-contract/docs/platforms/ANDROID_DESIGN.md": {
+      "source": "docs/platforms/ANDROID_DESIGN.md",
+      "sha256": "1a6b3b519aa0da80985f37cb3e50b782cedb95d350d4af08ddbdf84b64a7fdc0"
+    },
+    "design-contract/docs/platforms/ROKU_DESIGN.md": {
+      "source": "docs/platforms/ROKU_DESIGN.md",
+      "sha256": "919060d607d56604d573173ad0e75db00969be28686761e68ba0e9725c0b0554"
+    },
+    "design-contract/docs/platforms/TV_IMPLEMENTATION.md": {
+      "source": "docs/platforms/TV_IMPLEMENTATION.md",
+      "sha256": "8951090a0fbc5cdc8afbd854cfdcec26d80a21bccb5d85864066fbf2aed453a9"
+    },
+    "design-contract/docs/platforms/TV_POLISH.md": {
+      "source": "docs/platforms/TV_POLISH.md",
+      "sha256": "2c65fbdbebff40990a8529810e3b35619f983d23e8c3da8cd090810c98df854e"
+    },
+    "design-contract/docs/playback/BROWSER_MEDIA_PIPELINE.md": {
+      "source": "docs/playback/BROWSER_MEDIA_PIPELINE.md",
+      "sha256": "41c9ebc3e10341266827ee58ceead706baf53ffb2c0c942202716210066797cd"
+    },
+    "design-contract/docs/playback/BROWSER_PLAYBACK.md": {
+      "source": "docs/playback/BROWSER_PLAYBACK.md",
+      "sha256": "aad67ba07e7ab6f58abb343b07ca3641aab4482827a70a0a3c6338c2505d2500"
+    },
+    "design-contract/docs/playback/PLAYBACK_CAPABILITIES.md": {
+      "source": "docs/playback/PLAYBACK_CAPABILITIES.md",
+      "sha256": "df038854c7dff759fe7cd0374fe9b7740f1ff4f0351d2b84516566d97a983014"
+    },
+    "design-contract/docs/playback/PLAYBACK_ERROR_COPY.md": {
+      "source": "docs/playback/PLAYBACK_ERROR_COPY.md",
+      "sha256": "c50f0e769a18d13f92f0b058d87dcf6377768fcd9411221019f5ef7af89bd094"
+    },
+    "design-contract/docs/process/ANDROID_DEVELOPMENT.md": {
+      "source": "docs/process/ANDROID_DEVELOPMENT.md",
+      "sha256": "f06c6c2e70dce41c15487735bc769ba4504706c51aee3e69033f876c63e3d325"
+    },
+    "design-contract/docs/process/BUILD_DELIVERY.md": {
+      "source": "docs/process/BUILD_DELIVERY.md",
+      "sha256": "a00713be9c687049ee07a30264674b67b9ea1cccb18ed09e7f598de3605d5c57"
+    },
+    "design-contract/docs/process/DESIGN_SYNC.md": {
+      "source": "docs/process/DESIGN_SYNC.md",
+      "sha256": "62416f20ec16e1bcf065ae5b8817713c1199f63f09d79b344f973b4e67ed5db4"
+    },
+    "design-contract/docs/process/DEVELOPMENT.md": {
+      "source": "docs/process/DEVELOPMENT.md",
+      "sha256": "7d1a37022d71ac4addf2931de9f90da36d6b794626928bac4a194544c3915538"
+    },
+    "design-contract/docs/process/MIGRATION.md": {
+      "source": "docs/process/MIGRATION.md",
+      "sha256": "aa7879a3ed63850e0e50ee50a33acc61d8aa88874e89b907b46a9007a8a414de"
+    },
+    "design-contract/docs/process/TRACKING.md": {
+      "source": "docs/process/TRACKING.md",
+      "sha256": "8ad7efb62ad473938c36a40df4d2d3ec75667cb1440a9509c65024e80e07dcef"
+    },
+    "design-contract/plans/PLATFORM_PLAN.md": {
+      "source": "plans/PLATFORM_PLAN.md",
+      "sha256": "861c77f8a2775de19c4c19dcf4d030c23762a996b6c3ae1de67aa68ce20ca4e3"
+    },
+    "design-contract/plans/README.md": {
+      "source": "plans/README.md",
+      "sha256": "6d217033175273fc6c9cc3096e8fec04fe7e6d7994fee3b0a4e482423b42344b"
+    },
+    "design-contract/plans/backend-v2/ADMIN_V2.md": {
+      "source": "plans/backend-v2/ADMIN_V2.md",
+      "sha256": "8995f710c153eeb63b207ccaec7e547b6532f2018dafacf9be8d12431eb9a277"
+    },
+    "design-contract/plans/backend-v2/BACKEND_V2.md": {
+      "source": "plans/backend-v2/BACKEND_V2.md",
+      "sha256": "5ac50cc28081b435734a567df899be21e4c5ada42e199cb7722e4fb58b9e10fb"
+    },
+    "design-contract/plans/backend-v2/IMPLEMENTATION_V2.md": {
+      "source": "plans/backend-v2/IMPLEMENTATION_V2.md",
+      "sha256": "d8766bbfea9c59252d2748df0b593f5c397275670583567b570cab6fa91d5770"
+    },
+    "design-contract/plans/episode-annotations/PLAN.md": {
+      "source": "plans/episode-annotations/PLAN.md",
+      "sha256": "43607ea1a91b187f3b9fedbda026771ac610c0f41a69d9187e1e5a2bd091b5a5"
     },
     "design-contract/specs/behavior/android-tv-media-rows.md": {
       "source": "specs/behavior/android-tv-media-rows.md",
@@ -161,15 +173,23 @@
     },
     "design-contract/specs/behavior/torrent-gateway-sources.md": {
       "source": "specs/behavior/torrent-gateway-sources.md",
-      "sha256": "34dc7db8a453b626b41873dd0d49e922fbc546d81651ba945bcc74e499ef49c2"
+      "sha256": "2a35f7b9237809a181e26b89b9e3528691f1b2f703976299378677d33eb281bb"
+    },
+    "design-contract/specs/behavior/torrent-native-android.md": {
+      "source": "specs/behavior/torrent-native-android.md",
+      "sha256": "6d1ab0246bc203bc8a4d0d3fd727fda7300bd59b1600eff6e9e4b14722dcbd8f"
+    },
+    "design-contract/specs/behavior/torrent-runtime-v2.md": {
+      "source": "specs/behavior/torrent-runtime-v2.md",
+      "sha256": "8ff0158c7fd56eba72be4e3d206cda788565bf0d169d96135bbd98a749b15a85"
     },
     "design-contract/specs/repos/README.md": {
       "source": "specs/repos/README.md",
-      "sha256": "37f48c8c9132d2990bc998b2560823e829d4ab685911c3580344d1818dbc8dbc"
+      "sha256": "3f70540bb1f4311785d83cc13d074428c1c3fe54a603a9d9b0720d9dd41f8acd"
     },
     "design-contract/viptv-design-system/README.md": {
       "source": "viptv-design-system/README.md",
-      "sha256": "f6a9e5e0da4312a8d71d0e2b2a3338088bf9a5b5a9891a783c0a859257acd7e2"
+      "sha256": "e678027326519513efac9a4779150917647ee29652aee44cb1e0fa4b2d8996c0"
     },
     "design-contract/viptv-design-system/claude-code/.claude/skills/viptv-ui/SKILL.md": {
       "source": "viptv-design-system/claude-code/.claude/skills/viptv-ui/SKILL.md",
@@ -181,11 +201,11 @@
     },
     "design-contract/viptv-design-system/copy.md": {
       "source": "viptv-design-system/copy.md",
-      "sha256": "e812ef8b48ed62214e6b97d8535392e24b53891d1ca15b596be0420f6991ff47"
+      "sha256": "b5bfc142b5dac4cea5d55c578235c4ec656313caf42c809ac7b1a62bfd3e617f"
     },
     "design-contract/viptv-design-system/decisions.md": {
       "source": "viptv-design-system/decisions.md",
-      "sha256": "32a81e98b3fd79727b8ec79d65b066ac17d7d10928f3ebac994798642e71f1f1"
+      "sha256": "5aa629baee1e1d8cfff893393e485eda1a62776c80fa8adc57109ad2007b5f00"
     },
     "design-contract/viptv-design-system/reference/screens/index.json": {
       "source": "viptv-design-system/reference/screens/index.json",

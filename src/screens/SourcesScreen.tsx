@@ -71,6 +71,7 @@ export function SourcesScreen({
   setSourceProvider,
   busy,
   preparing,
+  playbackStage,
   openingSource,
   play,
   setModal,
@@ -89,6 +90,7 @@ export function SourcesScreen({
   setSourceProvider: Dispatch<SetStateAction<string>>;
   busy: boolean;
   preparing: boolean;
+  playbackStage?: string;
   openingSource: string | undefined;
   play: (item: MediaItem, source?: MediaSource, position?: number) => unknown;
   setModal: Dispatch<SetStateAction<ModalRequest | undefined>>;
@@ -104,7 +106,7 @@ export function SourcesScreen({
   const checking = busy && !preparing;
   const context = selected ? presentationContext(selected) : { title: "", status: "" };
   const discovery = checking ? (count ? "Still checking sources" : "Finding sources") : "";
-  const progress = preparing ? "opening stream…" : discovery;
+  const progress = preparing ? playbackStage ?? "opening stream…" : discovery;
   const found = `${count} found`;
   // Phone: "Still checking sources · The End of Oak Street"; desktop: "12 found · Still checking sources";
   // TV: "Monster · S1 E1 · Still checking sources". Once every addon answered, the resume / queue

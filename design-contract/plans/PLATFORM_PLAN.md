@@ -2,7 +2,7 @@
 
 Status: proposed platform work; the Roku baseline remains unchanged.
 
-The accepted platform matrix and playback-consolidation decision of 2026-09-17 are recorded in [docs/adr/0003-shared-platform-matrix-and-playback-consolidation.md](docs/adr/0003-shared-platform-matrix-and-playback-consolidation.md); where the rows below differ, that record is authoritative.
+The accepted platform matrix and playback-consolidation decision of 2026-09-17 are recorded in [docs/adr/0003-shared-platform-matrix-and-playback-consolidation.md](../docs/adr/0003-shared-platform-matrix-and-playback-consolidation.md); where the rows below differ, that record is authoritative.
 
 | Target | App | Preferred playback path | Last resort |
 |---|---|---|---|
