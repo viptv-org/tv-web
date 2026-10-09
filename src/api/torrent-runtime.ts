@@ -29,6 +29,26 @@ function wait(ms: number, signal?: AbortSignal): Promise<void> {
   });
 }
 
+/** A slow response body is still part of preparation, not a new startup budget. */
+async function startupControl(control:Control,input:unknown,options:RequestOptions|undefined,remaining:number):Promise<PrivateResponse> {
+  throwIfAborted(options?.signal);
+  const abort=new AbortController();
+  const cancel=()=>abort.abort();
+  options?.signal?.addEventListener('abort',cancel,{once:true});
+  let timedOut=false;
+  const timer=setTimeout(()=>{timedOut=true;abort.abort();},Math.max(1,remaining));
+  try {
+    if(remaining<=0)throw new TvApiError(408,'Playback did not reach its first frame within the startup deadline.','native_acquisition_timeout');
+    const result=await control(input,{signal:abort.signal});
+    if(timedOut)throw new TvApiError(408,'Playback did not reach its first frame within the startup deadline.','native_acquisition_timeout');
+    throwIfAborted(options?.signal);
+    return result;
+  } catch(error) {
+    if(timedOut)throw new TvApiError(408,'Playback did not reach its first frame within the startup deadline.','native_acquisition_timeout');
+    throwIfAborted(options?.signal);throw error;
+  } finally {clearTimeout(timer);options?.signal?.removeEventListener('abort',cancel);}
+}
+
 /** Rust validates authority and selection; this object executes network, IPC and timers. */
 export class NativeTorrentTransport {
   private readonly owners = new Set<Owner>();
@@ -44,7 +64,7 @@ export class NativeTorrentTransport {
     const qualified=started!==undefined && await this.port.available().catch(()=>false);
     throwIfAborted(options?.signal);
     if(!qualified)return this.ordinary(request,options);
-    const protocol=await this.control({operation:'torrentRuntimeProtocol'},options);
+    const protocol=await startupControl(this.control,{operation:'torrentRuntimeProtocol'},options,started!+120_000-await this.port.clock());
     const decision=normalizeResponse<string>('torrentRuntime',{operation:'negotiation',platform:request.client.platform,qualified,
       scopeMatches:!options?.signal?.aborted,status:protocol.status,authorizationRefused:[401,403].includes(protocol.status),body:text.decode(protocol.bytes)});
     if(decision==='authRecovery')throw new TvApiError(403,'Your session is no longer authorized.','unauthorized');
@@ -99,11 +119,13 @@ class Owner {
     const execute=async()=> {
       throwIfAborted(this.cancelled.signal);
       const sent=await this.port.clock();
-      const response=await this.control({operation,...(operation==='playbackV2'?{playback:this.request}:{id:this.playbackId})},{signal:this.cancelled.signal});
+      const command={operation,...(operation==='playbackV2'?{playback:this.request}:{id:this.playbackId})};
+      const response=this.frame ? await this.control(command,{signal:this.cancelled.signal}) : await startupControl(this.control,command,{signal:this.cancelled.signal},this.startupDeadline-sent);
       const received=await this.port.clock();throwIfAborted(this.cancelled.signal);
       if(![200,202].includes(response.status)) {
-        const envelope=response.bytes.length<=4096?JSON.parse(text.decode(response.bytes)):{};
-        const failure=normalizeResponse<{message:string;code?:string}>('apiError',{status:response.status,error_code:envelope.error_code});
+        let code:unknown;
+        if(response.bytes.length<=4096) {try {const envelope:unknown=JSON.parse(text.decode(response.bytes));if(envelope&&typeof envelope==='object'&&!Array.isArray(envelope))code=(envelope as Record<string,unknown>).error_code;}catch { /* Only closed status/code facts may leave private control. */ }}
+        const failure=normalizeResponse<{message:string;code?:string}>('apiError',{status:response.status,error_code:typeof code==='string'?code:undefined});
         throw new TvApiError(response.status,failure.message,failure.code);
       }
       this.state=JSON.parse(this.bridge.acceptMeasuredBytes(response.status,response.bytes,JSON.stringify({scope:this.scope,generation:1,sequence:++this.sequence,

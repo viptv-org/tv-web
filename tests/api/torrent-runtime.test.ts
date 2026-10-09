@@ -34,6 +34,29 @@ function harness() {
 }
 beforeEach(()=>vi.useFakeTimers());afterEach(()=>vi.useRealTimers());
 describe('native runtime client effects with actual WASM authority',()=> {
+  it('aborts a stalled preparation response within the original startup budget',async()=> {
+    const h=harness();const original=h.control.getMockImplementation()!;
+    h.control.mockImplementation((input:unknown,...args:unknown[])=> {
+      if((input as Record<string,unknown>).operation!=='playbackV2')return original(input);
+      const options=args[0] as {signal:AbortSignal};
+      return new Promise((_resolve,reject)=>options.signal.addEventListener('abort',()=>reject(new DOMException('Aborted','AbortError')),{once:true}));
+    });
+    let failure:unknown;
+    const pending=h.runtime.start(request).catch(error=>{failure=error;});
+    await vi.advanceTimersByTimeAsync(0);
+    await vi.advanceTimersByTimeAsync(120_000);
+    expect(failure).toMatchObject({code:'native_acquisition_timeout'});
+    await pending;
+    expect(h.commands.some(command=>command.op==='prepare')).toBe(false);
+    expect(h.control.mock.calls.some(([command])=>(command as Record<string,unknown>).operation==='playbackV2CancelRequest')).toBe(true);
+    expect(h.ordinary).not.toHaveBeenCalled();
+  });
+  it('projects malformed refusal bodies without exposing a raw parse exception',async()=> {
+    const h=harness();const original=h.control.getMockImplementation()!;
+    h.control.mockImplementation(async(input:unknown)=> (input as Record<string,unknown>).operation==='playbackV2' ? {status:403,bytes:new TextEncoder().encode('private malformed refusal')} : original(input));
+    await expect(h.runtime.start(request)).rejects.toMatchObject({name:'TvApiError',status:403});
+    expect(h.ordinary).not.toHaveBeenCalled();
+  });
   it('preserves hints, auto selection and large media without projecting a grant',async()=> {
     const h=harness();
     const lease=await h.runtime.start(request);
