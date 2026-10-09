@@ -59,7 +59,7 @@ For the backend, build the TV distribution first, then set `VIPTV_TV_DIST` to it
 
 ## Design synchronization
 
-The canonical UI and UX contract lives in [viptv-org/design](https://github.com/viptv-org/design). Read the pinned [sync workflow](design-contract/DESIGN_SYNC.md) and [VIPTV design system](design-contract/viptv-design-system/README.md). `DESIGN_REF` identifies the immutable revision, and the build checks the imported specification and asset hashes. Update design first, then explicitly import its committed revision; visual and behavior evidence remain separate from the mechanical integrity check.
+The canonical UI and UX contract lives in [viptv-org/design](https://github.com/viptv-org/design). Read the pinned [sync workflow](design-contract/docs/process/DESIGN_SYNC.md) and [VIPTV design system](design-contract/viptv-design-system/README.md). `DESIGN_REF` identifies the immutable revision, and the build checks the imported specification and asset hashes. Update design first, then explicitly import its committed revision; visual and behavior evidence remain separate from the mechanical integrity check.
 
 ## Validation status
 

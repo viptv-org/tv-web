@@ -7,7 +7,7 @@ Review and implementation/device qualification remain pending.
 Source revisions: design `18b19af378b27655e3b6401f17b92321739dba83`; gateway
 `76d100b8fce0922aefca203e791c10e41f83019c` (reviewed transport source
 `889dbe6359668aedf0190f731898fda4c3a034d7`). Existing account ownership and
-playback policy remain [BE-002](../../BACKEND_V2.md); source interactions remain
+playback policy remain [BE-002](../../plans/backend-v2/BACKEND_V2.md); source interactions remain
 [the Roku behavior contract](roku-ux-contract.md) and SRC-PROVIDERS-001 in
 [components](../../viptv-design-system/components.md). Each implementation
 must reference a reviewed immutable design commit before adopting this draft.
@@ -75,13 +75,18 @@ exposed to clients.
 
 ## Delivery and privacy
 
-Torrent/archive sources always require an account-authorized gateway. Web,
-desktop and Android use the same existing backend v2 playback request with an
-opaque `stream_id`, then consume gateway HLS through their existing decoder.
-Android has no in-process torrent facade, native peer traffic, JNA packaging or
-loopback cleartext exception in this contract. Native direct-first delivery
-continues to apply to compatible ordinary HTTP media; it never routes a magnet,
-metainfo or archive URL to a player.
+Gateway delivery remains the path for web/TV-web, desktop, Roku and unqualified
+or non-negotiated Android clients, and for archives or sources outside the native
+subset. They use the existing backend v2 request with opaque `stream_id` and
+consume gateway HLS through their existing decoder. The owner-approved
+[SRC-TORRENT-NATIVE-001](torrent-native-android.md) defines the sole Android/
+Android TV exception: separately negotiated, qualified exact-index v1 VOD with
+private grants, public peer/DHT policy and a narrow literal-127.0.0.1 byte
+capability. Supported Android clients enable it by default for all authorized
+accounts without a torrent-enable setting or operator allowlist. Qualification
+and deployment evidence remain separately recorded. Ordinary HTTP direct
+remains unchanged. No path sends a magnet, metainfo or archive URL directly to
+a decoder, and archives never enter native torrent delivery.
 
 Gateway output remains copy/remux first, with conversion only under existing
 capability/explicit conversion policy. The initial integration uses HLS because
@@ -104,8 +109,10 @@ Source handles remain transient and scoped; source URLs, hashes, source hints,
 headers, peer lists and gateway integration keys never enter public source
 cards, persisted history, logging, exception messages or analytics. Redaction
 also covers those values reflected in title/description/filename/binge-group
-metadata. Clients receive only the existing short-lived HTTPS media capability
-and bounded safe media/track metadata.
+metadata. Gateway clients receive only the existing short-lived HTTPS media
+capability and bounded safe media/track metadata. The native exception's private
+transport grant is not a public source/card/history model; its closed disclosure
+and redaction rules are owned by SRC-TORRENT-NATIVE-001.
 
 The gateway may report selected `input_file` basename/index/size on its own API.
 The backend does not forward arbitrary upstream JSON. No client file chooser
@@ -162,9 +169,11 @@ releases only that viewer; another authorized viewer continues normally.
    bad file index; headers on magnet; peer/webseed hints and external-player
    input fail without new source activity or public private-value disclosure.
 3. No authorized gateway, runtime torrent disabled, missing operation scope or
-   unsupported capability produces the existing safe failure. Native clients
-   never receive direct torrent/archive delivery. Ordinary HTTP direct remains
-   available under BE-002, including HTTP-only providers where permitted.
+   unsupported capability produces the existing safe failure for gateway
+   admission. Clients without negotiated/qualified SRC-TORRENT-NATIVE-001 support
+   never receive native torrent delivery; archives always remain gateway-owned.
+   Ordinary HTTP direct remains available under BE-002, including HTTP-only
+   providers where permitted. Native acceptance is recorded independently.
 4. Two authorized selections with the same payload but different file indices
    remain distinct; identical compatible selections retain existing sharing.
    Cross-account/profile, credential revision and namespace boundaries remain
