@@ -3052,3 +3052,20 @@ validation, auto selection and large-file descriptors, archive refusal, late
 cancellation, frame acknowledgement and cache clearing. Native Linux/Windows
 shell packaging and decoded public-source evidence are recorded in desktop;
 these browser tests do not establish hardware or production qualification.
+
+## Torrent-runtime gateway integration, 2026-10-09
+
+The production `Html5FallbackAdapter` was bundled from the pinned Video source
+and decoded real authenticated gateway HLS over trusted local HTTPS in Chrome.
+Mediabunny presented actual canvas frames and advanced the VOD clock from zero.
+A gateway output replacement at 120 seconds also rendered destination frames
+(absolute clock 120.114 seconds), taking 27.1 seconds for request/preparation and
+player replacement in the successful observation. Native HLS/MSE decoded the
+same source independently. Viewer release immediately refused the media URL.
+
+These are direct gateway/player integration checks using a disposable key and
+private test page. Backend account/discovery screens and a physical TV/Roku were
+not exercised. An earlier seek creation failed and remains in the performance
+ledger; one later successful trial does not qualify every swarm. Source URLs,
+credentials and raw captures stay private. See the gateway's
+`docs/GATEWAY_TORRENT_RUNTIME.md` and `docs/TORRENT_PERFORMANCE_FOLLOWUP.md`.
