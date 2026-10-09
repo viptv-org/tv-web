@@ -2,7 +2,7 @@ import type { PlaybackLease, PlaybackSession, PlaybackV2Request } from '../../ve
 import { normalizeResponse, throwIfAborted, TvApiError, type RequestOptions } from './client-shared';
 
 type Control = (input: unknown, options?: RequestOptions) => Promise<unknown>;
-const STARTUP_MS = 45_000;
+const STARTUP_MS = 120_000;
 const CLEANUP_MS = 5_000;
 
 function wait(signal: AbortSignal): Promise<void> {
@@ -16,6 +16,9 @@ function wait(signal: AbortSignal): Promise<void> {
 
 /** Backend control only: this transport never follows a delivery URL. */
 export class PlaybackV2Transport {
+  private readonly startupDeadlines = new Map<string, number>();
+  remainingStartup(id: string) { const deadline = this.startupDeadlines.get(id); this.startupDeadlines.delete(id); return deadline === undefined ? undefined : deadline - performance.now(); }
+
   constructor(private readonly control: Control, private readonly origin: string) {}
 
   private identity(value: unknown): string {
@@ -53,6 +56,8 @@ export class PlaybackV2Transport {
     const controller = new AbortController();
     const abort = () => controller.abort();
     options?.signal?.addEventListener('abort', abort, { once: true });
+    const deadline = performance.now() + STARTUP_MS;
+    let renewAt = performance.now() + 20_000;
     let timedOut = false;
     const timer = setTimeout(() => { timedOut = true; controller.abort(); }, STARTUP_MS);
     let id: string | undefined;
@@ -68,10 +73,14 @@ export class PlaybackV2Transport {
         if (session) {
           if (session.deliveryKind === 'direct' && (!request.client.canPlayDirect || request.forceGateway || request.conversion !== 'auto'))
             throw new TvApiError(502, 'The server returned a delivery this device did not request.', 'invalid_playback_response');
+          this.startupDeadlines.set(id, deadline);
           return lease;
         }
         await wait(controller.signal);
-        lease = await this.status(id, { signal: controller.signal });
+        if (performance.now() >= renewAt) {
+          lease = this.decode(await this.control({ operation: 'playbackV2Heartbeat', id }, { signal: controller.signal }), id);
+          renewAt = performance.now() + 20_000;
+        } else lease = await this.status(id, { signal: controller.signal });
       }
     } catch (error) {
       // Reconcile an ambiguous POST with the exact same idempotency body, then
@@ -99,6 +108,7 @@ export class PlaybackV2Transport {
   }
 
   async stop(id: string, options?: RequestOptions): Promise<void> {
+    this.startupDeadlines.delete(id);
     await this.control({ operation: 'playbackV2Stop', id }, options);
   }
 

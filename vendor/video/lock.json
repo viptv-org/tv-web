@@ -1,11 +1,11 @@
 {
   "repository": "viptv-org/video",
-  "revision": "35eb8612574119d76b1658905ae472ffe48f56ed",
+  "revision": "d235eb99618e5e7a5b23b929f5e7ad85bd8c54e5",
   "files": {
     "vendor/video/src/browser-capabilities.ts": "3261889250b9ea0ea3ac33cd23dcc756ce3945f58f321fe62d54809481c5b921",
     "vendor/video/src/browser-policy.ts": "463891c85e85cf6b9b09083f99f671e882976171f07307a4d5d9569939ac311a",
     "vendor/video/src/captions.ts": "75b7a60caedb88f2522edb9f943f031136524b5427b7df604ef4bda5656f2601",
-    "vendor/video/src/html5-fallback.ts": "06204d6920826daccd4d77c7fc91f43462c37f6df05d03be7be91e0d442186fb",
+    "vendor/video/src/html5-fallback.ts": "38433522faec31345552f57e2b902d57d400cb9ebf619755280933cbfe13b2bf",
     "vendor/video/src/index.ts": "b320e18d4d58b791326107b93f5beefc08abaadfe6d254d33d71f1316609c095",
     "vendor/video/src/media-tracks.ts": "e2af19192049d8b6d22db23bcb94862a4878fac1deacaf3b65ce69f8c6cfa1f9",
     "vendor/video/src/mediabunny-mse.ts": "9910839d92fe5ff9ce41d95cd8284f7f6b15d98d7b00c685fc832d26edeb3396",
@@ -15,7 +15,7 @@
     "vendor/video/src/session-media-fetch.ts": "aef56122b0f8403e8e9b1107cd5d51b0c0552e78365f67853d38e8d8f79b1c88",
     "vendor/video/src/session-player.ts": "35950d3318fadc8c8844abec184298b0b3bab70611fac52bb0b52c3dc4e72097",
     "vendor/video/src/session-request.ts": "1c184d8aefb57a3a19f59144987c4d68cdf1e27ffa2e74de132a33ec5594d9a5",
-    "vendor/video/src/session.ts": "59450bdf70afe987b1506c7b2c45464d7d540688490f1e2e27cbc5f5cca79369",
+    "vendor/video/src/session.ts": "e0f6efeda124690e6d944ac901d2cfce77637bc65fef5ab683af9302ecfd8a17",
     "vendor/video/src/source-authorization.ts": "5bf2e33a9eedbf9ce253153dcefd44d0a1dcbcafa73e6fd8e459592b6c4c30f9",
     "vendor/video/src/tauri-native.ts": "5a0d0c58e900aa7304a962de16d5f68b6b3a60f105bad5673f5956a9be83840d",
     "vendor/video/src/tauri-native/aperture.ts": "860a4c36aaaf16a47ff0c97e0dc8d6326beefd86178a257664145136e6ad07d1",
@@ -32,6 +32,6 @@
     "vendor/video/src/tizen-avplay.ts": "e6624e60d1aedcb0c64ce15eaed471f918923f4750dc3e31b8400d5b4cf2aae2",
     "vendor/video/src/types.ts": "1b2e83e8e56f918ddc6afbf45931244789ec072f4eed9ed42c0c37c7dc7bbb67",
     "vendor/video/src/vizio-evidence.ts": "3f6135c3a6b99677d84fce70d393a6cb43ced88397cb2098ed3e0f1bcbea42e0",
-    "vendor/video/src/vizio-html5.ts": "dd57ae53924e1cc96a2fed428def4d8afcf9bbed154c8a9d31986d089a1fe489"
+    "vendor/video/src/vizio-html5.ts": "57921d015559c914e348633d3a8ad42e42ee31fd62b86cdd62346cbe1d1cedb5"
   }
 }

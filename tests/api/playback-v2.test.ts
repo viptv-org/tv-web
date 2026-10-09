@@ -196,10 +196,10 @@ describe('v2 backend playback control', () => {
     const fetcher: typeof fetch = async (_input, init) => { calls.push(init?.method ?? 'GET'); return response(init?.method === 'DELETE' ? {} : lease()); };
     const pending = apiFor(fetcher).startPlaybackV2(request);
     const failed = expect(pending).rejects.toMatchObject({ code: 'playback_start_timeout' });
-    await vi.advanceTimersByTimeAsync(45_000);
+    await vi.advanceTimersByTimeAsync(120_000);
     await failed;
     expect(calls.at(-1)).toBe('DELETE');
-    expect(calls.filter(method => method === 'POST')).toHaveLength(1);
-    expect(calls.length).toBeLessThanOrEqual(92);
+    expect(calls.filter(method => method === 'POST').length).toBeGreaterThan(1);
+    expect(calls.length).toBeLessThanOrEqual(244);
   });
 });

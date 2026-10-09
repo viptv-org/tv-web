@@ -30,7 +30,7 @@ export class TvApiCatalog extends TvApiClientBase {
   private readonly nativePlayback = this.torrentRuntimePort ? new NativeTorrentTransport(this.torrentRuntimePort,
     (input,options)=>this.privateControl(input,options),(request,options)=>this.playbackV2.start(request,options),this.origin) : undefined;
   protected override async revokeNative(clear=false) {await this.nativePlayback?.revoke(clear);}
-  remainingStartupBudget(id:string) {return this.nativePlayback?.remainingStartup(id)??Promise.resolve(undefined);}
+  remainingStartupBudget(id:string) {return this.isNativePlayback(id) ? this.nativePlayback!.remainingStartup(id) : Promise.resolve(this.playbackV2.remainingStartup(id));}
   canConvertPlayback(id:string) {return !this.isNativePlayback(id);}
   isNativePlayback(id:string) {return this.nativePlayback?.has(id)??false;}
   nativePlaybackEvents(listener:(event:RuntimeEvent)=>void) {return this.nativePlayback?.subscribe(listener)??(()=>{});}
