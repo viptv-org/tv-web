@@ -72,6 +72,22 @@ describe('v2 backend playback control', () => {
     expect(body).toMatchObject({ conversion: 'audio', force_gateway: true, preferred_audio_language: 'en', client: { platform: 'desktop', max_height: 2160 } });
     expect(body).not.toHaveProperty('quality');
   });
+  it('announces only measured gateway stage changes while a lease is preparing',async()=> {
+    let polls=0;
+    const fetcher:typeof fetch=async(input,init)=> {
+      const path=new URL(String(input)).pathname;
+      if(path.endsWith('/progress'))return response({stage:polls<3?'fetching_metadata':'buffering'});
+      if(init?.method==='DELETE')return response({});
+      if(init?.method==='POST')return response(lease(),202);
+      polls++;return response(lease(polls>=5?'ready':'starting'));
+    };
+    const api=apiFor(fetcher),stages:string[]=[];
+    api.nativePlaybackEvents(event=>{if(event.stage)stages.push(event.stage);});
+    const pending=api.startPlaybackV2(request);
+    await vi.advanceTimersByTimeAsync(3000);const ready=await pending;
+    expect(stages).toEqual(['Fetching metadata…','Buffering…']);
+    await api.stopPlaybackV2(ready.id);
+  });
   it('polls a pending lease and never sends control traffic to the media origin', async () => {
     const fake = scripted(response(lease(), 202), response(lease('ready')), response(lease('ready')), response({}));
     const api = apiFor(fake.fetcher);
@@ -200,6 +216,6 @@ describe('v2 backend playback control', () => {
     await failed;
     expect(calls.at(-1)).toBe('DELETE');
     expect(calls.filter(method => method === 'POST').length).toBeGreaterThan(1);
-    expect(calls.length).toBeLessThanOrEqual(244);
+    expect(calls.length).toBeLessThanOrEqual(484);
   });
 });

@@ -3069,3 +3069,12 @@ not exercised. An earlier seek creation failed and remains in the performance
 ledger; one later successful trial does not qualify every swarm. Source URLs,
 credentials and raw captures stay private. See the gateway's
 `docs/GATEWAY_TORRENT_RUNTIME.md` and `docs/TORRENT_PERFORMANCE_FOLLOWUP.md`.
+
+The subsequent ephemeral full-backend run includes profile/vault validation,
+registered add-on source discovery, production `TvApi`/Rust-WASM normalization
+and `PlaybackSessionController`. It presented real frames after measured
+Finding peers → Fetching metadata → Buffering transitions; controller/backend
+stop revoked the media URL immediately. Gateway stage tests cover deduplication
+and keep startup/authority deadlines independent. Current web suite: 300 tests
+and production build pass. The test page wrapped production API/controller code;
+ordinary account/catalog screens were not driven in this media probe.

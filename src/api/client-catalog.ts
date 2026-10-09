@@ -26,14 +26,32 @@ import { PlaybackV2Transport } from "./playback-v2";
 import type { PlaybackV2Request, PlaybackLease } from "../../vendor/core/typescript/wire";
 
 export class TvApiCatalog extends TvApiClientBase {
-  private readonly playbackV2 = new PlaybackV2Transport((input, options) => this.domainRequest(input, options), this.origin);
+  private readonly gatewayStages=new Set<(event:RuntimeEvent)=>void>();
+  private readonly playbackV2 = new PlaybackV2Transport((input, options) => this.domainRequest(input, options), this.origin,
+    (id,options)=>this.observeGatewayStage(id,options),(id,stage)=>{for(const listener of this.gatewayStages)listener({id,stage});});
+  private async observeGatewayStage(id:string,options:RequestOptions) {
+    const scope=new AbortController(),cancel=()=>scope.abort();
+    options.signal?.addEventListener('abort',cancel,{once:true});
+    const timer=setTimeout(cancel,2000);
+    try {
+      if(options.signal?.aborted)return;
+      const value=expectObject(await this.raw(`/api/v2/playback/${segment(id)}/progress`,{},true,{signal:scope.signal}));
+      if(options.signal?.aborted || value.stage==null)return;
+      const stage=normalizeResponse<string>('torrentRuntime',{operation:'stage',stage:value.stage});
+      return stage;
+    } catch { /* Advisory stages cannot extend authority or replace lease failures. */ }
+    finally {clearTimeout(timer);options.signal?.removeEventListener('abort',cancel);}
+  }
   private readonly nativePlayback = this.torrentRuntimePort ? new NativeTorrentTransport(this.torrentRuntimePort,
     (input,options)=>this.privateControl(input,options),(request,options)=>this.playbackV2.start(request,options),this.origin) : undefined;
   protected override async revokeNative(clear=false) {await this.nativePlayback?.revoke(clear);}
   remainingStartupBudget(id:string) {return this.isNativePlayback(id) ? this.nativePlayback!.remainingStartup(id) : Promise.resolve(this.playbackV2.remainingStartup(id));}
   canConvertPlayback(id:string) {return !this.isNativePlayback(id);}
   isNativePlayback(id:string) {return this.nativePlayback?.has(id)??false;}
-  nativePlaybackEvents(listener:(event:RuntimeEvent)=>void) {return this.nativePlayback?.subscribe(listener)??(()=>{});}
+  nativePlaybackEvents(listener:(event:RuntimeEvent)=>void) {
+    this.gatewayStages.add(listener);const native=this.nativePlayback?.subscribe(listener);
+    return ()=>{this.gatewayStages.delete(listener);native?.();};
+  }
   nativeFirstFrame(id:string) {return this.nativePlayback?.firstFrame(id)??Promise.resolve();}
   private readonly playbackLeases = new Map<string, PlaybackLease>();
   async startPlaybackV2(request: PlaybackV2Request, options?: RequestOptions) {

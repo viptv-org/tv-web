@@ -19,7 +19,9 @@ export class PlaybackV2Transport {
   private readonly startupDeadlines = new Map<string, number>();
   remainingStartup(id: string) { const deadline = this.startupDeadlines.get(id); this.startupDeadlines.delete(id); return deadline === undefined ? undefined : deadline - performance.now(); }
 
-  constructor(private readonly control: Control, private readonly origin: string) {}
+  constructor(private readonly control: Control, private readonly origin: string,
+    private readonly progress?: (id:string,options:RequestOptions)=>Promise<string|undefined>,
+    private readonly stageChanged?: (id:string,stage:string)=>void) {}
 
   private identity(value: unknown): string {
     const id = value && typeof value === 'object' && 'id' in value ? value.id : undefined;
@@ -61,6 +63,7 @@ export class PlaybackV2Transport {
     let timedOut = false;
     const timer = setTimeout(() => { timedOut = true; controller.abort(); }, STARTUP_MS);
     let id: string | undefined;
+    let previousStage:string|undefined;
     let posted = false;
     try {
       posted = true;
@@ -81,6 +84,11 @@ export class PlaybackV2Transport {
           lease = this.decode(await this.control({ operation: 'playbackV2Heartbeat', id }, { signal: controller.signal }), id);
           renewAt = performance.now() + 20_000;
         } else lease = await this.status(id, { signal: controller.signal });
+        if(lease.status==='starting') {
+          const stage=await this.progress?.(id,{signal:controller.signal});
+          throwIfAborted(controller.signal);
+          if(stage && stage!==previousStage){previousStage=stage;this.stageChanged?.(id,stage);}
+        }
       }
     } catch (error) {
       // Reconcile an ambiguous POST with the exact same idempotency body, then
