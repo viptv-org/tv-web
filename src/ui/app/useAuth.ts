@@ -7,7 +7,7 @@ import {
 } from "../../api";
 import { TV_CANVAS_HEIGHT, TV_CANVAS_WIDTH } from "../tvCanvas";
 import { describeApiError } from "../errors";
-import { browseRequest, firstHomeCatalog, homeRowsFor, type HomeRow } from "./homeRows";
+import { browseRequest, firstHomeCatalog, homeRowsFor, recentLiveLimit, type HomeRow } from "./homeRows";
 import { sameCatalog } from "../catalogFilters";
 import { CatalogRevisionMonitor } from "./catalogRevisionMonitor";
 import type { Screen } from "../screens";
@@ -130,7 +130,7 @@ export function useAuth(app: DialogsApi) {
             })
           : undefined,
         api
-          .liveV2({ collection: "recent", limit: 20 })
+          .liveV2({ collection: "recent", limit: recentLiveLimit() })
           .catch(() => ({ items: [] })),
       ]);
       if (ticket !== epoch.current) return;

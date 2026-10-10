@@ -1,4 +1,6 @@
 import type { Catalog, DiscoverRequest, MediaItem } from "../../api";
+import type { HomeLayout } from "../../../vendor/core/typescript/wire";
+import { normalizeCore } from "../../core";
 import { catalogDefaults, catalogFilters, catalogShelfName, sameCatalog } from "../catalogFilters";
 
 /**
@@ -34,9 +36,27 @@ export function browseRequest(catalog: Catalog): DiscoverRequest | undefined {
   };
 }
 
+/**
+ * The shared Home shelf layout: shelf order, titles and fetch limits, with
+ * catalog shelves only for catalogs that load without viewer input.
+ */
+export function homeLayout(catalogs: readonly Catalog[]): HomeLayout {
+  return normalizeCore<HomeLayout>("homeLayout", { catalogs });
+}
+
+/** Catalog shelves in layout order with their addon-qualified titles. */
+function homeCatalogs(catalogs: readonly Catalog[]) {
+  return homeLayout(catalogs).shelves.flatMap((shelf) =>
+    shelf.catalogIndex == null ? [] : [{ catalog: catalogs[shelf.catalogIndex], title: shelf.title }],
+  );
+}
+
+/** Recently watched channels requested for Home. */
+export const recentLiveLimit = () =>
+  homeLayout([]).shelves.find((shelf) => shelf.role === "recentLive")?.limit ?? 24;
+
 /** The catalog that feeds the hero and the first Home shelf. */
-export const firstHomeCatalog = (catalogs: readonly Catalog[]) =>
-  catalogs.find((catalog) => catalog.type !== "live" && !!browseRequest(catalog));
+export const firstHomeCatalog = (catalogs: readonly Catalog[]) => homeCatalogs(catalogs)[0]?.catalog;
 
 /**
  * Shelves for every other browsable catalog, in catalog order. A shelf this
@@ -49,14 +69,12 @@ export function homeRowsFor(
   responsive: boolean,
   previous: readonly HomeRow[] = [],
 ): HomeRow[] {
-  return catalogs
-    .filter((catalog) => catalog.type !== "live" && catalog !== first && !!browseRequest(catalog))
-    .map((catalog) => ({
-      // The responsive shelves name the content type; the TV keeps its
-      // addon-qualified Roku row labels.
-      name: responsive
-        ? catalogShelfName(catalog)
-        : catalog.addonName ? `${catalog.addonName} · ${catalog.name}` : catalog.name,
+  return homeCatalogs(catalogs)
+    .filter(({ catalog }) => catalog !== first)
+    .map(({ catalog, title }) => ({
+      // The responsive shelves name the content type; the TV keeps the
+      // shared addon-qualified shelf titles.
+      name: responsive ? catalogShelfName(catalog) : title,
       catalog,
       items: [] as readonly MediaItem[],
       loaded: false,

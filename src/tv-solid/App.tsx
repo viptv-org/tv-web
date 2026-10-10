@@ -11,7 +11,7 @@ import { TextEntry, type TextEntryProps } from "./TextEntry";
 import { UpNextOverlay, PlayerDialog, type PlayerDialogProps } from "./PlayerOverlays";
 import { nextFromEpisodes, UP_NEXT_SECONDS, UP_NEXT_TICK_MS, type UpNextCard } from "../ui/app/upNext";
 import type { createSolidTVContinuation, SolidTVContinuationResult } from "./continuationRuntime";
-import { catalogFilterLabel } from "../ui/catalogFilters";
+import { catalogFilterLabel, searchPlan } from "../ui/catalogFilters";
 import { heroLabelWidth } from "./heroGeometry";
 import { HomeBackdrop } from "./HomeBackdrop";
 import { exitWebos, installWebosLifecycle } from "./webos";
@@ -2780,9 +2780,9 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
             : await api.catalogs({ signal: scope.signal });
           if (generation !== searchGeneration || scope.signal.aborted) return;
           this.searchCatalogs = catalogs;
-          const searchable = catalogs
-            .filter((catalog) => catalog.supportsSearch)
-            .slice(0, 128);
+          // Shared core selects the searched catalogs, live channel search and limits.
+          const plan = searchPlan(query, catalogs);
+          const searchable = plan.sections.map((section) => catalogs[section.catalogIndex]);
           // Each completed addon/catalog publishes immediately. A slow addon
           // occupies only its own worker, not an entire Promise.all batch.
           let next=0;
@@ -2795,15 +2795,15 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
             while(next<searchable.length&&!scope.signal.aborted) {
               const index=next++, catalog=searchable[index];
               try {
-                const page=await api.discover({type:catalog.type,catalog:catalog.id,addonId:catalog.addonId,search:query},{signal:scope.signal});
-                rows[index]={name:catalog.name,items:page.items,catalog};
+                const page=await api.discover({type:catalog.type,catalog:catalog.id,addonId:catalog.addonId,search:plan.query},{signal:scope.signal});
+                rows[index]={name:catalog.name,items:page.items.slice(0,plan.sectionLimit),catalog};
               } catch { partial=true;rows[index]={name:catalog.name,items:[],catalog}; }
               publish();
             }
           };
-          const liveTask=api.liveV2({search:query,limit:80},{signal:scope.signal}).then(live=>{
-            rows[searchable.length]={name:"Live TV",items:live.items};publish();
-          }).catch(()=>{partial=true;});
+          const liveTask=plan.live?api.liveV2({search:plan.query,limit:plan.liveRequestLimit},{signal:scope.signal}).then(live=>{
+            rows[searchable.length]={name:plan.liveTitle,items:live.items.slice(0,plan.sectionLimit)};publish();
+          }).catch(()=>{partial=true;}):Promise.resolve();
           await Promise.all([liveTask,...Array.from({length:Math.min(3,searchable.length)},worker)]);
           if (generation !== searchGeneration || scope.signal.aborted) return;
           this.searchRows = rows.filter(Boolean);

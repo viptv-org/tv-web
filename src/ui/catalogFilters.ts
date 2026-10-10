@@ -1,5 +1,6 @@
 import { normalizeCore } from "../core";
 import type { Catalog, MediaItem } from "../api";
+import type { SearchPlan } from "../../vendor/core/typescript/wire";
 export type CatalogFilter = {
   name: string;
   required: boolean;
@@ -139,3 +140,11 @@ export function formatContentType(type: string): string {
     .join(" ");
 }
 
+/**
+ * The shared search plan for one query: which catalogs to search (indices
+ * into `catalogs`, live namespaces included) and their titles, whether to
+ * search live channels and how many, and the per-section item limit.
+ */
+export function searchPlan(query: string, catalogs: readonly Catalog[], scope = "all"): SearchPlan {
+  return normalizeCore<SearchPlan>("searchPlan", { query, scope, catalogs });
+}

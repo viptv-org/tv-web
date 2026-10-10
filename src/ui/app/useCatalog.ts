@@ -13,7 +13,7 @@ import {
 import { exactResumeSource } from "../continuation";
 import { focusElement } from "../remote";
 import { enrichDetail, mergeEpisodeProgress, initialEpisode } from "../detailProgress";
-import { catalogFilters, catalogDefaults } from "../catalogFilters";
+import { catalogFilters, catalogDefaults, searchPlan } from "../catalogFilters";
 import { appendCatalogPage } from "../catalogPaging";
 import type { PlaybackSessionApi } from "./useTvApp";
 
@@ -462,13 +462,9 @@ export function useCatalog(app: PlaybackSessionApi) {
       try {
         const results: MediaItem[] = [],
           rows: { name: string; items: readonly MediaItem[]; catalog?: Catalog }[] = [];
-        const cats = catalogs
-          .filter(
-            (c) =>
-              c.supportsSearch &&
-              (searchScope === "all" || c.type === searchScope),
-          )
-          .slice(0, 128);
+        // Shared core selects the searched catalogs, live channel search and limits.
+        const plan = searchPlan(query, catalogs, searchScope);
+        const cats = plan.sections.map((section) => catalogs[section.catalogIndex]);
         for (let i = 0; i < cats.length; i += 3) {
           const pages = await Promise.all(
             cats.slice(i, i + 3).map((c) =>
@@ -478,7 +474,7 @@ export function useCatalog(app: PlaybackSessionApi) {
                     type: c.type,
                     catalog: c.id,
                     addonId: c.addonId,
-                    search: query.trim(),
+                    search: plan.query,
                   },
                   { signal: scope.signal },
                 )
@@ -499,7 +495,7 @@ export function useCatalog(app: PlaybackSessionApi) {
                     (other) => other.type === item.type && other.id === item.id,
                   ) === index,
               )
-              .slice(0, 24);
+              .slice(0, plan.sectionLimit);
             rows.push({ name: page.name, items: unique, catalog: page.catalog });
             for (const item of unique)
               if (
@@ -510,14 +506,15 @@ export function useCatalog(app: PlaybackSessionApi) {
           setItems([...results]);
           setSearchRows([...rows]);
         }
-        if (searchScope === "all" || searchScope === "live") {
+        if (plan.live) {
           const live = await api.liveV2(
-            { search: query.trim(), limit: 80 },
+            { search: plan.query, limit: plan.liveRequestLimit },
             { signal: scope.signal },
           );
           if (ticket !== epoch.current) return;
-          rows.push({ name: "Live TV", items: live.items.slice(0, 24) });
-          results.push(...live.items.slice(0, 24));
+          const shown = live.items.slice(0, plan.sectionLimit);
+          rows.push({ name: plan.liveTitle, items: shown });
+          results.push(...shown);
           setItems([...results]);
           setSearchRows([...rows]);
         }

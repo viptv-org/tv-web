@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
 import type { Catalog, MediaItem } from "../../src/api";
 import { normalizeCore } from "../../src/core";
-import { browseRequest, firstHomeCatalog, homeRowsFor } from "../../src/ui/app/homeRows";
+import { browseRequest, firstHomeCatalog, homeRowsFor, recentLiveLimit } from "../../src/ui/app/homeRows";
 import { castMembers, directorNames, genreTarget } from "../../src/ui/detailLinks";
+import { searchPlan } from "../../src/ui/catalogFilters";
 
 const catalogs = (raw: unknown[]) => normalizeCore<Catalog[]>("catalogs", raw);
 const item = (raw: Record<string, unknown>) =>
@@ -33,6 +34,18 @@ describe("Home catalog shelves", () => {
     ]);
   });
 
+  it("titles TV shelves from the shared layout and skips the hero catalog", () => {
+    const list = catalogs([
+      { id: "top", name: "Top", type: "movie", addon_id: 1, addon_name: "Cinemeta" },
+      { id: "trend", name: "Trending", type: "series", addon_id: 2, addon_name: "AIOMetadata" },
+      { id: "plain", name: "Plain", type: "movie", addon_id: 3 },
+      { id: "channels", name: "Channels", type: "live", addon_id: 5 },
+    ]);
+    expect(firstHomeCatalog(list)?.id).toBe("top");
+    expect(homeRowsFor(list, list[0], false).map((row) => row.name)).toEqual(["AIOMetadata · Trending", "Plain"]);
+    expect(recentLiveLimit()).toBe(24);
+  });
+
   it("keeps a shelf this profile already loaded when Home reloads", () => {
     const list = shelves();
     const loaded = homeRowsFor(list, list[0], true).map((row) => ({ ...row, items: [item({})], loaded: true }));
@@ -41,6 +54,27 @@ describe("Home catalog shelves", () => {
     expect(rows[0].loaded).toBe(true);
     expect(rows[0].items).toHaveLength(1);
     expect(rows[0].catalog).toBe(refetched[0]);
+  });
+});
+
+describe("search plan", () => {
+  const list = () => catalogs([
+    { id: "top", name: "Popular", type: "movie", addon_id: 1, addon_name: "Cinemeta", supports_search: true },
+    { id: "chan", name: "Channels", type: "live", addon_id: 2, addon_name: "IPTV", supports_search: true },
+    { id: "plain", name: "Plain", type: "series", addon_id: 3 },
+  ]);
+
+  it("searches live namespaces and live channels for every scope that includes them", () => {
+    const plan = searchPlan(" bebop ", list());
+    expect(plan.query).toBe("bebop");
+    expect(plan.sections).toEqual([
+      { catalogIndex: 0, title: "Cinemeta · Popular" },
+      { catalogIndex: 1, title: "IPTV · Channels" },
+    ]);
+    expect([plan.live, plan.liveRequestLimit, plan.sectionLimit, plan.liveTitle]).toEqual([true, 80, 24, "Live TV"]);
+    expect(searchPlan("bebop", list(), "movie").sections.map((section) => section.catalogIndex)).toEqual([0]);
+    expect(searchPlan("bebop", list(), "movie").live).toBe(false);
+    expect(searchPlan("  ", list()).sections).toEqual([]);
   });
 });
 
