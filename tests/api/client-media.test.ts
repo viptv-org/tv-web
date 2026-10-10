@@ -120,7 +120,7 @@ describe("TvApi device and media boundary", () => {
     ).resolves.toMatchObject({
       url: "https://gateway.example/base/media/playback-1/capability/index.m3u8",
     });
-    expect(fake.calls[0].input).toBe('https://viptv.example/api/v2/playback');
+    expect(fake.calls[0].input).toBe('https://viptv.example/api/v2/playback-decoder-start');
     expect(JSON.parse(String(fake.calls[0].init?.body)).client).toMatchObject({
       platform: 'web', can_play_direct: true, video_codecs: ['h264'], audio_codecs: ['aac'],
     });

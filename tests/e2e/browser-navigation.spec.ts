@@ -31,7 +31,7 @@ async function installPlaybackBoundary(page: Page, requests: Awaited<ReturnType<
     const path = new URL(request.url()).pathname;
     const body = JSON.parse(request.postData() || '{}') as Record<string, unknown>;
     requests.push({ method: request.method(), path, body });
-    const result = path === '/api/playback' || path === '/api/v2/playback' ? {
+    const result = path === '/api/playback' || path === '/api/v2/playback-decoder-start' ? {
       id: 'history-playback', url: '/media/history-playback/capability/index.m3u8', format: 'hls', mode: 'direct', video_mode: 'copy', audio_mode: 'copy',
       position: 0, duration: 120, live: String(body.stream_id ?? '').startsWith('live_source_'), audio_tracks: [], subtitle_tracks: [], subtitles_supported: false,
     } : {};
@@ -111,7 +111,7 @@ test('browser Back stops playback and Forward requires manual source selection',
   await page.goForward();
   await expect(page.locator('[data-focus-id="source-0"]')).toBeVisible();
   await expect(page).toHaveURL(/\/sources$/);
-  expect(fixture.requests.filter(request => request.path === '/api/v2/playback' && request.method === 'POST')).toHaveLength(1);
+  expect(fixture.requests.filter(request => request.path === '/api/v2/playback-decoder-start' && request.method === 'POST')).toHaveLength(1);
   expect(fixture.errors).toEqual([]);
 });
 
@@ -141,7 +141,7 @@ test('a live card opens playback directly and history never restores a live sour
   await expect(page).toHaveURL(/\/tv\/title\/live\/station-0\/watch$/);
   await expect(page.locator('.vx-sources__status')).toHaveCount(0);
   await expect(page.locator('.detail')).toHaveCount(0);
-  expect(fixture.requests.find(request => request.path === '/api/v2/playback' && request.method === 'POST')?.body).toMatchObject({ stream_id: 'live_source_station-0', position: 0 });
+  expect(fixture.requests.find(request => request.path === '/api/v2/playback-decoder-start' && request.method === 'POST')?.body).toMatchObject({ stream_id: 'live_source_station-0', position: 0 });
   expect(fixture.requests.some(request => request.path === '/api/v2/iptv/live/station-0/source')).toBe(true);
   expect(fixture.requests.filter(request => request.path === '/api/v2/streams')).toHaveLength(0);
   // Responsive players use the header Back control to leave playback.
@@ -151,7 +151,7 @@ test('a live card opens playback directly and history never restores a live sour
   await page.goForward();
   await expect(page).toHaveURL(/\/tv\/live$/);
   await expect(page.locator('.vx-sources__status')).toHaveCount(0);
-  expect(fixture.requests.filter(request => request.path === '/api/v2/playback' && request.method === 'POST')).toHaveLength(1);
+  expect(fixture.requests.filter(request => request.path === '/api/v2/playback-decoder-start' && request.method === 'POST')).toHaveLength(1);
   expect(fixture.errors).toEqual([]);
 });
 import { playbackV2Fixture } from './helpers/playbackV2Fixture';

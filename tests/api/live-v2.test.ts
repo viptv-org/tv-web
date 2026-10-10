@@ -43,7 +43,7 @@ it('resolves one exact live source and admits its opaque id through v2 without a
   const ready = await api.startPlaybackV2(input);
   expect(ready.session).toMatchObject({ live: true, deliveryKind: 'gateway', mode: 'direct', position: 0 });
   await api.stopPlayback(ready.id);
-  expect(fake.calls.map(call => call.input)).toEqual(['https://viptv.example/api/v2/iptv/live/iptv%3A1%3A7/source', 'https://viptv.example/api/v2/playback', 'https://viptv.example/api/v2/playback/pb2_live']);
+  expect(fake.calls.map(call => call.input)).toEqual(['https://viptv.example/api/v2/iptv/live/iptv%3A1%3A7/source', 'https://viptv.example/api/v2/playback-decoder-start', 'https://viptv.example/api/v2/playback/pb2_live']);
   expect(JSON.parse(fake.calls[1].init!.body as string)).toMatchObject({ stream_id: 'opaque_live', client: { platform: 'vizio', can_play_direct: false, max_height: 2160 } });
 });
 
@@ -92,6 +92,6 @@ it('normal live playback resolves the exact channel and never invokes legacy dis
   const api = new TvApi({ baseUrl: 'https://viptv.example', fetch: fake.fetcher, playbackPlatform: 'vizio' });
   const session = await api.startPlayback({ channelId: 'iptv:1:7', position: 88, capabilities: { maxWidth: 3840, maxHeight: 2160, h264: true, aac: true, hevc: false, directPlay: false, hevcSdr: false } });
   expect(session.id).toBe('pb2_live');
-  expect(fake.calls.map(call => call.input)).toEqual(['https://viptv.example/api/v2/iptv/live/iptv%3A1%3A7/source', 'https://viptv.example/api/v2/playback']);
+  expect(fake.calls.map(call => call.input)).toEqual(['https://viptv.example/api/v2/iptv/live/iptv%3A1%3A7/source', 'https://viptv.example/api/v2/playback-decoder-start']);
   expect(JSON.parse(fake.calls[1].init!.body as string)).toMatchObject({ stream_id: 'opaque_live', position: 0, client: { platform: 'vizio', can_play_direct: false } });
 });

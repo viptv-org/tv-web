@@ -132,7 +132,7 @@ async function installBackend(page: Page, options: FixtureOptions = {}): Promise
       if (options.delayNext) await new Promise(resolve => setTimeout(resolve, 750));
       return json(route, { status: 'next', item: second });
     }
-    if (path === '/api/v2/playback' && request.method() === 'POST') {
+    if (path === '/api/v2/playback-decoder-start' && request.method() === 'POST') {
       const body = JSON.parse(request.postData() || '{}') as Record<string, unknown>;
       state.playbackRequests.push(body);
       const id = `playback-${state.playbackRequests.length}`;
@@ -298,7 +298,7 @@ test('Vizio: failed Next tries at most three distinct sources and preserves the 
       id: `failed-next-${index}`, name: '1080p H.264 English', source_addon_id: 'addon:ranked', audioEvidenceScore: 8,
     })) }], done: true });
   });
-  await page.route(`${apiOrigin}/api/v2/playback`, async route => {
+  await page.route(`${apiOrigin}/api/v2/playback-decoder-start`, async route => {
     if (route.request().method() !== 'POST') return route.fallback();
     const body = JSON.parse(route.request().postData() || '{}') as Record<string, unknown>;
     if (body.stream_id === 'first-source') return route.fallback();
@@ -324,7 +324,7 @@ test('Vizio: failed explicit Resume offers exact Retry and manual source choice 
   const noPageErrors = await installVizioMedia(page);
   const state = await installBackend(page, { queue: [{ ...first, position: 42, queue_status: 'resume' }] });
   const intents = () => Array.from(new Map(state.playbackRequests.map(request => [request.request_id, request])).values());
-  await page.route(`${apiOrigin}/api/v2/playback`, async route => {
+  await page.route(`${apiOrigin}/api/v2/playback-decoder-start`, async route => {
     if (route.request().method() !== 'POST') return route.fallback();
     state.playbackRequests.push(JSON.parse(route.request().postData() || '{}') as Record<string, unknown>);
     return json(route, { error: 'Source is temporarily unavailable.' }, 503);

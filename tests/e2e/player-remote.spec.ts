@@ -2,7 +2,7 @@ import { expect, test, type Page, type Route } from '@playwright/test';
 // Direct-delivery scenarios use HTML5 with the shared TV layout, not Vizio's
 // gateway-only product policy. Decoder boundaries are synthetic, not hardware.
 
-declare global { interface Window { finishFixturePlayback(video: HTMLMediaElement): void; } }
+declare global { interface Window { finishFixturePlayback(video: HTMLMediaElement): void; presentFixtureFrame(video: HTMLVideoElement): void; } }
 
 const apiOrigin = process.env.VIPTV_TEST_API_ORIGIN ?? 'https://viptv.syek.tech';
 const corsHeaders = {
@@ -38,6 +38,7 @@ type FixtureState = {
   readonly playbackRequests: Array<Record<string, unknown>>;
   /** Safe request intent only; no source URL, headers, or credentials enter assertions. */
   readonly playbackIntents: Array<Pick<Record<string, unknown>, 'stream_id' | 'position' | 'audio_track_index' | 'subtitle_track_index' | 'subtitles_off'>>;
+  readonly firstFrames: string[];
   readonly progress: Array<Record<string, unknown>>;
   nextRequests: number;
 };
@@ -47,10 +48,10 @@ async function json(route: Route, body: unknown, status = 200) {
 }
 
 /** Controlled HTML media edge: UI/controller code receives the real DOM events. */
-async function installVizioMedia(page: Page) {
+async function installVizioMedia(page: Page, holdFrames = false) {
   const pageErrors: string[] = [];
   page.on('pageerror', error => pageErrors.push(error.message));
-  await page.addInitScript(() => {
+  await page.addInitScript(holdFrames => {
     const media = HTMLMediaElement.prototype;
     // This fixture simulates native HLS; real MSE decoding has a separate test.
     const nativeCanPlayType = media.canPlayType;
@@ -61,10 +62,11 @@ async function installVizioMedia(page: Page) {
     const playing = new WeakMap<HTMLMediaElement, boolean>();
     const frames = new WeakMap<HTMLMediaElement, number>();
     HTMLVideoElement.prototype.getVideoPlaybackQuality = function() {
-      const count = (frames.get(this) ?? 0) + (playing.get(this) ? 1 : 0);
+      const count = (frames.get(this) ?? 0) + (playing.get(this) && !holdFrames ? 1 : 0);
       frames.set(this, count);
       return { creationTime: performance.now(), totalVideoFrames: count, droppedVideoFrames: 0, corruptedVideoFrames: 0 };
     };
+    window.presentFixtureFrame = video => { frames.set(video, 3); video.dispatchEvent(new Event('timeupdate')); };
     const completed = new WeakMap<HTMLMediaElement, boolean>();
     const sources = new WeakMap<HTMLMediaElement, string>();
     // The adapter is under test, not Chromium's HLS stack. Keeping the
@@ -104,12 +106,12 @@ async function installVizioMedia(page: Page) {
       video.dispatchEvent(new Event('timeupdate'));
       video.dispatchEvent(new Event('ended'));
     };
-  });
+  }, holdFrames);
   return () => expect(pageErrors).toEqual([]);
 }
 
 async function installBackend(page: Page, options: FixtureOptions = {}): Promise<FixtureState> {
-  const state: FixtureState = { playbackRequests: [], playbackIntents: [], progress: [], nextRequests: 0 };
+  const state: FixtureState = { playbackRequests: [], playbackIntents: [], firstFrames: [], progress: [], nextRequests: 0 };
   const preferences = { audio_language: 'en', subtitle_language: 'en', subtitles_enabled: false, subtitle_size: 'normal', subtitle_style: 'system', quality: 'auto', autoplay: true };
   await page.route('**/fixture.svg', route => route.fulfill({ status: 200, contentType: 'image/svg+xml', body: '<svg xmlns="http://www.w3.org/2000/svg" width="256" height="144" />' }));
   let selectedProfileId: string | null = null;
@@ -148,7 +150,7 @@ async function installBackend(page: Page, options: FixtureOptions = {}): Promise
       if (options.delayNext) await new Promise(resolve => setTimeout(resolve, 750));
       return json(route, { status: 'next', item: second });
     }
-    if (path === '/api/v2/playback' && request.method() === 'POST') {
+    if ((path === '/api/v2/playback' || path === '/api/v2/playback-decoder-start') && request.method() === 'POST') {
       const body = JSON.parse(request.postData() || '{}') as Record<string, unknown>;
       state.playbackRequests.push(body);
       state.playbackIntents.push({ stream_id: body.stream_id, position: body.position, audio_track_index: body.audio_track ?? undefined, subtitle_track_index: body.subtitle_track ?? undefined, subtitles_off: body.subtitles_off || undefined });
@@ -161,6 +163,11 @@ async function installBackend(page: Page, options: FixtureOptions = {}): Promise
       return json(route, { ok: true });
     }
     if (path.startsWith('/api/v2/iptv/live/')) return json(route, { catalog_id: null, generation: null, items: [], next_cursor: null, previous_cursor: null });
+    if (path.endsWith('/first-frame')) {
+      state.firstFrames.push(path.split('/')[4]);
+      expect(request.postDataJSON()).toEqual({});
+      return json(route, {ok:true});
+    }
     if (path.startsWith('/api/v2/playback/') || path === '/api/addons') return json(route, []);
     return json(route, { error: `unhandled ${path}` }, 404);
   });
@@ -259,7 +266,7 @@ test.describe('Vizio remote player contract', () => {
     test.skip(test.info().project.name !== 'vizio', 'managed replacement is shared; exercise one web-TV platform boundary');
     const noPageErrors = await installVizioMedia(page);
     const state = await installBackend(page);
-    await page.route(`${apiOrigin}/api/v2/playback`, async route => {
+    await page.route(`${apiOrigin}/api/v2/playback-decoder-start`, async route => {
       const body = JSON.parse(route.request().postData() || '{}') as Record<string, unknown>;
       state.playbackRequests.push(body);
       state.playbackIntents.push({ stream_id: body.stream_id, position: body.position, audio_track_index: body.audio_track ?? undefined, subtitle_track_index: body.subtitle_track ?? undefined, subtitles_off: body.subtitles_off || undefined });
@@ -306,3 +313,17 @@ test.describe('Vizio remote player contract', () => {
   });
 });
 import { playbackV2Fixture } from './helpers/playbackV2Fixture';
+
+test('metadata readiness waits for a measured frame before scoped acknowledgement', async ({page}) => {
+  test.skip(test.info().project.name !== 'vizio', 'controlled HTML boundary');
+  const noPageErrors = await installVizioMedia(page, true);
+  const state = await installBackend(page, {playbackMode:'direct'});
+  await enterFirstEpisode(page, state);
+  expect(state.firstFrames).toEqual([]);
+  await page.evaluate(() => window.presentFixtureFrame(document.querySelector('video')!));
+  await expect.poll(() => state.firstFrames).toEqual(['playback-1']);
+  await page.evaluate(() => window.presentFixtureFrame(document.querySelector('video')!));
+  await page.waitForTimeout(100);
+  expect(state.firstFrames).toEqual(['playback-1']);
+  noPageErrors();
+});

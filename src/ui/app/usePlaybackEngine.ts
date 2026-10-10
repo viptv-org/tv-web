@@ -50,11 +50,21 @@ export function usePlaybackEngine(app: AuthApi) {
       lastReportedFailure = key;
       report();
     };
+    let frameSession: string | undefined;
+    const reportFrame = () => {
+      const current = sessions.snapshot;
+      const id = current.active?.session.id;
+      if (!id || disposed || current.state === 'replacing' || current.state === 'opening'
+        || (engine.snapshot.diagnostics?.presentedFrames ?? 0) <= 0 || frameSession === id) return;
+      frameSession = id;
+      void api.playbackFirstFrame(id).catch(error => {
+        if (disposed || sessions.snapshot.active?.session.id !== id) return;
+        fail(error); void sessions.stop().catch(() => undefined);
+      });
+    };
     const off = engine.subscribe((snapshot) => {
       setSnapshot(snapshot);
-      const nativeId = sessions.snapshot.active?.session.id;
-      if (nativeId && api.isNativePlayback?.(nativeId) && (snapshot.diagnostics?.presentedFrames ?? 0) > 0)
-        void api.nativeFirstFrame(nativeId).catch(fail);
+      reportFrame();
       const noticeKey = `${snapshot.sessionId}:${snapshot.notice ?? ''}`;
       if (snapshot.notice && noticeKey !== lastPlayerNotice) notify(snapshot.notice);
       lastPlayerNotice = noticeKey;
@@ -109,8 +119,7 @@ export function usePlaybackEngine(app: AuthApi) {
           session,
         };
         setSession(session);
-        if (api.isNativePlayback?.(session.id) && (engine.snapshot.diagnostics?.presentedFrames ?? 0) > 0)
-          void api.nativeFirstFrame(session.id).catch(fail);
+        reportFrame();
         setSelected(intent.item);
       } else {
         active.current = undefined;

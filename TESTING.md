@@ -3084,3 +3084,20 @@ production browser controller before metadata/first frame. Stop restored all
 owned gateway input/output slots, and scoped cancellation tombstones prevent a
 late create from starting again. This is a synthetic unavailable source fixture
 for lifecycle qualification, separate from the real-media frame/seek trials.
+
+### Decoder acknowledgement, 2026-10-09
+
+The viewing client adopts core `0f3d9f7` and video `b391571`. Gateway starts use
+the separate decoder-aware backend route; their first measured frame triggers a
+coalesced, bounded control acknowledgement. Native sessions keep reporting to
+their local worker. Metadata readiness cannot acknowledge a frame. Replacement
+and Stop fence late acknowledgement failures, and acknowledgements never renew
+leases or follow the media URL.
+
+The complete unit suite passes 302 tests; type checking and production packaging
+pass. Five trusted-HTTPS remote-player UI tests pass, including holding frame
+evidence at zero after metadata readiness and then acknowledging once after it
+advances. An actual backend/Go/Mediabunny browser run presented six frames,
+accepted its decoder acknowledgement and revoked media with 401 on Stop.
+Admission/player opening took 17.85 s in that one observation. This is browser
+and controlled boundary evidence, not a physical TV or comparative-speed claim.

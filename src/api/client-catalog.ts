@@ -52,6 +52,7 @@ export class TvApiCatalog extends TvApiClientBase {
     this.gatewayStages.add(listener);const native=this.nativePlayback?.subscribe(listener);
     return ()=>{this.gatewayStages.delete(listener);native?.();};
   }
+  playbackFirstFrame(id:string) {return this.isNativePlayback(id) ? this.nativePlayback!.firstFrame(id) : this.playbackV2.firstFrame(id);}
   nativeFirstFrame(id:string) {return this.nativePlayback?.firstFrame(id)??Promise.resolve();}
   private readonly playbackLeases = new Map<string, PlaybackLease>();
   async startPlaybackV2(request: PlaybackV2Request, options?: RequestOptions) {

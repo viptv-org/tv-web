@@ -16,6 +16,8 @@ function wait(signal: AbortSignal): Promise<void> {
 
 /** Backend control only: this transport never follows a delivery URL. */
 export class PlaybackV2Transport {
+  private readonly frames = new Map<string, Promise<void>>();
+  private readonly readyIds = new Set<string>();
   private readonly startupDeadlines = new Map<string, number>();
   remainingStartup(id: string) { const deadline = this.startupDeadlines.get(id); this.startupDeadlines.delete(id); return deadline === undefined ? undefined : deadline - performance.now(); }
 
@@ -54,7 +56,7 @@ export class PlaybackV2Transport {
   async start(request: PlaybackV2Request, options?: RequestOptions): Promise<PlaybackLease> {
     throwIfAborted(options?.signal);
     request = JSON.parse(JSON.stringify(request)) as PlaybackV2Request;
-    normalizeResponse('request', { operation: 'playbackV2', playback: request });
+    normalizeResponse('request', { operation: 'playbackV2DecodedStart', playback: request });
     const controller = new AbortController();
     const abort = () => controller.abort();
     options?.signal?.addEventListener('abort', abort, { once: true });
@@ -67,7 +69,7 @@ export class PlaybackV2Transport {
     let posted = false;
     try {
       posted = true;
-      const response = await this.control({ operation: 'playbackV2', playback: request }, { signal: controller.signal });
+      const response = await this.control({ operation: 'playbackV2DecodedStart', playback: request }, { signal: controller.signal });
       id = this.identity(response);
       let lease = this.decode(response, id);
       for (;;) {
@@ -77,6 +79,7 @@ export class PlaybackV2Transport {
           if (session.deliveryKind === 'direct' && (!request.client.canPlayDirect || request.forceGateway || request.conversion !== 'auto'))
             throw new TvApiError(502, 'The server returned a delivery this device did not request.', 'invalid_playback_response');
           this.startupDeadlines.set(id, deadline);
+          this.readyIds.add(id);
           return lease;
         }
         await wait(controller.signal);
@@ -104,6 +107,21 @@ export class PlaybackV2Transport {
     }
   }
 
+  firstFrame(id: string): Promise<void> {
+    if (!this.readyIds.has(id)) return Promise.resolve();
+    const existing = this.frames.get(id);
+    if (existing) return existing;
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 5_000);
+    const operation = this.control({ operation: 'playbackV2FirstFrame', id }, { signal: controller.signal })
+      .then(value => {
+        if (!value || typeof value !== 'object' || Object.keys(value).length !== 1 || !('ok' in value) || value.ok !== true)
+          throw new TvApiError(502, 'The server returned an invalid startup acknowledgement.', 'invalid_playback_response');
+      }).finally(() => clearTimeout(timer));
+    this.frames.set(id, operation);
+    return operation;
+  }
+
   async status(id: string, options?: RequestOptions): Promise<PlaybackLease> {
     return this.decode(await this.control({ operation: 'playbackV2Status', id }, options), id);
   }
@@ -117,6 +135,8 @@ export class PlaybackV2Transport {
 
   async stop(id: string, options?: RequestOptions): Promise<void> {
     this.startupDeadlines.delete(id);
+    this.readyIds.delete(id);
+    this.frames.delete(id);
     await this.control({ operation: 'playbackV2Stop', id }, options);
   }
 
@@ -124,7 +144,7 @@ export class PlaybackV2Transport {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), CLEANUP_MS);
     try {
-      if (!id) id = this.identity(await this.control({ operation: 'playbackV2', playback: request }, { signal: controller.signal }));
+      if (!id) id = this.identity(await this.control({ operation: 'playbackV2DecodedStart', playback: request }, { signal: controller.signal }));
       await this.stop(id, { signal: controller.signal });
     } catch { /* The independently expiring backend/gateway lease is the final bound. */ }
     finally { clearTimeout(timer); }

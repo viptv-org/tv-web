@@ -23,6 +23,7 @@ export function playbackV2Fixture(route: Route, body: unknown, status = 200): un
   let sessions = playbackSessions.get(page);
   if (!sessions) { sessions = new Map(); playbackSessions.set(page, sessions); }
   const raw = body && typeof body === 'object' ? body as Record<string, unknown> : {};
+  if (url.pathname.endsWith('/first-frame')) return {ok:true};
   const id = typeof raw.id === 'string' ? raw.id : url.pathname.split('/')[4];
   if (request.method() === 'DELETE') { sessions.delete(id); return {}; }
   if (typeof raw.url === 'string') sessions.set(id, { ...raw, kind: 'gateway', url: new URL(raw.url, url.origin).href,
@@ -612,7 +613,7 @@ export async function installBackend(page: Page, options: BackendOptions): Promi
     if (guideMatch) return json(guide(decodeURIComponent(guideMatch[1])));
 
     // Playback.
-    if (path === '/api/v2/playback' && method === 'POST') {
+    if ((path === '/api/v2/playback' || path === '/api/v2/playback-decoder-start') && method === 'POST') {
       playbackCount++;
       if (options.playbackHang || (options.playbackHangAfter !== undefined && playbackCount > options.playbackHangAfter)) return hang();
       if (options.playbackFailAfter !== undefined && playbackCount > options.playbackFailAfter) return json({ error: 'upstream unavailable', error_code: 'SOURCE_TIMEOUT' }, 504);

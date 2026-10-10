@@ -9,6 +9,7 @@ export function playbackV2Fixture(route: Route, body: unknown, status = 200): un
   let values = sessions.get(page);
   if (!values) { values = new Map(); sessions.set(page, values); }
   const raw = body && typeof body === 'object' ? body as Record<string, unknown> : {};
+  if (url.pathname.endsWith('/first-frame')) return {ok:true};
   if (raw.status) return body;
   const id = typeof raw.id === 'string' ? raw.id : url.pathname.split('/')[4];
   if (request.method() === 'DELETE') { values.delete(id); return {}; }

@@ -99,7 +99,7 @@ describe('v2 backend playback control', () => {
     await api.renewPlaybackV2(ready.id);
     await api.stopPlaybackV2(ready.id);
     expect(fake.calls.map(call => call.input)).toEqual([
-      'https://viptv.example/api/v2/playback',
+      'https://viptv.example/api/v2/playback-decoder-start',
       'https://viptv.example/api/v2/playback/pb2_one',
       'https://viptv.example/api/v2/playback/pb2_one/heartbeat',
       'https://viptv.example/api/v2/playback/pb2_one',
@@ -218,4 +218,30 @@ describe('v2 backend playback control', () => {
     expect(calls.filter(method => method === 'POST').length).toBeGreaterThan(1);
     expect(calls.length).toBeLessThanOrEqual(484);
   });
+});
+
+it('reports a presented frame once through control without renewing or following media', async () => {
+  const fake = scripted(response(lease('ready')), response({ok:true}), response({}));
+  const api = apiFor(fake.fetcher);
+  await api.startPlaybackV2(request);
+  await Promise.all([api.playbackFirstFrame('pb2_one'), api.playbackFirstFrame('pb2_one')]);
+  expect(fake.calls).toHaveLength(2);
+  expect(fake.calls[1].input).toBe('https://viptv.example/api/v2/playback/pb2_one/first-frame');
+  expect(JSON.parse(fake.calls[1].init!.body as string)).toEqual({});
+  expect(fake.calls.some(call => call.input.includes('/heartbeat'))).toBe(false);
+  await api.stopPlaybackV2('pb2_one');
+  await api.playbackFirstFrame('pb2_one');
+  expect(fake.calls).toHaveLength(3);
+});
+it('bounds a stalled decoder acknowledgement and does not report an unadmitted session', async () => {
+  const fetcher: typeof fetch = async (input, init) => {
+    if (String(input).endsWith('/first-frame')) return new Promise((_resolve, reject) => init?.signal?.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError'))));
+    return response(lease('ready'));
+  };
+  const api = apiFor(fetcher);
+  await api.playbackFirstFrame('unadmitted');
+  await api.startPlaybackV2(request);
+  const acknowledgement = api.playbackFirstFrame('pb2_one');
+  const refused = expect(acknowledgement).rejects.toMatchObject({name:'AbortError'});
+  await vi.advanceTimersByTimeAsync(5_000); await refused;
 });
