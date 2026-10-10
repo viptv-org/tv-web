@@ -3101,3 +3101,18 @@ advances. An actual backend/Go/Mediabunny browser run presented six frames,
 accepted its decoder acknowledgement and revoked media with 401 on Stop.
 Admission/player opening took 17.85 s in that one observation. This is browser
 and controlled boundary evidence, not a physical TV or comparative-speed claim.
+# Shared core and hosted-TV navigation merge — 2026-10-09
+
+Core `aae69de27d69f87f79ce513e47a78985cede4a39` combines exact-source
+deduplication, bounded request/render scheduling, preview expiry, playable-source
+ranking and explicit native Retry. The regenerated WASM and TypeScript snapshot
+is adopted together with design `01abe2ea695ae2041742056de756e11d7d191eb5`.
+The incoming hosted-TV history-Back guard and playback acceptance updates remain.
+
+All typecheck groups, 291 unit/integration tests with one worker, production build
+and core/design/video snapshot checks pass. The trusted-HTTPS Playwright config
+includes the four Vizio black-screen/Back regressions and their hosted `/tv/`
+entry. Listing these alongside responsive corrections discovers 13 scenarios.
+Browser execution is not qualified for this merge: the owner's private local
+HTTPS tooling is absent on this checkout and its documented hostname does not
+resolve. No physical-TV, installed desktop or production deployment claim follows.

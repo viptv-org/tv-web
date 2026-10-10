@@ -34,7 +34,7 @@ async function playSeriesFromQueue(page: Page) {
   const episode = { id: 'series-1:1:2', type: 'series', series_id: 'series-1', season: 1, episode: 2, name: 'Fixture Series', episodeTitle: 'Episode Two', position: 20, duration: 120, genres: [] };
   await page.route(`${apiOrigin}/api/profiles/1/continue/page**`, route => route.fulfill({ json: { items: [episode], offset: 0, total: 1, next_offset: null } }));
   await page.addInitScript(({ key, token }) => localStorage.setItem(key, JSON.stringify(token)), { key: `viptv-device:${apiOrigin}`, token: { sessionId: 'device-1', accountId: '7', profileId: null, accessToken: 'access', refreshToken: 'refresh', expiresIn: 900 } });
-  await page.goto('/?platform=vizio&focusdebug=1');
+  await page.goto('/tv/?platform=vizio&focusdebug=1');
   // Home hero action (Resume) starts the queued episode.
   await page.waitForFunction(() => (window as any).__viptvFocus?.view === 'home-action');
   await page.keyboard.press('Enter');
