@@ -1,5 +1,7 @@
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 import {NativeTorrentTransport, type PrivateResponse, type RuntimeReply, type TorrentRuntimePort} from '../../src/api/torrent-runtime';
+import {MemoryDeviceSessionStore, TvApi} from '../../src/api';
+import {response as httpResponse} from './client-helpers';
 import type {PlaybackV2Request} from '../../vendor/core/typescript/wire';
 
 const request:PlaybackV2Request={conversion:'auto',audioLanguage:null,preferredAudioLanguage:null,preferredSubtitleLanguage:null,subtitlesOff:false,
@@ -34,6 +36,35 @@ function harness() {
 }
 beforeEach(()=>vi.useFakeTimers());afterEach(()=>vi.useRealTimers());
 describe('native runtime client effects with actual WASM authority',()=> {
+  it.each([0,120])('renews native playback at position %s through the real API without a JSON body',async(position)=> {
+    const h=harness(),store=new MemoryDeviceSessionStore();
+    await store.save({sessionId:'s1',accountId:'1',profileId:'1',accessToken:'fixture-access',refreshToken:'fixture-refresh',expiresIn:3600});
+    const heartbeats:RequestInit[]=[];
+    const fetcher:typeof fetch=async(input,init)=> {
+      const path=new URL(String(input)).pathname;
+      if(path.endsWith('/torrent-runtime-protocol'))return httpResponse({version:2,native_torrent_versions:[2]});
+      if(init?.method==='DELETE')return httpResponse({ok:true});
+      const renewal=path.endsWith('/heartbeat');
+      if(renewal) {
+        heartbeats.push(init!);
+        if(init?.body)return httpResponse({error_code:'invalid_playback_request'},400);
+      }
+      const ready=body(renewal);ready.delivery.position=position;
+      return httpResponse(ready);
+    };
+    const api=new TvApi({baseUrl:'https://fixture.invalid',sessionStore:store,fetch:fetcher,playbackPlatform:'tauri',torrentRuntime:h.port});
+    await api.restoreSession();
+    const lease=await api.startPlaybackV2({...request,position});
+    try {
+      await api.playbackFirstFrame(lease.id);
+      h.setNow(120_000);
+      await expect(api.heartbeat(lease.id)).resolves.toBeUndefined();
+      expect(heartbeats).toHaveLength(1);
+      expect(heartbeats[0].body).toBeUndefined();
+      expect(new Headers(heartbeats[0].headers).get('Content-Type')).toBeNull();
+      expect(api.playbackLease(lease.id)?.session?.position).toBe(position);
+    } finally {await api.stopPlaybackV2(lease.id);}
+  });
   it('aborts a stalled preparation response within the original startup budget',async()=> {
     const h=harness();const original=h.control.getMockImplementation()!;
     h.control.mockImplementation((input:unknown,...args:unknown[])=> {

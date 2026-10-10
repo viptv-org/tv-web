@@ -304,14 +304,17 @@ export class TvApiClientBase {
   /** Private bytes reach the strict holder before JSON projection. */
   protected async privateControl(input: unknown, options?: RequestOptions): Promise<import('./torrent-runtime').PrivateResponse> {
     const wire=normalizeResponse<{method:string;path:string;body:JsonObject|null}>('request',input);
+    // Native renewal is bodyless. Ordinary gateway renewal keeps its {} body.
+    // This private transport only executes the native holder's control requests.
+    const body=wire.method==='POST' && wire.path.endsWith('/heartbeat') ? null : wire.body;
     const send=async(retry:boolean):Promise<import('./torrent-runtime').PrivateResponse>=> {
       throwIfAborted(options?.signal);
       const token=this.tokens?.accessToken;
       const headers:Record<string,string>={Accept:'application/json','Accept-Encoding':'identity'};
       if(token)headers.Authorization=`Bearer ${token}`;
-      if(wire.body)headers['Content-Type']='application/json';
+      if(body)headers['Content-Type']='application/json';
       let response:Response;
-      try {response=await this.requestFetch(this.origin+wire.path,{method:wire.method,headers,body:wire.body?JSON.stringify(wire.body):undefined,signal:options?.signal,redirect:'error',cache:'no-store'});}
+      try {response=await this.requestFetch(this.origin+wire.path,{method:wire.method,headers,body:body?JSON.stringify(body):undefined,signal:options?.signal,redirect:'error',cache:'no-store'});}
       catch(error){if(isAbort(error))throw error;throw new TvApiError(0,'Network request failed','network');}
       if(response.status===401&&retry) {await response.body?.cancel();if(token===this.tokens?.accessToken)await this.refreshTokens(options);return send(false);}
       const limit=6*1024*1024;
