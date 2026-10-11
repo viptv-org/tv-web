@@ -2547,6 +2547,198 @@
       "source": "assets/roku/roku/images/avatar-catalog/voxel-bot-9.png",
       "sha256": "4cfbdd82a3dfd0dbf1d1a389ac11f09156c7e72adb2239d419c80f205bc475cf"
     },
+    "public/assets/avatar-characters/animal-friends-1.png": {
+      "source": "assets/roku/roku/images/avatar-characters/animal-friends-1.png",
+      "sha256": "4efd7e343acad28b0dbf9ed6107ba30bc09c4302fd00c12e528fa5276f06bd35"
+    },
+    "public/assets/avatar-characters/animal-friends-10.png": {
+      "source": "assets/roku/roku/images/avatar-characters/animal-friends-10.png",
+      "sha256": "f501c015295c75b89d64e79f80a97a6c3b04dd203d435db2ec498327f10eb9cf"
+    },
+    "public/assets/avatar-characters/animal-friends-11.png": {
+      "source": "assets/roku/roku/images/avatar-characters/animal-friends-11.png",
+      "sha256": "8c874be312ebf50aeb5700e145498d4bc1f6dbf50615ada7e9b049359471687f"
+    },
+    "public/assets/avatar-characters/animal-friends-12.png": {
+      "source": "assets/roku/roku/images/avatar-characters/animal-friends-12.png",
+      "sha256": "bae9eafc0487767866659b15d1535622d4378604463f1f4ad5470a96d378ffce"
+    },
+    "public/assets/avatar-characters/animal-friends-2.png": {
+      "source": "assets/roku/roku/images/avatar-characters/animal-friends-2.png",
+      "sha256": "2948aed8fb138ea77242b2dcba854864f4556faea2ce937c4b2e4eb34f665267"
+    },
+    "public/assets/avatar-characters/animal-friends-3.png": {
+      "source": "assets/roku/roku/images/avatar-characters/animal-friends-3.png",
+      "sha256": "a7bad21fb182fe9ab9fcae8fb3334c75659bb5b2149f34509ab2d0f3c8b8f9ad"
+    },
+    "public/assets/avatar-characters/animal-friends-4.png": {
+      "source": "assets/roku/roku/images/avatar-characters/animal-friends-4.png",
+      "sha256": "5005017a4560e17801f7e175124e78e1bcbb77bd15c23ed6b8616c87fce1ba1e"
+    },
+    "public/assets/avatar-characters/animal-friends-5.png": {
+      "source": "assets/roku/roku/images/avatar-characters/animal-friends-5.png",
+      "sha256": "eef0570a90f540c4b7e9e132ed72d101fae8e8ef8630eb04b5757a491adc4992"
+    },
+    "public/assets/avatar-characters/animal-friends-6.png": {
+      "source": "assets/roku/roku/images/avatar-characters/animal-friends-6.png",
+      "sha256": "41c9b4a92fe756902d9f77770b2621d0cff1fa071a81e8e48bb5f8fac0640a24"
+    },
+    "public/assets/avatar-characters/animal-friends-7.png": {
+      "source": "assets/roku/roku/images/avatar-characters/animal-friends-7.png",
+      "sha256": "e768ad7ae0811dd62ae387775eba75ad4f85d013e8f712dc76b6fcb5d442a53a"
+    },
+    "public/assets/avatar-characters/animal-friends-8.png": {
+      "source": "assets/roku/roku/images/avatar-characters/animal-friends-8.png",
+      "sha256": "a17ef90e9bc62a1232dea9df948cb55ddc8b55122549c8afcd4f1683449f7b8e"
+    },
+    "public/assets/avatar-characters/animal-friends-9.png": {
+      "source": "assets/roku/roku/images/avatar-characters/animal-friends-9.png",
+      "sha256": "48ae37dc4d4e3af9b592a87f498bf8c11e82fd1abf180d264566bcc6cd9ff331"
+    },
+    "public/assets/avatar-characters/disney-1.png": {
+      "source": "assets/roku/roku/images/avatar-characters/disney-1.png",
+      "sha256": "925084546afc3f04349743c346b826412b5af9635e63c03022b57b4045f4b650"
+    },
+    "public/assets/avatar-characters/disney-10-curated.png": {
+      "source": "assets/roku/roku/images/avatar-characters/disney-10-curated.png",
+      "sha256": "4d552abd5d329f618e8c97f6eba07b5b326e8e88ce261562e55c77b235c5f28f"
+    },
+    "public/assets/avatar-characters/disney-11.png": {
+      "source": "assets/roku/roku/images/avatar-characters/disney-11.png",
+      "sha256": "c567bbc19a0c0c4445a50519a0b93d46ff2b861382280f966990a835f3583e5d"
+    },
+    "public/assets/avatar-characters/disney-12-curated.png": {
+      "source": "assets/roku/roku/images/avatar-characters/disney-12-curated.png",
+      "sha256": "4bf9f0ff61bc2884263586b97d22571dde7482e88cf44bdb0442ee4f2893d8d0"
+    },
+    "public/assets/avatar-characters/disney-13-curated.png": {
+      "source": "assets/roku/roku/images/avatar-characters/disney-13-curated.png",
+      "sha256": "407ccff9411a1206c1c3583d61ee7269050962ae8c336cb588368eab14c8b57f"
+    },
+    "public/assets/avatar-characters/disney-14-curated.png": {
+      "source": "assets/roku/roku/images/avatar-characters/disney-14-curated.png",
+      "sha256": "84bbdd1b77f517b9e108d3f80d04a377fe47179d2bd932e1900a36deed95a430"
+    },
+    "public/assets/avatar-characters/disney-2.png": {
+      "source": "assets/roku/roku/images/avatar-characters/disney-2.png",
+      "sha256": "7d57d80108147b472acd24fdc89685a6930e16276a9636e29c9e7ea716b8860a"
+    },
+    "public/assets/avatar-characters/disney-3.png": {
+      "source": "assets/roku/roku/images/avatar-characters/disney-3.png",
+      "sha256": "4dbf0f9ed4d7ab4547ebcb7b0184e2875c75be76e2da7498162356034661f78d"
+    },
+    "public/assets/avatar-characters/disney-4.png": {
+      "source": "assets/roku/roku/images/avatar-characters/disney-4.png",
+      "sha256": "00d5cebf438a5285f630edbc13530007a16286634cf0eacc357d878b3ebbcbb6"
+    },
+    "public/assets/avatar-characters/disney-5.png": {
+      "source": "assets/roku/roku/images/avatar-characters/disney-5.png",
+      "sha256": "3e8e7bcecb790f6c1b60cfae0cf231bf46c1e839b19db79e98461e4b78a8c59b"
+    },
+    "public/assets/avatar-characters/disney-6-curated.png": {
+      "source": "assets/roku/roku/images/avatar-characters/disney-6-curated.png",
+      "sha256": "49ed217e1cef92934868a02253d80ecabb082d441c4451801f9c1825c1b823da"
+    },
+    "public/assets/avatar-characters/disney-7-curated.png": {
+      "source": "assets/roku/roku/images/avatar-characters/disney-7-curated.png",
+      "sha256": "f20e01bccb149c3d9ec18af74363f7ef58b90627e73f9a49759091879129ca64"
+    },
+    "public/assets/avatar-characters/disney-8.png": {
+      "source": "assets/roku/roku/images/avatar-characters/disney-8.png",
+      "sha256": "5d0f3beb27eddbb6606395e21d99868f366310e7c555264e3f39084e299e2f0d"
+    },
+    "public/assets/avatar-characters/disney-9.png": {
+      "source": "assets/roku/roku/images/avatar-characters/disney-9.png",
+      "sha256": "734be4d65238436e695712dba6d1fb9b0acefc0b81098f7ade7fcdce196d78c4"
+    },
+    "public/assets/avatar-characters/princesses-1.png": {
+      "source": "assets/roku/roku/images/avatar-characters/princesses-1.png",
+      "sha256": "bb751389e03437a376b85a8350d36e44624f6dc124adf42bf23fa96d792d1e5e"
+    },
+    "public/assets/avatar-characters/princesses-10.png": {
+      "source": "assets/roku/roku/images/avatar-characters/princesses-10.png",
+      "sha256": "301d7e1e5e1679f4c50b93e63f0a59b39e709ff68abdc8a630634e64f3e88967"
+    },
+    "public/assets/avatar-characters/princesses-2-curated.png": {
+      "source": "assets/roku/roku/images/avatar-characters/princesses-2-curated.png",
+      "sha256": "64d812ee8fff24fc1c4aea9fa154e9fd803c214034c6439291d227f8e0ffe424"
+    },
+    "public/assets/avatar-characters/princesses-3-curated.png": {
+      "source": "assets/roku/roku/images/avatar-characters/princesses-3-curated.png",
+      "sha256": "0a06a9b1d515a8e16e2e95290d67206ef6d56fa6f713f0f2fcae416e04cb6f61"
+    },
+    "public/assets/avatar-characters/princesses-4.png": {
+      "source": "assets/roku/roku/images/avatar-characters/princesses-4.png",
+      "sha256": "3491553c4c524d9015d27ed5829130ab0d01c989d4e3c48cee1503a65b0f31c1"
+    },
+    "public/assets/avatar-characters/princesses-5.png": {
+      "source": "assets/roku/roku/images/avatar-characters/princesses-5.png",
+      "sha256": "8dbbddee1f5d67b96ddba265bff373cc24efa6a02bc226d2f3c1153ea3b6a95b"
+    },
+    "public/assets/avatar-characters/princesses-6-curated.png": {
+      "source": "assets/roku/roku/images/avatar-characters/princesses-6-curated.png",
+      "sha256": "2ac2ac2891f89d17b542a144b4a11b98dde4bb54d1876b7efb511ea0ca45cc3c"
+    },
+    "public/assets/avatar-characters/princesses-7.png": {
+      "source": "assets/roku/roku/images/avatar-characters/princesses-7.png",
+      "sha256": "c015d1d273d51d0b15efe1d08f2ccb30d8c2c3054ce311b2c5ddc64f80f20b7c"
+    },
+    "public/assets/avatar-characters/princesses-8.png": {
+      "source": "assets/roku/roku/images/avatar-characters/princesses-8.png",
+      "sha256": "6533f78025ae77441c1cbf2177ecbfb2d2712dedf2d2e062dbf44abc5c1681e0"
+    },
+    "public/assets/avatar-characters/princesses-9.png": {
+      "source": "assets/roku/roku/images/avatar-characters/princesses-9.png",
+      "sha256": "9db97d84992daffd6f374597363ad2aaedb706663da48b27522a52cd49fcc122"
+    },
+    "public/assets/avatar-characters/villains-1.png": {
+      "source": "assets/roku/roku/images/avatar-characters/villains-1.png",
+      "sha256": "14293a8367106f233069a5cdc904fed07db4f652a9a7541e81e3e58d03a5be14"
+    },
+    "public/assets/avatar-characters/villains-10.png": {
+      "source": "assets/roku/roku/images/avatar-characters/villains-10.png",
+      "sha256": "7e3d74466196993c2f66f4a98a1650b71d9abe51af38737e721d86d00de07630"
+    },
+    "public/assets/avatar-characters/villains-11.png": {
+      "source": "assets/roku/roku/images/avatar-characters/villains-11.png",
+      "sha256": "991ce2df15251d2eb1dc8ded6c30fc62ecaa4d5a94706da7fe15d6e82ab92dc3"
+    },
+    "public/assets/avatar-characters/villains-12.png": {
+      "source": "assets/roku/roku/images/avatar-characters/villains-12.png",
+      "sha256": "3f48ae4f58144e82803d043be1d2fe8dfb2a3fc6d9cc388906da3c09a0a8fbcb"
+    },
+    "public/assets/avatar-characters/villains-2.png": {
+      "source": "assets/roku/roku/images/avatar-characters/villains-2.png",
+      "sha256": "0424e5bc3338cd684ce573a2556f7d649f315c808c84449e8796151719d6faec"
+    },
+    "public/assets/avatar-characters/villains-3.png": {
+      "source": "assets/roku/roku/images/avatar-characters/villains-3.png",
+      "sha256": "85fa4f98c191de9d7f48e6dfd7788b20bf7780d1fbc41d24d2e55a6277aa60d0"
+    },
+    "public/assets/avatar-characters/villains-4.png": {
+      "source": "assets/roku/roku/images/avatar-characters/villains-4.png",
+      "sha256": "c6a3f91b1d58958cb54e84bb1a88fd411c6bdba98bb496faaeec33685e9b2e9e"
+    },
+    "public/assets/avatar-characters/villains-5.png": {
+      "source": "assets/roku/roku/images/avatar-characters/villains-5.png",
+      "sha256": "3963bd248f2cb94883d0e19bf50887268e1942af7cddbca8ffa58695488a527d"
+    },
+    "public/assets/avatar-characters/villains-6.png": {
+      "source": "assets/roku/roku/images/avatar-characters/villains-6.png",
+      "sha256": "b81f6bb3fb2a10a94aa754955c32f1630f3cec1d18fe5805c477242a2de4427d"
+    },
+    "public/assets/avatar-characters/villains-7.png": {
+      "source": "assets/roku/roku/images/avatar-characters/villains-7.png",
+      "sha256": "22f832bfa372a23ab047d0e59f15b8d6a024aa710a47b66137a443370f7cc5f7"
+    },
+    "public/assets/avatar-characters/villains-8.png": {
+      "source": "assets/roku/roku/images/avatar-characters/villains-8.png",
+      "sha256": "9cb9f69cf66d6dc193f843578e663aac1ae29755f45ace5dda7f6fb6e702c824"
+    },
+    "public/assets/avatar-characters/villains-9.png": {
+      "source": "assets/roku/roku/images/avatar-characters/villains-9.png",
+      "sha256": "6866d1cc6000be94539b92dbffe9d61c656d2c044d71e1feb921720908391b3d"
+    },
     "public/assets/lucide/LICENSE": {
       "source": "assets/roku/roku/images/lucide/LICENSE",
       "sha256": "1e7290b35280a048667bbf0ebabac1c7fd52a75300e8b2946ac165715997f2bc"

@@ -2,19 +2,19 @@
 import { For, Show, createEffect, createSignal, onCleanup } from 'solid-js';
 import { activeElement, type ElementNode } from '@solidtv/solid';
 import type { TvApi, TvProfile } from '../api';
-import catalog from '../ui/avatars.json';
-import { avatarSrc } from '../ui/avatarCatalog';
+import { avatarCount, avatarSrc, avatarWorlds as worlds, profileAvatarChoice } from '../ui/avatarCatalog';
 import { TvText, TvView } from './runtime';
 import { tokens } from '../theme/viptv-tokens.generated';
 import { EntryButton, EntryLegend, entryButtonWidth, restoreEntryFocus } from './EntryButton';
 import { TextEntry } from './TextEntry';
 
-const worlds = catalog.categories.filter(category => !('available' in category) || category.available !== false);
-const pageCount = Math.ceil(catalog.perCategory / 18);
+const worldSize = (style: string) => worlds.find(w=>w.style===style)?.count ?? 0;
+const worldPages = (style: string) => Math.max(1, Math.ceil(worldSize(style) / 18));
 export function ProfileEditor(props: { api: TvApi; profile?: TvProfile; primary: boolean; onDone: () => Promise<void>; onCancel: () => void }) {
   const [name,setName] = createSignal(props.profile?.name ?? '');
-  const [style,setStyle] = createSignal(typeof props.profile?.raw.avatar_style === 'string' ? props.profile.raw.avatar_style : 'critters');
-  const [choice,setChoice] = createSignal(typeof props.profile?.raw.avatar_choice === 'number' ? props.profile.raw.avatar_choice : 1);
+  const initial = profileAvatarChoice(props.profile);
+  const [style,setStyle] = createSignal(initial.style);
+  const [choice,setChoice] = createSignal(initial.choice);
   const [preview,setPreview] = createSignal(style()), [page,setPage] = createSignal(0), [worldStart,setWorldStart] = createSignal(0);
   const [mode,setMode] = createSignal<'form'|'name'|'avatar'|'pin'|'delete'>('form');
   const [error,setError] = createSignal(''), [missing,setMissing] = createSignal(false), [busy,setBusy] = createSignal(false);
@@ -56,9 +56,9 @@ export function ProfileEditor(props: { api: TvApi; profile?: TvProfile; primary:
   };
   const pickWorld = (index: number) => { const next = worlds[Math.max(0,Math.min(worlds.length-1,index))]; if(next.style!==preview()) {setPreview(next.style);setPage(0);} };
   const worldFocus = (index:number) => { const next = Math.max(0,Math.min(worlds.length-1,index)); if(next<worldStart()) setWorldStart(next); if(next>=worldStart()+7) setWorldStart(next-6); queueMicrotask(()=>focus(`world-${next}`)); };
-  const turnPage = (step:number) => { setPage((page()+step+pageCount)%pageCount); queueMicrotask(()=>focus('avatar-0')); };
+  const turnPage = (step:number) => { const pages = worldPages(preview()); setPage((page()+step+pages)%pages); queueMicrotask(()=>focus('avatar-0')); };
   const gridMove = (index:number,direction:string) => {
-    const count = Math.min(18,catalog.perCategory-page()*18);
+    const count = Math.min(18,worldSize(preview())-page()*18);
     if(direction==='Up' && index<6) return worldFocus(worlds.findIndex(w=>w.style===preview()));
     if(direction==='Down' && index>=count-6) return focus('avatar-next');
     if(direction==='Left' && index%6===0 || direction==='Right' && index%6===5) return;
@@ -71,7 +71,7 @@ export function ProfileEditor(props: { api: TvApi; profile?: TvProfile; primary:
     <Show when={mode()!=='avatar'}>
       <TvText x={192} y={120} size={56} font="Bricolage700" letterspacing={-1.12} cssLineBox lineheight={1.2} content={props.profile ? 'Edit profile' : 'Add a profile'} />
       <TvText x={192} y={205} size={26} color={tokens["color.text.secondary"]} content="A space for their favorites, shows, and discoveries." />
-      <EntryButton id="profile-avatar" x={192} y={317} w={260} h={260} radius={52} src={avatarSrc(style(),choice())} register={register} onMove={d=>formMove('profile-avatar',d)} onActivate={()=>{returnId='profile-avatar';setPreview(style());setPage(Math.floor((choice()-1)/18)); const i=worlds.findIndex(w=>w.style===style()); setWorldStart(Math.max(0,Math.min(worlds.length-7,i)));setMode('avatar');}} />
+      <EntryButton id="profile-avatar" x={192} y={317} w={260} h={260} radius={52} src={avatarSrc(style(),choice())} register={register} onMove={d=>formMove('profile-avatar',d)} onActivate={()=>{returnId='profile-avatar';setPreview(style());setPage(Math.min(Math.floor((choice()-1)/18),worldPages(style())-1)); const i=worlds.findIndex(w=>w.style===style()); setWorldStart(Math.max(0,Math.min(worlds.length-7,i)));setMode('avatar');}} />
       <TvText x={192} y={597} w={260} maxwidth={260} align="center" size={24} font="Onest600" cssLineBox lineheight={1.3} color={tokens["color.text.secondary"]} content="Change avatar" />
       <TvText x={562} y={317} size={18} font="Onest700" letterspacing={18*parseFloat(tokens["type.tv.eyebrow"].letterSpacing)} content="PROFILE NAME" color={tokens["color.text.secondary"]} />
       <EntryButton id="profile-name" x={562} y={355} w={860} h={88} radius={22} size={34} align="left" label={name() || 'Enter profile name'} register={register} onMove={d=>formMove('profile-name',d)} onActivate={()=>{returnId='profile-name';setMode('name');}} />
@@ -83,15 +83,15 @@ export function ProfileEditor(props: { api: TvApi; profile?: TvProfile; primary:
     </Show>
     <Show when={mode()==='avatar'}>
       <TvText x={192} y={54} size={56} font="Bricolage700" letterspacing={-1.12} cssLineBox lineheight={1.2} content="Find your favorite" />
-      <TvText x={192} y={138} size={24} color={tokens["color.text.secondary"]} content={`${worlds.length*catalog.perCategory} avatars. Pick a world, then pick your character.`} />
+      <TvText x={192} y={138} size={24} color={tokens["color.text.secondary"]} content={`${avatarCount} avatars. Pick a world, then pick your character.`} />
       <For each={worlds}>{(world,index)=><TvView show={index()>=worldStart() && index()<worldStart()+7}>
         <EntryButton id={`world-${index()}`} x={192+(index()-worldStart())*225} y={198} w={213} h={56} radius={28} size={22} label={world.name} selected={world.style===preview()} register={register} onFocus={()=>pickWorld(index())} onActivate={()=>focus('avatar-0')} onMove={direction=>{if(direction==='Left')worldFocus(index()-1);else if(direction==='Right')worldFocus(index()+1);else if(direction==='Down')focus('avatar-0');}} />
       </TvView>}</For>
-      <For each={Array.from({length:18},(_,i)=>i)}>{i=><TvView show={page()*18+i<catalog.perCategory}>
+      <For each={Array.from({length:18},(_,i)=>i)}>{i=><TvView show={page()*18+i<worldSize(preview())}>
         <EntryButton id={`avatar-${i}`} x={192+(i%6)*176} y={292+Math.floor(i/6)*176} w={150} h={150} radius={30} src={avatarSrc(preview(),page()*18+i+1)} selected={style()===preview() && choice()===page()*18+i+1} register={register} onMove={d=>gridMove(i,d)} onActivate={()=>{setStyle(preview());setChoice(page()*18+i+1);setMode('form');}} />
       </TvView>}</For>
-      <TvText x={192} y={842} size={24} content={`${worlds.find(w=>w.style===preview())?.name} · ${page()+1} / ${pageCount}`} color={tokens["color.text.secondary"]} />
-      <For each={['previous','next']}>{(id,index)=><EntryButton id={`avatar-${id}`} x={562+index()*244} y={820} w={220} label={id==='next' ? 'Next →' : '← Previous'} register={register} onActivate={()=>turnPage(id==='next' ? 1 : -1)} onMove={direction=>focus(direction==='Up' ? 'avatar-12' : direction==='Left' ? 'avatar-previous' : 'avatar-next')} />}</For>
+      <TvText x={192} y={842} size={24} content={`${worlds.find(w=>w.style===preview())?.name} · ${page()+1} / ${worldPages(preview())}`} color={tokens["color.text.secondary"]} />
+      <For each={['previous','next']}>{(id,index)=><EntryButton id={`avatar-${id}`} x={562+index()*244} y={820} w={220} label={id==='next' ? 'Next →' : '← Previous'} register={register} onActivate={()=>turnPage(id==='next' ? 1 : -1)} onMove={direction=>focus(direction==='Up' ? `avatar-${Math.floor((Math.min(18,worldSize(preview())-page()*18)-1)/6)*6}` : direction==='Left' ? 'avatar-previous' : 'avatar-next')} />}</For>
     </Show>
     <Show when={mode()==='form' || mode()==='avatar'}><EntryLegend items={mode()==='avatar' ? [{key:'OK',label:'Choose'},{key:'▲ ▼',label:'Worlds / grid'},{key:'BACK',label:'Cancel'}] : [{key:'OK',label:'Select'},{key:'BACK',label:'Cancel'}]} /></Show>
     <Show when={mode()==='name'}><TextEntry title="Profile name" initialValue={name()} maxLength={64} showCount hint="Select to type with your remote or a connected keyboard." onCancel={cancel} onSubmit={async value=>{setName(value);setMissing(false);setMode('form');}} /></Show>

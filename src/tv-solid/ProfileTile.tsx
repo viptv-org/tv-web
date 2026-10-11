@@ -2,8 +2,7 @@
 import { defineScreen, TvView, TvText } from "./runtime";
 import type { TvProfile } from "../api";
 import { tokens } from "../theme/viptv-tokens.generated";
-import avatarCatalog from "../ui/avatars.json";
-import { avatarSrc } from "../ui/avatarCatalog";
+import { profileAvatarSrc } from "../ui/avatarCatalog";
 import { noteFocus } from "./focusDebug";
 import { vectorIcon } from "./vectorIcons";
 
@@ -27,25 +26,10 @@ export const emptyProfileTile: ProfileTileData = {
 };
 
 export function profileTileData(profile: TvProfile): ProfileTileData {
-  const style =
-    typeof profile.raw.avatar_style === "string"
-      ? profile.raw.avatar_style
-      : "critters";
-  const choice =
-    typeof profile.raw.avatar_choice === "number"
-      ? profile.raw.avatar_choice
-      : 1;
-  const available = avatarCatalog.categories.some(
-    (category) =>
-      category.style === style &&
-      (!("available" in category) || category.available !== false),
-  );
   return {
     id: profile.id,
     name: profile.name,
-    image: available
-      ? avatarSrc(style, choice)
-      : "",
+    image: profileAvatarSrc(profile),
     initial: profile.name.trim().slice(0, 1).toUpperCase(),
     visible: true,
     add: false,

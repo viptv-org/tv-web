@@ -8,24 +8,14 @@ import { TvButton, focusElement } from "./remote";
 import { buttonClass } from "./primitives/Button";
 import { AvatarTileContent } from "./primitives/Cards";
 import { KeyLegend } from "./primitives/Keys";
-import catalog from "./avatars.json";
-import { avatarSrc } from "./avatarCatalog";
+import { avatarCount, avatarSrc, avatarWorld, avatarWorlds, profileAvatarChoice, profileAvatarSrc } from "./avatarCatalog";
 
-/* ---- Avatar catalog -------------------------------------------------------
- * Categories marked "available": false (the Disney-style worlds) have no
- * images in public/assets/avatar-catalog, so the picker hides them and the
- * "[N] avatars" count covers only the worlds it shows. */
-const avatarWorlds = catalog.categories.filter((category) => !("available" in category) || category.available !== false);
-const avatarCount = avatarWorlds.length * catalog.perCategory;
 const PAGE_SIZE = 18;
-const pageCount = Math.ceil(catalog.perCategory / PAGE_SIZE);
-const worldName = (style: string) => catalog.categories.find((category) => category.style === style)?.name ?? style;
+const worldName = (style: string) => avatarWorld(style)?.name ?? style;
+const worldSize = (style: string) => avatarWorld(style)?.count ?? 0;
+const worldPages = (style: string) => Math.max(1, Math.ceil(worldSize(style) / PAGE_SIZE));
 
-export const avatarUrl = (profile: TvProfile) =>
-  avatarSrc(
-    typeof profile.raw.avatar_style === "string" ? profile.raw.avatar_style : "critters",
-    typeof profile.raw.avatar_choice === "number" ? profile.raw.avatar_choice : 1,
-  );
+export const avatarUrl = profileAvatarSrc;
 
 /**
  * Protected profiles show a lock badge (decisions.md 4). The profile DTO has no
@@ -39,7 +29,7 @@ export const profileLocked = (profile: TvProfile) =>
 export function ProfileAvatar({ profile }: { profile: TvProfile }) {
   const src = avatarUrl(profile);
   const [failed, setFailed] = useState<string>();
-  return failed === src ? (
+  return !src || failed === src ? (
     <span className="vx-profile__letter vx-account-letter" aria-hidden="true">
       {profile.name.trim().slice(0, 1).toUpperCase()}
     </span>
@@ -66,18 +56,11 @@ export function ProfileEditor({
   onDone: () => Promise<void>;
   onCancel: () => void;
 }) {
+  const [initial] = useState(() => profileAvatarChoice(profile));
   const [name, setName] = useState(profile?.name ?? ""),
-    [style, setStyle] = useState(
-      typeof profile?.raw.avatar_style === "string"
-        ? profile.raw.avatar_style
-        : "critters",
-    ),
+    [style, setStyle] = useState(initial.style),
     [previewStyle, setPreviewStyle] = useState(style),
-    [choice, setChoice] = useState(
-      typeof profile?.raw.avatar_choice === "number"
-        ? profile.raw.avatar_choice
-        : 1,
-    ),
+    [choice, setChoice] = useState(initial.choice),
     [mode, setMode] = useState<"form" | "name" | "avatar" | "pin" | "delete">(
       "form",
     ),
@@ -164,6 +147,7 @@ export function ProfileEditor({
       setPage(0);
     }
   };
+  const pageCount = worldPages(previewStyle);
   const turnPage = (step: number) => {
     setPage((current) => (current + step + pageCount) % pageCount);
     if (tv) setTimeout(() => focusElement("avatar-0"), 0);
@@ -208,7 +192,7 @@ export function ProfileEditor({
       </div>
       <div className="vx-avatars__grid">
         {Array.from(
-          { length: Math.min(PAGE_SIZE, catalog.perCategory - page * PAGE_SIZE) },
+          { length: Math.min(PAGE_SIZE, worldSize(previewStyle) - page * PAGE_SIZE) },
           (_, i) => page * PAGE_SIZE + i + 1,
         ).map((n, i) => {
           const selected = style === previewStyle && choice === n;
@@ -263,12 +247,12 @@ export function ProfileEditor({
           onActivate={() => {
             returnFocus.current = "profile-avatar";
             setPreviewStyle(style);
-            setPage(Math.floor((choice - 1) / PAGE_SIZE));
+            setPage(Math.min(Math.floor((choice - 1) / PAGE_SIZE), worldPages(style) - 1));
             setMode("avatar");
           }}
         >
           <span className="vx-account-editor__avatar-art">
-            <img src={avatarSrc(style, choice)} alt="" />
+            {avatarSrc(style, choice) && <img src={avatarSrc(style, choice)} alt="" />}
           </span>
           <span className="vx-account-editor__avatar-label">Change avatar</span>
         </TvButton>

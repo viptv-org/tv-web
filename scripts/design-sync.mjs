@@ -56,13 +56,14 @@ if (command === "sync") {
     (p) => p.endsWith(".md") && !p.startsWith("assets/") && !p.startsWith("prototypes/"),
   );
   const imagePrefix = "assets/roku/roku/images/";
-  // Ship only the artwork the app loads: the launcher mark, the catalog
-  // avatars (avatarCatalog.ts) and the Lucide control icons (actionIcons.ts,
-  // vectorIcons.ts). Both directories are addressed dynamically, so they are
-  // imported whole; legacy Roku frames and unused avatar sets stay in design.
+  // Ship only the artwork the app loads: the launcher mark, the generated and
+  // character avatars (avatarCatalog.ts) and the Lucide control icons
+  // (actionIcons.ts, vectorIcons.ts). These directories are addressed
+  // dynamically, so they are imported whole; legacy Roku frames stay in design.
   const shipped = (name) =>
     name === "viptv-mark.png" ||
     name.startsWith("avatar-catalog/") ||
+    (name.startsWith("avatar-characters/") && name.endsWith(".png")) ||
     name.startsWith("lucide/");
   const assets = paths.filter(
     (p) => p.startsWith(imagePrefix) && shipped(p.slice(imagePrefix.length)),

@@ -47,6 +47,12 @@ test('profile management preserves avatar choice, unlocks a protected edit, and 
   await expect(page.getByRole('heading', { name: 'Add a profile' })).toBeVisible();
   await page.getByRole('button', { name: 'Change avatar' }).click();
   await expect(page.getByRole('heading', { name: 'Find your favorite' })).toBeVisible();
+  await expect(page.getByText('624 avatars. Pick a world, then pick your character.')).toBeVisible();
+  await page.getByRole('button', { name: 'Disney favorites', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Disney favorites 14' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Disney favorites 15' })).toHaveCount(0);
+  await expect.poll(() => page.getByRole('button', { name: 'Disney favorites 1', exact: true }).locator('img').evaluate((image: HTMLImageElement) => image.naturalWidth)).toBeGreaterThan(0);
+  await page.getByRole('button', { name: 'Creatures', exact: true }).click();
   await page.getByRole('button', { name: 'Creatures 2' }).click();
   await expect(page.getByRole('button', { name: 'Profile name: empty' })).toBeVisible();
   await page.locator('[data-focus-id="profile-name"]').click();
