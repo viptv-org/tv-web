@@ -562,13 +562,13 @@ export async function installBackend(page: Page, options: BackendOptions): Promi
     }
 
     // Addons.
-    if (path === '/api/addons' && method === 'GET') return json(addonList);
-    if (path === '/api/addons' && method === 'POST') {
+    if (path === '/api/v2/addons' && method === 'GET') return json({ items: addonList, next_cursor: null });
+    if (path === '/api/v2/addons' && method === 'POST') {
       if (options.addonInstallHang) return hang();
       if (options.addonInstallError) return json({ error: 'Enter an HTTPS manifest URL.' }, 400);
       return json({ id: 9, name: 'New addon', enabled: true });
     }
-    const addonMatch = /^\/api\/addons\/([^/]+)$/.exec(path);
+    const addonMatch = /^\/api\/v2\/addons\/([^/]+)$/.exec(path);
     if (addonMatch) {
       if (method === 'DELETE') { addonList = addonList.filter(addon => String(addon.id) !== addonMatch[1]); return json({ ok: true }); }
       const addon = addonList.find(entry => String(entry.id) === addonMatch[1]);

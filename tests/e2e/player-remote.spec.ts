@@ -168,7 +168,8 @@ async function installBackend(page: Page, options: FixtureOptions = {}): Promise
       expect(request.postDataJSON()).toEqual({});
       return json(route, {ok:true});
     }
-    if (path.startsWith('/api/v2/playback/') || path === '/api/addons') return json(route, []);
+    if (path.startsWith('/api/v2/playback/')) return json(route, []);
+    if (path === '/api/v2/addons') return json(route, { items: [], next_cursor: null });
     return json(route, { error: `unhandled ${path}` }, 404);
   });
   return state;
