@@ -75,7 +75,7 @@ try {
     await key('ArrowRight'); await key('ArrowDown'); await focus('title-episode', 0);
     await shot('season2');
     await key('Enter'); await focus('source-row', 0);
-    assert(backend.requests.some(r => r.path === '/api/streams' && (r.body?.id === 'tt-monster:2:1' || r.body?.video_id === 'tt-monster:2:1')), 'Season 2 episode identity must reach source discovery');
+    assert(backend.requests.some(r => r.path === '/api/v2/streams' && (r.body?.id === 'tt-monster:2:1' || r.body?.video_id === 'tt-monster:2:1')), 'Season 2 episode identity must reach source discovery');
     await key('Escape'); await focus('title-episode', 0);
     await key('Escape'); await focus('home-action', 1);
   });
@@ -104,7 +104,7 @@ try {
     await key('ArrowDown'); await focus('home-card', 0);
     await key('Enter'); await focus('source-row', 0);
     assert(!backend.requests.some(r => r.path.startsWith('/api/meta/live/')));
-    assert(backend.requests.some(r => r.path === '/api/streams' && r.body?.type === 'live'));
+    assert(backend.requests.some(r => r.path === '/api/v2/streams' && r.body?.type === 'live'));
     await page.waitForTimeout(150);
     await key('Enter'); await focus('player-control', 4);
     await key('ArrowLeft'); await key('ArrowUp'); await focus('player-control', 4);

@@ -55,7 +55,6 @@ async function installBackend(page: Page): Promise<State> {
     if (path === '/api/profiles/2/preferences' || path === '/api/profiles/1/preferences') return json(route, preferences);
     if (path === '/api/catalogs') return json(route, [{ id: 'movies', name: 'Movies', type: 'movie', addon_id: 2, supports_search: true, supports_skip: true }]);
     if (path === '/api/discover') return json(route, { metas: [], has_more: false, next_skip: null });
-    if (path === '/api/live/categories') return json(route, { categories: [], total: 0 });
     if (path === '/api/v2/addons') return json(route, { items: [], next_cursor: null });
     if (path === '/api/auth/device/code') return json(route, { device_code: 'pair', user_code: 'AB12CD34EF', verification_uri: 'https://viptv.syek.tech/device', verification_uri_complete: 'https://viptv.syek.tech/device?code=AB12CD34EF', qr_uri: 'https://viptv.syek.tech/api/auth/device/qr?code=AB12CD34EF', expires_in: 600, interval: 60 });
     if (path === '/api/auth/device/token') return json(route, { error: 'authorization_pending' }, 400);

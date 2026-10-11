@@ -9,6 +9,20 @@ async function box(page: Page, selector: string) {
   return bounds!;
 }
 
+/** One cursor page of the v2 live catalog; cursors carry the next offset. */
+function livePage<T>(items: T[], offset: number, total: number) {
+  return {
+    catalog_id: 1, generation: 1, items,
+    next_cursor: offset + items.length < total ? `page_${offset + items.length}` : null,
+    previous_cursor: offset > 0 ? `page_${Math.max(0, offset - items.length)}` : null,
+  };
+}
+function channelPage<T>(url: URL, channels: T[]) {
+  const offset = Number(url.searchParams.get('cursor')?.replace('page_', '') ?? 0);
+  const limit = Number(url.searchParams.get('limit') ?? 40);
+  return livePage(channels.slice(offset, offset + limit), offset, channels.length);
+}
+
 async function openProfile(page: Page) {
   await page.goto('/');
   await page.getByRole('button', { name: 'Alex' }).click();
@@ -22,15 +36,13 @@ test('phone Live TV is a searchable channel list with category chips and no guid
   const now = Math.floor(Date.now() / 1000);
   const stations = Array.from({ length: 88 }, (_, index) => ({ id: `station-${index}`, type: 'live', name: `Channel ${index + 1}`, section: 'News' }));
   const searches: string[] = [];
-  await page.route('**/api/live**', async route => {
+  await page.route('**/api/v2/iptv/live/**', async route => {
     const url = new URL(route.request().url());
-    if (url.pathname.endsWith('/categories')) return route.fulfill({ headers: cors, json: { categories: [{ id: 'news', name: 'News', count: 88 }], total: 1 } });
+    if (url.pathname.endsWith('/categories')) return route.fulfill({ headers: cors, json: livePage([{ id: 'news', name: 'News' }], 0, 1) });
     searches.push(url.searchParams.get('search') ?? '');
-    const offset = Number(url.searchParams.get('offset') ?? 0);
-    const limit = Number(url.searchParams.get('limit') ?? 40);
-    return route.fulfill({ headers: cors, json: { channels: stations.slice(offset, offset + limit), total: stations.length } });
+    return route.fulfill({ headers: cors, json: channelPage(url, stations) });
   });
-  await page.route('**/api/guide/**', route => route.fulfill({ headers: cors, json: { programs: [{ title: 'Current programme', start: now - 600, end: now + 1200 }, { title: 'Later programme', start: now + 1200, end: now + 4800 }], timezone: 'UTC' } }));
+  await page.route('**/api/v2/iptv/guide/**', route => route.fulfill({ headers: cors, json: { programs: [{ title: 'Current programme', start: now - 600, end: now + 1200 }, { title: 'Later programme', start: now + 1200, end: now + 4800 }], timezone: 'UTC' } }));
   await openProfile(page);
   await page.getByRole('navigation', { name: 'Main navigation' }).getByRole('button', { name: 'Live TV', exact: true }).click();
 
@@ -110,7 +122,8 @@ for (const width of [390, 1440]) {
     // page inside the same scroll.
     await expect(page.getByRole('button', { name: 'Previous channels', exact: true })).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'Next channels', exact: true })).toHaveCount(0);
-    await expect(page.locator('.vx-live-guide__count')).toContainText('channels');
+    // The v2 catalog is cursor-paged without totals, so the column is labelled, not counted.
+    await expect(page.locator('.vx-live-guide__count')).toHaveText('Channels');
     // The page itself never scrolls; the guide scrolls both ways.
     expect(await page.locator('.vx-live--desk').evaluate(node => getComputedStyle(node).overflowY)).toBe('hidden');
     expect(await page.locator('.vx-live-guide__scroll').evaluate(node => getComputedStyle(node).overflowY)).toBe('auto');
@@ -208,18 +221,16 @@ test('scrolling the responsive guide to its end loads the next channel page', as
   const fixture = await installBackend(page, {});
   const cors = { 'access-control-allow-origin': process.env.VIPTV_TEST_BROWSER_ORIGIN ?? 'http://127.0.0.1:4173' };
   const stations = Array.from({ length: 88 }, (_, index) => ({ id: `station-${index}`, type: 'live', name: `Channel ${index + 1}`, section: 'News' }));
-  await page.route('**/api/live**', async route => {
+  await page.route('**/api/v2/iptv/live/**', async route => {
     const url = new URL(route.request().url());
-    if (url.pathname.endsWith('/categories')) return route.fulfill({ headers: cors, json: { categories: [], total: 0 } });
-    const offset = Number(url.searchParams.get('offset') ?? 0);
-    const limit = Number(url.searchParams.get('limit') ?? 40);
-    return route.fulfill({ headers: cors, json: { channels: stations.slice(offset, offset + limit), total: stations.length } });
+    if (url.pathname.endsWith('/categories')) return route.fulfill({ headers: cors, json: livePage([], 0, 0) });
+    return route.fulfill({ headers: cors, json: channelPage(url, stations) });
   });
   await openProfile(page);
   await page.getByRole('navigation', { name: 'Main navigation' }).getByRole('button', { name: 'Live TV', exact: true }).click();
   const rows = page.locator('[data-testid^="guide-row-"]');
   await expect(rows).toHaveCount(40);
-  await expect(page.locator('.vx-live-guide__count')).toHaveText('88 channels');
+  await expect(page.locator('.vx-live-guide__count')).toHaveText('Channels');
   const scroller = page.locator('.vx-live-guide__scroll');
   await scroller.evaluate(node => { node.scrollTop = node.scrollHeight; });
   await expect(rows).toHaveCount(80);

@@ -253,37 +253,6 @@ describe("TvApi device and media boundary", () => {
     expect(session.authorization).toMatchObject({ cookie: "provider-session=1", userAgent: "VIPTV Desktop" });
   });
 
-  it("decodes live categories as filters rather than pretending they are playable media", async () => {
-    const store = new MemoryDeviceSessionStore();
-    await store.save({
-      sessionId: "s1",
-      accountId: "1",
-      profileId: "3",
-      accessToken: "access",
-      refreshToken: "refresh",
-      expiresIn: 900,
-    });
-    const fake = scripted(
-      response({
-        total: 1,
-        categories: [{ id: "section:News", name: "News", count: 12 }],
-      }),
-    );
-    const api = apiFor(fake.fetcher, store);
-    await api.restoreSession();
-    await expect(api.liveCategories("us")).resolves.toEqual({
-      total: 1,
-      categories: [
-        {
-          id: "section:News",
-          name: "News",
-          count: 12,
-          raw: { id: "section:News", name: "News", count: 12 },
-        },
-      ],
-    });
-  });
-
   it("retains the backend continuation episode title separately from its series name", async () => {
     const store = new MemoryDeviceSessionStore();
     await store.save({

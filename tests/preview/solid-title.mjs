@@ -18,14 +18,14 @@ try {
  await page.keyboard.press('ArrowDown');await focus('title-episode',0);
  for(let i=1;i<=9;i++){await page.keyboard.press('ArrowRight');await focus('title-episode',i);}
  await page.keyboard.press('Enter');await focus('source-row',0);
- const discovery=backend.requests.filter(r=>r.path==='/api/streams'&&r.method==='POST').at(-1);
+ const discovery=backend.requests.filter(r=>r.path==='/api/v2/streams'&&r.method==='POST').at(-1);
  expect(JSON.stringify(discovery.body)).toContain('tt-monster:2:10');
  await page.keyboard.press('Escape');await focus('title-episode',9);
  await page.keyboard.press('ArrowUp');await entry('title-season');await page.keyboard.press('Enter');await entry('player-dialog-season-2');
  await page.keyboard.press('Escape');await entry('title-season');
  await page.keyboard.press('ArrowUp');await focus('title-action',0);
  await page.keyboard.press('Enter');await focus('source-row',0);
- expect(JSON.stringify(backend.requests.filter(r=>r.path==='/api/streams'&&r.method==='POST').at(-1).body)).toContain('tt-monster:1:1');
+ expect(JSON.stringify(backend.requests.filter(r=>r.path==='/api/v2/streams'&&r.method==='POST').at(-1).body)).toContain('tt-monster:1:1');
  expect(backend.errors).toEqual([]);
  console.log('PASS season selection, tenth-episode navigation, exact source identity, Back and original Resume target');
 } finally {await browser.close();}

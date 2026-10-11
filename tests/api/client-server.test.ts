@@ -35,7 +35,7 @@ it("preserves guide timeline and programme display labels from the server", asyn
     sessionStore: store,
   });
   await api.restoreSession();
-  await expect(api.guide("news")).resolves.toMatchObject({
+  await expect(api.guideV2("news")).resolves.toMatchObject({
     timezone: "America/New_York",
     timeline: [{ time: 1800000000, displayTime: "8:00 PM EDT" }],
     programs: [{ raw: { display_time: "8:00 PM EDT" } }],

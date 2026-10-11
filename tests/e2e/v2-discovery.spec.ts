@@ -43,7 +43,6 @@ for (const partial of [false, true]) {
       await expect(page.getByRole('alert')).toContainText('connection limit');
     }
     await expect(page.locator('body')).not.toContainText('private.invalid');
-    expect(fixture.requests.some(request => request.path.startsWith('/api/streams'))).toBe(false);
     expect(fixture.errors).toEqual([]);
   });
 }

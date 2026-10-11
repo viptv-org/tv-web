@@ -120,10 +120,6 @@ export interface Guide {
     readonly displayTime: string;
   }[];
 }
-export interface LivePage {
-  readonly channels: readonly MediaItem[];
-  readonly total: number;
-}
 
 export interface LiveCatalogQuery {
   readonly catalogId?: string;
@@ -141,10 +137,6 @@ export interface LiveCategory {
   readonly name: string;
   readonly count?: number;
   readonly raw: JsonObject;
-}
-export interface LiveCategories {
-  readonly categories: readonly LiveCategory[];
-  readonly total: number;
 }
 export interface ParentStatus {
   readonly configured: boolean;
