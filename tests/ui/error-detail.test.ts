@@ -21,11 +21,11 @@ describe("describeApiError", () => {
 
   it("carries the backend's own message and code for server errors", () => {
     const detail = describeApiError(
-      new TvApiError(503, "Service unavailable", "unhealthy", "POST /api/streams"),
+      new TvApiError(503, "Service unavailable", "unhealthy", "POST /api/v2/streams"),
     );
     expect(detail.kind).toBe("server");
     expect(detail.message).toContain("Service unavailable (HTTP 503)");
-    expect(detail.lines).toContain("Request: POST /api/streams");
+    expect(detail.lines).toContain("Request: POST /api/v2/streams");
     expect(detail.lines).toContain("Error code: unhealthy");
   });
 

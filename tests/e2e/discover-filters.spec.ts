@@ -42,7 +42,6 @@ test('Discover applies declared defaults and resets pagination for genre, input 
     if (path === '/api/profiles/1/progress' || path === '/api/profiles/1/favorites') return json(route, []);
     if (path === '/api/profiles/1/preferences') return json(route, preferences);
     if (path === '/api/catalogs') return json(route, [calendar]);
-    if (path === '/api/live') return json(route, { channels: [], total: 0 });
     if (path === '/api/discover') {
       discovers.push(url);
       const skip = url.searchParams.get('skip') ?? '0';

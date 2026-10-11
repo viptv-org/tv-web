@@ -15,7 +15,7 @@ async function run(name,options,callback){
   await installMediaStubs(page,{duration:120,position:0,frame:'63e024',...(options.mediaStub??{})});
   const focused=(view,index)=>page.waitForFunction(({view,index})=>window.__viptvFocus?.view===view&&window.__viptvFocus?.index===index,{view,index},{timeout:10000});
   const entry=id=>page.waitForFunction(id=>window.__viptvEntryFocus?.id===id,id,{timeout:10000});
-  const posts=()=>backend.requests.filter(r=>r.path==='/api/playback'&&r.method==='POST');
+  const posts=()=>backend.requests.filter(r=>r.path==='/api/v2/playback'&&r.method==='POST');
   const play=async()=>{await page.keyboard.press('Enter');await focused('source-row',0);await page.keyboard.press('Enter');await focused('player-control',1);};
   const next=async()=>{await page.keyboard.press('ArrowRight');await page.keyboard.press('ArrowRight');await focused('player-control',3);await page.keyboard.press('Enter');};
   try{
@@ -92,7 +92,7 @@ try{
   await run('queued-next-source-previous',{queueNext:true,queuePosition:42},async({page,focused,backend,play})=>{
     await page.keyboard.down('Enter');await page.waitForTimeout(760);await page.keyboard.up('Enter');await focused('title-menu-option',0);
     await page.keyboard.press('ArrowDown');await page.keyboard.press('Enter');await focused('source-row',0);
-    const discovery=backend.requests.find(r=>r.path==='/api/streams'&&r.method==='POST');
+    const discovery=backend.requests.find(r=>r.path==='/api/v2/streams'&&r.method==='POST');
     expect(JSON.stringify(discovery?.body)).toContain('tt-monster:1:1');
     await page.keyboard.press('Enter');await focused('player-control',1);
     expect(await page.evaluate(()=>window.__viptvSourceIntent?.position)).toBe(42);

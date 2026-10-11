@@ -74,10 +74,10 @@ try {
  }
  {
   const {page,errors}=await fixture(1920,{},async page=>{
-   await page.route(u=>u.origin===origin&&u.pathname==='/api/live',route=>route.fulfill({json:{channels:[{id:'abc-news-live',type:'live',name:'ABC News Live',logo:'https://art.example/station.svg'}],total:1,offset:0}}));
+   await page.route(u=>u.origin===origin&&u.pathname==='/api/v2/iptv/live/channels',route=>route.fulfill({json:{catalog_id:1,generation:1,items:[{id:'abc-news-live',type:'live',name:'ABC News Live',logo:'https://art.example/station.svg'}],next_cursor:null,previous_cursor:null}}));
    await page.route('https://art.example/station.svg',route=>route.fulfill({contentType:'image/svg+xml',body:'<svg xmlns="http://www.w3.org/2000/svg" width="400" height="80"><rect width="400" height="80" fill="#f5c542"/><text x="10" y="58" font-size="50">ABC NEWS</text></svg>'}));
    await page.clock.setFixedTime(new Date('2026-09-23T10:55:00-04:00'));
-   await page.route(`${origin}/api/live/categories**`,route=>route.fulfill({json:{categories:Array.from({length:24},(_,i)=>({id:`category-${i}`,name:`Channel category ${i}`,count:1})),total:24}}));
+   await page.route(`${origin}/api/v2/iptv/live/categories**`,route=>route.fulfill({json:{catalog_id:1,generation:1,items:Array.from({length:24},(_,i)=>({id:`category-${i}`,name:`Channel category ${i}`})),next_cursor:null,previous_cursor:null}}));
   });
   await focus(page,'home-action',0);await rail(page,4);await focus(page,'guide-channel',0);
   await page.waitForFunction(()=>{let count=0;const walk=n=>{if(n.worldAlpha>.5&&n.texture?.props?.src?.includes?.('station.svg')&&n.isRenderable)count++;for(const child of n.children??[])walk(child);};walk(window.__viptvRenderer.stage.root);return count>=2;});

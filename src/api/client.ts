@@ -8,8 +8,6 @@ import type {
   Guide,
   JsonObject,
   JsonValue,
-  LiveCategories,
-  LivePage,
   LiveCatalogQuery,
   LiveCatalogPage,
   LiveCatalogCategories,
@@ -148,22 +146,6 @@ export class TvApi extends TvApiCatalog {
     );
     return boolAt(v, "saved");
   }
-  async live(
-    query: {
-      view?: "us";
-      collection?: string;
-      category?: string;
-      search?: string;
-      offset?: number;
-      limit?: number;
-    },
-    options?: RequestOptions,
-  ): Promise<LivePage> {
-    const v = expectObject(
-      await this.raw(`/api/live${params(query)}`, {}, true, options),
-    );
-    return normalizeResponse<LivePage>("live", v);
-  }
   async liveV2(query: LiveCatalogQuery = {}, options?: RequestOptions): Promise<LiveCatalogPage> {
     const value = await this.liveV2Control({ ...query, operation: "livePageV2" }, options);
     return this.liveV2PageDecode<LiveCatalogPage>("liveCatalogV2", value, query);
@@ -191,26 +173,6 @@ export class TvApi extends TvApiCatalog {
     if (result.items.length > (query.limit ?? 50) || query.catalogId !== undefined && result.catalogId !== query.catalogId)
       throw new TvApiError(502, "The server returned the wrong live playlist page. Reload the guide.", "invalid_catalog_response");
     return result;
-  }
-  async liveCategories(
-    view?: "us",
-    options?: RequestOptions,
-  ): Promise<LiveCategories> {
-    const v = expectObject(
-      await this.raw(
-        `/api/live/categories${params({ view })}`,
-        {},
-        true,
-        options,
-      ),
-    );
-    return normalizeResponse<LiveCategories>("liveCategories", v);
-  }
-  async guide(channelId: string, options?: RequestOptions): Promise<Guide> {
-    const v = expectObject(
-      await this.raw(`/api/guide/${segment(channelId)}`, {}, true, options),
-    );
-    return normalizeResponse<Guide>("guide", v);
   }
   async preferences(profileId: string, options?: RequestOptions) {
     return preferences(

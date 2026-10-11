@@ -59,7 +59,6 @@ async function installBackend(page: Page): Promise<State> {
       { seq: 1, source: 'addon:2', streams: [{ id: 'good-1080', name: 'Good source', title: '1080p H.264 English', filename: 'good.mkv', source_addon_id: 'addon:2', source_name: 'Fixture provider', source_quality: '1080p' }] },
       { seq: 2, source: 'addon:3', streams: [{ id: 'other-720', name: 'Other source', title: '720p H.264 English', filename: 'other.mkv', source_addon_id: 'addon:3', source_name: 'Other provider', source_quality: '720p' }] },
     ], done: true });
-    if (path === '/api/live/categories') return json(route, { categories: [], total: 0 });
     if (path === '/api/v2/addons' && request.method() === 'GET') return json(route, { items: state.addons, next_cursor: null });
     if (path === '/api/v2/addons' && request.method() === 'POST') {
       state.addons.push({ id: 3, name: 'Installed add-on', enabled: true });

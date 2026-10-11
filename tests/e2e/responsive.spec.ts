@@ -165,7 +165,7 @@ for (const viewport of [
     await expectResponsiveViewport(page, viewport.width);
     expect(fixture.requests.some(request => request.path === '/api/meta/movie/responsive-movie')).toBe(true);
     expect(fixture.requests.find(request => request.path === '/api/v2/streams' && request.method === 'POST')?.body).toMatchObject({ id: movie.id, type: 'movie' });
-    expect(fixture.requests.some(request => request.path === '/api/playback')).toBe(false);
+    expect(fixture.requests.some(request => request.path === '/api/v2/playback')).toBe(false);
 
     await page.keyboard.press('Escape');
     await expect(page.locator('.detail')).toBeVisible();
