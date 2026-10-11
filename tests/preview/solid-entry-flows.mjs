@@ -26,7 +26,7 @@ try {
     await page.keyboard.press('Enter');await entry('key-0');
     for(let i=0;i<8;i++)await page.keyboard.press('Backspace');
     await page.keyboard.type('http://invalid.example/manifest.json');await submit();await page.waitForTimeout(150);
-    expect(backend.requests.filter(r=>r.path==='/api/addons'&&r.method==='POST')).toHaveLength(0);
+    expect(backend.requests.filter(r=>r.path==='/api/v2/addons'&&r.method==='POST')).toHaveLength(0);
     await page.screenshot({path:`${output}/TvAddonInstall.invalid.solid.png`});
     // Navigate to the spanning Delete key and use its 700ms clear action.
     for(let i=0;i<7;i++)await page.keyboard.press('ArrowDown');
@@ -34,7 +34,7 @@ try {
     await page.keyboard.down('Enter');await page.waitForTimeout(760);await page.keyboard.up('Enter');
     await page.keyboard.type('https://example.test/manifest.json');await submit();
     await page.waitForFunction(()=>!window.__viptvEntryFocus);await focused('settings-row',0);
-    const post=backend.requests.find(r=>r.path==='/api/addons'&&r.method==='POST');
+    const post=backend.requests.find(r=>r.path==='/api/v2/addons'&&r.method==='POST');
     expect(post?.body?.manifest_url).toBe('https://example.test/manifest.json');
     expect(backend.errors).toEqual([]);await page.close();
     console.log('Addon entry: HTTPS validation, physical typing, held Delete, install and return focus passed');

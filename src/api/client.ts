@@ -271,15 +271,25 @@ export class TvApi extends TvApiCatalog {
     );
   }
   async addons(options?: RequestOptions) {
-    return arrayValue(await this.raw("/api/addons", {}, true, options)).map(
-      clean,
-    );
+    // Accounts have few addons; read every bounded cursor page so settings
+    // and source labels see them all.
+    const addons: JsonObject[] = [];
+    let cursor: string | undefined;
+    for (let pages = 0; pages < 10; pages++) {
+      const v = expectObject(
+        await this.raw(`/api/v2/addons${params({ limit: 200, cursor })}`, {}, true, options),
+      );
+      addons.push(...arrayValue(v.items ?? null).map(clean));
+      if (typeof v.next_cursor !== "string" || !v.next_cursor) break;
+      cursor = v.next_cursor;
+    }
+    return addons;
   }
   async addAddon(manifestUrl: string, options?: RequestOptions) {
     return clean(
       expectObject(
         await this.raw(
-          "/api/addons",
+          "/api/v2/addons",
           { method: "POST", body: { manifest_url: manifestUrl } },
           true,
           options,
@@ -291,7 +301,7 @@ export class TvApi extends TvApiCatalog {
     return clean(
       expectObject(
         await this.raw(
-          `/api/addons/${segment(id)}`,
+          `/api/v2/addons/${segment(id)}`,
           { method: "PATCH", body: values },
           true,
           options,
@@ -301,7 +311,7 @@ export class TvApi extends TvApiCatalog {
   }
   async deleteAddon(id: string, options?: RequestOptions) {
     await this.raw(
-      `/api/addons/${segment(id)}`,
+      `/api/v2/addons/${segment(id)}`,
       { method: "DELETE" },
       true,
       options,
