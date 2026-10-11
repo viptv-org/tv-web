@@ -1,6 +1,6 @@
 import type { Catalog, TvApi } from "../api";
 import { browseRequest, firstHomeCatalog, homeRowsFor, type HomeRow } from "../ui/app/homeRows";
-import { catalogHomeCards, queueHomeCards, type HomeShelfView, type HomeView } from "./homeModel";
+import { catalogHomeCards, homeShelfGeometry, posterHomeCards, queueHomeCards, type HomeShelfView, type HomeView } from "./homeModel";
 
 /** Geometry shared by painting and demand loading; one extra row ahead. */
 export function homeRowWindow(scrollY: number, count: number) {
@@ -80,7 +80,7 @@ export class HomeShelfCache {
         if(kind==="queue")this.rows.unshift(row);else this.rows.push(row);
       }
       this.rows=this.rows.map(row=>row.key===key&&this.retained.has(key)
-        ? {...row,cards:kind==="queue"?queueHomeCards(items):catalogHomeCards(items),loaded:true} : row);
+        ? {...row,cards:kind==="queue"?queueHomeCards(items):posterHomeCards(items),loaded:true} : row);
     }
     this.emit();
   }
@@ -128,7 +128,7 @@ export class HomeShelfCache {
         row.kind==="live"?(await this.api.liveV2({collection:"recent",limit:20},{signal})).items:
         (await this.api.discover(browseRequest(row.catalog!)!,{signal})).items;
       if(signal.aborted||this.disposed||!this.retained.has(row.key))return;
-      const cards=row.kind==="queue"?queueHomeCards(items):catalogHomeCards(items);
+      const cards=row.kind==="queue"?queueHomeCards(items):row.kind==="favorites"?posterHomeCards(items):catalogHomeCards(items);
       this.rows=this.rows.map(value=>value.key===row.key?{...value,cards,loaded:true,error:undefined}:value);
     } catch(error) {
       if(controller.signal.aborted||this.disposed)return;
@@ -139,6 +139,6 @@ export class HomeShelfCache {
 
 /** Slot identity survives placeholder -> metadata updates without losing focus. */
 export function homeVisibleCards(shelf:HomeShelfView, first:number) {
-  if(shelf.cards.length)return shelf.cards.slice(first,first+6).map((card,index)=>({card,index:first+index}));
+  if(shelf.cards.length)return shelf.cards.slice(first,first+homeShelfGeometry(shelf.kind).visible).map((card,index)=>({card,index:first+index}));
   return [{index:0,card:{id:`pending:${shelf.key}`,title:shelf.error?"Couldn't load titles":shelf.loading?"Loading titles…":"Titles not loaded",subtitle:shelf.error?"Select to retry":shelf.loading?"":"Select to load",image:"",progress:0}}];
 }

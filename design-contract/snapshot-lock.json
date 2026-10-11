@@ -1,7 +1,7 @@
 {
   "version": 1,
   "repository": "viptv-org/design",
-  "commit": "9998da83ef42cfe1d1c46d76f7ee6d8a2e43242e",
+  "commit": "4f3a1eae36399608f459b5973381ead969c2c2d1",
   "files": {
     "design-contract/.github/pull_request_template.md": {
       "source": ".github/pull_request_template.md",
@@ -69,7 +69,7 @@
     },
     "design-contract/docs/platforms/ANDROID_DESIGN.md": {
       "source": "docs/platforms/ANDROID_DESIGN.md",
-      "sha256": "1a6b3b519aa0da80985f37cb3e50b782cedb95d350d4af08ddbdf84b64a7fdc0"
+      "sha256": "8e7702f331a6357c3f7bd8412ed646130cb6087eb0d8ff9aa069de8a5b256ec2"
     },
     "design-contract/docs/platforms/ROKU_DESIGN.md": {
       "source": "docs/platforms/ROKU_DESIGN.md",
@@ -183,6 +183,14 @@
       "source": "specs/behavior/torrent-runtime-v2.md",
       "sha256": "b09d0cd1b01cd4fb699d1c22dd2aa282cf2349846807b4f5405ba512681a57ba"
     },
+    "design-contract/specs/behavior/tv-my-list-posters.md": {
+      "source": "specs/behavior/tv-my-list-posters.md",
+      "sha256": "f7423e409e93f7ca18f4cbd725b359d3b0e8ef697fd24af111f27fdbe6f6c6ab"
+    },
+    "design-contract/specs/behavior/tv-ui-trial.md": {
+      "source": "specs/behavior/tv-ui-trial.md",
+      "sha256": "19b896764726aece6e9cd10cd783589b4004a0c8c91a5b1e483b4448464cacc8"
+    },
     "design-contract/specs/repos/README.md": {
       "source": "specs/repos/README.md",
       "sha256": "3f70540bb1f4311785d83cc13d074428c1c3fe54a603a9d9b0720d9dd41f8acd"
@@ -197,7 +205,7 @@
     },
     "design-contract/viptv-design-system/components.md": {
       "source": "viptv-design-system/components.md",
-      "sha256": "9a282aa9d9c6d44a01cc04b1cb7349397bfa3e04175ad308d1aa153144c2c3af"
+      "sha256": "51807b08aa80d625707ef61c8ef3d132c1c64b2a29eee21121f6548c36fab90a"
     },
     "design-contract/viptv-design-system/copy.md": {
       "source": "viptv-design-system/copy.md",
@@ -205,7 +213,7 @@
     },
     "design-contract/viptv-design-system/decisions.md": {
       "source": "viptv-design-system/decisions.md",
-      "sha256": "5aa629baee1e1d8cfff893393e485eda1a62776c80fa8adc57109ad2007b5f00"
+      "sha256": "66d850e13f0577eebbf33086c4b3932fad84dd581321a4af48ee1e68b2dacaed"
     },
     "design-contract/viptv-design-system/reference/screens/index.json": {
       "source": "viptv-design-system/reference/screens/index.json",
@@ -213,7 +221,7 @@
     },
     "design-contract/viptv-design-system/tokens/tokens.json": {
       "source": "viptv-design-system/tokens/tokens.json",
-      "sha256": "3c502ddf30eb838d0de2955a319716bf309f062c0ee420771b5d4a36688ffd10"
+      "sha256": "9a1cc6ca62035a72907d595080a1cc55426b1ae0fb0de4df59bc1bc45380ad3d"
     },
     "design-contract/viptv-design-system/tools/targets.json": {
       "source": "viptv-design-system/tools/targets.json",

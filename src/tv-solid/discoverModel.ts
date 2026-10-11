@@ -18,6 +18,8 @@ export interface DiscoverCardView {
   subtitle: string;
   image: string;
   progress: number;
+  /** Contain rather than crop the art (live channel logos in a poster frame). */
+  logo?: boolean;
 }
 export const emptyDiscoverCard: DiscoverCardView = {
   id: "",

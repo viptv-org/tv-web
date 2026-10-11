@@ -4,17 +4,23 @@ import { tokens } from "../theme/viptv-tokens.generated";
 import { noteFocus } from "./focusDebug";
 import type { DiscoverCardView } from "./discoverModel";
 
+/** Landscape grid still; My List draws 2:3 posters (TV-MYLIST-POSTER-001). */
+const STILL = { w: 360, h: 202 };
+const POSTER = { w: 200, h: 300 };
+
 /** Shared grid card, including hold/release handling, for Discover and My List. */
 export function createCatalogCard(scope: "discover" | "library") {
   return defineScreen({
-  props: ["position", "card"] as unknown as {
+  props: ["position", "card", "poster"] as unknown as {
     position: number;
     card: DiscoverCardView;
+    poster?: boolean;
   },
 
   state() {
     return {
       focused: false,
+      artFailed: false,
       titleText: "",
       subtitleText: "",
       pressed: false,
@@ -50,9 +56,12 @@ export function createCatalogCard(scope: "discover" | "library") {
       this.titleText = this.card.title;
       this.subtitleText = this.card.subtitle;
     },
+    onArtError() {
+      this.artFailed = true;
+    },
   },
   watch: {
-    card() { this.reveal(); },
+    card() { this.artFailed = false; this.reveal(); },
     position() { if (this.focused) noteFocus(`${scope}-card`, this.position); },
   },
   input: {
@@ -89,7 +98,10 @@ export function createCatalogCard(scope: "discover" | "library") {
     },
   },
 
-  render: (s) => (
+  render: (s) => {
+    const size = () => (s.poster ? POSTER : STILL);
+    const missingArt = () => s.card.image === "" || s.artFailed;
+    return (
     <TvView show={s.card.id !== ""}>
       <TvView
         x={0}
@@ -98,25 +110,37 @@ export function createCatalogCard(scope: "discover" | "library") {
         <TvView
           x={-4}
           y={-4}
-          w={368}
-          h={210}
+          w={size().w + 8}
+          h={size().h + 8}
           rounded={20}
           color={s.white}
           show={s.focused}
         />
-        <TvView w={360} h={202} rounded={16} color={s.ground} />
+        <TvView w={size().w} h={size().h} rounded={16} color={s.ground} />
+        <TvText
+          x={16}
+          y={size().h / 2 - 48}
+          maxwidth={size().w - 32}
+          maxlines={3}
+          align={"center"}
+          content={s.poster && missingArt() ? s.titleText : ""}
+          font={"Bricolage700"}
+          size={24}
+          color={s.secondary}
+        />
         <TvView
-          w={360}
-          h={202}
+          w={size().w}
+          h={size().h}
           rounded={16}
-          fit={"cover"}
+          fit={s.poster && s.card.logo ? "contain" : "cover"}
           src={s.card.image}
-          show={s.card.image !== ""}
+          show={!missingArt()}
+          onError={s.onArtError}
         />
         <TvView
           x={14}
-          y={184}
-          w={332}
+          y={size().h - 18}
+          w={size().w - 28}
           h={6}
           rounded={3}
           color={s.progressTrack}
@@ -124,8 +148,8 @@ export function createCatalogCard(scope: "discover" | "library") {
         />
         <TvView
           x={14}
-          y={184}
-          w={Math.max(0, Math.min(332, s.card.progress * 332))}
+          y={size().h - 18}
+          w={Math.max(0, Math.min(size().w - 28, s.card.progress * (size().w - 28)))}
           h={6}
           rounded={3}
           color={s.accent}
@@ -133,8 +157,8 @@ export function createCatalogCard(scope: "discover" | "library") {
         />
       </TvView>
       <TvText
-        y={219}
-        maxwidth={360}
+        y={size().h + 17}
+        maxwidth={size().w}
         maxlines={1}
         content={s.titleText}
         font={"Onest600"}
@@ -142,8 +166,8 @@ export function createCatalogCard(scope: "discover" | "library") {
         color={s.focused ? s.primary : s.body}
       />
       <TvText
-        y={255}
-        maxwidth={360}
+        y={size().h + 53}
+        maxwidth={size().w}
         maxlines={1}
         content={s.subtitleText}
         font={"Onest"}
@@ -151,6 +175,7 @@ export function createCatalogCard(scope: "discover" | "library") {
         color={s.focused ? s.secondary : s.tertiary}
       />
     </TvView>
-  ),
+    );
+  },
 });
 }

@@ -973,13 +973,13 @@
     --vx-card-r: var(--viptv-radius-xl);
     gap: var(--viptv-space-2);
   }
-  /* Phone posters fill their 3-column grid cell at 4:5 (responsive-only, so aspect-ratio is fine). */
+  /* Phone posters fill their 3-column grid cell at 2:3 (responsive-only, so aspect-ratio is fine). */
   [data-layout="responsive"] .vx-card--poster {
     --vx-card-w: 100%;
     --vx-card-h: auto;
   }
   [data-layout="responsive"] .vx-card--poster .vx-card__art {
-    aspect-ratio: 4 / 5;
+    aspect-ratio: 2 / 3;
   }
   [data-layout="responsive"] .vx-card__caption {
     gap: var(--viptv-space-0_5);

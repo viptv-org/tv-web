@@ -95,6 +95,33 @@ export function queueHomeCards(queue: readonly MediaItem[]): HomeCardView[] {
   });
 }
 
+/**
+ * Home shelf card geometry. The My List shelf draws 160 × 240 posters
+ * (TV-MYLIST-POSTER-001), 60 px taller than the 320 × 180 stills.
+ */
+export function homeShelfGeometry(kind: HomeShelfView["kind"]) {
+  return kind === "favorites"
+    ? { poster: true, width: 160, stride: 196, visible: 10, extra: 60 }
+    : { poster: false, width: 320, stride: 356, visible: 6, extra: 0 };
+}
+
+/** Heading y of a Home shelf in the scrolling frame. */
+export function homeRowTop(shelves: readonly HomeShelfView[], row: number) {
+  let top = 700 + row * 364;
+  for (let index = 0; index < row && index < shelves.length; index++)
+    top += homeShelfGeometry(shelves[index].kind).extra;
+  return top;
+}
+
+/** My List shelf: saved posters at 2:3; live channels keep their contained logo. */
+export function posterHomeCards(items: readonly MediaItem[]): HomeCardView[] {
+  return catalogHomeCards(items).map((card) => {
+    if (card.item?.type === "live") return card;
+    const poster = presentation(card.item!).posterImage ?? undefined;
+    return { ...card, image: artworkUrl(poster, 160, 240) ?? poster ?? "" };
+  });
+}
+
 export function catalogHomeCards(items: readonly MediaItem[]): HomeCardView[] {
   return items.map((candidate) => {
     const card = cardPresentation(candidate, "catalog");

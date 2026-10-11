@@ -1,3 +1,22 @@
+## TV My List and phone 2:3 posters — 2026-10-11
+
+Design `4f3a1eae36399608f459b5973381ead969c2c2d1` (TV-MYLIST-POSTER-001,
+PHONE-POSTER-001). The SolidTV My List segment draws seven 200 × 300 posters
+per row from the shared core `posterImage` projection, keeping the focused row
+at the grid top; Continue Watching keeps its four 360 × 202 stills. The TV Home
+My List shelf draws 160 × 240 posters and grows by 60 px. Responsive phone
+poster cards use 2:3 instead of 4:5.
+
+Verification: typecheck, 310 unit tests in one fork (new
+`tests/ui/tv-my-list-posters.test.ts`) and the production build pass. Solid
+preview `TvLibrary` (Tizen) passed its existing focus/hold/source/return
+assertions; the saved grid, Continue Watching grid and a scrolled Home My List
+shelf were inspected locally at 1920 × 1080. The TV fixture's `poster` values
+for some titles are landscape stills, so those cards show a cropped still in
+the preview; real saved posters are portrait. Phone `Library` at 390 × 844
+shows three 2:3 posters per row. Vizio/webOS captures, Playwright e2e and
+physical TV runs were not executed for this change.
+
 ## SolidTV history-Back guard for hosted TV containers — 2026-10-08
 
 The owner reported full black screens on the Vizio receiver when pressing

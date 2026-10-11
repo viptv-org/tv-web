@@ -134,10 +134,12 @@ export const HomeAction = defineScreen({
 
 /** First Home shelf tile. It receives focus from SolidTV, not the DOM registry. */
 export const HomeCard = defineScreen({
-  props: ["position", "card", "shelf"] as unknown as {
+  props: ["position", "card", "shelf", "poster"] as unknown as {
     position: number;
     card: HomeCardView;
     shelf: number;
+    /** My List shelf: a 160 × 240 poster (TV-MYLIST-POSTER-001). */
+    poster?: boolean;
   },
 
   state() {
@@ -213,22 +215,25 @@ export const HomeCard = defineScreen({
     },
   },
 
-  render: (s) => (
+  render: (s) => {
+    const w = () => (s.poster ? 160 : 320);
+    const h = () => (s.poster ? 240 : 180);
+    return (
     <TvView show={s.card.id !== ""}>
-      <TvView w={320} h={180} scale={1}>
+      <TvView w={w()} h={h()} scale={1}>
       <TvView
         x={-4}
         y={-4}
-        w={328}
-        h={188}
+        w={w() + 8}
+        h={h() + 8}
         rounded={20}
         color={s.white}
         show={s.focused}
       />
-      <TvView w={320} h={180} rounded={16} color={s.surface} />
+      <TvView w={w()} h={h()} rounded={16} color={s.surface} />
       <TvView
-        w={320}
-        h={180}
+        w={w()}
+        h={h()}
         rounded={16}
         src={s.card.image}
         fit={s.card.item?.type === "live" ? "contain" : "cover"}
@@ -236,8 +241,8 @@ export const HomeCard = defineScreen({
       />
       <TvView
         x={14}
-        y={164}
-        w={292}
+        y={h() - 16}
+        w={w() - 28}
         h={6}
         rounded={3}
         color={s.progressTrack}
@@ -245,8 +250,8 @@ export const HomeCard = defineScreen({
       />
       <TvView
         x={14}
-        y={164}
-        w={Math.max(0, Math.min(292, s.card.progress * 292))}
+        y={h() - 16}
+        w={Math.max(0, Math.min(w() - 28, s.card.progress * (w() - 28)))}
         h={6}
         rounded={3}
         color={s.accent}
@@ -254,10 +259,10 @@ export const HomeCard = defineScreen({
       />
       </TvView>
       <TvText
-        y={196}
+        y={h() + 16}
         lineheight={1.3}
         cssLineBox={true}
-        maxwidth={320}
+        maxwidth={w()}
         maxlines={1}
         content={s.titleText}
         font={"Onest600"}
@@ -265,10 +270,10 @@ export const HomeCard = defineScreen({
         color={s.focused ? s.primary : s.primary}
       />
       <TvText
-        y={231.1875}
+        y={h() + 51.1875}
         lineheight={1.35}
         cssLineBox={true}
-        maxwidth={320}
+        maxwidth={w()}
         maxlines={1}
         content={s.subtitleText}
         font={"Onest"}
@@ -276,5 +281,6 @@ export const HomeCard = defineScreen({
         color={s.secondary}
       />
     </TvView>
-  ),
+    );
+  },
 });

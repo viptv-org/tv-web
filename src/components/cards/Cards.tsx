@@ -25,7 +25,7 @@ export type CardActions = {
 
 /**
  * Tile kinds (components.md §6; src/styles/primitives/cards.css):
- *   poster    P fluid 4:5 (fills its grid cell; 111 wide in a Home shelf) · D 172 × 258 ·
+ *   poster    P fluid 2:3 (fills its grid cell; 111 wide in a Home shelf) · D 172 × 258 ·
  *             web 164 × 246 · TV: a still
  *   still     landscape still + caption: D 256 × 128 · TV 320 × 180 · P fluid 16:9 when asked
  *             for explicitly (a shape-derived landscape row draws posters on phones)

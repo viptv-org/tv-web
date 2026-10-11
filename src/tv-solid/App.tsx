@@ -56,7 +56,7 @@ import { RailItem } from "./RailFocus";
 import { DiscoverFilterOption } from "./DiscoverFocus";
 import { DiscoverScreen } from "./DiscoverScreen";
 import { LibraryScreen } from "./LibraryScreen";
-import { libraryCard } from "./libraryModel";
+import { libraryCard, libraryGrid } from "./libraryModel";
 import { TitleMenuScreen } from "./TitleMenuScreen";
 import {
   emptyTitleMenuChoice,
@@ -131,7 +131,7 @@ import {
   type DiscoverChipView,
 } from "./discoverModel";
 import { HomeAction, HomeCard } from "./HomeFocus";
-import { emptyHomeCard } from "./homeModel";
+import { emptyHomeCard, homeRowTop, homeShelfGeometry } from "./homeModel";
 import {
   emptyDetail,
   emptyDetailEpisode,
@@ -607,7 +607,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         libraryQueueItems: [] as MediaItem[],
         libraryItems: [] as MediaItem[],
         libraryNextOffset: null as number | null,
-        libraryCards: Array.from({ length: 12 }, () => ({
+        libraryCards: Array.from({ length: 14 }, () => ({
           ...emptyDiscoverCard,
         })) as DiscoverCardView[],
         libraryWindowStart: 0,
@@ -1596,7 +1596,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
           if(count)this.homeShelfCardIndex=Math.min(this.homeShelfCardIndex,count-1);
           if(wasLoading&&count&&(this.homePositions[selected!]??0)>0&&this.phase==="home"&&!this.railExpanded&&!this.titleMenuOpen)
             queueMicrotask(()=>this.focusHomeShelfCard(this.homeShelfIndex,this.homePositions[selected!]));
-          this.homeScrollY=this.homeShelfIndex===0?0:700+(this.homeShelfIndex-1)*364-54;
+          this.homeScrollY=this.homeShelfIndex===0?0:homeRowTop(this.homeShelves,this.homeShelfIndex-1)-54;
           if(selected&&next<0&&this.phase==="home"&&!this.railExpanded&&!this.titleMenuOpen)
             queueMicrotask(()=>this.focusHomeShelfCard(this.homeShelfIndex,this.homeShelfCardIndex));
         }
@@ -1624,7 +1624,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
           $selectRevealable(this.$select(`heroAction${index}`))?.reveal?.();
         for (let shelf = 0; shelf < this.homeShelves.length; shelf++) {
           const start = shelf === this.homeShelfIndex ? this.homeShelfStart : 0;
-          for (let slot = 0; slot < Math.min(6, this.homeShelves[shelf].cards.length - start); slot++)
+          for (let slot = 0; slot < Math.min(homeShelfGeometry(this.homeShelves[shelf].kind).visible, this.homeShelves[shelf].cards.length - start); slot++)
             $selectRevealable(this.$select(`homeCard${shelf}Slot${slot}`))?.reveal?.();
         }
       },
@@ -1655,11 +1655,11 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         this.homeShelfIndex = shelfIndex;
         this.homeShelfCardIndex = target;
         this.homeCardIndex = target;
-        const window = carouselWindow(target, shelf.cards.length, 320, 1624, this.homeOffsets[shelf.key] ?? 0);
+        const window = carouselWindow(target, shelf.cards.length, homeShelfGeometry(shelf.kind).width, 1624, this.homeOffsets[shelf.key] ?? 0);
         this.homeOffsets = { ...this.homeOffsets, [shelf.key]: window.offset };
         this.homePositions = { ...this.homePositions, [shelf.key]: shelf.cards.length?target:Math.max(0,index) };
         this.homeShelfStart = window.start;
-        this.homeScrollY = shelfIndex === 0 ? 0 : 700 + (shelfIndex - 1) * 364 - 54;
+        this.homeScrollY = shelfIndex === 0 ? 0 : homeRowTop(this.homeShelves, shelfIndex - 1) - 54;
         this.updateHomeWindow();
         const slot = target - this.homeShelfStart;
         setTimeout(() => { if (this.phase === "home" && this.homeFocusZone === "card" && this.homeShelfIndex===shelfIndex && this.homeShelfCardIndex===target && !this.titleMenuOpen && !this.railExpanded) { this.homeFocusZone = "card"; this.$select(`homeCard${shelfIndex}Slot${slot}`)?.$focus(); } }, 0);
@@ -2530,19 +2530,20 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
           $selectRevealable(this.$select("libraryScreen")?.$select(`librarySegment${index}`))?.reveal?.();
       },
       refreshLibraryCards() {
+        const queue = this.libraryMode === "queue";
         const visible = this.libraryItems.slice(
           this.libraryWindowStart,
-          this.libraryWindowStart + 12,
+          this.libraryWindowStart + libraryGrid(queue).slots,
         );
-        this.libraryCards = Array.from({ length: 12 }, (_, index) =>
+        this.libraryCards = Array.from({ length: 14 }, (_, index) =>
           visible[index]
-            ? libraryCard(visible[index], this.libraryMode === "queue")
+            ? libraryCard(visible[index], queue)
             : { ...emptyDiscoverCard },
         );
         setTimeout(() => {
           if (this.phase !== "library" && this.sourceReturnOrigin !== "library")
             return;
-          for (let index = 0; index < 12; index++)
+          for (let index = 0; index < 14; index++)
             $selectRevealable(this.$select("libraryScreen")?.$select(`libraryCard${index}`))?.reveal?.();
         }, 0);
       },
@@ -2584,7 +2585,11 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         this.libraryFocusZone = "card";
         this.libraryCardIndex = index;
         const previousWindow = this.libraryWindowStart;
-        if (index < this.libraryWindowStart)
+        const grid = libraryGrid(this.libraryMode === "queue");
+        if (this.libraryMode !== "queue")
+          // My List keeps the focused poster row at the top (TV-MYLIST-POSTER-001).
+          this.libraryWindowStart = Math.floor(index / grid.columns) * grid.columns;
+        else if (index < this.libraryWindowStart)
           this.libraryWindowStart = Math.floor(index / 4) * 4;
         else if (index >= this.libraryWindowStart + 12)
           this.libraryWindowStart = (Math.floor(index / 4) - 2) * 4;
@@ -2605,11 +2610,12 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
       },
       moveLibraryCard(direction: string) {
         const index = this.libraryCardIndex;
-        if (direction === "left" && index % 4 === 0) {
+        const { columns } = libraryGrid(this.libraryMode === "queue");
+        if (direction === "left" && index % columns === 0) {
           this.openRail();
           return;
         }
-        if (direction === "up" && index < 4) {
+        if (direction === "up" && index < columns) {
           this.focusLibrarySegment(this.librarySegmentIndex);
           return;
         }
@@ -2619,13 +2625,21 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
             : direction === "right"
               ? 1
               : direction === "up"
-                ? -4
-                : 4;
-        const next = index + delta;
+                ? -columns
+                : columns;
+        let next = index + delta;
+        // My List: Down into a shorter last row lands on its last card.
+        if (
+          direction === "down" &&
+          this.libraryMode !== "queue" &&
+          next >= this.libraryItems.length &&
+          Math.floor(index / columns) < Math.floor((this.libraryItems.length - 1) / columns)
+        )
+          next = this.libraryItems.length - 1;
         if (
           next >= 0 &&
           next < this.libraryItems.length &&
-          (direction !== "right" || index % 4 !== 3)
+          (direction !== "right" || index % columns !== columns - 1)
         )
           this.focusLibraryCard(next);
         if (
@@ -6805,7 +6819,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
           <Show when={s.homeScrollY<950}><TvView zIndex={-1} y={-s.homeScrollY}><HomeBackdrop sharp={s.home.heroImage} ambient={s.home.ambientImage} /></TvView></Show>
           <CollapsedRail avatar={s.homeProfileAvatar} current="home"/>
           <TvView w={1920} h={1080} clipping>
-          <TvView w={1920} h={Math.max(1080, 1080 + Math.max(0, s.homeShelves.length - 1) * 364)} y={-s.homeScrollY}>
+          <TvView w={1920} h={Math.max(1080, 1080 + homeRowTop(s.homeShelves, Math.max(0, s.homeShelves.length - 1)) - 700 + (s.homeShelves.length ? homeShelfGeometry(s.homeShelves[s.homeShelves.length - 1].kind).extra : 0))} y={-s.homeScrollY}>
           <Show when={s.homeScrollY<664}>
           <TvText
             x={192}
@@ -6942,15 +6956,17 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
           <KeyedFor each={s.homeShelves} keyOf={shelf => shelf.key}>{(shelf, shelfPosition) => {
             const row = shelfPosition;
             const offset = () => s.homeOffsets[shelf().key] ?? 0;
-            const first = () => Math.floor(offset() / 356);
+            const geometry = () => homeShelfGeometry(shelf().kind);
+            const first = () => Math.floor(offset() / geometry().stride);
+            const top = () => homeRowTop(s.homeShelves, row());
             return <Show when={row()>=s.homeMountFirst && row()<=s.homeMountLast}>
-              <TvText show={700 + row() * 364 - s.homeScrollY >= 54 && 700 + row() * 364 - s.homeScrollY <= 984} x={192} y={700 + row() * 364} content={shelf().title}
+              <TvText show={top() - s.homeScrollY >= 54 && top() - s.homeScrollY <= 984} x={192} y={top()} content={shelf().title}
                 font="Bricolage650" size={32} letterspacing={-0.32} cssLineBox lineheight={1.35} color={s.primary} />
-              <TvView x={192} y={762 + row() * 364} w={1632} h={276} clipping>
+              <TvView x={192} y={top() + 62} w={1632} h={276 + geometry().extra} clipping>
               <KeyedFor each={homeVisibleCards(shelf(), first())} keyOf={entry => entry.index}>{(card, slot) => <HomeCard
                 screenRef={`homeCard${row()}Slot${slot()}`} shelf={row()}
-                position={card().index} card={card().card}
-                x={4 + (first() + slot()) * 356 - offset()} y={4} />}</KeyedFor>
+                position={card().index} card={card().card} poster={geometry().poster}
+                x={4 + (first() + slot()) * geometry().stride - offset()} y={4} />}</KeyedFor>
               </TvView>
             </Show>;
           }}</KeyedFor>
