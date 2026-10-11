@@ -357,7 +357,7 @@ try {
     } else if (name === 'TvAddonManage') {
       await page.keyboard.press('Enter');
       await focused('settings-row', 3);
-      if (!backend.requests.some(request => request.path.includes('/api/addons/') && request.method !== 'GET'))
+      if (!backend.requests.some(request => request.path.includes('/api/v2/addons/') && request.method !== 'GET'))
         throw new Error('Addon enable action did not reach the addon API');
     } else if (name === 'TvAddonRemove') {
       await page.keyboard.press('Escape');
@@ -366,7 +366,7 @@ try {
       await focused('settings-row', 2).catch(async cause => {
         throw new Error(`${cause.message}; focus ${JSON.stringify(await page.evaluate(() => window.__viptvFocus))}; errors ${JSON.stringify(errors)}`);
       });
-      if (backend.requests.some(request => request.method === 'DELETE' && request.path.includes('/api/addons/')))
+      if (backend.requests.some(request => request.method === 'DELETE' && request.path.includes('/api/v2/addons/')))
         throw new Error('Cancelled addon removal called DELETE');
     }
   }

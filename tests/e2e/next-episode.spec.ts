@@ -144,7 +144,8 @@ async function installBackend(page: Page, options: FixtureOptions = {}): Promise
       return json(route, { ok: true });
     }
     if (path.startsWith('/api/v2/iptv/live/')) return json(route, { catalog_id: null, generation: null, items: [], next_cursor: null, previous_cursor: null });
-    if (path.startsWith('/api/v2/playback/') || path === '/api/addons') return json(route, []);
+    if (path.startsWith('/api/v2/playback/')) return json(route, []);
+    if (path === '/api/v2/addons') return json(route, { items: [], next_cursor: null });
     return json(route, { error: `unhandled ${path}` }, 404);
   });
   return state;

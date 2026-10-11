@@ -60,16 +60,16 @@ async function installBackend(page: Page): Promise<State> {
       { seq: 2, source: 'addon:3', streams: [{ id: 'other-720', name: 'Other source', title: '720p H.264 English', filename: 'other.mkv', source_addon_id: 'addon:3', source_name: 'Other provider', source_quality: '720p' }] },
     ], done: true });
     if (path === '/api/live/categories') return json(route, { categories: [], total: 0 });
-    if (path === '/api/addons' && request.method() === 'GET') return json(route, state.addons);
-    if (path === '/api/addons' && request.method() === 'POST') {
+    if (path === '/api/v2/addons' && request.method() === 'GET') return json(route, { items: state.addons, next_cursor: null });
+    if (path === '/api/v2/addons' && request.method() === 'POST') {
       state.addons.push({ id: 3, name: 'Installed add-on', enabled: true });
       return json(route, state.addons.at(-1));
     }
-    if (path === '/api/addons/2' && request.method() === 'PATCH') {
+    if (path === '/api/v2/addons/2' && request.method() === 'PATCH') {
       Object.assign(state.addons[0], body);
       return json(route, state.addons[0]);
     }
-    if (path === '/api/addons/2' && request.method() === 'DELETE') {
+    if (path === '/api/v2/addons/2' && request.method() === 'DELETE') {
       state.addons.splice(0, 1);
       return json(route, { ok: true });
     }
@@ -240,9 +240,9 @@ test('Vizio: settings persist an add-on draft, enable/remove an extension, and s
   await expect(page.getByRole('heading', { name: 'Remove Fixture add-on?' })).toBeVisible();
   await page.getByRole('button', { name: 'Remove', exact: true }).click();
   await expect(fixtureAddon).toHaveCount(0);
-  expect(state.calls).toContainEqual({ path: '/api/addons/2', method: 'PATCH', body: { enabled: false } });
-  expect(state.calls).toContainEqual({ path: '/api/addons', method: 'POST', body: { manifest_url: 'https://addons.example.test/manifest.json' } });
-  expect(state.calls).toContainEqual({ path: '/api/addons/2', method: 'DELETE', body: {} });
+  expect(state.calls).toContainEqual({ path: '/api/v2/addons/2', method: 'PATCH', body: { enabled: false } });
+  expect(state.calls).toContainEqual({ path: '/api/v2/addons', method: 'POST', body: { manifest_url: 'https://addons.example.test/manifest.json' } });
+  expect(state.calls).toContainEqual({ path: '/api/v2/addons/2', method: 'DELETE', body: {} });
 
   await page.keyboard.press('Escape');
   await expect(page.getByRole('button', { name: 'Addons', exact: true })).toBeFocused();
