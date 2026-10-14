@@ -1,5 +1,6 @@
 import { normalizeCore } from "./index";
 import type { CardPresentation, MediaItem, MediaPresentation } from "../api";
+import { isEngineArtwork } from '../api/engine-artwork';
 
 /**
  * Presentation and artwork projections are pure functions of the item, but
@@ -58,6 +59,7 @@ export function artworkUrl(
   logo = false,
 ): string | undefined {
   if (!original) return undefined;
+  if (isEngineArtwork(original)) return original;
   const key = `${original}|${width}x${height}|${large ? 1 : 0}${logo ? 1 : 0}`;
   let value = artworkCache.get(key);
   if (value === undefined) {

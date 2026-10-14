@@ -11,6 +11,7 @@
 import type { Page, Route } from '@playwright/test';
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
+import { engineFixture } from './engine-fixture.ts';
 
 export const apiOrigin = process.env.PREVIEW_API_ORIGIN ?? 'https://viptv.syek.tech';
 export const sessionKey = `viptv-device:${apiOrigin}`;
@@ -481,6 +482,14 @@ export async function installBackend(page: Page, options: BackendOptions): Promi
     requests.push({ method, path, query: url.search, body });
     const hang = () => new Promise<void>(() => undefined);
     if (options.backendDown) return route.abort('connectionrefused');
+    if (path.startsWith('/api/v3/')) {
+      if (options.catalogHang && path === '/api/v3/discover') return hang();
+      if (options.searchFail && url.searchParams.get('search')) return json({ error: 'upstream failed' }, 502);
+      const value = engineFixture(url, method, body, { profile: selectedProfile, queue, favorites,
+        catalogs: options.noCatalogs ? [] : catalogs, discover: input => discover(input, family),
+        detail: id => { const spec = byId.get(id); return spec ? meta(spec, family) : undefined; } });
+      if (value !== undefined) return json(value);
+    }
     const pinGate = () => (options.wrongPin || !unlocked) ? json({ error: 'parent PIN required' }, 403) : undefined;
 
     // Session and pairing.

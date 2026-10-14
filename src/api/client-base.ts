@@ -3,6 +3,9 @@
 import { CoreBridge } from "../../vendor/core/wasm/viptv_core";
 import { createCoreDriver } from "../../vendor/core/runtime/driver";
 import { createHttpTransport } from "../../vendor/core/runtime/index";
+import { EngineBootstrapCache } from './engine-bootstrap';
+import { EngineCatalogTransport } from './engine-catalog';
+import { engineArtwork } from './engine-artwork';
 import type { Event, ViewModel } from "../../vendor/core/typescript/wire";
 import { ApiScope, MemoryDeviceSessionStore, TvApiError, throwIfAborted, normalizeResponse, safeJson, isAbort, tokenSet, objectOrEmpty, expectObject, optionalString } from "./client-shared";
 import type { DeviceSessionStore, RequestOptions, TvApiOptions } from "./client-shared";
@@ -23,6 +26,10 @@ export class TvApiClientBase {
   protected tokens: DeviceTokenSet | null = null;
   protected refreshFlight: Promise<DeviceTokenSet> | null = null;
   protected sessionEvent?: (event: Event, options?: RequestOptions) => Promise<ViewModel>;
+  protected readonly engineBootstrap = new EngineBootstrapCache((path, input, options) => this.raw(path, input, true, options));
+  protected readonly engineCatalog = new EngineCatalogTransport((path, input, options) => this.raw(path, input, true, options));
+  bootstrap(options?: RequestOptions) { return this.engineBootstrap.get(options); }
+  protected proxyEngineArtwork(): boolean { return false; }
 
   constructor(options: TvApiOptions) {
     const url = new URL(options.baseUrl);
@@ -60,7 +67,7 @@ export class TvApiClientBase {
         save: async (serialized) => {
           await this.saveTokens(JSON.parse(serialized) as DeviceTokenSet);
         },
-        clear: async () => { await this.revokeNative(true); this.tokens = null; await this.store.clear(); },
+        clear: async () => { await this.revokeNative(true); this.engineBootstrap.invalidate(); this.tokens = null; await this.store.clear(); },
       },
       http: createHttpTransport({ allowedOrigins: [this.origin], fetch: this.requestFetch, maxResponseBytes: 2 * 1024 * 1024 }),
       render: (view) => { if (!imperative) render(view); },
@@ -108,6 +115,7 @@ export class TvApiClientBase {
     return new ApiScope();
   }
   async restoreSession() {
+    this.engineBootstrap.invalidate();
     this.tokens = await this.store.load();
     return this.tokens;
   }
@@ -168,6 +176,7 @@ export class TvApiClientBase {
       options,
     );
     await this.revokeNative(true);
+    this.engineBootstrap.invalidate();
     this.tokens = null;
     await this.store.clear();
   }
@@ -200,6 +209,8 @@ export class TvApiClientBase {
     return tokenSet(v);
   }
   protected async saveTokens(tokens: DeviceTokenSet) {
+    if (!this.tokens || this.tokens.sessionId !== tokens.sessionId || this.tokens.accountId !== tokens.accountId || this.tokens.profileId !== tokens.profileId)
+      this.engineBootstrap.invalidate();
     if (this.tokens && (this.tokens.accountId !== tokens.accountId || this.tokens.profileId !== tokens.profileId)) await this.revokeNative(this.tokens.accountId !== tokens.accountId);
     this.tokens = tokens;
     await this.store.save(tokens);
@@ -239,6 +250,7 @@ export class TvApiClientBase {
             error instanceof TvApiError &&
             error.status === 401
           ) {
+            this.engineBootstrap.invalidate();
             this.tokens = null;
             await this.store.clear();
           }
@@ -260,6 +272,7 @@ export class TvApiClientBase {
     const endpoint = `${init.method ?? "GET"} ${path}`;
     const request = async (retry: boolean): Promise<JsonValue> => {
       const headers: Record<string, string> = { Accept: "application/json" };
+      if (path.startsWith('/api/v3/') && this.proxyEngineArtwork()) headers['x-viptv-image-delivery'] = 'proxy';
       if (init.body) headers["Content-Type"] = "application/json";
       throwIfAborted(options?.signal);
       const accessToken = this.tokens?.accessToken;
@@ -294,7 +307,7 @@ export class TvApiClientBase {
           endpoint,
         );
       }
-      return payload;
+      return this.proxyEngineArtwork() ? engineArtwork(payload, this.origin) : payload;
     };
     return request(true);
   }

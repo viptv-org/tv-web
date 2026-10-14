@@ -1,4 +1,6 @@
 import type { Catalog, TvApi } from "../api";
+import { engineRow } from '../api/engine-catalog';
+import { engineCard } from '../api/engine-card';
 import { browseRequest, firstHomeCatalog, homeRowsFor, type HomeRow } from "../ui/app/homeRows";
 import { catalogHomeCards, homeShelfGeometry, posterHomeCards, queueHomeCards, type HomeShelfView, type HomeView } from "./homeModel";
 
@@ -124,8 +126,10 @@ export class HomeShelfCache {
   private async load(row:HomeShelfView,controller:AbortController) {
     try {
       const signal=controller.signal;
+      const supplied = row.catalog ? engineRow(row.catalog) : undefined;
       const items=row.kind==="queue"?this.profile.queueItems:row.kind==="favorites"?this.profile.favoriteItems:
         row.kind==="live"?(await this.api.liveV2({collection:"recent",limit:20},{signal})).items:
+        supplied?.state === 'Ready' ? supplied.cards.map(card => engineCard(card)) :
         (await this.api.discover(browseRequest(row.catalog!)!,{signal})).items;
       if(signal.aborted||this.disposed||!this.retained.has(row.key))return;
       const cards=row.kind==="queue"?queueHomeCards(items):row.kind==="favorites"?posterHomeCards(items):catalogHomeCards(items);

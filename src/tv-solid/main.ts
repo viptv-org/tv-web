@@ -10,7 +10,8 @@ import { CanvasTextRenderer } from "@solidtv/renderer/canvas";
 import { displayFonts, configureDisplayFonts } from "./fonts";
 import "../theme/viptv-tokens.generated.css";
 import "../playbackConfig";
-import { TvApi, type DeviceTokenSet } from "../api";
+import { type DeviceTokenSet } from "../api";
+import { EngineTvApi } from '../api/engine-client';
 import { initializeCore } from "../core";
 import bricolage700Url from "@fontsource/bricolage-grotesque/files/bricolage-grotesque-latin-700-normal.woff2?url";
 import bricolage800Url from "@fontsource/bricolage-grotesque/files/bricolage-grotesque-latin-800-normal.woff2?url";
@@ -34,7 +35,7 @@ const origin = preview
       : "https://viptv.syek.tech");
 const key = `viptv-device:${origin}`;
 
-const api = new TvApi({
+const api = new EngineTvApi({
   baseUrl: origin,
   playbackPlatform: platform,
   allowInsecurePreview: preview,

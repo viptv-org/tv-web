@@ -56,6 +56,9 @@ export type DiscoverPage = CoreView<Core.DiscoverPage>;
 export interface MediaDetail {
   readonly item: MediaItem;
   readonly episodes: readonly MediaItem[];
+  readonly recommendations?: readonly MediaItem[];
+  readonly seasons?: readonly import('../../vendor/engine/wire').EpisodeSeason[];
+  readonly nextOffset?: number | null;
 }
 export interface Page<T> {
   readonly items: readonly T[];

@@ -13,7 +13,7 @@
     "perf:audit": "node scripts/perf-audit.mjs",
     "preview": "vite preview --host 0.0.0.0",
     "package:tv": "npm run build && node scripts/package-tv.mjs",
-    "core:check": "node scripts/core-sync.mjs check",
+    "core:check": "node scripts/core-sync.mjs check && node scripts/engine-check.mjs",
     "typecheck": "node scripts/typecheck.mjs",
     "video:check": "node scripts/video-sync.mjs check",
     "perf:tv": "node tests/preview/perf-compare.mjs"

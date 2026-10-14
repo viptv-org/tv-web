@@ -1,4 +1,5 @@
 import type { Catalog, MediaItem, TvApi } from "../api";
+import { EngineTvApi } from '../api/engine-client';
 import {
   artworkUrl,
   cardPresentation,
@@ -205,6 +206,12 @@ export async function loadHomeView(
   signal: AbortSignal,
   onChange?: (view: HomeView) => void,
 ): Promise<HomeView> {
+  if (api instanceof EngineTvApi) {
+    const value = await api.homeProjection(profileId, { signal });
+    const view = projectHome(value.hero ?? value.featured[0], value.queue, undefined, value.favorites);
+    if (!signal.aborted) onChange?.(view);
+    return view;
+  }
   let queue: readonly MediaItem[] = [];
   let favorites: readonly MediaItem[] = [];
   const view = () => projectHome(queue[0] ?? favorites[0], queue, undefined, favorites);

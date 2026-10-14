@@ -1,0 +1,6 @@
+{
+  "repository": "https://github.com/viptv-org/core",
+  "revision": "a7495e753ba9bdace3eb83d7cf99d86b9ed7f200",
+  "source": "generated/engine/wire.ts",
+  "sha256": "07110392cb71d405008305fd632dbf7dae0fda18343f4c4debf5b204e6e13005"
+}
