@@ -13,6 +13,24 @@ export class EngineTvApi extends TvApi {
   protected override proxyEngineArtwork() { return true; }
   override get supportsLiveCollections() { return false; }
   override get supportsGlobalSearch() { return true; }
+  private subtitleProfile: string | null = null;
+  private subtitleSession?: string;
+  private subtitleAvailable = false;
+  override get supportsProviderSubtitles() { return this.subtitleAvailable && this.subtitleProfile === this.tokens?.profileId && this.subtitleSession === this.tokens?.sessionId; }
+  override async bootstrap(options?: RequestOptions) {
+    const value = await super.bootstrap(options);
+    this.subtitleProfile = value.identity.profile_id == null ? null : String(value.identity.profile_id);
+    this.subtitleSession = this.tokens?.sessionId;
+    this.subtitleAvailable = value.subtitle_availability?.available === true;
+    return value;
+  }
+  override async providerSubtitles(item: Pick<MediaItem, 'id' | 'type'>, options?: RequestOptions) {
+    const profile = this.tokens?.profileId, session = this.tokens?.sessionId;
+    const value = await this.raw(`/api/v3/subtitles/${segment(item.type)}/${segment(item.id)}`, {}, true, options) as unknown as import('../../vendor/engine/wire').SubtitleSnapshot;
+    if (profile !== this.tokens?.profileId || session !== this.tokens?.sessionId || value.scope.profile_id !== profile)
+      throw new TvApiError(409, 'The selected profile changed.');
+    return value.candidates;
+  }
   override globalSearch(query: string, options?: RequestOptions) { return this.engineCatalog.discover({ type: 'all', search: query }, options); }
   private readonly continuation = new EngineContinuationTransport((path, input, options) => this.raw(path, input, true, options));
   private readonly liveEngine = new EngineLiveTransport((path, input, options) => this.raw(path, input, true, options), () => {

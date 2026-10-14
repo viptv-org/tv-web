@@ -185,6 +185,7 @@ import type { PlayerSnapshot, PlaybackControllerActive } from "@viptv/video";
 import {
   emptyTrackChoice,
   trackChoicesFor,
+  mergeProviderTracks,
   type TrackChoiceView,
 } from "./trackModel";
 import { exactResumeSource } from "../ui/continuation";
@@ -5730,7 +5731,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         const owner = playback;
         const session = playback.controller.snapshot.active?.session;
         if (!session) return;
-        const initial = trackChoicesFor(kind, playback.player, session);
+        const initial = mergeProviderTracks(trackChoicesFor(kind, playback.player, session), kind === 'text' ? playback.providerTrackChoices() : []);
         const choices = initial.length ? initial : [{ ...emptyTrackChoice, label: "Loading tracks…" }];
         this.trackPanelKind = kind;
         this.trackReturnControlIndex = this.playerFocusIndex;
@@ -5763,7 +5764,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         try {
           if (kind === 'text') await owner.player.loadTextTracks?.(); else await owner.player.loadAudioTracks?.();
           if (playback !== owner || this.phase !== 'playerTracks' || !this.trackPanelOpen || this.trackPanelKind !== kind) return;
-          const refreshed = trackChoicesFor(kind, owner.player, session);
+          const refreshed = mergeProviderTracks(trackChoicesFor(kind, owner.player, session), kind === 'text' ? owner.providerTrackChoices() : []);
           const focusedId = this.trackChoices[this.trackFocusIndex]?.id;
           this.trackChoices = refreshed.length ? refreshed : [{ ...emptyTrackChoice, label: "No tracks available." }];
           this.trackWindowStart = -1;
@@ -5808,23 +5809,44 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
           this.trackNotice = "This track is not supported on this TV.";
           return;
         }
+        if (choice.mode === 'provider-search') {
+          const owner = playback;
+          this.trackNotice = 'Finding add-on subtitles…';
+          try {
+            await owner.discoverProviderSubtitles();
+            if (playback !== owner || this.phase !== 'playerTracks' || !this.trackPanelOpen) return;
+            const session = owner.controller.snapshot.active?.session;
+            if (!session) return;
+            this.trackChoices = mergeProviderTracks(trackChoicesFor('text', owner.player, session), owner.providerTrackChoices());
+            this.trackNotice = this.trackChoices.some(track => track.mode === 'provider') ? '' : 'No add-on subtitles found.';
+            this.trackWindowStart = -1;
+            this.focusTrackChoice(Math.max(0, this.trackChoices.findIndex(track => track.mode === 'provider')));
+          } catch (cause) {
+            if (playback === owner && this.phase === 'playerTracks') this.trackNotice = cause instanceof Error ? cause.message : 'Subtitles could not be loaded.';
+          }
+          return;
+        }
         this.closeTrackPanel();
         try {
-          if (choice.mode === 'quality') {
+          if (choice.mode === 'provider') {
+            await playback.selectProviderSubtitle(choice.id);
+          } else if (choice.mode === 'quality') {
             await playback.player.selectQuality?.(choice.id);
           } else if (choice.mode === "off") {
+            const providerSelected = playback.providerTrackChoices().some(track => track.mode === 'provider' && track.current);
+            playback.clearProviderSubtitle();
             const session = playback.controller.snapshot.active?.session;
-            if (
+            if (!providerSelected &&
               session?.mode === "direct" &&
               playback.player.capabilities.canDisableTextTrack
             )
               await playback.player.selectTextTrack(null);
-            else
+            else if (!providerSelected)
               await playback.controller.replaceTracks({ subtitlesOff: true });
           } else if (choice.mode === "native") {
             if (this.trackPanelKind === "audio")
               await playback.player.selectAudioTrack(choice.id);
-            else await playback.player.selectTextTrack(choice.id);
+            else { await playback.player.selectTextTrack(choice.id); playback.clearProviderSubtitle(); }
           } else if (this.trackPanelKind === "audio") {
             await playback.controller.replaceTracks({
               audioTrackIndex: choice.inputIndex,
@@ -5834,6 +5856,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
               subtitleTrackIndex: choice.inputIndex,
               subtitlesOff: false,
             });
+            playback.clearProviderSubtitle();
           }
           const active = playback.controller.snapshot.active;
           if (active) {

@@ -43,7 +43,7 @@ describe("SolidTV playback recovery callbacks", () => {
   it("forwards controller ownership changes and unsubscribes both streams on disposal", async () => {
     const { runtime, onControllerState } = fixture();
     expect(onControllerState).toHaveBeenCalledWith(mock.controller.snapshot);
-    const state = { active: { session: { id: "recovered-session" } }, state: "playing", error: null } as PlaybackControllerSnapshot;
+    const state = { active: { intent: { item: { id: 'title', type: 'movie' } }, session: { id: "recovered-session" } }, state: "playing", error: null } as PlaybackControllerSnapshot;
     controllerListener(state);
     expect(onControllerState).toHaveBeenLastCalledWith(state);
     await runtime.dispose(); await runtime.dispose();

@@ -1,6 +1,8 @@
 import type { MediaItem, MediaSource, TvApi } from "../api";
 import { monitorPlaybackLease } from '../api/playback-lease';
 import { TvApiError } from '../api';
+import { ProviderCaptions } from './providerCaptions';
+import type { TrackChoiceView } from './trackModel';
 import {
   createPlayer,
   deliveryCapabilitiesFor,
@@ -28,6 +30,10 @@ export interface SolidTVPlaybackRuntime {
   ): ReturnType<PlaybackSessionController<MediaItem, MediaSource>["start"]>;
   stop(): Promise<void>;
   dispose(): Promise<void>;
+  providerTrackChoices(): readonly TrackChoiceView[];
+  discoverProviderSubtitles(): Promise<void>;
+  selectProviderSubtitle(id: string): Promise<void>;
+  clearProviderSubtitle(): void;
 }
 
 /** One adapter/controller instance for the TV player, using the pinned video package. */
@@ -43,6 +49,12 @@ export function createSolidTVPlaybackRuntime(
   const enginePlatform: PlayerPlatform =
     platform === "webos" ? "html5" : platform;
   const player = createPlayer({ platform: enginePlatform, video });
+  const captions = new ProviderCaptions(api);
+  let captionOwner = '';
+  const publish = (snapshot: PlayerSnapshot) => {
+    const lines = captions.at(snapshot.time.positionSeconds);
+    onSnapshot(lines === undefined ? snapshot : { ...snapshot, captions: lines });
+  };
   const controller = new PlaybackSessionController<MediaItem, MediaSource>({
     player,
     backend: api,
@@ -72,6 +84,10 @@ export function createSolidTVPlaybackRuntime(
     else console.error("TV playback recovery failed", error);
   };
   const unsubscribeController = controller.subscribe((state) => {
+    if (state.active) {
+      const key = JSON.stringify([state.active.intent.item.type, state.active.intent.item.id, state.active.intent.source?.id]);
+      if (key !== captionOwner) { captionOwner = key; captions.reset(state.active.intent.item); }
+    }
     const id = state.active?.session.id;
     if (id !== monitoredId) {
       monitor?.dispose(); monitor = undefined; monitoredId = id;
@@ -91,7 +107,7 @@ export function createSolidTVPlaybackRuntime(
   const unsubscribe = player.subscribe((snapshot) => {
     if (disposed) return;
     const ticket = generation;
-    onSnapshot(snapshot);
+    publish(snapshot);
     void controller.recoverPlayback(snapshot).then((handled) => {
       if (disposed || ticket !== generation) return;
       // Only the unresolved current decoder error is terminal. Recovery can
@@ -112,6 +128,25 @@ export function createSolidTVPlaybackRuntime(
   return {
     player,
     controller,
+    providerTrackChoices() {
+      if (!captions.supported || !controller.snapshot.active) return [];
+      const choices: TrackChoiceView[] = [{ id: '__provider_search__', label: 'Find add-on subtitles',
+        current: false, available: true, mode: 'provider-search', inputIndex: -1 }];
+      for (const track of captions.tracks ?? []) choices.push({ id: track.id, label: track.label,
+        current: captions.selectedId === track.id, available: true, mode: 'provider', inputIndex: -1 });
+      return choices;
+    },
+    async discoverProviderSubtitles() { await captions.discover(); },
+    async selectProviderSubtitle(id) {
+      await captions.select(id, async () => {
+        const session = controller.snapshot.active?.session;
+        if (!session) throw new Error('Playback is no longer available.');
+        if (session.mode === 'direct' && player.capabilities.canDisableTextTrack) await player.selectTextTrack(null);
+        else if (session.subtitleTracks.some(track => track.selected)) await controller.replaceTracks({ subtitlesOff: true });
+      });
+      publish(player.snapshot);
+    },
+    clearProviderSubtitle() { captions.clear(); publish(player.snapshot); },
     start(item, source, position) {
       generation++;
       reportedError = undefined;
@@ -130,11 +165,13 @@ export function createSolidTVPlaybackRuntime(
     },
     stop() {
       generation++;
+      captions.reset(); captionOwner = '';
       return controller.stop();
     },
     async dispose() {
       if (disposed) return;
       disposed = true;
+      captions.reset();
       monitor?.dispose();
       document.removeEventListener('visibilitychange', reconnect);
       window.removeEventListener('keydown', interaction);

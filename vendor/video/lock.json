@@ -1,12 +1,12 @@
 {
   "repository": "viptv-org/video",
-  "revision": "dc52e45ba6b5e11f901051c4ee7a79eb9ef879aa",
+  "revision": "0bd7aed1b8d285460edf7be2b2d0b94cc93374f2",
   "files": {
     "vendor/video/src/browser-capabilities.ts": "3261889250b9ea0ea3ac33cd23dcc756ce3945f58f321fe62d54809481c5b921",
     "vendor/video/src/browser-policy.ts": "463891c85e85cf6b9b09083f99f671e882976171f07307a4d5d9569939ac311a",
-    "vendor/video/src/captions.ts": "75b7a60caedb88f2522edb9f943f031136524b5427b7df604ef4bda5656f2601",
+    "vendor/video/src/captions.ts": "2ac7d350531f101ba8577ebe66c640db1dae047e378addb647cd701977270df5",
     "vendor/video/src/html5-fallback.ts": "38433522faec31345552f57e2b902d57d400cb9ebf619755280933cbfe13b2bf",
-    "vendor/video/src/index.ts": "b320e18d4d58b791326107b93f5beefc08abaadfe6d254d33d71f1316609c095",
+    "vendor/video/src/index.ts": "91fa501f52cdb542e79e896cacc576bfe12f6efebacc4edf7651ad6cbf6877cd",
     "vendor/video/src/media-tracks.ts": "e2af19192049d8b6d22db23bcb94862a4878fac1deacaf3b65ce69f8c6cfa1f9",
     "vendor/video/src/mediabunny-mse.ts": "9910839d92fe5ff9ce41d95cd8284f7f6b15d98d7b00c685fc832d26edeb3396",
     "vendor/video/src/mediabunny.ts": "655fa8ab4694fd75ea86bb54c9f24ebf88a70134084da5eafb7870251899f039",

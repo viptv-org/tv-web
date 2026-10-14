@@ -22,6 +22,17 @@ const record = (item: Card): PlaybackRecord => ({ identity: item.identity, paren
   updated_at_millis: 1000, completed_at_millis: 1000, poster: null, landscape: null, times_watched: 1 });
 
 describe('server engine TV boundary', () => {
+  it('shows provider subtitles only when the selected profile aggregate advertises them', async () => {
+    const store = new MemoryDeviceSessionStore(); await store.save({ ...deviceTokens, profileId: '3' });
+    const fetcher = vi.fn(async () => response({ identity: { profile_id: '3' }, home: null,
+      subtitle_availability: { available: true, provider_count: 1 } }));
+    const api = new EngineTvApi({ baseUrl: 'https://fixture.example', fetch: fetcher, sessionStore: store });
+    await api.restoreSession(); expect(api.supportsProviderSubtitles).toBe(false);
+    await api.bootstrap(); expect(api.supportsProviderSubtitles).toBe(true);
+    expect(fetcher).toHaveBeenCalledTimes(1);
+    await store.save({ ...deviceTokens, profileId: '4' }); await api.restoreSession();
+    expect(api.supportsProviderSubtitles).toBe(false);
+  });
   it('searches once across media types and preserves host order within each labeled row', async () => {
     const anime = { ...card('naruto'), category: 'anime' };
     const movie = { ...card('naruto-movie'), identity: { ...identity('naruto-movie'), kind: 'movie' } };

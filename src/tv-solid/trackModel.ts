@@ -5,7 +5,7 @@ export interface TrackChoiceView {
   label: string;
   current: boolean;
   available: boolean;
-  mode: "off" | "native" | "server" | "quality";
+  mode: "off" | "native" | "server" | "quality" | "provider-search" | "provider";
   inputIndex: number;
 }
 
@@ -17,6 +17,15 @@ export const emptyTrackChoice: TrackChoiceView = {
   mode: "server",
   inputIndex: -1,
 };
+
+export function mergeProviderTracks(embedded: readonly TrackChoiceView[], provider: readonly TrackChoiceView[]): TrackChoiceView[] {
+  if (!provider.length) return [...embedded];
+  const selected = provider.some(track => track.current);
+  const base = embedded.map(track => ({ ...track, current: selected ? false : track.current }));
+  if (!base.some(track => track.mode === 'off')) base.unshift({ id: '__off__', label: 'Off',
+    current: !selected && !base.some(track => track.current), available: true, mode: 'off', inputIndex: -1 });
+  return [...base, ...provider];
+}
 
 /** Same direct/native preference and managed-session choices as React TV. */
 export function trackChoicesFor(

@@ -6,6 +6,7 @@ import { createHttpTransport } from "../../vendor/core/runtime/index";
 import { EngineBootstrapCache } from './engine-bootstrap';
 import { EngineCatalogTransport } from './engine-catalog';
 import { engineArtwork } from './engine-artwork';
+import { engineSubtitleText } from './engine-subtitle-text';
 import type { Event, ViewModel } from "../../vendor/core/typescript/wire";
 import { ApiScope, MemoryDeviceSessionStore, TvApiError, throwIfAborted, normalizeResponse, safeJson, isAbort, tokenSet, objectOrEmpty, expectObject, optionalString } from "./client-shared";
 import type { DeviceSessionStore, RequestOptions, TvApiOptions } from "./client-shared";
@@ -35,6 +36,16 @@ export class TvApiClientBase {
     return Promise.reject(new TvApiError(422, 'Global search is unavailable.'));
   }
   protected proxyEngineArtwork(): boolean { return false; }
+  get supportsProviderSubtitles(): boolean { return false; }
+  async providerSubtitles(_item: Pick<import('./types').MediaItem, 'id' | 'type'>, _options?: RequestOptions): Promise<readonly import('../../vendor/engine/wire').SubtitleCandidate[]> { return []; }
+  async providerSubtitleContent(id: string, options?: RequestOptions): Promise<string> {
+    const profile = this.tokens?.profileId, session = this.tokens?.sessionId;
+    const content = await engineSubtitleText(this.requestFetch, this.origin, id, () => this.tokens?.accessToken,
+      () => this.refreshTokens(options), options);
+    if (profile !== this.tokens?.profileId || session !== this.tokens?.sessionId)
+      throw new TvApiError(409, 'The selected profile changed.');
+    return content;
+  }
 
   constructor(options: TvApiOptions) {
     const url = new URL(options.baseUrl);

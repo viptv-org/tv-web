@@ -10,6 +10,7 @@ export interface EngineBootstrap {
   readonly library_membership?: LibraryMembershipSnapshot | null;
   readonly library_import?: LibraryImportStatus | null;
   readonly continuation?: ContinuationPage | null;
+  readonly subtitle_availability?: { readonly available: boolean; readonly provider_count: number } | null;
 }
 export type EngineRequest = (path: string, input?: { method?: string; body?: JsonObject }, options?: RequestOptions) => Promise<JsonValue>;
 
