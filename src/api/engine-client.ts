@@ -47,8 +47,17 @@ export class EngineTvApi extends TvApi {
     const value = await this.bootstrap(options);
     if (String(value.identity.profile_id) !== profile) throw new TvApiError(409, 'The selected profile changed.');
     const hero = value.home?.hero ?? value.home?.featured[0];
+    const seen = new Set<string>();
+    const featured = [hero, ...(value.home?.featured ?? [])].filter((card): card is Card => {
+      if (!card) return false;
+      const key = identityKey(card.identity);
+      if (seen.has(key)) return false;
+      seen.add(key); return true;
+    }).slice(0, 5).map(card => engineCard(card));
+    const savedFeatured = (await Promise.all(featured.map(async item =>
+      await this.saved(item, options) ? identityKey(itemIdentity(item)) : null))).filter((key): key is string => key != null);
     return { hero: hero ? engineCard(hero) : undefined, saved: hero ? await this.saved(engineCard(hero), options) : false,
-      featured: value.home?.featured.map(card => engineCard(card)) ?? [],
+      featured, savedFeatured,
       queue: value.continuation ? continuationPage(value.continuation).items : [],
       favorites: value.library?.cards.slice(0, 12).map(card => engineCard(card)) ?? [] };
   }

@@ -11,7 +11,7 @@ function cover(context: CanvasRenderingContext2D, image: HTMLImageElement, x: nu
 
 /** The pinned Home backdrop's CSS layers, composed once per artwork change.
  * Focus movement reuses the texture; it does not blur or encode images again. */
-export function HomeBackdrop(props: { sharp: string; ambient: string }) {
+export function HomeBackdrop(props: { sharp: string; ambient: string; onReady?: (sharp: string) => void }) {
   const [pixels, setPixels] = createSignal<ImageData>();
   const sources = createMemo(() => ({sharp:props.sharp, ambient:props.ambient}), undefined,
     {equals:(before,after)=>before.sharp===after.sharp&&before.ambient===after.ambient});
@@ -57,6 +57,7 @@ export function HomeBackdrop(props: { sharp: string; ambient: string }) {
       bottom.addColorStop(0, "transparent"); bottom.addColorStop(1, ground);
       context.fillStyle = bottom; context.fillRect(0, 440, 1920, 510);
       setPixels(context.getImageData(0, 0, 1920, 950));
+      props.onReady?.(sharp);
     });
     onCleanup(() => {
       cancelled = true;

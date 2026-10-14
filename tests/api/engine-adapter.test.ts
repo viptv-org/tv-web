@@ -121,4 +121,15 @@ describe('server engine TV boundary', () => {
     expect(await api.saved(engineCard(selected))).toBe(true);
     expect(fetcher).toHaveBeenCalledTimes(1);
   });
+  it('projects five distinct featured titles and their saved state with only the existing bootstrap', async () => {
+    const titles = Array.from({ length: 7 }, (_, index) => card(`featured-${index}`));
+    const fetcher = vi.fn(async () => response({ identity: { profile_id: '3' },
+      home: { hero: titles[0], featured: titles },
+      library_membership: { identities: [titles[4].identity], complete: true, revision: 1 } }));
+    const api = new EngineTvApi({ baseUrl: 'https://fixture.example', fetch: fetcher });
+    const home = await api.homeProjection('3');
+    expect(home.featured.map(item => item.id)).toEqual(titles.slice(0, 5).map(item => item.identity.id));
+    expect(home.savedFeatured).toHaveLength(1);
+    expect(fetcher).toHaveBeenCalledTimes(1);
+  });
 });

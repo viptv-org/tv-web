@@ -37,6 +37,8 @@ export const emptyHomeCard: HomeCardView = {
 
 export interface HomeView {
   heroItem: MediaItem | null;
+  featured?: readonly MediaItem[];
+  savedFeatured?: readonly string[];
   queueItems: readonly MediaItem[];
   favoriteItems: readonly MediaItem[];
   heroImage: string;
@@ -208,7 +210,8 @@ export async function loadHomeView(
 ): Promise<HomeView> {
   if (api instanceof EngineTvApi) {
     const value = await api.homeProjection(profileId, { signal });
-    const view = { ...projectHome(value.hero ?? value.featured[0], value.queue, undefined, value.favorites), saved: value.saved };
+    const view = { ...projectHome(value.hero ?? value.featured[0], value.queue, undefined, value.favorites),
+      featured: value.featured, savedFeatured: value.savedFeatured, saved: value.saved };
     if (!signal.aborted) onChange?.(view);
     return view;
   }

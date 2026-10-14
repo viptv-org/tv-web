@@ -14,6 +14,9 @@ import type { createSolidTVContinuation, SolidTVContinuationResult } from "./con
 import { catalogFilterLabel, searchPlan } from "../ui/catalogFilters";
 import { heroLabelWidth } from "./heroGeometry";
 import { HomeBackdrop } from "./HomeBackdrop";
+import { HomeHeroIndicators } from "./HomeHeroIndicators";
+import { HomeHeroTitle } from "./HomeHeroTitle";
+import { featuredKey, projectFeatured } from "./homeFeatured";
 import { exitWebos, installWebosLifecycle } from "./webos";
 import QRCode from "qrcode";
 import { carouselWindow } from "./carousel";
@@ -419,6 +422,8 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
           return homeScrim();
         },
         home: emptyHome as HomeView,
+        homePending: null as HomeView | null,
+        homeArtworkReady: "",
         detail: emptyDetail as DetailView,
         source: emptySources as SourcesView,
         sourceProducers: [] as SourceProducer[],
@@ -1520,6 +1525,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         this.phase = "ready";
         this.startingLabel = "Starting VIPTV…";
         this.homeShelves=[];this.homeShelfIndex=0;this.homeScrollY=0;this.homeFocusZone="action";
+        this.homePending=null;this.homeArtworkReady="";
         homeRevisionToken=await api.catalogRevision({signal:homeScope.signal}).catch(()=>undefined);
         if(generation!==homeGeneration||homeScope.signal.aborted)return;
         const catalogs=api.catalogs({signal:homeScope.signal}).catch(()=>[]);
@@ -1629,6 +1635,26 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
           for (let slot = 0; slot < Math.min(homeShelfGeometry(this.homeShelves[shelf].kind).visible, this.homeShelves[shelf].cards.length - start); slot++)
             $selectRevealable(this.$select(`homeCard${shelf}Slot${slot}`))?.reveal?.();
         }
+      },
+      prepareHomeFeatured(item: MediaItem) {
+        if (this.phase !== "home" || this.homeFocusZone !== "action") return;
+        this.homePending = projectFeatured(this.home, item);
+        if (this.homePending.heroImage === this.homeArtworkReady) this.presentHomeFeatured(this.homeArtworkReady);
+      },
+      presentHomeFeatured(sharp: string) {
+        batch(() => {
+          this.homeArtworkReady = sharp;
+          if (this.homePending?.heroImage === sharp) {
+            this.home = this.homePending; this.homePending = null;
+            this.homeAddLabel = this.home.saved ? "✓" : "+";
+            this.revealHomeControls();
+          }
+          if (new URLSearchParams(location.search).has("focusdebug"))
+            (window as Window & { __viptvHomeHero?: unknown }).__viptvHomeHero = {
+              id: this.home.heroItem?.id, count: this.home.featured?.length ?? 0,
+              ready: this.homeArtworkReady === this.home.heroImage,
+            };
+        });
       },
       focusHomeAction(index: number) {
         this.homeFocusZone = "action";
@@ -4692,19 +4718,25 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         if (this.phase !== "home" || this.homeFocusZone !== "action") return;
         const action = ["play", "details", "save"][this.homeActionIndex];
         if (action === "save" && this.home.heroItem && this.currentProfileId) {
+          const item = this.home.heroItem, profile = this.currentProfileId;
           try {
             const saved = await api.toggleFavorite(
-              this.currentProfileId,
-              this.home.heroItem,
+              profile,
+              item,
             );
+            if (this.currentProfileId !== profile) return;
             const favoriteItems = saved
-              ? [...this.home.favoriteItems, this.home.heroItem]
+              ? [...this.home.favoriteItems.filter(favorite => featuredKey(favorite) !== featuredKey(item)), item]
               : this.home.favoriteItems.filter(
-                  (favorite) => favorite.id !== this.home.heroItem?.id,
+                  (favorite) => featuredKey(favorite) !== featuredKey(item),
                 );
-            this.home = { ...this.home, saved, favoriteItems };
+            const savedFeatured = this.home.savedFeatured?.filter(key => key !== featuredKey(item)) ?? [];
+            if (saved) savedFeatured.push(featuredKey(item));
+            this.home = { ...this.home, saved: featuredKey(this.home.heroItem) === featuredKey(item) ? saved : this.home.saved,
+              favoriteItems, savedFeatured };
+            if (this.homePending) this.homePending = projectFeatured(this.home, this.homePending.heroItem!);
             homeCache?.updateProfile(this.home);
-            this.homeAddLabel = saved ? "✓" : "+";
+            this.homeAddLabel = this.home.saved ? "✓" : "+";
             $selectRevealable(this.$select("heroAction2"))?.reveal?.();
             this.homeNotice = saved
               ? "Added to My List"
@@ -6856,7 +6888,9 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
           }
         ><TvView>
           {/* A remounted backdrop must remain behind content, regardless of insertion order. */}
-          <Show when={s.homeScrollY<950}><TvView zIndex={-1} y={-s.homeScrollY}><HomeBackdrop sharp={s.home.heroImage} ambient={s.home.ambientImage} /></TvView></Show>
+          <Show when={s.homeScrollY<950}><TvView zIndex={-1} y={-s.homeScrollY}><HomeBackdrop
+            sharp={s.homePending?.heroImage ?? s.home.heroImage} ambient={s.homePending?.ambientImage ?? s.home.ambientImage}
+            onReady={sharp => s.presentHomeFeatured(sharp)} /></TvView></Show>
           <CollapsedRail avatar={s.homeProfileAvatar} current="home"/>
           <TvView w={1920} h={1080} clipping>
           <TvView w={1920} h={Math.max(1080, 1080 + homeRowTop(s.homeShelves, Math.max(0, s.homeShelves.length - 1)) - 700 + (s.homeShelves.length ? homeShelfGeometry(s.homeShelves[s.homeShelves.length - 1].kind).extra : 0))} y={-s.homeScrollY}>
@@ -6872,25 +6906,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
             letterspacing={2}
             color={s.secondary}
           />
-          <TvView
-            x={192}
-            y={196}
-            w={410}
-            h={118}
-            fit={"contain"}
-            src={s.home.titleLogo}
-            show={s.home.titleLogo !== ""}
-          />
-          <TvText
-            x={192}
-            y={196}
-            maxwidth={760}
-            content={s.home.title}
-            font={"Bricolage700"}
-            size={56}
-            color={s.primary}
-            show={s.home.titleLogo === ""}
-          />
+          <HomeHeroTitle logo={s.home.titleLogo} title={s.home.title} />
           <TvText
             x={192}
             y={336}
@@ -6992,6 +7008,10 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
             round={true}
             holdable={false}
           />
+          <HomeHeroIndicators home={s.home}
+            running={s.phase === "home" && s.homeFocusZone === "action" && s.homeActionIndex === 0 &&
+              !s.railExpanded && !s.titleMenuOpen && s.homePending == null}
+            ready={s.homeArtworkReady === s.home.heroImage} advance={item => s.prepareHomeFeatured(item)} />
           </Show>
           <KeyedFor each={s.homeShelves} keyOf={shelf => shelf.key}>{(shelf, shelfPosition) => {
             const row = shelfPosition;
