@@ -34,7 +34,7 @@ export class HomeShelfCache {
     private publish: (rows: HomeShelfView[]) => void) {
     this.rows = [
       ...(profile.queueItems.length ? [{key:"continue",title:"Continue watching",kind:"queue" as const,cards:[],loaded:false}] : []),
-      {key:"recent-live",title:"Recently watched live TV",kind:"live",cards:[],loaded:false},
+      ...(api.supportsLiveCollections !== false ? [{key:"recent-live",title:"Recently watched live TV",kind:"live" as const,cards:[],loaded:false}] : []),
       ...catalogShelves(catalogs),
       ...(profile.favoriteItems.length ? [{key:"my-list",title:"My List",kind:"favorites" as const,cards:[],loaded:false}] : []),
     ];

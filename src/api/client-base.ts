@@ -29,6 +29,11 @@ export class TvApiClientBase {
   protected readonly engineBootstrap = new EngineBootstrapCache((path, input, options) => this.raw(path, input, true, options));
   protected readonly engineCatalog = new EngineCatalogTransport((path, input, options) => this.raw(path, input, true, options));
   bootstrap(options?: RequestOptions) { return this.engineBootstrap.get(options); }
+  get supportsLiveCollections(): boolean { return true; }
+  get supportsGlobalSearch(): boolean { return false; }
+  globalSearch(_query: string, _options?: RequestOptions): Promise<import('./types').DiscoverPage> {
+    return Promise.reject(new TvApiError(422, 'Global search is unavailable.'));
+  }
   protected proxyEngineArtwork(): boolean { return false; }
 
   constructor(options: TvApiOptions) {

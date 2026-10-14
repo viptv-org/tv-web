@@ -8,6 +8,7 @@ import { artworkUrl } from '../../src/core/presentations';
 import type { Card, ContinuationEntry, PlaybackRecord } from '../../vendor/engine/wire';
 import type { JsonObject } from '../../src/api/types';
 import { MemoryDeviceSessionStore } from '../../src/api';
+import { engineSearchRows } from '../../src/tv-solid/engineSearch';
 import { deviceTokens, response } from './client-helpers';
 
 const identity = (id: string, episode: number | null = null) => ({ id, kind: 'series', ids: [], edition: null,
@@ -21,6 +22,25 @@ const record = (item: Card): PlaybackRecord => ({ identity: item.identity, paren
   updated_at_millis: 1000, completed_at_millis: 1000, poster: null, landscape: null, times_watched: 1 });
 
 describe('server engine TV boundary', () => {
+  it('searches once across media types and preserves host order within each labeled row', async () => {
+    const anime = { ...card('naruto'), category: 'anime' };
+    const movie = { ...card('naruto-movie'), identity: { ...identity('naruto-movie'), kind: 'movie' } };
+    const fetcher = vi.fn(async (_input: RequestInfo | URL) => response({ cards: [anime, movie, card('series'),
+      { ...card('naruto-two'), category: 'anime' }], next_cursor: null, complete: true }));
+    const api = new EngineTvApi({ baseUrl: 'https://fixture.example', fetch: fetcher });
+    const result = await api.globalSearch('Naruto');
+    const rows = engineSearchRows(result.items);
+    expect(fetcher).toHaveBeenCalledTimes(1);
+    const url = new URL(String(fetcher.mock.calls[0]?.[0]));
+    expect(url.pathname).toBe('/api/v3/discover');
+    expect(url.searchParams.get('type')).toBe('all');
+    expect(url.searchParams.get('search')).toBe('Naruto');
+    expect(rows.map(row => [row.id, row.name, row.items.map(item => item.id)])).toEqual([
+      ['metadata:anime', 'Anime', ['naruto', 'naruto-two']],
+      ['metadata:movie', 'Movies', ['naruto-movie']],
+      ['metadata:series', 'TV Shows', ['series']],
+    ]);
+  });
   it('resolves public image descriptors to the selected server without sending them to an external resizer', () => {
     const path = '/api/v3/images/simkl/posters/abc_m.webp';
     const value = engineArtwork({ poster: path, nested: { landscape: path }, logo: 'https://images.example/logo.png' }, 'https://fixture.example');

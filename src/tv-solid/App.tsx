@@ -114,6 +114,7 @@ import {
   timeRange,
 } from "../ui/guide-core";
 import { cardPresentation, presentation } from "../core/presentations";
+import { engineSearchRows } from './engineSearch';
 import {
   catalogDefaults,
   catalogFilters,
@@ -661,7 +662,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         liveOffset: 0,
         liveCategories: [] as LiveCategory[],
         liveFilterId: "all",
-        liveFilters: liveFilters([], "all") as LiveFilterView[],
+        liveFilters: liveFilters([], "all", api.supportsLiveCollections) as LiveFilterView[],
         liveGuides: {} as Record<string, Guide>,
         liveSelectedRow: 0,
         liveSelectedCellIndex: null as number | null,
@@ -2740,6 +2741,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
           this.focusSearchKey(0);
         }, 60);
         try {
+          if (api.supportsGlobalSearch) return;
           const catalogs = await api.catalogs({ signal: scope.signal });
           if (generation === searchGeneration && !scope.signal.aborted)
             this.searchCatalogs = catalogs;
@@ -2789,6 +2791,16 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         const rows: SearchRow[] = [];
         let partial = false;
         try {
+          if (api.supportsGlobalSearch) {
+            const page = await api.globalSearch(query, { signal: scope.signal });
+            if (generation !== searchGeneration || scope.signal.aborted) return;
+            this.searchRows = engineSearchRows(page.items);
+            this.searchPartial = false; this.searchBusy = false;
+            this.refreshSearchLayout();
+            this.searchStatus = page.items.length ? '' : 'No matching titles';
+            noteSearchState(query, searchCanonicalCards.length, false, false, true);
+            return;
+          }
           const catalogs = this.searchCatalogs.length
             ? this.searchCatalogs
             : await api.catalogs({ signal: scope.signal });
@@ -3142,7 +3154,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
           liveCategoryPrevious = categoriesResult.value.previousCursor;
           liveSnapshot = categoriesResult.value;
         }
-        liveCanonicalFilters = liveFilters(this.liveCategories, "all");
+        liveCanonicalFilters = liveFilters(this.liveCategories, "all", api.supportsLiveCollections);
         this.liveFilters = liveCanonicalFilters.map((filter) => ({
           ...filter, x:filter.x-this.liveFilterOffset,
         }));
@@ -3236,7 +3248,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         this.liveNowLabel = view.nowLabel;
         liveCanonicalFilters = liveFilters(
           this.liveCategories,
-          this.liveFilterId,
+          this.liveFilterId, api.supportsLiveCollections,
         );
         this.liveFilters = liveCanonicalFilters.map((filter) => ({
           ...filter, x:filter.x-this.liveFilterOffset,

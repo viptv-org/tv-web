@@ -6,11 +6,25 @@ import type { Card, LibrarySnapshot } from '../../vendor/engine/wire';
 import { engineCard, itemIdentity, identityKey } from './engine-card';
 import { engineCatalog, numericCursor } from './engine-catalog';
 import { continuationPage, EngineContinuationTransport } from './engine-continuation';
+import { EngineLiveTransport } from './engine-live';
 
 /** Remote TV adapter: the engine host owns providers, identity mapping and viewing policy. */
 export class EngineTvApi extends TvApi {
   protected override proxyEngineArtwork() { return true; }
+  override get supportsLiveCollections() { return false; }
+  override get supportsGlobalSearch() { return true; }
+  override globalSearch(query: string, options?: RequestOptions) { return this.engineCatalog.discover({ type: 'all', search: query }, options); }
   private readonly continuation = new EngineContinuationTransport((path, input, options) => this.raw(path, input, true, options));
+  private readonly liveEngine = new EngineLiveTransport((path, input, options) => this.raw(path, input, true, options), () => {
+    if (!this.tokens?.profileId) throw new TvApiError(401, 'Choose a profile.');
+    return this.tokens.profileId;
+  });
+  override liveV2(query: import('./types').LiveCatalogQuery = {}, options?: RequestOptions) {
+    return this.liveEngine.page(query, options);
+  }
+  override liveCategoriesV2(query = {}, options?: RequestOptions) { return this.liveEngine.categories(query, options); }
+  override guideV2(channel: string, options?: RequestOptions) { return this.liveEngine.guide(channel, options); }
+  override liveSourceV2(channel: string, options?: RequestOptions) { return this.liveEngine.source(channel, options); }
   async homeProjection(profile: string, options?: RequestOptions) {
     const value = await this.bootstrap(options);
     if (String(value.identity.profile_id) !== profile) throw new TvApiError(409, 'The selected profile changed.');

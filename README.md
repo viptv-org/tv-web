@@ -10,7 +10,7 @@ Playback uses the existing scoped v2 source-discovery and playback lifecycle. Ti
 
 Browser image delivery uses the backend's public validated image descriptors. Relative descriptors resolve against the selected API origin and bypass external resizing. Transparent title logos retain the supplied image.
 
-Current migration evidence: TypeScript and the production bundle passed; 315 unit/component checks passed; Tizen, Vizio and webOS launcher navigation passed in Chromium. The real local HTTPS backend displayed Home and Details with one startup aggregate, no per-card metadata fanout and no JavaScript errors. These checks do not certify physical TV decoding or full design parity.
+Current migration evidence: TypeScript and the production bundle passed; 323 unit/component checks passed; Tizen, Vizio and webOS launcher navigation passed in Chromium. The real local HTTPS backend displayed Home and Details with one startup aggregate, no per-card metadata fanout and no JavaScript errors. One host search returned 38 Naruto results grouped by media type. Profile-scoped Live uses opaque M3U and other native host connection IDs; unsupported collection controls are hidden. A cold artwork 502 regression after a backend restart is under investigation. These checks do not certify physical TV decoding or full design parity.
 
 The tree still contains legacy React and Tauri integration awaiting retirement. The active experimental TV entry uses the remote engine adapter. Nothing in this branch has been deployed to production.
 

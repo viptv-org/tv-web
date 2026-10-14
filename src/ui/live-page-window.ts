@@ -8,7 +8,7 @@ export class LivePageWindow {
   end = 0;
   reset(): void { this.pages = []; this.start = 0; this.end = 0; }
   get items(): readonly MediaItem[] { return this.pages.flatMap(page => [...page.items]); }
-  get next(): string | null { return this.pages.at(-1)?.nextCursor ?? null; }
+  get next(): string | null { return this.pages[this.pages.length - 1]?.nextCursor ?? null; }
   get previous(): string | null { return this.pages[0]?.previousCursor ?? null; }
   replace(page: LiveCatalogPage): void { this.reset(); this.pages = [page]; this.end = page.items.length; }
   append(page: LiveCatalogPage): number {

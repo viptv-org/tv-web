@@ -77,8 +77,9 @@ const widthOf = (label: string) =>
 export function liveFilters(
   categories: readonly LiveCategory[],
   active: string,
+  collections = true,
 ): LiveFilterView[] {
-  const options = filterOptions(categories);
+  const options = filterOptions(categories).filter(option => collections || !['favorites', 'recent'].includes(option.id));
   let x = 258;
   const choices = options.map((option) => {
     const width = option.id === "all" ? 237 : widthOf(option.label);

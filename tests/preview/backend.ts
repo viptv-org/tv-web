@@ -289,7 +289,7 @@ function discover(url: URL, family: Family) {
   let ids: string[];
   if (search) {
     const want = type === 'series' || type === 'anime' ? 'series' : 'movie';
-    ids = searchPool.filter(id => byId.get(id)!.type === want && byId.get(id)!.name.toLowerCase().includes(search));
+    ids = searchPool.filter(id => (type === 'all' || byId.get(id)!.type === want) && byId.get(id)!.name.toLowerCase().includes(search));
     // Search ranks the reference's "naruto" results first.
     ids.sort((left, right) => searchPool.indexOf(left) - searchPool.indexOf(right));
     if (search === 'naruto') ids = ids.filter(id => id !== 'tt-naruto-movie-tv');

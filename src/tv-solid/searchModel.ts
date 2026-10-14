@@ -41,6 +41,7 @@ export const searchKeys: SearchKeyView[] = [
 ];
 
 export interface SearchRow {
+  id?: string;
   name: string;
   items: readonly MediaItem[];
   catalog?: Catalog;
@@ -78,7 +79,7 @@ export function projectSearch(
   cards: SearchCardView[];
 } {
   const sections = rows.map(row => ({
-    key: row.catalog ? `${row.catalog.addonId ?? ""}:${row.catalog.type}:${row.catalog.id}` : `live:${row.name}`,
+    key: row.id ?? (row.catalog ? `${row.catalog.addonId ?? ""}:${row.catalog.type}:${row.catalog.id}` : `live:${row.name}`),
     title: row.catalog?.addonName ? `${row.catalog.addonName} · ${row.name}` : row.name,
     items: row.items.filter((item, index, list) => list.findIndex(other => other.id === item.id && other.type === item.type) === index),
   })).filter(section => section.items.length > 0);
