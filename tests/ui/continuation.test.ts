@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import type { MediaItem, MediaSource, PlaybackCapabilities, PlaybackPreferences, TvApi } from '../../src/api';
 import { exactResumeSource, resolveNext } from '../../src/ui/continuation';
@@ -37,5 +37,16 @@ describe('resolveNext', () => {
     expect(uhd?.source?.id).toBe('uhd');
     const hd = await resolveNext(api, '1', { ...item, sourceAddonId: 'addon:a' }, preferences, undefined, device(1080));
     expect(hd?.source?.id).toBe('hd');
+  });
+  it('cancels an abandoned next-episode discovery without canceling normally completed jobs', async () => {
+    const scope = new AbortController(), cancelSources = vi.fn(async () => {});
+    await resolveNext({ ...api, cancelSources }, '1', item, preferences, undefined, device(1080));
+    expect(cancelSources).not.toHaveBeenCalled();
+    const pendingApi = { ...api, cancelSources, pollSourcesStep: async () => {
+      scope.abort(); return { done: false, sources, producers: [], events: [],
+        state: { after: 0, sources, polls: 1, errors: null, producers: [] } };
+    } };
+    await expect(resolveNext(pendingApi, '1', item, preferences, scope.signal, device(1080))).rejects.toMatchObject({ name: 'AbortError' });
+    expect(cancelSources).toHaveBeenCalledExactlyOnceWith('discovery');
   });
 });

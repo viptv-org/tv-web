@@ -202,12 +202,14 @@ export class TvApiCatalog extends TvApiClientBase {
     const id = idAt(v, "id");
     return { id };
   }
-  /**
-   * One polling step of stream discovery. Both the poll path (with its
-   * cursor) and the cursor/dedup/budget/completion policy come from the
-   * shared Rust core; the caller supplies its accumulated state and
-   * transports one page at a time.
-   */
+  /** Discovery cancellation retains already-published playback source grants. */
+  async cancelSources(id: string): Promise<void> {
+    const scope = new AbortController(), timer = setTimeout(() => scope.abort(), 5000);
+    try { await this.raw(`/api/v2/streams/${segment(id)}`, { method: 'DELETE' }, true, { signal: scope.signal }); }
+    finally { clearTimeout(timer); }
+  }
+
+  /** Cursor/dedup/budget/completion policy comes from the shared Rust reducer. */
   async pollSourcesStep(
     id: string,
     state: SourcesPollState,

@@ -13,7 +13,7 @@ export type SolidTVContinuationResult =
   | { readonly kind: "failed"; readonly error: Error; readonly active: Active | null; readonly outgoing: Active | null; readonly outgoingPosition: number; readonly rollbackFailed: boolean };
 
 export interface SolidTVContinuationOptions {
-  readonly api: Pick<TvApi, "nextEpisode" | "sources" | "pollSourcesStep" | "saveProgress">;
+  readonly api: Pick<TvApi, "nextEpisode" | "sources" | "pollSourcesStep" | "saveProgress"> & Partial<Pick<TvApi, 'cancelSources'>>;
   readonly platform: TvPlatform;
   readonly getRuntime: () => SolidTVPlaybackRuntime | undefined;
   readonly profileId: () => string;
@@ -81,6 +81,7 @@ export function createSolidTVContinuation(options: SolidTVContinuationOptions) {
           },
           sources: (...args) => options.api.sources(...args),
           pollSourcesStep: (...args) => options.api.pollSourcesStep(...args),
+          cancelSources: options.api.cancelSources ? id => options.api.cancelSources!(id) : undefined,
         }, profileId, previous, preferences, scope.signal, capabilities, attempted);
         if (cancelled() || !intent?.source) {
           if (missingStatus === "next") missingStatus = "sources-unavailable";

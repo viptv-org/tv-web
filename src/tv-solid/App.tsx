@@ -4963,6 +4963,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
           this.revealSourceControls();
           this.focusSourceChip(0);
         }, 50);
+        let discoveryId: string | undefined, discoveryDone = false;
         try {
           void api.addons({ signal: scope.signal }).then((addons) => {
             if (generation !== sourceGeneration || scope.signal.aborted) return;
@@ -4974,6 +4975,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
               this.sourceProviderLabel = this.sourceProducers.find((producer) => producer.key === this.source.provider)?.label ?? this.source.provider;
           }).catch(() => undefined);
           const discovery = await api.sources(item, { signal: scope.signal });
+          discoveryId = discovery.id;
           let state = {
             after: 0,
             sources: [] as readonly MediaSource[],
@@ -4984,6 +4986,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
               signal: scope.signal,
               retainProducerFailures: true,
             });
+            discoveryDone = step.done;
             if (generation !== sourceGeneration || scope.signal.aborted) return;
             state = step.state;
             this.sourceProducers = observeSourceProducers(this.sourceProducers, step.events, sourceProducerNames);
@@ -5025,6 +5028,8 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
           this.sourceNotice =
             cause instanceof Error ? cause.message : "Could not find sources.";
           this.updateSources(this.source.sources, false, true);
+        } finally {
+          if (discoveryId && !discoveryDone) void api.cancelSources(discoveryId).catch(() => undefined);
         }
       },
       updateSources(

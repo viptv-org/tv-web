@@ -20,7 +20,7 @@ import type { SessionStartIntent } from "@viptv/video";
  * add-ons to supply the best available next episode.
  */
 export async function resolveNext(
-  api: Pick<TvApi, "nextEpisode" | "sources" | "pollSourcesStep">,
+  api: Pick<TvApi, "nextEpisode" | "sources" | "pollSourcesStep"> & Partial<Pick<TvApi, 'cancelSources'>>,
   profileId: string,
   current: MediaItem,
   preferences: PlaybackPreferences,
@@ -67,19 +67,24 @@ export function exactResumeSource(item: MediaItem, sources: readonly MediaSource
 }
 
 async function collectSources(
-  api: Pick<TvApi, "pollSourcesStep">,
+  api: Pick<TvApi, "pollSourcesStep"> & Partial<Pick<TvApi, 'cancelSources'>>,
   id: string,
   signal?: AbortSignal,
 ): Promise<readonly MediaSource[]> {
   // The polling policy (cursor, dedup, three-minute budget, completion) is
   // the shared Rust reducer; this loop owns only cancellation and the delay.
   let state: SourcesPollState = { after: 0, sources: [], polls: 0 };
-  for (;;) {
-    throwIfAborted(signal);
-    const step = await api.pollSourcesStep(id, state, { signal });
-    if (step.done) return step.sources;
-    state = step.state;
-    await delay(1_500, signal);
+  let complete = false;
+  try {
+    for (;;) {
+      throwIfAborted(signal);
+      const step = await api.pollSourcesStep(id, state, { signal });
+      if (step.done) { complete = true; return step.sources; }
+      state = step.state;
+      await delay(1_500, signal);
+    }
+  } finally {
+    if (!complete) void api.cancelSources?.(id).catch(() => undefined);
   }
 }
 
