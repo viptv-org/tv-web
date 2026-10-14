@@ -5,7 +5,7 @@ candidate rows and their loading/empty/error messages have no individually match
 uploaded board yet. They remain provisional for replacement with the supplied
 provider-subtitle design. No separate provider search selector was added.
 
-Full TV-web five-title hero presentation, richer provider discovery controls and
+Full TV-web hero/header visual parity, richer provider discovery controls and
 related-content layout remain migration work; their absence is not design parity.
 
 The engine-backed Home now rotates up to five distinct host-selected titles with
