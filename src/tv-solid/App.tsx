@@ -11,7 +11,7 @@ import { TextEntry, type TextEntryProps } from "./TextEntry";
 import { UpNextOverlay, PlayerDialog, type PlayerDialogProps } from "./PlayerOverlays";
 import { nextFromEpisodes, UP_NEXT_SECONDS, UP_NEXT_TICK_MS, type UpNextCard } from "../ui/app/upNext";
 import type { createSolidTVContinuation, SolidTVContinuationResult } from "./continuationRuntime";
-import { catalogFilterLabel, searchPlan } from "../ui/catalogFilters";
+import { searchPlan } from "../ui/catalogFilters";
 import { heroLabelWidth } from "./heroGeometry";
 import { HomeBackdrop } from "./HomeBackdrop";
 import { HomeHeroIndicators } from "./HomeHeroIndicators";
@@ -56,7 +56,6 @@ import { HomeShelfCache, homeRowWindow, homeVisibleCards } from "./homeShelfCach
 import { CatalogRevisionMonitor } from "../ui/app/catalogRevisionMonitor";
 import { railIcon } from "./railIcons";
 import { RailItem } from "./RailFocus";
-import { DiscoverFilterOption } from "./DiscoverFocus";
 import { DiscoverScreen } from "./DiscoverScreen";
 import { LibraryScreen } from "./LibraryScreen";
 import { libraryCard, libraryGrid } from "./libraryModel";
@@ -117,6 +116,11 @@ import {
   timeRange,
 } from "../ui/guide-core";
 import { cardPresentation, presentation } from "../core/presentations";
+import { DiscoveryFilterSheet } from './DiscoveryFilterSheet';
+import { discoveryFilterMethods } from './discoveryFilterMethods';
+import { hostDiscoveryMethods, focusDiscoverFallback } from './hostDiscoveryMethods';
+import { selectedValues, type DiscoveryValues } from './discoveryQuery';
+import type { CatalogFilter } from '../ui/catalogFilters';
 import { engineSearchRows } from './engineSearch';
 import {
   catalogDefaults,
@@ -162,7 +166,6 @@ import {
   emptyProviderChoice,
 } from "./SourceFocus";
 import {
-  noteDiscoverFilter,
   noteDiscoverWindow,
   noteFocus,
   noteLibraryState,
@@ -287,9 +290,8 @@ const pairingFrame = {
 } as const;
 
 /**
- * Staged SolidTV renderer for the first TV sign-in slice. The existing TV
- * launcher remains on React until every screen and interaction is qualified.
- * The API and Rust session driver are shared; only rendering/input differ.
+ * Experimental SolidTV application. The API and Rust session driver are shared;
+ * Solid owns rendering/input. Full supplied-design and physical-TV acceptance remain pending.
  */
 export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
   let seasonNode: ElementNode | undefined;
@@ -380,7 +382,6 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
       LiveDetailsScreen,
       SettingsScreen,
       TitleMenuScreen,
-      DiscoverFilterOption,
       TitleAction,
       EpisodeTile,
       SourceChip,
@@ -571,13 +572,12 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         discoverSelectLabel: "",
         discoverOptionsIcon: "",
         discoverOptionsLabel: "",
-        discoverBackLabel: "",
-        discoverCancelLabel: "",
-        discoverFilterOkLabel: "",
-        discoverFilterSelectLabel: "",
         discoverCatalogs: [] as Catalog[],
+        discoverType: "movie",
+        discoverTypes: [] as string[],
+        discoverFilter: null as CatalogFilter | null,
         discoverCatalog: null as Catalog | null,
-        discoverValues: {} as Record<string, string>,
+        discoverValues: {} as DiscoveryValues,
         discoverItems: [] as MediaItem[],
         discoverNextSkip: null as number | null,
         discoverBusy: false,
@@ -594,10 +594,6 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         discoverWindowStart: 0,
         discoverFilterOpen: false,
         discoverFilterName: "",
-        discoverFilterTitle: "",
-        discoverFilterValue: "",
-        discoverOptionLabels: Array.from({ length: 8 }, () => ""),
-        discoverOptionIndex: 0,
         discoverFilterReturnChip: 0,
         discoverReturnPhase: "home" as "home" | "library" | "search",
         discoverReturnZone: "action" as
@@ -1102,17 +1098,6 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
           const item = this.discoverItems[Number(position)];
           if (item) this.openTitleMenu(item, "discover", Number(position));
         });
-        this.$listen("discover-option-focused", (position: number) => {
-          this.discoverOptionIndex = Number(position);
-        });
-        this.$listen("discover-option-move", (delta: number) =>
-          this.moveDiscoverOption(Number(delta)),
-        );
-        this.$listen(
-          "discover-option-activate",
-          () => void this.selectDiscoverOption(),
-        );
-        this.$listen("discover-option-close", () => this.closeDiscoverFilter());
         this.$listen("library-segment-focused", (position: number) => {
           this.librarySegmentIndex = Number(position);
         });
@@ -2025,6 +2010,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
           this.discoverOptionsLabel = "Options";
         }, 0);
         try {
+          if (api.supportsDiscoveryControls) { await this.loadDiscoverType(this.discoverType); return; }
           const available = await api.catalogs({ signal: scope.signal });
           if (generation !== discoverGeneration || scope.signal.aborted) return;
           this.discoverCatalogs = available;
@@ -2051,7 +2037,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
       },
       async loadDiscoverCatalog(
         catalog: Catalog,
-        values: Record<string, string> = catalogDefaults(catalog),
+        values: DiscoveryValues = catalogDefaults(catalog),
         skip = 0,
         focusCard = true,
       ) {
@@ -2066,9 +2052,11 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         discoverScope = scope;
         this.discoverCatalog = catalog;
         this.discoverValues = values;
-        const chips = discoverChips(this.discoverCatalogs, catalog, values);
+        this.discoverType = catalog.type;
+        const chips = discoverChips(this.discoverCatalogs, catalog, values, this.discoverTypes.length ? this.discoverTypes : undefined);
         this.discoverChips = chips;
         if (!skip) {
+          this.discoverNextSkip = null;
           this.discoverItems = [];
           this.discoverWindowStart = 0;
           this.discoverCardIndex = 0;
@@ -2079,11 +2067,14 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         if (!request) {
           this.discoverBusy = false;
           this.discoverError =
-            "Choose the required filters to browse this catalog.";
+            "Choose valid filters to browse this catalog.";
           this.revealDiscoverChips();
+          const missing = catalogFilters(catalog).find(filter => filter.required && !selectedValues(values[filter.name]).length);
+          focusDiscoverFallback(this, missing?.name);
           return;
         }
         this.discoverBusy = true;
+        if (this.discoverFocusZone === 'chip') focusDiscoverFallback(this, undefined, this.discoverChipIndex);
         try {
           const page = await api.discover(request, { signal: scope.signal });
           if (generation !== discoverGeneration || scope.signal.aborted) return;
@@ -2094,6 +2085,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
           this.discoverError = this.discoverItems.length ? "" : "No titles yet";
           this.refreshDiscoverCards();
           this.revealDiscoverChips();
+          if (!this.discoverItems.length) focusDiscoverFallback(this, undefined, this.discoverChipIndex);
           if (!skip && focusCard)
             setTimeout(() => {
               if (
@@ -2137,6 +2129,8 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         }, 0);
       },
       focusDiscoverChip(index: number) {
+        if (!this.discoverChips.length) return;
+        index = Math.max(0, Math.min(this.discoverChips.length - 1, index));
         this.discoverFocusZone = "chip";
         this.discoverChipIndex = index;
         const focused = this.discoverChips[index];
@@ -2241,6 +2235,11 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         const chip = this.discoverChips[this.discoverChipIndex];
         if (!chip?.visible) return;
         if (chip.kind === "group") {
+          if (api.supportsDiscoveryControls) {
+            const type = this.discoverTypes.find(type => discoverTypeGroup(type) === chip.value);
+            if (type && type !== this.discoverType) void this.loadDiscoverType(type);
+            return;
+          }
           const first = catalogForGroup(
             this.discoverCatalogs,
             chip.value as ReturnType<typeof discoverTypeGroup>,
@@ -2271,103 +2270,12 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
             );
         } else this.openDiscoverFilter(chip.value);
       },
-      openDiscoverFilter(name: string) {
-        const filter =
-          this.discoverCatalog &&
-          catalogFilters(this.discoverCatalog).find(
-            (candidate) => candidate.name === name,
-          );
-        if (!filter) return;
-        if (!filter.options.length) {
-          const catalog = this.discoverCatalog;
-          if (!catalog) return;
-          this.openTextEntry({
-            title: catalogFilterLabel(name), initialValue: this.discoverValues[name] ?? "", maxLength: 256,
-            onSubmit: async (value, signal) => {
-              const trimmed = value.trim();
-              if (filter.required && !trimmed) throw new Error("Enter a value for this required filter.");
-              const loading = this.loadDiscoverCatalog(catalog, { ...this.discoverValues, [name]: trimmed }, 0, false);
-              const scope = discoverScope;
-              const cancel = () => scope?.abort();
-              signal?.addEventListener("abort", cancel, {once:true});
-              try { await loading; } finally { signal?.removeEventListener("abort", cancel); }
-            },
-          });
-          return;
-        }
-        this.discoverFilterName = name;
-        this.discoverFilterTitle = "";
-        this.discoverFilterOkLabel = "";
-        this.discoverFilterSelectLabel = "";
-        this.discoverBackLabel = "";
-        this.discoverCancelLabel = "";
-        this.discoverFilterValue = this.discoverValues[name] || "Any";
-        this.discoverFilterReturnChip = this.discoverChipIndex;
-        this.discoverOptionLabels = Array.from(
-          { length: 8 },
-          (_, index) =>
-            (filter.required
-              ? [...filter.options, "Cancel"]
-              : ["Any", ...filter.options, "Cancel"])[index] ?? "",
-        );
-        this.discoverFilterOpen = true;
-        noteDiscoverFilter(true);
-        setTimeout(() => {
-          if (!this.discoverFilterOpen) return;
-          this.discoverFilterTitle =
-            name === "genre"
-              ? "Genre"
-              : name.charAt(0).toUpperCase() + name.slice(1);
-          this.discoverFilterOkLabel = "OK";
-          this.discoverFilterSelectLabel = "Select";
-          this.discoverBackLabel = "BACK";
-          this.discoverCancelLabel = "Cancel";
-          for (let index = 0; index < 8; index++)
-            $selectRevealable(this.$select(`discoverOption${index}`))?.reveal?.();
-          this.focusDiscoverOption(
-            Math.max(
-              0,
-              this.discoverOptionLabels.indexOf(this.discoverFilterValue),
-            ),
-          );
-        }, 0);
-      },
-      focusDiscoverOption(index: number) {
-        this.discoverOptionIndex = index;
-        this.$select(`discoverOption${index}`)?.$focus();
-      },
-      moveDiscoverOption(delta: number) {
-        const last = Math.max(
-          0,
-          this.discoverOptionLabels.filter(Boolean).length - 1,
-        );
-        this.focusDiscoverOption(
-          Math.max(0, Math.min(last, this.discoverOptionIndex + delta)),
-        );
-      },
-      closeDiscoverFilter() {
-        if (!this.discoverFilterOpen) return;
-        this.discoverFilterOpen = false;
-        noteDiscoverFilter(false);
-        this.focusDiscoverChip(this.discoverFilterReturnChip);
-      },
-      async selectDiscoverOption() {
-        const value = this.discoverOptionLabels[this.discoverOptionIndex];
-        const catalog = this.discoverCatalog;
-        if (!catalog || !value) return;
-        if (value === "Cancel") {
-          this.closeDiscoverFilter();
-          return;
-        }
-        const name = this.discoverFilterName;
-        this.closeDiscoverFilter();
-        void this.loadDiscoverCatalog(
-          catalog,
-          { ...this.discoverValues, [name]: value === "Any" ? "" : value },
-          0,
-          false,
-        );
-      },
+      ...discoveryFilterMethods(() => discoverScope),
+      ...hostDiscoveryMethods(api, () => {
+        discoverScope?.abort();
+        const scope = api.createScope(); discoverScope = scope;
+        return { scope, generation: ++discoverGeneration };
+      }, generation => generation === discoverGeneration),
       returnFromDiscover() {
         discoverScope?.abort();
         ++discoverGeneration;
@@ -7817,105 +7725,9 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
             color={s.secondary}
           />
         </TvView>
-        <TvView zIndex={10} show={s.discoverFilterOpen}>
-          <TvView w={1920} h={1080} color={s.sourceScrim} />
-          <TvView x={1100} y={0} w={820} h={1080} color={s.sourcePanelGround} />
-          <TvText
-            x={1164}
-            y={64}
-            content={s.discoverFilterTitle}
-            font={"Bricolage700"}
-            size={44}
-            color={s.primary}
-          />
-          <DiscoverFilterOption
-            screenRef={"discoverOption0"}
-            position={0}
-            label={s.discoverOptionLabels[0]}
-            selected={s.discoverOptionLabels[0] === s.discoverFilterValue}
-            visible={s.discoverOptionLabels[0] !== ""}
-            x={1158}
-            y={130}
-          />
-          <DiscoverFilterOption
-            screenRef={"discoverOption1"}
-            position={1}
-            label={s.discoverOptionLabels[1]}
-            selected={s.discoverOptionLabels[1] === s.discoverFilterValue}
-            visible={s.discoverOptionLabels[1] !== ""}
-            x={1158}
-            y={224}
-          />
-          <DiscoverFilterOption
-            screenRef={"discoverOption2"}
-            position={2}
-            label={s.discoverOptionLabels[2]}
-            selected={s.discoverOptionLabels[2] === s.discoverFilterValue}
-            visible={s.discoverOptionLabels[2] !== ""}
-            x={1158}
-            y={318}
-          />
-          <DiscoverFilterOption
-            screenRef={"discoverOption3"}
-            position={3}
-            label={s.discoverOptionLabels[3]}
-            selected={s.discoverOptionLabels[3] === s.discoverFilterValue}
-            visible={s.discoverOptionLabels[3] !== ""}
-            x={1158}
-            y={412}
-          />
-          <DiscoverFilterOption
-            screenRef={"discoverOption4"}
-            position={4}
-            label={s.discoverOptionLabels[4]}
-            selected={s.discoverOptionLabels[4] === s.discoverFilterValue}
-            visible={s.discoverOptionLabels[4] !== ""}
-            x={1158}
-            y={506}
-          />
-          <DiscoverFilterOption
-            screenRef={"discoverOption5"}
-            position={5}
-            label={s.discoverOptionLabels[5]}
-            selected={s.discoverOptionLabels[5] === s.discoverFilterValue}
-            visible={s.discoverOptionLabels[5] !== ""}
-            x={1158}
-            y={600}
-          />
-          <DiscoverFilterOption
-            screenRef={"discoverOption6"}
-            position={6}
-            label={s.discoverOptionLabels[6]}
-            selected={s.discoverOptionLabels[6] === s.discoverFilterValue}
-            visible={s.discoverOptionLabels[6] !== ""}
-            x={1158}
-            y={694}
-          />
-          <DiscoverFilterOption
-            screenRef={"discoverOption7"}
-            position={7}
-            label={s.discoverOptionLabels[7]}
-            selected={s.discoverOptionLabels[7] === s.discoverFilterValue}
-            visible={s.discoverOptionLabels[7] !== ""}
-            x={1158}
-            y={788}
-          />
-          <TvView
-            x={1100}
-            y={976}
-            w={820}
-            h={104}
-            color={s.sourcePanelGround}
-          />
-
-
-
-
-
-
-
-
-        </TvView>
+        <Show when={s.discoverFilterOpen ? s.discoverFilter : null} keyed>{filter => <DiscoveryFilterSheet
+          filter={filter} selected={selectedValues(s.discoverValues[filter.name])}
+          cancel={() => s.closeDiscoverFilter()} apply={values => s.applyDiscoverFilter(values)} />}</Show>
         <LiveDetailsScreen
           screenRef={"liveDetailsScreen"}
           show={s.liveDetailsOpen}

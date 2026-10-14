@@ -32,6 +32,10 @@ export class TvApiClientBase {
   bootstrap(options?: RequestOptions) { return this.engineBootstrap.get(options); }
   get supportsLiveCollections(): boolean { return true; }
   get supportsGlobalSearch(): boolean { return false; }
+  get supportsDiscoveryControls(): boolean { return false; }
+  discoveryControls(_type: string, _options?: RequestOptions): Promise<import('./types').DiscoveryControls> {
+    return Promise.reject(new TvApiError(422, 'Discovery filters are unavailable on this connection.'));
+  }
   globalSearch(_query: string, _options?: RequestOptions): Promise<import('./types').DiscoverPage> {
     return Promise.reject(new TvApiError(422, 'Global search is unavailable.'));
   }

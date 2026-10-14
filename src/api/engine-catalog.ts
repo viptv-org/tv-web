@@ -4,6 +4,7 @@ import type { RequestOptions } from './client-shared';
 import { params, segment, TvApiError } from './client-shared';
 import { engineCard } from './engine-card';
 import type { EngineRequest } from './engine-bootstrap';
+import type { DiscoveryControls } from './discovery-types';
 
 /** Project host actions into the existing shelf UI without interpreting opaque row IDs. */
 export function engineCatalog(row: HomeRow): Catalog | undefined {
@@ -23,10 +24,14 @@ export function engineRow(catalog: Catalog): HomeRow | undefined {
 
 export class EngineCatalogTransport {
   constructor(private readonly request: EngineRequest) {}
+  async controls(type: string, options?: RequestOptions): Promise<DiscoveryControls> {
+    return await this.request(`/api/v3/discovery-controls${params({ type })}`, {}, options) as unknown as DiscoveryControls;
+  }
   async discover(input: DiscoverRequest, options?: RequestOptions): Promise<DiscoverPage> {
     const value = await this.request(`/api/v3/discover${params({ type: input.type,
       catalog: input.catalog, addon_id: input.addonId, skip: input.skip, search: input.search,
-      genre: input.genre, extras: input.extras ? JSON.stringify(input.extras) : undefined })}`, {}, options) as unknown as CatalogPage;
+      genre: input.genre, extras: input.extras ? JSON.stringify(input.extras) : undefined,
+      values: input.values?.length ? JSON.stringify(input.values) : undefined })}`, {}, options) as unknown as CatalogPage;
     return { items: value.cards.map(card => engineCard(card)), hasMore: value.next_cursor != null,
       nextSkip: value.next_cursor == null ? undefined : numericCursor(value.next_cursor) };
   }

@@ -16,6 +16,7 @@ describe("browse catalog helpers", () => {
     expect(catalogChoiceLabel(catalog("x", "Plain", "movie"))).toBe("Plain");
     expect(catalogChipLabels([popular, seasonal])).toEqual(["Popular", "Seasonal"]);
     expect(catalogChipLabels([popular, other, seasonal])).toEqual(["Cinemeta · Popular", "AIOMetadata · Popular", "Seasonal"]);
+    expect(catalogChipLabels([popular, { ...popular, addonId: 22 }])).toEqual(["Cinemeta · Popular (1)", "Cinemeta · Popular (2)"]);
   });
 
   it("names filter chips with their value, Any, or Required", () => {

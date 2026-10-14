@@ -49,7 +49,10 @@ export interface DiscoverRequest {
   readonly search?: string;
   readonly genre?: string;
   readonly extras?: Readonly<Record<string, string>>;
+  readonly values?: readonly import('../../vendor/engine/wire').QueryValue[];
 }
+
+export type { DiscoveryControls } from './discovery-types';
 
 export type DiscoverPage = CoreView<Core.DiscoverPage>;
 

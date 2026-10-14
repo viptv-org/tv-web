@@ -10,6 +10,8 @@ import { EngineLiveTransport } from './engine-live';
 
 /** Remote TV adapter: the engine host owns providers, identity mapping and viewing policy. */
 export class EngineTvApi extends TvApi {
+  override get supportsDiscoveryControls(): boolean { return true; }
+  override discoveryControls(type: string, options?: RequestOptions) { return this.engineCatalog.controls(type, options); }
   protected override proxyEngineArtwork() { return true; }
   override get supportsLiveCollections() { return false; }
   override get supportsGlobalSearch() { return true; }

@@ -1,4 +1,7 @@
-import type { Catalog, DiscoverRequest, MediaItem } from "../api";
+import type { Catalog, MediaItem } from "../api";
+import { filterTitle, selectionLabel, type DiscoveryValues } from "./discoveryQuery";
+import { requestForCatalog } from "./discoveryQuery";
+export { requestForCatalog } from "./discoveryQuery";
 import { artworkUrl, cardPresentation } from "../core/presentations";
 import {
   catalogChipLabels,
@@ -70,45 +73,23 @@ export function discoverCard(item: MediaItem): DiscoverCardView {
   };
 }
 
-export function requestForCatalog(
-  catalog: Catalog,
-  values: Readonly<Record<string, string>>,
-  skip = 0,
-): DiscoverRequest | undefined {
-  if (
-    catalogFilters(catalog).some(
-      (filter) => filter.required && !values[filter.name]?.trim(),
-    )
-  )
-    return undefined;
-  const { search, genre, ...other } = values;
-  return {
-    type: catalog.type,
-    catalog: catalog.id,
-    addonId: catalog.addonId,
-    skip,
-    search: search || undefined,
-    genre: genre || undefined,
-    extras: Object.fromEntries(
-      Object.entries(other).filter(([, value]) => value !== ""),
-    ),
-  };
-}
-
 export function initialCatalog(
   catalogs: readonly Catalog[],
 ): Catalog | undefined {
-  return catalogs.find((catalog) => catalog.type !== "live") ?? catalogs[0];
+  const available = catalogs.filter(catalog => catalog.type !== 'live');
+  return available.find(catalog => requestForCatalog(catalog, catalogDefaults(catalog))) ?? available[0] ?? catalogs[0];
 }
 
 export function discoverChips(
   catalogs: readonly Catalog[],
   selected: Catalog | undefined,
-  values: Readonly<Record<string, string>>,
+  values: DiscoveryValues,
+  types?: readonly string[],
+  requestedType?: string,
 ): DiscoverChipView[] {
-  if (!selected) return [];
-  const groups = discoverGroups(catalogs);
-  const group = discoverTypeGroup(selected.type);
+  if (!selected && !types) return [];
+  const groups = types ? (["movie", "series", "anime", "other"] as const).filter(group => types.some(type => discoverTypeGroup(type) === group)) : discoverGroups(catalogs);
+  const group = discoverTypeGroup(selected?.type ?? requestedType ?? types?.[0] ?? "movie");
   const inGroup = catalogsForGroup(catalogs, group);
   const names = catalogChipLabels(inGroup);
   const chips: DiscoverChipView[] = [];
@@ -130,6 +111,7 @@ export function discoverChips(
     });
     x += width + 8;
   }
+  if (!selected) return chips;
   x = 192;
   for (let index = 0; index < inGroup.length; index++) {
     const label = names[index];
@@ -149,8 +131,8 @@ export function discoverChips(
   const filters = catalogFilters(selected);
   if (filters.length) x += 42;
   for (const filter of filters) {
-    const value = values[filter.name]?.trim();
-    const label = `${filter.name === "genre" ? "Genre" : filter.name.charAt(0).toUpperCase() + filter.name.slice(1)}: ${value || (filter.required ? "Required" : "Any")} ⌄`;
+    const value = values[filter.name];
+    const label = `${filterTitle(filter)}: ${selectionLabel(filter, value)}`;
     const width = Math.max(176, Math.round(label.length * 12 + 38));
     chips.push({
       label,
@@ -159,7 +141,7 @@ export function discoverChips(
       value: filter.name,
       x,
       width,
-      selected: !!value,
+      selected: Array.isArray(value) ? value.length > 0 : !!value,
       visible: true,
     });
     x += width + 8;

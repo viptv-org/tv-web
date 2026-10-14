@@ -1,16 +1,27 @@
 import { normalizeCore } from "../core";
 import type { Catalog, MediaItem } from "../api";
 import type { SearchPlan } from "../../vendor/core/typescript/wire";
+import { hostCatalogControls } from '../api/engine-discovery';
 export type CatalogFilter = {
   name: string;
+  label?: string;
   required: boolean;
   options: string[];
   defaultValue?: string;
+  kind?: string;
+  maximumSelections?: number;
+  choices?: readonly { readonly value: string; readonly label: string }[];
 };
 export function catalogFilters(catalog: Catalog): CatalogFilter[] {
+  const controls = hostCatalogControls(catalog);
+  if (controls) return controls.filter(control => !['type', 'catalog', 'skip'].includes(control.id) && control.maximum_selections !== 0)
+    .map(control => ({ name: control.id, label: control.label, required: control.required,
+      options: control.choices.map(choice => choice.value), choices: control.choices,
+      kind: control.kind, maximumSelections: control.maximum_selections ?? (control.kind === 'MultiChoice' ? 64 : 1) }));
   return normalizeCore("catalogFilters", catalog);
 }
 export function catalogDefaults(catalog: Catalog): Record<string, string> {
+  if (hostCatalogControls(catalog)) return {};
   return normalizeCore("catalogDefaults", catalog);
 }
 export function catalogFilterLabel(name: string): string {
@@ -37,7 +48,8 @@ export function discoverGroupLabel(group: DiscoverGroup): string {
 }
 /** Same addon catalog, across refetched catalog lists. */
 export const sameCatalog = (left: Catalog, right: Catalog | undefined) =>
-  !!right && left.id === right.id && left.type === right.type && left.addonId === right.addonId;
+  !!right && left.id === right.id && left.type === right.type && left.addonId === right.addonId
+    && (!hostCatalogControls(left) && !hostCatalogControls(right) || left.addonKey === right.addonKey);
 
 /** "Addon · Catalog" ("Cinemeta · Popular"): the desktop catalog chip and every catalog list. */
 export function catalogChoiceLabel(catalog: Catalog): string {
@@ -51,9 +63,14 @@ export function catalogChoiceLabel(catalog: Catalog): string {
 export function catalogChipLabels(catalogs: readonly Catalog[]): string[] {
   const counts = new Map<string, number>();
   for (const catalog of catalogs) counts.set(catalog.name, (counts.get(catalog.name) ?? 0) + 1);
-  return catalogs.map((catalog) =>
-    (counts.get(catalog.name) ?? 0) > 1 ? catalogChoiceLabel(catalog) : catalog.name,
-  );
+  const labels = catalogs.map(catalog => (counts.get(catalog.name) ?? 0) > 1 ? catalogChoiceLabel(catalog) : catalog.name);
+  const duplicates = new Map<string, number>(), seen = new Map<string, number>();
+  for (const label of labels) duplicates.set(label, (duplicates.get(label) ?? 0) + 1);
+  return labels.map(label => {
+    if ((duplicates.get(label) ?? 0) < 2) return label;
+    const index = (seen.get(label) ?? 0) + 1; seen.set(label, index);
+    return `${label} (${index})`;
+  });
 }
 
 /** A filter chip's accessible name: "Genre: Any", "Year: Required", "Search catalog: moon". */

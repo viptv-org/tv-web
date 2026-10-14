@@ -1,3 +1,4 @@
+import { fixtureDiscoveryControls } from './discovery-controls-fixture.ts';
 import type { Card, PlaybackRecord } from '../../vendor/engine/wire';
 type Item = Record<string, any>;
 export interface EngineFixtureState {
@@ -33,6 +34,7 @@ function continuation(state: EngineFixtureState) {
 }
 /** Wire fixtures match the remote host; this module does not participate in production routing. */
 export function engineFixture(url: URL, method: string, body: Item, state: EngineFixtureState): unknown {
+  if (url.pathname === '/api/v3/discovery-controls') return fixtureDiscoveryControls(state.catalogs, url.searchParams.get('type') ?? 'movie');
   if (url.pathname === '/api/v3/bootstrap') {
     const rows = state.catalogs.filter(catalog => ['movie', 'series', 'anime'].includes(catalog.type)).map(catalog => {
       const query = [{ id: 'type', values: [catalog.type] }, { id: 'catalog', values: [catalog.id] },
