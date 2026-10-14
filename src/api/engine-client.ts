@@ -14,10 +14,16 @@ export class EngineTvApi extends TvApi {
   async homeProjection(profile: string, options?: RequestOptions) {
     const value = await this.bootstrap(options);
     if (String(value.identity.profile_id) !== profile) throw new TvApiError(409, 'The selected profile changed.');
-    return { hero: value.home?.hero ? engineCard(value.home.hero) : undefined,
+    const hero = value.home?.hero ?? value.home?.featured[0];
+    return { hero: hero ? engineCard(hero) : undefined, saved: hero ? await this.saved(engineCard(hero), options) : false,
       featured: value.home?.featured.map(card => engineCard(card)) ?? [],
       queue: value.continuation ? continuationPage(value.continuation).items : [],
       favorites: value.library?.cards.slice(0, 12).map(card => engineCard(card)) ?? [] };
+  }
+  async saved(item: MediaItem, options?: RequestOptions): Promise<boolean> {
+    const value = await this.bootstrap(options), identity = itemIdentity(item);
+    return value.library_membership?.identities.some(id => identityKey(id) === identityKey(identity))
+      ?? value.library?.cards.some(card => identityKey(card.identity) === identityKey(identity)) ?? false;
   }
   override async catalogRevision(options?: RequestOptions): Promise<string> {
     const value = await this.bootstrap(options);
@@ -96,9 +102,7 @@ export class EngineTvApi extends TvApi {
     this.engineBootstrap.invalidate();
   }
   override async toggleFavorite(profile: string, item: MediaItem, options?: RequestOptions) {
-    const value = await this.bootstrap(options), identity = itemIdentity(item);
-    const saved = value.library_membership?.identities.some(id => identityKey(id) === identityKey(identity))
-      ?? value.library?.cards.some(card => identityKey(card.identity) === identityKey(identity)) ?? false;
+    const identity = itemIdentity(item), saved = await this.saved(item, options);
     if (saved) {
       await this.raw(`/api/v3/profiles/${segment(profile)}/library/${segment(identity.kind)}/${segment(identity.id)}`,
         { method: 'DELETE' }, true, options);

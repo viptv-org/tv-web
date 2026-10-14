@@ -1,4 +1,5 @@
 import type { MediaItem, TvApi } from "../api";
+import { EngineTvApi } from '../api/engine-client';
 import { artworkUrl, presentation } from "../core/presentations";
 import {
   enrichDetail,
@@ -119,7 +120,7 @@ export async function loadDetailView(
     synopsis: selected.description ?? "",
     playLabel,
     sourceLabel: "Choose source",
-    saved: favorites.some(
+    saved: api instanceof EngineTvApi ? await api.saved(value.item, { signal }) : favorites.some(
       (favorite) =>
         favorite.id === selected.id && favorite.type === selected.type,
     ),

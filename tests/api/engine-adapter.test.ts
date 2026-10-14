@@ -81,4 +81,13 @@ describe('server engine TV boundary', () => {
     expect(paths).toHaveLength(2); expect(paths[1].searchParams.get('offset')).toBe('128');
     expect(paths[0].pathname).toContain('opaque%3Aparent');
   });
+  it('knows saved membership beyond the bounded Home shelf without hydrating more cards', async () => {
+    const selected = card('saved-outside-home');
+    const fetcher = vi.fn(async () => response({ identity: { profile_id: '3' }, home: null,
+      library: { cards: [], complete: false, next_cursor: '100' },
+      library_membership: { identities: [selected.identity], revision: 1, complete: true } }));
+    const api = new EngineTvApi({ baseUrl: 'https://fixture.example', fetch: fetcher });
+    expect(await api.saved(engineCard(selected))).toBe(true);
+    expect(fetcher).toHaveBeenCalledTimes(1);
+  });
 });

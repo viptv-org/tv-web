@@ -208,7 +208,7 @@ export async function loadHomeView(
 ): Promise<HomeView> {
   if (api instanceof EngineTvApi) {
     const value = await api.homeProjection(profileId, { signal });
-    const view = projectHome(value.hero ?? value.featured[0], value.queue, undefined, value.favorites);
+    const view = { ...projectHome(value.hero ?? value.featured[0], value.queue, undefined, value.favorites), saved: value.saved };
     if (!signal.aborted) onChange?.(view);
     return view;
   }
