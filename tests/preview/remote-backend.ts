@@ -43,11 +43,11 @@ export async function installRemoteBackend(page:Page,origin:string,options:{
   }={}){
  const requests:{method:string;path:string;body:any}[]=[];
  const art=(name:string)=>`${origin}/fixture/${name}`;
- const card:Card={identity:{kind:'movie',id:'tt-oak-street',ids:[]},provider_id:'stremio',title:'The End of Oak Street',description:'The Platt family bands together to navigate their new surroundings after a cosmic event transports their…',poster:art('a5729872fdf6d97950dabed6371ef4d6.jpg'),landscape:art('a5729872fdf6d97950dabed6371ef4d6.jpg'),logo:art('274e704ffc2eeb3e73918396e294edb0.png'),badges:[],view:{saved:false,metadata_parts:['Movie','2026','Action, Adventure','1h 40m'],hero_metadata_parts:['2026','Action, Adventure','1h 40m'],compact_metadata_parts:['2026','1h 40m'],badges:[{label:'4K',role:'capability'},{label:'HDR',role:'capability'},{label:'5.1',role:'capability'},{label:'PG-13',role:'certification'}],tile_badge:null,progress:null,preview:{background:null,caption:'',progress:null,action:'details' as const}},metadata:{year:2026,runtime_minutes:100,genres:['Action','Adventure'],certification:'PG-13'}};
+ const card:Card={identity:{kind:'movie',id:'tt-oak-street',ids:[]},provider_id:'stremio',title:'The End of Oak Street',description:'The Platt family bands together to navigate their new surroundings after a cosmic event transports their…',poster:art('a5729872fdf6d97950dabed6371ef4d6.jpg'),landscape:art('a5729872fdf6d97950dabed6371ef4d6.jpg'),logo:art('274e704ffc2eeb3e73918396e294edb0.png'),badges:[],view:{saved:false,metadata_parts:['Movie','2026','Action, Adventure','1h 40m'],hero_metadata_parts:['2026','Action, Adventure','1h 40m'],compact_metadata_parts:['2026','1h 40m'],badges:[{label:'4K',role:'capability'},{label:'HDR',role:'capability'},{label:'5.1',role:'capability'},{label:'PG-13',role:'certification'}],tile_badge:null,progress:null,preview:{background:null,caption:'',progress:null,action:'play' as const}},metadata:{year:2026,runtime_minutes:100,genres:['Action','Adventure'],certification:'PG-13'}};
  const cardTitles=['Monster','One Piece','Obsession','Naruto','Five Nights at Freddy’s','The Last of Us','Arcane','Severance','Andor','The Bear','Shogun','Fallout'];
  const cardImages=['d1f119013660d10c200395924d2e01f1.jpg','22d40e71d7251ce37731f9c92046225e.jpg','3da010bb588e70c5323088b2c66658fe.jpg','4fb620620d8744ec661c36af04563200.jpg','4ecebe14f02c5841c69a2da6d6cb5389.jpg','0009e1ac6db9b5c0570faa7b78ec8292.jpg','0390bbf6dc6f0ecf3112d8cd02b8df71.jpg','07043870a1a3a4de9a3140758d5ac6b8.jpg','138b3e7eec5324db705f886653b91819.jpg','147a5b3e7ac27398c379c7e4c8be8f43.jpg','16264432fcbd259fc7111f7086159713.jpg','1b8e776fadffacda0429eae19567c9d9.jpg'];
  const seriesCard:Card={...card,identity:{kind:'series',id:'fixture-series',ids:[]},title:'Monster',subtitle:'S1 E2 · 38m left',progress:.38,view:{...card.view!,preview:{background:null,caption:'Resume S1 E2',progress:.38,action:'details' as const}}};
- const cards:Card[]=cardImages.map((image,i)=>({...card,identity:{...card.identity,id:`movie-${i}`},title:cardTitles[i],landscape:art(image),poster:art(image),logo:null,badges:i===1?['New episode']:[]}));
+ const cards:Card[]=cardImages.map((image,i)=>({...card,identity:{...card.identity,id:`movie-${i}`},title:cardTitles[i],landscape:art(image),poster:art(image),logo:null,badges:i===1?['New episode']:[],view:{...card.view!,preview:{...card.view!.preview!,action:'details' as const}}}));
  cards[0]=seriesCard as typeof card;
  let profile:string|null='1',library:Card[]=[],revision=0,liveRevision=0;
  // Incremental source discovery: events accumulate, waiters long-poll until a
@@ -93,6 +93,7 @@ export async function installRemoteBackend(page:Page,origin:string,options:{
   const catalogCards:Card[]=cardImages.map((image,i)=>({...card,identity:{...card.identity,id:`catalog-${i}`},title:`Catalog ${i}`,landscape:art(image),poster:art(image),logo:null,badges:[]}));
  let catalogView = catalogCards;
   let sourceEpisode = false, leaseEpisode = false, leaseLive = false, leaseCount = 0, leasePosition = 0;
+  const leases = new Map<string, any>();
   let replacementFailed = false;
  await page.route('**/media/**',async route=>{
   const name=new URL(route.request().url()).pathname.split('/').pop()!;
@@ -212,7 +213,7 @@ export async function installRemoteBackend(page:Page,origin:string,options:{
       leaseEpisode = !leaseLive && sourceEpisode;
       leasePosition = leaseLive ? 0 : body.replace_source ? (options.replacementPosition ?? body.replace_source.observed_position) : (body.position ?? 0);
       const leaseId = leaseCount <= 1 ? "fixture-playback" : `fixture-playback-${leaseCount}`;
-      return send({
+      const lease = {
         id: leaseId,
         status: "ready",
         actions: {pause:!leaseLive,seek:!leaseLive,restart:!leaseLive,change_source:true,episodes:leaseEpisode,next_episode:leaseEpisode,tracks:options.captionTracks ?? false,subtitle_style:options.captionTracks ?? false,report_progress:!leaseLive,...options.playbackActions},
@@ -230,11 +231,17 @@ export async function installRemoteBackend(page:Page,origin:string,options:{
           live: leaseLive,
           ...(options.captionTracks ? {subtitles_supported:true,subtitle_tracks:[{input_index:2,title:"English",language:"en",selected:true,selectable:true,supported:true}],subtitle_appearance:{font_scale:1,text_color:"#FFFFFF",background_color:"#00000000"}} : {}),
         },
-      });
+      };
+      leases.set(leaseId, lease);
+      return send(lease);
     }
     if (/^\/api\/playback\/fixture-playback(?:-\d+)?\/heartbeat$/.test(path)){
       if(options.stallRenewal)return; // a stalled heartbeat never resolves
-      return options.refuseRenewal ? send({error:"unauthorized"},401) : send({status:"ready",expires_at:Math.floor(Date.now()/1000)+3600,renew_after_seconds:1});
+      if(options.refuseRenewal)return send({error:"unauthorized"},401);
+      const id=path.split('/')[3];
+      const stored=leases.get(id);
+      if(stored)return send({...stored,expires_at:Math.floor(Date.now()/1000)+3600});
+      return send({status:"ready",expires_at:Math.floor(Date.now()/1000)+3600,renew_after_seconds:1});
     }
     if (/^\/api\/playback\/fixture-playback(?:-\d+)?\/first-frame$/.test(path))
       return send({status:"ok"});

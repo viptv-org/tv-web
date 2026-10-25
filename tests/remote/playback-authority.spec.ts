@@ -43,141 +43,16 @@ test("Live consumes the named best source and an explicit source change still re
     .toBeGreaterThan(0.2);
   await page.keyboard.press("ArrowUp");
   await page.keyboard.press("Enter");
-  test("definitive authentication loss during a player mutation stops media and clears the profile view", async ({
-    page,
-    baseURL,
-  }) => {
-    await installRemoteBackend(page, baseURL!, {
-      media: true,
-      captionTracks: true,
-      expireOnPreference: true,
-    });
-    await play(page);
-    await page.keyboard.press("ArrowUp");
-    await page.keyboard.press("Enter");
-    await expect(screen(page)).toHaveAttribute("data-tv-overlay", "tracks");
-    await page.keyboard.press("ArrowRight");
-    await page.keyboard.press("Enter");
-    await expect(screen(page)).toHaveAttribute("data-tv-screen", "welcome");
-    await expect(screen(page)).toHaveAttribute("data-tv-sources", "0");
-    expect(
-      await page
-        .locator("video")
-        .evaluate((video) => (video as HTMLVideoElement).paused),
-    ).toBe(true);
-    expect(
-      await page.evaluate(
-        (origin) => localStorage.getItem(`viptv-device:${origin}`),
-        baseURL!,
-      ),
-    ).toBeNull();
-  });
-  test("track focus follows server selection and confirmed subtitle size changes the active decoder style", async ({
-    page,
-    baseURL,
-  }) => {
-    const fixture = await installRemoteBackend(page, baseURL!, {
-      media: true,
-      captionTracks: true,
-    });
-    await play(page);
-    await page.keyboard.press("ArrowUp");
-    await page.keyboard.press("Enter");
-    await expect(screen(page)).toHaveAttribute("data-tv-overlay", "tracks");
-    await expect(screen(page)).toHaveAttribute("data-tv-focus", /:1$/);
-    await page.keyboard.press("ArrowRight");
-    await page.keyboard.press("ArrowDown");
-    await page.keyboard.press("ArrowDown");
-    await page.keyboard.press("Enter");
-    await expect
-      .poll(() =>
-        fixture.requests.some(
-          (r) =>
-            r.path.endsWith("/preferences") &&
-            r.method === "PUT" &&
-            r.body.preferences.subtitle_font_scale === 1.25,
-        ),
-      )
-      .toBe(true);
-    await expect
-      .poll(() => page.locator("#tv-caption-style").textContent())
-      .toContain("font-size: 2.75vw");
-  });
-  test("definitive authentication loss during a player mutation stops media and clears the profile view", async ({
-    page,
-    baseURL,
-  }) => {
-    await installRemoteBackend(page, baseURL!, {
-      media: true,
-      captionTracks: true,
-      expireOnPreference: true,
-    });
-    await play(page);
-    await page.keyboard.press("ArrowUp");
-    await page.keyboard.press("Enter");
-    await expect(screen(page)).toHaveAttribute("data-tv-overlay", "tracks");
-    await page.keyboard.press("ArrowRight");
-    await page.keyboard.press("Enter");
-    await expect(screen(page)).toHaveAttribute("data-tv-screen", "welcome");
-    await expect(screen(page)).toHaveAttribute("data-tv-sources", "0");
-    expect(
-      await page
-        .locator("video")
-        .evaluate((video) => (video as HTMLVideoElement).paused),
-    ).toBe(true);
-    expect(
-      await page.evaluate(
-        (origin) => localStorage.getItem(`viptv-device:${origin}`),
-        baseURL!,
-      ),
-    ).toBeNull();
-  });
-  test("track focus follows server selection and confirmed subtitle size changes the active decoder style", async ({
-    page,
-    baseURL,
-  }) => {
-    const fixture = await installRemoteBackend(page, baseURL!, {
-      media: true,
-      captionTracks: true,
-    });
-    await play(page);
-    await page.keyboard.press("ArrowUp");
-    await page.keyboard.press("Enter");
-    await expect(screen(page)).toHaveAttribute("data-tv-overlay", "tracks");
-    await expect(screen(page)).toHaveAttribute("data-tv-focus", /:1$/);
-    await page.keyboard.press("ArrowRight");
-    await page.keyboard.press("ArrowDown");
-    await page.keyboard.press("ArrowDown");
-    await page.keyboard.press("Enter");
-    await expect
-      .poll(() =>
-        fixture.requests.some(
-          (r) =>
-            r.path.endsWith("/preferences") &&
-            r.method === "PUT" &&
-            r.body.preferences.subtitle_font_scale === 1.25,
-        ),
-      )
-      .toBe(true);
-    await expect
-      .poll(() => page.locator("#tv-caption-style").textContent())
-      .toContain("font-size: 2.75vw");
-  });
   await expect(screen(page)).toHaveAttribute("data-tv-overlay", "sources");
   await expect(screen(page)).toHaveAttribute("data-tv-sources", "2");
   await page.waitForTimeout(200);
-  expect(
-    fixture.requests.filter((r) => r.path === "/api/playback"),
-  ).toHaveLength(1);
+  expect(fixture.requests.filter((r) => r.path === "/api/playback")).toHaveLength(1);
   await page.keyboard.press("Enter");
   await expect
-    .poll(
-      () => fixture.requests.filter((r) => r.path === "/api/playback").length,
-    )
+    .poll(() => fixture.requests.filter((r) => r.path === "/api/playback").length)
     .toBe(2);
   expect(
-    fixture.requests.filter((r) => r.path === "/api/playback")[1].body
-      .stream_id,
+    fixture.requests.filter((r) => r.path === "/api/playback")[1].body.stream_id,
   ).toBe("live-stream-0");
 });
 async function play(page: Page, live = false) {

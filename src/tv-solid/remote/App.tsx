@@ -780,18 +780,10 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
         return;
       }
       setLivePages(pages);
-      // Channels accumulate for global focus; only the guide windows stay
-      // bounded. A reset (empty window) clears the accumulation. A refresh that
-      // returns the same channel ids adopts their new server data in place, and
-      // genuinely new channels append for cross-page focus.
-      setChannels((current) => {
-        if (!pages.length) return [];
-        const byId = new Map(values.map((channel) => [channelKey(channel), channel]));
-        const seen = new Set(current.map(channelKey));
-        const merged = current.map((channel) => byId.get(channelKey(channel)) ?? channel);
-        const fresh = values.filter((channel) => !seen.has(channelKey(channel)));
-        return [...merged, ...fresh];
-      });
+      // The channel list is the current bounded window (at most two retained
+      // pages). A reset clears it; a reload replaces it wholesale so revised
+      // server titles adopt immediately.
+      setChannels(values);
       setPage({
         cards: channels().map((channel) => channel.card),
         complete: pages.at(-1)?.complete ?? true,
