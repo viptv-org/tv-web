@@ -33,6 +33,20 @@ export function PosterWall() {
     reduced ? 0 : performance.now() - stage.startTime,
   );
   let active = true;
+  // The wall drifts on a time-uniform, which never creates a scene update, so
+  // the renderer's idle pass would freeze it after the texture settles. While
+  // the motion shader is mounted, request a frame each rAF so the drift stays
+  // live; cleanup stops it the moment the wall leaves the screen.
+  if (!reduced) {
+    let frame = 0;
+    const drive = () => {
+      if (!active) return;
+      stage.requestRender();
+      frame = requestAnimationFrame(drive);
+    };
+    frame = requestAnimationFrame(drive);
+    onCleanup(() => cancelAnimationFrame(frame));
+  }
   onCleanup(() => {
     active = false;
   });

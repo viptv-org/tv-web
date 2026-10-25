@@ -29,11 +29,11 @@ export const welcomeShader: WebGlShaderType = {
     precision mediump float;
     #endif
     uniform sampler2D u_texture;
-    uniform float u_wallOffset;
+    varying float v_wallOffset;
     varying vec2 v_nodeCoords;
     void main() {
       vec2 pixel=v_nodeCoords*vec2(1920.0,1080.0);
-      vec4 art=texture2D(u_texture,(pixel+vec2(u_wallOffset,100.0))/vec2(2520.0,1500.0));
+      vec4 art=texture2D(u_texture,(pixel+vec2(v_wallOffset,100.0))/vec2(2520.0,1500.0));
       float t=min(1.0,length((pixel-vec2(960.0,540.0))/vec2(1152.0,756.0)));
       float vignette=t<=0.55?mix(0.92,0.75,t/0.55):mix(0.75,0.45,(t-0.55)/0.45);
       float amount=0.32*(1.0-vignette);
