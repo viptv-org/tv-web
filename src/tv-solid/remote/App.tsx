@@ -1551,13 +1551,18 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
       onCleanup(() => clearTimeout(timer));
     });
     const [previewCard, setPreviewCard] = createSignal<Card>();
+    let previewGeneration = 0;
     createEffect(() => {
       const card = focusedCard(),
         active = zone() === "rows";
-      const timer = setTimeout(
-        () => setPreviewCard(active ? card : undefined),
-        400,
-      );
+      // A stale settle can still fire if the cleanup's clearTimeout loses a
+      // race against the fake clock's fast-forward; the generation guard makes
+      // such a fire a no-op so a skipped-over card never flashes its preview.
+      const generation = ++previewGeneration;
+      const timer = setTimeout(() => {
+        if (generation === previewGeneration)
+          setPreviewCard(active ? card : undefined);
+      }, 400);
       onCleanup(() => clearTimeout(timer));
     });
     createEffect(() => {
@@ -4850,6 +4855,14 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
         return;
       }
       if (screen() === "live") {
+        // A failed page fetch leaves a pending retry; Enter retries it before
+        // it could be mistaken for a play intent on the focused channel.
+        if (channelRetry) {
+          const direction = channelRetry;
+          channelRetry = undefined;
+          await moreChannels(direction);
+          return;
+        }
         const channel = channels()[column()];
         if (channel) await playIntent(channel.card, false, false, channel.id);
         return;
