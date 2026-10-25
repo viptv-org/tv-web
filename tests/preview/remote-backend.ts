@@ -94,6 +94,7 @@ export async function installRemoteBackend(page:Page,origin:string,options:{
  let catalogView = catalogCards;
   let sourceEpisode = false, leaseEpisode = false, leaseLive = false, leaseCount = 0, leasePosition = 0;
   const leases = new Map<string, any>();
+  const liveFavoriteIds = new Set<string>();
   let replacementFailed = false;
  await page.route('**/media/**',async route=>{
   const name=new URL(route.request().url()).pathname.split('/').pop()!;
@@ -155,7 +156,7 @@ export async function installRemoteBackend(page:Page,origin:string,options:{
     }
   if(path==='/api/streams'){sourceEpisode=body.type==="series";return send({id:'job-1'});}
     if(/\/live\/[^/]+\/sources$/.test(path))return send({streams:[{id:"live-stream-0",name:"Live source A"},{id:"live-stream-1",name:"Live source B"}],live:true,action:{card:{identity:{kind:"live",id:path.split('/').at(-2)!,ids:[]},provider_id:"m3u:1",title:"Server live channel",badges:[],poster:null,landscape:null,logo:null},label:"Watch live",resume:false,source_selection:options.best?"best":"ask"}});
-  const streams=Array.from({length:8},(_,i)=>({id:`stream-${i}`,name:i%2?'[Provider 2]':'LordStreams',detail:'WEB-DL · HEVC · 5.1 · 18.4 GB',quality_height:i<2?2160:i<5?1080:720}));
+  const streams=Array.from({length:8},(_,i)=>{const h=i<2?2160:i<5?1080:720;const name=i%2?'[Provider 2]':'LordStreams';const quality=h>=2160?'4K':`${h}p`;return {id:`stream-${i}`,name,detail:'WEB-DL · HEVC · 5.1 · 18.4 GB',quality_height:h,view:{title:name,body:'WEB-DL · HEVC · 5.1 · 18.4 GB',quality_label:quality,format_label:i===0?'HDR10 · Dolby Atmos':'HEVC',addon_label:`[Add-on ${i%2?'B':'A'}]`,provider_label:name}};});
   if(path==='/api/streams/job-1'){
       const after=Number(url.searchParams.get('after')??0);
       if(options.finding&&!discoveryEvents.length)discoveryEvents.push({streams});
@@ -169,7 +170,7 @@ export async function installRemoteBackend(page:Page,origin:string,options:{
       }
     }
   if(path.endsWith("/source-ranking") && body.ids?.some((id: string) => id.startsWith("live-stream-")))
-      return send({streams:[{id:"live-stream-0",name:"Live source A"},{id:"live-stream-1",name:"Live source B"}],best_match_id:"live-stream-1",quality_filters:[],total:2});
+      return send({streams:[{id:"live-stream-0",name:"Live source A",view:{title:"Live source A",body:"Server HLS · 1080p",quality_label:"1080p",format_label:"HLS"}},{id:"live-stream-1",name:"Live source B",view:{title:"Live source B",body:"Server HLS · 720p",quality_label:"720p",format_label:"HLS"}}],best_match_id:"live-stream-1",quality_filters:[],total:2});
   if(path.endsWith('/source-ranking')){
       const heightFilter=typeof body.quality_height==='number'?body.quality_height:null;
       const wanted:string[]=Array.isArray(body.ids)?body.ids:[];
@@ -248,8 +249,16 @@ export async function installRemoteBackend(page:Page,origin:string,options:{
     if (/^\/api\/playback\/fixture-playback(?:-\d+)?\/(progress|stop)$/.test(path))
       return send({status:"ok"});
     if (/^\/api\/playback\/fixture-playback(?:-\d+)?$/.test(path)) {
-      if (request.method()==='DELETE') return send({status:"released"});
-      return send({id:path.split('/').pop(),status:"ready"});
+      if (request.method()==='DELETE') {
+        // A slow release holds the lease open long enough for a Back to land
+        // while the release is still in flight.
+        if (options.slowRelease) await new Promise(resolve=>setTimeout(resolve,1200));
+        leases.delete(path.split('/').pop()!);
+        return send({status:"released"});
+      }
+      const id=path.split('/').pop()!;
+      const stored=leases.get(id);
+      return send(stored?{...stored}:{id,status:"ready"});
     }
   if(path.endsWith('/guide'))return send({programs:[{id:'program',title:'Now playing',start_millis:0,end_millis:9999999999999}]});
   if (path.endsWith("/addon-activation")) {
@@ -263,8 +272,22 @@ export async function installRemoteBackend(page:Page,origin:string,options:{
       }
       return send({addons:[...addonStates.entries()].map(([connection_id,enabled])=>({connection_id,enabled}))});
     }
-  if(path==='/api/addons')return send({items:Array.from({length:options.addons??0},(_,i)=>({id:i+1,name:`Add-on ${i+1}`,enabled:true})),next_cursor:null});
+  if(path==='/api/addons'){
+      if(request.method()==="POST"){
+        if(options.rejectAddon)return send({error:"The address did not resolve to a valid add-on.",error_code:"addon_invalid"},422);
+        const id=(options.addons??0)+1;addonStates.set(`addon:${id}`,true);
+        return send({id});
+      }
+      return send({items:Array.from({length:options.addons??0},(_,i)=>({id:i+1,name:`Add-on ${i+1}`,enabled:true})),next_cursor:null});
+    }
   if(path.endsWith('/source-integrations'))return send({revision:0,schemas:[],connections:[]});
+  if(path.endsWith('/live/favorites'))return send({channel_ids:[...liveFavoriteIds]});
+  const favMatch=path.match(/^\/api\/profiles\/[^/]+\/live\/([^/]+)\/favorite$/);
+  if(favMatch){
+    const id=favMatch[1];
+    if(request.method()==='PUT')liveFavoriteIds.add(id);else liveFavoriteIds.delete(id);
+    return send({channel_ids:[...liveFavoriteIds]});
+  }
   if(path==='/api/parent/status')return send({pin_configured:true,unlocked:true});
   return send({error:`Unhandled fixture ${request.method()} ${path}`},404);
  });
@@ -277,7 +300,7 @@ export async function installRemoteBackend(page:Page,origin:string,options:{
   reviseCatalog: (indices: number[]) => { catalogView = indices.map(index => catalogCards[index]); revision++; },
   reviseLive: () => { liveRevision++; revision++; },
   completeDiscovery: () => { discoveryDone=true; notifyDiscovery(); },
-  addBestSource: () => { discoveryEvents.push({streams:[{id:'stream-best',name:'LordStreams',detail:'WEB-DL · AV1 · 5.1 · 9.2 GB',quality_height:2160,best:true}]}); notifyDiscovery(); },
+  addBestSource: () => { discoveryEvents.push({streams:[{id:'stream-best',name:'LordStreams',detail:'WEB-DL · AV1 · 5.1 · 9.2 GB',quality_height:2160,best:true,view:{title:'LordStreams',body:'WEB-DL · AV1 · 5.1 · 9.2 GB',quality_label:'4K',format_label:'AV1',provider_label:'LordStreams'}}]}); notifyDiscovery(); },
   setNavigation: (ids: string[]) => { navigationIds = ids; revision++; },
   setProfile: (id: string | null) => { profile = id; revision++; },
   libraryQueries,

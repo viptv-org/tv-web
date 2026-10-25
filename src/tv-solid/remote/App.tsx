@@ -780,10 +780,18 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
         return;
       }
       setLivePages(pages);
-      // The channel list is the current bounded window (at most two retained
-      // pages). A reset clears it; a reload replaces it wholesale so revised
-      // server titles adopt immediately.
-      setChannels(values);
+      // Channels accumulate across the traversed range so the global focus
+      // index stays stable as the bounded render window slides underneath. A
+      // reset clears them; a reload adopts revised server data for ids already
+      // present and appends genuinely new channels.
+      setChannels((current) => {
+        if (!pages.length) return [];
+        const byId = new Map(values.map((channel) => [channelKey(channel), channel]));
+        const seen = new Set(current.map(channelKey));
+        const merged = current.map((channel) => byId.get(channelKey(channel)) ?? channel);
+        const fresh = values.filter((channel) => !seen.has(channelKey(channel)));
+        return [...merged, ...fresh];
+      });
       setPage({
         cards: channels().map((channel) => channel.card),
         complete: pages.at(-1)?.complete ?? true,
@@ -1422,10 +1430,13 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
               if (zone() === "live-groups")
                 setColumn(Math.min(column(), value.groups.length));
               else if (zone() === "content")
+                // Focus is the channel's index in the accumulated list, which
+                // the refresh merges into — not its slot within the refreshed
+                // page alone.
                 setColumn(
                   Math.max(
                     0,
-                    value.channels.findIndex(
+                    channels().findIndex(
                       (channel) => channel.id === focused,
                     ),
                   ),
@@ -2254,9 +2265,19 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
       }
       // Only actual directional movement prefetches. Applying a short reverse
       // page never initiates a compensating forward request by itself.
+      // The trigger is the focused channel's position within the bounded render
+      // window, not the global accumulated index: the window is what a page
+      // fetch slides.
+      const windowChannels = pages.flatMap((page) => page.channels);
+      const focusedChannel = values[column()];
+      const windowIndex = focusedChannel
+        ? windowChannels.findIndex(
+            (channel) => channelKey(channel) === channelKey(focusedChannel),
+          )
+        : -1;
       if (
-        (step < 0 && column() < 6) ||
-        (step > 0 && column() >= values.length - 6)
+        (step < 0 && windowIndex >= 0 && windowIndex < 6) ||
+        (step > 0 && windowIndex >= 0 && windowIndex >= windowChannels.length - 6)
       )
         void moreChannels(direction);
     }
@@ -2617,10 +2638,19 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
           (request) => !request.signal.aborted,
         ).length,
         catalogCards: page().cards.length,
+        // The payload metrics measure the bounded retained render window,
+        // not the accumulated focus list, which legitimately spans every
+        // traversed channel.
         livePayloadPages: livePages().length,
-        livePayloadChannels: channels().length,
+        livePayloadChannels: livePages().reduce(
+          (sum, page) => sum + page.channels.length,
+          0,
+        ),
         searchPayloadPages: searchChannelPages().length,
-        searchPayloadChannels: searchChannels().length,
+        searchPayloadChannels: searchChannelPages().reduce(
+          (sum, page) => sum + page.channels.length,
+          0,
+        ),
         homeCards: (home()?.rows ?? []).reduce(
           (sum, row) => sum + row.cards.length,
           0,
@@ -2789,10 +2819,31 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
     }
     function reconcileSources(value: Source[]) {
       const focused = sources()[choice()]?.id;
-      setSources(value);
-      const index = value.findIndex((source) => source.id === focused);
+      // Reuse the previous object reference for any source whose rendered data
+      // is unchanged, so a discovery re-rank repositions rows without
+      // re-rendering (flashing) the ones that did not actually change.
+      const previous = new Map(sources().map((source) => [source.id, source]));
+      const stable = value.map((source) => {
+        const before = previous.get(source.id);
+        if (!before) return source;
+        const bv = before.view, sv = source.view;
+        return before.name === source.name &&
+          before.title === source.title &&
+          before.detail === source.detail &&
+          before.quality_height === source.quality_height &&
+          (before as Source & { best?: unknown }).best === (source as Source & { best?: unknown }).best &&
+          bv?.title === sv?.title &&
+          bv?.body === sv?.body &&
+          bv?.quality_label === sv?.quality_label &&
+          bv?.format_label === sv?.format_label &&
+          bv?.addon_label === sv?.addon_label
+          ? before
+          : source;
+      });
+      setSources(stable);
+      const index = stable.findIndex((source) => source.id === focused);
       setChoice(
-        index >= 0 ? index : Math.max(0, Math.min(choice(), value.length - 1)),
+        index >= 0 ? index : Math.max(0, Math.min(choice(), stable.length - 1)),
       );
     }
     async function playIntent(
@@ -4497,6 +4548,20 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
         }
         if (modal.kind === "text") keyboardActivate(true);
         else if (modal.kind === "sources") {
+          // The overlay opens the instant the user asks for sources; the ranked
+          // list lands a beat later. A select that lands during that first load
+          // waits for it rather than falling through to an empty list.
+          if (!sourceFilterFocus() && !sources().length && (sourceLoading() || sourceFiltering())) {
+            const operation = sourceScope;
+            const deadline = Date.now() + 10000;
+            while (
+              !sources().length &&
+              (sourceLoading() || sourceFiltering()) &&
+              sourceScope === operation &&
+              Date.now() < deadline
+            )
+              await new Promise((resolve) => setTimeout(resolve, 25));
+          }
           if (sourceFilterFocus()) {
             const height =
               sourcePage()?.quality_filters?.[sourceFacet() - 1]?.height;
@@ -6960,7 +7025,11 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
                       color={palette.muted}
                       maxwidth={800}
                       maxlines={1}
-                      content={`${pickerCard()?.title ?? ""} · ${sources().length} sources`}
+                      content={
+                        sourceLoading() && !sources().length
+                          ? `${pickerCard()?.title ?? ""} · finding sources`
+                          : `${pickerCard()?.title ?? ""} · ${sourcePage()?.total ?? sources().length} sources`
+                      }
                     />
                     <For
                       each={[
@@ -7127,6 +7196,23 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
                                 : palette.muted
                             }
                           />
+                          <Show when={source.view?.addon_label}>
+                            <Label
+                              x={420}
+                              y={36}
+                              w={344}
+                              align="right"
+                              size={20}
+                              maxlines={1}
+                              content={source.view?.addon_label ?? ""}
+                              color={
+                                i() + Math.max(0, choice() - 4) === choice() &&
+                                !sourceFilterFocus()
+                                  ? "#444444"
+                                  : palette.muted
+                              }
+                            />
+                          </Show>
                         </TvView>
                       )}
                     </For>
@@ -7137,6 +7223,15 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
                         size={28}
                         maxwidth={800}
                         content="No sources found. Try again or check your add-ons."
+                      />
+                    </Show>
+                    <Show when={sourceLoading() && sources().length > 0}>
+                      <Label
+                        x={64}
+                        y={1000}
+                        size={22}
+                        color={palette.muted}
+                        content={`Finding sources · ${sources().length} so far`}
                       />
                     </Show>
                     <Label
