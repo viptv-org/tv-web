@@ -9,6 +9,9 @@ runtime remains baseline until the acceptance ledger records its replacement.
 - VIPTV owns accounts, profiles, grants, catalogs, source discovery and history.
 - Add-ons and Xtream connections are account-owned. Profile ownership continues
   to protect viewing history, favorites, restrictions and playback preferences.
+- Add-on management uses only `/api/v2/addons`. Paired viewing devices with a
+  selected profile may list, install, enable/disable and remove the account's
+  shared add-ons, as TV settings require; parent restrictions still apply.
 - The independent `playback-gateway` owns authenticated generic media jobs,
   input/output sharing, probing, proxying/remux/transcode and viewer leases.
 - Xtream supplies live, movie and series data. No generic M3U or external XMLTV
@@ -96,8 +99,10 @@ separately negotiated qualified Android requests, with no remote media URL. Its
 closed `GET /api/v2/playback-protocol` negotiation precedes optional native
 capability fields because existing request DTOs are closed. Unsupported servers/
 clients retain the existing HTTP/gateway wire shape. The coordinated cutover
-rejects old media/catalog protocol clients with `client_update_required`;
-authentication need not be rewritten.
+rejected old media/catalog protocol clients with `client_update_required`;
+after the 2026-10-09 production cutover those retired namespaces and the
+unversioned `/api/addons` routes are removed and answer as unknown routes.
+Authentication need not be rewritten.
 
 ## Xtream, defaults and bounded discovery
 

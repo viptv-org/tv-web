@@ -1,6 +1,8 @@
 # viptv design specification
 
-Native Roku adopts the current TV design through [ROK-042](docs/platforms/ROKU_DESIGN.md).
+Native Roku's remote 2.0 rebuild adopts the owner-selected KMP TV presentation
+through [ROK-REMOTE-001](docs/platforms/ROKU_KMP_REMOTE.md). The earlier
+[ROK-042 adoption](docs/platforms/ROKU_DESIGN.md) is historical for that runtime.
 
 This repository is the source of truth for viptv product UI, UX and app assets. The behavioral baseline is the actual Roku implementation at `vynxc/viptv@7d6b413`; historical notes are evidence, not overrides. The visual source for the redesign is the [VIPTV Redesign canvas](https://claude.ai/artifact/UX1E5AtPUoSKnaSLPou3Pp) together with its committed export in [viptv-design-system/](viptv-design-system/README.md); resolve visual questions from the canvas and import changes here before implementation.
 

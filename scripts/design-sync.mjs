@@ -52,8 +52,10 @@ if (command === "sync") {
   const files = {};
   // Only committed canonical documents and app artwork enter the snapshot.
   // Private machine files, screenshots and working-tree edits are never read.
+  // Session handoffs are operational notes, not product contracts or assets.
+  // They can contain private runtime/account details and must not be vendored.
   const docs = paths.filter(
-    (p) => p.endsWith(".md") && !p.startsWith("assets/") && !p.startsWith("prototypes/"),
+    (p) => p.endsWith(".md") && p !== "HANDOFF.md" && !p.startsWith("assets/") && !p.startsWith("prototypes/"),
   );
   const imagePrefix = "assets/roku/roku/images/";
   // Ship only the artwork the app loads: the launcher mark, the generated and
@@ -77,6 +79,27 @@ if (command === "sync") {
     "viptv-design-system/tokens/tokens.json",
     "viptv-design-system/tools/targets.json",
     "viptv-design-system/reference/screens/index.json",
+    "viptv-design-system/reference/assets/c5e059aaab8694dc24d6eac5443251d7.jpg",
+    "viptv-design-system/reference/assets/583431e4f79c9c282528008fe0dc55d1.jpg",
+    "viptv-design-system/reference/assets/b3223e2a084e414007a98927d4dacb2a.jpg",
+    "viptv-design-system/reference/assets/4ad1cd0344ed6671f51e0752cec8f76a.jpg",
+    "viptv-design-system/reference/assets/77f3ff5fe16cf0addfc249bcf775431c.jpg",
+    "viptv-design-system/reference/assets/73769fe97de6261d73028ef33ba3c67c.jpg",
+    "viptv-design-system/reference/assets/cf9ac68563546726c448b391311deb20.jpg",
+    "viptv-design-system/reference/assets/853a629260ff2e6e91c508e50cbc4cfd.jpg",
+    "viptv-design-system/reference/assets/1b8e776fadffacda0429eae19567c9d9.jpg",
+    "viptv-design-system/reference/assets/7a243334ecd247bb9e774aab5e88b96c.jpg",
+    "viptv-design-system/reference/assets/f1317811427e2bdd076d68c8137f0d3a.jpg",
+    "viptv-design-system/reference/assets/6df8de10da7fd21be30c813631b351fd.jpg",
+    "viptv-design-system/reference/assets/a58ce52f4693189507a3a209139fb1e8.jpg",
+    "viptv-design-system/reference/assets/86e41958ebe13339a4428a67a45cf9af.jpg",
+    "viptv-design-system/reference/assets/73adb3881e6289889a341e90548146a3.jpg",
+    "viptv-design-system/reference/assets/f8d575b124e315021fc7157db89c7315.jpg",
+    "viptv-design-system/reference/assets/138b3e7eec5324db705f886653b91819.jpg",
+    "viptv-design-system/reference/assets/9655a617b392ac7c81fc6f78c3d48e5d.jpg",
+
+    "viptv-design-system/reference/assets/5112cc304140378385555c10e98d120d.png",
+    "viptv-design-system/reference/assets/e12f8d0854be9217fda190bd7a21aebd.png",
   ].includes(p));
   const previous = existsSync(
     resolve(root, "design-contract/snapshot-lock.json"),

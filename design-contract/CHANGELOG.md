@@ -1,5 +1,95 @@
 # Design changes
 
+## 2026-10-22 — KMP subtitle mode and vertical TV Subtitles & audio
+
+PLAY-SUBTITLE-MODE-001 is adopted by the KMP app: **Subtitles** offers Always /
+`When audio isn't [language]` / Never on Subtitles & audio, and TV Playback drops
+**Start with subtitles**. TV Subtitles & audio becomes one vertical Up/Down list
+with the preview beside it (owner decision; canvas board pending).
+
+## 2026-10-22 — Proposed: Best match autoplay, ranking and fallback
+
+[SRC-BEST-MATCH-001](specs/behavior/source-best-match.md) replaces "wait for
+every provider, then play the top row" with an early-start countdown that any
+list navigation cancels. Ranking now covers device decode support, one
+preferred-audio setting with dub/dual-audio evidence tiers, release type (WEB
+and BluRay first, camera releases never autoplayed), an off-by-default
+HDR/Dolby Vision preference, torrent health and per-series binge groups. A
+failed Best match start tries the next source, at most three attempts.
+`PLAYBACK_CAPABILITIES.md` names this as the one exception to explicit source
+selection. Canvas boards are still needed.
+
+## 2026-10-19 — Second canvas re-export: browse, source integrations, missing screens
+
+The owner's design AI produced the requested boards (see
+`plans/DESIGN_REQUEST-2026-10-18.md`): 264 screens now (tv 56, phone 69, tablet
+18, desktop 55, web 40, simkl 26). New: browse page sets with catalog pickers,
+facet filters and loading/empty/error states (D3/M3/T3/W3Browse*, Tv3Movies*),
+source-integration settings and configure forms for VIPTV Sources, Xtream and
+M3U with all states (SetSources, SourcesViptu/M3u/Xtream/Remove/Empty/Torrent),
+parental controls, recovery codes, About/Display, TV add-on manual entry, and
+card/row state sheets. The IPTV provider sign-in boards were removed per owner
+decision (M3U and Xtream remain Live TV source integrations). The canvas data
+dictionary (`reference/canvas-data-dictionary.md`) documents the generic field
+shapes the boards draw from. Screens rendered with `tools/screenshots.mjs`
+(scale 1) and stored as WebP q85.
+
+## 2026-10-18 — Full canvas re-export: 197 current screens
+
+The owner supplied the current canvas export (chat artifact
+`ded73220-d76b-426c-8ea2-57d74c2d8473`). This replaces the reference screen set
+wholesale: 197 boards — tv 37, phone 53, tablet 11, desktop 40, web 30, simkl
+26 — including the previously missing season menu boards (`D3TitleSeason`,
+`M3SeasonSheet`), tablet and Simkl surface sets, offline fonts, the canvas token
+file (`reference/canvas-tokens.json`), per-platform research notes
+(`viptv-design-system/notes/`) and the TV focus/row-motion demo
+(`reference/extras/tv-focus-and-rows.html`). Screens were rendered with the
+export's `tools/screenshots.mjs` (Playwright, scale 1) and stored as WebP q85.
+Naming changed to the canvas prefixes: `M3*` phone, `T3*` tablet, `D3*`
+desktop, `W3*` web, `Tv3*` TV, `Sk*` Simkl; the previous export's short names
+(`Desk*`, `Web*`, `Ph*`, `Tv*`, `Main`, `Title`) are retired. The 9 component
+sheets remain from the 2026-09-23 export; where a sheet and a new board
+disagree, the new board wins. Notable canvas rules now visible in the boards:
+primary buttons are off-white (accent stays on progress, marks/logo and
+toggles); hero art is a framed 16:9 card with a blurred ambient fill; sign-in
+methods on every platform are browser, email code, password, another device,
+IPTV provider (Xtream/M3U) or no account; the desktop title bar hides search
+until a profile is chosen. `copy.md`, `components.md` and `decisions.md` still
+describe parts of the previous export and need follow-up passes against the
+new boards.
+
+## 2026-10-18 — Remove the IPTV provider sign-in method
+
+Sign-in never included an IPTV provider method in this specification (see copy.md
+Sign-in): VIPTV accounts sign in with a username and password, a browser/device
+flow, or use local mode. An implementation draft exposed "IPTV provider (Xtream
+Codes login or an M3U playlist)" as a sign-in option on TV, phone and desktop;
+it was removed to restore parity with the specified sign-in set. M3U and Xtream
+remain available as Live TV source integrations in Settings, not as sign-in.
+Additionally, password sign-in fields are labelled "Username" (matching the
+account system and WebSignIn reference); the field never required an email
+address.
+
+## 2026-10-18 — Stremio import in the KMP web and phone clients
+
+The owner approved moving IMP-001 into the KMP app for the browser build and
+Android phone and tablet, behind an "Import from Stremio" settings entry after
+Devices, with the full dashboard feature set on each. TV, desktop and local mode
+have no import UI. Signed-in device sessions may import into their own selected,
+unrestricted profile, including adopting Stremio add-ons, as devices can already
+manage shared add-ons. Long verification steps get an honest busy message and no
+short client timeout, and failed add-ons are identified on their rows. Flow,
+copy and history rules are otherwise unchanged.
+
+## 2026-10-11 — Remove the v1 backend surface
+
+After the verified 2026-10-09 cutover, BE-002 drops the `client_update_required`
+stubs for retired media/setup/organizer namespaces and the unversioned
+`/api/addons` routes; both now answer as unknown routes. Add-on management is
+`/api/v2/addons` only. Paired viewing devices with a selected profile may manage
+the account's shared add-ons there, preserving the existing TV/Roku settings
+behavior; parent restrictions still apply. No screens or copy change.
+
 ## 2026-10-07 — Actionable source startup diagnostics
 
 NT-09 requires the measured native preparation stage to survive its first

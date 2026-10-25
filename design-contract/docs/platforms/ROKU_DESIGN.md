@@ -1,3 +1,7 @@
+> Roku remote 2.0: the owner-selected KMP reference and server-authoritative
+> runtime are specified by [ROK-REMOTE-001](ROKU_KMP_REMOTE.md). The earlier
+> native rail/adoption contracts below describe the retained historical client.
+
 # ROK-042 — Native Roku design-system adoption
 
 Status: owner authorized 2026-09-27. This replaces the extracted Roku visual

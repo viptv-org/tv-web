@@ -1,3 +1,547 @@
+# Completion audit checkpoint — 2026-10-23
+
+The rebuild is **not fully qualified**. `tests/REMOTE_COMPLETION_AUDIT.json` tracks
+42 obligations from the approved scope: 15 verified for their stated scope,
+21 partial, five open, and deployment/physical certification outside this task.
+Of 56 Tv3 reference boards, 50 remain included. The earlier 32 captures label
+30 references and assert nine rectangles; that is not exhaustive visual parity.
+
+This checkpoint fixed regressions reproduced by 14 failing cases: stale HTTP
+errors, lost refresh rotations, cancellation blocked by refresh, late outcomes
+from retired authentication sessions, unbounded response-body consumption,
+invisible Live category focus, revision focus/cache restoration, explicit media
+key semantics, and a cancelled episode picker changing the active player target.
+Additional tests cover host suspension, webOS root Back and EPG refresh when
+profile revisions remain unchanged. Platform admission now reports web, Tizen,
+Vizio or webOS explicitly instead of always reporting web.
+
+Validation on isolated HTTPS output `/tmp/viptv-tv-audit-20261023`:
+
+- Production build/type checks/immutable dependency checks passed; reachable TV
+  boundary passed for 176 emitted modules, including the pure webOS host helper.
+- Full unit suite: **342 passed / 60 files**. Transport: 29 cases; webOS host
+  helper: three cases. The final UI-only intent separation was then checked by
+  another production build and the complete browser run.
+- Full single-worker browser suite: **40 passed**.
+- A subsequent extended round trip visited all 120 fixture channels: **238 focus
+  samples**, at most **17 observed retained guide snapshots** and **one observed
+  active request**. An earlier 198-sample run observed five active requests. The
+  assertions enforce ceilings of 25 snapshots and five active requests.
+- All 200 category choices remain selectable with exactly one visible focus and
+  at most nine rendered category chips. Moving focus dispatches no category fetch;
+  only activating the selected category does.
+- Oversized streamed-response test cancels after at most 65 × 64 KiB chunks;
+  the retained response budget is 4 MiB, with one incoming transport chunk of
+  possible overshoot before rejection. Split UTF-8 decoding is verified.
+
+Five paired performance runs used identical current API fixture data for the
+previous `c9c1aae` bundle and the candidate. Served HTML is checked against the
+selected build directory before measurement. All current runs passed the strict
+17.5ms p95 frame gate, with zero long tasks/frames over 50ms. These measurements
+cover the Home workload only; see PERFORMANCE.md for distributions and limits.
+
+Backend producer remains `23b9675`. Its three reproduced baseline failures have
+not been resolved in this UI checkpoint. Concurrent gateway media-lab edits were
+preserved. No shared QA binary or production hosting was replaced. The previous
+hosting ZIP remains a historical checkpoint; a final replacement awaits the
+full completion audit.
+
+---
+
+# Completion audit checkpoint — 2026-10-23
+
+The rebuild is **not fully qualified**. `tests/REMOTE_COMPLETION_AUDIT.json` tracks
+42 obligations from the approved scope: 15 verified for their stated scope,
+21 partial, five open, and deployment/physical certification outside this task.
+Of 56 Tv3 reference boards, 50 remain included. The earlier 32 captures label
+30 references and assert nine rectangles; that is not exhaustive visual parity.
+
+This checkpoint fixed regressions reproduced by 14 failing cases: stale HTTP
+errors, lost refresh rotations, cancellation blocked by refresh, late outcomes
+from retired authentication sessions, unbounded response-body consumption,
+invisible Live category focus, revision focus/cache restoration, explicit media
+key semantics, and a cancelled episode picker changing the active player target.
+Additional tests cover host suspension, webOS root Back and EPG refresh when
+profile revisions remain unchanged. Platform admission now reports web, Tizen,
+Vizio or webOS explicitly instead of always reporting web.
+
+Validation on isolated HTTPS output `/tmp/viptv-tv-audit-20261023`:
+
+- Production build/type checks/immutable dependency checks passed; reachable TV
+  boundary passed for 176 emitted modules, including the pure webOS host helper.
+- Full unit suite: **342 passed / 60 files**. Transport: 29 cases; webOS host
+  helper: three cases. The final UI-only intent separation was then checked by
+  another production build and the complete browser run.
+- Full single-worker browser suite: **40 passed**.
+- A subsequent extended round trip visited all 120 fixture channels: **238 focus
+  samples**, at most **17 observed retained guide snapshots** and **one observed
+  active request**. An earlier 198-sample run observed five active requests. The
+  assertions enforce ceilings of 25 snapshots and five active requests.
+- All 200 category choices remain selectable with exactly one visible focus and
+  at most nine rendered category chips. Moving focus dispatches no category fetch;
+  only activating the selected category does.
+- Oversized streamed-response test cancels after at most 65 × 64 KiB chunks;
+  the retained response budget is 4 MiB, with one incoming transport chunk of
+  possible overshoot before rejection. Split UTF-8 decoding is verified.
+
+Five paired performance runs used identical current API fixture data for the
+previous `c9c1aae` bundle and the candidate. Served HTML is checked against the
+selected build directory before measurement. All current runs passed the strict
+17.5ms p95 frame gate, with zero long tasks/frames over 50ms. These measurements
+cover the Home workload only; see PERFORMANCE.md for distributions and limits.
+
+Backend producer remains `23b9675`. Its three reproduced baseline failures have
+not been resolved in this UI checkpoint. Concurrent gateway media-lab edits were
+preserved. No shared QA binary or production hosting was replaced. The previous
+hosting ZIP remains a historical checkpoint; a final replacement awaits the
+full completion audit.
+
+---
+
+# Focused Browse and shared Home previews — 2026-10-24
+
+Source `ee23cf6fb9c84191a1fe96c724c291ed473deb4f`; producer
+`0d8da118e2282c1d7cefa4bc590004bf6a97c211`; design
+`6bd0c0b3dd76f43d96a76e281ef7e4ec4886794c`. The canonical engine remains
+`65add90c6a73da8743021ed0a0ff5c862d78124d`; React's core pin is unchanged.
+
+Home row cards project `view.preview.background`, caption, progress and activation
+intent. The producer reuses scoped continuation and verified metadata, retaining
+episode artwork on tiles and separate series artwork in the focused preview.
+Only eligible Continue Watching entries project Play. The same resumed title in
+My List projects Details. Viewing-action still makes the fresh playback decision.
+A regression covers missing parent artwork: sibling episode frames cannot leak
+into each other's preview fallback. Provider/client view fields are not trusted.
+
+Browse uses reference geometry, logo aspect, metadata, description, resume hint,
+progress and focused Play treatment. Geometry/pixel gates and private captures
+cover 19 measured rectangles; Home retains its 36 measured rectangles. Server
+badge ordering/wording and minute-based subtitles are preserved; unsupported
+release-age badges are absent. Whole-frame scores are measured browser results,
+not universal pixel identity. Exact values are in REMOTE_VISUAL_MEASUREMENTS.json.
+Home-to-rows choreography remains a separate unqualified reference.
+
+Five new browser cases cover explicit Play versus Details with contradictory
+caption/progress, no inferred resume when preview is absent, rapid focus/late
+artwork cancellation, and bounded blur reuse. Hover sends no metadata, viewing
+or source request; activation consumes the fresh server episode. Back restores
+tile focus. Initial repeated blur readbacks increased work/key to 43.917ms;
+retaining one small result per mounted tile reduces it to 26.972ms. See
+PERFORMANCE.md for the comparison and separately reported memory.
+
+Final checks: 95 single-worker browser cases; 345 unit tests / 60 files;
+real-producer HTTPS pairing/profile/reload/preferences flow; type/design/core/
+video gates and production build (194 reachable TV modules, no local engine or
+business-policy runtime). Backend: 570 passed / 11 ignored, including scoped
+parent artwork, same-title action differences and the sibling-frame regression.
+Three navigation runs and three 30-second normal-motion Home runs have frame
+p95 ≤16.8ms, zero long tasks and zero intervals above 50ms.
+
+Isolated bundle: `../.artifacts/tv-remote-browse-20261024/tv-web-hosting.zip`.
+Remaining references, bounded payload windows, per-screen lazy loading,
+unique-art stress, equivalent original baseline and playback edge cases remain
+open in the completion audit. The Roku handoff also records
+`ROK-MEDIA-20261024-MKV-COPY`: truncated Matroska-to-HLS output in its frozen
+producer/gateway fixture. That producer investigation is open; no client timing
+workaround was added. Concurrent gateway edits were preserved. No deployment,
+shared QA replacement or physical-TV certification occurred.
+
+---
+
+# Home billboard and shared reverse paging — 2026-10-24
+
+Source `291a061c3300dfb979d182e4030f527d8d049a69`; producer
+`1a361e4dc7923cf2909ff0be828912fb8530fa48`; engine
+`65add90c6a73da8743021ed0a0ff5c862d78124d`; design
+`09c75289adceb80c6c343a3812369d20414eb989`.
+
+Home follows the server's featured order with the reference 9-second indicator
+and 14-second ease-out zoom to 106%. Input, menus, pending/error and hidden-page
+states pause/restart the cycle. Reduced motion remains static. Cycling never
+requests viewing intent, sources or playback. Image clocks retire after 14s;
+failed, late and zero-size artwork cannot block controls or cover another route.
+
+The backdrop composes its fixed gradients in one pass. Small yielded canvas
+jobs prepare bounded glass textures; zoom coordinates are calculated per vertex.
+Static uniforms avoid per-frame cache growth. Pixel checks cover the foreground
+as well as node geometry, after the first capture exposed late artwork layering.
+The focused controls, icons and shadow now use reference geometry and treatment.
+Default Home has **36 matched rectangles**. At 7s and 14s, artwork/control region
+mean differences are all below **1.67/255**. Whole-frame mean is **1.366/255**;
+these are browser measurements, not universal pixel identity.
+
+The shared Live response now contains server-owned `paging.origin`, applied
+limit, navigation `page_size`, and nullable previous/next request descriptors.
+Clients can keep bounded payload/metadata windows without cursor arithmetic.
+A short reverse slice preserves its original navigation budget for the next
+forward request. Tests cover arbitrary origins, changed slice sizes, past-end,
+empty/unconfigured, private directories and unchanged snapshot scope.
+
+Accepted gates: **90 browser cases**, **345 web unit tests**, real-producer HTTPS
+pairing/profile/reload flow, type/design/core/video checks and production build
+(**192 TV modules**, no local engine/policy). Producer: **569 passed / 11 ignored**;
+Live-runtime: **20 passed / 1 ignored**; shared engine: **115 passed / 1 ignored**.
+Three navigation pairs and three 30-second normal-motion runs pass the frame
+budget with no long tasks or >50ms intervals. A proposed retained-control-layer
+optimization reproducibly missed the motion gate and was removed; diagnostics
+are kept separate from acceptance data. See PERFORMANCE.md for measured costs.
+
+The conversion remains in progress. Browse/Home-to-rows, remaining references,
+bounded client payload windows, original fixture equivalence, unique-art stress
+and remaining playback cases are still open. No deployment, shared QA replacement
+or physical-TV certification occurred.
+
+---
+
+# Large Live directories and Home geometry — 2026-10-23
+
+Source `3af20b865b7945ef729b876a0d3b3ac6d427c727`, producer
+`def82a0fce40317ae9e15554c325626064bd5157`, canonical server engine
+`62b45fca8e82593a0a9ab3320b1adb7cf4f63a98`; design remains `bf5d1e1`.
+
+The Roku handoff's offset counterexample was reproduced: a 10,041-channel
+catalog emitted cursor 10040, then rejected that request. The canonical query
+now accepts the full existing u32 offset range while retaining the 200-row page
+limit and other input budgets. Native readers clamp to available rows before
+adding the limit. Browsing, Search and category-filter cases reach the final
+channel; maximal past-end requests return empty/complete. No client truncation,
+new endpoint or changed native schema/ABI was introduced. React's core pin is
+unchanged. The shared fixture includes this boundary expectation.
+
+Home now uses separate server-ordered metadata parts, correctly spaced and
+outlined badges, and the reference row-heading and tile-badge typography.
+All **32 measured rectangles** match within one pixel. Whole-frame mean channel
+difference falls from 2.031 to 1.449/255. This is reduced-motion geometry evidence;
+Home's carousel/zoom timing and glass/backdrop details remain open.
+
+Gates: full build/type/integrity checks pass (**188 TV modules**); **84 browser
+cases**, **345 web unit tests**, and the real-producer HTTPS flow pass. Backend
+**568 passed / 11 ignored**, Live-runtime **19 passed / 1 ignored**, canonical
+engine **115 passed / 1 ignored**, and the native-core boundary case passes.
+Three matched Home performance pairs pass the existing frame budget with zero
+long tasks or >50ms intervals; see PERFORMANCE.md. Shared QA and production were
+not changed; concurrent gateway work remains untouched. The complete conversion
+is still in progress, as recorded in the completion audit.
+
+---
+
+# Entry fidelity, animation cost and Live snapshot coherence — 2026-10-23
+
+Runtime source `d3ab4d900500dc7418aea9194a2084da7fb73498`; producer
+`e8e7b5fa74a581dc6c40d6876edee9ab3f9a665d`; design
+`bf5d1e1476b40e3f57b4e30e4f3e8bc6e4d65877`. Later design commits change Roku
+notes only; the included Tv3 HTML/artwork remains unchanged.
+
+Splash, Welcome, SignIn and Profiles now use the reference geometry, typography,
+artwork treatment and motion. Pairing uses server-issued values and a monotonic
+expiry duration, clears abandoned codes during refresh and rejects cancelled
+replies. Profile controls obey management capabilities, including an empty-list
+Retry state. Required authentication remains the only entry path.
+
+The shared Live API now projects `snapshot_id`. Live and channel Search compare
+it before appending pages, discard incompatible windows and reload offset zero;
+Live also retires dependent guide requests. The producer reuses existing IPTV
+catalog generations and private directory cache identities. No core ABI/native
+cache-struct change or separate TV business engine was introduced.
+
+Private matched captures cover seven states, with **80 measured rectangles**
+and **32 Welcome artwork-region comparisons**. Entry geometry is within one
+pixel; the earlier three boards retain their 0.5px bounds. Welcome artwork
+regions, excluding foreground controls/text, differ by at most 0.61 RGB channel
+levels on average. These measurements do not assert universal pixel identity.
+
+The initial moving wall failed the frame budget. Profiling and a repeatable
+cache probe exposed **119 additional shader-cache entries in two seconds**.
+The final implementation uses a bounded artwork atlas, one compositing pass and
+the renderer clock: the same probe stays at **2 → 2 entries**. Reusing the guide
+locale formatter also removes a measured JavaScript hot spot. Failed probes are
+retained separately; final performance results are in PERFORMANCE.md.
+
+Final isolated-output gates (`/tmp/viptv-tv-entry-clock-20261023`):
+
+- Production, TypeScript and immutable design/core/video checks pass; the TV
+  dependency boundary contains **187 modules**, with no legacy engine/policy.
+- **84 browser cases** and **345 unit/integration tests in 60 files** pass, with
+  one worker. The real-producer HTTPS pairing/profile/reload flow also passes.
+- Backend: **567 passed, zero failed, 11 ignored** in the shared working tree.
+  The Live-runtime group has **18 passed, 1 external fixture ignored**.
+- Three matched Home and Live pairs, a final Search run, three normal-motion
+  Welcome/pairing runs and a continuous 60-second Welcome run all meet the
+  17.5ms frame-p95 gate, with zero long tasks or frames above 50ms.
+
+The full completion audit remains open: seven of fifty included references have
+matched captures. Remaining screen/state coverage, original pre-conversion
+fixture equivalence, unique-art stress and playback qualification are tracked
+in `tests/REMOTE_COMPLETION_AUDIT.json`. No shared QA binary/data, production
+hosting or physical-TV certification was changed.
+
+---
+
+# Search, typography and session retirement — 2026-10-23
+
+Producer `38a89cc09fa282bde962e4961870a4720fd6a14c`; design
+`008791323a2c2b23624f08f6eaa46a48940fd9d3`. Later local design commits affect
+Roku documentation only; the included Tv3 reference HTML/artwork is unchanged.
+
+Search now uses the reference input, Space/Delete/alphanumeric keyboard,
+212×318 posters and channel row. Media and channel availability come from
+separate server facts; channel-only profiles avoid media queries. Results keep
+server order and provenance. Each query retires prior requests/results, partial
+results remain retryable, channel paging keeps the boundary intent, and playback
+returns to the selected channel. Unsupported query suggestions, channel numbers
+and program captions remain omitted under the canonical scope.
+
+Text now uses the shipped font metrics and CSS line boxes, native-size glyph
+bitmaps, and native letter spacing where supported. The older-platform fallback
+is exercised. All 62 measured rectangles across SignedIn, My List and Search
+match within 0.5px. Private capture differences and font provenance are recorded
+in `tests/REMOTE_VISUAL_MEASUREMENTS.json`; whole-frame metrics are not a claim
+of universal pixel identity or physical-TV qualification.
+
+Auth retirement now stops obsolete revision polling, fences unsignalled replies
+and queued playback observations, and cannot let progress bookkeeping prevent
+decoder shutdown. A failing full-suite case exposed the shutdown issue before
+it was fixed; the final run passes it and the new re-pairing regressions.
+
+Final gates on isolated `/tmp/viptv-tv-search-20261023`:
+
+- Production, TypeScript, immutable dependency/design checks and TV boundary
+  passed: **181 modules**, no local engine/client business-policy runtime.
+- Full single-worker browser suite: **76 passed**.
+- Full single-fork unit suite: **344 passed / 60 files**.
+- Actual producer HTTPS flow, with no API interception: **passed**, now including
+  Search as well as pairing, profile selection, reload, detail, save and preferences.
+- Backend library suite: **566 passed, zero failed, 11 ignored** in the shared
+  tree, including the preserved concurrent media-lab harness.
+- **15 candidate performance runs passed** across five workloads. The final
+  paging-auth guard has separate final-build checks; see PERFORMANCE.md.
+
+The overall completion audit remains open. Remaining reference states, source
+form fidelity, original matched pre-conversion fixtures, unique-art stress and
+remaining playback/state gaps still require verification. No shared QA runtime,
+database or production hosting was replaced.
+
+---
+
+# Live source authority follow-up — 2026-10-23
+
+Producer `74e0ac964a88be08738704f570d53d6c43aceae4` returns the canonical Live
+viewing action and saved source-selection preference. The TV consumes that
+response and the existing source-ranking API; it no longer hard-codes Ask or
+assumes the first Live source is best. Explicit source-picker intent still
+requires a user choice. The action target contains no artwork/media URLs;
+artwork remains in the existing channel directory.
+
+Validation: production/type/integrity gates passed, **64 browser cases** and
+**343 unit tests** passed. The complete default backend suite passed **566 tests,
+zero failures, 11 ignored**. The `live-runtime` feature's Live group passed
+**16 tests**, with one explicitly ignored public-playlist test. Assertions cover
+saved Ask/Best policy, canonical channel identity, parental/source scope and a
+URL-free M3U source response even when its directory card contains artwork.
+The browser test deliberately names the second Live source as best, then proves
+that manual source changes still wait for explicit selection.
+
+Overall qualification remains open. Search geometry and per-query cancellation
+are next; the current implementation uses a four-column result grid instead of
+the reference's five 212×318 tiles, and superseded query failures are not yet
+independently fenced. Prior performance and matched visual evidence below retain
+their exact checkpoint scopes.
+
+---
+
+# Navigation availability follow-up — 2026-10-23
+
+Backend producer `d1eda1d96d860a436e1d93a69cb4acbd5f9a1b01` now supplies ordered
+navigation from cached profile capabilities and catalog types. The TV omits
+unsupported routes, preserves focus by route ID when entries disappear, retires
+an open section when the server removes it, and prevents Back from reviving a
+retired catalog. Older snapshots expose only the base Home/Profile entry points.
+
+Validation: **63 fixture browser cases**, the separate **real producer HTTPS
+flow**, and **566 backend tests** pass (zero backend failures, 11 ignored in the
+shared tree). The real movie-only fixture advertises neither Series nor Live.
+Production/type/integrity checks pass with 178 TV modules. The design pin remains
+`e61f5cb2ca39fcc1c78b1028a6cda391afdfe779`.
+
+Three additional paired Home runs against `5613158` pass the frame gate with
+zero long tasks/frames above 50ms. Startup medians: 510.4 → 524.7ms, with ranges
+508.4–544.1 and 506.2–526.1ms. Navigation work/key: 25.411 → 24.691ms. Decoded
+JavaScript: 995.187 → 995.973KiB. These overlapping ranges do not establish a
+startup regression. This follow-up does not claim new all-state visual parity.
+
+---
+
+# Producer, playback and navigation checkpoint — 2026-10-23
+
+The rebuild remains **in progress**, with 42 tracked obligations: 18 verified
+for their stated scope, 20 partial, three open, and deployment/physical
+certification outside this task. All 50 included Tv3 boards remain in the audit;
+two now have current matched captures and 15 exact artwork bounds. This does
+not establish exhaustive visual parity.
+
+Exact inputs: backend `8228c40d4ef6c765f58c5989bb9f252403035411`, design
+`e61f5cb2ca39fcc1c78b1028a6cda391afdfe779`, video
+`76c73fde22984d6d87a4848aab2fb47d563fdf46`. The server's canonical engine snapshot
+is `e42a97fd9734b850b92579e2eb10d800300e39f1`. The separate React core pin is
+unchanged. The design pin includes TV-web's Library filter access path; Tv3
+reference HTML/artwork remains the approved revision.
+
+This checkpoint adds server-projected player permissions and validated source
+replacement, correct Live channel source changes, confirmed active caption
+appearance, authentication-loss cleanup, and pending-page focus intents. Pairing
+now includes Tv3SignedIn with its entrance/timer and authoritative destination.
+My List consumes producer type/sort/filter/reset values, keeps drafts until
+Apply, and cancels late reads on Back. Its measured geometry/focus treatment was
+corrected. Hidden poster labels are no longer rasterized.
+
+Validation on isolated `/tmp/viptv-tv-authority-20261023`:
+
+- Production build, all TypeScript groups (including remote/server test configs),
+  immutable design/core/video checks and TV boundary passed: **178 modules**,
+  no local engine or client playback-policy runtime.
+- Single-fork unit suite: **342 tests / 60 files passed**.
+- Full single-worker deterministic browser suite: **57 passed**.
+- Separate trusted-HTTPS **real producer browser flow passed**: actual device
+  pairing, bootstrap/profile selection, durable reload, owned add-on catalog and
+  detail provenance, library save/read and preference persistence. No API
+  interception; [fixture instructions](tests/REMOTE_SERVER.md).
+- Backend complete single-threaded library suite: **564 passed, zero failed**.
+  The parental-certification failures are fixed. Shared core owner tests:
+  **114 passed, zero failed, one existing ignored**. Native response compatibility
+  is checked with the actual NativeTorrentBridge parser. External-runtime
+  backend harnesses remain explicitly ignored in the default suite.
+- All **12 candidate performance runs** (three alternating pairs per Home,
+  210-title grid, 120-channel guide and 100-row settings workload) passed the
+  17.5ms frame p95 gate, with zero long tasks and zero frames above 50ms.
+  See PERFORMANCE.md for timings, heap, textures, transfer and limits.
+- Tv3SignedIn/Tv3MyList matched private capture review and geometry: all 15
+  artwork rectangles within 0.5px. Canvas text rasterization differs by roughly
+  1–3px in the inspected sign-in ink bounds; selected-pill shadow remains a
+  visible minor difference. Captures stay private, outside source/release files.
+
+Measured and final production JavaScript bundle hashes are identical:
+`397e5c7dda9a358b24270902ba71a4fcf3183b3d267f7c3a5552aeffe4d89f3f`.
+Evidence/artifact checkpoint: `../.artifacts/tv-remote-authority-20261023/`.
+No shared QA binary, database, served bundle or production route was replaced.
+The original matched-data pre-conversion baseline, remaining visual states,
+capability visibility, unique-art stress and remaining flow gaps are still
+tracked in [the completion audit](tests/REMOTE_COMPLETION_AUDIT.json).
+
+The older sections below are historical checkpoints, including failures later
+resolved above.
+
+---
+
+# Completion audit checkpoint — 2026-10-23
+
+The rebuild is **not fully qualified**. `tests/REMOTE_COMPLETION_AUDIT.json` tracks
+42 obligations from the approved scope: 15 verified for their stated scope,
+21 partial, five open, and deployment/physical certification outside this task.
+Of 56 Tv3 reference boards, 50 remain included. The earlier 32 captures label
+30 references and assert nine rectangles; that is not exhaustive visual parity.
+
+This checkpoint fixed regressions reproduced by 14 failing cases: stale HTTP
+errors, lost refresh rotations, cancellation blocked by refresh, late outcomes
+from retired authentication sessions, unbounded response-body consumption,
+invisible Live category focus, revision focus/cache restoration, explicit media
+key semantics, and a cancelled episode picker changing the active player target.
+Additional tests cover host suspension, webOS root Back and EPG refresh when
+profile revisions remain unchanged. Platform admission now reports web, Tizen,
+Vizio or webOS explicitly instead of always reporting web.
+
+Validation on isolated HTTPS output `/tmp/viptv-tv-audit-20261023`:
+
+- Production build/type checks/immutable dependency checks passed; reachable TV
+  boundary passed for 176 emitted modules, including the pure webOS host helper.
+- Full unit suite: **342 passed / 60 files**. Transport: 29 cases; webOS host
+  helper: three cases. The final UI-only intent separation was then checked by
+  another production build and the complete browser run.
+- Full single-worker browser suite: **40 passed**.
+- A subsequent extended round trip visited all 120 fixture channels: **238 focus
+  samples**, at most **17 observed retained guide snapshots** and **one observed
+  active request**. An earlier 198-sample run observed five active requests. The
+  assertions enforce ceilings of 25 snapshots and five active requests.
+- All 200 category choices remain selectable with exactly one visible focus and
+  at most nine rendered category chips. Moving focus dispatches no category fetch;
+  only activating the selected category does.
+- Oversized streamed-response test cancels after at most 65 × 64 KiB chunks;
+  the retained response budget is 4 MiB, with one incoming transport chunk of
+  possible overshoot before rejection. Split UTF-8 decoding is verified.
+
+Five paired performance runs used identical current API fixture data for the
+previous `c9c1aae` bundle and the candidate. Served HTML is checked against the
+selected build directory before measurement. All current runs passed the strict
+17.5ms p95 frame gate, with zero long tasks/frames over 50ms. These measurements
+cover the Home workload only; see PERFORMANCE.md for distributions and limits.
+
+Backend producer remains `23b9675`. Its three reproduced baseline failures have
+not been resolved in this UI checkpoint. Concurrent gateway media-lab edits were
+preserved. No shared QA binary or production hosting was replaced. The previous
+hosting ZIP remains a historical checkpoint; a final replacement awaits the
+full completion audit.
+
+---
+
+# Server-authoritative TV rebuild — 2026-10-23
+
+Current scope and per-reference limits: [tests/REMOTE_PARITY.md](tests/REMOTE_PARITY.md).
+Backend producer `23b9675f4411eda9448b41177450720ad8b20fac`; design
+`58245a1429cfc8c954b708b1f116e5cbb2cdaaf2`; video
+`76c73fde22984d6d87a4848aab2fb47d563fdf46`.
+
+| Gate | Result |
+| --- | --- |
+| All TypeScript groups | Passed |
+| Immutable design/core/video checks | Passed |
+| Production build, isolated `/tmp/viptv-tv-after-20261023` | Passed |
+| Reachable TV bundle boundary | Passed: 175 emitted modules; no legacy core, local torrent, client playback policy, MediaBunny or Tauri runtime |
+| Single-fork Vitest | 326 passed, 60 files |
+| Single-worker remote Playwright | 30 passed |
+| Video owner tests/typecheck/build | 173 passed, 15 files; checks/build passed |
+| Backend `cargo check` | Passed, existing warnings retained |
+| Backend library suite, one test thread | 554 passed, 3 failed, 10 ignored |
+| Canonical design validator | Passed: 12 required docs, 1049 assets, 653 canvas references, 516 tokens |
+
+The three backend failures were reproduced on the untouched `7275bce` baseline:
+
+- `auth_integration_tests::kids_library_uses_trusted_ratings_approvals_and_exact_episode_membership`
+- `auth_integration_tests::kids_mixed_series_details_omit_every_episode_disallowed_by_sources`
+- `auth_integration_tests::kids_policy_changes_revoke_already_issued_resources`
+
+They remain unresolved baseline failures; this is not an all-green backend claim.
+New viewing intent, membership/presentation, source ranking/filter, preference
+admission and optional hosting tests passed. Concurrent, uncommitted gateway
+media-lab test changes were preserved and excluded from the producer commit.
+
+Browser acceptance uses a production build on a private trusted HTTPS origin,
+fixture API responses and a real HLS decoder fixture. It covers current `/api/*`
+routing, refresh/session failure handling, profile isolation/revisions, exact
+server-selected source/episode targets, partial discovery, source reranking,
+explicit Next, foreground/expiry/release, cancelled replacement, rejected
+mutations, focused long lists, keyboard symbols/case, 700ms hold, reduced motion,
+normal drawer timings, season navigation and restored focus. Tests wait for
+committed UI state before activating a source; request dispatch alone is not a
+readiness assertion. Lease fixtures allow media preparation before intentionally
+stalling/refusing renewal, while retaining independent expiration checks.
+
+Reproduce from `tv-web/` with the owned trusted HTTPS preview on port 18562:
+
+```sh
+npm run build -- --outDir /tmp/viptv-tv-after-20261023 --emptyOutDir
+npx vitest run --pool=forks --poolOptions.forks.singleFork
+npx playwright test --config playwright.remote.config.ts
+node --experimental-strip-types tests/preview/remote-visual.mjs
+```
+
+The visual sweep records private captures and renderer geometry; see the parity
+record for compared bounds and limits. No screenshots are committed or packaged.
+Performance measurements and their software-GPU limitation are in PERFORMANCE.md.
+No shared QA binary, served KMP/Wasm distribution, production route or live user
+data was replaced. Tizen/Vizio/webOS physical qualification and signed packaging
+remain separate gates.
+
+---
+
 ## TV My List and phone 2:3 posters — 2026-10-11
 
 Design `4f3a1eae36399608f459b5973381ead969c2c2d1` (TV-MYLIST-POSTER-001,

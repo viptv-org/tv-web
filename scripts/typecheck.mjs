@@ -6,7 +6,7 @@ import { spawnSync } from 'node:child_process';
 // the next group. Let Node size its heap from the build host's available memory.
 const root = resolve(import.meta.dirname, '..');
 const groups = [
-  ['application', ['src', 'vite.config.ts', 'playwright.config.ts']],
+  ['application', ['src', 'vite.config.ts', ...readdirSync(root).filter(name => /^playwright(?:\.[\w-]+)?\.config\.ts$/.test(name)).sort()]],
   ...readdirSync(join(root, 'tests'), { withFileTypes: true })
     .filter(entry => entry.isDirectory())
     .map(entry => [`tests/${entry.name}`, [`tests/${entry.name}`, 'tests/setup.ts']]),

@@ -1,4 +1,9 @@
-# TV API contract
+# Legacy React transport contract
+
+The current SolidTV entry uses `src/tv-solid/remote/api.ts` and the unversioned
+server contract in `backend/TV_REMOTE_API.md`. The historical v2/WASM transport
+below remains for the separate React entry; it is not loaded by the TV wrapper.
+
 
 The explicit `startPlaybackV2`, `playbackStatusV2`, `renewPlaybackV2` and
 `stopPlaybackV2` methods now execute the generated canonical v2 contract.

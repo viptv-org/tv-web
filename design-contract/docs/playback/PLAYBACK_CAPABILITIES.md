@@ -8,7 +8,7 @@ Current browser implementation work is governed by [BROWSER_PLAYBACK.md](BROWSER
 
 Transcoding is a last resort. A player adapter must first inspect the selected stream and actual device capability, then use the cheapest path that passes a playback probe. A container suffix alone is not evidence that transcoding is required. A capability probe must account for container/demux support, video codec plus profile/level, audio codec, subtitle representation, DRM, headers/cookies, adaptive protocol, seek/range behavior, hardware/resource budget, and the actual engine/browser/TV model.
 
-No probe may override product intent. Ordinary Play/Sources remains explicit source selection; exact-source Resume and controlled next episode retain their narrowly defined automatic paths; a failed path must preserve pause/position/track intent and expose retry/Choose source rather than silently selecting a different provider. See the [Roku UX contract](../../specs/behavior/roku-ux-contract.md).
+No probe may override product intent. Ordinary Play/Sources remains explicit source selection; exact-source Resume and controlled next episode retain their narrowly defined automatic paths; a failed path must preserve pause/position/track intent and expose retry/Choose source rather than silently selecting a different provider. The one exception is a profile that chose **Best match**: its visible countdown and announced, capped fallback are defined by [SRC-BEST-MATCH-001](../../specs/behavior/source-best-match.md) (proposed). See the [Roku UX contract](../../specs/behavior/roku-ux-contract.md).
 
 ## Verified capability facts
 

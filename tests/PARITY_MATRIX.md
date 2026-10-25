@@ -1,3 +1,58 @@
+# Completion audit in progress — 2026-10-23
+
+The authoritative outstanding-work inventory is
+[REMOTE_COMPLETION_AUDIT.json](REMOTE_COMPLETION_AUDIT.json). Passing the current
+40 browser cases and selected geometry checks does not establish all-state
+parity. See the latest [testing checkpoint](../TESTING.md) for reproduced
+regressions, bounded guide measurements and validation scope.
+
+The older checkpoint sections below remain historical.
+
+---
+
+# Completion audit in progress — 2026-10-23
+
+The authoritative outstanding-work inventory is
+[REMOTE_COMPLETION_AUDIT.json](REMOTE_COMPLETION_AUDIT.json). Passing the current
+40 browser cases and selected geometry checks does not establish all-state
+parity. See the latest [testing checkpoint](../TESTING.md) for reproduced
+regressions, bounded guide measurements and validation scope.
+
+The older checkpoint sections below remain historical.
+
+---
+
+# Completion audit in progress — 2026-10-23
+
+The authoritative outstanding-work inventory is
+[REMOTE_COMPLETION_AUDIT.json](REMOTE_COMPLETION_AUDIT.json). Passing the current
+the current browser cases and selected geometry checks does not establish all-state
+parity. See the latest [testing checkpoint](../TESTING.md) for reproduced
+regressions, bounded guide measurements and validation scope.
+
+The older checkpoint sections below remain historical.
+
+---
+
+# Active server-authoritative TV wrapper — 2026-10-23
+
+The current TV entry is the remote SolidTV wrapper. Its implementation,
+per-reference exclusions, browser evidence and physical-device limits are tracked
+in [REMOTE_PARITY.md](REMOTE_PARITY.md), with exact pins/results in
+[TESTING.md](../TESTING.md). The older sections below remain historical evidence
+for the retired client-policy implementation and the separate React entry.
+
+| Boundary | Current result |
+| --- | --- |
+| Current backend contracts | Unversioned APIs, server ordering/actions/resume/ranking/continuation/preferences |
+| Local operation | Removed from reachable TV graph; only durable device credentials persist |
+| Tv3 geometry/focus | Private capture review and selected exact geometry checks; 30 browser acceptance tests |
+| Playback | Gateway-selected delivery, actual browser HLS frame/progress evidence, independent lease expiry |
+| Missing server features | Omitted; Calendar excluded by owner; no invented local fallbacks |
+| Hardware / deployment | Not qualified or deployed by this conversion |
+
+---
+
 ## Native Recovery Integration - 2026-10-05
 
 | Surface | Current evidence | Limits |

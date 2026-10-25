@@ -1,9 +1,17 @@
 # VIPTV Design System
 
-The design language for VIPTV on phone, desktop (Tauri app), web and TV. It is dark-only, with one accent colour and the thumb (phone) or the D-pad (TV) in mind.
-The system contains 167 reference screens and 9 component sheets, including the
-12 phone remote screens from the owner's 2026-09-27 export. Android adaptation
-and interaction details are recorded in AND-038 in `../docs/platforms/ANDROID_DESIGN.md`.
+The design language for VIPTV on phone, tablet, desktop (Tauri app), web, TV
+and Simkl surfaces. It is dark-only, with one accent colour and the thumb
+(phone) or the D-pad (TV) in mind. The 2026-10-19 full canvas re-export supplies
+264 reference screens (tv 56, phone 69, tablet 18, desktop 55, web 40, simkl
+26) including the browse page sets, source-integration settings (VIPTV Sources,
+Xtream, M3U), parental controls, recovery codes and card/row state sheets, plus
+the canvas token file, the canvas data dictionary
+(`reference/canvas-data-dictionary.md`) and the per-platform research notes in
+`notes/`. The 9 component sheets are from the 2026-09-23 export and remain for
+component-level reference; where a sheet and a canvas board disagree, the board
+wins. Android adaptation and interaction details are recorded in AND-038 in
+`../docs/platforms/ANDROID_DESIGN.md`.
 
 ```
 viptv-design-system/
@@ -11,17 +19,21 @@ viptv-design-system/
 ├── components.md           ← every component: sizes per platform, states, rules
 ├── copy.md                 ← exact UI strings (empty states, toasts, errors, dialogs)
 ├── decisions.md            ← UX decisions made during the redesign, and open items
+├── notes/                  ← per-platform research and decisions (2026-10-18 export)
 ├── tokens/
 │   ├── tokens.json         ← source of truth (W3C design-tokens format)
 │   ├── tokens.css          ← CSS variables + type-role classes + focus recipes
 │   ├── tailwind.preset.js  ← Tailwind preset
 │   └── tokens.ts           ← flat TS object for React / React Native / Tauri
 ├── reference/
-│   ├── components/         ← the 9 component sheets (phone / desktop & web / TV), WebP
+│   ├── components/         ← the 9 component sheets (phone / desktop & web / TV), prior export
 │   ├── screens/img/        ← every screen rendered at 1:1, by platform, WebP
-│   ├── screens/html/       ← every screen as standalone HTML (open in a browser; links work)
+│   ├── screens/html/       ← every screen as standalone HTML (self-contained; fonts are local)
 │   ├── screens/index.json  ← name, title, platform, size of every screen
-│   └── assets/             ← images the HTML screens use
+│   ├── canvas-tokens.json  ← the canvas token file from the canvas export (input; tokens/ stays authoritative)
+│   ├── canvas-data-dictionary.md ← the generic field shapes every board draws from
+│   ├── extras/             ← TV focus and row-motion demo (self-contained HTML)
+│   └── assets/             ← images and fonts the HTML screens use
 └── claude-code/            ← drop-in files so Claude Code builds UI with this system
 ```
 
@@ -115,4 +127,11 @@ Claude can turn this into a **Design System artifact**: a browsable page of toke
 
 ## Screens
 
-`reference/screens/index.json` lists every screen. File names follow the canvas: `Ph*` is phone, `Desk*` is the desktop app, `Web*` is the browser, `Tv*` is TV, and the originals keep their short names (`Main`, `Title`, `DeskHome`, `TvHome` and so on). Values in `[brackets]` are placeholders or proposals, not real data.
+`reference/screens/index.json` lists every screen. File names follow the
+2026-10-18 canvas: `M3*` is phone, `T3*` is tablet, `D3*` is the desktop app,
+`W3*` is the browser, `Tv3*` is TV and `Sk*` is a Simkl surface. The previous
+export's short names (`Main`, `Title`, `DeskHome`, `WebSignIn`, `Ph*`, `Tv*`)
+were retired with that export. Values in `[brackets]` are placeholders or
+proposals, not real data. Screen renders live under
+`reference/screens/img/<platform>/<id>.webp`; open the matching
+`reference/screens/html/<platform>/<id>.html` for exact geometry and copy.

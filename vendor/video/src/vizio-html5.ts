@@ -1,7 +1,12 @@
 import Hls, { FetchLoader } from 'hls.js';
 import { hasSourceAuthorization } from './source-authorization';
 import { checkedMediaDelivery, sessionMediaRequest } from './session-media-fetch';
-import { supportsNativeHls } from './browser-capabilities';
+// Inlined so the remote TV graph never pulls the browser capability probe
+// (which carries the local demuxer). The check is a decoder fact, not policy.
+const HLS_MIME_TYPES_LOCAL = ['application/vnd.apple.mpegurl', 'application/x-mpegURL'] as const;
+function supportsNativeHls(media: { canPlayType?(type: string): string }): boolean {
+  return HLS_MIME_TYPES_LOCAL.some((type) => { try { return !!media.canPlayType?.(type); } catch { return false; } });
+}
 import { SessionPlayer } from './session';
 import { mediaFailure } from './browser-policy';
 import { nonNegative } from './primitives';

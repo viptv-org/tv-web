@@ -145,3 +145,17 @@ recovery dialog and can be quoted when reporting a failure.
 - Remote: "Connected · [IP]" · "Not reachable" · **Open VIPTV on TV** · Buttons / Swipe · "Swipe to move · Tap for OK" · Back · Play · Pause · Volume. Offline: "Can't reach [TV name]" / "Turn the TV on and check it's on the same Wi‑Fi as this phone." · **Try again**.
 - Settings: Remote button ("At the top of Home, Discover, Live and My List") · Vibrate on press · Keep screen on ("While the remote is open") · Change TV ("Pair a different Vizio TV") · Forget this TV ("Turns off Watch on TV").
 - Forget: "Forget [TV name]?" / "The remote button goes away. You can set up a TV again at any time." · **Forget TV** (danger) · **Cancel**.
+
+## Copy decisions (2026-10-19)
+
+- A guide/stream notice is **source-scoped**: "Guide data isn’t available for this
+  source yet. You can still watch this channel." It never claims a per-channel
+  failure and never renders above the category chips.
+- Empty and failure are separate messages on every list: "Nothing matches these
+  filters" (with Clear all) versus "Couldn’t load this catalog" (with Try again).
+- A row that fails shows a titled card — "Couldn’t load this row" plus the
+  provider's message plus "Try again" — never the provider text alone in a button.
+- "Could not load" strings are never used for a title page; it is "This title
+  couldn’t load" with a Go back action.
+- Server-originated messages are mapped to human copy before display; a raw
+  backend string ("API route not found") never reaches the UI.
