@@ -1,0 +1,2618 @@
+{
+  "design_ref": "4f3a1eae36399608f459b5973381ead969c2c2d1",
+  "states": [
+    {
+      "board": "Tv3Splash",
+      "reference_sha256": "844831004c19cf6633c0f24b03af80d25d4f8c1335d31b8302108f70fcfe4845",
+      "adaptations": [
+        "Pairing-only authentication; guest/email alternatives omitted",
+        "Server-issued URI/code/QR/expiry and synthetic profile names"
+      ],
+      "geometry_tolerance_pixels": 1,
+      "artwork_crops": [],
+      "resolution": [
+        1920,
+        1080
+      ],
+      "bounds": [
+        {
+          "expected": {
+            "x": 778.890625,
+            "y": 448,
+            "w": 88,
+            "h": 88,
+            "tag": "SPAN"
+          },
+          "matched": true
+        },
+        {
+          "expected": {
+            "x": 840,
+            "y": 600,
+            "w": 240,
+            "h": 4,
+            "tag": "DIV"
+          },
+          "matched": true
+        },
+        {
+          "expected": {
+            "x": 840,
+            "y": 600,
+            "w": 96,
+            "h": 4,
+            "tag": "SPAN"
+          },
+          "matched": true
+        }
+      ],
+      "matched_rectangles": 3,
+      "whole_frame_mean_absolute_channel_difference": 0.08226498199588478,
+      "fraction_pixels_with_channel_difference_over_12": 0.0011062885802469136,
+      "limits": [
+        "Whole-frame metrics include background and are not a universal similarity score.",
+        "Canvas and DOM text rasterization differ; browser measurements do not establish physical-TV certification."
+      ],
+      "source_revision": "dd83d34728715d8ae0804ad00e1f2e2bf4534901"
+    },
+    {
+      "board": "Tv3Welcome",
+      "reference_sha256": "97af6fc7de6f599c1455adeaafd462b1e8bc068cfe291acea060867c6f92f227",
+      "adaptations": [
+        "Pairing-only authentication; guest/email alternatives omitted",
+        "Server-issued URI/code/QR/expiry and synthetic profile names"
+      ],
+      "geometry_tolerance_pixels": 1,
+      "artwork_crops": [
+        {
+          "reference_region": {
+            "x": -60,
+            "y": -100,
+            "w": 236,
+            "h": 354,
+            "tag": "IMG"
+          },
+          "foreground_text_and_controls_excluded": true,
+          "mean_absolute_channel_difference": 0.29893670961584345
+        },
+        {
+          "reference_region": {
+            "x": 192,
+            "y": -100,
+            "w": 236,
+            "h": 354,
+            "tag": "IMG"
+          },
+          "foreground_text_and_controls_excluded": true,
+          "mean_absolute_channel_difference": 0.34054562035677743
+        },
+        {
+          "reference_region": {
+            "x": 444,
+            "y": -100,
+            "w": 236,
+            "h": 354,
+            "tag": "IMG"
+          },
+          "foreground_text_and_controls_excluded": true,
+          "mean_absolute_channel_difference": 0.26594265759152985
+        },
+        {
+          "reference_region": {
+            "x": 696,
+            "y": -100,
+            "w": 236,
+            "h": 354,
+            "tag": "IMG"
+          },
+          "foreground_text_and_controls_excluded": true,
+          "mean_absolute_channel_difference": 0.28038947462075714
+        },
+        {
+          "reference_region": {
+            "x": 948,
+            "y": -100,
+            "w": 236,
+            "h": 354,
+            "tag": "IMG"
+          },
+          "foreground_text_and_controls_excluded": true,
+          "mean_absolute_channel_difference": 0.29505872147337514
+        },
+        {
+          "reference_region": {
+            "x": 1200,
+            "y": -100,
+            "w": 236,
+            "h": 354,
+            "tag": "IMG"
+          },
+          "foreground_text_and_controls_excluded": true,
+          "mean_absolute_channel_difference": 0.3188475910850127
+        },
+        {
+          "reference_region": {
+            "x": 1452,
+            "y": -100,
+            "w": 236,
+            "h": 354,
+            "tag": "IMG"
+          },
+          "foreground_text_and_controls_excluded": true,
+          "mean_absolute_channel_difference": 0.3498654299568486
+        },
+        {
+          "reference_region": {
+            "x": 1704,
+            "y": -100,
+            "w": 236,
+            "h": 354,
+            "tag": "IMG"
+          },
+          "foreground_text_and_controls_excluded": true,
+          "mean_absolute_channel_difference": 0.316965587634879
+        },
+        {
+          "reference_region": {
+            "x": -60,
+            "y": 272,
+            "w": 236,
+            "h": 354,
+            "tag": "IMG"
+          },
+          "foreground_text_and_controls_excluded": true,
+          "mean_absolute_channel_difference": 0.3697515408320493
+        },
+        {
+          "reference_region": {
+            "x": 192,
+            "y": 272,
+            "w": 236,
+            "h": 354,
+            "tag": "IMG"
+          },
+          "foreground_text_and_controls_excluded": true,
+          "mean_absolute_channel_difference": 0.35902039643780526
+        },
+        {
+          "reference_region": {
+            "x": 444,
+            "y": 272,
+            "w": 236,
+            "h": 354,
+            "tag": "IMG"
+          },
+          "foreground_text_and_controls_excluded": true,
+          "mean_absolute_channel_difference": 0.2598238216215744
+        },
+        {
+          "reference_region": {
+            "x": 696,
+            "y": 272,
+            "w": 236,
+            "h": 354,
+            "tag": "IMG"
+          },
+          "foreground_text_and_controls_excluded": true,
+          "mean_absolute_channel_difference": 0.3613639755260409
+        },
+        {
+          "reference_region": {
+            "x": 948,
+            "y": 272,
+            "w": 236,
+            "h": 354,
+            "tag": "IMG"
+          },
+          "foreground_text_and_controls_excluded": true,
+          "mean_absolute_channel_difference": 0.38939340504320225
+        },
+        {
+          "reference_region": {
+            "x": 1200,
+            "y": 272,
+            "w": 236,
+            "h": 354,
+            "tag": "IMG"
+          },
+          "foreground_text_and_controls_excluded": true,
+          "mean_absolute_channel_difference": 0.27438613514460525
+        },
+        {
+          "reference_region": {
+            "x": 1452,
+            "y": 272,
+            "w": 236,
+            "h": 354,
+            "tag": "IMG"
+          },
+          "foreground_text_and_controls_excluded": true,
+          "mean_absolute_channel_difference": 0.3213955121452967
+        },
+        {
+          "reference_region": {
+            "x": 1704,
+            "y": 272,
+            "w": 236,
+            "h": 354,
+            "tag": "IMG"
+          },
+          "foreground_text_and_controls_excluded": true,
+          "mean_absolute_channel_difference": 0.33905715979633116
+        },
+        {
+          "reference_region": {
+            "x": -60,
+            "y": 644,
+            "w": 236,
+            "h": 354,
+            "tag": "IMG"
+          },
+          "foreground_text_and_controls_excluded": true,
+          "mean_absolute_channel_difference": 0.3509673001198425
+        },
+        {
+          "reference_region": {
+            "x": 192,
+            "y": 644,
+            "w": 236,
+            "h": 354,
+            "tag": "IMG"
+          },
+          "foreground_text_and_controls_excluded": true,
+          "mean_absolute_channel_difference": 0.3463244916850203
+        },
+        {
+          "reference_region": {
+            "x": 444,
+            "y": 644,
+            "w": 236,
+            "h": 354,
+            "tag": "IMG"
+          },
+          "foreground_text_and_controls_excluded": true,
+          "mean_absolute_channel_difference": 0.27689201698107185
+        },
+        {
+          "reference_region": {
+            "x": 696,
+            "y": 644,
+            "w": 236,
+            "h": 354,
+            "tag": "IMG"
+          },
+          "foreground_text_and_controls_excluded": true,
+          "mean_absolute_channel_difference": 0.37908946445831493
+        },
+        {
+          "reference_region": {
+            "x": 948,
+            "y": 644,
+            "w": 236,
+            "h": 354,
+            "tag": "IMG"
+          },
+          "foreground_text_and_controls_excluded": true,
+          "mean_absolute_channel_difference": 0.3820210818033355
+        },
+        {
+          "reference_region": {
+            "x": 1200,
+            "y": 644,
+            "w": 236,
+            "h": 354,
+            "tag": "IMG"
+          },
+          "foreground_text_and_controls_excluded": true,
+          "mean_absolute_channel_difference": 0.27841217402406715
+        },
+        {
+          "reference_region": {
+            "x": 1452,
+            "y": 644,
+            "w": 236,
+            "h": 354,
+            "tag": "IMG"
+          },
+          "foreground_text_and_controls_excluded": true,
+          "mean_absolute_channel_difference": 0.29412445338185067
+        },
+        {
+          "reference_region": {
+            "x": 1704,
+            "y": 644,
+            "w": 236,
+            "h": 354,
+            "tag": "IMG"
+          },
+          "foreground_text_and_controls_excluded": true,
+          "mean_absolute_channel_difference": 0.29882035990793054
+        },
+        {
+          "reference_region": {
+            "x": -60,
+            "y": 1016,
+            "w": 236,
+            "h": 354,
+            "tag": "IMG"
+          },
+          "foreground_text_and_controls_excluded": true,
+          "mean_absolute_channel_difference": 0.43095999053030304
+        },
+        {
+          "reference_region": {
+            "x": 192,
+            "y": 1016,
+            "w": 236,
+            "h": 354,
+            "tag": "IMG"
+          },
+          "foreground_text_and_controls_excluded": true,
+          "mean_absolute_channel_difference": 0.2930349576271186
+        },
+        {
+          "reference_region": {
+            "x": 444,
+            "y": 1016,
+            "w": 236,
+            "h": 354,
+            "tag": "IMG"
+          },
+          "foreground_text_and_controls_excluded": true,
+          "mean_absolute_channel_difference": 0.3003619350282486
+        },
+        {
+          "reference_region": {
+            "x": 696,
+            "y": 1016,
+            "w": 236,
+            "h": 354,
+            "tag": "IMG"
+          },
+          "foreground_text_and_controls_excluded": true,
+          "mean_absolute_channel_difference": 0.2774099576271186
+        },
+        {
+          "reference_region": {
+            "x": 948,
+            "y": 1016,
+            "w": 236,
+            "h": 354,
+            "tag": "IMG"
+          },
+          "foreground_text_and_controls_excluded": true,
+          "mean_absolute_channel_difference": 0.3262049788135593
+        },
+        {
+          "reference_region": {
+            "x": 1200,
+            "y": 1016,
+            "w": 236,
+            "h": 354,
+            "tag": "IMG"
+          },
+          "foreground_text_and_controls_excluded": true,
+          "mean_absolute_channel_difference": 0.3005605579096045
+        },
+        {
+          "reference_region": {
+            "x": 1452,
+            "y": 1016,
+            "w": 236,
+            "h": 354,
+            "tag": "IMG"
+          },
+          "foreground_text_and_controls_excluded": true,
+          "mean_absolute_channel_difference": 0.3261167019774011
+        },
+        {
+          "reference_region": {
+            "x": 1704,
+            "y": 1016,
+            "w": 236,
+            "h": 354,
+            "tag": "IMG"
+          },
+          "foreground_text_and_controls_excluded": true,
+          "mean_absolute_channel_difference": 0.6097608024691358
+        }
+      ],
+      "resolution": [
+        1920,
+        1080
+      ],
+      "bounds": [
+        {
+          "expected": {
+            "x": 798.1875,
+            "y": 336,
+            "w": 80,
+            "h": 80,
+            "tag": "SPAN"
+          },
+          "matched": true
+        },
+        {
+          "expected": {
+            "x": 780,
+            "y": 584,
+            "w": 360,
+            "h": 72,
+            "tag": "A"
+          },
+          "matched": true
+        },
+        {
+          "expected": {
+            "x": 0,
+            "y": 0,
+            "w": 1920,
+            "h": 1080,
+            "tag": "composited-wall"
+          },
+          "matched": true
+        }
+      ],
+      "matched_rectangles": 3,
+      "whole_frame_mean_absolute_channel_difference": 0.5426036844135802,
+      "fraction_pixels_with_channel_difference_over_12": 0.003525752314814815,
+      "limits": [
+        "Whole-frame metrics include background and are not a universal similarity score.",
+        "Canvas and DOM text rasterization differ; browser measurements do not establish physical-TV certification."
+      ],
+      "source_revision": "dd83d34728715d8ae0804ad00e1f2e2bf4534901"
+    },
+    {
+      "board": "Tv3SignIn",
+      "reference_sha256": "4924a068b685f3b68d0214e51b5d72d3929ba0c666aeaafe613854ba06ada253",
+      "adaptations": [
+        "Pairing-only authentication; guest/email alternatives omitted",
+        "Server-issued URI/code/QR/expiry and synthetic profile names"
+      ],
+      "geometry_tolerance_pixels": 1,
+      "artwork_crops": [],
+      "resolution": [
+        1920,
+        1080
+      ],
+      "bounds": [
+        {
+          "expected": {
+            "x": 96,
+            "y": 422.875,
+            "w": 340,
+            "h": 340,
+            "tag": "DIV"
+          },
+          "matched": true
+        },
+        {
+          "expected": {
+            "x": 116,
+            "y": 442.875,
+            "w": 300,
+            "h": 300,
+            "tag": "SPAN"
+          },
+          "matched": true
+        },
+        {
+          "expected": {
+            "x": 116,
+            "y": 442.875,
+            "w": 300,
+            "h": 300,
+            "tag": "IMG"
+          },
+          "matched": true
+        },
+        {
+          "expected": {
+            "x": 930,
+            "y": 500,
+            "w": 60,
+            "h": 60,
+            "tag": "SPAN"
+          },
+          "matched": true
+        },
+        {
+          "expected": {
+            "x": 1126,
+            "y": 537.296875,
+            "w": 640,
+            "h": 120,
+            "tag": "DIV"
+          },
+          "matched": true
+        },
+        {
+          "expected": {
+            "x": 1365,
+            "y": 679.296875,
+            "w": 175,
+            "h": 48,
+            "tag": "A"
+          },
+          "matched": true
+        }
+      ],
+      "matched_rectangles": 6,
+      "whole_frame_mean_absolute_channel_difference": 0.9629552469135803,
+      "fraction_pixels_with_channel_difference_over_12": 0.013068576388888888,
+      "limits": [
+        "Whole-frame metrics include background and are not a universal similarity score.",
+        "Canvas and DOM text rasterization differ; browser measurements do not establish physical-TV certification."
+      ],
+      "source_revision": "dd83d34728715d8ae0804ad00e1f2e2bf4534901"
+    },
+    {
+      "board": "Tv3Profiles",
+      "reference_sha256": "a921b8455608b3caba4ed39cc130ed8bb2c097927606fa71d258bc2f8ea6935b",
+      "adaptations": [
+        "Pairing-only authentication; guest/email alternatives omitted",
+        "Server-issued URI/code/QR/expiry and synthetic profile names"
+      ],
+      "geometry_tolerance_pixels": 1,
+      "artwork_crops": [],
+      "resolution": [
+        1920,
+        1080
+      ],
+      "bounds": [
+        {
+          "expected": {
+            "x": 348,
+            "y": 380,
+            "w": 200,
+            "h": 200,
+            "tag": "IMG"
+          },
+          "matched": true
+        },
+        {
+          "expected": {
+            "x": 604,
+            "y": 380,
+            "w": 200,
+            "h": 200,
+            "tag": "IMG"
+          },
+          "matched": true
+        },
+        {
+          "expected": {
+            "x": 860,
+            "y": 380,
+            "w": 200,
+            "h": 200,
+            "tag": "SPAN"
+          },
+          "matched": true
+        },
+        {
+          "expected": {
+            "x": 1116,
+            "y": 380,
+            "w": 200,
+            "h": 200,
+            "tag": "SPAN"
+          },
+          "matched": true
+        },
+        {
+          "expected": {
+            "x": 1372,
+            "y": 380,
+            "w": 200,
+            "h": 200,
+            "tag": "SPAN"
+          },
+          "matched": true
+        },
+        {
+          "expected": {
+            "x": 810,
+            "y": 780,
+            "w": 300,
+            "h": 72,
+            "tag": "A"
+          },
+          "matched": true
+        }
+      ],
+      "matched_rectangles": 6,
+      "whole_frame_mean_absolute_channel_difference": 0.24628536522633745,
+      "fraction_pixels_with_channel_difference_over_12": 0.003387345679012346,
+      "limits": [
+        "Whole-frame metrics include background and are not a universal similarity score.",
+        "Canvas and DOM text rasterization differ; browser measurements do not establish physical-TV certification."
+      ],
+      "source_revision": "dd83d34728715d8ae0804ad00e1f2e2bf4534901"
+    },
+    {
+      "board": "Tv3SignedIn",
+      "reference_sha256": "a23637ff0b7001c7f20ab5381756eb76ed6d4ae3dd8b62c586083dec09147ff0",
+      "adaptations": [
+        "Calendar omitted per approved scope",
+        "Synthetic authenticated username"
+      ],
+      "resolution": [
+        1920,
+        1080
+      ],
+      "bounds": [
+        {
+          "expected": {
+            "src": "5112cc304140378385555c10e98d120d.png",
+            "title": null,
+            "x": 876,
+            "y": 300,
+            "w": 168,
+            "h": 168
+          },
+          "matched": true
+        }
+      ],
+      "matched_rectangles": 1,
+      "whole_frame_mean_absolute_channel_difference": 0.35599038708847736,
+      "fraction_pixels_with_channel_difference_over_12": 0.004291570216049383,
+      "limits": [
+        "Whole-frame metrics include background and are not a universal similarity score.",
+        "Canvas and DOM text rasterization differ; browser measurements do not establish physical-TV certification."
+      ],
+      "source_revision": "dd83d34728715d8ae0804ad00e1f2e2bf4534901"
+    },
+    {
+      "board": "Tv3MyList",
+      "reference_sha256": "bcaa2fabc272227095e90dc572ac20a1ada9367c31505cfcf7dbfa694a646ade",
+      "adaptations": [
+        "Calendar omitted per approved scope"
+      ],
+      "resolution": [
+        1920,
+        1080
+      ],
+      "bounds": [
+        {
+          "expected": {
+            "src": "c5e059aaab8694dc24d6eac5443251d7.jpg",
+            "title": "The End of Oak Street",
+            "x": 96,
+            "y": 236,
+            "w": 232,
+            "h": 348
+          },
+          "matched": true
+        },
+        {
+          "expected": {
+            "src": "86e41958ebe13339a4428a67a45cf9af.jpg",
+            "title": "The Muppet Show",
+            "x": 344,
+            "y": 236,
+            "w": 232,
+            "h": 348
+          },
+          "matched": true
+        },
+        {
+          "expected": {
+            "src": "f1317811427e2bdd076d68c8137f0d3a.jpg",
+            "title": "Project Hail Mary",
+            "x": 592,
+            "y": 236,
+            "w": 232,
+            "h": 348
+          },
+          "matched": true
+        },
+        {
+          "expected": {
+            "src": "b3223e2a084e414007a98927d4dacb2a.jpg",
+            "title": "The Whisper Man",
+            "x": 840,
+            "y": 236,
+            "w": 232,
+            "h": 348
+          },
+          "matched": true
+        },
+        {
+          "expected": {
+            "src": "a58ce52f4693189507a3a209139fb1e8.jpg",
+            "title": "The Mandalorian & Grogu",
+            "x": 1088,
+            "y": 236,
+            "w": 232,
+            "h": 348
+          },
+          "matched": true
+        },
+        {
+          "expected": {
+            "src": "6df8de10da7fd21be30c813631b351fd.jpg",
+            "title": "The Invite",
+            "x": 1336,
+            "y": 236,
+            "w": 232,
+            "h": 348
+          },
+          "matched": true
+        },
+        {
+          "expected": {
+            "src": "138b3e7eec5324db705f886653b91819.jpg",
+            "title": "Weapons",
+            "x": 1584,
+            "y": 236,
+            "w": 232,
+            "h": 348
+          },
+          "matched": true
+        },
+        {
+          "expected": {
+            "src": "583431e4f79c9c282528008fe0dc55d1.jpg",
+            "title": "Mayday",
+            "x": 96,
+            "y": 676,
+            "w": 232,
+            "h": 348
+          },
+          "matched": true
+        },
+        {
+          "expected": {
+            "src": "853a629260ff2e6e91c508e50cbc4cfd.jpg",
+            "title": "Obsession",
+            "x": 344,
+            "y": 676,
+            "w": 232,
+            "h": 348
+          },
+          "matched": true
+        },
+        {
+          "expected": {
+            "src": "f8d575b124e315021fc7157db89c7315.jpg",
+            "title": "Pressure",
+            "x": 592,
+            "y": 676,
+            "w": 232,
+            "h": 348
+          },
+          "matched": true
+        },
+        {
+          "expected": {
+            "src": "9655a617b392ac7c81fc6f78c3d48e5d.jpg",
+            "title": "Those Who Wish Me Dead",
+            "x": 840,
+            "y": 676,
+            "w": 232,
+            "h": 348
+          },
+          "matched": true
+        },
+        {
+          "expected": {
+            "src": "77f3ff5fe16cf0addfc249bcf775431c.jpg",
+            "title": "Practical Magic",
+            "x": 1088,
+            "y": 676,
+            "w": 232,
+            "h": 348
+          },
+          "matched": true
+        },
+        {
+          "expected": {
+            "src": "cf9ac68563546726c448b391311deb20.jpg",
+            "title": "Tony",
+            "x": 1336,
+            "y": 676,
+            "w": 232,
+            "h": 348
+          },
+          "matched": true
+        },
+        {
+          "expected": {
+            "src": "7a243334ecd247bb9e774aab5e88b96c.jpg",
+            "title": "Backrooms",
+            "x": 1584,
+            "y": 676,
+            "w": 232,
+            "h": 348
+          },
+          "matched": true
+        }
+      ],
+      "matched_rectangles": 14,
+      "whole_frame_mean_absolute_channel_difference": 0.7523916538065843,
+      "fraction_pixels_with_channel_difference_over_12": 0.007601755401234568,
+      "limits": [
+        "Whole-frame metrics include background and are not a universal similarity score.",
+        "Canvas and DOM text rasterization differ; browser measurements do not establish physical-TV certification."
+      ],
+      "source_revision": "dd83d34728715d8ae0804ad00e1f2e2bf4534901"
+    },
+    {
+      "board": "Tv3Search",
+      "reference_sha256": "adc495c730bb6e5e418bfcbcd6890aeb3b40804e3259cf111d06383b22750d09",
+      "adaptations": [
+        "Calendar omitted by approved scope",
+        "No server query-suggestion projection: suggestions omitted",
+        "No channel number/current-program projection: captions omitted"
+      ],
+      "resolution": [
+        1920,
+        1080
+      ],
+      "bounds": [
+        {
+          "expected": {
+            "x": 96,
+            "y": 236,
+            "w": 254,
+            "h": 68
+          },
+          "matched": true
+        },
+        {
+          "expected": {
+            "x": 360,
+            "y": 236,
+            "w": 254,
+            "h": 68
+          },
+          "matched": true
+        },
+        {
+          "expected": {
+            "x": 96,
+            "y": 312,
+            "w": 80,
+            "h": 68
+          },
+          "matched": true
+        },
+        {
+          "expected": {
+            "x": 184,
+            "y": 312,
+            "w": 80,
+            "h": 68
+          },
+          "matched": true
+        },
+        {
+          "expected": {
+            "x": 272,
+            "y": 312,
+            "w": 80,
+            "h": 68
+          },
+          "matched": true
+        },
+        {
+          "expected": {
+            "x": 360,
+            "y": 312,
+            "w": 80,
+            "h": 68
+          },
+          "matched": true
+        },
+        {
+          "expected": {
+            "x": 448,
+            "y": 312,
+            "w": 80,
+            "h": 68
+          },
+          "matched": true
+        },
+        {
+          "expected": {
+            "x": 536,
+            "y": 312,
+            "w": 80,
+            "h": 68
+          },
+          "matched": true
+        },
+        {
+          "expected": {
+            "x": 96,
+            "y": 388,
+            "w": 80,
+            "h": 68
+          },
+          "matched": true
+        },
+        {
+          "expected": {
+            "x": 184,
+            "y": 388,
+            "w": 80,
+            "h": 68
+          },
+          "matched": true
+        },
+        {
+          "expected": {
+            "x": 272,
+            "y": 388,
+            "w": 80,
+            "h": 68
+          },
+          "matched": true
+        },
+        {
+          "expected": {
+            "x": 360,
+            "y": 388,
+            "w": 80,
+            "h": 68
+          },
+          "matched": true
+        },
+        {
+          "expected": {
+            "x": 448,
+            "y": 388,
+            "w": 80,
+            "h": 68
+          },
+          "matched": true
+        },
+        {
+          "expected": {
+            "x": 536,
+            "y": 388,
+            "w": 80,
+            "h": 68
+          },
+          "matched": true
+        },
+        {
+          "expected": {
+            "x": 96,
+            "y": 464,
+            "w": 80,
+            "h": 68
+          },
+          "matched": true
+        },
+        {
+          "expected": {
+            "x": 184,
+            "y": 464,
+            "w": 80,
+            "h": 68
+          },
+          "matched": true
+        },
+        {
+          "expected": {
+            "x": 272,
+            "y": 464,
+            "w": 80,
+            "h": 68
+          },
+          "matched": true
+        },
+        {
+          "expected": {
+            "x": 360,
+            "y": 464,
+            "w": 80,
+            "h": 68
+          },
+          "matched": true
+        },
+        {
+          "expected": {
+            "x": 448,
+            "y": 464,
+            "w": 80,
+            "h": 68
+          },
+          "matched": true
+        },
+        {
+          "expected": {
+            "x": 536,
+            "y": 464,
+            "w": 80,
+            "h": 68
+          },
+          "matched": true
+        },
+        {
+          "expected": {
+            "x": 96,
+            "y": 540,
+            "w": 80,
+            "h": 68
+          },
+          "matched": true
+        },
+        {
+          "expected": {
+            "x": 184,
+            "y": 540,
+            "w": 80,
+            "h": 68
+          },
+          "matched": true
+        },
+        {
+          "expected": {
+            "x": 272,
+            "y": 540,
+            "w": 80,
+            "h": 68
+          },
+          "matched": true
+        },
+        {
+          "expected": {
+            "x": 360,
+            "y": 540,
+            "w": 80,
+            "h": 68
+          },
+          "matched": true
+        },
+        {
+          "expected": {
+            "x": 448,
+            "y": 540,
+            "w": 80,
+            "h": 68
+          },
+          "matched": true
+        },
+        {
+          "expected": {
+            "x": 536,
+            "y": 540,
+            "w": 80,
+            "h": 68
+          },
+          "matched": true
+        },
+        {
+          "expected": {
+            "x": 96,
+            "y": 616,
+            "w": 80,
+            "h": 68
+          },
+          "matched": true
+        },
+        {
+          "expected": {
+            "x": 184,
+            "y": 616,
+            "w": 80,
+            "h": 68
+          },
+          "matched": true
+        },
+        {
+          "expected": {
+            "x": 272,
+            "y": 616,
+            "w": 80,
+            "h": 68
+          },
+          "matched": true
+        },
+        {
+          "expected": {
+            "x": 360,
+            "y": 616,
+            "w": 80,
+            "h": 68
+          },
+          "matched": true
+        },
+        {
+          "expected": {
+            "x": 448,
+            "y": 616,
+            "w": 80,
+            "h": 68
+          },
+          "matched": true
+        },
+        {
+          "expected": {
+            "x": 536,
+            "y": 616,
+            "w": 80,
+            "h": 68
+          },
+          "matched": true
+        },
+        {
+          "expected": {
+            "x": 96,
+            "y": 692,
+            "w": 80,
+            "h": 68
+          },
+          "matched": true
+        },
+        {
+          "expected": {
+            "x": 184,
+            "y": 692,
+            "w": 80,
+            "h": 68
+          },
+          "matched": true
+        },
+        {
+          "expected": {
+            "x": 272,
+            "y": 692,
+            "w": 80,
+            "h": 68
+          },
+          "matched": true
+        },
+        {
+          "expected": {
+            "x": 360,
+            "y": 692,
+            "w": 80,
+            "h": 68
+          },
+          "matched": true
+        },
+        {
+          "expected": {
+            "x": 448,
+            "y": 692,
+            "w": 80,
+            "h": 68
+          },
+          "matched": true
+        },
+        {
+          "expected": {
+            "x": 536,
+            "y": 692,
+            "w": 80,
+            "h": 68
+          },
+          "matched": true
+        },
+        {
+          "expected": {
+            "x": 96,
+            "y": 140,
+            "w": 520,
+            "h": 72
+          },
+          "matched": true
+        },
+        {
+          "expected": {
+            "x": 700,
+            "y": 196,
+            "w": 212,
+            "h": 318
+          },
+          "matched": true
+        },
+        {
+          "expected": {
+            "x": 928,
+            "y": 196,
+            "w": 212,
+            "h": 318
+          },
+          "matched": true
+        },
+        {
+          "expected": {
+            "x": 1156,
+            "y": 196,
+            "w": 212,
+            "h": 318
+          },
+          "matched": true
+        },
+        {
+          "expected": {
+            "x": 1384,
+            "y": 196,
+            "w": 212,
+            "h": 318
+          },
+          "matched": true
+        },
+        {
+          "expected": {
+            "x": 1612,
+            "y": 196,
+            "w": 212,
+            "h": 318
+          },
+          "matched": true
+        },
+        {
+          "expected": {
+            "x": 700,
+            "y": 640,
+            "w": 356,
+            "h": 200
+          },
+          "matched": true
+        },
+        {
+          "expected": {
+            "x": 1076,
+            "y": 640,
+            "w": 356,
+            "h": 200
+          },
+          "matched": true
+        },
+        {
+          "expected": {
+            "x": 1452,
+            "y": 640,
+            "w": 356,
+            "h": 200
+          },
+          "matched": true
+        }
+      ],
+      "matched_rectangles": 47,
+      "whole_frame_mean_absolute_channel_difference": 0.4493431712962963,
+      "fraction_pixels_with_channel_difference_over_12": 0.005578221450617284,
+      "limits": [
+        "Whole-frame metrics include background and are not a universal similarity score.",
+        "Canvas and DOM text rasterization differ; browser measurements do not establish physical-TV certification."
+      ],
+      "source_revision": "dd83d34728715d8ae0804ad00e1f2e2bf4534901",
+      "latest_regression_capture": {
+        "source_revision": "cb7224edf6763ed12b53ef73fc4c2d2207647f7d",
+        "comparison_source_revision": "ee23cf6fb9c84191a1fe96c724c291ed473deb4f",
+        "matched_rectangles": 47,
+        "reference_sha256": "adc495c730bb6e5e418bfcbcd6890aeb3b40804e3259cf111d06383b22750d09",
+        "application_before_after_pixel_identical": true,
+        "application_png_sha256": "93a5894f131d089914d18e16102b6c58b2e9ec2dcc659e5546d2dc3fb448ab1b",
+        "bounds": [
+          {
+            "expected": {
+              "x": 96,
+              "y": 236,
+              "w": 254,
+              "h": 68
+            },
+            "matched": true
+          },
+          {
+            "expected": {
+              "x": 360,
+              "y": 236,
+              "w": 254,
+              "h": 68
+            },
+            "matched": true
+          },
+          {
+            "expected": {
+              "x": 96,
+              "y": 312,
+              "w": 80,
+              "h": 68
+            },
+            "matched": true
+          },
+          {
+            "expected": {
+              "x": 184,
+              "y": 312,
+              "w": 80,
+              "h": 68
+            },
+            "matched": true
+          },
+          {
+            "expected": {
+              "x": 272,
+              "y": 312,
+              "w": 80,
+              "h": 68
+            },
+            "matched": true
+          },
+          {
+            "expected": {
+              "x": 360,
+              "y": 312,
+              "w": 80,
+              "h": 68
+            },
+            "matched": true
+          },
+          {
+            "expected": {
+              "x": 448,
+              "y": 312,
+              "w": 80,
+              "h": 68
+            },
+            "matched": true
+          },
+          {
+            "expected": {
+              "x": 536,
+              "y": 312,
+              "w": 80,
+              "h": 68
+            },
+            "matched": true
+          },
+          {
+            "expected": {
+              "x": 96,
+              "y": 388,
+              "w": 80,
+              "h": 68
+            },
+            "matched": true
+          },
+          {
+            "expected": {
+              "x": 184,
+              "y": 388,
+              "w": 80,
+              "h": 68
+            },
+            "matched": true
+          },
+          {
+            "expected": {
+              "x": 272,
+              "y": 388,
+              "w": 80,
+              "h": 68
+            },
+            "matched": true
+          },
+          {
+            "expected": {
+              "x": 360,
+              "y": 388,
+              "w": 80,
+              "h": 68
+            },
+            "matched": true
+          },
+          {
+            "expected": {
+              "x": 448,
+              "y": 388,
+              "w": 80,
+              "h": 68
+            },
+            "matched": true
+          },
+          {
+            "expected": {
+              "x": 536,
+              "y": 388,
+              "w": 80,
+              "h": 68
+            },
+            "matched": true
+          },
+          {
+            "expected": {
+              "x": 96,
+              "y": 464,
+              "w": 80,
+              "h": 68
+            },
+            "matched": true
+          },
+          {
+            "expected": {
+              "x": 184,
+              "y": 464,
+              "w": 80,
+              "h": 68
+            },
+            "matched": true
+          },
+          {
+            "expected": {
+              "x": 272,
+              "y": 464,
+              "w": 80,
+              "h": 68
+            },
+            "matched": true
+          },
+          {
+            "expected": {
+              "x": 360,
+              "y": 464,
+              "w": 80,
+              "h": 68
+            },
+            "matched": true
+          },
+          {
+            "expected": {
+              "x": 448,
+              "y": 464,
+              "w": 80,
+              "h": 68
+            },
+            "matched": true
+          },
+          {
+            "expected": {
+              "x": 536,
+              "y": 464,
+              "w": 80,
+              "h": 68
+            },
+            "matched": true
+          },
+          {
+            "expected": {
+              "x": 96,
+              "y": 540,
+              "w": 80,
+              "h": 68
+            },
+            "matched": true
+          },
+          {
+            "expected": {
+              "x": 184,
+              "y": 540,
+              "w": 80,
+              "h": 68
+            },
+            "matched": true
+          },
+          {
+            "expected": {
+              "x": 272,
+              "y": 540,
+              "w": 80,
+              "h": 68
+            },
+            "matched": true
+          },
+          {
+            "expected": {
+              "x": 360,
+              "y": 540,
+              "w": 80,
+              "h": 68
+            },
+            "matched": true
+          },
+          {
+            "expected": {
+              "x": 448,
+              "y": 540,
+              "w": 80,
+              "h": 68
+            },
+            "matched": true
+          },
+          {
+            "expected": {
+              "x": 536,
+              "y": 540,
+              "w": 80,
+              "h": 68
+            },
+            "matched": true
+          },
+          {
+            "expected": {
+              "x": 96,
+              "y": 616,
+              "w": 80,
+              "h": 68
+            },
+            "matched": true
+          },
+          {
+            "expected": {
+              "x": 184,
+              "y": 616,
+              "w": 80,
+              "h": 68
+            },
+            "matched": true
+          },
+          {
+            "expected": {
+              "x": 272,
+              "y": 616,
+              "w": 80,
+              "h": 68
+            },
+            "matched": true
+          },
+          {
+            "expected": {
+              "x": 360,
+              "y": 616,
+              "w": 80,
+              "h": 68
+            },
+            "matched": true
+          },
+          {
+            "expected": {
+              "x": 448,
+              "y": 616,
+              "w": 80,
+              "h": 68
+            },
+            "matched": true
+          },
+          {
+            "expected": {
+              "x": 536,
+              "y": 616,
+              "w": 80,
+              "h": 68
+            },
+            "matched": true
+          },
+          {
+            "expected": {
+              "x": 96,
+              "y": 692,
+              "w": 80,
+              "h": 68
+            },
+            "matched": true
+          },
+          {
+            "expected": {
+              "x": 184,
+              "y": 692,
+              "w": 80,
+              "h": 68
+            },
+            "matched": true
+          },
+          {
+            "expected": {
+              "x": 272,
+              "y": 692,
+              "w": 80,
+              "h": 68
+            },
+            "matched": true
+          },
+          {
+            "expected": {
+              "x": 360,
+              "y": 692,
+              "w": 80,
+              "h": 68
+            },
+            "matched": true
+          },
+          {
+            "expected": {
+              "x": 448,
+              "y": 692,
+              "w": 80,
+              "h": 68
+            },
+            "matched": true
+          },
+          {
+            "expected": {
+              "x": 536,
+              "y": 692,
+              "w": 80,
+              "h": 68
+            },
+            "matched": true
+          },
+          {
+            "expected": {
+              "x": 96,
+              "y": 140,
+              "w": 520,
+              "h": 72
+            },
+            "matched": true
+          },
+          {
+            "expected": {
+              "x": 700,
+              "y": 196,
+              "w": 212,
+              "h": 318
+            },
+            "matched": true
+          },
+          {
+            "expected": {
+              "x": 928,
+              "y": 196,
+              "w": 212,
+              "h": 318
+            },
+            "matched": true
+          },
+          {
+            "expected": {
+              "x": 1156,
+              "y": 196,
+              "w": 212,
+              "h": 318
+            },
+            "matched": true
+          },
+          {
+            "expected": {
+              "x": 1384,
+              "y": 196,
+              "w": 212,
+              "h": 318
+            },
+            "matched": true
+          },
+          {
+            "expected": {
+              "x": 1612,
+              "y": 196,
+              "w": 212,
+              "h": 318
+            },
+            "matched": true
+          },
+          {
+            "expected": {
+              "x": 700,
+              "y": 640,
+              "w": 356,
+              "h": 200
+            },
+            "matched": true
+          },
+          {
+            "expected": {
+              "x": 1076,
+              "y": 640,
+              "w": 356,
+              "h": 200
+            },
+            "matched": true
+          },
+          {
+            "expected": {
+              "x": 1452,
+              "y": 640,
+              "w": 356,
+              "h": 200
+            },
+            "matched": true
+          }
+        ]
+      }
+    },
+    {
+      "board": "Tv3Home",
+      "reference_sha256": "eaaef7f97d1b42ea78c3fa3ce9b39b1eb7615235b32f45aa3698f1ed3fcc5b73",
+      "adaptations": [
+        "Calendar omitted by approved scope"
+      ],
+      "bounds": [
+        {
+          "expected": {
+            "x": 0,
+            "y": 0,
+            "w": 1920,
+            "h": 1080,
+            "tag": "IMG",
+            "src": "a5729872fdf6d97950dabed6371ef4d6.jpg",
+            "label": null
+          },
+          "matched": true
+        },
+        {
+          "expected": {
+            "x": 96,
+            "y": 300,
+            "w": 229.171875,
+            "h": 170,
+            "tag": "IMG",
+            "src": "274e704ffc2eeb3e73918396e294edb0.png",
+            "label": null
+          },
+          "matched": true
+        },
+        {
+          "expected": {
+            "x": 530,
+            "y": 494,
+            "w": 39.734375,
+            "h": 30,
+            "tag": "SPAN",
+            "label": null
+          },
+          "matched": true
+        },
+        {
+          "expected": {
+            "x": 581.734375,
+            "y": 494,
+            "w": 55.09375,
+            "h": 30,
+            "tag": "SPAN",
+            "label": null
+          },
+          "matched": true
+        },
+        {
+          "expected": {
+            "x": 648.828125,
+            "y": 494,
+            "w": 40.09375,
+            "h": 30,
+            "tag": "SPAN",
+            "label": null
+          },
+          "matched": true
+        },
+        {
+          "expected": {
+            "x": 700.921875,
+            "y": 494,
+            "w": 68.8125,
+            "h": 30,
+            "tag": "SPAN",
+            "label": null
+          },
+          "matched": true
+        },
+        {
+          "expected": {
+            "x": 96,
+            "y": 648,
+            "w": 220,
+            "h": 72,
+            "tag": "A",
+            "label": null
+          },
+          "matched": true
+        },
+        {
+          "expected": {
+            "x": 124,
+            "y": 672,
+            "w": 24,
+            "h": 24,
+            "tag": "svg",
+            "label": null
+          },
+          "matched": true
+        },
+        {
+          "expected": {
+            "x": 336,
+            "y": 648,
+            "w": 72,
+            "h": 72,
+            "tag": "BUTTON",
+            "label": "Add to My List"
+          },
+          "matched": true
+        },
+        {
+          "expected": {
+            "x": 357,
+            "y": 669,
+            "w": 30,
+            "h": 30,
+            "tag": "svg",
+            "label": null
+          },
+          "matched": true
+        },
+        {
+          "expected": {
+            "x": 428,
+            "y": 648,
+            "w": 72,
+            "h": 72,
+            "tag": "BUTTON",
+            "label": "More info"
+          },
+          "matched": true
+        },
+        {
+          "expected": {
+            "x": 449,
+            "y": 669,
+            "w": 30,
+            "h": 30,
+            "tag": "svg",
+            "label": null
+          },
+          "matched": true
+        },
+        {
+          "expected": {
+            "x": 96,
+            "y": 876,
+            "w": 384,
+            "h": 216,
+            "tag": "A",
+            "label": null
+          },
+          "matched": true
+        },
+        {
+          "expected": {
+            "x": 96,
+            "y": 876,
+            "w": 384,
+            "h": 216,
+            "tag": "IMG",
+            "src": "d1f119013660d10c200395924d2e01f1.jpg",
+            "label": null
+          },
+          "matched": true
+        },
+        {
+          "expected": {
+            "x": 96,
+            "y": 876,
+            "w": 384,
+            "h": 216,
+            "tag": "SPAN",
+            "label": null
+          },
+          "matched": true
+        },
+        {
+          "expected": {
+            "x": 500,
+            "y": 876,
+            "w": 384,
+            "h": 216,
+            "tag": "A",
+            "label": null
+          },
+          "matched": true
+        },
+        {
+          "expected": {
+            "x": 500,
+            "y": 876,
+            "w": 384,
+            "h": 216,
+            "tag": "IMG",
+            "src": "22d40e71d7251ce37731f9c92046225e.jpg",
+            "label": null
+          },
+          "matched": true
+        },
+        {
+          "expected": {
+            "x": 500,
+            "y": 876,
+            "w": 384,
+            "h": 216,
+            "tag": "SPAN",
+            "label": null
+          },
+          "matched": true
+        },
+        {
+          "expected": {
+            "x": 904,
+            "y": 876,
+            "w": 384,
+            "h": 216,
+            "tag": "A",
+            "label": null
+          },
+          "matched": true
+        },
+        {
+          "expected": {
+            "x": 904,
+            "y": 876,
+            "w": 384,
+            "h": 216,
+            "tag": "IMG",
+            "src": "3da010bb588e70c5323088b2c66658fe.jpg",
+            "label": null
+          },
+          "matched": true
+        },
+        {
+          "expected": {
+            "x": 904,
+            "y": 876,
+            "w": 384,
+            "h": 216,
+            "tag": "SPAN",
+            "label": null
+          },
+          "matched": true
+        },
+        {
+          "expected": {
+            "x": 1308,
+            "y": 876,
+            "w": 384,
+            "h": 216,
+            "tag": "A",
+            "label": null
+          },
+          "matched": true
+        },
+        {
+          "expected": {
+            "x": 1308,
+            "y": 876,
+            "w": 384,
+            "h": 216,
+            "tag": "IMG",
+            "src": "4fb620620d8744ec661c36af04563200.jpg",
+            "label": null
+          },
+          "matched": true
+        },
+        {
+          "expected": {
+            "x": 1308,
+            "y": 876,
+            "w": 384,
+            "h": 216,
+            "tag": "SPAN",
+            "label": null
+          },
+          "matched": true
+        },
+        {
+          "expected": {
+            "x": 1712,
+            "y": 876,
+            "w": 384,
+            "h": 216,
+            "tag": "A",
+            "label": null
+          },
+          "matched": true
+        },
+        {
+          "expected": {
+            "x": 1712,
+            "y": 876,
+            "w": 384,
+            "h": 216,
+            "tag": "IMG",
+            "src": "4ecebe14f02c5841c69a2da6d6cb5389.jpg",
+            "label": null
+          },
+          "matched": true
+        },
+        {
+          "expected": {
+            "x": 1712,
+            "y": 876,
+            "w": 384,
+            "h": 216,
+            "tag": "SPAN",
+            "label": null
+          },
+          "matched": true
+        },
+        {
+          "expected": {
+            "x": 300,
+            "y": 38,
+            "w": 56,
+            "h": 56,
+            "tag": "A",
+            "label": "Search"
+          },
+          "matched": true
+        },
+        {
+          "expected": {
+            "x": 313,
+            "y": 51,
+            "w": 30,
+            "h": 30,
+            "tag": "svg",
+            "label": null
+          },
+          "matched": true
+        },
+        {
+          "expected": {
+            "x": 364,
+            "y": 38,
+            "w": 108,
+            "h": 56,
+            "tag": "A",
+            "label": null
+          },
+          "matched": true
+        },
+        {
+          "expected": {
+            "x": 480,
+            "y": 38,
+            "w": 123,
+            "h": 56,
+            "tag": "A",
+            "label": null
+          },
+          "matched": true
+        },
+        {
+          "expected": {
+            "x": 611,
+            "y": 38,
+            "w": 112,
+            "h": 56,
+            "tag": "A",
+            "label": null
+          },
+          "matched": true
+        },
+        {
+          "expected": {
+            "x": 731,
+            "y": 38,
+            "w": 86,
+            "h": 56,
+            "tag": "A",
+            "label": null
+          },
+          "matched": true
+        },
+        {
+          "expected": {
+            "x": 825,
+            "y": 38,
+            "w": 126,
+            "h": 56,
+            "tag": "A",
+            "label": null
+          },
+          "matched": true
+        },
+        {
+          "expected": {
+            "x": 1768,
+            "y": 38,
+            "w": 56,
+            "h": 56,
+            "tag": "A",
+            "label": "Profile: vynxc"
+          },
+          "matched": true
+        },
+        {
+          "expected": {
+            "x": 1768,
+            "y": 38,
+            "w": 56,
+            "h": 56,
+            "tag": "IMG",
+            "src": "5112cc304140378385555c10e98d120d.png",
+            "label": null
+          },
+          "matched": true
+        }
+      ],
+      "resolution": [
+        1920,
+        1080
+      ],
+      "geometry_tolerance_pixels": 1,
+      "matched_rectangles": 36,
+      "whole_frame_mean_absolute_channel_difference": 1.348831500771605,
+      "source_revision": "ee23cf6fb9c84191a1fe96c724c291ed473deb4f",
+      "qualification": "Matched default Home geometry, artwork/icon regions and normal/reduced billboard motion; browser evidence.",
+      "limits": [
+        "Whole-frame metrics include background and are not a universal similarity score.",
+        "Canvas and DOM text rasterization differ; browser measurements do not establish physical-TV certification."
+      ],
+      "artwork_regions": [
+        {
+          "box": {
+            "x": 0,
+            "y": 0,
+            "w": 1920,
+            "h": 1080,
+            "tag": "IMG",
+            "src": "a5729872fdf6d97950dabed6371ef4d6.jpg",
+            "label": null
+          },
+          "mean_absolute_channel_difference": 1.36584860468107
+        },
+        {
+          "box": {
+            "x": 96,
+            "y": 300,
+            "w": 229.171875,
+            "h": 170,
+            "tag": "IMG",
+            "src": "274e704ffc2eeb3e73918396e294edb0.png",
+            "label": null
+          },
+          "mean_absolute_channel_difference": 3.753393009377664
+        },
+        {
+          "box": {
+            "x": 124,
+            "y": 672,
+            "w": 24,
+            "h": 24,
+            "tag": "svg",
+            "label": null
+          },
+          "mean_absolute_channel_difference": 0.015046296296296295
+        },
+        {
+          "box": {
+            "x": 357,
+            "y": 669,
+            "w": 30,
+            "h": 30,
+            "tag": "svg",
+            "label": null
+          },
+          "mean_absolute_channel_difference": 0.7240740740740741
+        },
+        {
+          "box": {
+            "x": 449,
+            "y": 669,
+            "w": 30,
+            "h": 30,
+            "tag": "svg",
+            "label": null
+          },
+          "mean_absolute_channel_difference": 0.38925925925925925
+        },
+        {
+          "box": {
+            "x": 96,
+            "y": 876,
+            "w": 384,
+            "h": 216,
+            "tag": "IMG",
+            "src": "d1f119013660d10c200395924d2e01f1.jpg",
+            "label": null
+          },
+          "mean_absolute_channel_difference": 0.642152607570806
+        },
+        {
+          "box": {
+            "x": 500,
+            "y": 876,
+            "w": 384,
+            "h": 216,
+            "tag": "IMG",
+            "src": "22d40e71d7251ce37731f9c92046225e.jpg",
+            "label": null
+          },
+          "mean_absolute_channel_difference": 0.8011599605119826
+        },
+        {
+          "box": {
+            "x": 904,
+            "y": 876,
+            "w": 384,
+            "h": 216,
+            "tag": "IMG",
+            "src": "3da010bb588e70c5323088b2c66658fe.jpg",
+            "label": null
+          },
+          "mean_absolute_channel_difference": 0.7454299428104575
+        },
+        {
+          "box": {
+            "x": 1308,
+            "y": 876,
+            "w": 384,
+            "h": 216,
+            "tag": "IMG",
+            "src": "4fb620620d8744ec661c36af04563200.jpg",
+            "label": null
+          },
+          "mean_absolute_channel_difference": 1.125906352124183
+        },
+        {
+          "box": {
+            "x": 1712,
+            "y": 876,
+            "w": 384,
+            "h": 216,
+            "tag": "IMG",
+            "src": "4ecebe14f02c5841c69a2da6d6cb5389.jpg",
+            "label": null
+          },
+          "mean_absolute_channel_difference": 0.5214775012569131
+        },
+        {
+          "box": {
+            "x": 313,
+            "y": 51,
+            "w": 30,
+            "h": 30,
+            "tag": "svg",
+            "label": null
+          },
+          "mean_absolute_channel_difference": 0.5222222222222223
+        },
+        {
+          "box": {
+            "x": 1768,
+            "y": 38,
+            "w": 56,
+            "h": 56,
+            "tag": "IMG",
+            "src": "5112cc304140378385555c10e98d120d.png",
+            "label": null
+          },
+          "mean_absolute_channel_difference": 3.25765306122449
+        }
+      ],
+      "motion_measurements": [
+        {
+          "target_ms": 7000,
+          "actual_ms": 7003,
+          "regions": [
+            {
+              "name": "artwork",
+              "x": 1000,
+              "y": 160,
+              "w": 800,
+              "h": 650,
+              "mean_absolute_channel_difference": 1.5597634615384615
+            },
+            {
+              "name": "add-control",
+              "x": 336,
+              "y": 648,
+              "w": 72,
+              "h": 72,
+              "mean_absolute_channel_difference": 1.6631301440329218
+            },
+            {
+              "name": "info-control",
+              "x": 428,
+              "y": 648,
+              "w": 72,
+              "h": 72,
+              "mean_absolute_channel_difference": 0.8016975308641975
+            }
+          ]
+        },
+        {
+          "target_ms": 14000,
+          "actual_ms": 14000,
+          "regions": [
+            {
+              "name": "artwork",
+              "x": 1000,
+              "y": 160,
+              "w": 800,
+              "h": 650,
+              "mean_absolute_channel_difference": 1.551901923076923
+            },
+            {
+              "name": "add-control",
+              "x": 336,
+              "y": 648,
+              "w": 72,
+              "h": 72,
+              "mean_absolute_channel_difference": 1.581983024691358
+            },
+            {
+              "name": "info-control",
+              "x": 428,
+              "y": 648,
+              "w": 72,
+              "h": 72,
+              "mean_absolute_channel_difference": 0.8831661522633745
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "board": "Tv3Browse",
+      "reference_sha256": "390b2cb6d77ad5c4a6c31e576c99444a20c48fdc12f7b27e2c928e5e6e461d01",
+      "adaptations": [
+        "Current server badge ordering/720p wording and minute-based subtitles",
+        "Unsupported release New badges omitted"
+      ],
+      "bounds": [
+        {
+          "expected": {
+            "x": 760,
+            "y": 0,
+            "w": 1160,
+            "h": 620,
+            "tag": "IMG"
+          },
+          "matched": true
+        },
+        {
+          "expected": {
+            "x": 96,
+            "y": 96,
+            "w": 420,
+            "h": 121.4375,
+            "tag": "IMG"
+          },
+          "matched": true
+        },
+        {
+          "expected": {
+            "x": 466,
+            "y": 240,
+            "w": 59.453125,
+            "h": 30,
+            "tag": "SPAN"
+          },
+          "matched": true
+        },
+        {
+          "expected": {
+            "x": 537.453125,
+            "y": 240,
+            "w": 40.09375,
+            "h": 30,
+            "tag": "SPAN"
+          },
+          "matched": true
+        },
+        {
+          "expected": {
+            "x": 589.546875,
+            "y": 240,
+            "w": 78.8125,
+            "h": 30,
+            "tag": "SPAN"
+          },
+          "matched": true
+        },
+        {
+          "expected": {
+            "x": 96,
+            "y": 564,
+            "w": 384,
+            "h": 216,
+            "tag": "IMG"
+          },
+          "matched": true
+        },
+        {
+          "expected": {
+            "x": 276,
+            "y": 658,
+            "w": 28,
+            "h": 28,
+            "tag": "svg"
+          },
+          "matched": true
+        },
+        {
+          "expected": {
+            "x": 500,
+            "y": 564,
+            "w": 384,
+            "h": 216,
+            "tag": "IMG"
+          },
+          "matched": true
+        },
+        {
+          "expected": {
+            "x": 904,
+            "y": 564,
+            "w": 384,
+            "h": 216,
+            "tag": "IMG"
+          },
+          "matched": true
+        },
+        {
+          "expected": {
+            "x": 1308,
+            "y": 564,
+            "w": 384,
+            "h": 216,
+            "tag": "IMG"
+          },
+          "matched": true
+        },
+        {
+          "expected": {
+            "x": 1712,
+            "y": 564,
+            "w": 384,
+            "h": 216,
+            "tag": "IMG"
+          },
+          "matched": true
+        },
+        {
+          "expected": {
+            "x": 96,
+            "y": 948,
+            "w": 232,
+            "h": 348,
+            "tag": "IMG"
+          },
+          "matched": true
+        },
+        {
+          "expected": {
+            "x": 344,
+            "y": 948,
+            "w": 232,
+            "h": 348,
+            "tag": "IMG"
+          },
+          "matched": true
+        },
+        {
+          "expected": {
+            "x": 592,
+            "y": 948,
+            "w": 232,
+            "h": 348,
+            "tag": "IMG"
+          },
+          "matched": true
+        },
+        {
+          "expected": {
+            "x": 840,
+            "y": 948,
+            "w": 232,
+            "h": 348,
+            "tag": "IMG"
+          },
+          "matched": true
+        },
+        {
+          "expected": {
+            "x": 1088,
+            "y": 948,
+            "w": 232,
+            "h": 348,
+            "tag": "IMG"
+          },
+          "matched": true
+        },
+        {
+          "expected": {
+            "x": 1336,
+            "y": 948,
+            "w": 232,
+            "h": 348,
+            "tag": "IMG"
+          },
+          "matched": true
+        },
+        {
+          "expected": {
+            "x": 1584,
+            "y": 948,
+            "w": 232,
+            "h": 348,
+            "tag": "IMG"
+          },
+          "matched": true
+        },
+        {
+          "expected": {
+            "x": 1832,
+            "y": 948,
+            "w": 232,
+            "h": 348,
+            "tag": "IMG"
+          },
+          "matched": true
+        }
+      ],
+      "whole_frame_mean_absolute_channel_difference": 0.7827440200617284,
+      "source_revision": "ee23cf6fb9c84191a1fe96c724c291ed473deb4f",
+      "geometry_tolerance_pixels": 1,
+      "resolution": [
+        1920,
+        1080
+      ],
+      "matched_rectangles": 19,
+      "limits": [
+        "Whole-frame metrics include background and are not a universal similarity score.",
+        "Canvas and DOM text rasterization differ; browser measurements do not establish physical-TV certification."
+      ]
+    }
+  ],
+  "font_provenance": [
+    {
+      "file": "tv-web/node_modules/@fontsource/onest/files/onest-latin-600-normal.woff2",
+      "sha256": "a56e6d2dcc2d24fe160cbc8c08adbca5a9da776237460704f6f24e1b5f7cba36",
+      "units_per_em": 1000,
+      "ascender": 970,
+      "descender": -305,
+      "line_gap": 0,
+      "axes": [],
+      "version": "Version 2.001"
+    },
+    {
+      "file": "design/viptv-design-system/reference/assets/fonts/onest-latin-wght-normal.woff2",
+      "sha256": "052df74533250c2e0ca0c4bdd32de594e107d99c1648e63820ef9c6142067828",
+      "units_per_em": 1000,
+      "ascender": 970,
+      "descender": -305,
+      "line_gap": 0,
+      "axes": [
+        "wght"
+      ],
+      "version": "Version 2.001"
+    },
+    {
+      "file": "tv-web/node_modules/@fontsource-variable/bricolage-grotesque/files/bricolage-grotesque-latin-opsz-normal.woff2",
+      "sha256": "a79fdb52d4a5c76552452f69202add96e287401fff03d3e8c0e38b4dcb5a99cd",
+      "units_per_em": 1000,
+      "ascender": 930,
+      "descender": -270,
+      "line_gap": 0,
+      "axes": [
+        "opsz",
+        "wght"
+      ],
+      "version": "Version 1.001;gftools[0.9.33.dev8+g029e19f]"
+    },
+    {
+      "file": "design/viptv-design-system/reference/assets/fonts/bricolage-grotesque-latin-standard-normal.woff2",
+      "sha256": "a756882d8a7802ebd4663b4544a62ebedafc7227c1c159ab95eea61393af3f8e",
+      "units_per_em": 1000,
+      "ascender": 930,
+      "descender": -270,
+      "line_gap": 0,
+      "axes": [
+        "opsz",
+        "wght",
+        "wdth"
+      ],
+      "version": "Version 1.001;gftools[0.9.33.dev8+g029e19f]"
+    }
+  ],
+  "font_correction": "Use shipped font metrics, CSS line boxes, native-size glyph bitmaps and native letter spacing when supported. Older engines retain the existing spaced-text fallback.",
+  "source_revision": "291a061c3300dfb979d182e4030f527d8d049a69",
+  "backend_producer": "1a361e4dc7923cf2909ff0be828912fb8530fa48",
+  "measurement_note": "Per-state source_revision identifies the actual captured build; the top-level revision identifies the current checkpoint."
+}

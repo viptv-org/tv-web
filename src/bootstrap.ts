@@ -34,4 +34,7 @@ if (renderer === "solid") {
   await import("./tv-solid/main");
 } else await import("./main");
 }
-void launch().catch(() => { document.body.textContent = "VIPTV could not start. Reload to try again."; });
+void launch().catch((cause) => {
+  console.error("VIPTV launch failed", cause);
+  document.body.textContent = "VIPTV could not start. Reload to try again.";
+});

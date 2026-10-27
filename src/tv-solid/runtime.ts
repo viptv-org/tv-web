@@ -15,7 +15,8 @@ import {
 } from "solid-js";
 import type { ImageTexture } from "@solidtv/renderer";
 import { CanvasTextRenderer } from "@solidtv/renderer/canvas";
-import { canvasFont } from "./fonts";
+import { canvasFont, canvasFontMetrics } from "./fonts";
+import { nativeSpacedLine } from "./text-raster";
 import {
   Config,
   activeElement,
@@ -369,17 +370,33 @@ function visualNode(
   insert(node, () => (mounted() ? props.children : undefined));
   return node as unknown as JSX.Element;
 }
+/** Server-owned display preference: profile text size scales every rasterized
+ * label. Layout positions are unchanged; only glyph rasterization scales. */
+const [textScaleSignal, setTextScaleSignal] = createSignal(1);
+export const textScale = () => textScaleSignal();
+export function setTextScale(value: number) {
+  setTextScaleSignal(value);
+}
 export const TvView = (props: Record<string, any>) => visualNode(props);
 /** Keep one visible node. Upload a replacement before swapping; color is a
  * quad tint, so focus changes never evict glyphs or rasterize the same label. */
 export function TvText(props: Record<string, any>): JSX.Element {
-  const [frame, setFrame] = createSignal<{texture: ImageTexture; width: number; height: number; inkCenter: number}>();
+  const [frame, setFrame] = createSignal<{texture: ImageTexture; width: number; height: number; layoutWidth: number; lineHeight: number; baselineAdjustment: number}>();
+  const scaledSize = () => (props.size ?? 32) * textScale();
+  const cssLineHeight = () => {
+    const size = scaledSize();
+    if (props.lineheight !== undefined) return size * props.lineheight;
+    const metrics = canvasFontMetrics(props.font ?? "Onest");
+    return Math.round(metrics.ascender * size / metrics.unitsPerEm) + Math.round(-metrics.descender * size / metrics.unitsPerEm);
+  };
   const layoutProps = createMemo(() => ({
-    text: String(props.content ?? ""), fontFamily: canvasFont(props.font ?? "Onest", props.size ?? 32),
-    fontSize: props.size ?? 32, color: 0xffffffff,
+    text: String(props.content ?? ""), fontFamily: canvasFont(props.font ?? "Onest", scaledSize()),
+    fontSize: scaledSize(), color: 0xffffffff,
     maxWidth: props.maxwidth ?? props.w ?? 0, maxHeight: props.maxheight ?? 0,
     maxLines: props.maxlines ?? 0, textAlign: props.align ?? "left",
-    lineHeight: props.lineheight ?? 1.2, letterSpacing: props.letterspacing ?? 0,
+    // The renderer's multiplier is relative to font bounds, whereas CSS
+    // multipliers are relative to font size. Supply CSS pixels explicitly.
+    lineHeight: cssLineHeight(), letterSpacing: props.letterspacing ?? 0,
     overflowSuffix: "…", wordBreak: props.maxlines === 1 ? "break-all" as const : "break-word" as const,
   }), undefined, {equals:(a,b)=>a.text===b.text&&a.fontFamily===b.fontFamily&&a.fontSize===b.fontSize
     &&a.maxWidth===b.maxWidth&&a.maxHeight===b.maxHeight&&a.maxLines===b.maxLines
@@ -387,18 +404,20 @@ export function TvText(props: Record<string, any>): JSX.Element {
   createRenderEffect(() => {
     const renderer = getRenderer();
     if (!("createTextNodeProps" in renderer)) throw new Error("SolidTV text requires its canvas renderer");
-    const layout = CanvasTextRenderer.renderText(renderer.createTextNodeProps(layoutProps()));
+    const native = nativeSpacedLine(layoutProps(), props.lineheight === undefined);
+    const layout = native ?? CanvasTextRenderer.renderText(renderer.createTextNodeProps(layoutProps()));
     if (!layout.imageData || !layout.width || !layout.height) { setFrame(undefined); return; }
     const pixels = layout.imageData;
-    let first = pixels.height, last = 0;
-    for (let y = 0; y < pixels.height; y++) {
-      for (let x = 0; x < pixels.width; x++) if (pixels.data[(y*pixels.width+x)*4+3]) {
-        first = Math.min(first,y); last = y; break;
-      }
-    }
+    const metrics = canvasFontMetrics(layoutProps().fontFamily);
+    const scale = layoutProps().fontSize / metrics.unitsPerEm;
+    const baseline = (layoutProps().lineHeight - (metrics.ascender - metrics.descender + metrics.lineGap) * scale) / 2 + metrics.ascender * scale;
+    const ascent = Math.round(metrics.ascender * scale), descent = Math.round(-metrics.descender * scale);
+    const cssBaseline = (layoutProps().lineHeight - ascent - descent) / 2 + ascent;
     const texture = renderer.createTexture("ImageTexture", {src:pixels, premultiplyAlpha:true});
     let cancelled = false;
-    const ready = () => { if (!cancelled) setFrame({texture, width:layout.width, height:layout.height, inkCenter:(first+last+1)/2}); };
+    // The canvas rasterizer rounds its backing pixels up. Drawing them at the
+    // fractional layout size resamples every glyph, softening otherwise crisp text.
+    const ready = () => { if (!cancelled) setFrame({texture, width:pixels.width, height:pixels.height, layoutWidth:layout.width, lineHeight:layout.height, baselineAdjustment:native ? 0 : cssBaseline-Math.ceil(baseline)}); };
     texture.on("loaded", ready);
     texture.load();
     if (texture.state === "loaded") ready();
@@ -409,8 +428,8 @@ export function TvText(props: Record<string, any>): JSX.Element {
     if(debugNode?.lng)Object.defineProperty(debugNode.lng,"viptvText",{get:()=>String(props.content??"")});
   });
   return TvView({
-    get x() { const width=props.maxwidth ?? props.w ?? 0; return (props.x??0)+(width>0?Math.max(0,width-(frame()?.width??0))*(props.align==="right"?1:props.align==="center"?.5:0):0); },
-    get y() { return props.centerY !== undefined ? props.centerY-(frame()?.inkCenter??0) : props.y??0; },
+    get x() { const width=props.maxwidth ?? props.w ?? 0; return (props.x??0)+(width>0?Math.max(0,width-(frame()?.layoutWidth??0))*(props.align==="right"?1:props.align==="center"?.5:0):0); },
+    get y() { return (props.centerY !== undefined ? props.centerY-(frame()?.lineHeight??0)/2 : props.y??0)+(frame()?.baselineAdjustment??0); },
     get w() { return frame()?.width??0; }, get h() { return frame()?.height??0; },
     get texture() { return frame()?.texture??null; },
     get color() { return props.color??"#ffffff"; },

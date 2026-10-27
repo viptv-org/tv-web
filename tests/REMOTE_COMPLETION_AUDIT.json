@@ -1,0 +1,385 @@
+{
+  "schema": 1,
+  "objective": "Fully quantify the approved server-authoritative TV-web rebuild; do not mark complete while required evidence is missing.",
+  "state": "in_progress",
+  "source_base_commit": "cb7224edf6763ed12b53ef73fc4c2d2207647f7d",
+  "design_ref": "4f3a1eae36399608f459b5973381ead969c2c2d1",
+  "backend_producer": "0d8da118e2282c1d7cefa4bc590004bf6a97c211",
+  "previous_turn_classification": "progress: Live and channel Search payload/descriptor windows bounded; reverse traversal, refresh, failure recovery, frame budgets and focus geometry quantified",
+  "requirements": [
+    {
+      "id": "scope",
+      "requirement": "SolidTV Tizen, Vizio, webOS and browser TV; responsive React untouched",
+      "status": "verified",
+      "evidence_or_gap": "src/rendererSelection.ts; src/tv-solid/main.ts; current build boundary"
+    },
+    {
+      "id": "design-pin",
+      "requirement": "Immutable design adoption and canonical exclusions",
+      "status": "verified",
+      "evidence_or_gap": "DESIGN_REF; design:check; design-contract/docs/platforms/TV_SERVER_WRAPPER.md"
+    },
+    {
+      "id": "design-parity",
+      "requirement": "All included Tv3 states match reference geometry, typography, art treatment, copy, focus and motion",
+      "status": "open",
+      "evidence_or_gap": "Nine reference states now have measured captures: 135 rectangles and 32 Welcome artwork regions. Browse has 19 rectangles and a whole-frame mean channel difference of 0.783/255. Home-to-rows choreography and other included boards remain open."
+    },
+    {
+      "id": "screen-states",
+      "requirement": "Loading, partial, empty, error, cancellation and return focus for each supported screen",
+      "status": "partial",
+      "evidence_or_gap": "Search now has independent loading/error states, actionable partial results, query cancellation, paging and playback return focus. Other screen-state combinations remain incomplete."
+    },
+    {
+      "id": "features",
+      "requirement": "Server-supported Live, My List, parental controls, preferences, add-ons and integrations",
+      "status": "partial",
+      "evidence_or_gap": "Search now consumes separate media/channel capabilities, supports channel-only profiles and paged channel playback. UI routes remain server-owned. Remaining source/settings form fidelity and per-screen adverse states still require audit."
+    },
+    {
+      "id": "exclusions",
+      "requirement": "No local/guest mode, local providers, downloads, native torrents, casting, Calendar or unavailable annotations",
+      "status": "verified",
+      "evidence_or_gap": "TV boundary; TV_SERVER_WRAPPER.md; remote entry"
+    },
+    {
+      "id": "api",
+      "requirement": "Dedicated typed transport using current unversioned APIs",
+      "status": "verified",
+      "evidence_or_gap": "Dedicated typed transport uses current routes. Search consumes existing all-types discovery and scoped Live filtering independently; it performs no local result ranking or provider fan-out."
+    },
+    {
+      "id": "engine-boundary",
+      "requirement": "No Rust/WASM initialization or business runtime reachable from TV entry; preserve React",
+      "status": "verified",
+      "evidence_or_gap": "Production graph contains 195 TV modules and no legacy engine or playback policy. React core pin remains unchanged."
+    },
+    {
+      "id": "server-presentation",
+      "requirement": "Server owns order, artwork roles, actions, resume, source selection, continuation, parental permissions and preferences",
+      "status": "partial",
+      "evidence_or_gap": "Home preview artwork, captions, progress and activation intents now come from the producer. Explicit Play still resolves a fresh viewing action. Remaining settings/form presentation and other per-screen policy still need audit."
+    },
+    {
+      "id": "backend-compatibility",
+      "requirement": "Additive shared producer compatible with Roku and existing clients",
+      "status": "partial",
+      "evidence_or_gap": "Current producer remains 0d8da11 with its 570-pass default suite. The client consumes its pinned shared paging fixture; real HTTPS probes verify distinct limits/budgets and maximal unsigned cursor on the unavailable directory. Configured traversal is browser-fixture evidence."
+    },
+    {
+      "id": "decoder-facts",
+      "requirement": "Send actual platform decoder facts and execute server-authorized delivery",
+      "status": "partial",
+      "evidence_or_gap": "All four platform labels are sent and tested. The H.264/AAC 1080p envelope remains conservative; no 4K/native capability qualification is claimed."
+    },
+    {
+      "id": "no-fallback",
+      "requirement": "No local source fallback ranking or next-episode inference",
+      "status": "verified",
+      "evidence_or_gap": "remote/playback.ts; server-selected source/continuation tests"
+    },
+    {
+      "id": "durable-auth",
+      "requirement": "Durable authentication and refresh rotation, including cancelled/retired views",
+      "status": "verified",
+      "evidence_or_gap": "29 transport cases include rotation across profile switch and retirement by new pairing"
+    },
+    {
+      "id": "scope-cache",
+      "requirement": "Temporary profile-scoped caches; invalidate on revisions and reject retired outcomes",
+      "status": "partial",
+      "evidence_or_gap": "Live and channel Search retain two payload pages and constant descriptor metadata. Server cursors/budgets are copied unchanged; changed snapshots, profile/query scope and stale replies are fenced. Home, discovery, Library and detail payload bounds plus unique-art stress remain open."
+    },
+    {
+      "id": "pending-mutations",
+      "requirement": "Keep confirmed state until server mutation succeeds; visible retry without offline mode",
+      "status": "partial",
+      "evidence_or_gap": "Rejected add-on, preference/auth-loss and Library sort/read cancellation cases pass; remaining mutation families still need exhaustive adverse cases."
+    },
+    {
+      "id": "remote-input",
+      "requirement": "Keep focus/animation independent of round trips; retain remote semantics",
+      "status": "partial",
+      "evidence_or_gap": "200 groups/120 channels, explicit Play/Pause/Stop, repeated media key suppression and webOS root Back now tested; remaining remote-repeat rates and target host behavior need coverage."
+    },
+    {
+      "id": "virtualization",
+      "requirement": "Virtualize long rows, grids, guides and settings with stable identity",
+      "status": "partial",
+      "evidence_or_gap": "Live/channel Search now bound both payload windows and rendered rows; reverse arrivals preserve focus geometry. Other long-catalog payloads and metadata still need bounded retention."
+    },
+    {
+      "id": "image-memory",
+      "requirement": "Bound image/texture caches and request appropriately sized artwork",
+      "status": "partial",
+      "evidence_or_gap": "64MiB renderer threshold; long unique-art stress and image-sizing evidence missing"
+    },
+    {
+      "id": "lazy-loading",
+      "requirement": "Lazy screen loading and batched updates without broad navigation rerenders",
+      "status": "partial",
+      "evidence_or_gap": "App is one lazy entry chunk; per-screen loading and comprehensive rerender evidence missing"
+    },
+    {
+      "id": "bootstrap",
+      "requirement": "Use bootstrap immediately, revision refresh, no per-card metadata/duplicate discovery",
+      "status": "partial",
+      "evidence_or_gap": "startup/no-network focus tests; full multi-screen request budget not yet measured"
+    },
+    {
+      "id": "baseline",
+      "requirement": "Capture production baseline before conversion",
+      "status": "verified",
+      "evidence_or_gap": "f109eb3 artifact and before performance raw report retained"
+    },
+    {
+      "id": "perf-startup",
+      "requirement": "Measure cold startup and first actionable content",
+      "status": "verified",
+      "evidence_or_gap": "Three paired Home samples against 2fafc08: median 511.8 \u2192 499.6ms. Exact fixtures, verified served bundle, 1920\u00d71080, software WebGL, 4x CPU throttle."
+    },
+    {
+      "id": "perf-navigation",
+      "requirement": "Measure sustained navigation/frame timing and JavaScript transfer",
+      "status": "verified",
+      "evidence_or_gap": "Three paired runs for Home/grid/guide/settings plus three new Search runs. Search exercises typing/deletion and 120-channel round trips, 258 inputs/run; all traversal assertions passed."
+    },
+    {
+      "id": "perf-memory",
+      "requirement": "Measure heap and texture allocation separately",
+      "status": "verified",
+      "evidence_or_gap": "Post-GC heap and renderer texture allocations recorded separately for all four workloads. Grid median textures 41.274 \u2192 32.174MiB; this is not total process memory or unique-art churn qualification."
+    },
+    {
+      "id": "perf-equivalence",
+      "requirement": "Compare under identical fixtures/conditions",
+      "status": "open",
+      "evidence_or_gap": "Five matched-fixture runs now compare c9c1aae to the current candidate. The original pre-conversion comparison still used different fixture data, so that broader obligation remains open."
+    },
+    {
+      "id": "concurrency",
+      "requirement": "Recheck backend contracts/status, preserve concurrent edits",
+      "status": "verified",
+      "evidence_or_gap": "backend status inspected; gateway/mod.rs and media_lab_acceptance.rs untouched"
+    },
+    {
+      "id": "isolation",
+      "requirement": "Use isolated build outputs and trusted HTTPS; preserve shared QA and hosting",
+      "status": "verified",
+      "evidence_or_gap": "Owned /tmp/viptv-tv-channel-window-release-20261024 served via trusted HTTPS 18587; isolated real producer on 18565. No shared QA runtime or production replacement."
+    },
+    {
+      "id": "types-integrity",
+      "requirement": "Type checks and immutable dependency/design integrity checks",
+      "status": "verified",
+      "evidence_or_gap": "/tmp/viptv-channel-window-release-build.log and /tmp/viptv-channel-window-types-release.log cover all application/test/config groups and immutable dependencies."
+    },
+    {
+      "id": "unit-gates",
+      "requirement": "Single-worker unit and integration tests",
+      "status": "verified",
+      "evidence_or_gap": "357 tests / 61 files pass in one fork, including the pinned producer paging fixture and malformed/mismatched envelopes."
+    },
+    {
+      "id": "build-gate",
+      "requirement": "Production build and reachable dependency graph gate",
+      "status": "verified",
+      "evidence_or_gap": "Production/type/integrity build passes; 195 emitted TV modules and no local engine or business-policy runtime."
+    },
+    {
+      "id": "browser-gate",
+      "requirement": "Targeted single-worker browser acceptance",
+      "status": "verified",
+      "evidence_or_gap": "107 single-worker browser cases pass, plus the real-producer HTTPS flow. Twelve new window cases cover 241-channel traversal, exact requests, rollback/retirement, playback return, refresh and focus geometry."
+    },
+    {
+      "id": "pairing",
+      "requirement": "Pairing/refresh and profile isolation acceptance",
+      "status": "partial",
+      "evidence_or_gap": "Real producer pairing/profile/reload passes; new countdown, abandoned-code clearing, cancelled refresh, passive/focused controls, unavailable-management and empty-profile cases pass. Remaining producer expiry/refresh adverse cases remain open."
+    },
+    {
+      "id": "flow-coverage",
+      "requirement": "All supported screen flows and mutations",
+      "status": "partial",
+      "evidence_or_gap": "57-case fixture suite and one real-producer HTTPS flow now exist; full supported per-screen loading/partial/error/mutation matrix remains incomplete."
+    },
+    {
+      "id": "playback-acceptance",
+      "requirement": "Server-selected playback, manual source changes, continuation, cancellation, expiry and failures",
+      "status": "partial",
+      "evidence_or_gap": "Existing server-selected playback/continuation/lifecycle cases pass. Paused/ended replacement, decoder failure and server/gateway torrent qualification remain open. Roku also reports ROK-MEDIA-20261024-MKV-COPY (missing source prefix/duration mismatch); no client workaround is permitted."
+    },
+    {
+      "id": "current-routes",
+      "requirement": "Assert TV requests use current routes and do not load local policy runtime",
+      "status": "verified",
+      "evidence_or_gap": "remote API tests; browser route test; production boundary"
+    },
+    {
+      "id": "visual-acceptance",
+      "requirement": "Compare every included reference state with matching content through private screenshots and geometry",
+      "status": "open",
+      "evidence_or_gap": "Nine qualified reference states retain 135 rectangles. Search was recaptured on cb7224e: 47 reference rectangles and byte-identical before/after pixels. Delayed reverse page arrival has separate Live/Search focus-coordinate checks. Remaining boards are still unproven."
+    },
+    {
+      "id": "scaling-motion",
+      "requirement": "Scaled layouts, remote hold/repeat, focus restoration and reduced motion",
+      "status": "partial",
+      "evidence_or_gap": "Home 9s cycle, 14s/106% zoom, interaction/menu/visibility pause, reduced motion, clock retirement and failed/late artwork pass. Default and 7s/14s captures are measured. Broader screen motion/scaling qualification remains open."
+    },
+    {
+      "id": "perf-gates",
+      "requirement": "No unexplained startup/navigation regression, no long tasks and existing frame budget",
+      "status": "partial",
+      "evidence_or_gap": "All 15 repeated candidate runs pass frame p95 <=17.5ms, zero long tasks/>50ms intervals. Final guarded build also passes Home and 258-input Search follow-ups at 16.8ms. Original matched pre-conversion baseline and unique-art stress remain open."
+    },
+    {
+      "id": "evidence-record",
+      "requirement": "Update parity/testing records with exact producer/design revisions and measured results",
+      "status": "partial",
+      "evidence_or_gap": "Current audit, paired performance reports and testing checkpoint are recorded; per-state full visual measurements and final artifacts remain pending."
+    },
+    {
+      "id": "delivery",
+      "requirement": "Deliver implementation and validated build artifacts",
+      "status": "partial",
+      "evidence_or_gap": "Validated Search/typography hosting archive and evidence checkpoint in .artifacts/tv-remote-search-20261023; full-task qualification remains pending."
+    },
+    {
+      "id": "deployment",
+      "requirement": "Production deployment and physical-device certification are separate",
+      "status": "out_of_scope",
+      "evidence_or_gap": "Explicit approved-plan boundary; no claim of hardware certification required for this conversion"
+    },
+    {
+      "id": "handoff",
+      "requirement": "Consume Roku shared requirements and fixtures without a TV-only business engine",
+      "status": "partial",
+      "evidence_or_gap": "Roku snapshot, large-offset and bounded reverse-bookkeeping dependencies are addressed in shared contracts/fixtures. New history/modal-eligibility handoff requests have been observed; relevant remaining consumer/presentation work is not claimed complete."
+    }
+  ],
+  "visual_states": [],
+  "counts": {
+    "requirements": 42,
+    "requirements_by_status": {
+      "verified": 18,
+      "open": 3,
+      "partial": 20,
+      "out_of_scope": 1
+    },
+    "reference_states": 0,
+    "included_reference_states": 0,
+    "prior_capture_files": 32,
+    "prior_reference_labels": 30,
+    "prior_geometry_assertions": 9,
+    "current_matched_states": 9,
+    "current_matched_rectangles": 135,
+    "current_artwork_region_comparisons": 32,
+    "current_geometry_measured_states": 9
+  },
+  "next_required_work": [
+    "Implement and match Home-to-rows choreography and the remaining included reference states; nine states currently have quantified captures.",
+    "Qualify paused/ended source replacement, explicit decoder-failure reporting and the real server/gateway torrent flow.",
+    "Complete all source-integration, parental and preference adverse states; retain server-owned availability and mutation confirmation.",
+    "Bound remaining Home, discovery, Library and detail payloads/metadata; qualify their revision focus anchors and unique-art/image-size stress.",
+    "Complete per-screen lazy loading and remote hold/repeat request/frame budgets.",
+    "Establish an equivalent original pre-conversion fixture comparison; retain browser and physical-device evidence separately.",
+    "Update final delivery records only after every required obligation is proven; deployment and physical certification remain outside this conversion."
+  ],
+  "current_checkpoint": {
+    "source_revision": "cb7224edf6763ed12b53ef73fc4c2d2207647f7d",
+    "backend_producer": "0d8da118e2282c1d7cefa4bc590004bf6a97c211",
+    "unit_tests": 357,
+    "unit_files": 61,
+    "browser_tests": 107,
+    "real_producer_flows": 1,
+    "backend_tests": 570,
+    "backend_ignored_shared_tree": 11,
+    "live_runtime_tests": 20,
+    "live_runtime_ignored": 1,
+    "build_output": "/tmp/viptv-tv-channel-window-release-20261024",
+    "tv_emitted_modules": 195,
+    "bundle_sha256": "8f7c0c451439a15444fc9599e7b0bc23d9730ae53477a13ff8e4177fe3ef29b5",
+    "matched_visual_states": 9,
+    "matched_rectangles": 135,
+    "artwork_region_comparisons": 32,
+    "guide_traversal": {
+      "channels": 120,
+      "focus_samples": 238,
+      "observed_peak_snapshots": 17,
+      "observed_peak_requests": 1,
+      "earlier_198_sample_run_peak_requests": 5
+    },
+    "performance_record": "../.artifacts/tv-remote-channel-windows-20261024/performance-comparison.json",
+    "shader_cache_regression": {
+      "before_growth_in_two_seconds": 119,
+      "after_growth_in_two_seconds": 0
+    },
+    "limits": "The remaining obligations above prevent a whole-task completion claim.",
+    "server_engine": "65add90c6a73da8743021ed0a0ff5c862d78124d",
+    "canonical_engine_tests": 115,
+    "canonical_engine_ignored": 1,
+    "native_core_boundary_tests": 1,
+    "geometry_measured_states": 9,
+    "live_runtime_evidence_producer": "1a361e4dc7923cf2909ff0be828912fb8530fa48",
+    "channel_payload_window": {
+      "retained_pages": 2,
+      "wire_max_rows_per_page": 200,
+      "wire_retained_channel_bound": 400,
+      "fixture_page_size": 40,
+      "fixture_observed_peak_channels": 80,
+      "fixture_round_trip_channels": 241,
+      "fixture_round_trip_page_requests": 12,
+      "live_focus_rectangle": [
+        424,
+        796
+      ],
+      "search_focus_rectangle": [
+        1076,
+        196
+      ]
+    },
+    "performance": {
+      "comparison": "c9c1aae checkpoint versus current candidate, identical remote-backend fixtures",
+      "runs_per_build": 5,
+      "fixture_sha256": "381a25cfe66c8013126e507833d5c66905e704e946db91fd60ef8d32d85c3534",
+      "before": {
+        "readyMs": 689.7999999821186,
+        "mainThreadMsPerKey": 38.36718749999999,
+        "handlerP95": 1.7000000178813934,
+        "frameP95": 16.800000000000182,
+        "framesOver50": 0,
+        "longTasks": 0,
+        "heapMiB": 4.253135681152344,
+        "textureMiB": 30.20858306884766,
+        "jsKiB": 976.6796875
+      },
+      "after": {
+        "readyMs": 591.8999999761581,
+        "mainThreadMsPerKey": 36.71750000000001,
+        "handlerP95": 1.7000000178813934,
+        "frameP95": 16.800000000000182,
+        "framesOver50": 0,
+        "longTasks": 0,
+        "heapMiB": 4.269229888916016,
+        "textureMiB": 30.20858306884766,
+        "jsKiB": 982.541015625
+      },
+      "all_current_runs_p95_at_most_17_5ms": true,
+      "all_current_runs_zero_long_tasks": true,
+      "initial_preconversion_matched_data_comparison": "still incomplete",
+      "measured_bundle_sha256": "551671eb199c8ffb585fd57c5d3411e313b901721cfd1ea3b36f9512b5138f51"
+    },
+    "reproduced_failing_regression_cases": 14
+  },
+  "known_producer_counterexamples": [
+    {
+      "id": "ROK-MEDIA-20261024-MKV-COPY",
+      "evidence": "../roku/artifacts/roku-playback-current-20261024/mkv-copy-counterexample.json",
+      "state": "open",
+      "observation": "Roku reports 90.021s/2700-frame Matroska yielding 74.013s/2192-frame HLS from its frozen gateway snapshot; producer investigation required."
+    }
+  ]
+}

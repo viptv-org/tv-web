@@ -176,6 +176,15 @@ Acceptance: on a 390 px phone, My List, Discover and Search show three 2:3
 posters per row with the whole poster visible and unchanged captions, ⋯ and
 long-press menus; missing art fills the 2:3 frame.
 
+## Subtitle mode (PLAY-SUBTITLE-MODE-001)
+
+The 2026-10-11 owner request replaces the Subtitles on/off preference with
+`Always`, `Foreign audio only` and `Never`. Foreign audio only turns subtitles
+on when the audio that plays is not the preferred audio language; the shared
+core rule decides once the player knows its tracks and again after an audio
+switch, until the viewer picks subtitles. See the
+[subtitle mode contract](../specs/behavior/subtitle-mode.md).
+
 ## Android TV episode-number jump (AND-EPISODE-JUMP-001)
 
 The proposed compact `Episode #` chip beside the season badge opens a native
@@ -225,3 +234,37 @@ producer kinds; source artwork/borders remain smooth; desktop Tab/arrows/media
 keys do not activate or navigate controls; text editing still works. Home uses
 frame-bounded scroll measurement, cached card geometry and offscreen rendering
 containment. Verify scrolling with many loaded shelves on the desktop host.
+
+## 2026-10-19 — export reconciliation (264 platform boards, 273 files incl. components/simkl)
+
+Counts at this export: TV 56, desktop 55, phone 69, tablet 18, web 40 (232
+platform screens) plus 9 `components` and 26 `simkl` documents.
+
+Decisions taken while implementing against this export:
+
+- **Focus treatment is one rule, applied three ways.** Content rows and buttons:
+  filled `#F4F2EE` with a 4 px white outline drawn *outside* the box plus a soft
+  shadow. Sidebar items: the `0 0 0 3px #0B0B0C, 0 0 0 6px #F4F2EE` double ring.
+  Cards: an inset 3 px white ring, no fill or size change. `Tv3SetPlayback`
+  draws only the fill; TVU-16 states the outline explicitly, so the outline wins
+  and the board frame is treated as incomplete.
+- **A row with no cards is not drawn at all** (`Tv3RowStates` EMPTY), including
+  the empty-state title. The app's old "Nothing here yet." line is gone.
+- **Only state labels belong on artwork.** `New episode` (light), `Ended`
+  (dark), `LIVE` (red). Presentation badges (4K/HDR/5.1/CC) are metadata and sit
+  on the caption line with the certification chip.
+- **No-art cards keep the board's title+year tile** (bottom-left stack), never an
+  initials monogram.
+- **Screens with no board are self-designed in the same vocabulary, not
+  skipped:** TV History, TV Calendar, TV Recovery codes, TV Settings→Account,
+  and `D3NotFound` (which does not exist in this export) has no implementation.
+- **TV browse has no in-page page title**; the top navigation owns the heading and
+  content starts at the 96 px inset.
+- **Catalog + Filters chips replace inline facet chips on TV**, and filtering is
+  applied once from the full-page filter surface ("Show results"), not per
+  keystroke.
+- **D-pad geometry is not trusted blindly.** A row's last card dead-ends Right
+  instead of jumping to the profile avatar, Up from the first shelf row returns to
+  the billboard, and Up/Down are clamped inside a settings page. The board frames
+  do not show these edges; they are recorded here as deliberate navigational
+  decisions.

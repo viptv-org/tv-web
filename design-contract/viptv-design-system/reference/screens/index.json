@@ -1,1402 +1,7 @@
 [
   {
-    "name": "Main",
-    "title": "Home",
-    "platform": "phone",
-    "size": [
-      390,
-      844
-    ]
-  },
-  {
-    "name": "Title",
-    "title": "Title",
-    "platform": "phone",
-    "size": [
-      390,
-      844
-    ]
-  },
-  {
-    "name": "Sources",
-    "title": "Sources sheet",
-    "platform": "phone",
-    "size": [
-      390,
-      844
-    ]
-  },
-  {
-    "name": "Discover",
-    "title": "Discover",
-    "platform": "phone",
-    "size": [
-      390,
-      844
-    ]
-  },
-  {
-    "name": "Live",
-    "title": "Live TV",
-    "platform": "phone",
-    "size": [
-      390,
-      844
-    ]
-  },
-  {
-    "name": "Library",
-    "title": "My List",
-    "platform": "phone",
-    "size": [
-      390,
-      844
-    ]
-  },
-  {
-    "name": "Settings",
-    "title": "Settings",
-    "platform": "phone",
-    "size": [
-      390,
-      844
-    ]
-  },
-  {
-    "name": "DeskHome",
-    "title": "Home",
-    "platform": "desktop-web",
-    "size": [
-      1440,
-      900
-    ]
-  },
-  {
-    "name": "DeskTitle",
-    "title": "Title \u2014 series",
-    "platform": "desktop-web",
-    "size": [
-      1440,
-      900
-    ]
-  },
-  {
-    "name": "DeskSources",
-    "title": "Title \u2014 source drawer",
-    "platform": "desktop-web",
-    "size": [
-      1440,
-      900
-    ]
-  },
-  {
-    "name": "DeskDiscover",
-    "title": "Discover",
-    "platform": "desktop-web",
-    "size": [
-      1440,
-      900
-    ]
-  },
-  {
-    "name": "DeskLive",
-    "title": "Live TV guide",
-    "platform": "desktop-web",
-    "size": [
-      1440,
-      900
-    ]
-  },
-  {
-    "name": "DeskLibrary",
-    "title": "My List (empty)",
-    "platform": "desktop-web",
-    "size": [
-      1440,
-      900
-    ]
-  },
-  {
-    "name": "DeskSettings",
-    "title": "Settings",
-    "platform": "desktop-web",
-    "size": [
-      1440,
-      900
-    ]
-  },
-  {
-    "name": "WideHome",
-    "title": "Home \u2014 2560\u00d71080 ultra-wide",
-    "platform": "desktop-web",
-    "size": [
-      2560,
-      1080
-    ]
-  },
-  {
-    "name": "WebHome",
-    "title": "Home \u2014 web",
-    "platform": "desktop-web",
-    "size": [
-      1280,
-      800
-    ]
-  },
-  {
-    "name": "WebSearch",
-    "title": "Search \u2014 web",
-    "platform": "desktop-web",
-    "size": [
-      1280,
-      800
-    ]
-  },
-  {
-    "name": "TvProfiles",
-    "title": "Who\u2019s watching",
-    "platform": "tv",
-    "size": [
-      1920,
-      1080
-    ]
-  },
-  {
-    "name": "TvHome",
-    "title": "Home",
-    "platform": "tv",
-    "size": [
-      1920,
-      1080
-    ]
-  },
-  {
-    "name": "TvMenu",
-    "title": "Home \u2014 menu open",
-    "platform": "tv",
-    "size": [
-      1920,
-      1080
-    ]
-  },
-  {
-    "name": "TvTitle",
-    "title": "Title",
-    "platform": "tv",
-    "size": [
-      1920,
-      1080
-    ]
-  },
-  {
-    "name": "TvSources",
-    "title": "Choose source",
-    "platform": "tv",
-    "size": [
-      1920,
-      1080
-    ]
-  },
-  {
-    "name": "TvDiscover",
-    "title": "Discover",
-    "platform": "tv",
-    "size": [
-      1920,
-      1080
-    ]
-  },
-  {
-    "name": "TvLive",
-    "title": "Live TV guide",
-    "platform": "tv",
-    "size": [
-      1920,
-      1080
-    ]
-  },
-  {
-    "name": "TvSearch",
-    "title": "Search",
-    "platform": "tv",
-    "size": [
-      1920,
-      1080
-    ]
-  },
-  {
-    "name": "TvSettings",
-    "title": "Settings",
-    "platform": "tv",
-    "size": [
-      1920,
-      1080
-    ]
-  },
-  {
-    "name": "PhPlayer",
-    "title": "Player \u2014 controls (paused)",
-    "platform": "phone",
-    "size": [
-      390,
-      844
-    ]
-  },
-  {
-    "name": "PhPlayerSubs",
-    "title": "Player \u2014 subtitles",
-    "platform": "phone",
-    "size": [
-      390,
-      844
-    ]
-  },
-  {
-    "name": "PhPlayerInfo",
-    "title": "Player \u2014 playback info",
-    "platform": "phone",
-    "size": [
-      390,
-      844
-    ]
-  },
-  {
-    "name": "PhPlayerLive",
-    "title": "Player \u2014 live channel",
-    "platform": "phone",
-    "size": [
-      390,
-      844
-    ]
-  },
-  {
-    "name": "PhPlayerBuffering",
-    "title": "Player \u2014 buffering + seek notice",
-    "platform": "phone",
-    "size": [
-      390,
-      844
-    ]
-  },
-  {
-    "name": "PhPlayerNext",
-    "title": "Player \u2014 preparing next episode",
-    "platform": "phone",
-    "size": [
-      390,
-      844
-    ]
-  },
-  {
-    "name": "PhUpNext",
-    "title": "Player \u2014 Up Next card",
-    "platform": "phone",
-    "size": [
-      390,
-      844
-    ]
-  },
-  {
-    "name": "PhPlayerError",
-    "title": "Can\u2019t play source (over Sources)",
-    "platform": "phone",
-    "size": [
-      390,
-      844
-    ]
-  },
-  {
-    "name": "PhSignIn",
-    "title": "Sign in",
-    "platform": "phone",
-    "size": [
-      390,
-      844
-    ]
-  },
-  {
-    "name": "PhProfiles",
-    "title": "Who\u2019s watching",
-    "platform": "phone",
-    "size": [
-      390,
-      844
-    ]
-  },
-  {
-    "name": "PhProfilesManage",
-    "title": "Manage profiles",
-    "platform": "phone",
-    "size": [
-      390,
-      844
-    ]
-  },
-  {
-    "name": "PhProfileEdit",
-    "title": "Edit profile",
-    "platform": "phone",
-    "size": [
-      390,
-      844
-    ]
-  },
-  {
-    "name": "PhProfileName",
-    "title": "Profile name \u2014 text entry",
-    "platform": "phone",
-    "size": [
-      390,
-      844
-    ]
-  },
-  {
-    "name": "PhProfileAdd",
-    "title": "Add a profile \u2014 saving",
-    "platform": "phone",
-    "size": [
-      390,
-      844
-    ]
-  },
-  {
-    "name": "PhAvatars",
-    "title": "Avatar picker",
-    "platform": "phone",
-    "size": [
-      390,
-      844
-    ]
-  },
-  {
-    "name": "PhProfileDelete",
-    "title": "Delete profile",
-    "platform": "phone",
-    "size": [
-      390,
-      844
-    ]
-  },
-  {
-    "name": "PhPin",
-    "title": "Parent PIN \u2014 error",
-    "platform": "phone",
-    "size": [
-      390,
-      844
-    ]
-  },
-  {
-    "name": "PhSignOut",
-    "title": "Sign out",
-    "platform": "phone",
-    "size": [
-      390,
-      844
-    ]
-  },
-  {
-    "name": "PhPlayback",
-    "title": "Settings \u2014 Playback preferences",
-    "platform": "phone",
-    "size": [
-      390,
-      844
-    ]
-  },
-  {
-    "name": "PhPlaybackChoice",
-    "title": "Preferred audio \u2014 choice",
-    "platform": "phone",
-    "size": [
-      390,
-      844
-    ]
-  },
-  {
-    "name": "PhAddons",
-    "title": "Settings \u2014 Addons",
-    "platform": "phone",
-    "size": [
-      390,
-      844
-    ]
-  },
-  {
-    "name": "PhAddonInstall",
-    "title": "Install addon \u2014 error",
-    "platform": "phone",
-    "size": [
-      390,
-      844
-    ]
-  },
-  {
-    "name": "PhAddonManage",
-    "title": "Manage addon",
-    "platform": "phone",
-    "size": [
-      390,
-      844
-    ]
-  },
-  {
-    "name": "PhAddonRemove",
-    "title": "Remove addon",
-    "platform": "phone",
-    "size": [
-      390,
-      844
-    ]
-  },
-  {
-    "name": "PhLocalHome",
-    "title": "Local mode \u2014 Home",
-    "platform": "phone",
-    "size": [
-      390,
-      844
-    ]
-  },
-  {
-    "name": "PhItemMenu",
-    "title": "Title menu (long-press)",
-    "platform": "phone",
-    "size": [
-      390,
-      844
-    ]
-  },
-  {
-    "name": "PhItemMenuLive",
-    "title": "Channel menu (long-press)",
-    "platform": "phone",
-    "size": [
-      390,
-      844
-    ]
-  },
-  {
-    "name": "PhHidden",
-    "title": "Removed from Continue Watching",
-    "platform": "phone",
-    "size": [
-      390,
-      844
-    ]
-  },
-  {
-    "name": "PhOverflowCue",
-    "title": "Touch \u22ef on cards",
-    "platform": "phone",
-    "size": [
-      390,
-      844
-    ]
-  },
-  {
-    "name": "PhDiscoverFilter",
-    "title": "Discover \u2014 Genre filter",
-    "platform": "phone",
-    "size": [
-      390,
-      844
-    ]
-  },
-  {
-    "name": "PhFilterText",
-    "title": "Discover \u2014 required text filter",
-    "platform": "phone",
-    "size": [
-      390,
-      844
-    ]
-  },
-  {
-    "name": "PhSourceProvider",
-    "title": "Sources \u2014 Source provider",
-    "platform": "phone",
-    "size": [
-      390,
-      844
-    ]
-  },
-  {
-    "name": "PhSourceDetails",
-    "title": "Source details",
-    "platform": "phone",
-    "size": [
-      390,
-      844
-    ]
-  },
-  {
-    "name": "PhLiveDetails",
-    "title": "Live \u2014 programme details",
-    "platform": "phone",
-    "size": [
-      390,
-      844
-    ]
-  },
-  {
-    "name": "PhLiveDetailsNone",
-    "title": "Live \u2014 no guide information",
-    "platform": "phone",
-    "size": [
-      390,
-      844
-    ]
-  },
-  {
-    "name": "PhSearch",
-    "title": "Search \u2014 results (field docked above nav)",
-    "platform": "phone",
-    "size": [
-      390,
-      844
-    ]
-  },
-  {
-    "name": "PhSearchBlank",
-    "title": "Search \u2014 blank (some sources failed)",
-    "platform": "phone",
-    "size": [
-      390,
-      844
-    ]
-  },
-  {
-    "name": "PhLibraryCW",
-    "title": "My List \u2014 Continue Watching",
-    "platform": "phone",
-    "size": [
-      390,
-      844
-    ]
-  },
-  {
-    "name": "PhCastUnavailable",
-    "title": "Watch on TV \u2014 phone",
-    "platform": "phone",
-    "size": [
-      390,
-      844
-    ]
-  },
-  {
-    "name": "PhStates",
-    "title": "App-wide states \u2014 phone",
-    "platform": "phone",
-    "size": [
-      1760,
-      6476
-    ]
-  },
-  {
-    "name": "DeskPlayer",
-    "title": "Player \u2014 controls, timeline hover",
-    "platform": "desktop-web",
-    "size": [
-      1440,
-      900
-    ]
-  },
-  {
-    "name": "DeskPlayerAudio",
-    "title": "Player \u2014 audio tracks",
-    "platform": "desktop-web",
-    "size": [
-      1440,
-      900
-    ]
-  },
-  {
-    "name": "DeskPlayerInfo",
-    "title": "Player \u2014 playback info (desktop app)",
-    "platform": "desktop-web",
-    "size": [
-      1440,
-      900
-    ]
-  },
-  {
-    "name": "DeskPlayerLive",
-    "title": "Player \u2014 live channel",
-    "platform": "desktop-web",
-    "size": [
-      1440,
-      900
-    ]
-  },
-  {
-    "name": "DeskPlayerBuffering",
-    "title": "Player \u2014 buffering + seek notice",
-    "platform": "desktop-web",
-    "size": [
-      1440,
-      900
-    ]
-  },
-  {
-    "name": "DeskPlayerNext",
-    "title": "Player \u2014 preparing next episode",
-    "platform": "desktop-web",
-    "size": [
-      1440,
-      900
-    ]
-  },
-  {
-    "name": "DeskPlayerError",
-    "title": "Can\u2019t play source (over the source drawer)",
-    "platform": "desktop-web",
-    "size": [
-      1440,
-      900
-    ]
-  },
-  {
-    "name": "DeskPlayerRestore",
-    "title": "Playback could not be restored",
-    "platform": "desktop-web",
-    "size": [
-      1440,
-      900
-    ]
-  },
-  {
-    "name": "DeskUpNext",
-    "title": "Player \u2014 Up Next card",
-    "platform": "desktop-web",
-    "size": [
-      1440,
-      900
-    ]
-  },
-  {
-    "name": "WebSignIn",
-    "title": "Sign in \u2014 web",
-    "platform": "desktop-web",
-    "size": [
-      1280,
-      800
-    ]
-  },
-  {
-    "name": "WebSignInError",
-    "title": "Sign in \u2014 error",
-    "platform": "desktop-web",
-    "size": [
-      1280,
-      800
-    ]
-  },
-  {
-    "name": "WebSignInDevice",
-    "title": "Sign in \u2014 another device",
-    "platform": "desktop-web",
-    "size": [
-      1280,
-      800
-    ]
-  },
-  {
-    "name": "WebSignInLocal",
-    "title": "Sign in \u2014 local build",
-    "platform": "desktop-web",
-    "size": [
-      1280,
-      800
-    ]
-  },
-  {
-    "name": "DeskSignIn",
-    "title": "Sign in \u2014 desktop app",
-    "platform": "desktop-web",
-    "size": [
-      1440,
-      900
-    ]
-  },
-  {
-    "name": "WebLinkTv",
-    "title": "Link your TV \u2014 web code entry",
-    "platform": "desktop-web",
-    "size": [
-      1280,
-      800
-    ]
-  },
-  {
-    "name": "DeskProfiles",
-    "title": "Who\u2019s watching \u2014 desktop",
-    "platform": "desktop-web",
-    "size": [
-      1440,
-      900
-    ]
-  },
-  {
-    "name": "DeskProfilesPaged",
-    "title": "Who\u2019s watching \u2014 12 profiles, page 1 / 3",
-    "platform": "desktop-web",
-    "size": [
-      1440,
-      900
-    ]
-  },
-  {
-    "name": "WebProfilesManage",
-    "title": "Manage profiles \u2014 web",
-    "platform": "desktop-web",
-    "size": [
-      1280,
-      800
-    ]
-  },
-  {
-    "name": "DeskProfileEdit",
-    "title": "Add a profile \u2014 blank name",
-    "platform": "desktop-web",
-    "size": [
-      1440,
-      900
-    ]
-  },
-  {
-    "name": "DeskAvatars",
-    "title": "Avatar picker \u2014 desktop",
-    "platform": "desktop-web",
-    "size": [
-      1440,
-      900
-    ]
-  },
-  {
-    "name": "DeskProfileDelete",
-    "title": "Delete profile \u2014 desktop",
-    "platform": "desktop-web",
-    "size": [
-      1440,
-      900
-    ]
-  },
-  {
-    "name": "DeskPin",
-    "title": "Parent PIN \u2014 desktop",
-    "platform": "desktop-web",
-    "size": [
-      1440,
-      900
-    ]
-  },
-  {
-    "name": "DeskSignOut",
-    "title": "Sign out \u2014 desktop",
-    "platform": "desktop-web",
-    "size": [
-      1440,
-      900
-    ]
-  },
-  {
-    "name": "DeskPlayback",
-    "title": "Settings \u2014 Playback preferences",
-    "platform": "desktop-web",
-    "size": [
-      1440,
-      900
-    ]
-  },
-  {
-    "name": "DeskEngine",
-    "title": "Playback engine \u2014 choice (anchored)",
-    "platform": "desktop-web",
-    "size": [
-      1440,
-      900
-    ]
-  },
-  {
-    "name": "DeskAddons",
-    "title": "Settings \u2014 Addons",
-    "platform": "desktop-web",
-    "size": [
-      1440,
-      900
-    ]
-  },
-  {
-    "name": "DeskAddonInstall",
-    "title": "Install addon \u2014 saving",
-    "platform": "desktop-web",
-    "size": [
-      1440,
-      900
-    ]
-  },
-  {
-    "name": "DeskAddonManage",
-    "title": "Manage addon",
-    "platform": "desktop-web",
-    "size": [
-      1440,
-      900
-    ]
-  },
-  {
-    "name": "DeskAddonRemove",
-    "title": "Remove addon",
-    "platform": "desktop-web",
-    "size": [
-      1440,
-      900
-    ]
-  },
-  {
-    "name": "WebLocalHome",
-    "title": "Local mode \u2014 Home (web)",
-    "platform": "desktop-web",
-    "size": [
-      1280,
-      800
-    ]
-  },
-  {
-    "name": "WebLocalLoading",
-    "title": "Local mode \u2014 loading",
-    "platform": "desktop-web",
-    "size": [
-      1280,
-      800
-    ]
-  },
-  {
-    "name": "WebLocalEmpty",
-    "title": "Local mode \u2014 no addons",
-    "platform": "desktop-web",
-    "size": [
-      1280,
-      800
-    ]
-  },
-  {
-    "name": "WebLocalAddons",
-    "title": "Local mode \u2014 Addons, error",
-    "platform": "desktop-web",
-    "size": [
-      1280,
-      800
-    ]
-  },
-  {
-    "name": "WebLocalRemove",
-    "title": "Local mode \u2014 remove addon",
-    "platform": "desktop-web",
-    "size": [
-      1280,
-      800
-    ]
-  },
-  {
-    "name": "DeskItemMenu",
-    "title": "Title menu (right-click)",
-    "platform": "desktop-web",
-    "size": [
-      1440,
-      900
-    ]
-  },
-  {
-    "name": "DeskHidden",
-    "title": "Removed from Continue Watching",
-    "platform": "desktop-web",
-    "size": [
-      1440,
-      900
-    ]
-  },
-  {
-    "name": "DeskDiscoverCatalog",
-    "title": "Discover \u2014 catalog list (one control)",
-    "platform": "desktop-web",
-    "size": [
-      1440,
-      900
-    ]
-  },
-  {
-    "name": "DeskDiscoverFilter",
-    "title": "Discover \u2014 catalog extras (Genre)",
-    "platform": "desktop-web",
-    "size": [
-      1440,
-      900
-    ]
-  },
-  {
-    "name": "DeskSourceProvider",
-    "title": "Sources \u2014 Source provider (anchored)",
-    "platform": "desktop-web",
-    "size": [
-      1440,
-      900
-    ]
-  },
-  {
-    "name": "DeskSourceDetails",
-    "title": "Source details",
-    "platform": "desktop-web",
-    "size": [
-      1440,
-      900
-    ]
-  },
-  {
-    "name": "DeskLiveDetails",
-    "title": "Live \u2014 programme details",
-    "platform": "desktop-web",
-    "size": [
-      1440,
-      900
-    ]
-  },
-  {
-    "name": "DeskSearchRecent",
-    "title": "Search popunder \u2014 recent searches",
-    "platform": "desktop-web",
-    "size": [
-      1440,
-      900
-    ]
-  },
-  {
-    "name": "DeskSearchMatches",
-    "title": "Search popunder \u2014 quick matches",
-    "platform": "desktop-web",
-    "size": [
-      1440,
-      900
-    ]
-  },
-  {
-    "name": "DeskLibraryCW",
-    "title": "My List \u2014 Continue Watching",
-    "platform": "desktop-web",
-    "size": [
-      1440,
-      900
-    ]
-  },
-  {
-    "name": "DeskCastSearch",
-    "title": "Watch on TV \u2014 searching",
-    "platform": "desktop-web",
-    "size": [
-      1440,
-      900
-    ]
-  },
-  {
-    "name": "DeskCastManual",
-    "title": "Watch on TV \u2014 manual IP",
-    "platform": "desktop-web",
-    "size": [
-      1440,
-      900
-    ]
-  },
-  {
-    "name": "DeskCastBusy",
-    "title": "Watch on TV \u2014 contacting (busy)",
-    "platform": "desktop-web",
-    "size": [
-      1440,
-      900
-    ]
-  },
-  {
-    "name": "DeskCastPin",
-    "title": "Watch on TV \u2014 pair with PIN",
-    "platform": "desktop-web",
-    "size": [
-      1440,
-      900
-    ]
-  },
-  {
-    "name": "DeskCastRemote",
-    "title": "Watch on TV \u2014 connected remote",
-    "platform": "desktop-web",
-    "size": [
-      1440,
-      900
-    ]
-  },
-  {
-    "name": "DeskCastError",
-    "title": "Watch on TV \u2014 request failed",
-    "platform": "desktop-web",
-    "size": [
-      1440,
-      900
-    ]
-  },
-  {
-    "name": "WebCastUnavailable",
-    "title": "Watch on TV \u2014 browser",
-    "platform": "desktop-web",
-    "size": [
-      1280,
-      800
-    ]
-  },
-  {
-    "name": "DeskStates",
-    "title": "App-wide states \u2014 desktop & web",
-    "platform": "desktop-web",
-    "size": [
-      3100,
-      4820
-    ]
-  },
-  {
-    "name": "TvPlayer",
-    "title": "Player \u2014 controls (focus Play)",
-    "platform": "tv",
-    "size": [
-      1920,
-      1080
-    ]
-  },
-  {
-    "name": "TvPlayerSeek",
-    "title": "Player \u2014 seeking (preview)",
-    "platform": "tv",
-    "size": [
-      1920,
-      1080
-    ]
-  },
-  {
-    "name": "TvPlayerSubs",
-    "title": "Player \u2014 subtitles (scrolling list)",
-    "platform": "tv",
-    "size": [
-      1920,
-      1080
-    ]
-  },
-  {
-    "name": "TvPlayerLive",
-    "title": "Player \u2014 live channel (focus Audio)",
-    "platform": "tv",
-    "size": [
-      1920,
-      1080
-    ]
-  },
-  {
-    "name": "TvPlayerBuffering",
-    "title": "Player \u2014 buffering + seek notice",
-    "platform": "tv",
-    "size": [
-      1920,
-      1080
-    ]
-  },
-  {
-    "name": "TvPlayerNext",
-    "title": "Player \u2014 preparing next episode",
-    "platform": "tv",
-    "size": [
-      1920,
-      1080
-    ]
-  },
-  {
-    "name": "TvUpNext",
-    "title": "Player \u2014 Up Next card",
-    "platform": "tv",
-    "size": [
-      1920,
-      1080
-    ]
-  },
-  {
-    "name": "TvPlayerError",
-    "title": "Can\u2019t play source (over Choose source)",
-    "platform": "tv",
-    "size": [
-      1920,
-      1080
-    ]
-  },
-  {
-    "name": "TvPairing",
-    "title": "Sign in \u2014 pairing code",
-    "platform": "tv",
-    "size": [
-      1920,
-      1080
-    ]
-  },
-  {
-    "name": "TvPairingLoading",
-    "title": "Sign in \u2014 connecting",
-    "platform": "tv",
-    "size": [
-      1920,
-      1080
-    ]
-  },
-  {
-    "name": "TvPairingExpired",
-    "title": "Sign in \u2014 code expired",
-    "platform": "tv",
-    "size": [
-      1920,
-      1080
-    ]
-  },
-  {
-    "name": "TvProfilesManage",
-    "title": "Manage profiles",
-    "platform": "tv",
-    "size": [
-      1920,
-      1080
-    ]
-  },
-  {
-    "name": "TvManageCue",
-    "title": "Manage profiles \u2014 Done focused",
-    "platform": "tv",
-    "size": [
-      1920,
-      1080
-    ]
-  },
-  {
-    "name": "TvProfileEdit",
-    "title": "Edit profile",
-    "platform": "tv",
-    "size": [
-      1920,
-      1080
-    ]
-  },
-  {
-    "name": "TvProfileName",
-    "title": "Profile name \u2014 text entry",
-    "platform": "tv",
-    "size": [
-      1920,
-      1080
-    ]
-  },
-  {
-    "name": "TvAvatars",
-    "title": "Avatar picker",
-    "platform": "tv",
-    "size": [
-      1920,
-      1080
-    ]
-  },
-  {
-    "name": "TvProfileDelete",
-    "title": "Delete profile",
-    "platform": "tv",
-    "size": [
-      1920,
-      1080
-    ]
-  },
-  {
-    "name": "TvPin",
-    "title": "Parent PIN \u2014 to sign out",
-    "platform": "tv",
-    "size": [
-      1920,
-      1080
-    ]
-  },
-  {
-    "name": "TvPinError",
-    "title": "Parent PIN \u2014 error",
-    "platform": "tv",
-    "size": [
-      1920,
-      1080
-    ]
-  },
-  {
-    "name": "TvSignOut",
-    "title": "Sign out",
-    "platform": "tv",
-    "size": [
-      1920,
-      1080
-    ]
-  },
-  {
-    "name": "TvPlayback",
-    "title": "Settings \u2014 Playback preferences",
-    "platform": "tv",
-    "size": [
-      1920,
-      1080
-    ]
-  },
-  {
-    "name": "TvPlaybackChoice",
-    "title": "Subtitle size \u2014 choice",
-    "platform": "tv",
-    "size": [
-      1920,
-      1080
-    ]
-  },
-  {
-    "name": "TvAddons",
-    "title": "Settings \u2014 Addons",
-    "platform": "tv",
-    "size": [
-      1920,
-      1080
-    ]
-  },
-  {
-    "name": "TvAddonInstall",
-    "title": "Install addon \u2014 URL entry",
-    "platform": "tv",
-    "size": [
-      1920,
-      1080
-    ]
-  },
-  {
-    "name": "TvAddonManage",
-    "title": "Manage addon",
-    "platform": "tv",
-    "size": [
-      1920,
-      1080
-    ]
-  },
-  {
-    "name": "TvAddonRemove",
-    "title": "Remove addon",
-    "platform": "tv",
-    "size": [
-      1920,
-      1080
-    ]
-  },
-  {
-    "name": "TvItemMenu",
-    "title": "Title menu (hold OK / Info)",
-    "platform": "tv",
-    "size": [
-      1920,
-      1080
-    ]
-  },
-  {
-    "name": "TvHidden",
-    "title": "Removed from Continue Watching",
-    "platform": "tv",
-    "size": [
-      1920,
-      1080
-    ]
-  },
-  {
-    "name": "TvDiscoverFilter",
-    "title": "Discover \u2014 Genre filter",
-    "platform": "tv",
-    "size": [
-      1920,
-      1080
-    ]
-  },
-  {
-    "name": "TvFilterText",
-    "title": "Discover \u2014 Search catalog entry",
-    "platform": "tv",
-    "size": [
-      1920,
-      1080
-    ]
-  },
-  {
-    "name": "TvSourceProvider",
-    "title": "Sources \u2014 Source provider",
-    "platform": "tv",
-    "size": [
-      1920,
-      1080
-    ]
-  },
-  {
-    "name": "TvSourceDetails",
-    "title": "Source details",
-    "platform": "tv",
-    "size": [
-      1920,
-      1080
-    ]
-  },
-  {
-    "name": "TvLiveDetails",
-    "title": "Live \u2014 programme details",
-    "platform": "tv",
-    "size": [
-      1920,
-      1080
-    ]
-  },
-  {
-    "name": "TvLiveSearch",
-    "title": "Live \u2014 search entry",
-    "platform": "tv",
-    "size": [
-      1920,
-      1080
-    ]
-  },
-  {
-    "name": "TvMoreInfo",
-    "title": "Title \u2014 More info",
-    "platform": "tv",
-    "size": [
-      1920,
-      1080
-    ]
-  },
-  {
-    "name": "TvLibrary",
-    "title": "My List \u2014 Continue Watching",
-    "platform": "tv",
-    "size": [
-      1920,
-      1080
-    ]
-  },
-  {
-    "name": "TvStates",
-    "title": "App-wide states \u2014 TV",
-    "platform": "tv",
-    "size": [
-      4200,
-      5309
-    ]
-  },
-  {
     "name": "CmpPhone1",
-    "title": "Components \u2014 Phone \u2014 controls",
+    "title": "Components — Phone — controls",
     "platform": "components",
     "size": [
       1760,
@@ -1405,7 +10,7 @@
   },
   {
     "name": "CmpPhone2",
-    "title": "Components \u2014 Phone \u2014 cards and navigation",
+    "title": "Components — Phone — cards and navigation",
     "platform": "components",
     "size": [
       1760,
@@ -1414,7 +19,7 @@
   },
   {
     "name": "CmpPhone3",
-    "title": "Components \u2014 Phone \u2014 overlays, feedback, player",
+    "title": "Components — Phone — overlays, feedback, player",
     "platform": "components",
     "size": [
       1760,
@@ -1423,7 +28,7 @@
   },
   {
     "name": "CmpDesk1",
-    "title": "Components \u2014 Desktop & web \u2014 controls",
+    "title": "Components — Desktop & web — controls",
     "platform": "components",
     "size": [
       2400,
@@ -1432,7 +37,7 @@
   },
   {
     "name": "CmpDesk2",
-    "title": "Components \u2014 Desktop & web \u2014 cards and navigation",
+    "title": "Components — Desktop & web — cards and navigation",
     "platform": "components",
     "size": [
       2400,
@@ -1441,7 +46,7 @@
   },
   {
     "name": "CmpDesk3",
-    "title": "Components \u2014 Desktop & web \u2014 overlays, feedback, player",
+    "title": "Components — Desktop & web — overlays, feedback, player",
     "platform": "components",
     "size": [
       3100,
@@ -1450,7 +55,7 @@
   },
   {
     "name": "CmpTv1",
-    "title": "Components \u2014 TV \u2014 controls",
+    "title": "Components — TV — controls",
     "platform": "components",
     "size": [
       4200,
@@ -1459,7 +64,7 @@
   },
   {
     "name": "CmpTv2",
-    "title": "Components \u2014 TV \u2014 cards and navigation",
+    "title": "Components — TV — cards and navigation",
     "platform": "components",
     "size": [
       4200,
@@ -1468,7 +73,7 @@
   },
   {
     "name": "CmpTv3",
-    "title": "Components \u2014 TV \u2014 overlays, feedback, player",
+    "title": "Components — TV — overlays, feedback, player",
     "platform": "components",
     "size": [
       4200,
@@ -1476,8 +81,512 @@
     ]
   },
   {
-    "name": "PhTvSetup",
-    "title": "Watch on TV \u2014 set up (off by default)",
+    "name": "Tv3Motion",
+    "title": "Motion spec (live)",
+    "platform": "tv",
+    "size": [
+      1920,
+      1080
+    ]
+  },
+  {
+    "name": "Tv3HomeToRows",
+    "title": "Animation — Home to Continue Watching (loops)",
+    "platform": "tv",
+    "size": [
+      1920,
+      1080
+    ]
+  },
+  {
+    "name": "Tv3Splash",
+    "title": "Starting — splash",
+    "platform": "tv",
+    "size": [
+      1920,
+      1080
+    ]
+  },
+  {
+    "name": "Tv3Welcome",
+    "title": "Welcome",
+    "platform": "tv",
+    "size": [
+      1920,
+      1080
+    ]
+  },
+  {
+    "name": "Tv3SignInChoose",
+    "title": "Sign in — every method",
+    "platform": "tv",
+    "size": [
+      1920,
+      1080
+    ]
+  },
+  {
+    "name": "Tv3SignIn",
+    "title": "Sign in — phone or browser code",
+    "platform": "tv",
+    "size": [
+      1920,
+      1080
+    ]
+  },
+  {
+    "name": "Tv3SignInEmail",
+    "title": "Sign in — email (fallback)",
+    "platform": "tv",
+    "size": [
+      1920,
+      1080
+    ]
+  },
+  {
+    "name": "Tv3SignInCode",
+    "title": "Sign in — email code",
+    "platform": "tv",
+    "size": [
+      1920,
+      1080
+    ]
+  },
+  {
+    "name": "Tv3SignInPassword",
+    "title": "Sign in — password",
+    "platform": "tv",
+    "size": [
+      1920,
+      1080
+    ]
+  },
+  {
+    "name": "Tv3SignedIn",
+    "title": "Signed in — welcome back",
+    "platform": "tv",
+    "size": [
+      1920,
+      1080
+    ]
+  },
+  {
+    "name": "Tv3Profiles",
+    "title": "Who’s watching",
+    "platform": "tv",
+    "size": [
+      1920,
+      1080
+    ]
+  },
+  {
+    "name": "Tv3Pin",
+    "title": "Profile PIN",
+    "platform": "tv",
+    "size": [
+      1920,
+      1080
+    ]
+  },
+  {
+    "name": "Tv3ProfileEdit",
+    "title": "Edit profile",
+    "platform": "tv",
+    "size": [
+      1920,
+      1080
+    ]
+  },
+  {
+    "name": "Tv3HomeLoading",
+    "title": "Home — loading",
+    "platform": "tv",
+    "size": [
+      1920,
+      1080
+    ]
+  },
+  {
+    "name": "Tv3Home",
+    "title": "Home — billboard, first row peeking",
+    "platform": "tv",
+    "size": [
+      1920,
+      1080
+    ]
+  },
+  {
+    "name": "Tv3Browse",
+    "title": "Home — browsing rows, the top describes the focused title",
+    "platform": "tv",
+    "size": [
+      1920,
+      1080
+    ]
+  },
+  {
+    "name": "Tv3Search",
+    "title": "Search — typing",
+    "platform": "tv",
+    "size": [
+      1920,
+      1080
+    ]
+  },
+  {
+    "name": "Tv3Live",
+    "title": "Live — guide",
+    "platform": "tv",
+    "size": [
+      1920,
+      1080
+    ]
+  },
+  {
+    "name": "Tv3MyList",
+    "title": "My List",
+    "platform": "tv",
+    "size": [
+      1920,
+      1080
+    ]
+  },
+  {
+    "name": "Tv3Movies",
+    "title": "Movies — catalog, filters, grid appending",
+    "platform": "tv",
+    "size": [
+      1920,
+      1080
+    ]
+  },
+  {
+    "name": "Tv3MoviesCatalogs",
+    "title": "Movies — choose a catalog",
+    "platform": "tv",
+    "size": [
+      1920,
+      1080
+    ]
+  },
+  {
+    "name": "Tv3MoviesFilters",
+    "title": "Movies — filters (multi-choice, up to 3)",
+    "platform": "tv",
+    "size": [
+      1920,
+      1080
+    ]
+  },
+  {
+    "name": "Tv3MoviesFilterText",
+    "title": "Movies — filters (text)",
+    "platform": "tv",
+    "size": [
+      1920,
+      1080
+    ]
+  },
+  {
+    "name": "Tv3MoviesLoading",
+    "title": "Movies — loading",
+    "platform": "tv",
+    "size": [
+      1920,
+      1080
+    ]
+  },
+  {
+    "name": "Tv3MoviesEmpty",
+    "title": "Movies — nothing matches",
+    "platform": "tv",
+    "size": [
+      1920,
+      1080
+    ]
+  },
+  {
+    "name": "Tv3MoviesError",
+    "title": "Movies — couldn’t load",
+    "platform": "tv",
+    "size": [
+      1920,
+      1080
+    ]
+  },
+  {
+    "name": "Tv3CardStates",
+    "title": "Cards — every state (A1)",
+    "platform": "tv",
+    "size": [
+      1920,
+      1080
+    ]
+  },
+  {
+    "name": "Tv3RowStates",
+    "title": "Home rows — READY, PENDING, EMPTY, FAILED (A2)",
+    "platform": "tv",
+    "size": [
+      1920,
+      1080
+    ]
+  },
+  {
+    "name": "Tv3Title",
+    "title": "Series page — actions first",
+    "platform": "tv",
+    "size": [
+      1920,
+      1080
+    ]
+  },
+  {
+    "name": "Tv3Episodes",
+    "title": "Series page — scrolled to episodes",
+    "platform": "tv",
+    "size": [
+      1920,
+      1080
+    ]
+  },
+  {
+    "name": "Tv3Movie",
+    "title": "Movie page",
+    "platform": "tv",
+    "size": [
+      1920,
+      1080
+    ]
+  },
+  {
+    "name": "Tv3Sources",
+    "title": "Choose a source",
+    "platform": "tv",
+    "size": [
+      1920,
+      1080
+    ]
+  },
+  {
+    "name": "Tv3SourcesLoading",
+    "title": "Choose a source — still finding",
+    "platform": "tv",
+    "size": [
+      1920,
+      1080
+    ]
+  },
+  {
+    "name": "Tv3SourcesEmpty",
+    "title": "Choose a source — none found",
+    "platform": "tv",
+    "size": [
+      1920,
+      1080
+    ]
+  },
+  {
+    "name": "Tv3SourcesTorrent",
+    "title": "Choose a source — torrent links only",
+    "platform": "tv",
+    "size": [
+      1920,
+      1080
+    ]
+  },
+  {
+    "name": "Tv3PlayerBuffer",
+    "title": "Player — starting",
+    "platform": "tv",
+    "size": [
+      1920,
+      1080
+    ]
+  },
+  {
+    "name": "Tv3PlayerControls",
+    "title": "Player — controls",
+    "platform": "tv",
+    "size": [
+      1920,
+      1080
+    ]
+  },
+  {
+    "name": "Tv3PlayerScrub",
+    "title": "Player — scrubbing",
+    "platform": "tv",
+    "size": [
+      1920,
+      1080
+    ]
+  },
+  {
+    "name": "Tv3PlayerSkip",
+    "title": "Player — Skip intro",
+    "platform": "tv",
+    "size": [
+      1920,
+      1080
+    ]
+  },
+  {
+    "name": "Tv3PlayerAudio",
+    "title": "Player — audio and subtitles",
+    "platform": "tv",
+    "size": [
+      1920,
+      1080
+    ]
+  },
+  {
+    "name": "Tv3PlayerNext",
+    "title": "Player — next episode",
+    "platform": "tv",
+    "size": [
+      1920,
+      1080
+    ]
+  },
+  {
+    "name": "Tv3PlayerError",
+    "title": "Player — source failed",
+    "platform": "tv",
+    "size": [
+      1920,
+      1080
+    ]
+  },
+  {
+    "name": "Tv3SetPlayback",
+    "title": "Settings — Playback",
+    "platform": "tv",
+    "size": [
+      1920,
+      1080
+    ]
+  },
+  {
+    "name": "Tv3SetSubs",
+    "title": "Settings — Subtitles & audio",
+    "platform": "tv",
+    "size": [
+      1920,
+      1080
+    ]
+  },
+  {
+    "name": "Tv3SetAddons",
+    "title": "Settings — Add-ons",
+    "platform": "tv",
+    "size": [
+      1920,
+      1080
+    ]
+  },
+  {
+    "name": "Tv3AddonEntry",
+    "title": "Add-ons — add by address",
+    "platform": "tv",
+    "size": [
+      1920,
+      1080
+    ]
+  },
+  {
+    "name": "Tv3AddonInstall",
+    "title": "Add-ons — install?",
+    "platform": "tv",
+    "size": [
+      1920,
+      1080
+    ]
+  },
+  {
+    "name": "Tv3SetDisplay",
+    "title": "Settings — Display",
+    "platform": "tv",
+    "size": [
+      1920,
+      1080
+    ]
+  },
+  {
+    "name": "Tv3SetParental",
+    "title": "Settings — Parental controls",
+    "platform": "tv",
+    "size": [
+      1920,
+      1080
+    ]
+  },
+  {
+    "name": "Tv3SetAbout",
+    "title": "Settings — About",
+    "platform": "tv",
+    "size": [
+      1920,
+      1080
+    ]
+  },
+  {
+    "name": "Tv3SignOut",
+    "title": "Settings — sign out",
+    "platform": "tv",
+    "size": [
+      1920,
+      1080
+    ]
+  },
+  {
+    "name": "Tv3SetSources",
+    "title": "Settings — Source integrations",
+    "platform": "tv",
+    "size": [
+      1920,
+      1080
+    ]
+  },
+  {
+    "name": "Tv3SourcesViptv",
+    "title": "Source integrations — VIPTV Sources (keyboard + providers)",
+    "platform": "tv",
+    "size": [
+      1920,
+      1080
+    ]
+  },
+  {
+    "name": "Tv3SourcesXtream",
+    "title": "Source integrations — Xtream, saving",
+    "platform": "tv",
+    "size": [
+      1920,
+      1080
+    ]
+  },
+  {
+    "name": "Tv3SourcesM3u",
+    "title": "Source integrations — M3U, error",
+    "platform": "tv",
+    "size": [
+      1920,
+      1080
+    ]
+  },
+  {
+    "name": "Tv3SourcesRemove",
+    "title": "Source integrations — remove",
+    "platform": "tv",
+    "size": [
+      1920,
+      1080
+    ]
+  },
+  {
+    "name": "M3Welcome",
+    "title": "Welcome",
     "platform": "phone",
     "size": [
       390,
@@ -1485,8 +594,8 @@
     ]
   },
   {
-    "name": "PhTvSearch",
-    "title": "Watch on TV \u2014 choose your TV",
+    "name": "M3SignIn",
+    "title": "Sign in — every method",
     "platform": "phone",
     "size": [
       390,
@@ -1494,8 +603,8 @@
     ]
   },
   {
-    "name": "PhTvNoAccess",
-    "title": "Watch on TV \u2014 local network access off",
+    "name": "M3SignInEmail",
+    "title": "Sign in — email",
     "platform": "phone",
     "size": [
       390,
@@ -1503,8 +612,8 @@
     ]
   },
   {
-    "name": "PhTvManual",
-    "title": "Watch on TV \u2014 enter IP address",
+    "name": "M3Code",
+    "title": "Sign in — email code",
     "platform": "phone",
     "size": [
       390,
@@ -1512,8 +621,8 @@
     ]
   },
   {
-    "name": "PhTvPin",
-    "title": "Watch on TV \u2014 pair with the PIN",
+    "name": "M3SignInPassword",
+    "title": "Sign in — password",
     "platform": "phone",
     "size": [
       390,
@@ -1521,8 +630,8 @@
     ]
   },
   {
-    "name": "PhTvDone",
-    "title": "Watch on TV \u2014 connected",
+    "name": "M3SignInDevice",
+    "title": "Sign in — approve from another device",
     "platform": "phone",
     "size": [
       390,
@@ -1530,8 +639,8 @@
     ]
   },
   {
-    "name": "PhHomeRemote",
-    "title": "Home \u2014 remote button (first time)",
+    "name": "M3SignInBrowser",
+    "title": "Sign in — finishing in the browser",
     "platform": "phone",
     "size": [
       390,
@@ -1539,8 +648,8 @@
     ]
   },
   {
-    "name": "PhRemote",
-    "title": "TV remote \u2014 buttons",
+    "name": "M3LinkScan",
+    "title": "Link a TV — scan",
     "platform": "phone",
     "size": [
       390,
@@ -1548,8 +657,8 @@
     ]
   },
   {
-    "name": "PhRemoteSwipe",
-    "title": "TV remote \u2014 swipe",
+    "name": "M3LinkCode",
+    "title": "Link a TV — enter code",
     "platform": "phone",
     "size": [
       390,
@@ -1557,8 +666,8 @@
     ]
   },
   {
-    "name": "PhRemoteOffline",
-    "title": "TV remote \u2014 TV not reachable",
+    "name": "M3LinkConfirm",
+    "title": "Link a TV — confirm",
     "platform": "phone",
     "size": [
       390,
@@ -1566,8 +675,8 @@
     ]
   },
   {
-    "name": "PhTvSettings",
-    "title": "Watch on TV \u2014 settings (set up)",
+    "name": "M3LinkDone",
+    "title": "Link a TV — done",
     "platform": "phone",
     "size": [
       390,
@@ -1575,12 +684,1776 @@
     ]
   },
   {
-    "name": "PhTvForget",
-    "title": "Watch on TV \u2014 forget TV",
+    "name": "M3Profiles",
+    "title": "Who’s watching",
     "platform": "phone",
     "size": [
       390,
       844
+    ]
+  },
+  {
+    "name": "M3Pin",
+    "title": "Profile PIN",
+    "platform": "phone",
+    "size": [
+      390,
+      844
+    ]
+  },
+  {
+    "name": "M3ProfileEdit",
+    "title": "Edit profile",
+    "platform": "phone",
+    "size": [
+      390,
+      844
+    ]
+  },
+  {
+    "name": "M3HomeLoading",
+    "title": "Home — loading",
+    "platform": "phone",
+    "size": [
+      390,
+      844
+    ]
+  },
+  {
+    "name": "M3Home",
+    "title": "Home",
+    "platform": "phone",
+    "size": [
+      390,
+      844
+    ]
+  },
+  {
+    "name": "M3HomeScrolled",
+    "title": "Home — scrolled",
+    "platform": "phone",
+    "size": [
+      390,
+      844
+    ]
+  },
+  {
+    "name": "M3CwMenu",
+    "title": "Continue Watching — options",
+    "platform": "phone",
+    "size": [
+      390,
+      844
+    ]
+  },
+  {
+    "name": "M3HomeToast",
+    "title": "Home — added to My List",
+    "platform": "phone",
+    "size": [
+      390,
+      844
+    ]
+  },
+  {
+    "name": "M3HomeCasting",
+    "title": "Home — casting (mini controller)",
+    "platform": "phone",
+    "size": [
+      390,
+      844
+    ]
+  },
+  {
+    "name": "M3Search",
+    "title": "Search",
+    "platform": "phone",
+    "size": [
+      390,
+      844
+    ]
+  },
+  {
+    "name": "M3SearchResults",
+    "title": "Search — results",
+    "platform": "phone",
+    "size": [
+      390,
+      844
+    ]
+  },
+  {
+    "name": "M3Live",
+    "title": "Live",
+    "platform": "phone",
+    "size": [
+      390,
+      844
+    ]
+  },
+  {
+    "name": "M3MyList",
+    "title": "My List",
+    "platform": "phone",
+    "size": [
+      390,
+      844
+    ]
+  },
+  {
+    "name": "M3MyListSort",
+    "title": "My List — sort and filter",
+    "platform": "phone",
+    "size": [
+      390,
+      844
+    ]
+  },
+  {
+    "name": "M3MyListEmpty",
+    "title": "My List — empty",
+    "platform": "phone",
+    "size": [
+      390,
+      844
+    ]
+  },
+  {
+    "name": "M3History",
+    "title": "History",
+    "platform": "phone",
+    "size": [
+      390,
+      844
+    ]
+  },
+  {
+    "name": "M3Browse",
+    "title": "Movies — catalog, filters, grid appending",
+    "platform": "phone",
+    "size": [
+      390,
+      844
+    ]
+  },
+  {
+    "name": "M3BrowseCatalogs",
+    "title": "Movies — choose a catalog",
+    "platform": "phone",
+    "size": [
+      390,
+      844
+    ]
+  },
+  {
+    "name": "M3BrowseFilters",
+    "title": "Movies — filters (every control kind)",
+    "platform": "phone",
+    "size": [
+      390,
+      844
+    ]
+  },
+  {
+    "name": "M3BrowseLoading",
+    "title": "Movies — loading",
+    "platform": "phone",
+    "size": [
+      390,
+      844
+    ]
+  },
+  {
+    "name": "M3BrowseEmpty",
+    "title": "Movies — nothing matches",
+    "platform": "phone",
+    "size": [
+      390,
+      844
+    ]
+  },
+  {
+    "name": "M3BrowseError",
+    "title": "Movies — couldn’t load",
+    "platform": "phone",
+    "size": [
+      390,
+      844
+    ]
+  },
+  {
+    "name": "M3Title",
+    "title": "Series page",
+    "platform": "phone",
+    "size": [
+      390,
+      844
+    ]
+  },
+  {
+    "name": "M3TitleEpisodes",
+    "title": "Series page — episodes",
+    "platform": "phone",
+    "size": [
+      390,
+      844
+    ]
+  },
+  {
+    "name": "M3SeasonSheet",
+    "title": "Series page — choose season",
+    "platform": "phone",
+    "size": [
+      390,
+      844
+    ]
+  },
+  {
+    "name": "M3Movie",
+    "title": "Movie page",
+    "platform": "phone",
+    "size": [
+      390,
+      844
+    ]
+  },
+  {
+    "name": "M3Sources",
+    "title": "Choose a source",
+    "platform": "phone",
+    "size": [
+      390,
+      844
+    ]
+  },
+  {
+    "name": "M3SourcesLoading",
+    "title": "Choose a source — still finding",
+    "platform": "phone",
+    "size": [
+      390,
+      844
+    ]
+  },
+  {
+    "name": "M3SourcesEmpty",
+    "title": "Choose a source — none found",
+    "platform": "phone",
+    "size": [
+      390,
+      844
+    ]
+  },
+  {
+    "name": "M3SourcesTorrent",
+    "title": "Choose a source — torrent links only",
+    "platform": "phone",
+    "size": [
+      390,
+      844
+    ]
+  },
+  {
+    "name": "M3Player",
+    "title": "Player — controls",
+    "platform": "phone",
+    "size": [
+      844,
+      390
+    ]
+  },
+  {
+    "name": "M3PlayerSeek",
+    "title": "Player — double-tap +10 s",
+    "platform": "phone",
+    "size": [
+      844,
+      390
+    ]
+  },
+  {
+    "name": "M3PlayerScrub",
+    "title": "Player — scrubbing",
+    "platform": "phone",
+    "size": [
+      844,
+      390
+    ]
+  },
+  {
+    "name": "M3PlayerLocked",
+    "title": "Player — screen locked",
+    "platform": "phone",
+    "size": [
+      844,
+      390
+    ]
+  },
+  {
+    "name": "M3PlayerAudio",
+    "title": "Player — audio and subtitles",
+    "platform": "phone",
+    "size": [
+      844,
+      390
+    ]
+  },
+  {
+    "name": "M3PlayerNext",
+    "title": "Player — next episode",
+    "platform": "phone",
+    "size": [
+      844,
+      390
+    ]
+  },
+  {
+    "name": "M3PlayerBuffer",
+    "title": "Player — starting",
+    "platform": "phone",
+    "size": [
+      844,
+      390
+    ]
+  },
+  {
+    "name": "M3PlayerError",
+    "title": "Player — source failed",
+    "platform": "phone",
+    "size": [
+      844,
+      390
+    ]
+  },
+  {
+    "name": "M3PlayerLive",
+    "title": "Player — live with channel list",
+    "platform": "phone",
+    "size": [
+      844,
+      390
+    ]
+  },
+  {
+    "name": "M3CastPicker",
+    "title": "Watch on — pick a TV",
+    "platform": "phone",
+    "size": [
+      390,
+      844
+    ]
+  },
+  {
+    "name": "M3CastExpanded",
+    "title": "Casting — controls",
+    "platform": "phone",
+    "size": [
+      390,
+      844
+    ]
+  },
+  {
+    "name": "M3Remote",
+    "title": "TV remote",
+    "platform": "phone",
+    "size": [
+      390,
+      844
+    ]
+  },
+  {
+    "name": "M3Settings",
+    "title": "Settings",
+    "platform": "phone",
+    "size": [
+      390,
+      844
+    ]
+  },
+  {
+    "name": "M3SetPlayback",
+    "title": "Settings — Playback",
+    "platform": "phone",
+    "size": [
+      390,
+      844
+    ]
+  },
+  {
+    "name": "M3SetSubs",
+    "title": "Settings — Subtitles & audio",
+    "platform": "phone",
+    "size": [
+      390,
+      844
+    ]
+  },
+  {
+    "name": "M3SetDisplay",
+    "title": "Display",
+    "platform": "phone",
+    "size": [
+      390,
+      844
+    ]
+  },
+  {
+    "name": "M3SetAddons",
+    "title": "Settings — Add-ons",
+    "platform": "phone",
+    "size": [
+      390,
+      844
+    ]
+  },
+  {
+    "name": "M3AddAddon",
+    "title": "Add an add-on",
+    "platform": "phone",
+    "size": [
+      390,
+      844
+    ]
+  },
+  {
+    "name": "M3Parental",
+    "title": "Parental controls",
+    "platform": "phone",
+    "size": [
+      390,
+      844
+    ]
+  },
+  {
+    "name": "M3Recovery",
+    "title": "Account — recovery codes",
+    "platform": "phone",
+    "size": [
+      390,
+      844
+    ]
+  },
+  {
+    "name": "M3About",
+    "title": "About",
+    "platform": "phone",
+    "size": [
+      390,
+      844
+    ]
+  },
+  {
+    "name": "M3SignOut",
+    "title": "Sign out",
+    "platform": "phone",
+    "size": [
+      390,
+      844
+    ]
+  },
+  {
+    "name": "M3Offline",
+    "title": "Offline",
+    "platform": "phone",
+    "size": [
+      390,
+      844
+    ]
+  },
+  {
+    "name": "M3SetSources",
+    "title": "Source integrations",
+    "platform": "phone",
+    "size": [
+      390,
+      844
+    ]
+  },
+  {
+    "name": "M3SourcesViptv",
+    "title": "Source integrations — VIPTV Sources",
+    "platform": "phone",
+    "size": [
+      390,
+      844
+    ]
+  },
+  {
+    "name": "M3SourcesXtream",
+    "title": "Source integrations — Xtream, saving",
+    "platform": "phone",
+    "size": [
+      390,
+      844
+    ]
+  },
+  {
+    "name": "M3SourcesM3u",
+    "title": "Source integrations — M3U, error",
+    "platform": "phone",
+    "size": [
+      390,
+      844
+    ]
+  },
+  {
+    "name": "M3SourcesRemove",
+    "title": "Source integrations — remove",
+    "platform": "phone",
+    "size": [
+      390,
+      844
+    ]
+  },
+  {
+    "name": "T3Home",
+    "title": "Home — landscape",
+    "platform": "tablet",
+    "size": [
+      1194,
+      834
+    ]
+  },
+  {
+    "name": "T3HomePortrait",
+    "title": "Home — portrait",
+    "platform": "tablet",
+    "size": [
+      834,
+      1194
+    ]
+  },
+  {
+    "name": "T3Narrow",
+    "title": "Split View — narrow window (compact: phone layout)",
+    "platform": "tablet",
+    "size": [
+      507,
+      834
+    ]
+  },
+  {
+    "name": "T3Title",
+    "title": "Series page — info | episodes",
+    "platform": "tablet",
+    "size": [
+      1194,
+      834
+    ]
+  },
+  {
+    "name": "T3Sources",
+    "title": "Choose a source — side sheet",
+    "platform": "tablet",
+    "size": [
+      1194,
+      834
+    ]
+  },
+  {
+    "name": "T3Player",
+    "title": "Player — episodes pane",
+    "platform": "tablet",
+    "size": [
+      1194,
+      834
+    ]
+  },
+  {
+    "name": "T3Live",
+    "title": "Live guide",
+    "platform": "tablet",
+    "size": [
+      1194,
+      834
+    ]
+  },
+  {
+    "name": "T3MyList",
+    "title": "My List — sort popover",
+    "platform": "tablet",
+    "size": [
+      1194,
+      834
+    ]
+  },
+  {
+    "name": "T3Search",
+    "title": "Search",
+    "platform": "tablet",
+    "size": [
+      1194,
+      834
+    ]
+  },
+  {
+    "name": "T3Settings",
+    "title": "Settings — list | detail",
+    "platform": "tablet",
+    "size": [
+      1194,
+      834
+    ]
+  },
+  {
+    "name": "T3SignIn",
+    "title": "Sign in",
+    "platform": "tablet",
+    "size": [
+      1194,
+      834
+    ]
+  },
+  {
+    "name": "T3Browse",
+    "title": "Movies — filters column, grid appending",
+    "platform": "tablet",
+    "size": [
+      1194,
+      834
+    ]
+  },
+  {
+    "name": "T3BrowseCatalogs",
+    "title": "Movies — choose a catalog",
+    "platform": "tablet",
+    "size": [
+      1194,
+      834
+    ]
+  },
+  {
+    "name": "T3SetSources",
+    "title": "Source integrations",
+    "platform": "tablet",
+    "size": [
+      1194,
+      834
+    ]
+  },
+  {
+    "name": "T3SourcesViptv",
+    "title": "Source integrations — VIPTV Sources (side sheet)",
+    "platform": "tablet",
+    "size": [
+      1194,
+      834
+    ]
+  },
+  {
+    "name": "T3SourcesXtream",
+    "title": "Source integrations — Xtream, saving",
+    "platform": "tablet",
+    "size": [
+      1194,
+      834
+    ]
+  },
+  {
+    "name": "T3SourcesM3u",
+    "title": "Source integrations — M3U, error",
+    "platform": "tablet",
+    "size": [
+      1194,
+      834
+    ]
+  },
+  {
+    "name": "T3SourcesRemove",
+    "title": "Source integrations — remove",
+    "platform": "tablet",
+    "size": [
+      1194,
+      834
+    ]
+  },
+  {
+    "name": "D3HomeWin",
+    "title": "Home — Windows, 1440 × 900",
+    "platform": "desktop",
+    "size": [
+      1440,
+      900
+    ]
+  },
+  {
+    "name": "D3HomeMac",
+    "title": "Home — macOS, 1280 × 800",
+    "platform": "desktop",
+    "size": [
+      1280,
+      800
+    ]
+  },
+  {
+    "name": "D3HomeCompact",
+    "title": "Home — 1024 × 700 (icon rail)",
+    "platform": "desktop",
+    "size": [
+      1024,
+      700
+    ]
+  },
+  {
+    "name": "D3HomeNarrow",
+    "title": "Home — snapped half, 600 × 800 (menu button)",
+    "platform": "desktop",
+    "size": [
+      600,
+      800
+    ]
+  },
+  {
+    "name": "D3HomeUltra",
+    "title": "Home — ultrawide 2560 × 1080",
+    "platform": "desktop",
+    "size": [
+      2560,
+      1080
+    ]
+  },
+  {
+    "name": "D3HomeLoading",
+    "title": "Home — loading",
+    "platform": "desktop",
+    "size": [
+      1440,
+      900
+    ]
+  },
+  {
+    "name": "D3HomeHover",
+    "title": "Home — hover preview",
+    "platform": "desktop",
+    "size": [
+      1440,
+      900
+    ]
+  },
+  {
+    "name": "D3Context",
+    "title": "Right-click menu",
+    "platform": "desktop",
+    "size": [
+      1440,
+      900
+    ]
+  },
+  {
+    "name": "D3Toast",
+    "title": "Toast with undo",
+    "platform": "desktop",
+    "size": [
+      1440,
+      900
+    ]
+  },
+  {
+    "name": "D3Update",
+    "title": "Update ready (info bar)",
+    "platform": "desktop",
+    "size": [
+      1440,
+      900
+    ]
+  },
+  {
+    "name": "D3Offline",
+    "title": "Offline (info bar)",
+    "platform": "desktop",
+    "size": [
+      1440,
+      900
+    ]
+  },
+  {
+    "name": "D3CardStates",
+    "title": "Cards — every state, desktop and web (A1)",
+    "platform": "desktop",
+    "size": [
+      1440,
+      810
+    ]
+  },
+  {
+    "name": "D3RowStates",
+    "title": "Home rows — states, desktop and web (A2)",
+    "platform": "desktop",
+    "size": [
+      1440,
+      810
+    ]
+  },
+  {
+    "name": "D3Title",
+    "title": "Series page",
+    "platform": "desktop",
+    "size": [
+      1440,
+      900
+    ]
+  },
+  {
+    "name": "D3TitleSeason",
+    "title": "Series page — season menu",
+    "platform": "desktop",
+    "size": [
+      1440,
+      900
+    ]
+  },
+  {
+    "name": "D3TitleUltra",
+    "title": "Series page — ultrawide 2560 × 1080",
+    "platform": "desktop",
+    "size": [
+      2560,
+      1080
+    ]
+  },
+  {
+    "name": "D3Movie",
+    "title": "Movie page",
+    "platform": "desktop",
+    "size": [
+      1440,
+      900
+    ]
+  },
+  {
+    "name": "D3Sources",
+    "title": "Choose a source — drawer",
+    "platform": "desktop",
+    "size": [
+      1440,
+      900
+    ]
+  },
+  {
+    "name": "D3SourcesEmpty",
+    "title": "Choose a source — none found",
+    "platform": "desktop",
+    "size": [
+      1440,
+      900
+    ]
+  },
+  {
+    "name": "D3SourcesTorrent",
+    "title": "Choose a source — torrent links only",
+    "platform": "desktop",
+    "size": [
+      1440,
+      900
+    ]
+  },
+  {
+    "name": "D3Browse",
+    "title": "Movies — filter rail, catalog, grid appending",
+    "platform": "desktop",
+    "size": [
+      1440,
+      900
+    ]
+  },
+  {
+    "name": "D3BrowseCatalogs",
+    "title": "Movies — choose a catalog",
+    "platform": "desktop",
+    "size": [
+      1440,
+      900
+    ]
+  },
+  {
+    "name": "D3BrowseLoading",
+    "title": "Movies — loading",
+    "platform": "desktop",
+    "size": [
+      1440,
+      900
+    ]
+  },
+  {
+    "name": "D3BrowseEmpty",
+    "title": "Movies — nothing matches (genre limit reached)",
+    "platform": "desktop",
+    "size": [
+      1440,
+      900
+    ]
+  },
+  {
+    "name": "D3BrowseError",
+    "title": "Movies — couldn’t load",
+    "platform": "desktop",
+    "size": [
+      1440,
+      900
+    ]
+  },
+  {
+    "name": "D3Search",
+    "title": "Search — Ctrl K",
+    "platform": "desktop",
+    "size": [
+      1440,
+      900
+    ]
+  },
+  {
+    "name": "D3Live",
+    "title": "Live guide",
+    "platform": "desktop",
+    "size": [
+      1440,
+      900
+    ]
+  },
+  {
+    "name": "D3MyList",
+    "title": "My List — sort menu",
+    "platform": "desktop",
+    "size": [
+      1440,
+      900
+    ]
+  },
+  {
+    "name": "D3History",
+    "title": "History",
+    "platform": "desktop",
+    "size": [
+      1440,
+      900
+    ]
+  },
+  {
+    "name": "D3Player",
+    "title": "Player — controls",
+    "platform": "desktop",
+    "size": [
+      1440,
+      900
+    ]
+  },
+  {
+    "name": "D3PlayerScrub",
+    "title": "Player — hover scrubbing",
+    "platform": "desktop",
+    "size": [
+      1440,
+      900
+    ]
+  },
+  {
+    "name": "D3PlayerAudio",
+    "title": "Player — audio & subtitles flyout",
+    "platform": "desktop",
+    "size": [
+      1440,
+      900
+    ]
+  },
+  {
+    "name": "D3PlayerNext",
+    "title": "Player — next episode",
+    "platform": "desktop",
+    "size": [
+      1440,
+      900
+    ]
+  },
+  {
+    "name": "D3PlayerBuffer",
+    "title": "Player — starting",
+    "platform": "desktop",
+    "size": [
+      1440,
+      900
+    ]
+  },
+  {
+    "name": "D3PlayerError",
+    "title": "Player — source failed",
+    "platform": "desktop",
+    "size": [
+      1440,
+      900
+    ]
+  },
+  {
+    "name": "D3Mini",
+    "title": "Mini player — always-on-top window",
+    "platform": "desktop",
+    "size": [
+      480,
+      270
+    ]
+  },
+  {
+    "name": "D3SignIn",
+    "title": "Sign in — every method",
+    "platform": "desktop",
+    "size": [
+      1100,
+      720
+    ]
+  },
+  {
+    "name": "D3SignInWaiting",
+    "title": "Sign in — waiting for the browser",
+    "platform": "desktop",
+    "size": [
+      1100,
+      720
+    ]
+  },
+  {
+    "name": "D3SignInEmail",
+    "title": "Sign in — email code",
+    "platform": "desktop",
+    "size": [
+      1100,
+      720
+    ]
+  },
+  {
+    "name": "D3SignInPassword",
+    "title": "Sign in — password",
+    "platform": "desktop",
+    "size": [
+      1100,
+      720
+    ]
+  },
+  {
+    "name": "D3SignInDevice",
+    "title": "Sign in — approve from another device",
+    "platform": "desktop",
+    "size": [
+      1100,
+      720
+    ]
+  },
+  {
+    "name": "D3Profiles",
+    "title": "Who’s watching",
+    "platform": "desktop",
+    "size": [
+      1100,
+      720
+    ]
+  },
+  {
+    "name": "D3SetGeneral",
+    "title": "Settings — General",
+    "platform": "desktop",
+    "size": [
+      1440,
+      900
+    ]
+  },
+  {
+    "name": "D3SetPlayback",
+    "title": "Settings — Playback",
+    "platform": "desktop",
+    "size": [
+      1440,
+      900
+    ]
+  },
+  {
+    "name": "D3SetAddons",
+    "title": "Settings — Add-ons",
+    "platform": "desktop",
+    "size": [
+      1440,
+      900
+    ]
+  },
+  {
+    "name": "D3Parental",
+    "title": "Settings — Parental controls",
+    "platform": "desktop",
+    "size": [
+      1440,
+      900
+    ]
+  },
+  {
+    "name": "D3Recovery",
+    "title": "Settings — Account, recovery codes",
+    "platform": "desktop",
+    "size": [
+      1440,
+      900
+    ]
+  },
+  {
+    "name": "D3SetAbout",
+    "title": "Settings — About",
+    "platform": "desktop",
+    "size": [
+      1440,
+      900
+    ]
+  },
+  {
+    "name": "D3Shortcuts",
+    "title": "Keyboard shortcuts (Shift ?)",
+    "platform": "desktop",
+    "size": [
+      1440,
+      900
+    ]
+  },
+  {
+    "name": "D3Remote",
+    "title": "TV remote popover",
+    "platform": "desktop",
+    "size": [
+      1440,
+      900
+    ]
+  },
+  {
+    "name": "D3SetSources",
+    "title": "Settings — Source integrations",
+    "platform": "desktop",
+    "size": [
+      1440,
+      900
+    ]
+  },
+  {
+    "name": "D3SourcesViptv",
+    "title": "Source integrations — VIPTV Sources (dialog)",
+    "platform": "desktop",
+    "size": [
+      1440,
+      900
+    ]
+  },
+  {
+    "name": "D3SourcesXtream",
+    "title": "Source integrations — Xtream, saving",
+    "platform": "desktop",
+    "size": [
+      1440,
+      900
+    ]
+  },
+  {
+    "name": "D3SourcesM3u",
+    "title": "Source integrations — M3U, error",
+    "platform": "desktop",
+    "size": [
+      1440,
+      900
+    ]
+  },
+  {
+    "name": "D3SourcesRemove",
+    "title": "Source integrations — remove",
+    "platform": "desktop",
+    "size": [
+      1440,
+      900
+    ]
+  },
+  {
+    "name": "W3Landing",
+    "title": "Signed-out landing — 1440",
+    "platform": "web",
+    "size": [
+      1440,
+      900
+    ]
+  },
+  {
+    "name": "W3LandingMobile",
+    "title": "Signed-out landing — 390",
+    "platform": "web",
+    "size": [
+      390,
+      844
+    ]
+  },
+  {
+    "name": "W3SignIn",
+    "title": "Sign in — every method",
+    "platform": "web",
+    "size": [
+      1440,
+      900
+    ]
+  },
+  {
+    "name": "W3SignInCode",
+    "title": "Sign in — email code",
+    "platform": "web",
+    "size": [
+      1440,
+      900
+    ]
+  },
+  {
+    "name": "W3SignInPassword",
+    "title": "Sign in — password",
+    "platform": "web",
+    "size": [
+      1440,
+      900
+    ]
+  },
+  {
+    "name": "W3SignInDevice",
+    "title": "Sign in — approve from another device",
+    "platform": "web",
+    "size": [
+      1440,
+      900
+    ]
+  },
+  {
+    "name": "W3SignInMobile",
+    "title": "Sign in — phone browser",
+    "platform": "web",
+    "size": [
+      390,
+      844
+    ]
+  },
+  {
+    "name": "W3Profiles",
+    "title": "Who’s watching",
+    "platform": "web",
+    "size": [
+      1440,
+      900
+    ]
+  },
+  {
+    "name": "W3Device",
+    "title": "Enter the TV code — 1440",
+    "platform": "web",
+    "size": [
+      1440,
+      900
+    ]
+  },
+  {
+    "name": "W3DeviceMobile",
+    "title": "Enter the TV code — phone browser",
+    "platform": "web",
+    "size": [
+      390,
+      844
+    ]
+  },
+  {
+    "name": "W3DeviceConfirm",
+    "title": "Confirm the TV + pick a profile",
+    "platform": "web",
+    "size": [
+      1440,
+      900
+    ]
+  },
+  {
+    "name": "W3DeviceDone",
+    "title": "TV signed in",
+    "platform": "web",
+    "size": [
+      1440,
+      900
+    ]
+  },
+  {
+    "name": "W3Addons",
+    "title": "Add an add-on (from the TV’s QR code)",
+    "platform": "web",
+    "size": [
+      1440,
+      900
+    ]
+  },
+  {
+    "name": "W3Home",
+    "title": "Home — 1440",
+    "platform": "web",
+    "size": [
+      1440,
+      900
+    ]
+  },
+  {
+    "name": "W3Home1920",
+    "title": "Home — 1920",
+    "platform": "web",
+    "size": [
+      1920,
+      1080
+    ]
+  },
+  {
+    "name": "W3Home768",
+    "title": "Home — 768 (Browse menu)",
+    "platform": "web",
+    "size": [
+      768,
+      1024
+    ]
+  },
+  {
+    "name": "W3HomeMobile",
+    "title": "Home — 390 (mobile web)",
+    "platform": "web",
+    "size": [
+      390,
+      844
+    ]
+  },
+  {
+    "name": "W3HomeLoading",
+    "title": "Home — loading",
+    "platform": "web",
+    "size": [
+      1440,
+      900
+    ]
+  },
+  {
+    "name": "W3HomeHover",
+    "title": "Home — hover preview",
+    "platform": "web",
+    "size": [
+      1440,
+      900
+    ]
+  },
+  {
+    "name": "W3HomeFocus",
+    "title": "Home — keyboard: skip link + focus ring",
+    "platform": "web",
+    "size": [
+      1440,
+      900
+    ]
+  },
+  {
+    "name": "W3TitleModal",
+    "title": "Details modal over the page (URL kept)",
+    "platform": "web",
+    "size": [
+      1440,
+      900
+    ]
+  },
+  {
+    "name": "W3TitlePage",
+    "title": "Shared title link — signed out",
+    "platform": "web",
+    "size": [
+      1440,
+      900
+    ]
+  },
+  {
+    "name": "W3Search",
+    "title": "Search",
+    "platform": "web",
+    "size": [
+      1440,
+      900
+    ]
+  },
+  {
+    "name": "W3Live",
+    "title": "Live guide",
+    "platform": "web",
+    "size": [
+      1440,
+      900
+    ]
+  },
+  {
+    "name": "W3MyList",
+    "title": "My List",
+    "platform": "web",
+    "size": [
+      1440,
+      900
+    ]
+  },
+  {
+    "name": "W3Browse",
+    "title": "Movies — filter rail, grid appending",
+    "platform": "web",
+    "size": [
+      1440,
+      900
+    ]
+  },
+  {
+    "name": "W3BrowseLoading",
+    "title": "Movies — loading",
+    "platform": "web",
+    "size": [
+      1440,
+      900
+    ]
+  },
+  {
+    "name": "W3BrowseEmpty",
+    "title": "Movies — nothing matches",
+    "platform": "web",
+    "size": [
+      1440,
+      900
+    ]
+  },
+  {
+    "name": "W3BrowseError",
+    "title": "Movies — couldn’t load",
+    "platform": "web",
+    "size": [
+      1440,
+      900
+    ]
+  },
+  {
+    "name": "W3Player",
+    "title": "Player",
+    "platform": "web",
+    "size": [
+      1440,
+      900
+    ]
+  },
+  {
+    "name": "W3PlayerAudio",
+    "title": "Player — audio & subtitles",
+    "platform": "web",
+    "size": [
+      1440,
+      900
+    ]
+  },
+  {
+    "name": "W3Account",
+    "title": "Account — devices",
+    "platform": "web",
+    "size": [
+      1440,
+      900
+    ]
+  },
+  {
+    "name": "W3Recovery",
+    "title": "Account — recovery codes",
+    "platform": "web",
+    "size": [
+      1440,
+      900
+    ]
+  },
+  {
+    "name": "W3Parental",
+    "title": "Account — Parental controls",
+    "platform": "web",
+    "size": [
+      1440,
+      900
+    ]
+  },
+  {
+    "name": "W3NotFound",
+    "title": "Not found",
+    "platform": "web",
+    "size": [
+      1440,
+      900
+    ]
+  },
+  {
+    "name": "W3SetSources",
+    "title": "Account — Source integrations",
+    "platform": "web",
+    "size": [
+      1440,
+      900
+    ]
+  },
+  {
+    "name": "W3SourcesViptv",
+    "title": "Source integrations — VIPTV Sources (dialog)",
+    "platform": "web",
+    "size": [
+      1440,
+      900
+    ]
+  },
+  {
+    "name": "W3SourcesXtream",
+    "title": "Source integrations — Xtream, saving",
+    "platform": "web",
+    "size": [
+      1440,
+      900
+    ]
+  },
+  {
+    "name": "W3SourcesM3u",
+    "title": "Source integrations — M3U, error",
+    "platform": "web",
+    "size": [
+      1440,
+      900
+    ]
+  },
+  {
+    "name": "W3SourcesRemove",
+    "title": "Source integrations — remove",
+    "platform": "web",
+    "size": [
+      1440,
+      900
+    ]
+  },
+  {
+    "name": "SkCalMonth",
+    "title": "Calendar — month",
+    "platform": "simkl",
+    "size": [
+      1440,
+      900
+    ]
+  },
+  {
+    "name": "SkCalAgenda",
+    "title": "Calendar — agenda + up next",
+    "platform": "simkl",
+    "size": [
+      1440,
+      900
+    ]
+  },
+  {
+    "name": "SkUpNext",
+    "title": "Up next — countdowns",
+    "platform": "simkl",
+    "size": [
+      1440,
+      900
+    ]
+  },
+  {
+    "name": "SkDiscover",
+    "title": "Discover — Simkl trending, premieres, airing",
+    "platform": "simkl",
+    "size": [
+      1440,
+      900
+    ]
+  },
+  {
+    "name": "SkGenres",
+    "title": "Browse by genre",
+    "platform": "simkl",
+    "size": [
+      1440,
+      900
+    ]
+  },
+  {
+    "name": "SkSurprise",
+    "title": "Surprise me",
+    "platform": "simkl",
+    "size": [
+      1440,
+      900
+    ]
+  },
+  {
+    "name": "SkSearch",
+    "title": "Search — Simkl results",
+    "platform": "simkl",
+    "size": [
+      1440,
+      900
+    ]
+  },
+  {
+    "name": "SkFilters",
+    "title": "Advanced filters — every Simkl filter",
+    "platform": "simkl",
+    "size": [
+      1440,
+      900
+    ]
+  },
+  {
+    "name": "SkFilterNetwork",
+    "title": "Advanced filters — network picker",
+    "platform": "simkl",
+    "size": [
+      1440,
+      900
+    ]
+  },
+  {
+    "name": "SkFilterSave",
+    "title": "Save filters as a smart list",
+    "platform": "simkl",
+    "size": [
+      1440,
+      900
+    ]
+  },
+  {
+    "name": "SkCalFilter",
+    "title": "Calendar filters",
+    "platform": "simkl",
+    "size": [
+      1440,
+      900
+    ]
+  },
+  {
+    "name": "SkListFilter",
+    "title": "List filters",
+    "platform": "simkl",
+    "size": [
+      1440,
+      900
+    ]
+  },
+  {
+    "name": "SkLists",
+    "title": "Lists — Simkl statuses, multi-select",
+    "platform": "simkl",
+    "size": [
+      1440,
+      900
+    ]
+  },
+  {
+    "name": "SkTitle",
+    "title": "Title — tracking, ratings, episodes",
+    "platform": "simkl",
+    "size": [
+      1440,
+      900
+    ]
+  },
+  {
+    "name": "SkStats",
+    "title": "Your stats",
+    "platform": "simkl",
+    "size": [
+      1440,
+      900
+    ]
+  },
+  {
+    "name": "SkRate",
+    "title": "End of episode — tracked + rate",
+    "platform": "simkl",
+    "size": [
+      1440,
+      900
+    ]
+  },
+  {
+    "name": "SkSettings",
+    "title": "Settings — Simkl connected",
+    "platform": "simkl",
+    "size": [
+      1440,
+      900
+    ]
+  },
+  {
+    "name": "SkSettingsOff",
+    "title": "Settings — connect Simkl",
+    "platform": "simkl",
+    "size": [
+      1440,
+      900
+    ]
+  },
+  {
+    "name": "SkMCalendar",
+    "title": "Phone — calendar",
+    "platform": "simkl",
+    "size": [
+      390,
+      844
+    ]
+  },
+  {
+    "name": "SkMUpNext",
+    "title": "Phone — up next",
+    "platform": "simkl",
+    "size": [
+      390,
+      844
+    ]
+  },
+  {
+    "name": "SkMLists",
+    "title": "Phone — lists",
+    "platform": "simkl",
+    "size": [
+      390,
+      844
+    ]
+  },
+  {
+    "name": "SkMListsSheet",
+    "title": "Phone — move / rate sheet",
+    "platform": "simkl",
+    "size": [
+      390,
+      844
+    ]
+  },
+  {
+    "name": "SkMFilters",
+    "title": "Phone — filters sheet",
+    "platform": "simkl",
+    "size": [
+      390,
+      844
+    ]
+  },
+  {
+    "name": "SkTvCalendar",
+    "title": "TV — calendar",
+    "platform": "simkl",
+    "size": [
+      1920,
+      1080
+    ]
+  },
+  {
+    "name": "SkTvFilters",
+    "title": "TV — filters",
+    "platform": "simkl",
+    "size": [
+      1920,
+      1080
+    ]
+  },
+  {
+    "name": "SkTvConnect",
+    "title": "TV — connect Simkl",
+    "platform": "simkl",
+    "size": [
+      1920,
+      1080
     ]
   }
 ]

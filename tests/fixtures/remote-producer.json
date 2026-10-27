@@ -1,0 +1,554 @@
+{
+  "description": "Synthetic shared producer fixtures. No real account, provider, credentials or media capability URLs. Fields absent from these samples are not capabilities.",
+  "card": {
+    "identity": {
+      "kind": "movie",
+      "id": "fixture-film",
+      "ids": []
+    },
+    "provider_id": "stremio",
+    "title": "Fixture Film",
+    "badges": [
+      "Watched",
+      "5.1",
+      "hdr",
+      "uhd",
+      "4K"
+    ],
+    "metadata": {
+      "year": 2026,
+      "genres": [
+        "Action",
+        "Adventure",
+        "Drama"
+      ],
+      "runtime_minutes": 100,
+      "certification": "PG-13"
+    }
+  },
+  "card_view": {
+    "saved": false,
+    "metadata_parts": [
+      "Movie",
+      "2026",
+      "Action, Adventure",
+      "1h 40m"
+    ],
+    "hero_metadata_parts": [
+      "2026",
+      "Action, Adventure",
+      "1h 40m"
+    ],
+    "compact_metadata_parts": [
+      "2026",
+      "1h 40m"
+    ],
+    "badges": [
+      {
+        "label": "4K",
+        "role": "capability"
+      },
+      {
+        "label": "HDR",
+        "role": "capability"
+      },
+      {
+        "label": "5.1",
+        "role": "capability"
+      },
+      {
+        "label": "PG-13",
+        "role": "certification"
+      },
+      {
+        "label": "Watched",
+        "role": "watched"
+      }
+    ],
+    "hero_badges": [
+      {
+        "label": "4K",
+        "role": "capability"
+      },
+      {
+        "label": "HDR",
+        "role": "capability"
+      },
+      {
+        "label": "5.1",
+        "role": "capability"
+      },
+      {
+        "label": "PG-13",
+        "role": "certification"
+      }
+    ],
+    "tile_badge": {
+      "label": "Watched",
+      "role": "watched"
+    },
+    "progress": null
+  },
+  "source_view": {
+    "title": "LordStreams",
+    "body": "WEB-DL \u00b7 HEVC \u00b7 5.1 \u00b7 18.4 GB",
+    "quality_label": "4K",
+    "format_label": "HDR10",
+    "addon_label": "Add-on A",
+    "provider_label": null
+  },
+  "subtitle_appearance": {
+    "font_scale": 1.25,
+    "text_color": "#FFFFFF",
+    "background_color": "#00000000"
+  },
+  "unavailable": [
+    "automatic_next_countdown",
+    "device_display_preferences",
+    "foreign_audio_subtitle_policy",
+    "unverified_cast_summary"
+  ],
+  "playback_actions": {
+    "vod": {
+      "pause": true,
+      "seek": true,
+      "restart": true,
+      "change_source": true,
+      "episodes": false,
+      "next_episode": false,
+      "tracks": false,
+      "subtitle_style": false,
+      "report_progress": true
+    },
+    "live": {
+      "pause": false,
+      "seek": false,
+      "restart": false,
+      "change_source": true,
+      "episodes": false,
+      "next_episode": false,
+      "tracks": false,
+      "subtitle_style": false,
+      "report_progress": false
+    }
+  },
+  "source_replacement": {
+    "request": {
+      "replace_source": {
+        "playback_id": "fixture-prior-lease",
+        "observed_position": 63.25
+      }
+    },
+    "resolved_hls_clock": {
+      "position": 0,
+      "timeline_offset_seconds": 63.25
+    }
+  },
+  "navigation": {
+    "movie_and_live": [
+      {
+        "id": "search",
+        "label": "Search",
+        "media_search": true,
+        "channel_search": true
+      },
+      {
+        "id": "home",
+        "label": "Home"
+      },
+      {
+        "id": "movie",
+        "label": "Movies"
+      },
+      {
+        "id": "live",
+        "label": "Live"
+      },
+      {
+        "id": "library",
+        "label": "My List"
+      },
+      {
+        "id": "profiles",
+        "label": "Profile"
+      }
+    ],
+    "unconfigured": [
+      {
+        "id": "home",
+        "label": "Home"
+      },
+      {
+        "id": "library",
+        "label": "My List"
+      },
+      {
+        "id": "profiles",
+        "label": "Profile"
+      }
+    ],
+    "no_selected_profile": [
+      {
+        "id": "profiles",
+        "label": "Profile"
+      }
+    ],
+    "restricted_without_parent": [
+      {
+        "id": "search",
+        "label": "Search",
+        "media_search": true,
+        "channel_search": false
+      },
+      {
+        "id": "home",
+        "label": "Home"
+      },
+      {
+        "id": "movie",
+        "label": "Movies"
+      },
+      {
+        "id": "series",
+        "label": "Series"
+      },
+      {
+        "id": "library",
+        "label": "My List"
+      },
+      {
+        "id": "profiles",
+        "label": "Profile"
+      }
+    ],
+    "live_only": [
+      {
+        "id": "search",
+        "label": "Search",
+        "media_search": false,
+        "channel_search": true
+      },
+      {
+        "id": "home",
+        "label": "Home"
+      },
+      {
+        "id": "live",
+        "label": "Live"
+      },
+      {
+        "id": "library",
+        "label": "My List"
+      },
+      {
+        "id": "profiles",
+        "label": "Profile"
+      }
+    ]
+  },
+  "live_source_action": {
+    "card": {
+      "identity": {
+        "kind": "live",
+        "id": "channel-fixture",
+        "ids": []
+      },
+      "provider_id": "m3u:1",
+      "title": "Fixture channel",
+      "badges": [],
+      "poster": null,
+      "landscape": null,
+      "logo": null
+    },
+    "label": "Watch live",
+    "resume": false,
+    "source_selection": "best"
+  },
+  "live_pagination_snapshot": {
+    "first_page": {
+      "snapshot_id": "fixture-directory-a",
+      "channels": [
+        {
+          "id": "channel-one",
+          "connection_id": "m3u:1",
+          "card": {
+            "identity": {
+              "kind": "live",
+              "id": "channel-one",
+              "ids": []
+            },
+            "provider_id": "m3u:1",
+            "title": "Channel One",
+            "badges": [],
+            "poster": null,
+            "landscape": null,
+            "logo": null
+          },
+          "group_id": null,
+          "group_name": null,
+          "group_ids": []
+        }
+      ],
+      "next_cursor": "1",
+      "complete": false,
+      "groups": [],
+      "connections": [
+        {
+          "id": "m3u:1",
+          "plugin_id": "m3u",
+          "account_id": "fixture-account",
+          "private_profile_id": "fixture-profile",
+          "name": "Fixture live connection",
+          "enabled": true,
+          "revision": 1,
+          "capabilities": [
+            "LiveTv",
+            "Sources"
+          ]
+        }
+      ],
+      "availability": "Available",
+      "reason": null
+    },
+    "compatible_next_page": {
+      "snapshot_id": "fixture-directory-a",
+      "channels": [
+        {
+          "id": "channel-two",
+          "connection_id": "m3u:1",
+          "card": {
+            "identity": {
+              "kind": "live",
+              "id": "channel-two",
+              "ids": []
+            },
+            "provider_id": "m3u:1",
+            "title": "Channel Two",
+            "badges": [],
+            "poster": null,
+            "landscape": null,
+            "logo": null
+          },
+          "group_id": null,
+          "group_name": null,
+          "group_ids": []
+        }
+      ],
+      "next_cursor": null,
+      "complete": true,
+      "groups": [],
+      "connections": [
+        {
+          "id": "m3u:1",
+          "plugin_id": "m3u",
+          "account_id": "fixture-account",
+          "private_profile_id": "fixture-profile",
+          "name": "Fixture live connection",
+          "enabled": true,
+          "revision": 1,
+          "capabilities": [
+            "LiveTv",
+            "Sources"
+          ]
+        }
+      ],
+      "availability": "Available",
+      "reason": null
+    },
+    "configuration_changed_next_page": {
+      "snapshot_id": "fixture-directory-b",
+      "channels": [
+        {
+          "id": "channel-changed-two",
+          "connection_id": "m3u:1",
+          "card": {
+            "identity": {
+              "kind": "live",
+              "id": "channel-changed-two",
+              "ids": []
+            },
+            "provider_id": "m3u:1",
+            "title": "Channel Changed Two",
+            "badges": [],
+            "poster": null,
+            "landscape": null,
+            "logo": null
+          },
+          "group_id": null,
+          "group_name": null,
+          "group_ids": []
+        }
+      ],
+      "next_cursor": null,
+      "complete": true,
+      "groups": [],
+      "connections": [
+        {
+          "id": "m3u:1",
+          "plugin_id": "m3u",
+          "account_id": "fixture-account",
+          "private_profile_id": "fixture-profile",
+          "name": "Fixture live connection",
+          "enabled": true,
+          "revision": 2,
+          "capabilities": [
+            "LiveTv",
+            "Sources"
+          ]
+        }
+      ],
+      "availability": "Available",
+      "reason": null
+    },
+    "reload_first_page": {
+      "snapshot_id": "fixture-directory-b",
+      "channels": [
+        {
+          "id": "channel-changed-one",
+          "connection_id": "m3u:1",
+          "card": {
+            "identity": {
+              "kind": "live",
+              "id": "channel-changed-one",
+              "ids": []
+            },
+            "provider_id": "m3u:1",
+            "title": "Channel Changed One",
+            "badges": [],
+            "poster": null,
+            "landscape": null,
+            "logo": null
+          },
+          "group_id": null,
+          "group_name": null,
+          "group_ids": []
+        }
+      ],
+      "next_cursor": "1",
+      "complete": false,
+      "groups": [],
+      "connections": [
+        {
+          "id": "m3u:1",
+          "plugin_id": "m3u",
+          "account_id": "fixture-account",
+          "private_profile_id": "fixture-profile",
+          "name": "Fixture live connection",
+          "enabled": true,
+          "revision": 2,
+          "capabilities": [
+            "LiveTv",
+            "Sources"
+          ]
+        }
+      ],
+      "availability": "Available",
+      "reason": null
+    },
+    "consumer_action_on_mismatch": "Discard the old window and cursor, cancel dependent guide requests, and request offset zero."
+  },
+  "live_offset_boundary": {
+    "catalog_size": 10041,
+    "first_request": {
+      "offset": 10000,
+      "limit": 40
+    },
+    "first_expected": {
+      "channel_count": 40,
+      "first_id": "large-10000",
+      "next_cursor": "10040",
+      "complete": false
+    },
+    "next_expected": {
+      "channel_count": 1,
+      "first_id": "large-10040",
+      "next_cursor": null,
+      "complete": true
+    },
+    "past_end_request": {
+      "offset": 4294967295,
+      "limit": 200
+    },
+    "past_end_expected": {
+      "channel_count": 0,
+      "next_cursor": null,
+      "complete": true
+    }
+  },
+  "live_reverse_paging": {
+    "catalog_size": 7,
+    "request": {
+      "offset": 5,
+      "limit": 3
+    },
+    "paging": {
+      "origin": "5",
+      "limit": 3,
+      "previous": {
+        "cursor": "2",
+        "limit": 3,
+        "page_size": 3
+      },
+      "next": null,
+      "page_size": 3
+    },
+    "previous_response_paging": {
+      "origin": "2",
+      "limit": 3,
+      "previous": {
+        "cursor": "0",
+        "limit": 2,
+        "page_size": 3
+      },
+      "next": {
+        "cursor": "5",
+        "limit": 3,
+        "page_size": 3
+      },
+      "page_size": 3
+    },
+    "first_response_paging": {
+      "origin": "0",
+      "limit": 2,
+      "previous": null,
+      "next": {
+        "cursor": "2",
+        "limit": 3,
+        "page_size": 3
+      },
+      "page_size": 3
+    },
+    "past_end_paging": {
+      "origin": "4294967295",
+      "limit": 3,
+      "previous": {
+        "cursor": "4",
+        "limit": 3,
+        "page_size": 3
+      },
+      "next": null,
+      "page_size": 3
+    }
+  },
+  "home_preview": {
+    "episode_tile_landscape": "https://images.example/episode.jpg",
+    "continue": {
+      "background": "https://images.example/series.jpg",
+      "caption": "Resume S1 E2 \u00b7 38m left",
+      "progress": 0.3,
+      "action": "play"
+    },
+    "saved_same_title": {
+      "background": "https://images.example/series.jpg",
+      "caption": "Resume S1 E2 \u00b7 38m left",
+      "progress": 0.3,
+      "action": "details"
+    },
+    "unavailable_hint": {
+      "background": null,
+      "caption": null,
+      "progress": null,
+      "action": "details"
+    }
+  }
+}

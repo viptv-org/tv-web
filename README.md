@@ -1,5 +1,23 @@
 # VIPTV Shared Viewing Client (`tv-web`)
 
+## Current TV entry: remote-only Tv3
+
+The SolidTV entry now lives in `src/tv-solid/remote`. It consumes the current
+unversioned backend API and server-owned presentation/selection/preferences;
+it does not initialize the legacy Rust/WASM core. Tizen, Vizio, webOS and browser
+TV mode use this entry. Responsive React and native desktop remain separate.
+
+The immutable design pin includes TV-REMOTE-001. Calendar, guest/local mode,
+local torrents/remux, downloads, casting and unsupported controls are omitted.
+The server API additions and optional `/tv` hosting mount are documented in
+[`../backend/TV_REMOTE_API.md`](../backend/TV_REMOTE_API.md).
+
+Use `playwright.remote.config.ts` for current TV browser acceptance. The older
+SolidTV preview fixtures describe the retired TV controller and are historical
+coverage, not proof of this entry. See `tests/REMOTE_PARITY.md` and the current
+section in `TESTING.md` for measured evidence and limitations.
+
+
 [Installer build instructions](BUILDING.md). Actions delivery: main pushes and manual builds produce sideloading artifacts
 (Android universal APK; desktop Windows/Linux installers; Roku ZIP; TV WGT/IPK).
 Other repositories have no Actions workflows. Local checks remain; previous
@@ -98,8 +116,8 @@ This program is free software; you can redistribute it and/or modify it under th
 `solid.html` renders all of the former Lightning/Blits TV screens with
 `@solidtv/solid` and `@solidtv/renderer`. `lightning.html` remains a compatibility
 URL for existing preview links and loads the same SolidTV entry. The regular `index.html` dispatches TV platform queries to this SolidTV entry;
-responsive web and Tauri dispatch to React. `renderer=react` is an explicit
-legacy diagnostic mode only.
+responsive web and Tauri dispatch to React. `renderer=react` no longer overrides an explicit TV platform/layout; ordinary
+responsive browser and native desktop entries still select React.
 
 Screens live in `src/tv-solid`: compiled Solid JSX uses the pinned layout values,
 assets, fonts and design tokens. The small `runtime.ts` adapter retains the
