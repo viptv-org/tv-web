@@ -1,5 +1,16 @@
 # VIPTV Shared Viewing Client (`tv-web`)
 
+**This repository is the client for web-based TV platforms:** Tizen (Samsung),
+Vizio SmartCast, LG webOS and the other TV firmwares whose apps are web apps
+(Philips/HiSense, Hisense VIDAA, Panasonic, Fire TV web views, browser-based TV
+shells), plus the browser and desktop viewing surfaces that share the bundle.
+
+Those platforms run JavaScript on a browser engine and cannot run a Kotlin
+Multiplatform native client, so the KMP app (`viptv-org/app`, Android/Android TV,
+iOS, desktop JVM) does not replace this client on them and no TV-web work is
+superseded by it. Keep this bundle compatible with the constrained TV engines;
+per-platform acceptance and signing are tracked separately from browser tests.
+
 ## Current TV entry: remote-only Tv3
 
 The SolidTV entry now lives in `src/tv-solid/remote`. It consumes the current
