@@ -1615,10 +1615,14 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
       billboardKey();
       resetHeroCycle();
     });
+    let heroOrder = "";
     createEffect(() => {
-      // A new featured order is new presentation: present it as a fresh pass.
+      // A new featured order is new presentation: present it as a fresh pass. A
+      // server refresh that repeats the same order must not restart anything.
       const order = (home()?.featured ?? []).map(cardKey).join("|");
-      if (order) setHeroRotation((current) => restartHeroRotation(current));
+      if (!order || order === heroOrder) return;
+      heroOrder = order;
+      setHeroRotation((current) => restartHeroRotation(current));
       resetHeroCycle();
     });
     function remember() {

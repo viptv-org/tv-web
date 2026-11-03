@@ -21,7 +21,7 @@ async function open(page:Page,baseURL:string,reduced:boolean,count=2){
  await page.emulateMedia({reducedMotion:reduced?'reduce':'no-preference'});await page.clock.install();
  const fixture=await installRemoteBackend(page,baseURL);
  const home=fixture.bootstrap().home!;
- home.featured=[{...fixture.card,title:'First server choice',logo:null},{...fixture.cards[2],title:'Second server choice',logo:null}].slice(0,count);home.hero=home.featured[0];
+ home.featured=[{...fixture.card,title:'First server choice',logo:null},{...fixture.cards[2],title:'Second server choice',logo:null},{...fixture.cards[3],title:'Third server choice',logo:null}].slice(0,count);home.hero=home.featured[0];
  await page.goto('/tv/?platform=vizio&focusdebug=1');await expect(state(page)).toHaveAttribute('data-tv-ready','true');
  await expect.poll(async()=>(await inspect(page)).photos.length).toBe(1);
  await page.clock.pauseAt(new Date(await page.evaluate(()=>Date.now()+1000)));
@@ -29,22 +29,27 @@ async function open(page:Page,baseURL:string,reduced:boolean,count=2){
 }
 async function beforeCycle(page:Page){const view=await inspect(page);expect(view.cycle).toBeDefined();await page.clock.fastForward(Math.max(1,Math.floor(9000-(view.now-view.cycle!)-20)));}
 
-test('Home cycles server order after nine seconds and pauses for interaction and menus',async({page,baseURL})=>{
- const fixture=await open(page,baseURL!,false);
- await beforeCycle(page);expect((await inspect(page)).texts).toContain('First server choice');
- await page.clock.fastForward(40);await expect.poll(async()=>(await inspect(page)).texts).toContain('Second server choice');
- await page.evaluate(()=>{Object.defineProperty(document,'visibilityState',{configurable:true,value:'hidden'});document.dispatchEvent(new Event('visibilitychange'));});
- await page.clock.fastForward(30000);expect((await inspect(page)).texts).toContain('Second server choice');
- await page.evaluate(()=>{Object.defineProperty(document,'visibilityState',{configurable:true,value:'visible'});document.dispatchEvent(new Event('visibilitychange'));});
- await page.clock.runFor(32);await beforeCycle(page);expect((await inspect(page)).texts).toContain('Second server choice');
- await page.clock.fastForward(40);await expect.poll(async()=>(await inspect(page)).texts).toContain('First server choice');
- await page.keyboard.press('ArrowRight');
+test('Home presents the server featured order once, parks, and restarts on interaction',async({page,baseURL})=>{
+ const fixture=await open(page,baseURL!,false,3);
  await beforeCycle(page);expect((await inspect(page)).texts).toContain('First server choice');
  await page.clock.fastForward(40);await expect.poll(async()=>(await inspect(page)).texts).toContain('Second server choice');
  await page.keyboard.press('ContextMenu');await expect(state(page)).not.toHaveAttribute('data-tv-overlay','');
  await page.clock.fastForward(30000);expect((await inspect(page)).texts).toContain('Second server choice');
  await page.keyboard.press('Escape');await page.clock.runFor(400);await expect(state(page)).toHaveAttribute('data-tv-overlay','');
- await beforeCycle(page);expect((await inspect(page)).texts).toContain('Second server choice');
+ await page.clock.runFor(32);await beforeCycle(page);expect((await inspect(page)).texts).toContain('Second server choice');
+ await page.clock.fastForward(40);await expect.poll(async()=>(await inspect(page)).texts).toContain('Third server choice');
+ // Every featured title has been presented: the rotation parks instead of
+ // starting another pass, which is what lets idle Home stop redrawing.
+ expect((await inspect(page)).cycle).toBeUndefined();
+ await page.clock.fastForward(30000);expect((await inspect(page)).texts).toContain('Third server choice');
+ await page.evaluate(()=>{Object.defineProperty(document,'visibilityState',{configurable:true,value:'hidden'});document.dispatchEvent(new Event('visibilitychange'));});
+ await page.clock.fastForward(30000);expect((await inspect(page)).texts).toContain('Third server choice');
+ await page.evaluate(()=>{Object.defineProperty(document,'visibilityState',{configurable:true,value:'visible'});document.dispatchEvent(new Event('visibilitychange'));});
+ await page.clock.runFor(32);
+ // Remote activity restarts a fresh pass from the slide in view.
+ await page.keyboard.press('ArrowRight');
+ await page.clock.runFor(32);
+ await beforeCycle(page);expect((await inspect(page)).texts).toContain('Third server choice');
  await page.clock.fastForward(40);await expect.poll(async()=>(await inspect(page)).texts).toContain('First server choice');
  expect(fixture.requests.some(r=>r.path.includes('/viewing-action')||r.path==='/api/playback'||r.path==='/api/streams')).toBe(false);
 });
