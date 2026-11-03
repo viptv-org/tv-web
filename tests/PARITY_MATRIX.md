@@ -6,6 +6,11 @@ The authoritative outstanding-work inventory is
 parity. See the latest [testing checkpoint](../TESTING.md) for reproduced
 regressions, bounded guide measurements and validation scope.
 
+The adopted design contract pin is `8b7f85941addf5a65390fe6eca4f11aba9584a17`
+([DESIGN_REF](../DESIGN_REF)). Design revisions cited inside the dated
+checkpoints below record the pin each checkpoint was measured against; they are
+historical, and none of them is the current pin.
+
 The older checkpoint sections below remain historical.
 
 ---
@@ -64,8 +69,10 @@ for the retired client-policy implementation and the separate React entry.
 
 ## Desktop playback follow-up — 2026-10-03
 
-Design `a8b5acac2f810e3d447334e64b7fc3f44c696b4d`; see
-[TESTING.md](../TESTING.md) for pin and execution details.
+Design `8b7f85941addf5a65390fe6eca4f11aba9584a17` is the adopted pin; this
+2026-10-03 checkpoint measured
+`a8b5acac2f810e3d447334e64b7fc3f44c696b4d`, which later revisions superseded.
+See [TESTING.md](../TESTING.md) for pin and execution details.
 
 | Surface | Verified scope | Native evidence / limits |
 | --- | --- | --- |
@@ -113,9 +120,11 @@ owner-requested geometry corrections or imply current pixel/hardware parity.
 
 # SolidTV renderer adoption — 2026-09-24
 
-Pinned design: `fa8b20e0e63d465498b6b2af8571a4e9cdc1015f`. The entries below
-bound the migration from the Blits canvas to `src/tv-solid`; prior platform
-coverage and outstanding product gaps are historical records below.
+Pinned design: `8b7f85941addf5a65390fe6eca4f11aba9584a17`. These 2026-09-24
+entries were measured against the then-pinned
+`fa8b20e0e63d465498b6b2af8571a4e9cdc1015f` and bound the migration from the
+Blits canvas to `src/tv-solid`; prior platform coverage and outstanding product
+gaps are historical records below.
 
 | Surface | SolidTV browser evidence | Physical device evidence |
 | --- | --- | --- |
@@ -138,13 +147,15 @@ comparison is not byte equality or complete canonical-design certification.
 
 # VIPTV design-system overhaul — 2026-09-23
 
-Current design: `732244c79c05da9a47004dd97cdc6caf1ed534be`, with the
+Current design: `8b7f85941addf5a65390fe6eca4f11aba9584a17`, with the
 authoritative [screen index](../design-contract/viptv-design-system/reference/screens/index.json),
 [components](../design-contract/viptv-design-system/components.md),
 [copy](../design-contract/viptv-design-system/copy.md), and
 [decisions](../design-contract/viptv-design-system/decisions.md). The table
-below describes the current build. The older Roku-based record farther down
-is historical evidence for a superseded design revision.
+below describes the current build. The 2026-09-23 checkpoint was measured
+against `732244c79c05da9a47004dd97cdc6caf1ed534be`, which later revisions
+superseded. The older Roku-based record farther down is historical evidence for
+a superseded design revision.
 
 | Surface | Browser and reference evidence | Remaining limit |
 | --- | --- | --- |
@@ -244,7 +255,7 @@ baseline `6f335d7631e1334be398b7aa5977ce4ce51ac50a`.
 | TV state / path | Lightning browser evidence | 1:1 visual evidence | Device evidence / disposition |
 | --- | --- | --- | --- |
 | Pairing, loading, expiry, retry | Shared device API/QR mocked at 1920×1080; expiry Enter release caused a new device-code request. Tizen/Vizio/webOS browser captures were byte-equal. | Pairing vs current React: 331,807 pixels changed (16.0015%), MAE 3.7149, RMSE 25.1868, SSIM 0.911408. Open deviation. | Physical Tizen/Vizio/webOS unverified; staged entry only. |
-| Profiles / Manage / hold | SolidTV focused tiles and Manage retain size and use cached settings/check icons under design `fa8b20e`. The lazy shared editor handles create, rename, avatar, save, delete and PIN through the same API/UI flow as React. Fixture requests and return focus passed; a twelve-profile fixture paged to page two and selected profile 6. | `TvProfiles`, `TvProfilesManage`, `TvProfileEdit`, `TvProfileName`, `TvAvatars`, `TvProfileDelete` inspected at 1920×1080. Focused profile is ring-only and Manage text/icon are centred. Historic pixel metrics below predate this refinement. | Browser fixture only; physical remote/PIN hardware qualification remains. |
+| Profiles / Manage / hold | SolidTV focused tiles and Manage retain size and use cached settings/check icons under the then-pinned design `fa8b20e0e63d465498b6b2af8571a4e9cdc1015f`. The lazy shared editor handles create, rename, avatar, save, delete and PIN through the same API/UI flow as React. Fixture requests and return focus passed; a twelve-profile fixture paged to page two and selected profile 6. | `TvProfiles`, `TvProfilesManage`, `TvProfileEdit`, `TvProfileName`, `TvAvatars`, `TvProfileDelete` inspected at 1920×1080. Focused profile is ring-only and Manage text/icon are centred. Historic pixel metrics below predate this refinement. | Browser fixture only; physical remote/PIN hardware qualification remains. |
 | Home first frame / action and shelf focus | Shared API/Rust hero and queue projections feed staged Home. Live/catalog/My List shelves load after the first usable queue frame. Browser D-pad fixtures reached the last queue card, stayed in the row on Right, moved to the next shelf on Down and restored the cursor on Up. | `TvHome` and a lower-shelf capture inspected at 1920×1080. The hero art disappears on lower shelves. Historic metric: 1,406,199 pixels changed (67.8144%), MAE 8.8849, RMSE 26.6207, SSIM 0.857713 against React `TvHome`; it predates this refinement. | Browser fixture only; no launcher or device qualification. |
 | Expanded TV menu | Left from the first Home action opens seven Blits focus rows; Down focuses Discover. Right/Back restore the remembered Home action. Profile activates profile selection; Home, Search, Discover, Live TV, My List and Settings route to content. Tizen/Vizio/webOS browser captures were byte-equal. | `TvMenu` vs React: 1,625,803 changed pixels (78.4049%), MAE 3.7609, RMSE 12.2046, SSIM 0.930841. The Home background contributes to the full-frame difference; exact pixel parity remains open. | Browser fixture only; physical remote behavior unverified. |
 | TV Search | Blits on-screen keys and physical typing search the same catalog/live API after 650 ms; replacement cancels stale work. Browser fixtures exercised 14 grouped Naruto results, D-pad result/keyboard navigation including offscreen results, title/Back focus, held-card menu, Delete/Clear, no results, partial catalog failure with retained Live TV, and rail return through Discover/My List. Search keeps all result positions for navigation but mounts and reprojects at most nine viewport cards per D-pad window move; a 120-result model check confirmed only visible cards receive wsrv URLs. Populated and blank captures were byte-equal in Tizen/Vizio/webOS browser modes, and the windowing edits left the Blits `TvSearch` frame pixel-identical. | `TvSearch` populated vs React: 407,982 changed pixels (19.6751%), MAE 4.5274, RMSE 23.1041, SSIM 0.942227. Matched blank Search: 79,744 changed (3.8457%), MAE 1.3043, RMSE 13.4446, SSIM 0.827156. Both open deviations; no-result and partial-failure states lack React pixel baselines. Search input latency was not remeasured after windowing. | Browser fixtures only; physical keyboard/remote behavior unverified. Voice search is unavailable in the current React baseline too. |
@@ -317,13 +328,15 @@ comparison is not byte equality or complete canonical-design certification.
 
 # VIPTV design-system overhaul — 2026-09-23
 
-Current design: `732244c79c05da9a47004dd97cdc6caf1ed534be`, with the
+Current design: `8b7f85941addf5a65390fe6eca4f11aba9584a17`, with the
 authoritative [screen index](../design-contract/viptv-design-system/reference/screens/index.json),
 [components](../design-contract/viptv-design-system/components.md),
 [copy](../design-contract/viptv-design-system/copy.md), and
 [decisions](../design-contract/viptv-design-system/decisions.md). The table
-below describes the current build. The older Roku-based record farther down
-is historical evidence for a superseded design revision.
+below describes the current build. The 2026-09-23 checkpoint was measured
+against `732244c79c05da9a47004dd97cdc6caf1ed534be`, which later revisions
+superseded. The older Roku-based record farther down is historical evidence for
+a superseded design revision.
 
 | Surface | Browser and reference evidence | Remaining limit |
 | --- | --- | --- |
