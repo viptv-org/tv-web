@@ -257,10 +257,26 @@ import {
 
 
 
-  segment
+  segment,
+
+
+
+  type AccountIdentity
 
 
 } from "./api";
+import {
+  LIVE_EMPTY_COPY,
+  liveFailureBody,
+  liveKeepsToday,
+  liveNoChannelsBody,
+  liveNoSourceActions,
+  liveRecoveryActions,
+  liveViewerOf,
+  pickLiveSpread,
+  type LiveRecoveryAction,
+} from "./liveEmpty";
+import { LiveAnswer, LiveNoSource, LiveSkeletons } from "./liveEmptyViews";
 import {
 
   ACCOUNT_SESSION_REQUIRED,
@@ -613,7 +629,44 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
       [liveSnapshot, setLiveSnapshot] = createSignal(""),
       [groups, setGroups] = createSignal<{ id: string; label: string }[]>([]),
       [liveGroup, setLiveGroup] = createSignal<string>(),
-      [programs, setPrograms] = createSignal<Record<string, Program[]>>({});
+      [programs, setPrograms] = createSignal<Record<string, Program[]>>({}),
+      // LIVE-EMPTY-001: the message a failed first Live request read, and who is
+      // looking, which decides the action block and the who line.
+      [liveFailure, setLiveFailure] = createSignal(""),
+      [liveIdentity, setLiveIdentity] = createSignal<AccountIdentity>();
+    /** Which form the page draws. Only the page's own facts decide. */
+    const liveSpread = createMemo(() =>
+      pickLiveSpread({
+        channels: channels().length,
+        page: livePages()[0],
+        filtered: !!liveGroup(),
+        pending: loading(),
+        failure: liveFailure(),
+      }),
+    );
+    const liveViewer = createMemo(() => liveViewerOf(liveIdentity()));
+    /** The block's focused action, while the block owns the page. */
+    const liveEmptyFocus = () =>
+      zone() === "live-empty" ? column() : undefined;
+    /**
+     * The answered and failed blocks' recovery, in the contract's order: the
+     * primary is first, so **Try again** leads whenever there is something to
+     * re-request. **Source integrations** needs a proven owner: the server
+     * refuses a source write from a member or a paired TV.
+     */
+    const liveRecovery = createMemo<{ id: LiveRecoveryAction; label: string }[]>(
+      () =>
+        liveRecoveryActions({
+          retry: liveSpread() === "failed" || !!livePages()[0]?.reason,
+          mayChangeSources: liveViewer() === "owner",
+        }).map((id) => ({
+          id,
+          label:
+            id === "retry"
+              ? LIVE_EMPTY_COPY.retry
+              : LIVE_EMPTY_COPY.sourceIntegrations,
+        })),
+    );
     const [guideInfo, setGuideInfo] = createSignal<
         Record<string, Guide["view"]>
       >({}),
@@ -1448,10 +1501,15 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
           else if (view === "live") {
             const value = await refreshChannelPage(false, signal);
             const focused = channels()[liveChannelIndex()]?.id;
+            // A page that had nothing to show and now has rows lands the remote
+            // on the first row instead of leaving focus on the navigation
+            // (LIVE-EMPTY-13).
+            const arrived = !channels().length && !!value.channels.length;
             batch(() => {
               adoptLiveSnapshot(value.snapshot_id);
               adoptChannelWindow([value]);
               setGroups(value.groups);
+              setLiveFailure("");
               if (zone() === "live-groups")
                 setColumn(Math.min(column(), value.groups.length));
               else if (zone() === "content")
@@ -1466,6 +1524,13 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
                     ),
                   ),
                 );
+              else if (
+                arrived &&
+                (zone() === "live-empty" || zone() === "nav")
+              ) {
+                setZone("content");
+                setColumn(0);
+              }
               setPrograms({});
               setGuideInfo({});
             });
@@ -1935,6 +2000,8 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
                 ),
               );
           });
+        } else if (previous.screen === "live") {
+          await loadLiveFirstPage(signal);
         } else if (["movie", "series", "library"].includes(previous.screen)) {
           const value =
             previous.screen === "library"
@@ -1953,6 +2020,116 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
       } finally {
         if (!signal.aborted) setLoading(false);
       }
+    }
+    /**
+     * LIVE-EMPTY-001: the Live page's first request. A failure with no page in
+     * hand is the contract's failed form (**Could not load Live TV.** with its
+     * own recovery), not the app's generic overlay, because nothing on the page
+     * has proved a source is configured yet.
+     */
+    async function loadLiveFirstPage(signal: AbortSignal) {
+      setLoading(true);
+      setLiveFailure("");
+      try {
+        const result = await api.live("0", undefined, signal);
+        adoptLiveSnapshot(result.snapshot_id);
+        adoptChannelWindow([result]);
+        void call<{ channel_ids: string[] }>(
+          api.scoped("/live/favorites"),
+          "GET",
+          undefined,
+          signal,
+        )
+          .then((value) => setLiveFavorites(new Set(value.channel_ids)))
+          .catch(() => {});
+        setGroups(result.groups);
+        setLiveGroup(undefined);
+        setPrograms({});
+        void loadVisibleGuides();
+      } catch (e) {
+        if (
+          signal.aborted ||
+          (e instanceof DOMException && e.name === "AbortError")
+        )
+          return;
+        // A 401 retires the session; it is not this page's empty state.
+        if (e instanceof RemoteError && e.status === 401) {
+          fail(e);
+          return;
+        }
+        setLiveFailure(e instanceof Error ? e.message : "");
+      } finally {
+        if (!signal.aborted) setLoading(false);
+      }
+      focusLiveSpread();
+    }
+    /**
+     * Entering Live keeps the row focus a page with channels has today. An empty
+     * or failed page focuses the navigation's own Live tab instead, so the first
+     * Down enters the page on the primary (contract § Focus, input and timing).
+     */
+    function focusLiveSpread() {
+      if (screen() !== "live") return;
+      if (liveKeepsToday(liveSpread())) {
+        setZone("content");
+        setColumn(0);
+        return;
+      }
+      setZone("nav");
+      setColumn(navIndex("live"));
+    }
+    /**
+     * **Try again**: the same query with the same filters, on the loading form.
+     * A failure that leaves no page lands back on the failed form.
+     */
+    function retryLive() {
+      setLiveFailure("");
+      void loadLiveGroup(liveGroup()).catch((e) => {
+        if (
+          e instanceof DOMException ||
+          (e instanceof Error && e.name === "AbortError")
+        )
+          return;
+        if (e instanceof RemoteError && e.status === 401) fail(e);
+        else setLiveFailure(e instanceof Error ? e.message : "");
+      });
+    }
+    /**
+     * Settings on a named section, the existing destinations both empty states
+     * route to. The remembered Live entry is marked stale so Back re-requests
+     * the page and the primary takes focus again (LIVE-EMPTY-02).
+     */
+    async function openLiveSettings(tab: number) {
+      remember();
+      const entry = history[history.length - 1];
+      if (entry) entry.stale = true;
+      const signal = resetScope();
+      setLoading(true);
+      setZone("settings-nav");
+      setColumn(0);
+      setRow(0);
+      try {
+        await loadSettings(tab, signal);
+      } catch (e) {
+        fail(e);
+      }
+      setScreen("settings");
+      if (!signal.aborted) setLoading(false);
+    }
+    /** The focused action of whichever empty or failed block owns the page. */
+    async function activateLiveSpread() {
+      if (liveSpread() === "no-source") {
+        const action = liveNoSourceActions(liveViewer())[column()];
+        if (action === "setup")
+          await openLiveSettings(settingsTabIndex("Source integrations"));
+        else if (action === "add-ons")
+          await openLiveSettings(settingsTabIndex("Add-ons"));
+        return;
+      }
+      const action = liveRecovery()[column()]?.id;
+      if (action === "retry") retryLive();
+      else if (action === "source-integrations")
+        await openLiveSettings(settingsTabIndex("Source integrations"));
     }
     async function navigate(target: Screen) {
       if (screen() === "player") await player.stop();
@@ -2027,22 +2204,7 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
             return;
           }
         } else if (target === "live") {
-          setLoading(true);
-          const result = await api.live("0", undefined, signal);
-          adoptLiveSnapshot(result.snapshot_id);
-          adoptChannelWindow([result]);
-          void call<{ channel_ids: string[] }>(
-            api.scoped("/live/favorites"),
-            "GET",
-            undefined,
-            signal,
-          )
-            .then((value) => setLiveFavorites(new Set(value.channel_ids)))
-            .catch(() => {});
-          setGroups(result.groups);
-          setLiveGroup(undefined);
-          setPrograms({});
-          void loadVisibleGuides();
+          await loadLiveFirstPage(signal);
         }
         setLoading(false);
       } catch (e) {
@@ -2732,9 +2894,12 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
           adoptLiveSnapshot(value.snapshot_id);
           adoptChannelWindow([value]);
           setGroups(value.groups);
+          setLiveFailure("");
           setColumn(0);
           setZone("content");
         });
+        // Nothing to focus in the list: the page's own state holds the focus.
+        if (!value.channels.length) focusLiveSpread();
         void loadVisibleGuides();
       } finally {
         if (!signal.aborted) setLoading(false);
@@ -3151,6 +3316,9 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
       "Parental controls",
       "About",
     ];
+    /** The existing Settings section by name, so a copy change moves no code. */
+    const settingsTabIndex = (label: string) =>
+      Math.max(0, settingsTabs.indexOf(label));
     async function preferenceChoice(
       field: string,
       label: string,
@@ -3297,6 +3465,23 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
         setCanManageAccount(await api.canManageAccount());
       return offersHouseholdWrite(canManageAccount());
     }
+    /**
+     * LIVE-EMPTY-001 reads the account identity only when its empty or failed
+     * form appears, so a working Live page never pays for it. Until it answers
+     * the block holds its height and draws neither actions nor a who line.
+     */
+    createEffect(() => {
+      const spread = liveSpread();
+      if (
+        screen() !== "live" ||
+        !["no-source", "no-channels", "failed"].includes(spread) ||
+        liveIdentity() !== undefined
+      )
+        return;
+      void api.accountIdentity().then((value) => {
+        if (alive) setLiveIdentity(value);
+      });
+    });
     async function loadSettings(tab: number, signal: AbortSignal) {
       if (signal.aborted) return;
       settingsScope?.abort();
@@ -4173,6 +4358,19 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
       if (zone() === "nav") {
         setColumn((i) => Math.max(0, Math.min(navs().length - 1, i + dx)));
         if (dy > 0) {
+          // The empty and failed Live forms own the whole page: Down enters them
+          // only when there is an action to land on (LIVE-EMPTY-01, -05, -14).
+          if (screen() === "live" && !liveKeepsToday(liveSpread())) {
+            const actions =
+              liveSpread() === "no-source"
+                ? liveNoSourceActions(liveViewer())
+                : liveRecovery();
+            if (actions.length) {
+              setZone("live-empty");
+              setColumn(0);
+            }
+            return;
+          }
           setColumn(0);
           setZone(
             screen() === "home" || screen() === "detail"
@@ -4429,6 +4627,20 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
         return;
       }
 
+      if (screen() === "live" && zone() === "live-empty") {
+        // Down reaches the second action, Up returns to the navigation, and
+        // Left and Right do nothing on either action.
+        const count =
+          liveSpread() === "no-source"
+            ? liveNoSourceActions(liveViewer()).length
+            : liveRecovery().length;
+        if (dy < 0) {
+          setZone("nav");
+          setColumn(navIndex("live"));
+        } else if (dy > 0)
+          setColumn((i) => Math.min(Math.max(0, count - 1), i + 1));
+        return;
+      }
       if (screen() === "live" && zone() === "live-groups") {
         if (dy > 0) {
           setZone("content");
@@ -4962,6 +5174,10 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
         } else await playIntent(card, true);
         return;
       }
+      if (screen() === "live" && zone() === "live-empty") {
+        await activateLiveSpread();
+        return;
+      }
       if (screen() === "live" && zone() === "live-groups") {
         const group = column() ? groups()[column() - 1]?.id : undefined;
         await loadLiveGroup(group);
@@ -5119,6 +5335,12 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
           ? `confirmation:${row()}:${column()}`
           : `${zone()}:${column()}:${row()}:${heroAction()}:${choice()}`;
       document.documentElement.dataset.tvSaver = String(screenSaver());
+      // The Live page's own state, so a session can be checked without reading
+      // the canvas: the empty, loading and failed forms are not all visible as
+      // copy on screen.
+      document.documentElement.dataset.tvLiveSpread = String(
+        screen() === "live" ? liveSpread() : "",
+      );
       if (state !== "player")
         document.getElementById("video-layer")!.style.display = "none";
     });
@@ -6436,6 +6658,45 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
               </Show>
             </Show>
             <Show when={screen() === "live"}>
+              {/* LIVE-EMPTY-001A: one broadcast frame, no chips, no preview, no
+                  rows. The crop and its scrim are the contract's own. */}
+              <Show when={liveSpread() === "no-source"}>
+                <LiveNoSource
+                  viewer={liveViewer()}
+                  focused={liveEmptyFocus()}
+                />
+              </Show>
+              {/* LIVE-EMPTY-001B: the loading form has no copy at all, the
+                  answered form carries the server's reason, and a first request
+                  that failed says so instead of claiming a source is set up. */}
+              <Show
+                when={
+                  liveSpread() === "loading" ||
+                  liveSpread() === "no-channels" ||
+                  liveSpread() === "failed"
+                }
+              >
+                <Show when={liveSpread() === "loading"}>
+                  <LiveSkeletons />
+                </Show>
+                <Show when={liveSpread() === "no-channels"}>
+                  <LiveAnswer
+                    headline={LIVE_EMPTY_COPY.noChannelsHeadline}
+                    body={liveNoChannelsBody(livePages()[0])}
+                    actions={liveRecovery()}
+                    focused={liveEmptyFocus()}
+                  />
+                </Show>
+                <Show when={liveSpread() === "failed"}>
+                  <LiveAnswer
+                    headline={LIVE_EMPTY_COPY.failedHeadline}
+                    body={liveFailureBody(liveFailure())}
+                    actions={liveRecovery()}
+                    focused={liveEmptyFocus()}
+                  />
+                </Show>
+              </Show>
+              <Show when={liveKeepsToday(liveSpread())}>
               <TvView x={96} y={130} w={64} h={30} rounded={5} color="#FF5A4E">
                 <Label
                   w={64}
@@ -6751,6 +7012,7 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
                   content="No live channels. Configure a source in Settings."
                 />
               </Show>
+              </Show>
             </Show>
             <Show when={screen() === "settings"}>
               <TvView w={560} h={1080} color={palette.surface} />
@@ -7046,7 +7308,8 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
             </Show>
             <Show
               when={
-                loading() && !["player", "welcome", "search"].includes(screen())
+                loading() &&
+                !["player", "welcome", "search", "live"].includes(screen())
               }
             >
               <For each={[0, 1, 2]}>
