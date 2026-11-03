@@ -305,6 +305,9 @@
     font-size: var(--viptv-type-phone-meta-size);
     font-weight: 500;
   }
+  [data-layout="responsive"] .vx-title__fact {
+    gap: var(--viptv-space-1_5); /* the separator sits 6 px from the value it follows (M3Title) */
+  }
   [data-layout="responsive"] .vx-title__badge {
     /* M3Title outlined chip: 17 tall, 4 radius, 1 px 0.5 ring, 10 / 700 +0.02em. */
     display: inline-flex;
@@ -363,7 +366,7 @@
     display: flex;
     justify-content: space-around;
     align-items: flex-start;
-    padding: var(--viptv-radius-xs) 0;
+    padding: var(--viptv-space-1) 0; /* 4, as drawn (M3Title) */
   }
   [data-layout="responsive"] .vx-title__action {
     display: flex;
@@ -509,14 +512,6 @@
     padding: var(--viptv-space-0_5) 0 0;
   }
   /* M3Title episode row: "1. Episode One" (15 / 600) over "52m · 38m left" (13 / 500). */
-  [data-layout="responsive"] .vx-title__episode .vx-card__heading {
-    gap: var(--viptv-space-1);
-  }
-  [data-layout="responsive"] .vx-title__episode .vx-card__number {
-    color: var(--viptv-color-text-primary);
-    font-size: var(--viptv-type-phone-body-size);
-    font-weight: 600;
-  }
   [data-layout="responsive"] .vx-title__episode .vx-card__title {
     font-size: var(--viptv-type-phone-body-size);
   }
