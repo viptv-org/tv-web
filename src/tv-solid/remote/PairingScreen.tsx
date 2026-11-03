@@ -9,6 +9,7 @@ import {
 } from "solid-js";
 import { TvView } from "../runtime";
 import { icon, Label, outline, palette } from "./visuals";
+import { textMetrics } from "./text-measure";
 import type { Pairing } from "./types";
 import { easeProgress } from "./motion";
 
@@ -49,8 +50,7 @@ export function PairingScreen(props: {
   const address = () =>
     props.pairing?.verification_uri.replace(/^https:\/\//, "") ?? "";
   const lines = createMemo(() => {
-    const ctx = document.createElement("canvas").getContext("2d")!;
-    ctx.font = "44px Onest700";
+    const ctx = textMetrics("44px Onest700");
     return Math.max(
       1,
       Math.min(2, Math.ceil(ctx.measureText(address()).width / 698)),
@@ -59,15 +59,13 @@ export function PairingScreen(props: {
   const step2 = () => 375.5 + 63.8 * lines() + 32;
   const codeY = () => step2() + 66;
   const refreshX = createMemo(() => {
-    const ctx = document.createElement("canvas").getContext("2d")!;
-    ctx.font = "22px Onest";
+    const ctx = textMetrics("22px Onest");
     return (
       1126 + ctx.measureText(`Code expires in ${remainingText()}`).width + 24
     );
   });
   const refreshWidth = createMemo(() => {
-    const ctx = document.createElement("canvas").getContext("2d")!;
-    ctx.font = "22px Onest600";
+    const ctx = textMetrics("22px Onest600");
     return ctx.measureText("New code").width + 68;
   });
   return (

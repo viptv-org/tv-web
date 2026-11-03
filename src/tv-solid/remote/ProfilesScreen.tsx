@@ -2,6 +2,7 @@
 import { createMemo, createSignal, onCleanup, onMount, Show } from "solid-js";
 import { KeyedFor, TvView } from "../runtime";
 import { avatar, icon, Label, outline, palette } from "./visuals";
+import { textMetrics } from "./text-measure";
 import type { Profile } from "./types";
 
 type Item = Pick<Profile, "id" | "name" | "avatar_id" | "locked">;
@@ -20,8 +21,9 @@ function ProfileTile(props: {
     onCleanup(() => cancelAnimationFrame(frame));
   });
   const nameWidth = createMemo(() => {
-    const context = document.createElement("canvas").getContext("2d")!;
-    context.font = `28px ${props.focused ? "Onest700" : "Onest500"}`;
+    const context = textMetrics(
+      `28px ${props.focused ? "Onest700" : "Onest500"}`,
+    );
     return Math.min(
       props.profile.locked ? 168 : 200,
       context.measureText(props.profile.name).width,
@@ -158,8 +160,7 @@ export function ProfilesScreen(props: {
   const start = () => Math.floor(props.index / 5) * 5;
   const visible = () => items().slice(start(), start() + 5);
   const manageWidth = createMemo(() => {
-    const ctx = document.createElement("canvas").getContext("2d")!;
-    ctx.font = "26px Onest700";
+    const ctx = textMetrics("26px Onest700");
     return ctx.measureText("Manage profiles").width + 40;
   });
   return (

@@ -2,6 +2,7 @@
 import { createMemo, For, Show } from "solid-js";
 import { TvView } from "../runtime";
 import { Button, icon, Label, palette } from "./visuals";
+import { textMetrics } from "./text-measure";
 import type { Control, LibraryQuery } from "./types";
 
 export function LibraryToolbar(props: {
@@ -19,8 +20,7 @@ export function LibraryToolbar(props: {
   const sortValue = () =>
     props.sort?.choices.find((c) => c.value === props.query?.sort)?.label ?? "";
   const sortWidths = createMemo(() => {
-    const canvas = document.createElement("canvas").getContext("2d")!;
-    canvas.font = "24px Onest600";
+    const canvas = textMetrics("24px Onest600");
     return [
       Math.ceil(canvas.measureText(props.sort?.label ?? "").width),
       Math.ceil(canvas.measureText(sortValue()).width),

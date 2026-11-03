@@ -396,6 +396,7 @@ import {
 
 
 } from "./types";
+import { textMetrics } from "./text-measure";
 import type { PlayerSnapshot } from "../../../vendor/video/src/types";
 
 type Screen =
@@ -476,8 +477,7 @@ type Overlay =
 const available = (value?: { availability: string }) =>
   value?.availability === "Available";
 const sourceLabelWidth = (label: string) => {
-  const context = document.createElement("canvas").getContext("2d")!;
-  context.font = "27px Onest700";
+  const context = textMetrics("27px Onest700");
   return Math.min(300, Math.ceil(context.measureText(label).width));
 };
 const clock = (seconds: number) =>
@@ -1094,7 +1094,7 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
         );
     }
     const navLayout = createMemo(() => {
-      const context = document.createElement("canvas").getContext("2d")!;
+      const context = textMetrics("26px Onest500");
       let x = 300;
       return navs().map((nav) => {
         if (nav.id === "profiles") return { x: 1768, w: 56 };
@@ -5264,8 +5264,9 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
         height: props.h,
       }));
       const badgeWidth = createMemo(() => {
-        const context = document.createElement("canvas").getContext("2d")!;
-        context.font = `${props.library || props.home ? 18 : 20}px Onest700`;
+        const context = textMetrics(
+          `${props.library || props.home ? 18 : 20}px Onest700`,
+        );
         return Math.min(
           props.w - 24,
           Math.ceil(
