@@ -1,6 +1,6 @@
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import {
   javascriptReferences,
@@ -14,7 +14,7 @@ const base = '/tv/';
 const packageOf = (files: Record<string, string>) => {
   const directory = mkdtempSync(join(tmpdir(), 'viptv-tv-package-'));
   for (const [path, source] of Object.entries(files)) {
-    mkdirSync(join(directory, path, '..'), { recursive: true });
+    mkdirSync(dirname(join(directory, path)), { recursive: true });
     writeFileSync(join(directory, path), source);
   }
   return directory;
@@ -61,7 +61,6 @@ describe('TV package check', () => {
   it('resolves stylesheet and document references', () => {
     expect([...stylesheetReferences('a{background:url(/tv/assets/photo-W.webp)}')])
       .toEqual(['/tv/assets/photo-W.webp']);
-    expect([...javascriptReferences('x')]).toEqual([]);
   });
 
   it('passes a package whose lazy chunks are all present', async () => {

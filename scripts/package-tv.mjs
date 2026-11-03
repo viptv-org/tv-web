@@ -22,8 +22,9 @@ try {
     // import graph, never from a hand-maintained list of hashed chunk names.
     const manifest = JSON.parse(await readFile(join(root, 'artifacts', 'tv-assets.json'), 'utf8'));
     for (const file of manifest.files) {
-      await mkdir(dirname(join(stage, file)), { recursive: true });
-      await cp(join(root, 'dist', file), join(stage, file));
+      const destination = join(stage, file);
+      await mkdir(dirname(destination), { recursive: true });
+      await cp(join(root, 'dist', file), destination);
     }
     const report = await verifyTvPackage(stage, manifest);
     if (report.problems.length) throw Error(`TV package is incomplete:\n${report.problems.join('\n')}`);

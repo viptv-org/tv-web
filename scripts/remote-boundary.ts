@@ -34,7 +34,7 @@ export const TV_MANIFEST_FILE = 'tv-assets.json';
 
 /** A path that resolves outside the project root (a linked `node_modules`)
  * keeps its package-relative tail, so package rules match in every checkout
- * layout. Type-only or virtual modules outside both keep their own id. */
+ * layout. Anything else outside both gets no path and matches no rule. */
 function relativePath(id: string, root: string): string {
   const normalised = id.replace(/\\/g, '/');
   if (normalised.startsWith(root + '/')) return '/' + normalised.slice(root.length + 1);
@@ -51,8 +51,9 @@ function viteMetadata(chunk: Rollup.OutputChunk): ViteChunkMetadata {
   return (chunk as Rollup.OutputChunk & { viteMetadata?: ViteChunkMetadata }).viteMetadata ?? {};
 }
 
-/** A written chunk carries code; a CSS-only facade does not reach the package. */
-function hasCode(chunk: Rollup.OutputChunk): boolean {
+/** Vite writes a chunk only when it carries code; a CSS-only facade chunk is
+ * dropped and only its extracted stylesheet remains in the output. */
+function isWritten(chunk: Rollup.OutputChunk): boolean {
   return chunk.code.trim().length > 0 && Object.values(chunk.modules).some(module => module.renderedLength > 0);
 }
 
@@ -200,7 +201,7 @@ export function collectTvDistribution(
       excludedRoots.push({ chunk, ...stop });
       continue;
     }
-    if (hasCode(chunk)) files.add(name);
+    if (isWritten(chunk)) files.add(name);
     addAssets(chunk);
     pending.push(...chunk.imports, ...chunk.dynamicImports);
   }
