@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Rollup } from 'vite';
-import { inspectRemoteBoundary } from '../../scripts/remote-boundary';
+import { collectTvDistribution, htmlEntryFiles, inspectRemoteBoundary } from '../../scripts/remote-boundary';
 
 const root = '/repo';
 const tv = '/repo/src/tv-solid/main.ts';
@@ -18,19 +18,27 @@ const react = '/repo/src/main.tsx';
 interface Edges {
   imports?: string[];
   dynamicImports?: string[];
+  css?: string[];
+  assets?: string[];
+  code?: string;
 }
 
 /** A rendered chunk shaped like the ones Rollup hands to `generateBundle`. */
 function chunk(fileName: string, modules: Record<string, number>, edges: Edges = {}): Rollup.OutputChunk {
+  const rendered = Object.values(modules).reduce((total, size) => total + size, 0);
   return {
     type: 'chunk',
     fileName,
-    code: 'x'.repeat(Object.values(modules).reduce((total, size) => total + size, 0)),
+    code: edges.code ?? 'x'.repeat(Math.max(rendered, 1)),
     imports: edges.imports ?? [],
     dynamicImports: edges.dynamicImports ?? [],
     modules: Object.fromEntries(
       Object.entries(modules).map(([id, renderedLength]) => [id, { renderedLength }]),
     ),
+    viteMetadata: {
+      importedAssets: new Set(edges.assets ?? []),
+      importedCss: new Set(edges.css ?? []),
+    },
   } as unknown as Rollup.OutputChunk;
 }
 
@@ -123,5 +131,109 @@ describe('remote TV build boundary', () => {
     expect(() => inspectRemoteBoundary(bundleOf(chunk('main.js', { [react]: 100 })), root)).toThrow(
       'The remote TV entry is missing from this build.',
     );
+  });
+});
+
+describe('TV distribution manifest', () => {
+  const bootstrap = '/repo/src/bootstrap.ts';
+  const hostCss = '/repo/src/tv-solid/host.css';
+  const options = { base: '/tv/', html: ['index.html', 'lightning.html', 'solid.html'] };
+
+  /** The shipped shape: `/tv/` loads the bootstrap, which dynamically imports
+   * the TV entry, the host stylesheet and the React application. The TV entry
+   * lazily fetches the HLS engine and the QR encoder, and the HLS engine can
+   * lazily reach the desktop bridge. */
+  const shipped = () =>
+    bundleOf(
+      chunk('app.js', { [bootstrap]: 100, '/repo/src/rendererSelection.ts': 10 }, {
+        imports: ['preload.js'], dynamicImports: ['host.js', 'main.js', 'react.js'],
+      }),
+      chunk('preload.js', { '/repo/node_modules/vite/preload-helper.js': 10 }),
+      chunk('host.js', { [hostCss]: 0 }, { css: ['host.css'] }),
+      chunk('main.js', { [tv]: 100 }, { dynamicImports: ['App.js'], assets: ['font.woff2'] }),
+      chunk('App.js', { [app]: 100 }, { dynamicImports: ['hls-engine.js', 'qrcode.js'], assets: ['photo.webp'] }),
+      chunk('hls-engine.js', { [hlsEngine]: 10 }, { imports: ['vizio.js'] }),
+      chunk('vizio.js', { [vizio]: 100, [hls]: 50_000 }, { dynamicImports: ['bridge.js'] }),
+      chunk('qrcode.js', { [qrcode]: 10_000 }),
+      chunk('bridge.js', { [bridge]: 2_000 }, { imports: ['react.js'] }),
+      chunk('react.js', { [react]: 600_000 }, { imports: ['engine.js', 'mediabunny.js'], css: ['main.css'], assets: ['engine.wasm'] }),
+      chunk('engine.js', { [engine]: 90_000 }),
+      chunk('mediabunny.js', { '/repo/node_modules/mediabunny/index.js': 400_000 }),
+    );
+
+  it('packages every chunk a TV can fetch, including the lazy HLS and QR chunks', () => {
+    const { files } = collectTvDistribution(shipped(), root, options);
+
+    expect(files).toEqual(expect.arrayContaining([
+      'index.html', 'lightning.html', 'solid.html',
+      'app.js', 'preload.js', 'host.css', 'main.js', 'App.js', 'hls-engine.js', 'vizio.js', 'qrcode.js',
+      'font.woff2', 'photo.webp',
+    ]));
+  });
+
+  it('leaves the browser application and its assets out, and says why', () => {
+    const { files, unreachable } = collectTvDistribution(shipped(), root, options);
+
+    expect(files).not.toContain('react.js');
+    expect(files).not.toContain('mediabunny.js');
+    expect(files).not.toContain('engine.wasm');
+    expect(files).not.toContain('main.css');
+    expect(unreachable).toEqual(expect.arrayContaining([
+      { file: 'react.js', module: '/src/main.tsx', reason: 'browser-app' },
+      { file: 'engine.wasm', module: '/src/main.tsx', reason: 'browser-app' },
+      { file: 'main.css', module: '/src/main.tsx', reason: 'browser-app' },
+      { file: 'bridge.js', module: '/node_modules/@tauri-apps/plugin-http/dist-js/index.js', reason: 'desktop-bridge' },
+    ]));
+  });
+
+  it('does not walk the desktop bridge into the React entry', () => {
+    const { files } = collectTvDistribution(
+      bundleOf(
+        chunk('app.js', { [bootstrap]: 100 }, { dynamicImports: ['main.js'] }),
+        chunk('main.js', { [tv]: 100 }, { dynamicImports: ['vizio.js'] }),
+        chunk('vizio.js', { [vizio]: 100 }, { dynamicImports: ['bridge.js'] }),
+        chunk('bridge.js', { [bridge]: 2_000 }, { imports: ['react.js'] }),
+        chunk('react.js', { [react]: 600_000 }),
+      ),
+      root,
+      options,
+    );
+
+    expect(files).toContain('vizio.js');
+    expect(files).not.toContain('bridge.js');
+    expect(files).not.toContain('react.js');
+  });
+
+  it('adds public files named by reachable TV code only', () => {
+    const publicFile = 'assets/photography/live-empty-wide.webp';
+    const { files } = collectTvDistribution(
+      bundleOf(
+        chunk('app.js', { [bootstrap]: 100 }, { dynamicImports: ['main.js'] }),
+        chunk('main.js', { [tv]: 100 }, {
+          code: `const wide="/tv/${publicFile}", tall="/tv/assets/photography/live-empty-tall.webp";`,
+        }),
+        chunk('react.js', { '/repo/src/main.tsx': 100 }, {
+          code: 'const gallery="/tv/assets/avatar-catalog/clay-1.png";',
+        }),
+      ),
+      root,
+      { ...options, isPublicFile: path => path === publicFile },
+    );
+
+    expect(files).toContain(publicFile);
+    expect(files).not.toContain('assets/avatar-catalog/clay-1.png');
+  });
+
+  it('requires at least one TV entry in the build', () => {
+    expect(() => collectTvDistribution(bundleOf(chunk('react.js', { [react]: 100 })), root, options)).toThrow(
+      'The remote TV entry is missing from this build.',
+    );
+  });
+
+  it('derives the HTML documents from the build inputs', () => {
+    expect(htmlEntryFiles({ app: '/repo/index.html', solid: '/repo/solid.html', lightning: '/repo/lightning.html' }, root))
+      .toEqual(['index.html', 'lightning.html', 'solid.html']);
+    expect(htmlEntryFiles(['/repo/solid.html'], root)).toEqual(['solid.html']);
+    expect(htmlEntryFiles(undefined, root)).toEqual([]);
   });
 });

@@ -1,9 +1,10 @@
-import { cp, mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
+import { cp, mkdir, mkdtemp, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises';
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
+import { verifyTvPackage } from './tv-package-check.mjs';
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const target = process.argv[2] ?? 'hosting';
@@ -15,9 +16,26 @@ const stage = await mkdtemp(join(tmpdir(), 'viptv-package-'));
 await mkdir(output, { recursive: true });
 try {
   if (target === 'hosting') {
-    await cp(join(root, 'dist'), stage, { recursive: true });
+    // The hosting ZIP is what every Tizen/webOS/Vizio launcher loads, so it
+    // carries the TV entry's reachable set only. `dist` still contains the full
+    // browser/desktop build; `tv-assets.json` is emitted from that same build's
+    // import graph, never from a hand-maintained list of hashed chunk names.
+    const manifest = JSON.parse(await readFile(join(root, 'artifacts', 'tv-assets.json'), 'utf8'));
+    for (const file of manifest.files) {
+      const destination = join(stage, file);
+      await mkdir(dirname(destination), { recursive: true });
+      await cp(join(root, 'dist', file), destination);
+    }
+    const report = await verifyTvPackage(stage, manifest);
+    if (report.problems.length) throw Error(`TV package is incomplete:\n${report.problems.join('\n')}`);
+    const bytes = (await Promise.all(report.files.map(async file => (await stat(join(stage, file))).size))).reduce((total, size) => total + size, 0);
+    console.log(`TV package: ${report.files.length} files, ${(bytes / 1024 / 1024).toFixed(2)} MiB; ${report.allowed.length} references resolve only into declared non-TV branches.`);
     await writeFile(join(stage, 'HOSTING.txt'), `VIPTV ${revision}\nServe at the existing HTTPS API origin under /tv/.\nTV packages are hosted launchers; deploy this matching bundle manually.\nPreserve Host/Origin rewrites on watch.syek.tech.\n`);
-    run('zip', ['-q', '-r', join(output, `viptv-tv-hosting-${version}-${revision.slice(0, 8)}.zip`), '.'], stage);
+    const archive = join(output, `viptv-tv-hosting-${version}-${revision.slice(0, 8)}.zip`);
+    // `zip` updates an existing archive instead of replacing it, so a local
+    // re-package would otherwise keep shipping files the TV set no longer names.
+    await rm(archive, { force: true });
+    run('zip', ['-q', '-r', archive, '.'], stage);
   } else {
     const url = new URL(process.env[`VIPTV_${target.toUpperCase()}_HOSTED_URL`] ?? `https://viptv.syek.tech/tv/?platform=${target}`);
     if (url.protocol !== 'https:' || url.username || url.password || url.hash || !/^\/tv\/?$/.test(url.pathname) || url.searchParams.get('platform') !== target) throw Error('Hosted URL must be credential-free HTTPS /tv/?platform=' + target);

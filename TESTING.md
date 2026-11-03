@@ -3733,3 +3733,64 @@ entry. Listing these alongside responsive corrections discovers 13 scenarios.
 Browser execution is not qualified for this merge: the owner's private local
 HTTPS tooling is absent on this checkout and its documented hostname does not
 resolve. No physical-TV, installed desktop or production deployment claim follows.
+
+# TV-only hosting distribution — 2026-11-03
+
+Issue viptv-org/tv-web#39. The hosted `/tv/` ZIP that every Tizen, webOS and
+Vizio launcher loads now carries the TV entry's reachable set instead of all of
+`dist`. `dist` itself is unchanged and still serves the browser/desktop entry,
+including React, MediaBunny, id3, the Core WASM and `main-lwlrW-3E.css`.
+
+Reachability is derived from the production build's own Rollup bundle, not from a
+list of chunk names. The `viptv-remote-boundary` plugin roots at
+`src/bootstrap.ts` (the document `/tv/` serves) and `src/tv-solid/main.ts` (the
+`solid.html`/`lightning.html` entries), follows static imports, dynamic imports
+and each chunk's Vite `importedCss`/`importedAssets`, and stops only at branches
+a TV cannot execute: the React entry (`/src/main.tsx`) and the Tauri bridge
+(`@tauri-apps/*`). It writes `artifacts/tv-assets.json`; `scripts/package-tv.mjs`
+copies exactly that set and then re-resolves every `import()`, static import,
+preload array entry, HTML `src`/`href`, CSS `url()` and runtime `/tv/assets/...`
+literal in the staged package.
+
+Measured on `ca5cca1` with Node 26.11.1 and Vite 6.1.0:
+
+| Hosting ZIP | Before | After |
+| --- | --- | --- |
+| Files (excluding ZIP metadata) | 948 | 42 (41 TV files + `HOSTING.txt`) |
+| Uncompressed | 14,734,841 B | 1,793,160 B |
+| ZIP (`viptv-tv-hosting-0.1.0-*.zip`) | 8,127,652 B | 1,000,817 B |
+
+What still ships: `index.html`, `solid.html`, `lightning.html`; `app-CsKIUMe0.js`
+(bootstrap), `main-CMyV41DE.js` (TV entry), `App-Hu8eHReS.js`,
+`preload-helper-CtxONCfg.js`, `viptv-tokens.generated-BTSuEl6Y.js` (video/core
+contract), `viptv-tokens-dvPV1MV5.css`, `host-C3m1tLMs.css`; the lazy
+`hls-engine-Rkos_9_K.js` and `vizio-html5-vfz0k7at.js` (which contains hls.js),
+the lazy `browser-BgJBWLyt.js` QR encoder; 7 WOFF2 faces; 20 entry-art images;
+and `assets/photography/live-empty-wide.webp`, which the emitted TV code names at
+runtime and cannot be discovered as an import. The ZIP carries the revision in
+`HOSTING.txt`, so its byte count moves by a byte between commits.
+
+Lazy-chunk proof, resolved from the staged package against
+`artifacts/tv-assets.json` (`missing: 0`):
+
+- `assets/App-Hu8eHReS.js -> ./hls-engine-Rkos_9_K.js` SHIPPED
+- `assets/App-Hu8eHReS.js -> ./browser-BgJBWLyt.js` SHIPPED
+- `assets/main-CMyV41DE.js -> ./App-Hu8eHReS.js` SHIPPED
+- `assets/app-CsKIUMe0.js -> ./main-CMyV41DE.js` SHIPPED
+- `assets/app-CsKIUMe0.js -> ./main-vXVEbQFB.js` declared non-TV (React branch,
+  selected only when the platform query is not tizen/webos/vizio)
+- `assets/vizio-html5-vfz0k7at.js -> ./index-Dz6ixlBL.js` declared non-TV (Tauri
+  HTTP bridge, guarded by `'__TAURI_INTERNALS__' in window`)
+
+Seven references resolve only into those two declared branches; every other
+reference in the package resolves to a packaged file.
+
+Validation: `node scripts/typecheck.mjs`, 420 unit/integration tests in 65 files
+with `--pool=forks --poolOptions.forks.singleFork`, `npm run build` (design,
+core and video hash checks included) and `npm run package:tv` all pass. New unit
+coverage in `tests/build/remote-boundary.test.ts` and
+`tests/build/tv-package-check.test.ts`. Unexecuted: no physical TV install or
+playback; `ares-package` and the Tizen CLI are absent on this host, so the
+launcher IPK/WGT were not rebuilt locally (their launcher-only code path is
+unchanged; `.github/workflows/build.yml` builds both on main). The ZIP was not
+deployed and `/tv/` was not exercised against the backend.
