@@ -397,34 +397,54 @@ async function installBackend(page, unhandled) {
         state.selectedProfileId = "1";
         return json({ profile_id: "1" });
       }
+      // Continue Watching is a cursor envelope of continuation entries: a
+      // server-rendered card plus the playback record it stands on. Shape matches
+      // tests/fixtures/continuation.ts queueEntry() and the deployed backend.
       if (path === "/api/profiles/1/continue")
         return json({
           scope: { profile_id: "1" },
           revision: 1,
-          entries: queue.map((item) => ({
-            card: {
-              identity: {
-                id: item.id,
-                kind: item.type,
-                episode: { season: item.season, episode: item.episode },
+          entries: queue.map((item) => {
+            const identity = {
+              id: item.id,
+              kind: item.type,
+              ids: [],
+              edition: null,
+              episode: { order: "aired", season: item.season, episode: item.episode },
+            };
+            const parent = { id: item.series_id, kind: "series", ids: [], episode: null, edition: null };
+            return {
+              card: {
+                identity,
+                parent_identity: parent,
+                provider_id: "addon",
+                title: item.name,
+                subtitle: item.episode_title,
+                description: null,
+                poster: item.poster,
+                landscape: item.poster,
+                logo: null,
+                progress: null,
+                badges: [],
               },
-              parent_identity: { id: item.series_id, kind: "series" },
-              title: item.name,
-              subtitle: item.episode_title,
-              poster: item.poster,
-              landscape: item.poster,
-              provider_id: "addon",
-            },
-            record: {
-              position_millis: item.position * 1000,
-              duration_millis: item.duration * 1000,
-              updated_at_millis: 1_700_000_000_000,
-            },
-            status: "Resume",
-          })),
+              record: {
+                identity,
+                parent_identity: parent,
+                provider_id: "addon",
+                title: item.name,
+                position_millis: item.position * 1000,
+                duration_millis: item.duration * 1000,
+                updated_at_millis: 1_700_000_000_000,
+              },
+              status: "Resume",
+              previous_identity: null,
+            };
+          }),
           next_cursor: null,
           complete: true,
         });
+      if (path === "/api/profiles/1/progress/page")
+        return json({ items: [], offset: 0, total: 0, next_offset: null });
       if (path === "/api/profiles/1/progress" || path === "/api/profiles/1/progress/series") return json([]);
       if (path === "/api/profiles/1/favorites") return json(favorites);
       if (path === "/api/profiles/1/preferences") {
