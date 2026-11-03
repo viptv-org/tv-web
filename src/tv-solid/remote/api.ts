@@ -31,6 +31,15 @@ export class RemoteError extends Error {
     this.name = "RemoteError";
   }
 }
+/**
+ * What `/api/auth/me` says about this session: its role and whether it may
+ * change household settings. Either field stays `undefined` when the server did
+ * not say, so callers cannot invent an answer.
+ */
+export interface AccountIdentity {
+  role?: string;
+  manageAccount?: boolean;
+}
 export interface SessionStore {
   load(): Promise<Tokens | null>;
   save(tokens: Tokens): Promise<void>;
@@ -168,7 +177,7 @@ export function originFields(card: Card): Record<string, unknown> {
 export class RemoteTvApi {
   private tokens: Tokens | null = null;
   private refreshFlight?: Promise<void>;
-  private manageAccountFlight?: Promise<boolean | undefined>;
+  private identityFlight?: Promise<AccountIdentity>;
   private epoch = 0;
   // Profile data and durable device grants have different lifetimes. A profile
   // switch retires its data requests but must retain a consumed token rotation.
@@ -401,7 +410,7 @@ export class RemoteTvApi {
     };
     await this.store.save(tokens);
     this.tokens = tokens;
-    this.manageAccountFlight = undefined;
+    this.identityFlight = undefined;
   }
   pair(signal?: AbortSignal) {
     return this.exchange<Pairing>(
@@ -453,28 +462,33 @@ export class RemoteTvApi {
     this.authEpoch++;
     this.profile = "";
     this.tokens = null;
-    this.manageAccountFlight = undefined;
+    this.identityFlight = undefined;
     await this.store.clear();
   }
   /**
-   * Whether this session may change household settings. `/api/bootstrap` does
-   * not project this, so it is read from the one identity route a device
-   * session may still call, once per grant. `undefined` means the server did
-   * not say — callers must not invent an answer.
+   * This session's role and household-write capability. `/api/bootstrap` does
+   * not project either, so both are read from the one identity route a device
+   * session may still call, once per grant. `undefined` fields mean the server
+   * did not say — callers must not invent an answer.
    */
-  canManageAccount(): Promise<boolean | undefined> {
-    if (!this.manageAccountFlight)
-      this.manageAccountFlight = this.readManageAccount().catch(
-        () => undefined,
-      );
-    return this.manageAccountFlight;
+  accountIdentity(): Promise<AccountIdentity> {
+    if (!this.identityFlight)
+      this.identityFlight = this.readIdentity().catch(() => ({}));
+    return this.identityFlight;
   }
-  private async readManageAccount(): Promise<boolean | undefined> {
+  async canManageAccount(): Promise<boolean | undefined> {
+    return (await this.accountIdentity()).manageAccount;
+  }
+  private async readIdentity(): Promise<AccountIdentity> {
     const value = await this.call<{
+      role?: unknown;
       capabilities?: { manage_account?: unknown };
     }>("/api/auth/me");
     const flag = value.capabilities?.manage_account;
-    return typeof flag === "boolean" ? flag : undefined;
+    return {
+      role: typeof value.role === "string" ? value.role : undefined,
+      manageAccount: typeof flag === "boolean" ? flag : undefined,
+    };
   }
   scoped(suffix: string) {
     if (!this.profile) throw new Error("Choose a profile first.");
