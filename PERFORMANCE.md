@@ -42,6 +42,43 @@ physical-TV GPU evidence**, and no Tizen or webOS device ran this build.
 
 ---
 
+# React entry gate — 2026-11-03
+
+`npm run perf:audit` (`scripts/perf-audit.mjs`) is the performance gate for the
+React responsive entry. It is a gate, not a report: every selector is derived
+from the component that emits it, a target that cannot be found fails the run
+with the selector, the screen and the body text, and the only tolerated
+absences (a stored-session profile chooser, a single content type, catalogs
+without filters) are recorded in the report with their reason. It also fails on
+any API path the fixture backend does not answer, and on any page error.
+
+The battery runs twice, with `prefers-reduced-motion: reduce` and with
+`no-preference`, at 1440x900 against a 12-catalog / 24-item / 24-queue /
+24-favorite fixture. Representative run on this host:
+
+| Scenario | reduced | motion |
+| --- | ---: | ---: |
+| Cold Home LCP (ms) | 168 | 188 |
+| Cold long tasks (count / ms) | 0 / 0 | 0 / 0 |
+| Idle 10 s: style recalcs per second | 0 | 61 |
+| Idle 10 s: main-thread tasks (ms/s) | 3.7 | 18.2 |
+| Idle 10 s: frame p95 (ms) | 16.7 | 16.7 |
+| Carousel right, 5 clicks: median / max (ms) | 12 / 12 | 12 / 13 |
+| Route switch median (ms) | 46 | 51 |
+| Discover type switch (ms) | 48 | 48 |
+| Discover filter open / close (ms) | 16 / 3 | 16 / 4 |
+| Sweep Live TV / My List / Search (ms) | 58 / 47 / 42 | 59 / 45 / 44 |
+
+The motion half exists because the reduced half is the cheap one: the same
+idle Home costs ~5x the main-thread task time with motion on, from one style
+recalculation per frame. Limits live in `LIMITS` with the observation behind
+each one in `LIMIT_NOTES`, are evaluated per motion mode, and are set from
+measured runs with the headroom recorded there. The gate does not cover
+playback, the SolidTV TV entry, or any platform other than Chromium at
+1440x900.
+
+---
+
 # Matched-fixture audit checkpoint — 2026-10-23
 
 Five fresh-context runs compare the previous `c9c1aae` remote wrapper with the
