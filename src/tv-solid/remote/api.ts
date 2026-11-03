@@ -20,6 +20,7 @@ import type {
   Tokens,
 } from "./types";
 import { validateChannelPage } from "./channelWindow";
+import { refusalMessage } from "./refusals";
 export class RemoteError extends Error {
   constructor(
     readonly status: number,
@@ -167,6 +168,7 @@ export function originFields(card: Card): Record<string, unknown> {
 export class RemoteTvApi {
   private tokens: Tokens | null = null;
   private refreshFlight?: Promise<void>;
+  private manageAccountFlight?: Promise<boolean | undefined>;
   private epoch = 0;
   // Profile data and durable device grants have different lifetimes. A profile
   // switch retires its data requests but must retain a consumed token rotation.
@@ -272,15 +274,7 @@ export class RemoteTvApi {
       throw new RemoteError(
         response.status,
         code,
-        response.status === 401
-          ? "Sign in again to continue."
-          : response.status === 403
-            ? "Unlock the parent PIN to continue."
-            : response.status === 409
-              ? "This changed on another device. Refresh and try again."
-              : response.status === 429
-                ? "Too many requests. Try again shortly."
-                : "Couldn’t connect. Try again.",
+        refusalMessage(response.status, code),
       );
     }
     const images = (value: unknown): void => {
@@ -407,6 +401,7 @@ export class RemoteTvApi {
     };
     await this.store.save(tokens);
     this.tokens = tokens;
+    this.manageAccountFlight = undefined;
   }
   pair(signal?: AbortSignal) {
     return this.exchange<Pairing>(
@@ -458,7 +453,28 @@ export class RemoteTvApi {
     this.authEpoch++;
     this.profile = "";
     this.tokens = null;
+    this.manageAccountFlight = undefined;
     await this.store.clear();
+  }
+  /**
+   * Whether this session may change household settings. `/api/bootstrap` does
+   * not project this, so it is read from the one identity route a device
+   * session may still call, once per grant. `undefined` means the server did
+   * not say — callers must not invent an answer.
+   */
+  manageAccount(): Promise<boolean | undefined> {
+    if (!this.manageAccountFlight)
+      this.manageAccountFlight = this.readManageAccount().catch(
+        () => undefined,
+      );
+    return this.manageAccountFlight;
+  }
+  private async readManageAccount(): Promise<boolean | undefined> {
+    const value = await this.call<{
+      capabilities?: { manage_account?: unknown };
+    }>("/api/auth/me");
+    const flag = value.capabilities?.manage_account;
+    return typeof flag === "boolean" ? flag : undefined;
   }
   scoped(suffix: string) {
     if (!this.profile) throw new Error("Choose a profile first.");

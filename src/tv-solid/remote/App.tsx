@@ -263,6 +263,15 @@ import {
 } from "./api";
 import {
 
+  ACCOUNT_SESSION_REQUIRED,
+
+  ACCOUNT_SESSION_REQUIRED_ROW,
+
+  offersHouseholdWrite
+
+} from "./refusals";
+import {
+
 
  RemotePlayback 
 
@@ -737,6 +746,11 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
       [seek, setSeek] = createSignal<number>(),
       [settingsTab, setSettingsTab] = createSignal(0),
       [settingsItems, setSettingsItems] = createSignal<Item[]>([]),
+      // Household writes need an account session. `/api/bootstrap` omits the
+      // capability, so it stays unknown until the server answers.
+      [canManageAccount, setCanManageAccount] = createSignal<
+        boolean | undefined
+      >(undefined),
       [notice, setNotice] = createSignal("");
     const [captionOverride, setCaptionOverride] = createSignal<{
       leaseId: string;
@@ -1145,6 +1159,7 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
     };
     function resetScope() {
       setSignedIn(undefined);
+      setCanManageAccount(undefined);
       clearTimeout(overlayTimer);
       cancelAnimationFrame(overlayFrame);
       overlayParents.length = 0;
@@ -3272,6 +3287,16 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
           }),
       };
     }
+    /** Household writes (add-ons, source integrations, the parent PIN, kids
+     * limits) are refused to a paired device session by the server's owner
+     * guard. `/api/bootstrap` does not project that capability, so it is asked
+     * for once per session; an unknown answer keeps the control and lets the
+     * refusal explain itself. */
+    async function mayWriteHousehold() {
+      if (canManageAccount() === undefined)
+        setCanManageAccount(await api.manageAccount());
+      return offersHouseholdWrite(canManageAccount());
+    }
     async function loadSettings(tab: number, signal: AbortSignal) {
       if (signal.aborted) return;
       settingsScope?.abort();
@@ -3403,6 +3428,7 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
             .map((control) => displayItem(control, pref)),
         );
       if (tab === 4) {
+        const write = await mayWriteHousehold();
         const [inventory, states] = await Promise.all([
           call<{ items: { id: number; name: string; enabled: boolean }[] }>(
             "/api/addons?limit=200",
@@ -3418,24 +3444,38 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
           ),
         ]);
         setSettingsItems([
-          {
-            id: "add",
-            label: "Add by address",
-            run: () =>
-              edit("Add-on address", async (address) => {
-                const installed = await call<{ id: number }>(
-                  "/api/addons",
-                  "POST",
-                  { manifest_url: address },
-                );
-                await call(api.scoped("/addon-activation"), "PUT", {
-                  connection_id: `addon:${installed.id}`,
-                  enabled: true,
-                });
-                closeOverlay();
-                await loadSettings(tab, scope.signal);
-              }),
-          },
+          // Installing and removing add-ons is an account-owner write. A paired
+          // TV can only enable an installed add-on for its own profile.
+          ...(write
+            ? [
+                {
+                  id: "add",
+                  label: "Add by address",
+                  run: () =>
+                    edit("Add-on address", async (address) => {
+                      const installed = await call<{ id: number }>(
+                        "/api/addons",
+                        "POST",
+                        { manifest_url: address },
+                      );
+                      await call(api.scoped("/addon-activation"), "PUT", {
+                        connection_id: `addon:${installed.id}`,
+                        enabled: true,
+                      });
+                      closeOverlay();
+                      await loadSettings(tab, scope.signal);
+                    }),
+                },
+              ]
+            : [
+                {
+                  id: "add",
+                  label: "Add or remove add-ons",
+                  value: "On the web",
+                  description: ACCOUNT_SESSION_REQUIRED_ROW,
+                  run: () => notify(ACCOUNT_SESSION_REQUIRED),
+                },
+              ]),
           ...inventory.items.map((addon) => {
             const state = states.addons.find(
               (item) => item.connection_id === `addon:${addon.id}`,
@@ -3449,77 +3489,97 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
                   : "Disabled"
                 : "Disabled for account",
               run: () =>
-                openOverlay({
-                  kind: "choices",
-                  title: addon.name,
-                  items: [
-                    ...(state
-                      ? [
-                          {
-                            id: "enabled",
-                            label: state.enabled
-                              ? "Disable for this profile"
-                              : "Enable for this profile",
-                            run: async () => {
-                              await call(
-                                api.scoped("/addon-activation"),
-                                "PUT",
-                                {
-                                  connection_id: state.connection_id,
-                                  enabled: !state.enabled,
-                                },
-                              );
-                              closeOverlay();
-                              await loadSettings(tab, scope.signal);
-                            },
-                          },
-                        ]
-                      : []),
-                    {
-                      id: "remove",
-                      label: "Remove add-on",
-                      run: () =>
-                        openOverlay(
-                          {
-                            kind: "confirm",
-                            title: `Remove ${addon.name}?`,
-                            items: [
+                !write && !state
+                  ? notify(ACCOUNT_SESSION_REQUIRED)
+                  : openOverlay({
+                      kind: "choices",
+                      title: addon.name,
+                      items: [
+                        ...(state
+                          ? [
                               {
-                                id: "cancel",
-                                label: "Cancel",
-                                run: dismissOverlay,
-                              },
-                              {
-                                id: "remove",
-                                label: "Remove",
+                                id: "enabled",
+                                label: state.enabled
+                                  ? "Disable for this profile"
+                                  : "Enable for this profile",
                                 run: async () => {
                                   await call(
-                                    `/api/addons/${addon.id}`,
-                                    "DELETE",
+                                    api.scoped("/addon-activation"),
+                                    "PUT",
+                                    {
+                                      connection_id: state.connection_id,
+                                      enabled: !state.enabled,
+                                    },
                                   );
                                   closeOverlay();
                                   await loadSettings(tab, scope.signal);
                                 },
                               },
-                            ],
-                          },
-                          true,
-                        ),
-                    },
-                  ],
-                }),
+                            ]
+                          : []),
+                        ...(write
+                          ? [
+                              {
+                                id: "remove",
+                                label: "Remove add-on",
+                                run: () =>
+                                  openOverlay(
+                                    {
+                                      kind: "confirm",
+                                      title: `Remove ${addon.name}?`,
+                                      items: [
+                                        {
+                                          id: "cancel",
+                                          label: "Cancel",
+                                          run: dismissOverlay,
+                                        },
+                                        {
+                                          id: "remove",
+                                          label: "Remove",
+                                          run: async () => {
+                                            await call(
+                                              `/api/addons/${addon.id}`,
+                                              "DELETE",
+                                            );
+                                            closeOverlay();
+                                            await loadSettings(
+                                              tab,
+                                              scope.signal,
+                                            );
+                                          },
+                                        },
+                                      ],
+                                    },
+                                    true,
+                                  ),
+                              },
+                            ]
+                          : []),
+                      ],
+                    }),
             };
           }),
         ]);
       }
       if (tab === 5) await loadIntegrations(signal);
       if (tab === 7) {
+        const write = await mayWriteHousehold();
         const status = await call<{
           pin_configured: boolean;
           unlocked: boolean;
         }>("/api/parent/status", "GET", undefined, signal);
         const rows: Item[] = [];
-        if (!status.pin_configured || !status.unlocked)
+        // Unlocking is a device-session write the server allows; setting or
+        // changing the PIN is an account-owner write it refuses.
+        if (!status.pin_configured && !write)
+          rows.push({
+            id: "unlock",
+            label: "Set parent PIN",
+            value: "On the web",
+            description: ACCOUNT_SESSION_REQUIRED_ROW,
+            run: () => notify(ACCOUNT_SESSION_REQUIRED),
+          });
+        else if (!status.pin_configured || !status.unlocked)
           rows.push({
             id: "unlock",
             label: status.pin_configured
@@ -3544,7 +3604,15 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
                 true,
               ),
           });
-        if (status.pin_configured)
+        if (status.pin_configured && !write)
+          rows.push({
+            id: "pin",
+            label: "Change parent PIN",
+            value: "On the web",
+            description: ACCOUNT_SESSION_REQUIRED_ROW,
+            run: () => notify(ACCOUNT_SESSION_REQUIRED),
+          });
+        if (status.pin_configured && write)
           rows.push({
             id: "pin",
             label: "Change parent PIN",
@@ -3570,7 +3638,9 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
                 true,
               ),
           });
-        if (status.unlocked)
+        // A kids limit is read and written through the account-session guard,
+        // so a paired TV cannot even show the current value.
+        if (status.unlocked && write)
           for (const profile of management()?.profiles ?? [])
             rows.push({
               id: profile.id,
@@ -3635,6 +3705,7 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
       });
     }
     async function loadIntegrations(signal: AbortSignal) {
+      const write = await mayWriteHousehold();
       const value = await call<{
         revision: number;
         schemas: IntegrationSchema[];
@@ -3648,11 +3719,18 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
           .map((schema) => ({
             id: schema.plugin_id,
             label: schema.name,
-            value: schema.state === "Ready" ? "Connected" : "Set up",
-            description: schema.saved_provider_count
-              ? `${schema.saved_provider_count} providers`
-              : undefined,
-            run: () => integrationForm(schema, value.revision),
+            value:
+              schema.state === "Ready" ? "Connected" : write ? "Set up" : "",
+            // Saving or removing an integration is an account-owner write; the
+            // TV only reads it. Saying so beats a form that cannot save.
+            description: write
+              ? schema.saved_provider_count
+                ? `${schema.saved_provider_count} providers`
+                : undefined
+              : ACCOUNT_SESSION_REQUIRED_ROW,
+            run: write
+              ? () => integrationForm(schema, value.revision)
+              : () => notify(ACCOUNT_SESSION_REQUIRED),
           })),
       );
     }
