@@ -1,6 +1,6 @@
 {
  "repository": "viptv-org/video",
- "revision": "0bd7aed1b8d285460edf7be2b2d0b94cc93374f2",
+ "revision": "4b52aa5bfaf7f993ad6aa791e759f884ff4e23fd",
  "files": {
   "vendor/video/src/browser-capabilities.ts": "3261889250b9ea0ea3ac33cd23dcc756ce3945f58f321fe62d54809481c5b921",
   "vendor/video/src/browser-policy.ts": "463891c85e85cf6b9b09083f99f671e882976171f07307a4d5d9569939ac311a",
