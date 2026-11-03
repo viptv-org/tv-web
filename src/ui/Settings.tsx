@@ -14,7 +14,6 @@ import {
   Captions,
   Cast,
   Check,
-  ChevronLeft,
   ChevronRight,
   CircleAlert,
   CirclePlay,
@@ -39,6 +38,7 @@ import { ENGINE_CHOICES } from "./enginePreference";
 import { TextEntry } from "./TextEntry";
 import { TvButton, focusElement } from "./remote";
 import { usePhoneLayout } from "./usePhoneLayout";
+import { BackControl } from "./primitives/Back";
 import { avatarUrl } from "./ProfileEditor";
 import { ReadyImage } from "./RokuArtwork";
 import { ACCENTS, useAppearance, type Accent } from "../theme/appearance";
@@ -669,14 +669,7 @@ export function Settings({
     return (
       <main className="vx-settings vx-settings-list">
         <header className="vx-settings-list__header">
-          <button
-            type="button"
-            className="vx-settings-list__back"
-            aria-label={page === "Settings" ? "Back" : "Back to Settings"}
-            onClick={back}
-          >
-            <ChevronLeft aria-hidden="true" strokeWidth={2.4} />
-          </button>
+          <BackControl label={page === "Settings" ? "Back" : "Back to Settings"} onActivate={back} />
           <h1 className="vx-settings-list__title">{page}</h1>
         </header>
         {PAGE_CAPTION[page] && <p className="vx-settings-list__caption">{PAGE_CAPTION[page]}</p>}

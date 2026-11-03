@@ -6,6 +6,7 @@ import { DialogBackdrop } from "./DialogBackdrop";
 import { isBackKey } from "./SettingsOverlay";
 import { TvButton, focusElement } from "./remote";
 import { buttonClass } from "./primitives/Button";
+import { BackControl } from "./primitives/Back";
 import { AvatarTileContent } from "./primitives/Cards";
 import { KeyLegend } from "./primitives/Keys";
 import { avatarCount, avatarSrc, avatarWorld, avatarWorlds, profileAvatarChoice, profileAvatarSrc } from "./avatarCatalog";
@@ -164,9 +165,7 @@ export function ProfileEditor({
     <>
       <div className="vx-avatars__head">
         {!tv && (
-          <button type="button" className="vx-avatars__back" aria-label="Back" onClick={cancel}>
-            <ChevronLeft aria-hidden="true" />
-          </button>
+          <BackControl onActivate={cancel} />
         )}
         <h1 className="vx-account-editor__title">Find your favorite</h1>
       </div>

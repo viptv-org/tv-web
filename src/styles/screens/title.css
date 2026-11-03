@@ -286,37 +286,6 @@
     left: 0;
     background: linear-gradient(to bottom, transparent 45%, var(--viptv-color-bg) 100%);
   }
-  [data-layout="responsive"] .vx-title__back {
-    position: fixed;
-    top: 54px; /* Title.html back button */
-    left: var(--viptv-layout-phone-gutter);
-    z-index: 12;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-sizing: border-box;
-    width: var(--viptv-layout-phone-min-target);
-    height: var(--viptv-layout-phone-min-target);
-    min-height: 0;
-    margin: 0;
-    padding: 0;
-    border: 0;
-    border-radius: 50%;
-    outline: none;
-    background: var(--viptv-color-fill-live-glass);
-    -webkit-backdrop-filter: blur(var(--viptv-size-blur-badge));
-    backdrop-filter: blur(var(--viptv-size-blur-badge));
-    color: var(--viptv-color-text-primary);
-    cursor: pointer;
-    -webkit-tap-highlight-color: transparent;
-  }
-  [data-layout="responsive"] .vx-title__back > svg {
-    width: var(--viptv-size-icon-phone-round);
-    height: var(--viptv-size-icon-phone-round);
-  }
-  [data-layout="responsive"] .vx-title__back:active {
-    transform: scale(var(--viptv-motion-pressed-scale));
-  }
   [data-layout="responsive"] .vx-title__copy {
     position: relative;
     margin-top: -58px; /* Title.html: the text block rises over the art's fade */
@@ -718,7 +687,6 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  [data-layout="responsive"] .vx-title__back,
   [data-layout="responsive"] .vx-title__source-row {
     transition: none;
   }

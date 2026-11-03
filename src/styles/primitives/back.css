@@ -1,0 +1,135 @@
+/*
+ * The one Back control (Back.tsx). components.md §7 draws it in the phone
+ * header beside the sub-page title and in the desktop title bar's Back rail;
+ * §10 draws it first in the player's header. account-and-profile-settings.md
+ * sizes it: "44 back button" in the phone surface's 48 header row.
+ *
+ * One glyph, one name, one 44 minimum target: only the slot differs, so the
+ * placement modifiers below carry geometry and nothing else.
+ */
+.vx-back {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  min-width: 0;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  outline: none;
+  background: transparent;
+  color: var(--viptv-color-text-primary);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.vx-back > svg {
+  display: block;
+  flex: none;
+}
+
+/* ---- Page header: the 44 disc beside the sub-page title (P, D) ------------- */
+[data-layout] .vx-back--page {
+  width: var(--viptv-layout-phone-min-target);
+  height: var(--viptv-layout-phone-min-target);
+}
+[data-layout] .vx-back--page > svg {
+  width: var(--viptv-size-icon-large);
+  height: var(--viptv-size-icon-large);
+}
+[data-layout] .vx-back--page:focus {
+  background: transparent;
+  color: var(--viptv-color-text-primary);
+}
+[data-layout="responsive"] .vx-back--page:active {
+  background: var(--viptv-color-surface-2);
+  transform: scale(var(--viptv-motion-pressed-scale));
+}
+@media (min-width: 600px) {
+  [data-layout="responsive"] .vx-back--page:focus-visible {
+    box-shadow: var(--viptv-focus-desktop);
+  }
+}
+
+/* ---- Over art: the glass disc on the phone title page --------------------- */
+[data-layout="responsive"] .vx-back--over-art {
+  position: fixed;
+  top: 54px; /* Title.html back button */
+  left: var(--viptv-layout-phone-gutter);
+  z-index: 12;
+  width: var(--viptv-layout-phone-min-target);
+  height: var(--viptv-layout-phone-min-target);
+  background: var(--viptv-color-fill-live-glass);
+  -webkit-backdrop-filter: blur(var(--viptv-size-blur-badge));
+  backdrop-filter: blur(var(--viptv-size-blur-badge));
+}
+[data-layout="responsive"] .vx-back--over-art > svg {
+  width: var(--viptv-size-icon-phone-round);
+  height: var(--viptv-size-icon-phone-round);
+}
+[data-layout="responsive"] .vx-back--over-art:active {
+  transform: scale(var(--viptv-motion-pressed-scale));
+}
+
+/* ---- Player header, top-left (P, D) -------------------------------------- */
+[data-layout="responsive"] .vx-back--player {
+  width: var(--viptv-size-player-control-desktop);
+  height: var(--viptv-size-player-control-desktop);
+  background: var(--viptv-color-player-back-desktop);
+  transition: transform var(--viptv-motion-focus) ease-out, box-shadow var(--viptv-motion-focus) ease-out;
+}
+[data-layout="responsive"] .vx-back--player > svg {
+  width: var(--viptv-size-icon-phone-round);
+  height: var(--viptv-size-icon-phone-round);
+}
+@media (min-width: 600px) {
+  [data-layout="responsive"] .vx-back--player:focus-visible {
+    box-shadow: var(--viptv-focus-desktop);
+  }
+}
+@media (max-width: 599px) {
+  [data-layout="responsive"] .vx-back--player {
+    background: var(--viptv-color-player-back-phone);
+  }
+  [data-layout="responsive"] .vx-back--player:active {
+    background: var(--viptv-color-player-control-active);
+    transform: scale(var(--viptv-motion-pressed-scale));
+  }
+}
+
+/* ---- Desktop app title bar: the Back rail in its 40 tall bar ------------- */
+[data-layout="responsive"] .vx-back--titlebar {
+  width: var(--vx-titlebar-nav);
+  height: var(--vx-titlebar-nav);
+  border-radius: var(--viptv-radius-sm);
+  color: var(--viptv-color-text-primary);
+  font: inherit;
+  cursor: default;
+  transition: background-color var(--viptv-motion-focus) ease-out, color var(--viptv-motion-focus) ease-out;
+}
+[data-layout="responsive"] .vx-back--titlebar > svg {
+  width: 18px;
+  height: 18px;
+}
+[data-layout="responsive"] .vx-back--titlebar:disabled {
+  opacity: 1;
+  color: var(--viptv-color-text-tertiary);
+}
+@media (hover: hover) and (pointer: fine) {
+  [data-layout="responsive"] .vx-back--titlebar:hover:not(:disabled) {
+    background: var(--viptv-color-fill-wash);
+    color: var(--viptv-color-text-primary);
+  }
+}
+[data-layout="responsive"] .vx-back--titlebar:active:not(:disabled) {
+  background: var(--viptv-color-fill-wash-pressed);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-layout] .vx-back--over-art,
+  [data-layout] .vx-back--player {
+    transition: none;
+  }
+}

@@ -1,7 +1,8 @@
 import type { MouseEvent, ReactNode, SyntheticEvent } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import { isDesktopShell } from "./app/appShared";
+import { BackControl } from "./primitives/Back";
 
 interface DesktopTitlebarProps {
   /** "pairing": wordmark and window controls only (sign-in, profiles). */
@@ -126,16 +127,13 @@ export function DesktopTitlebar({
         </span>
         {variant === "app" && (
           <>
-            <button
-              {...barButton(() => onNavigateBack?.())}
-              className="vx-titlebar-nav"
-              aria-label="Back"
+            <BackControl
+              placement="titlebar"
               title="Back"
+              onActivate={() => onNavigateBack?.()}
               disabled={!canGoBack}
               onDoubleClick={stop}
-            >
-              <ChevronLeft size={18} strokeWidth={2} aria-hidden="true" />
-            </button>
+            />
             <button
               {...barButton(() => onNavigateForward?.())}
               className="vx-titlebar-nav"
