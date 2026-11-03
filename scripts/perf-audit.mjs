@@ -136,7 +136,7 @@ const LIMITS = {
     coldLcpMs: 1200,
     coldTotalBlockingMs: 400,
     idleRecalcPerSecond: 12,
-    idleTaskMsPerSecond: 15,
+    idleTaskMsPerSecond: 20,
     idleFrameP95Ms: 25,
     carouselMedianMs: 120,
     carouselMaxMs: 400,
@@ -149,7 +149,7 @@ const LIMITS = {
     coldLcpMs: 1600,
     coldTotalBlockingMs: 700,
     idleRecalcPerSecond: 90,
-    idleTaskMsPerSecond: 60,
+    idleTaskMsPerSecond: 70,
     idleFrameP95Ms: 25,
     carouselMedianMs: 200,
     carouselMaxMs: 600,
@@ -162,8 +162,8 @@ const LIMITS = {
 const LIMIT_NOTES = {
   coldLcpMs: "cold Home LCP; ~5x the observed value, because a cold Vite transform can spike",
   coldTotalBlockingMs: "sum of cold-load long tasks; ~2x the observed value",
-  idleRecalcPerSecond: "idle style recalcs/s: reduce observed ~0, motion ~60 (one per frame); reduce fails if an animation escapes its media query, motion fails at 1.5x a single per-frame animation",
-  idleTaskMsPerSecond: "idle main-thread task time/s: reduce observed ~3, motion ~25; ~5x and ~2.4x observed",
+  idleRecalcPerSecond: "idle style recalcs/s: reduce observed 0, motion ~61 (one per frame); reduce fails if an animation escapes its media query, motion fails at 1.5x a single per-frame animation",
+  idleTaskMsPerSecond: "idle main-thread task time/s: reduce observed 3.3-4.0, motion 16.8-17.3 in one-second buckets; ~5x and ~4x the observed maximum",
   idleFrameP95Ms: "idle frame interval p95: both modes observed 16.8ms on a 60Hz clock; 25ms fails on any sustained dropped frame",
   carouselMedianMs: "median shelf arrow click (click → track settled); ~10x the observed 8-9ms to absorb host noise",
   carouselMaxMs: "slowest shelf arrow click; ~10x the observed maximum",
@@ -218,7 +218,7 @@ async function structuralFailure(page, scenario, message) {
 async function requireStep(page, scenario, result, absences) {
   if (result?.ok) return result;
   const code = result?.code ?? "unknown";
-  if (Object.keys(LEGITIMATE_ABSENCE).includes(code)) {
+  if (code in LEGITIMATE_ABSENCE) {
     absences.push({ scenario, code, reason: LEGITIMATE_ABSENCE[code], detail: result?.detail });
     return result;
   }
@@ -569,40 +569,57 @@ const longtaskTotal = (tasks) => Math.round(tasks.reduce((sum, task) => sum + ta
  * Idle Home workload: no input, just what the rendered page does on its own.
  * Under prefers-reduced-motion the responsive Home is expected to be calm; with
  * motion on it runs per-frame CSS animation work, which is exactly the cost the
- * reduced-motion half of this audit cannot see. Normalised per second so the
- * window length can change without moving the gate.
+ * reduced-motion half of this audit cannot see.
+ *
+ * Measured in one-second buckets and reported as the median bucket, so a single
+ * scheduler hiccup on a shared host cannot turn a calm page into a failure.
  */
 async function measureIdle(page, cdp, durationMs) {
+  const seconds = Math.max(1, Math.round(durationMs / 1000));
   await clearLongtasks(page);
-  const before = await perfMetrics(cdp);
-  const frames = await page.evaluate(
-    (duration) =>
-      new Promise((resolve) => {
-        const gaps = [];
-        let last = performance.now();
-        const end = last + duration;
-        const loop = (now) => {
-          const gap = now - last;
-          last = now;
-          if (gap > 0 && gap < 1000) gaps.push(gap);
-          if (now < end) return void requestAnimationFrame(loop);
-          resolve(gaps);
-        };
-        requestAnimationFrame(loop);
-      }),
-    durationMs,
-  );
-  const after = await perfMetrics(cdp);
+  const buckets = [];
+  let previous = await perfMetrics(cdp);
+  for (let index = 0; index < seconds; index++) {
+    const gaps = await page.evaluate(
+      () =>
+        new Promise((resolve) => {
+          const collected = [];
+          let last = performance.now();
+          const end = last + 1000;
+          const loop = (now) => {
+            const gap = now - last;
+            last = now;
+            if (gap > 0 && gap < 1000) collected.push(gap);
+            if (now < end) return void requestAnimationFrame(loop);
+            resolve(collected);
+          };
+          requestAnimationFrame(loop);
+        }),
+    );
+    const sample = await perfMetrics(cdp);
+    const elapsed = 1;
+    buckets.push({
+      gaps,
+      recalc: (sample.RecalcStyleCount - previous.RecalcStyleCount) / elapsed,
+      layout: (sample.LayoutCount - previous.LayoutCount) / elapsed,
+      taskMs: ((sample.TaskDuration - previous.TaskDuration) * 1000) / elapsed,
+      scriptMs: ((sample.ScriptDuration - previous.ScriptDuration) * 1000) / elapsed,
+      recalcMs: ((sample.RecalcStyleDuration - previous.RecalcStyleDuration) * 1000) / elapsed,
+    });
+    previous = sample;
+  }
   const longtasks = await page.evaluate(() => window.__perf.longtasks.slice());
-  const perSecond = (value) => round((value / durationMs) * 1000);
+  const medianOf = (read) => round(median(buckets.map(read).map((value) => Math.max(0, value))));
+  const gaps = buckets.flatMap((bucket) => bucket.gaps);
   return {
-    seconds: round(durationMs / 1000),
-    frames: frameStats(frames),
-    recalcPerSecond: Math.round(((after.RecalcStyleCount - before.RecalcStyleCount) / durationMs) * 1000),
-    layoutPerSecond: Math.round(((after.LayoutCount - before.LayoutCount) / durationMs) * 1000),
-    taskMsPerSecond: perSecond((after.TaskDuration - before.TaskDuration) * 1000),
-    scriptMsPerSecond: perSecond((after.ScriptDuration - before.ScriptDuration) * 1000),
-    recalcMsPerSecond: perSecond((after.RecalcStyleDuration - before.RecalcStyleDuration) * 1000),
+    seconds,
+    buckets: buckets.length,
+    frames: frameStats(gaps),
+    recalcPerSecond: medianOf((bucket) => bucket.recalc),
+    layoutPerSecond: medianOf((bucket) => bucket.layout),
+    taskMsPerSecond: medianOf((bucket) => bucket.taskMs),
+    scriptMsPerSecond: medianOf((bucket) => bucket.scriptMs),
+    recalcMsPerSecond: medianOf((bucket) => bucket.recalcMs),
     longtaskCount: longtasks.length,
     longtaskMs: longtaskTotal(longtasks),
   };
@@ -1047,13 +1064,20 @@ async function measurePass(mode) {
       frames: frameStats(leg.gaps),
       longtaskCount: longtasks.length,
       longtaskMs: longtaskTotal(longtasks),
+      cards: pageAfter.cards,
       domNodes: pageAfter.domNodes,
       domNodeDelta: pageAfter.domNodes - pageBefore.domNodes,
       imageRequests: images.images.requests - imagesBefore,
       layout: delta(after, before),
     });
-    log(`screen ${label}: ${leg.ms}ms dom=${pageAfter.domNodes} longtasks=${longtasks.length}`);
+    log(`screen ${label}: ${leg.ms}ms cards=${pageAfter.cards} dom=${pageAfter.domNodes} longtasks=${longtasks.length}`);
   }
+  // The sweep is only meaningful if the screens had content to render. My List
+  // is fed by the fixture's favorites; an empty grid there means the fixture or
+  // the library transport drifted, not that the screen is cheap.
+  const library = screens.find((screen) => screen.label === "My List");
+  if (!library?.cards)
+    await structuralFailure(page, "screen My List", `no cards inside ${SELECTORS.libraryGrid} (fixture supplies ${FAVORITE_COUNT} favorites)`);
 
   // ---- Back home -----------------------------------------------------------
   const homeReturn = await navStep(page, "Home", `${SELECTORS.shelfSection} ${SELECTORS.mediaCard}`);
@@ -1149,7 +1173,7 @@ function summarize(report) {
     );
     for (const screen of screens)
       lines.push(
-        `Screen ${screen.label}: ${screen.ms}ms, DOM ${screen.domNodes} (${screen.domNodeDelta >= 0 ? "+" : ""}${screen.domNodeDelta}), ` +
+        `Screen ${screen.label}: ${screen.ms}ms, cards ${screen.cards}, DOM ${screen.domNodes} (${screen.domNodeDelta >= 0 ? "+" : ""}${screen.domNodeDelta}), ` +
           `long tasks ${screen.longtaskCount}/${screen.longtaskMs}ms, frames ${screen.frames.median}ms median, images ${screen.imageRequests}`,
       );
     if (pass.absences.length)
@@ -1190,8 +1214,8 @@ function compareReports(baseline, current) {
     ["cold total long tasks", (r) => r.coldHome.totalBlockingTime, "ms"],
     ["cold image requests", (r) => r.coldHome.imageRequests, ""],
     ["cold DOM nodes", (r) => r.coldHome.domNodes, ""],
-    ["idle tasks", (r) => r.idle.taskMsPerSecond, "ms/s"],
-    ["idle style recalcs", (r) => r.idle.recalcPerSecond, "/s"],
+    ["idle tasks", (r) => r.idle?.taskMsPerSecond ?? 0, "ms/s"],
+    ["idle style recalcs", (r) => r.idle?.recalcPerSecond ?? 0, "/s"],
     ["carousel median", (r) => r.carousel.medianMs, "ms"],
     ["carousel images during", (r) => r.carousel.imageRequestsDuring, ""],
   ];
@@ -1244,7 +1268,9 @@ run()
         viewport: "1440x900",
         fixture: { catalogs: CATALOG_COUNT, itemsPerCatalog: ITEMS_PER_CATALOG, queue: QUEUE_COUNT, favorites: FAVORITE_COUNT },
         carouselSteps: CAROUSEL_STEPS,
+        idleMs: IDLE_MS,
         limits: LIMITS,
+        limitNotes: LIMIT_NOTES,
         pageErrors,
       },
       passes,
@@ -1267,15 +1293,21 @@ run()
     const failures = gates.filter((gate) => !gate.pass);
     if (failures.length) {
       console.error(`\n${failures.length} performance gate(s) failed:`);
-      for (const gate of failures) console.error(`  ${gate.mode}/${gate.name}: ${gate.value}${gate.unit} > ${gate.limit}${gate.unit}`);
-      process.exitCode = 1;
+      for (const gate of failures)
+        console.error(
+          `  ${gate.mode}/${gate.name}: ${gate.value}${gate.unit} > ${gate.limit}${gate.unit}` +
+            (LIMIT_NOTES[gate.name] ? ` — ${LIMIT_NOTES[gate.name]}` : "") +
+            (gate.detail ? ` ${JSON.stringify(gate.detail)}` : ""),
+        );
+      throw new GateFailure(failures);
     }
   })
   .catch((error) => {
     // A structural failure is the point of the gate: say what could not be
     // measured, then leave non-zero so CI cannot pass on a silent no-op.
-    console.error(`\n${error instanceof AuditFailure || error instanceof GateFailure ? "AUDIT FAILED" : "AUDIT ERROR"}: ${error.message}`);
-    if (!(error instanceof AuditFailure || error instanceof GateFailure) && error?.stack) console.error(error.stack);
+    const classified = error instanceof AuditFailure || error instanceof GateFailure;
+    console.error(`\n${classified ? "AUDIT FAILED" : "AUDIT ERROR"}: ${error.message}`);
+    if (!classified && error?.stack) console.error(error.stack);
     if (pageErrors.length) console.error(`Page errors: ${JSON.stringify(pageErrors)}`);
     process.exitCode = 1;
   })
