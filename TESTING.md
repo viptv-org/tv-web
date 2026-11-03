@@ -3758,7 +3758,7 @@ Measured on `ca5cca1` with Node 26.11.1 and Vite 6.1.0:
 | --- | --- | --- |
 | Files (excluding ZIP metadata) | 948 | 42 (41 TV files + `HOSTING.txt`) |
 | Uncompressed | 14,734,841 B | 1,793,160 B |
-| ZIP (`viptv-tv-hosting-0.1.0-*.zip`) | 8,127,652 B | 1,000,818 B |
+| ZIP (`viptv-tv-hosting-0.1.0-*.zip`) | 8,127,652 B | 1,000,817 B |
 
 What still ships: `index.html`, `solid.html`, `lightning.html`; `app-CsKIUMe0.js`
 (bootstrap), `main-CMyV41DE.js` (TV entry), `App-Hu8eHReS.js`,
@@ -3767,7 +3767,8 @@ contract), `viptv-tokens-dvPV1MV5.css`, `host-C3m1tLMs.css`; the lazy
 `hls-engine-Rkos_9_K.js` and `vizio-html5-vfz0k7at.js` (which contains hls.js),
 the lazy `browser-BgJBWLyt.js` QR encoder; 7 WOFF2 faces; 20 entry-art images;
 and `assets/photography/live-empty-wide.webp`, which the emitted TV code names at
-runtime and cannot be discovered as an import.
+runtime and cannot be discovered as an import. The ZIP carries the revision in
+`HOSTING.txt`, so its byte count moves by a byte between commits.
 
 Lazy-chunk proof, resolved from the staged package against
 `artifacts/tv-assets.json` (`missing: 0`):
