@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { apiOrigin, capture, enterHome, expectBox, installBackend, installPlatformRuntime, json, movie } from './helpers/tvShellRuntime';
+import { continuation } from '../fixtures/continuation';
 
 
 test('held series-root hero opens its episode detail instead of source selection', async ({ page }) => {
@@ -94,7 +95,7 @@ test('resume never substitutes a lookalike source and leaves the user at manual 
   const assertNoPageErrors = await installPlatformRuntime(page);
   const queued = { ...movie, id: 'tt-resume', name: 'Resume fixture', title: 'Resume fixture', position: 42, duration: 120, source_addon_id: 'addon:2', source_fingerprint: 'original-only' };
   await installBackend(page);
-  await page.route(`${apiOrigin}/api/profiles/1/continue/page**`, route => json(route, { items: [queued], offset: 0, total: 1, next_offset: null }));
+  await page.route(`${apiOrigin}/api/profiles/1/continue`, route => json(route, continuation([queued])));
   await page.addInitScript(({ key, token }) => localStorage.setItem(key, JSON.stringify(token)), { key: `viptv-device:${apiOrigin}`, token: { sessionId: 'device-1', accountId: '7', profileId: null, accessToken: 'access', refreshToken: 'refresh', expiresIn: 900 } });
   await page.goto('/?renderer=react&platform=vizio');
   await page.getByRole('button', { name: 'Alex' }).press('Enter');
@@ -205,9 +206,7 @@ test('Home keeps the last queue card fully visible and Right stays in its shelf'
     position: 20,
     duration: 120,
   }));
-  await page.route(`${apiOrigin}/api/profiles/1/continue/page**`, route =>
-    json(route, { items: queue, offset: 0, total: queue.length, next_offset: null }),
-  );
+  await page.route(`${apiOrigin}/api/profiles/1/continue`, route => json(route, continuation(queue)));
   await page.addInitScript(({ key, token }) => localStorage.setItem(key, JSON.stringify(token)), { key: `viptv-device:${apiOrigin}`, token: { sessionId: 'device-1', accountId: '7', profileId: null, accessToken: 'access', refreshToken: 'refresh', expiresIn: 900 } });
   await page.goto('/?renderer=react&platform=tizen');
   await page.getByRole('button', { name: 'Alex' }).press('Enter');

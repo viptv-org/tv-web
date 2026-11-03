@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { apiOrigin, capture, expectBox, installBackend, installPlatformRuntime, json, movie, profile, type ProfileFixture } from './helpers/tvShellRuntime';
+import { continuation } from '../fixtures/continuation';
 
 
 test('renders the real device-pairing handoff without storing a token before approval', async ({ page }, testInfo) => {
@@ -93,7 +94,7 @@ test('held OK opens queue management without also activating the card, then hide
   const queued = { ...movie, id: 'tt-queued', name: 'Queued movie', title: 'Queued movie', position: 42, duration: 120, source_addon_id: 'addon:2', source_fingerprint: 'same-provider-source' };
   const visibility: boolean[] = [];
   await installBackend(page);
-  await page.route(`${apiOrigin}/api/profiles/1/continue/page**`, route => json(route, { items: [queued], offset: 0, total: 1, next_offset: null }));
+  await page.route(`${apiOrigin}/api/profiles/1/continue`, route => json(route, continuation([queued])));
   await page.route(`${apiOrigin}/api/profiles/1/continue/visibility`, route => {
     const body = JSON.parse(route.request().postData() || '{}') as { hidden?: boolean };
     visibility.push(body.hidden === true);
@@ -125,7 +126,7 @@ test('held queue hero opens Manage before its primary Resume action', async ({ p
   const assertNoPageErrors = await installPlatformRuntime(page);
   const queued = { ...movie, id: 'tt-hero-queued', name: 'Hero queue movie', title: 'Hero queue movie', position: 42, duration: 120, source_addon_id: 'addon:2', source_fingerprint: 'same-provider-source' };
   await installBackend(page);
-  await page.route(`${apiOrigin}/api/profiles/1/continue/page**`, route => json(route, { items: [queued], offset: 0, total: 1, next_offset: null }));
+  await page.route(`${apiOrigin}/api/profiles/1/continue`, route => json(route, continuation([queued])));
   await page.addInitScript(({ key, token }) => localStorage.setItem(key, JSON.stringify(token)), { key: `viptv-device:${apiOrigin}`, token: { sessionId: 'device-1', accountId: '7', profileId: null, accessToken: 'access', refreshToken: 'refresh', expiresIn: 900 } });
   await page.goto('/?renderer=react&platform=tizen');
   await page.getByRole('button', { name: 'Alex' }).press('Enter');
@@ -147,7 +148,7 @@ test('held resumable non-queue hero opens explicit source choice instead of Mana
   const assertNoPageErrors = await installPlatformRuntime(page);
   const resumable = { ...movie, id: 'tt-hero-resume', name: 'Resume hero movie', title: 'Resume hero movie', position: 42, duration: 120, source_addon_id: 'addon:2', source_fingerprint: 'same-provider-source' };
   await installBackend(page);
-  await page.route(`${apiOrigin}/api/profiles/1/continue/page**`, route => json(route, { items: [], offset: 0, total: 0, next_offset: null }));
+  await page.route(`${apiOrigin}/api/profiles/1/continue`, route => json(route, continuation([])));
   await page.route(`${apiOrigin}/api/v2/iptv/live/**`, route => json(route, { catalog_id: 1, generation: 1, items: [], next_cursor: null, previous_cursor: null }));
   await page.route(`${apiOrigin}/api/discover**`, route => json(route, { metas: [resumable], has_more: false, next_skip: null }));
   await page.addInitScript(({ key, token }) => localStorage.setItem(key, JSON.stringify(token)), { key: `viptv-device:${apiOrigin}`, token: { sessionId: 'device-1', accountId: '7', profileId: null, accessToken: 'access', refreshToken: 'refresh', expiresIn: 900 } });

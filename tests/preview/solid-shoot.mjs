@@ -357,7 +357,7 @@ try {
     } else if (name === 'TvAddonManage') {
       await page.keyboard.press('Enter');
       await focused('settings-row', 3);
-      if (!backend.requests.some(request => request.path.includes('/api/v2/addons/') && request.method !== 'GET'))
+      if (!backend.requests.some(request => request.path.includes('/api/addons/') && request.method !== 'GET'))
         throw new Error('Addon enable action did not reach the addon API');
     } else if (name === 'TvAddonRemove') {
       await page.keyboard.press('Escape');
@@ -366,7 +366,7 @@ try {
       await focused('settings-row', 2).catch(async cause => {
         throw new Error(`${cause.message}; focus ${JSON.stringify(await page.evaluate(() => window.__viptvFocus))}; errors ${JSON.stringify(errors)}`);
       });
-      if (backend.requests.some(request => request.method === 'DELETE' && request.path.includes('/api/v2/addons/')))
+      if (backend.requests.some(request => request.method === 'DELETE' && request.path.includes('/api/addons/')))
         throw new Error('Cancelled addon removal called DELETE');
     }
   }
@@ -719,7 +719,7 @@ try {
       { view, index }, { timeout: 10000 });
     const platformSuffix = platform === 'tizen' ? '' : `.${platform}`;
     if (!backend.requests.some(request => request.path.endsWith('/favorites')) ||
-        !backend.requests.some(request => request.path.endsWith('/continue/page')))
+        !backend.requests.some(request => request.path.endsWith('/continue')))
       throw new Error('My List did not load both saved titles and Continue Watching');
     const sourceRequestsBeforeHold = backend.requests.filter(request => request.path === '/api/v2/streams').length;
     await page.keyboard.down('Enter');
@@ -775,7 +775,7 @@ try {
   }
   const pairingRequests = () => backend.requests.filter(request => request.path === '/api/auth/device/code').length;
   if (pairingRequests() !== (profiles || settingsNames.includes(name) || name === 'TvHome' || name === 'TvMenu' || name === 'TvDiscover' || name === 'TvDiscoverFilter' || name === 'TvLibrary' || name === 'TvItemMenu' || name === 'TvSearch' || name === 'TvLive' || name === 'TvLiveDetails' || name === 'TvLiveSearch' || name === 'TvTitle' || name === 'TvSources' || name === 'TvSourceProvider' || name === 'TvSourceDetails' || name === 'TvPlayer' || name === 'TvPlayerSeek' || name === 'TvPlayerSubs' ? 0 : 1)) throw new Error(`Unexpected device-pairing request count ${pairingRequests()}`);
-  if (name === 'TvHome' && !backend.requests.some(request => request.path.endsWith('/continue/page')))
+  if (name === 'TvHome' && !backend.requests.some(request => request.path.endsWith('/continue')))
     throw new Error(`Home did not request profile data: ${JSON.stringify(backend.requests)}`);
   if (name === 'TvHome') {
     // Deliberately rapid input catches focus handoff lag: the third control

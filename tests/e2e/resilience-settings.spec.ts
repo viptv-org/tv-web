@@ -41,8 +41,9 @@ async function installBackend(page: Page): Promise<State> {
     if (path === '/api/auth/logout') return json(route, { ok: true });
     if (path === '/api/auth/device/code') return json(route, { device_code: 'code', user_code: 'AB12CD34EF', verification_uri: 'https://viptv.syek.tech/device', verification_uri_complete: 'https://viptv.syek.tech/device?code=AB12CD34EF', qr_uri: 'https://viptv.syek.tech/api/auth/device/qr?code=AB12CD34EF', expires_in: 600, interval: 60 });
     if (path === '/api/auth/device/token') return json(route, { error: 'authorization_pending' }, 400);
-    if (path === '/api/profiles/1/continue/page') return json(route, { items: [], offset: 0, total: 0, next_offset: null });
-    if (path === '/api/profiles/1/progress' || path === '/api/profiles/1/favorites') return json(route, []);
+    if (path === '/api/profiles/1/continue') return json(route, { scope: { kind: 'viptv:device', account: '7', profile: '1', generation: 1 }, revision: 1, entries: [], next_cursor: null, complete: true });
+    if (path === '/api/profiles/1/progress/page') return json(route, { items: [], offset: 0, total: 0, next_offset: null });
+    if (path === '/api/profiles/1/favorites') return json(route, []);
     if (path === '/api/profiles/1/preferences') return json(route, preferences);
     if (path === '/api/catalogs') return json(route, [
       { id: 'working', name: 'Working catalog', type: 'movie', addon_id: 2, supports_search: true, supports_skip: true },
@@ -59,16 +60,16 @@ async function installBackend(page: Page): Promise<State> {
       { seq: 1, source: 'addon:2', streams: [{ id: 'good-1080', name: 'Good source', title: '1080p H.264 English', filename: 'good.mkv', source_addon_id: 'addon:2', source_name: 'Fixture provider', source_quality: '1080p' }] },
       { seq: 2, source: 'addon:3', streams: [{ id: 'other-720', name: 'Other source', title: '720p H.264 English', filename: 'other.mkv', source_addon_id: 'addon:3', source_name: 'Other provider', source_quality: '720p' }] },
     ], done: true });
-    if (path === '/api/v2/addons' && request.method() === 'GET') return json(route, { items: state.addons, next_cursor: null });
-    if (path === '/api/v2/addons' && request.method() === 'POST') {
+    if (path === '/api/addons' && request.method() === 'GET') return json(route, { items: state.addons, next_cursor: null });
+    if (path === '/api/addons' && request.method() === 'POST') {
       state.addons.push({ id: 3, name: 'Installed add-on', enabled: true });
       return json(route, state.addons.at(-1));
     }
-    if (path === '/api/v2/addons/2' && request.method() === 'PATCH') {
+    if (path === '/api/addons/2' && request.method() === 'PATCH') {
       Object.assign(state.addons[0], body);
       return json(route, state.addons[0]);
     }
-    if (path === '/api/v2/addons/2' && request.method() === 'DELETE') {
+    if (path === '/api/addons/2' && request.method() === 'DELETE') {
       state.addons.splice(0, 1);
       return json(route, { ok: true });
     }
@@ -239,9 +240,9 @@ test('Vizio: settings persist an add-on draft, enable/remove an extension, and s
   await expect(page.getByRole('heading', { name: 'Remove Fixture add-on?' })).toBeVisible();
   await page.getByRole('button', { name: 'Remove', exact: true }).click();
   await expect(fixtureAddon).toHaveCount(0);
-  expect(state.calls).toContainEqual({ path: '/api/v2/addons/2', method: 'PATCH', body: { enabled: false } });
-  expect(state.calls).toContainEqual({ path: '/api/v2/addons', method: 'POST', body: { manifest_url: 'https://addons.example.test/manifest.json' } });
-  expect(state.calls).toContainEqual({ path: '/api/v2/addons/2', method: 'DELETE', body: {} });
+  expect(state.calls).toContainEqual({ path: '/api/addons/2', method: 'PATCH', body: { enabled: false } });
+  expect(state.calls).toContainEqual({ path: '/api/addons', method: 'POST', body: { manifest_url: 'https://addons.example.test/manifest.json' } });
+  expect(state.calls).toContainEqual({ path: '/api/addons/2', method: 'DELETE', body: {} });
 
   await page.keyboard.press('Escape');
   await expect(page.getByRole('button', { name: 'Addons', exact: true })).toBeFocused();

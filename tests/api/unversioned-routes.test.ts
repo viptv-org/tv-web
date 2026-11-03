@@ -1,5 +1,4 @@
 import { describe, expect, it, vi } from "vitest";
-import { TvApi } from "../../src/api";
 import { apiFor, response, scripted } from "./client-helpers";
 
 /**
@@ -133,5 +132,4 @@ it("no longer exposes the retired continue/settings client path", () => {
   const api = apiFor(async () => response({}));
   expect("queueSettings" in api).toBe(false);
   expect("saveQueueSettings" in api).toBe(false);
-  expect(api instanceof TvApi).toBe(true);
 });

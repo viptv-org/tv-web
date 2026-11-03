@@ -23,13 +23,47 @@ foreground validation before resuming. Disposal cancels renewal; late heartbeats
 cannot restore a released cache entry. Player operation cancellation reaches the
 backend admission signal. This does not complete the all-client/live cutover.
 
-BE-002 migration checkpoint: movie/exact-episode discovery now starts at
-`POST /api/v2/streams` and polls `/api/v2/streams/:id?after=N`. Closed shared-core
-error messages survive successful HTTP polling; terminal failure with no usable
-sources raises a typed error. Partial success keeps healthy sources. Live jobs
-temporarily retain the legacy route; live playback, live catalog paging and account
-management have not yet completed the v2 cutover. The legacy description below
-is not a claim of full v2 adoption.
+### Route versions: what this transport actually requests
+
+The backend retired every versioned API prefix (`backend` `ea82f19`), so no
+`/api/v2/...` or `/api/v3/...` route exists. Request paths now come from two
+places, and only one of them is fixed here.
+
+Request literals in this transport are unversioned: `GET/POST /api/addons`,
+`PATCH/DELETE /api/addons/:id`, `GET /api/playback/:id/progress`,
+`GET /api/profiles/:id/continue`, `GET /api/profiles/:id/progress/page`,
+`GET /api/profiles/:id/favorites`, `PUT /api/profiles/:id/preferences`.
+
+Everything the shared Rust core builds through `normalize("request", ...)` —
+stream discovery (`/api/v2/streams`), live catalog and guide
+(`/api/v2/iptv/...`), playback protocol/start/heartbeat/stop
+(`/api/v2/playback*`, `/api/v2/playback-decoder-start`) — is still versioned,
+because those strings live inside the pinned `vendor/core` WASM. Until that pin
+moves, source discovery, live browsing and playback control issued through this
+transport still answer `API route not found`. Do not describe them as migrated,
+and do not promote a `/api/v2/...` path to "current" here again.
+
+`POST /streams` and `GET /streams/:id?after=N` are the routes the server serves
+today for those core operations; only the pin controls whether they are asked
+for.
+
+### Continue Watching
+
+`GET /api/profiles/:id/continue?offset=<cursor>&limit=40` returns a cursor
+envelope — `{scope, revision, entries, next_cursor, complete}` — not an offset
+page. Each entry is a server-rendered `card` plus the playback `record` it stands
+on, and the client flattens them into the existing shelf row: the card supplies
+identity, title and artwork, the record supplies position, duration and
+`updated_at`, and `status` maps to the shelf's `queueStatus` (`next`,
+`caught_up`, `pending`, `upcoming`, `unavailable`, `resume`). A `next` row keeps
+`previous_identity` as `previousEpisode`, because resume finishes the episode the
+viewer just watched rather than the announced one. `next_cursor` is opaque and is
+passed back verbatim.
+
+There is no `continue/settings` route, and `/api/profiles/:id/preferences`
+rejects `autoplay` with 422: the profile preference now carries
+`next_episode_button` (offer Next, never auto-play) instead. The transport has no
+autoplay setting of its own.
 
 `TvApi` is the only HTTP boundary for Tizen and Vizio. It talks to a VIPTV HTTPS origin and uses the existing device grant flow: `POST /api/auth/device/code`, poll `POST /api/auth/device/token`, then rotate through `POST /api/auth/device/refresh`. Device tokens travel only as a Bearer header. The default `MemoryDeviceSessionStore` deliberately does not persist them; each platform must opt into its platform credential store.
 

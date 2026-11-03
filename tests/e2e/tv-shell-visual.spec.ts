@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { apiOrigin, installBackend, installPlatformRuntime, json } from './helpers/tvShellRuntime';
+import { continuation } from '../fixtures/continuation';
 
 
 test('restores a remembered profile without flashing pairing and retains Home after reload', async ({ page }) => {
@@ -49,7 +50,7 @@ test('reported TV web regressions keep episode details, loading feedback and row
   };
   await installPlatformRuntime(page);
   await installBackend(page);
-  await page.route(`${apiOrigin}/api/profiles/1/continue/page**`, route => json(route, { items: [bleach], offset: 0, total: 1, next_offset: null }));
+  await page.route(`${apiOrigin}/api/profiles/1/continue`, route => json(route, continuation([bleach])));
   await page.route(`${apiOrigin}/api/meta/series/bleach`, route => json(route, { meta: {
     id: 'bleach', type: 'series', name: 'Bleach', poster: '/poster.jpg', background: '/background.jpg',
     description: 'A Soul Reaper protects the living.', genres: ['Anime', 'Action'],
