@@ -12,7 +12,7 @@ export function TitleMetadata(props: {
   detail?: boolean;
 }) {
   const layout = createMemo(() => {
-    const context = textMetrics("24px Onest500");
+    let context = textMetrics("24px Onest500");
     const parts = props.detail
       ? props.card.view?.metadata_parts
       : props.card.view?.hero_metadata_parts;
@@ -27,11 +27,13 @@ export function TitleMetadata(props: {
       x += context.measureText(value).width + 12;
     }
     if (text.length) x += 18; // 6px spacer and the second flex gap before badges.
-    const badgeContext = textMetrics("18px Onest700", 0.36);
+    // One shared context: retarget it to the badge font and its CSS spacing
+    // before the badge pass, exactly as the per-component canvas did.
+    context = textMetrics("18px Onest700", 0.36);
     const native = letterSpacingSupported();
     const badges = (props.card.view?.hero_badges ?? []).map((badge) => {
       const width =
-        badgeContext.measureText(badge.label).width +
+        context.measureText(badge.label).width +
         (native ? 0 : Array.from(badge.label).length * 0.36) +
         16;
       const value = { ...badge, x, width };
