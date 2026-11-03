@@ -8,6 +8,7 @@ vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn() }));
 const nativeInvoke = vi.mocked(invoke);
 const complete = (result: Record<string, unknown> = {}) => JSON.stringify({ kind: "complete", result, credentialChanged: false });
 const authentication = JSON.stringify({ kind: "error", error: { kind: "authentication", message: "TV requires pairing" } });
+const transportFailure = JSON.stringify({ kind: "error", error: { kind: "transport", message: "SmartCast transport failed", retryable: true, protocolStatus: null } });
 const discoveredTvs = JSON.stringify([
   { name: "VIZIO SmartCast (192.168.1.50)", host: "192.168.1.50" },
   { name: "Vizio TV (192.168.1.61)", host: "192.168.1.61" },
@@ -128,6 +129,63 @@ describe("native SmartCast controller boundary", () => {
     expect(screen.getByRole("button", { name: "Open VIPTV on TV" })).toBeDisabled();
     expect(screen.getByText(/A TV receiver has not been configured/)).toBeVisible();
     expect(nativeInvoke).not.toHaveBeenCalledWith("smartcast_run", expect.objectContaining({ operation: "beginPair" }));
+  });
+
+  it("keeps the PIN entry reachable when beginPair fails at the transport", async () => {
+    // The shared core's `beginPair` is a PUT /pairing/start: the set displays a code as
+    // soon as it accepts that request, and the host reports `transport` (reject) or
+    // `invalidResponse` when the reply is lost or unusable. A failed attempt therefore
+    // cannot hide the PIN field or read as an unreachable TV.
+    native();
+    let attempts = 0;
+    nativeInvoke.mockImplementation(async (command, args) => {
+      if (command === "smartcast_discover") return "[]";
+      if (command === "smartcast_configure") return undefined;
+      if (command !== "smartcast_run") return undefined;
+      switch ((args as Record<string, unknown> | undefined)?.operation) {
+        case "pingAuth": return authentication;
+        case "beginPair": return ++attempts === 1 ? transportFailure : complete({ challengeType: 1, token: 42 });
+        case "finishPair": return complete({ paired: true });
+        default: return complete();
+      }
+    });
+    render(<CastController onClose={() => {}} />);
+    enterAddress();
+    // The field and the real fault stay together: no address form, no unreachable-TV copy.
+    expect(await screen.findByLabelText("PIN shown on your TV")).toBeVisible();
+    expect(screen.getByText("The pairing request failed on the network. Get a new PIN to try again.")).toBeVisible();
+    expect(screen.queryByText(/did not return a pairing challenge/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/native TV controller is unavailable/)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("TV IP address")).not.toBeInTheDocument();
+    // The code on screen belongs to the attempt that lost its token; a fresh challenge
+    // replaces it and then pairs with the code the TV shows for that attempt.
+    fireEvent.click(screen.getByRole("button", { name: "Get a new PIN" }));
+    await screen.findByText("Enter the PIN displayed on your TV.");
+    fireEvent.change(screen.getByLabelText("PIN shown on your TV"), { target: { value: "1234" } });
+    fireEvent.click(screen.getByRole("button", { name: "Pair TV" }));
+    await screen.findByText("Paired with your TV.");
+    expect(nativeInvoke).toHaveBeenCalledWith("smartcast_run", { operation: "beginPair", input: "{}" });
+    expect(nativeInvoke).toHaveBeenCalledWith("smartcast_run", { operation: "finishPair", input: JSON.stringify({ challengeType: 1, token: 42, pin: "1234" }) });
+  });
+
+  it("names a host that never answered beginPair instead of blaming the app", async () => {
+    native();
+    nativeInvoke.mockImplementation(async (command, args) => {
+      if (command === "smartcast_discover") return "[]";
+      if (command === "smartcast_configure") return undefined;
+      if (command !== "smartcast_run") return undefined;
+      switch ((args as Record<string, unknown> | undefined)?.operation) {
+        case "pingAuth": return authentication;
+        case "beginPair": throw new Error("SmartCast core is unavailable");
+        default: return complete();
+      }
+    });
+    render(<CastController onClose={() => {}} />);
+    enterAddress();
+    expect(await screen.findByLabelText("PIN shown on your TV")).toBeVisible();
+    expect(screen.getByText("The desktop host did not answer the pairing request. Get a new PIN to try again.")).toBeVisible();
+    expect(screen.getByRole("button", { name: "Get a new PIN" })).toBeEnabled();
+    expect(screen.queryByText(/Use a VIPTV desktop app with SmartCast support/)).not.toBeInTheDocument();
   });
 
   it("cancels a PIN challenge and permits entering another TV", async () => {
