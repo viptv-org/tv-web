@@ -278,6 +278,15 @@ import {
 } from "./liveEmpty";
 import { LiveAnswer, LiveNoSource, LiveSkeletons } from "./liveEmptyViews";
 import {
+  SOURCE_SPINNER_SIZE,
+  SOURCE_SPINNER_STEP,
+  SOURCE_SPINNER_TICK_MS,
+  pickSourceSpread,
+  sourceEmptyCopy,
+  sourceSpinnerSrc,
+  sourceStatusCopy,
+} from "./sourceStatus";
+import {
 
   ACCOUNT_SESSION_REQUIRED,
 
@@ -793,7 +802,38 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
       [sourceChannel, setSourceChannel] = createSignal<string>(),
       [replacingSource, setReplacingSource] = createSignal(false),
       [activeChannel, setActiveChannel] = createSignal<string>(),
-      [activeSource, setActiveSource] = createSignal<Source>();
+      [activeSource, setActiveSource] = createSignal<Source>(),
+      // The source the picker handed to playback. It stays set for exactly as
+      // long as the player is preparing it, which is what the contract's
+      // `Opening stream…` state reports.
+      [openingSource, setOpeningSource] = createSignal<Source>();
+    // The picker's own facts decide its copy (SRC-DRAWER-001): discovery is the
+    // first source request, opening is real playback preparation.
+    const sourceSpread = () =>
+      pickSourceSpread({
+        open: overlay()?.kind === "sources",
+        opening: !!openingSource(),
+        discovering: sourceLoading(),
+        rows: sources().length,
+      });
+    const [sourceSpinnerAngle, setSourceSpinnerAngle] = createSignal(0);
+    // The status line carries a spinner, so it turns only while one of the
+    // three working states is on screen.
+    createEffect(() => {
+      if (!sourceStatusCopy(sourceSpread())) {
+        setSourceSpinnerAngle(0);
+        return;
+      }
+      if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+      const timer = setInterval(
+        () =>
+          setSourceSpinnerAngle(
+            (angle) => (angle + SOURCE_SPINNER_STEP) % (Math.PI * 2),
+          ),
+        SOURCE_SPINNER_TICK_MS,
+      );
+      onCleanup(() => clearInterval(timer));
+    });
     const [snapshot, setSnapshot] = createSignal<PlayerSnapshot>(),
       [showControls, setShowControls] = createSignal(true),
       [seek, setSeek] = createSignal<number>(),
@@ -2338,6 +2378,13 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
         finishSignIn();
         return;
       }
+      // A stream the drawer is opening is cancelled the way it always was:
+      // Back leaves the player and returns to the page that asked for it.
+      if (openingSource()) {
+        setOpeningSource(undefined);
+        await leavePlayer();
+        return;
+      }
       if (
         !overlay() &&
         (screen() === "welcome" || (screen() === "profiles" && !api.profile))
@@ -3204,7 +3251,6 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
         };
       }
       sourceScope?.abort();
-      setOverlay(undefined);
       if (screen() === "search") {
         searchScope?.abort();
         clearTimeout(searchTimer);
@@ -3217,6 +3263,11 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
       setActiveChannel(sourceChannel());
       setShowControls(true);
       setChoice(0);
+      // The drawer stays up while the chosen stream opens, so its status line
+      // reports the contract's `Opening stream…` from the player's real
+      // preparation instead of a timer, and a second press cannot start a
+      // duplicate stream.
+      setOpeningSource(source);
       setLoading(true);
       document.getElementById("video-layer")!.style.display = "block";
       try {
@@ -3226,6 +3277,11 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
         hideControls();
       } catch (e) {
         fail(e);
+      } finally {
+        setOpeningSource(undefined);
+        // Only the drawer this stream was chosen from. Back has already closed
+        // it and restored the previous focus.
+        if (overlay()?.kind === "sources") setOverlay(undefined);
       }
     }
     function hideControls() {
@@ -4213,6 +4269,8 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
         return;
       }
       if (overlayClosing() || error()) return;
+      // The picker is terminal while the chosen stream opens.
+      if (openingSource()) return;
       pendingFocus = undefined;
       restartHeroCycling();
       if (loading() && screen() === "welcome") return;
@@ -5320,6 +5378,9 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
       document.documentElement.dataset.tvSources=String(sources().length);
       document.documentElement.dataset.tvSources = String(sources().length);
       document.documentElement.dataset.tvSources = String(sources().length);
+      // The picker's own state, so a session can be checked without reading the
+      // canvas: the status line and the empty state are drawn, not queried.
+      document.documentElement.dataset.tvSourceStatus = String(sourceSpread());
       document.documentElement.dataset.tvReady = String(
         !loading() && !pending(),
       );
@@ -5345,7 +5406,7 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
         document.getElementById("video-layer")!.style.display = "none";
     });
     createEffect(() => {
-      const show = screen() === "player" && loading();
+      const show = screen() === "player" && loading() && !overlay();
       const spinner = document.getElementById("solid-preparing-spinner");
       const timer = setTimeout(() => {
         if (show && spinner) spinner.style.display = "block";
@@ -7606,22 +7667,34 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
                         </TvView>
                       )}
                     </For>
-                    <Show when={!sources().length && !sourceLoading()}>
+                    <Show when={sourceEmptyCopy(sourceSpread())}>
                       <Label
                         x={64}
                         y={320}
                         size={28}
                         maxwidth={800}
-                        content="No sources found. Try again or check your add-ons."
+                        content={sourceEmptyCopy(sourceSpread())}
                       />
                     </Show>
-                    <Show when={sourceLoading() && sources().length > 0}>
-                      <Label
+                    {/* SRC-DRAWER-10: the status line sits under the list and
+                        is absent while the picker is idle. */}
+                    <Show when={sourceStatusCopy(sourceSpread())}>
+                      <TvView
                         x={64}
-                        y={1000}
+                        y={884}
+                        w={SOURCE_SPINNER_SIZE}
+                        h={SOURCE_SPINNER_SIZE}
+                        src={sourceSpinnerSrc(palette.accent)}
+                        rotation={sourceSpinnerAngle()}
+                      />
+                      <Label
+                        x={64 + SOURCE_SPINNER_SIZE + 12}
+                        y={880}
                         size={22}
+                        maxwidth={800}
+                        maxlines={1}
                         color={palette.muted}
-                        content={`Finding sources · ${sources().length} so far`}
+                        content={sourceStatusCopy(sourceSpread())}
                       />
                     </Show>
                     <Label
