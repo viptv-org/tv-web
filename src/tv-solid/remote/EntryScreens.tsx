@@ -10,6 +10,7 @@ import { TvView } from "../runtime";
 import { canvasFont } from "../fonts";
 import { PosterWall } from "./PosterWall";
 import { Label, palette } from "./visuals";
+import { letterSpacingSupported, textMetrics } from "./text-measure";
 import { easeProgress } from "./motion";
 
 let shadow: ImageData | undefined;
@@ -40,14 +41,11 @@ function Brand(props: { splash: boolean }) {
     mark = () => (props.splash ? 88 : 80),
     gap = () => (props.splash ? 22 : 20);
   const width = createMemo(() => {
-    const context = document.createElement("canvas").getContext("2d")!;
-    context.font = `${size()}px ${canvasFont("Bricolage800", size())}`;
-    if (Reflect.has(context, "letterSpacing")) {
-      (
-        context as CanvasRenderingContext2D & { letterSpacing: string }
-      ).letterSpacing = `${-0.04 * size()}px`;
-      return context.measureText("VIPTV").width;
-    }
+    const context = textMetrics(
+      `${size()}px ${canvasFont("Bricolage800", size())}`,
+      -0.04 * size(),
+    );
+    if (letterSpacingSupported()) return context.measureText("VIPTV").width;
     return context.measureText("VIPTV").width - 0.04 * size() * 4;
   });
   return (

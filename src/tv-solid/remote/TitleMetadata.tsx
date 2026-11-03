@@ -2,6 +2,7 @@
 import { createMemo, For } from "solid-js";
 import { TvView } from "../runtime";
 import { Label, outline, palette } from "./visuals";
+import { letterSpacingSupported, textMetrics } from "./text-measure";
 import type { Card } from "./types";
 
 /** Lay out the producer's ordered display parts; no metadata/quality policy. */
@@ -11,8 +12,7 @@ export function TitleMetadata(props: {
   detail?: boolean;
 }) {
   const layout = createMemo(() => {
-    const context = document.createElement("canvas").getContext("2d")!;
-    context.font = "24px Onest500";
+    const context = textMetrics("24px Onest500");
     const parts = props.detail
       ? props.card.view?.metadata_parts
       : props.card.view?.hero_metadata_parts;
@@ -27,15 +27,11 @@ export function TitleMetadata(props: {
       x += context.measureText(value).width + 12;
     }
     if (text.length) x += 18; // 6px spacer and the second flex gap before badges.
-    context.font = "18px Onest700";
-    const native = "letterSpacing" in context;
-    if (native)
-      (
-        context as CanvasRenderingContext2D & { letterSpacing: string }
-      ).letterSpacing = ".36px";
+    const badgeContext = textMetrics("18px Onest700", 0.36);
+    const native = letterSpacingSupported();
     const badges = (props.card.view?.hero_badges ?? []).map((badge) => {
       const width =
-        context.measureText(badge.label).width +
+        badgeContext.measureText(badge.label).width +
         (native ? 0 : Array.from(badge.label).length * 0.36) +
         16;
       const value = { ...badge, x, width };
