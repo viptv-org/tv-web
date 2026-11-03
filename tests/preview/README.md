@@ -137,3 +137,19 @@ PREVIEW_API_ORIGIN=https://viptv.local.test:8443 node tests/preview/solid-regres
 Use `--scenario=vod-clock` (or another scenario name) for a targeted run.
 Private captures default to `/tmp/viptv-polish`; set `PREVIEW_OUT` to change it.
 These tests do not certify physical TVs or GPU scan-out.
+
+## Remote allocation counts
+
+`remote-allocations.mjs` counts the canvases, 2D contexts and `measureText`
+calls the served TV entry performs across a cold Home mount and a 48-key Home
+workload, splitting canvases that only measured text from those that
+rasterized. It asserts nothing; record the numbers in `PERFORMANCE.md`.
+
+```sh
+node tests/preview/https-static.mjs ../.local-https/certs 18571
+REMOTE_PREVIEW_ORIGIN=https://viptv.local.test:18571 \
+  node --experimental-strip-types tests/preview/remote-allocations.mjs
+```
+
+`ALLOC_RUNS=cold-home,48-home-keys,48-down-keys` selects the phases. Like the
+timing harness, it is browser-fixture evidence, not physical-TV evidence.

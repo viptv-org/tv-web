@@ -1,3 +1,66 @@
+# One shared text-measure context — 2026-11-03
+
+Every TV remote component built a throwaway `<canvas>` and 2D context to
+measure a label, then discarded it. `src/tv-solid/remote/text-measure.ts` now
+creates one context on first use for the whole entry and resets its `font` and
+`letterSpacing` per layout pass, so one component's spacing cannot widen
+another's text. The twelve measurement call sites in `App.tsx`,
+`TitleMetadata.tsx`, `PairingScreen.tsx`, `ProfilesScreen.tsx`,
+`LibraryToolbar.tsx`, `SearchInput.tsx` and `EntryScreens.tsx` use it; measured
+widths are unchanged (same font strings, same returned values). Metrics are not
+cached: the faces load asynchronously, and a width measured before a face is
+ready would be frozen as fallback-font metrics.
+
+`tests/preview/remote-allocations.mjs` counts canvas/context/`measureText` work
+in the served entry and splits canvases that only measured text from those that
+rasterized. One run per phase, HTTPS Chromium 1920×1080, 4× CPU, software WebGL,
+same fixture and design pin as the harness below.
+
+| Allocation counts per phase | Before | After |
+| --- | ---: | ---: |
+| Cold Home mount: canvases | 31 | 16 |
+| Cold Home mount: 2D contexts | 30 | 15 |
+| Cold Home mount: measurement-only canvases | 16 | 1 |
+| Cold Home mount: `measureText` calls | 137 | 137 |
+| 48-key Home (hero + rows): canvases | 8 | 6 |
+| 48-key Home: measurement-only canvases | 2 | 0 |
+| 48-key Home: `measureText` calls | 62 | 62 |
+| 48-key Home (ArrowDown): measurement-only canvases | 2 | 0 |
+
+The `measureText` counts are identical in both versions, so the same labels are
+measured in the same fonts; only the canvas allocation per component is gone.
+The canvases that remain are raster surfaces (poster atlas, billboard blur,
+button-shadow masks, screen backdrops, the renderer's own text raster path) that
+need their own sized pixels.
+
+| HTTPS Chromium, 4× CPU, software WebGL, Home | Before | After |
+| --- | ---: | ---: |
+| Main-thread work per key, median (ms), 2×3 runs | 21.940 / 24.460 | 22.072 / 22.212 |
+| Cold Home readiness, median (ms) | 471.600 / 443.200 | 460.800 / 465.500 |
+| Decoded JavaScript (KiB) | 426.709 | 426.249 |
+
+The two memory-and-navigation runs per version interleave: one "before" sample
+is slower than either "after" sample and the other is faster, so the ms/key
+delta is inside this shared host's run-to-run spread. At 0.065 ms per
+create+measure, 16 removed canvases at Home mount is ~1 ms of the 48-key
+window — below what that metric resolves. The allocation counts are the firm
+result, not a device-speed claim. **SwiftShader/CPU throttling is not
+physical-TV GPU evidence**, and no Tizen, webOS or Vizio device ran this build.
+
+Reproduce with the workspace local HTTPS certificates:
+
+```sh
+npm run build
+node tests/preview/https-static.mjs ../.local-https/certs 18571
+REMOTE_PREVIEW_ORIGIN=https://viptv.local.test:18571 \
+  node --experimental-strip-types tests/preview/remote-allocations.mjs
+REMOTE_PREVIEW_ORIGIN=https://viptv.local.test:18571 PERF_DIST=$PWD/dist \
+  PERF_RUNS=3 PERF_CPU_THROTTLE=4 PERF_GPU=software PERF_WORKLOAD=home \
+  PERF_OUTPUT=/tmp/tv-perf.json node --experimental-strip-types tests/preview/remote-perf.mjs
+```
+
+---
+
 # hls.js off the TV boot path — 2026-11-03
 
 The TV entry imported the vendored Vizio/HLS adapter statically, so hls.js
