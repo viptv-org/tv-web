@@ -1561,6 +1561,12 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
       if (!wasHeroActive) {
         wasHeroActive = true;
         started = performance.now();
+        // Becoming active again — a returned-to Home, a closed menu, a visible
+        // page — is a fresh presentation: the contract's "returning to an
+        // active billboard starts a fresh cycle" rule, applied to the pass.
+        setHeroRotation((current) =>
+          current.shown > 1 ? restartHeroRotation(current) : current,
+        );
         setHeroCycleStart(started);
       }
       const timer = setTimeout(
