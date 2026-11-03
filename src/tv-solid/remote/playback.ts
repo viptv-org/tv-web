@@ -1,7 +1,7 @@
-import { VizioHtml5Adapter } from "../../../vendor/video/src/vizio-html5";
 import { TizenAvplayAdapter } from "../../../vendor/video/src/tizen-avplay";
 import type { Player, PlayerSnapshot } from "../../../vendor/video/src/types";
 import { RemoteTvApi, RemoteError, segment } from "./api";
+import { DeferredPlayer } from "./deferred-player";
 import type {
   Card,
   Lease,
@@ -57,10 +57,17 @@ export class RemotePlayback {
     private publish: (snapshot: PlayerSnapshot) => void,
     private failure: (error: Error) => void,
   ) {
+    // AVPlay is a small SDK shim the platform needs from the first session, so
+    // it stays in the boot graph. The HTML/HLS engine drags in hls.js (1450 KiB
+    // of source, most of the TV entry's largest chunk) and is only reachable
+    // from a session, so `playback.ts` fetches it through `import()` in
+    // `hls-engine.ts` instead of importing it here.
     this.player =
       platform === "tizen" && "webapis" in window
         ? new TizenAvplayAdapter()
-        : new VizioHtml5Adapter(video);
+        : new DeferredPlayer(async () =>
+            (await import("./hls-engine")).createHtmlHlsPlayer(video),
+          );
     this.unsubscribe = this.player.subscribe((snapshot) => {
       const previous = this.lastState;
       this.lastState = snapshot.state;

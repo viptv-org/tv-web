@@ -1,3 +1,47 @@
+# hls.js off the TV boot path — 2026-11-03
+
+The TV entry imported the vendored Vizio/HLS adapter statically, so hls.js
+(1450 KiB of source) was parsed and evaluated before the first frame on every
+Tizen (AVPlay) and webOS boot, even though only an HTML/HLS session evaluates
+it. `src/tv-solid/remote/playback.ts` now fetches that adapter through a
+dynamic `import()` in its platform branch, and the pairing screen fetches the
+QR encoder the same way. Nothing else changed: the AVPlay adapter and the
+player contract stay eager.
+
+| Production `solid.html` entry, eager chunks | Before | After |
+| --- | ---: | ---: |
+| `browser-*.js` (hls.js, qrcode, video adapters) | 654.29 kB | removed from boot |
+| `vizio-html5-*.js` (on demand, fetched by a session) | - | 617.67 kB |
+| `main-*.js` (SolidTV renderer) | 248.00 kB | 248.01 kB |
+| `App-*.js` (`src/tv-solid/remote/App.tsx`) | 170.98 kB | 173.62 kB |
+| `viptv-tokens.generated-*.js` (AVPlay adapter and player contract) | in `browser-*` | 11.61 kB |
+| Preload helper | 1.73 kB | 1.73 kB |
+| **Total eager** | **1075.00 kB** | **434.97 kB** |
+
+`npm run build` reports the same total through the `viptv-remote-boundary`
+plugin, which now defines the first-frame graph explicitly and refuses hls.js or
+qrcode in it.
+
+| HTTPS Chromium, 1920x1080, 4x CPU, software WebGL, Home | Before | After |
+| --- | ---: | ---: |
+| Decoded JavaScript fetched, median (KiB) | 1051.401 | 426.425 |
+| Cold Home readiness, median (ms) | 490.100 | 479.900 |
+| Post-GC JavaScript heap, median (MiB) | 4.986 | 4.388 |
+| Main-thread work per key, median (ms) | 35.006 | 37.075 |
+
+Three sequential runs per version at the same fixture and design pin, using the
+same 48-key Home sequence. All runs had zero long tasks, zero frames over 50ms
+and frame p95 16.7-16.8ms. Readiness moved by 10.2ms on a shared host, which is
+within the spread seen between runs of one version; the JavaScript reduction is
+the firm result. Main-thread work per key is post-readiness interaction work that
+boot weight does not touch, so its 2.1ms difference is not attributed to this
+change. A Vizio-mode session against the HLS fixture still admits `/api/playback`,
+fetches the HLS engine chunk at Play rather than at boot, reaches `currentTime`
+0.58s and reports its first frame. **SwiftShader/CPU throttling is not
+physical-TV GPU evidence**, and no Tizen or webOS device ran this build.
+
+---
+
 # Matched-fixture audit checkpoint — 2026-10-23
 
 Five fresh-context runs compare the previous `c9c1aae` remote wrapper with the
