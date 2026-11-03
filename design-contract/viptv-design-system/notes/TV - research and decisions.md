@@ -30,7 +30,7 @@ What the big TV apps do, why, and what I took:
 
 14. Sources: Play already picks the best match, so the panel is an override; it fills in as add-ons answer instead of blocking.
 
-15. Player (Netflix 2025 test, tvOS 15): no on-screen play/pause (the remote has them); one cluster above a bigger scrubber; audio, subtitles and subtitle size in one sheet you change without pausing; Skip intro appears only when relevant; credits shrink to the corner and a Play next episode button waits — nothing ever plays on its own.
+15. Player (Netflix 2025 test, tvOS 15): no on-screen play/pause (the remote has them); one cluster above a bigger scrubber; audio, subtitles and subtitle size in one sheet you change without pausing; Skip intro appears only when relevant; credits shrink to the corner and a Play next episode button waits — nothing ever plays on its own. (Superseded 2026-10-27 by [PLAY-NEXT-AUTOPLAY-001](../../specs/behavior/next-episode-autoplay.md): at the end of an episode the panel counts down 10 s and plays the next one unless the viewer acts or turns Autoplay next episode off.)
 
 16. Errors offer the next best source first.
 

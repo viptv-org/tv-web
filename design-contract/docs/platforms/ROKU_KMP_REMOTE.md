@@ -1010,3 +1010,65 @@ that Options result. The accepted custom component makes press/repeat event
 payload forwarding explicit. Native Up→controls→track selection and dedicated
 seek confirmation passed. The TV's Options path remains a separate unverified
 platform/input gate, rather than a claimed fix or a replacement of Up navigation.
+
+## Home focus reconstruction and producer preview (2026-10-24)
+
+Source: KMP88bc463cce7df91695b5bd521b2cd91c084ac282 plus the twelve unchanged
+working-tree source hashes recorded by Roku's `home_focus_20261024` reference
+ledger. Six actual TvHomeScreen renders cover hero, landscape and poster focus
+at1920x1080 and1280x720. This records reference measurements, not Roku parity.
+
+The billboard keeps its existing full-frame layout. Browsing hides the top
+navigation over200ms and hides hero actions. The focused summary uses title
+box[96,96,1000,120],48/58 bold, bottom aligned; optional logo[96,96,420,120];
+metadata[96,240]; description[96,290,700,114],26/38, at most3lines. Do not add
+another caption/progress panel absent from TvBrowseSummary. Landscape artwork
+is[760,0,1160,620], with the existing560px horizontal fade and vertical fade
+from y380 to620. Landscape shelf heading y691, art y743,422.4x237.6, gap20;
+poster heading y545, art y597,255.2x382.8, gap16. Preserve server row.card_shape
+and card order, even when row names or IDs disagree with KMP's local policies.
+
+Poster focus adds a sharp supplied poster at[1520,96,280,420],radius12.
+Its soft background requires a producer artwork role matching KMP's70px blur,
+.45 opacity,1920x620 plane and1.2 scale. Until available, leave the background
+neutral and record the missing blur as a parity dependency. Never construct a
+third-party proxy URL, parse provider hosts or blur full images on the render
+thread. Logos require producer-trimmed alpha bounds for exact parity.
+
+Consume the current backend0d8da118 Home row card `view.preview.action` exactly:
+`play` opens the existing fresh viewing-action flow; `details` opens details.
+No row-ID/percentage/subtitle fallback. Landscape preview uses only
+`view.preview.background`, retaining the episode's original tile landscape.
+Null stays absent. Missing/invalid preview is an update-required contract error.
+The current producer supplies bounded complete rows with no continuation;
+remove the dormant Home-to-discover paging adapter rather than invent a cursor.
+Other catalog and Live pagination retain their existing current contracts.
+
+Focus preview waits120ms normally or350ms during repeats less than400ms apart,
+and waits until shelf movement finishes. Retire pending previews on route/profile
+change, drawer/playback entry or Home response replacement. A transient content
+reset cannot select the first card over a restored canonical identity. Refresh
+restores the same row ID and exact card identity/origin; a removed card uses the
+nearest surviving position without reordering. Up/Back returns to the billboard
+and restores navigation; Down resumes the previous shelf item. Detail return
+restores the browsing plane and item. Press/repeat retain native row movement;
+release does not activate. Null art keeps readable text and a neutral surface.
+
+Acceptance ROK-HOME-FOCUS: Continue+details must open details, arbitrary row+play
+must request fresh server authority; tile/preview artwork stay distinct; absent
+preview fails contract validation; late timer after reset cannot render prior
+content; reordered refresh restores identity and preserves new response order;
+removed identity chooses a surviving neighbor; hidden navigation cannot receive
+focus; return restores its opacity; no Home discover request. Compare all six
+reference states on Roku separately. Metadata formatter differences, poster blur,
+logo trim, row loading/error shells and native motion remain explicitly open
+until measured and supported by their owning contracts.
+
+The shared TvCatalogCard artwork uses12px corners and a3px light focus stroke
+inside its unchanged bounds (both poster and landscape), rather than the earlier
+Roku10px/4px extraction. Home rows expose the partially visible trailing tile to
+the right screen edge; the96px safe area anchors the first tile, not a right-edge
+clip. The native custom title component occupies40px followed by a12px gap.
+Collapse hidden message geometry because native Group bounds otherwise include
+its old rectangle and push artwork/captions down. These are renderer corrections
+to the existing KMP shell, not server ordering or catalog decisions.

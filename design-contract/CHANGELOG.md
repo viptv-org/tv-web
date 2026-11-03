@@ -1,5 +1,597 @@
 # Design changes
 
+## 2026-11-02 — A failed first Live request is a failure, not an empty page
+
+[LIVE-EMPTY-001](specs/behavior/live-empty-state.md) records app `1ca77237` on
+app `edge` ([app#541](https://github.com/viptv-org/app/issues/541), [PR
+#544](https://github.com/viptv-org/app/pull/544)): with no page and no request
+open, `liveSpread` answers `LiveSpread.Failed`, so a first Live request that
+fails reads **Could not load Live TV.**, the message the request read
+(**Something went wrong. Try again.** when it carried none), **Try again** and,
+when the viewer may change sources, **Source integrations** — the no-channels
+state's block and metrics instead of its **No channels came back.** The state
+table, LIVE-EMPTY-14 and the parity record carry it, and
+[copy.md](viptv-design-system/copy.md#empty-states) gains the headline.
+LIVE-EMPTY-11 loses **or source chosen**: a Source chip pick is not a filter, so
+switching back to a source that sends nothing reproduces the no-channels state
+LIVE-EMPTY-12 asks for ([app#539](https://github.com/viptv-org/app/issues/539)).
+
+Refs [app#541](https://github.com/viptv-org/app/issues/541),
+[app#539](https://github.com/viptv-org/app/issues/539).
+
+## 2026-11-02 — The phone Watch on TV row, setup and remote surface ship
+
+[components §11](viptv-design-system/components.md#11-tv-remote-phone-watch-on-tv--android-phone-and-tablet)
+and [ACCT-SPLIT-001](specs/behavior/account-and-profile-settings.md) record the
+phone **Watch on TV** row as shipped at app `09fef5c7` (app#486,
+[app#512](https://github.com/viptv-org/app/pull/512)): `SettingsRow.WatchOnTv`
+in the This device group, gated by `watchOnTvAvailable()` to non-television
+Android UI modes, reading **Off** until a TV is paired. The setup flow ships at
+app `04599d57` (app#487, [app#520](https://github.com/viptv-org/app/pull/520))
+and the remote surface — the 44 dp header button, the one-time tip and the
+bottom-sheet remote — ships at app `cc3684a0` on `edge` (app#488,
+[app#536](https://github.com/viptv-org/app/pull/536)). The full **Watch on TV**
+settings page, the error and permission lifecycle (app#489) and the browser
+dialog stay proposed.
+
+Refs [design#80](https://github.com/viptv-org/design/issues/80).
+
+## 2026-11-02 — The phone Live empty state ends on the bottom bar's box
+
+[LIVE-EMPTY-001](specs/behavior/live-empty-state.md) records app `06bc0a96`
+([app#454](https://github.com/viptv-org/app/issues/454),
+[PR #493](https://github.com/viptv-org/app/pull/493)): the shared bottom
+clearance (`LocalBottomClearance`) is the bottom bar's own 80 dp box, so the
+phone no-source block, its actions and the member who line end 28 dp lower than
+the bar-plus-fade band they used to clear. The root applies
+`WindowInsets.safeDrawing` around the page and the bar once, and nothing on the
+page scrolls, so no fade is drawn over the block and the clearance reserves
+neither the fade nor the navigation-bar inset. The P geometry row, the
+LIVE-EMPTY-03 acceptance and the design-system P geometry row match.
+
+Refs [design#75](https://github.com/viptv-org/design/issues/75).
+
+## 2026-11-02 — The Live member who line ships
+
+[LIVE-EMPTY-001](specs/behavior/live-empty-state.md) records app `434d10e2`
+(app `edge`, [app#492](https://github.com/viptv-org/app/pull/492)): the Live
+no-source block decides by `account.role`, so a member account session gets
+**Only the household owner can set up live TV.** and no action while the owner
+and local mode keep **Set up live TV** and **Add-ons** and a paired TV keeps its
+own line. The same rule removes the no-channels **Source integrations**
+secondary for a member. LIVE-EMPTY-05 ships, and the parity record lists the
+member form with what matches instead of among its differences.
+
+Refs [design#74](https://github.com/viptv-org/design/issues/74).
+
+## 2026-11-02 — The phone remote pins its TV's certificate instead of weakening TLS
+
+[AND-038](docs/platforms/ANDROID_DESIGN.md#and-038--android-phone-and-tablet-vizio-remote-2026-11-02)
+and [CORE-003](docs/architecture/SHARED_CORE.md#core-003--vizio-smartcast-control)
+now state the SmartCast transport rule the app implements at `d5f89ea6`
+([app#485](https://github.com/viptv-org/app/issues/485),
+[PR #496](https://github.com/viptv-org/app/pull/496)): Vizio SmartCast TVs
+serve self-signed certificates, so the exact-TV-origin client pins the SHA-256
+fingerprint of the TV's leaf certificate at a successful PIN pairing, seals it
+with the token under the Android Keystore key, and afterwards accepts only that
+certificate for that host and port. A different certificate fails the
+connection and the existing recovery's **Pair again** replaces the pin on the
+next successful pairing; pairing is the trust-establishing step and runs
+unpinned, the first pairing trusts whichever certificate answers at the selected
+address, **Forget** drops the pin with the token while a replacement TV under
+**Change TV** pins its own, and there is no trust-all manager: the pin is stored
+and checked per exact origin, and a self-signed certificate's names are not what
+binds the connection. The ordinary backend and catalog
+transport keep normal certificate validation. The pairing page keeps its copy,
+geometry and auto-submitted four-digit PIN and shows no certificate
+fingerprint, because the TV states none to compare it with
+([components §11](viptv-design-system/components.md#11-tv-remote-phone-watch-on-tv--android-phone-and-tablet),
+[decisions](viptv-design-system/decisions.md#phone-tv-remote-watch-on-tv--proposed-for-android-phone-and-tablet)).
+[AND-039](docs/platforms/ANDROID_DESIGN.md#and-039--phone-remote-reliability-and-responsiveness)
+keeps off-thread transport setup and names that pin instead of "no TLS
+weakening".
+
+Refs [design#76](https://github.com/viptv-org/design/issues/76).
+
+## 2026-11-02 — Household configuration writes are owner-only again
+
+[ACCT-SPLIT-001](specs/behavior/account-and-profile-settings.md) and
+[LIVE-EMPTY-001](specs/behavior/live-empty-state.md) now record backend
+`04bcbfc` ([backend#205](https://github.com/viptv-org/backend/pull/205)): a
+member account session reads the household inventories and checks a shared
+gateway's capacity but cannot write them — the household PIN, add-ons, source
+integrations, connections, matches, gateways and device/session sign-outs answer
+`403 owner_required` ("Only the account owner can change household settings."),
+and `GET /auth/me` reports `capabilities.manage_account` only for the owner.
+Reads stay open to any account session, and password, delete-account, pairing,
+profile and parental-policy routes stay self-service. The Live member who line
+**Only the household owner can set up live TV.** is no longer a parity
+difference.
+
+Refs [design#77](https://github.com/viptv-org/design/issues/77).
+
+## 2026-11-02 — The Live no-source artwork is the shipped CC0 photograph
+
+[LIVE-EMPTY-001](specs/behavior/live-empty-state.md#artwork) and
+[components.md §13](viptv-design-system/components.md#13-empty-states-and-artwork)
+now specify one artwork: two crops of Mario Klassen's CC0 photograph of the
+Volksparkstadion, Hamburg, 1920 × 1080 for W and T and 1080 × 1440 for P,
+copied into `assets/photography/` byte for byte from what viptv-org/app
+packages since `2d7949b8` ([app#349](https://github.com/viptv-org/app/issues/349)),
+with the photographer, both source URLs, the CC0 licence and the file hashes
+recorded beside them and in `assets/ASSET_MANIFEST.md`. The reading scrim is
+drawn in code at the stops the app ships. The two hand-authored SVGs are retired
+from the contract and the inventory. Copy, layout and state selection are
+unchanged.
+
+Refs [design#70](https://github.com/viptv-org/design/issues/70).
+
+## 2026-11-02 — The phone Vizio remote is specified for the KMP app
+
+AND-038 now brings the phone Vizio remote into the KMP app on Android phone
+and tablet, superseding AND-042's exclusion of it. The **Watch on TV** opt-in
+row returns to Settings › This device, setup is intro → bounded LAN search on
+both SmartCast ports (7345/9000) → manual IPv4 → four-digit auto-submitted PIN
+→ connected, and one paired TV shows the 44 dp header remote button next to the
+profile entry on Discover, Live and My List with the one-time "Your TV remote"
+tip. The remote sheet keeps the D-pad/OK, Back, Play/Pause, volume and swipe
+controls, an exact-TV-origin HTTPS transport with Android Keystore tokens, the
+eight-command bounded queue with no replay on return, and offline, permission
+and rejected-PIN recoveries. Android TV, iOS, desktop and web do not adopt it.
+
+Refs [design#67](https://github.com/viptv-org/design/issues/67).
+
+## 2026-11-02 — The Live empty states are implemented, with a parity record of what differs
+
+[LIVE-EMPTY-001](specs/behavior/live-empty-state.md) is **implemented**, not
+device-verified: both states ship in viptv-org/app at `86df58c1`
+([app#304](https://github.com/viptv-org/app/issues/304),
+[app#349](https://github.com/viptv-org/app/issues/349),
+[app#376](https://github.com/viptv-org/app/issues/376)), and the spec carries
+the per-state record [DESIGN_SYNC](docs/process/DESIGN_SYNC.md) asks for:
+contract, implementation, functional, visual and device evidence, and
+disposition. Matching the app: the state order, the empty page without a chip,
+preview, guide or list, the copy, the action forms for local mode, the account
+owner and a paired TV, six skeletons with only the Source chip while loading,
+and the no-channels reason with **Try again** and **Source integrations**.
+Differing: the app ships two credited CC0 photographs with the scrim in code
+instead of the SVG illustration ([design#70](https://github.com/viptv-org/design/issues/70));
+a member account session is offered the setup actions and refused only at the
+source write ([viptv-org/app#484](https://github.com/viptv-org/app/issues/484));
+a chosen source is not a filter, so its zero channels show the no-channels state;
+and a failed first request shows no channels with no page in hand. The
+no-channels block offsets and skeleton bars are the app's own padding and bar
+widths, and the copy table drops its proposed tags.
+
+Refs [design#69](https://github.com/viptv-org/design/issues/69).
+
+## 2026-11-02 — The phone Live no-source layout is a top photo band
+
+[LIVE-EMPTY-001](specs/behavior/live-empty-state.md)'s phone geometry now
+matches what viptv-org/app ships at `86df58c1`
+([app#376](https://github.com/viptv-org/app/issues/376)): under 640 dp the tall
+artwork is a full-bleed band under the header, cropped bottom-anchored and
+scrimmed into `bg` at its bottom edge, and the eyebrow, headline, body and
+full-width actions sit below it on the 16 dp gutter. The band takes whatever
+the copy and the shared bottom clearance leave — at most about 55 % of the page
+area and about a third on a 411 × 914 dp phone — so it shrinks first on short
+screens and the copy and buttons never sit under the bottom bar. The who line
+still takes the action place. The design-system P geometry row and
+LIVE-EMPTY-03 match.
+
+Refs [design#54](https://github.com/viptv-org/design/issues/54).
+
+## 2026-11-02 — The controlled next episode plays the best match on either Default source
+
+[PLAY-NEXT-AUTOPLAY-001](specs/behavior/next-episode-autoplay.md) now says how
+the next episode starts, from app `f19e0dc6`, `9e236f52` and `5e4ebbc7`: Next,
+the TV pill, the end panel's primary action and the countdown play its best
+match whatever the profile's **Default source** says, from the source prepared
+during the last three minutes when there is one, otherwise from the series'
+remembered source or from the best match at the end of discovery. The picker
+plays nothing when no row survives the hard filters, a ranking request fails or
+three starts fail. Picking any other episode still asks.
+
+[SRC-BEST-MATCH-001](specs/behavior/source-best-match.md) records the shipped
+[remembered source](specs/behavior/source-best-match.md#remembered-source),
+names the two starts that **Always ask** now allows, and moves fallback with its
+notices from proposed to shipped (app `805b7c0f`, [app#411](https://github.com/viptv-org/app/issues/411)).
+[Playback capabilities](docs/playback/PLAYBACK_CAPABILITIES.md) names those
+starts instead of treating Best match as the only exception.
+
+Refs [design#62](https://github.com/viptv-org/design/issues/62).
+
+## 2026-11-02 — The Episode # chip ends the season strip
+
+[AND-EPISODE-JUMP-001](specs/behavior/episode-number-jump.md) now places the
+`Episode #` chip at the end of the season strip, after every season badge, not
+beside the selected badge. The TV Details header is one focus run: Right walks
+the season badges and then reaches the chip, and Down from any badge enters the
+episode row, so the viewer keeps stepping seasons and the chip never interrupts
+that. The component and decision notes and the TV-044 pill row carry the same
+order. viptv-org/app ships it at `c8d541ff`
+([app#409](https://github.com/viptv-org/app/issues/409)); the reference screen
+exports predate the chip and need no re-export.
+
+Refs [design#63](https://github.com/viptv-org/design/issues/63).
+
+## 2026-11-02 — The app updates contract is the shipped Android flow
+
+[app-updates.md](specs/behavior/app-updates.md) now describes what
+viptv-org/app ships at `62e0c949`: the prompt is **Update ready**, **Update
+required** or **Couldn't update VIPTV** with **Install** · **Later**, a banner on
+phone and tablet and a corner card on TV; the About status lines and last-check
+line are the app's; the build downloads quietly before the prompt and there is
+no download dialog; checks run at most once an hour; and a required update comes
+back on every return to the app. The settings table no longer names GitHub
+releases as the source: updates come from the signed-in server's
+`/updates/android/update.json` and the APK it names.
+
+Refs [design#55](https://github.com/viptv-org/design/issues/55).
+
+## 2026-11-02 — Best match starts as soon as it meets every preference
+
+[SRC-BEST-MATCH-001](specs/behavior/source-best-match.md) describes one start
+rule: the first Best matches row starts as soon as a ranking reports that it
+fully meets the profile's quality, audio, HDR and delivery preferences, and at
+the end of discovery otherwise. The countdown, its hard deadline and its
+Play now / Cancel controls, with the acceptance scenarios that assumed them,
+make way for that rule. The status header separates what ships in app
+`62e0c949`, backend `e1ec02d` and core `985a23f` — the ranking order and hard
+filters without decode class and series memory, the Best matches and All sources
+groups with their headers and marker, progressive ranking, and the early start —
+from what is still proposed: decode class, series memory and device capability
+([core#32](https://github.com/viptv-org/core/issues/32)), and fallback with its
+notices ([app#411](https://github.com/viptv-org/app/issues/411)). A start stops
+on a pick, a close, leaving the screen or a drag on the list; moving focus in
+the list does not stop it. The marker and the row that starts are the same row.
+`docs/playback/PLAYBACK_CAPABILITIES.md` names the automatic start.
+
+Refs [design#56](https://github.com/viptv-org/design/issues/56).
+
+## 2026-11-01 — The brand rasters are checked against the vector master
+
+`scripts/validate.py` now regenerates `assets/brand/app-icon/` and
+`brand-mark-tile.svg` from `assets/brand/viptv-v.svg` on every run and fails when
+a committed file no longer matches: the SVGs byte for byte, the two PNGs within
+resampling tolerance, so a Pillow other than the pin fails only on a changed
+mark. A stale icon, a hand-edited layer or a raster left behind by a master
+change can no longer pass validation. The committed rasters and the app's copies
+of them — the 1024 px square and the TV banner — already come from the master
+and are unchanged.
+
+Refs [design#49](https://github.com/viptv-org/design/issues/49).
+
+## 2026-10-30 — One vector master for the branded V
+
+`assets/brand/viptv-v.svg` is the VIPTV V for every surface: the branded V of
+the Roku wordmark as one closed path, traced from
+`assets/roku/roku/images/viptv-mark.png` and checked by
+`assets/brand/tools/trace_v.py`. It reproduces the raster at a mean absolute
+coverage error of 0.004 of a pixel and keeps the mark's own geometry: the flat
+top cut, the two outer edges, each arm's inner edge bending once on the way to
+the notch apex, and a bottom tip rounded tangent to both outer edges.
+
+`assets/brand/tools/make_app_icon.py` generates every variant from that path:
+
+- **In-app mark tile** — `assets/brand/brand-mark-tile.svg`: accent ground at
+  radius 30 (`radius.app-mark`), the V in the app's background colour.
+- **Launcher icons** — the 72-unit square and its 1024 px render, the adaptive
+  foreground for the 72-unit visible area and the monochrome layer, white on
+  black as before.
+- **TV banner** — 320 × 180, white "VIPTV" on black; both V's are the master at
+  the cap height and "IPT" stay in Bricolage Grotesque ExtraBold.
+
+So the icon, the tile and the banner stop being a typed font V; the app's
+`BrandMark`, navigation logos and update screen follow in
+[app#303](https://github.com/viptv-org/app/issues/303). `docs/branding.md` and
+the asset manifest name the vector master as the source for every surface, with
+the trace method, geometry, pinned tools and hashes. Refs
+[design#46](https://github.com/viptv-org/design/issues/46).
+
+## 2026-10-30 — Live with no source gets a designed first run
+
+[LIVE-EMPTY-001](specs/behavior/live-empty-state.md) replaces the Live page's
+single empty line with two states. With no live source configured the page is a
+broadcast frame: a full-bleed night-stadium illustration, an eyebrow, a headline,
+a body line naming both routes, and the action for whoever is signed in. With a
+source configured that returns no channels, the page keeps its Source chip and
+shows the reason and a retry, with skeleton rows while the request is open. The
+filter row disappears when there is nothing to filter. Nothing is invented as a
+destination: the primary opens the existing Settings › Source integrations, the
+secondary Settings › Add-ons, and a member or a paired TV gets a line naming who
+can act instead of an action the server answers `403` to.
+
+The artwork is two hand-authored SVGs in `assets/illustrations/`, drawn only in
+the tokens' colours and only from paths, rectangles, circles, ellipses and
+gradients, with the reading scrim baked in: a 1920 × 1080 wide scene and a
+1080 × 1920 tall one, so a phone gets its own composition instead of a sliver of
+the wide one. `copy.md` gains four rows and retires three app strings;
+`components.md` §13 records how empty states and artwork work on every layout;
+`decisions.md` records the two states, the chip rule, the three who-can-act
+forms and the missing free-add-on directory.
+
+Refs [design#45](https://github.com/viptv-org/design/issues/45).
+
+## 2026-10-30 — Settings split into Account, Profile, Playback and This device
+
+[ACCT-SPLIT-001](specs/behavior/account-and-profile-settings.md) separates what
+belongs to the household from what belongs to one viewer, and rebuilds the
+Account page around it. Settings keeps one shell with four labelled groups in
+this order on every platform: **Profile** (Profile · Linked services · Parental
+controls · Import from Stremio), **Playback** (Playback · Subtitles & audio),
+**This device** (Display on TV · Watch on TV on phone and tablet · About · Help)
+and **Account** (Account · Password · Household PIN · Devices & sessions · Add a
+device · Add-ons · Source integrations · Sign out · Delete account).
+
+**Profile** becomes a real page: name, avatar, kids flag, maturity limit,
+approved titles, profile lock, language (the profile's audio and subtitle
+languages, opening the one editor) and delete profile. **Account** becomes the
+household's own page: read-only identity (display name, `@username`, Owner or
+Member), password, household PIN, devices and sessions, Add a device, add-ons,
+source integrations, sign out and delete account.
+
+Three facts the split has to live with: there is **no sign-in email** (an account
+is a username, a display name and a password), **Simkl is per profile** and
+becomes Profile › Linked services, and the backend has **no route to change a
+password or delete an account**, so those two pages are specified as proposed and
+stay absent until the routes exist. The Account group is visible to everyone
+signed in; a TV device session cannot manage the account, so those rows are
+disabled with "Manage this from a signed-in phone, computer or the web
+dashboard." rather than hidden.
+
+`copy.md` gains the row labels, the group names, the identity, household PIN,
+devices, change-password and delete-account strings and four dialog rows;
+`components.md` §5 the group labels and their geometry on each layout and §7 the
+TV rail's labels with **Profile** and **Switch profile**; `decisions.md` the
+settled decision. The phone, tablet, desktop and web boards keep their geometry
+and lose their flat row order, `W3Account`'s sidebar is retitled **Settings**, and
+`Tv3SetAbout` / `Tv3SignOut` keep their geometry while the rail gains the groups.
+The boards' Recovery codes pages cannot be built: no route lists or regenerates
+codes.
+
+Refs [design#40](https://github.com/viptv-org/design/issues/40).
+
+## 2026-10-29 — Proposed: motion for pointer and touch layouts
+
+[MOTION-001](specs/behavior/motion.md) proposes the motion phone, tablet, the
+desktop app and web get, and adds none of it to TV. One scale: 120 ms for what
+the pointer's own movement causes (hover fills, press scales, a chip filling, a
+carousel dot), 200 ms for content arriving in place (a list item, a hero slide,
+a page crossfade, a popover or dialog, player controls), 200 ms for every exit,
+300 ms for a sheet or drawer entering from its own edge, and 30 ms between two
+list items in one row; easing `cubic-bezier(0.2, 0, 0, 1)` in and
+`cubic-bezier(0.3, 0, 1, 1)` out. Pages crossfade in the page area only; cards
+fade their hover treatment and scale 0.98 under a press; the hero crossfades
+art, logo and text together and never resizes; overlays arrive from their edge
+and their content is usable from the first frame; a page's first load staggers
+its items 8 dp up, eight per row, while a refresh, paging and a restored page
+animate nothing; the Continue Watching preview crossfades the hero; the pull
+indicator keeps the library's timing as the one direct-manipulation exception;
+and the player's control layer fades as one layer with the video frame
+untouched.
+
+Every duration is read through the app's existing `motionSpec()`, so reduce
+motion snaps all of it in the frame of the state change; progress bars,
+spinners, the skeleton shimmer, the hero rotation and the Up Next number keep
+running, and the pull indicator holds a still arc. No copy is added.
+
+`components.md` gains §12 Motion (the scale and a per-component table) and
+motion notes on chips, cards, overlays, pull-to-refresh and player controls;
+`tokens.json` gains `motion.response`, `motion.arrive`, `motion.leave`,
+`motion.panel`, `motion.stagger-step`, `motion.easing-standard` and
+`motion.easing-exit`, with `tokens.css` and `tokens.ts` regenerated;
+`pull-to-refresh.md` gains the reduced-motion rule and loses its unverified
+spinner unknown; `decisions.md` records the decision. No board is re-exported:
+this contract is timing, not geometry.
+
+Refs [design#39](https://github.com/viptv-org/design/issues/39).
+
+## 2026-10-29 — Caught-up Continue Watching labels
+
+The app's caught-up Continue Watching card states what the app already draws (app#149, app#163):
+**`S3 E4 · Watched`** under the title on phone, tablet, desktop and web, then **`S3 E5 · Nov 4`**, or
+**`S3 E5 coming soon`** while the next episode has no air date; with nothing announced, the first
+label alone. TV keeps **`S3 E4`** and its corner check and adds the awaited episode to the same meta
+line (**`S3 E4  S3 E5 · Nov 4`**), so the one-line caption box and the shelf geometry stay as they
+were. A caught-up card opens the show's Details rather than the source picker for an episode already
+watched.
+
+`copy.md` gains the labels, the undated wording (no separator: **`S3 E5 coming soon`**), the
+month-and-day air date in the device's locale without the year, and the accessibility reading;
+`components.md` §6 the card they belong to.
+
+Refs [app#132](https://github.com/viptv-org/app/issues/132),
+[design#36](https://github.com/viptv-org/design/issues/36).
+
+## 2026-10-28 — TV filters are the same chips and the right panel
+
+[FILTER-CHIP-001](viptv-design-system/components.md#2-chips-and-segmented-controls)
+now records TV as implemented: app#121 (PR
+[app#148](https://github.com/viptv-org/app/pull/148), `90d6e47`) moved Browse /
+Discover / Movies / Series / Anime, My List and the source picker onto the same
+one-row dropdown chips as phone, tablet, desktop and web. Browse reads
+**Catalog: Popular · Sort: Required · Genre: Any · Languages: Any · Free only ·
+Search: Any**, My List **List: My List · Type: All · Sort by: Last watched ·
+Status: Any · Genre: Any**, the source picker **Quality: All · Source: All
+sources**, and the Catalog + Filters chips, the applied-chip strip and the
+"Show results" full-page surface are gone. The only TV-specific part is the
+container of the list: the right panel, 760 × scale wide over the 0.6 scrim with
+the chip's title as its heading and 72 × scale rows, focus opening on the
+current option. A pick applies at once — a single choice closes the panel, a
+multiple stays open — and Back, Escape, the scrim or a pick close only the
+panel, returning the remote to the chip that opened it. Chips are focus stops in
+one row: the remote enters on the first chip, Left/Right walk it, and Clear
+resets the facets and leaves the remote on the row.
+
+`components.md` §2 gains the TV reading of the pattern and its chip geometry,
+§5 the panel's rows and focus, §8 the container and its close rules, and the
+implemented contracts name `BrowseFilterBar` / `LibraryFilterBar` /
+`SourceFilters`, `LocalTvScale` and `TvFilterBarTest`. The retired TV filter
+boards are marked superseded beside the desktop and phone ones: `Tv3Movies` and
+`Tv3MoviesCatalogs` for the Catalog + Filters chips and applied strip,
+`Tv3MoviesFilters` and `Tv3MoviesFilterText` for the full-page surface, and
+`Tv3MyList` for its type segments and Sort pill. No board is re-exported, and
+`decisions.md`'s 2026-10-19 TV filter decision carries the supersession.
+
+Refs [app#121](https://github.com/viptv-org/app/issues/121),
+[design#34](https://github.com/viptv-org/design/issues/34).
+
+## 2026-10-28 — Proposed: the Android Updating screen and its copy
+
+[AND-APP-UPDATE-001](specs/behavior/app-updates.md#updating-screen) records what
+app#139 shipped (PR [app#145](https://github.com/viptv-org/app/pull/145),
+`81cf5ae`) while the spec stays **proposed**: choosing **Install** now covers
+the app with one full-screen Updating screen until Android has replaced the
+process. It shows **Updating VIPTV to [version]…**, the write progress as a bar
+with **"[N]%"**, becomes indeterminate behind Android's confirmation, carries
+the install-permission step (**Allow updates**, **Open settings** or Fire TV's
+**Try again**, **Later**) on the same cover instead of the prompt's dialog, and
+makes Back do nothing while the session commits. An install Android rejects
+returns to the prompt as **Couldn't update VIPTV** · **Android didn't install
+the update.** · **Try again** · **Later**. Where the app can reopen itself it
+does, and confirms **Updated to [version]** at the bottom for six seconds.
+`copy.md` gains the strings, `components.md` §8 the cover and §9 the
+confirmation bar, and `decisions.md` the entry.
+
+No canvas board shows the screen (app `docs/DESIGN_GAPS.md` GAP-064 and
+GAP-065), so the recorded geometry is the implementation's, unmeasured against
+a board, and the section says so. The contract is retitled **Android in-app
+updates** and its source corrected to what the app actually reads — the
+signed-in server's `<server origin>/updates/android/update.json` feed (app#64) —
+with GitHub Releases named as the planned future source (owner decision
+2026-10-27) and acceptance for a missing, malformed and rejected feed. The
+spec's permission step keeps its earlier wording honest by moving the copy to
+the screen, and Back on the permission step is still the page's Back rather
+than Later ([app#146](https://github.com/viptv-org/app/issues/146)). Refs
+[app#139](https://github.com/viptv-org/app/issues/139),
+[design#32](https://github.com/viptv-org/design/issues/32).
+
+## 2026-10-28 — The dropdown chip and its list are the one filter pattern
+
+[FILTER-CHIP-001](viptv-design-system/components.md#2-chips-and-segmented-controls)
+records the rule the owner set on 2026-10-27 and the implementation in
+app#117 (PR [app#130](https://github.com/viptv-org/app/pull/130), open while
+this entry lands). Browse / Discover / Movies / Series / Anime, My List and
+the source picker filter through one horizontal, scrolling row of dropdown
+chips at the top of the page: the catalog or list chip first, a group divider,
+one chip per facet, and a "Clear" chip at the end while anything is set. Each
+chip opens the shared choice list — the anchored popover on desktop, web and
+tablet, the bottom sheet on a phone — which adds a search field past 8 rows,
+ticks checkboxes and respects the provider's cap for a multiple choice, and
+applies a text filter on Enter or Done. A chip is filled while its value
+differs from the page default. Picking applies at once: no "Filters" toggle,
+no second panel and no Apply or "Show results" button. A set of 2–3 options,
+an on/off filter and a text filter are all that same chip.
+
+This retires the phone "Filters" toggle and applied-chip strip, the My List
+filter sheet and segmented type chips, the source picker's chip rows, the
+`W3Browse` filter rail, and the app#57 / app#59 segments-or-dropdown threshold.
+**TV is out of scope for that PR:** it keeps the Catalog + Filters chips and
+the "Show results" surface until [app#121](https://github.com/viptv-org/app/issues/121).
+`components.md` §2 gains the rules, §5 the list content and §8 the containers;
+`copy.md` gains the chip and list strings; the implemented component contracts
+record `FilterBar.kt` / `SearchableSelect.kt` and the `FilterPatternScanTest`
+that keeps the retired surfaces gone. No board is re-exported yet, and the
+canvas frames that draw the retired filter forms need one.
+
+Refs [app#117](https://github.com/viptv-org/app/issues/117), [design#30](https://github.com/viptv-org/design/issues/30).
+
+## 2026-10-27 — Proposed: Phone and tablet pull-to-refresh
+
+[REFRESH-PULL-001](specs/behavior/pull-to-refresh.md) records what the KMP
+app shipped in app#35 (`b55f942`), with the My List rule from app#74
+(`3aa4a3e`). On phone and tablet layouts, pulling down at the very top of
+Home, My List, History or Details shows the Material 3 indicator and reloads
+the page at once. On My List the very top means the collapsing header is
+fully expanded. A pull released before the threshold does nothing. The pull
+skips the revision check and rebuilds Home even when nothing changed. It
+otherwise follows HOME-ADDON-001's quiet rules: no cover, no scroll reset, and
+a failure keeps the shown data with no error. An expired session goes to
+sign-in as usual. TV, the desktop app and the browser have no gesture. The source
+picker, Browse, Calendar, Live, Search and Settings have none either, because
+their loaders empty the page first. There is no copy.
+
+The indicator is the Material default: a `color.text.secondary` arc on a
+`color.surface.2` disc. That makes it the one non-accent spinner, an exception
+recorded against the Spinner rule (`components.md` §3) and the README accent
+principle. `components.md` §3 and §9, `copy.md`, the README, HOME-ADDON-001
+and phone research note 8 ("skeletons not spinners", which covers first loads
+only) gain pointers. No board is superseded. Owner request 2026-10-26
+([app#1](https://github.com/viptv-org/app/issues/1),
+[design#23](https://github.com/viptv-org/design/issues/23)). There is no
+device evidence yet, and no canvas board shows the indicator.
+
+## 2026-10-27 — Proposed: Wider desktop/web source drawer and no best-match hint
+
+[SRC-DRAWER-001](specs/behavior/source-drawer.md) records what the KMP app
+shipped in app#86 (`f80aa91`). The desktop and web source drawer is now
+min(720, 55 % of the window) wide, never narrower than 460; at 1440 it is 720.
+Other desktop drawers, the tablet drawer, the phone sheet and the TV panel are
+unchanged. On web, the drawer opened from a title's Details dialog now stacks
+over that dialog behind its 0.55 scrim. Focus starts on its ×, and Escape, the
+× or a scrim click close only the drawer and return to the unchanged dialog.
+The hint "Play always starts the best match. Change … in Settings › Playback."
+is removed on every layout. TV keeps its status line only while add-ons
+answer ("Checking add-ons · N sources so far") or a stream opens ("Opening
+stream…"). `components.md` §8, `copy.md` and the README overview are amended.
+The `D3Sources`, `D3SourcesEmpty`, `D3SourcesTorrent`, `CmpDesk3`, `M3Sources`,
+`Tv3Sources` and `Tv3SourcesLoading` boards are listed as superseded until the
+canvas re-exports them. Owner decision 2026-10-27
+([app#60](https://github.com/viptv-org/app/issues/60),
+[design#24](https://github.com/viptv-org/design/issues/24)). No device
+evidence yet, and a board for the drawer over the web Details dialog is still
+needed.
+
+## 2026-10-27 — Proposed: Next-episode autoplay countdown and its setting
+
+[PLAY-NEXT-AUTOPLAY-001](specs/behavior/next-episode-autoplay.md) records
+what the KMP app shipped in app#48 and app#77. When a series episode ends, the
+next-episode panel opens over the last frame. Its primary action counts down
+10 seconds ("Next episode in 9", with a ring that empties; reduced motion keeps
+only the number) and then plays the next episode. Any viewer action cancels it
+for that end: the secondary action, Back/Escape, a seek, or any key or pointer
+press. Finales, movies and live channels never count down. Settings › Playback
+gains **Autoplay next episode**, on by default and stored per device because
+the profile preference API has no field for it. The TV footnote reads "Starts
+automatically. Press any button to cancel." while counting and "Nothing plays
+on its own." otherwise.
+
+This resolves the conflict between the Roku contract, AND-037 and
+`decisions.md` #1 (a countdown) and the TV, phone and desktop boards ("Nothing
+plays on its own"). The Roku baseline stays frozen and AND-037 is marked
+superseded. Decision #1, the Up Next component, copy, the `up-next-countdown`
+token (now 10000ms) and the research notes are amended. "Nothing ever plays on its
+own" is retired from the `Next episode button` setting description. Owner
+decision 2026-10-27 ([app#65](https://github.com/viptv-org/app/issues/65),
+[design#26](https://github.com/viptv-org/design/issues/26)). Canvas boards for
+the countdown and the setting row are still needed.
+
+## 2026-10-27 — Black and white V app icon and TV banner master
+
+`assets/brand/app-icon/` is the square app-icon and TV-banner master for
+Android, Android TV and Fire TV: a white Bricolage Grotesque ExtraBold V on
+black, an adaptive-icon foreground and monochrome layer, and a 320×180 banner
+(the white "VIPTV" wordmark on black). Roku branding is unchanged. `assets/brand/tools/make_app_icon.py` generates it
+reproducibly; provenance is in
+[the asset manifest](assets/ASSET_MANIFEST.md#app-icon-and-tv-banner-master).
+It replaces the amber V the KMP app shipped. Owner decision 2026-10-27
+([design#21](https://github.com/viptv-org/design/issues/21)).
+
+## 2026-10-26 — Proposed: Best matches source group, ranked as sources arrive
+
+[SRC-BEST-MATCH-001](specs/behavior/source-best-match.md#source-groups-best-matches-and-all-sources)
+now groups the source list in both Best match and Always ask: a **Best
+matches** group with the top five rows that pass the hard filters, then **All
+sources** in ranking order. Rows are ranked and grouped as providers answer
+instead of being shown in arrival order and reordered at the end; re-ranking
+keeps TV focus on the same source and the phone scroll anchor in place once the
+viewer has navigated. The shared ranking supplies membership and the marker;
+headers are non-focusable headings (copy in `copy.md`).
+Best match autoplay is unchanged. Owner request 2026-10-26
+([design#20](https://github.com/viptv-org/design/issues/20)); header boards
+are still needed.
+
 ## 2026-10-22 — KMP subtitle mode and vertical TV Subtitles & audio
 
 PLAY-SUBTITLE-MODE-001 is adopted by the KMP app: **Subtitles** offers Always /

@@ -6,13 +6,36 @@ These are the exact strings used on the screens. Text in `[brackets]` is a place
 
 - **My List** is the saved-titles list, everywhere (the nav tab, page title, menu item and toasts). Do not use "Library" or "Watchlist".
 - **Continue Watching** is the in-progress list: the second segment of My List, and the Home shelf ("Continue watching" as a shelf heading).
-- **Watch on TV** is the pairing / remote feature (the desktop app). The rail item is "On TV".
+- **Watch on TV** is the phone-to-TV remote, proposed for Android phone and tablet ([AND-038](../docs/platforms/ANDROID_DESIGN.md#and-038--android-phone-and-tablet-vizio-remote-2026-11-02)); it is not built yet. No layout has an **On TV** rail item or a Settings row for it today; a TV signs in with **Settings › Account › Add a device** (`components.md` §11 keeps the design).
 - Search placeholder: **"Search movies and series"** (desktop and web show no keyboard-shortcut hint).
 - Android TV native input: **"Results"**, **"Done"**, **"Unlock"**, **"Cancel"**. The device owns IME action labels; the app shows no custom keyboard or jump-to-results hint.
 - Android TV episode jump (AND-EPISODE-JUMP-001): chip **"Episode #"**; dialog **"Jump to episode"**; field **"Episode number"**; actions **"Go"**, **"Cancel"**; invalid input **"Episode not found in this season."**
 - Android completed episode (AND-EPISODE-WATCHED-001): visible and accessible badge **"Watched"**.
 
+Continue Watching card, caught up (a series the profile has finished as far as it is released):
+
+- Phone, tablet, desktop, web: **`S3 E4 · Watched`** under the title, then **`S3 E5 · Nov 4`** on its own line; **`S3 E5 coming soon`** while the next episode has no air date. With nothing announced: **`S3 E4 · Watched`** alone.
+- TV: **`S3 E4`** then **`S3 E5 · Nov 4`** (or **`S3 E5 coming soon`**) on the card's one meta line, the corner check saying watched. With nothing announced: **`S3 E4`** and the check.
+- An episode with no season reads **`E4`**. The air date is the month and day, in the device's locale and never the year (**`4 nov.`** in French).
+- Spoken as drawn: "Show, S3 E4 · Watched, S3 E5 · Nov 4" on phone, tablet, desktop and web; "Show, S3 E4, Watched, S3 E5 · Nov 4" on TV.
+
 Responsive player picture mode (WEB-PLAYER-FIT-001): visible toggle **"Fit"** / **"Fill"**; accessible actions **"Fill video"** / **"Fit video"**.
+
+Next-episode end panel (PLAY-NEXT-AUTOPLAY-001):
+- TV: eyebrow **"Next episode"**; primary **"Next episode in [N]"** while counting, otherwise **"Play next episode"**; secondary **"Keep watching credits"**; caption **"[Series] · Credits"**.
+- TV footnote: **"Starts automatically. Press any button to cancel."** while counting; **"Nothing plays on its own."** with the setting off or after a cancel.
+- Phone, desktop and web: eyebrow **"Up next"**; primary **"Next episode in [N]"** while counting, otherwise **"Next episode"**; secondary **"Watch credits"**. No footnote.
+- Settings › Playback: **"Autoplay next episode"**, described as **"Plays the next episode after a 10-second countdown. Applies to this device."** The phone group heading is **"Next episode"**. The `Next episode button` row reads **"Shows during the credits"**, without "Nothing ever plays on its own".
+
+Source groups (proposed, SRC-BEST-MATCH-001): source list group headers **"Best matches"** and **"All sources"**, displayed uppercase as group labels and announced as headings. The row marker stays **"Best match"**.
+
+Source picker status (proposed, [SRC-DRAWER-001](../specs/behavior/source-drawer.md#no-best-match-hint)): no layout shows a hint about how Play picks a source. **"Play always starts the best match. Change … in Settings › Playback."** is retired on phone, tablet, desktop/web and TV. The TV status line under the list reads **"Finding sources"** while nothing has arrived, **"Still checking sources"** once sources have arrived but discovery is still in flight, and **"Opening stream…"** (or the current opening stage) while a stream opens. It is hidden otherwise.
+
+Pull-to-refresh (proposed, [REFRESH-PULL-001](../specs/behavior/pull-to-refresh.md#copy)): no copy. The indicator has no label, and no toast or error reports the result. An expired session shows the existing **"Session expired. Sign in again."** on sign-in.
+
+App update screens (proposed, [AND-APP-UPDATE-001](../specs/behavior/app-updates.md#updating-screen)): choosing **Install** covers the app with the Updating screen. Title **"Updating VIPTV to [versionName]…"**; while the APK is written into Android's installer session the body reads **"Writing the update. Android asks you to confirm before it installs."** and the progress reads **"[N]%"**; while Android's confirmation is up the body reads **"Confirm the update in the dialog Android is showing."** and the bar is indeterminate. The line under it reads **"VIPTV restarts by itself when the update is installed."**, or **"VIPTV closes when the update is installed. Open it again to finish."** where the app cannot reopen itself. The permission step is the same screen: **"Allow updates"**, **"Allow VIPTV to install apps in the screen that opens, then come back to finish the update."**, **"The update continues by itself when you come back."**, **"Open settings"** · **"Later"** (Fire TV without that screen: the settings path and **"Try again"** · **"Later"**). An install Android rejects comes back on the prompt as **"Couldn't update VIPTV"**, **"Android didn't install the update."**, **"Try again"** · **"Later"**. After the relaunch **"Updated to [versionName]"** sits at the bottom for six seconds.
+
+Filter bar and chip lists (FILTER-CHIP-001, `components.md` §2): a chip reads **"[Title]: [value]"** — "Genre: Any", "Genre: Comedy", "Sort: Popular", "Type: All", "Quality: All", "Source: All sources", "Catalog: Popular" — and an unset required chip reads **"[Title]: Required"**. The row ends with **"Clear"** (an × icon and the word) while any filter is set. A list's search field is **"Search [title]"** ("Search genre", "Search catalogs", "Search lists", "Search sources") and a text filter's field is **"Enter [title]"**; pointer layouts add **"Press Enter to apply"**. Rows read **"Current"** on a single choice's pick, **"· unavailable"** on an option that cannot be picked, and the clearing row is **"Any"**, or the control's own **"All"** / **"All sources"**. An empty search says **"No matches for [text]"**. The sheet's accessible close label is "Close".
 
 ## Empty states
 
@@ -24,6 +47,11 @@ Responsive player picture mode (WEB-PLAYER-FIT-001): visible toggle **"Fit"** / 
 | Discover, required filter | Choose the required filters to browse this catalog. |
 | Discover, no titles | No titles yet |
 | Search, no results | No matching titles |
+| Live, no source (LIVE-EMPTY-001) | Eyebrow **LIVE TV** · **Live TV isn't set up yet.** · **Add an IPTV connection with Xtream or M3U, or install a live add-on. Channels, the guide and favourites appear here.** · **Set up live TV** · **Add-ons** |
+| Live, no source, member (LIVE-EMPTY-001) | **Only the household owner can set up live TV.** |
+| Live, no source, paired TV (LIVE-EMPTY-001) | **Manage live TV from a signed-in phone, computer or the web dashboard.** |
+| Live, no channels (LIVE-EMPTY-001) | **No channels came back.** · the server's own human reason when it sent one, otherwise **This source is set up, but it isn't sending channels.** · **Try again** · **Source integrations** |
+| Live, first request failed (LIVE-EMPTY-001) | **Could not load Live TV.** · the message the request read, otherwise **Something went wrong. Try again.** · **Try again** · **Source integrations** |
 | Live, empty category | No channels here yet. Choose another category. (TV / desktop: "…another filter.") |
 | Live search, phone | No channels match your search. |
 | Live search, desktop / TV | No channels match your search. |
@@ -38,6 +66,21 @@ Responsive player picture mode (WEB-PLAYER-FIT-001): visible toggle **"Fit"** / 
 | Sources, filtered out | No matching sources. Choose another provider or quality. |
 | Live details, no guide | No guide information. You can still watch this channel. |
 | Local mode, no addons | Install an addon to start browsing. |
+
+Live, no source ([LIVE-EMPTY-001](../specs/behavior/live-empty-state.md)) replaces
+three app strings that were never in this file: **"No channels are available for
+this profile."**, the **"Manage add-ons"** button and the **"All channels"**
+button in that state. The filtered Live line and its **"All channels"** button
+stay for a filtered page. Live with no channels never says "No channels" while
+the request is still open, and its loading form has no copy at all. The app
+ships **Only the household owner can set up live TV.** as the member line and
+shows a member no setup actions; the owner gate also hides the no-channels
+**Source integrations** secondary
+([viptv-org/app#492](https://github.com/viptv-org/app/pull/492)). A first Live
+request that fails with no page is a failure, not an empty answer: it reads
+**Could not load Live TV.** and the message the request read, never **No
+channels came back.**
+([viptv-org/app#541](https://github.com/viptv-org/app/issues/541)).
 
 ## Toasts, notices and loading
 
@@ -113,13 +156,19 @@ recovery dialog and can be quoted when reporting a failure.
 
 | Dialog | Title | Actions |
 |---|---|---|
-| Sign out | Sign out of this device? (TV: "Sign out of this TV?") | Sign out (danger) · Cancel |
+| Sign out | Sign out of VIPTV on this phone? (tablet, desktop and web: "Sign out of VIPTV on this device?"; TV: "Sign out of this TV?") | "Your profiles and progress stay on your account." · Sign out (danger) · Cancel |
+| Change connection, local mode | Change connection? | "Your local library and progress stay on this device. You'll choose a server or local mode next." (TV: "Your local library and progress stay on this TV. You'll choose a server or local mode next.") · Change connection (danger) · Cancel |
+| Sign out of all devices | Sign out of all devices? | "Every device, including this browser, will need to sign in again. Your profiles, lists and history stay on your account." · Cancel · Sign out of all devices (danger) |
+| Sign out a device | Sign out [device name]? | "This device will need to sign in again. Your profiles, lists and history stay on your account." · Cancel · Sign out (danger) |
+| Delete account | Delete account | "This deletes [name]'s account, its profiles, their history, My List, add-ons and paired devices. It cannot be undone." · Cancel · Delete account (danger) |
 | Delete profile | Delete profile | "Delete [name]? This permanently removes this profile's watch history, favorites and preferences." Cancel · Delete profile (danger) |
 | Remove addon | Remove [Addon]? | "Its catalogs leave this device." (local mode) · Cancel · Remove (danger) |
 | Manage addon | Manage [Addon] | Enable / Disable · Remove addon (danger) · Cancel |
 | Parent PIN | Enter parent PIN (TV sign-out: "Enter parent PIN to sign out") | "Enter the parent PIN to continue." (TV: "Use your remote or a connected keyboard.") · Done · Cancel |
-| Watch on TV | Watch on TV | "Connect to a Vizio SmartCast TV on the same network." |
-| Watch on TV, browser | Watch on TV | "TV pairing is available in a VIPTV desktop app with SmartCast support…" · Close |
+| Watch on TV (Android phone and tablet, proposed) | Watch on TV | "Connect to a Vizio SmartCast TV on the same network." |
+| Watch on TV, browser (proposed, not implemented) | Watch on TV | "TV pairing is available in a VIPTV desktop app with SmartCast support…" · Close |
+| App update (Android) | Update ready · Update required · Couldn't update VIPTV | See the [app updates contract](../specs/behavior/app-updates.md) for descriptions · Install · Later · Try again |
+| Updating screen (Android, proposed) | Updating VIPTV to [version]… · Allow updates | A full-screen cover rather than a dialog; copy, states and failure flow in [app-updates.md](../specs/behavior/app-updates.md#updating-screen) · Open settings · Try again · Later |
 
 ## Sign-in
 
@@ -132,18 +181,38 @@ recovery dialog and can be quoted when reporting a failure.
 - Profiles: Who's watching? · Manage profiles · Add a profile · Edit profile · "A space for their favorites, shows, and discoveries." · Find your favorite · "[468] avatars. Pick a world, then pick your character."
 
 
-## Watch on TV (phone remote)
+## Settings
 
-- Settings row: **Watch on TV** · "Use this phone as a Vizio TV remote" · value "Off" until a TV is paired.
+[ACCT-SPLIT-001](../specs/behavior/account-and-profile-settings.md) groups Settings into **Profile**, **Playback**, **This device** and **Account**, in that order, on every platform.
+
+- Rows — Profile: **Profile** · **Linked services** · **Parental controls** · **Import from Stremio**. Playback: **Playback** · **Subtitles & audio**. This device: **Display** (TV) · **About** · **Help**. Account: **Account** · **Password** · **Household PIN** · **Devices & sessions** · **Add a device** · **Add-ons** · **Source integrations** · **Sign out** · **Delete account**.
+- The profile card above the groups reads the profile's name with **Switch profile**. On TV the rail entry is **Switch profile**, beside a separate **Profile** entry that opens the page below.
+- Profile page: **Name** · **Avatar** · **Kids profile** ("Limits titles, search and Live for this profile.") · **Maturity limit** ("Titles above this rating are hidden for this profile"; values **All ratings**, `G` `PG` `PG-13` `R` `NC-17`, `TV-Y` `TV-Y7` `TV-G` `TV-PG` `TV-14` `TV-MA`) · **Approved titles** ("Only these titles show in the kids library") · **Profile lock** ("Ask for a PIN before this profile opens") · **Language** ("Default audio and subtitles for this profile") · **Delete profile**.
+- Account page: **Name**, **Username** `@[username]`, **Role** **Owner** / **Member**. There is no email row.
+- Household PIN: "Use a 4–8 digit PIN to protect leaving kids profiles. Turn off kids mode on all profiles before removing the PIN." A blocked removal reads "Turn off kids restrictions on all profiles before removing the PIN."
+- Devices: "Everywhere [name]'s account is signed in. Signing a device out doesn't delete anything from the account." · a row reads **Now** or **Signed in [when]**, and **This device** for the one in use · empty "No other devices are signed in." · **Sign out of all devices**.
+- Change password: **Current password** · **New password** · **Confirm new password** · **Change password** · **Cancel** · "Password changed. Other devices stay signed in." · "That password is not correct." · "Passwords do not match." · "Too many attempts. Wait a minute and try again." · "Could not change your password. Try again."
+- Delete account: type the username to confirm ("Type [username] to confirm"), the account password, plus the household PIN when one is set. "The username or password is not correct." · "The parent PIN is not correct." · "Other accounts still need an owner. Have them delete their accounts first." · "Could not delete your account. Nothing was changed. Try again." Success signs out with "Your account was deleted."
+- A TV cannot manage the account: those rows are disabled with "Manage this from a signed-in phone, computer or the web dashboard.", and **Devices & sessions** opens read-only with that line in place of its sign-out actions.
+
+## Watch on TV (phone remote) — proposed for Android phone and tablet
+
+The remote is proposed for the KMP app on Android phone and tablet
+([AND-038](../docs/platforms/ANDROID_DESIGN.md#and-038--android-phone-and-tablet-vizio-remote-2026-11-02)),
+superseding the earlier exclusion; no layout shows the **Watch on TV** row it
+starts from until it ships (`components.md` §11). A TV signs in with
+**Settings › Account › Add a device**.
+
+- Settings row (Android phone and tablet): **Watch on TV** · "Use this phone as a Vizio TV remote" · value "Off" until a TV is paired, then the TV name.
 - Intro: "Use this phone as your TV remote" / "Works with Vizio SmartCast TVs on the same Wi‑Fi as this phone. It's off until you set it up." Points: "Arrows, OK, Back, play and volume for your TV." · "Opens VIPTV on the TV in one tap." · "What's playing on this phone stays here. Nothing is sent to the TV." Note: "VIPTV searches your local network only to find your TV." Button: **Set up a TV**.
 - Choose your TV: "Looking for Vizio TVs on your Wi‑Fi…" · "Don't see your TV?" / "Turn the TV on, then check it's on the same Wi‑Fi as this phone. It can take a few seconds to show up." · **Enter IP address**.
 - Permission off: "VIPTV can't look for TVs" / "Local network access is off for VIPTV. Turn it on in your phone's settings, then come back here." · **Open phone settings** (Manual IP entry does not bypass a network permission denial).
 - IP entry: "Enter your TV's IP address" / "Find it on the TV under Settings › Network." · **Connect** · **Cancel**.
 - PIN: "Enter the PIN on your TV" / "[TV name] is showing a 4-digit PIN." · "Pairs as soon as all 4 digits are in." · **New PIN** · **Cancel**.
-- Connected: "Connected to [TV name]" / "You can control it from this phone now." · Remote button: "Shows at the top of Home, Discover, Live and My List." · **Open the remote** · **Done**.
-- One-time tip: "Your TV remote" / "It stays up here on Home, Discover, Live and My List. Turn it off in Settings › Watch on TV." · **Got it**.
-- Remote: "Connected · [IP]" · "Not reachable" · **Open VIPTV on TV** · Buttons / Swipe · "Swipe to move · Tap for OK" · Back · Play · Pause · Volume. Offline: "Can't reach [TV name]" / "Turn the TV on and check it's on the same Wi‑Fi as this phone." · **Try again**.
-- Settings: Remote button ("At the top of Home, Discover, Live and My List") · Vibrate on press · Keep screen on ("While the remote is open") · Change TV ("Pair a different Vizio TV") · Forget this TV ("Turns off Watch on TV").
+- Connected: "Connected to [TV name]" / "You can control it from this phone now." · Remote button: "Shows at the top of Discover, Live and My List." · **Open the remote** · **Done**.
+- One-time tip: "Your TV remote" / "It stays up here on Discover, Live and My List. Turn it off in Settings › Watch on TV." · **Got it**.
+- Remote: "Connected · [IP]" · "Not reachable" · **Open VIPTV on TV** · Buttons / Swipe · "Swipe to move · Tap for OK" · Back · Play · Pause · Volume. Offline: "Can't reach [TV name]" / "Turn the TV on and check it's on the same Wi‑Fi as this phone." · **Try again** · **Pair again**.
+- Settings: Remote button ("At the top of Discover, Live and My List") · Vibrate on press · Keep screen on ("While the remote is open") · Change TV ("Pair a different Vizio TV") · Forget this TV ("Turns off Watch on TV").
 - Forget: "Forget [TV name]?" / "The remote button goes away. You can set up a TV again at any time." · **Forget TV** (danger) · **Cancel**.
 
 ## Copy decisions (2026-10-19)

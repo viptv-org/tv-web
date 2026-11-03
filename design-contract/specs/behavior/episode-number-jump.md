@@ -2,18 +2,23 @@
 
 Status: **proposed** for Android TV. Source revision: design `8ce8971` for
 the existing title-detail layout and AND-KEYBOARD-001 native input contract.
-Implementation and device evidence are pending. The Roku and TV-web episode
-views retain their pinned behavior until separately adopted.
+The chip, dialog and jump ship in viptv-org/app `c8d541ff` (`origin/edge`,
+2026-11-02), with the chip ending the season strip. Physical-device evidence
+is pending. The Roku and TV-web episode views retain their pinned behavior
+until separately adopted.
 
 ## Intent and entry
 
 On a series Details screen, a viewer can jump to an episode in the **currently
-selected season** without paging through a long row. Place one compact,
-focusable `Episode #` chip immediately to the right of the season badge in the
-episode-row header. Preserve the badge, episode count, card size and row
-placement. The chip is visible only when that row contains episodes. Its
-visual height follows the existing AppChip in that header; exact width and
-spacing are unmeasured and must fit without obscuring the count at TV size.
+selected season** without paging through a long row. The season badges and the
+chip are one focus run in the episode-row header: place one compact, focusable
+`Episode #` chip at the end of the season strip, after every season badge.
+Right moves focus through the badges in season order and then reaches the chip;
+Down from any season badge enters the episode row and never stops on the chip.
+Preserve the badge, episode count, card size and row placement. The chip is
+visible only when that row contains episodes. Its visual height follows the
+existing AppChip in that header; exact width and spacing are unmeasured and
+must fit without obscuring the count at TV size.
 Its accessible name is `Jump to episode number`.
 
 Pressing OK on the chip opens an app dialog titled `Jump to episode` with a
@@ -81,3 +86,8 @@ readers announce the field label, error and focused target card.
    composition. Remote, connected keyboard, pointer and accessibility input
    use the same exact match; physical Android TV IME and focus behavior remain
    unverified until device testing.
+6. Focus a season badge and press Right once per badge. Focus visits every
+   season in order without stopping on the chip, and one further Right reaches
+   `Episode #`. Down from any badge enters the episode row, and neither
+   stepping between badges nor pressing Down opens the dialog. Left from the
+   chip returns to the last badge.

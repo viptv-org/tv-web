@@ -94,10 +94,13 @@ differ from those boards, these rules win.
 
 - AND-042-HOME: Home has no header bar. Its first element is the Main hero
   card: 16dp gutters, 28dp radius on every corner, starting at the system top
-  inset plus 8dp. The profile and Watch on TV entries leave Home. Settings
-  stays reachable from the Discover, Live and My List headers. Watch on TV
-  stays in Settings › This device. A paired TV's remote button stays in those
-  three headers. This replaces only AND-038's Home header remote button.
+  inset plus 8dp. The profile and remote entries leave Home. Settings stays
+  reachable from the Discover, Live and My List headers. The earlier exclusion
+  of the phone remote is superseded by AND-038: the **Watch on TV** row and the
+  header remote button return on phone and tablet as AND-038 specifies, while a
+  TV still signs in with **Settings › Account › Add a device**. Home keeps this
+  section's headerless hero; only the Discover, Live and My List headers gain
+  the remote button, replacing AND-038's former Home header remote button.
 - AND-042-NAV: the floating bar keeps the Main geometry: a 64dp glass bar,
   52dp segments and a separate 64dp Search disc. Segments show 22dp icons
   only, with no text, and keep accessible names (Home, Discover, Live TV,
@@ -144,7 +147,7 @@ differ from those boards, these rules win.
   the panel.
 
 Acceptance AND-042-01: phone Home starts with the rounded hero under the status
-bar, shows no header, and keeps Settings and Watch on TV reachable. AND-042-02:
+bar, shows no header, and keeps Settings reachable. AND-042-02:
 icon-only nav with accessible names, content-type headings, live logo tiles,
 6dp lifted progress and year/episode captions. AND-042-03: skeletons for
 Home, Discover, Search and Live, with no loading copy and automatic paging.
@@ -221,7 +224,8 @@ outlined header-button treatment. No other platform UI changes.
 - Discovery consumes the actual shared-core Result envelope and probes both
   supported SmartCast ports. Results arrive progressively; a bad/unreachable
   host cannot abort the scan. Network, TLS, JNI client setup and credential
-  operations run off the UI thread. No global TLS weakening.
+  operations run off the UI thread. TLS keeps AND-038's per-TV pin on every
+  command; nothing else is relaxed.
 - Key presses never toggle the launch button's disabled/alpha state, clear its
   label, or rebuild connection chrome. Serialize an eight-command bounded queue,
   give immediate local press/haptic feedback, and cancel queued keys on exit.
@@ -237,56 +241,118 @@ without launch-button flicker; ordered rapid taps; cancellation without replay;
 native header size/appearance inspection. Physical LAN/device evidence remains
 distinct from emulator and synthetic-network evidence.
 
-## AND-038 — Android phone Vizio remote (2026-09-27)
+## AND-038 — Android phone and tablet Vizio remote (2026-11-02)
 
-Status: approved implementation contract; device qualification remains separate.
-Source: owner's `viptv-design-system (1).zip`, exported 2026-09-27. The twelve
-PhTv*/PhRemote*/PhHomeRemote reference states and components section 11 define
-the phone remote. Existing AND-036/037 and TV corrections continue to apply.
+Status: proposed for the KMP app's Android phone and tablet layouts; supersedes
+AND-042's exclusion of the phone remote and the earlier "no app ships this
+remote" note. Scope is Android phone and tablet only — never Android TV, iOS,
+desktop or web (CORE-003 owns the SmartCast transport and separately permits a
+Tauri desktop adapter, which this feature does not adopt). Device
+qualification remains separate.
 
-Settings → This device → Watch on TV is the only entry before pairing. Setup
-pushes native pages over the saved app route: introduction, bounded LAN search,
-manual IPv4 address, four-digit PIN (submit automatically), connected. Back
-cancels the pending operation and returns one step; leaving setup restores the
-originating screen. New PIN starts a fresh challenge. A failed PIN stays on the
-PIN page with editable input. Pairing tokens use the Android Keystore; selected
-TV and preferences are device-local, never account credentials.
+Source: the archived Android client implements this contract
+(`TvRemoteScreen.kt`, `TvRemoteController.kt`, `SettingsScreen.kt`). Its design
+entry is the 2026-09-27 `viptv-design-system (1).zip` export, and components
+section 11 plus the PhTv*/PhRemote*/PhHomeRemote reference states define the
+geometry and copy. CORE-003 owns pairing, exact remote codes, payloads and port
+candidates; AND-039 owns queue bounds, background/foreground and no replay.
+Existing AND-036/037 and TV corrections continue to apply.
+
+The design entry is an opt-in **Watch on TV** row in Settings' **This device**
+group, on phone and tablet only. It reads **Off** until a TV is paired, then the
+persisted TV name, with **Use this phone as a Vizio TV remote** as its sub-line.
+The selected TV (name and `https://` origin) and the remote preferences are
+device-local, never account credentials. A TV signs in with
+**Settings › Account › Add a device**, which never adopts the phone remote.
+
+Setup pushes native pages over the saved app route: introduction, bounded LAN
+search, manual IPv4 address, four-digit PIN (submit automatically), connected.
+The search probes both SmartCast ports (7345 and 9000) on the connected local
+network and publishes candidates progressively; a bad or unreachable host cannot
+abort the scan and results are bounded. The manual step accepts a private local
+IPv4 address, optionally `:7345` or `:9000`. Back cancels the pending operation
+and returns one step; leaving setup restores the originating screen. New PIN
+starts a fresh challenge. A failed PIN stays on the PIN page with editable
+input. Setup is always cancellable and reachable again: **Change TV** keeps the
+old selection until a replacement pairs, and **Pair again** restarts the
+challenge from the offline state.
 
 The target remains SDK 36: do not display a fictitious local-network permission
 prompt. Intro copy is “VIPTV searches your local network only to find your TV.”
-Actual access denial opens recovery; manual addressing cannot bypass denial.
-Discovery is user-initiated, scoped to the connected local network, cancellable,
-and falls back to manual entry. Timeouts and offline TVs have retry actions.
+Actual access denial opens a recovery page inside setup; manual addressing
+cannot bypass denial. Discovery is user-initiated, scoped to the connected
+local network, cancellable, and falls back to manual entry. Timeouts and
+offline TVs have retry actions.
 
-One paired TV enables a 44 dp header remote button on Home, Discover, Live and
-My List. The bottom navigation is unchanged. Show the one-time “Your TV remote”
-tip with “Got it”. The sheet uses the 390×844 reference proportionally with safe
-insets and scrolling on smaller screens; it restores the underlying route when
-closed. Its controls are D-pad/OK, Back, separate Play/Pause and volume −/+.
-Each tap sends one key; each swipe past 32 dp sends one direction, tap sends OK.
-No background repeat or queued gesture survives dismissal. Serialize commands.
-Buttons is the initial mode, then retain the last mode. Buttons remain an
-accessible equivalent to all swipe actions. Use native labeled touch targets.
+One paired TV shows a 44 dp header remote button next to the profile entry on
+Discover, Live and My List; Home keeps AND-042's headerless hero. The bottom
+navigation is unchanged. Show the one-time “Your TV remote” tip with “Got it”.
+The sheet uses the 390×844 reference proportionally with safe insets and
+scrolling on smaller screens; it restores the underlying route when closed. Its
+controls are D-pad/OK, Back, separate Play/Pause and volume −/+. Each tap sends
+one key; each swipe past 32 dp sends one direction, tap sends OK. No background
+repeat or queued gesture survives dismissal. Commands serialize into the
+eight-command bounded queue with immediate local press/haptic feedback; queued
+keys are cancelled on exit and never replay on return, per AND-039. Buttons is
+the initial mode, then retain the last mode. Buttons remain an accessible
+equivalent to all swipe actions. Use native labeled touch targets.
 
 “Open VIPTV on TV” launches the configured HTTPS Vizio receiver, never transfers
-the phone video. A TV acknowledgment is not proof the receiver rendered.
-Reconnect checks the saved token; authentication failure offers re-pairing.
-Network failure shows PhRemoteOffline and disables commands until retry succeeds.
-Remote button visibility, vibration, and keep-screen-on default on. Screen-on
-is active only while the sheet is visible. Change TV retains the old selection
-until a replacement pairs; Forget deletes the credential/selection and hides
-the header button. Cancelling Forget preserves both. TV mode never exposes this
-phone feature. No other platform UI adopts this update.
+the phone video. All remote transport is exact-TV-origin HTTPS to the one
+selected TV. Vizio SmartCast TVs serve self-signed certificates, so the client
+does not fall back to the platform trust store for them: it pins the TV's
+certificate on first use. A successful PIN pairing records the SHA-256
+fingerprint of the leaf certificate the TV presented for its exact origin (host
+and port), seals it with the pairing token under the Android Keystore key, and
+from then on accepts only that certificate there. A different certificate fails
+the connection, and the existing recovery's **Pair again** replaces the pin when
+the new pairing succeeds. Pairing is the trust-establishing step, so the
+challenge itself is not gated by the stored pin; the first pairing trusts
+whichever certificate answers at the selected TV address, and the pin protects
+every later connection. Nothing global is weakened: there is no trust-all
+manager, the pin is stored and checked per exact origin (host and port) with
+requests outside it refused, and the ordinary VIPTV backend and catalog keep
+normal certificate validation. A self-signed TV certificate's names are not what
+binds the connection; the pin and the exact origin are. **Forget** discards the
+pin with the token; a replacement TV under **Change TV** pins its own
+certificate when it pairs. The fingerprint is never displayed or logged, like
+the bearer tokens that never enter the ordinary view model, logs or error copy.
+A TV acknowledgment is not proof the receiver rendered. Reconnect checks the
+saved token; authentication failure offers re-pairing. Network failure shows
+PhRemoteOffline and disables commands until retry succeeds. Remote button
+visibility, vibration, and keep-screen-on default on. Screen-on is active only
+while the sheet is visible. **Forget** deletes the credential/selection and
+hides the header button; cancelling Forget preserves both. TV mode never exposes
+this feature.
 
-Acceptance: first setup, empty search/manual fallback, invalid IP, wrong/new PIN,
-cancel/stale response, paired restart, every button and swipe, offline/retry,
-revoked credential/re-pair, change-TV cancellation, preferences, Forget/cancel,
-rotation/font scaling/keyboard insets, background cleanup, unchanged phone
-playback and Android TV navigation. Record functional, visual and physical TV
+Three distinct errors each recover in place: a TV offline shows PhRemoteOffline
+with **Try again** and **Pair again**; a denied local-network permission opens
+the access recovery page (manual IP does not bypass it); a rejected PIN stays on
+the PIN page with **Incorrect PIN. Try again.** and editable input. A rejected
+command alone is never an offline TV. A changed TV certificate takes the same
+recovery and its **Pair again**.
+
+Implementation note: the SmartCast transport, certificate pin and Keystore
+credential store ship in viptv-org/app at `d5f89ea6` (app#485, PR #496) with
+this rule; the setup pages, remote sheet and their error lifecycle remain
+proposed (app#487–#489). The app's checked-in `EngineWire.kt` is the generated
+core wire surface, so before an `androidMain` SmartcastBridge binding compiles,
+refresh it from core's generated Vizio wire types.
+
+Acceptance: first setup pinning the TV certificate; empty search/manual
+fallback, invalid IP, wrong/new PIN, cancel/stale response, paired restart,
+every button and swipe, offline/retry, revoked credential/re-pair, a changed
+certificate refused then re-paired, pairing accepted without a stored pin,
+Forget dropping the pin, change-TV cancellation, preferences, Forget/cancel,
+rotation/font scaling/keyboard insets, background cleanup, unchanged backend
+and catalog certificate validation, unchanged phone playback and Android TV
+navigation. The physical-TV qualification is separate
+and runs on a real Vizio SmartCast TV: pair over the home LAN with a real
+four-digit PIN, exercise every key and swipe against an on-screen menu, confirm
+discovery enumerates the TV and both ports work, and verify the launched VIPTV
+URL actually renders on the TV — never printing the TV host, PIN, token, serial
+number, ESN, or MAC address. Record functional, emulator visual and physical-TV
 evidence separately in Android TESTING.md.
-
-Status: owner requested on 2026-09-25; implementation and emulator acceptance
-must be recorded in Android TESTING.md. Related: Android issue #3, design #6.
 
 Android uses the current VIPTV design system and TV-034 corrections. This
 supersedes the old 1280×720 Roku reconstruction for Android only. Native
@@ -480,6 +546,12 @@ are recorded separately in TESTING.md. Related: Android #3 and design #6.
   excludes only its own area from edge Back gestures, and preserves pause.
 
 ## Up Next
+
+Superseded for the KMP app on 2026-10-27 by
+[PLAY-NEXT-AUTOPLAY-001](../../specs/behavior/next-episode-autoplay.md):
+the 10-second countdown starts when the media ends, on the end panel's
+primary action, and the **Autoplay next episode** setting can turn it off.
+The rules below record the old Android client.
 
 - Eligible final-ten-second series playback resolves one server-authorized next
   episode, then displays a 10-second countdown card. It does not immediately

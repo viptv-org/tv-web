@@ -93,6 +93,8 @@ Resume requires the exact saved `source_addon_id` plus a nonempty server-authore
 
 ## Next episode behavior
 
+This section is the frozen Roku baseline. The KMP app's end-of-episode panel and its 10-second autoplay countdown, with the per-device **Autoplay next episode** setting, are [PLAY-NEXT-AUTOPLAY-001](next-episode-autoplay.md); Roku adopts that contract only through its own pin.
+
 The player Next action, Home’s Play next episode action, and active series playback in the last ten seconds use the controlled continuation flow. Auto-start requires: series episode, VOD (not live), known duration, playing (not paused), not seeking, next episode known and available. It does not trigger simply by focusing a title or opening Sources. Explicit Resume inside the last ten seconds plays the remainder, then normal completion may advance. [Controlled continuation source](https://github.com/viptv-org/roku/blob/a047d9ca5fc80898013eefb66120d20fab5048c0/roku/components/ContinuationScene.brs); `MainScene.brs:1507-1535`; `ContinuationScene.brs:62-145`.
 
 On a permitted transition, retain the outgoing frame/session while showing loading. Request the next episode, then start it. Back during preparation cancels next playback and resumes the outgoing episode in place. If no next item/caught up/upcoming state exists, resume the outgoing episode and explain the result with Open series/Done. [ContinuationScene.brs:62-126](https://github.com/viptv-org/roku/blob/a047d9ca5fc80898013eefb66120d20fab5048c0/roku/components/ContinuationScene.brs).
