@@ -7,7 +7,7 @@ import {
 } from "../../api";
 import { resolveNext } from "../continuation";
 import { focusElement } from "../remote";
-import { enrichDetail, mergeEpisodeProgress, initialEpisode } from "../detailProgress";
+import { enrichDetail, savedEpisodeProgress, initialEpisode } from "../detailProgress";
 import { safeRestoredRoute } from "../browserNavigation";
 import { sourceKey } from "../../screens/titleSources";
 import { normalizeCore } from "../../core";
@@ -106,9 +106,9 @@ export function usePlaybackSession(app: PlaybackEngineApi) {
           browserApplying.current = false;
           const value = await api.detail(reference);
           if (ticket !== epoch.current) return;
-          const progress = value.item.type === "series" ? await api.seriesProgress(profile, value.item.seriesId ?? value.item.id).catch(() => []) : [];
+          const progress = value.item.type === "series" ? await api.seriesProgress(profile, value.item.seriesId ?? value.item.id).catch(() => undefined) : [];
           if (ticket !== epoch.current) return;
-          const episodeItems = mergeEpisodeProgress(value.episodes, progress, value.item.seriesId ?? value.item.id);
+          const episodeItems = savedEpisodeProgress(value.episodes, progress, value.item.seriesId ?? value.item.id, reference);
           setSelected(enrichDetail(reference, value.item)); setEpisodes(episodeItems); setSeason(initialEpisode(episodeItems, reference)?.season ?? episodeItems[0]?.season);
         }
       } else {

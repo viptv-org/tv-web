@@ -3,7 +3,7 @@ import { artworkUrl, presentation } from "../core/presentations";
 import {
   enrichDetail,
   initialEpisode,
-  mergeEpisodeProgress,
+  savedEpisodeProgress,
 } from "../ui/detailProgress";
 import { formatRuntime } from "../components/cards/cardText";
 
@@ -72,13 +72,15 @@ export async function loadDetailView(
   favorites: readonly MediaItem[],
   signal: AbortSignal,
 ): Promise<DetailView> {
-  const progress = original.type === "series" || original.seriesId ? api.seriesProgress(profileId, original.seriesId ?? original.id, { signal }).catch(() => []) : Promise.resolve([]);
+  // A rejected history load stays `undefined`: unknown rows must not erase the
+  // resume point the originating card already carries.
+  const progress = original.type === "series" || original.seriesId ? api.seriesProgress(profileId, original.seriesId ?? original.id, { signal }).catch(() => undefined) : Promise.resolve([]);
   const value = await api.detail(original, { signal });
   let episodes = value.episodes;
   if (value.item.type === "series") {
     const seriesId = value.item.seriesId ?? value.item.id;
     const history = await progress;
-    episodes = mergeEpisodeProgress(episodes, history, seriesId);
+    episodes = savedEpisodeProgress(episodes, history, seriesId, original);
   }
   const selected = enrichDetail(original, value.item);
   const first = initialEpisode(episodes, original);
