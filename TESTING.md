@@ -11,6 +11,34 @@ The adopted design contract pin is `8b7f85941addf5a65390fe6eca4f11aba9584a17`
 below record the pin each checkpoint was measured against; they are historical,
 and none of them is the current pin.
 
+## Cited revisions
+
+`f2122a6` reconstructed this repository's history from session transcripts.
+Source revisions recorded before that reconstruction are absent from the object
+store: `git cat-file -t` fails on every one of them here and in
+`viptv-org/video`, `viptv-org/core`, `viptv-org/backend`, `viptv-org/design`,
+`viptv-org/playback-gateway`, `viptv-org/roku`, `viptv-org/android` and
+`viptv-org/metadata`. A checkpoint that names one cannot be re-derived from
+code. The recorded values stay: they are the only surviving evidence for those
+checkpoints, and they are recorded observations rather than re-runnable gates.
+
+| Unreachable revision | Recorded in | Recorded measurement |
+| --- | --- | --- |
+| `ee23cf6` | Focused Browse and shared Home previews | preview artwork, 19 Browse rectangles, 95 browser cases |
+| `291a061` | Home billboard and shared reverse paging | default Home geometry, 36 rectangles, 9s/14s motion |
+| `3af20b8` | Large Live directories and Home geometry | 32 reduced-motion Home rectangles, 10,041-channel offset counterexample |
+| `d3ab4d9` | Entry fidelity, animation cost and Live snapshot coherence | seven matched captures, 80 rectangles |
+| `c9c1aae` | Completion audit checkpoints | paired Home bundle comparison |
+| `5613158` | Navigation availability follow-up | three paired Home runs |
+| `76c73fde` | Producer, playback and navigation checkpoint; Server-authoritative TV rebuild | Video pin absent from `viptv-org/video` |
+| `c7e4aa6` | BE-002 native source headers | native plugin MP4/HTTP 401 qualification |
+
+Producer, design, core and Video revisions cited beside these do resolve in the
+repository that owns them. The anchors the build checks are [DESIGN_REF](DESIGN_REF)
+`8b7f85941addf5a65390fe6eca4f11aba9584a17`, [VIDEO_REF](VIDEO_REF)
+`4b52aa5bfaf7f993ad6aa791e759f884ff4e23fd` and [CORE_REF](CORE_REF)
+`b6ee0548753483c9627cb1c73e7761b62f936933`.
+
 This checkpoint fixed regressions reproduced by 14 failing cases: stale HTTP
 errors, lost refresh rotations, cancellation blocked by refresh, late outcomes
 from retired authentication sessions, unbounded response-body consumption,
@@ -40,7 +68,8 @@ Validation on isolated HTTPS output `/tmp/viptv-tv-audit-20261023`:
   possible overshoot before rejection. Split UTF-8 decoding is verified.
 
 Five paired performance runs used identical current API fixture data for the
-previous `c9c1aae` bundle and the candidate. Served HTML is checked against the
+previous `c9c1aae` bundle (unreachable; see
+[Cited revisions](#cited-revisions)) and the candidate. Served HTML is checked against the
 selected build directory before measurement. All current runs passed the strict
 17.5ms p95 frame gate, with zero long tasks/frames over 50ms. These measurements
 cover the Home workload only; see PERFORMANCE.md for distributions and limits.
@@ -90,8 +119,9 @@ Validation on isolated HTTPS output `/tmp/viptv-tv-audit-20261023`:
   possible overshoot before rejection. Split UTF-8 decoding is verified.
 
 Five paired performance runs used identical current API fixture data for the
-previous `c9c1aae` bundle and the candidate. Served HTML is checked against the
-selected build directory before measurement. All current runs passed the strict
+previous `c9c1aae` bundle (unreachable; see
+[Cited revisions](#cited-revisions)) and the candidate. Served HTML is checked
+against the selected build directory before measurement. All current runs passed the strict
 17.5ms p95 frame gate, with zero long tasks/frames over 50ms. These measurements
 cover the Home workload only; see PERFORMANCE.md for distributions and limits.
 
@@ -105,7 +135,8 @@ full completion audit.
 
 # Focused Browse and shared Home previews — 2026-10-24
 
-Source `ee23cf6fb9c84191a1fe96c724c291ed473deb4f`; producer
+Source `ee23cf6fb9c84191a1fe96c724c291ed473deb4f` (unreachable; see
+[Cited revisions](#cited-revisions)); producer
 `0d8da118e2282c1d7cefa4bc590004bf6a97c211`; design
 `6bd0c0b3dd76f43d96a76e281ef7e4ec4886794c`. The canonical engine remains
 `65add90c6a73da8743021ed0a0ff5c862d78124d`; React's core pin is unchanged.
@@ -155,7 +186,8 @@ shared QA replacement or physical-TV certification occurred.
 
 # Home billboard and shared reverse paging — 2026-10-24
 
-Source `291a061c3300dfb979d182e4030f527d8d049a69`; producer
+Source `291a061c3300dfb979d182e4030f527d8d049a69` (unreachable; see
+[Cited revisions](#cited-revisions)); producer
 `1a361e4dc7923cf2909ff0be828912fb8530fa48`; engine
 `65add90c6a73da8743021ed0a0ff5c862d78124d`; design
 `09c75289adceb80c6c343a3812369d20414eb989`.
@@ -200,7 +232,8 @@ or physical-TV certification occurred.
 
 # Large Live directories and Home geometry — 2026-10-23
 
-Source `3af20b865b7945ef729b876a0d3b3ac6d427c727`, producer
+Source `3af20b865b7945ef729b876a0d3b3ac6d427c727` (unreachable; see
+[Cited revisions](#cited-revisions)), producer
 `def82a0fce40317ae9e15554c325626064bd5157`, canonical server engine
 `62b45fca8e82593a0a9ab3320b1adb7cf4f63a98`; design remains `bf5d1e1`.
 
@@ -232,7 +265,8 @@ is still in progress, as recorded in the completion audit.
 
 # Entry fidelity, animation cost and Live snapshot coherence — 2026-10-23
 
-Runtime source `d3ab4d900500dc7418aea9194a2084da7fb73498`; producer
+Runtime source `d3ab4d900500dc7418aea9194a2084da7fb73498` (unreachable; see
+[Cited revisions](#cited-revisions)); producer
 `e8e7b5fa74a581dc6c40d6876edee9ab3f9a665d`; design
 `bf5d1e1476b40e3f57b4e30e4f3e8bc6e4d65877`. Later design commits change Roku
 notes only; the included Tv3 HTML/artwork remains unchanged.
@@ -368,7 +402,8 @@ shared tree). The real movie-only fixture advertises neither Series nor Live.
 Production/type/integrity checks pass with 178 TV modules. The design pin remains
 `e61f5cb2ca39fcc1c78b1028a6cda391afdfe779`.
 
-Three additional paired Home runs against `5613158` pass the frame gate with
+Three additional paired Home runs against `5613158` (unreachable; see
+[Cited revisions](#cited-revisions)) pass the frame gate with
 zero long tasks/frames above 50ms. Startup medians: 510.4 → 524.7ms, with ranges
 508.4–544.1 and 506.2–526.1ms. Navigation work/key: 25.411 → 24.691ms. Decoded
 JavaScript: 995.187 → 995.973KiB. These overlapping ranges do not establish a
@@ -386,7 +421,8 @@ not establish exhaustive visual parity.
 
 Exact inputs: backend `8228c40d4ef6c765f58c5989bb9f252403035411`, design
 `e61f5cb2ca39fcc1c78b1028a6cda391afdfe779`, video
-`76c73fde22984d6d87a4848aab2fb47d563fdf46`. The server's canonical engine snapshot
+`76c73fde22984d6d87a4848aab2fb47d563fdf46` (absent from `viptv-org/video`;
+see [Cited revisions](#cited-revisions)). The server's canonical engine snapshot
 is `e42a97fd9734b850b92579e2eb10d800300e39f1`. The separate React core pin is
 unchanged. The design pin includes TV-web's Library filter access path; Tv3
 reference HTML/artwork remains the approved revision.
@@ -474,7 +510,8 @@ Validation on isolated HTTPS output `/tmp/viptv-tv-audit-20261023`:
   possible overshoot before rejection. Split UTF-8 decoding is verified.
 
 Five paired performance runs used identical current API fixture data for the
-previous `c9c1aae` bundle and the candidate. Served HTML is checked against the
+previous `c9c1aae` bundle (unreachable; see
+[Cited revisions](#cited-revisions)) and the candidate. Served HTML is checked against the
 selected build directory before measurement. All current runs passed the strict
 17.5ms p95 frame gate, with zero long tasks/frames over 50ms. These measurements
 cover the Home workload only; see PERFORMANCE.md for distributions and limits.
@@ -492,7 +529,8 @@ full completion audit.
 Current scope and per-reference limits: [tests/REMOTE_PARITY.md](tests/REMOTE_PARITY.md).
 Backend producer `23b9675f4411eda9448b41177450720ad8b20fac`; design
 `58245a1429cfc8c954b708b1f116e5cbb2cdaaf2`; video
-`76c73fde22984d6d87a4848aab2fb47d563fdf46`.
+`76c73fde22984d6d87a4848aab2fb47d563fdf46` (absent from `viptv-org/video`;
+see [Cited revisions](#cited-revisions)).
 
 | Gate | Result |
 | --- | --- |
@@ -683,9 +721,10 @@ The adopted design pin is `8b7f85941addf5a65390fe6eca4f11aba9584a17`; this
 2026-10-03 checkpoint measured
 `a8b5acac2f810e3d447334e64b7fc3f44c696b4d`, which later revisions superseded.
 The Video revision this checkpoint recorded,
-`f22a2a6672c01f55c2c777e27a1428bf5e998d88`, no longer exists in
-`viptv-org/video` and is not the current VIDEO_REF, so its measurements cannot be
-reproduced from that revision. Selected VOD intent retains positive native
+`f22a2a6672c01f55c2c777e27a1428bf5e998d88`, does resolve in `viptv-org/video`
+but is not the current [VIDEO_REF](VIDEO_REF) `4b52aa5b`; the tv-web checkpoint
+that consumed it is unreachable (see [Cited revisions](#cited-revisions)), so
+these measurements cannot be re-derived here. Selected VOD intent retains positive native
 duration/buffering before the first seek, including GStreamer live=true.
 Explicit desktop source replacement retires outgoing presentation/lease and
 remains empty on failure; managed seek/track/Next recovery stays separate.
@@ -960,7 +999,8 @@ User-Agent, with explicit refusal on unsupported transports. A v2 API fixture
 passes original HTTP delivery headers through actual WASM normalization to the
 adapter request; source authorization never becomes backend control auth.
 244 unit tests, typechecks and build passed. The owning video passed 111 tests
-and build; native plugin c7e4aa6 passed Linux real header-required MP4 and HTTP401
+and build; native plugin c7e4aa6 (unreachable; see
+[Cited revisions](#cited-revisions)) passed Linux real header-required MP4 and HTTP401
 fixtures. Installed desktop and Windows playback qualification remain separate.
 
 Thirty-two trusted-HTTPS browser cases passed across two runs: the first passed

@@ -12,6 +12,19 @@
 
 # Server-authoritative TV wrapper — 2026-10-23
 
+## Cited revisions
+
+`f2122a6` reconstructed this repository's history from session transcripts. The
+source revisions named below (`cb7224e`, `ee23cf6`, `291a061`, `3af20b8`,
+`d3ab4d9`) do not resolve with `git cat-file -t` here or in any sibling
+repository, so their measurements are recorded evidence and not re-runnable
+gates. The Video pin `76c73fde` is absent from `viptv-org/video`; the current
+[VIDEO_REF](../VIDEO_REF) is `4b52aa5bfaf7f993ad6aa791e759f884ff4e23fd`. The
+design pins `4f3a1eae` and `07c76e08`, the producer pins and the core pins do
+resolve in `viptv-org/design`, `viptv-org/backend` and `viptv-org/core`. The
+measured design pin is not the current [DESIGN_REF](../DESIGN_REF)
+`8b7f85941addf5a65390fe6eca4f11aba9584a17`.
+
 The active TV entry is `src/tv-solid/remote`. It replaces the previous SolidTV
 application for Tizen, Vizio, webOS and explicit browser TV layout. The responsive
 React entry is unchanged. Historical TV evidence in PARITY_MATRIX.md applies to
@@ -23,7 +36,8 @@ the retired application, not automatically to this one.
   from the approved `07c76e0858ea62896aba88002cee2483d5d4796f`. Later design work
   before this pin concerns Roku KMP assets/docs; the pin includes TV Library/Search access paths and device-entry states without replacing the Tv3 boards.
 - Backend producer: `0d8da118e2282c1d7cefa4bc590004bf6a97c211`, based on `7275bce`.
-- Video: `76c73fde22984d6d87a4848aab2fb47d563fdf46`.
+- Video: `76c73fde22984d6d87a4848aab2fb47d563fdf46`, which no longer exists
+  in `viptv-org/video` (see [Cited revisions](#cited-revisions)).
 - Core pin retained for the separate React entry:
   `b6ee0548753483c9627cb1c73e7761b62f936933`. The TV graph does not load that engine.
 - Shared contract and fixture: `../backend/TV_REMOTE_API.md` and
@@ -57,7 +71,8 @@ the retired application, not automatically to this one.
 
 ## Current bounded channel traversal
 
-Source `cb7224e` adopts the producer's previous/next descriptors in Live and
+Source `cb7224e` (unreachable; see [Cited revisions](#cited-revisions)) adopts
+the producer's previous/next descriptors in Live and
 channel Search. Both retain two payload pages (at most 400 channels under the
 wire limit), not a growing cursor history. A 241-channel round trip peaks at 80
 fixture payloads and exactly twelve page requests. Delayed/rejected responses,
@@ -72,7 +87,8 @@ Home, discovery, Library and detail payload windows remain a separate obligation
 
 ## Prior focused Browse
 
-Source `ee23cf6` consumes producer-owned preview artwork, hint/progress and
+Source `ee23cf6` (unreachable; see [Cited revisions](#cited-revisions)) consumes
+producer-owned preview artwork, hint/progress and
 Play/Details intent. The matched Browse capture has 19 rectangles, a pixel gate
 and browser-reviewed visible layers. Five authority/cancellation/cache cases
 pass; the complete browser suite has 95 cases. Episode tiles and parent-series
@@ -82,7 +98,8 @@ The current delivered artifact is `../.artifacts/tv-remote-browse-20261024/`.
 
 ## Prior Home billboard
 
-Source `291a061` matches default Home geometry, icons, glass and the 9s/14s
+Source `291a061` (unreachable; see [Cited revisions](#cited-revisions)) matches
+default Home geometry, icons, glass and the 9s/14s
 presentation motion. Interaction/menu/visibility pause, reduced motion and
 image failure/cancellation are tested. There are 36 measured Home rectangles
 and matched intermediate/end zoom regions. Browse is qualified above; Home-to-rows remains open.
@@ -91,7 +108,8 @@ client payload-window adoption is a separate remaining cache obligation.
 
 ## Earlier Home and large-directory follow-up
 
-Source `3af20b8` adds 32 measured reduced-motion Home rectangles, correcting
+Source `3af20b8` (unreachable; see [Cited revisions](#cited-revisions)) adds 32
+measured reduced-motion Home rectangles, correcting
 metadata gaps, badge outlines and row typography. Home motion/glass behavior and
 focused-title Browse remain unqualified. Producer `def82a0` fixes the Roku-reported
 10,000-offset cursor rejection without client truncation; the shared boundary
@@ -99,7 +117,8 @@ fixture and browsing/search/category handler tests cover the last page.
 
 ## Earlier matched states
 
-Source `d3ab4d9` has seven matched captures: Splash, Welcome, SignIn, SignedIn,
+Source `d3ab4d9` (unreachable; see [Cited revisions](#cited-revisions)) has seven
+matched captures: Splash, Welcome, SignIn, SignedIn,
 Profiles, MyList and Search. There are 80 measured rectangles and 32 Welcome
 artwork-region comparisons. See REMOTE_VISUAL_MEASUREMENTS.json for bounds,
 differences and limits. Live/Search page windows now consume the shared producer
