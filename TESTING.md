@@ -68,8 +68,8 @@ Validation on isolated HTTPS output `/tmp/viptv-tv-audit-20261023`:
   possible overshoot before rejection. Split UTF-8 decoding is verified.
 
 Five paired performance runs used identical current API fixture data for the
-previous `c9c1aae` bundle (unreachable; see
-[Cited revisions](#cited-revisions)) and the candidate. Served HTML is checked against the
+previous `c9c1aae` bundle and the candidate; `c9c1aae` is unreachable (see
+[Cited revisions](#cited-revisions)). Served HTML is checked against the
 selected build directory before measurement. All current runs passed the strict
 17.5ms p95 frame gate, with zero long tasks/frames over 50ms. These measurements
 cover the Home workload only; see PERFORMANCE.md for distributions and limits.
@@ -119,9 +119,9 @@ Validation on isolated HTTPS output `/tmp/viptv-tv-audit-20261023`:
   possible overshoot before rejection. Split UTF-8 decoding is verified.
 
 Five paired performance runs used identical current API fixture data for the
-previous `c9c1aae` bundle (unreachable; see
-[Cited revisions](#cited-revisions)) and the candidate. Served HTML is checked
-against the selected build directory before measurement. All current runs passed the strict
+previous `c9c1aae` bundle and the candidate; `c9c1aae` is unreachable (see
+[Cited revisions](#cited-revisions)). Served HTML is checked against the
+selected build directory before measurement. All current runs passed the strict
 17.5ms p95 frame gate, with zero long tasks/frames over 50ms. These measurements
 cover the Home workload only; see PERFORMANCE.md for distributions and limits.
 
@@ -510,8 +510,8 @@ Validation on isolated HTTPS output `/tmp/viptv-tv-audit-20261023`:
   possible overshoot before rejection. Split UTF-8 decoding is verified.
 
 Five paired performance runs used identical current API fixture data for the
-previous `c9c1aae` bundle (unreachable; see
-[Cited revisions](#cited-revisions)) and the candidate. Served HTML is checked against the
+previous `c9c1aae` bundle and the candidate; `c9c1aae` is unreachable (see
+[Cited revisions](#cited-revisions)). Served HTML is checked against the
 selected build directory before measurement. All current runs passed the strict
 17.5ms p95 frame gate, with zero long tasks/frames over 50ms. These measurements
 cover the Home workload only; see PERFORMANCE.md for distributions and limits.
@@ -721,11 +721,12 @@ The adopted design pin is `8b7f85941addf5a65390fe6eca4f11aba9584a17`; this
 2026-10-03 checkpoint measured
 `a8b5acac2f810e3d447334e64b7fc3f44c696b4d`, which later revisions superseded.
 The Video revision this checkpoint recorded,
-`f22a2a6672c01f55c2c777e27a1428bf5e998d88`, does resolve in `viptv-org/video`
+`f22a2a6672c01f55c2c777e27a1428bf5e998d88` does resolve in `viptv-org/video`
 but is not the current [VIDEO_REF](VIDEO_REF) `4b52aa5b`; the tv-web checkpoint
 that consumed it is unreachable (see [Cited revisions](#cited-revisions)), so
-these measurements cannot be re-derived here. Selected VOD intent retains positive native
-duration/buffering before the first seek, including GStreamer live=true.
+these measurements cannot be re-derived here. Selected VOD intent retains
+positive native duration/buffering before the first seek, including
+GStreamer live=true.
 Explicit desktop source replacement retires outgoing presentation/lease and
 remains empty on failure; managed seek/track/Next recovery stays separate.
 
