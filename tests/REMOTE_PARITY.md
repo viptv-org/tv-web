@@ -12,6 +12,11 @@
 
 # Server-authoritative TV wrapper — 2026-10-23
 
+The active TV entry is `src/tv-solid/remote`. It replaces the previous SolidTV
+application for Tizen, Vizio, webOS and explicit browser TV layout. The responsive
+React entry is unchanged. Historical TV evidence in PARITY_MATRIX.md applies to
+the retired application, not automatically to this one.
+
 ## Cited revisions
 
 `f2122a6` reconstructed this repository's history from session transcripts. The
@@ -24,11 +29,6 @@ design pins `4f3a1eae` and `07c76e08`, the producer pins and the core pins do
 resolve in `viptv-org/design`, `viptv-org/backend` and `viptv-org/core`. The
 measured design pin is not the current [DESIGN_REF](../DESIGN_REF)
 `8b7f85941addf5a65390fe6eca4f11aba9584a17`.
-
-The active TV entry is `src/tv-solid/remote`. It replaces the previous SolidTV
-application for Tizen, Vizio, webOS and explicit browser TV layout. The responsive
-React entry is unchanged. Historical TV evidence in PARITY_MATRIX.md applies to
-the retired application, not automatically to this one.
 
 ## Exact inputs
 
