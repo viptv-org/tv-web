@@ -124,31 +124,35 @@ This program is free software; you can redistribute it and/or modify it under th
 
 ## SolidTV canvas entry
 
-`solid.html` renders all of the former Lightning/Blits TV screens with
-`@solidtv/solid` and `@solidtv/renderer`. `lightning.html` remains a compatibility
-URL for existing preview links and loads the same SolidTV entry. The regular `index.html` dispatches TV platform queries to this SolidTV entry;
-responsive web and Tauri dispatch to React. `renderer=react` no longer overrides an explicit TV platform/layout; ordinary
-responsive browser and native desktop entries still select React.
+`solid.html` renders the TV screens that replaced the former Lightning/Blits
+entry with `@solidtv/solid` and `@solidtv/renderer`. `lightning.html` remains a
+compatibility URL for existing preview links and loads the same SolidTV entry.
+The regular `index.html` dispatches TV platform queries to this SolidTV entry;
+responsive web and Tauri dispatch to React. `renderer=react` no longer overrides
+an explicit TV platform/layout; ordinary responsive browser and native desktop
+entries still select React.
 
-Screens live in `src/tv-solid`: compiled Solid JSX uses the pinned layout values,
-assets, fonts and design tokens. The small `runtime.ts` adapter retains the
-screen controller methods, parent events, refs and release-to-activate remote
-contract, with Solid signals, keyed list reconciliation and component cleanup.
-There is no Blits dependency or runtime template evaluation. Text baselines
-are adapted to the renderer's alphabetic line boxes so the existing hanging
-baseline coordinates remain valid; canvas text nodes refresh their baked color
-when focus changes.
+The shipped TV screens live in `src/tv-solid/remote`; `src/tv-solid` keeps the
+entry, the `runtime.ts` adapter, fonts, text raster, shaders and the webOS host
+shell. Compiled Solid JSX uses the pinned layout values, assets, fonts and
+design tokens. The adapter retains the screen controller methods, parent
+events, refs and release-to-activate remote contract, with Solid signals, keyed
+list reconciliation and component cleanup. There is no Blits dependency or
+runtime template evaluation. Text baselines are adapted to the renderer's
+alphabetic line boxes so the existing hanging baseline coordinates remain
+valid; canvas text nodes refresh their baked color when focus changes.
 
-Home loads all browsable shelves after its first queue frame and keeps a separate
-cursor for each row. Profile create/edit/delete, text entry and playback overlays use the reconciled
-native SolidTV focus manager and screen components.
+The TV entry is server-authoritative: the unversioned TV API supplies cards,
+Home rows with their own cursors and Pending/Ready/Empty/Failed states, catalog
+and Library controls, detail episodes and seasons, settings descriptors and
+display preferences. Client code renders those projections and reports the
+player's observed clock and track choices; it does not derive them. Profile
+create/edit/delete, text entry and playback overlays are overlay and screen
+components in `src/tv-solid/remote` under the same focus manager.
 
-Run `node tests/preview/solid-shoot.mjs TvHome` against the preview server.
-For local HTTPS builds, set `SOLID_PREVIEW_URL` to the full `solid.html` URL and
-`PREVIEW_API_ORIGIN` to the same HTTPS origin. The harness intercepts fixture
-API/media calls and blocks unrecognised external hosts. Use `PREVIEW_OUT` for
-private captures. Browser fixture evidence and real-TV qualification are
-recorded separately in `TESTING.md`.
+Current TV acceptance runs through `playwright.remote.config.ts` and the
+`tests/preview/remote-*.mjs` harnesses against `solid.html`. Browser fixture
+evidence and real-TV qualification are recorded separately in `TESTING.md`.
 
 ## TV performance checks
 
