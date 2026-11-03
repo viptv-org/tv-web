@@ -28,6 +28,13 @@ HTTPS `/tv/` shape and platform query. Manually deploy the matching hosting ZIP;
 building an installer does not deploy its hosted runtime. Vizio continues to
 use the same hosted bundle. Existing browser, desktop and TV styling is retained.
 
+The hosting ZIP is a TV-only distribution: `npm run build` emits
+`artifacts/tv-assets.json` from the emitted import graph, and
+`node scripts/package-tv.mjs hosting` copies exactly that set (plus the public
+photography the TV names at runtime) and fails if any packaged script still
+references a file that is neither packaged nor declared browser/desktop-only.
+The `dist` directory keeps the complete browser/desktop build.
+
 LG reuses shared remote focus and HTML media playback; physical device behavior,
 codecs and DRM are not established by an IPK or browser test. Backgrounding
 stops the playback session. Root Back delegates to platform exit.

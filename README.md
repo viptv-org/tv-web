@@ -78,7 +78,17 @@ When the machine is healthy enough for a build, use the ordinary package script:
 npm run package:tv
 ```
 
-This builds the static hosting ZIP under `artifacts/hosting/`. Use
+This builds the static hosting ZIP under `artifacts/hosting/`. The ZIP is the
+bundle every TV launcher loads, so it contains only the files the TV entry can
+reach: `index.html`/`solid.html`/`lightning.html`, the entry graph and every
+chunk it dynamically imports (the HLS engine, hls.js, the QR encoder), their
+fonts, artwork and tokens CSS, plus the public photography the TV names at
+runtime. The reachable set is derived from the production build's own import
+graph (`artifacts/tv-assets.json`), never from a list of hashed chunk names, and
+`package-tv.mjs` re-resolves every reference in the staged package before it
+writes the ZIP. `dist` still contains the full browser/desktop build.
+
+Use
 `node scripts/package-tv.mjs webos` for the IPK and
 `TIZEN_PROFILE=viptv node scripts/package-tv.mjs tizen` for the signed WGT after
 installing the platform SDKs. See [BUILDING.md](BUILDING.md) for signing secrets
