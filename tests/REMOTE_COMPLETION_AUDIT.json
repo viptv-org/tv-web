@@ -5,6 +5,24 @@
   "source_base_commit": null,
   "source_base_commit_note": "Unrecoverable. cb7224edf6763ed12b53ef73fc4c2d2207647f7d does not exist in this repository (git cat-file -t fails): tv-web history was rewritten in f2122a6, which reconstructed the tree from session transcripts. No measurement recorded in this audit or in REMOTE_VISUAL_MEASUREMENTS.json can be reproduced from that base commit, and this audit makes no such claim.",
   "design_ref": "8b7f85941addf5a65390fe6eca4f11aba9584a17",
+  "unrecoverable_revisions": [
+    {
+      "revision": "c9c1aae",
+      "cited_in": ["current_checkpoint.performance.comparison", "requirements.perf-equivalence"],
+      "note": "Not an object in this repository or any sibling repository. The before/after pair it names cannot be rebuilt, so its limits are recorded observations rather than a re-runnable gate."
+    },
+    {
+      "revision": "2fafc08",
+      "cited_in": ["requirements.perf-startup"],
+      "note": "Not an object in this repository or any sibling repository. The paired Home sample recorded against it cannot be re-derived."
+    },
+    {
+      "revision": "cb7224edf6763ed12b53ef73fc4c2d2207647f7d",
+      "cited_in": ["source_base_commit", "current_checkpoint.source_revision", "requirements.visual-acceptance"],
+      "note": "Already null in source_base_commit and current_checkpoint.source_revision; see source_base_commit_note. Retained here so every unreachable revision cited in this file is machine-readable."
+    }
+  ],
+  "cited_revision_note": "Revisions cited elsewhere in this file resolve in the repository that owns them (design, backend, core, video, roku). See unrecoverable_revisions for the ones that do not.",
   "backend_producer": "0d8da118e2282c1d7cefa4bc590004bf6a97c211",
   "previous_turn_classification": "progress: Live and channel Search payload/descriptor windows bounded; reverse traversal, refresh, failure recovery, frame budgets and focus geometry quantified",
   "requirements": [
@@ -292,6 +310,7 @@
   "current_checkpoint": {
     "source_revision": null,
     "source_revision_note": "Unrecoverable; same rewritten-history base as source_base_commit. The captures below were taken from a working tree whose commit is no longer reachable, so they are recorded evidence, not a reproducible measurement.",
+    "recorded_measurement_note": "Every count, hash, duration and ratio in this checkpoint was recorded from that unreachable working tree, so none of them is a re-runnable gate. The design, backend, engine and live-runtime revisions named in this checkpoint do resolve in their owning repositories.",
     "backend_producer": "0d8da118e2282c1d7cefa4bc590004bf6a97c211",
     "unit_tests": 357,
     "unit_files": 61,
@@ -345,6 +364,7 @@
     },
     "performance": {
       "comparison": "c9c1aae checkpoint versus current candidate, identical remote-backend fixtures",
+      "comparison_note": "c9c1aae is unreachable (see unrecoverable_revisions) and tests/preview/remote-backend.ts no longer hashes to fixture_sha256, so neither side of this comparison can be rebuilt.",
       "runs_per_build": 5,
       "fixture_sha256": "381a25cfe66c8013126e507833d5c66905e704e946db91fd60ef8d32d85c3534",
       "before": {

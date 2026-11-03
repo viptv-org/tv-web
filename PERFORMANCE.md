@@ -1,3 +1,28 @@
+# Cited revisions
+
+Sections are reverse-chronological. The 2026-10-23 and 2026-10-24 comparisons
+cite tv-web source revisions from before `f2122a6` reconstructed this
+repository's history. None of them resolves with `git cat-file -t` here or in
+`viptv-org/video`, `viptv-org/core`, `viptv-org/backend`, `viptv-org/design`,
+`viptv-org/playback-gateway`, `viptv-org/roku`, `viptv-org/android` or
+`viptv-org/metadata`, so `c9c1aae`, `ee23cf6`, `291a061`, `3af20b8`, `d3ab4d9`,
+`57f6ec2`, `2fafc08`, `5613158` and `8a1fd02` name builds that cannot be rebuilt.
+No before/after pair below is a re-runnable gate; the measured values are the
+only surviving evidence and stay unchanged.
+
+The identical-fixture condition is unreproducible for those runs as well. They
+record `tests/preview/remote-backend.ts` at SHA-256
+`381a25cfe66c8013126e507833d5c66905e704e946db91fd60ef8d32d85c3534`; the current
+file hashes to
+`dd498823558f6a77c39da086bff820f8ab125a86ce94383662425bfb6d147f69`.
+
+Current anchors: [DESIGN_REF](DESIGN_REF)
+`8b7f85941addf5a65390fe6eca4f11aba9584a17`, [VIDEO_REF](VIDEO_REF)
+`4b52aa5bfaf7f993ad6aa791e759f884ff4e23fd` and [CORE_REF](CORE_REF)
+`b6ee0548753483c9627cb1c73e7761b62f936933`.
+
+---
+
 # One shared text-measure context — 2026-11-03
 
 Every TV remote component built a throwaway `<canvas>` and 2D context to
@@ -144,7 +169,8 @@ playback, the SolidTV TV entry, or any platform other than Chromium at
 
 # Matched-fixture audit checkpoint — 2026-10-23
 
-Five fresh-context runs compare the previous `c9c1aae` remote wrapper with the
+Five fresh-context runs compare the previous `c9c1aae` remote wrapper
+(unreachable; see [Cited revisions](#cited-revisions)) with the
 current audit candidate. Both consume the exact same `remote-backend.ts`
 fixtures (SHA-256 `381a25cfe66c8013126e507833d5c66905e704e946db91fd60ef8d32d85c3534`), at 1920×1080,
 4× CPU throttle and software WebGL. The script now verifies the served entry
@@ -183,7 +209,8 @@ open until the broader workload and visual obligations in
 
 # Matched-fixture audit checkpoint — 2026-10-23
 
-Five fresh-context runs compare the previous `c9c1aae` remote wrapper with the
+Five fresh-context runs compare the previous `c9c1aae` remote wrapper
+(unreachable; see [Cited revisions](#cited-revisions)) with the
 current audit candidate. Both consume the exact same `remote-backend.ts`
 fixtures (SHA-256 `381a25cfe66c8013126e507833d5c66905e704e946db91fd60ef8d32d85c3534`), at 1920×1080,
 4× CPU throttle and software WebGL. The script now verifies the served entry
@@ -222,7 +249,8 @@ open until the broader workload and visual obligations in
 
 # Focused Browse — 2026-10-24
 
-Source `ee23cf6` versus `291a061`, three runs per build using identical snapshots
+Source `ee23cf6` versus `291a061` (both unreachable; see
+[Cited revisions](#cited-revisions)), three runs per build using identical snapshots
 with server-projected Play previews. Conditions: trusted HTTPS, 1920×1080,
 4× CPU throttle, software WebGL, 48 hero/row inputs per run; builds, tests and
 benchmarks run separately. All runs have frame p95 ≤16.8ms, zero long tasks
@@ -255,7 +283,8 @@ pre-conversion equivalent fixture and physical-TV qualification remain separate.
 
 # Home billboard motion — 2026-10-24
 
-Accepted source `291a061` against prior Home `3af20b8`; 1920×1080, software WebGL,
+Accepted source `291a061` against prior Home `3af20b8` (both unreachable; see
+[Cited revisions](#cited-revisions)); 1920×1080, software WebGL,
 4× CPU throttle, identical fixtures and sequential runs. Three navigation pairs
 all pass frame p95 ≤16.8ms, with zero long tasks or intervals above 50ms.
 
@@ -286,7 +315,8 @@ other unqualified screen workloads remain separate obligations.
 
 # Home metadata geometry checkpoint — 2026-10-23
 
-Three alternating pairs compare `d3ab4d9` with `3af20b8` under the same current
+Three alternating pairs compare `d3ab4d9` with `3af20b8` (both unreachable; see
+[Cited revisions](#cited-revisions)) under the same current
 fixtures, 1920×1080, 4× CPU throttle and software WebGL. Every run has frame p95
 ≤16.8ms, zero long tasks and zero frame intervals above 50ms.
 
@@ -306,7 +336,8 @@ No physical-TV or production claim follows from these browser measurements.
 # Entry animation and Live guide checkpoint — 2026-10-23
 
 Source `d3ab4d9`, producer `e8e7b5f`, design `bf5d1e1`. Three alternating pairs
-compare the current build with validated Search checkpoint `57f6ec2`, using the
+compare the current build with validated Search checkpoint `57f6ec2` (the two
+tv-web revisions are unreachable; see [Cited revisions](#cited-revisions)), using the
 same fixtures, 1920×1080, 4× CPU throttle and software WebGL. Builds, tests and
 benchmarks ran separately. All final navigation samples have frame p95 ≤16.8ms,
 zero long tasks and zero intervals above 50ms.
@@ -351,7 +382,8 @@ remaining screen workloads and physical-TV qualification remain separate work.
 
 # Search and typography checkpoint — 2026-10-23
 
-Three alternating pairs compare `2fafc08` with the Search/typography candidate
+Three alternating pairs compare `2fafc08` (unreachable; see
+[Cited revisions](#cited-revisions)) with the Search/typography candidate
 for Home, grid, Live and settings. Three additional runs exercise the new Search
 workload: ten typed characters, ten deletions, then 120 channel results out and
 back (258 measured inputs/run). All **15 candidate runs** pass the 17.5ms frame
@@ -383,7 +415,8 @@ comparison remain open. No physical-TV qualification is implied.
 
 # Navigation projection follow-up — 2026-10-23
 
-Three alternating Home pairs compare the validated `5613158` checkpoint with
+Three alternating Home pairs compare the validated `5613158` checkpoint
+(unreachable; see [Cited revisions](#cited-revisions)) with
 the navigation candidate. All six runs have zero long tasks and zero frames
 above 50ms; candidate frame p95 is at most 16.8ms. Startup median is
 510.4 → 524.7ms; ranges overlap (508.4–544.1 → 506.2–526.1ms). Work/key is
@@ -399,7 +432,8 @@ at their exact measured checkpoint. Bundle SHA-256:
 
 # Expanded navigation checkpoint — 2026-10-23
 
-Three alternating pairs per workload compare `8a1fd02` with the current
+Three alternating pairs per workload compare `8a1fd02` (unreachable; see
+[Cited revisions](#cited-revisions)) with the current
 candidate, using identical current fixtures and verified served bundle hashes.
 Conditions: fresh browser contexts, 1920×1080, software WebGL, 4× CPU throttle,
 one benchmark at a time. All **12 candidate runs** meet the existing **17.5 ms
@@ -441,7 +475,8 @@ that original matched-data obligation or physical-TV qualification.
 
 # Matched-fixture audit checkpoint — 2026-10-23
 
-Five fresh-context runs compare the previous `c9c1aae` remote wrapper with the
+Five fresh-context runs compare the previous `c9c1aae` remote wrapper
+(unreachable; see [Cited revisions](#cited-revisions)) with the
 current audit candidate. Both consume the exact same `remote-backend.ts`
 fixtures (SHA-256 `381a25cfe66c8013126e507833d5c66905e704e946db91fd60ef8d32d85c3534`), at 1920×1080,
 4× CPU throttle and software WebGL. The script now verifies the served entry

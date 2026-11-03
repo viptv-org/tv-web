@@ -1,5 +1,6 @@
 {
   "design_ref": "4f3a1eae36399608f459b5973381ead969c2c2d1",
+  "design_ref_note": "Design revision these captures were compared against. It resolves in viptv-org/design but predates the current DESIGN_REF 8b7f85941addf5a65390fe6eca4f11aba9584a17, and the vendored design snapshot present at capture time cannot be confirmed because the captured source revision is unreachable.",
   "states": [
     {
       "board": "Tv3Splash",
@@ -2613,6 +2614,12 @@
   ],
   "font_correction": "Use shipped font metrics, CSS line boxes, native-size glyph bitmaps and native letter spacing when supported. Older engines retain the existing spaced-text fallback.",
   "source_revision": "291a061c3300dfb979d182e4030f527d8d049a69",
+  "source_revision_note": "Unreachable. 291a061c3300dfb979d182e4030f527d8d049a69 is not an object in this repository or in viptv-org/video, core, backend, design, playback-gateway, roku, android or metadata: tv-web history was reconstructed in f2122a6. The bounds, geometry tolerances and whole-frame pixel values recorded here cannot be re-derived or re-measured, and they are the only surviving evidence for these states. Per-state source_revision values are unreachable in the same way.",
+  "unreachable_source_revisions": [
+    "291a061c3300dfb979d182e4030f527d8d049a69",
+    "dd83d34728715d8ae0804ad00e1f2e2bf4534901",
+    "ee23cf6fb9c84191a1fe96c724c291ed473deb4f"
+  ],
   "backend_producer": "1a361e4dc7923cf2909ff0be828912fb8530fa48",
   "measurement_note": "Per-state source_revision identifies the actual captured build; the top-level revision identifies the current checkpoint."
 }
