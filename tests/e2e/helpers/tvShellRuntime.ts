@@ -104,8 +104,8 @@ export async function installBackend(page: Page, profileFixture?: ProfileFixture
     }
     if (path === '/api/auth/device/code') return json(route, { device_code: 'opaque-pairing-code', user_code: 'AB12CD34EF', verification_uri: 'https://viptv.syek.tech/device', verification_uri_complete: 'https://viptv.syek.tech/device?code=AB12CD34EF', qr_uri: 'https://viptv.syek.tech/api/auth/device/qr?code=AB12CD34EF', expires_in: 600, interval: 60 });
     if (path === '/api/auth/device/token') return json(route, { error: 'authorization_pending' }, 400);
-    if (path === '/api/profiles/1/continue/page') return json(route, { items: [], offset: 0, total: 0, next_offset: null });
-    if (path === '/api/profiles/1/progress' && route.request().method() === 'GET') return json(route, []);
+    if (path === '/api/profiles/1/continue') return json(route, { scope: { kind: 'viptv:device', account: '7', profile: '1', generation: 1 }, revision: 1, entries: [], next_cursor: null, complete: true });
+    if (path === '/api/profiles/1/progress/page') return json(route, { items: [], offset: 0, total: 0, next_offset: null });
     if (path === '/api/profiles/1/favorites' && route.request().method() === 'GET') return json(route, []);
     if (profileFixture && (path === '/api/profiles' || path === '/api/profiles/2')) {
       const method = route.request().method();
@@ -147,7 +147,7 @@ export async function installBackend(page: Page, profileFixture?: ProfileFixture
     if (path === `/api/v2/iptv/guide/${encodeURIComponent(channel.id)}`) return json(route, { timezone: 'UTC', programs: [{ title: 'News Now', start: 0, end: 4_102_444_800, description: 'Live fixture.' }] });
     if (path === '/api/parent/status') return json(route, { pin_configured: true, unlocked: false, restricted: false });
     if (path === '/api/parent/unlock') return json(route, { unlocked: true });
-    if (path === '/api/v2/addons' && route.request().method() === 'GET') return json(route, { items: [], next_cursor: null });
+    if (path === '/api/addons' && route.request().method() === 'GET') return json(route, { items: [], next_cursor: null });
     if (path === '/api/v2/playback-decoder-start' && route.request().method() === 'POST') return json(route, { id: 'playback-1', url: '/media/playback-1/capability/index.m3u8', format: 'hls', mode: 'remux', video_mode: 'copy', audio_mode: 'copy', position: 0, live: false, duration: 120, audio_tracks: [], subtitle_tracks: [], subtitles_supported: false });
     if (path.includes('/heartbeat') || path.includes('/progress') || path.includes('/continue/') || path.includes('/preferences')) return json(route, { ok: true });
     return json(route, { error: `unhandled ${path}` }, 404);

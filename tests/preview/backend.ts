@@ -417,6 +417,37 @@ export async function installBackend(page: Page, options: BackendOptions): Promi
     const previous={...item,...(options.queuePosition!==undefined?{position:options.queuePosition}:{}),...(options.queueDuration!==undefined?{duration:options.queueDuration}:{})};
     return options.queueNext ? {...previous,id:'tt-monster:1:2',episode:2,episode_title:'Please Don’t Go',queue_status:'next',previous_episode:previous,position:0} : previous;
   });
+  /** `/continue` answers card + playback-record entries, not media rows. */
+  const continuationOf = (rows: readonly Record<string, unknown>[]) => ({
+    scope: { kind: 'viptv:device', account: '7', profile: '1', generation: 1 }, revision: 1, complete: true,
+    next_cursor: null,
+    entries: rows.map(row => {
+      const identity = {
+        id: String(row.id), kind: String(row.type ?? 'series'), ids: [], edition: null,
+        episode: row.season == null && row.episode == null ? null : { order: 'aired', season: row.season, episode: row.episode },
+      };
+      const parent = typeof row.series_id === 'string' ? { id: row.series_id, kind: 'series', ids: [], episode: null, edition: null } : null;
+      const previous = row.previous_episode as Record<string, unknown> | undefined;
+      const title = row.name ?? row.title;
+      return {
+        card: {
+          identity, parent_identity: parent, provider_id: row.source_addon_id, title,
+          subtitle: row.episode_title, description: row.description, poster: row.poster,
+          landscape: row.background, logo: row.title_logo, progress: null, badges: [],
+        },
+        record: {
+          identity, parent_identity: parent, provider_id: row.source_addon_id, title,
+          position_millis: Number(row.position ?? 0) * 1000, duration_millis: Number(row.duration ?? 0) * 1000,
+          updated_at_millis: 1_700_000_000_000,
+        },
+        status: row.queue_status === 'next' ? 'Next' : 'Resume',
+        previous_identity: previous ? {
+          id: String(previous.id), kind: String(previous.type ?? 'series'), ids: [], edition: null,
+          episode: previous.season == null && previous.episode == null ? null : { order: 'aired', season: previous.season, episode: previous.episode },
+        } : null,
+      };
+    }),
+  });
   let addonList = [...addons(), ...Array.from({ length: Math.max(0, (options.sourceProducerCount ?? 4) - 4) }, (_, index) => ({ id: index + 5, name: `Provider ${index + 5}`, enabled: true, version: '1.0.0', description: 'Source producer.' }))];
   let playbackCount = 0;
 
@@ -539,11 +570,10 @@ export async function installBackend(page: Page, options: BackendOptions): Promi
     const scoped = /^\/api\/profiles\/([^/]+)\/(.+)$/.exec(path);
     if (scoped) {
       const [, , rest] = scoped;
-      if (rest === 'continue/page') return json({ items: queue, offset: 0, total: queue.length, next_offset: null });
-      if (rest === 'continue/settings') return json({ autoplay: true });
+      if (rest === 'continue') return json(continuationOf(queue));
       if (rest === 'continue/visibility') return json({ ok: true });
       if (rest === 'continue/next') return json({ status: 'next', item: { id: 'tt-monster:1:2', type: 'episode', series_id: 'tt-monster', name: 'Monster: The Jeffrey Dahmer Story', episode_title: 'Please Don’t Go', season: 1, episode: 2 } });
-      if (rest === 'progress' && method === 'GET') return json([]);
+      if (rest === 'progress/page' && method === 'GET') return json({ items: [], offset: 0, total: 0, next_offset: null });
       if (rest === 'progress/series') return json(url.searchParams.get('series_id') === 'tt-monster' ? [{ id: 'tt-monster:1:1', type: 'episode', series_id: 'tt-monster', name: 'Monster: The Jeffrey Dahmer Story', season: 1, episode: 1, position: 4, duration: 3130 }] : []);
       if (rest.startsWith('progress')) return json({ ok: true });
       if (rest === 'favorites' && method === 'GET') return json(favorites);
@@ -562,8 +592,8 @@ export async function installBackend(page: Page, options: BackendOptions): Promi
     }
 
     // Addons.
-    if (path === '/api/v2/addons' && method === 'GET') return json({ items: addonList, next_cursor: null });
-    if (path === '/api/v2/addons' && method === 'POST') {
+    if (path === '/api/addons' && method === 'GET') return json({ items: addonList, next_cursor: null });
+    if (path === '/api/addons' && method === 'POST') {
       if (options.addonInstallHang) return hang();
       if (options.addonInstallError) return json({ error: 'Enter an HTTPS manifest URL.' }, 400);
       return json({ id: 9, name: 'New addon', enabled: true });

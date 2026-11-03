@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { installBackend, apiOrigin } from '../preview/backend';
+import { continuation } from '../fixtures/continuation';
 
 // Reproduction of the owner-reported Vizio issue: press Back during playback
 // entered from Continue Watching, and the screen goes fully black.
@@ -32,7 +33,7 @@ async function playSeriesFromQueue(page: Page) {
   await installVizioMedia(page);
   // A series episode with saved position in Continue Watching.
   const episode = { id: 'series-1:1:2', type: 'series', series_id: 'series-1', season: 1, episode: 2, name: 'Fixture Series', episodeTitle: 'Episode Two', position: 20, duration: 120, genres: [] };
-  await page.route(`${apiOrigin}/api/profiles/1/continue/page**`, route => route.fulfill({ json: { items: [episode], offset: 0, total: 1, next_offset: null } }));
+  await page.route(`${apiOrigin}/api/profiles/1/continue`, route => route.fulfill({ json: continuation([episode]) }));
   await page.addInitScript(({ key, token }) => localStorage.setItem(key, JSON.stringify(token)), { key: `viptv-device:${apiOrigin}`, token: { sessionId: 'device-1', accountId: '7', profileId: null, accessToken: 'access', refreshToken: 'refresh', expiresIn: 900 } });
   await page.goto('/tv/?platform=vizio&focusdebug=1');
   // Home hero action (Resume) starts the queued episode.

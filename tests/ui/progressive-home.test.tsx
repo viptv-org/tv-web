@@ -2,6 +2,7 @@ import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, expect, it } from 'vitest';
 import { MemoryDeviceSessionStore, TvApi } from '../../src/api';
 import { App } from '../../src/ui/App';
+import { continuation } from '../fixtures/continuation';
 
 beforeEach(() => window.history.replaceState({}, '', '/tv/home'));
 
@@ -21,7 +22,8 @@ async function slowCatalogApi(saved = false) {
       ? { account: { id: 1, username: 'fixture', name: 'Fixture', role: 'member' }, profiles: [{ id: 7, name: 'Profile', setup_complete: true }], profile_id: 7, restricted: false, profile_setup_required: false }
       : path === '/api/catalogs' ? [{ id: 'featured', type: 'movie', name: 'Featured', addon_id: '1', addon_name: 'Fixture' }]
       : path === '/api/catalogs/revision' ? { revision: 'fixture' }
-      : path.endsWith('/continue/page') ? { items: [], offset: 0, total: 0, next_offset: null }
+      : path.endsWith('/continue') ? continuation()
+      : path.endsWith('/progress/page') ? { items: [], offset: 0, total: 0, next_offset: null }
       : path === '/api/v2/iptv/live/channels' ? { catalog_id: 1, generation: 1, items: [], next_cursor: null, previous_cursor: null }
       : path.endsWith('/preferences') ? {}
       : path.endsWith('/favorites') && saved ? [{ id: 'saved', type: 'movie', name: 'Saved movie' }]

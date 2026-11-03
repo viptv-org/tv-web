@@ -249,7 +249,7 @@ test('phone player fits and fills video without losing the controls', async ({ p
 
 test('Discover keeps all addon namespaces and loads despite an unrelated Home failure', async ({ page }) => {
   await installBackend(page);
-  await page.route(`${apiOrigin}/api/profiles/1/continue/page**`, route => route.fulfill({ status: 503, json: { error: 'temporary outage' }, headers: cors }));
+  await page.route(`${apiOrigin}/api/profiles/1/continue`, route => route.fulfill({ status: 503, json: { error: 'temporary outage' }, headers: cors }));
   await page.route(`${apiOrigin}/api/catalogs`, route => route.fulfill({ headers: cors, json: [
     { id: 'popular', name: 'Popular', type: 'movie', addon_id: 1, addon_name: 'Cinemeta' },
     { id: 'popular', name: 'Popular', type: 'movie', addon_id: 2, addon_name: 'AIOMetadata' },

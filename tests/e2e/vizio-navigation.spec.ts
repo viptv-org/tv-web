@@ -1,14 +1,15 @@
 import { test, expect, type Page } from '@playwright/test';
 import { installBackend, apiOrigin } from '../preview/backend';
+import { continuation } from '../fixtures/continuation';
 
 test.beforeEach(({}, info) => { test.skip(info.project.name !== "vizio", "Vizio entry regression; other shared surfaces have their own acceptance."); });
 
 const byId = (page: Page, id: string) => page.locator(`[data-focus-id="${id}"]`);
 async function setup(page: Page, longQueue = false) {
   await installBackend(page, { family: 'tv', session: 'ready', sourcesDone: true });
-  if (longQueue) await page.route(`${apiOrigin}/api/profiles/1/continue/page*`, route => route.fulfill({ json: {
-    items: Array.from({ length: 18 }, (_, i) => ({ id: `queue-${i}`, type: 'movie', name: `Queue ${i}`, position: 60, duration: 120, genres: [] })), total: 18, offset: 0, next_offset: null,
-  } }));
+  if (longQueue) await page.route(`${apiOrigin}/api/profiles/1/continue`, route => route.fulfill({ json: continuation(
+    Array.from({ length: 18 }, (_, i) => ({ id: `queue-${i}`, type: 'movie', name: `Queue ${i}`, position: 60, duration: 120, genres: [] })),
+  ) }));
   await page.goto('/tv/?renderer=react&platform=vizio');
   await expect(byId(page, 'hero-play')).toBeVisible();
 }

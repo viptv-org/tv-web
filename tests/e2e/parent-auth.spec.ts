@@ -50,12 +50,13 @@ async function installBackend(page: Page): Promise<State> {
       if (!state.unlocked) return json(route, { error: 'parent PIN required' }, 403);
       return json(route, { ok: true });
     }
-    if (path === '/api/profiles/2/continue/page' || path === '/api/profiles/1/continue/page') return json(route, { items: [], offset: 0, total: 0, next_offset: null });
-    if (path === '/api/profiles/2/progress' || path === '/api/profiles/1/progress' || path === '/api/profiles/2/favorites' || path === '/api/profiles/1/favorites') return json(route, []);
+    if (path === '/api/profiles/2/continue' || path === '/api/profiles/1/continue') return json(route, { scope: { kind: 'viptv:device', account: '7', profile: '1', generation: 1 }, revision: 1, entries: [], next_cursor: null, complete: true });
+    if (path === '/api/profiles/2/progress/page' || path === '/api/profiles/1/progress/page') return json(route, { items: [], offset: 0, total: 0, next_offset: null });
+    if (path === '/api/profiles/2/favorites' || path === '/api/profiles/1/favorites') return json(route, []);
     if (path === '/api/profiles/2/preferences' || path === '/api/profiles/1/preferences') return json(route, preferences);
     if (path === '/api/catalogs') return json(route, [{ id: 'movies', name: 'Movies', type: 'movie', addon_id: 2, supports_search: true, supports_skip: true }]);
     if (path === '/api/discover') return json(route, { metas: [], has_more: false, next_skip: null });
-    if (path === '/api/v2/addons') return json(route, { items: [], next_cursor: null });
+    if (path === '/api/addons') return json(route, { items: [], next_cursor: null });
     if (path === '/api/auth/device/code') return json(route, { device_code: 'pair', user_code: 'AB12CD34EF', verification_uri: 'https://viptv.syek.tech/device', verification_uri_complete: 'https://viptv.syek.tech/device?code=AB12CD34EF', qr_uri: 'https://viptv.syek.tech/api/auth/device/qr?code=AB12CD34EF', expires_in: 600, interval: 60 });
     if (path === '/api/auth/device/token') return json(route, { error: 'authorization_pending' }, 400);
     return json(route, { error: `unhandled ${path}` }, 404);
