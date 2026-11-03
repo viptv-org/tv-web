@@ -57,18 +57,39 @@ if (command === "sync") {
   const docs = paths.filter(
     (p) => p.endsWith(".md") && p !== "HANDOFF.md" && !p.startsWith("assets/") && !p.startsWith("prototypes/"),
   );
-  const imagePrefix = "assets/roku/roku/images/";
-  // Ship only the artwork the app loads: the launcher mark, the generated and
-  // character avatars (avatarCatalog.ts) and the Lucide control icons
-  // (actionIcons.ts, vectorIcons.ts). These directories are addressed
-  // dynamically, so they are imported whole; legacy Roku frames stay in design.
-  const shipped = (name) =>
-    name === "viptv-mark.png" ||
-    name.startsWith("avatar-catalog/") ||
-    (name.startsWith("avatar-characters/") && name.endsWith(".png")) ||
-    name.startsWith("lucide/");
+  // App artwork becomes a served file under public/assets/. Each design tree
+  // keeps its own predicate, because only the artwork the app loads should
+  // ship; everything else stays in design as the authoritative source.
+  const artworkTrees = [
+    {
+      prefix: "assets/roku/roku/images/",
+      target: "public/assets/",
+      // The launcher mark, the generated and character avatars
+      // (avatarCatalog.ts) and the Lucide control icons (actionIcons.ts,
+      // vectorIcons.ts). These directories are addressed dynamically, so they
+      // are imported whole; legacy Roku frames stay in design.
+      shipped: (name) =>
+        name === "viptv-mark.png" ||
+        name.startsWith("avatar-catalog/") ||
+        (name.startsWith("avatar-characters/") && name.endsWith(".png")) ||
+        name.startsWith("lucide/"),
+    },
+    {
+      prefix: "assets/photography/",
+      target: "public/assets/photography/",
+      // The Live no-source background (LIVE-EMPTY-001 artwork). The wide and
+      // tall crops are the only photographs the contract serves, so the
+      // predicate is the image format itself; README.md and the manifests
+      // beside them are provenance records, not app artwork.
+      shipped: (name) => name.endsWith(".webp"),
+    },
+  ];
+  const shipped = (source) => {
+    const tree = artworkTrees.find((t) => source.startsWith(t.prefix));
+    return tree ? tree.shipped(source.slice(tree.prefix.length)) : false;
+  };
   const assets = paths.filter(
-    (p) => p.startsWith(imagePrefix) && shipped(p.slice(imagePrefix.length)),
+    (p) => p.startsWith("assets/") && shipped(p),
   );
   const data = paths.filter((p) =>
     /^assets\/roku\/roku\/data\/(?:avatar-catalog|character-avatars)\.json$/.test(
@@ -109,8 +130,11 @@ if (command === "sync") {
   const imports = [];
   for (const source of [...docs, ...designSystemData, ...paths.filter(p => p.startsWith("tokens/") && p.endsWith(".json")), "assets/FILES.json", ...data, ...assets]) {
     if (!safe(source)) throw Error(`Unsafe design path: ${source}`);
-    const destination = source.startsWith(imagePrefix)
-      ? `public/assets/${source.slice(imagePrefix.length)}`
+    // Artwork keeps a stable served path so consumers never chase a design
+    // tree rename; everything else mirrors its design path in the snapshot.
+    const tree = artworkTrees.find((t) => source.startsWith(t.prefix));
+    const destination = tree
+      ? `${tree.target}${source.slice(tree.prefix.length)}`
       : `design-contract/${source}`;
     const bytes = git(repo, ["show", `${commit}:${source}`]);
     imports.push({ destination, bytes });
