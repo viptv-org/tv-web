@@ -7,6 +7,7 @@ import { revealOffset } from "../ui/scrollGeometry";
 import type { Catalog, MediaItem, MediaPresentation, MediaSource, TvApi } from "../api";
 import { enrichDetail, initialEpisode } from "../ui/detailProgress";
 import { castMembers, directorNames, genreTarget, type GenreTarget } from "../ui/detailLinks";
+import { phoneEpisodeHeading, phoneEpisodeMeta, titleBadgeLabels, titleCreditLines, titleKind, titleRuntime } from "./titleText";
 import { buttonClass, SourcePillContent } from "../ui/primitives/Button";
 import { CardArt, EpisodeCaption, MissingArt } from "../ui/primitives/Cards";
 import { Badge, QualityBadge } from "../ui/primitives/Badges";
@@ -182,11 +183,14 @@ export function DetailScreen({
   const finding = !!targetKey && (!summary || (!summary.done && !count));
 
   // Facts: P/D "2026 · 1 h 40 min · Action · Adventure"; TV adds "Series" and the IMDb rating (TvTitle).
+  // Phone draws the board line instead: "Series · 2022 · Crime, Drama" plus the outlined badges
+  // (M3Title), "Movie · 2026 · Action, Adventure · 1h 40m" plus them for a movie (M3Movie).
   const genreNode = genres.length ? (
     <span className="vx-title__genres">
       {genres.map(({ genre, target: link }, index) => (
         <span key={genre}>
-          {index > 0 ? " · " : ""}
+          {/* One comma-joined fact, as the boards write it: "Crime, Drama" (M3Title, D3Title). */}
+          {index > 0 ? ", " : ""}
           {link && onGenre ? (
             <button type="button" className="vx-title__genre" title={`Browse ${genre} in ${link.catalog.name}`} onClick={() => onGenre(link)}>{genre}</button>
           ) : genre}
@@ -194,14 +198,25 @@ export function DetailScreen({
       ))}
     </span>
   ) : null;
-  const facts: ReactNode[] = [
-    !responsive && selected.type === "series" ? "Series" : "",
+  const phoneFacts: ReactNode[] = [
+    titleKind(selected),
     selected.year ? String(selected.year) : "",
-    !responsive && selected.imdbRating ? `IMDb ${selected.imdbRating}` : "",
-    formatRuntime(selected.runtime),
-  ].filter(Boolean);
-  if (genreNode) facts.push(genreNode);
-  const factsLine = facts.length ? (
+    genreNode ?? "",
+    // A series has no single runtime: its episodes carry theirs (M3Title, M3Movie).
+    selected.type === "movie" ? titleRuntime(selected.runtime, selected.duration) : "",
+  ];
+  const facts: ReactNode[] = phone
+    ? phoneFacts.filter(Boolean)
+    : [
+        !responsive && selected.type === "series" ? "Series" : "",
+        selected.year ? String(selected.year) : "",
+        !responsive && selected.imdbRating ? `IMDb ${selected.imdbRating}` : "",
+        formatRuntime(selected.runtime),
+      ].filter(Boolean);
+  if (!phone && genreNode) facts.push(genreNode);
+  // The outlined badges end the board's one fact row (M3Title "TV-MA", M3Movie "PG-13").
+  const badgeLabels = phone ? titleBadgeLabels(selected) : [];
+  const factsLine = facts.length || badgeLabels.length ? (
     <p className="vx-title__facts">
       {facts.map((fact, index) => (
         <span key={index} className="vx-title__fact">
@@ -209,12 +224,16 @@ export function DetailScreen({
           {fact}
         </span>
       ))}
+      {badgeLabels.map((label) => (
+        <span key={label} className="vx-title__badge">{label}</span>
+      ))}
     </p>
   ) : null;
-  const credits = (cast.length > 0 || directors) && (
+  // "Starring Evan Peters, …", as M3Title and D3Title write it: no Cast or Director label.
+  const creditLines = titleCreditLines(selected, cast, directors);
+  const credits = creditLines.length > 0 && (
     <div className="vx-title__credits">
-      {directors ? <p><span className="vx-title__credit-label">Director</span> {directors}</p> : null}
-      {cast.length > 0 ? <p><span className="vx-title__credit-label">Cast</span> {cast.slice(0, 4).map((member) => member.name).join(", ")}</p> : null}
+      {creditLines.map((line) => <p key={line}>{line}</p>)}
     </div>
   );
   const heading = <TitleHeading name={selected.name} logo={presentation?.titleLogo ?? undefined} />;
@@ -269,6 +288,26 @@ export function DetailScreen({
       onActivate={() => manage(selected)}
     >
       <Ellipsis {...icon} strokeWidth={2.4} />
+    </TvButton>
+  );
+  /**
+   * A phone secondary action: the board's 76-wide column, 44 disc and 12/600
+   * label (M3Title). The board draws four (My List, Trailer, Rate, Share); this
+   * client has My List and the title menu, so those two are drawn here.
+   */
+  const secondaryAction = ({ id, label, ariaLabel, hasPopup, pressed, onActivate, children }: {
+    id: string; label: string; ariaLabel: string; hasPopup?: "menu"; pressed?: boolean; onActivate: () => void; children: ReactNode;
+  }) => (
+    <TvButton
+      id={id}
+      className="vx-title__action"
+      aria-label={ariaLabel}
+      aria-pressed={pressed}
+      aria-haspopup={hasPopup}
+      onActivate={onActivate}
+    >
+      <span className="vx-title__action-disc" aria-hidden="true">{children}</span>
+      <span className="vx-title__action-label">{label}</span>
     </TvButton>
   );
 
@@ -337,7 +376,11 @@ export function DetailScreen({
               />
               {responsive ? (
                 <span className="vx-card__caption">
-                  <EpisodeCaption number={`E${number}`} title={e.episodeTitle ?? e.name} synopsis={e.description} />
+                  {phone ? (
+                    <EpisodeCaption title={phoneEpisodeHeading(e, i)} meta={phoneEpisodeMeta(e)} synopsis={e.description} />
+                  ) : (
+                    <EpisodeCaption number={`E${number}`} title={e.episodeTitle ?? e.name} synopsis={e.description} />
+                  )}
                 </span>
               ) : (
                 <EpisodeCaption eyebrow={`Episode ${number}`} title={e.episodeTitle ?? e.name} synopsis={e.description} />
@@ -403,6 +446,15 @@ export function DetailScreen({
         </div>
         {episodeList}
         <div className="vx-title__dock">
+          <TvButton
+            id="detail-play"
+            className={buttonClass({ kind: "primary", size: "detail", icon: true, block: true })}
+            onActivate={startPlay}
+            onHold={chooseSource}
+          >
+            <PlayIcon />
+            {playLabel}
+          </TvButton>
           {targetKey ? (
             <TvButton
               id="detail-source"
@@ -421,12 +473,22 @@ export function DetailScreen({
             </TvButton>
           ) : null}
           <div className="vx-title__actions">
-            {saveButton(false)}
-            <TvButton id="detail-play" className={buttonClass({ kind: "primary", size: "detail", icon: true })} onActivate={startPlay} onHold={chooseSource}>
-              <PlayIcon />
-              {playLabel}
-            </TvButton>
-            {menuButton}
+            {secondaryAction({
+              id: "detail-save",
+              label: "My List",
+              ariaLabel: saved ? "Remove from My List" : "Add to My List",
+              pressed: saved,
+              onActivate: () => void toggle(selected),
+              children: saved ? <Check {...icon} /> : <Plus {...icon} />,
+            })}
+            {secondaryAction({
+              id: "detail-info",
+              label: "More",
+              ariaLabel: "More options",
+              hasPopup: "menu",
+              onActivate: () => manage(selected),
+              children: <Ellipsis {...icon} strokeWidth={2.4} />,
+            })}
           </div>
         </div>
       </main>
