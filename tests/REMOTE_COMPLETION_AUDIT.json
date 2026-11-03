@@ -2,8 +2,9 @@
   "schema": 1,
   "objective": "Fully quantify the approved server-authoritative TV-web rebuild; do not mark complete while required evidence is missing.",
   "state": "in_progress",
-  "source_base_commit": "cb7224edf6763ed12b53ef73fc4c2d2207647f7d",
-  "design_ref": "4f3a1eae36399608f459b5973381ead969c2c2d1",
+  "source_base_commit": null,
+  "source_base_commit_note": "Unrecoverable. cb7224edf6763ed12b53ef73fc4c2d2207647f7d does not exist in this repository (git cat-file -t fails): tv-web history was rewritten in f2122a6, which reconstructed the tree from session transcripts. No measurement recorded in this audit or in REMOTE_VISUAL_MEASUREMENTS.json can be reproduced from that base commit, and this audit makes no such claim.",
+  "design_ref": "8b7f85941addf5a65390fe6eca4f11aba9584a17",
   "backend_producer": "0d8da118e2282c1d7cefa4bc590004bf6a97c211",
   "previous_turn_classification": "progress: Live and channel Search payload/descriptor windows bounded; reverse traversal, refresh, failure recovery, frame budgets and focus geometry quantified",
   "requirements": [
@@ -221,7 +222,7 @@
       "id": "visual-acceptance",
       "requirement": "Compare every included reference state with matching content through private screenshots and geometry",
       "status": "open",
-      "evidence_or_gap": "Nine qualified reference states retain 135 rectangles. Search was recaptured on cb7224e: 47 reference rectangles and byte-identical before/after pixels. Delayed reverse page arrival has separate Live/Search focus-coordinate checks. Remaining boards are still unproven."
+      "evidence_or_gap": "Nine qualified reference states retain 135 rectangles. Search was recaptured in the working tree recorded as cb7224e: 47 reference rectangles and byte-identical before/after pixels. That revision is unrecoverable (see source_base_commit_note), so this is recorded evidence, not a reproducible measurement. Delayed reverse page arrival has separate Live/Search focus-coordinate checks. Remaining boards are still unproven."
     },
     {
       "id": "scaling-motion",
@@ -289,7 +290,8 @@
     "Update final delivery records only after every required obligation is proven; deployment and physical certification remain outside this conversion."
   ],
   "current_checkpoint": {
-    "source_revision": "cb7224edf6763ed12b53ef73fc4c2d2207647f7d",
+    "source_revision": null,
+    "source_revision_note": "Unrecoverable; same rewritten-history base as source_base_commit. The captures below were taken from a working tree whose commit is no longer reachable, so they are recorded evidence, not a reproducible measurement.",
     "backend_producer": "0d8da118e2282c1d7cefa4bc590004bf6a97c211",
     "unit_tests": 357,
     "unit_files": 61,

@@ -7,6 +7,6 @@
 5. Overlays: drawers for sources (video stays visible), flyouts for audio/subs and sort, dialogs only to confirm, info bars for update/offline, toasts with Undo.
 6. Player: Space/K, J/L ±10 s, arrows, F, M, C, I, Shift+N; controls hide after ~3 s idle, never while paused; hover scrub thumbnails; the title bar shrinks to drag + caption buttons; mini player = a separate always-on-top 16:9 window; media keys via Media Session / SMTC.
 7. Every sign-in method: browser (default, RFC 8252 deep link back), email code, password, another device (QR + code), IPTV provider (Xtream / M3U), or no account. Before a profile is picked the title bar is only the mark and window controls — nothing to search yet.
-8. Nothing ever autoplays: no trailer previews, no next-episode countdown.
+8. Nothing ever autoplays: no trailer previews, no next-episode countdown. (Superseded 2026-10-27 for next episodes by [PLAY-NEXT-AUTOPLAY-001](../../specs/behavior/next-episode-autoplay.md): a 10 s countdown at the end, which any action cancels and a setting turns off. Trailer previews still never autoplay.)
 
 Sources: learn.microsoft.com (title bar, snap layouts, NavigationView, breakpoints, dialogs & flyouts, InfoBar, settings), Apple HIG (windows, toolbars, sidebars, full screen, playing video), GNOME HIG header bars, Tauri v2 docs, NN/g timing, MDN Media Session, RFC 8252, YouTube & Spotify shortcut pages.

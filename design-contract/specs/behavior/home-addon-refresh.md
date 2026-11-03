@@ -46,6 +46,11 @@ existing meanings. Leaving Home cancels the watcher; returning restores Home
 focus and immediately checks configuration. Background refresh must not cancel
 an unrelated active detail, source picker, playback or profile interaction.
 
+A phone or tablet pull ([REFRESH-PULL-001](pull-to-refresh.md)) is the only
+refresh the viewer starts. It rebuilds without a revision check and shows the
+pull indicator, and otherwise follows the presentation and recovery rules
+above.
+
 ## Acceptance
 
 - HAF-01: Import a new eligible catalog add-on while Home remains open. Its

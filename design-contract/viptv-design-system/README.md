@@ -40,11 +40,11 @@ viptv-design-system/
 ## Principles
 
 1. **Thumb first on phone.** Things you tap often sit in the bottom third: the nav, Play, the source picker and filters. The top of the screen is for looking at, not tapping. Every target is 44 px or more.
-2. **One accent primary per screen.** The accent is for the main action, progress, spinners, the caret and the "Best match" label, and nothing else. Red is only for LIVE, and danger text for destructive actions.
+2. **One accent primary per screen.** The accent is for the main action, progress, spinners (except the phone and tablet pull-to-refresh indicator, [REFRESH-PULL-001](../specs/behavior/pull-to-refresh.md#superseded)), the caret and the "Best match" label, and nothing else. Red is only for LIVE, and danger text for destructive actions.
 3. **Fewer taps to play.** Play starts the best source. Changing the source opens a sheet or drawer, not a new page.
 4. **Never stretch art.** Tiles keep fixed widths, so wider windows show more tiles. Low-resolution art is never scaled up to fill space.
 5. **Exactly one focused element on TV.** Focus is an off-white fill (buttons and rows) or a 4 px white ring (image tiles). Focus never changes an element's size. TV has no accent buttons.
-6. **Loading is a skeleton, never a "Loading…" screen.** There are no "Load more" buttons: more items load as you scroll.
+6. **Loading is a skeleton, never a "Loading…" screen.** (First loads; a pull-to-refresh over shown content uses the pull indicator, [REFRESH-PULL-001](../specs/behavior/pull-to-refresh.md).) There are no "Load more" buttons: more items load as you scroll.
 7. **Accessible as drawn.** Use real `<button>`, `<a href>` and `<input>` + `<label>`. Icon-only buttons get an `aria-label`. Text contrast is at least 4.5:1.
 
 ## Platforms at a glance
@@ -53,7 +53,7 @@ viptv-design-system/
 |---|---|---|---|
 | Frame | 390 × 844 | 1440 × 900 (web 1280 × 800, ultra-wide 2560 × 1080) | 1920 × 1080, safe area 96 × 54 |
 | Navigation | Floating 64 px glass nav, 28 px above the edge, with a separate search button | 40 px custom title bar (back, forward, search, window controls) + 84 px rail | 144 px icon rail that expands to a 520 px labelled menu |
-| Overlays | Bottom sheets over a 0.62 scrim, actions stacked full width | Centred 460 dialog, right 460 drawer, anchored popovers | Right 820 panel over a 0.6 scrim; full-screen text entry |
+| Overlays | Bottom sheets over a 0.62 scrim, actions stacked full width | Centred 460 dialog, right 460 drawer (source drawer up to 720, SRC-DRAWER-001), anchored popovers | Right 820 panel over a 0.6 scrim; full-screen text entry |
 | Focus | None. The pressed state replaces hover | `:focus-visible` = 2 px off-white ring with a 2 px ground gap | Off-white fill or white ring, without scaling |
 | Buttons | 54 tall (58 on detail) | 48 tall | 72 tall (52 small) |
 | Minimum text | 11 px (eyebrows), 12 px captions | 11 px (rail labels, eyebrows) | 18 px |

@@ -6,6 +6,11 @@ The rebuild is **not fully qualified**. `tests/REMOTE_COMPLETION_AUDIT.json` tra
 Of 56 Tv3 reference boards, 50 remain included. The earlier 32 captures label
 30 references and assert nine rectangles; that is not exhaustive visual parity.
 
+The adopted design contract pin is `8b7f85941addf5a65390fe6eca4f11aba9584a17`
+([DESIGN_REF](DESIGN_REF)). Design revisions cited inside the dated checkpoints
+below record the pin each checkpoint was measured against; they are historical,
+and none of them is the current pin.
+
 This checkpoint fixed regressions reproduced by 14 failing cases: stale HTTP
 errors, lost refresh rotations, cancellation blocked by refresh, late outcomes
 from retired authentication sessions, unbounded response-body consumption,
@@ -544,12 +549,14 @@ remain separate gates.
 
 ## TV My List and phone 2:3 posters — 2026-10-11
 
-Design `4f3a1eae36399608f459b5973381ead969c2c2d1` (TV-MYLIST-POSTER-001,
-PHONE-POSTER-001). The SolidTV My List segment draws seven 200 × 300 posters
-per row from the shared core `posterImage` projection, keeping the focused row
-at the grid top; Continue Watching keeps its four 360 × 202 stills. The TV Home
-My List shelf draws 160 × 240 posters and grows by 60 px. Responsive phone
-poster cards use 2:3 instead of 4:5.
+Design `8b7f85941addf5a65390fe6eca4f11aba9584a17` (TV-MYLIST-POSTER-001 and
+PHONE-POSTER-001 remain current in the adopted contract; this 2026-10-11
+checkpoint measured `4f3a1eae36399608f459b5973381ead969c2c2d1`). The SolidTV
+My List segment draws seven 200 × 300 posters per row from the shared core
+`posterImage` projection, keeping the focused row at the grid top; Continue
+Watching keeps its four 360 × 202 stills. The TV Home My List shelf draws
+160 × 240 posters and grows by 60 px. Responsive phone poster cards use 2:3
+instead of 4:5.
 
 Verification: typecheck, 310 unit tests in one fork (new
 `tests/ui/tv-my-list-posters.test.ts`) and the production build pass. Solid
@@ -672,12 +679,16 @@ and Windows/macOS qualification were not rerun. Historical evidence follows.
 
 # Desktop timeline, source return and fullscreen — 2026-10-03
 
-Design `a8b5acac2f810e3d447334e64b7fc3f44c696b4d` and Video
-`f22a2a6672c01f55c2c777e27a1428bf5e998d88` are imported through the normal
-sync scripts. Selected VOD intent retains positive native duration/buffering
-before the first seek, including GStreamer live=true. Explicit desktop source
-replacement retires outgoing presentation/lease and remains empty on failure;
-managed seek/track/Next recovery stays separate.
+The adopted design pin is `8b7f85941addf5a65390fe6eca4f11aba9584a17`; this
+2026-10-03 checkpoint measured
+`a8b5acac2f810e3d447334e64b7fc3f44c696b4d`, which later revisions superseded.
+The Video revision this checkpoint recorded,
+`f22a2a6672c01f55c2c777e27a1428bf5e998d88`, no longer exists in
+`viptv-org/video` and is not the current VIDEO_REF, so its measurements cannot be
+reproduced from that revision. Selected VOD intent retains positive native
+duration/buffering before the first seek, including GStreamer live=true.
+Explicit desktop source replacement retires outgoing presentation/lease and
+remains empty on failure; managed seek/track/Next recovery stays separate.
 
 Provider and quality filters survive player, titlebar and browser Back to the
 same episode; another episode starts at All. Player-button/titlebar fullscreen
@@ -1186,7 +1197,9 @@ promote the staged SolidTV entry into a physical-TV-qualified release.
 
 # TV visual refinement — 2026-09-24
 
-Design pin `fa8b20e0e63d465498b6b2af8571a4e9cdc1015f` records stable-size TV focus. The React TV entry now keeps focus in the current horizontal shelf, reveals the full trailing card, adds space between Home shelves, removes the Home key legend and focused scaling, and uses landscape detail art and a stable runtime label in the player. SolidTV preview now uses cached canvas icons for the affected Home, title, profile and player actions, shows an animated preparation spinner, avoids tile/profile scaling, reveals later queue cards, and omits empty movie episode chrome.
+Design pin `8b7f85941addf5a65390fe6eca4f11aba9584a17`. This 2026-09-24
+checkpoint measured `fa8b20e0e63d465498b6b2af8571a4e9cdc1015f`, which records
+stable-size TV focus. The React TV entry now keeps focus in the current horizontal shelf, reveals the full trailing card, adds space between Home shelves, removes the Home key legend and focused scaling, and uses landscape detail art and a stable runtime label in the player. SolidTV preview now uses cached canvas icons for the affected Home, title, profile and player actions, shows an animated preparation spinner, avoids tile/profile scaling, reveals later queue cards, and omits empty movie episode chrome.
 
 Evidence: design validation passed; `npm run build`, `npm test` (172 tests), TypeScript, five React preview captures (`TvHome`, `TvTitle`, `TvProfiles`, `TvPlayer`, `TvPlayerNext`), and SolidTV captures (`TvHome`, `TvProfiles`, `TvProfilesManage`, `TvTitle`, `TvPlayer`) passed in desktop Chromium at 1920×1080. The targeted Tizen browser test for trailing-card visibility, shelf-bound Right and hiding the hero artwork after moving down passed. A broader Tizen E2E run had seven passes, twelve declared skips and one search timing failure; that exact search case passed alone. Browser captures are visual evidence, not physical TV or real-media qualification.
 

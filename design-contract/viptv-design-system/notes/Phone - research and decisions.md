@@ -9,7 +9,7 @@ Built from the TV study's look (Onest UI type, title logos, white primary button
 5. Player is landscape for full titles (Netflix): double-tap ±10 s with a ripple, Episodes · Audio & subtitles · Speed · Lock along the bottom, screen lock against pocket touches, scrub thumbnails, Skip intro / Next episode, live with a channel list.
 6. Link a TV from the phone: scan the TV's QR, or type its code (letters only, no look-alikes), check the TV name, pick the profile, done — then offer the remote (Netflix/YouTube TV sign-in; RFC 8628).
 7. Every sign-in method: browser, email code, password, approve from another device (QR + code), IPTV provider (Xtream / M3U), or no account.
-9. Nothing autoplays: no trailers, no next-episode countdown — Next episode is a button.
-8. Targets 44 pt+, 16 pt gutters, text 13–17 pt so Dynamic Type has room; skeletons not spinners; offline banner keeps saved content usable.
+9. Nothing autoplays: no trailers, no next-episode countdown — Next episode is a button. (Superseded 2026-10-27 for next episodes by [PLAY-NEXT-AUTOPLAY-001](../../specs/behavior/next-episode-autoplay.md): a 10 s countdown at the end, which any action cancels and a setting turns off. Trailers still never autoplay.)
+8. Targets 44 pt+, 16 pt gutters, text 13–17 pt so Dynamic Type has room; skeletons not spinners; offline banner keeps saved content usable. (First loads only: the pull-to-refresh indicator over shown content is a spinner, [REFRESH-PULL-001](../../specs/behavior/pull-to-refresh.md).)
 
 Sources: Apple HIG (tab bars, sheets, loading, playing video), Google Cast design checklist, Netflix help + 2026 iPhone redesign coverage, Material bottom sheet + motion, RFC 8628.

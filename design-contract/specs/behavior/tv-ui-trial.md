@@ -65,12 +65,14 @@ More info button. Hold Play/Resume for 700ms opens manual source selection;
 release does not also play. Failed metadata keeps retry and list access.
 
 Replace previous/next season cards and TV season dropdown with one horizontally
-scrollable pill row: `Episode #`, then available seasons in numeric order,
-including `Season 0` when supplied (extras/OVAs), then `Season 1` and later seasons.
-Do not fabricate absent seasons. Episode # opens numeric entry; invalid numbers
-show `Episode not found in this season.` Cancel restores its pill; success focuses
-the matching episode. Selecting a season focuses its first available episode.
-Empty seasons retain the selector. Episode short/hold actions remain unchanged.
+scrollable pill row of available seasons in numeric order, including `Season 0`
+when supplied (extras/OVAs), then `Season 1` and later seasons, ending with
+`Episode #`. Do not fabricate absent seasons. Right walks the season pills and
+then reaches `Episode #`; Down from any season pill enters the episode row.
+Episode # opens numeric entry; invalid numbers show `Episode not found in this
+season.` Cancel restores its pill; success focuses the matching episode.
+Selecting a season focuses its first available episode. Empty seasons retain the
+selector. Episode short/hold actions remain unchanged.
 
 Collapsed sidebar buttons span x=20..84; page content begins at x=104, providing
 20px between screen/button and button/content. Expanded sidebar overlays content
