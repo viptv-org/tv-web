@@ -7,7 +7,7 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp, ExternalLink, Monitor, Pause, Volume1, Volume2, Power, VolumeX } from "lucide-react";
-import type { VizioControllerOutput, VizioRemoteKey } from "../../vendor/core/typescript/wire";
+import type { VizioControllerOutput, VizioFailure, VizioRemoteKey } from "../../vendor/core/typescript/wire";
 import { DialogBackdrop } from "./DialogBackdrop";
 import { Dialog, DialogText } from "./primitives/Overlays";
 import { ButtonContent, buttonClass } from "./primitives/Button";
@@ -47,6 +47,24 @@ function parseDiscoveredTvs(payload: string): DiscoveredTv[] {
   });
 }
 
+/**
+ * A pairing attempt fails in two distinct ways, and the dialog must not read them the
+ * same: the TV answered without a challenge, or the request produced no answer at all
+ * (the host delivered it and lost the reply). The second case is reachable while the set
+ * already displays a code: the shared core reports `transport` from `reject` after the
+ * `/pairing/start` PUT was sent, and `invalidResponse` when the body arrives unusable.
+ * Both keep the PIN entry mounted, so the wording names which failure happened and the
+ * one action that resolves it — a fresh challenge, because only the TV knows the token.
+ */
+function pairingFailure(failure: VizioFailure | null): string {
+  switch (failure?.kind) {
+    case "transport": return "The pairing request failed on the network. Get a new PIN to try again.";
+    case "busy": return "Your TV is still busy with the previous request. Get a new PIN to try again.";
+    case "invalidResponse": return "Your TV answered without a pairing challenge. Get a new PIN to try again.";
+    default: return `${failure?.message ?? "Your TV did not start pairing."} Get a new PIN to try again.`;
+  }
+}
+
 const REMOTE_PAD = [
   ["UP", "Up", <ChevronUp key="up" aria-hidden="true" strokeWidth={2.4} />],
   ["LEFT", "Left", <ChevronLeft key="left" aria-hidden="true" strokeWidth={2.4} />],
@@ -71,7 +89,11 @@ export function CastController({ receiverUrl = previewBridge?.receiverUrl, onClo
   const [host, setHost] = useState("");
   const [tvName, setTvName] = useState("Vizio TV");
   const [pin, setPin] = useState("");
+  // A challenge carries the token `finishPair` needs. `pairing` is the wider fact: an
+  // attempt is in flight or the TV may be showing a code we have no token for, and the
+  // PIN entry must stay reachable in both, so the two states are not the same switch.
   const [challenge, setChallenge] = useState<Challenge | null>(null);
+  const [pairing, setPairing] = useState(false);
   const [connected, setConnected] = useState(false);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
@@ -186,15 +208,36 @@ export function CastController({ receiverUrl = previewBridge?.receiverUrl, onClo
       if (!mounted.current) return;
       if (check.kind === "complete") { setConnected(true); setMessage("Connected to your TV."); await refreshTvName(); return; }
       if (check.error?.kind !== "authentication") { accepted(check); return; }
-      const pairing = await run("beginPair");
-      if (!mounted.current || !accepted(pairing)) return;
-      const result = pairing.result;
-      if (typeof result?.challengeType !== "number" || typeof result.token !== "number") {
-        setError("The TV did not return a pairing challenge. Try again."); return;
-      }
-      setChallenge({ challengeType: result.challengeType, token: result.token });
-      setMessage("Enter the PIN displayed on your TV.");
+      await startPairing();
     });
+  }
+
+  /**
+   * Starts (or restarts) a pairing challenge. The PIN entry is mounted before the request
+   * leaves, because the TV displays a code as soon as it accepts the PUT, and a failure
+   * here is not proof that it did not: a transport failure says the answer was lost, not
+   * that the set stayed silent. Neither case may collapse into an unreachable-TV message.
+   */
+  async function startPairing() {
+    setPairing(true);
+    let output: VizioControllerOutput;
+    try {
+      output = await run("beginPair");
+    } catch {
+      // The desktop host did not answer the IPC call; the TV may still hold a challenge.
+      if (mounted.current) setError("The desktop host did not answer the pairing request. Get a new PIN to try again.");
+      return;
+    }
+    if (!mounted.current) return;
+    if (output.kind === "error") { setError(pairingFailure(output.error)); return; }
+    const result = output.result;
+    if (typeof result?.challengeType !== "number" || typeof result.token !== "number") {
+      setError("Your TV answered without a pairing challenge. Get a new PIN to try again."); return;
+    }
+    // A new challenge means the set is showing a new code; the field starts empty for it.
+    setChallenge({ challengeType: result.challengeType, token: result.token });
+    setPin("");
+    setMessage("Enter the PIN displayed on your TV.");
   }
 
   async function connect(event: FormEvent) {
@@ -205,26 +248,30 @@ export function CastController({ receiverUrl = previewBridge?.receiverUrl, onClo
 
   async function pair(event: FormEvent) {
     event.preventDefault();
-    if (!challenge || !pin) return;
+    // Without a challenge the code on screen belongs to an attempt this app never
+    // finished, so the only useful step is a fresh challenge for the new code.
+    if (!challenge) { await perform(startPairing); return; }
+    if (!pin) return;
     const submitted = pin;
     setPin("");
     await perform(async () => {
       const output = await run("finishPair", { ...challenge, pin: submitted });
       if (!mounted.current || !accepted(output)) return;
       if (output.result?.paired !== true) { setError("The TV did not confirm pairing. Try again."); return; }
-      setChallenge(null); setConnected(true); setMessage("Paired with your TV.");
+      setChallenge(null); setPairing(false); setConnected(true); setMessage("Paired with your TV.");
       await refreshTvName();
     });
   }
 
   const changeTv = () => perform(async () => {
     try {
-      if (challenge) {
+      // Also cancel a challenge the TV may hold from a failed attempt of our own.
+      if (pairing) {
         const output = await run("cancelPair");
         if (mounted.current) accepted(output);
       }
     } finally {
-      if (mounted.current) { setChallenge(null); setConnected(false); setPin(""); setHost(""); }
+      if (mounted.current) { setChallenge(null); setPairing(false); setConnected(false); setPin(""); setHost(""); }
     }
   });
   function close() {
@@ -245,17 +292,17 @@ export function CastController({ receiverUrl = previewBridge?.receiverUrl, onClo
   });
   const forget = () => perform(async () => {
     await call("smartcast_forget");
-    if (mounted.current) { setConnected(false); setChallenge(null); setPin(""); setMessage("Saved TV pairing removed from this app."); }
+    if (mounted.current) { setConnected(false); setChallenge(null); setPairing(false); setPin(""); setMessage("Saved TV pairing removed from this app."); }
   });
 
   // With nothing discovered, the address form is the way in (DeskCastManual): no toggle then.
-  const choosing = native && !connected && !challenge;
+  const choosing = native && !connected && !pairing;
   const formShown = choosing && (manual || (!discovering && discovered.length === 0));
   const toggleShown = choosing && (discovering || discovered.length > 0);
   // The field takes focus when the form appears (the placeholder shows the expected shape).
   useEffect(() => {
-    if ((formShown || challenge) && !busy) field.current?.focus({ preventScroll: true });
-  }, [formShown, !!challenge, busy]);
+    if ((formShown || pairing) && !busy) field.current?.focus({ preventScroll: true });
+  }, [formShown, pairing, busy]);
 
   const closeButton = (
     <button type="button" className={buttonClass({ block: true })} disabled={busy} onClick={close}>Close</button>
@@ -291,7 +338,7 @@ export function CastController({ receiverUrl = previewBridge?.receiverUrl, onClo
         </ul>
       )}
       {choosing && discoveryNote && <DialogText>{discoveryNote}</DialogText>}
-      {challenge && message && <DialogText>{message}</DialogText>}
+      {pairing && message && <DialogText>{message}</DialogText>}
       {formShown && (
         <form className="vx-cast__form" onSubmit={connect} aria-label="Connect to a TV">
           <TextField
@@ -328,7 +375,7 @@ export function CastController({ receiverUrl = previewBridge?.receiverUrl, onClo
           </div>
         </>
       )}
-      {challenge && (
+      {pairing && (
         <form className="vx-cast__form" onSubmit={pair} aria-label="Pair with your TV">
           <TextField
             ref={field}
@@ -340,13 +387,15 @@ export function CastController({ receiverUrl = previewBridge?.receiverUrl, onClo
             value={pin}
             onChange={event => setPin(event.target.value)}
             maxLength={32}
-            required
+            required={challenge !== null}
             disabled={busy}
           />
           {status}
           {errorLine}
           <div className="vx-dialog__actions">
-            <button type="submit" className={buttonClass({ kind: "primary", block: true })} disabled={busy}>Pair TV</button>
+            <button type="submit" className={buttonClass({ kind: "primary", block: true })} disabled={busy}>
+              {challenge ? "Pair TV" : "Get a new PIN"}
+            </button>
             <button type="button" className={buttonClass({ kind: "quiet", block: true })} onClick={changeTv} disabled={busy}>Change TV</button>
             {closeButton}
           </div>
