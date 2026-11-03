@@ -118,7 +118,6 @@ const LEGITIMATE_ABSENCE = {
   "no-round-trip-profile": "the stored session already selected a profile, so no chooser was drawn",
   "single-content-type": "every fixture catalog has the same type, so Discover draws one segment",
   "no-catalog-filters": "the fixture catalogs expose no filter controls",
-  "carousel-exhausted": "every overflowing fixture shelf was already paged to its end",
 };
 
 // ---------------------------------------------------------------------------
@@ -126,10 +125,9 @@ const LEGITIMATE_ABSENCE = {
 // ---------------------------------------------------------------------------
 /**
  * Limits are per motion mode because the motion-on path is genuinely more
- * expensive. Each number came from measured runs on this host, rounded up with
- * ~2x headroom for shared-machine noise: see LIMIT_NOTES for the observation
- * each limit was derived from. They are intentionally loose enough to measure
- * the machine, not so loose they cannot fail.
+ * expensive. Every number was measured on this host first and then given the
+ * headroom recorded in LIMIT_NOTES: loose enough to survive a shared machine,
+ * tight enough that the workload this gate drives cannot quietly double.
  */
 const LIMITS = {
   reduced: {
@@ -160,13 +158,13 @@ const LIMITS = {
   },
 };
 const LIMIT_NOTES = {
-  coldLcpMs: "cold Home LCP; ~5x the observed value, because a cold Vite transform can spike",
-  coldTotalBlockingMs: "sum of cold-load long tasks; ~2x the observed value",
+  coldLcpMs: "cold Home LCP; observed 168-236ms, limit ~5x because a cold Vite transform can spike under load",
+  coldTotalBlockingMs: "sum of cold-load long tasks; observed 0ms, so any 400ms of blocking fails",
   idleRecalcPerSecond: "idle style recalcs/s: reduce observed 0, motion ~61 (one per frame); reduce fails if an animation escapes its media query, motion fails at 1.5x a single per-frame animation",
   idleTaskMsPerSecond: "idle main-thread task time/s: reduce observed 3.3-4.0, motion 16.8-17.3 in one-second buckets; ~5x and ~4x the observed maximum",
   idleFrameP95Ms: "idle frame interval p95: both modes observed 16.8ms on a 60Hz clock; 25ms fails on any sustained dropped frame",
-  carouselMedianMs: "median shelf arrow click (click → track settled); ~10x the observed 8-9ms to absorb host noise",
-  carouselMaxMs: "slowest shelf arrow click; ~10x the observed maximum",
+  carouselMedianMs: "median shelf arrow click (click → track settled); observed 10-12ms, limit ~10x for host noise",
+  carouselMaxMs: "slowest shelf arrow click; observed 13ms, limit 400ms because one noisy page-in on a shared host can cost 100ms+",
   routeMedianMs: "median nav rail switch (click → target screen painted); ~6x the observed 45-48ms",
   screenMaxLongtaskMs: "worst long task during a per-screen sweep leg; observed 0ms, so this catches the first 300ms regression",
   discoverSwitchMedianMs: "Discover content-type switch, click → filtered grid painted; ~6x the observed 48ms",
@@ -956,7 +954,10 @@ async function measurePass(mode) {
   let shelfIndex = 0;
   const imagesBeforeCarousel = images.images.requests;
   const metricsBeforeCarousel = await cdpSnapshot(cdp);
-  while (clicks.length < CAROUSEL_STEPS && shelfIndex < 20) {
+  // A disabled chevron is a legitimate state (that shelf is already paged to
+  // its end), so it moves to the next shelf and is recorded; a missing chevron
+  // or track is drift and fails. The bound only stops a pathological loop.
+  while (clicks.length < CAROUSEL_STEPS && shelfIndex < 100) {
     await clearLongtasks(page);
     const step = await carouselStep(page, shelfIndex);
     if (!step.ok) {
@@ -965,10 +966,7 @@ async function measurePass(mode) {
         shelfIndex += 1;
         continue;
       }
-      if (step.code === "shelf-missing") {
-        absences.push({ scenario: "carousel", code: "carousel-exhausted", reason: LEGITIMATE_ABSENCE["carousel-exhausted"] });
-        break;
-      }
+      if (step.code === "shelf-missing") break;
       await requireStep(page, "carousel", step, absences);
     }
     if (step.reason === "timeout") await structuralFailure(page, "carousel", `shelf "${step.shelf}" never settled after a right click`);
@@ -979,7 +977,12 @@ async function measurePass(mode) {
     await sleep(300);
   }
   if (clicks.length < CAROUSEL_STEPS)
-    await structuralFailure(page, "carousel", `only ${clicks.length}/${CAROUSEL_STEPS} steps could run (shelves exhausted: ${shelvedOut.join(", ") || "none"})`);
+    await structuralFailure(
+      page,
+      "carousel",
+      `only ${clicks.length}/${CAROUSEL_STEPS} steps could run: the fixture no longer supplies enough overflowing shelves ` +
+        `(paged to the end: ${shelvedOut.join(", ") || "none"})`,
+    );
   const metricsAfterCarousel = await cdpSnapshot(cdp);
   const carousel = {
     clicks: clicks.map(({ gaps, ...rest }) => rest),
@@ -1037,7 +1040,7 @@ async function measurePass(mode) {
   else await requireStep(page, "discover filter", filterStep, absences);
   const discover = {
     typeSwitches: [typeSwitch, typeSwitchTwo].filter((step) => step.ok).map(({ gaps, ...rest }) => rest),
-    filter: filterStep.ok ? (({ ...rest }) => rest)(filterStep) : { skipped: filterStep.code, reason: LEGITIMATE_ABSENCE[filterStep.code] },
+    filter: filterStep,
     cards: discoverBefore.cards,
   };
 
