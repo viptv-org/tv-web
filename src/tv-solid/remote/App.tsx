@@ -284,6 +284,14 @@ import {
 
 } from "./display";
 import {
+  HERO_SLIDE_MS,
+  advanceHeroRotation,
+  clampHeroRotation,
+  heroRotationRunning,
+  restartHeroRotation,
+  startHeroRotation,
+} from "./heroCycle";
+import {
 
 
 
@@ -1207,7 +1215,7 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
         setGroups([]);
         setLiveGroup(undefined);
         setSettingsItems([]);
-        setHeroSlide(0);
+        setHeroRotation(startHeroRotation(0));
         setHeroAction(0);
         setSaved(new Map());
       });
@@ -1508,12 +1516,23 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
       !!search() &&
       !searchMediaPending() &&
       (!!searchError() || !page().complete);
-    const [heroSlide, setHeroSlide] = createSignal(0);
+    const [heroRotation, setHeroRotation] = createSignal(
+      startHeroRotation(home()?.featured.length ?? 0),
+    );
     const [heroCycleStart, setHeroCycleStart] = createSignal(performance.now());
     const [heroVisible, setHeroVisible] = createSignal(
       document.visibilityState === "visible",
     );
     const heroMotion = !matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const heroSlide = () => heroRotation().slide;
+    const heroFeatured = () => home()?.featured.length ?? 0;
+    // A pass ends once every featured title has been presented; the rotation
+    // then parks. That is what lets idle Home stop redrawing: a parked pass
+    // schedules no advance and its indicator is the static one, so only the
+    // pinned fourteen-second artwork zoom is left to retire.
+    const heroCycling = createMemo(() =>
+      heroRotationRunning(heroRotation(), heroFeatured()),
+    );
     const heroActive = createMemo(
       () =>
         screen() === "home" &&
@@ -1524,9 +1543,15 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
         !error() &&
         heroVisible() &&
         heroMotion &&
-        (home()?.featured.length ?? 0) > 1,
+        heroCycling(),
     );
     const resetHeroCycle = () => setHeroCycleStart(performance.now());
+    // Remote activity restarts the presentation cycle, and with it a full pass
+    // through the server's featured order.
+    const restartHeroCycling = () => {
+      setHeroRotation((current) => restartHeroRotation(current));
+      resetHeroCycle();
+    };
     let wasHeroActive = false;
     createEffect(() => {
       const active = heroActive();
@@ -1538,17 +1563,25 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
       if (!wasHeroActive) {
         wasHeroActive = true;
         started = performance.now();
+        // Becoming active again — a returned-to Home, a closed menu, a visible
+        // page — is a fresh presentation: the contract's "returning to an
+        // active billboard starts a fresh cycle" rule, applied to the pass.
+        setHeroRotation((current) =>
+          current.shown > 1 ? restartHeroRotation(current) : current,
+        );
         setHeroCycleStart(started);
       }
       const timer = setTimeout(
         () => {
           if (!heroActive()) return;
+          const next = advanceHeroRotation(heroRotation(), heroFeatured());
+          if (!next) return;
           batch(() => {
-            setHeroSlide((i) => (i + 1) % home()!.featured.length);
+            setHeroRotation(next);
             resetHeroCycle();
           });
         },
-        Math.max(0, 9000 - (performance.now() - started)),
+        Math.max(0, HERO_SLIDE_MS - (performance.now() - started)),
       );
       onCleanup(() => clearTimeout(timer));
     });
@@ -1567,16 +1600,6 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
       }, 400);
       onCleanup(() => clearTimeout(timer));
     });
-    createEffect(() => {
-      const card = focusedCard(),
-        active = zone() === "rows";
-      const timer = setTimeout(
-        () => setPreviewCard(active ? card : undefined),
-        matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 400,
-      );
-      onCleanup(() => clearTimeout(timer));
-    });
-    createEffect(()=>{const card=focusedCard(),active=zone()==="rows";const timer=setTimeout(()=>setPreviewCard(active?card:undefined),matchMedia('(prefers-reduced-motion: reduce)').matches?0:400);onCleanup(()=>clearTimeout(timer));});
     const hero = createMemo(() =>
       screen() === "home"
         ? zone() === "rows"
@@ -1598,6 +1621,16 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
     );
     createEffect(() => {
       billboardKey();
+      resetHeroCycle();
+    });
+    let heroOrder = "";
+    createEffect(() => {
+      // A new featured order is new presentation: present it as a fresh pass. A
+      // server refresh that repeats the same order must not restart anything.
+      const order = (home()?.featured ?? []).map(cardKey).join("|");
+      if (!order || order === heroOrder) return;
+      heroOrder = order;
+      setHeroRotation((current) => restartHeroRotation(current));
       resetHeroCycle();
     });
     function remember() {
@@ -1797,8 +1830,8 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
       batch(() => {
         setHome(value);
         setPreviewCard(undefined);
-        setHeroSlide((index) =>
-          Math.min(index, Math.max(0, (value?.featured.length ?? 1) - 1)),
+        setHeroRotation((current) =>
+          clampHeroRotation(current, value?.featured.length ?? 0),
         );
         if (screen() === "home" && zone() === "rows") {
           setRow(nextRow);
@@ -3918,7 +3951,7 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
       }
       if (overlayClosing() || error()) return;
       pendingFocus = undefined;
-      resetHeroCycle();
+      restartHeroCycling();
       if (loading() && screen() === "welcome") return;
       if (overlay()) {
         const value = overlay()!;
@@ -4526,7 +4559,7 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
     }
     async function activate() {
       channelPending = undefined;
-      resetHeroCycle();
+      restartHeroCycling();
       const canLeaveLoading =
         !overlay() &&
         ((zone() === "nav" && !["welcome", "pairing"].includes(screen())) ||
@@ -5369,7 +5402,7 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
           // A held Enter auto-repeats; only the first keydown arms the hold
           // timer, so repeats must not reset it or the 700ms menu never fires.
           if (event?.repeat) return undefined;
-          resetHeroCycle();
+          restartHeroCycling();
           if (overlay()?.kind === "sources") manualSourceSelection = true;
           const target = pressTarget(),
             pressedOverlay = overlay();
