@@ -12,7 +12,7 @@ import {
 } from "../../api";
 import { exactResumeSource } from "../continuation";
 import { focusElement } from "../remote";
-import { enrichDetail, mergeEpisodeProgress, initialEpisode } from "../detailProgress";
+import { enrichDetail, savedEpisodeProgress, initialEpisode } from "../detailProgress";
 import { catalogFilters, catalogDefaults, searchPlan } from "../catalogFilters";
 import { appendCatalogPage } from "../catalogPaging";
 import type { PlaybackSessionApi } from "./useTvApp";
@@ -33,23 +33,26 @@ export function useCatalog(app: PlaybackSessionApi) {
       if (ticket !== epoch.current) return;
       let enrichedEpisodes = value.episodes;
       if (value.item.type === "series") {
+        // `undefined` distinguishes a failed history load from a loaded history
+        // that reports nothing: only the failure keeps the card's resume point.
         const history = await api
           .seriesProgress(profile, value.item.seriesId ?? value.item.id)
           .catch((error: unknown) => {
-            if (ticket !== epoch.current) return [];
+            if (ticket !== epoch.current) return undefined;
             // Keep the series usable during a history outage without inventing progress.
             notify(
               "Watch history couldn't load. Episode progress may be unavailable.",
             );
             if (error instanceof DOMException && error.name === "AbortError")
               throw error;
-            return [];
+            return undefined;
           });
         if (ticket !== epoch.current) return;
-        enrichedEpisodes = mergeEpisodeProgress(
+        enrichedEpisodes = savedEpisodeProgress(
           value.episodes,
           history,
           value.item.seriesId ?? value.item.id,
+          item,
         );
       }
       if (ticket === epoch.current) {

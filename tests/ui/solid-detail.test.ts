@@ -26,6 +26,34 @@ describe("SolidTV season projection", () => {
     expect(api.seriesProgress).toHaveBeenCalledTimes(1);
   });
 
+  it("keeps a saved resume point when watch history fails to load", async () => {
+    const one = episode(1, 1), two = episode(2, 1);
+    const resume = { ...two, position: 42, sourceAddonId: "iptv:7", sourceFingerprint: "saved-source" };
+    const api = {
+      detail: vi.fn(async () => ({ item: show, episodes: [one, two] })),
+      seriesProgress: vi.fn(async (): Promise<readonly MediaItem[]> => { throw new Error("history unavailable"); }),
+    } as unknown as TvApi;
+    const detail = await loadDetailView(api, resume, "profile", [], new AbortController().signal);
+    expect(detail.season).toBe(2);
+    expect(detail.target).toMatchObject({ id: two.id, position: 42, sourceFingerprint: "saved-source" });
+    expect(detail.playLabel).toBe("Resume S2 E1");
+    expect(detail.episodes[0]).toMatchObject({ watching: true, progress: 0.35 });
+  });
+
+  it("treats an empty loaded history as authoritative instead of resurrecting the card position", async () => {
+    const one = episode(1, 1), two = episode(2, 1);
+    const stale = { ...two, position: 42 };
+    const api = {
+      detail: vi.fn(async () => ({ item: show, episodes: [one, two] })),
+      seriesProgress: vi.fn(async () => []),
+    } as unknown as TvApi;
+    const detail = await loadDetailView(api, stale, "profile", [], new AbortController().signal);
+    expect(detail.target?.id).toBe(two.id);
+    expect(detail.target?.position).toBeUndefined();
+    expect(detail.playLabel).toBe("Play S2 E1");
+    expect(detail.episodes[0]).toMatchObject({ watching: false, progress: 0 });
+  });
+
   it("keeps a watched active rewatch resumable with partial progress", async () => {
     const watched = { ...episode(1, 1), watched: true, position: 42, resumeActive: true, completionOnly: false, watchDateKnown: true };
     const api = { detail: vi.fn(async () => ({ item: show, episodes: [watched] })), seriesProgress: vi.fn(async () => [watched]) } as unknown as TvApi;
