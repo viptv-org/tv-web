@@ -1,4 +1,5 @@
 import { expect, test, type Page, type Route } from '@playwright/test';
+import { continuation } from '../fixtures/continuation';
 
 declare global { interface Window { finishFixturePlayback(video: HTMLMediaElement): void; } }
 
@@ -110,8 +111,8 @@ async function installBackend(page: Page, options: FixtureOptions = {}): Promise
       selectedProfileId = String(route.request().postDataJSON().profile_id);
       return json(route, { profile_id: selectedProfileId });
     }
-    if (path === '/api/profiles/1/continue/page') return json(route, { items: options.queue ?? [], offset: 0, total: options.queue?.length ?? 0, next_offset: null });
-    if (path === '/api/profiles/1/progress' && request.method() === 'GET') return json(route, []);
+    if (path === '/api/profiles/1/continue') return json(route, continuation(options.queue ?? []));
+    if (path === '/api/profiles/1/progress/page') return json(route, { items: [], offset: 0, total: 0, next_offset: null });
     if (path === '/api/profiles/1/favorites' && request.method() === 'GET') return json(route, []);
     if (path === '/api/profiles/1/preferences') return json(route, preferences);
     if (path === '/api/catalogs') return json(route, [{ id: 'series', name: 'Series', type: 'series', addon_id: 2, supports_search: true, supports_skip: true }]);
@@ -145,7 +146,7 @@ async function installBackend(page: Page, options: FixtureOptions = {}): Promise
     }
     if (path.startsWith('/api/v2/iptv/live/')) return json(route, { catalog_id: null, generation: null, items: [], next_cursor: null, previous_cursor: null });
     if (path.startsWith('/api/v2/playback/')) return json(route, []);
-    if (path === '/api/v2/addons') return json(route, { items: [], next_cursor: null });
+    if (path === '/api/addons') return json(route, { items: [], next_cursor: null });
     return json(route, { error: `unhandled ${path}` }, 404);
   });
   return state;

@@ -1,7 +1,7 @@
 /* TvApiClientBase: constructor, fields, session driver, device pairing,
    profiles and the catalog/detail/source request surface. */
 import { normalizeCore as normalizeRust } from "../core";
-import { TvApiError, normalizeResponse, profile, mediaItem, params, segment, expectObject, arrayValue, idAt, minimalItem } from "./client-shared";
+import { TvApiError, normalizeResponse, profile, mediaItem, page, params, segment, expectObject, arrayValue, idAt, minimalItem } from "./client-shared";
 import type { RequestOptions } from "./client-shared";
 import type {
   Catalog,
@@ -35,7 +35,7 @@ export class TvApiCatalog extends TvApiClientBase {
     const timer=setTimeout(cancel,2000);
     try {
       if(options.signal?.aborted)return;
-      const value=expectObject(await this.raw(`/api/v2/playback/${segment(id)}/progress`,{},true,{signal:scope.signal}));
+      const value=expectObject(await this.raw(`/api/playback/${segment(id)}/progress`,{},true,{signal:scope.signal}));
       if(options.signal?.aborted || value.stage==null)return;
       const stage=normalizeResponse<string>('torrentRuntime',{operation:'stage',stage:value.stage});
       return stage;
@@ -274,14 +274,18 @@ export class TvApiCatalog extends TvApiClientBase {
     return this.startPlayback(request, options);
   }
   async progress(profileId: string, options?: RequestOptions) {
-    return arrayValue(
-      await this.raw(
-        `/api/profiles/${segment(profileId)}/progress`,
-        {},
-        true,
-        options,
+    // The bare `/progress` route is PUT-only now: typed records come from the
+    // profile history page, which keeps the offset page envelope.
+    return page(
+      expectObject(
+        await this.raw(
+          `/api/profiles/${segment(profileId)}/progress/page`,
+          {},
+          true,
+          options,
+        ),
       ),
-    ).map(mediaItem);
+    ).items;
   }
   async seriesProgress(
     profileId: string,

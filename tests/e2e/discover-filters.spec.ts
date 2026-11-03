@@ -38,8 +38,9 @@ test('Discover applies declared defaults and resets pagination for genre, input 
       selectedProfileId = String(route.request().postDataJSON().profile_id);
       return json(route, { profile_id: selectedProfileId });
     }
-    if (path === '/api/profiles/1/continue/page') return json(route, { items: [], offset: 0, total: 0, next_offset: null });
-    if (path === '/api/profiles/1/progress' || path === '/api/profiles/1/favorites') return json(route, []);
+    if (path === '/api/profiles/1/continue') return json(route, { scope: { kind: 'viptv:device', account: '7', profile: '1', generation: 1 }, revision: 1, entries: [], next_cursor: null, complete: true });
+    if (path === '/api/profiles/1/progress/page') return json(route, { items: [], offset: 0, total: 0, next_offset: null });
+    if (path === '/api/profiles/1/favorites') return json(route, []);
     if (path === '/api/profiles/1/preferences') return json(route, preferences);
     if (path === '/api/catalogs') return json(route, [calendar]);
     if (path === '/api/discover') {

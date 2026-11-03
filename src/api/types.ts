@@ -63,6 +63,11 @@ export interface Page<T> {
   readonly total: number;
   readonly nextOffset: number | null;
 }
+/** Continue Watching is a server cursor envelope, not an offset page. */
+export interface QueuePage {
+  readonly items: readonly MediaItem[];
+  readonly nextCursor: string | null;
+}
 
 export interface StreamDiscovery {
   readonly id: string;

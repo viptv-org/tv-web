@@ -74,8 +74,10 @@ describe('v2 backend playback control', () => {
   });
   it('announces only measured gateway stage changes while a lease is preparing',async()=> {
     let polls=0;
+    const paths:string[]=[];
     const fetcher:typeof fetch=async(input,init)=> {
       const path=new URL(String(input)).pathname;
+      paths.push(path);
       if(path.endsWith('/progress'))return response({stage:polls<3?'fetching_metadata':'buffering'});
       if(init?.method==='DELETE')return response({});
       if(init?.method==='POST')return response(lease(),202);
@@ -86,6 +88,8 @@ describe('v2 backend playback control', () => {
     const pending=api.startPlaybackV2(request);
     await vi.advanceTimersByTimeAsync(3000);const ready=await pending;
     expect(stages).toEqual(['Fetching metadata…','Buffering…']);
+    // The advisory stage probe is the transport's own request, not core-generated.
+    expect(paths).toContain('/api/playback/pb2_one/progress');
     await api.stopPlaybackV2(ready.id);
   });
   it('polls a pending lease and never sends control traffic to the media origin', async () => {

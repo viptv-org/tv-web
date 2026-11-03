@@ -56,7 +56,7 @@ try {
     const retry=await browser.newPage({viewport:{width:1920,height:1080}});
     const backend=await installBackend(retry,{family:'tv',session:'ready'});
     let fail=true;
-    await retry.route('**/api/profiles/*/continue/page**',route=>fail
+    await retry.route('**/api/profiles/*/continue',route=>fail
       ? route.fulfill({status:503,contentType:'application/json',body:JSON.stringify({error:'Temporary catalog outage'})})
       : route.fallback());
     await retry.goto(`${url}?platform=vizio&focusdebug=1`);
