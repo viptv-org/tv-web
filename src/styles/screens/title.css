@@ -109,9 +109,8 @@
   font-size: var(--viptv-type-desktop-row-size);
   line-height: 1.5;
 }
-[data-layout] .vx-title__credit-label {
-  margin-right: var(--viptv-space-1);
-  color: var(--viptv-color-text-tertiary);
+[data-layout] .vx-title__dot {
+  color: var(--viptv-color-text-tertiary); /* M3Title / D3Title separators */
 }
 
 [data-layout="responsive"] .vx-title__hero {
@@ -263,7 +262,8 @@
     --vx-title-logo-w: 215px; /* the desktop logo box at the phone's 92 height */
     --vx-title-logo-h: 92px;  /* Title.html logo 92 tall */
     margin: 0;
-    padding: 0 0 200px; /* Title.html: scroll clearance for the dock */
+    /* Title.html scroll clearance, sized for this dock: Play 58, the source row 60, the 44 discs. */
+    padding: 0 0 260px;
   }
   [data-layout="responsive"] .vx-title__art {
     position: relative;
@@ -299,14 +299,43 @@
     letter-spacing: var(--viptv-type-phone-screen-title-letter-spacing);
   }
   [data-layout="responsive"] .vx-title__facts {
-    font-size: var(--viptv-type-phone-label-size);
+    /* M3Title / M3Movie: 13 / 500 body text, 6 px apart, outlined badges on the same row. */
+    gap: var(--viptv-space-1_5);
+    color: var(--viptv-color-text-body);
+    font-size: var(--viptv-type-phone-meta-size);
+    font-weight: 500;
+  }
+  [data-layout="responsive"] .vx-title__fact {
+    gap: var(--viptv-space-1_5); /* the separator sits 6 px from the value it follows (M3Title) */
+  }
+  [data-layout="responsive"] .vx-title__badge {
+    /* M3Title outlined chip: 17 tall, 4 radius, 1 px 0.5 ring, 10 / 700 +0.02em. */
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    box-sizing: border-box;
+    height: 17px;
+    padding: 0 var(--viptv-radius-xs);
+    border-radius: var(--viptv-radius-xs);
+    box-shadow: inset 0 0 0 1px rgba(244, 242, 238, 0.5);
+    color: var(--viptv-color-text-body);
+    font-family: var(--viptv-font-family-ui);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    line-height: 1;
+    white-space: nowrap;
   }
   [data-layout="responsive"] .vx-title__synopsis {
     max-width: none;
     font-size: var(--viptv-type-phone-body-strong-size);
   }
   [data-layout="responsive"] .vx-title__credits > p {
-    font-size: var(--viptv-type-phone-label-size);
+    display: -webkit-box;
+    overflow: hidden;
+    font-size: var(--viptv-type-phone-meta-size);
+    -webkit-line-clamp: 1; /* M3Title: "Starring Evan Peters, …" is one clamped line */
+    -webkit-box-orient: vertical;
   }
   [data-layout="responsive"] .vx-title__dock {
     position: fixed;
@@ -325,15 +354,64 @@
     bottom: 0;
     left: 0;
     z-index: -1;
-    height: 230px; /* Title.html dock fade */
+    height: 280px; /* the dock's fade: Title.html's 230, plus the secondary action row */
     background: linear-gradient(to bottom, transparent, var(--viptv-color-bg) 40%);
     pointer-events: none;
   }
   [data-layout="responsive"] .vx-title__dock .vx-title__actions {
     margin: 0;
   }
-  [data-layout="responsive"] .vx-title__dock [data-focus-id="detail-play"] {
-    flex: 1 1 auto;
+  /* Secondary actions (M3Title): a 76-wide column, a 44 disc at 0.08 white and a 12 / 600 label. */
+  [data-layout="responsive"] .vx-title__actions {
+    display: flex;
+    justify-content: space-around;
+    align-items: flex-start;
+    padding: var(--viptv-space-1) 0; /* 4, as drawn (M3Title) */
+  }
+  [data-layout="responsive"] .vx-title__action {
+    display: flex;
+    flex-direction: column;
+    flex: none;
+    align-items: center;
+    gap: var(--viptv-space-1_5);
+    width: 76px;
+    min-height: 0;
+    padding: 0;
+    border: 0;
+    outline: none;
+    background: none;
+    color: var(--viptv-color-text-body);
+    font-family: var(--viptv-font-family-ui);
+    font-size: var(--viptv-type-phone-caption-size);
+    font-weight: 600;
+    white-space: nowrap;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  [data-layout="responsive"] .vx-title__action-disc {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.08); /* M3Title secondary-action disc */
+    color: var(--viptv-color-text-primary);
+  }
+  [data-layout="responsive"] .vx-title__action-disc > svg {
+    width: var(--viptv-size-icon-phone-round);
+    height: var(--viptv-size-icon-phone-round);
+  }
+  [data-layout="responsive"] .vx-title__action:active .vx-title__action-disc {
+    transform: scale(var(--viptv-motion-pressed-scale));
+  }
+  [data-layout="responsive"] .vx-title__action:focus-visible .vx-title__action-disc {
+    box-shadow: var(--viptv-focus-desktop);
+  }
+  [data-layout="responsive"] .vx-title__action-label {
+    overflow: hidden;
+    max-width: 100%;
+    text-overflow: ellipsis;
   }
   /* Change-source row: "1080p · Best source LordStreams · 12 sources ⌃". */
   [data-layout="responsive"] .vx-title__source-row {
@@ -433,8 +511,14 @@
     flex: 1 1 auto;
     padding: var(--viptv-space-0_5) 0 0;
   }
+  /* M3Title episode row: "1. Episode One" (15 / 600) over "52m · 38m left" (13 / 500). */
   [data-layout="responsive"] .vx-title__episode .vx-card__title {
     font-size: var(--viptv-type-phone-body-size);
+  }
+  [data-layout="responsive"] .vx-title__episode .vx-card__meta {
+    color: var(--viptv-color-text-secondary);
+    font-size: var(--viptv-type-phone-meta-size);
+    font-weight: 500;
   }
   [data-layout="responsive"] .vx-title__episode .vx-card__synopsis {
     font-size: var(--viptv-type-phone-meta-size);

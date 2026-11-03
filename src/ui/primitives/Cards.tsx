@@ -60,14 +60,15 @@ export function CardCaption({ title, meta }: { title: ReactNode; meta?: ReactNod
   );
 }
 
-/** Episode caption: D "E1 Title" + 2-line synopsis; TV "EPISODE 1" eyebrow + title. */
-export function EpisodeCaption({ number, title, synopsis, eyebrow }: { number?: ReactNode; title: ReactNode; synopsis?: ReactNode; eyebrow?: ReactNode }) {
+/** Episode caption: D "E1 Title" + 2-line synopsis; phone "1. Episode One" + facts + synopsis; TV "EPISODE 1" eyebrow + title. */
+export function EpisodeCaption({ number, title, meta, synopsis, eyebrow }: { number?: ReactNode; title: ReactNode; meta?: ReactNode; synopsis?: ReactNode; eyebrow?: ReactNode }) {
   return (
     <>
       {eyebrow ? <span className="vx-card__eyebrow">{eyebrow}</span> : null}
       {eyebrow
         ? <span className="vx-card__title">{title}</span>
         : <span className="vx-card__heading">{number ? <span className="vx-card__number">{number}</span> : null}<span className="vx-card__title">{title}</span></span>}
+      {meta ? <span className="vx-card__meta">{meta}</span> : null}
       {synopsis ? <span className="vx-card__synopsis">{synopsis}</span> : null}
     </>
   );
