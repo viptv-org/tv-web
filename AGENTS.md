@@ -67,8 +67,12 @@ Before changing responsive playback, fullscreen or sign-in, read the platform ho
 
 ## SolidTV canvas renderer
 
-The former Blits entry is now `solid.html` / `src/tv-solid`; the legacy
-`lightning.html` URL loads that same entry. JSX in this directory uses the
-SolidTV universal compiler, separately from the React entry. Preserve the
-pinned geometry and the remote controller contract when changing the adapter.
-Run `tests/preview/solid-shoot.mjs` for the migrated TV acceptance scenarios.
+The former Blits entry is now `solid.html` (`src/tv-solid/main.ts`); the legacy
+`lightning.html` URL loads that same entry. The shipped TV screens are
+`src/tv-solid/remote`; `src/tv-solid` otherwise holds only the entry, the
+`runtime.ts` adapter, fonts, text raster, shaders and the webOS host shell. JSX
+there uses the SolidTV universal compiler, separately from the React entry.
+That entry is server-authoritative and renders the unversioned TV API's cards,
+rows, controls, descriptors and preferences. Preserve the pinned geometry and
+the remote contract when changing the adapter. Current TV acceptance is
+`playwright.remote.config.ts` plus the `tests/preview/remote-*.mjs` harnesses.
