@@ -15,6 +15,10 @@
  * Measurement must be synchronous. One context serves every component, so a
  * caller may not hold `font`/`letterSpacing` across an await or a yield; the
  * layout code here measures inside a single synchronous memo pass.
+ *
+ * The renderer's text raster path (`src/tv-solid/text-raster.ts`) keeps its own
+ * canvas: it resizes to the label and reads pixels back, which resets the state
+ * this context depends on.
  */
 export type TextMeasureContext = CanvasRenderingContext2D & {
   letterSpacing: string;
