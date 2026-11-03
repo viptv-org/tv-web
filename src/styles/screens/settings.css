@@ -102,32 +102,6 @@
   height: var(--viptv-size-button-desktop);
   padding: 0 var(--viptv-space-2) 0 var(--viptv-space-1);
 }
-[data-layout="responsive"] .vx-settings-list__back {
-  display: flex;
-  flex: none;
-  align-items: center;
-  justify-content: center;
-  width: var(--viptv-layout-phone-min-target);
-  height: var(--viptv-layout-phone-min-target);
-  min-height: 0;
-  margin: 0;
-  padding: 0;
-  border: 0;
-  border-radius: 50%;
-  outline: none;
-  background: transparent;
-  color: var(--viptv-color-text-primary);
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-}
-[data-layout="responsive"] .vx-settings-list__back > svg {
-  width: var(--viptv-size-icon-large);
-  height: var(--viptv-size-icon-large);
-}
-[data-layout="responsive"] .vx-settings-list__back:active {
-  background: var(--viptv-color-surface-2);
-  transform: scale(var(--viptv-motion-pressed-scale));
-}
 [data-layout="responsive"] .vx-settings-list__title {
   min-width: 0;
   margin: 0;
@@ -193,8 +167,7 @@
   transform: scale(var(--viptv-motion-pressed-scale));
 }
 @media (min-width: 600px) {
-  [data-layout="responsive"] .vx-settings-list__signout:focus-visible,
-  [data-layout="responsive"] .vx-settings-list__back:focus-visible {
+  [data-layout="responsive"] .vx-settings-list__signout:focus-visible {
     box-shadow: var(--viptv-focus-desktop);
   }
 }

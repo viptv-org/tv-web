@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type Dispatch, type ReactNode, type SetStateAction } from "react";
-import { Check, ChevronDown, ChevronLeft, ChevronUp, Ellipsis, Film, Info, Plus } from "lucide-react";
+import { Check, ChevronDown, ChevronUp, Ellipsis, Film, Info, Plus } from "lucide-react";
 import { presentation as itemPresentation } from "../core/presentations";
 import { ReadyImage, artworkUrl } from "../ui/RokuArtwork";
 import { TvButton, focusElement } from "../ui/remote";
@@ -11,6 +11,7 @@ import { buttonClass, SourcePillContent } from "../ui/primitives/Button";
 import { CardArt, EpisodeCaption, MissingArt } from "../ui/primitives/Cards";
 import { Badge, QualityBadge } from "../ui/primitives/Badges";
 import { PlayIcon } from "../ui/primitives/icons";
+import { BackControl } from "../ui/primitives/Back";
 import { Spinner } from "../ui/primitives/Progress";
 import type { Choice, ModalView } from "../ui/app/appShared";
 import { providerOf, sourceKey } from "./titleSources";
@@ -392,9 +393,7 @@ export function DetailScreen({
           {art ? <ReadyImage src={artworkUrl(art, 780, 600, true)} alt="" /> : null}
         </div>
         {onBack && !backdrop ? (
-          <TvButton id="detail-back" className="vx-title__back" aria-label="Back" onActivate={onBack}>
-            <ChevronLeft {...icon} strokeWidth={2.4} />
-          </TvButton>
+          <BackControl id="detail-back" placement="over-art" onActivate={onBack} />
         ) : null}
         <div className="vx-title__copy">
           {heading}

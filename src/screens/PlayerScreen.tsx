@@ -10,7 +10,6 @@ import {
 import {
   AudioLines,
   Captions,
-  ChevronLeft,
   FastForward,
   Info,
   LogOut,
@@ -31,6 +30,7 @@ import { TvButton, focusElement } from "../ui/remote";
 import { KeyLegend, type LegendItem } from "../ui/primitives/Keys";
 import { Notice } from "../ui/primitives/Feedback";
 import { PlayIcon } from "../ui/primitives/icons";
+import { BackControl } from "../ui/primitives/Back";
 import type { UpNextCard as UpNextState } from "../ui/app/upNext";
 import type { Player, PlayerSnapshot } from "@viptv/video";
 import type { MediaItem } from "../api";
@@ -237,9 +237,7 @@ function ResponsivePlayer({
           }}
         >
           <header className="vx-player__header">
-            <TvButton id="player-back" className="vx-player__back" aria-label="Back" title="Back" onActivate={() => void stop()}>
-              <ChevronLeft aria-hidden="true" strokeWidth={2.4} />
-            </TvButton>
+            <BackControl id="player-back" placement="player" title="Back" onActivate={() => void stop()} />
             <div className="vx-player__heading">
               <h1 className="vx-player__title">{selected?.name ?? ""}</h1>
               {live ? (
