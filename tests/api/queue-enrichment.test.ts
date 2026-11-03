@@ -1,12 +1,20 @@
 import { describe, expect, it, vi } from "vitest";
 import { TvApi, TvApiError, type MediaItem } from "../../src/api";
 
-const item = (id: string): MediaItem => ({ id, type: "movie", name: id, title: id, genres: [], episodes: [], raw: {}, position: 60, duration: 1000, sourceAddonId: "addon:1", sourceFingerprint: "exact" });
+const item = (id: string): MediaItem => ({ id, type: "movie", name: id, title: id, genres: [], episodes: [], raw: {}, position: 60, duration: 1000, sourceAddonId: "addon:1" });
+/** `/continue` is a cursor envelope of card + playback-record entries. */
+function continuation(entries: readonly unknown[]) {
+  return { scope: { kind: "viptv:remote", account: "1", profile: "1", generation: 1 }, revision: 1, entries, next_cursor: null, complete: true };
+}
 function fixture(count = 5) {
-  const api = new TvApi({ baseUrl: "https://viptv.example", fetch: async () => new Response(JSON.stringify({
-    items: Array.from({ length: count }, (_, index) => ({ id: String(index), type: "movie", name: String(index), position: 60, duration: 1000, source_addon_id: "addon:1", source_fingerprint: "exact" })),
-    offset: 0, total: count, next_offset: null,
-  }), { status: 200 }) });
+  const api = new TvApi({ baseUrl: "https://viptv.example", fetch: async () => new Response(JSON.stringify(continuation(
+    Array.from({ length: count }, (_, index) => ({
+      card: { identity: { id: String(index), kind: "movie" }, provider_id: "addon:1", title: String(index), progress: 0.06 },
+      record: { position_millis: 60_000, duration_millis: 1_000_000, updated_at_millis: 1_700_000_000_000 },
+      status: "Resume",
+      previous_identity: null,
+    })),
+  )), { status: 200 }) });
   return api;
 }
 describe("queue metadata hydration", () => {
@@ -47,8 +55,8 @@ describe("queue metadata hydration", () => {
     const result = await pending;
     expect(peak).toBe(3);
     expect(result.items.map(row => row.id)).toEqual(["0", "1", "2", "3", "4"]);
-    expect(result.items[0]).toMatchObject({ position: 60, sourceAddonId: "addon:1", sourceFingerprint: "exact", background: "https://images.example/0.jpg" });
-    expect(result.items[1]).toMatchObject({ position: 60, sourceFingerprint: "exact" });
+    expect(result.items[0]).toMatchObject({ position: 60, sourceAddonId: "addon:1", background: "https://images.example/0.jpg" });
+    expect(result.items[1]).toMatchObject({ position: 60 });
   });
   it("propagates caller cancellation to every in-flight detail and schedules no later rows", async () => {
     const api = fixture();

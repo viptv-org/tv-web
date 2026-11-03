@@ -15,12 +15,25 @@ export async function installBackend(page: Page, options: { series?: boolean; in
     logo: `https://art.example/${options.invalidLogo ? 'invalid-logo' : 'title-logo'}.svg`,
     videos: Array.from({ length: 8 }, (_, index) => ({ id: `responsive-series:1:${index + 1}`, title: `Episode ${index + 1}`, season: 1, episode: index + 1, thumbnail: 'https://art.example/episode.svg', description: `Episode ${index + 1} brings the crew closer to the signal.` })),
   } : options.populated ? { ...movie, logo: 'https://art.example/title-logo.svg', description: `${movie.description} ${movie.description} This extended description exercises real catalog copy wrapping across phones, tablets and wide desktop displays.` } : movie;
-  const queue = Array.from({ length: 24 }, (_, index) => ({
-    id: `queue-series:1:${index + 1}`, type: options.seriesShapedQueue ? 'series' : 'episode', series_id: 'queue-series',
-    name: 'Returning Series', title: `Episode ${index + 1}`, episode_title: `Episode ${index + 1}`,
-    season: 1, episode: index + 1, position: 42 + index, duration: 2400, queue_status: 'resume',
-    poster: 'https://art.example/poster.svg',
-  }));
+  // `/continue` answers a cursor envelope of card + playback-record entries. The
+  // live backend only emits `series`-kind episode identities; the episode-kind
+  // variant is kept to cover the shelf's episode-shaped rendering path.
+  const queue = Array.from({ length: 24 }, (_, index) => {
+    const identity = { id: `queue-series:1:${index + 1}`, kind: options.seriesShapedQueue ? 'series' : 'episode', ids: [], edition: null, episode: { order: 'aired', season: 1, episode: index + 1 } };
+    const series = { id: 'queue-series', kind: 'series', ids: [], episode: null, edition: null };
+    return {
+      card: {
+        identity, provider_id: 'addon:2', title: 'Returning Series', subtitle: `S1 E${index + 1}`,
+        poster: 'https://art.example/poster.svg', progress: (42 + index) / 2400, badges: [], parent_identity: series,
+      },
+      record: {
+        identity, provider_id: 'addon:2', title: 'Returning Series', parent_identity: series,
+        position_millis: (42 + index) * 1000, duration_millis: 2_400_000, updated_at_millis: 1_700_000_000_000,
+      },
+      status: 'Resume',
+      previous_identity: null,
+    };
+  });
   const liveChannels = Array.from({ length: 4 }, (_, index) => ({
     id: `station-${index}`, type: 'live', name: `International News ${index + 1}`, logo: `https://art.example/live-logo-${index}.svg`, section: 'News',
   }));
@@ -83,10 +96,11 @@ export async function installBackend(page: Page, options: { series?: boolean; in
       selectedProfileId = String(body.profile_id);
       return json({ profile_id: selectedProfileId });
     }
-    if (path === '/api/profiles/1/continue/page') return json({ items: options.activity ? queue : [], offset: 0, total: options.activity ? queue.length : 0, next_offset: null });
-    if (path === '/api/profiles/1/progress' || path === '/api/profiles/1/favorites') return json([]);
+    if (path === '/api/profiles/1/continue') return json({ scope: { kind: 'viptv:device', account: '7', profile: '1', generation: 1 }, revision: 1, entries: options.activity ? queue : [], next_cursor: null, complete: true });
+    if (path === '/api/profiles/1/progress/page') return json({ items: [], offset: 0, total: 0, next_offset: null });
+    if (path === '/api/profiles/1/favorites') return json([]);
     if (path === '/api/profiles/1/preferences') return json({ audio_language: 'en', subtitle_language: 'en', subtitles_enabled: false, subtitle_size: 'normal', subtitle_style: 'system', quality: 'auto', autoplay: true });
-    if (path === '/api/v2/addons') return json({ items: [], next_cursor: null });
+    if (path === '/api/addons') return json({ items: [], next_cursor: null });
     if (path === '/api/catalogs') return json(Array.from({ length: options.populated ? 4 : 1 }, (_, i) => ({ id: i ? `catalog-${i}` : 'popular', name: options.populated ? `Global Cinema Collection — ${['Popular', 'Recently Added', 'Drama', 'Adventure'][i]} Features and Award-Winning International Television` : 'Popular', type: title.type, addon_id: 2, supports_search: true, supports_skip: true })));
     if (path === '/api/discover') return json({ metas: options.populated ? Array.from({ length: 24 }, (_, i) => ({ ...title, id: i ? `title-${i}` : title.id, name: i ? `The Long Journey Through the Mountains: Chapter ${i}` : title.name })) : [title], has_more: false, next_skip: null });
     if (path === '/api/v2/iptv/live/channels') return json({ catalog_id: 1, generation: 1, items: options.activity ? liveChannels : [], next_cursor: null, previous_cursor: null });
@@ -96,7 +110,7 @@ export async function installBackend(page: Page, options: { series?: boolean; in
     if (options.activity && path === '/api/meta/series/queue-series') {
       parentMetadataRequests++;
       if (options.parentFailOnReturn && parentMetadataRequests === 2) return json({ error: 'Temporary failure' }, 503);
-      return json({ meta: { id: 'queue-series', type: 'series', name: 'Returning Series', poster: 'https://art.example/poster.svg', background: 'https://art.example/backdrop.svg', videos: queue.map(item => ({ id: item.id, title: item.episode_title, season: item.season, episode: item.episode, thumbnail: `https://art.example/episode.svg?episode=${item.episode}` })) } });
+      return json({ meta: { id: 'queue-series', type: 'series', name: 'Returning Series', poster: 'https://art.example/poster.svg', background: 'https://art.example/backdrop.svg', videos: queue.map(item => ({ id: item.card.identity.id, title: item.card.subtitle, season: item.card.identity.episode?.season, episode: item.card.identity.episode?.episode, thumbnail: `https://art.example/episode.svg?episode=${item.card.identity.episode?.episode}` })) } });
     }
     if (path === `/api/meta/${title.type}/${title.id}`) return json({ meta: title });
     if (options.populated && /^\/api\/meta\/movie\/title-\d+$/.test(path)) return json({ meta: { ...title, id: path.split("/").at(-1), name: "The Long Journey Through the Mountains" } });

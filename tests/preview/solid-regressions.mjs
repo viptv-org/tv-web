@@ -2,6 +2,7 @@ import { chromium } from '@playwright/test';
 import assert from 'node:assert/strict';
 import { mkdirSync } from 'node:fs';
 import { installBackend, installMediaStubs } from './backend.ts';
+import { continuation } from '../fixtures/continuation.ts';
 
 const origin = process.env.PREVIEW_API_ORIGIN;
 assert(origin?.startsWith('https://'), 'Set PREVIEW_API_ORIGIN to the local HTTPS origin');
@@ -96,7 +97,7 @@ try {
     await shot('last');
     await key('ArrowDown'); await focus('home-card', 0); await shot('row-gap');
     await key('ArrowUp'); await focus('home-card', count - 1);
-  }, page => page.route(`${origin}/api/profiles/*/continue/page*`, route => route.fulfill({ json: { items: Array.from({length:20}, (_, index) => ({ id:`tt-long-${index}`, type:'movie', name:`Continue watching title ${index + 1}`, position:60, duration:1200, queue_status:'resume' })), offset:0, total:20, next_offset:null } })));
+  }, page => page.route(`${origin}/api/profiles/*/continue`, route => route.fulfill({ json: continuation(Array.from({length:20}, (_, index) => ({ id:`tt-long-${index}`, type:'movie', name:`Continue watching title ${index + 1}`, position:60, duration:1200, queue_status:'resume' }))) })));
   await scenario('live-controls', {}, async ({ page, backend, focus, key, shot }) => {
     await focus('home-action', 0);
     await page.waitForFunction(() => window.__viptvHome?.shelves > 1 && window.__viptvHome?.count === 9);
@@ -197,7 +198,7 @@ try {
     await shot('usable-rail');
     results.push({ name: 'shell-ms-with-1.8s-data-delay', value: Math.round(timing) });
   }, async page => {
-    await page.route(`${origin}/api/profiles/*/continue/page*`, async route => { await new Promise(done => setTimeout(done, 1800)); await route.fallback(); });
+    await page.route(`${origin}/api/profiles/*/continue`, async route => { await new Promise(done => setTimeout(done, 1800)); await route.fallback(); });
     await page.route(`${origin}/api/discover*`, async route => { await new Promise(done => setTimeout(done, 1800)); await route.fallback(); });
   });
   console.log(JSON.stringify({ platform, results }, null, 2));

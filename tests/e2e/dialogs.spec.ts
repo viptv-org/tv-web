@@ -73,7 +73,7 @@ for (const viewport of viewports) {
     test.skip(test.info().project.name !== 'vizio', 'one browser project runs the responsive layouts');
     await installBackend(page, { activity: true });
     // Removing from Continue Watching answers; everything else keeps the fixture.
-    await page.route(`${apiOrigin}/api/profiles/1/continue/**`, route => route.request().method() === 'GET'
+    await page.route(`${apiOrigin}/api/profiles/1/continue**`, route => route.request().method() === 'GET'
       ? route.fallback()
       : route.fulfill(answer({ ok: true })));
     await page.setViewportSize(viewport);

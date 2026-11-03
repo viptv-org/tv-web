@@ -606,7 +606,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         libraryFavorites: [] as MediaItem[],
         libraryQueueItems: [] as MediaItem[],
         libraryItems: [] as MediaItem[],
-        libraryNextOffset: null as number | null,
+        libraryNextOffset: null as string | null,
         libraryCards: Array.from({ length: 14 }, () => ({
           ...emptyDiscoverCard,
         })) as DiscoverCardView[],
@@ -2431,9 +2431,9 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
           this.focusLibrarySegment(0);
         }
       },
-      async loadLibraryQueue(offset = 0) {
-        if (offset) {
-          const pageKey = `${this.currentProfileId}@${offset}`;
+      async loadLibraryQueue(cursor = "") {
+        if (cursor) {
+          const pageKey = `${this.currentProfileId}@${cursor}`;
           if (pageKey === libraryRequestedPage) return;
           libraryRequestedPage = pageKey;
         } else libraryRequestedPage = "";
@@ -2444,7 +2444,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         this.libraryMode = "queue";
         this.libraryBusy = true;
         this.libraryError = "";
-        if (!offset) {
+        if (!cursor) {
           this.libraryWindowStart = 0;
           this.libraryCardIndex = 0;
           this.libraryItems = this.libraryQueueItems.length
@@ -2453,11 +2453,11 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
           this.refreshLibraryCards();
         }
         try {
-          const page = await api.queue(this.currentProfileId, offset, {
+          const page = await api.queue(this.currentProfileId, cursor, {
             signal: scope.signal,
           });
           if (generation !== libraryGeneration || scope.signal.aborted) return;
-          this.libraryQueueItems = offset
+          this.libraryQueueItems = cursor
             ? [
                 ...this.libraryQueueItems,
                 ...page.items.filter(
@@ -2470,7 +2470,7 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
             : [...page.items];
           this.libraryItems = [...this.libraryQueueItems];
           noteLibraryState("queue", this.libraryItems.length);
-          this.libraryNextOffset = page.nextOffset;
+          this.libraryNextOffset = page.nextCursor;
           this.libraryBusy = false;
           this.libraryError = this.libraryItems.length
             ? ""
@@ -4577,9 +4577,9 @@ export function createSolidTvApp(api: TvApi, platform: TvPlatform) {
         this.revealHomeControls();
       },
       async refreshQueueAfterMenu() {
-        const page = await api.queue(this.currentProfileId, 0);
+        const page = await api.queue(this.currentProfileId);
         this.updateQueueLists(page.items);
-        this.libraryNextOffset = page.nextOffset;
+        this.libraryNextOffset = page.nextCursor;
       },
       showUndoMenu(item: MediaItem) {
         this.titleMenuKind = "undo";

@@ -169,6 +169,8 @@ const LIMIT_NOTES = {
   screenMaxLongtaskMs: "worst long task during a per-screen sweep leg; observed 0ms, so this catches the first 300ms regression",
   discoverSwitchMedianMs: "Discover content-type switch, click → filtered grid painted; ~6x the observed 48ms",
   discoverFilterOpenMs: "Discover filter control, click → its dialog mounted; ~12x the observed 16ms",
+  iptvLivePaths:
+    "not a threshold: the Live TV and guide legs are served on the versioned /api/v2/iptv/* paths the pinned core still builds, not the unversioned routes the server serves. They measure the screen, not the contract; see viptv-org/tv-web#44",
 };
 
 const MOTION_MODES = [
@@ -395,8 +397,34 @@ async function installBackend(page, unhandled) {
         state.selectedProfileId = "1";
         return json({ profile_id: "1" });
       }
-      if (path === "/api/profiles/1/continue/page")
-        return json({ items: queue, offset: 0, total: queue.length, next_offset: null });
+      if (path === "/api/profiles/1/continue")
+        return json({
+          scope: { profile_id: "1" },
+          revision: 1,
+          entries: queue.map((item) => ({
+            card: {
+              identity: {
+                id: item.id,
+                kind: item.type,
+                episode: { season: item.season, episode: item.episode },
+              },
+              parent_identity: { id: item.series_id, kind: "series" },
+              title: item.name,
+              subtitle: item.episode_title,
+              poster: item.poster,
+              landscape: item.poster,
+              provider_id: "addon",
+            },
+            record: {
+              position_millis: item.position * 1000,
+              duration_millis: item.duration * 1000,
+              updated_at_millis: 1_700_000_000_000,
+            },
+            status: "Resume",
+          })),
+          next_cursor: null,
+          complete: true,
+        });
       if (path === "/api/profiles/1/progress" || path === "/api/profiles/1/progress/series") return json([]);
       if (path === "/api/profiles/1/favorites") return json(favorites);
       if (path === "/api/profiles/1/preferences") {
@@ -413,13 +441,18 @@ async function installBackend(page, unhandled) {
       if (path === "/api/health") return json({ status: "ok" });
       if (path === "/api/catalogs/revision") return json({ revision: 1 });
       if (path === "/api/catalogs") return json(catalogs);
-      if (path === "/api/v2/addons") return json({ items: [], next_cursor: null });
+      if (path === "/api/addons") return json({ items: [], next_cursor: null });
       if (path === "/api/discover") {
         const id = url.searchParams.get("catalog") ?? "";
         const index = Math.max(0, catalogs.findIndex((c) => c.id === id));
         return json({ metas: metasFor(index), has_more: false, next_skip: null });
       }
-      // Live TV now reads the v2 IPTV page and per-channel guide.
+      // Live TV and the guide are still requested through the versioned paths the
+      // pinned shared core builds (vendor/core, CORE_REF b6ee054), while the
+      // server serves them unversioned (/iptv/live/channels, /iptv/guide/:id in
+      // backend/server/src/routes.rs). These fixtures follow the client so this
+      // gate can still measure the screen at all; they are NOT the server
+      // contract. Recorded in LIMIT_NOTES.iptvLivePaths.
       if (path === "/api/v2/iptv/live/channels")
         return json({ catalog_id: 1, generation: 1, items: liveChannels, next_cursor: null, previous_cursor: null });
       if (path === "/api/v2/iptv/live/categories")

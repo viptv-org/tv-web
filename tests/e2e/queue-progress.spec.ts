@@ -1,4 +1,5 @@
 import { expect, test, type Page, type Route } from '@playwright/test';
+import { continuation } from '../fixtures/continuation';
 
 const apiOrigin = process.env.VIPTV_TEST_API_ORIGIN ?? 'https://viptv.syek.tech';
 const corsHeaders = {
@@ -56,13 +57,13 @@ async function installFixture(page: Page, watched = false): Promise<FixtureState
       selectedProfileId = String(route.request().postDataJSON().profile_id);
       return json(route, { profile_id: selectedProfileId });
     }
-    if (path === '/api/profiles/1/continue/page') {
+    if (path === '/api/profiles/1/continue') {
       state.queueReads += 1;
-      return json(route, { items: state.queue, offset: 0, total: state.queue.length, next_offset: null });
+      return json(route, continuation(state.queue));
     }
-    if (path === '/api/profiles/1/progress' && request.method() === 'GET') {
+    if (path === '/api/profiles/1/progress/page' && request.method() === 'GET') {
       state.historyReads += 1;
-      return json(route, state.history);
+      return json(route, { items: state.history, offset: 0, total: state.history.length, next_offset: null });
     }
     if (path === '/api/profiles/1/progress/correct' && request.method() === 'PUT') {
       const body = JSON.parse(request.postData() || '{}') as Record<string, unknown>;
@@ -84,7 +85,7 @@ async function installFixture(page: Page, watched = false): Promise<FixtureState
     if (path === '/api/catalogs') return json(route, [{ id: 'popular', name: 'Popular', type: 'movie', addon_id: 2, supports_search: true, supports_skip: true }]);
     if (path === '/api/discover') return json(route, { metas: [catalogMovie], has_more: false, next_skip: null });
     if (path.startsWith('/api/v2/iptv/live/')) return json(route, { catalog_id: null, generation: null, items: [], next_cursor: null, previous_cursor: null });
-    if (path === '/api/v2/addons') return json(route, { items: [], next_cursor: null });
+    if (path === '/api/addons') return json(route, { items: [], next_cursor: null });
     if (path === '/api/parent/status') return json(route, { pin_configured: false, unlocked: false, restricted: false });
     if (path === '/api/v2/streams' && request.method() === 'POST') return json(route, { id: 'queue-job' });
     if (path === '/api/v2/streams/queue-job') return json(route, {

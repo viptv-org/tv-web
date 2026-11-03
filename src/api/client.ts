@@ -2,7 +2,7 @@
    extending the session/profile/catalog base. The module's public
    surface is re-exported so existing importers are unchanged. */
 import { normalizeCore as normalizeRust } from "../core";
-import { TvApiError, normalizeResponse, isAbort, mediaItem, page, preferences, snakePreferences, params, segment, expectObject, objectAt, hasObject, arrayValue, stringAt, boolAt, optionalBool, clean } from "./client-shared";
+import { TvApiError, normalizeResponse, isAbort, mediaItem, preferences, snakePreferences, params, segment, expectObject, objectAt, hasObject, arrayValue, stringAt, boolAt, optionalBool, optionalString, clean } from "./client-shared";
 import type { RequestOptions } from "./client-shared";
 import type {
   Guide,
@@ -13,19 +13,88 @@ import type {
   LiveCatalogCategories,
   MediaDetail,
   MediaItem,
-  Page,
   ParentStatus,
   ParentPinChange,
   PlaybackPreferences,
+  QueuePage,
 } from "./types";
 import { TvApiCatalog } from "./client-catalog";
 
+/** `/continue` reports its state as typed PascalCase names; the shelf contract
+    keeps the historical snake_case wire values it renders and filters on. */
+const CONTINUATION_STATUS: Readonly<Record<string, string>> = {
+  Resume: "resume",
+  Next: "next",
+  Pending: "pending",
+  CaughtUp: "caught_up",
+  Upcoming: "upcoming",
+  Unavailable: "unavailable",
+};
+
+function numberAt(v: JsonObject, key: string) {
+  const value = v[key];
+  return typeof value === "number" && Number.isFinite(value) ? value : undefined;
+}
+
+/** The continuation record measures milliseconds; shelf rows are in seconds. */
+function seconds(value: JsonValue | undefined) {
+  return typeof value === "number" && Number.isFinite(value) && value >= 0 ? value / 1000 : undefined;
+}
+
+/** Only the identity fields the shelf contract carries; the server owns the rest. */
+function identityRow(identity: JsonObject, series?: JsonObject): JsonObject {
+  const episode = hasObject(identity, "episode") ? objectAt(identity, "episode") : undefined;
+  return {
+    id: stringAt(identity, "id"),
+    type: stringAt(identity, "kind"),
+    series_id: series ? stringAt(series, "id") : undefined,
+    season: episode ? numberAt(episode, "season") : undefined,
+    episode: episode ? numberAt(episode, "episode") : undefined,
+  };
+}
+
+/**
+ * One continuation entry is a server-rendered card plus the playback record it
+ * stands on. The card names the title and its artwork; the record carries the
+ * resumable offset. Flattening them here keeps the existing shelf item shape
+ * and leaves all validation and scrubbing to the shared Rust `media` contract.
+ */
+function continuationRow(entry: JsonObject): MediaItem {
+  const card = objectAt(entry, "card");
+  const record = objectAt(entry, "record");
+  const series = hasObject(card, "parent_identity") ? objectAt(card, "parent_identity")
+    : hasObject(record, "parent_identity") ? objectAt(record, "parent_identity") : undefined;
+  const previous = hasObject(entry, "previous_identity") ? objectAt(entry, "previous_identity") : undefined;
+  const status = optionalString(entry, "status");
+  return mediaItem({
+    ...identityRow(objectAt(card, "identity"), series),
+    name: stringAt(card, "title"),
+    title: stringAt(card, "title"),
+    subtitle: optionalString(card, "subtitle"),
+    description: optionalString(card, "description"),
+    poster: optionalString(card, "poster"),
+    background: optionalString(card, "landscape"),
+    title_logo: optionalString(card, "logo"),
+    source_addon_id: optionalString(card, "provider_id"),
+    position: seconds(record.position_millis),
+    duration: seconds(record.duration_millis),
+    updated_at: seconds(record.updated_at_millis),
+    queue_status: status ? CONTINUATION_STATUS[status] : undefined,
+    previous_episode: previous ? {
+      ...identityRow(previous, series),
+      name: stringAt(card, "title"),
+      title: stringAt(card, "title"),
+    } : undefined,
+  });
+}
+
 export class TvApi extends TvApiCatalog {
+  /** Continue Watching is a cursor envelope (`entries` + `next_cursor`). */
   async queue(
     profileId: string,
-    offset?: number,
-    options?: RequestOptions & { readonly onPage?: (page: Page<MediaItem>) => void },
-  ): Promise<Page<MediaItem>> {
+    cursor?: string,
+    options?: RequestOptions & { readonly onPage?: (page: QueuePage) => void },
+  ): Promise<QueuePage> {
     const scope = new AbortController();
     const cancel = () => scope.abort();
     options?.signal?.addEventListener("abort", cancel, { once: true });
@@ -34,18 +103,22 @@ export class TvApi extends TvApiCatalog {
     try {
       ensureActive();
       const v = expectObject(await this.raw(
-        `/api/profiles/${segment(profileId)}/continue/page${params({ offset, limit: 40 })}`,
+        `/api/profiles/${segment(profileId)}/continue${params({ offset: cursor, limit: 40 })}`,
         {}, true, { signal: scope.signal },
       ));
-      const result = page(v);
+      const next = v.next_cursor;
+      const result: QueuePage = {
+        items: arrayValue(v.entries ?? null).map(continuationRow),
+        nextCursor: typeof next === "string" && next.length ? next : null,
+      };
       options?.onPage?.(result);
       const enriched = [...result.items];
       const metadata = new Map<string, Promise<MediaDetail>>();
-      let cursor = 0;
+      let position = 0;
       const worker = async () => {
-        while (cursor < enriched.length) {
+        while (position < enriched.length) {
           ensureActive();
-          const index = cursor++, item = enriched[index];
+          const index = position++, item = enriched[index];
           if (item.type === "live") continue;
           try {
             const key = `${item.type}\0${item.seriesId ?? item.id}`;
@@ -92,32 +165,6 @@ export class TvApi extends TvApiCatalog {
     options?: RequestOptions,
   ) {
     await this.domainRequest({ operation: "setQueueVisibility", profileId, item, hidden }, options);
-  }
-  async queueSettings(profileId: string, options?: RequestOptions) {
-    const v = expectObject(
-      await this.raw(
-        `/api/profiles/${segment(profileId)}/continue/settings`,
-        {},
-        true,
-        options,
-      ),
-    );
-    return { autoplay: boolAt(v, "autoplay") };
-  }
-  async saveQueueSettings(
-    profileId: string,
-    autoplay: boolean,
-    options?: RequestOptions,
-  ) {
-    const v = expectObject(
-      await this.raw(
-        `/api/profiles/${segment(profileId)}/continue/settings`,
-        { method: "PUT", body: { autoplay } },
-        true,
-        options,
-      ),
-    );
-    return { autoplay: boolAt(v, "autoplay") };
   }
   async favorites(profileId: string, options?: RequestOptions) {
     return arrayValue(
@@ -239,7 +286,7 @@ export class TvApi extends TvApiCatalog {
     let cursor: string | undefined;
     for (let pages = 0; pages < 10; pages++) {
       const v = expectObject(
-        await this.raw(`/api/v2/addons${params({ limit: 200, cursor })}`, {}, true, options),
+        await this.raw(`/api/addons${params({ limit: 200, cursor })}`, {}, true, options),
       );
       addons.push(...arrayValue(v.items ?? null).map(clean));
       if (typeof v.next_cursor !== "string" || !v.next_cursor) break;
@@ -251,7 +298,7 @@ export class TvApi extends TvApiCatalog {
     return clean(
       expectObject(
         await this.raw(
-          "/api/v2/addons",
+          "/api/addons",
           { method: "POST", body: { manifest_url: manifestUrl } },
           true,
           options,
@@ -263,7 +310,7 @@ export class TvApi extends TvApiCatalog {
     return clean(
       expectObject(
         await this.raw(
-          `/api/v2/addons/${segment(id)}`,
+          `/api/addons/${segment(id)}`,
           { method: "PATCH", body: values },
           true,
           options,
@@ -273,7 +320,7 @@ export class TvApi extends TvApiCatalog {
   }
   async deleteAddon(id: string, options?: RequestOptions) {
     await this.raw(
-      `/api/v2/addons/${segment(id)}`,
+      `/api/addons/${segment(id)}`,
       { method: "DELETE" },
       true,
       options,

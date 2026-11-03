@@ -1,6 +1,7 @@
 import { chromium, expect } from '@playwright/test';
 import { mkdirSync } from 'node:fs';
 import { installBackend, installMediaStubs } from './backend.ts';
+import { continuation } from '../fixtures/continuation.ts';
 const url=process.env.SOLID_PREVIEW_URL, origin=process.env.PREVIEW_API_ORIGIN;
 if(!url?.startsWith('https://')||!origin?.startsWith('https://'))throw new Error('Use local HTTPS for the SolidTV polish audit');
 const out=process.env.PREVIEW_OUT??'/tmp/tv-polish-audit';mkdirSync(out,{recursive:true});
@@ -32,7 +33,7 @@ try {
  {
   let slowDone=false;
   const {page,errors}=await fixture(1920,{},async page=>{
-   await page.route(`${origin}/api/profiles/*/continue/page*`,route=>route.fulfill({json:{items:[{id:'tt-monster:1:1',type:'series',series_id:'tt-monster',name:'Monster',season:1,episode:1,position:4,duration:3120,queue_status:'resume'},{id:'tt-obsession',type:'movie',name:'Obsession',position:16,duration:6540,queue_status:'resume'}],offset:0,total:2,next_offset:null}}));
+   await page.route(`${origin}/api/profiles/*/continue`,route=>route.fulfill({json:continuation([{id:'tt-monster:1:1',type:'series',series_id:'tt-monster',name:'Monster',season:1,episode:1,position:4,duration:3120,queue_status:'resume'},{id:'tt-obsession',type:'movie',name:'Obsession',position:16,duration:6540,queue_status:'resume'}])}));
    await page.route(`${origin}/api/meta/movie/tt-obsession`,async route=>{await new Promise(resolve=>setTimeout(resolve,2500));slowDone=true;await route.fallback();});
   });
   await focus(page,'home-action',0);
