@@ -118,7 +118,7 @@ it("reads the household-write capability from the one identity route a device se
   );
   const { api } = apiFor(fetcher, store(null));
 
-  await expect(api.manageAccount()).resolves.toBe(false);
+  await expect(api.canManageAccount()).resolves.toBe(false);
   expect(fetcher).toHaveBeenCalledOnce();
   expect(fetcher.mock.calls[0][0]).toBe("https://example.test/api/auth/me");
 });
@@ -128,13 +128,13 @@ it("reports the capability as unknown instead of inventing one", async () => {
     vi.fn(async () => response({ role: "device" })),
     store(null),
   );
-  await expect(missing.api.manageAccount()).resolves.toBeUndefined();
+  await expect(missing.api.canManageAccount()).resolves.toBeUndefined();
 
   const refused = apiFor(
     vi.fn(async () => response({ error: "Forbidden" }, 403)),
     store(null),
   );
-  await expect(refused.api.manageAccount()).resolves.toBeUndefined();
+  await expect(refused.api.canManageAccount()).resolves.toBeUndefined();
 });
 
 it("asks once per grant and asks again after a new pairing", async () => {
@@ -143,8 +143,8 @@ it("asks once per grant and asks again after a new pairing", async () => {
   );
   const { api } = apiFor(fetcher, store(null));
 
-  await api.manageAccount();
-  await api.manageAccount();
+  await api.canManageAccount();
+  await api.canManageAccount();
   expect(fetcher).toHaveBeenCalledOnce();
 
   fetcher.mockImplementation(async (input: RequestInfo | URL) =>
@@ -153,6 +153,6 @@ it("asks once per grant and asks again after a new pairing", async () => {
       : response({ capabilities: { manage_account: true } }),
   );
   await api.claim("device-code");
-  await api.manageAccount();
+  await api.canManageAccount();
   expect(fetcher).toHaveBeenCalledTimes(3);
 });

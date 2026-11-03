@@ -3294,7 +3294,7 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
      * refusal explain itself. */
     async function mayWriteHousehold() {
       if (canManageAccount() === undefined)
-        setCanManageAccount(await api.manageAccount());
+        setCanManageAccount(await api.canManageAccount());
       return offersHouseholdWrite(canManageAccount());
     }
     async function loadSettings(tab: number, signal: AbortSignal) {

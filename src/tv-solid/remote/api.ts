@@ -462,7 +462,7 @@ export class RemoteTvApi {
    * session may still call, once per grant. `undefined` means the server did
    * not say — callers must not invent an answer.
    */
-  manageAccount(): Promise<boolean | undefined> {
+  canManageAccount(): Promise<boolean | undefined> {
     if (!this.manageAccountFlight)
       this.manageAccountFlight = this.readManageAccount().catch(
         () => undefined,
