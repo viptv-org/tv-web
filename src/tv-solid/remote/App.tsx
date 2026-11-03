@@ -35,7 +35,6 @@ import {
 
 
 } from "solid-js";
-import QRCode from "qrcode";
 import {
 
 
@@ -1262,6 +1261,9 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
         setPairing(value);
         const expires = performance.now() + value.expires_in * 1000;
         setPairingDeadline(expires);
+        // Pairing is the only QR consumer in the TV entry, so the 70 KiB
+        // encoder is fetched by the screen that draws one, not by every boot.
+        const { default: QRCode } = await import("qrcode");
         const codeImage = await QRCode.toDataURL(
           value.verification_uri_complete ?? value.verification_uri,
           { width: 300, margin: 2 },
