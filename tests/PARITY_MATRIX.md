@@ -1,3 +1,9 @@
+# SolidTV source-picker hint suppression
+
+| Contract | Functional and visual evidence | Device limits |
+| --- | --- | --- |
+| SRC-DRAWER-09, TV 1920×1080, design `8b7f85941addf5a65390fe6eca4f11aba9584a17` | `remote/source-hint.spec.ts`: both server hints absent during discovery and idle; source rows selectable; Back restores Home focus; private screenshots inspected | Browser simulation only; Tizen, Vizio and webOS hardware unverified |
+
 # Completion audit in progress — 2026-10-23
 
 The authoritative outstanding-work inventory is
