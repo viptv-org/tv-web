@@ -153,3 +153,10 @@ REMOTE_PREVIEW_ORIGIN=https://viptv.local.test:18571 \
 
 `ALLOC_RUNS=cold-home,48-home-keys,48-down-keys` selects the phases. Like the
 timing harness, it is browser-fixture evidence, not physical-TV evidence.
+
+`PERF_RENDERER_DIAGNOSTICS=1` adds rendered-frame, GPU draw-call and Home glass/
+rounded shader creation counts to `remote-perf.mjs` samples. It wraps the real
+SolidTV renderer for the measured workload; keep the option identical in both
+artifacts being compared. `PERF_ASSERT_BUDGET=1` retains the 17.5ms p95 frame
+limit and rejects long tasks or frames over 50ms. Steady-state measurement waits
+for the startup skeleton to retire; initial readiness is reported separately.
