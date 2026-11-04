@@ -7697,15 +7697,6 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
                         content={sourceStatusCopy(sourceSpread())}
                       />
                     </Show>
-                    <Label
-                      x={64}
-                      y={968}
-                      size={22}
-                      maxwidth={800}
-                      maxlines={2}
-                      color={palette.muted}
-                      content={sourcePage()?.selection_note ?? ""}
-                    />
                   </TvView>
                 </Show>
                 <Show

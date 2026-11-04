@@ -1,3 +1,19 @@
+# SolidTV source-picker hint suppression
+
+`tests/remote/source-hint.spec.ts` checks SRC-DRAWER-09 at 1920×1080 against
+isolated HTTPS output. Both server `selection_note` variants are absent from
+the rendered picker during discovery and when idle. Source rows remain visible
+and selectable, `Still checking sources` remains while discovery is pending,
+and Back restores Home and its prior focus. Private screenshots were inspected.
+
+Validation: both regressions fail on the prior renderer and pass with the
+footer removed; five existing source-picker browser cases, all 420 unit tests
+in 65 files (single fork), typecheck and the production build pass. The existing
+normal-motion drawer case passed alone after its initial 40ms exit assertion
+failed in the grouped run. Browser
+playback uses the fixture HTTP/media boundary. Physical TV qualification and
+deployment remain unverified.
+
 # Completion audit checkpoint — 2026-10-23
 
 The rebuild is **not fully qualified**. `tests/REMOTE_COMPLETION_AUDIT.json` tracks
