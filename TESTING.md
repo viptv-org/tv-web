@@ -3804,12 +3804,6 @@ on channel 0 and Down reaches channel 1. With reduced motion disabled, every
 observed arrival frame keeps the first channel row at x 96, y 636, opacity 1,
 without a loading frame or a change of screen.
 
-The implementation at `532f841` already performs this refresh and focus transfer.
-This change adds regression coverage and fixture controls. Temporarily disabling
-the arrival-focus branch made the browser test fail with `nav:4:0:0:0` where
-`content:0:` was required; restoring the source passed all four cases. The
-temporary mutation is absent from the change.
-
 Validation: all TypeScript groups, 420 unit/integration tests in 65 files using a
 single fork, `npm run build` including pinned design/core/video integrity checks,
 and four targeted Chromium browser cases passed. Browser runs used an isolated
