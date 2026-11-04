@@ -3810,3 +3810,23 @@ playback; `ares-package` and the Tizen CLI are absent on this host, so the
 launcher IPK/WGT were not rebuilt locally (their launcher-only code path is
 unchanged; `.github/workflows/build.yml` builds both on main). The ZIP was not
 deployed and `/tv/` was not exercised against the backend.
+
+# SolidTV Live empty-state arrival — LIVE-EMPTY-13
+
+`tests/remote/live-empty-arrival.spec.ts` verifies both no-source and no-channels
+with initial focus on the Live navigation tab or the owner's empty-page action.
+A changed server revision delivers three channels without navigation; focus lands
+on channel 0 and Down reaches channel 1. With reduced motion disabled, every
+observed arrival frame keeps the first channel row at x 96, y 636, opacity 1,
+without a loading frame or a change of screen.
+
+Validation: all TypeScript groups, 420 unit/integration tests in 65 files using a
+single fork, `npm run build` including pinned design/core/video integrity checks,
+and four targeted Chromium browser cases passed. Browser runs used an isolated
+production distribution over localhost HTTPS, with Chromium trusting only the
+temporary fixture certificate's SPKI. The test advances the 15-second revision
+poll using the browser clock; it does not invoke application refresh functions.
+
+No physical Tizen, Vizio or webOS device, real provider, or deployed environment
+was exercised. This evidence covers the SolidTV browser renderer and mocked
+backend HTTP boundary.
