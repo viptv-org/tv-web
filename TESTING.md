@@ -1,3 +1,33 @@
+# SolidTV startup and delayed loading
+
+The production TV entries (`/tv/?platform=vizio`, `?layout=tv`,
+`/tv/solid.html`, `/tv/lightning.html`) show an inline static skeleton before
+module, stylesheet, font or bootstrap requests complete. The cover leaves after
+application readiness and the following rendered frame. Failed assets and a
+30-second unfinished startup expose **VIPTV could not start.** and a focused
+**Try again** button. Browser Back preserves the TV document before bootstrap
+and during direct-entry playback. React entry selection is unchanged. The complete
+inline script targets ES2017; the emitted-HTML build regression rejects scripts
+that still require newer syntax transformations.
+
+At 1920×1080 over isolated HTTPS, all 26 startup/loading browser cases pass:
+Vizio/Tizen/webOS and native-host selection, entry delays, pinned card bounds
+and fill, stylesheet/font/bootstrap delays,
+asset failure and remote retry, bounded recovery, delayed Discover/detail/Live
+cancellation, initial playback stall/refusal recovery, pause/play, and direct
+SolidTV/legacy history Back with real HLS. Eight existing billboard cases also
+pass with controlled clocks. The wider selected navigation/source/player batch
+has 68 passing cases of 69; the intermediate drawer-exit timing observation is
+tracked in [#79](https://github.com/viptv-org/tv-web/issues/79).
+
+The production build, design/core/video integrity checks, grouped typecheck and
+421 unit tests in 66 files (one fork) pass. Private startup, recovery, first-frame
+and settled Home screenshots were inspected; the hero artwork arrives after the
+initial usable controls and rows. Geometry assertions cover the startup cards,
+not full-screen visual parity. Media evidence uses the existing decoded HLS
+fixture and server API boundary. Physical Tizen, Vizio and webOS qualification,
+production provider playback and deployment remain unverified.
+
 # Home featured-pass acceptance
 
 `tests/remote/billboard.spec.ts` verifies an uninterrupted featured pass parks,

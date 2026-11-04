@@ -2,6 +2,7 @@ import { Agent } from "node:https";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { defineConfig } from "vitest/config";
+import { solidStartup } from "./scripts/solid-startup";
 import {remoteBoundary} from "./scripts/remote-boundary";
 import react from "@vitejs/plugin-react";
 import solid from "vite-plugin-solid";
@@ -32,7 +33,7 @@ const previewProxy = () => ({
   },
 });
 export default defineConfig(({ command }) => ({
-  plugins: [remoteBoundary(), react({ exclude: /src\/tv-solid\// }), solid({ include: /src\/tv-solid\/.*\.tsx$/, solid: { moduleName: "@solidtv/solid", generate: "universal" } })],
+  plugins: [solidStartup(), remoteBoundary(), react({ exclude: /src\/tv-solid\// }), solid({ include: /src\/tv-solid\/.*\.tsx$/, solid: { moduleName: "@solidtv/solid", generate: "universal" } })],
   // The player contract resolves from the pinned vendored source, not the
   // generated dist-js of a sibling checkout.
   resolve: { dedupe: ["solid-js", "@solidtv/solid"], alias: { "@viptv/video": fileURLToPath(new URL("./vendor/video/src/index.ts", import.meta.url)) } },
