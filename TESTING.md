@@ -11,8 +11,16 @@ All eleven matched Home-action/navigation focus captures are pixel-identical
 to the baseline at 1920×1080 (`/tmp/viptv-75-nav-visual/comparison.json`);
 private captures were inspected. This verifies preservation, not a new reference
 parity measurement. [Performance evidence](PERFORMANCE.md) records reduced
-renderer work and the remaining failed frame budget. Final full checks and
-broader screen responsiveness are pending; hardware and deployment are unverified.
+renderer work and the remaining failed frame budget.
+
+Combined source `0672b3cf146b3e74058877f7082a1550c20413e8` passes grouped
+typecheck, 421 unit tests in 66 files (single fork), design/core/video integrity
+checks and `npx vite build --outDir /tmp/viptv-solid-75-final`. Logs are
+`/tmp/viptv-75-final-{typecheck,unit,build}.log`; the exact command batch is
+`/tmp/viptv-75-final-gates.sh`. The isolated artifact's bundle SHA-256 is
+`af6bf85fd26fdbc981c765d646f75873160b6c8ce53c894046e79c050cc8a0ae`
+(`/tmp/viptv-solid-75-final-provenance.json`). Broader screen responsiveness,
+the frame budget, hardware and deployment remain unverified.
 
 # SolidTV startup and delayed loading
 

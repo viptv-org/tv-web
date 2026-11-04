@@ -36,6 +36,13 @@ remaining full-scene cost is unavoidable. An explicit software GPU compositor
 was slower. These controls do not justify removing required effects or reducing
 resolution. Physical-TV performance remains unqualified.
 
+Temporary full-scene minimization uses 24 hero keys and three samples per
+condition (`/tmp/viptv-75-layer-*.json`). The median frame p95 is 33.3ms
+unchanged, 16.8ms with only the backdrop suppressed, 16.8ms with only rows
+suppressed, 33.4ms without text, 33.3ms without decorations, and 16.7ms with all
+quads suppressed. This isolates aggregate backdrop/row fill as the remaining
+candidate; suppression is diagnostic only and is absent from the product.
+
 # Cited revisions
 
 Sections are reverse-chronological. The 2026-10-23 and 2026-10-24 comparisons
