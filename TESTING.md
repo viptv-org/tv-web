@@ -36,11 +36,18 @@ playback-authority cases against fixture media.
 The same artifact's wider run (`/tmp/viptv-perf-75/accept-b.log`: 29 viewing and
 12 Live/Search page cases) reached 31 passes and 10 timeouts while two other
 sessions saturated the shared host for 26 minutes — `mainThreadMsPerKey` doubles
-and 5s request predicates and 120/180s walks expire. Those ten are re-run on a
-quiet window before any conclusion is drawn; they are not recorded as passing.
-The Live and Search seven-page walks keep their 180-second host budget, so a
-contended host still ends them early. The frame budget, physical hardware and
-deployment remain unverified.
+and 5s request predicates and 120/180s walks expire. Twenty-five of the 29
+viewing cases pass, including the issue #79 normal-motion source-drawer bounds,
+the player's buffered timeline, real fixture HLS playback with lease release,
+the 700ms hold and the long add-on lists. The four that did not finish are the
+request-predicate cases (source-quality selection, lease heartbeat, profile-change
+intent, remote keyboard punctuation) whose polls allow five seconds.
+
+The Live and Search seven-page walks keep their 180-second host budget and again
+ended early under that load; they are not recorded as passing here. All ten cases
+are re-run when the shared host reports genuine idle time, and no pass is claimed
+until that run is clean. The frame budget, physical hardware and deployment remain
+unverified.
 
 # SolidTV startup and delayed loading
 
