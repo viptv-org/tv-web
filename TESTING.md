@@ -1,3 +1,19 @@
+# SolidTV focus rendering
+
+Renderer source `d559f73b7728599196ad677af2593cf7ed685b9c`,
+[execution issue #75](https://github.com/viptv-org/tv-web/issues/75): the three
+new real-renderer regressions fail against the prior behavior. All 17 Home and
+navigation cases pass across `/tmp/viptv-75-nav-green.log` (16 cases) and
+`/tmp/viptv-75-nav-moving.log` (the isolated normal-motion case). Its paused
+test clock advances while waiting for queued texture uploads.
+
+All eleven matched Home-action/navigation focus captures are pixel-identical
+to the baseline at 1920×1080 (`/tmp/viptv-75-nav-visual/comparison.json`);
+private captures were inspected. This verifies preservation, not a new reference
+parity measurement. [Performance evidence](PERFORMANCE.md) records reduced
+renderer work and the remaining failed frame budget. Final full checks and
+broader screen responsiveness are pending; hardware and deployment are unverified.
+
 # Home featured-pass acceptance
 
 `tests/remote/billboard.spec.ts` verifies an uninterrupted featured pass parks,

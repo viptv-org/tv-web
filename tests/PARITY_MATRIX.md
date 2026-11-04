@@ -1,3 +1,9 @@
+# SolidTV focus rendering
+
+| Contract | Implementation / execution | Functional evidence | Visual evidence | Tizen | Vizio | webOS | Disposition |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Tv3Home actions and top navigation, TV_SERVER_WRAPPER, design `8b7f85941addf5a65390fe6eca4f11aba9584a17` | `d559f73b7728599196ad677af2593cf7ed685b9c`; browser Vizio configuration; [execution issue #75](https://github.com/viptv-org/tv-web/issues/75) | 17 Home/navigation cases, including normal/reduced-motion glass retention and focused-fill-only drawing; `/tmp/viptv-75-nav-green.log`, `/tmp/viptv-75-nav-moving.log` | Eleven baseline/candidate focus states have zero changed channels at 1920×1080; `/tmp/viptv-75-nav-visual/comparison.json`; reference metric unmeasured | Hardware unverified | Hardware unverified | Hardware unverified | Functional and visual preservation verified for this browser scope; frame budget failed |
+
 # Home featured-pass acceptance
 
 | Contract | Implementation / execution | Functional evidence | Visual evidence | Tizen | Vizio | webOS | Disposition |

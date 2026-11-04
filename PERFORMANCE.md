@@ -1,3 +1,41 @@
+# SolidTV focus rendering
+
+Home retains its glass-control layers across focus changes. Navigation retains
+one fill node per entry and draws only the focused fill; labels and icons remain
+visible. Geometry, blur, artwork motion and resolution are unchanged.
+
+[Execution issue #75](https://github.com/viptv-org/tv-web/issues/75) compares
+baseline `1068b6511da55618e7d218dc20246bae5438f802` with renderer source
+`d559f73b7728599196ad677af2593cf7ed685b9c`, design
+`8b7f85941addf5a65390fe6eca4f11aba9584a17`. Three samples use the same 48-key
+Home workload, 1920×1080, reduced motion, 4× CPU throttling and SwiftShader.
+The shared host has a three-CPU quota; scheduling pressure affects timings.
+
+| Median per workload | Baseline | Candidate |
+| --- | ---: | ---: |
+| Glass / rounded shader creations during focus | 18 / 18 | 0 / 0 |
+| GPU draw calls | 2928 | 2644 |
+| Rendered frames | 58 | 56 |
+| Main-thread milliseconds per key | 48.31 | 45.80 |
+| Handler p95 milliseconds | 3.1 | 2.2 |
+| Frame p95 milliseconds | 33.4 | 33.3 |
+| Long tasks | 2 | 3 |
+
+The 17.5ms frame budget still fails. Candidate frame p95 samples are
+50.0 / 33.3 / 33.3ms, with 11 / 3 / 3 long tasks; the slower sample is retained.
+Raw reports are `/tmp/viptv-solid-75-work-before.json` and
+`/tmp/viptv-solid-75-nav-work-after.json`. The diagnostic records source and
+served-bundle hashes; its temporary renderer wrappers count actual submissions.
+`PERF_RENDERER_DIAGNOSTICS=1` exposes the same counters in `remote-perf.mjs`.
+
+Matched-context controls at the same 80ms cadence fit 16.7–16.8ms p95 with one
+full-screen artwork quad, including the actual billboard shader and blend state
+(`/tmp/viptv-textured-render-control.json`). Native Chromium tracing identifies
+compositor readback and GPU submission costs, but does not establish that the
+remaining full-scene cost is unavoidable. An explicit software GPU compositor
+was slower. These controls do not justify removing required effects or reducing
+resolution. Physical-TV performance remains unqualified.
+
 # Cited revisions
 
 Sections are reverse-chronological. The 2026-10-23 and 2026-10-24 comparisons
