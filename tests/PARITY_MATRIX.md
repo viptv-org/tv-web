@@ -1,8 +1,8 @@
 # SolidTV source-picker hint suppression
 
-| Contract | Functional and visual evidence | Device limits |
-| --- | --- | --- |
-| SRC-DRAWER-09, TV 1920×1080, design `8b7f85941addf5a65390fe6eca4f11aba9584a17` | `remote/source-hint.spec.ts`: both server hints absent during discovery and idle; source rows selectable; Back restores Home focus; private screenshots inspected | Browser simulation only; Tizen, Vizio and webOS hardware unverified |
+| Contract | Implementation / execution | Functional evidence | Visual evidence | Tizen | Vizio | webOS | Disposition |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| SRC-DRAWER-09, TV 1920×1080, design `8b7f85941addf5a65390fe6eca4f11aba9584a17` | `fe115118c6d628b7ddae1592b01a6c29d8693403`, browser Vizio configuration; [execution issue #61](https://github.com/viptv-org/tv-web/issues/61) | `remote/source-hint.spec.ts`: both server hints absent during discovery and idle; source rows selectable; Back restores Home focus; 2 passed (`/tmp/viptv-61-browser-green.log`) | Private screenshots inspected at 1920×1080; reference metric unmeasured | Hardware unverified | Hardware unverified | Hardware unverified | Verified for the stated browser scope |
 
 # Completion audit in progress — 2026-10-23
 
