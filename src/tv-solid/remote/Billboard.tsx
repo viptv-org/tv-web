@@ -251,24 +251,21 @@ export function BillboardButton(props: {
         show={props.focused}
       />
       <TvView w={72} h={72}>
-        <Show
-          when={!props.focused && props.art.frames().length}
-          fallback={
-            <TvView
-              w={72}
-              h={72}
-              rounded={36}
-              color={props.focused ? palette.text : "rgba(255,255,255,.16)"}
-            />
-          }
-        >
+        <TvView show={!props.focused && props.art.frames().length > 0}>
           <Layers
             art={props.art}
             glass
             pageX={props.pageX}
             pageY={props.pageY}
           />
-        </Show>
+        </TvView>
+        <TvView
+          show={props.focused || !props.art.frames().length}
+          w={72}
+          h={72}
+          rounded={36}
+          color={props.focused ? palette.text : "rgba(255,255,255,.16)"}
+        />
       </TvView>
       <TvView
         x={21}

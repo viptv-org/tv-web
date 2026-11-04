@@ -130,3 +130,24 @@ test('zero-size artwork cannot create invalid billboard coordinates',async({page
  expect(await page.evaluate(()=>{let count=0;function visit(n:any){if(n.shader?.shaderKey?.startsWith('tvBillboard'))count++;n.children?.forEach(visit);}visit((window as any).__viptvRenderer.stage.root);return count;})).toBe(0);
  await page.keyboard.press('ArrowRight');await expect(state(page)).toHaveAttribute('data-tv-focus',/^hero:0:0:1:/);
 });
+for(const reduced of [false,true])test(`Home retains its ${reduced?'still':'moving'} glass controls while focus changes`,async({page,baseURL})=>{
+ await open(page,baseURL!,reduced,1);
+ const glass=()=>page.evaluate(()=>{
+  const nodes:{id:number;x:number;visible:boolean}[]=[];
+  function visit(n:any){
+   if(n.shader?.shaderKey?.startsWith('tvBillboardGlass'))nodes.push({id:n.id,x:n.absX,visible:n.isRenderable&&n.worldAlpha>0});
+   n.children?.forEach(visit);
+  }
+  visit((window as any).__viptvRenderer.stage.root);
+  return nodes.sort((a,b)=>a.x-b.x);
+ });
+ await expect.poll(async()=>(await glass()).filter(n=>n.visible).map(n=>n.x)).toEqual([336,428]);
+ const identities=(await glass()).map(n=>n.id);
+ for(let cycle=0;cycle<3;cycle++)for(const [key,visible] of [
+  ['ArrowRight',[428]],['ArrowRight',[336]],['ArrowLeft',[428]],['ArrowLeft',[336,428]],
+ ] as const){
+  await page.keyboard.press(key);await page.clock.runFor(32);
+  await expect.poll(async()=>(await glass()).filter(n=>n.visible).map(n=>n.x)).toEqual(visible);
+  expect((await glass()).map(n=>n.id)).toEqual(identities);
+ }
+});
