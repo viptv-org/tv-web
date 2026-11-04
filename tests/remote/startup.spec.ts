@@ -10,7 +10,7 @@ for (const entry of ['/tv/?platform=vizio', '/tv/?layout=tv', '/tv/solid.html', 
       await held;
       await route.continue().catch(() => {});
     });
-    await page.goto(entry, { waitUntil: 'commit' });
+    await page.goto(entry + (entry.includes('?') ? '&' : '?') + 'focusdebug=1', { waitUntil: 'commit' });
     const startup = page.locator('#solid-startup');
     await expect(startup).toBeVisible();
     const shape = startup.locator('rect').first();
@@ -22,7 +22,19 @@ for (const entry of ['/tv/?platform=vizio', '/tv/?layout=tv', '/tv/solid.html', 
     await expect(page.locator('html')).toHaveAttribute('data-tv-ready', 'true');
     await expect(startup).toHaveCount(0);
     await expect(page.locator('canvas').first()).toBeVisible();
-    if (entry === '/tv/?platform=vizio') await page.screenshot({ path: '/tmp/viptv-78-home.png' });
+    if (entry === '/tv/?platform=vizio') {
+      await page.screenshot({ path: '/tmp/viptv-78-home.png' });
+      await page.waitForFunction(() => {
+        let loaded = false;
+        function visit(node: any) {
+          if (node.isRenderable && node.props.w === 1920 && node.shader?.shaderKey?.startsWith('tvBillboard') && node.texture?.state === 'loaded') loaded = true;
+          node.children?.forEach(visit);
+        }
+        visit((window as any).__viptvRenderer.stage.root);
+        return loaded;
+      });
+      await page.screenshot({ path: '/tmp/viptv-78-home-settled.png' });
+    }
   });
 }
 

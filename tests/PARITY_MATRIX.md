@@ -1,3 +1,9 @@
+# SolidTV startup and loading acceptance
+
+| Contract | Implementation / execution | Functional evidence | Visual evidence | Tizen | Vizio | webOS | Disposition |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| First-load skeleton principle, startup recovery copy, TV 1920×1080; design `8b7f85941addf5a65390fe6eca4f11aba9584a17` | Application `a1c339c77f0bd19bdeee8b8d48f7539b6989dc5b`, browser Vizio/public TV and direct SolidTV/legacy entries; [execution issue #78](https://github.com/viptv-org/tv-web/issues/78) | `remote/startup.spec.ts` and `remote/loading-navigation.spec.ts`: 23 passed, including delayed assets/data, remote recovery, history Back, cancellation and decoded HLS retry/controls. Eight existing billboard cases pass; selected wider navigation/source/player coverage is 68/69, with drawer timing tracked in [#79](https://github.com/viptv-org/tv-web/issues/79). Logs: `/tmp/viptv-78-ready.log`, `/tmp/viptv-78-final-browser.log` | Startup card bounds/fill asserted; private startup/recovery/first-frame/settled Home captures inspected at 1920×1080. Full-reference metric unmeasured | Hardware unverified | Hardware unverified | Hardware unverified | Verified for the stated startup/loading browser and fixture-media scope; wider drawer timing unresolved |
+
 # Home featured-pass acceptance
 
 | Contract | Implementation / execution | Functional evidence | Visual evidence | Tizen | Vizio | webOS | Disposition |
