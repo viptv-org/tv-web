@@ -1,3 +1,9 @@
+# Home featured-pass acceptance
+
+| Contract | Implementation / execution | Functional evidence | Visual evidence | Tizen | Vizio | webOS | Disposition |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Tv3Home, TV_SERVER_WRAPPER Home billboard motion, design `8b7f85941addf5a65390fe6eca4f11aba9584a17` | Application `9b70b07352b7ffd7a2e8a552660ad2e89f6f00c5`, browser Vizio configuration; [execution issue #71](https://github.com/viptv-org/tv-web/issues/71) | `remote/billboard.spec.ts`: uninterrupted and restarted full passes, pause, eventual indicator retirement and no playback; eight cases verified (`/tmp/viptv-71-final-browser.log`, `/tmp/viptv-71-first-retry.log`) | Existing reduced-motion pixel and artwork-retirement assertions retained; reference metric unmeasured | Hardware unverified | Hardware unverified | Hardware unverified | Verified for the stated browser scope |
+
 # SolidTV source-picker hint suppression
 
 | Contract | Implementation / execution | Functional evidence | Visual evidence | Tizen | Vizio | webOS | Disposition |
