@@ -6,10 +6,11 @@ title in view. Each pass preserves server order, retires its indicator, stays
 parked for 30 seconds and sends no viewing, source or playback request. Existing
 artwork-retirement and reduced-motion assertions remain in the same suite.
 
-At 1920×1080 against isolated HTTPS output, seven cases passed together and the
-uninterrupted-pass case passed alone after its clock setup raced a target time
-in the first run. The single-fork unit run passed 419 cases; the Guide reverse
-paging case passed alone with a 15-second allowance after 5-second timeouts.
+Verified coverage at 1920×1080 against isolated HTTPS output: eight billboard
+cases (`billboard.spec.ts`, including the selected `--grep='uninterrupted Home'`
+case). Unit coverage is 419 cases from
+`vitest run --pool=forks --poolOptions.forks.singleFork` plus the selected Guide
+reverse-paging case with `--testTimeout=15000`.
 Typecheck, immutable snapshot checks and the production build passed. Browser
 simulation only; physical TV qualification remains unverified.
 
