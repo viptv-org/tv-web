@@ -19,6 +19,7 @@ export async function installRemoteBackend(page:Page,origin:string,options:{
     failReplacementOnce?: boolean;
     holdNextPage?: boolean;
     liveChannels?: number;
+    liveAvailability?: "Available" | "NeedsConfiguration";
     liveGroups?: number;
     media?: boolean;
     mediaSearch?: boolean;
@@ -50,6 +51,7 @@ export async function installRemoteBackend(page:Page,origin:string,options:{
  const cards:Card[]=cardImages.map((image,i)=>({...card,identity:{...card.identity,id:`movie-${i}`},title:cardTitles[i],landscape:art(image),poster:art(image),logo:null,badges:i===1?['New episode']:[],view:{...card.view!,preview:{...card.view!.preview!,action:'details' as const}}}));
  cards[0]=seriesCard as typeof card;
  let profile:string|null='1',library:Card[]=[],revision=0,liveRevision=0;
+ let liveChannelCount=options.liveChannels,liveAvailability=options.liveAvailability??'Available';
  // Incremental source discovery: events accumulate, waiters long-poll until a
  // new event arrives or discovery completes.
  const discoveryEvents:{streams:any[]}[]=[];
@@ -189,7 +191,7 @@ export async function installRemoteBackend(page:Page,origin:string,options:{
         pageSize = Number(url.searchParams.get("page_size") ?? limit);
       if (offset > 0 && options.pageDelayMillis) await new Promise(resolve=>setTimeout(resolve,options.pageDelayMillis));
       if (offset > 0 && options.holdNextPage) await pageGate;
-      const all = Array.from({length: searching ? options.searchChannelCount ?? 3 : options.liveChannels ?? cards.length}, (_,i) => ({id:`channel-${i}`,connection_id:"m3u:1",card:{...cards[i % cards.length],identity:{kind:"live",id:`channel-${i}`,ids:[]},provider_id:"m3u:1",title:(liveRevision>0?`Updated channel ${i}`:(searching?`Fixture channel ${i}`:cards[i % cards.length].title)),...(liveRevision>0||searching ? {landscape:null,poster:null,logo:null} : {})}}));
+      const all = Array.from({length: searching ? options.searchChannelCount ?? 3 : liveChannelCount ?? cards.length}, (_,i) => ({id:`channel-${i}`,connection_id:"m3u:1",card:{...cards[i % cards.length],identity:{kind:"live",id:`channel-${i}`,ids:[]},provider_id:"m3u:1",title:(liveRevision>0?`Updated channel ${i}`:(searching?`Fixture channel ${i}`:cards[i % cards.length].title)),...(liveRevision>0||searching ? {landscape:null,poster:null,logo:null} : {})}}));
       return send({
         channels: all.slice(offset, offset + limit),
         snapshot_id: `fixture-live-${liveRevision}-${profile}-${url.searchParams.get("group_id") ?? "all"}-${url.searchParams.get("search") ?? ""}`,
@@ -201,7 +203,7 @@ export async function installRemoteBackend(page:Page,origin:string,options:{
         groups: Array.from({length: options.liveGroups ?? 0}, (_, i) => ({id:`group-${i + 1}`,label:`Group ${i + 1}`})),
         complete: offset+limit >= all.length,
         next_cursor: options.misleadingLiveCursor ? "4294967295" : offset + limit < all.length ? String(offset+limit) : null,
-        availability: "Available",
+        availability: liveAvailability,
       });
     }
   if (path === "/api/playback" && options.media) {
@@ -299,6 +301,7 @@ export async function installRemoteBackend(page:Page,origin:string,options:{
   bootstrap,
   reviseCatalog: (indices: number[]) => { catalogView = indices.map(index => catalogCards[index]); revision++; },
   reviseLive: () => { liveRevision++; revision++; },
+  addLiveChannels: (count: number) => { liveChannelCount=count; liveAvailability="Available"; liveRevision++; revision++; },
   completeDiscovery: () => { discoveryDone=true; notifyDiscovery(); },
   addBestSource: () => { discoveryEvents.push({streams:[{id:'stream-best',name:'LordStreams',detail:'WEB-DL · AV1 · 5.1 · 9.2 GB',quality_height:2160,best:true,view:{title:'LordStreams',body:'WEB-DL · AV1 · 5.1 · 9.2 GB',quality_label:'4K',format_label:'AV1',provider_label:'LordStreams'}}]}); notifyDiscovery(); },
   setNavigation: (ids: string[]) => { navigationIds = ids; revision++; },

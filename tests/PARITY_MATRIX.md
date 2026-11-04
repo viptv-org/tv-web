@@ -578,3 +578,9 @@ public-stage regressions pass; the cancelled case failed before the ownership
 fence. All47 board inspections remain scoped across their recorded revisions.
 This includes DeskStates' seven separately matched cells, and is neither uniform pixel parity
 nor installed/native failure recovery or hardware acceptance.
+
+# SolidTV Live empty-state arrival
+
+| Contract | Functional browser evidence | Visual evidence | Device evidence |
+| --- | --- | --- | --- |
+| LIVE-EMPTY-13; design `8b7f85941addf5a65390fe6eca4f11aba9584a17` | Four HTTPS Chromium cases cover no-source/no-channels with initial navigation/action focus, revision-driven channel arrival, first-row focus and Down to the next row. Disabling arrival focus makes the regression fail. | With reduced motion disabled, observed arrival frames contain the first row at x 96, y 636, opacity 1, with no intervening loading frame or screen navigation. This is scoped frame geometry, not uniform screenshot parity. | Tizen, Vizio and webOS unverified; mocked HTTP only. |
