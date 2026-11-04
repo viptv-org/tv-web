@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { installRemoteBackend } from '../preview/remote-backend';
 
-for (const entry of ['/tv/?platform=vizio', '/tv/?layout=tv', '/tv/solid.html', '/tv/lightning.html']) {
+for (const entry of ['/tv/?platform=vizio', '/tv/?platform=tizen', '/tv/?platform=webos', '/tv/?layout=tv', '/tv/solid.html', '/tv/lightning.html']) {
   test(`startup skeleton survives a delayed entry module: ${entry}`, async ({ page, baseURL }) => {
     await installRemoteBackend(page, baseURL!);
     let release!: () => void;
@@ -94,8 +94,13 @@ test('a stuck entry reaches remote recovery without losing the visible shell', a
   await expect(page.getByRole('button', { name: 'Try again', exact: true })).toBeFocused();
 });
 
-for (const query of ['', '?platform=web']) {
-  test(`web startup retains React routing: ${query || 'default'}`, async ({ page }) => {
+for (const { query, native } of [
+  { query: '', native: false },
+  { query: '?platform=web', native: false },
+  { query: '?platform=vizio', native: true },
+]) {
+  test(`web startup retains React routing: ${native ? 'native host' : query || 'default'}`, async ({ page }) => {
+    if (native) await page.addInitScript(() => Object.defineProperty(window, '__TAURI_INTERNALS__', { value: {} }));
     await page.route('**/assets/*.js', () => new Promise(() => {}));
     await page.goto('/tv/' + query, { waitUntil: 'commit' });
     await expect(page.locator('#root')).toHaveCount(1);
