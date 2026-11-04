@@ -69,6 +69,18 @@ measured design pin is not the current [DESIGN_REF](../DESIGN_REF)
 | SetParental, SetAbout, SignOut | Parent PIN/policy intents, app/server information, confirmed sign-out | No account-wide revocation or household destructive QA operations |
 | SetDisplay | Omitted | No device-scoped remote preference contract |
 
+## Player diagnostics — 2026-11-04
+
+TV playback faults are diagnosed from the backend's record of the failing lease
+and the events the client reports against it, not from an on-TV panel. That
+record holds the platform label, declared codec and resolution facts, gateway
+delivery and format, selected tracks, reported position, first frame and the
+start/pause/stop events, which is what a qualification run reads after a device
+session has ended. The player chrome carries no read-only key/value surface, a
+viewer cannot copy text off a canvas, no Tv3 board or token specifies one, and
+the player error state offers a recovery action instead of fields. The absence is
+chosen.
+
 ## Current bounded channel traversal
 
 Source `cb7224e` (unreachable; see [Cited revisions](#cited-revisions)) adopts
