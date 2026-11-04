@@ -2629,6 +2629,21 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
           overlay()
         )
           return;
+        const focused = values()[column()];
+        const currentPages = pages();
+        const evicted =
+          currentPages.length > 1
+            ? currentPages[direction === "next" ? 0 : currentPages.length - 1]
+            : undefined;
+        if (
+          !(error instanceof RemoteError && error.status === 401) &&
+          (!samePageRequest(request, edgeRequest(pages(), direction)) ||
+            (focused &&
+              evicted?.channels.some(
+                (channel) => channelKey(channel) === channelKey(focused),
+              )))
+        )
+          return;
         channelPending = undefined;
         channelRetry = direction;
         if (error instanceof RemoteError && error.status === 401) fail(error);

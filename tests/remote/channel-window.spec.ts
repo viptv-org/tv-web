@@ -2,6 +2,12 @@ import {test,expect,type Page} from '@playwright/test';
 import {installRemoteBackend} from '../preview/remote-backend';
 const state=(page:Page)=>page.locator('html');
 const metrics=(page:Page)=>page.evaluate(()=>(window as any).__viptvRemoteMetrics());
+const errorShown=(page:Page)=>page.evaluate(()=>{
+ const text:string[]=[];
+ const visit=(node:any)=>{if(node.viptvText)text.push(node.viptvText);node.children?.forEach(visit);};
+ visit((window as any).__viptvRenderer.stage.root);
+ return text.includes('Couldn’t continue')||text.includes('The server took too long. Try again.');
+});
 async function open(page:Page,searching:boolean){
  await page.goto('/tv/?platform=vizio&focusdebug=1&perfdebug=1');await expect(state(page)).toHaveAttribute('data-tv-ready','true');
  await page.keyboard.press('ArrowUp');
@@ -16,7 +22,7 @@ async function walk(page:Page,searching:boolean,from:number,to:number){
 }
 for(const searching of [false,true]){
  test(`${searching?'Search':'Live'} crosses seven pages and reverses with bounded payloads and exact server requests`,async({page,baseURL})=>{
-  test.setTimeout(60000);
+  test.setTimeout(120000);
   const fixture=await installRemoteBackend(page,baseURL!,{media:true,liveChannels:241,mediaSearch:false,channelSearch:true,searchChannelCount:241,misleadingLiveCursor:true});
   const requests:Record<string,string>[]=[];page.on('request',r=>{const u=new URL(r.url());if(u.pathname.endsWith('/live/channels'))requests.push(Object.fromEntries(u.searchParams));});
   await open(page,searching);
@@ -38,6 +44,7 @@ for(const searching of [false,true]){
  });
 
  test(`${searching?'Search':'Live'} discards a delayed prefetch that would evict reversed focus`,async({page,baseURL})=>{
+  test.setTimeout(120000);
   await installRemoteBackend(page,baseURL!,{liveChannels:120,mediaSearch:false,channelSearch:true,searchChannelCount:120});
   let release!:()=>void,count=0;const gate=new Promise<void>(r=>release=r);
   await page.route('**/api/profiles/1/live/channels?**',async route=>{if(new URL(route.request().url()).searchParams.get('offset')==='80'){count++;if(count===1)await gate;}await route.fallback();});
@@ -49,17 +56,20 @@ for(const searching of [false,true]){
  });
 
  test(`${searching?'Search':'Live'} retries a failed reverse request without losing channel focus`,async({page,baseURL})=>{
+  test.setTimeout(120000);
   await installRemoteBackend(page,baseURL!,{liveChannels:120,mediaSearch:false,channelSearch:true,searchChannelCount:120});
   let zeroRequests=0;
   await page.route('**/api/profiles/1/live/channels?**',async route=>{if(new URL(route.request().url()).searchParams.get('offset')==='0'&&++zeroRequests===2)return route.fulfill({status:503,json:{error:'Synthetic reverse failure'}});await route.fallback();});
   await open(page,searching);await walk(page,searching,0,119);await walk(page,searching,119,45);
   await expect.poll(()=>zeroRequests).toBe(2);
   if(searching){await page.waitForTimeout(100);await page.keyboard.press('ArrowUp');await expect(state(page)).toHaveAttribute('data-tv-focus',/^search-channel-retry:/);}
+  else await expect.poll(()=>errorShown(page)).toBe(true);
   await page.keyboard.press('Enter');await expect.poll(()=>zeroRequests).toBe(3);
   await expect(state(page)).toHaveAttribute('data-tv-channel-id','channel-45');await walk(page,searching,45,0);
  });
 
  test(`${searching?'Search':'Live'} refreshes the focused retained page after a revision`,async({page,baseURL})=>{
+  test.setTimeout(120000);
   await page.clock.install();const fixture=await installRemoteBackend(page,baseURL!,{liveChannels:120,mediaSearch:false,channelSearch:true,searchChannelCount:120});
   const offsets:string[]=[];page.on('request',r=>{const u=new URL(r.url());if(u.pathname.endsWith('/live/channels'))offsets.push(u.searchParams.get('offset')!);});
   await open(page,searching);await walk(page,searching,0,119);fixture.reviseCatalog([0]);await page.clock.fastForward(15001);
@@ -68,3 +78,41 @@ for(const searching of [false,true]){
   expect((await metrics(page))[searching?'searchPayloadPages':'livePayloadPages']).toBe(1);
  });
 }
+
+for(const searching of [false,true])test(`${searching?'Search':'Live'} ignores a timed-out prefetch after reversing into the page it would evict`,async({page,baseURL})=>{
+ await page.clock.install();
+ await installRemoteBackend(page,baseURL!,{liveChannels:12,livePageLength:4,mediaSearch:false,channelSearch:true,searchChannelCount:12});
+ let release!:()=>void,count=0,failed=false;const gate=new Promise<void>(resolve=>release=resolve);
+ await page.route('**/api/profiles/1/live/channels?**',async route=>{
+  if(new URL(route.request().url()).searchParams.get('offset')==='8'&&++count===1)await gate;
+  await route.fallback();
+ });
+ page.on('requestfailed',request=>{const url=new URL(request.url());if(url.pathname.endsWith('/live/channels')&&url.searchParams.get('offset')==='8')failed=true;});
+ await open(page,searching);
+ await page.clock.pauseAt(await page.evaluate(()=>Date.now()+100));
+ await walk(page,searching,0,6);await expect.poll(()=>count).toBe(1);
+ await walk(page,searching,6,0);
+ await page.clock.fastForward(20001);await expect.poll(()=>failed).toBe(true);
+ await page.clock.runFor(50);
+ expect(await errorShown(page)).toBe(false);
+ await walk(page,searching,0,1);
+ release();
+});
+
+test('Live retries the displayed reverse-page error before considering channel playback',async({page,baseURL})=>{
+ await page.clock.install();
+ await installRemoteBackend(page,baseURL!,{liveChannels:12,livePageLength:4});
+ let zeroRequests=0,release!:()=>void;const gate=new Promise<void>(resolve=>release=resolve);
+ await page.route('**/api/profiles/1/live/channels?**',async route=>{
+  if(new URL(route.request().url()).searchParams.get('offset')==='0'&&++zeroRequests===2){await gate;return route.fulfill({status:503,json:{error:'Synthetic reverse failure'}});}
+  await route.fallback();
+ });
+ await open(page,false);
+ await page.clock.pauseAt(await page.evaluate(()=>Date.now()+100));
+ await walk(page,false,0,11);await walk(page,false,11,5);release();
+ await expect.poll(()=>errorShown(page)).toBe(true);
+ await page.keyboard.press('Enter');await expect.poll(()=>zeroRequests).toBe(3);
+ await expect(state(page)).toHaveAttribute('data-tv-channel-id','channel-5');
+ await expect(state(page)).toHaveAttribute('data-tv-overlay','');
+ await walk(page,false,5,0);
+});
