@@ -2,6 +2,7 @@ import {test,expect,type Page} from '@playwright/test';
 import {createRequire} from 'node:module';
 import {installRemoteBackend} from '../preview/remote-backend';
 const {PNG}=createRequire(import.meta.url)('pngjs');
+type RemoteFixture=Awaited<ReturnType<typeof installRemoteBackend>>;
 const state=(page:Page)=>page.locator('html');
 const inspect=(page:Page)=>page.evaluate(()=>{
  const photos:{key:string;zoom:number;src:string;alpha:number}[]=[],texts:string[]=[];let cycle:number|undefined;
@@ -28,30 +29,63 @@ async function open(page:Page,baseURL:string,reduced:boolean,count=2){
  return fixture;
 }
 async function beforeCycle(page:Page){const view=await inspect(page);expect(view.cycle).toBeDefined();await page.clock.fastForward(Math.max(1,Math.floor(9000-(view.now-view.cycle!)-20)));}
+async function advanceSlide(page:Page,current:string,next:string){
+ await beforeCycle(page);expect((await inspect(page)).texts).toContain(current);
+ await page.clock.fastForward(40);await expect.poll(async()=>(await inspect(page)).texts).toContain(next);
+}
+async function expectParked(page:Page,title:string){
+ await expect.poll(async()=>(await inspect(page)).cycle).toBeUndefined();
+ await page.clock.fastForward(30000);await page.clock.runFor(32);
+ const settled=await inspect(page);expect(settled.texts).toContain(title);expect(settled.cycle).toBeUndefined();
+}
+async function expectFreshCycle(page:Page){
+ const view=await inspect(page);expect(view.cycle).toBeDefined();expect(view.now-view.cycle!).toBeGreaterThanOrEqual(0);expect(view.now-view.cycle!).toBeLessThan(1000);
+}
+function expectNoPlayback(fixture:RemoteFixture){
+ expect(fixture.requests.some(r=>r.path.includes('/viewing-action')||r.path==='/api/playback'||r.path==='/api/streams')).toBe(false);
+}
 
-test('Home presents the server featured order once, parks, and restarts on interaction',async({page,baseURL})=>{
+test('uninterrupted Home presents the server featured order once and parks',async({page,baseURL})=>{
  const fixture=await open(page,baseURL!,false,3);
- await beforeCycle(page);expect((await inspect(page)).texts).toContain('First server choice');
- await page.clock.fastForward(40);await expect.poll(async()=>(await inspect(page)).texts).toContain('Second server choice');
+ await advanceSlide(page,'First server choice','Second server choice');
+ await advanceSlide(page,'Second server choice','Third server choice');
+ await expectParked(page,'Third server choice');
+ expectNoPlayback(fixture);
+});
+
+test('Home pauses for a menu and completes a fresh featured pass after it closes',async({page,baseURL})=>{
+ const fixture=await open(page,baseURL!,false,3);
+ await advanceSlide(page,'First server choice','Second server choice');
  await page.keyboard.press('ContextMenu');await expect(state(page)).not.toHaveAttribute('data-tv-overlay','');
- await page.clock.fastForward(30000);expect((await inspect(page)).texts).toContain('Second server choice');
+ await page.clock.fastForward(30000);expect((await inspect(page)).texts).toContain('Second server choice');expect((await inspect(page)).cycle).toBeUndefined();
  await page.keyboard.press('Escape');await page.clock.runFor(400);await expect(state(page)).toHaveAttribute('data-tv-overlay','');
- await page.clock.runFor(32);await beforeCycle(page);expect((await inspect(page)).texts).toContain('Second server choice');
- await page.clock.fastForward(40);await expect.poll(async()=>(await inspect(page)).texts).toContain('Third server choice');
- // Every featured title has been presented: the rotation parks instead of
- // starting another pass, which is what lets idle Home stop redrawing.
- expect((await inspect(page)).cycle).toBeUndefined();
- await page.clock.fastForward(30000);expect((await inspect(page)).texts).toContain('Third server choice');
+ await page.clock.runFor(32);await expectFreshCycle(page);await advanceSlide(page,'Second server choice','Third server choice');
+ expect((await inspect(page)).cycle).toBeDefined();
+ await advanceSlide(page,'Third server choice','First server choice');
+ await expectParked(page,'First server choice');
+ expectNoPlayback(fixture);
+});
+
+test('Home pauses while hidden and restarts complete passes on visibility and remote activity',async({page,baseURL})=>{
+ const fixture=await open(page,baseURL!,false,3);
+ await advanceSlide(page,'First server choice','Second server choice');
  await page.evaluate(()=>{Object.defineProperty(document,'visibilityState',{configurable:true,value:'hidden'});document.dispatchEvent(new Event('visibilitychange'));});
- await page.clock.fastForward(30000);expect((await inspect(page)).texts).toContain('Third server choice');
+ await page.clock.fastForward(30000);expect((await inspect(page)).texts).toContain('Second server choice');expect((await inspect(page)).cycle).toBeUndefined();
  await page.evaluate(()=>{Object.defineProperty(document,'visibilityState',{configurable:true,value:'visible'});document.dispatchEvent(new Event('visibilitychange'));});
  await page.clock.runFor(32);
- // Remote activity restarts a fresh pass from the slide in view.
+ await expectFreshCycle(page);
+ await advanceSlide(page,'Second server choice','Third server choice');
+ expect((await inspect(page)).cycle).toBeDefined();
+ await advanceSlide(page,'Third server choice','First server choice');
+ await expectParked(page,'First server choice');
  await page.keyboard.press('ArrowRight');
  await page.clock.runFor(32);
- await beforeCycle(page);expect((await inspect(page)).texts).toContain('Third server choice');
- await page.clock.fastForward(40);await expect.poll(async()=>(await inspect(page)).texts).toContain('First server choice');
- expect(fixture.requests.some(r=>r.path.includes('/viewing-action')||r.path==='/api/playback'||r.path==='/api/streams')).toBe(false);
+ await expectFreshCycle(page);
+ await advanceSlide(page,'First server choice','Second server choice');
+ expect((await inspect(page)).cycle).toBeDefined();
+ await advanceSlide(page,'Second server choice','Third server choice');
+ await expectParked(page,'Third server choice');
+ expectNoPlayback(fixture);
 });
 
 for(const reduced of [false,true])test(`Home ${reduced?'keeps reduced motion still':'zooms to 106 percent then retires its animation clock'}`,async({page,baseURL})=>{
