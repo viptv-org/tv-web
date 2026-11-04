@@ -5391,8 +5391,6 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
         .map((item) => item.id)
         .join(",");
       document.documentElement.dataset.tvOverlay = overlay()?.kind ?? "";
-      document.documentElement.dataset.tvSources=String(sources().length);
-      document.documentElement.dataset.tvSources = String(sources().length);
       document.documentElement.dataset.tvSources = String(sources().length);
       // The picker's own state, so a session can be checked without reading the
       // canvas: the status line and the empty state are drawn, not queried.
