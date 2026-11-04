@@ -19,6 +19,7 @@ export async function installRemoteBackend(page:Page,origin:string,options:{
     failReplacementOnce?: boolean;
     holdNextPage?: boolean;
     liveChannels?: number;
+    livePageLength?: number;
     liveAvailability?: "Available" | "NeedsConfiguration";
     liveGroups?: number;
     media?: boolean;
@@ -188,21 +189,22 @@ export async function installRemoteBackend(page:Page,origin:string,options:{
       const searching = url.searchParams.has("search");
       const offset = Number(url.searchParams.get("offset") ?? 0),
         limit = Number(url.searchParams.get("limit") ?? 40),
-        pageSize = Number(url.searchParams.get("page_size") ?? limit);
+        pageSize = Number(url.searchParams.get("page_size") ?? limit),
+        pageLength = Math.min(limit, options.livePageLength ?? limit);
       if (offset > 0 && options.pageDelayMillis) await new Promise(resolve=>setTimeout(resolve,options.pageDelayMillis));
       if (offset > 0 && options.holdNextPage) await pageGate;
       const all = Array.from({length: searching ? options.searchChannelCount ?? 3 : liveChannelCount ?? cards.length}, (_,i) => ({id:`channel-${i}`,connection_id:"m3u:1",card:{...cards[i % cards.length],identity:{kind:"live",id:`channel-${i}`,ids:[]},provider_id:"m3u:1",title:(liveRevision>0?`Updated channel ${i}`:(searching?`Fixture channel ${i}`:cards[i % cards.length].title)),...(liveRevision>0||searching ? {landscape:null,poster:null,logo:null} : {})}}));
       return send({
-        channels: all.slice(offset, offset + limit),
+        channels: all.slice(offset, offset + pageLength),
         snapshot_id: `fixture-live-${liveRevision}-${profile}-${url.searchParams.get("group_id") ?? "all"}-${url.searchParams.get("search") ?? ""}`,
         paging: {
           origin:String(offset),limit,page_size:pageSize,
-          previous: offset > 0 && all.length ? {cursor:String(Math.max(0,offset-pageSize)),limit:Math.min(offset,pageSize),page_size:pageSize} : null,
-          next: offset+limit < all.length ? {cursor:String(offset+limit),limit:pageSize,page_size:pageSize} : null,
+          previous: offset > 0 && all.length ? {cursor:String(Math.max(0,offset-pageLength)),limit:Math.min(offset,pageSize),page_size:pageSize} : null,
+          next: offset+pageLength < all.length ? {cursor:String(offset+pageLength),limit:pageSize,page_size:pageSize} : null,
         },
         groups: Array.from({length: options.liveGroups ?? 0}, (_, i) => ({id:`group-${i + 1}`,label:`Group ${i + 1}`})),
-        complete: offset+limit >= all.length,
-        next_cursor: options.misleadingLiveCursor ? "4294967295" : offset + limit < all.length ? String(offset+limit) : null,
+        complete: offset+pageLength >= all.length,
+        next_cursor: options.misleadingLiveCursor ? "4294967295" : offset + pageLength < all.length ? String(offset+pageLength) : null,
         availability: liveAvailability,
       });
     }
