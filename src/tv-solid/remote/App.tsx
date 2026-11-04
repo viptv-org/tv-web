@@ -149,6 +149,7 @@ import {
 
 
 } from "./HomeTileEffects";
+import { bufferedSegments } from "./playerTimeline";
 import {
 
 
@@ -7337,6 +7338,27 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
                   rounded={4}
                   color="rgba(255,255,255,.3)"
                 />
+                {/* The buffer needs its own node: a For created after the played
+                    fill would append its quads over it. */}
+                <TvView x={96} y={936} w={1728} h={8}>
+                  <For
+                    each={bufferedSegments(
+                      snapshot()?.time.bufferedRanges,
+                      snapshot()?.time.durationSeconds,
+                    )}
+                  >
+                    {(segment) => (
+                      <TvView
+                        x={1728 * segment.left}
+                        y={0}
+                        w={1728 * segment.width}
+                        h={8}
+                        rounded={4}
+                        color={palette.buffered}
+                      />
+                    )}
+                  </For>
+                </TvView>
                 <TvView
                   x={96}
                   y={936}
