@@ -43,6 +43,85 @@ suppressed, 33.4ms without text, 33.3ms without decorations, and 16.7ms with all
 quads suppressed. This isolates aggregate backdrop/row fill as the remaining
 candidate; suppression is diagnostic only and is absent from the product.
 
+## Where the remaining frame cost goes — 2026-11-04
+
+This host renders and composites in software, and that is what the remaining
+budget gap measures. `SystemInfo.getInfo` reports `gl=egl-angle,angle=swiftshader`
+(ANGLE/Vulkan SwiftShader 5.0.0) with `gpu_compositing: disabled_software` and
+`rasterization: disabled_software`; `/dev/dri` is absent, so `PERF_GPU=hardware`
+has no device to use, and `/sys/fs/cgroup/cpu.max` is `300000 100000` (three
+CPUs). Every number below is from this container, 1920×1080, reduced motion,
+4× CPU throttling and SwiftShader. Samples taken while another build or test
+saturated the shared host are excluded from attribution; a run that reports
+`mainThreadMsPerKey` far above 50 is contention, not code.
+
+A Chromium trace of a 24-key Home run spends, per canvas update, about 33ms in
+`LayerTreeHost::DoUpdateLayers`, of which about 26ms is `GLES2::ReadPixels` — the
+software compositor reading the 1920×1080 canvas back. Summed JavaScript self
+time across the whole trace was about 35ms, roughly 1.5ms per key. The key
+handler itself measures 1.8–2.2ms p95. The application is not the cost; it reacts
+and then waits for a frame the container cannot produce inside one refresh.
+
+A control page with one canvas, no application code, quantifies that limit:
+
+| One 1920×1080 WebGL canvas, 4× CPU, SwiftShader | frame p95 |
+| --- | ---: |
+| blank `requestAnimationFrame` loop, no canvas updates | 16.7ms |
+| `gl.clear` on every frame | 16.8ms |
+| one full-screen textured quad on every frame | 33.4ms |
+| one full-screen textured quad on every fifth frame (80ms cadence) | 16.7ms |
+| one full-screen textured quad on a 640×360 canvas every frame | 16.7ms |
+| one full-screen textured quad, opaque canvas, every frame | 33.4ms |
+
+Forcing completion with a one-pixel `readPixels` after each draw costs 10.6ms for
+the 1920×1080 quad and 5.3ms at 960×540, the same for source textures from 512 to
+4096 pixels square. One required full-screen backdrop frame is therefore about
+63% of the 17.5ms budget here before any other content is drawn.
+
+## What the Home frame draws, and what remains removable
+
+`stage.renderList` for an idle Home is 49 quads covering 3.60Mpx:
+
+| Group | Quads | Mpx |
+| --- | ---: | ---: |
+| Backdrop (`tvBillboard`, 1920×1080) | 1 | 2.07 |
+| Visible row tile: surface placeholder, artwork, 1px outline | 15 | 1.25 |
+| Hero artwork, logo, badge and icon images | 10 | 0.24 |
+| Labels | 15 | 0.09 |
+| Navigation and other rounded fills | 12 | 0.03 |
+
+The per-draw cost of that frame with a forced completion sync is 21.5ms p50 and
+30.4ms p95. Suppressing one group at a time on the same artifact gives 11.0ms
+without the backdrop (−10.5), 16.8ms without the 21 rounded tile and label fills
+(−4.7), 20.9ms without labels (−0.6), 20.1ms without the remaining solid fills
+(−1.4) and 1.3ms with every quad suppressed. Replacing the billboard fragment
+with a plain textured blit removes the whole gradient expression for 1.5ms
+(21.5 → 20.0), so the fill itself, not the shader arithmetic, is the cost.
+
+Two quads per visible row tile are removable in principle. The surface
+placeholder (0.083Mpx) is completely covered once an opaque artwork is loaded,
+and the hairline outline is drawn as a full 384×216 texture for a one-pixel
+stroke (0.083Mpx). Together they are 0.83Mpx per Home frame, about 4ms at the
+4.8ns per pixel these measurements imply, which would put a Home update at
+about 17.5ms — still above the 16.7ms refresh boundary. Suppressing exactly those
+submissions through the diagnostic harness left frame p95 at 33.3ms in the same
+session, consistent with that arithmetic.
+
+Neither is in the product: skipping the covered placeholder changes the
+anti-aliased pixels where the tile's rounded corner blends (≤3 of 255 per
+channel over about 250–740 channels at 1920×1080), which breaks the zero-changed
+capture parity this repository requires for visual changes, and the outline
+strips are pixel-exact but do not change the outcome on this host. They are
+recorded here so a future change can weigh them against that parity requirement
+rather than rediscover them.
+
+What remains is required content: a full-screen backdrop plus the visible row
+artwork. On this host that content alone is at the frame boundary, so no change
+that preserves the pinned geometry, resolution, blur and artwork motion brings a
+Home update inside one refresh here. The 17.5ms budget is unchanged and unmet;
+qualifying it needs a host that composites on a GPU, or an owner decision about
+the environment the gate is measured in.
+
 # Cited revisions
 
 Sections are reverse-chronological. The 2026-10-23 and 2026-10-24 comparisons

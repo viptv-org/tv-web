@@ -22,6 +22,26 @@ checks and `npx vite build --outDir /tmp/viptv-solid-75-final`. Logs are
 (`/tmp/viptv-solid-75-final-provenance.json`). Broader screen responsiveness,
 the frame budget, hardware and deployment remain unverified.
 
+Combined tree `f6aa5321673cee5b2bc2b82f8328ea3ec5c32feb` (this branch merged onto
+main `b394746`) rebuilds with the grouped typecheck, design/core/video integrity
+checks and the Vite production build. On its served artifact over isolated
+HTTPS at 1920×1080, **52 scoped browser cases pass** in 4.4 minutes
+(`/tmp/viptv-perf-75/accept-a.log`): startup skeletons for Vizio/Tizen/webOS,
+`?layout=tv`, `solid.html` and `lightning.html`; delayed stylesheet, font and
+bootstrap; asset failure and remote retry; stuck-startup recovery; browser Back
+before bootstrap and out of real playback; delayed Discover/detail/Live
+cancellation; Home glass retention and navigation pills; and all nine
+playback-authority cases against fixture media.
+
+The same artifact's wider run (`/tmp/viptv-perf-75/accept-b.log`: 29 viewing and
+12 Live/Search page cases) reached 31 passes and 10 timeouts while two other
+sessions saturated the shared host for 26 minutes — `mainThreadMsPerKey` doubles
+and 5s request predicates and 120/180s walks expire. Those ten are re-run on a
+quiet window before any conclusion is drawn; they are not recorded as passing.
+The Live and Search seven-page walks keep their 180-second host budget, so a
+contended host still ends them early. The frame budget, physical hardware and
+deployment remain unverified.
+
 # SolidTV startup and delayed loading
 
 The production TV entries (`/tv/?platform=vizio`, `?layout=tv`,
