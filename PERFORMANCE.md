@@ -207,46 +207,6 @@ open until the broader workload and visual obligations in
 
 ---
 
-# Matched-fixture audit checkpoint — 2026-10-23
-
-Five fresh-context runs compare the previous `c9c1aae` remote wrapper
-(unreachable; see [Cited revisions](#cited-revisions)) with the
-current audit candidate. Both consume the exact same `remote-backend.ts`
-fixtures (SHA-256 `381a25cfe66c8013126e507833d5c66905e704e946db91fd60ef8d32d85c3534`), at 1920×1080,
-4× CPU throttle and software WebGL. The script now verifies the served entry
-against `PERF_DIST` and can hash source from an explicit `PERF_SOURCE_REF`.
-
-| Median measurement | c9c1aae checkpoint | Audit candidate |
-| --- | ---: | ---: |
-| Cold Home readiness (ms) | 689.800 | 591.900 |
-| Main-thread work/key (ms) | 38.367 | 36.718 |
-| Handler p95 (ms) | 1.700 | 1.700 |
-| Frame p95 (ms) | 16.800 | 16.800 |
-| Heap after GC (MiB) | 4.253 | 4.269 |
-| Renderer textures (MiB) | 30.209 | 30.209 |
-| Decoded JavaScript (KiB) | 976.680 | 982.541 |
-
-All five candidate runs had frame p95 16.8ms, zero long tasks and zero intervals
-above 50ms. This satisfies the existing **17.5ms** frame gate for this workload.
-Startup ranges were 673.1–727.5ms before and 576.9–715.4ms after. Main-thread
-work/key ranges were 37.516–38.797ms before and 35.223–38.978ms after. These are
-observations on a shared host, not a claim that every added guard improves speed.
-
-The correctness fixes add 5.861 KiB of decoded JavaScript and 0.016 MiB of post-GC
-heap; measured texture allocation is unchanged. Memory is reported separately
-from speed. The 48-key Home workload still does not cover long guide/grid/settings
-navigation, unique-art texture churn or physical TV performance. The initial
-pre-conversion comparison below also used different fixture data; its large
-percentage improvements are not an identical-data causal comparison.
-
-Audit candidate bundle hash: `551671eb199c8ffb585fd57c5d3411e313b901721cfd1ea3b36f9512b5138f51`.
-Remote source hash: `18c445c6e3e6de6bf59b9fed07350931fce9f9e777c5504c1072458c6fe175cc`.
-Raw before/after samples are retained with the audit evidence. Completion remains
-open until the broader workload and visual obligations in
-`tests/REMOTE_COMPLETION_AUDIT.json` are satisfied.
-
----
-
 # Focused Browse — 2026-10-24
 
 Source `ee23cf6` versus `291a061` (both unreachable; see
@@ -470,46 +430,6 @@ Raw comparison: `../.artifacts/tv-remote-authority-20261023/performance-comparis
 The original pre-conversion comparison still used different fixture data. This
 checkpoint closes the broader remote-wrapper workload measurement gap, not
 that original matched-data obligation or physical-TV qualification.
-
----
-
-# Matched-fixture audit checkpoint — 2026-10-23
-
-Five fresh-context runs compare the previous `c9c1aae` remote wrapper
-(unreachable; see [Cited revisions](#cited-revisions)) with the
-current audit candidate. Both consume the exact same `remote-backend.ts`
-fixtures (SHA-256 `381a25cfe66c8013126e507833d5c66905e704e946db91fd60ef8d32d85c3534`), at 1920×1080,
-4× CPU throttle and software WebGL. The script now verifies the served entry
-against `PERF_DIST` and can hash source from an explicit `PERF_SOURCE_REF`.
-
-| Median measurement | c9c1aae checkpoint | Audit candidate |
-| --- | ---: | ---: |
-| Cold Home readiness (ms) | 689.800 | 591.900 |
-| Main-thread work/key (ms) | 38.367 | 36.718 |
-| Handler p95 (ms) | 1.700 | 1.700 |
-| Frame p95 (ms) | 16.800 | 16.800 |
-| Heap after GC (MiB) | 4.253 | 4.269 |
-| Renderer textures (MiB) | 30.209 | 30.209 |
-| Decoded JavaScript (KiB) | 976.680 | 982.541 |
-
-All five candidate runs had frame p95 16.8ms, zero long tasks and zero intervals
-above 50ms. This satisfies the existing **17.5ms** frame gate for this workload.
-Startup ranges were 673.1–727.5ms before and 576.9–715.4ms after. Main-thread
-work/key ranges were 37.516–38.797ms before and 35.223–38.978ms after. These are
-observations on a shared host, not a claim that every added guard improves speed.
-
-The correctness fixes add 5.861 KiB of decoded JavaScript and 0.016 MiB of post-GC
-heap; measured texture allocation is unchanged. Memory is reported separately
-from speed. The 48-key Home workload still does not cover long guide/grid/settings
-navigation, unique-art texture churn or physical TV performance. The initial
-pre-conversion comparison below also used different fixture data; its large
-percentage improvements are not an identical-data causal comparison.
-
-Audit candidate bundle hash: `551671eb199c8ffb585fd57c5d3411e313b901721cfd1ea3b36f9512b5138f51`.
-Remote source hash: `18c445c6e3e6de6bf59b9fed07350931fce9f9e777c5504c1072458c6fe175cc`.
-Raw before/after samples are retained with the audit evidence. Completion remains
-open until the broader workload and visual obligations in
-`tests/REMOTE_COMPLETION_AUDIT.json` are satisfied.
 
 ---
 
