@@ -596,10 +596,14 @@ test("normal-motion source drawers enter and exit at their reference bounds", as
   baseURL,
 }) => {
   await page.emulateMedia({ reducedMotion: "no-preference" });
+  await page.clock.install();
   await installRemoteBackend(page, baseURL!);
   await page.goto("/tv/?platform=vizio&focusdebug=1");
   await expect(screen(page)).toHaveAttribute("data-tv-screen", "home");
   await expect(screen(page)).toHaveAttribute("data-tv-ready", "true");
+  await page.clock.pauseAt(
+    new Date(await page.evaluate(() => Date.now() + 1000)),
+  );
   const paneX = () =>
     page.evaluate(() => {
       let x: number | undefined;
@@ -617,16 +621,19 @@ test("normal-motion source drawers enter and exit at their reference bounds", as
     });
   await page.keyboard.press("Enter");
   await expect(screen(page)).toHaveAttribute("data-tv-overlay", "sources");
-  await page.waitForTimeout(50);
+  await page.clock.runFor(50);
   expect(await paneX()).toBeGreaterThan(960);
-  await page.waitForTimeout(350);
+  await page.clock.runFor(300);
   expect(await paneX()).toBeCloseTo(960, 0);
   await page.keyboard.press("Escape");
-  await page.waitForTimeout(40);
+  await page.clock.runFor(100);
   await expect(screen(page)).toHaveAttribute("data-tv-overlay", "sources");
-  await page.waitForTimeout(250);
+  expect(await paneX()).toBeGreaterThan(960);
+  expect(await paneX()).toBeLessThan(1920);
+  await page.clock.runFor(150);
   await expect(screen(page)).toHaveAttribute("data-tv-overlay", "");
   await expect(screen(page)).toHaveAttribute("data-tv-focus", /^hero:0:/);
+  expect(await paneX()).toBeUndefined();
 });
 
 test("long add-on lists stay visible and profile activation uses a server intent", async ({
