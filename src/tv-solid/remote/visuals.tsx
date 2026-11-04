@@ -18,6 +18,7 @@ export const palette = {
   body: tokens["color.text.body"],
   muted: tokens["color.text.secondary"],
   surface: tokens["color.surface.1"],
+  buffered: tokens["color.fill.buffered"],
   get accent() {
     return accentColor();
   },
