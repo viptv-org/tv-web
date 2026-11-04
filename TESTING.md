@@ -3846,3 +3846,29 @@ poll using the browser clock; it does not invoke application refresh functions.
 No physical Tizen, Vizio or webOS device, real provider, or deployed environment
 was exercised. This evidence covers the SolidTV browser renderer and mocked
 backend HTTP boundary.
+
+# SolidTV channel-page failure ownership
+
+Live and Search keep remote focus on retained channels when a failed prefetch
+would evict the page the viewer reversed into. Authentication refusals retain
+their session handling. A displayed page error retries its failed direction
+before channel playback; acceptance waits for that displayed action.
+
+All TypeScript groups, pinned design/core/video integrity checks, the production
+build, and 420 unit/integration tests in 65 files pass on the combined main
+checkout. Thirteen scoped Chromium cases pass over isolated localhost HTTPS
+with mocked backend HTTP: reverse prefetch disposal and retries on both screens,
+revision refresh, four short-page timeout/retry scenarios, all 200 Live groups,
+bounded guide snapshots, and the complete Search seven-page roundtrip.
+
+Search verifies all 480 directional inputs from channel 0 to 240 and back,
+fixture playback and return focus, bounded payloads and exact server requests
+in 71.7 seconds. Live's seven-page roundtrip remains partially qualified on this
+software WebGL host: all 240 forward inputs, fixture playback, return focus and
+170 reverse inputs pass; the 180-second overall deadline ends the run after
+410 of 480 verified inputs at channel 70. The final return to channel 0 and
+complete request-order assertion are unverified for that Live run. The overall
+allowance is a host test budget, not an input-latency requirement.
+
+Reference-image parity is unmeasured. No physical Tizen, Vizio or webOS device,
+real provider, or deployment is qualified by these browser fixtures.

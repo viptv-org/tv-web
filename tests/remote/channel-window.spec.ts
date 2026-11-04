@@ -90,7 +90,6 @@ for(const searching of [false,true])test(`${searching?'Search':'Live'} ignores a
  });
  page.on('requestfailed',request=>{const url=new URL(request.url());if(url.pathname.endsWith('/live/channels')&&url.searchParams.get('offset')==='8')failed=true;});
  await open(page,searching);
- await page.clock.pauseAt(await page.evaluate(()=>Date.now()+100));
  await walk(page,searching,0,6);await expect.poll(()=>count).toBe(1);
  await walk(page,searching,6,0);
  await page.clock.fastForward(20001);await expect.poll(()=>failed).toBe(true);
@@ -109,7 +108,6 @@ for(const searching of [false,true])test(`${searching?'Search':'Live'} retries t
   await route.fallback();
  });
  await open(page,searching);
- await page.clock.pauseAt(await page.evaluate(()=>Date.now()+100));
  await walk(page,searching,0,11);await walk(page,searching,11,5);release();
  if(searching){
   await expect.poll(async()=>(await canvasTexts(page)).includes('Try again')).toBe(true);

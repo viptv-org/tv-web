@@ -596,3 +596,17 @@ nor installed/native failure recovery or hardware acceptance.
 | Contract | Functional browser evidence | Visual evidence | Device evidence |
 | --- | --- | --- | --- |
 | LIVE-EMPTY-13; design `8b7f85941addf5a65390fe6eca4f11aba9584a17` | Four HTTPS Chromium cases cover no-source/no-channels with initial navigation/action focus, revision-driven channel arrival, first-row focus and Down to the next row. Disabling arrival focus makes the regression fail. | With reduced motion disabled, observed arrival frames contain the first row at x 96, y 636, opacity 1, with no intervening loading frame or screen navigation. This is scoped frame geometry, not uniform screenshot parity. | Tizen, Vizio and webOS unverified; mocked HTTP only. |
+
+# SolidTV channel-page failure ownership
+
+Implementation `4cf36237e70b387aacad8a3c5521d5f2ee9eaf9e`;
+[execution](https://github.com/viptv-org/tv-web/issues/74); design
+`8b7f85941addf5a65390fe6eca4f11aba9584a17`. Local run logs:
+`/tmp/viptv-74-final-min.log`, `/tmp/viptv-74-other.log`,
+`/tmp/viptv-74-search-retry.log`, `/tmp/viptv-74-matrix.log`,
+`/tmp/viptv-74-seven.log` and `/tmp/viptv-74-search-seven.log`.
+
+| Scenario | Browser functional evidence | Reference metric | Tizen | Vizio | webOS | Disposition |
+| --- | --- | --- | --- | --- | --- | --- |
+| Live/Search page failures and bounded traversal | Thirteen scoped HTTPS Chromium cases pass with mocked HTTP, including four short-page timeout/retry cases, original reverse/revision cases, 200 groups, bounded guides and Search's complete 480-input seven-page roundtrip with playback, exact requests and bounded payloads. | Unmeasured; focus/data assertions only. | Unverified | Unverified | Unverified | Verified for the stated browser scenarios. |
+| Live seven-page roundtrip | Forward 0→240, fixture playback, return focus and reverse 240→70 pass: 410/480 verified directional inputs. The 180-second host deadline prevents final return/request-order qualification. | Unmeasured. | Unverified | Unverified | Unverified | Partial on the software WebGL host; no input-latency or hardware claim. |
