@@ -18,6 +18,15 @@ html[data-tv-startup="failed"] #solid-startup-recovery{display:block}
 (function () {
   var shell = document.getElementById('solid-startup');
   if (!(__SOLID_STARTUP_SELECTED__)) { shell.remove(); return; }
+  var sentinel = { viptvHistorySentinel: true };
+  if (!history.state || !history.state.viptvHistorySentinel) {
+    history.replaceState(sentinel, '', location.href);
+    history.pushState(sentinel, '', location.href);
+  }
+  window.addEventListener('popstate', function () {
+    history.pushState(sentinel, '', location.href);
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'GoBack', keyCode: 461, bubbles: true, cancelable: true }));
+  });
   var root = document.documentElement;
   root.dataset.tvStartup = 'loading';
   var timer = setTimeout(fail, 30000);

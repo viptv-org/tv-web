@@ -61,6 +61,14 @@ async function start() {
   // Prefetch each face once through SolidTV before synchronous WebGL setup.
   // The renderer attaches the prefetched faces when its stage is available.
   const dependencies = Promise.all([import("./remote/App")]);
+  const styles = Promise.all(
+    Array.from(document.querySelectorAll<HTMLLinkElement>('link[rel="stylesheet"][media="print"]')).map(
+      (link) => link.sheet ? Promise.resolve() : new Promise<void>((resolve, reject) => {
+        link.addEventListener("load", () => resolve(), { once: true });
+        link.addEventListener("error", () => reject(new Error("TV stylesheet unavailable")), { once: true });
+      }),
+    ),
+  );
   const rendererFonts = loadFonts(
     [
       { fontFamily: "Bricolage700", fontUrl: bricolage700Url },
@@ -116,7 +124,7 @@ async function start() {
           ? renderer.stage.txMemManager.getMemoryInfo().memUsed
           : 0,
     });
-  const [[appModule]] = await Promise.all([dependencies, rendererFonts]);
+  const [[appModule]] = await Promise.all([dependencies, rendererFonts, styles]);
   configureDisplayFonts();
   if (new URLSearchParams(location.search).has("perfdebug"))
     performance.mark("viptv:deps-ready");
