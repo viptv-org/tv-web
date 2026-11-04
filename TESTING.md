@@ -1,3 +1,18 @@
+# Home featured-pass acceptance
+
+`tests/remote/billboard.spec.ts` verifies an uninterrupted featured pass parks,
+and that menu, visibility and remote activity restart complete passes from the
+title in view. Each pass preserves server order, retires its indicator, stays
+parked for 30 seconds and sends no viewing, source or playback request. Existing
+artwork-retirement and reduced-motion assertions remain in the same suite.
+
+At 1920×1080 against isolated HTTPS output, seven cases passed together and the
+uninterrupted-pass case passed alone after its clock setup raced a target time
+in the first run. The single-fork unit run passed 419 cases; the Guide reverse
+paging case passed alone with a 15-second allowance after 5-second timeouts.
+Typecheck, immutable snapshot checks and the production build passed. Browser
+simulation only; physical TV qualification remains unverified.
+
 # SolidTV source-picker hint suppression
 
 `tests/remote/source-hint.spec.ts` checks SRC-DRAWER-09 at 1920×1080 against
