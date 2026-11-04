@@ -5885,13 +5885,14 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
                     y={38}
                     w={navLayout()[index()].w}
                     h={56}
-                    rounded={28}
-                    color={
-                      zone() === "nav" && column() === index()
-                        ? palette.text
-                        : "rgba(0,0,0,0)"
-                    }
                   >
+                    <TvView
+                      w={navLayout()[index()].w}
+                      h={56}
+                      rounded={28}
+                      color={palette.text}
+                      show={zone() === "nav" && column() === index()}
+                    />
                     <Show when={nav.id === "search"}>
                       <TvView
                         x={13}

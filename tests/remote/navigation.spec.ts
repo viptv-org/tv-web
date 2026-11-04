@@ -74,3 +74,21 @@ test('profile changes replace the previous profiles navigation capabilities', as
   await expect(state(page)).toHaveAttribute('data-tv-navigation','home,profiles');
   await keys(page,'ArrowUp','ArrowRight');await expect(state(page)).toHaveAttribute('data-tv-focus',/^nav:1:/);
 });
+
+test('navigation draws a pill only behind its focused entry while labels stay visible',async({page,baseURL})=>{
+ await installRemoteBackend(page,baseURL!);
+ await page.goto('/tv/?platform=vizio&focusdebug=1');await ready(page);
+ const pills=()=>page.evaluate(()=>{
+  const stage=(window as any).__viptvRenderer.stage;
+  return stage.renderList.filter((n:any)=>n.shader?.shaderKey==='rounded'&&n.absY===38&&n.h===56&&!n.texture).map((n:any)=>({x:n.absX,alpha:n.props.color&255}));
+ });
+ await expect.poll(pills).toEqual([]);
+ for(const [key,x]of [['ArrowUp',364],['ArrowRight',480],['ArrowLeft',364]]as const){
+  await page.keyboard.press(key);
+  await expect.poll(pills).toEqual([{x,alpha:255}]);
+ }
+ await page.keyboard.press('ArrowDown');
+ await expect.poll(pills).toEqual([]);
+ const labels=await page.evaluate(()=>(window as any).__viptvRenderer.stage.renderList.map((n:any)=>n.viptvText));
+ for(const label of ['Home','Movies','Series','Live','My List'])expect(labels).toContain(label);
+});

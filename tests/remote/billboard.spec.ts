@@ -141,7 +141,7 @@ for(const reduced of [false,true])test(`Home retains its ${reduced?'still':'movi
   visit((window as any).__viptvRenderer.stage.root);
   return nodes.sort((a,b)=>a.x-b.x);
  });
- await expect.poll(async()=>(await glass()).filter(n=>n.visible).map(n=>n.x)).toEqual([336,428]);
+ await expect.poll(async()=>{await page.clock.runFor(32);return(await glass()).filter(n=>n.visible).map(n=>n.x);}).toEqual([336,428]);
  const identities=(await glass()).map(n=>n.id);
  for(let cycle=0;cycle<3;cycle++)for(const [key,visible] of [
   ['ArrowRight',[428]],['ArrowRight',[336]],['ArrowLeft',[428]],['ArrowLeft',[336,428]],
