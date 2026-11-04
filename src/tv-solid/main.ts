@@ -123,6 +123,22 @@ async function start() {
   const dispose = render(() =>
     createComponent(appModule.createRemoteTvApp(api, platform), {}),
   );
+  const observer = new MutationObserver(reveal);
+  observer.observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ["data-tv-ready"],
+  });
+  function reveal() {
+    if (document.documentElement.dataset.tvReady !== "true") return;
+    observer.disconnect();
+    renderer.once("frameTick", () => {
+      requestAnimationFrame(() => {
+        window.dispatchEvent(new Event("viptv:startup-ready"));
+      });
+    });
+    renderer.stage.requestRender();
+  }
+  reveal();
   if (import.meta.hot)
     import.meta.hot.dispose(() => {
       dispose();
@@ -132,6 +148,5 @@ async function start() {
 }
 start().catch((cause: unknown) => {
   console.error("VIPTV TV launch failed", cause);
-  document.getElementById("app")!.textContent =
-    `VIPTV could not start: ${String(cause)}`;
+  window.dispatchEvent(new Event("viptv:startup-failed"));
 });

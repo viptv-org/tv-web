@@ -1,0 +1,59 @@
+<style>
+#solid-startup{display:none;position:fixed;inset:0;z-index:4;background:#0B0B0C;color:#F4F2EE;font-family:Onest,sans-serif}
+html[data-tv-startup] #solid-startup{display:block}
+#solid-startup svg{display:block;width:100%;height:100%}
+#solid-startup rect{fill:#17171A}
+#solid-startup-recovery{display:none;position:absolute;left:5%;top:43.5%;font-size:1.3542vw}
+#solid-startup-recovery p{margin:0 0 2.5vw}
+#solid-startup-recovery button{height:3.75vw;min-width:12.5vw;padding:0 1.875vw;border:0;border-radius:1.875vw;background:#212124;color:#F4F2EE;font:700 1.3542vw Onest,sans-serif}
+#solid-startup-recovery button:focus{outline:none;background:#F4F2EE;color:#111113}
+html[data-tv-startup="failed"] #solid-startup svg{display:none}
+html[data-tv-startup="failed"] #solid-startup-recovery{display:block}
+</style>
+<div id="solid-startup">
+<svg viewBox="0 0 1920 1080" preserveAspectRatio="none" aria-hidden="true"><rect x="96" y="470" width="384" height="216" rx="10"/><rect x="500" y="470" width="384" height="216" rx="10"/><rect x="904" y="470" width="384" height="216" rx="10"/></svg>
+<div id="solid-startup-recovery" role="alert"><p>VIPTV could not start.</p><button type="button">Try again</button></div>
+</div>
+<script>
+(function () {
+  var shell = document.getElementById('solid-startup');
+  if (!(__SOLID_STARTUP_SELECTED__)) { shell.remove(); return; }
+  var root = document.documentElement;
+  root.dataset.tvStartup = 'loading';
+  var timer = setTimeout(fail, 30000);
+  var button = document.querySelector('#solid-startup-recovery button');
+  function retry() { location.reload(); }
+  function fail() {
+    if (!shell.isConnected) return;
+    clearTimeout(timer);
+    root.dataset.tvStartup = 'failed';
+    button.focus();
+  }
+  function error(event) {
+    if (event.target instanceof HTMLScriptElement || (event.target instanceof HTMLLinkElement && event.target.rel === 'stylesheet') || event.error) fail();
+  }
+  function key(event) {
+    if (root.dataset.tvStartup === 'failed' && (event.key === 'Enter' || event.keyCode === 13)) {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      retry();
+    }
+  }
+  function ready() {
+    clearTimeout(timer);
+    root.dataset.tvStartup = 'ready';
+    shell.remove();
+    window.removeEventListener('error', error, true);
+    window.removeEventListener('unhandledrejection', fail);
+    window.removeEventListener('viptv:startup-failed', fail);
+    window.removeEventListener('viptv:startup-ready', ready);
+    window.removeEventListener('keydown', key, true);
+  }
+  button.addEventListener('click', retry);
+  window.addEventListener('keydown', key, true);
+  window.addEventListener('error', error, true);
+  window.addEventListener('unhandledrejection', fail);
+  window.addEventListener('viptv:startup-failed', fail);
+  window.addEventListener('viptv:startup-ready', ready);
+}());
+</script>

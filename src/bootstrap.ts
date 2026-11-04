@@ -30,11 +30,13 @@ if (renderer === "solid") {
 async function launch() {
 if (renderer === "solid") {
   await import("./tv-solid/host.css");
-  document.body.innerHTML = '<div id="video-layer"><video id="tv-video" class="video" playsinline preload="auto"></video></div><div id="player-shade"></div><div id="app"></div><div id="solid-preparing-spinner" aria-hidden="true"></div>';
+  document.getElementById('root')?.remove();
+  document.body.insertAdjacentHTML('beforeend', '<div id="video-layer"><video id="tv-video" class="video" playsinline preload="auto"></video></div><div id="player-shade"></div><div id="app"></div><div id="solid-preparing-spinner" aria-hidden="true"></div>');
   await import("./tv-solid/main");
 } else await import("./main");
 }
 void launch().catch((cause) => {
   console.error("VIPTV launch failed", cause);
-  document.body.textContent = "VIPTV could not start. Reload to try again.";
+  if (renderer === "solid") window.dispatchEvent(new Event("viptv:startup-failed"));
+  else document.body.textContent = "VIPTV could not start. Reload to try again.";
 });
