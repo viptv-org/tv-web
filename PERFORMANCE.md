@@ -92,9 +92,10 @@ the 1920×1080 quad and 5.3ms at 960×540, the same for source textures from 512
 
 The per-draw cost of that frame with a forced completion sync is 21.5ms p50 and
 30.4ms p95. Suppressing one group at a time on the same artifact gives 11.0ms
-without the backdrop (−10.5), 16.8ms without the 21 rounded tile and label fills
-(−4.7), 20.9ms without labels (−0.6), 20.1ms without the remaining solid fills
-(−1.4) and 1.3ms with every quad suppressed. Replacing the billboard fragment
+without the backdrop (−10.5), 16.8ms without the 21 rounded fills, tile
+placeholders and tile artwork included (−4.7), 20.9ms without labels (−0.6),
+20.1ms without the remaining solid fills (−1.4) and 1.3ms with every quad
+suppressed. Replacing the billboard fragment
 with a plain textured blit removes the whole gradient expression for 1.5ms
 (21.5 → 20.0), so the fill itself, not the shader arithmetic, is the cost.
 
