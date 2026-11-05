@@ -5,6 +5,7 @@ import type { AccountIdentity } from "../../src/tv-solid/remote/api";
 import {
   LIVE_ANSWER_T,
   LIVE_EMPTY_COPY,
+  LIVE_FILTERED_LINE,
   LIVE_NO_SOURCE_T,
   LIVE_PAGE_HEIGHT,
   LIVE_PAGE_TOP,
@@ -15,6 +16,7 @@ import {
   liveEmptyArtworkSrc,
   liveFailureBody,
   liveKeepsToday,
+  liveFilteredChip,
   liveNoChannelsBody,
   liveNoSourceActions,
   liveRecoveryActions,
@@ -81,6 +83,20 @@ describe("Live empty, loading and failed states (LIVE-EMPTY-001)", () => {
     expect(liveKeepsToday("filtered")).toBe(true);
     for (const spread of ["loading", "failed", "no-source", "no-channels"] as const)
       expect(liveKeepsToday(spread)).toBe(false);
+  });
+
+  it("names the chosen filter on a page it emptied, not the source", () => {
+    // copy.md § Empty states, Live, empty category, in its TV/desktop form.
+    expect(LIVE_FILTERED_LINE).toBe(
+      "No channels here yet. Choose another filter.",
+    );
+    // The chips are the page's only stop, so one is always focused (All is 0).
+    const groups = [{ id: "group-1" }, { id: "group-2" }];
+    expect(liveFilteredChip(groups, "group-1")).toBe(1);
+    expect(liveFilteredChip(groups, "group-2")).toBe(2);
+    expect(liveFilteredChip(groups, undefined)).toBe(0);
+    expect(liveFilteredChip(groups, "retired-group")).toBe(0);
+    expect(liveFilteredChip([], undefined)).toBe(0);
   });
 
   it("carries the contract's copy word for word", () => {

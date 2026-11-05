@@ -268,7 +268,9 @@ import {
 } from "./api";
 import {
   LIVE_EMPTY_COPY,
+  LIVE_FILTERED_LINE,
   liveFailureBody,
+  liveFilteredChip,
   liveKeepsToday,
   liveNoChannelsBody,
   liveNoSourceActions,
@@ -2114,9 +2116,16 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
      * Entering Live keeps the row focus a page with channels has today. An empty
      * or failed page focuses the navigation's own Live tab instead, so the first
      * Down enters the page on the primary (contract § Focus, input and timing).
+     * A page that is empty only because of its filter keeps the chips, on the
+     * chosen one, because it has no row to hold the focus (LIVE-EMPTY-11).
      */
     function focusLiveSpread() {
       if (screen() !== "live") return;
+      if (liveSpread() === "filtered") {
+        setZone("live-groups");
+        setColumn(liveFilteredChip(groups(), liveGroup()));
+        return;
+      }
       if (liveKeepsToday(liveSpread())) {
         setZone("content");
         setColumn(0);
@@ -4451,6 +4460,10 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
             }
             return;
           }
+          if (screen() === "live") {
+            focusLiveSpread();
+            return;
+          }
           setColumn(0);
           setZone(
             screen() === "home" || screen() === "detail"
@@ -4723,6 +4736,9 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
       }
       if (screen() === "live" && zone() === "live-groups") {
         if (dy > 0) {
+          // A page that is empty only because of its filter has no row for the
+          // focus to land on, so the chips stay the page's own stop.
+          if (!channels().length) return;
           setZone("content");
           setColumn(0);
         } else if (dy < 0) {
@@ -7083,13 +7099,11 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
                   />
                 </Show>
               </TvView>
-              <Show when={!loading() && !channels().length}>
-                <Label
-                  x={96}
-                  y={640}
-                  size={28}
-                  content="No live channels. Configure a source in Settings."
-                />
+              {/* LIVE-EMPTY-11: a page that is empty because of its filter
+                  says so, under the chips that are its focus stop, instead of
+                  reading as a missing source. */}
+              <Show when={liveSpread() === "filtered"}>
+                <Label x={96} y={640} size={28} content={LIVE_FILTERED_LINE} />
               </Show>
               </Show>
             </Show>
