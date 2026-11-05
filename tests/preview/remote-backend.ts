@@ -18,10 +18,15 @@ export async function installRemoteBackend(page:Page,origin:string,options:{
     expireOnPreference?: boolean;
     failReplacementOnce?: boolean;
     holdNextPage?: boolean;
+    holdPreference?: boolean;
     liveChannels?: number;
     livePageLength?: number;
     liveAvailability?: "Available" | "NeedsConfiguration";
     liveGroups?: number;
+    liveEmptyGroups?: string[];
+    liveGuideWindows?: boolean;
+    liveGuideFailures?: string[];
+    holdGuides?: string[];
     media?: boolean;
     mediaSearch?: boolean;
     misleadingLiveCursor?: boolean;
@@ -91,6 +96,10 @@ export async function installRemoteBackend(page:Page,origin:string,options:{
   let rejectedLibraryFilter = false;
   let releasePages!: () => void;
   const pageGate = new Promise<void>(resolve=>{releasePages=resolve;});
+  let releasePreference!: () => void;
+  const preferenceGate = new Promise<void>(resolve=>{releasePreference=resolve;});
+  let releaseGuides!: () => void;
+  const guideGate = new Promise<void>(resolve=>{releaseGuides=resolve;});
  await page.route('**/fixture/*',async route=>{const file=new URL(route.request().url()).pathname.split('/').pop()!;if(!/^[a-f0-9]+\.(png|jpg|webp)$/.test(file))return route.abort();await route.fulfill({body:readFileSync(resolve(referenceRoot,'assets',file)),contentType:file.endsWith('png')?'image/png':'image/jpeg'});});
   let activationRejected = false;
   const catalogCards:Card[]=cardImages.map((image,i)=>({...card,identity:{...card.identity,id:`catalog-${i}`},title:`Catalog ${i}`,landscape:art(image),poster:art(image),logo:null,badges:[]}));
@@ -122,7 +131,7 @@ export async function installRemoteBackend(page:Page,origin:string,options:{
   if(path.endsWith('/revisions'))return send({library:revision});
   if(path.endsWith('/home'))return send(home);
   if (path === "/api/auth/device/refresh" && options.expireOnPreference) return send({error:"unauthorized"},401);
-  if(path.endsWith('/preferences')){if(request.method()==='PUT'){if(options.expireOnPreference)return send({error:"unauthorized"},401);preferences.revision++;if(body.preferences)preferences.preferences=body.preferences;if(body.display)preferences.display=body.display;}return send(preferences);}
+  if(path.endsWith('/preferences')){if(request.method()==='PUT'){if(options.expireOnPreference)return send({error:"unauthorized"},401);if(options.holdPreference)await preferenceGate;preferences.revision++;if(body.preferences)preferences.preferences=body.preferences;if(body.display)preferences.display=body.display;}return send(preferences);}
   if(path.endsWith('/library')){
       if (request.method() === "PUT") { library.push(body.card); revision++; return send({ saved: true }); }
       libraryQueries.push(Object.fromEntries(url.searchParams));
@@ -193,7 +202,7 @@ export async function installRemoteBackend(page:Page,origin:string,options:{
         pageLength = Math.min(limit, options.livePageLength ?? limit);
       if (offset > 0 && options.pageDelayMillis) await new Promise(resolve=>setTimeout(resolve,options.pageDelayMillis));
       if (offset > 0 && options.holdNextPage) await pageGate;
-      const all = Array.from({length: searching ? options.searchChannelCount ?? 3 : liveChannelCount ?? cards.length}, (_,i) => ({id:`channel-${i}`,connection_id:"m3u:1",card:{...cards[i % cards.length],identity:{kind:"live",id:`channel-${i}`,ids:[]},provider_id:"m3u:1",title:(liveRevision>0?`Updated channel ${i}`:(searching?`Fixture channel ${i}`:cards[i % cards.length].title)),...(liveRevision>0||searching ? {landscape:null,poster:null,logo:null} : {})}}));
+      const all = options.liveEmptyGroups?.includes(url.searchParams.get("group_id") ?? "") ? [] : Array.from({length: searching ? options.searchChannelCount ?? 3 : liveChannelCount ?? cards.length}, (_,i) => ({id:`channel-${i}`,connection_id:"m3u:1",card:{...cards[i % cards.length],identity:{kind:"live",id:`channel-${i}`,ids:[]},provider_id:"m3u:1",title:(liveRevision>0?`Updated channel ${i}`:(searching?`Fixture channel ${i}`:cards[i % cards.length].title)),...(liveRevision>0||searching ? {landscape:null,poster:null,logo:null} : {})}}));
       return send({
         channels: all.slice(offset, offset + pageLength),
         snapshot_id: `fixture-live-${liveRevision}-${profile}-${url.searchParams.get("group_id") ?? "all"}-${url.searchParams.get("search") ?? ""}`,
@@ -264,7 +273,16 @@ export async function installRemoteBackend(page:Page,origin:string,options:{
       const stored=leases.get(id);
       return send(stored?{...stored}:{id,status:"ready"});
     }
-  if(path.endsWith('/guide'))return send({programs:[{id:'program',title:'Now playing',start_millis:0,end_millis:9999999999999}]});
+  const guideChannel = path.match(/\/live\/([^/]+)\/guide$/)?.[1];
+  if(guideChannel){
+    if(options.holdGuides?.includes(guideChannel))await guideGate;
+    if(options.liveGuideFailures?.includes(guideChannel))return send({error:'Guide unavailable'},503);
+    if(options.liveGuideWindows){
+      const start=Math.floor(Date.now()/1800000)*1800000;
+      return send({view:{current_program_id:`${guideChannel}-now`,now_millis:start+300000,window_start_millis:start,window_end_millis:start+7200000},programs:[{id:`${guideChannel}-now`,title:`${guideChannel} now`,start_millis:start,end_millis:start+1800000},{id:`${guideChannel}-next`,title:`${guideChannel} next`,start_millis:start+1800000,end_millis:start+3600000}]});
+    }
+    return send({programs:[{id:'program',title:'Now playing',start_millis:0,end_millis:9999999999999}]});
+  }
   if (path.endsWith("/addon-activation")) {
       if (request.method() === "PUT") {
         if (options.rejectActivationOnce && !activationRejected) {
@@ -310,5 +328,7 @@ export async function installRemoteBackend(page:Page,origin:string,options:{
   setProfile: (id: string | null) => { profile = id; revision++; },
   libraryQueries,
   releasePages,
+  releasePreference,
+  releaseGuides,
 };
 }
