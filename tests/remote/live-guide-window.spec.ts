@@ -40,5 +40,7 @@ test('a channel whose guide is still loading does not blank the rows that answer
   expect(await headerLabels(page)).toHaveLength(4);
   fixture.releaseGuides();
   await expect.poll(()=>shown(page,'channel-0 now')).toBe(true);
+  // Every row, including the one that arrived last, then draws its programmes.
+  await expect.poll(()=>shown(page,'channel-4 now')).toBe(true);
   expect(await shown(page,'Programme information unavailable')).toBe(false);
 });
