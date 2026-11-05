@@ -23,6 +23,58 @@ Current anchors: [DESIGN_REF](DESIGN_REF)
 
 ---
 
+# SolidTV renderer 2.0 migration — 2026-11-05
+
+The TV entry moved from `@solidtv/renderer` 1.9.4 / `@solidtv/solid` 1.6.4 to
+2.0.7 / 1.7.1 (issue #98). The renderer change is the WebGL-only rewrite:
+typed-array node state, a single SDF text engine and no per-frame shader-prop
+cache. Browser floor is unchanged (Chrome 38, WebGL1; the renderer still asks
+for `webgl` and falls back to `experimental-webgl`).
+
+What the migration changed in this repository:
+
+- **Text is SDF.** `src/tv-solid/sdf/` holds ten atlases generated from the
+  same WOFF2 faces the DOM uses (see TESTING.md for the pipeline). `fonts.ts`
+  maps the design families and the Bricolage optical-size bands to them, and
+  `runtime.ts` renders one measured text node per label instead of uploading a
+  canvas raster. The canvas text rasterizer and its DOM face aliases are gone.
+- **Shaders register on the renderer.** `renderer.registerShaderType` replaces
+  `renderer.stage.shManager.registerShaderType`; per-instance uniform writes
+  became shader props written by a 1.10-style `update()`. `@solidtv/solid` 1.7
+  no longer registers its built-in types, so `main.ts` calls
+  `registerDefaultShaders` once after creating the renderer.
+- **The 1.9.4 rounded-opacity patch is gone.** 2.0's box shader applies node
+  alpha once, so `tvRoundedShader` was deleted; the existing pixel test for a
+  half-alpha accent node passes unchanged (`[128,104,39]`).
+
+Measured on this host with the same 48-key Home workload, 1920×1080, reduced
+motion, 4× CPU throttling and SwiftShader as the 1.9.4 evidence (the
+2026-11-04 trace and `PERFORMANCE.md` on PR #82). Samples were taken on a host
+2% busy; each run reports the served bundle hash and GPU identity
+(`ANGLE/SwiftShader 5.0.0`, `displayType: ANGLE_SWIFTSHADER`).
+
+| 48-key Home | 1.9.4 (`5299ec0`, artifact `final3`) | 2.0.7 (`d522f01`) |
+| --- | ---: | ---: |
+| Main-thread ms per key | 49.1 | 44.6 / 46.7 |
+| Handler p95 | 2.0ms | 2.3 / 2.7ms |
+| Frame p95 | 33.4ms | 33.4 / 33.4ms |
+| Frames over 50ms | 3 | 0 / 2 |
+| Long tasks | 3 | 0 / 3 |
+| Texture memory | — | 49.9MiB |
+
+The frame budget is still unmet. Renderer 2.0's update/draw phase is faster, and
+the main-thread work per key improves by about 5–9%, but the cost that produces
+the 33.4ms p95 is the software compositor's per-update canvas readback measured
+for issue #75: 2.0 still clears and presents the whole 1920×1080 canvas, and the
+readback is outside the renderer's update/draw phases. The measured gate is
+unchanged and this migration is not a 60fps claim.
+
+Visual parity: six matched Home/focus states were compared against the 1.9.4
+artifact. Layout boxes, line wraps and element positions are unchanged; every
+differing pixel is glyph rasterization (canvas hints → SDF), with no changed
+non-text region. The `rows` state is mid-transition in that harness and is not
+used for parity, as its README notes.
+
 # One shared text-measure context — 2026-11-03
 
 Every TV remote component built a throwaway `<canvas>` and 2D context to
