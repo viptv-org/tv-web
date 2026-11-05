@@ -1,3 +1,9 @@
+# SolidTV focus rendering
+
+| Contract | Implementation / execution | Functional evidence | Visual evidence | Tizen | Vizio | webOS | Disposition |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Tv3Home actions and top navigation, TV_SERVER_WRAPPER, design `8b7f85941addf5a65390fe6eca4f11aba9584a17` | `d559f73b7728599196ad677af2593cf7ed685b9c`; browser Vizio configuration; [execution issue #75](https://github.com/viptv-org/tv-web/issues/75) | 17 Home/navigation cases, including normal/reduced-motion glass retention and focused-fill-only drawing; `/tmp/viptv-75-nav-green.log`, `/tmp/viptv-75-nav-moving.log` | Eleven baseline/candidate focus states have zero changed channels at 1920×1080; `/tmp/viptv-75-nav-visual/comparison.json`; reference metric unmeasured | Hardware unverified | Hardware unverified | Hardware unverified | Functional and visual preservation verified for this browser scope; frame budget failed |
+
 # SolidTV startup and loading acceptance
 
 | Contract | Implementation / execution | Functional evidence | Visual evidence | Tizen | Vizio | webOS | Disposition |
@@ -488,5 +494,5 @@ Implementation `4cf36237e70b387aacad8a3c5521d5f2ee9eaf9e`;
 
 | Scenario | Browser functional evidence | Reference metric | Tizen | Vizio | webOS | Disposition |
 | --- | --- | --- | --- | --- | --- | --- |
-| Live/Search page failures and bounded traversal | Thirteen scoped HTTPS Chromium cases pass with mocked HTTP, including four short-page timeout/retry cases, original reverse/revision cases, 200 groups, bounded guides and Search's complete 480-input seven-page roundtrip with playback, exact requests and bounded payloads. | Unmeasured; focus/data assertions only. | Unverified | Unverified | Unverified | Verified for the stated browser scenarios. |
-| Live seven-page roundtrip | Forward 0→240, fixture playback, return focus and reverse 240→70 pass: 410/480 verified directional inputs. The 180-second host deadline prevents final return/request-order qualification. | Unmeasured. | Unverified | Unverified | Unverified | Partial on the software WebGL host; no input-latency or hardware claim. |
+| Live/Search page failures and bounded traversal | Thirteen scoped HTTPS Chromium cases pass with mocked HTTP, including four short-page timeout/retry cases, original reverse/revision cases, 200 groups, bounded guides and the complete 480-input seven-page roundtrips of both screens with playback, exact requests and bounded payloads. The 200-group and 100-key guide traversals need more than the 30-second per-test default on a slow host (issue #94); their assertions pass at a 180-second allowance. | Unmeasured; focus/data assertions only. | Unverified | Unverified | Unverified | Verified for the stated browser scenarios. |
+| Live seven-page roundtrip | Forward 0→240, fixture playback, return focus and reverse 240→0 pass with all 480 verified directional inputs and the exact request order (`0…240,160…0`), in 2.4 minutes of an idle host against the run's 180-second budget. Earlier attempts on a contended host stopped at 410/480. | Unmeasured. | Unverified | Unverified | Unverified | Verified in browser for the stated scenario on an idle software WebGL host; no input-latency or hardware claim. |

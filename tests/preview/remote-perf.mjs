@@ -12,9 +12,10 @@ const dist =
 const sourceRef = process.env.PERF_SOURCE_REF;
 const workload = process.env.PERF_WORKLOAD ?? "home";
 const browseActions = process.env.PERF_BROWSE_ACTIONS === "1";
+const rendererDiagnostics = process.env.PERF_RENDERER_DIAGNOSTICS === "1";
 if (
   !["home", "grid", "live", "settings", "search"].includes(workload) ||
-  (legacy && workload !== "home")
+  (legacy && (workload !== "home" || rendererDiagnostics))
 )
   throw new Error("Unsupported benchmark workload");
 const expectedIndex = readFileSync(dist + "/index.html", "utf8");
@@ -116,6 +117,7 @@ try {
           : document.documentElement.dataset.tvScreen === "home",
       legacy,
     );
+    await page.waitForFunction(() => !document.getElementById("solid-startup"));
     await page.evaluate(() => document.fonts.ready);
     await page.evaluate(
       () =>
@@ -172,7 +174,38 @@ try {
       throw new Error(
         "The served entry does not match PERF_DIST; refusing to attribute performance to another build.",
       );
-    await page.evaluate(() => (window.__remotePerf.active = true));
+    await page.evaluate((diagnostics) => {
+      if (diagnostics) {
+        const renderer = window.__viptvRenderer;
+        const stage = renderer.stage;
+        const gl = stage.renderer.glw;
+        const createShader = renderer.createShader;
+        const drawFrame = stage.drawFrame;
+        const drawElements = gl.drawElements;
+        window.__remotePerf.renderer = {
+          renderedFrames: 0,
+          drawCalls: 0,
+          createdGlassShaders: 0,
+          createdRoundedShaders: 0,
+        };
+        renderer.createShader = function (name, ...args) {
+          if (name.startsWith("tvBillboardGlass"))
+            window.__remotePerf.renderer.createdGlassShaders++;
+          if (name === "rounded")
+            window.__remotePerf.renderer.createdRoundedShaders++;
+          return createShader.call(this, name, ...args);
+        };
+        stage.drawFrame = function (...args) {
+          window.__remotePerf.renderer.renderedFrames++;
+          return drawFrame.apply(this, args);
+        };
+        gl.drawElements = function (...args) {
+          window.__remotePerf.renderer.drawCalls++;
+          return drawElements.apply(this, args);
+        };
+      }
+      window.__remotePerf.active = true;
+    }, rendererDiagnostics);
     if (process.env.PERF_CPU_PROFILE) {
       await cdp.send("Profiler.enable");
       await cdp.send("Profiler.start");
@@ -289,6 +322,7 @@ try {
       set.metrics.find((e) => e.name === name)?.value ?? 0;
     const sample = {
       run,
+      ...data.renderer,
       readyMs,
       workloadReadyMs,
       peakFocusedIndex,
@@ -373,6 +407,7 @@ const report = {
   legacy,
   workload,
   browseActions,
+  rendererDiagnostics,
   mode,
   rate,
   runs,

@@ -1,3 +1,111 @@
+# SolidTV focus rendering
+
+Renderer source `d559f73b7728599196ad677af2593cf7ed685b9c`,
+[execution issue #75](https://github.com/viptv-org/tv-web/issues/75): the three
+new real-renderer regressions fail against the prior behavior. All 17 Home and
+navigation cases pass across `/tmp/viptv-75-nav-green.log` (16 cases) and
+`/tmp/viptv-75-nav-moving.log` (the isolated normal-motion case). Its paused
+test clock advances while waiting for queued texture uploads.
+
+All eleven matched Home-action/navigation focus captures are pixel-identical
+to the baseline at 1920×1080 (`/tmp/viptv-75-nav-visual/comparison.json`);
+private captures were inspected. This verifies preservation, not a new reference
+parity measurement. The final candidate repeats that on the merged artifact:
+six Home/focus states (idle, rows, two row steps, hero, one hero step) have zero
+changed pixel channels against a main-only `5053be9` build, 1920×1080, identical
+fixtures (`/tmp/viptv-75-visual-final`). [Performance evidence](PERFORMANCE.md) records reduced
+renderer work and the remaining failed frame budget.
+
+Combined source `0672b3cf146b3e74058877f7082a1550c20413e8` passes grouped
+typecheck, 421 unit tests in 66 files (single fork), design/core/video integrity
+checks and `npx vite build --outDir /tmp/viptv-solid-75-final`. Logs are
+`/tmp/viptv-75-final-{typecheck,unit,build}.log`; the exact command batch is
+`/tmp/viptv-75-final-gates.sh`. The isolated artifact's bundle SHA-256 is
+`af6bf85fd26fdbc981c765d646f75873160b6c8ce53c894046e79c050cc8a0ae`
+(`/tmp/viptv-solid-75-final-provenance.json`). Broader screen responsiveness,
+the frame budget, hardware and deployment remain unverified.
+
+The current head `5299ec0` merges this branch with main `43246c8`. It passes the
+grouped typecheck, design/core/video integrity checks and the Vite production
+build, plus **431 unit/integration tests in 68 files** (single fork), and the
+thirteen cases in the specs that main changed since `99a4c4b` all pass: both
+`audit.spec.ts` traversals with their new per-test budget (#97), the display-tab
+and screen-saver cases including the confirmed-pick-after-Back close (#95), the
+Live empty-category message (#92) and both guide-window cases (#93)
+(`/tmp/viptv-75-final3-specs`). One harness sample on this artifact at 4×
+CPU/SwiftShader reports frame p95 33.4ms, main-thread 49.1ms per key, handler p95
+2.0ms, 2690 draw calls and zero focus-time shader creations, bundle
+`1605329c…`; a second attempt at that moment was contention only (643ms per key).
+
+Combined tree `a6c1e87` (this branch merged with main `99a4c4b`) is the final
+candidate. It passes the grouped typecheck, design/core/video integrity checks
+and the Vite production build, plus **427 unit/integration tests in 67 files**
+(single fork). Its artifact `/tmp/viptv-solid-75-merged` reports
+`frameP95` 33.4 / 33.4ms in two isolated quiet samples,
+`mainThreadMsPerKey` 47.1 / 47.8ms, handler p95 3.6 / 1.9ms, four and five frames
+over 50ms, four and three long tasks, 2637 / 2693 draw calls, 56 / 57 rendered
+frames and zero focus-time glass or rounded shader creations; the served bundle
+SHA-256 is `112aeeb1…` and both reports carry the SwiftShader/`disabled_software`
+identity. A third sample that reported 85.4ms per key was contention and is not
+used.
+
+The whole SolidTV remote suite ran against that artifact in one 17.5-minute pass
+(`/tmp/viptv-75-merged-suite`): **135 pass, 3 fail**. The failures are the two
+`audit.spec.ts` traversals that exceed the 30-second per-test default (they pass
+at a 180-second allowance — issue #94) and the Live seven-page walk, which
+exceeded its own 180-second budget with a closed browser session in this long
+run after passing in 2.4 minutes when run alone
+(`/tmp/viptv-75-combined-c`). `settings-display.spec.ts:314` passed here and
+failed on a main-only artifact earlier, so it is intermittent.
+
+Earlier artifacts of the same work: combined tree
+`f6aa5321673cee5b2bc2b82f8328ea3ec5c32feb` (branch on main `b394746`). On its
+served artifact over isolated HTTPS at 1920×1080, **52 scoped browser cases pass** in 4.4 minutes
+(`/tmp/viptv-perf-75/accept-a.log`): startup skeletons for Vizio/Tizen/webOS,
+`?layout=tv`, `solid.html` and `lightning.html`; delayed stylesheet, font and
+bootstrap; asset failure and remote retry; stuck-startup recovery; browser Back
+before bootstrap and out of real playback; delayed Discover/detail/Live
+cancellation; Home glass retention and navigation pills; and all nine
+playback-authority cases against fixture media.
+
+The same artifact's wider run (`/tmp/viptv-perf-75/accept-b.log`: 29 viewing and
+12 Live/Search page cases) reached 31 passes and 10 timeouts while two other
+sessions saturated the shared host for 26 minutes — `mainThreadMsPerKey` doubles
+and 5s request predicates and 120/180s walks expire. Twenty-five of the 29
+viewing cases pass, including the issue #79 normal-motion source-drawer bounds,
+the player's buffered timeline, real fixture HLS playback with lease release,
+the 700ms hold and the long add-on lists. The four that did not finish are the
+request-predicate cases (source-quality selection, lease heartbeat, profile-change
+intent, remote keyboard punctuation) whose polls allow five seconds.
+
+The Live and Search seven-page walks keep their 180-second host budget and ended
+early under that load. Re-run on the same artifact once the shared host reported
+idle time (`/tmp/viptv-75-combined-c`, 16 cases, 7.7 minutes, all passing), every
+one of those ten passes: **Live crosses seven pages and reverses** in 2.4 minutes
+with the complete 480-input roundtrip, fixture playback, return focus and the
+exact request-order assertion (previously 410/480 inputs at channel 70 before the
+deadline), Search's roundtrip in 1.2 minutes, the delayed-prefetch, reverse-retry,
+revision, timed-out-prefetch and displayed-error cases on both screens, and the
+four request-predicate viewing cases. The earlier ten failures were host
+contention, not application behaviour; no product change was made in response.
+The frame budget, physical hardware and deployment remain unverified.
+
+The remaining remote specs ran on the same artifact over the same idle host
+(`/tmp/viptv-perf-75/accept-rest`): entry, browse, library controls, audit,
+live-empty arrival, live snapshot, pairing completion, all ten Search cases,
+settings/display and the source hint — **42 pass in 4.0 minutes**. Three fail,
+and all three fail identically on a main-only `5053be9` artifact with this branch
+absent, so they are pre-existing and filed as issue #94 rather than fixed here:
+the two `audit.spec.ts` traversals exceed the 30-second per-test default while
+pressing 200 group and 100 channel keys (both pass at `--timeout=180000` in 46s
+and 60s), and `settings-display.spec.ts:314` still reports
+`data-tv-screen="settings"` where it expects `home` after two `Escape` presses
+under an installed page clock.
+
+Across these runs every SolidTV remote spec file executes on the combined
+artifact. Excluding the three pre-existing cases above and the host-budget
+timeouts that later passed, no case fails.
+
 # SolidTV startup and delayed loading
 
 The production TV entries (`/tv/?platform=vizio`, `?layout=tv`,
@@ -2853,12 +2961,14 @@ bounded guide snapshots, and the complete Search seven-page roundtrip.
 
 Search verifies all 480 directional inputs from channel 0 to 240 and back,
 fixture playback and return focus, bounded payloads and exact server requests
-in 71.7 seconds. Live's seven-page roundtrip remains partially qualified on this
-software WebGL host: all 240 forward inputs, fixture playback, return focus and
-170 reverse inputs pass; the 180-second overall deadline ends the run after
-410 of 480 verified inputs at channel 70. The final return to channel 0 and
-complete request-order assertion are unverified for that Live run. The overall
-allowance is a host test budget, not an input-latency requirement.
+in 71.7 seconds. Live's seven-page roundtrip was partially qualified in that run:
+all 240 forward inputs, fixture playback, return focus and 170 reverse inputs
+passed; the 180-second overall deadline ended the run after 410 of 480 verified
+inputs at channel 70. **It is qualified now**: on the same case re-run against the
+combined `f6aa532` artifact on an idle host, Live completes the full 480-input
+roundtrip, fixture playback, return focus and the exact request-order assertion
+in 2.4 minutes. The overall allowance is a host test budget, not an input-latency
+requirement, and the earlier stop was host contention.
 
 Reference-image parity is unmeasured. No physical Tizen, Vizio or webOS device,
 real provider, or deployment is qualified by these browser fixtures.

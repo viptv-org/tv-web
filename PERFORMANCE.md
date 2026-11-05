@@ -1,3 +1,251 @@
+# SolidTV focus rendering
+
+Home retains its glass-control layers across focus changes. Navigation retains
+one fill node per entry and draws only the focused fill; labels and icons remain
+visible. Geometry, blur, artwork motion and resolution are unchanged.
+
+[Execution issue #75](https://github.com/viptv-org/tv-web/issues/75) compares
+baseline `1068b6511da55618e7d218dc20246bae5438f802` with renderer source
+`d559f73b7728599196ad677af2593cf7ed685b9c`, design
+`8b7f85941addf5a65390fe6eca4f11aba9584a17`. Three samples use the same 48-key
+Home workload, 1920×1080, reduced motion, 4× CPU throttling and SwiftShader.
+The shared host has a three-CPU quota; scheduling pressure affects timings.
+
+| Median per workload | Baseline | Candidate |
+| --- | ---: | ---: |
+| Glass / rounded shader creations during focus | 18 / 18 | 0 / 0 |
+| GPU draw calls | 2928 | 2644 |
+| Rendered frames | 58 | 56 |
+| Main-thread milliseconds per key | 48.31 | 45.80 |
+| Handler p95 milliseconds | 3.1 | 2.2 |
+| Frame p95 milliseconds | 33.4 | 33.3 |
+| Long tasks | 2 | 3 |
+
+The 17.5ms frame budget still fails. Candidate frame p95 samples are
+50.0 / 33.3 / 33.3ms, with 11 / 3 / 3 long tasks; the slower sample is retained.
+Raw reports are `/tmp/viptv-solid-75-work-before.json` and
+`/tmp/viptv-solid-75-nav-work-after.json`. The diagnostic records source and
+served-bundle hashes; its temporary renderer wrappers count actual submissions.
+`PERF_RENDERER_DIAGNOSTICS=1` exposes the same counters in `remote-perf.mjs`.
+
+Matched-context controls at the same 80ms cadence fit 16.7–16.8ms p95 with one
+full-screen artwork quad, including the actual billboard shader and blend state
+(`/tmp/viptv-textured-render-control.json`). Native Chromium tracing identifies
+compositor readback and GPU submission costs, but does not establish that the
+remaining full-scene cost is unavoidable. An explicit software GPU compositor
+was slower. These controls do not justify removing required effects or reducing
+resolution. Physical-TV performance remains unqualified.
+
+Temporary full-scene minimization uses 24 hero keys and three samples per
+condition (`/tmp/viptv-75-layer-*.json`). The median frame p95 is 33.3ms
+unchanged, 16.8ms with only the backdrop suppressed, 16.8ms with only rows
+suppressed, 33.4ms without text, 33.3ms without decorations, and 16.7ms with all
+quads suppressed. This isolates aggregate backdrop/row fill as the remaining
+candidate; suppression is diagnostic only and is absent from the product.
+
+## Dirty-rect updates: what damaged area pays for — 2026-11-05
+
+The 2026-11-04 section below attributes the per-update readback to the canvas
+size and concludes that painted area cannot pay for it. The measurement here
+says that second half is too strong: narrowing the damaged area inside the same
+1920×1080 canvas does move the cost, but it does not reach the cost of a
+genuinely smaller canvas. Nothing in this section is in the product; no
+application, renderer or vendored file was changed to produce it.
+
+Method: app-free control pages, same browser configuration as the 2026-11-04
+controls (ANGLE/Vulkan SwiftShader 5.0.0, `gpu_compositing: disabled_software`,
+`rasterization: disabled_software`, no `/dev/dri`, 1920×1080 viewport, reduced
+motion, 4× CPU throttling, one canvas, one 512px textured quad). Three scripts
+in `/tmp/viptv-perf-75/`, each repeated in interleaved rounds on this shared
+host with `/proc/loadavg` and `/proc/stat` busy% recorded per run:
+
+| Script | What it measures |
+| --- | --- |
+| `readback-scaling.mjs` | in-page cost of one update, forced to completion with a 1px `readPixels`, varying canvas size and scissor rect |
+| `readback-scaling-updates.mjs` | one update every sixth frame, frame intervals split by whether the previous frame drew |
+| `readback-scaling-rounds.mjs` | one update on every animation frame, presented-frame cadence, four rounds, with and without `preserveDrawingBuffer` |
+
+These are stress shapes, not a projected gate result: the application issues
+about 1.2 canvas updates per key, not one per displayed frame.
+
+In-page update cost with a forced completion sync, p50 over 30 updates:
+
+| 1920×1080 canvas, one quad | Damaged area | Update cost |
+| --- | ---: | ---: |
+| full canvas | 2.07Mpx | 10.6ms |
+| scissor to 50% side | 0.52Mpx | 5.9ms |
+| scissor to 25% side | 0.13Mpx | 2.6ms |
+| scissor to 12.5% side | 0.03Mpx | 1.8ms |
+
+Same quad on a smaller canvas, no scissor: 1920×1080 10.7ms (2.07Mpx),
+1280×720 6.8ms (0.92Mpx), 960×540 5.3ms (0.52Mpx), 640×360 2.2ms (0.23Mpx),
+480×270 1.4ms (0.13Mpx). Cost falls with pixels whichever way the area is
+reduced, but not at one constant rate: the two smallest canvases are close to
+linear at about 10ms per Mpx, while 1920×1080 costs 5.2ms per Mpx.
+
+The presented frame cadence separates the two cases. One update per animation
+frame, median dropped-frame rate (intervals over 25ms) over four rounds in each
+of two sessions:
+
+| 1920×1080, update every frame | Dropped frames | Presented p50 |
+| --- | ---: | ---: |
+| blank `requestAnimationFrame`, no update | 0% | 16.7ms |
+| full canvas | 59 / 64% | 33.3ms |
+| scissor to 50% side (0.52Mpx) | 16 / 26% | 16.7ms |
+| scissor to 25% side (0.13Mpx) | 7.5 / 6.2% | 16.7ms |
+| scissor to 12.5% side (0.03Mpx) | 7.9 / 4.8% | 16.7ms |
+| 960×540 canvas, full (0.52Mpx) | 0.6 / 0.6% | 16.7ms |
+
+Recorded system busy, which includes the control's own CPU, ranged from 18% to
+54% across those rounds and the ordering was identical in both sessions; `blank`
+and the 960×540 canvas anchor the two ends.
+
+With one update every sixth frame and forced completion, the p50 draw cost was
+11.0ms full, 6.1ms at 0.52Mpx damaged, 2.4ms at 0.13Mpx and 1.9ms at 0.03Mpx,
+and every interval stayed at 16.7ms — those updates fit inside a refresh, which
+is why the harness's per-key cost shows up as a whole-canvas readback rather
+than as an in-page draw cost.
+
+Two conclusions for the owner decision in issue #75:
+
+- The readback is charged by damaged area, so partial updates are a real lever:
+  in-page completion falls from 11.0ms to 1.9ms at 1.6% damage, and the
+  continuous-update drop rate falls from ~60% to 5–8%. That is the difference
+  between a comfortable fail and a knife edge, not a guaranteed pass.
+- The lever bottoms out above the small-canvas floor. A 960×540 canvas updating
+  fully costs 0.6% dropped frames, while 0.13Mpx of damage inside a 1920×1080
+  canvas still costs 6–8%: the rest of the canvas is still read back at
+  presentation even though it was not repainted. `preserveDrawingBuffer`, which
+  the dirty-rect approach requires, showed no penalty at 0.03Mpx damage in the
+  in-page probe (0.9ms versus 1.9ms) and no consistent difference in the
+  continuous probe (full damage 52.7 / 78.3% versus 59 / 64% dropped; 25% area
+  2.6 / 11.8% versus 6.2 / 7.5%), so its cost needs a prototype measurement
+  rather than an assumption.
+
+That keeps option C — dirty-rect scissor draws plus `preserveDrawingBuffer` in
+place of a full-scene redraw per focus change — a plausible but unproven path,
+and it remains renderer work the vendored `@solidtv/renderer` does not support.
+No app-side change can substitute for it, and the 17.5ms budget is unchanged.
+
+## Where the remaining frame cost goes — 2026-11-04
+
+This host renders and composites in software, and that is what the remaining
+budget gap measures. `SystemInfo.getInfo` reports `gl=egl-angle,angle=swiftshader`
+(ANGLE/Vulkan SwiftShader 5.0.0) with `gpu_compositing: disabled_software` and
+`rasterization: disabled_software`; `/dev/dri` is absent, so `PERF_GPU=hardware`
+has no device to use, and `/sys/fs/cgroup/cpu.max` is `300000 100000` (three
+CPUs). Every number below is from this container, 1920×1080, reduced motion,
+4× CPU throttling and SwiftShader. Samples taken while another build or test
+saturated the shared host are excluded from attribution; a run that reports
+`mainThreadMsPerKey` far above 50 is contention, not code.
+
+A Chromium trace of a 24-key Home run spends, per canvas update, about 34ms in
+`LayerTreeHost::DoUpdateLayers`, of which about 27ms is `GLES2::ReadPixels` — the
+software compositor reading the 1920×1080 canvas back — plus about 14ms waiting
+on the GL command buffer, and about 7ms of commit bookkeeping. That per-update
+total of ~48ms reproduces `mainThreadMsPerKey` exactly. The trace was repeated
+with the host six percent busy and produced the same per-update figures, so this
+is the rendering path, not scheduling pressure. Summed JavaScript self time
+across the whole trace was about 35ms, roughly 1.5ms per key, and the key handler
+measures 1.8–3.6ms p95. The application is not the cost; it reacts and then waits
+for a canvas readback that is larger than the frame it is asked to fit in.
+
+A control page with one canvas, no application code, quantifies that limit:
+
+| One 1920×1080 WebGL canvas, 4× CPU, SwiftShader | frame p95 |
+| --- | ---: |
+| blank `requestAnimationFrame` loop, no canvas updates | 16.7ms |
+| `gl.clear` on every frame | 16.8ms |
+| one full-screen textured quad on every frame | 33.4ms |
+| one full-screen textured quad on every fifth frame (80ms cadence) | 16.7ms |
+| one full-screen textured quad on a 640×360 canvas every frame | 16.7ms |
+| one full-screen textured quad, opaque canvas, every frame | 33.4ms |
+
+Forcing completion with a one-pixel `readPixels` after each draw costs 10.6ms for
+the 1920×1080 quad and 5.3ms at 960×540, the same for source textures from 512 to
+4096 pixels square. One required full-screen backdrop frame is therefore about
+63% of the 17.5ms budget here before any other content is drawn.
+
+## What the Home frame draws, and what remains removable
+
+`stage.renderList` for an idle Home is 49 quads covering 3.60Mpx:
+
+| Group | Quads | Mpx |
+| --- | ---: | ---: |
+| Backdrop (`tvBillboard`, 1920×1080) | 1 | 2.07 |
+| Visible row tile: surface placeholder, artwork, 1px outline | 15 | 1.25 |
+| Hero artwork, logo, badge and icon images | 10 | 0.24 |
+| Labels | 15 | 0.09 |
+| Navigation and other rounded fills | 12 | 0.03 |
+
+The per-draw cost of that frame with a forced completion sync is 21.5ms p50 and
+30.4ms p95. Suppressing one group at a time on the same artifact gives 11.0ms
+without the backdrop (−10.5), 16.8ms without the 21 rounded fills, tile
+placeholders and tile artwork included (−4.7), 20.9ms without labels (−0.6),
+20.1ms without the remaining solid fills (−1.4) and 1.3ms with every quad
+suppressed. Replacing the billboard fragment
+with a plain textured blit removes the whole gradient expression for 1.5ms
+(21.5 → 20.0), so the fill itself, not the shader arithmetic, is the cost.
+
+## The removable covered fill was tried, and it does not move the gate
+
+Two quads per visible row tile are removable in principle. The surface
+placeholder (0.083Mpx) is completely covered once an opaque artwork is loaded,
+and the hairline outline is drawn as a full 384×216 texture for a one-pixel
+stroke (0.083Mpx). Together they are 0.83Mpx per Home frame, 23% of everything the
+screen draws.
+
+Both were implemented and measured on this host, then withdrawn:
+
+| 48-key Home, 1920×1080, 4× CPU, SwiftShader | Before | After |
+| --- | ---: | ---: |
+| Drawn area per frame | 3.60Mpx | 2.73Mpx |
+| Per-draw cost, forced completion (p50), two samples | 21.5ms | 18.9 / 17.6ms |
+| Main-thread work per key, three samples | 47.1 / 47.8ms | 47.8 / 45.6 / 44.8ms |
+| Draw calls per run | 2637 / 2693 | 3300 / 3170 / 3353 |
+| Frame p95 | 33.4ms | 33.3 / 33.3 / 33.3ms |
+
+The placeholder was merged into the artwork node with the engine's
+`placeholderColor`, and the outline became four border-band strips with viewBox
+windows into the same SVG, which is pixel-exact. A diagnostic run that suppressed
+both submissions outright produced one 16.8ms p95 sample and one 33.3ms sample,
+so the pass was the knife edge, not the change: dropped frames sat at 5–6% of
+frames, and the harness's 5% quantile lands on either side of that.
+
+The reason is visible in the row above: removing 23% of the fill left main-thread
+work per key essentially unchanged. That work is not the draw. The Chromium trace
+puts about 26ms per canvas update in `GLES2::ReadPixels`, which is the software
+compositor copying the 1920×1080 canvas back, and that copy is set by the canvas
+rather than by how many quads the app submits. The 2026-11-05 section above
+refines that: shrinking the damaged area inside the same canvas does reduce the
+copy, but not to the cost of a smaller canvas, so the fill reductions below still
+cannot pay for it. The product keeps the zero-changed-pixel parity this
+repository requires and does not carry 25% more draw calls for no accepted gain.
+
+What remains is required content: a full-screen backdrop plus the visible row
+artwork. On this host that content alone is at the frame boundary, so no change
+that preserves the pinned geometry, resolution, blur and artwork motion brings a
+Home update inside one refresh here. The 17.5ms budget is unchanged and unmet;
+qualifying it needs a host that composites on a GPU, or an owner decision about
+the environment the gate is measured in.
+
+The current head — this branch merged with main `43246c8` at `5299ec0` — reports
+frame p95 33.4ms, main-thread work 49.1ms per key, handler p95 2.0ms, 57 rendered
+frames, 2690 draw calls, three frames over 50ms, three long tasks and zero
+focus-time shader creations, with served bundle `1605329c…`.
+
+The previous candidate — this branch merged with main `99a4c4b` at `a6c1e87` — was
+served on this host twice while it was idle and repeats the same result: frame
+p95 33.4 / 33.4ms, main-thread work 47.1 / 47.8ms per key, handler p95 3.6 /
+1.9ms, four and five frames over 50ms, four and three long tasks, 2637 / 2693
+draw calls, 56 / 57 rendered frames and zero focus-time glass or rounded shader
+creations. Both reports record the served bundle SHA-256 (`112aeeb1…`), the
+source revision and the SwiftShader/`disabled_software` identity they were
+measured under. An earlier combined tree
+`f6aa5321673cee5b2bc2b82f8328ea3ec5c32feb` produced 33.3 / 33.4ms on the same host.
+A third sample of the final candidate reported 85.4ms per key and is excluded as
+contention.
+
 # Cited revisions
 
 Sections are reverse-chronological. The 2026-10-23 and 2026-10-24 comparisons
