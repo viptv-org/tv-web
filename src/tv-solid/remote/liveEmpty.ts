@@ -74,6 +74,19 @@ export function pickLiveSpread(facts: LiveFacts): LiveSpread {
 export const liveKeepsToday = (spread: LiveSpread) =>
   spread === "today" || spread === "filtered";
 
+/**
+ * The chips row's index for the chosen group, `All` being 0. A page that is
+ * empty only because of its filter has no channel row to hold the focus, so its
+ * stop is the chosen chip and the remote stays somewhere it can act
+ * (LIVE-EMPTY-11).
+ */
+export function liveFilteredChip(
+  groups: readonly { id: string }[],
+  group: string | undefined,
+): number {
+  return Math.max(0, groups.findIndex((value) => value.id === group) + 1);
+}
+
 /** Who is looking, once the account identity has answered. */
 export type LiveViewer = "owner" | "member" | "device";
 
@@ -112,6 +125,13 @@ export const LIVE_EMPTY_COPY = {
   retry: "Try again",
   sourceIntegrations: "Source integrations",
 } as const;
+
+/**
+ * The filtered-empty line, `copy.md` § Empty states "Live, empty category" in
+ * the form it gives TV and desktop, where the row under the page is its filters.
+ */
+export const LIVE_FILTERED_LINE =
+  "No channels here yet. Choose another filter.";
 
 /** The no-source action block, by viewer (spec § No source, actions table). */
 export type LiveNoSourceAction = "setup" | "add-ons";
