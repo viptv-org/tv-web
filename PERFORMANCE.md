@@ -99,22 +99,38 @@ suppressed. Replacing the billboard fragment
 with a plain textured blit removes the whole gradient expression for 1.5ms
 (21.5 → 20.0), so the fill itself, not the shader arithmetic, is the cost.
 
+## The removable covered fill was tried, and it does not move the gate
+
 Two quads per visible row tile are removable in principle. The surface
 placeholder (0.083Mpx) is completely covered once an opaque artwork is loaded,
 and the hairline outline is drawn as a full 384×216 texture for a one-pixel
-stroke (0.083Mpx). Together they are 0.83Mpx per Home frame, about 4ms at the
-4.8ns per pixel these measurements imply, which would put a Home update at
-about 17.5ms — still above the 16.7ms refresh boundary. Suppressing exactly those
-submissions through the diagnostic harness left frame p95 at 33.3ms in the same
-session, consistent with that arithmetic.
+stroke (0.083Mpx). Together they are 0.83Mpx per Home frame, 23% of everything the
+screen draws.
 
-Neither is in the product: skipping the covered placeholder changes the
-anti-aliased pixels where the tile's rounded corner blends (≤3 of 255 per
-channel over about 250–740 channels at 1920×1080), which breaks the zero-changed
-capture parity this repository requires for visual changes, and the outline
-strips are pixel-exact but do not change the outcome on this host. They are
-recorded here so a future change can weigh them against that parity requirement
-rather than rediscover them.
+Both were implemented and measured on this host, then withdrawn:
+
+| 48-key Home, 1920×1080, 4× CPU, SwiftShader | Before | After |
+| --- | ---: | ---: |
+| Drawn area per frame | 3.60Mpx | 2.73Mpx |
+| Per-draw cost, forced completion (p50), two samples | 21.5ms | 18.9 / 17.6ms |
+| Main-thread work per key, three samples | 47.1 / 47.8ms | 47.8 / 45.6 / 44.8ms |
+| Draw calls per run | 2637 / 2693 | 3300 / 3170 / 3353 |
+| Frame p95 | 33.4ms | 33.3 / 33.3 / 33.3ms |
+
+The placeholder was merged into the artwork node with the engine's
+`placeholderColor`, and the outline became four border-band strips with viewBox
+windows into the same SVG, which is pixel-exact. A diagnostic run that suppressed
+both submissions outright produced one 16.8ms p95 sample and one 33.3ms sample,
+so the pass was the knife edge, not the change: dropped frames sat at 5–6% of
+frames, and the harness's 5% quantile lands on either side of that.
+
+The reason is visible in the row above: removing 23% of the fill left main-thread
+work per key essentially unchanged. That work is not the draw. The Chromium trace
+puts about 26ms per canvas update in `GLES2::ReadPixels`, which is the software
+compositor copying the 1920×1080 canvas back, and that copy is set by the canvas
+size, not by how much of the canvas the app paints. Fill reduction cannot pay for
+it. The product keeps the zero-changed-pixel parity this repository requires and
+does not carry 25% more draw calls for no accepted gain.
 
 What remains is required content: a full-screen backdrop plus the visible row
 artwork. On this host that content alone is at the frame boundary, so no change
