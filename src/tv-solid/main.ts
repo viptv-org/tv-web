@@ -1,4 +1,9 @@
-import { Config, createRenderer, loadFonts } from "@solidtv/solid";
+import {
+  Config,
+  createRenderer,
+  loadFonts,
+  registerDefaultShaders,
+} from "@solidtv/solid";
 import { createComponent } from "solid-js";
 import type { RendererMain } from "@solidtv/renderer";
 import { sdfFonts } from "./fonts";
@@ -78,6 +83,9 @@ async function start() {
     },
     "app",
   );
+  // @solidtv/solid 1.7 no longer registers its built-in shader types itself;
+  // without them every `color`/`rounded` node draws as an unrounded quad.
+  registerDefaultShaders(renderer as RendererMain);
   if (new URLSearchParams(location.search).get("focusdebug") === "1")
     (window as Window & { __viptvRenderer?: typeof renderer }).__viptvRenderer =
       renderer;
