@@ -43,11 +43,17 @@ the 700ms hold and the long add-on lists. The four that did not finish are the
 request-predicate cases (source-quality selection, lease heartbeat, profile-change
 intent, remote keyboard punctuation) whose polls allow five seconds.
 
-The Live and Search seven-page walks keep their 180-second host budget and again
-ended early under that load; they are not recorded as passing here. All ten cases
-are re-run when the shared host reports genuine idle time, and no pass is claimed
-until that run is clean. The frame budget, physical hardware and deployment remain
-unverified.
+The Live and Search seven-page walks keep their 180-second host budget and ended
+early under that load. Re-run on the same artifact once the shared host reported
+idle time (`/tmp/viptv-75-combined-c`, 16 cases, 7.7 minutes, all passing), every
+one of those ten passes: **Live crosses seven pages and reverses** in 2.4 minutes
+with the complete 480-input roundtrip, fixture playback, return focus and the
+exact request-order assertion (previously 410/480 inputs at channel 70 before the
+deadline), Search's roundtrip in 1.2 minutes, the delayed-prefetch, reverse-retry,
+revision, timed-out-prefetch and displayed-error cases on both screens, and the
+four request-predicate viewing cases. The earlier ten failures were host
+contention, not application behaviour; no product change was made in response.
+The frame budget, physical hardware and deployment remain unverified.
 
 # SolidTV startup and delayed loading
 
@@ -3944,12 +3950,14 @@ bounded guide snapshots, and the complete Search seven-page roundtrip.
 
 Search verifies all 480 directional inputs from channel 0 to 240 and back,
 fixture playback and return focus, bounded payloads and exact server requests
-in 71.7 seconds. Live's seven-page roundtrip remains partially qualified on this
-software WebGL host: all 240 forward inputs, fixture playback, return focus and
-170 reverse inputs pass; the 180-second overall deadline ends the run after
-410 of 480 verified inputs at channel 70. The final return to channel 0 and
-complete request-order assertion are unverified for that Live run. The overall
-allowance is a host test budget, not an input-latency requirement.
+in 71.7 seconds. Live's seven-page roundtrip was partially qualified in that run:
+all 240 forward inputs, fixture playback, return focus and 170 reverse inputs
+passed; the 180-second overall deadline ended the run after 410 of 480 verified
+inputs at channel 70. **It is qualified now**: on the same case re-run against the
+combined `f6aa532` artifact on an idle host, Live completes the full 480-input
+roundtrip, fixture playback, return focus and the exact request-order assertion
+in 2.4 minutes. The overall allowance is a host test budget, not an input-latency
+requirement, and the earlier stop was host contention.
 
 Reference-image parity is unmeasured. No physical Tizen, Vizio or webOS device,
 real provider, or deployment is qualified by these browser fixtures.
