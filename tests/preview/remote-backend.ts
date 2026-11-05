@@ -22,6 +22,7 @@ export async function installRemoteBackend(page:Page,origin:string,options:{
     livePageLength?: number;
     liveAvailability?: "Available" | "NeedsConfiguration";
     liveGroups?: number;
+    liveEmptyGroups?: string[];
     media?: boolean;
     mediaSearch?: boolean;
     misleadingLiveCursor?: boolean;
@@ -193,7 +194,7 @@ export async function installRemoteBackend(page:Page,origin:string,options:{
         pageLength = Math.min(limit, options.livePageLength ?? limit);
       if (offset > 0 && options.pageDelayMillis) await new Promise(resolve=>setTimeout(resolve,options.pageDelayMillis));
       if (offset > 0 && options.holdNextPage) await pageGate;
-      const all = Array.from({length: searching ? options.searchChannelCount ?? 3 : liveChannelCount ?? cards.length}, (_,i) => ({id:`channel-${i}`,connection_id:"m3u:1",card:{...cards[i % cards.length],identity:{kind:"live",id:`channel-${i}`,ids:[]},provider_id:"m3u:1",title:(liveRevision>0?`Updated channel ${i}`:(searching?`Fixture channel ${i}`:cards[i % cards.length].title)),...(liveRevision>0||searching ? {landscape:null,poster:null,logo:null} : {})}}));
+      const all = options.liveEmptyGroups?.includes(url.searchParams.get("group_id") ?? "") ? [] : Array.from({length: searching ? options.searchChannelCount ?? 3 : liveChannelCount ?? cards.length}, (_,i) => ({id:`channel-${i}`,connection_id:"m3u:1",card:{...cards[i % cards.length],identity:{kind:"live",id:`channel-${i}`,ids:[]},provider_id:"m3u:1",title:(liveRevision>0?`Updated channel ${i}`:(searching?`Fixture channel ${i}`:cards[i % cards.length].title)),...(liveRevision>0||searching ? {landscape:null,poster:null,logo:null} : {})}}));
       return send({
         channels: all.slice(offset, offset + pageLength),
         snapshot_id: `fixture-live-${liveRevision}-${profile}-${url.searchParams.get("group_id") ?? "all"}-${url.searchParams.get("search") ?? ""}`,
