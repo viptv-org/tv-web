@@ -60,7 +60,7 @@ measured design pin is not the current [DESIGN_REF](../DESIGN_REF)
 | Search, MyList, Live | Search keyboard/results; producer Library type/sort/filter/reset controls; virtual guide and explicit playback | My List matched capture and 14 exact artwork rectangles; draft cancellation/retry; guide source changes remain on channel routes and obey server action flags |
 | Title, Movie, Episodes | Detail artwork, server viewing action/resume display, season offsets, episode and recommendation strips | Cast and unavailable episode annotations omitted; source summary appears only after discovery |
 | Sources, SourcesLoading, SourcesEmpty, SourcesTorrent | Partial discovery, server ranking/facets/named best source, explicit selection, cancellation | Torrent delivery is server-managed; no native torrent progress or local engine |
-| PlayerBuffer, PlayerControls, PlayerScrub, PlayerAudio, PlayerError | Producer action flags; source/track replacement reports observed clock and executes returned clock; actual HLS frames, retry/cancellation, expiry and auth loss | Paused/ended replacement and explicit decoder failure reporting still need qualification; native AVPlay/TV codecs not qualified here |
+| PlayerBuffer, PlayerControls, PlayerScrub, PlayerAudio, PlayerError | Producer action flags; source/track replacement reports observed clock and executes returned clock; the VOD timeline draws the engine's reported buffered ranges with their gaps; actual HLS frames, retry/cancellation, expiry and auth loss | AVPlay reports no buffered range, so a Tizen timeline draws none rather than an inferred one; paused/ended replacement and explicit decoder failure reporting still need qualification; native AVPlay/TV codecs not qualified here |
 | PlayerNext | Explicit Next consumes the server continuation result | Countdown/auto-next omitted: no producer directive exists |
 | PlayerSkip | Omitted | No authoritative skip-intro/credits annotation supplied |
 | SetPlayback, SetSubs | Server preference descriptors, revision-confirmed mutations, caption appearance | Foreign-audio mode omitted from choices pending gateway support; existing saved foreign mode fails visibly, never becomes local policy |
@@ -68,6 +68,18 @@ measured design pin is not the current [DESIGN_REF](../DESIGN_REF)
 | SetSources, SourcesViptv, SourcesXtream, SourcesM3u, SourcesRemove | Server schema-driven configuration, secret fields, provider choices and explicit removal | Unavailable runtime schemas omitted; private credentials are never echoed; live service credentials were not exercised |
 | SetParental, SetAbout, SignOut | Parent PIN/policy intents, app/server information, confirmed sign-out | No account-wide revocation or household destructive QA operations |
 | SetDisplay | Omitted | No device-scoped remote preference contract |
+
+## Player diagnostics — 2026-11-04
+
+TV playback faults are diagnosed from the backend's record of the failing lease
+and the events the client reports against it, not from an on-TV panel. That
+record holds the platform label, declared codec and resolution facts, gateway
+delivery and format, selected tracks, reported position, first frame and the
+start/pause/stop events, which is what a qualification run reads after a device
+session has ended. The player chrome carries no read-only key/value surface, a
+viewer cannot copy text off a canvas, no Tv3 board or token specifies one, and
+the player error state offers a recovery action instead of fields. The absence is
+chosen.
 
 ## Current bounded channel traversal
 

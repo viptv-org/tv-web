@@ -1,6 +1,27 @@
 import { test, expect, type Page } from "@playwright/test";
 import { installRemoteBackend } from "../preview/remote-backend";
 const screen = (page: Page) => page.locator("html");
+const MEDIA_PROGRESS_TIMEOUT_MS = 20_000;
+const mediaTime = (page: Page) =>
+  page
+    .locator("video")
+    .evaluate((video) => (video as HTMLVideoElement).currentTime);
+const mediaPaused = (page: Page) =>
+  page
+    .locator("video")
+    .evaluate((video) => (video as HTMLVideoElement).paused);
+async function expectPlaybackProgress(page: Page, seconds: number) {
+  await expect
+    .poll(() => mediaTime(page), { timeout: MEDIA_PROGRESS_TIMEOUT_MS })
+    .toBeGreaterThan(seconds);
+}
+// Freeze the page clock once the app has committed its first screen, so timers
+// and animation advance only where the test advances them.
+async function pauseClock(page: Page) {
+  await page.clock.pauseAt(
+    new Date(await page.evaluate(() => Date.now() + 1000)),
+  );
+}
 test("a rejected add-on mutation retains confirmed state and retries the same intent", async ({
   page,
   baseURL,
@@ -75,9 +96,11 @@ async function boot(page: Page, origin: string) {
   const fixture = await installRemoteBackend(page, origin);
   await page.goto("/tv/?platform=vizio");
   await expect(screen(page)).toHaveAttribute("data-tv-screen", "home");
+  await expect(screen(page)).toHaveAttribute("data-tv-ready", "true");
   return fixture;
 }
 async function navigate(page: Page, index: number) {
+  await expect(screen(page)).toHaveAttribute("data-tv-ready", "true");
   await page.keyboard.press("ArrowUp");
   for (let i = 1; i < index; i++) await page.keyboard.press("ArrowRight");
   for (let i = index; i < 1; i++) await page.keyboard.press("ArrowLeft");
@@ -90,8 +113,10 @@ test("TV startup loads one server bootstrap and no legacy engine", async ({
 }) => {
   const loaded: string[] = [];
   page.on("request", (r) => loaded.push(r.url()));
+  await page.clock.install();
   const fixture = await boot(page, baseURL!);
-  await page.waitForTimeout(400);
+  await pauseClock(page);
+  await page.clock.runFor(400);
   expect(fixture.requests.map((r) => r.path)).toEqual(["/api/bootstrap"]);
   expect(
     loaded.some((url) => /\.wasm(?:\?|$)|viptv_core|local-torrent/.test(url)),
@@ -205,7 +230,7 @@ test("pairing has server-issued code and no guest mode", async ({
   });
   await page.goto("/tv/?platform=vizio");
   await expect(screen(page)).toHaveAttribute("data-tv-screen", "welcome");
-  await page.waitForTimeout(100);
+  await expect(screen(page)).toHaveAttribute("data-tv-ready", "true");
   await page.keyboard.press("Enter");
   await expect(screen(page)).toHaveAttribute("data-tv-screen", "pairing");
   await expect
@@ -259,14 +284,17 @@ test("leaving Search cancels its scheduled work without changing the next screen
   page,
   baseURL,
 }) => {
+  await page.clock.install();
   const fixture = await boot(page, baseURL!);
   await navigate(page, 0);
   await expect(screen(page)).toHaveAttribute("data-tv-screen", "search");
+  await pauseClock(page);
   await page.keyboard.type("test");
   await page.keyboard.press("Escape");
   await page.keyboard.press("Escape");
   await expect(screen(page)).toHaveAttribute("data-tv-screen", "home");
-  await page.waitForTimeout(350);
+  // The debounce that would issue the discover request has to elapse and still find nothing to do.
+  await page.clock.runFor(200);
   await expect(screen(page)).toHaveAttribute("data-tv-ready", "true");
   expect(
     fixture.requests.filter((r) => r.path === "/api/discover"),
@@ -288,13 +316,7 @@ test("real HLS playback reports frames/progress and releases the server lease", 
     .toBe(true);
   await page.keyboard.press("Enter");
   await expect(screen(page)).toHaveAttribute("data-tv-screen", "player");
-  await expect
-    .poll(() =>
-      page
-        .locator("video")
-        .evaluate((v) => (v as HTMLVideoElement).currentTime),
-    )
-    .toBeGreaterThan(0.2);
+  await expectPlaybackProgress(page, 0.2);
   await expect
     .poll(() => fixture.requests.some((r) => r.path.endsWith("/first-frame")))
     .toBe(true);
@@ -392,8 +414,10 @@ test("Back during source replacement cannot start another lease after release fi
     media: true,
     slowRelease: true,
   });
+  await page.clock.install();
   await page.goto("/tv/?platform=vizio");
   await expect(screen(page)).toHaveAttribute("data-tv-screen", "home");
+  await expect(screen(page)).toHaveAttribute("data-tv-ready", "true");
   await page.keyboard.press("Enter");
   await expect
     .poll(() =>
@@ -401,13 +425,7 @@ test("Back during source replacement cannot start another lease after release fi
     )
     .toBe(true);
   await page.keyboard.press("Enter");
-  await expect
-    .poll(() =>
-      page
-        .locator("video")
-        .evaluate((video) => (video as HTMLVideoElement).currentTime),
-    )
-    .toBeGreaterThan(0.1);
+  await expectPlaybackProgress(page, 0.1);
   await page.keyboard.press("ArrowUp");
   await page.keyboard.press("Enter");
   await expect
@@ -429,8 +447,10 @@ test("Back during source replacement cannot start another lease after release fi
     .toBe(true);
   await page.keyboard.press("Escape");
   await expect(screen(page)).toHaveAttribute("data-tv-screen", "home");
-  await page.waitForTimeout(500);
   await expect(screen(page)).toHaveAttribute("data-tv-ready", "true");
+  // Nothing scheduled by the finished release may start another lease.
+  await pauseClock(page);
+  await page.clock.runFor(500);
   expect(
     fixture.requests.filter((r) => r.path === "/api/playback"),
   ).toHaveLength(1);
@@ -453,13 +473,7 @@ test("lease expiry stops cached media even while a heartbeat is stalled", async 
     )
     .toBe(true);
   await page.keyboard.press("Enter");
-  await expect
-    .poll(() =>
-      page
-        .locator("video")
-        .evaluate((video) => (video as HTMLVideoElement).currentTime),
-    )
-    .toBeGreaterThan(0.1);
+  await expectPlaybackProgress(page, 0.1);
   await expect
     .poll(() => fixture.requests.some((r) => r.path.endsWith("/heartbeat")))
     .toBe(true);
@@ -471,15 +485,15 @@ test("lease expiry stops cached media even while a heartbeat is stalled", async 
       ),
     )
     .toBe(true);
-  await page.waitForTimeout(3200);
+  // The lease expiry is the app's own deadline; poll the media state it stops.
+  await expect
+    .poll(() => mediaPaused(page), { timeout: MEDIA_PROGRESS_TIMEOUT_MS })
+    .toBe(true);
   expect(
-    await page
-      .locator("video")
-      .evaluate((video) => (video as HTMLVideoElement).paused),
-  ).toBe(true);
-  expect(
-    fixture.requests.filter((r) => r.path === "/api/playback"),
-  ).toHaveLength(1);
+    fixture.requests
+      .filter((r) => r.path === "/api/playback")
+      .length,
+  ).toBe(1);
 });
 
 test("profile editor matches the supported fields and Back restores its child form", async ({
@@ -510,8 +524,10 @@ test("source focus survives incremental reranking and user input cancels automat
     best: true,
     media: true,
   });
+  await page.clock.install();
   await page.goto("/tv/?platform=vizio");
   await expect(screen(page)).toHaveAttribute("data-tv-screen", "home");
+  await expect(screen(page)).toHaveAttribute("data-tv-ready", "true");
   await page.keyboard.press("Enter");
   await expect
     .poll(() =>
@@ -522,7 +538,13 @@ test("source focus survives incremental reranking and user input cancels automat
   fixture.addBestSource();
   await expect(screen(page)).toHaveAttribute("data-tv-focus", /:2$/);
   fixture.completeDiscovery();
-  await page.waitForTimeout(500);
+  await expect(screen(page)).not.toHaveAttribute(
+    "data-tv-source-status",
+    "discovering",
+  );
+  await expect(screen(page)).toHaveAttribute("data-tv-overlay", "sources");
+  await pauseClock(page);
+  await page.clock.runFor(500);
   expect(fixture.requests.some((r) => r.path === "/api/playback")).toBe(false);
   await page.keyboard.press("Enter");
   await expect
@@ -580,10 +602,12 @@ test("the 700ms hold opens the menu before release and cannot activate twice", a
   page,
   baseURL,
 }) => {
+  await page.clock.install();
   const fixture = await boot(page, baseURL!);
+  await pauseClock(page);
   await page.keyboard.press("ArrowDown");
   await page.keyboard.down("Enter");
-  await page.waitForTimeout(750);
+  await page.clock.runFor(750);
   await expect(screen(page)).toHaveAttribute("data-tv-overlay", "choices");
   await page.keyboard.up("Enter");
   expect(fixture.requests.some((r) => r.path.startsWith("/api/meta/"))).toBe(
@@ -596,10 +620,14 @@ test("normal-motion source drawers enter and exit at their reference bounds", as
   baseURL,
 }) => {
   await page.emulateMedia({ reducedMotion: "no-preference" });
+  await page.clock.install();
   await installRemoteBackend(page, baseURL!);
   await page.goto("/tv/?platform=vizio&focusdebug=1");
   await expect(screen(page)).toHaveAttribute("data-tv-screen", "home");
   await expect(screen(page)).toHaveAttribute("data-tv-ready", "true");
+  await page.clock.pauseAt(
+    new Date(await page.evaluate(() => Date.now() + 1000)),
+  );
   const paneX = () =>
     page.evaluate(() => {
       let x: number | undefined;
@@ -617,16 +645,19 @@ test("normal-motion source drawers enter and exit at their reference bounds", as
     });
   await page.keyboard.press("Enter");
   await expect(screen(page)).toHaveAttribute("data-tv-overlay", "sources");
-  await page.waitForTimeout(50);
+  await page.clock.runFor(50);
   expect(await paneX()).toBeGreaterThan(960);
-  await page.waitForTimeout(350);
+  await page.clock.runFor(300);
   expect(await paneX()).toBeCloseTo(960, 0);
   await page.keyboard.press("Escape");
-  await page.waitForTimeout(40);
+  await page.clock.runFor(100);
   await expect(screen(page)).toHaveAttribute("data-tv-overlay", "sources");
-  await page.waitForTimeout(250);
+  expect(await paneX()).toBeGreaterThan(960);
+  expect(await paneX()).toBeLessThan(1920);
+  await page.clock.runFor(150);
   await expect(screen(page)).toHaveAttribute("data-tv-overlay", "");
   await expect(screen(page)).toHaveAttribute("data-tv-focus", /^hero:0:/);
+  expect(await paneX()).toBeUndefined();
 });
 
 test("long add-on lists stay visible and profile activation uses a server intent", async ({
@@ -650,22 +681,29 @@ test("long add-on lists stay visible and profile activation uses a server intent
     "data-tv-focus",
     /^settings-content:8:/,
   );
-  const rows = await page.evaluate(() => {
-    const result: number[] = [];
-    const visit = (node: any) => {
-      if (
-        node.props?.w === 1184 &&
-        node.props?.h === 96 &&
-        node.props?.color === 0xf4f2eeff &&
-        node.isRenderable
-      )
-        result.push(node.absY);
-      node.children?.forEach(visit);
-    };
-    visit((window as any).__viptvRenderer.stage.root);
-    return result;
-  });
-  expect(rows.some((y) => y >= 220 && y < 980)).toBe(true);
+  const settingsRows = () =>
+    page.evaluate(() => {
+      const result: number[] = [];
+      const visit = (node: any) => {
+        if (
+          node.props?.w === 1184 &&
+          node.props?.h === 96 &&
+          node.props?.color === 0xf4f2eeff &&
+          node.isRenderable
+        )
+          result.push(node.absY);
+        node.children?.forEach(visit);
+      };
+      visit((window as any).__viptvRenderer.stage.root);
+      return result;
+    });
+  await expect
+    .poll(
+      async () =>
+        (await settingsRows()).some((y) => y >= 220 && y < 980),
+      { timeout: 10_000 },
+    )
+    .toBe(true);
   await page.keyboard.press("Enter");
   await expect(screen(page)).toHaveAttribute("data-tv-overlay", "choices");
   await page.keyboard.press("Enter");
