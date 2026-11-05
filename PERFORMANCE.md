@@ -79,8 +79,9 @@ In-page update cost with a forced completion sync, p50 over 30 updates:
 
 Same quad on a smaller canvas, no scissor: 1920×1080 10.7ms (2.07Mpx),
 1280×720 6.8ms (0.92Mpx), 960×540 5.3ms (0.52Mpx), 640×360 2.2ms (0.23Mpx),
-480×270 1.4ms (0.13Mpx). Cost follows pixels at roughly 10ms per Mpx plus a
-sub-millisecond floor, whichever way the area is reduced.
+480×270 1.4ms (0.13Mpx). Cost falls with pixels whichever way the area is
+reduced, but not at one constant rate: the two smallest canvases are close to
+linear at about 10ms per Mpx, while 1920×1080 costs 5.2ms per Mpx.
 
 The presented frame cadence separates the two cases. One update per animation
 frame, median dropped-frame rate (intervals over 25ms) over four rounds in each
@@ -95,8 +96,9 @@ of two sessions:
 | scissor to 12.5% side (0.03Mpx) | 7.9 / 4.8% | 16.7ms |
 | 960×540 canvas, full (0.52Mpx) | 0.6 / 0.6% | 16.7ms |
 
-Host busy ranged from 18% to 54% across those rounds and the ordering was
-identical in both sessions; `blank` and the 960×540 canvas anchor the two ends.
+Recorded system busy, which includes the control's own CPU, ranged from 18% to
+54% across those rounds and the ordering was identical in both sessions; `blank`
+and the 960×540 canvas anchor the two ends.
 With one update every sixth frame and forced completion, the p50 draw cost was
 11.0ms full, 6.1ms at 0.52Mpx damaged, 2.4ms at 0.13Mpx and 1.9ms at 0.03Mpx,
 and every interval stayed at 16.7ms — those updates fit inside a refresh, which
@@ -113,10 +115,11 @@ Two conclusions for the owner decision in issue #75:
   fully costs 0.6% dropped frames, while 0.13Mpx of damage inside a 1920×1080
   canvas still costs 6–8%: the rest of the canvas is still read back at
   presentation even though it was not repainted. `preserveDrawingBuffer`, which
-  the dirty-rect approach requires, measured free at 0.03Mpx damage in the
-  in-page probe (0.9ms versus 1.9ms) but worse in the continuous probe (78% vs
-  59–64% dropped at full damage, 2.6–11.8% vs 6.2–7.5% at 25% area), so its cost
-  needs a prototype measurement rather than an assumption.
+  the dirty-rect approach requires, showed no penalty at 0.03Mpx damage in the
+  in-page probe (0.9ms versus 1.9ms) and no consistent difference in the
+  continuous probe (full damage 52.7 / 78.3% versus 59 / 64% dropped; 25% area
+  2.6 / 11.8% versus 6.2 / 7.5%), so its cost needs a prototype measurement
+  rather than an assumption.
 
 That keeps option C — dirty-rect scissor draws plus `preserveDrawingBuffer` in
 place of a full-scene redraw per focus change — a plausible but unproven path,
