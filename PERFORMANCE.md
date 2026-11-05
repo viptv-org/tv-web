@@ -123,6 +123,14 @@ Home update inside one refresh here. The 17.5ms budget is unchanged and unmet;
 qualifying it needs a host that composites on a GPU, or an owner decision about
 the environment the gate is measured in.
 
+The combined tree `f6aa5321673cee5b2bc2b82f8328ea3ec5c32feb` served on this host at
+load 0.55–0.74 repeats the same result on two isolated samples: frame p95
+33.3 / 33.4ms, main-thread work 45.9 / 47.3ms per key, handler p95 2.5 / 1.7ms,
+two frames over 50ms each, two and three long tasks, 2641 / 2740 draw calls and
+zero focus-time glass or rounded shader creations. Both reports record the
+served bundle SHA-256 (`7864c87bc81e555e…`), the source revision and the
+SwiftShader/`disabled_software` identity they were measured under.
+
 # Cited revisions
 
 Sections are reverse-chronological. The 2026-10-23 and 2026-10-24 comparisons
