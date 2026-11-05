@@ -70,19 +70,39 @@ and `@fontsource-variable/bricolage-grotesque/files/bricolage-grotesque-latin-op
    fontTools (`instantiateVariableFont`, `wght=800`, `opsz` in {28, 56, 90}).
    Onest700Tabular is Onest700 with the `tnum` glyphs written into the cmap:
    SDF atlases carry glyphs, not OpenType feature shaping.
-2. Run `solid-tv/msdf-generator` (`msdf-bmfont-xml`) with a charset of printable
-   ASCII, Latin-1, the Latin-extended characters the fonts ship and the
-   punctuation the UI uses (ellipsis, middot, arrows), `ssdf`, `textureSize`
-   1024 and `fontSize` 42 (Onest) / 48 (Bricolage). Keep every face on one page:
-   renderer 2.0 loads one atlas image per face.
+2. Run `solid-tv/msdf-generator` 1.4.0 (`msdf-bmfont-xml` 2.8.0) with a charset
+   string of printable ASCII, Latin-1, the Latin-extended characters the fonts
+   ship and the punctuation the UI uses (`…`, `·`, `→`, `⌫`, `✓`), `ssdf`,
+   `textureSize` 1024 and `fontSize` 42 (Onest) / 48 (Bricolage). The charset is
+   passed as `{"charset": "…", "presets": []}` in `font-src/charset.config.json`;
+   overrides go in `font-src/overrides.json`. Keep every face on one page:
+   renderer 2.0 loads one atlas image per face. On this host the generator's
+   bundled `msdfgen.linux` needed GLIBC 2.38 and the host has 2.36, so the
+   binary from `msdf-bmfont-xml` 2.7.0 was used; the JSON/PNG output is the
+   same format.
 3. Copy the `.ssdf.json` and `.ssdf.png` pairs into `src/tv-solid/sdf/` and
    update the imports in `src/tv-solid/fonts.ts`.
 
+`TvText` measures the label with `renderer.measureText` and reports the layout
+box (`w`/`maxwidth`) as the node width: the renderer derives a text node's
+`maxWidth` from its width when none is set, so a measured glyph run would wrap
+the text at its own edge. Alignment is applied to the block by the adapter; the
+design only aligns single-line labels, so line-level `textAlign` is not set
+(setting it without `contain` logs a warning per node).
+
+Two entry assertions changed with the renderer: the countdown label's hardcoded
+175×48 box became the height plus its colour (the SDF text width differs), and
+the 1.x `shaderManager.valuesCache` counter became a live shader count (2.0 has
+no per-frame prop cache).
+
 Verification on this branch: `npm run build` and 431 unit/integration tests in
-68 files pass; the full remote browser suite (19 specs) passes against a
-fixture-built `dist`; six matched Home/focus states differ from the 1.9.4 build
-only in glyph rasterization (PERFORMANCE.md). Physical TV qualification remains
-#2/#4.
+68 files pass; the remote browser suite (19 specs) was run against a
+fixture-built `dist` — 137/139 in one pass on a quiet host with the two
+failures (Live prefetch timeout, source reranking) passing alone on the same
+build; on a 53%-busy host the 5-second startup cases time out, the same
+contention pattern the suite already records. Six matched Home/focus states
+differ from the 1.9.4 build only in glyph rasterization (PERFORMANCE.md).
+Physical TV qualification remains #2/#4.
 
 # Home featured-pass acceptance
 

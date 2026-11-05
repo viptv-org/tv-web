@@ -49,9 +49,13 @@ What the migration changed in this repository:
 
 Measured on this host with the same 48-key Home workload, 1920×1080, reduced
 motion, 4× CPU throttling and SwiftShader as the 1.9.4 evidence (the
-2026-11-04 trace and `PERFORMANCE.md` on PR #82). Samples were taken on a host
-2% busy; each run reports the served bundle hash and GPU identity
-(`ANGLE/SwiftShader 5.0.0`, `displayType: ANGLE_SWIFTSHADER`).
+2026-11-04 trace on PR #82). Samples were taken on a host 2% busy. The report
+(`/tmp/viptv-sdf/perf-v2b.json`) records source revision
+`d522f01b81956ee3806643fc850ebb4627c011da`, source SHA-256 `0699be23…`, the
+measured bundle SHA-256 `8d6250f6…`, `servedEntryVerified: true`, and the GPU
+identity `ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero)),
+SwiftShader driver-5.0.0)` with `displayType: ANGLE_SWIFTSHADER`. This host has
+no `/dev/dri` and composites in software.
 
 | 48-key Home | 1.9.4 (`5299ec0`, artifact `final3`) | 2.0.7 (`d522f01`) |
 | --- | ---: | ---: |
@@ -70,10 +74,13 @@ readback is outside the renderer's update/draw phases. The measured gate is
 unchanged and this migration is not a 60fps claim.
 
 Visual parity: six matched Home/focus states were compared against the 1.9.4
-artifact. Layout boxes, line wraps and element positions are unchanged; every
-differing pixel is glyph rasterization (canvas hints → SDF), with no changed
-non-text region. The `rows` state is mid-transition in that harness and is not
-used for parity, as its README notes.
+artifact with the `/tmp/viptv-perf-75/visual.sh` harness (PNG diffs written to
+`/tmp/viptv-sdf/visual5/`). Layout boxes, line wraps and element positions are
+unchanged; every differing pixel is glyph rasterization (canvas hints → SDF),
+with no changed non-text region. The `rows` state is mid-transition in that
+harness and is not used for parity. A separate capture of the pairing screen
+(`/tmp/viptv-sdf/pairing-old.png` vs `pairing-new3.png`) confirmed the code
+label renders in full after text nodes started reporting their layout box.
 
 # One shared text-measure context — 2026-11-03
 
