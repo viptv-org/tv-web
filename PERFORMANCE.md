@@ -43,6 +43,86 @@ suppressed, 33.4ms without text, 33.3ms without decorations, and 16.7ms with all
 quads suppressed. This isolates aggregate backdrop/row fill as the remaining
 candidate; suppression is diagnostic only and is absent from the product.
 
+## Dirty-rect updates: what damaged area pays for — 2026-11-05
+
+The 2026-11-04 section below attributes the per-update readback to the canvas
+size and concludes that painted area cannot pay for it. The measurement here
+says that second half is too strong: narrowing the damaged area inside the same
+1920×1080 canvas does move the cost, but it does not reach the cost of a
+genuinely smaller canvas. Nothing in this section is in the product; no
+application, renderer or vendored file was changed to produce it.
+
+Method: app-free control pages, same browser configuration as the 2026-11-04
+controls (ANGLE/Vulkan SwiftShader 5.0.0, `gpu_compositing: disabled_software`,
+`rasterization: disabled_software`, no `/dev/dri`, 1920×1080 viewport, reduced
+motion, 4× CPU throttling, one canvas, one 512px textured quad). Three scripts
+in `/tmp/viptv-perf-75/`, each repeated in interleaved rounds on this shared
+host with `/proc/loadavg` and `/proc/stat` busy% recorded per run:
+
+| Script | What it measures |
+| --- | --- |
+| `readback-scaling.mjs` | in-page cost of one update, forced to completion with a 1px `readPixels`, varying canvas size and scissor rect |
+| `readback-scaling-updates.mjs` | one update every sixth frame, frame intervals split by whether the previous frame drew |
+| `readback-scaling-rounds.mjs` | one update on every animation frame, presented-frame cadence, four rounds, with and without `preserveDrawingBuffer` |
+
+These are stress shapes, not a projected gate result: the application issues
+about 1.2 canvas updates per key, not one per displayed frame.
+
+In-page update cost with a forced completion sync, p50 over 30 updates:
+
+| 1920×1080 canvas, one quad | Damaged area | Update cost |
+| --- | ---: | ---: |
+| full canvas | 2.07Mpx | 10.6ms |
+| scissor to 50% side | 0.52Mpx | 5.9ms |
+| scissor to 25% side | 0.13Mpx | 2.6ms |
+| scissor to 12.5% side | 0.03Mpx | 1.8ms |
+
+Same quad on a smaller canvas, no scissor: 1920×1080 10.7ms (2.07Mpx),
+1280×720 6.8ms (0.92Mpx), 960×540 5.3ms (0.52Mpx), 640×360 2.2ms (0.23Mpx),
+480×270 1.4ms (0.13Mpx). Cost follows pixels at roughly 10ms per Mpx plus a
+sub-millisecond floor, whichever way the area is reduced.
+
+The presented frame cadence separates the two cases. One update per animation
+frame, median dropped-frame rate (intervals over 25ms) over four rounds in each
+of two sessions:
+
+| 1920×1080, update every frame | Dropped frames | Presented p50 |
+| --- | ---: | ---: |
+| blank `requestAnimationFrame`, no update | 0% | 16.7ms |
+| full canvas | 59 / 64% | 33.3ms |
+| scissor to 50% side (0.52Mpx) | 16 / 26% | 16.7ms |
+| scissor to 25% side (0.13Mpx) | 7.5 / 6.2% | 16.7ms |
+| scissor to 12.5% side (0.03Mpx) | 7.9 / 4.8% | 16.7ms |
+| 960×540 canvas, full (0.52Mpx) | 0.6 / 0.6% | 16.7ms |
+
+Host busy ranged from 18% to 54% across those rounds and the ordering was
+identical in both sessions; `blank` and the 960×540 canvas anchor the two ends.
+With one update every sixth frame and forced completion, the p50 draw cost was
+11.0ms full, 6.1ms at 0.52Mpx damaged, 2.4ms at 0.13Mpx and 1.9ms at 0.03Mpx,
+and every interval stayed at 16.7ms — those updates fit inside a refresh, which
+is why the harness's per-key cost shows up as a whole-canvas readback rather
+than as an in-page draw cost.
+
+Two conclusions for the owner decision in issue #75:
+
+- The readback is charged by damaged area, so partial updates are a real lever:
+  in-page completion falls from 11.0ms to 1.9ms at 1.6% damage, and the
+  continuous-update drop rate falls from ~60% to 5–8%. That is the difference
+  between a comfortable fail and a knife edge, not a guaranteed pass.
+- The lever bottoms out above the small-canvas floor. A 960×540 canvas updating
+  fully costs 0.6% dropped frames, while 0.13Mpx of damage inside a 1920×1080
+  canvas still costs 6–8%: the rest of the canvas is still read back at
+  presentation even though it was not repainted. `preserveDrawingBuffer`, which
+  the dirty-rect approach requires, measured free at 0.03Mpx damage in the
+  in-page probe (0.9ms versus 1.9ms) but worse in the continuous probe (78% vs
+  59–64% dropped at full damage, 2.6–11.8% vs 6.2–7.5% at 25% area), so its cost
+  needs a prototype measurement rather than an assumption.
+
+That keeps option C — dirty-rect scissor draws plus `preserveDrawingBuffer` in
+place of a full-scene redraw per focus change — a plausible but unproven path,
+and it remains renderer work the vendored `@solidtv/renderer` does not support.
+No app-side change can substitute for it, and the 17.5ms budget is unchanged.
+
 ## Where the remaining frame cost goes — 2026-11-04
 
 This host renders and composites in software, and that is what the remaining
@@ -132,9 +212,11 @@ The reason is visible in the row above: removing 23% of the fill left main-threa
 work per key essentially unchanged. That work is not the draw. The Chromium trace
 puts about 26ms per canvas update in `GLES2::ReadPixels`, which is the software
 compositor copying the 1920×1080 canvas back, and that copy is set by the canvas
-size, not by how much of the canvas the app paints. Fill reduction cannot pay for
-it. The product keeps the zero-changed-pixel parity this repository requires and
-does not carry 25% more draw calls for no accepted gain.
+rather than by how many quads the app submits. The 2026-11-05 section above
+refines that: shrinking the damaged area inside the same canvas does reduce the
+copy, but not to the cost of a smaller canvas, so the fill reductions below still
+cannot pay for it. The product keeps the zero-changed-pixel parity this
+repository requires and does not carry 25% more draw calls for no accepted gain.
 
 What remains is required content: a full-screen backdrop plus the visible row
 artwork. On this host that content alone is at the frame boundary, so no change
