@@ -43,6 +43,10 @@ What the migration changed in this repository:
   became shader props written by a 1.10-style `update()`. `@solidtv/solid` 1.7
   no longer registers its built-in types, so `main.ts` calls
   `registerDefaultShaders` once after creating the renderer.
+- **1.10 defaults are pinned.** 2.0 changes `targetFPS` to uncapped,
+  `boundsMargin`, `imageDecodeConcurrency` and `textureProcessingTimeLimit`;
+  the entry keeps 1.10's values (60, 200, 4, 10ms) so TV pacing, timers and
+  memory behaviour are unchanged.
 - **The 1.9.4 rounded-opacity patch is gone.** 2.0's box shader applies node
   alpha once, so `tvRoundedShader` was deleted; the existing pixel test for a
   half-alpha accent node passes unchanged (`[128,104,39]`).

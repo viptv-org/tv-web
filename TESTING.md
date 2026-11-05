@@ -55,6 +55,10 @@ The TV entry runs `@solidtv/renderer` 2.0.7 and `@solidtv/solid` 1.7.1 (issue
   `worldAlpha`). `installRemoteBackend` now installs a test-only adapter over
   the 2.0 scene, and the app records shader names at registration so the
   adapter can report them. The adapter is not in the app bundle.
+- **Defaults.** 2.0's changed defaults (`targetFPS` uncapped, `boundsMargin`,
+  `imageDecodeConcurrency`, `textureProcessingTimeLimit`) are pinned to 1.10's
+  values in `main.ts`; with the frozen browser clock some specs also need one
+  explicit frame (`clock.runFor(32)`) before paint-driven focus is observed.
 - **Startup resource cases** delay or fail `**/*.ssdf*.json` instead of
   `**/*.woff2`: the TV entry no longer fetches WOFF2 (the DOM still does, from
   `theme/fonts.css`).
