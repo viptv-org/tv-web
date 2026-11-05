@@ -99,6 +99,7 @@ of two sessions:
 Recorded system busy, which includes the control's own CPU, ranged from 18% to
 54% across those rounds and the ordering was identical in both sessions; `blank`
 and the 960×540 canvas anchor the two ends.
+
 With one update every sixth frame and forced completion, the p50 draw cost was
 11.0ms full, 6.1ms at 0.52Mpx damaged, 2.4ms at 0.13Mpx and 1.9ms at 0.03Mpx,
 and every interval stayed at 16.7ms — those updates fit inside a refresh, which
