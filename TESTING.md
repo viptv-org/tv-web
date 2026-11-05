@@ -22,11 +22,30 @@ checks and `npx vite build --outDir /tmp/viptv-solid-75-final`. Logs are
 (`/tmp/viptv-solid-75-final-provenance.json`). Broader screen responsiveness,
 the frame budget, hardware and deployment remain unverified.
 
-Combined tree `f6aa5321673cee5b2bc2b82f8328ea3ec5c32feb` (this branch merged onto
-main `b394746`) rebuilds with the grouped typecheck, design/core/video integrity
-checks and the Vite production build; every branch commit after it is
-documentation only, so that artifact carries the source these results describe. On its served artifact over isolated
-HTTPS at 1920×1080, **52 scoped browser cases pass** in 4.4 minutes
+Combined tree `a6c1e87` (this branch merged with main `99a4c4b`) is the final
+candidate. It passes the grouped typecheck, design/core/video integrity checks
+and the Vite production build, plus **427 unit/integration tests in 67 files**
+(single fork). Its artifact `/tmp/viptv-solid-75-merged` reports
+`frameP95` 33.4 / 33.4ms in two isolated quiet samples,
+`mainThreadMsPerKey` 47.1 / 47.8ms, handler p95 3.6 / 1.9ms, four and five frames
+over 50ms, four and three long tasks, 2637 / 2693 draw calls, 56 / 57 rendered
+frames and zero focus-time glass or rounded shader creations; the served bundle
+SHA-256 is `112aeeb1…` and both reports carry the SwiftShader/`disabled_software`
+identity. A third sample that reported 85.4ms per key was contention and is not
+used.
+
+The whole SolidTV remote suite ran against that artifact in one 17.5-minute pass
+(`/tmp/viptv-75-merged-suite`): **135 pass, 3 fail**. The failures are the two
+`audit.spec.ts` traversals that exceed the 30-second per-test default (they pass
+at a 180-second allowance — issue #94) and the Live seven-page walk, which
+exceeded its own 180-second budget with a closed browser session in this long
+run after passing in 2.4 minutes when run alone
+(`/tmp/viptv-75-combined-c`). `settings-display.spec.ts:314` passed here and
+failed on a main-only artifact earlier, so it is intermittent.
+
+Earlier artifacts of the same work: combined tree
+`f6aa5321673cee5b2bc2b82f8328ea3ec5c32feb` (branch on main `b394746`). On its
+served artifact over isolated HTTPS at 1920×1080, **52 scoped browser cases pass** in 4.4 minutes
 (`/tmp/viptv-perf-75/accept-a.log`): startup skeletons for Vizio/Tizen/webOS,
 `?layout=tv`, `solid.html` and `lightning.html`; delayed stylesheet, font and
 bootstrap; asset failure and remote retry; stuck-startup recovery; browser Back
