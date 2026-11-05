@@ -46,7 +46,7 @@ async function installRendererCompat(page: Page): Promise<void> {
     const srcTexture = (node: any) =>
       node.src ? { state: 'loaded', props: { src: node.src } } : null;
 
-    const compatNode = (node: any, inheritedAlpha: number, renderer: any): any => {
+    const compatNode = (node: any, inheritedAlpha: number, renderer: any, parent: any = null): any => {
       const ownAlpha = typeof node.alpha === "number" ? node.alpha : 1;
       const worldAlpha = ownAlpha * inheritedAlpha;
       const shader = node.shader ?? null;
@@ -70,6 +70,9 @@ async function installRendererCompat(page: Page): Promise<void> {
         props,
         absX: node.absX,
         absY: node.absY,
+        width: node.width,
+        height: node.height,
+        parent,
         worldAlpha,
         viptvText: node.viptvText,
         // 1.x node time: the renderer clock the shader's u_time advances on.
@@ -81,10 +84,11 @@ async function installRendererCompat(page: Page): Promise<void> {
             }
           : null,
         texture,
-        children: (node.children ?? []).map((child: any) =>
-          compatNode(child, worldAlpha, renderer),
-        ),
+        children: [],
       };
+      compat.children = (node.children ?? []).map((child: any) =>
+        compatNode(child, worldAlpha, renderer, compat),
+      );
       // Specs mutate alpha on the node they find (the rounded-opacity case);
       // forward it to the live node so the renderer actually re-renders.
       Object.defineProperty(compat, "alpha", {
