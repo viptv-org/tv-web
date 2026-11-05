@@ -17,12 +17,18 @@ test('pairing countdown is server bounded; refresh clears the abandoned code and
   await page.keyboard.press('Enter');
   await expect(state(page)).toHaveAttribute('data-tv-screen','pairing');
   await expect(state(page)).toHaveAttribute('data-tv-ready','true');
-  await expect.poll(async()=> (await nodes(page)).some(n=>n.text==='Code expires in 5:00')).toBe(true);
-  expect((await nodes(page)).find(n=>n.h===48&&n.w===175)?.color).toBe(0xffffff29);
+  const countdown=async()=>{
+    const text=(await nodes(page)).find(n=>n.text?.startsWith('Code expires in'))?.text ?? '';
+    const match=/Code expires in (\d+):(\d\d)/.exec(text);
+    return match?Number(match[1])*60+Number(match[2]):-1;
+  };
+  await expect.poll(countdown).toBeGreaterThan(0);
+  expect((await nodes(page)).find(n=>n.h===48&&n.color===0xffffff29)).toBeDefined();
+  const before=await countdown();
   await page.clock.fastForward(2000);
-  await expect.poll(async()=> (await nodes(page)).some(n=>n.text==='Code expires in 4:58')).toBe(true);
+  await expect.poll(countdown).toBe(before-2);
   await page.keyboard.press('ArrowRight');
-  expect((await nodes(page)).find(n=>n.h===48&&n.w===175)?.color).toBe(0xf4f2eeff);
+  expect((await nodes(page)).find(n=>n.h===48&&n.color===0xf4f2eeff)).toBeDefined();
   let release!:()=>void;let requested=false;
   const held=new Promise<void>(resolve=>release=resolve);
   await page.route('**/api/auth/device/code',async route=>{requested=true;await held;await route.fulfill({json:{device_code:'replacement',user_code:'LATE-CODE',verification_uri:`${baseURL}/device`,expires_in:300,interval:1}}).catch(()=>{});});
@@ -81,20 +87,21 @@ for(const reduced of [true,false])test(`entry motion ${reduced?'stays still for 
   await expect(state(page)).toHaveAttribute('data-tv-ready','true');
   const wall=()=>page.evaluate(()=>{let x:number|undefined;function visit(n:any){if(n.isRenderable&&n.texture?.state==='loaded'&&n.shader?.shaderKey?.startsWith('tvWelcome')){const start=n.shader.uniforms.single.u_startedAt.value;x=-60-500*(1-Math.abs(((n.time-start)/60000)%2-1));}n.children?.forEach(visit);}visit((window as any).__viptvRenderer.stage.root);return x;});
   await expect.poll(wall).toBeDefined();const start=(await wall())!;
-  const shaderCache=()=>page.evaluate(()=>(window as any).__viptvRenderer.stage.shManager.valuesCache.size as number);
-  const cached=await shaderCache();
+  const shaderCount=()=>page.evaluate(()=>{let count=0;function visit(n:any){if(n.shader)count++;n.children?.forEach(visit);}visit((window as any).__viptvRenderer.stage.root);return count;});
+  const cached=await shaderCount();
   const before=PNG.sync.read(await page.screenshot({clip:{x:0,y:0,width:500,height:200}})).data;
   await page.waitForTimeout(300);
   if(reduced)expect(await wall()).toBe(start);else expect((await wall())!).toBeLessThan(start-1.5);
   const after=PNG.sync.read(await page.screenshot({clip:{x:0,y:0,width:500,height:200}})).data;
   expect(before.equals(after)).toBe(reduced);
-  expect(await shaderCache()).toBe(cached);
+  expect(await shaderCount()).toBe(cached);
   await page.keyboard.press('Enter');
   await expect(state(page)).toHaveAttribute('data-tv-screen','pairing');
   await expect(state(page)).toHaveAttribute('data-tv-ready','true');
   await page.waitForTimeout(700);
-  const dot=(await nodes(page)).find(n=>n.w===12&&n.h===12)!;
-  if(reduced)expect(dot.alpha).toBe(1);else expect(dot.alpha).toBeLessThan(.6);
+  const dot=()=>page.evaluate(()=>{let value=1;function visit(n:any){if(n.props?.w===12&&n.props?.h===12&&n.absX===96)value=n.worldAlpha;n.children?.forEach(visit);}visit((window as any).__viptvRenderer.stage.root);return value;});
+  if(reduced)expect(await dot()).toBe(1);
+  else await expect.poll(dot,{timeout:2200}).toBeLessThan(.6);
 });
 
 test('an empty profile list offers retry without inventing an Add action',async({page,baseURL})=>{

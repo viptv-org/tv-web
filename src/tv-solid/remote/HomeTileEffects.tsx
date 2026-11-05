@@ -7,41 +7,46 @@ import {
   Show,
 } from "solid-js";
 import { getRenderer } from "@solidtv/solid";
-import type { Stage } from "@solidtv/renderer";
-import type { WebGlShaderNode, WebGlShaderType } from "@solidtv/renderer/webgl";
+import type { RendererMain, ShaderNode, WebGlShaderType } from "@solidtv/renderer";
+import { sameShader } from "../shaders";
 import { TvView } from "../runtime";
+import { registerTvShader } from "../shaders";
 import { icon } from "./visuals";
-const progressShader: WebGlShaderType = {
-  props: {},
-  canBatch: (node, op) => node.props.shader === op.shader,
+type ProgressProps = { size: number[]; top: number; radius: number; progress: number };
+const progressShader: WebGlShaderType<ProgressProps> = {
+  props: { size: [0, 4], top: 0, radius: 2, progress: 0 },
+  update(this: any) {
+    const p = this.props as ProgressProps;
+    this.uniform2fa("u_size", p.size);
+    this.uniform1f("u_top", p.top);
+    this.uniform1f("u_radius", p.radius);
+    this.uniform1f("u_progress", p.progress);
+  },
+  canBatch: sameShader,
   vertex: `
 precision highp float;attribute vec2 a_position;attribute vec2 a_nodeCoords;attribute vec4 a_color;uniform vec2 u_resolution;uniform float u_pixelRatio;varying vec2 v_local;varying vec4 v_color;void main(){v_local=a_nodeCoords;v_color=a_color;gl_Position=vec4(a_position*u_pixelRatio*vec2(2.0/u_resolution.x,-2.0/u_resolution.y)+vec2(-1.0,1.0),0.0,1.0);}`,
   fragment: `
 precision highp float;uniform vec2 u_size;uniform float u_top;uniform float u_radius;uniform float u_progress;uniform float u_pixelRatio;varying vec2 v_local;varying vec4 v_color;void main(){vec2 p=v_local*vec2(u_size.x,4.0)+vec2(0.0,u_top)-u_size*.5;vec2 q=abs(p)-u_size*.5+u_radius;float d=min(max(q.x,q.y),0.0)+length(max(q,0.0))-u_radius;float a=1.0-smoothstep(-.5/u_pixelRatio,.5/u_pixelRatio,d);vec4 c=mix(vec4(.25),vec4(245.0/255.0,197.0/255.0,66.0/255.0,1.0),1.0-step(u_progress,v_local.x));gl_FragColor=c*a*v_color;}`,
 };
-const registered = new WeakSet<Stage>();
+const registered = new WeakSet<RendererMain>();
 export function HomeProgress(props: {
   width: number;
   progress: number;
   tileHeight?: number;
 }) {
-  const renderer = getRenderer(),
-    stage = renderer.stage as Stage;
-  if (!registered.has(stage)) {
-    stage.shManager.registerShaderType("tvHomeProgress", progressShader);
-    registered.add(stage);
+  const renderer = getRenderer() as RendererMain;
+  if (!registered.has(renderer)) {
+    registerTvShader(renderer, "tvHomeProgress", progressShader);
+    registered.add(renderer);
   }
-  const shader = createMemo(() => {
-    const value = renderer.createShader(
-      "tvHomeProgress",
-      {},
-    ) as WebGlShaderNode;
-    value.uniform2f("u_size", props.width, props.tileHeight ?? 4);
-    value.uniform1f("u_top", props.tileHeight ? props.tileHeight - 4 : 0);
-    value.uniform1f("u_radius", props.tileHeight ? 10 : 2);
-    value.uniform1f("u_progress", props.progress);
-    return value;
-  });
+  const shader = createMemo(() =>
+    renderer.createShader("tvHomeProgress", {
+      size: [props.width, props.tileHeight ?? 4],
+      top: props.tileHeight ? props.tileHeight - 4 : 0,
+      radius: props.tileHeight ? 10 : 2,
+      progress: props.progress,
+    }) as ShaderNode,
+  );
   return <TvView w={props.width} h={4} color="#FFFFFF" shader={shader()} />;
 }
 export type TilePlayArt = {

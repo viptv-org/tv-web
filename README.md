@@ -143,14 +143,16 @@ an explicit TV platform/layout; ordinary responsive browser and native desktop
 entries still select React.
 
 The shipped TV screens live in `src/tv-solid/remote`; `src/tv-solid` keeps the
-entry, the `runtime.ts` adapter, fonts, text raster, shaders and the webOS host
-shell. Compiled Solid JSX uses the pinned layout values, assets, fonts and
-design tokens. The adapter retains the screen controller methods, parent
-events, refs and release-to-activate remote contract, with Solid signals, keyed
-list reconciliation and component cleanup. There is no Blits dependency or
-runtime template evaluation. Text baselines are adapted to the renderer's
-alphabetic line boxes so the existing hanging baseline coordinates remain
-valid; canvas text nodes refresh their baked color when focus changes.
+entry, the `runtime.ts` adapter, SDF font atlases, shaders and the webOS host
+shell. It runs `@solidtv/renderer` 2.0 / `@solidtv/solid` 1.7. Compiled Solid
+JSX uses the pinned layout values, assets, fonts and design tokens. The adapter
+retains the screen controller methods, parent events, refs and
+release-to-activate remote contract, with Solid signals, keyed list
+reconciliation and component cleanup. There is no Blits dependency or runtime
+template evaluation. Text is SDF: `TvText` measures the label with the renderer
+and renders one text node, so focus changes update its color without
+rasterizing anything. The atlases and their regeneration steps are in
+`src/tv-solid/sdf/` and `TESTING.md`.
 
 The TV entry is server-authoritative: the unversioned TV API supplies cards,
 Home rows with their own cursors and Pending/Ready/Empty/Failed states, catalog

@@ -1,12 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createComponent, createRoot, createSignal } from "solid-js";
 
-type Node = { props: Record<string, unknown>; children: Node[] };
-const graphics = vi.hoisted(() => ({ nodes: [] as Node[], textures: [] as { finish:()=>void; state:string }[], raster:vi.fn() }));
-vi.mock("@solidtv/renderer/canvas",()=>({CanvasTextRenderer:{renderText:(props:{text:string})=>{
-  graphics.raster(props);
-  return props.text ? {width:4,height:4,imageData:{width:4,height:4,data:new Uint8ClampedArray(64).fill(255)}} : {width:0,height:0};
-}}}));
+type Node = { kind: string; props: Record<string, unknown>; children: Node[] };
+const graphics = vi.hoisted(() => ({ nodes: [] as Node[], textures: [] as { finish:()=>void; state:string }[] }));
 // These tests exercise deferred painting; native focus is covered by the
 // browser remote scenarios with the real SolidTV focus manager.
 vi.mock("@solidtv/solid/primitives", () => ({
@@ -18,8 +14,8 @@ vi.mock("@solidtv/solid/primitives", () => ({
 vi.mock("@solidtv/solid", async () => {
   const { createRenderEffect } = await import("solid-js");
   return {
-    createElement: () => {
-      const node: Node = { props: {}, children: [] };
+    createElement: (kind: string) => {
+      const node: Node = { kind, props: {}, children: [] };
       graphics.nodes.push(node);
       return node;
     },
@@ -35,11 +31,21 @@ vi.mock("@solidtv/solid", async () => {
       });
     },
     getRenderer: () => ({
-      createTextNodeProps:(props:unknown)=>props,
-      createTexture:()=>{
-        const listeners=new Set<()=>void>();
-        const texture={state:"freed",on:(_name:string,fn:()=>void)=>listeners.add(fn),off:(_name:string,fn:()=>void)=>listeners.delete(fn),load:()=>{},finish:()=>{texture.state="loaded";listeners.forEach(fn=>fn());}};
-        graphics.textures.push(texture);return texture;
+      // The renderer lays SDF text out; the block width is all these tests need.
+      measureText: (props: { text?: string; lineHeight?: number }) =>
+        props.text
+          ? { w: String(props.text).length * 4, h: props.lineHeight ?? 32 }
+          : { w: 0, h: props.lineHeight ?? 32 },
+      createTexture: () => {
+        const listeners = new Set<() => void>();
+        const texture = {
+          state: "freed",
+          on: (_name: string, fn: () => void) => listeners.add(fn),
+          off: (_name: string, fn: () => void) => listeners.delete(fn),
+          finish: () => { texture.state = "loaded"; listeners.forEach(fn => fn()); },
+        };
+        graphics.textures.push(texture);
+        return texture;
       },
     }),
   };
@@ -47,7 +53,7 @@ vi.mock("@solidtv/solid", async () => {
 import { TvView, TvText } from "../../src/tv-solid/runtime";
 
 const disposals: (() => void)[] = [];
-afterEach(() => { disposals.splice(0).forEach(dispose => dispose()); graphics.nodes.length = 0; });
+afterEach(() => { disposals.splice(0).forEach(dispose => dispose()); graphics.nodes.length = 0; graphics.textures.length = 0; });
 
 describe("SolidTV deferred screen rendering", () => {
   it("does no child work before first visibility and retains the mounted subtree on return", () => {
@@ -95,26 +101,32 @@ describe("SolidTV deferred screen rendering", () => {
   });
 });
 
-
-describe("SolidTV atomic glyph updates",()=>{
-  it("keeps the visible texture while a changed clock loads and tints focus without rerasterizing",()=>{
-    graphics.textures.length=0;graphics.raster.mockClear();
-    const [content,setContent]=createSignal("1:00"),[color,setColor]=createSignal("#ffffff");
-    const [projection,setProjection]=createSignal({});
-    let node!:Node;
-    createRoot(dispose=>{disposals.push(dispose);node=TvText({get content(){projection();return content();},get color(){return color();}}) as unknown as Node;});
-    graphics.textures[0].finish();const first=node.props.texture;
-    expect(node.props.alpha).toBe(1);
-    setProjection({});expect(graphics.textures).toHaveLength(1);
+describe("SolidTV SDF text updates", () => {
+  it("updates the text node in place when content or colour changes", () => {
+    const [content, setContent] = createSignal("1:00"), [color, setColor] = createSignal("#ffffff");
+    const [projection, setProjection] = createSignal({});
+    let node!: Node;
+    createRoot(dispose => {
+      disposals.push(dispose);
+      node = TvText({
+        get content() { projection(); return content(); },
+        get color() { return color(); },
+      }) as unknown as Node;
+    });
+    expect(node.kind).toBe("text");
+    expect(node.props.text).toBe("1:00");
+    expect(node.props.fontFamily).toBe("Onest");
+    expect(node.props.fontSize).toBe(32);
+    const nodeCount = graphics.nodes.length;
+    setProjection({});
+    expect(graphics.nodes).toHaveLength(nodeCount);
     setContent("1:01");
-    expect(node.props.texture).toBe(first);expect(node.props.alpha).toBe(1);
-    const nodeCount=graphics.nodes.length, rasterCount=graphics.raster.mock.calls.length;
+    expect(node.props.text).toBe("1:01");
+    expect(graphics.nodes).toHaveLength(nodeCount);
     setColor("#111113");
-    expect(graphics.nodes).toHaveLength(nodeCount);expect(graphics.raster).toHaveBeenCalledTimes(rasterCount);
     expect(node.props.color).toBe(0x111113ff);
-    setContent("1:02");graphics.textures[1].finish();
-    expect(node.props.texture).toBe(first);
-    graphics.textures[2].finish();expect(node.props.texture).toBe(graphics.textures[2]);expect(node.props.alpha).toBe(1);
-    setContent("");expect(node.props.alpha).toBe(0);
+    expect(node.props.text).toBe("1:01");
+    setContent("");
+    expect(node.props.alpha).toBe(0);
   });
 });

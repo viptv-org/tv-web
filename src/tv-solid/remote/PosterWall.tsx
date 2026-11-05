@@ -1,37 +1,34 @@
 /** @jsxImportSource @solidtv/solid */
 import { createSignal, onCleanup, onMount } from "solid-js";
 import { getRenderer } from "@solidtv/solid";
-import type { ImageTexture, Stage } from "@solidtv/renderer";
-import type { WebGlShaderNode } from "@solidtv/renderer/webgl";
+import type { ImageTexture, RendererMain, ShaderNode } from "@solidtv/renderer";
 import { TvView } from "../runtime";
+import { registerTvShader } from "../shaders";
+import { rendererStart } from "../renderer-clock";
 import { entryArt } from "./entry-art";
 import { welcomeShader } from "./welcome-shader";
-const registered = new WeakSet<Stage>();
+const registered = new WeakSet<RendererMain>();
 
 /** One bounded wall texture keeps forty tile transforms off each frame.
  * Reference artwork is painted once at its native 236×354 display size.
  */
 export function PosterWall() {
-  const renderer = getRenderer(),
+  const renderer = getRenderer() as RendererMain,
     [wall, setWall] = createSignal<ImageTexture>();
-  const stage = renderer.stage as Stage;
   const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
   const name = reduced ? "tvWelcomeStatic" : "tvWelcomeMotion";
-  if (!registered.has(stage)) {
-    stage.shManager.registerShaderType("tvWelcomeStatic", welcomeShader);
-    stage.shManager.registerShaderType("tvWelcomeMotion", {
+  if (!registered.has(renderer)) {
+    registerTvShader(renderer, "tvWelcomeStatic", welcomeShader);
+    registerTvShader(renderer, "tvWelcomeMotion", {
       ...welcomeShader,
       time: true,
     });
-    registered.add(stage);
+    registered.add(renderer);
   }
-  const shader = renderer.createShader(name, {}) as WebGlShaderNode;
-  // Static uniforms are installed once. A continuously changing shader prop
-  // would retain a value-cache entry for every animation frame in renderer 1.9.4.
-  shader.uniform1f(
-    "u_startedAt",
-    reduced ? 0 : performance.now() - stage.startTime,
-  );
+  // u_time is the renderer's elapsed time in 2.0; the drift starts at 0.
+  const shader = renderer.createShader(name, {
+    startedAt: reduced ? 0 : performance.now() - rendererStart(renderer),
+  }) as ShaderNode;
   let active = true;
   // The wall drifts on a time-uniform, which never creates a scene update, so
   // the renderer's idle pass would freeze it after the texture settles. While
@@ -41,7 +38,7 @@ export function PosterWall() {
     let frame = 0;
     const drive = () => {
       if (!active) return;
-      stage.requestRender();
+      renderer.requestRender();
       frame = requestAnimationFrame(drive);
     };
     frame = requestAnimationFrame(drive);

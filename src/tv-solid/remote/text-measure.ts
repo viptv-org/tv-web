@@ -16,9 +16,8 @@
  * caller may not hold `font`/`letterSpacing` across an await or a yield; the
  * layout code here measures inside a single synchronous memo pass.
  *
- * The renderer's text raster path (`src/tv-solid/text-raster.ts`) keeps its own
- * canvas: it resizes to the label and reads pixels back, which resets the state
- * this context depends on.
+ * The renderer lays SDF text out itself; this context is only for the layout
+ * code that still measures DOM faces (navigation widths, guide columns).
  */
 export type TextMeasureContext = CanvasRenderingContext2D & {
   letterSpacing: string;

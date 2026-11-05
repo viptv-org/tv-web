@@ -7,10 +7,11 @@ import {
   Show,
 } from "solid-js";
 import { TvView } from "../runtime";
-import { canvasFont } from "../fonts";
+import { sdfFontFamily, sdfLineHeight } from "../fonts";
+import { getRenderer } from "@solidtv/solid";
+import type { RendererMain } from "@solidtv/renderer";
 import { PosterWall } from "./PosterWall";
 import { Label, palette } from "./visuals";
-import { letterSpacingSupported, textMetrics } from "./text-measure";
 import { easeProgress } from "./motion";
 
 let shadow: ImageData | undefined;
@@ -41,12 +42,18 @@ function Brand(props: { splash: boolean }) {
     mark = () => (props.splash ? 88 : 80),
     gap = () => (props.splash ? 22 : 20);
   const width = createMemo(() => {
-    const context = textMetrics(
-      `${size()}px ${canvasFont("Bricolage800", size())}`,
-      -0.04 * size(),
+    // The logo is SDF text now: measure the layout the renderer will draw,
+    // with the same family, size and letter spacing the label passes.
+    const family = sdfFontFamily("Bricolage800", size());
+    return (
+      (getRenderer() as RendererMain).measureText({
+        text: "VIPTV",
+        fontFamily: family,
+        fontSize: size(),
+        lineHeight: sdfLineHeight(family, size()),
+        letterSpacing: -0.04 * size(),
+      })?.w ?? 0
     );
-    if (letterSpacingSupported()) return context.measureText("VIPTV").width;
-    return context.measureText("VIPTV").width - 0.04 * size() * 4;
   });
   return (
     <TvView

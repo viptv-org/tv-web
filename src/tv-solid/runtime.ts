@@ -13,10 +13,8 @@ import {
   type Component,
   type JSX,
 } from "solid-js";
-import type { ImageTexture } from "@solidtv/renderer";
-import { CanvasTextRenderer } from "@solidtv/renderer/canvas";
-import { canvasFont, canvasFontMetrics } from "./fonts";
-import { nativeSpacedLine } from "./text-raster";
+import type { ImageTexture, RendererMain } from "@solidtv/renderer";
+import { sdfFontFamily, sdfLineHeight } from "./fonts";
 import {
   Config,
   activeElement,
@@ -309,8 +307,9 @@ function imageTexture(image: ImageData) {
 
 function visualNode(
   props: Record<string, any>,
+  kind: "node" | "text" = "node",
 ): JSX.Element {
-  const node = createElement("node") as ElementNode;
+  const node = createElement(kind) as ElementNode;
   const mapped: Record<string, any> = { color: 0x00000000, width: 0, height: 0 };
   for (const key of Object.keys(props)) {
     if (
@@ -341,7 +340,7 @@ function visualNode(
         name.startsWith("color")
           ? tvColor(props[key])
           : name === "fontFamily"
-            ? canvasFont(props[key], props.size ?? 32)
+            ? sdfFontFamily(props[key], props.size ?? 32)
           : name === "text"
             ? String(props[key] ?? "")
             : props[key],
@@ -381,62 +380,131 @@ export const TvView = (props: Record<string, any>) => visualNode(props);
 /** Keep one visible node. Upload a replacement before swapping; color is a
  * quad tint, so focus changes never evict glyphs or rasterize the same label. */
 export function TvText(props: Record<string, any>): JSX.Element {
-  const [frame, setFrame] = createSignal<{texture: ImageTexture; width: number; height: number; layoutWidth: number; lineHeight: number; baselineAdjustment: number}>();
-  const scaledSize = () => (props.size ?? 32) * textScale();
-  const cssLineHeight = () => {
-    const size = scaledSize();
-    if (props.lineheight !== undefined) return size * props.lineheight;
-    const metrics = canvasFontMetrics(props.font ?? "Onest");
-    return Math.round(metrics.ascender * size / metrics.unitsPerEm) + Math.round(-metrics.descender * size / metrics.unitsPerEm);
-  };
-  const layoutProps = createMemo(() => ({
-    text: String(props.content ?? ""), fontFamily: canvasFont(props.font ?? "Onest", scaledSize()),
-    fontSize: scaledSize(), color: 0xffffffff,
-    maxWidth: props.maxwidth ?? props.w ?? 0, maxHeight: props.maxheight ?? 0,
-    maxLines: props.maxlines ?? 0, textAlign: props.align ?? "left",
-    // The renderer's multiplier is relative to font bounds, whereas CSS
-    // multipliers are relative to font size. Supply CSS pixels explicitly.
-    lineHeight: cssLineHeight(), letterSpacing: props.letterspacing ?? 0,
-    overflowSuffix: "…", wordBreak: props.maxlines === 1 ? "break-all" as const : "break-word" as const,
-  }), undefined, {equals:(a,b)=>a.text===b.text&&a.fontFamily===b.fontFamily&&a.fontSize===b.fontSize
-    &&a.maxWidth===b.maxWidth&&a.maxHeight===b.maxHeight&&a.maxLines===b.maxLines
-    &&a.textAlign===b.textAlign&&a.lineHeight===b.lineHeight&&a.letterSpacing===b.letterSpacing&&a.wordBreak===b.wordBreak});
-  createRenderEffect(() => {
-    const renderer = getRenderer();
-    if (!("createTextNodeProps" in renderer)) throw new Error("SolidTV text requires its canvas renderer");
-    const native = nativeSpacedLine(layoutProps(), props.lineheight === undefined);
-    const layout = native ?? CanvasTextRenderer.renderText(renderer.createTextNodeProps(layoutProps()));
-    if (!layout.imageData || !layout.width || !layout.height) { setFrame(undefined); return; }
-    const pixels = layout.imageData;
-    const metrics = canvasFontMetrics(layoutProps().fontFamily);
-    const scale = layoutProps().fontSize / metrics.unitsPerEm;
-    const baseline = (layoutProps().lineHeight - (metrics.ascender - metrics.descender + metrics.lineGap) * scale) / 2 + metrics.ascender * scale;
-    const ascent = Math.round(metrics.ascender * scale), descent = Math.round(-metrics.descender * scale);
-    const cssBaseline = (layoutProps().lineHeight - ascent - descent) / 2 + ascent;
-    const texture = renderer.createTexture("ImageTexture", {src:pixels, premultiplyAlpha:true});
-    let cancelled = false;
-    // The canvas rasterizer rounds its backing pixels up. Drawing them at the
-    // fractional layout size resamples every glyph, softening otherwise crisp text.
-    const ready = () => { if (!cancelled) setFrame({texture, width:pixels.width, height:pixels.height, layoutWidth:layout.width, lineHeight:layout.height, baselineAdjustment:native ? 0 : cssBaseline-Math.ceil(baseline)}); };
-    texture.on("loaded", ready);
-    texture.load();
-    if (texture.state === "loaded") ready();
-    onCleanup(() => { cancelled=true; texture.off("loaded",ready); });
-  });
   let debugNode: ElementNode | undefined;
-  if(new URLSearchParams(location.search).get("focusdebug")==="1") onMount(()=>{
-    if(debugNode?.lng)Object.defineProperty(debugNode.lng,"viptvText",{get:()=>String(props.content??"")});
+  const scaledSize = () => (props.size ?? 32) * textScale();
+  const family = () => sdfFontFamily(props.font ?? "Onest", scaledSize());
+  const lineHeight = () =>
+    props.lineheight !== undefined
+      ? scaledSize() * props.lineheight
+      : sdfLineHeight(family(), scaledSize());
+  const textProps = createMemo(
+    () => ({
+      text: String(props.content ?? ""),
+      fontFamily: family(),
+      fontSize: scaledSize(),
+      maxWidth: props.maxwidth ?? props.w ?? 0,
+      maxHeight: props.maxheight ?? 0,
+      maxLines: props.maxlines ?? 0,
+      lineHeight: lineHeight(),
+      letterSpacing: props.letterspacing ?? 0,
+      overflowSuffix: "…",
+      wordBreak: (props.maxlines === 1 ? "break-all" : "break-word") as
+        | "break-all"
+        | "break-word",
+    }),
+    undefined,
+    {
+      equals: (a, b) =>
+        a.text === b.text &&
+        a.fontFamily === b.fontFamily &&
+        a.fontSize === b.fontSize &&
+        a.maxWidth === b.maxWidth &&
+        a.maxHeight === b.maxHeight &&
+        a.maxLines === b.maxLines &&
+        a.lineHeight === b.lineHeight &&
+        a.letterSpacing === b.letterSpacing &&
+        a.wordBreak === b.wordBreak,
+    },
+  );
+  // The renderer lays the text out from its SDF atlas; measuring it gives the
+  // same block size the rasterized label used to report, so every caller's
+  // geometry (alignment shift, flex width) is unchanged. Alignment is applied
+  // to the block here: the design aligns only single-line labels, so a text
+  // node's own line alignment is not needed (and `contain` would feed the
+  // measured width back into maxWidth).
+  const size = createMemo(() => {
+    const value = textProps();
+    return (getRenderer() as RendererMain).measureText(value) ?? { w: value.maxWidth, h: value.lineHeight };
   });
-  return TvView({
-    get x() { const width=props.maxwidth ?? props.w ?? 0; return (props.x??0)+(width>0?Math.max(0,width-(frame()?.layoutWidth??0))*(props.align==="right"?1:props.align==="center"?.5:0):0); },
-    get y() { return (props.centerY !== undefined ? props.centerY-(frame()?.lineHeight??0)/2 : props.y??0)+(frame()?.baselineAdjustment??0); },
-    get w() { return frame()?.width??0; }, get h() { return frame()?.height??0; },
-    get texture() { return frame()?.texture??null; },
-    get color() { return props.color??"#ffffff"; },
-    get alpha() { return frame() ? props.alpha??1 : 0; },
-    get show() { return props.show??true; },
-    nodeRef: (node: ElementNode) => { debugNode=node;props.nodeRef?.(node); },
-  });
+  if (new URLSearchParams(location.search).get("focusdebug") === "1")
+    onMount(() => {
+      if (debugNode?.lng)
+        Object.defineProperty(debugNode.lng, "viptvText", {
+          get: () => String(props.content ?? ""),
+        });
+    });
+  return visualNode(
+    {
+      get x() {
+        const width = props.maxwidth ?? props.w ?? 0;
+        return (
+          (props.x ?? 0) +
+          (width > 0
+            ? Math.max(0, width - (size().w ?? 0)) *
+              (props.align === "right" ? 1 : props.align === "center" ? 0.5 : 0)
+            : 0)
+        );
+      },
+      get y() {
+        return props.centerY !== undefined
+          ? props.centerY - (size().h ?? 0) / 2
+          : (props.y ?? 0);
+      },
+      get w() {
+        // A boxed label (w/maxwidth) reports the box, not the measured glyph
+        // run: the renderer derives a text node's maxWidth from its width when
+        // it has none, so a measured width would wrap the text at its own edge.
+        return props.maxwidth ?? props.w ?? size().w ?? 0;
+      },
+      get h() {
+        return size().h ?? 0;
+      },
+      get text() {
+        return textProps().text;
+      },
+      get fontFamily() {
+        return textProps().fontFamily;
+      },
+      get fontSize() {
+        return textProps().fontSize;
+      },
+      get lineHeight() {
+        return textProps().lineHeight;
+      },
+      get letterSpacing() {
+        return textProps().letterSpacing;
+      },
+      get maxWidth() {
+        return textProps().maxWidth;
+      },
+      get maxHeight() {
+        return textProps().maxHeight;
+      },
+      get maxLines() {
+        return textProps().maxLines;
+      },
+      get overflowSuffix() {
+        return textProps().overflowSuffix;
+      },
+      get wordBreak() {
+        return textProps().wordBreak;
+      },
+      get color() {
+        return props.color ?? "#ffffff";
+      },
+      get alpha() {
+        return String(props.content ?? "").length === 0 ? 0 : (props.alpha ?? 1);
+      },
+      get show() {
+        return props.show ?? true;
+      },
+      nodeRef: (node: ElementNode) => {
+        debugNode = node;
+        props.nodeRef?.(node);
+      },
+    },
+    "text",
+  );
 }
 
 /** Keep controller/focus lifetimes stable when a view model is reprojected. */

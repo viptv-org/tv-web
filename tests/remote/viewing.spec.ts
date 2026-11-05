@@ -536,6 +536,9 @@ test("source focus survives incremental reranking and user input cancels automat
     .toBe(true);
   await page.keyboard.press("ArrowDown");
   fixture.addBestSource();
+  // The renderer now runs a 60 fps loop; give the frozen clock one frame so
+  // the discovery update is painted and focus can follow the new best source.
+  await page.clock.runFor(32);
   await expect(screen(page)).toHaveAttribute("data-tv-focus", /:2$/);
   fixture.completeDiscovery();
   await expect(screen(page)).not.toHaveAttribute(
@@ -569,6 +572,7 @@ test("a server-side profile change is adopted before the next viewing intent", a
     )
     .toBeGreaterThanOrEqual(2);
   await page.keyboard.press("Enter");
+  await page.clock.runFor(32);
   await expect
     .poll(() =>
       fixture.requests.some((r) => r.path === "/api/profiles/2/viewing-action"),

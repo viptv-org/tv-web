@@ -28,6 +28,89 @@ not full-screen visual parity. Media evidence uses the existing decoded HLS
 fixture and server API boundary. Physical Tizen, Vizio and webOS qualification,
 production provider playback and deployment remain unverified.
 
+# SolidTV renderer 2.0 migration — 2026-11-05
+
+The TV entry runs `@solidtv/renderer` 2.0.7 and `@solidtv/solid` 1.7.1 (issue
+#98). The app-facing changes the browser suite sees:
+
+- **SDF text.** Renderer 2.0 draws SDF text only, so `src/tv-solid/sdf/` ships
+  ten `ssdf` atlases (image + BMFont JSON) for the faces the entry names:
+  Onest 400/500/600/700 and Onest700Tabular, Bricolage 700/800, and three
+  Bricolage 800 optical instances (28/56/90) that the size bands in
+  `src/tv-solid/fonts.ts` alias. `main.ts` loads them with `loadFonts`; the
+  canvas text rasterizer (`@solidtv/renderer/canvas`) and `text-raster.ts` are
+  gone. `TvText` measures with `renderer.measureText` and renders one `text`
+  node.
+- **Built-in shaders.** `@solidtv/solid` 1.7 ships `registerDefaultShaders()`
+  but does not call it for renderer 2.0, so `main.ts` calls it once. Without it
+  every `color`/`rounded` node draws as an unrounded quad; the entry pixel test
+  for a half-alpha accent node and the rounded Play button/avatar ring depend on
+  it.
+- **App shaders** register with `renderer.registerShaderType` and pass their
+  uniforms as shader props, written by a 1.10-style `update()`; the 1.9.4
+  `rounded` opacity override is deleted because 2.0 applies node alpha once.
+- **Scene inspection for specs.** The remote specs read
+  `window.__viptvRenderer.stage.root` with 1.x node fields (`isRenderable`,
+  `props`, `shaderKey`, `shader.uniforms`, `texture.state`, `parent`,
+  `worldAlpha`). `installRemoteBackend` now installs a test-only adapter over
+  the 2.0 scene, and the app records shader names at registration so the
+  adapter can report them. The adapter is not in the app bundle.
+- **Defaults.** 2.0's changed defaults (`targetFPS` uncapped, `boundsMargin`,
+  `imageDecodeConcurrency`, `textureProcessingTimeLimit`) are pinned to 1.10's
+  values in `main.ts`; with the frozen browser clock some specs also need one
+  explicit frame (`clock.runFor(32)`) before paint-driven focus is observed.
+- **Startup resource cases** delay or fail `**/*.ssdf*.json` instead of
+  `**/*.woff2`: the TV entry no longer fetches WOFF2 (the DOM still does, from
+  `theme/fonts.css`).
+
+## Regenerating the SDF atlases
+
+Sources are the WOFF2 faces the entry already shipped
+(`@fontsource/onest/files/onest-latin-*-normal.woff2`,
+`@fontsource/bricolage-grotesque/files/bricolage-grotesque-latin-{700,800}-normal.woff2`
+and `@fontsource-variable/bricolage-grotesque/files/bricolage-grotesque-latin-opsz-normal.woff2`).
+
+1. Convert each WOFF2 to TTF and instance the variable display face with
+   fontTools (`instantiateVariableFont`, `wght=800`, `opsz` in {28, 56, 90}).
+   Onest700Tabular is Onest700 with the `tnum` glyphs written into the cmap:
+   SDF atlases carry glyphs, not OpenType feature shaping.
+2. Run `solid-tv/msdf-generator` 1.4.0 (`msdf-bmfont-xml` 2.8.0) with a charset
+   string of printable ASCII, Latin-1, the Latin-extended characters the fonts
+   ship and the punctuation the UI uses (`…`, `·`, `→`, `⌫`, `✓`), `ssdf`,
+   `textureSize` 1024 and `fontSize` 42 (Onest) / 48 (Bricolage). The charset is
+   passed as `{"charset": "…", "presets": []}` in `font-src/charset.config.json`;
+   overrides go in `font-src/overrides.json`. Keep every face on one page:
+   renderer 2.0 loads one atlas image per face. On this host the generator's
+   bundled `msdfgen.linux` needed GLIBC 2.38 and the host has 2.36, so the
+   binary from `msdf-bmfont-xml` 2.7.0 was used; the JSON/PNG output is the
+   same format.
+3. Copy the `.ssdf.json` and `.ssdf.png` pairs into `src/tv-solid/sdf/` and
+   update the imports in `src/tv-solid/fonts.ts`.
+
+`TvText` measures the label with `renderer.measureText` and reports the layout
+box (`w`/`maxwidth`) as the node width: the renderer derives a text node's
+`maxWidth` from its width when none is set, so a measured glyph run would wrap
+the text at its own edge. Alignment is applied to the block by the adapter; the
+design only aligns single-line labels, so line-level `textAlign` is not set
+(setting it without `contain` logs a warning per node).
+
+Two entry assertions changed with the renderer: the countdown label's hardcoded
+175×48 box became the height plus its colour (the SDF text width differs), and
+the 1.x `shaderManager.valuesCache` counter became a live shader count (2.0 has
+no per-frame prop cache).
+
+Verification on this branch: `npm run build` and 431 unit/integration tests in
+68 files passed twice before the last text-box fix; after it the React guide
+suite flakes exactly as it does on unmodified `main` under the same load (5 of
+19 there). The remote browser suite (19 specs, 139 tests) ran on an idle host
+against a fixture-built `dist`: **138 passed, one startup case timed out** at
+its 5-second readiness threshold (all startup specs had passed in the same run
+batch earlier); every spec has passed on this build across the runs. On a
+busy host the 5-second startup cases time out, the same contention pattern the
+suite already records. Six matched Home/focus states differ from the 1.9.4
+build only in glyph rasterization, and the pairing screen capture matches the
+1.9.4 render (PERFORMANCE.md). Physical TV qualification remains #2/#4.
+
 # Home featured-pass acceptance
 
 `tests/remote/billboard.spec.ts` verifies an uninterrupted featured pass parks,

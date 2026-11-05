@@ -10,9 +10,10 @@ import {
   type Accessor,
 } from "solid-js";
 import { getRenderer } from "@solidtv/solid";
-import type { Stage } from "@solidtv/renderer";
-import type { WebGlShaderNode } from "@solidtv/renderer/webgl";
+import type { RendererMain, ShaderNode } from "@solidtv/renderer";
 import { KeyedFor, TvView } from "../runtime";
+import { registerTvShader } from "../shaders";
+import { rendererStart } from "../renderer-clock";
 import { icon, palette } from "./visuals";
 import {
   billboardShader,
@@ -22,26 +23,25 @@ import {
 } from "./billboard-shaders";
 import { billboardBlur } from "./billboard-blur";
 import { buttonShadow } from "./button-shadow";
-const registered = new WeakSet<Stage>();
+const registered = new WeakSet<RendererMain>();
 function setup() {
-  const renderer = getRenderer(),
-    stage = renderer.stage as Stage;
-  if (!registered.has(stage)) {
+  const renderer = getRenderer() as RendererMain;
+  if (!registered.has(renderer)) {
     for (const [name, shader] of [
       ["tvBillboard", billboardShader],
       ["tvBillboardGlass", billboardGlassShader],
       ["tvBillboardGlassAtlas", billboardGlassAtlasShader],
     ] as const) {
-      stage.shManager.registerShaderType(name, shader);
-      stage.shManager.registerShaderType(name + "Motion", {
+      registerTvShader(renderer, name, shader);
+      registerTvShader(renderer, name + "Motion", {
         ...shader,
         time: true,
       });
     }
-    stage.shManager.registerShaderType("tvHeroProgress", heroProgressShader);
-    registered.add(stage);
+    registerTvShader(renderer, "tvHeroProgress", heroProgressShader);
+    registered.add(renderer);
   }
-  return { renderer, stage };
+  return { renderer };
 }
 type Frame = {
   id: number;
@@ -120,7 +120,7 @@ function Photo(props: {
   pageX?: number;
   pageY?: number;
 }) {
-  const { renderer, stage } = setup(),
+  const { renderer } = setup(),
     reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
   const [ended, setEnded] = createSignal(
     reduced || performance.now() - props.frame.started >= 14000,
@@ -141,30 +141,26 @@ function Photo(props: {
     1080 / (props.frame.height * scale),
   ];
   const make = (motion: boolean) => {
-    const shader = renderer.createShader(
+    // u_time is the renderer's elapsed time in 2.0; the prop is the frame's
+    // start on the same clock.
+    const startedAt = props.frame.started - rendererStart(renderer);
+    const common = { startedAt, animate: motion ? 1 : 0, zoom: reduced ? 1 : 1.06 };
+    return renderer.createShader(
       (props.glass
         ? props.frame.glass
           ? "tvBillboardGlassAtlas"
           : "tvBillboardGlass"
         : "tvBillboard") + (motion ? "Motion" : ""),
-      {},
-    ) as WebGlShaderNode;
-    shader.uniform1f("u_startedAt", props.frame.started - stage.startTime);
-    shader.uniform1f("u_animate", motion ? 1 : 0);
-    shader.uniform1f("u_zoom", reduced ? 1 : 1.06);
-    if (props.glass && props.frame.glass)
-      shader.uniform1f("u_row", props.pageX === 336 ? 0 : 1);
-    else {
-      shader.uniform2f("u_origin", props.pageX ?? 0, props.pageY ?? 0);
-      shader.uniform2f("u_size", width, height);
-      shader.uniform2f("u_uvSize", uvSize[0], uvSize[1]);
-      shader.uniform2f(
-        "u_uvOrigin",
-        (1 - uvSize[0]) * 0.5,
-        (1 - uvSize[1]) * 0.3,
-      );
-    }
-    return shader;
+      props.glass && props.frame.glass
+        ? { ...common, row: props.pageX === 336 ? 0 : 1 }
+        : {
+            ...common,
+            origin: [props.pageX ?? 0, props.pageY ?? 0],
+            size: [width, height],
+            uvSize: [uvSize[0], uvSize[1]],
+            uvOrigin: [(1 - uvSize[0]) * 0.5, (1 - uvSize[1]) * 0.3],
+          },
+    ) as ShaderNode;
   };
   const moving = reduced ? undefined : make(true),
     still = make(false);
@@ -281,15 +277,12 @@ export function BillboardButton(props: {
   );
 }
 export function HeroProgress(props: { started: number; running: boolean }) {
-  const { renderer, stage } = setup();
+  const { renderer } = setup();
   const shader = createMemo(() => {
     if (!props.running) return undefined;
-    const value = renderer.createShader(
-      "tvHeroProgress",
-      {},
-    ) as WebGlShaderNode;
-    value.uniform1f("u_startedAt", props.started - stage.startTime);
-    return value;
+    return renderer.createShader("tvHeroProgress", {
+      startedAt: props.started - rendererStart(renderer),
+    }) as ShaderNode;
   });
   return (
     <Show

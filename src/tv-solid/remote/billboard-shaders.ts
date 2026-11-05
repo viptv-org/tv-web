@@ -1,4 +1,47 @@
-import type { WebGlShaderType } from "@solidtv/renderer/webgl";
+import type { WebGlShaderType } from "@solidtv/renderer";
+import { sameShader } from "../shaders";
+
+/** Props the billboard programs read. 2.0 writes uniforms from props in a
+ * 1.10-style update(), so a shader is fully described when it is created. */
+type BillboardProps = {
+  startedAt: number;
+  animate: number;
+  zoom: number;
+  origin: number[];
+  size: number[];
+  uvOrigin: number[];
+  uvSize: number[];
+  row: number;
+};
+const billboardProps: BillboardProps = {
+  startedAt: 0,
+  animate: 0,
+  zoom: 1,
+  origin: [0, 0],
+  size: [0, 0],
+  uvOrigin: [0, 0],
+  uvSize: [1, 1],
+  row: 0,
+};
+function billboardUpdate(this: any) {
+  const p = this.props as BillboardProps;
+  this.uniform1f("u_startedAt", p.startedAt);
+  this.uniform1f("u_animate", p.animate);
+  this.uniform1f("u_zoom", p.zoom);
+  this.uniform2fa("u_origin", p.origin);
+  this.uniform2fa("u_size", p.size);
+  this.uniform2fa("u_uvOrigin", p.uvOrigin);
+  this.uniform2fa("u_uvSize", p.uvSize);
+}
+function billboardAtlasUpdate(this: any) {
+  billboardUpdate.call(this);
+  this.uniform1f("u_row", (this.props as BillboardProps).row);
+}
+const canBatch = sameShader;
+
+function heroPropsUpdate(this: any) {
+  this.uniform1f("u_startedAt", (this.props as { startedAt: number }).startedAt);
+}
 const vertex = `
 #ifdef GL_FRAGMENT_PRECISION_HIGH
 precision highp float;
@@ -58,9 +101,10 @@ vec3 shade(vec2 pixel,vec4 sampleColor){
  return mix(vec3(11.0,11.0,12.0)/255.0,art,visible);
 }
 vec3 paint(vec2 pixel){return shade(pixel,texture2D(u_texture,v_uv+(pixel-v_pixel)/vec2(1920.0,1080.0)/v_zoom*u_uvSize));}`;
-export const billboardShader: WebGlShaderType = {
-  props: {},
-  canBatch: (node, op) => node.props.shader === op.shader,
+export const billboardShader: WebGlShaderType<BillboardProps> = {
+  props: billboardProps,
+  update: billboardUpdate,
+  canBatch,
   vertex,
   fragment:
     paint +
@@ -69,9 +113,10 @@ void main(){gl_FragColor=vec4(shade(v_pixel,texture2D(u_texture,v_uv)),1.0)*v_co
 };
 // The 7×7 Gaussian samples cover three standard deviations of the reference
 // 24px backdrop blur. Only the two 72px controls use this fragment program.
-export const billboardGlassShader: WebGlShaderType = {
-  props: {},
-  canBatch: (node, op) => node.props.shader === op.shader,
+export const billboardGlassShader: WebGlShaderType<BillboardProps> = {
+  props: billboardProps,
+  update: billboardUpdate,
+  canBatch,
   vertex,
   fragment:
     paint +
@@ -87,9 +132,10 @@ void main(){
  gl_FragColor=vec4(color*edge,edge)*v_color;
 }`,
 };
-export const billboardGlassAtlasShader: WebGlShaderType = {
-  props: {},
-  canBatch: (node, op) => node.props.shader === op.shader,
+export const billboardGlassAtlasShader: WebGlShaderType<BillboardProps> = {
+  props: billboardProps,
+  update: billboardAtlasUpdate,
+  canBatch,
   vertex,
   fragment: `
 precision highp float;
@@ -105,10 +151,11 @@ void main(){
  gl_FragColor=vec4(color*edge,edge)*v_color;
 }`,
 };
-export const heroProgressShader: WebGlShaderType = {
-  props: {},
+export const heroProgressShader: WebGlShaderType<{ startedAt: number }> = {
+  props: { startedAt: 0 },
+  update: heroPropsUpdate,
   time: true,
-  canBatch: (node, op) => node.props.shader === op.shader,
+  canBatch,
   vertex: `
 precision highp float;
 attribute vec2 a_position;attribute vec2 a_nodeCoords;attribute vec4 a_color;

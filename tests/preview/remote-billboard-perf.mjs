@@ -13,11 +13,13 @@ try{for(let run=0;run<runs;run++){
  const response=await page.goto(origin+'/tv/?platform=vizio&perfdebug=1&focusdebug=1');if(await response.text()!==readFileSync(dist+'/index.html','utf8'))throw new Error('Wrong bundle');
  await page.waitForFunction(()=>document.documentElement.dataset.tvScreen==='home'&&document.documentElement.dataset.tvReady==='true');const readyMs=await page.evaluate(()=>performance.now());
  await page.waitForFunction(()=>{let ready=false;function visit(n){if(n.isRenderable&&n.props.w===1920&&n.props.h===1080&&n.texture?.state==='loaded'&&typeof n.texture.props.src==='string'&&n.worldAlpha>=.999)ready=true;n.children?.forEach(visit);}visit(window.__viptvRenderer.stage.root);return ready;});const artworkReadyMs=await page.evaluate(()=>performance.now());await page.waitForTimeout(1500);
- const cacheBefore=await page.evaluate(()=>window.__viptvRenderer.stage.shManager.valuesCache.size);
+ const shaderCount=()=>page.evaluate(()=>{let count=0;function visit(n){if(n.shader)count++;n.children?.forEach(visit);}visit(window.__viptvRenderer.stage.root);return count;});
+ const shaderCountBefore=await shaderCount();
  await page.evaluate(()=>{window.__heroPerf.active=true;});await page.waitForTimeout(duration);
- const data=await page.evaluate(()=>{window.__heroPerf.active=false;return{...window.__heroPerf,textureBytes:window.__viptvRendererMetrics().textureBytes,shaderEntries:window.__viptvRenderer.stage.shManager.valuesCache.size};});
+ const data=await page.evaluate(()=>{window.__heroPerf.active=false;return{...window.__heroPerf,textureBytes:window.__viptvRendererMetrics().textureBytes};});
+ const shaderCountAfter=await shaderCount();
  await cdp.send('HeapProfiler.collectGarbage');const heap=await cdp.send('Runtime.getHeapUsage');
- const sorted=data.frames.slice().sort((a,b)=>a-b);samples.push({run,readyMs,artworkReadyMs,frameP95:sorted[Math.ceil(sorted.length*.95)-1],framesOver50:data.frames.filter(n=>n>50.1).length,longTasks:data.tasks.length,heapMiB:heap.usedSize/1048576,textureMiB:data.textureBytes/1048576,shaderCacheBefore:cacheBefore,shaderCacheAfter:data.shaderEntries,viewingRequests:fixture.requests.filter(r=>r.path.includes('/viewing-action')||r.path==='/api/streams'||r.path==='/api/playback').length});
+ const sorted=data.frames.slice().sort((a,b)=>a-b);samples.push({run,readyMs,artworkReadyMs,frameP95:sorted[Math.ceil(sorted.length*.95)-1],framesOver50:data.frames.filter(n=>n>50.1).length,longTasks:data.tasks.length,heapMiB:heap.usedSize/1048576,textureMiB:data.textureBytes/1048576,shaderCountBefore,shaderCountAfter,viewingRequests:fixture.requests.filter(r=>r.path.includes('/viewing-action')||r.path==='/api/streams'||r.path==='/api/playback').length});
  await context.close();
 }}finally{await browser.close();}
 const bundle=createHash('sha256');for(const f of ['index.html','solid.html',...readdirSync(dist+'/assets').filter(f=>f.endsWith('.js')).sort().map(f=>'assets/'+f)])bundle.update(f).update(readFileSync(dist+'/'+f));

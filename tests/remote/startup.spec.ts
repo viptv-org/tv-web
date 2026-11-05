@@ -38,7 +38,7 @@ for (const entry of ['/tv/?platform=vizio', '/tv/?platform=tizen', '/tv/?platfor
   });
 }
 
-for (const resource of ['**/assets/*.css', '**/*.woff2', '**/api/bootstrap']) {
+for (const resource of ['**/assets/*.css', '**/*.ssdf*.json', '**/api/bootstrap']) {
   test(`startup stays visible through delayed ${resource}`, async ({ page, baseURL }) => {
     await installRemoteBackend(page, baseURL!);
     let release!: () => void;
@@ -61,7 +61,7 @@ for (const resource of ['**/assets/*.css', '**/*.woff2', '**/api/bootstrap']) {
   });
 }
 
-for (const resource of ['**/assets/*.js', '**/assets/*.css', '**/*.woff2']) {
+for (const resource of ['**/assets/*.js', '**/assets/*.css', '**/*.ssdf*.json']) {
   test(`startup resource failure offers remote recovery: ${resource}`, async ({ page, baseURL }) => {
     await installRemoteBackend(page, baseURL!);
     let failing = true;
