@@ -16,6 +16,18 @@ export function registerTvShader(
   names.set(type as object, name);
 }
 
+/**
+ * The 1.x batch predicate: two ops batch when they share a shader instance.
+ * Renderer 2.0 types the arguments as plain objects, so read `props` through
+ * the shape every node handle has.
+ */
+export function sameShader(node: object, op: object): boolean {
+  return (
+    (node as { props: { shader: unknown } }).props.shader ===
+    (op as { props: { shader: unknown } }).props.shader
+  );
+}
+
 export function tvShaderName(
   shader: { shaderType?: object } | null | undefined,
 ): string | undefined {

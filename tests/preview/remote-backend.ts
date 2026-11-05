@@ -6,7 +6,7 @@ export const referenceRoot=resolve('../design/viptv-design-system/reference');
 function isSeriesRequest(path:string,url:URL){return path.includes('/series/')||url.searchParams.get('card')==='series';}
 /**
  * Renderer 1.x exposed the live scene to the browser specs (isRenderable,
- * props, shaderKey, shader.uniforms, valuesCache). 2.0 exposes different node
+ * props, shaderKey, shader.uniforms). 2.0 exposes different node
  * handles and keeps no shader name, so this init script presents the 1.x
  * read-only view over the 2.0 scene. Test-only: the app bundle is untouched,
  * and every value is read from the live scene when the spec asks for it.
@@ -57,7 +57,14 @@ async function installRendererCompat(page: Page): Promise<void> {
         y: node.y,
         color: node.color,
       };
-      if (node.text !== undefined) props.text = node.text;
+      if (node.text !== undefined) {
+        props.text = node.text;
+        props.fontSize = node.fontSize;
+        props.maxWidth = node.maxWidth;
+        props.maxLines = node.maxLines;
+        props.letterSpacing = node.letterSpacing;
+        props.lineHeight = node.lineHeight;
+      }
       const texture = node.texture
         ? { state: node.texture.state, props: node.texture.props }
         : srcTexture(node);
@@ -111,11 +118,6 @@ async function installRendererCompat(page: Page): Promise<void> {
       },
       get renderer() {
         return { getQuadCount: () => renderer.scene?.quads ?? 0 };
-      },
-      // 1.x's shader-props cache does not exist in 2.0: prop writes go to
-      // typed storage and nothing is retained per frame.
-      get shManager() {
-        return { valuesCache: { size: 0 } };
       },
       registerShaderType: (name: string, type: any) =>
         renderer.registerShaderType(name, type),

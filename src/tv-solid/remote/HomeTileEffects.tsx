@@ -8,6 +8,7 @@ import {
 } from "solid-js";
 import { getRenderer } from "@solidtv/solid";
 import type { RendererMain, ShaderNode, WebGlShaderType } from "@solidtv/renderer";
+import { sameShader } from "../shaders";
 import { TvView } from "../runtime";
 import { registerTvShader } from "../shaders";
 import { icon } from "./visuals";
@@ -21,9 +22,7 @@ const progressShader: WebGlShaderType<ProgressProps> = {
     this.uniform1f("u_radius", p.radius);
     this.uniform1f("u_progress", p.progress);
   },
-  canBatch: (node: object, op: object) =>
-    (node as { props: { shader: unknown } }).props.shader ===
-    (op as { props: { shader: unknown } }).props.shader,
+  canBatch: sameShader,
   vertex: `
 precision highp float;attribute vec2 a_position;attribute vec2 a_nodeCoords;attribute vec4 a_color;uniform vec2 u_resolution;uniform float u_pixelRatio;varying vec2 v_local;varying vec4 v_color;void main(){v_local=a_nodeCoords;v_color=a_color;gl_Position=vec4(a_position*u_pixelRatio*vec2(2.0/u_resolution.x,-2.0/u_resolution.y)+vec2(-1.0,1.0),0.0,1.0);}`,
   fragment: `

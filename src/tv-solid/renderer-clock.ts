@@ -12,5 +12,9 @@ export function setRendererStart(renderer: object, at: number): void {
 }
 
 export function rendererStart(renderer: object): number {
-  return starts.get(renderer) ?? 0;
+  const start = starts.get(renderer);
+  if (start === undefined) {
+    throw new Error("renderer start time was not recorded before it was read");
+  }
+  return start;
 }

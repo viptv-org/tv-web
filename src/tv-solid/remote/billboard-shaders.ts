@@ -1,4 +1,5 @@
 import type { WebGlShaderType } from "@solidtv/renderer";
+import { sameShader } from "../shaders";
 
 /** Props the billboard programs read. 2.0 writes uniforms from props in a
  * 1.10-style update(), so a shader is fully described when it is created. */
@@ -36,9 +37,7 @@ function billboardAtlasUpdate(this: any) {
   billboardUpdate.call(this);
   this.uniform1f("u_row", (this.props as BillboardProps).row);
 }
-const canBatch = (node: object, op: object) =>
-  (node as { props: { shader: unknown } }).props.shader ===
-  (op as { props: { shader: unknown } }).props.shader;
+const canBatch = sameShader;
 
 function heroPropsUpdate(this: any) {
   this.uniform1f("u_startedAt", (this.props as { startedAt: number }).startedAt);

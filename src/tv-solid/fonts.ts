@@ -74,6 +74,9 @@ export const sdfFonts: SdfFontFace[] = [
   },
 ];
 
+/** The optical sizes the entry has always named on the display face. */
+const Bricolage800OpticalSizes = new Set([17, 28, 32, 48, 50, 52, 55, 56, 80, 90, 92, 104]);
+
 const ONEST = { ascender: 970, descender: -305, unitsPerEm: 1000 };
 const BRICOLAGE = { ascender: 930, descender: -270, unitsPerEm: 1000 };
 
@@ -90,9 +93,12 @@ export function sdfFontMetrics(family: string) {
 export function sdfFontFamily(family: string, size: number): string {
   if (family === "Bricolage650") family = "Bricolage700";
   if (family !== "Bricolage800") return family;
-  if (size <= 40) return "Bricolage800Optical28";
-  if (size <= 64) return "Bricolage800Optical56";
-  return "Bricolage800Optical90";
+  // The entry registered these twelve optical sizes on 1.9.4; keep the same
+  // family names and map each to the nearest of the three atlas instances.
+  // Any other size uses the base face.
+  return Bricolage800OpticalSizes.has(size)
+    ? `Bricolage800Optical${size}`
+    : "Bricolage800";
 }
 
 /** The default line height the design uses: ascender + descender at `size`. */

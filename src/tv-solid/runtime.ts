@@ -418,7 +418,10 @@ export function TvText(props: Record<string, any>): JSX.Element {
   );
   // The renderer lays the text out from its SDF atlas; measuring it gives the
   // same block size the rasterized label used to report, so every caller's
-  // geometry (alignment shift, flex width) is unchanged.
+  // geometry (alignment shift, flex width) is unchanged. Alignment is applied
+  // to the block here: the design aligns only single-line labels, so a text
+  // node's own line alignment is not needed (and `contain` would feed the
+  // measured width back into maxWidth).
   const size = createMemo(() => {
     const value = textProps();
     return (getRenderer() as RendererMain).measureText(value) ?? { w: value.maxWidth, h: value.lineHeight };
@@ -448,7 +451,10 @@ export function TvText(props: Record<string, any>): JSX.Element {
           : (props.y ?? 0);
       },
       get w() {
-        return size().w ?? 0;
+        // A boxed label (w/maxwidth) reports the box, not the measured glyph
+        // run: the renderer derives a text node's maxWidth from its width when
+        // it has none, so a measured width would wrap the text at its own edge.
+        return props.maxwidth ?? props.w ?? size().w ?? 0;
       },
       get h() {
         return size().h ?? 0;

@@ -9,6 +9,7 @@ import {
 } from "solid-js";
 import { getRenderer } from "@solidtv/solid";
 import type { RendererMain, ShaderNode, WebGlShaderType } from "@solidtv/renderer";
+import { sameShader } from "../shaders";
 import { KeyedFor, TvView } from "../runtime";
 import { registerTvShader } from "../shaders";
 import { Label, Logo, palette } from "./visuals";
@@ -23,9 +24,7 @@ const shader: WebGlShaderType<BrowsePreviewProps> = {
     this.uniform2fa("u_uvSize", p.uvSize);
     this.uniform2fa("u_uvOrigin", p.uvOrigin);
   },
-  canBatch: (node: object, op: object) =>
-    (node as { props: { shader: unknown } }).props.shader ===
-    (op as { props: { shader: unknown } }).props.shader,
+  canBatch: sameShader,
   vertex: `
 precision highp float;
 attribute vec2 a_position;attribute vec2 a_nodeCoords;attribute vec4 a_color;

@@ -90,17 +90,16 @@ async function start() {
   registerDefaultShaders(renderer as RendererMain);
   const rendererStartAt = performance.now();
   setRendererStart(renderer as RendererMain, rendererStartAt);
-  if (new URLSearchParams(location.search).get("focusdebug") === "1")
-    (window as Window & { __viptvRenderer?: typeof renderer }).__viptvRenderer =
-      renderer;
-  if (new URLSearchParams(location.search).get("focusdebug") === "1")
-    (
-      window as Window & { __viptvShaderName?: typeof tvShaderName }
-    ).__viptvShaderName = tvShaderName;
-  if (new URLSearchParams(location.search).get("focusdebug") === "1")
-    (
-      window as Window & { __viptvRendererStart?: () => number }
-    ).__viptvRendererStart = () => rendererStartAt;
+  if (new URLSearchParams(location.search).get("focusdebug") === "1") {
+    const debug = window as Window & {
+      __viptvRenderer?: typeof renderer;
+      __viptvShaderName?: typeof tvShaderName;
+      __viptvRendererStart?: () => number;
+    };
+    debug.__viptvRenderer = renderer;
+    debug.__viptvShaderName = tvShaderName;
+    debug.__viptvRendererStart = () => rendererStartAt;
+  }
   if (new URLSearchParams(location.search).has("perfdebug"))
     (
       window as Window & {
