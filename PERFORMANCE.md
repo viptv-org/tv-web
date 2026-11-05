@@ -53,22 +53,24 @@ What the migration changed in this repository:
 
 Measured on this host with the same 48-key Home workload, 1920×1080, reduced
 motion, 4× CPU throttling and SwiftShader as the 1.9.4 evidence (the
-2026-11-04 trace on PR #82). Samples were taken on a host 2% busy. The report
-(`/tmp/viptv-sdf/perf-v2b.json`) records source revision
-`d522f01b81956ee3806643fc850ebb4627c011da`, source SHA-256 `0699be23…`, the
-measured bundle SHA-256 `8d6250f6…`, `servedEntryVerified: true`, and the GPU
-identity `ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero)),
-SwiftShader driver-5.0.0)` with `displayType: ANGLE_SWIFTSHADER`. This host has
-no `/dev/dri` and composites in software.
+2026-11-04 trace on PR #82). The final report (`/tmp/viptv-sdf/perf-final3.json`)
+is on an idle host: source revision
+`647e9a8d8a595161bc3a87dd1242cb5703861697`, source SHA-256 `08a37ae5…`, measured
+bundle SHA-256 `34343d5d…`, `servedEntryVerified: true`, GPU identity
+`ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero)), SwiftShader
+driver-5.0.0)` with `displayType: ANGLE_SWIFTSHADER`. This host has no
+`/dev/dri` and composites in software. A second sample in the same report
+(120ms per key) is host contention and is excluded; an earlier pair on
+`d522f01` measured 44.6 / 46.7ms per key.
 
 | 48-key Home | 1.9.4 (`5299ec0`, artifact `final3`) | 2.0.7 (`d522f01`) |
 | --- | ---: | ---: |
-| Main-thread ms per key | 49.1 | 44.6 / 46.7 |
-| Handler p95 | 2.0ms | 2.3 / 2.7ms |
-| Frame p95 | 33.4ms | 33.4 / 33.4ms |
-| Frames over 50ms | 3 | 0 / 2 |
-| Long tasks | 3 | 0 / 3 |
-| Texture memory | — | 49.9MiB |
+| Main-thread ms per key | 49.1 | 46.2 (earlier 44.6 / 46.7) |
+| Handler p95 | 2.0ms | 2.6ms (earlier 2.3 / 2.7ms) |
+| Frame p95 | 33.4ms | 33.4ms |
+| Frames over 50ms | 3 | 1 (earlier 0 / 2) |
+| Long tasks | 3 | 3 (earlier 0 / 3) |
+| Texture memory | — | 50.0MiB |
 
 The frame budget is still unmet. Renderer 2.0's update/draw phase is faster, and
 the main-thread work per key improves by about 5–9%, but the cost that produces

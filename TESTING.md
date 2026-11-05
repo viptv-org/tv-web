@@ -100,13 +100,16 @@ the 1.x `shaderManager.valuesCache` counter became a live shader count (2.0 has
 no per-frame prop cache).
 
 Verification on this branch: `npm run build` and 431 unit/integration tests in
-68 files pass; the remote browser suite (19 specs) was run against a
-fixture-built `dist` — 137/139 in one pass on a quiet host with the two
-failures (Live prefetch timeout, source reranking) passing alone on the same
-build; on a 53%-busy host the 5-second startup cases time out, the same
-contention pattern the suite already records. Six matched Home/focus states
-differ from the 1.9.4 build only in glyph rasterization (PERFORMANCE.md).
-Physical TV qualification remains #2/#4.
+68 files passed twice before the last text-box fix; after it the React guide
+suite flakes exactly as it does on unmodified `main` under the same load (5 of
+19 there). The remote browser suite (19 specs, 139 tests) ran on an idle host
+against a fixture-built `dist`: **138 passed, one startup case timed out** at
+its 5-second readiness threshold (all startup specs had passed in the same run
+batch earlier); every spec has passed on this build across the runs. On a
+busy host the 5-second startup cases time out, the same contention pattern the
+suite already records. Six matched Home/focus states differ from the 1.9.4
+build only in glyph rasterization, and the pairing screen capture matches the
+1.9.4 render (PERFORMANCE.md). Physical TV qualification remains #2/#4.
 
 # Home featured-pass acceptance
 
