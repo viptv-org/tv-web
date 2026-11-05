@@ -55,12 +55,16 @@ CPUs). Every number below is from this container, 1920×1080, reduced motion,
 saturated the shared host are excluded from attribution; a run that reports
 `mainThreadMsPerKey` far above 50 is contention, not code.
 
-A Chromium trace of a 24-key Home run spends, per canvas update, about 33ms in
-`LayerTreeHost::DoUpdateLayers`, of which about 26ms is `GLES2::ReadPixels` — the
-software compositor reading the 1920×1080 canvas back. Summed JavaScript self
-time across the whole trace was about 35ms, roughly 1.5ms per key. The key
-handler itself measures 1.8–2.2ms p95. The application is not the cost; it reacts
-and then waits for a frame the container cannot produce inside one refresh.
+A Chromium trace of a 24-key Home run spends, per canvas update, about 34ms in
+`LayerTreeHost::DoUpdateLayers`, of which about 27ms is `GLES2::ReadPixels` — the
+software compositor reading the 1920×1080 canvas back — plus about 14ms waiting
+on the GL command buffer, and about 7ms of commit bookkeeping. That per-update
+total of ~48ms reproduces `mainThreadMsPerKey` exactly. The trace was repeated
+with the host six percent busy and produced the same per-update figures, so this
+is the rendering path, not scheduling pressure. Summed JavaScript self time
+across the whole trace was about 35ms, roughly 1.5ms per key, and the key handler
+measures 1.8–3.6ms p95. The application is not the cost; it reacts and then waits
+for a canvas readback that is larger than the frame it is asked to fit in.
 
 A control page with one canvas, no application code, quantifies that limit:
 
