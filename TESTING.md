@@ -56,6 +56,22 @@ four request-predicate viewing cases. The earlier ten failures were host
 contention, not application behaviour; no product change was made in response.
 The frame budget, physical hardware and deployment remain unverified.
 
+The remaining remote specs ran on the same artifact over the same idle host
+(`/tmp/viptv-perf-75/accept-rest`): entry, browse, library controls, audit,
+live-empty arrival, live snapshot, pairing completion, all ten Search cases,
+settings/display and the source hint — **42 pass in 4.0 minutes**. Three fail,
+and all three fail identically on a main-only `5053be9` artifact with this branch
+absent, so they are pre-existing and filed as issue #94 rather than fixed here:
+the two `audit.spec.ts` traversals exceed the 30-second per-test default while
+pressing 200 group and 100 channel keys (both pass at `--timeout=180000` in 46s
+and 60s), and `settings-display.spec.ts:314` still reports
+`data-tv-screen="settings"` where it expects `home` after two `Escape` presses
+under an installed page clock.
+
+Across these runs every SolidTV remote spec file executes on the combined
+artifact. Excluding the three pre-existing cases above and the host-budget
+timeouts that later passed, no case fails.
+
 # SolidTV startup and delayed loading
 
 The production TV entries (`/tv/?platform=vizio`, `?layout=tv`,
