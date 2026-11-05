@@ -10,7 +10,10 @@ test clock advances while waiting for queued texture uploads.
 All eleven matched Home-action/navigation focus captures are pixel-identical
 to the baseline at 1920×1080 (`/tmp/viptv-75-nav-visual/comparison.json`);
 private captures were inspected. This verifies preservation, not a new reference
-parity measurement. [Performance evidence](PERFORMANCE.md) records reduced
+parity measurement. The final candidate repeats that on the merged artifact:
+six Home/focus states (idle, rows, two row steps, hero, one hero step) have zero
+changed pixel channels against a main-only `5053be9` build, 1920×1080, identical
+fixtures (`/tmp/viptv-75-visual-final`). [Performance evidence](PERFORMANCE.md) records reduced
 renderer work and the remaining failed frame budget.
 
 Combined source `0672b3cf146b3e74058877f7082a1550c20413e8` passes grouped
