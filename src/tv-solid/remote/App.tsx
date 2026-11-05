@@ -280,6 +280,7 @@ import {
   type LiveRecoveryAction,
 } from "./liveEmpty";
 import { LiveAnswer, LiveNoSource, LiveSkeletons } from "./liveEmptyViews";
+import { guideWindowOf } from "./guideWindow";
 import {
   SOURCE_SPINNER_SIZE,
   SOURCE_SPINNER_STEP,
@@ -695,14 +696,19 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
           : groups().findIndex((group) => group.id === liveGroup()) + 1;
       return Math.max(0, Math.min(groups().length - 8, focused - 4));
     });
-    const currentGuide = createMemo(
-      () => guideInfo()[channels()[liveChannelIndex()]?.id],
-    );
     const currentProgram = createMemo(
       () => programs()[channels()[liveChannelIndex()]?.id]?.[programIndex()],
     );
+    /**
+     * The grid's own window, shared by every row, the header and the Now marker:
+     * the guides that answered decide it, never the focused row (whose own guide
+     * may be pending or failed).
+     */
+    const guideWindow = createMemo(() =>
+      guideWindowOf(Object.values(guideInfo()), Date.now()),
+    );
     const guideStart = createMemo(() => {
-      const base = currentGuide()?.window_start_millis ?? 0;
+      const base = guideWindow().start;
       const selected = currentProgram();
       return selected &&
         (selected.start_millis < base ||
@@ -2775,9 +2781,9 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
     }
     const guideFlights = new Map<string, AbortController>();
     const guideTimes = new Map<string, number>();
-    let guideWindow = 0;
+    let guideGeneration = 0;
     function retireLiveGuides() {
-      guideWindow++;
+      guideGeneration++;
       for (const flight of guideFlights.values()) flight.abort();
       guideFlights.clear();
       guideTimes.clear();
@@ -2883,7 +2889,7 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
     }
     async function loadVisibleGuides(force = false) {
       const owner = scope,
-        ticket = ++guideWindow;
+        ticket = ++guideGeneration;
       const start = Math.max(0, guideRowStart()),
         end = guideRowStart() + 5;
       const visible = new Set(
@@ -2895,7 +2901,7 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
         if (!visible.has(id)) flight.abort();
       trimGuides();
       for (let i = start; i < Math.min(channels().length, end); i += 3) {
-        if (owner !== scope || owner.signal.aborted || ticket !== guideWindow)
+        if (owner !== scope || owner.signal.aborted || ticket !== guideGeneration)
           return;
         await Promise.all(
           Array.from(
@@ -6846,8 +6852,7 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
                           0,
                           Math.min(
                             1,
-                            ((currentGuide()?.now_millis ?? p().start_millis) -
-                              p().start_millis) /
+                            (guideWindow().now - p().start_millis) /
                               (p().end_millis - p().start_millis),
                           ),
                         )
@@ -6918,21 +6923,21 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
                   </TvView>
                 )}
               </For>
-              <For each={[0, 1, 2, 3]}>
-                {(i) => (
-                  <Label
-                    x={420 + i * 350}
-                    y={592}
-                    size={22}
-                    color={palette.muted}
-                    content={
-                      currentGuide()
-                        ? guideTime(guideStart() + i * 1800000)
-                        : ""
-                    }
-                  />
-                )}
-              </For>
+              {/* The header belongs to the grid, not to one row: it reads the
+                  page's window for as long as there are channels to draw. */}
+              <Show when={channels().length}>
+                <For each={[0, 1, 2, 3]}>
+                  {(i) => (
+                    <Label
+                      x={420 + i * 350}
+                      y={592}
+                      size={22}
+                      color={palette.muted}
+                      content={guideTime(guideStart() + i * 1800000)}
+                    />
+                  )}
+                </For>
+              </Show>
               <TvView x={96} y={636} w={1728} h={408} clipping={true}>
                 <For
                   each={channels().slice(
@@ -7075,7 +7080,7 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
                     </TvView>
                   )}
                 </For>
-                <Show when={currentGuide()}>
+                <Show when={channels().length}>
                   <TvView
                     x={
                       328 +
@@ -7083,9 +7088,7 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
                         0,
                         Math.min(
                           1400,
-                          (((currentGuide()?.now_millis ?? guideStart()) -
-                            guideStart()) /
-                            7200000) *
+                          ((guideWindow().now - guideStart()) / 7200000) *
                             1400,
                         ),
                       )
