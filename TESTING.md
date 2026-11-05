@@ -24,7 +24,8 @@ the frame budget, hardware and deployment remain unverified.
 
 Combined tree `f6aa5321673cee5b2bc2b82f8328ea3ec5c32feb` (this branch merged onto
 main `b394746`) rebuilds with the grouped typecheck, design/core/video integrity
-checks and the Vite production build. On its served artifact over isolated
+checks and the Vite production build; every branch commit after it is
+documentation only, so that artifact carries the source these results describe. On its served artifact over isolated
 HTTPS at 1920×1080, **52 scoped browser cases pass** in 4.4 minutes
 (`/tmp/viptv-perf-75/accept-a.log`): startup skeletons for Vizio/Tizen/webOS,
 `?layout=tv`, `solid.html` and `lightning.html`; delayed stylesheet, font and
