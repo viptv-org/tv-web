@@ -30,8 +30,12 @@ const nodes = (page: Page) =>
     return result;
   });
 
-async function boot(page: Page, origin: string) {
-  const fixture = await installRemoteBackend(page, origin);
+async function boot(
+  page: Page,
+  origin: string,
+  options?: Parameters<typeof installRemoteBackend>[2],
+) {
+  const fixture = await installRemoteBackend(page, origin, options);
   await page.goto("/tv/?platform=vizio&focusdebug=1");
   await expect(screen(page)).toHaveAttribute("data-tv-screen", "home");
   return fixture;
@@ -337,6 +341,9 @@ test("the screen saver dims to slow art after the server-set idle minutes", asyn
       ),
     )
     .toBe(true);
+  // The pick closes the overlay once its confirmed write lands: Back is then
+  // a layer at a time, so wait for that committed close instead of assuming it.
+  await expect(screen(page)).toHaveAttribute("data-tv-overlay", "");
   await page.keyboard.press("Escape");
   await page.keyboard.press("Escape");
   await expect(screen(page)).toHaveAttribute("data-tv-screen", "home");
@@ -349,4 +356,43 @@ test("the screen saver dims to slow art after the server-set idle minutes", asyn
   await expect(screen(page)).toHaveAttribute("data-tv-saver", "false");
   await expect(screen(page)).toHaveAttribute("data-tv-screen", "home");
   await expect(screen(page)).toHaveAttribute("data-tv-focus", focus!);
+});
+
+test("a confirmed pick that lands after Back does not take focus back into the row", async ({
+  page,
+  baseURL,
+}) => {
+  const fixture = await boot(page, baseURL!, { holdPreference: true });
+  await openSettingsTab(page, 6);
+  await page.keyboard.press("ArrowDown");
+  await page.keyboard.press("ArrowDown");
+  await page.keyboard.press("Enter");
+  await expect(screen(page)).toHaveAttribute("data-tv-overlay", "choices");
+  await page.keyboard.press("ArrowDown");
+  await page.keyboard.press("ArrowDown");
+  await page.keyboard.press("Enter");
+  await expect
+    .poll(() =>
+      fixture.requests.some(
+        (r) =>
+          r.method === "PUT" &&
+          r.path.endsWith("/preferences") &&
+          r.body?.display?.text_size === "large",
+      ),
+    )
+    .toBe(true);
+  await page.keyboard.press("Escape");
+  await page.keyboard.press("Escape");
+  await expect(screen(page)).toHaveAttribute(
+    "data-tv-focus",
+    /^settings-nav:/,
+  );
+  fixture.releasePreference();
+  await expect(screen(page)).toHaveAttribute("data-tv-ready", "true");
+  await expect(screen(page)).toHaveAttribute(
+    "data-tv-focus",
+    /^settings-nav:/,
+  );
+  await page.keyboard.press("Escape");
+  await expect(screen(page)).toHaveAttribute("data-tv-screen", "home");
 });

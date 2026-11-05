@@ -81,6 +81,9 @@ test("all 200 server Live groups remain visible and selectable in a bounded focu
   page,
   baseURL,
 }) => {
+  // 200 remote presses, plus the Live page's first load: the traversal's cost is
+  // the key count, so the default per-test budget does not cover it.
+  test.setTimeout(180_000);
   await installRemoteBackend(page, baseURL!, { liveGroups: 200 });
   const groupRequests: string[] = [];
   page.on("request", (request) => {
@@ -130,6 +133,9 @@ test("guide snapshots and obsolete requests stay bounded while traversing 120 ch
   page,
   baseURL,
 }) => {
+  // 199 remote presses with a readback after each: the traversal's cost is the
+  // key count, so the default per-test budget does not cover it.
+  test.setTimeout(240_000);
   const fixture = await installRemoteBackend(page, baseURL!, { liveChannels: 120 });
   await live(page);
   const counts = () =>
