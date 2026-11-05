@@ -18,6 +18,7 @@ export async function installRemoteBackend(page:Page,origin:string,options:{
     expireOnPreference?: boolean;
     failReplacementOnce?: boolean;
     holdNextPage?: boolean;
+    holdPreference?: boolean;
     liveChannels?: number;
     livePageLength?: number;
     liveAvailability?: "Available" | "NeedsConfiguration";
@@ -91,6 +92,8 @@ export async function installRemoteBackend(page:Page,origin:string,options:{
   let rejectedLibraryFilter = false;
   let releasePages!: () => void;
   const pageGate = new Promise<void>(resolve=>{releasePages=resolve;});
+  let releasePreference!: () => void;
+  const preferenceGate = new Promise<void>(resolve=>{releasePreference=resolve;});
  await page.route('**/fixture/*',async route=>{const file=new URL(route.request().url()).pathname.split('/').pop()!;if(!/^[a-f0-9]+\.(png|jpg|webp)$/.test(file))return route.abort();await route.fulfill({body:readFileSync(resolve(referenceRoot,'assets',file)),contentType:file.endsWith('png')?'image/png':'image/jpeg'});});
   let activationRejected = false;
   const catalogCards:Card[]=cardImages.map((image,i)=>({...card,identity:{...card.identity,id:`catalog-${i}`},title:`Catalog ${i}`,landscape:art(image),poster:art(image),logo:null,badges:[]}));
@@ -122,7 +125,7 @@ export async function installRemoteBackend(page:Page,origin:string,options:{
   if(path.endsWith('/revisions'))return send({library:revision});
   if(path.endsWith('/home'))return send(home);
   if (path === "/api/auth/device/refresh" && options.expireOnPreference) return send({error:"unauthorized"},401);
-  if(path.endsWith('/preferences')){if(request.method()==='PUT'){if(options.expireOnPreference)return send({error:"unauthorized"},401);preferences.revision++;if(body.preferences)preferences.preferences=body.preferences;if(body.display)preferences.display=body.display;}return send(preferences);}
+  if(path.endsWith('/preferences')){if(request.method()==='PUT'){if(options.expireOnPreference)return send({error:"unauthorized"},401);if(options.holdPreference)await preferenceGate;preferences.revision++;if(body.preferences)preferences.preferences=body.preferences;if(body.display)preferences.display=body.display;}return send(preferences);}
   if(path.endsWith('/library')){
       if (request.method() === "PUT") { library.push(body.card); revision++; return send({ saved: true }); }
       libraryQueries.push(Object.fromEntries(url.searchParams));
@@ -310,5 +313,6 @@ export async function installRemoteBackend(page:Page,origin:string,options:{
   setProfile: (id: string | null) => { profile = id; revision++; },
   libraryQueries,
   releasePages,
+  releasePreference,
 };
 }

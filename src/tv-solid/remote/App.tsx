@@ -2317,12 +2317,14 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
       const focus = overlayFocus,
         current = overlay();
       const finish = () => {
+        const restore = !!current && overlay() === current;
         setOverlay(undefined);
         setOverlayClosing(false);
         setOverlaySettled(false);
         setOverlayEntered(false);
         setText("");
         setError(screen() === "player" ? playbackError() : "");
+        if (!restore) return;
         setZone(focus.zone);
         setColumn(focus.column);
         setRow(focus.row);
