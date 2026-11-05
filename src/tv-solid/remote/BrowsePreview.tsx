@@ -10,6 +10,7 @@ import {
 import { getRenderer } from "@solidtv/solid";
 import type { RendererMain, ShaderNode, WebGlShaderType } from "@solidtv/renderer";
 import { KeyedFor, TvView } from "../runtime";
+import { registerTvShader } from "../shaders";
 import { Label, Logo, palette } from "./visuals";
 import { TitleMetadata } from "./TitleMetadata";
 import type { Card } from "./types";
@@ -41,7 +42,7 @@ type Frame = { id: number; src: string; width: number; height: number };
 function Artwork(props: { frame: Frame; alpha: number }) {
   const renderer = getRenderer() as RendererMain;
   if (!registered.has(renderer)) {
-    renderer.registerShaderType("tvBrowsePreview", shader);
+    registerTvShader(renderer, "tvBrowsePreview", shader);
     registered.add(renderer);
   }
   const scale = Math.max(1160 / props.frame.width, 620 / props.frame.height),

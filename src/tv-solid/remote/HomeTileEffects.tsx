@@ -9,6 +9,7 @@ import {
 import { getRenderer } from "@solidtv/solid";
 import type { RendererMain, ShaderNode, WebGlShaderType } from "@solidtv/renderer";
 import { TvView } from "../runtime";
+import { registerTvShader } from "../shaders";
 import { icon } from "./visuals";
 type ProgressProps = { size: number[]; top: number; radius: number; progress: number };
 const progressShader: WebGlShaderType<ProgressProps> = {
@@ -36,7 +37,7 @@ export function HomeProgress(props: {
 }) {
   const renderer = getRenderer() as RendererMain;
   if (!registered.has(renderer)) {
-    renderer.registerShaderType("tvHomeProgress", progressShader);
+    registerTvShader(renderer, "tvHomeProgress", progressShader);
     registered.add(renderer);
   }
   const shader = createMemo(() =>

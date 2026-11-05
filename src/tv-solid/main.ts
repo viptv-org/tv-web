@@ -7,6 +7,8 @@ import {
 import { createComponent } from "solid-js";
 import type { RendererMain } from "@solidtv/renderer";
 import { sdfFonts } from "./fonts";
+import { tvShaderName } from "./shaders";
+import { setRendererStart } from "./renderer-clock";
 import "../theme/viptv-tokens.generated.css";
 
 import { RemoteTvApi } from "./remote/api";
@@ -86,9 +88,19 @@ async function start() {
   // @solidtv/solid 1.7 no longer registers its built-in shader types itself;
   // without them every `color`/`rounded` node draws as an unrounded quad.
   registerDefaultShaders(renderer as RendererMain);
+  const rendererStartAt = performance.now();
+  setRendererStart(renderer as RendererMain, rendererStartAt);
   if (new URLSearchParams(location.search).get("focusdebug") === "1")
     (window as Window & { __viptvRenderer?: typeof renderer }).__viptvRenderer =
       renderer;
+  if (new URLSearchParams(location.search).get("focusdebug") === "1")
+    (
+      window as Window & { __viptvShaderName?: typeof tvShaderName }
+    ).__viptvShaderName = tvShaderName;
+  if (new URLSearchParams(location.search).get("focusdebug") === "1")
+    (
+      window as Window & { __viptvRendererStart?: () => number }
+    ).__viptvRendererStart = () => rendererStartAt;
   if (new URLSearchParams(location.search).has("perfdebug"))
     (
       window as Window & {

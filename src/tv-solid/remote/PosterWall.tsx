@@ -3,6 +3,8 @@ import { createSignal, onCleanup, onMount } from "solid-js";
 import { getRenderer } from "@solidtv/solid";
 import type { ImageTexture, RendererMain, ShaderNode } from "@solidtv/renderer";
 import { TvView } from "../runtime";
+import { registerTvShader } from "../shaders";
+import { rendererStart } from "../renderer-clock";
 import { entryArt } from "./entry-art";
 import { welcomeShader } from "./welcome-shader";
 const registered = new WeakSet<RendererMain>();
@@ -16,8 +18,8 @@ export function PosterWall() {
   const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
   const name = reduced ? "tvWelcomeStatic" : "tvWelcomeMotion";
   if (!registered.has(renderer)) {
-    renderer.registerShaderType("tvWelcomeStatic", welcomeShader);
-    renderer.registerShaderType("tvWelcomeMotion", {
+    registerTvShader(renderer, "tvWelcomeStatic", welcomeShader);
+    registerTvShader(renderer, "tvWelcomeMotion", {
       ...welcomeShader,
       time: true,
     });
@@ -25,7 +27,7 @@ export function PosterWall() {
   }
   // u_time is the renderer's elapsed time in 2.0; the drift starts at 0.
   const shader = renderer.createShader(name, {
-    startedAt: reduced ? 0 : renderer.elapsedTime,
+    startedAt: reduced ? 0 : performance.now() - rendererStart(renderer),
   }) as ShaderNode;
   let active = true;
   // The wall drifts on a time-uniform, which never creates a scene update, so

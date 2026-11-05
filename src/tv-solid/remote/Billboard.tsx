@@ -12,6 +12,8 @@ import {
 import { getRenderer } from "@solidtv/solid";
 import type { RendererMain, ShaderNode } from "@solidtv/renderer";
 import { KeyedFor, TvView } from "../runtime";
+import { registerTvShader } from "../shaders";
+import { rendererStart } from "../renderer-clock";
 import { icon, palette } from "./visuals";
 import {
   billboardShader,
@@ -30,13 +32,13 @@ function setup() {
       ["tvBillboardGlass", billboardGlassShader],
       ["tvBillboardGlassAtlas", billboardGlassAtlasShader],
     ] as const) {
-      renderer.registerShaderType(name, shader);
-      renderer.registerShaderType(name + "Motion", {
+      registerTvShader(renderer, name, shader);
+      registerTvShader(renderer, name + "Motion", {
         ...shader,
         time: true,
       });
     }
-    renderer.registerShaderType("tvHeroProgress", heroProgressShader);
+    registerTvShader(renderer, "tvHeroProgress", heroProgressShader);
     registered.add(renderer);
   }
   return { renderer };
@@ -141,8 +143,7 @@ function Photo(props: {
   const make = (motion: boolean) => {
     // u_time is the renderer's elapsed time in 2.0; the prop is the frame's
     // start on the same clock.
-    const startedAt =
-      props.frame.started - (performance.now() - renderer.elapsedTime);
+    const startedAt = props.frame.started - rendererStart(renderer);
     const common = { startedAt, animate: motion ? 1 : 0, zoom: reduced ? 1 : 1.06 };
     return renderer.createShader(
       (props.glass
@@ -280,7 +281,7 @@ export function HeroProgress(props: { started: number; running: boolean }) {
   const shader = createMemo(() => {
     if (!props.running) return undefined;
     return renderer.createShader("tvHeroProgress", {
-      startedAt: props.started - (performance.now() - renderer.elapsedTime),
+      startedAt: props.started - rendererStart(renderer),
     }) as ShaderNode;
   });
   return (

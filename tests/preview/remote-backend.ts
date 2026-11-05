@@ -4,6 +4,132 @@ import {resolve} from 'node:path';
 import type {Card,Bootstrap,Preferences} from '../../src/tv-solid/remote/types';
 export const referenceRoot=resolve('../design/viptv-design-system/reference');
 function isSeriesRequest(path:string,url:URL){return path.includes('/series/')||url.searchParams.get('card')==='series';}
+/**
+ * Renderer 1.x exposed the live scene to the browser specs (isRenderable,
+ * props, shaderKey, shader.uniforms, valuesCache). 2.0 exposes different node
+ * handles and keeps no shader name, so this init script presents the 1.x
+ * read-only view over the 2.0 scene. Test-only: the app bundle is untouched,
+ * and every value is read from the live scene when the spec asks for it.
+ */
+async function installRendererCompat(page: Page): Promise<void> {
+
+  await page.addInitScript(() => {
+    const state: { raw?: any } = {};
+    // Uniform name -> shader prop name, for the app shader types the specs
+    // read. Everything else is absent, as a 1.x uniform the program lacks.
+    const uniformProps: Record<string, string> = {
+      u_startedAt: "startedAt",
+      u_animate: "animate",
+      u_zoom: "zoom",
+      u_row: "row",
+      u_progress: "progress",
+      u_top: "top",
+      u_radius: "radius",
+    };
+
+    const uniforms = (shader: any) => {
+      const single: Record<string, { value: unknown }> = {};
+      const props = shader?.props;
+      if (props) {
+        for (const uniform of Object.keys(uniformProps)) {
+          const prop = uniformProps[uniform]!;
+          if (prop in props) single[uniform] = { value: props[prop] };
+        }
+      }
+      return { single };
+    };
+
+    // A node showing `src` builds its texture internally in 2.0, so the handle
+    // and its upload state are not exposed. The app sets `src` only after the
+    // image decoded (createBillboardArt, imageTexture, ...), which is the
+    // readiness point the 1.x specs waited for.
+    const srcTexture = (node: any) =>
+      node.src ? { state: 'loaded', props: { src: node.src } } : null;
+
+    const compatNode = (node: any, inheritedAlpha: number, renderer: any): any => {
+      const ownAlpha = typeof node.alpha === "number" ? node.alpha : 1;
+      const worldAlpha = ownAlpha * inheritedAlpha;
+      const shader = node.shader ?? null;
+      const props: Record<string, unknown> = {
+        w: node.width,
+        h: node.height,
+        x: node.x,
+        y: node.y,
+        color: node.color,
+      };
+      if (node.text !== undefined) props.text = node.text;
+      const texture = node.texture
+        ? { state: node.texture.state, props: node.texture.props }
+        : srcTexture(node);
+      if (texture) props.src = texture.props?.src;
+      return {
+        isRenderable:
+          (shader !== null || node.texture !== undefined || node.text !== undefined) &&
+          node.width > 0 &&
+          node.height > 0,
+        props,
+        absX: node.absX,
+        absY: node.absY,
+        worldAlpha,
+        viptvText: node.viptvText,
+        // 1.x node time: the renderer clock the shader's u_time advances on.
+        time: renderer?.elapsedTime ?? 0,
+        shader: shader
+          ? {
+              shaderKey: (window as any).__viptvShaderName?.(shader),
+              uniforms: uniforms(shader),
+            }
+          : null,
+        texture,
+        children: (node.children ?? []).map((child: any) =>
+          compatNode(child, worldAlpha, renderer),
+        ),
+      };
+    };
+
+    const compatStage = (renderer: any) => ({
+      get root() {
+        return compatNode(renderer.root, 1, renderer);
+      },
+      // 1.x's stage start: the renderer clock counts from it.
+      get startTime() {
+        return (window as any).__viptvRendererStart?.() ?? 0;
+      },
+      get renderer() {
+        return { getQuadCount: () => renderer.scene?.quads ?? 0 };
+      },
+      // 1.x's shader-props cache does not exist in 2.0: prop writes go to
+      // typed storage and nothing is retained per frame.
+      get shManager() {
+        return { valuesCache: { size: 0 } };
+      },
+      registerShaderType: (name: string, type: any) =>
+        renderer.registerShaderType(name, type),
+      requestRender: () => renderer.requestRender(),
+    });
+
+    const compatRenderer = (renderer: any) => ({
+      get stage() {
+        return compatStage(renderer);
+      },
+      on: renderer.on?.bind(renderer),
+      once: renderer.once?.bind(renderer),
+      registerShaderType: renderer.registerShaderType?.bind(renderer),
+      requestRender: renderer.requestRender?.bind(renderer),
+    });
+
+    Object.defineProperty(window, "__viptvRenderer", {
+      configurable: true,
+      get() {
+        return state.raw === undefined ? undefined : compatRenderer(state.raw);
+      },
+      set(value: unknown) {
+        state.raw = value;
+      },
+    });
+  });
+}
+
 export async function installRemoteBackend(page:Page,origin:string,options:{
     session?: boolean;
     empty?: boolean;
@@ -48,6 +174,7 @@ export async function installRemoteBackend(page:Page,origin:string,options:{
     stallRenewal?: boolean;
     rejectAddon?: boolean;
   }={}){
+ await installRendererCompat(page);
  const requests:{method:string;path:string;body:any}[]=[];
  const art=(name:string)=>`${origin}/fixture/${name}`;
  const card:Card={identity:{kind:'movie',id:'tt-oak-street',ids:[]},provider_id:'stremio',title:'The End of Oak Street',description:'The Platt family bands together to navigate their new surroundings after a cosmic event transports their…',poster:art('a5729872fdf6d97950dabed6371ef4d6.jpg'),landscape:art('a5729872fdf6d97950dabed6371ef4d6.jpg'),logo:art('274e704ffc2eeb3e73918396e294edb0.png'),badges:[],view:{saved:false,metadata_parts:['Movie','2026','Action, Adventure','1h 40m'],hero_metadata_parts:['2026','Action, Adventure','1h 40m'],compact_metadata_parts:['2026','1h 40m'],badges:[{label:'4K',role:'capability'},{label:'HDR',role:'capability'},{label:'5.1',role:'capability'},{label:'PG-13',role:'certification'}],tile_badge:null,progress:null,preview:{background:null,caption:'',progress:null,action:'play' as const}},metadata:{year:2026,runtime_minutes:100,genres:['Action','Adventure'],certification:'PG-13'}};

@@ -81,14 +81,14 @@ for(const reduced of [true,false])test(`entry motion ${reduced?'stays still for 
   await expect(state(page)).toHaveAttribute('data-tv-ready','true');
   const wall=()=>page.evaluate(()=>{let x:number|undefined;function visit(n:any){if(n.isRenderable&&n.texture?.state==='loaded'&&n.shader?.shaderKey?.startsWith('tvWelcome')){const start=n.shader.uniforms.single.u_startedAt.value;x=-60-500*(1-Math.abs(((n.time-start)/60000)%2-1));}n.children?.forEach(visit);}visit((window as any).__viptvRenderer.stage.root);return x;});
   await expect.poll(wall).toBeDefined();const start=(await wall())!;
-  const shaderCache=()=>page.evaluate(()=>(window as any).__viptvRenderer.stage.shManager.valuesCache.size as number);
-  const cached=await shaderCache();
+  const shaderCount=()=>page.evaluate(()=>{let count=0;function visit(n:any){if(n.shader)count++;n.children?.forEach(visit);}visit((window as any).__viptvRenderer.stage.root);return count;});
+  const cached=await shaderCount();
   const before=PNG.sync.read(await page.screenshot({clip:{x:0,y:0,width:500,height:200}})).data;
   await page.waitForTimeout(300);
   if(reduced)expect(await wall()).toBe(start);else expect((await wall())!).toBeLessThan(start-1.5);
   const after=PNG.sync.read(await page.screenshot({clip:{x:0,y:0,width:500,height:200}})).data;
   expect(before.equals(after)).toBe(reduced);
-  expect(await shaderCache()).toBe(cached);
+  expect(await shaderCount()).toBe(cached);
   await page.keyboard.press('Enter');
   await expect(state(page)).toHaveAttribute('data-tv-screen','pairing');
   await expect(state(page)).toHaveAttribute('data-tv-ready','true');

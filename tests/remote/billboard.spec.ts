@@ -16,7 +16,8 @@ const inspect=(page:Page)=>page.evaluate(()=>{
   n.children?.forEach(visit);
  }
  visit((window as any).__viptvRenderer.stage.root);
- return{photos,texts,cycle,now:performance.now(),cache:(window as any).__viptvRenderer.stage.shManager.valuesCache.size};
+ let shaders=0;function count(n:any){if(n.shader)shaders++;n.children?.forEach(count);}count((window as any).__viptvRenderer.stage.root);
+ return{photos,texts,cycle,now:performance.now(),cache:shaders};
 });
 async function open(page:Page,baseURL:string,reduced:boolean,count=2){
  await page.emulateMedia({reducedMotion:reduced?'reduce':'no-preference'});await page.clock.install();
