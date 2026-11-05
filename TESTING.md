@@ -25,6 +25,18 @@ checks and `npx vite build --outDir /tmp/viptv-solid-75-final`. Logs are
 (`/tmp/viptv-solid-75-final-provenance.json`). Broader screen responsiveness,
 the frame budget, hardware and deployment remain unverified.
 
+The current head `5299ec0` merges this branch with main `43246c8`. It passes the
+grouped typecheck, design/core/video integrity checks and the Vite production
+build, plus **431 unit/integration tests in 68 files** (single fork), and the
+thirteen cases in the specs that main changed since `99a4c4b` all pass: both
+`audit.spec.ts` traversals with their new per-test budget (#97), the display-tab
+and screen-saver cases including the confirmed-pick-after-Back close (#95), the
+Live empty-category message (#92) and both guide-window cases (#93)
+(`/tmp/viptv-75-final3-specs`). One harness sample on this artifact at 4×
+CPU/SwiftShader reports frame p95 33.4ms, main-thread 49.1ms per key, handler p95
+2.0ms, 2690 draw calls and zero focus-time shader creations, bundle
+`1605329c…`; a second attempt at that moment was contention only (643ms per key).
+
 Combined tree `a6c1e87` (this branch merged with main `99a4c4b`) is the final
 candidate. It passes the grouped typecheck, design/core/video integrity checks
 and the Vite production build, plus **427 unit/integration tests in 67 files**

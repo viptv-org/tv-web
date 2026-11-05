@@ -143,7 +143,12 @@ Home update inside one refresh here. The 17.5ms budget is unchanged and unmet;
 qualifying it needs a host that composites on a GPU, or an owner decision about
 the environment the gate is measured in.
 
-The final candidate — this branch merged with main `99a4c4b` at `a6c1e87` — was
+The current head — this branch merged with main `43246c8` at `5299ec0` — reports
+frame p95 33.4ms, main-thread work 49.1ms per key, handler p95 2.0ms, 57 rendered
+frames, 2690 draw calls, three frames over 50ms, three long tasks and zero
+focus-time shader creations, with served bundle `1605329c…`.
+
+The previous candidate — this branch merged with main `99a4c4b` at `a6c1e87` — was
 served on this host twice while it was idle and repeats the same result: frame
 p95 33.4 / 33.4ms, main-thread work 47.1 / 47.8ms per key, handler p95 3.6 /
 1.9ms, four and five frames over 50ms, four and three long tasks, 2637 / 2693
