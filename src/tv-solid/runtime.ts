@@ -487,7 +487,7 @@ export function TvText(props: Record<string, any>): JSX.Element {
         return props.color ?? "#ffffff";
       },
       get alpha() {
-        return props.alpha ?? 1;
+        return String(props.content ?? "").length === 0 ? 0 : (props.alpha ?? 1);
       },
       get show() {
         return props.show ?? true;
