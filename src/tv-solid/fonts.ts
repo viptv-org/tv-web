@@ -1,35 +1,105 @@
-import displayUrl from "@fontsource-variable/bricolage-grotesque/files/bricolage-grotesque-latin-opsz-normal.woff2?url";
+import onest400Atlas from "./sdf/Onest400.ssdf.png?url";
+import onest400Data from "./sdf/Onest400.ssdf.json?url";
+import onest500Atlas from "./sdf/Onest500.ssdf.png?url";
+import onest500Data from "./sdf/Onest500.ssdf.json?url";
+import onest600Atlas from "./sdf/Onest600.ssdf.png?url";
+import onest600Data from "./sdf/Onest600.ssdf.json?url";
+import onest700Atlas from "./sdf/Onest700.ssdf.png?url";
+import onest700Data from "./sdf/Onest700.ssdf.json?url";
+import onest700TabularAtlas from "./sdf/Onest700Tabular.ssdf.png?url";
+import onest700TabularData from "./sdf/Onest700Tabular.ssdf.json?url";
+import bricolage700Atlas from "./sdf/Bricolage700.ssdf.png?url";
+import bricolage700Data from "./sdf/Bricolage700.ssdf.json?url";
+import bricolage800Atlas from "./sdf/Bricolage800.ssdf.png?url";
+import bricolage800Data from "./sdf/Bricolage800.ssdf.json?url";
+import bricolage800Optical28Atlas from "./sdf/Bricolage800Optical28.ssdf.png?url";
+import bricolage800Optical28Data from "./sdf/Bricolage800Optical28.ssdf.json?url";
+import bricolage800Optical56Atlas from "./sdf/Bricolage800Optical56.ssdf.png?url";
+import bricolage800Optical56Data from "./sdf/Bricolage800Optical56.ssdf.json?url";
+import bricolage800Optical90Atlas from "./sdf/Bricolage800Optical90.ssdf.png?url";
+import bricolage800Optical90Data from "./sdf/Bricolage800Optical90.ssdf.json?url";
 
-// The DOM uses optical sizing at the CSS font size. CanvasTextRenderer loads
-// faces without weight descriptors, so register aliases with explicit axes.
-const variable = typeof FontFace !== "undefined" && "variationSettings" in FontFace.prototype;
-const sizes: Record<number, readonly number[]> = {
-  650: [32],
-  700: [30, 32, 38, 42, 44, 48, 52, 56, 64],
-  800: [17, 28, 32, 36, 40, 48, 50, 52, 55, 56, 64, 80, 90, 92, 104],
+/** One SDF face: the atlas image and its BMFont description. */
+export type SdfFontFace = {
+  fontFamily: string;
+  aliases?: string[];
+  type: "ssdf" | "msdf";
+  atlasUrl: string;
+  atlasDataUrl: string;
 };
-const axes = new Map<string, string>();
-// hhea/OS/2 metrics from the shipped Onest and Bricolage WOFF2 faces.
-export function canvasFontMetrics(family: string) {
-  return family.startsWith("Onest")
-    ? { ascender: 970, descender: -305, lineGap: 0, unitsPerEm: 1000 }
-    : { ascender: 930, descender: -270, lineGap: 0, unitsPerEm: 1000 };
-}
-export const displayFonts = variable ? Object.entries(sizes).flatMap(([weight, sizes]) => sizes.map(size => {
-  const fontFamily = `Bricolage${weight}Optical${size}`;
-  axes.set(fontFamily, `"wght" ${weight}, "opsz" ${size}`);
-  return {fontFamily, fontUrl:displayUrl};
-})) : [];
 
-export function configureDisplayFonts() {
-  for (const face of document.fonts) {
-    if(face.family.replace(/["']/g, "") === "Onest700Tabular") face.featureSettings='"tnum"';
-    const settings = axes.get(face.family.replace(/["']/g, ""));
-    if (settings) (face as FontFace & {variationSettings:string}).variationSettings = settings;
-  }
+/**
+ * Every face the TV entry can name, generated from the same WOFF2 faces the
+ * DOM uses (`solid-tv/msdf-generator`, 42px UI text / 48px display text, one
+ * page each). The renderer 2.x loads one atlas per face, so the generator is
+ * run with a texture size that keeps all 325 characters on one page.
+ *
+ * Bricolage's optical-size axis is applied through three instances and the
+ * size aliases the app asks for, instead of a distinct atlas per size: the
+ * SDF atlas scales the one instance to every size in its band.
+ */
+export const sdfFonts: SdfFontFace[] = [
+  { fontFamily: "Onest", type: "ssdf", atlasUrl: onest400Atlas, atlasDataUrl: onest400Data },
+  { fontFamily: "Onest500", type: "ssdf", atlasUrl: onest500Atlas, atlasDataUrl: onest500Data },
+  { fontFamily: "Onest600", type: "ssdf", atlasUrl: onest600Atlas, atlasDataUrl: onest600Data },
+  { fontFamily: "Onest700", type: "ssdf", atlasUrl: onest700Atlas, atlasDataUrl: onest700Data },
+  { fontFamily: "Onest700Tabular", type: "ssdf", atlasUrl: onest700TabularAtlas, atlasDataUrl: onest700TabularData },
+  { fontFamily: "Bricolage700", type: "ssdf", atlasUrl: bricolage700Atlas, atlasDataUrl: bricolage700Data },
+  {
+    fontFamily: "Bricolage800",
+    type: "ssdf",
+    atlasUrl: bricolage800Atlas,
+    atlasDataUrl: bricolage800Data,
+  },
+  {
+    fontFamily: "Bricolage800Optical28",
+    aliases: ["Bricolage800Optical17", "Bricolage800Optical32"],
+    type: "ssdf",
+    atlasUrl: bricolage800Optical28Atlas,
+    atlasDataUrl: bricolage800Optical28Data,
+  },
+  {
+    fontFamily: "Bricolage800Optical56",
+    aliases: ["Bricolage800Optical48", "Bricolage800Optical50", "Bricolage800Optical52", "Bricolage800Optical55"],
+    type: "ssdf",
+    atlasUrl: bricolage800Optical56Atlas,
+    atlasDataUrl: bricolage800Optical56Data,
+  },
+  {
+    fontFamily: "Bricolage800Optical90",
+    aliases: ["Bricolage800Optical80", "Bricolage800Optical92", "Bricolage800Optical104"],
+    type: "ssdf",
+    atlasUrl: bricolage800Optical90Atlas,
+    atlasDataUrl: bricolage800Optical90Data,
+  },
+];
+
+const ONEST = { ascender: 970, descender: -305, unitsPerEm: 1000 };
+const BRICOLAGE = { ascender: 930, descender: -270, unitsPerEm: 1000 };
+
+export function sdfFontMetrics(family: string) {
+  return family.startsWith("Onest") ? ONEST : BRICOLAGE;
 }
 
-export function canvasFont(family: string, size: number) {
-  const alias = `${family}Optical${size}`;
-  return axes.has(alias) ? alias : family === "Bricolage650" ? "Bricolage700" : family;
+/**
+ * The SDF family a design family and size resolve to. The DOM applies optical
+ * sizing with `font-variation-settings`, which an atlas cannot vary per size;
+ * the display face is split into three instances and each size band maps to
+ * the nearest one.
+ */
+export function sdfFontFamily(family: string, size: number): string {
+  if (family === "Bricolage650") family = "Bricolage700";
+  if (family !== "Bricolage800") return family;
+  if (size <= 40) return "Bricolage800Optical28";
+  if (size <= 64) return "Bricolage800Optical56";
+  return "Bricolage800Optical90";
+}
+
+/** The default line height the design uses: ascender + descender at `size`. */
+export function sdfLineHeight(family: string, size: number): number {
+  const metrics = sdfFontMetrics(family);
+  return (
+    Math.round((metrics.ascender * size) / metrics.unitsPerEm) +
+    Math.round((-metrics.descender * size) / metrics.unitsPerEm)
+  );
 }

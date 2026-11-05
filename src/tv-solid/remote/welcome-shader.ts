@@ -1,8 +1,11 @@
-import type { WebGlShaderType } from "@solidtv/renderer/webgl";
+import type { WebGlShaderType } from "@solidtv/renderer";
 
 /** Combine the drifting artwork and fixed radial vignette in one screen pass. */
-export const welcomeShader: WebGlShaderType = {
-  props: {},
+export const welcomeShader: WebGlShaderType<{ startedAt: number }> = {
+  props: { startedAt: 0 },
+  update(this: any) {
+    this.uniform1f("u_startedAt", (this.props as { startedAt: number }).startedAt);
+  },
   vertex: `
     #ifdef GL_FRAGMENT_PRECISION_HIGH
     precision highp float;

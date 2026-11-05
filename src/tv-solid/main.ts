@@ -1,24 +1,11 @@
 import { Config, createRenderer, loadFonts } from "@solidtv/solid";
 import { createComponent } from "solid-js";
-import { WebGlCoreRenderer } from "@solidtv/renderer/webgl";
-import { CanvasTextRenderer } from "@solidtv/renderer/canvas";
-import {
-  displayFonts,
-  configureDisplayFonts,
-  canvasFontMetrics,
-} from "./fonts";
-import { tvRoundedShader } from "./rounded-shader";
+import type { RendererMain } from "@solidtv/renderer";
+import { sdfFonts } from "./fonts";
 import "../theme/viptv-tokens.generated.css";
 
 import { RemoteTvApi } from "./remote/api";
 import type { Tokens } from "./remote/types";
-
-import bricolage700Url from "@fontsource/bricolage-grotesque/files/bricolage-grotesque-latin-700-normal.woff2?url";
-import bricolage800Url from "@fontsource/bricolage-grotesque/files/bricolage-grotesque-latin-800-normal.woff2?url";
-import onestUrl from "@fontsource/onest/files/onest-latin-400-normal.woff2?url";
-import onest500Url from "@fontsource/onest/files/onest-latin-500-normal.woff2?url";
-import onest600Url from "@fontsource/onest/files/onest-latin-600-normal.woff2?url";
-import onest700Url from "@fontsource/onest/files/onest-latin-700-normal.woff2?url";
 
 document.documentElement.dataset.renderer = "solid";
 const platformParam = new URLSearchParams(location.search).get("platform");
@@ -69,25 +56,9 @@ async function start() {
       }),
     ),
   );
-  const rendererFonts = loadFonts(
-    [
-      { fontFamily: "Bricolage700", fontUrl: bricolage700Url },
-      { fontFamily: "Bricolage800", fontUrl: bricolage800Url },
-      { fontFamily: "Onest", fontUrl: onestUrl },
-      { fontFamily: "Onest500", fontUrl: onest500Url },
-      { fontFamily: "Onest600", fontUrl: onest600Url },
-      { fontFamily: "Onest700", fontUrl: onest700Url },
-      { fontFamily: "Onest700Tabular", fontUrl: onest700Url },
-      ...displayFonts.filter(({ fontFamily }) =>
-        /^Bricolage800Optical(?:17|28|32|48|50|52|55|56|80|90|92|104)$/.test(
-          fontFamily,
-        ),
-      ),
-    ].map((font) => ({
-      ...font,
-      metrics: canvasFontMetrics(font.fontFamily),
-    })),
-  );
+  // Renderer 2.x draws SDF text only: every face the entry names is an
+  // atlas (see src/tv-solid/sdf and fonts.ts).
+  const rendererFonts = loadFonts(sdfFonts);
   Config.fontSettings = { fontFamily: "Onest", fontSize: 32 };
   Config.animationsEnabled = !matchMedia("(prefers-reduced-motion: reduce)")
     .matches;
@@ -97,8 +68,6 @@ async function start() {
       appHeight: 1080,
       deviceLogicalPixelRatio: window.innerWidth / 1920,
       devicePhysicalPixelRatio: window.devicePixelRatio || 1,
-      renderEngine: WebGlCoreRenderer,
-      fontEngines: [CanvasTextRenderer],
       clearColor: 0x00000000,
       textureMemory: {
         criticalThreshold: 64 * 1024 * 1024,
@@ -109,7 +78,6 @@ async function start() {
     },
     "app",
   );
-  renderer.stage.shManager.registerShaderType("rounded", tvRoundedShader);
   if (new URLSearchParams(location.search).get("focusdebug") === "1")
     (window as Window & { __viptvRenderer?: typeof renderer }).__viptvRenderer =
       renderer;
@@ -119,13 +87,9 @@ async function start() {
         __viptvRendererMetrics?: () => { textureBytes: number };
       }
     ).__viptvRendererMetrics = () => ({
-      textureBytes:
-        "txMemManager" in renderer.stage
-          ? renderer.stage.txMemManager.getMemoryInfo().memUsed
-          : 0,
+      textureBytes: (renderer as RendererMain).memoryInfo().memUsed,
     });
   const [[appModule]] = await Promise.all([dependencies, rendererFonts, styles]);
-  configureDisplayFonts();
   if (new URLSearchParams(location.search).has("perfdebug"))
     performance.mark("viptv:deps-ready");
   const dispose = render(() =>
@@ -144,7 +108,7 @@ async function start() {
         window.dispatchEvent(new Event("viptv:startup-ready"));
       });
     });
-    renderer.stage.requestRender();
+    (renderer as RendererMain).requestRender();
   }
   reveal();
   if (import.meta.hot)

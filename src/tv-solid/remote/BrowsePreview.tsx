@@ -8,16 +8,23 @@ import {
   Show,
 } from "solid-js";
 import { getRenderer } from "@solidtv/solid";
-import type { Stage } from "@solidtv/renderer";
-import type { WebGlShaderNode, WebGlShaderType } from "@solidtv/renderer/webgl";
+import type { RendererMain, ShaderNode, WebGlShaderType } from "@solidtv/renderer";
 import { KeyedFor, TvView } from "../runtime";
 import { Label, Logo, palette } from "./visuals";
 import { TitleMetadata } from "./TitleMetadata";
 import type { Card } from "./types";
 import { HomeProgress } from "./HomeTileEffects";
-const shader: WebGlShaderType = {
-  props: {},
-  canBatch: (node, op) => node.props.shader === op.shader,
+type BrowsePreviewProps = { uvSize: number[]; uvOrigin: number[] };
+const shader: WebGlShaderType<BrowsePreviewProps> = {
+  props: { uvSize: [1, 1], uvOrigin: [0, 0] },
+  update(this: any) {
+    const p = this.props as BrowsePreviewProps;
+    this.uniform2fa("u_uvSize", p.uvSize);
+    this.uniform2fa("u_uvOrigin", p.uvOrigin);
+  },
+  canBatch: (node: object, op: object) =>
+    (node as { props: { shader: unknown } }).props.shader ===
+    (op as { props: { shader: unknown } }).props.shader,
   vertex: `
 precision highp float;
 attribute vec2 a_position;attribute vec2 a_nodeCoords;attribute vec4 a_color;
@@ -29,21 +36,21 @@ precision highp float;
 uniform sampler2D u_texture;varying vec2 v_uv;varying vec2 v_local;varying vec4 v_color;
 void main(){vec4 art=texture2D(u_texture,v_uv);vec3 bg=vec3(11.0,11.0,12.0)/255.0;float visible=clamp(v_local.x*1160.0/560.0,0.0,1.0)*(1.0-clamp((v_local.y*620.0-380.0)/241.0,0.0,1.0));gl_FragColor=vec4(mix(bg,art.rgb+bg*(1.0-art.a),visible),1.0)*v_color;}`,
 };
-const registered = new WeakSet<Stage>();
+const registered = new WeakSet<RendererMain>();
 type Frame = { id: number; src: string; width: number; height: number };
 function Artwork(props: { frame: Frame; alpha: number }) {
-  const renderer = getRenderer(),
-    stage = renderer.stage as Stage;
-  if (!registered.has(stage)) {
-    stage.shManager.registerShaderType("tvBrowsePreview", shader);
-    registered.add(stage);
+  const renderer = getRenderer() as RendererMain;
+  if (!registered.has(renderer)) {
+    renderer.registerShaderType("tvBrowsePreview", shader);
+    registered.add(renderer);
   }
-  const paint = renderer.createShader("tvBrowsePreview", {}) as WebGlShaderNode;
   const scale = Math.max(1160 / props.frame.width, 620 / props.frame.height),
     w = 1160 / (props.frame.width * scale),
     h = 620 / (props.frame.height * scale);
-  paint.uniform2f("u_uvSize", w, h);
-  paint.uniform2f("u_uvOrigin", (1 - w) * 0.6, (1 - h) * 0.25);
+  const paint = renderer.createShader("tvBrowsePreview", {
+    uvSize: [w, h],
+    uvOrigin: [(1 - w) * 0.6, (1 - h) * 0.25],
+  }) as ShaderNode;
   return (
     <TvView
       x={760}
