@@ -197,6 +197,8 @@ export function defineScreen<
       value: scope,
       get children() {
         return TvView({
+          w: 1920,
+          h: 1080,
           nodeRef: (node: ElementNode) => { scope.node = node; nodeScopes.set(node,scope); },
           onFocus: (current: ElementNode, previous?: ElementNode) => {
             if (current !== scope.node) return;
@@ -286,6 +288,7 @@ const names: Record<string, string> = {
   align: "textAlign",
   content: "text",
 };
+const ROKU = typeof (globalThis as any).__SolidTVRokuRenderer !== "undefined";
 const colorCache = new Map<string, number>();
 function tvColor(value: string | number): number {
   if (!value) return 0;
@@ -306,10 +309,16 @@ const imageTextures = new WeakMap<ImageData, ImageTexture>();
 function imageTexture(image: ImageData) {
   let texture = imageTextures.get(image);
   if (!texture) {
-    texture = getRenderer().createTexture("ImageTexture", {
-      src: image,
-      premultiplyAlpha: true,
-    });
+    texture = ROKU
+      ? getRenderer().createTexture("ImageTexture", {
+          src: "pkg:/assets/fallback.png",
+          w: image.width,
+          h: image.height,
+        })
+      : getRenderer().createTexture("ImageTexture", {
+          src: image,
+          premultiplyAlpha: true,
+        });
     imageTextures.set(image, texture);
   }
   return texture;
@@ -320,7 +329,12 @@ function visualNode(
   kind: "node" | "text" = "node",
 ): JSX.Element {
   const node = createElement(kind) as ElementNode;
-  const mapped: Record<string, any> = { color: 0x00000000, width: 0, height: 0 };
+  // The browser renderer reads width/height; the native SceneGraph host's
+  // RokuNode reads w/h. Keep the platform mapping in one place so the shared
+  // tv-web tree does not have to fork.
+  const mapped: Record<string, any> = ROKU
+    ? { color: 0x00000000, w: 0, h: 0 }
+    : { color: 0x00000000, width: 0, height: 0 };
   for (const key of Object.keys(props)) {
     if (
       ["children", "show", "alpha", "fit", "nodeRef", "onError", "cssLineBox"].includes(key)
@@ -338,11 +352,18 @@ function visualNode(
       // Explicit SVG textures use its SVG rasterizer instead of image workers.
       Object.defineProperty(mapped, "texture", {
         enumerable: true,
-        get: () => getRenderer().createTexture("ImageTexture", {src:props.src,type:"svg",w:props.w,h:props.h}),
+        get: () =>
+          ROKU
+            ? getRenderer().createTexture("ImageTexture", {
+                src: "pkg:/assets/fallback.png",
+                w: props.w ?? 48,
+                h: props.h ?? 48,
+              })
+            : getRenderer().createTexture("ImageTexture", {src:props.src,type:"svg",w:props.w,h:props.h}),
       });
       continue;
     }
-    const name = names[key] ?? key;
+    const name = ROKU && (key === "w" || key === "h") ? key : (names[key] ?? key);
     Object.defineProperty(mapped, name, {
       enumerable: true,
       configurable: true,
@@ -368,7 +389,25 @@ function visualNode(
       get: () => ({ resizeMode: { type: props.fit } }),
     });
   if (props.onError) mapped.onEvent = { failed: () => props.onError() };
+  // The shared runtime uses `nodeRef` as a post-render callback, not the
+  // Solid `ref` field. The core ignores it, so call it once the ElementNode
+  // exists; text/native bridges and the screen focus scope depend on this.
+  if (props.nodeRef) onMount(() => props.nodeRef(node));
   spread(node, mapped, true);
+  // The native host's RokuNode reads x/y/w/h from the plain props object.
+  // Ensure the tv-web getters are materialised there as well; the generic
+  // spread path can miss getter-only layout values on the native renderer.
+  if (ROKU) {
+    const read = (value: any) => (typeof value === "function" ? value() : value);
+    const x = read(props.x);
+    const y = read(props.y);
+    const w = read(props.w);
+    const h = read(props.h);
+    if (x !== undefined) node.x = x;
+    if (y !== undefined) node.y = y;
+    if (w !== undefined) node.w = w;
+    if (h !== undefined) node.h = h;
+  }
   props.nodeRef?.(node);
   // Keep each node's original sibling position even while invisible. Only
   // defer its subtree; late insertion of an outline/image can cover siblings.
@@ -389,7 +428,87 @@ export function setTextScale(value: number) {
 export const TvView = (props: Record<string, any>) => visualNode(props);
 /** Keep one visible node. Upload a replacement before swapping; color is a
  * quad tint, so focus changes never evict glyphs or rasterize the same label. */
+function rokuText(props: Record<string, any>): JSX.Element {
+  const [node, setNode] = createSignal<ElementNode>();
+  const spec = createMemo(() => {
+    fontEpoch();
+    const fontSize = Number(props.size ?? 32);
+    const family = sdfFontFamily(props.font ?? "Onest", fontSize);
+    return {
+      text: String(props.content ?? ""),
+      fontFamily: family,
+      fontSize,
+      maxWidth: props.maxwidth ?? props.w ?? 0,
+      maxHeight: props.maxheight ?? 0,
+      maxLines: props.maxlines ?? 0,
+      lineHeight:
+        props.lineheight !== undefined
+          ? fontSize * props.lineheight
+          : sdfLineHeight(family, fontSize),
+      letterSpacing: props.letterspacing ?? 0,
+    };
+  });
+  const size = createMemo(() => {
+    const value = spec();
+    return (getRenderer() as RendererMain).measureText(value) ?? { w: value.maxWidth, h: value.lineHeight };
+  });
+  const boxW = () => props.maxwidth ?? props.w ?? size().w ?? 0;
+  const boxX = () =>
+    (props.x ?? 0) +
+    (boxW() > 0
+      ? Math.max(0, boxW() - (size().w ?? 0)) *
+        (props.align === "right" ? 1 : props.align === "center" ? 0.5 : 0)
+      : 0);
+  const boxY = () =>
+    props.centerY !== undefined
+      ? props.centerY - (size().h ?? 0) / 2
+      : (props.y ?? 0);
+  const update = (current: any) => {
+    if (!current?.lng?.dom) return;
+    (globalThis as any).__viptvNativeText(current.lng.dom, {
+      text: spec().text,
+      width: boxW(),
+      height: size().h ?? props.h ?? 0,
+      font: props.font,
+      size: spec().fontSize,
+      color: props.color ?? "#ffffff",
+      align: props.align,
+      maxlines: props.maxlines,
+    });
+  };
+  createEffect(() => update(node()));
+  onMount(() => update(node()));
+  return visualNode(
+    {
+      get x() {
+        return boxX();
+      },
+      get y() {
+        return boxY();
+      },
+      get w() {
+        return boxW();
+      },
+      get h() {
+        return size().h ?? props.h ?? 0;
+      },
+      get alpha() {
+        return props.alpha ?? 1;
+      },
+      get show() {
+        return props.show ?? true;
+      },
+      nodeRef: (value: ElementNode) => {
+        setNode(value);
+        props.nodeRef?.(value);
+      },
+    },
+    "node",
+  );
+}
+
 export function TvText(props: Record<string, any>): JSX.Element {
+  if (ROKU && typeof (globalThis as any).__viptvNativeText === "function") return rokuText(props);
   let debugNode: ElementNode | undefined;
   const [mountedNode, setMountedNode] = createSignal<ElementNode>();
   const scaledSize = () => (props.size ?? 32) * textScale();

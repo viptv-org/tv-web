@@ -17,9 +17,22 @@ function patchSolidElementNode() {
     const dir = realpathSync(path.join(process.cwd(), 'node_modules/@solidtv/solid'));
     const file = path.join(dir, 'dist/src/core/elementNode.js');
     const source = readFileSync(file, 'utf8');
-    const patched = source.replace(
+    let patched = source.replace(
       /for \(const key of (LightningRendererNumberProps|LightningRendererNonAnimatingProps)\) \{([\s\S]*?)\n\}/g,
       (_m, list, body) => `${list}.forEach((key) => {${body}\n});`,
+    );
+    // tv-web passes `rounded` as a number in places. The upstream effect
+    // serializer assumes it is an object with `.radius`; accept both.
+    patched = patched.replace(
+      /if \(v\.rounded\)\s*props\.radius = v\.rounded\.radius;/g,
+      'if (v.rounded != null) props.radius = typeof v.rounded === "object" ? v.rounded.radius : v.rounded;',
+    );
+    // tv-web's manual visualNode inserts text/native children after the
+    // ElementNode parent has already rendered. The upstream insertChild only
+    // records the child; render it now so the native node exists.
+    patched = patched.replace(
+      /(this\.children\.push\(node\);)\n    \}\n    removeChild\(node\)/,
+      '$1\n        if (this.rendered && isElementNode(node) && !node.rendered) node.render();\n    }\n    removeChild(node)',
     );
     if (patched !== source) {
       writeFileSync(file, patched);
@@ -60,7 +73,11 @@ function patchSolidFocusManager() {
       )
       .replace(/if \(!current\.states\.has\(/g, 'if (!current.states || !current.states.has(')
       .replace(/current\.states\.add\(/g, 'current.states?.add(')
-      .replace(/elm\.states\.remove\(/g, 'elm.states?.remove(');
+      .replace(/elm\.states\.remove\(/g, 'elm.states?.remove(')
+      .replace(
+        /if \(v\.rounded\)\s*props\.radius = v\.rounded\.radius;/g,
+        'if (v.rounded != null) props.radius = typeof v.rounded === "object" ? v.rounded.radius : v.rounded;',
+      );
     if (patched !== source) {
       writeFileSync(file, patched);
       console.log('Patched @solidtv/solid focus callbacks for Roku');

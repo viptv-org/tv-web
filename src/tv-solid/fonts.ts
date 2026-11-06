@@ -81,7 +81,7 @@ const ONEST = { ascender: 970, descender: -305, unitsPerEm: 1000 };
 const BRICOLAGE = { ascender: 930, descender: -270, unitsPerEm: 1000 };
 
 export function sdfFontMetrics(family: string) {
-  return family.startsWith("Onest") ? ONEST : BRICOLAGE;
+  return String(family || "").startsWith("Onest") ? ONEST : BRICOLAGE;
 }
 
 /**

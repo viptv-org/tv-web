@@ -554,7 +554,7 @@ const isSimklCard = (card?: Card | null) =>
     card.metadata_origin?.provider_id === "simkl");
 function stremioHome(value: Home | undefined): Home | undefined {
   if (!STREMIO_ONLY || !value) return value;
-  const rows = value.rows.filter((row) => !row.id.startsWith("simkl:"));
+  const rows = value.rows.filter((row) => !String(row.id ?? "").startsWith("simkl:"));
   const streamCards = rows
     .flatMap((row) => row.cards)
     .filter((card) => !isSimklCard(card));
@@ -6065,8 +6065,16 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
       style.textContent = `#tv-video::cue { font-size: ${2.2 * Number(appearance?.font_scale ?? preferencesValue?.subtitle_font_scale ?? 1)}vw; color: ${String(appearance?.text_color ?? preferencesValue?.subtitle_text_color ?? "#FFFFFF")}; background-color: ${String(appearance?.background_color ?? preferencesValue?.subtitle_background_color ?? "#00000000")}; }`;
       onCleanup(() => style?.remove());
     });
-    onMount(() => {
+    // Roku's native host mounts the shared root without running the app
+    // component's onMount in some launch paths. Start boot from a one-shot
+    // effect so the same component drives web and Roku.
+    let bootRequested = false;
+    createEffect(() => {
+      if (bootRequested) return;
+      bootRequested = true;
       void start();
+    });
+    onMount(() => {
       const input = (event: KeyboardEvent) => {
         if (event.ctrlKey || event.metaKey || event.altKey) return;
         if (

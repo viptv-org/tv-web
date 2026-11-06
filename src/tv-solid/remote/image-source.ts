@@ -13,6 +13,7 @@ export const imageVersion = () => imageEpoch();
  * after an idle wake without touching signed query parameters or refetching
  * bytes the browser already has. */
 function versioned(url: string, version: number) {
+  if (!url || typeof url !== "string") return "";
   if (!version || url.startsWith("data:") || url.startsWith("blob:")) return url;
   return `${url}${url.includes("#") ? "&" : "#"}_v=${version}`;
 }

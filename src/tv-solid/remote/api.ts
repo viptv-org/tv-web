@@ -230,7 +230,7 @@ export class RemoteTvApi {
     signal: AbortSignal | undefined,
     access?: string,
   ): Promise<T> {
-    if (!path.startsWith("/api/") || path.includes("://"))
+    if (typeof path !== "string" || !path.startsWith("/api/") || path.includes("://"))
       throw new Error("Invalid API path");
     abort(signal);
     const request = new AbortController();

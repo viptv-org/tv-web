@@ -7,6 +7,7 @@
  */
 import "./platform/roku-shims";
 import { createRenderer, Config } from "@solidtv/solid";
+import { createElement, insertNode, setProp } from "@roku-sdk/solid";
 import { createComponent } from "solid-js";
 import { setRendererStart } from "./renderer-clock";
 import { createRemoteTvApp } from "./remote/App";
@@ -112,4 +113,65 @@ native.createShader = () => null;
 
 setRendererStart(native, performance.now());
 
-render(() => createComponent(createRemoteTvApp(api, "web"), {}));
+// The shared UI's text node is a browser-renderer construct. On Roku, give
+// each TvText a native SceneGraph label inside its transparent positioning
+// group. This is the same primitive path the official SolidTV demo uses.
+const nativeLabels = new WeakMap<any, any>();
+const nativeFonts = new Map<string, any>();
+function fontUri(family: string | undefined): string {
+  const value = String(family ?? "Onest").toLowerCase();
+  if (value.includes("bricolage")) return "pkg:/fonts/remote_bricolage_800.ttf";
+  if (value.includes("onest")) {
+    if (value.includes("700")) return "pkg:/fonts/remote_onest_700.ttf";
+    if (value.includes("600")) return "pkg:/fonts/remote_onest_600.ttf";
+    if (value.includes("500")) return "pkg:/fonts/remote_onest_500.ttf";
+    return "pkg:/fonts/remote_onest_400.ttf";
+  }
+  return "pkg:/fonts/Roboto-Regular.ttf";
+}
+function rokuColor(value: any): any {
+  if (typeof value === "number") return value >>> 0;
+  if (typeof value !== "string" || !value) return 0xffffffff;
+  if (value.charAt(0) === "#") {
+    const hex = value.slice(1);
+    return parseInt(hex.length === 6 ? hex + "ff" : hex, 16) >>> 0;
+  }
+  return 0xffffffff;
+}
+(globalThis as any).__viptvNativeText = (group: any, p: any) => {
+  if (!group) return;
+  let label = nativeLabels.get(group);
+  if (!label) {
+    label = createElement("label");
+    insertNode(group, label);
+    nativeLabels.set(group, label);
+  }
+  const size = Math.max(1, Math.round(Number(p.size) || 32));
+  const uri = fontUri(p.font);
+  const key = uri + "@" + size;
+  let font = nativeFonts.get(key);
+  if (!font) {
+    font = createElement("font");
+    setProp(font, "uri", uri);
+    setProp(font, "size", size);
+    insertNode(group, font);
+    nativeFonts.set(key, font);
+  }
+  setProp(label, "font", font);
+  setProp(label, "text", String(p.text ?? ""));
+  setProp(label, "width", Math.max(1, Math.ceil(Number(p.width) || 1)));
+  setProp(label, "height", Math.max(1, Math.ceil(Number(p.height) || 1)));
+  setProp(label, "horizAlign", p.align === "center" ? "center" : p.align === "right" ? "right" : "left");
+  setProp(label, "vertAlign", "center");
+  setProp(label, "wrap", true);
+  setProp(label, "maxLines", Math.max(0, Math.floor(Number(p.maxlines) || 0)));
+  setProp(label, "color", rokuColor(p.color));
+  setProp(label, "translation", [0, 0]);
+};
+
+try {
+  render(() => createComponent(createRemoteTvApp(api, "web"), {}));
+} catch (error: any) {
+  console.error("ROKU_RENDER_ERROR " + String(error?.stack || error));
+}
+
