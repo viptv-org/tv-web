@@ -95,6 +95,8 @@ import {
 
 } from "./SearchChannels";
 import { imageSource } from "./image-source";
+import { CalendarBoard, calendarDayKey, calendarDays } from "./CalendarBoard";
+import { sourceAudioSubs, sourceFacts, sourceProvider as providerLabel, sourceQuality, sourceReleaseGroup, sourceReleaseType } from "./source-presentation";
 import {
 
 
@@ -398,6 +400,14 @@ import {
 
 
 
+  type CalendarEntry,
+
+
+
+  type CalendarSnapshot,
+
+
+
   type Source,
 
 
@@ -410,7 +420,7 @@ import {
 
 
 } from "./types";
-import { textMetrics } from "./text-measure";
+import { sdfTextMetrics } from "./text-measure";
 import type { PlayerSnapshot } from "../../../vendor/video/src/types";
 
 type Screen =
@@ -421,6 +431,8 @@ type Screen =
   | "home"
   | "movie"
   | "series"
+  | "anime"
+  | "calendar"
   | "search"
   | "live"
   | "library"
@@ -490,10 +502,6 @@ type Overlay =
     };
 const available = (value?: { availability: string }) =>
   value?.availability === "Available";
-const sourceLabelWidth = (label: string) => {
-  const context = textMetrics("27px Onest700");
-  return Math.min(300, Math.ceil(context.measureText(label).width));
-};
 const clock = (seconds: number) =>
   `${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, "0")}`;
 const uniqueCards = (cards: readonly Card[]) =>
@@ -503,13 +511,21 @@ const uniqueCards = (cards: readonly Card[]) =>
   );
 /** Bottom-align a 1-2 line title in a fixed hero logo box, as TvHeroSummary
  * and TvDetailHero do in the Android TV client. */
+type SourceMenuOption = {
+  id: string;
+  label: string;
+  count: number;
+  height?: number;
+  provider?: string;
+};
+
 const bottomTitleY = (
   title: string,
   size: number,
   width: number,
   box: number,
 ) => {
-  const measured = textMetrics(`${size}px Onest700`).measureText(title).width;
+  const measured = sdfTextMetrics(`${size}px Onest700`).measureText(title).width;
   const lines = Math.min(2, Math.max(1, Math.ceil(measured / width)));
   return box - lines * size * 1.2;
 };
@@ -518,7 +534,9 @@ const navigationTemplates = [
   { id: "home", label: "Home" },
   { id: "movie", label: "Movies" },
   { id: "series", label: "Series" },
+  { id: "anime", label: "Anime" },
   { id: "live", label: "Live" },
+  { id: "calendar", label: "Calendar" },
   { id: "library", label: "My List" },
   { id: "profiles", label: "Profile" },
 ] as const;
@@ -592,19 +610,35 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
     };
     const preferences = preferencesSignal;
     const setPreferences = adoptPreferences;
-    const navs = createMemo<NavigationItem[]>(() =>
-      (
+    const navs = createMemo<NavigationItem[]>(() => {
+      const source =
         navigation() ??
         navigationTemplates.filter(
           (item) => item.id === "home" || item.id === "profiles",
-        )
-      ).flatMap((item) => {
-        const supported = navigationTemplates.find(
-          (template) => template.id === item.id,
         );
-        return supported ? [{ ...item, id: supported.id }] : [];
-      }),
-    );
+      const byId = new Map(source.map((item) => [item.id, item]));
+      const order = [
+        "search",
+        "home",
+        "movie",
+        "series",
+        "anime",
+        "live",
+        "calendar",
+        "library",
+        "profiles",
+      ];
+      return order.flatMap((id) => {
+        const template = navigationTemplates.find((item) => item.id === id);
+        if (!template) return [];
+        const item = byId.get(id);
+        if (item) return [{ ...item, id: template.id }];
+        // The Android TV rail always keeps Anime; the web navigation contract
+        // predates the catalog even though discovery-controls supports it.
+        if (id === "anime") return [{ id: template.id, label: template.label }];
+        return [];
+      });
+    });
     const navIndex = (id: string) =>
       Math.max(
         0,
@@ -638,6 +672,33 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
       [controls, setControls] = createSignal<Controls>(),
       [catalog, setCatalog] = createSignal<Catalog>(),
       [filters, setFilters] = createSignal<Record<string, string[]>>({});
+    const continuingCard = (item: Card) => {
+      const row = home()?.rows?.find((value) => value.id === "continue");
+      return (row?.cards ?? []).find((card) => {
+        const progress = card.progress ?? 0;
+        if (progress <= 0 || progress >= 1) return false;
+        if (item.identity.kind === "movie")
+          return (
+            card.identity.kind === "movie" &&
+            card.identity.id === item.identity.id &&
+            card.identity.episode == null
+          );
+        if (item.identity.kind === "series" && item.identity.episode == null)
+          return (
+            card.identity.kind === "series" &&
+            card.parent_identity?.id === item.identity.id &&
+            (card.identity.episode?.episode ?? 0) > 0
+          );
+        return false;
+      });
+    };
+    const remainingLabel = (card: Card) => {
+      const progress = card.progress ?? 0,
+        runtime = card.metadata?.runtime_minutes ?? 0;
+      if (runtime > 0)
+        return `${Math.max(1, Math.round((1 - progress) * runtime))}m left`;
+      return "";
+    };
     const detailTarget = createMemo(() => {
       const value = detail();
       if (!value) return undefined;
@@ -668,9 +729,52 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
       const label = episode
         ? `${verb} S${episode.season ?? 1} E${episode.episode}`
         : verb;
-      return { card, label };
+      // The app's detail screen resumes from the Continue Watching rows even
+      // when the title was opened from My List, whose cards carry no progress.
+      // The continue card is also the right play target: it holds the exact
+      // episode and provider fields.
+      if (!value.item.identity.episode) {
+        const continuing = continuingCard(value.item);
+        if (continuing) {
+          const progress = continuing.progress ?? 0,
+            coordinates = continuing.identity.episode;
+          return {
+            card: continuing,
+            label: coordinates
+              ? `Resume S${coordinates.season ?? 1} E${coordinates.episode}`
+              : "Resume",
+            progress,
+            remaining: remainingLabel(continuing),
+          };
+        }
+      }
+      return {
+        card,
+        label,
+        progress: action?.resume ? (action.progress ?? 0) : 0,
+        remaining: action?.remaining_label ?? "",
+      };
     });
-    const [liveFavorites, setLiveFavorites] = createSignal<Set<string>>();
+    const detailActionLabel = () =>
+      detailTarget()?.label ?? detailAction()?.label ?? "Play";
+    const detailPlayProgress = () =>
+      detailTarget()?.progress ??
+      (detailAction()?.resume ? (detailAction()?.progress ?? 0) : 0);
+    const detailPlayRemaining = () =>
+      detailTarget()?.remaining ||
+      (detailAction()?.resume ? (detailAction()?.remaining_label ?? "") : "");
+    const detailRemainingX = () =>
+      Math.min(
+        300,
+        66 +
+          Math.ceil(
+            sdfTextMetrics("26px Onest700").measureText(
+              detailActionLabel(),
+            ).width,
+          ) +
+          54,
+      );
+    const [, setLiveFavorites] = createSignal<Set<string>>();
     const [livePages, setLivePages] = createSignal<LivePage[]>([]),
       [channels, setChannels] = createSignal<Channel[]>([]),
       [liveSnapshot, setLiveSnapshot] = createSignal(""),
@@ -723,13 +827,6 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
       edgeRequest(livePages(), "previous")
         ? liveChannelIndex() - 2
         : Math.max(0, liveChannelIndex() - 2);
-    const liveGroupStart = createMemo(() => {
-      const focused =
-        zone() === "live-groups"
-          ? column()
-          : groups().findIndex((group) => group.id === liveGroup()) + 1;
-      return Math.max(0, Math.min(groups().length - 8, focused - 4));
-    });
     const currentProgram = createMemo(
       () => programs()[channels()[liveChannelIndex()]?.id]?.[programIndex()],
     );
@@ -823,7 +920,12 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
     const [sourcePage, setSourcePage] = createSignal<SourcePage>(),
       [allSourceIds, setAllSourceIds] = createSignal<string[]>([]),
       [sourceFacet, setSourceFacet] = createSignal(0),
-      [sourceFilterFocus, setSourceFilterFocus] = createSignal(false);
+      [sourceFilterFocus, setSourceFilterFocus] = createSignal(false),
+      [sourceProviderFilter, setSourceProviderFilter] = createSignal<string>(),
+      [sourceMenu, setSourceMenu] = createSignal<"quality" | "provider">(),
+      [sourceMenuChoice, setSourceMenuChoice] = createSignal(0),
+      [sourceFailure, setSourceFailure] = createSignal(""),
+      [failedSources, setFailedSources] = createSignal<Set<string>>(new Set());
     const profileEditor = createMemo(() => {
       const value = overlay();
       return value &&
@@ -835,6 +937,7 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
     const [sourceHeight, setSourceHeight] = createSignal<number>(),
       [sourceFiltering, setSourceFiltering] = createSignal(false);
     let manualSourceSelection = false,
+      sourceStartPosition = 0,
       sourceFilterGeneration = 0,
       holdTimer: ReturnType<typeof setTimeout> | undefined;
     const [sources, setSources] = createSignal<Source[]>([]),
@@ -850,6 +953,105 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
       // long as the player is preparing it, which is what the contract's
       // `Opening stream…` state reports.
       [openingSource, setOpeningSource] = createSignal<Source>();
+    const [calendar, setCalendar] = createSignal<CalendarSnapshot>();
+    const [calendarDay, setCalendarDay] = createSignal(0);
+    const [calendarEntry, setCalendarEntry] = createSignal(0);
+    const calendarDaysList = createMemo(() =>
+      calendarDays(calendar()?.entries ?? []),
+    );
+    const calendarDayEntries = createMemo(() => {
+      const day = calendarDaysList()[calendarDay()];
+      if (!day) return [];
+      return (calendar()?.entries ?? []).filter((entry: CalendarEntry) => {
+        const date = new Date(entry.date);
+        return (
+          !Number.isNaN(date.getTime()) &&
+          calendarDayKey(date) === day.key
+        );
+      });
+    });
+    const sourceProviders = createMemo(() => {
+      const counts = new Map<string, number>();
+      for (const source of sources()) {
+        const label = providerLabel(source);
+        counts.set(label, (counts.get(label) ?? 0) + 1);
+      }
+      return [...counts].sort(([left], [right]) => left.localeCompare(right));
+    });
+    const visibleSources = createMemo(() => {
+      const filter = sourceProviderFilter();
+      return filter
+        ? sources().filter((source) => providerLabel(source) === filter)
+        : sources();
+    });
+    createEffect(() => {
+      const filter = sourceProviderFilter();
+      if (filter && !sources().some((source) => providerLabel(source) === filter))
+        setSourceProviderFilter(undefined);
+      if (choice() >= visibleSources().length)
+        setChoice(Math.max(0, visibleSources().length - 1));
+    });
+    const qualityMenuOptions = createMemo<SourceMenuOption[]>(() => [
+      {
+        id: "quality-all",
+        label: "All",
+        count: sourcePage()?.total ?? sources().length,
+        height: undefined,
+      },
+      ...(sourcePage()?.quality_filters ?? []).map((filter) => ({
+        id: `quality-${filter.height}`,
+        label: filter.label,
+        count: filter.count,
+        height: filter.height,
+      })),
+    ]);
+    const providerMenuOptions = createMemo<SourceMenuOption[]>(() => [
+      {
+        id: "provider-all",
+        label: "All sources",
+        count: sources().length,
+        provider: undefined,
+      },
+      ...sourceProviders().map(([label, count]) => ({
+        id: `provider-${label}`,
+        label,
+        count,
+        provider: label,
+      })),
+    ]);
+    const sourceMenuOptions = () =>
+      sourceMenu() === "provider"
+        ? providerMenuOptions()
+        : qualityMenuOptions();
+    const sourceFilterTitleWidth = (text: string) =>
+      Math.ceil(sdfTextMetrics("24px Onest600").measureText(text).width);
+    const sourceQualityValue = () => {
+      const height = sourceHeight();
+      if (height === undefined) return "All";
+      return (
+        sourcePage()?.quality_filters.find(
+          (filter) => filter.height === height,
+        )?.label ?? `${height}p`
+      );
+    };
+    const sourceProviderValue = () =>
+      sourceProviderFilter() ?? "All sources";
+    const sourceFilterPillWidth = (title: string, value: string) =>
+      76 +
+      sourceFilterTitleWidth(title) +
+      Math.ceil(sdfTextMetrics("24px Onest600").measureText(value).width);
+    const sourceAddonCount = () =>
+      new Set(
+        sources()
+          .map(
+            (source) =>
+              source.source_addon_id ??
+              source.view?.addon_label ??
+              source.source_name ??
+              "",
+          )
+          .filter(Boolean),
+      ).size;
     // The picker's own facts decide its copy (SRC-DRAWER-001): discovery is the
     // first source request, opening is real playback preparation.
     const sourceSpread = () =>
@@ -1229,16 +1431,25 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
           ),
         );
     }
+    const [fontsReady, setFontsReady] = createSignal(false);
+    onMount(() => {
+      void document.fonts.ready.then(() => setFontsReady(true));
+    });
     const navLayout = createMemo(() => {
+      fontsReady();
       let x = 300;
       return navs().map((nav) => {
-        if (nav.id === "profiles") return { x: 1768, w: 56 };
-        const w =
-          nav.id === "search"
-            ? 56
-            : Math.ceil((nav.label || "Search").length * 15.5) + 52;
-        const box = { x, w };
-        x += w + 8;
+        if (nav.id === "profiles") return { x: 1768, w: 56, text: 0 };
+        if (nav.id === "search") {
+          const box = { x, w: 56, text: 0 };
+          x += 56 + 8;
+          return box;
+        }
+        const context = sdfTextMetrics("26px Onest500");
+        context.font = `26px ${screen() === nav.id ? "Onest700" : "Onest500"}`;
+        const text = Math.ceil(context.measureText(nav.label).width);
+        const box = { x, w: text + 36, text };
+        x += box.w + 8;
         return box;
       });
     });
@@ -1524,7 +1735,7 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
             zone() === "nav" ? navs()[column()]?.id : undefined;
           setNavigation(fresh.navigation);
           if (
-            ["movie", "series", "search", "live", "library"].includes(
+            ["movie", "series", "anime", "search", "live", "library"].includes(
               screen(),
             ) &&
             !navs().some((item) => item.id === screen())
@@ -1549,7 +1760,7 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
           setSaved(new Map());
           const view = screen();
           if (view === "library") replacePage(await loadLibrary("0", signal));
-          else if (view === "movie" || view === "series")
+          else if (view === "movie" || view === "series" || view === "anime")
             replacePage(await api.discover(browseQuery(), signal));
           else if (view === "search" && search()) updateSearch(search(), true);
           else if (view === "detail" && selected()) {
@@ -1650,7 +1861,7 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
               ? detail()!.episodes[column()]
               : detail()?.recommendations[column()]
             : detail()?.item;
-      return ["movie", "series", "search", "library"].includes(screen())
+      return ["movie", "series", "anime", "search", "library"].includes(screen())
         ? page().cards[column()]
         : undefined;
     });
@@ -1871,20 +2082,25 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
       setLibrary(value);
       return value;
     }
-    const libraryTypes = createMemo(
-      () => library()?.controls?.find((c) => c.id === "type")?.choices ?? [],
+    const libraryType = createMemo(() =>
+      library()?.controls?.find((c) => c.id === "type"),
     );
     const librarySort = createMemo(() =>
       library()?.controls?.find((c) => c.id === "sort"),
     );
+    const libraryDefaultQuery = () => {
+      const base = library()?.default_query ?? library()?.query ?? {};
+      const lastWatched = librarySort()?.choices.find(
+        (choice) => choice.value === "last_watched",
+      );
+      return lastWatched ? { ...base, sort: lastWatched.value } : base;
+    };
     const libraryFilters = createMemo(() =>
       (library()?.controls ?? []).filter(
         (c) => c.id !== "type" && c.id !== "sort" && c.choices.length,
       ),
     );
-    const libraryControlCount = () =>
-      libraryTypes().length +
-      Number(Boolean(librarySort()) || libraryFilters().length > 0);
+    const libraryControlCount = () => 2 + 1;
     let libraryApplying = false;
     async function applyLibrary(values: LibraryQuery) {
       libraryApplying = true;
@@ -2038,7 +2254,7 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
     }
     async function restorePrevious(previous: (typeof history)[number]) {
       if (
-        ["movie", "series", "search", "live", "library"].includes(
+        ["movie", "series", "anime", "search", "live", "library"].includes(
           previous.screen,
         ) &&
         !navs().some((item) => item.id === previous.screen)
@@ -2108,7 +2324,7 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
           });
         } else if (previous.screen === "live") {
           await loadLiveFirstPage(signal);
-        } else if (["movie", "series", "library"].includes(previous.screen)) {
+        } else if (["movie", "series", "anime", "library"].includes(previous.screen)) {
           const value =
             previous.screen === "library"
               ? await loadLibrary("0", signal)
@@ -2265,7 +2481,7 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
         return;
       }
       setScreen(target);
-      if (["movie", "series", "library", "search", "live"].includes(target))
+      if (["movie", "series", "anime", "calendar", "library", "search", "live"].includes(target))
         setPage({ cards: [], complete: true });
       if (target === "live") {
         adoptChannelWindow([]);
@@ -2285,7 +2501,7 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
           setHome(await api.home(signal));
         } else if (target === "profiles") {
           setManagement(await api.profiles(signal));
-        } else if (target === "movie" || target === "series") {
+        } else if (target === "movie" || target === "series" || target === "anime") {
           setLoading(true);
           setPage({ cards: [], complete: true });
           const result = await api.controls(target, signal);
@@ -2307,8 +2523,33 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
           setZone("filters");
         } else if (target === "library") {
           setLoading(true);
-          setPage(await loadLibrary("0", signal));
+          const firstLibrary = await loadLibrary("0", signal);
+          setPage(firstLibrary);
+          const sortControl = firstLibrary.controls?.find(
+            (control) => control.id === "sort",
+          );
+          const lastWatched = sortControl?.choices.find(
+            (choice) => choice.value === "last_watched",
+          );
+          if (lastWatched && firstLibrary.query?.sort !== "last_watched") {
+            setPage(
+              await loadLibrary("0", signal, {
+                ...firstLibrary.default_query,
+                sort: lastWatched.value,
+              }),
+            );
+          }
           if (libraryControlCount()) setZone("library-controls");
+        } else if (target === "calendar") {
+          setLoading(true);
+          setCalendarDay(0);
+          setCalendarEntry(0);
+          setZone("calendar-days");
+          try {
+            setCalendar(await api.calendar(signal));
+          } finally {
+            setLoading(false);
+          }
         } else if (target === "search") {
           setPage({ cards: [], complete: true });
           setZone("keyboard");
@@ -2415,6 +2656,10 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
       } else finish();
     }
     function dismissOverlay() {
+      if (sourceMenu()) {
+        setSourceMenu(undefined);
+        return;
+      }
       if (libraryApplying) restartPaging();
       const previous = overlayParents.pop();
       if (!previous) {
@@ -2450,6 +2695,10 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
         updateSearch(search(), true);
     }
     async function back() {
+      if (sourceMenu()) {
+        setSourceMenu(undefined);
+        return;
+      }
       if (screen() === "signed-in") {
         finishSignIn();
         return;
@@ -3204,13 +3453,35 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
         index >= 0 ? index : Math.max(0, Math.min(choice(), stable.length - 1)),
       );
     }
+    /** Until the viewer moves, the focused row follows the server's best match
+     * as discovery grows instead of staying on whatever stream arrived first. */
+    function focusBestMatch(page: SourcePage) {
+      if (manualSourceSelection || !page.best_match_id) return;
+      const index = page.streams.findIndex(
+        (source) => source.id === page.best_match_id,
+      );
+      if (index >= 0) setChoice(index);
+    }
+    /** The app resumes from the card's own progress, and the server may key
+     * that progress to a different metadata provider than the stream. Sending
+     * the position explicitly makes the button and the decoder agree. */
+    function cardResumePosition(card: Card) {
+      const progress = card.progress ?? card.view?.progress ?? 0;
+      if (progress <= 0 || progress >= 1) return 0;
+      const runtime = card.metadata?.runtime_minutes ?? 0;
+      return runtime > 0 ? progress * runtime * 60 : 0;
+    }
     async function playIntent(
       card: Card,
       forcePicker = false,
       restart = false,
       channel?: string,
       replaceCurrent = false,
+      position?: number,
     ) {
+      sourceStartPosition = restart
+        ? 0
+        : Math.max(0, position ?? cardResumePosition(card));
       sourceScope?.abort();
       const operation = new AbortController();
       sourceScope = operation;
@@ -3224,13 +3495,24 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
       setSourceFacet(0);
       setSourceHeight(undefined);
       setSourceFiltering(false);
+      setSourceProviderFilter(undefined);
+      setSourceMenu(undefined);
+      setSourceFailure("");
+      setFailedSources(new Set<string>());
       manualSourceSelection = false;
       sourceFilterGeneration++;
       setSourceFilterFocus(false);
       setSourceLoading(true);
       openOverlay({ kind: "sources", title: "Choose a source" });
       retry = () =>
-        void playIntent(card, forcePicker, restart, channel, replaceCurrent);
+        void playIntent(
+          card,
+          forcePicker,
+          restart,
+          channel,
+          replaceCurrent,
+          sourceStartPosition,
+        );
       try {
         let resolved = channel
           ? undefined
@@ -3249,24 +3531,11 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
               setPickerCard(page.action.card);
             }
             const ticket = ++sourceFilterGeneration;
-            const focusedHeight = sourceFacet()
-              ? sourcePage()?.quality_filters?.[sourceFacet() - 1]?.height
-              : undefined;
             setAllSourceIds(ids);
             setSourcePage(page);
-            if (sourceFilterFocus())
-              setSourceFacet(
-                focusedHeight === undefined
-                  ? 0
-                  : Math.max(
-                      0,
-                      (page.quality_filters ?? []).findIndex(
-                        (filter) => filter.height === focusedHeight,
-                      ) + 1,
-                    ),
-              );
             if (height === sourceHeight()) {
               reconcileSources(value);
+              focusBestMatch(page);
               setSourceFiltering(false);
             } else {
               const wanted = sourceHeight();
@@ -3281,6 +3550,7 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
                   ) {
                     setSourcePage(result);
                     reconcileSources(result.streams);
+                    focusBestMatch(result);
                     setSourceFiltering(false);
                   }
                 })
@@ -3354,6 +3624,7 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
       setActiveChannel(sourceChannel());
       setShowControls(true);
       setChoice(0);
+      setSourceFailure("");
       // The drawer stays up while the chosen stream opens, so its status line
       // reports the contract's `Opening stream…` from the player's real
       // preparation instead of a timer, and a second press cannot start a
@@ -3361,18 +3632,41 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
       setOpeningSource(source);
       setLoading(true);
       document.getElementById("video-layer")!.style.display = "block";
+      let started = false;
       try {
         if (replacingSource()) await player.replaceSource(source);
-        else await player.start(current.card, source, current.resume);
+        else
+          await player.start(
+            current.card,
+            source,
+            current.resume || sourceStartPosition > 0,
+            sourceStartPosition,
+          );
+        started = true;
         setLoading(false);
         hideControls();
-      } catch (e) {
-        fail(e);
+      } catch {
+        await player.stop().catch(() => {});
+        setLoading(false);
+        setPlaybackError("");
+        setFailedSources((previous) => new Set(previous).add(source.id));
+        // Keep the picker over the page that requested the stream, exactly as
+        // the TV drawer does, and mark the row instead of dead-ending in the
+        // player's full-screen failure card.
+        if (returnScreen) {
+          setScreen(returnScreen);
+          setZone(returnFocus.zone);
+          setColumn(returnFocus.column);
+          setRow(returnFocus.row);
+        }
+        setSourceFailure(
+          "This source couldn't start. Choose another source.",
+        );
       } finally {
         setOpeningSource(undefined);
-        // Only the drawer this stream was chosen from. Back has already closed
-        // it and restored the previous focus.
-        if (overlay()?.kind === "sources") setOverlay(undefined);
+        // Only the drawer this stream was successfully chosen from. A failed
+        // start stays open so the next source is one press away.
+        if (started && overlay()?.kind === "sources") setOverlay(undefined);
       }
     }
     function hideControls() {
@@ -4402,34 +4696,24 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
         }
         if (value.kind === "sources") {
           manualSourceSelection = true;
+          if (sourceMenu()) {
+            const count = sourceMenuOptions().length;
+            if (dy)
+              setSourceMenuChoice((i) =>
+                Math.max(0, Math.min(count - 1, i + dy)),
+              );
+            return;
+          }
           if (sourceFilterFocus()) {
             if (dy > 0) setSourceFilterFocus(false);
-            else
-              setSourceFacet((i) =>
-                Math.max(
-                  0,
-                  Math.min(sourcePage()?.quality_filters?.length ?? 0, i + dx),
-                ),
-              );
-          } else if (
-            dy < 0 &&
-            choice() === 0 &&
-            (sourcePage()?.quality_filters?.length ?? 0) > 0
-          ) {
+            else if (dx)
+              setSourceFacet((i) => Math.max(0, Math.min(1, i + dx)));
+          } else if (dy < 0 && choice() === 0) {
             setSourceFilterFocus(true);
-            setSourceFacet(
-              sourceHeight() === undefined
-                ? 0
-                : Math.max(
-                    0,
-                    (sourcePage()?.quality_filters ?? []).findIndex(
-                      (filter) => filter.height === sourceHeight(),
-                    ) + 1,
-                  ),
-            );
+            setSourceFacet(0);
           } else
             setChoice((i) =>
-              Math.max(0, Math.min(sources().length - 1, i + dy)),
+              Math.max(0, Math.min(visibleSources().length - 1, i + dy)),
             );
           return;
         }
@@ -4578,6 +4862,34 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
         if (dy > 0) {
           setZone("episodes");
           setColumn(0);
+        }
+        return;
+      }
+      if (screen() === "calendar") {
+        if (zone() === "calendar-days") {
+          const count = calendarDaysList().length;
+          if (dx)
+            setCalendarDay((i) => Math.max(0, Math.min(count - 1, i + dx)));
+          if (dy > 0) {
+            setZone("calendar-list");
+            setCalendarEntry(0);
+          }
+          if (dy < 0) {
+            setZone("nav");
+            setColumn(navIndex("calendar"));
+          }
+        } else if (zone() === "calendar-list") {
+          if (dy < 0 && calendarEntry() === 0) setZone("calendar-days");
+          else if (dy)
+            setCalendarEntry((i) =>
+              Math.max(
+                0,
+                Math.min(calendarDayEntries().length - 1, i + dy),
+              ),
+            );
+          else if (dx > 0) setZone("calendar-watch");
+        } else if (zone() === "calendar-watch") {
+          if (dx < 0 || dy < 0) setZone("calendar-list");
         }
         return;
       }
@@ -4870,7 +5182,7 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
         const targetZone =
           screen() === "detail"
             ? "hero"
-            : screen() === "movie" || screen() === "series"
+            : screen() === "movie" || screen() === "series" || screen() === "anime"
               ? "filters"
               : screen() === "library" && libraryControlCount()
                 ? "library-controls"
@@ -5047,39 +5359,72 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
             )
               await new Promise((resolve) => setTimeout(resolve, 25));
           }
-          if (sourceFilterFocus()) {
-            const height =
-              sourcePage()?.quality_filters?.[sourceFacet() - 1]?.height;
-            setSourceHeight(height);
-            manualSourceSelection = true;
-            setSourceFiltering(true);
-            const ticket = ++sourceFilterGeneration,
-              signal = sourceScope?.signal ?? scope.signal;
-            try {
-              const result = await api.rankSources(
-                allSourceIds(),
-                height,
-                signal,
-              );
-              if (ticket === sourceFilterGeneration && !signal.aborted) {
-                setSourcePage(result);
-                setSources(result.streams);
-                setChoice(0);
-                setSourceFilterFocus(false);
+          if (sourceMenu()) {
+            const kind = sourceMenu();
+            const option = sourceMenuOptions()[sourceMenuChoice()];
+            setSourceMenu(undefined);
+            if (!option) return;
+            if (kind === "quality") {
+              const height = option.height;
+              setSourceHeight(height);
+              manualSourceSelection = true;
+              setSourceFiltering(true);
+              const ticket = ++sourceFilterGeneration,
+                signal = sourceScope?.signal ?? scope.signal;
+              try {
+                const result = await api.rankSources(
+                  allSourceIds(),
+                  height,
+                  signal,
+                );
+                if (ticket === sourceFilterGeneration && !signal.aborted) {
+                  setSourcePage(result);
+                  setSources(result.streams);
+                  setChoice(0);
+                }
+              } finally {
+                if (ticket === sourceFilterGeneration)
+                  setSourceFiltering(false);
               }
-            } finally {
-              if (ticket === sourceFilterGeneration) setSourceFiltering(false);
+            } else {
+              setSourceProviderFilter(option.provider);
+              manualSourceSelection = true;
+              setChoice(0);
             }
             return;
           }
+          if (sourceFilterFocus()) {
+            const kind = sourceFacet() === 0 ? "quality" : "provider";
+            setSourceMenu(kind);
+            const options =
+              kind === "quality" ? qualityMenuOptions() : providerMenuOptions();
+            const selected =
+              kind === "quality"
+                ? options.findIndex(
+                    (option) => option.height === sourceHeight(),
+                  )
+                : options.findIndex(
+                    (option) => option.provider === sourceProviderFilter(),
+                  );
+            setSourceMenuChoice(Math.max(0, selected));
+            return;
+          }
           if (sourceFiltering()) return;
-          const source = sources()[choice()];
+          const source = visibleSources()[choice()];
           if (source) await playSource(source);
         } else
           await run(async () => {
             await modal.items[choice()]?.run();
           });
         return;
+      }
+      if (screen() === "calendar") {
+        if (zone() === "calendar-list" || zone() === "calendar-watch") {
+          const entry = calendarDayEntries()[calendarEntry()];
+          if (entry) await openDetail(entry.card);
+          return;
+        }
+        if (zone() === "calendar-days") return;
       }
       if (screen() === "welcome" || screen() === "pairing") {
         await beginPairing();
@@ -5250,13 +5595,11 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
         return;
       }
       if (zone() === "library-controls") {
-        const item = libraryTypes()[column()];
-        if (item)
-          await run(() =>
-            applyLibrary({ ...library()?.query, type: item.value }),
-          );
-        else if (librarySort()) chooseLibrary(librarySort()!);
-        else libraryFilterDialog();
+        if (column() === 0 && libraryType()) chooseLibrary(libraryType()!);
+        else if (column() === 1 && librarySort())
+          chooseLibrary(librarySort()!);
+        else
+          await run(() => applyLibrary(libraryDefaultQuery()));
         return;
       }
       if (zone() === "filters") {
@@ -5475,6 +5818,31 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
         .join(",");
       document.documentElement.dataset.tvOverlay = overlay()?.kind ?? "";
       document.documentElement.dataset.tvSources = String(sources().length);
+      document.documentElement.dataset.tvSourceProviders = sourceProviders()
+        .map(([label]) => label)
+        .join(",");
+      document.documentElement.dataset.tvSourceChoice = String(choice());
+      document.documentElement.dataset.tvPlayerState = String(
+        snapshot()?.state ?? "",
+      );
+      document.documentElement.dataset.tvPlaybackError = playbackError();
+      document.documentElement.dataset.tvSourceMenu = sourceMenu() ?? "";
+      document.documentElement.dataset.tvSourceFilterFocus = String(
+        sourceFilterFocus(),
+      );
+      document.documentElement.dataset.tvSourceFacet = String(sourceFacet());
+      document.documentElement.dataset.tvSourceMenuChoice = String(
+        sourceMenuChoice(),
+      );
+      document.documentElement.dataset.tvSourceFilter =
+        sourceProviderFilter() ?? "";
+      document.documentElement.dataset.tvSourceFailure = sourceFailure();
+      document.documentElement.dataset.tvLibrarySort = String(
+        library()?.query?.sort ?? "",
+      );
+      document.documentElement.dataset.tvCalendarEntries = String(
+        calendar()?.entries.length ?? 0,
+      );
       // The picker's own state, so a session can be checked without reading the
       // canvas: the status line and the empty state are drawn, not queried.
       document.documentElement.dataset.tvSourceStatus = String(sourceSpread());
@@ -5647,7 +6015,7 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
         setFailed(false);
       });
       const badgeWidth = createMemo(() => {
-        const context = textMetrics("18px Onest700");
+        const context = sdfTextMetrics("18px Onest700");
         return Math.min(
           props.w - 20,
           Math.ceil(
@@ -5789,20 +6157,18 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
           </TvView>
           <Show when={!props.poster || props.focused || props.focusedCaptions}>
             <TvView y={props.h + 14} w={props.w} h={66} clipping>
-              <Show when={props.poster || !props.card.logo}>
-                <Label
-                  y={0}
-                  size={24}
-                  lineheight={1.2}
-                  font="Onest600"
-                  maxwidth={props.w}
-                  maxlines={1}
-                  content={props.card.title}
-                  color={palette.text}
-                />
-              </Show>
               <Label
-                y={props.poster || !props.card.logo ? 33 : 0}
+                y={0}
+                size={24}
+                lineheight={1.2}
+                font="Onest600"
+                maxwidth={props.w}
+                maxlines={1}
+                content={props.card.title}
+                color={palette.text}
+              />
+              <Label
+                y={33}
                 size={20}
                 lineheight={1.3}
                 maxwidth={props.w}
@@ -5945,7 +6311,12 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
                 <BillboardBackdrop art={billboard} />
               </Show>
               <Show when={screen() === "home" && zone() === "rows"}>
-                <BrowseBackdrop card={hero()} />
+                <BrowseBackdrop
+                  card={hero()}
+                  portrait={
+                    (home()?.rows[row()]?.id ?? "continue") !== "continue"
+                  }
+                />
               </Show>
               <Show when={screen() === "detail"}>
                 <Backdrop
@@ -5967,7 +6338,6 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
                   "player",
                   "settings",
                 ].includes(screen()) &&
-                !(screen() === "home" && zone() === "rows") &&
                 screen() !== "detail"
               }
             >
@@ -6005,9 +6375,12 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
                     y={38}
                     w={navLayout()[index()].w}
                     h={56}
-                    rounded={28}
+                    rounded={8}
                     color={
-                      zone() === "nav" && column() === index()
+                      zone() === "nav" &&
+                      column() === index() &&
+                      nav.id !== "search" &&
+                      nav.id !== "profiles"
                         ? "#212124"
                         : "rgba(0,0,0,0)"
                     }
@@ -6019,7 +6392,9 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
                         src={outline(
                           navLayout()[index()].w,
                           56,
-                          8,
+                          nav.id === "search" || nav.id === "profiles"
+                            ? 28
+                            : 8,
                           3,
                           "#F4F2EE",
                         )}
@@ -6046,11 +6421,7 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
                         w={60}
                         h={60}
                         rounded={30}
-                        color={
-                          zone() === "nav" && column() === index()
-                            ? palette.text
-                            : "#212124"
-                        }
+                        color="#212124"
                       />
                       <TvView
                         w={56}
@@ -6075,18 +6446,23 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
                           }
                         />
                         <Show
-                          when={avatar(
+                          when={
                             management()?.profiles.find(
                               (p) => p.id === api.profile,
-                            )?.avatar_id,
-                          )}
+                            )?.avatar_url ??
+                            avatar(
+                              management()?.profiles.find(
+                                (p) => p.id === api.profile,
+                              )?.avatar_id,
+                            )
+                          }
                         >
                           {(src) => (
                             <TvView
                               w={56}
                               h={56}
                               rounded={28}
-                              src={src()}
+                              src={imageSource(src())}
                               fit="cover"
                             />
                           )}
@@ -6099,7 +6475,7 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
                         centerY={28}
                         size={26}
                         font={screen() === nav.id ? "Onest700" : "Onest500"}
-                        maxwidth={navLayout()[index()].w - 36}
+                        maxwidth={navLayout()[index()].text}
                         maxlines={1}
                         content={nav.label}
                         color={
@@ -6113,7 +6489,7 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
                         show={screen() === nav.id}
                         x={18}
                         y={49}
-                        w={navLayout()[index()].w - 36}
+                        w={navLayout()[index()].text}
                         h={3}
                         rounded={2}
                         color={palette.text}
@@ -6151,6 +6527,19 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
                 zone={zone()}
               />
             </Show>
+            <Show when={screen() === "calendar"}>
+              <CalendarBoard
+                entries={calendar()?.entries ?? []}
+                days={calendarDaysList()}
+                day={calendarDay()}
+                active={calendarEntry()}
+                dayFocused={zone() === "calendar-days"}
+                listFocused={zone() === "calendar-list"}
+                watchFocused={zone() === "calendar-watch"}
+                loading={loading()}
+                error={error()}
+              />
+            </Show>
             <Show when={screen() === "home"}>
               <Show when={home()?.complete && !hero()}>
                 <Label
@@ -6180,7 +6569,7 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
                 {(card) => (
                   <TvView
                     x={96}
-                    y={zone() === "rows" ? -700 : 300}
+                    y={zone() === "rows" ? -700 : 330}
                     w={1100}
                     transition={{
                       y: {
@@ -6217,7 +6606,7 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
                     </Show>
                     <Metadata card={card()} y={188} />
                     <Label
-                      y={238}
+                      y={234}
                       size={26}
                       lineheight={1.45}
                       maxwidth={780}
@@ -6227,7 +6616,7 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
                     />
                     <Button
                       x={0}
-                      y={342}
+                      y={338}
                       w={220}
                       h={72}
                       icon="play"
@@ -6237,7 +6626,7 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
                     />
                     <Button
                       x={240}
-                      y={342}
+                      y={338}
                       w={72}
                       h={72}
                       round
@@ -6246,7 +6635,7 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
                     />
                     <Button
                       x={332}
-                      y={342}
+                      y={338}
                       w={72}
                       h={72}
                       round
@@ -6257,7 +6646,7 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
                       {(_, i) => (
                         <TvView
                           x={i() * 24 + (i() > heroSlide() ? 32 : 0)}
-                          y={460}
+                          y={450}
                         >
                           <Show
                             when={i() === heroSlide()}
@@ -6503,39 +6892,56 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
                       <Button
                         x={0}
                         y={value().episodes.length ? 648 : 668}
-                        w={detailAction()?.resume ? 420 : 260}
+                        w={detailPlayProgress() > 0 ? 420 : 260}
                         icon="play"
-                        label={detailTarget()?.label ?? "Play"}
+                        label={detailActionLabel()}
                         focused={zone() === "hero" && heroAction() === 0}
                       />
-                      <Show when={detailAction()?.resume}>
+                      <Show when={detailPlayProgress() > 0}>
                         <Label
-                          x={288}
+                          x={detailRemainingX()}
                           y={673}
                           size={24}
                           font="Onest600"
-                          color={heroAction() === 0 ? "#555553" : palette.muted}
-                          content={detailAction()?.remaining_label ?? ""}
+                          color={
+                            heroAction() === 0
+                              ? "rgba(17,17,19,.7)"
+                              : "rgba(244,242,238,.7)"
+                          }
+                          content={detailPlayRemaining()}
                         />
                         <TvView
                           x={28}
-                          y={704}
+                          y={(value().episodes.length ? 648 : 668) + 56}
                           w={364}
                           h={4}
                           rounded={2}
-                          color="rgba(17,17,19,.18)"
+                          color={
+                            heroAction() === 0
+                              ? "rgba(17,17,19,.2)"
+                              : "rgba(244,242,238,.2)"
+                          }
                         />
                         <TvView
                           x={28}
-                          y={704}
-                          w={364 * (detailAction()?.progress ?? 0)}
+                          y={(value().episodes.length ? 648 : 668) + 56}
+                          w={
+                            364 *
+                            Math.max(
+                              0,
+                              Math.min(
+                                1,
+                                detailPlayProgress(),
+                              ),
+                            )
+                          }
                           h={4}
                           rounded={2}
                           color={heroAction() === 0 ? "#111113" : palette.text}
                         />
                       </Show>
                       <Button
-                        x={detailAction()?.resume ? 440 : 280}
+                        x={detailPlayProgress() > 0 ? 440 : 280}
                         y={value().episodes.length ? 648 : 668}
                         icon={isSaved(value().item) ? "check" : "plus"}
                         round
@@ -6695,19 +7101,20 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
               </Show>
             </Show>
             <Show
-              when={["movie", "series", "library", "search"].includes(screen())}
+              when={["movie", "series", "anime", "library", "search"].includes(screen())}
             >
               <Show when={screen() === "library"}>
                 <LibraryToolbar
-                  types={libraryTypes()}
+                  type={libraryType()}
                   sort={librarySort()}
                   filters={libraryFilters().length > 0}
                   query={library()?.query}
+                  defaultQuery={library()?.default_query}
                   focused={zone() === "library-controls"}
                   index={column()}
                 />
               </Show>
-              <Show when={screen() === "movie" || screen() === "series"}>
+              <Show when={screen() === "movie" || screen() === "series" || screen() === "anime"}>
                 <For
                   each={[
                     {
@@ -6790,7 +7197,14 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
                   />
                 </Show>
               </Show>
-              <Show when={screen() !== "search" || searchCapabilities().media}>
+              <Show
+                when={
+                  ["movie", "series", "anime", "library", "search"].includes(
+                    screen(),
+                  ) &&
+                  (screen() !== "search" || searchCapabilities().media)
+                }
+              >
                 <TvView
                   x={screen() === "search" ? 700 : 96}
                   y={
@@ -6974,7 +7388,12 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
                 color={palette.muted}
                 maxwidth={920}
                 maxlines={1}
-                content={channels()[liveChannelIndex()]?.card.title ?? ""}
+                content={(() => {
+                  const channel = channels()[liveChannelIndex()];
+                  return [channel?.number, channel?.card.title]
+                    .filter(Boolean)
+                    .join(" · ");
+                })()}
               />
               <Label
                 x={96}
@@ -6985,8 +7404,8 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
                 maxlines={1}
                 content={
                   currentProgram()?.title ??
-                  channels()[liveChannelIndex()]?.card.title ??
-                  "Live TV"
+                  channels()[liveChannelIndex()]?.card.subtitle ??
+                  ""
                 }
               />
               <Show when={currentProgram()}>
@@ -6995,32 +7414,20 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
                     <Label
                       x={96}
                       y={250}
-                      size={26}
-                      content={`${guideTime(p().start_millis)} – ${guideTime(p().end_millis)}`}
-                    />
-                    <TvView
-                      x={96}
-                      y={292}
-                      w={360}
-                      h={4}
-                      color="rgba(255,255,255,.2)"
-                    />
-                    <TvView
-                      x={96}
-                      y={292}
-                      w={
-                        360 *
-                        Math.max(
-                          0,
-                          Math.min(
-                            1,
-                            (guideWindow().now - p().start_millis) /
-                              (p().end_millis - p().start_millis),
-                          ),
-                        )
-                      }
-                      h={4}
-                      color={palette.text}
+                      size={24}
+                      font="Onest500"
+                      content={`${guideTime(p().start_millis)} – ${guideTime(
+                        p().end_millis,
+                      )}${
+                        p().end_millis > Date.now()
+                          ? ` · ${Math.max(
+                              1,
+                              Math.round(
+                                (p().end_millis - Date.now()) / 60000,
+                              ),
+                            )} min left`
+                          : ""
+                      }`}
                     />
                     <Label
                       x={96}
@@ -7033,14 +7440,21 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
                   </>
                 )}
               </Show>
-              <Show when={channels()[liveChannelIndex()]?.card.landscape}>
+              <Show
+                when={
+                  currentProgram()?.artwork ??
+                  channels()[liveChannelIndex()]?.card.landscape ??
+                  channels()[liveChannelIndex()]?.card.poster
+                }
+              >
+                {(art) => (
                 <TvView
                   x={1184}
                   y={120}
                   w={640}
                   h={360}
                   rounded={12}
-                  src={imageSource(channels()[liveChannelIndex()]?.card.landscape, 1280)}
+                  src={imageSource(art(), 1280)}
                   fit="cover"
                 >
                   <TvView y={270} w={640} h={90} src={livePreviewScrim()} fit="cover" />
@@ -7061,48 +7475,88 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
                     content="OK to watch"
                   />
                 </TvView>
+                )}
               </Show>
-              <For
-                each={[{ id: "all", label: "All" }, ...groups()].slice(
-                  liveGroupStart(),
-                  liveGroupStart() + 9,
-                )}
-              >
-                {(group, i) => (
-                  <TvView
-                    x={96 + i() * 160}
-                    y={512}
-                    w={144}
-                    h={52}
-                    rounded={26}
-                    color={
-                      zone() === "live-groups" &&
-                      column() === i() + liveGroupStart()
-                        ? palette.text
-                        : liveGroup() === group.id ||
-                            (!liveGroup() && group.id === "all")
-                          ? "#34343A"
-                          : "rgba(0,0,0,0)"
-                    }
-                  >
-                    <Label
-                      w={144}
-                      align="center"
-                      centerY={26}
-                      size={22}
-                      font="Onest600"
-                      maxlines={1}
-                      content={group.label}
+              <Show when={groups().length}>
+                {(() => {
+                  const groupList = () => [
+                    { id: "all", label: "All" },
+                    ...groups(),
+                  ];
+                  const label = () => {
+                    const index =
+                      zone() === "live-groups"
+                        ? column()
+                        : liveGroup()
+                          ? groupList().findIndex(
+                              (group) => group.id === liveGroup(),
+                            )
+                          : 0;
+                    return groupList()[Math.max(0, index)]?.label ?? "All";
+                  };
+                  const width = () => {
+                    const title = "Group:";
+                    const value = label();
+                    const context = sdfTextMetrics("24px Onest600");
+                    return Math.min(
+                      520,
+                      76 +
+                        Math.ceil(context.measureText(title).width) +
+                        Math.ceil(context.measureText(value).width),
+                    );
+                  };
+                  return (
+                    <TvView
+                      x={96}
+                      y={512}
+                      w={width() + 6}
+                      h={64}
+                      rounded={32}
                       color={
-                        zone() === "live-groups" &&
-                        column() === i() + liveGroupStart()
-                          ? "#111113"
-                          : palette.muted
+                        zone() === "live-groups" ? palette.text : "#2A2A2E"
                       }
-                    />
-                  </TvView>
-                )}
-              </For>
+                    >
+                      <Label
+                        x={24}
+                        centerY={32}
+                        size={24}
+                        font="Onest600"
+                        content="Group:"
+                        color={
+                          zone() === "live-groups"
+                            ? "#4A4945"
+                            : palette.muted
+                        }
+                      />
+                      <Label
+                        x={24 + sourceFilterTitleWidth("Group:") + 6}
+                        centerY={32}
+                        size={24}
+                        font="Onest600"
+                        maxwidth={
+                          width() -
+                          74 -
+                          sourceFilterTitleWidth("Group:")
+                        }
+                        maxlines={1}
+                        content={label()}
+                        color={
+                          zone() === "live-groups"
+                            ? "#111113"
+                            : palette.text
+                        }
+                      />
+                      <TvView
+                        x={width() - 44}
+                        y={20}
+                        w={24}
+                        h={24}
+                        src={icon("down", zone() === "live-groups")}
+                      />
+                    </TvView>
+                  );
+                })()}
+              </Show>
               {/* The header belongs to the grid, not to one row: it reads the
                   page's window for as long as there are channels to draw. */}
               <Show when={channels().length}>
@@ -7111,9 +7565,17 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
                     <Label
                       x={420 + i * 350}
                       y={592}
-                      size={22}
+                      size={20}
+                      font="Onest600"
                       color={palette.muted}
-                      content={guideTime(guideStart() + i * 1800000)}
+                      content={
+                        i === 0
+                          ? guideTime(guideStart())
+                          : guideTime(guideStart() + i * 1800000).replace(
+                              /\s?(AM|PM)/i,
+                              "",
+                            )
+                      }
                     />
                   )}
                 </For>
@@ -7135,20 +7597,31 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
                       <TvView
                         w={300}
                         h={72}
-                        rounded={12}
-                        color={palette.surface}
+                        rounded={10}
+                        color="rgba(255,255,255,.06)"
                       >
+                        <Show when={channel.number}>
+                          <Label
+                            x={18}
+                            centerY={36}
+                            size={22}
+                            font="Onest600"
+                            maxwidth={34}
+                            maxlines={1}
+                            content={channel.number ?? ""}
+                            color={palette.muted}
+                          />
+                        </Show>
                         <Label
-                          x={24}
+                          x={channel.number ? 68 : 18}
                           centerY={36}
-                          size={26}
-                          font="Onest700"
-                          maxwidth={250}
+                          size={30}
+                          font="Bricolage800"
+                          letterspacing={-0.6}
+                          maxwidth={channel.number ? 214 : 264}
                           maxlines={1}
-                          content={
-                            (liveFavorites()?.has(channel.id) ? "★  " : "") +
-                            channel.card.title
-                          }
+                          content={channel.card.title}
+                          color={palette.text}
                         />
                       </TvView>
                       <TvView x={328} w={1400} h={72} clipping={true}>
@@ -7600,7 +8073,9 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
             <Show
               when={
                 loading() &&
-                !["player", "welcome", "search", "live"].includes(screen())
+                !["player", "welcome", "search", "live", "calendar"].includes(
+                  screen(),
+                )
               }
             >
               <For each={[0, 1, 2]}>
@@ -7708,201 +8183,457 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
                       content={
                         sourceLoading() && !sources().length
                           ? `${pickerCard()?.title ?? ""} · finding sources`
-                          : `${pickerCard()?.title ?? ""} · ${sourcePage()?.total ?? sources().length} sources`
+                          : `${pickerCard()?.title ?? ""} · ${
+                              sourcePage()?.total ?? sources().length
+                            } sources${
+                              sourceAddonCount()
+                                ? ` from ${sourceAddonCount()} ${
+                                    sourceAddonCount() === 1
+                                      ? "add-on"
+                                      : "add-ons"
+                                  }`
+                                : ""
+                            }`
                       }
                     />
-                    <For
-                      each={[
-                        {
-                          label: "All",
-                          count: sourcePage()?.total ?? sources().length,
-                        },
-                        ...(sourcePage()?.quality_filters ?? []),
-                      ]}
+                    <Show when={!sourceMenu()}>
+                    <TvView
+                      x={64}
+                      y={196}
+                      w={
+                        sourceFilterPillWidth(
+                          "Quality:",
+                          sourceQualityValue(),
+                        ) + 6
+                      }
+                      h={56}
+                      rounded={28}
+                      color={
+                        sourceFilterFocus() && sourceFacet() === 0
+                          ? palette.text
+                          : "#2A2A2E"
+                      }
                     >
-                      {(filter, i) => (
-                        <TvView
-                          x={64 + i() * 158}
-                          y={190}
-                          w={140}
-                          h={52}
-                          rounded={26}
-                          color={
-                            sourceFilterFocus() && sourceFacet() === i()
-                              ? palette.text
-                              : (
-                                    i() === 0
-                                      ? sourceHeight() === undefined
-                                      : "height" in filter &&
-                                        filter.height === sourceHeight()
-                                  )
-                                ? "#34343A"
-                                : "rgba(0,0,0,0)"
-                          }
-                        >
-                          <Label
-                            x={18}
-                            centerY={26}
-                            size={23}
-                            font="Onest600"
-                            content={`${filter.label} ${filter.count}`}
-                            color={
-                              sourceFilterFocus() && sourceFacet() === i()
-                                ? "#111113"
-                                : palette.muted
-                            }
-                          />
-                        </TvView>
-                      )}
-                    </For>
+                      <Label
+                        x={24}
+                        centerY={32}
+                        size={24}
+                        font="Onest600"
+                        content="Quality:"
+                        color={
+                          sourceFilterFocus() && sourceFacet() === 0
+                            ? "#4A4945"
+                            : palette.muted
+                        }
+                      />
+                      <Label
+                        x={24 + sourceFilterTitleWidth("Quality:") + 6}
+                        centerY={28}
+                        size={24}
+                        font="Onest600"
+                        maxwidth={
+                          sourceFilterPillWidth(
+                            "Quality:",
+                            sourceQualityValue(),
+                          ) -
+                          74 -
+                          sourceFilterTitleWidth("Quality:")
+                        }
+                        maxlines={1}
+                        content={sourceQualityValue()}
+                        color={
+                          sourceFilterFocus() && sourceFacet() === 0
+                            ? "#111113"
+                            : palette.text
+                        }
+                      />
+                      <TvView
+                        x={
+                          sourceFilterPillWidth(
+                            "Quality:",
+                            sourceQualityValue(),
+                          ) -
+                          44
+                        }
+                        y={16}
+                        w={24}
+                        h={24}
+                        src={icon(
+                          "down",
+                          sourceFilterFocus() && sourceFacet() === 0,
+                        )}
+                      />
+                    </TvView>
+                    <TvView
+                      x={
+                        64 +
+                        sourceFilterPillWidth(
+                          "Quality:",
+                          sourceQualityValue(),
+                        ) +
+                        14
+                      }
+                      y={196}
+                      w={
+                        sourceFilterPillWidth(
+                          "Source:",
+                          sourceProviderValue(),
+                        ) + 6
+                      }
+                      h={56}
+                      rounded={28}
+                      color={
+                        sourceFilterFocus() && sourceFacet() === 1
+                          ? palette.text
+                          : "#2A2A2E"
+                      }
+                    >
+                      <Label
+                        x={24}
+                        centerY={32}
+                        size={24}
+                        font="Onest600"
+                        content="Source:"
+                        color={
+                          sourceFilterFocus() && sourceFacet() === 1
+                            ? "#4A4945"
+                            : palette.muted
+                        }
+                      />
+                      <Label
+                        x={24 + sourceFilterTitleWidth("Source:") + 6}
+                        centerY={28}
+                        size={24}
+                        font="Onest600"
+                        maxwidth={
+                          sourceFilterPillWidth(
+                            "Source:",
+                            sourceProviderValue(),
+                          ) -
+                          74 -
+                          sourceFilterTitleWidth("Source:")
+                        }
+                        maxlines={1}
+                        content={sourceProviderValue()}
+                        color={
+                          sourceFilterFocus() && sourceFacet() === 1
+                            ? "#111113"
+                            : palette.text
+                        }
+                      />
+                      <TvView
+                        x={
+                          sourceFilterPillWidth(
+                            "Source:",
+                            sourceProviderValue(),
+                          ) -
+                          44
+                        }
+                        y={16}
+                        w={24}
+                        h={24}
+                        src={icon(
+                          "down",
+                          sourceFilterFocus() && sourceFacet() === 1,
+                        )}
+                      />
+                    </TvView>
+                    <Label
+                      x={64}
+                      y={264}
+                      size={22}
+                      font="Onest700"
+                      letterspacing={1.4}
+                      color={palette.muted}
+                      content="BEST MATCHES"
+                    />
                     <For
-                      each={sources().slice(
+                      each={visibleSources().slice(
                         Math.max(0, choice() - 4),
                         Math.max(0, choice() - 4) + 5,
                       )}
                     >
-                      {(source, i) => (
-                        <TvView
-                          x={64}
-                          y={270 + i() * 114}
-                          w={800}
-                          h={104}
-                          rounded={12}
-                          color={
-                            i() + Math.max(0, choice() - 4) === choice() &&
-                            !sourceFilterFocus()
-                              ? palette.text
-                              : "#212124"
-                          }
-                        >
-                          <Label
-                            x={28}
-                            y={20}
-                            size={28}
-                            font="Onest700"
-                            maxwidth={140}
-                            content={source.view?.quality_label ?? ""}
-                            color={
-                              i() + Math.max(0, choice() - 4) === choice() &&
-                              !sourceFilterFocus()
-                                ? "#111113"
-                                : palette.text
-                            }
-                          />
-                          <Label
-                            x={28}
-                            y={60}
-                            size={18}
-                            maxwidth={120}
-                            maxlines={1}
-                            content={source.view?.format_label ?? ""}
-                            color={
-                              i() + Math.max(0, choice() - 4) === choice() &&
-                              !sourceFilterFocus()
-                                ? "#444444"
-                                : palette.muted
-                            }
-                          />
-                          <Label
-                            x={164}
-                            y={20}
-                            size={27}
-                            font="Onest700"
-                            maxwidth={610}
-                            maxlines={1}
-                            content={
-                              source.view?.title ??
-                              source.name ??
-                              source.title ??
-                              "Source"
-                            }
-                            color={
-                              i() + Math.max(0, choice() - 4) === choice() &&
-                              !sourceFilterFocus()
-                                ? "#111113"
-                                : palette.text
-                            }
-                          />
-                          <Show
-                            when={source.id === sourcePage()?.best_match_id}
+                      {(source, i) => {
+                        const rowFocused = () =>
+                          i() + Math.max(0, choice() - 4) === choice() &&
+                          !sourceFilterFocus();
+                        const title = () => sourceReleaseGroup(source);
+                        const titleWidth = () =>
+                          Math.min(
+                            420,
+                            Math.ceil(
+                              sdfTextMetrics("26px Onest600").measureText(
+                                title(),
+                              ).width,
+                            ),
+                          );
+                        return (
+                          <TvView
+                            x={64}
+                            y={300 + i() * 120}
+                            w={800}
+                            h={120}
+                            rounded={12}
+                            color={rowFocused() ? palette.text : "#222222"}
                           >
-                            <TvView
-                              x={
-                                176 +
-                                sourceLabelWidth(
-                                  source.view?.title ??
-                                    source.name ??
-                                    source.title ??
-                                    "Source",
-                                )
-                              }
-                              y={22}
-                              w={136}
-                              h={30}
-                              rounded={6}
-                              color={
-                                i() + Math.max(0, choice() - 4) === choice() &&
-                                !sourceFilterFocus()
-                                  ? "#111113"
-                                  : "#34343A"
-                              }
-                            >
-                              <Label
-                                w={136}
-                                centerY={15}
-                                align="center"
-                                size={18}
-                                font="Onest700"
-                                content="Best match"
-                              />
-                            </TvView>
-                          </Show>
-                          <Label
-                            x={164}
-                            y={60}
-                            size={22}
-                            maxwidth={610}
-                            maxlines={1}
-                            content={
-                              source.view?.body ??
-                              source.detail ??
-                              source.description ??
-                              ""
-                            }
-                            color={
-                              i() + Math.max(0, choice() - 4) === choice() &&
-                              !sourceFilterFocus()
-                                ? "#444444"
-                                : palette.muted
-                            }
-                          />
-                          <Show when={source.view?.addon_label}>
                             <Label
-                              x={420}
-                              y={36}
-                              w={344}
-                              align="right"
-                              size={20}
+                              x={28}
+                              y={16}
+                              size={30}
+                              font="Onest700"
+                              maxwidth={116}
                               maxlines={1}
-                              content={source.view?.addon_label ?? ""}
+                              content={sourceQuality(source)}
                               color={
-                                i() + Math.max(0, choice() - 4) === choice() &&
-                                !sourceFilterFocus()
-                                  ? "#444444"
-                                  : palette.muted
+                                rowFocused() ? "#111113" : palette.text
                               }
                             />
-                          </Show>
-                        </TvView>
-                      )}
+                            <Label
+                              x={28}
+                              y={54}
+                              size={18}
+                              font="Onest600"
+                              maxwidth={116}
+                              maxlines={1}
+                              content={sourceReleaseType(source) ?? ""}
+                              color={
+                                rowFocused() ? "#444444" : palette.muted
+                              }
+                            />
+                            <Label
+                              x={164}
+                              y={14}
+                              size={26}
+                              font="Onest600"
+                              maxwidth={420}
+                              maxlines={1}
+                              content={title()}
+                              color={
+                                rowFocused() ? "#111113" : palette.text
+                              }
+                            />
+                            <Show
+                              when={source.id === sourcePage()?.best_match_id}
+                            >
+                              <TvView
+                                x={180 + titleWidth()}
+                                y={14}
+                                w={136}
+                                h={30}
+                                rounded={6}
+                                color={
+                                  rowFocused()
+                                    ? "#111113"
+                                    : "rgba(244,242,238,.16)"
+                                }
+                              >
+                                <Label
+                                  w={136}
+                                  centerY={15}
+                                  align="center"
+                                  size={18}
+                                  font="Onest700"
+                                  content="Best match"
+                                  color={
+                                    rowFocused()
+                                      ? palette.text
+                                      : palette.accent
+                                  }
+                                />
+                              </TvView>
+                            </Show>
+                            <Show when={failedSources().has(source.id)}>
+                              <Label
+                                x={600}
+                                y={80}
+                                w={172}
+                                align="right"
+                                size={18}
+                                font="Onest700"
+                                content="Didn't start"
+                                color={
+                                  rowFocused() ? "#8F2B22" : "#FF7A6E"
+                                }
+                              />
+                            </Show>
+                            <Label
+                              x={164}
+                              y={52}
+                              size={18}
+                              font="Onest600"
+                              maxwidth={420}
+                              maxlines={1}
+                              content={sourceAudioSubs(source)}
+                              color={
+                                rowFocused() ? "#4A4945" : palette.muted
+                              }
+                            />
+                            <Label
+                              x={164}
+                              y={80}
+                              size={18}
+                              maxwidth={420}
+                              maxlines={1}
+                              content={sourceFacts(source).join(" · ")}
+                              color={
+                                rowFocused() ? "#4A4945" : palette.muted
+                              }
+                            />
+                            <Show when={rowFocused()}>
+                              <TvView
+                                x={744}
+                                y={42}
+                                w={28}
+                                h={28}
+                                rounded={14}
+                                color="#111113"
+                              >
+                                <TvView
+                                  x={4}
+                                  y={4}
+                                  w={20}
+                                  h={20}
+                                  src={icon(
+                                    "check",
+                                    false,
+                                    2.4,
+                                    "#F4F2EE",
+                                  )}
+                                />
+                              </TvView>
+                            </Show>
+                          </TvView>
+                        );
+                      }}
                     </For>
+                    </Show>
+                    <Show when={sourceMenu()}>
+                      <TvView
+                        w={960}
+                        h={1080}
+                        color="rgba(0,0,0,.55)"
+                      />
+                      <TvView
+                        x={64}
+                        y={170}
+                        w={800}
+                        h={560}
+                        rounded={20}
+                        color={palette.surface}
+                      >
+                        <Label
+                          x={28}
+                          y={24}
+                          size={32}
+                          font="Onest700"
+                          content={
+                            sourceMenu() === "quality" ? "Quality" : "Source"
+                          }
+                        />
+                        <For
+                          each={sourceMenuOptions().slice(
+                            Math.max(0, sourceMenuChoice() - 4),
+                            Math.max(0, sourceMenuChoice() - 4) + 7,
+                          )}
+                        >
+                          {(option, i) => {
+                            const start = () =>
+                              Math.max(0, sourceMenuChoice() - 4);
+                            const focused = () =>
+                              i() + start() === sourceMenuChoice();
+                            const selected = () =>
+                              sourceMenu() === "quality"
+                                ? option.height === sourceHeight()
+                                : option.provider === sourceProviderFilter();
+                            return (
+                              <TvView
+                                x={24}
+                                y={84 + i() * 60}
+                                w={752}
+                                h={52}
+                                rounded={10}
+                                color={
+                                  focused() ? palette.text : "#222222"
+                                }
+                              >
+                                <Label
+                                  x={20}
+                                  centerY={26}
+                                  size={24}
+                                  font="Onest600"
+                                  maxwidth={520}
+                                  maxlines={1}
+                                  content={option.label}
+                                  color={
+                                    focused() ? "#111113" : palette.text
+                                  }
+                                />
+                                <Label
+                                  x={580}
+                                  w={120}
+                                  align="right"
+                                  centerY={26}
+                                  size={20}
+                                  content={String(option.count)}
+                                  color={
+                                    focused() ? "#444444" : palette.muted
+                                  }
+                                />
+                                <Show when={selected()}>
+                                  <TvView
+                                    x={704}
+                                    y={16}
+                                    w={20}
+                                    h={20}
+                                    src={icon(
+                                      "check",
+                                      focused(),
+                                      2.4,
+                                      focused() ? "#111113" : "#F4F2EE",
+                                    )}
+                                  />
+                                </Show>
+                              </TvView>
+                            );
+                          }}
+                        </For>
+                      </TvView>
+                    </Show>
                     <Show when={sourceEmptyCopy(sourceSpread())}>
                       <Label
                         x={64}
-                        y={320}
+                        y={340}
                         size={28}
                         maxwidth={800}
                         content={sourceEmptyCopy(sourceSpread())}
+                      />
+                    </Show>
+                    <Show
+                      when={
+                        !sourceEmptyCopy(sourceSpread()) &&
+                        sources().length > 0 &&
+                        visibleSources().length === 0
+                      }
+                    >
+                      <Label
+                        x={64}
+                        y={340}
+                        size={26}
+                        maxwidth={800}
+                        color={palette.muted}
+                        content="No sources match these filters."
+                      />
+                    </Show>
+                    <Show when={sourceFailure()}>
+                      <Label
+                        x={64}
+                        y={932}
+                        size={20}
+                        font="Onest600"
+                        maxwidth={800}
+                        maxlines={1}
+                        color="#FF7A6E"
+                        content={sourceFailure()}
                       />
                     </Show>
                     {/* SRC-DRAWER-10: the status line sits under the list and
@@ -7910,7 +8641,7 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
                     <Show when={sourceStatusCopy(sourceSpread())}>
                       <TvView
                         x={64}
-                        y={884}
+                        y={964}
                         w={SOURCE_SPINNER_SIZE}
                         h={SOURCE_SPINNER_SIZE}
                         src={sourceSpinnerSrc(palette.accent)}
@@ -7918,7 +8649,7 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
                       />
                       <Label
                         x={64 + SOURCE_SPINNER_SIZE + 12}
-                        y={880}
+                        y={960}
                         size={22}
                         maxwidth={800}
                         maxlines={1}

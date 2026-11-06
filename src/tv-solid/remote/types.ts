@@ -88,6 +88,9 @@ export interface Profile {
   id: string;
   name: string;
   avatar_id?: string | null;
+  avatar_url?: string | null;
+  avatar_style?: string | null;
+  avatar_choice?: number | null;
   locked: boolean;
   can_delete: boolean;
   selection_requires_parent: boolean;
@@ -170,8 +173,29 @@ export interface Source {
   title?: string;
   detail?: string;
   description?: string;
+  filename?: string;
   quality_height?: number;
-  presentation?: { quality?: string; [key: string]: unknown };
+  release_type?: string;
+  video_codec?: string;
+  audio_codecs?: string[];
+  audio_languages?: string[];
+  subtitle_languages?: string[];
+  audio_language_status?: string;
+  subbed?: boolean;
+  seeders?: number;
+  source_name?: string;
+  source_addon_id?: string;
+  presentation?: {
+    quality?: string;
+    container?: string;
+    delivery_format?: string | null;
+    video_codec?: string;
+    audio_codecs?: string[];
+    provider_name?: string;
+    size_label?: string;
+    size_bytes?: number | null;
+    [key: string]: unknown;
+  };
 }
 export interface Control {
   id: string;
@@ -197,6 +221,7 @@ export interface Controls {
 }
 export interface Channel {
   id: string;
+  number?: string | null;
   connection_id: string;
   card: Card;
   group_id?: string;
@@ -226,6 +251,7 @@ export interface Program {
   id: string;
   title: string;
   description?: string;
+  artwork?: string | null;
   start_millis: number;
   end_millis: number;
 }
@@ -298,6 +324,23 @@ export interface SourcePage {
   best_match_id?: string | null;
   quality_filters: { height: number; label: string; count: number }[];
   total: number;
+}
+
+export interface CalendarEntry {
+  id: string;
+  date: string;
+  season?: number | null;
+  episode?: number | null;
+  episode_title?: string | null;
+  source?: string | null;
+  card: Card;
+}
+
+export interface CalendarSnapshot {
+  entries: CalendarEntry[];
+  complete: boolean;
+  next_cursor?: string | null;
+  sources?: string[];
 }
 
 export interface Guide {

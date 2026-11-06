@@ -2,10 +2,14 @@
 import { createMemo, createSignal, onCleanup, onMount, Show } from "solid-js";
 import { KeyedFor, TvView } from "../runtime";
 import { avatar, icon, Label, outline, palette } from "./visuals";
-import { textMetrics } from "./text-measure";
+import { imageSource } from "./image-source";
+import { sdfTextMetrics } from "./text-measure";
 import type { Profile } from "./types";
 
-type Item = Pick<Profile, "id" | "name" | "avatar_id" | "locked">;
+type Item = Pick<
+  Profile,
+  "id" | "name" | "avatar_id" | "avatar_url" | "locked"
+>;
 function ProfileTile(props: {
   profile: Item;
   x: number;
@@ -21,7 +25,7 @@ function ProfileTile(props: {
     onCleanup(() => cancelAnimationFrame(frame));
   });
   const nameWidth = createMemo(() => {
-    const context = textMetrics(
+    const context = sdfTextMetrics(
       `28px ${props.focused ? "Onest700" : "Onest500"}`,
     );
     return Math.min(
@@ -68,7 +72,9 @@ function ProfileTile(props: {
         }
       >
         <Show
-          when={avatar(props.profile.avatar_id)}
+          when={
+            props.profile.avatar_url ?? avatar(props.profile.avatar_id)
+          }
           fallback={
             <Show
               when={props.profile.id !== "add"}
@@ -96,7 +102,13 @@ function ProfileTile(props: {
           }
         >
           {(src) => (
-            <TvView w={200} h={200} rounded={28} src={src()} fit="cover" />
+            <TvView
+              w={200}
+              h={200}
+              rounded={28}
+              src={imageSource(src())}
+              fit="cover"
+            />
           )}
         </Show>
       </TvView>
@@ -160,7 +172,7 @@ export function ProfilesScreen(props: {
   const start = () => Math.floor(props.index / 5) * 5;
   const visible = () => items().slice(start(), start() + 5);
   const manageWidth = createMemo(() => {
-    const ctx = textMetrics("26px Onest700");
+    const ctx = sdfTextMetrics("26px Onest700");
     return ctx.measureText("Manage profiles").width + 40;
   });
   return (

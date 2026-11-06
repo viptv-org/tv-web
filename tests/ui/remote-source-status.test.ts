@@ -161,7 +161,7 @@ describe("The shipped TV entry runs this code (#34)", () => {
     expect(entry).toContain("[openingSource, setOpeningSource]");
     expect(entry).toContain("setOpeningSource(source);");
     expect(entry.indexOf("setOpeningSource(source);")).toBeLessThan(
-      entry.indexOf("await player.start(current.card, source, current.resume)"),
+      entry.indexOf("await player.start("),
     );
     expect(entry).toContain("opening: !!openingSource()");
   });

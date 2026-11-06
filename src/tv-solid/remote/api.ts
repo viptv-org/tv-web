@@ -1,5 +1,6 @@
 import type {
   Bootstrap,
+  CalendarSnapshot,
   Card,
   Controls,
   Detail,
@@ -503,6 +504,9 @@ export class RemoteTvApi {
   }
   home(signal?: AbortSignal) {
     return this.call<Home>(this.scoped("/home"), "GET", undefined, signal);
+  }
+  calendar(signal?: AbortSignal) {
+    return this.call<CalendarSnapshot>("/api/calendar", "GET", undefined, signal);
   }
   profiles(signal?: AbortSignal) {
     return this.call<Management>("/api/profiles", "GET", undefined, signal);

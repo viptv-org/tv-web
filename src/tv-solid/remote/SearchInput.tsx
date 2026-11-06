@@ -9,7 +9,7 @@ import {
 } from "solid-js";
 import { TvView } from "../runtime";
 import { icon, Label, palette } from "./visuals";
-import { textMetrics } from "./text-measure";
+import { sdfTextMetrics } from "./text-measure";
 
 export const searchLetters = "abcdefghijklmnopqrstuvwxyz1234567890".split("");
 
@@ -33,7 +33,7 @@ export function SearchInput(props: {
   // Only the visible tail needs a glyph texture. The submitted query is intact.
   const tail = () => {
     const characters = Array.from(props.value);
-    const context = textMetrics("32px Onest500");
+    const context = sdfTextMetrics("32px Onest500");
     let start = 0;
     while (
       start < characters.length &&
@@ -43,7 +43,7 @@ export function SearchInput(props: {
     return characters.slice(start).join("");
   };
   const width = createMemo(() => {
-    const context = textMetrics("32px Onest500");
+    const context = sdfTextMetrics("32px Onest500");
     return context.measureText(tail()).width;
   });
   return (

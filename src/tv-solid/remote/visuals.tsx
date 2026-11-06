@@ -328,6 +328,63 @@ export function topBarGradient() {
   return topBar;
 }
 
+let browseWideScrim: ImageData | undefined;
+/** The wide left scrim from TvHomeBackdrop's hero backdrop. It darkens the
+ * ambient plane under the browse summary so the sharp art has no visible edge. */
+export function browseWideScrimGradient() {
+  if (!browseWideScrim) {
+    browseWideScrim = new ImageData(480, 155);
+    for (let y = 0; y < 155; y++)
+      for (let x = 0; x < 480; x++) {
+        const t = x / 479,
+          alpha = t < 0.625 ? 0.92 * Math.pow(1 - t / 0.625, 1.15) : 0,
+          i = (y * 480 + x) * 4;
+        browseWideScrim.data[i] = 11;
+        browseWideScrim.data[i + 1] = 11;
+        browseWideScrim.data[i + 2] = 12;
+        browseWideScrim.data[i + 3] = Math.round(alpha * 255);
+      }
+  }
+  return browseWideScrim;
+}
+
+let leftScrim: ImageData | undefined;
+/** The browsing plane's 560px horizontal dissolve into the page background. */
+export function leftScrimGradient() {
+  if (!leftScrim) {
+    leftScrim = new ImageData(140, 155);
+    for (let y = 0; y < 155; y++)
+      for (let x = 0; x < 140; x++) {
+        const alpha = Math.pow(1 - x / 139, 1.25),
+          i = (y * 140 + x) * 4;
+        leftScrim.data[i] = 11;
+        leftScrim.data[i + 1] = 11;
+        leftScrim.data[i + 2] = 12;
+        leftScrim.data[i + 3] = Math.round(alpha * 255);
+      }
+  }
+  return leftScrim;
+}
+
+let bottomScrim: ImageData | undefined;
+/** The 240px bottom fade under the browsing artwork. */
+export function bottomScrimGradient() {
+  if (!bottomScrim) {
+    bottomScrim = new ImageData(480, 60);
+    for (let y = 0; y < 60; y++) {
+      const alpha = Math.pow(y / 59, 1.25);
+      for (let x = 0; x < 480; x++) {
+        const i = (y * 480 + x) * 4;
+        bottomScrim.data[i] = 11;
+        bottomScrim.data[i + 1] = 11;
+        bottomScrim.data[i + 2] = 12;
+        bottomScrim.data[i + 3] = Math.round(alpha * 255);
+      }
+    }
+  }
+  return bottomScrim;
+}
+
 let liveScrim: ImageData | undefined;
 /** The 90px bottom scrim under the Live preview's "OK to watch" row. */
 export function livePreviewScrim() {
