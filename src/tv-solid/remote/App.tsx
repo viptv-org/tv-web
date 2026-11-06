@@ -623,7 +623,11 @@ const symbols = [
   "0",
 ];
 
-export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
+export function createRemoteTvApp(
+  api: RemoteTvApi,
+  platform: string,
+  options: { autoStart?: boolean; initialLoading?: boolean } = {},
+) {
   return () => {
     const [screen, setScreen] = createSignal<Screen>("welcome"),
       [home, setHome] = createSignal<Home>(),
@@ -685,7 +689,7 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
         channels: entry?.channel_search === true,
       };
     });
-    const [loading, setLoading] = createSignal(true),
+    const [loading, setLoading] = createSignal(options.initialLoading ?? true),
       [error, setError] = createSignal(""),
       [playbackError, setPlaybackError] = createSignal(""),
       [pending, setPending] = createSignal(false);
@@ -1660,7 +1664,7 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
       scheduleRevisions();
     }
     async function start() {
-      setLoading(true);
+      if (options.initialLoading !== false) setLoading(true);
       setError("");
       try {
         if (await api.restore())
@@ -6072,11 +6076,22 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
     createEffect(() => {
       if (bootRequested) return;
       bootRequested = true;
-      void start();
+      if (options.autoStart !== false) void start();
     });
-    onMount(() => {
+    let inputRequested = false;
+    createEffect(() => {
+      if (inputRequested) return;
+      inputRequested = true;
       const input = (event: KeyboardEvent) => {
         if (event.ctrlKey || event.metaKey || event.altKey) return;
+        if (
+          screen() === "welcome" &&
+          (event.key === "Enter" || event.keyCode === 13)
+        ) {
+          event.preventDefault();
+          void beginPairing();
+          return;
+        }
         if (
           screen() === "player" &&
           (event.key === "MediaStop" || event.keyCode === 413)

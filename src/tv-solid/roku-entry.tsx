@@ -195,6 +195,8 @@ function rokuColor(value: any): string {
   setProp(label, "text", String(p.text ?? ""));
   setProp(label, "width", Math.max(1, Math.min(1000, Math.ceil(Number(p.width) || 1))));
   setProp(label, "height", Math.max(1, Math.ceil(Number(p.height) || 1)));
+  setProp(label, "horizAlign", p.align === "center" ? "center" : p.align === "right" ? "right" : "left");
+  setProp(label, "vertAlign", "center");
   setProp(label, "color", rokuColor(p.color));
   setProp(label, "translation", [Number(node.absX || 0), Number(node.absY || 0)]);
   } catch (error: any) {
@@ -203,7 +205,8 @@ function rokuColor(value: any): string {
 };
 
 try {
-  render(() => createComponent(createRemoteTvApp(api, "web"), {}));
+  render(() => createComponent(createRemoteTvApp(api, "web", { initialLoading: false }), {}));
+
 
 // Font faces publish asynchronously after the shared entry mounts. Bump the
 // layout epoch once the native faces are measurable so TvText reflows.

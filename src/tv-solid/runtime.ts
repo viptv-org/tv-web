@@ -340,6 +340,7 @@ function visualNode(
       ["children", "show", "alpha", "fit", "nodeRef", "onError", "cssLineBox"].includes(key)
     )
       continue;
+    if ((key === "src" || key === "texture") && props[key] == null) continue;
     if (key === "src" && props.src instanceof ImageData) {
       Object.defineProperty(mapped, "texture", {
         enumerable: true,
