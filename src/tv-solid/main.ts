@@ -9,6 +9,7 @@ import type { RendererMain } from "@solidtv/renderer";
 import { sdfFonts } from "./fonts";
 import { tvShaderName } from "./shaders";
 import { setRendererStart } from "./renderer-clock";
+import { reloadImages } from "./remote/image-source";
 import "../theme/viptv-tokens.generated.css";
 
 import { RemoteTvApi } from "./remote/api";
@@ -91,10 +92,12 @@ async function start() {
       __viptvRenderer?: typeof renderer;
       __viptvShaderName?: typeof tvShaderName;
       __viptvRendererStart?: () => number;
+      __viptvReloadImages?: () => void;
     };
     debug.__viptvRenderer = renderer;
     debug.__viptvShaderName = tvShaderName;
     debug.__viptvRendererStart = () => rendererStartAt;
+    debug.__viptvReloadImages = reloadImages;
   }
   if (new URLSearchParams(location.search).has("perfdebug"))
     (

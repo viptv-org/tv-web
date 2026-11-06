@@ -94,7 +94,8 @@ import {
 
 
 } from "./SearchChannels";
-import { imageSource } from "./image-source";
+import { imageSource, reloadImages } from "./image-source";
+import { clearLogoCache } from "./visuals";
 import { CalendarBoard, calendarDayKey, calendarDays } from "./CalendarBoard";
 import { PageSkeleton } from "./Skeletons";
 import { sourceAudioSubs, sourceFacts, sourceProvider as providerLabel, sourceQuality, sourceReleaseGroup, sourceReleaseType } from "./source-presentation";
@@ -929,10 +930,15 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
     }, 15_000);
     onCleanup(() => clearInterval(screenSaverTimer));
     /** Returns true when a key woke the saver, swallowing that key press. */
+    function reloadIdleImages() {
+      clearLogoCache();
+      reloadImages();
+    }
     function dismissScreenSaver(): boolean {
       if (screenSaver()) {
         setScreenSaver(false);
         lastActivity = Date.now();
+        reloadIdleImages();
         return true;
       }
       lastActivity = Date.now();
@@ -6120,13 +6126,31 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
         cancelHold();
         if (screen() === "player") void leavePlayer().catch(fail);
       };
+      let hiddenAt = 0,
+        awayAt = Date.now();
       const visibility = () => {
         guideClock = undefined;
-        setHeroVisible(document.visibilityState === "visible");
-        if (document.visibilityState !== "visible") suspend();
+        const visible = document.visibilityState === "visible";
+        setHeroVisible(visible);
+        if (!visible) {
+          hiddenAt = Date.now();
+          suspend();
+        } else if (hiddenAt && Date.now() - hiddenAt > 5_000) {
+          hiddenAt = 0;
+          reloadIdleImages();
+        }
+      };
+      const away = () => {
+        awayAt = Date.now();
+      };
+      const back = () => {
+        if (Date.now() - awayAt > 30_000) reloadIdleImages();
+        awayAt = Date.now();
       };
       const relaunch = () => window.focus();
       window.addEventListener("blur", cancelHold);
+      window.addEventListener("blur", away);
+      window.addEventListener("focus", back);
       window.addEventListener("keydown", input);
       window.addEventListener("pagehide", suspend);
       document.addEventListener("visibilitychange", visibility);
@@ -6134,6 +6158,8 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
       onCleanup(() => {
         window.removeEventListener("keydown", input);
         window.removeEventListener("blur", cancelHold);
+        window.removeEventListener("blur", away);
+        window.removeEventListener("focus", back);
         window.removeEventListener("pagehide", suspend);
         document.removeEventListener("visibilitychange", visibility);
         document.removeEventListener("webOSRelaunch", relaunch);

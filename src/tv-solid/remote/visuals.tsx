@@ -1,7 +1,7 @@
 /** @jsxImportSource @solidtv/solid */
 import { createEffect, createSignal, onCleanup, Show } from "solid-js";
 import { TvView, TvText } from "../runtime";
-import { imageSource } from "./image-source";
+import { imageSource, imageVersion } from "./image-source";
 import { getRenderer } from "@solidtv/solid";
 import { tokens } from "../../theme/viptv-tokens.generated";
 import { buttonShadow } from "./button-shadow";
@@ -412,6 +412,11 @@ export const avatar = (id?: string | null) =>
  * the black matte to alpha in a bounded render texture, preserving its aspect. */
 type LogoPixels = { pixels: ImageData; w: number; h: number };
 const logoCache = new Map<string, LogoPixels>();
+/** An idle wake invalidates converted logo pixels too; the source URLs are not
+ * enough because a cached logo never reaches the renderer's texture loader. */
+export function clearLogoCache() {
+  logoCache.clear();
+}
 
 type LogoLoad = {
   height: number;
@@ -474,6 +479,7 @@ export function Logo(props: {
   );
   const [failed, setFailed] = createSignal(false);
   createEffect(() => {
+    imageVersion();
     const src = props.src,
       load = {
         height: props.h,
