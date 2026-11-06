@@ -118,6 +118,9 @@ setRendererStart(native, performance.now());
 // group. This is the same primitive path the official SolidTV demo uses.
 const nativeLabels = new WeakMap<any, any>();
 const nativeFonts = new Map<string, any>();
+const nativeRects = new WeakMap<any, any>();
+let labelLayer: any = null;
+let rectLayer: any = null;
 function fontUri(family: string | undefined): string {
   const value = String(family ?? "Onest").toLowerCase();
   if (value.includes("bricolage")) return "pkg:/fonts/remote_bricolage_800.ttf";
@@ -129,22 +132,53 @@ function fontUri(family: string | undefined): string {
   }
   return "pkg:/fonts/Roboto-Regular.ttf";
 }
-function rokuColor(value: any): any {
-  if (typeof value === "number") return value >>> 0;
-  if (typeof value !== "string" || !value) return 0xffffffff;
+function rokuColor(value: any): string {
+  if (typeof value === "number") return "0x" + (value >>> 0).toString(16).toUpperCase().padStart(8, "0");
+  if (typeof value !== "string" || !value) return "0xFFFFFFFF";
   if (value.charAt(0) === "#") {
     const hex = value.slice(1);
-    return parseInt(hex.length === 6 ? hex + "ff" : hex, 16) >>> 0;
+    return "0x" + (hex.length === 6 ? hex + "ff" : hex).toUpperCase();
   }
-  return 0xffffffff;
+  return "0xFFFFFFFF";
 }
-(globalThis as any).__viptvNativeText = (group: any, p: any) => {
-  if (!group) return;
-  let label = nativeLabels.get(group);
+(globalThis as any).__viptvNativeRect = (node: any, p: any) => {
+  try {
+    const root = (globalThis as any).__solidtvNativeRoot || node?.dom;
+    if (!root) return;
+    if (Number(p.w) >= 1900 && Number(p.h) >= 1000) return;
+    if (!rectLayer) {
+      rectLayer = createElement("group");
+      insertNode(root, rectLayer);
+    }
+    let rect = nativeRects.get(node);
+    if (!rect) {
+      rect = createElement("rectangle");
+      insertNode(rectLayer, rect);
+      nativeRects.set(node, rect);
+    }
+    setProp(rect, "color", rokuColor(p.color));
+    setProp(rect, "width", Math.max(1, Math.ceil(Number(p.w) || 1)));
+    setProp(rect, "height", Math.max(1, Math.ceil(Number(p.h) || 1)));
+    setProp(rect, "translation", [Number(node.absX || 0), Number(node.absY || 0)]);
+  } catch (error: any) {
+    console.error("ROKU_NATIVE_RECT_ERROR " + String(error?.stack || error));
+  }
+};
+
+(globalThis as any).__viptvNativeText = (node: any, p: any) => {
+  try {
+  if (!node) return;
+  const group = node.dom || node;
+  const root = (globalThis as any).__solidtvNativeRoot || group;
+  if (!labelLayer) {
+    labelLayer = createElement("group");
+    insertNode(root, labelLayer);
+  }
+  let label = nativeLabels.get(node);
   if (!label) {
     label = createElement("label");
-    insertNode(group, label);
-    nativeLabels.set(group, label);
+    insertNode(labelLayer, label);
+    nativeLabels.set(node, label);
   }
   const size = Math.max(1, Math.round(Number(p.size) || 32));
   const uri = fontUri(p.font);
@@ -154,23 +188,28 @@ function rokuColor(value: any): any {
     font = createElement("font");
     setProp(font, "uri", uri);
     setProp(font, "size", size);
-    insertNode(group, font);
+    insertNode(root, font);
     nativeFonts.set(key, font);
   }
   setProp(label, "font", font);
   setProp(label, "text", String(p.text ?? ""));
-  setProp(label, "width", Math.max(1, Math.ceil(Number(p.width) || 1)));
+  setProp(label, "width", Math.max(1, Math.min(1000, Math.ceil(Number(p.width) || 1))));
   setProp(label, "height", Math.max(1, Math.ceil(Number(p.height) || 1)));
-  setProp(label, "horizAlign", p.align === "center" ? "center" : p.align === "right" ? "right" : "left");
-  setProp(label, "vertAlign", "center");
-  setProp(label, "wrap", true);
-  setProp(label, "maxLines", Math.max(0, Math.floor(Number(p.maxlines) || 0)));
   setProp(label, "color", rokuColor(p.color));
-  setProp(label, "translation", [0, 0]);
+  setProp(label, "translation", [Number(node.absX || 0), Number(node.absY || 0)]);
+  } catch (error: any) {
+    console.error("ROKU_NATIVE_TEXT_ERROR " + String(error?.stack || error));
+  }
 };
 
 try {
   render(() => createComponent(createRemoteTvApp(api, "web"), {}));
+
+// Font faces publish asynchronously after the shared entry mounts. Bump the
+// layout epoch once the native faces are measurable so TvText reflows.
+for (const delay of [800, 1800, 3200]) {
+  setTimeout(() => (globalThis as any).__solidtvNotifyFont?.(), delay);
+}
 } catch (error: any) {
   console.error("ROKU_RENDER_ERROR " + String(error?.stack || error));
 }

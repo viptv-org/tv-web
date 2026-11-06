@@ -407,6 +407,16 @@ function visualNode(
     if (y !== undefined) node.y = y;
     if (w !== undefined) node.w = w;
     if (h !== undefined) node.h = h;
+    if (props.texture === undefined && props.shader === undefined && props.color !== undefined) {
+      const color = props.color;
+      const cw = props.w;
+      const ch = props.h;
+      onMount(() => {
+        const current = node as any;
+        if (current?.lng?.dom)
+          (globalThis as any).__viptvNativeRect?.(current.lng, { color, w: cw, h: ch });
+      });
+    }
   }
   props.nodeRef?.(node);
   // Keep each node's original sibling position even while invisible. Only
@@ -450,7 +460,15 @@ function rokuText(props: Record<string, any>): JSX.Element {
   });
   const size = createMemo(() => {
     const value = spec();
-    return (getRenderer() as RendererMain).measureText(value) ?? { w: value.maxWidth, h: value.lineHeight };
+    const measured = (getRenderer() as RendererMain).measureText(value);
+    if (measured && Number(measured.w) > 1) return measured;
+    // Native FontMeasure is unavailable until the firmware publishes the
+    // face. Keep the first layout close enough to render and let the font
+    // epoch reflow to the exact width when the host reports readiness.
+    return {
+      w: value.maxWidth || Math.max(1, value.text.length * value.fontSize * 0.55),
+      h: value.lineHeight,
+    };
   });
   const boxW = () => props.maxwidth ?? props.w ?? size().w ?? 0;
   const boxX = () =>
@@ -465,7 +483,7 @@ function rokuText(props: Record<string, any>): JSX.Element {
       : (props.y ?? 0);
   const update = (current: any) => {
     if (!current?.lng?.dom) return;
-    (globalThis as any).__viptvNativeText(current.lng.dom, {
+    (globalThis as any).__viptvNativeText(current.lng, {
       text: spec().text,
       width: boxW(),
       height: size().h ?? props.h ?? 0,

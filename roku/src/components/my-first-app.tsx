@@ -6,7 +6,7 @@ import { Config } from '@solidtv/solid';
 import { createEffect } from 'solid-js';
 import { SceneGraphRenderer } from '../roku/renderer';
 import { installBrowserServices, dispatchNativeKey } from '../roku/browser-services';
-import { loadBundledFonts } from '../roku/fonts';
+import { loadBundledFonts, loadFace, resolveFontUri } from '../roku/fonts';
 import { handleMediaKey } from '../roku/video';
 import { postRokuTask } from '../roku/worker-task';
 
@@ -37,6 +37,10 @@ export default defineAnchorNode(
     const nativeRoot = createElement('group');
     (globalThis as any).__solidtvNativeRoot = nativeRoot;
     (globalThis as any).__SolidTVRokuRenderer = SceneGraphRenderer;
+    (globalThis as any).__viptvRokuFont = (family: string | undefined, size: number) => {
+      const face = loadFace(resolveFontUri(family), nativeRoot, Math.max(1, Math.round(size)));
+      return face.node;
+    };
 
     // Test/deep-link navigation: {"contentId":"/examples"} from an ECP input
     // or launch parameter drives the shared hash router. No effect on normal
