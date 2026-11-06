@@ -17,6 +17,25 @@ export const state = {
   playingState: false
 };
 
+export type VideoEvent = {
+  state: string;
+  position: number;
+  duration: number;
+  error?: string;
+};
+const listeners = new Set<(event: VideoEvent) => void>();
+export function subscribe(listener: (event: VideoEvent) => void): () => void {
+  listeners.add(listener);
+  listener({ state: lastState, position: currentPosition, duration: currentDuration });
+  return () => listeners.delete(listener);
+}
+function notify(error?: string) {
+  const event = { state: lastState, position: currentPosition, duration: currentDuration, error };
+  listeners.forEach((listener) => {
+    try { listener(event); } catch (failure) { console.error(LOG + " subscriber failure " + String(failure)); }
+  });
+}
+
 let video: any = null;
 let content: any = null;
 let parent: any = null;
@@ -116,6 +135,7 @@ export async function init(element?: any): Promise<void> {
       state.playingState = lastState === "playing";
       if (lastState === "buffering" || lastState === "playing" || lastState === "paused") accept();
       if (lastState === "error") console.error(LOG + " state=error");
+      notify();
     })
   );
   setProp(
@@ -123,6 +143,7 @@ export async function init(element?: any): Promise<void> {
     "onPosition",
     safe((value: any) => {
       currentPosition = toSeconds(value);
+      notify();
     })
   );
   setProp(
@@ -132,6 +153,7 @@ export async function init(element?: any): Promise<void> {
       const n = Number(value);
       if (isFinite(n) && n > 0) durationIsMs = n > 10000;
       currentDuration = toSeconds(value);
+      notify();
     })
   );
   setProp(
@@ -139,7 +161,9 @@ export async function init(element?: any): Promise<void> {
     "onErrorCode",
     safe((value: any) => {
       state.playingState = false;
+      lastState = "error";
       console.error(LOG + " errorCode=" + String(value));
+      notify("Playback error " + String(value));
       accept();
     })
   );
@@ -148,7 +172,9 @@ export async function init(element?: any): Promise<void> {
     "onErrorMsg",
     safe((value: any) => {
       state.playingState = false;
+      lastState = "error";
       console.error(LOG + " errorMsg=" + String(value));
+      notify(String(value));
       accept();
     })
   );
@@ -178,8 +204,9 @@ export async function load(config: { streamUrl: string }): Promise<void> {
 
   currentPosition = 0;
   currentDuration = 0;
-  lastState = "none";
+  lastState = "loading";
   state.playingState = false;
+  notify();
 
   const accepted = new Promise<void>(resolve => {
     pendingAccept = resolve;
@@ -257,14 +284,18 @@ export async function destroy(): Promise<void> {
   if (backdrop && parent) tmTransaction.removeNode(parent, backdrop);
   backdrop = null;
   activeSession = false;
+  lastState = "stopped";
+  state.playingState = false;
+  notify();
   accept();
   video = null;
   content = null;
   parent = null;
   currentPosition = 0;
   currentDuration = 0;
-  lastState = "none";
+  lastState = "loading";
   state.playingState = false;
+  notify();
 }
 
 export function getCurrentTime(): number {

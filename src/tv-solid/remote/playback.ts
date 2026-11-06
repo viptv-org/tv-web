@@ -62,12 +62,15 @@ export class RemotePlayback {
     // of source, most of the TV entry's largest chunk) and is only reachable
     // from a session, so `playback.ts` fetches it through `import()` in
     // `hls-engine.ts` instead of importing it here.
+    const nativePlayer = (globalThis as any).__viptvCreatePlayer;
     this.player =
-      platform === "tizen" && "webapis" in window
-        ? new TizenAvplayAdapter()
-        : new DeferredPlayer(async () =>
-            (await import("./hls-engine")).createHtmlHlsPlayer(video),
-          );
+      typeof nativePlayer === "function"
+        ? nativePlayer()
+        : platform === "tizen" && "webapis" in window
+          ? new TizenAvplayAdapter()
+          : new DeferredPlayer(async () =>
+              (await import("./hls-engine")).createHtmlHlsPlayer(video),
+            );
     this.unsubscribe = this.player.subscribe((snapshot) => {
       const previous = this.lastState;
       this.lastState = snapshot.state;

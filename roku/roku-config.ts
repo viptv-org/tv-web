@@ -130,7 +130,8 @@ const plugin = {
     build.onLoad({ filter: /.*/, namespace: 'tvweb-stub' }, (args: any) => {
       if (args.path === 'qrcode') {
         return {
-          contents: 'export default { toDataURL: async () => "" };',
+          contents:
+            'export default { toDataURL: async (text) => "data:image/x-viptv-qr," + encodeURIComponent(String(text ?? "")) };',
           loader: 'js',
         };
       }

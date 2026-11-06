@@ -10,7 +10,7 @@ sub init()
     print "uiResolution: "; uiResolution.name
 
     ' Set a simple background color for the scene
-    m.top.backgroundColor = "0x000000FF"
+    m.top.backgroundColor = "0x0B0B0CFF"
 
     myFirstApp = m.top.findNode("myFirstApp")
     if myFirstApp <> invalid

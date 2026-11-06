@@ -335,18 +335,20 @@ function visualNode(
   const mapped: Record<string, any> = ROKU
     ? { color: 0x00000000, w: 0, h: 0 }
     : { color: 0x00000000, width: 0, height: 0 };
-  for (const key of Object.keys(props)) {
+  // Roku's JS engine loses per-iteration `const` bindings captured by
+  // closures; use forEach so each mapped getter closes over its own key.
+  Object.keys(props).forEach((key) => {
     if (
       ["children", "show", "alpha", "fit", "nodeRef", "onError", "cssLineBox"].includes(key)
     )
-      continue;
-    if ((key === "src" || key === "texture") && props[key] == null) continue;
+      return;
+    if ((key === "src" || key === "texture") && props[key] == null) return;
     if (key === "src" && props.src instanceof ImageData) {
       Object.defineProperty(mapped, "texture", {
         enumerable: true,
         get: () => imageTexture(props.src),
       });
-      continue;
+      return;
     }
     if (key === "src" && typeof props.src === "string" && props.src.startsWith("data:image/svg+xml")) {
       // The renderer's URL detector recognizes .svg files, not SVG data URIs.
@@ -362,7 +364,7 @@ function visualNode(
               })
             : getRenderer().createTexture("ImageTexture", {src:props.src,type:"svg",w:props.w,h:props.h}),
       });
-      continue;
+      return;
     }
     const name = ROKU && (key === "w" || key === "h") ? key : (names[key] ?? key);
     Object.defineProperty(mapped, name, {
@@ -377,7 +379,7 @@ function visualNode(
             ? String(props[key] ?? "")
             : props[key],
     });
-  }
+  });
   if (props.src !== undefined && props.color === undefined)
     mapped.color = 0xffffffff;
   Object.defineProperty(mapped, "alpha", {
@@ -408,14 +410,32 @@ function visualNode(
     if (y !== undefined) node.y = y;
     if (w !== undefined) node.w = w;
     if (h !== undefined) node.h = h;
-    if (props.texture === undefined && props.shader === undefined && props.color !== undefined) {
-      const color = props.color;
-      const cw = props.w;
-      const ch = props.h;
-      onMount(() => {
+    if (
+      typeof (globalThis as any).__viptvNativeVisual === "function" &&
+      props.shader === undefined &&
+      (props.src === undefined || typeof props.src === "string") &&
+      (props.color !== undefined || props.src !== undefined || props.texture !== undefined)
+    ) {
+      const spec = () => ({
+        color: props.color,
+        src: typeof props.src === "string" ? props.src : undefined,
+        texture: props.texture,
+        w: props.w,
+        h: props.h,
+        rounded: props.rounded,
+        alpha: props.alpha ?? 1,
+        fit: props.fit,
+      });
+      const update = () => {
         const current = node as any;
         if (current?.lng?.dom)
-          (globalThis as any).__viptvNativeRect?.(current.lng, { color, w: cw, h: ch });
+          (globalThis as any).__viptvNativeVisual(current.lng, spec());
+      };
+      createEffect(update);
+      onMount(update);
+      onCleanup(() => {
+        const current = node as any;
+        (globalThis as any).__viptvNativeVisualRemove?.(current?.lng);
       });
     }
   }
@@ -487,16 +507,20 @@ function rokuText(props: Record<string, any>): JSX.Element {
     (globalThis as any).__viptvNativeText(current.lng, {
       text: spec().text,
       width: boxW(),
+      textWidth: size().w ?? 0,
       height: size().h ?? props.h ?? 0,
       font: props.font,
       size: spec().fontSize,
       color: props.color ?? "#ffffff",
       align: props.align,
       maxlines: props.maxlines,
+      alpha: props.alpha ?? 1,
+      auto: (props.maxwidth ?? props.w) === undefined,
     });
   };
   createEffect(() => update(node()));
   onMount(() => update(node()));
+  onCleanup(() => (globalThis as any).__viptvNativeTextRemove?.(node()?.lng));
   return visualNode(
     {
       get x() {

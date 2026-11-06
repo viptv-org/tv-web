@@ -570,7 +570,16 @@ export function installBrowserServices(): void {
         if (init && typeof init === 'object' && (init.headers || init.method || init.body)) {
           const Req = g.Request;
           if (typeof Req === 'function') {
-            return firmwareFetch.call(g, new Req(input, init));
+            // Roku's Request host object rejects DOM-only fields such as the
+            // JS AbortSignal/credentials/redirect. Keep the transport fields
+            // the firmware understands and let the shared timeout controller
+            // resolve independently.
+            const clean: any = {};
+            if (init.method !== undefined) clean.method = String(init.method);
+            if (init.headers !== undefined) clean.headers = init.headers;
+            if (init.body !== undefined) clean.body = String(init.body);
+            if (init.agent !== undefined) clean.agent = init.agent;
+            return firmwareFetch.call(g, new Req(String(input), clean));
           }
           console.error('ROKU_FETCH Request is unavailable; request headers would be dropped');
         }

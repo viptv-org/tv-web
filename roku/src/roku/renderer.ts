@@ -210,6 +210,11 @@ export class SceneGraphRenderer extends Events {
         console.error('ROKU_FLUSH ' + node.id + ' ' + String((error as any)?.stack || error));
       }
     }
+    try {
+      (globalThis as any).__viptvSyncOverlays?.();
+    } catch (error) {
+      console.error('ROKU_OVERLAY_SYNC ' + String((error as any)?.stack || error));
+    }
     const elapsed = nowMs() - start;
     this.flushMsSum += elapsed;
     if (elapsed > this.flushMsMax) this.flushMsMax = elapsed;

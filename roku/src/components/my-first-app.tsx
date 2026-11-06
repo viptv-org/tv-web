@@ -15,6 +15,11 @@ import { postRokuTask } from '../roku/worker-task';
 // bundler still resolves and compiles the shared app.
 declare const SOLIDTV_SHARED_ENTRY: string;
 
+// Publish the renderer as soon as the host module evaluates. The shared entry
+// calls createRenderer during its own module evaluation, which can run before
+// the component setup callback on a cold launch.
+(globalThis as any).__SolidTVRokuRenderer = SceneGraphRenderer;
+
 // The focus manager calls preventDefault() only when this is enabled. The Roku
 // KeyHandler uses the return value to decide whether the Scene should handle
 // the key; without this an unhandled Back could never exit the channel.
@@ -35,13 +40,14 @@ export default defineAnchorNode(
   },
   () => {
     const nativeRoot = createElement('group');
+    const overlayRoot = createElement('group');
     (globalThis as any).__solidtvNativeRoot = nativeRoot;
+    (globalThis as any).__viptvOverlayRoot = overlayRoot;
     (globalThis as any).__SolidTVRokuRenderer = SceneGraphRenderer;
     (globalThis as any).__viptvRokuFont = (family: string | undefined, size: number) => {
       const face = loadFace(resolveFontUri(family), nativeRoot, Math.max(1, Math.round(size)));
       return face.node;
     };
-
     // Test/deep-link navigation: {"contentId":"/examples"} from an ECP input
     // or launch parameter drives the shared hash router. No effect on normal
     // remote-driven use.
@@ -120,6 +126,7 @@ export default defineAnchorNode(
         }}
       >
         {nativeRoot as any}
+        {overlayRoot as any}
       </KeyHandler>
     );
   },

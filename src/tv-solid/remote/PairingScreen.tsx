@@ -48,7 +48,7 @@ export function PairingScreen(props: {
   const remainingText = () =>
     `${Math.floor(remaining() / 60)}:${String(remaining() % 60).padStart(2, "0")}`;
   const address = () =>
-    props.pairing?.verification_uri.replace(/^https:\/\//, "") ?? "";
+    String(props.pairing?.verification_uri ?? "").replace(/^https:\/\//, "");
   const lines = createMemo(() => {
     const ctx = sdfTextMetrics("44px Onest700");
     return Math.max(

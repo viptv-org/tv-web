@@ -7,12 +7,14 @@
  */
 import "./platform/roku-shims";
 import { createRenderer, Config } from "@solidtv/solid";
-import { createElement, insertNode, setProp } from "@roku-sdk/solid";
+import { createElement, insertNode, setProp, tmTransaction } from "@roku-sdk/solid";
 import { createComponent } from "solid-js";
 import { setRendererStart } from "./renderer-clock";
 import { createRemoteTvApp } from "./remote/App";
 import { RemoteTvApi, type SessionStore } from "./remote/api";
 import type { Tokens } from "./remote/types";
+import QRCode from "qrcode/lib/core/qrcode";
+import { createRokuPlayer } from "./platform/roku-player";
 
 const STORE_KEY = "viptv-device:roku";
 const API_ORIGIN = "https://beta-viptv.syek.tech";
@@ -70,7 +72,11 @@ if (nativeMeasure) {
         value.letterSpacing ?? 0,
         value.maxWidth ?? 0,
       );
-      const width = Number(measured?.width ?? measured?.w ?? 0);
+      let width = Number(measured?.width ?? measured?.w ?? 0);
+      const text = String(value.text ?? "");
+      const size = Number(value.fontSize ?? 32);
+      if ((!width || !isFinite(width)) && text)
+        width = Math.max(1, text.length * size * 0.55);
       const height = Number(measured?.height ?? measured?.h ?? value.lineHeight ?? value.fontSize ?? 32);
       return { ...measured, w: width, h: height, width, height };
     }
@@ -86,20 +92,13 @@ if (nativeTexture) {
   native.createTexture = (type: any, props: any = {}) => {
     const src = props?.src;
     if (src && typeof src === "object" && "data" in src) {
-      return nativeTexture(type, {
-        ...props,
-        src: "pkg:/assets/fallback.png",
-        w: src.width,
-        h: src.height,
-      });
+      // Canvas-generated masks/shadows cannot be uploaded to SceneGraph. Keep
+      // the host node transparent instead of showing the fallback poster over
+      // the native labels.
+      return nativeTexture(type, { ...props, src: "", w: src.width, h: src.height });
     }
     if (typeof src === "string" && src.startsWith("data:image/svg+xml")) {
-      return nativeTexture(type, {
-        ...props,
-        src: "pkg:/assets/fallback.png",
-        w: props.w ?? 48,
-        h: props.h ?? 48,
-      });
+      return nativeTexture(type, { ...props, src: "", w: props.w ?? 48, h: props.h ?? 48 });
     }
     return nativeTexture(type, props);
   };
@@ -112,96 +111,327 @@ native.registerShader = () => {};
 native.createShader = () => null;
 
 setRendererStart(native, performance.now());
+(globalThis as any).__viptvCreatePlayer = createRokuPlayer;
 
-// The shared UI's text node is a browser-renderer construct. On Roku, give
-// each TvText a native SceneGraph label inside its transparent positioning
-// group. This is the same primitive path the official SolidTV demo uses.
-const nativeLabels = new WeakMap<any, any>();
+// The shared UI is drawn with SolidTV's renderer nodes, but the browser
+// renderer's text/image visuals are not SceneGraph nodes. This bridge turns
+// every shared TvText / TvView into a native Label / Rectangle / Poster in two
+// ordered top-level layers. Native nodes are removed with their owning Solid
+// nodes, and translations are re-synced after layout so centered groups and
+// wrapped labels land on their real positions.
+type NativeRecord = {
+  kind: "label" | "rect" | "poster" | "qr";
+  node: any;
+  holder: any;
+  visual: any;
+  effect?: any;
+  key?: string;
+  sync: () => void;
+};
+
+const nativeRecords = new Map<any, NativeRecord>();
 const nativeFonts = new Map<string, any>();
-const nativeRects = new WeakMap<any, any>();
+let visualLayer: any = null;
 let labelLayer: any = null;
-let rectLayer: any = null;
+let qrLayer: any = null;
+
+function ensureLayers() {
+  const root = (globalThis as any).__solidtvNativeRoot;
+  if (!root || visualLayer) return root;
+  const renderer = (globalThis as any).__rokuRenderer;
+  if (renderer?.createNode && renderer.root) {
+    // High zIndex keeps the native overlay above every shared host visual.
+    // The renderer's reorder pass owns these containers, so they cannot be
+    // pushed behind the shared tree when a late host visual is inserted.
+    const visual = renderer.createNode({ w: 1920, h: 1080, zIndex: 9000 });
+    visual.parent = renderer.root;
+    visualLayer = visual.dom;
+    const text = renderer.createNode({ w: 1920, h: 1080, zIndex: 10000 });
+    text.parent = renderer.root;
+    labelLayer = text.dom;
+    qrLayer = visualLayer;
+  } else {
+    visualLayer = createElement("group");
+    insertNode(root, visualLayer);
+    labelLayer = createElement("group");
+    insertNode(root, labelLayer);
+    qrLayer = createElement("group");
+    insertNode(root, qrLayer);
+  }
+  return root;
+}
+
+function holderAt(node: any, w: number, h: number): any {
+  const renderer = (globalThis as any).__rokuRenderer || (globalThis as any).__SolidTVRokuRenderer;
+  const holder = renderer.createNode({ x: 0, y: 0, w, h });
+  holder.parent = null;
+  return holder;
+}
+
+function syncHolder(record: NativeRecord) {
+  const node = record.node;
+  const holder = record.holder;
+  if (!holder) return;
+  const x = Number(node.absX || 0);
+  const y = Number(node.absY || 0);
+  if (holder.x !== x || holder.y !== y) {
+    holder.x = x;
+    holder.y = y;
+    holder.markTransform();
+    holder.flush();
+  }
+}
+
 function fontUri(family: string | undefined): string {
   const value = String(family ?? "Onest").toLowerCase();
   if (value.includes("bricolage")) return "pkg:/fonts/remote_bricolage_800.ttf";
   if (value.includes("onest")) {
-    if (value.includes("700")) return "pkg:/fonts/remote_onest_700.ttf";
+    if (value.includes("700") || value.includes("tabular")) return "pkg:/fonts/remote_onest_700.ttf";
     if (value.includes("600")) return "pkg:/fonts/remote_onest_600.ttf";
     if (value.includes("500")) return "pkg:/fonts/remote_onest_500.ttf";
     return "pkg:/fonts/remote_onest_400.ttf";
   }
   return "pkg:/fonts/Roboto-Regular.ttf";
 }
+
+function hex(value: number): string {
+  return "0x" + (value >>> 0).toString(16).toUpperCase().padStart(8, "0");
+}
+
 function rokuColor(value: any): string {
-  if (typeof value === "number") return "0x" + (value >>> 0).toString(16).toUpperCase().padStart(8, "0");
+  if (typeof value === "number") return hex(value);
   if (typeof value !== "string" || !value) return "0xFFFFFFFF";
   if (value.charAt(0) === "#") {
-    const hex = value.slice(1);
-    return "0x" + (hex.length === 6 ? hex + "ff" : hex).toUpperCase();
+    const raw = value.slice(1);
+    const expanded =
+      raw.length === 3
+        ? raw.split("").map((c) => c + c).join("") + "ff"
+        : raw.length === 4
+          ? raw.split("").map((c) => c + c).join("")
+          : raw.length === 6
+            ? raw + "ff"
+            : raw;
+    return "0x" + expanded.toUpperCase();
+  }
+  const match = /^rgba?\(([^)]+)\)$/.exec(value);
+  if (match) {
+    const parts = match[1].split(",").map(Number);
+    const alpha = parts.length > 3 ? Math.round(parts[3] * 255) : 255;
+    return hex(((parts[0] & 255) << 24) | ((parts[1] & 255) << 16) | ((parts[2] & 255) << 8) | (alpha & 255));
   }
   return "0xFFFFFFFF";
 }
-(globalThis as any).__viptvNativeRect = (node: any, p: any) => {
-  try {
-    const root = (globalThis as any).__solidtvNativeRoot || node?.dom;
-    if (!root) return;
-    if (Number(p.w) >= 1900 && Number(p.h) >= 1000) return;
-    if (!rectLayer) {
-      rectLayer = createElement("group");
-      insertNode(root, rectLayer);
-    }
-    let rect = nativeRects.get(node);
-    if (!rect) {
-      rect = createElement("rectangle");
-      insertNode(rectLayer, rect);
-      nativeRects.set(node, rect);
-    }
-    setProp(rect, "color", rokuColor(p.color));
-    setProp(rect, "width", Math.max(1, Math.ceil(Number(p.w) || 1)));
-    setProp(rect, "height", Math.max(1, Math.ceil(Number(p.h) || 1)));
-    setProp(rect, "translation", [Number(node.absX || 0), Number(node.absY || 0)]);
-  } catch (error: any) {
-    console.error("ROKU_NATIVE_RECT_ERROR " + String(error?.stack || error));
-  }
-};
 
-(globalThis as any).__viptvNativeText = (node: any, p: any) => {
+function removeRecord(node: any) {
+  const record = nativeRecords.get(node);
+  if (!record) return;
+  nativeRecords.delete(node);
   try {
-  if (!node) return;
-  const group = node.dom || node;
-  const root = (globalThis as any).__solidtvNativeRoot || group;
-  if (!labelLayer) {
-    labelLayer = createElement("group");
-    insertNode(root, labelLayer);
+    const layer = record.kind === "label" ? labelLayer : record.kind === "qr" ? qrLayer : visualLayer;
+    if (record.visual && record.holder?.dom)
+      tmTransaction.removeNode(record.holder.dom, record.visual);
+    if (record.holder) record.holder.destroy();
+    if (layer && record.holder?.dom) tmTransaction.removeNode(layer, record.holder.dom);
+  } catch (error) {
+    // The owning SceneGraph group may already have been removed.
   }
-  let label = nativeLabels.get(node);
-  if (!label) {
-    label = createElement("label");
-    insertNode(labelLayer, label);
-    nativeLabels.set(node, label);
-  }
-  const size = Math.max(1, Math.round(Number(p.size) || 32));
-  const uri = fontUri(p.font);
+}
+
+function fontFace(family: string | undefined, size: number): any {
+  const uri = fontUri(family);
   const key = uri + "@" + size;
   let font = nativeFonts.get(key);
   if (!font) {
-    font = createElement("font");
-    setProp(font, "uri", uri);
-    setProp(font, "size", size);
-    insertNode(root, font);
+    // The host's loadFace publishes preUpdate before uri/size and keeps the
+    // face measurable; a plain Font created before publication renders blank.
+    font = (globalThis as any).__viptvRokuFont?.(family, size);
+    if (!font) {
+      const root = ensureLayers();
+      font = createElement("font");
+      setProp(font, "preUpdate", true);
+      setProp(font, "uri", uri);
+      setProp(font, "size", size);
+      insertNode(root, font);
+    }
     nativeFonts.set(key, font);
   }
-  setProp(label, "font", font);
-  setProp(label, "text", String(p.text ?? ""));
-  setProp(label, "width", Math.max(1, Math.min(1000, Math.ceil(Number(p.width) || 1))));
-  setProp(label, "height", Math.max(1, Math.ceil(Number(p.height) || 1)));
-  setProp(label, "horizAlign", p.align === "center" ? "center" : p.align === "right" ? "right" : "left");
-  setProp(label, "vertAlign", "center");
-  setProp(label, "color", rokuColor(p.color));
-  setProp(label, "translation", [Number(node.absX || 0), Number(node.absY || 0)]);
+  return font;
+}
+
+(globalThis as any).__viptvNativeText = (node: any, p: any) => {
+  try {
+    if (!node) return;
+    ensureLayers();
+    let record = nativeRecords.get(node);
+    if (!record || record.kind !== "label") {
+      removeRecord(node);
+      const label = createElement("label");
+      const holder = holderAt(node, 1, 1);
+      insertNode(labelLayer, holder.dom);
+      insertNode(holder.dom, label);
+      record = { kind: "label", node, holder, visual: label, sync: () => syncHolder(record!) };
+      nativeRecords.set(node, record);
+      syncHolder(record);
+    }
+    const label = record.visual;
+    const size = Math.max(1, Math.round(Number(p.size) || 32));
+    setProp(label, "font", fontFace(p.font, size));
+    setProp(label, "text", String(p.text ?? ""));
+    const rawWidth = Math.max(1, Number(p.textWidth) || Number(p.width) || 1);
+    const labelWidth = Math.min(1920, Math.ceil(p.maxlines > 0 ? (Number(p.width) || rawWidth) + 8 : rawWidth * 1.2 + 20));
+    setProp(label, "width", labelWidth);
+    setProp(label, "height", Math.max(1, Math.ceil(Number(p.height) || size)));
+    // The shared text node's x already includes its alignment offset, so the
+    // native label starts at the holder and paints left-to-right.
+    setProp(label, "horizAlign", "left");
+    setProp(label, "vertAlign", "center");
+    setProp(label, "color", rokuColor(p.color ?? "#ffffff"));
+    if (record.holder) {
+      record.holder.w = labelWidth;
+      record.holder.h = Math.max(1, Math.ceil(Number(p.height) || size));
+      record.holder.markTransform();
+      record.holder.flush();
+    }
+    syncHolder(record);
   } catch (error: any) {
     console.error("ROKU_NATIVE_TEXT_ERROR " + String(error?.stack || error));
   }
+};
+
+(globalThis as any).__viptvNativeTextRemove = (node: any) => {
+  if (node) removeRecord(node);
+};
+
+function clearEffect(record: NativeRecord) {
+  if (!record.effect) return;
+  try {
+    tmTransaction.removeNode(record.visual, record.effect);
+  } catch (error) {
+    // Already removed.
+  }
+  record.effect = undefined;
+}
+
+function renderQr(record: NativeRecord, uri: string, width: number, height: number) {
+  const text = decodeURIComponent(uri.slice("data:image/x-viptv-qr,".length));
+  const code: any = (QRCode as any).create
+    ? (QRCode as any).create(text, { errorCorrectionLevel: "M" })
+    : (QRCode as any)(text, { errorCorrectionLevel: "M" });
+  const modules = code.modules;
+  const size = Number(modules.size || (modules.size = Math.sqrt(modules.data.length)));
+  const cell = Math.max(1, Math.floor(Math.min(width, height) / (size + 4)));
+  const offsetX = Math.floor((width - cell * size) / 2);
+  const offsetY = Math.floor((height - cell * size) / 2);
+  if (!record.key || record.key !== text) {
+    record.key = text;
+    const previous = (record as any).qrGroup;
+    if (previous) {
+      try { tmTransaction.removeNode(record.visual, previous); } catch (error) { /* detached */ }
+    }
+    const group = createElement("group");
+    insertNode(record.visual, group);
+    (record as any).qrGroup = group;
+    for (let row = 0; row < size; row++) {
+      for (let col = 0; col < size; col++) {
+        let dark = false;
+        try {
+          dark = typeof modules.get === "function" ? modules.get(row, col) : modules.data[row * size + col] === 1;
+        } catch (error) {
+          dark = false;
+        }
+        if (!dark) continue;
+        const dot = createElement("rectangle");
+        setProp(dot, "width", cell + 1);
+        setProp(dot, "height", cell + 1);
+        setProp(dot, "color", "0x000000FF");
+        setProp(dot, "translation", [offsetX + col * cell, offsetY + row * cell]);
+        insertNode(group, dot);
+      }
+    }
+  }
+}
+
+(globalThis as any).__viptvNativeVisual = (node: any, p: any) => {
+  try {
+    if (!node) return;
+    ensureLayers();
+    const width = Math.max(1, Math.ceil(Number(p.w) || 1));
+    const height = Math.max(1, Math.ceil(Number(p.h) || 1));
+    const rawSrc = typeof p.src === "string" ? p.src : p.texture?.src;
+    const qr = typeof rawSrc === "string" && rawSrc.indexOf("data:image/x-viptv-qr,") === 0;
+    const poster = typeof rawSrc === "string" && rawSrc.length > 0 && !rawSrc.startsWith("data:");
+    const kind: NativeRecord["kind"] = qr ? "qr" : poster ? "poster" : "rect";
+    if (kind === "rect" && width >= 1900 && height >= 1000) {
+      removeRecord(node);
+      return;
+    }
+    let record = nativeRecords.get(node);
+    if (!record || record.kind !== kind) {
+      removeRecord(node);
+      const layer = kind === "qr" ? qrLayer : visualLayer;
+      const holder = holderAt(node, width, height);
+      insertNode(layer, holder.dom);
+      const visual = createElement(kind === "poster" ? "poster" : kind === "qr" ? "group" : "rectangle");
+      insertNode(holder.dom, visual);
+      record = { kind, node, holder, visual, sync: () => syncHolder(record!) };
+      nativeRecords.set(node, record);
+      if (kind === "poster") setProp(visual, "loadDisplayMode", p.fit === "contain" ? "scaleToFit" : p.fit === "cover" ? "scaleToZoom" : "scaleToFill");
+      syncHolder(record);
+    }
+    const visual = record.visual;
+    if (kind === "qr") {
+      renderQr(record, String(rawSrc), width, height);
+    } else if (kind === "poster") {
+      const key = String(rawSrc);
+      if (record.key !== key) {
+        record.key = key;
+        setProp(visual, "uri", key);
+      }
+      setProp(visual, "width", width);
+      setProp(visual, "height", height);
+      setProp(visual, "opacity", Number(p.alpha ?? 1));
+    } else if (kind === "rect") {
+      const radius = typeof p.rounded === "object" ? Number(p.rounded?.radius ?? 0) : Number(p.rounded ?? 0);
+      setProp(visual, "color", rokuColor(p.color ?? "rgba(0,0,0,0)"));
+      setProp(visual, "width", width);
+      setProp(visual, "height", height);
+      setProp(visual, "opacity", Number(p.alpha ?? 1));
+      if (radius > 0) {
+        if (!record.effect) {
+          record.effect = createElement("effect");
+          insertNode(record.holder.dom, record.effect);
+        }
+        setProp(record.effect, "borderRadius", radius);
+        setProp(record.effect, "borderWidth", 0);
+        try { setProp(visual, "effect", record.effect); } catch (error) { /* optional field */ }
+      } else {
+        clearEffect(record);
+      }
+    }
+    if (record.holder) {
+      record.holder.w = width;
+      record.holder.h = height;
+      record.holder.markTransform();
+      record.holder.flush();
+    }
+    syncHolder(record);
+  } catch (error: any) {
+    console.error("ROKU_NATIVE_VISUAL_ERROR " + String(error?.stack || error));
+  }
+};
+
+(globalThis as any).__viptvNativeVisualRemove = (node: any) => {
+  if (node) removeRecord(node);
+};
+
+(globalThis as any).__viptvSyncOverlays = () => {
+  nativeRecords.forEach((record) => {
+    try {
+      record.sync();
+    } catch (error) {
+      // A node can be destroyed between layout and the sync pass.
+    }
+  });
 };
 
 try {

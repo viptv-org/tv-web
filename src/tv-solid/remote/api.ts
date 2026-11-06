@@ -100,7 +100,12 @@ async function snapshotText(
     void response.body?.cancel().catch(() => {});
     throw tooLarge();
   }
-  if (!response.body) return "";
+  if (!response.body) {
+    // Roku's fetch Response exposes text() but not a WHATWG ReadableStream.
+    const text = await response.text();
+    if (text.length > limit) throw tooLarge();
+    return text;
+  }
   const reader = response.body.getReader(),
     decoder = new TextDecoder();
   let received = 0;
@@ -255,7 +260,7 @@ export class RemoteTvApi {
       const serverDate = Date.parse(response.headers.get("date") ?? "");
       if (Number.isFinite(serverDate))
         this.clockOffset = serverDate - Date.now();
-      text = await snapshotText(response, request.signal);
+        text = await snapshotText(response, request.signal);
     } catch (error) {
       if (!signal?.aborted && request.signal.aborted)
         throw new RemoteError(

@@ -7,12 +7,13 @@ import { registerTvShader } from "../shaders";
 import { rendererStart } from "../renderer-clock";
 import { entryArt } from "./entry-art";
 import { welcomeShader } from "./welcome-shader";
+import { NativeWelcomeWall, isRokuNativeUi } from "../platform/welcome-wall";
 const registered = new WeakSet<RendererMain>();
 
 /** One bounded wall texture keeps forty tile transforms off each frame.
  * Reference artwork is painted once at its native 236×354 display size.
  */
-export function PosterWall() {
+function BrowserPosterWall() {
   const renderer = getRenderer() as RendererMain,
     [wall, setWall] = createSignal<ImageTexture>();
   const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -114,4 +115,10 @@ export function PosterWall() {
       color={wall() ? "#FFFFFF" : "rgba(0,0,0,0)"}
     />
   );
+}
+
+/** The browser wall uses a canvas texture and the shader; the Roku host draws
+ * the packaged poster grid and scrim with native Posters. */
+export function PosterWall() {
+  return isRokuNativeUi() ? NativeWelcomeWall() : BrowserPosterWall();
 }
