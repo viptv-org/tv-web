@@ -134,13 +134,11 @@ This program is free software; you can redistribute it and/or modify it under th
 
 ## SolidTV canvas entry
 
-`solid.html` renders the TV screens that replaced the former Lightning/Blits
-entry with `@solidtv/solid` and `@solidtv/renderer`. `lightning.html` remains a
-compatibility URL for existing preview links and loads the same SolidTV entry.
-The regular `index.html` dispatches TV platform queries to this SolidTV entry;
-responsive web and Tauri dispatch to React. `renderer=react` no longer overrides
-an explicit TV platform/layout; ordinary responsive browser and native desktop
-entries still select React.
+`index.html`, `solid.html` and `lightning.html` all render the SolidTV TV
+screens (`@solidtv/solid` and `@solidtv/renderer`). `solid.html` is the
+historical preview URL and `lightning.html` a compatibility URL; there is no
+second client. The platform query (`?platform=vizio|tizen|webos`) or the device
+user agent selects the TV adapter, and a bare `/tv/*` URL is still the TV app.
 
 The shipped TV screens live in `src/tv-solid/remote`; `src/tv-solid` keeps the
 entry, the `runtime.ts` adapter, SDF font atlases, shaders and the webOS host
@@ -168,10 +166,9 @@ evidence and real-TV qualification are recorded separately in `TESTING.md`.
 
 ## TV performance checks
 
-`npm run perf:tv` compares the production SolidTV and React TV entries over
-local HTTPS. Set `PERF_ASSERT_BETTER=1` to enforce comparative speed/frame
-checks. See [PERFORMANCE.md](PERFORMANCE.md) for measured results, the 8×
-guide-entry exception, memory tradeoff and GPU requirements.
+`npm run perf:tv` measures the SolidTV TV entry over local HTTPS. See
+[PERFORMANCE.md](PERFORMANCE.md) for measured results, the 8× guide-entry
+exception, memory tradeoff and GPU requirements.
 
 
 ## Trusted HTTPS Vizio navigation checks
