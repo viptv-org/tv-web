@@ -1,3 +1,12 @@
+# TV-only tree — 2026-11-06
+
+The React responsive web client, its entry selection, tests and dependencies
+were removed (issue #100). `index.html`, `solid.html` and `lightning.html` all
+load `src/tv-solid/main.ts`; the startup cover always applies, and `/tv/*`
+(including a bare `/tv/home`) is the SolidTV TV client. Phones and tablets use
+the KMP app instead. React-based sections later in this file describe previous
+releases and are kept as history, not current acceptance.
+
 # SolidTV startup and delayed loading
 
 The production TV entries (`/tv/?platform=vizio`, `?layout=tv`,
@@ -6,7 +15,8 @@ module, stylesheet, font or bootstrap requests complete. The cover leaves after
 application readiness and the following rendered frame. Failed assets and a
 30-second unfinished startup expose **VIPTV could not start.** and a focused
 **Try again** button. Browser Back preserves the TV document before bootstrap
-and during direct-entry playback. React entry selection is unchanged. The complete
+and during direct-entry playback. Every entry (`/tv/`, `solid.html`,
+`lightning.html`) is the SolidTV TV app; see the TV-only section below. The complete
 inline script targets ES2017; the emitted-HTML build regression rejects scripts
 that still require newer syntax transformations.
 
