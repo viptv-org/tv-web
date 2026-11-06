@@ -286,12 +286,10 @@ export interface TitleAction {
   progress?: number | null;
   remaining_label?: string | null;
 }
+/** Stable across provider refreshes: nodes are keyed by logical media, never by
+ * the metadata snapshot that produced the current artwork. */
 export const cardKey = (card: Card) =>
-  JSON.stringify([
-    card.metadata_origin ?? card.provider_id,
-    card.identity.kind,
-    card.identity.id,
-  ]);
+  `${card.identity.kind}\u0000${card.identity.id}`;
 
 export interface SourcePage {
   action?: TitleAction;

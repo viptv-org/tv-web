@@ -31,7 +31,17 @@ export function SearchInput(props: {
     onCleanup(() => clearInterval(timer));
   });
   // Only the visible tail needs a glyph texture. The submitted query is intact.
-  const tail = () => Array.from(props.value).slice(-48).join("");
+  const tail = () => {
+    const characters = Array.from(props.value);
+    const context = textMetrics("32px Onest500");
+    let start = 0;
+    while (
+      start < characters.length &&
+      context.measureText(characters.slice(start).join("")).width > 426
+    )
+      start++;
+    return characters.slice(start).join("");
+  };
   const width = createMemo(() => {
     const context = textMetrics("32px Onest500");
     return context.measureText(tail()).width;
@@ -44,7 +54,7 @@ export function SearchInput(props: {
         w={520}
         h={72}
         rounded={12}
-        color="rgba(255,255,255,.08)"
+        color="#212124"
       >
         <TvView x={20} y={22} w={28} h={28} src={icon("search", false, 2.2)} />
         <TvView x={62} w={438} h={72} clipping>
@@ -53,6 +63,8 @@ export function SearchInput(props: {
             centerY={36}
             size={32}
             font="Onest500"
+            maxwidth={438}
+            maxlines={1}
             content={props.value ? tail() : "Search…"}
             color={props.value ? palette.text : palette.muted}
           />
@@ -80,7 +92,7 @@ export function SearchInput(props: {
                 w={index() < 2 ? 254 : 80}
                 h={68}
                 rounded={10}
-                color={selected() ? palette.text : "rgba(255,255,255,.09)"}
+                color={selected() ? palette.text : "#212124"}
               >
                 <Show
                   when={index() < 2}

@@ -726,26 +726,94 @@ export class RemoteTvApi {
     }
   }
 
-  rankSources(ids: string[], height?: number, signal?: AbortSignal) {
-    return this.call<SourcePage>(
-      this.scoped("/source-ranking"),
-      "POST",
-      {
-        ids,
-        device_max_height: Math.min(
-          4320,
-          Math.max(
-            144,
-            Math.round(
-              (globalThis.screen?.height || 1080) *
-                (globalThis.devicePixelRatio || 1),
-            ),
-          ),
+  async rankSources(
+    ids: string[],
+    height?: number,
+    signal?: AbortSignal,
+  ): Promise<SourcePage> {
+    // A title can produce well over a thousand add-on sources. The server
+    // caps request bodies at 64 KiB, and a single ranking request with every
+    // UUID then answers 413 — which used to leave the picker empty. Rank in
+    // bounded batches and merge the pages back into one ranked list.
+    const unique = [...new Set(ids)];
+    const deviceMaxHeight = Math.min(
+      4320,
+      Math.max(
+        144,
+        Math.round(
+          (globalThis.screen?.height || 1080) *
+            (globalThis.devicePixelRatio || 1),
         ),
-        quality_height: height,
-      },
-      signal,
+      ),
     );
+    const batch = 400;
+    const pages: SourcePage[] = [];
+    for (let start = 0; start < unique.length; start += batch) {
+      if (signal?.aborted) throw signal.reason ?? new Error("Aborted");
+      pages.push(
+        await this.call<SourcePage>(
+          this.scoped("/source-ranking"),
+          "POST",
+          {
+            ids: unique.slice(start, start + batch),
+            device_max_height: deviceMaxHeight,
+            quality_height: height,
+          },
+          signal,
+        ),
+      );
+    }
+    if (!pages.length)
+      return { streams: [], quality_filters: [], total: 0 };
+    if (pages.length === 1) return pages[0];
+    const labels = new Map<number, string>();
+    for (const page of pages)
+      for (const filter of page.quality_filters)
+        labels.set(filter.height, filter.label);
+    const seen = new Set<string>();
+    const streams: Source[] = [];
+    let bestMatch: string | null = null;
+    let bestHeight = -1;
+    for (const page of pages) {
+      if (page.best_match_id) {
+        const candidate = page.streams.find(
+          (source) => source.id === page.best_match_id,
+        );
+        const candidateHeight = candidate?.quality_height ?? 0;
+        if (candidateHeight > bestHeight) {
+          bestMatch = page.best_match_id;
+          bestHeight = candidateHeight;
+        }
+      }
+      for (const source of page.streams)
+        if (!seen.has(source.id)) {
+          seen.add(source.id);
+          streams.push(source);
+        }
+    }
+    streams.sort(
+      (left, right) =>
+        (right.quality_height ?? 0) - (left.quality_height ?? 0),
+    );
+    const counts = new Map<number, number>();
+    for (const stream of streams)
+      if (stream.quality_height)
+        counts.set(
+          stream.quality_height,
+          (counts.get(stream.quality_height) ?? 0) + 1,
+        );
+    return {
+      streams,
+      best_match_id: bestMatch,
+      quality_filters: [...counts]
+        .map(([filterHeight, count]) => ({
+          height: filterHeight,
+          label: labels.get(filterHeight) ?? `${filterHeight}p`,
+          count,
+        }))
+        .sort((left, right) => right.height - left.height),
+      total: streams.length,
+    };
   }
   async admit(
     source: Source,

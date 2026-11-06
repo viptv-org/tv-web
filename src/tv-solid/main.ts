@@ -76,18 +76,7 @@ async function start() {
       deviceLogicalPixelRatio: window.innerWidth / 1920,
       devicePhysicalPixelRatio: window.devicePixelRatio || 1,
       clearColor: 0x00000000,
-      // Renderer 2.0 changed these defaults. Keep 1.10's TV pacing and loader
-      // limits: an uncapped loop on a software rasteriser starves the timers
-      // this app runs on, and the larger decode window changes TV memory use.
       targetFPS: 60,
-      boundsMargin: 200,
-      imageDecodeConcurrency: 4,
-      textureProcessingTimeLimit: 10,
-      textureMemory: {
-        criticalThreshold: 64 * 1024 * 1024,
-        targetThresholdLevel: 0.65,
-        cleanupInterval: 2000,
-      },
       textBaselineMode: "linebox",
     },
     "app",

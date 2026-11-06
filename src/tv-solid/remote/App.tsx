@@ -94,6 +94,7 @@ import {
 
 
 } from "./SearchChannels";
+import { imageSource } from "./image-source";
 import {
 
 
@@ -129,26 +130,7 @@ import {
 
 
 } from "./TitleMetadata";
-import {
-
-
- BrowseBackdrop,
-
-
- BrowsePreview 
-
-
-} from "./BrowsePreview";
-import {
-
-
- HomeProgress,
-
-
- TilePlay 
-
-
-} from "./HomeTileEffects";
+import { BrowseBackdrop, BrowsePreview } from "./BrowsePreview";
 import { bufferedSegments } from "./playerTimeline";
 import {
 
@@ -162,8 +144,7 @@ import {
 
 
 
-  BillboardButton,
-
+ 
 
 
   HeroProgress
@@ -216,7 +197,11 @@ import {
 
   palette,
 
+  topBarGradient,
 
+  livePreviewScrim,
+
+  DelayedTitle,
 
   avatar,
 
@@ -511,6 +496,23 @@ const sourceLabelWidth = (label: string) => {
 };
 const clock = (seconds: number) =>
   `${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, "0")}`;
+const uniqueCards = (cards: readonly Card[]) =>
+  cards.filter(
+    (card, index, all) =>
+      all.findIndex((other) => cardKey(other) === cardKey(card)) === index,
+  );
+/** Bottom-align a 1-2 line title in a fixed hero logo box, as TvHeroSummary
+ * and TvDetailHero do in the Android TV client. */
+const bottomTitleY = (
+  title: string,
+  size: number,
+  width: number,
+  box: number,
+) => {
+  const measured = textMetrics(`${size}px Onest700`).measureText(title).width;
+  const lines = Math.min(2, Math.max(1, Math.ceil(measured / width)));
+  return box - lines * size * 1.2;
+};
 const navigationTemplates = [
   { id: "search", label: "" },
   { id: "home", label: "Home" },
@@ -636,6 +638,38 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
       [controls, setControls] = createSignal<Controls>(),
       [catalog, setCatalog] = createSignal<Catalog>(),
       [filters, setFilters] = createSignal<Record<string, string[]>>({});
+    const detailTarget = createMemo(() => {
+      const value = detail();
+      if (!value) return undefined;
+      const action = detailAction();
+      const regular = (card: Card | undefined) =>
+        card?.identity.episode != null &&
+        (card.identity.episode.season ?? 1) > 0;
+      let card: Card | undefined = regular(action?.card)
+        ? action!.card
+        : regular(value.item)
+          ? value.item
+          : [...value.episodes]
+              .filter((episode) => regular(episode))
+              .sort((left, right) => {
+                const season =
+                  (left.identity.episode?.season ?? 1) -
+                  (right.identity.episode?.season ?? 1);
+                return season
+                  ? season
+                  : (left.identity.episode?.episode ?? 0) -
+                      (right.identity.episode?.episode ?? 0);
+              })[0];
+      if (!card && value.item.identity.kind !== "series") card = value.item;
+      if (!card) return undefined;
+      const episode = card.identity.episode;
+      const resume = !!action?.resume && action.card === card;
+      const verb = resume ? "Resume" : "Play";
+      const label = episode
+        ? `${verb} S${episode.season ?? 1} E${episode.episode}`
+        : verb;
+      return { card, label };
+    });
     const [liveFavorites, setLiveFavorites] = createSignal<Set<string>>();
     const [livePages, setLivePages] = createSignal<LivePage[]>([]),
       [channels, setChannels] = createSignal<Channel[]>([]),
@@ -1196,15 +1230,13 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
         );
     }
     const navLayout = createMemo(() => {
-      const context = textMetrics("26px Onest500");
       let x = 300;
       return navs().map((nav) => {
         if (nav.id === "profiles") return { x: 1768, w: 56 };
-        context.font = `26px ${screen() === nav.id ? "Onest700" : "Onest500"}`;
         const w =
           nav.id === "search"
             ? 56
-            : Math.ceil(context.measureText(nav.label).width) + 36;
+            : Math.ceil((nav.label || "Search").length * 15.5) + 52;
         const box = { x, w };
         x += w + 8;
         return box;
@@ -1640,6 +1672,11 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
       screen() === "search" && searchCapabilities().channels
         ? 5
         : gridColumns() * 2;
+    // A LazyVerticalGrid scrolls the focused row just inside its viewport; 26px
+    // is the overlap needed for the 424px row (348 poster + 76 captions) to fit
+    // under the 236px page offset. The container clips the row above.
+    const gridOffset = () =>
+      screen() !== "search" && column() >= gridColumns() ? 26 : 0;
     const searchNeedsRetry = () =>
       searchCapabilities().media &&
       !!search() &&
@@ -1729,13 +1766,33 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
       }, 400);
       onCleanup(() => clearTimeout(timer));
     });
-    const hero = createMemo(() =>
-      screen() === "home"
-        ? zone() === "rows"
-          ? (previewCard() ?? home()?.hero)
-          : (home()?.featured[heroSlide()] ?? home()?.hero)
-        : detail()?.item,
-    );
+    const hero = createMemo(() => {
+      const value =
+        screen() === "home"
+          ? zone() === "rows"
+            ? (previewCard() ?? home()?.hero)
+            : (home()?.featured[heroSlide()] ?? home()?.hero)
+          : detail()?.item;
+      if (!value || value.logo || screen() !== "home") return value;
+      // The featured carousel's cards can be summary-only while the same title
+      // in a row carries the logo. Borrow that artwork so Home never shows the
+      // title fallback for a title that already has one.
+      const identity = cardKey(value);
+      for (const row of home()?.rows ?? []) {
+        const match = row.cards.find((card) => cardKey(card) === identity);
+        if (match?.logo)
+          return {
+            ...value,
+            logo: match.logo,
+            landscape: value.landscape ?? match.landscape,
+            poster: value.poster ?? match.poster,
+          };
+      }
+      const fallback = home()?.hero;
+      if (fallback && cardKey(fallback) === identity && fallback.logo)
+        return { ...value, logo: fallback.logo };
+      return value;
+    });
     const billboardKey = createMemo(() =>
       screen() === "home" && zone() !== "rows" && hero()
         ? cardKey(hero()!)
@@ -2251,6 +2308,7 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
         } else if (target === "library") {
           setLoading(true);
           setPage(await loadLibrary("0", signal));
+          if (libraryControlCount()) setZone("library-controls");
         } else if (target === "search") {
           setPage({ cards: [], complete: true });
           setZone("keyboard");
@@ -3674,7 +3732,6 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
                   toggle: on,
                   value: "",
                   run: flip,
-                  cycle: flip,
                 };
               }
               return {
@@ -4566,7 +4623,7 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
       }
       if (zone() === "hero") {
         setHeroAction((i) =>
-          Math.max(0, Math.min(screen() === "home" ? 2 : 3, i + dx)),
+          Math.max(0, Math.min(screen() === "home" ? 2 : 1, i + dx)),
         );
         if (dy < 0 && screen() !== "detail") {
           setZone("nav");
@@ -5255,14 +5312,16 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
         return;
       }
       if (zone() === "hero") {
-        const card = hero();
+        const card =
+          screen() === "detail" ? detailTarget()?.card : hero();
         if (!card) {
           if (screen() === "home" && home()?.complete)
             await navigate("settings");
           return;
         }
         if (heroAction() === 0) await playIntent(card);
-        else if (heroAction() === 1) await toggleSaved(card);
+        else if (heroAction() === 1)
+          await toggleSaved(screen() === "detail" ? detail()?.item ?? card : card);
         else if (heroAction() === 2) {
           if (screen() === "home") await openDetail(card);
           else {
@@ -5574,147 +5633,184 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
       h: number;
       focused: boolean;
       poster?: boolean;
-      library?: boolean;
-      home?: boolean;
+      focusedCaptions?: boolean;
     }) {
-      // One tiny blur per mounted tile/artwork. Retired row windows release it;
-      // focus changes reuse pixels without repeating canvas readback.
-      const playArt = createMemo(() => ({
-        src: props.poster ? props.card.poster : props.card.landscape,
-        width: props.w,
-        height: props.h,
-      }));
+      const progress = () =>
+        props.card.progress ?? props.card.view?.progress ?? null;
+      const source = () =>
+        props.poster
+          ? (props.card.poster ?? props.card.landscape)
+          : (props.card.landscape ?? props.card.poster);
+      const [failed, setFailed] = createSignal(false);
+      createEffect(() => {
+        source();
+        setFailed(false);
+      });
       const badgeWidth = createMemo(() => {
-        const context = textMetrics(
-          `${props.library || props.home ? 18 : 20}px Onest700`,
-        );
+        const context = textMetrics("18px Onest700");
         return Math.min(
-          props.w - 24,
+          props.w - 20,
           Math.ceil(
             context.measureText(props.card.view?.tile_badge?.label ?? "").width,
           ) + 20,
         );
       });
+      const label = () =>
+        props.card.view?.tile_badge?.label ??
+        props.card.badges.find((badge) => !/simkl/i.test(badge)) ??
+        null;
+      const meta = () =>
+        props.card.subtitle ||
+        props.card.view?.compact_metadata_parts?.join(" · ") ||
+        "";
       return (
-        <TvView x={props.x} y={props.y} w={props.w} h={props.h + 64}>
-          <TvView
-            show={!props.library && !props.home}
-            x={-4}
-            y={-4}
-            w={props.w + 8}
-            h={props.h + 8}
-            rounded={12}
-            color={props.focused ? palette.text : "rgba(0,0,0,0)"}
-          />
+        <TvView x={props.x} y={props.y} w={props.w} h={props.h + 80} clipping>
           <TvView
             w={props.w}
             h={props.h}
             rounded={10}
             color={palette.surface}
-            clipping={true}
+            clipping
           >
             <Show
-              when={props.poster ? props.card.poster : props.card.landscape}
+              when={!failed() && source()}
+              fallback={
+                <TvView w={props.w} h={props.h} rounded={10} color="#1A1A1C">
+                  <Label
+                    x={14}
+                    y={props.h - 70}
+                    size={props.poster ? 24 : 22}
+                    lineheight={1.2}
+                    font="Onest600"
+                    maxwidth={props.w - 28}
+                    maxlines={2}
+                    content={props.card.title}
+                    color="rgba(244,242,238,.9)"
+                  />
+                </TvView>
+              }
             >
               <TvView
                 w={props.w}
                 h={props.h}
                 rounded={10}
-                src={(props.poster ? props.card.poster : props.card.landscape)!}
+                src={imageSource(source(), props.poster ? 510 : 844)}
                 fit="cover"
+                onError={() => setFailed(true)}
               />
             </Show>
-            <Show when={props.card.progress != null}>
-              <Show
-                when={props.home}
-                fallback={
-                  <>
-                    <TvView
-                      x={0}
-                      y={props.h - (props.home ? 4 : 5)}
-                      w={props.w}
-                      h={props.home ? 4 : 5}
-                      color="rgba(255,255,255,.25)"
-                    />
-                    <TvView
-                      x={0}
-                      y={props.h - (props.home ? 4 : 5)}
-                      w={props.w * (props.card.progress ?? 0)}
-                      h={props.home ? 4 : 5}
-                      color={palette.accent}
-                    />
-                  </>
-                }
-              >
-                <TvView y={props.h - 4}>
-                  <HomeProgress
-                    width={props.w}
-                    tileHeight={props.h}
-                    progress={props.card.progress!}
-                  />
-                </TvView>
-              </Show>
-            </Show>
-            <Show when={props.card.view?.tile_badge?.label}>
+            <Show when={!props.poster && props.card.logo}>
               <TvView
-                x={12}
-                y={12}
-                w={badgeWidth()}
-                h={props.library || props.home ? 30 : 36}
-                rounded={6}
-                color={palette.text}
+                x={18}
+                y={props.h - 74}
+                w={props.w * 0.62}
+                h={56}
+                clipping
               >
-                <Label
-                  x={10}
-                  centerY={props.library || props.home ? 15 : 18}
-                  size={props.library || props.home ? 18 : 20}
-                  font="Onest700"
-                  maxwidth={props.w - 44}
-                  maxlines={1}
-                  content={props.card.view?.tile_badge?.label ?? ""}
-                  color="#111113"
+                <Logo
+                  src={props.card.logo!}
+                  h={56}
+                  maxWidth={props.w * 0.62}
+                  title={props.card.title}
                 />
               </TvView>
             </Show>
-            <Show
-              when={
-                props.home &&
-                props.focused &&
-                props.card.view?.preview?.action === "play"
-              }
-            >
-              <TilePlay art={playArt()} />
+            <Show when={label()}>
+              <TvView
+                x={10}
+                y={10}
+                w={badgeWidth()}
+                h={30}
+                rounded={6}
+                color={
+                  /new episode/i.test(label() ?? "")
+                    ? palette.text
+                    : label() === "LIVE"
+                      ? "#E5484D"
+                      : "rgba(11,11,12,.8)"
+                }
+              >
+                <Label
+                  x={10}
+                  centerY={15}
+                  size={18}
+                  font="Onest700"
+                  maxwidth={props.w - 30}
+                  maxlines={1}
+                  content={label() ?? ""}
+                  color={
+                    /new episode/i.test(label() ?? "")
+                      ? "#111113"
+                      : palette.text
+                  }
+                />
+              </TvView>
+            </Show>
+            <Show when={(progress() ?? 0) > 0}>
+              <TvView
+                x={3}
+                y={props.h - 8}
+                w={props.w - 6}
+                h={5}
+                rounded={2}
+                color="rgba(255,255,255,.25)"
+              >
+                <TvView
+                  w={(props.w - 6) * Math.max(0, Math.min(1, progress() ?? 0))}
+                  h={5}
+                  rounded={2}
+                  color={palette.accent}
+                />
+              </TvView>
+            </Show>
+            <Show when={props.focused}>
+              <TvView
+                w={props.w}
+                h={props.h}
+                src={cardOutline(props.w, props.h, true)}
+              />
+              <TvView
+                x={(props.w - 72) / 2}
+                y={(props.h - 72) / 2}
+                w={72}
+                h={72}
+                rounded={36}
+                color="rgba(255,255,255,.16)"
+              >
+                <TvView
+                  x={22}
+                  y={21}
+                  w={28}
+                  h={30}
+                  src={icon("play", false, 0, "#F4F2EE")}
+                />
+              </TvView>
             </Show>
           </TvView>
-          <Show when={props.library || props.home}>
-            <TvView
-              w={props.w}
-              h={props.h}
-              src={cardOutline(props.w, props.h, props.focused)}
-            />
-          </Show>
-          <Show when={!props.poster || props.focused}>
-            <Label
-              y={props.h + (props.library || props.home ? 14 : 16)}
-              size={props.home && !props.poster ? 24 : 22}
-              font="Onest600"
-              maxwidth={props.w}
-              maxlines={1}
-              content={props.card.title}
-              color={props.home && !props.focused ? palette.body : palette.text}
-            />
-            <Label
-              y={props.h + (props.home && !props.poster ? 48 : 45)}
-              size={props.library || props.home ? 20 : 18}
-              maxwidth={props.w}
-              maxlines={1}
-              content={
-                props.poster
-                  ? (props.card.view?.compact_metadata_parts?.join(" · ") ?? "")
-                  : (props.card.subtitle ?? "")
-              }
-              color={props.home && !props.focused ? "#8F8D89" : palette.muted}
-            />
+          <Show when={!props.poster || props.focused || props.focusedCaptions}>
+            <TvView y={props.h + 14} w={props.w} h={66} clipping>
+              <Show when={props.poster || !props.card.logo}>
+                <Label
+                  y={0}
+                  size={24}
+                  lineheight={1.2}
+                  font="Onest600"
+                  maxwidth={props.w}
+                  maxlines={1}
+                  content={props.card.title}
+                  color={palette.text}
+                />
+              </Show>
+              <Label
+                y={props.poster || !props.card.logo ? 33 : 0}
+                size={20}
+                lineheight={1.3}
+                maxwidth={props.w}
+                maxlines={1}
+                content={meta()}
+                color={palette.muted}
+              />
+            </TvView>
           </Show>
         </TvView>
       );
@@ -5875,6 +5971,7 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
                 screen() !== "detail"
               }
             >
+              <TvView w={1920} h={132} src={topBarGradient()} fit="cover" />
               <TvView
                 x={96}
                 y={44}
@@ -5911,10 +6008,23 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
                     rounded={28}
                     color={
                       zone() === "nav" && column() === index()
-                        ? palette.text
+                        ? "#212124"
                         : "rgba(0,0,0,0)"
                     }
                   >
+                    <Show when={zone() === "nav" && column() === index()}>
+                      <TvView
+                        w={navLayout()[index()].w}
+                        h={56}
+                        src={outline(
+                          navLayout()[index()].w,
+                          56,
+                          8,
+                          3,
+                          "#F4F2EE",
+                        )}
+                      />
+                    </Show>
                     <Show when={nav.id === "search"}>
                       <TvView
                         x={13}
@@ -5923,11 +6033,9 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
                         h={30}
                         src={icon(
                           "search",
-                          zone() === "nav" && column() === index(),
+                          false,
                           2.2,
-                          zone() === "nav" && column() === index()
-                            ? "#111113"
-                            : palette.body,
+                          palette.text,
                         )}
                       />
                     </Show>
@@ -5941,20 +6049,49 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
                         color={
                           zone() === "nav" && column() === index()
                             ? palette.text
-                            : "rgba(255,255,255,.35)"
+                            : "#212124"
                         }
                       />
                       <TvView
                         w={56}
                         h={56}
                         rounded={28}
-                        src={avatar(
-                          management()?.profiles.find(
-                            (p) => p.id === api.profile,
-                          )?.avatar_id,
-                        )}
-                        fit="cover"
-                      />
+                        color="#212124"
+                      >
+                        <Label
+                          w={56}
+                          centerY={28}
+                          align="center"
+                          size={26}
+                          font="Onest700"
+                          content={
+                            (
+                              management()?.profiles.find(
+                                (p) => p.id === api.profile,
+                              )?.name ?? "?"
+                            )
+                              .slice(0, 1)
+                              .toUpperCase()
+                          }
+                        />
+                        <Show
+                          when={avatar(
+                            management()?.profiles.find(
+                              (p) => p.id === api.profile,
+                            )?.avatar_id,
+                          )}
+                        >
+                          {(src) => (
+                            <TvView
+                              w={56}
+                              h={56}
+                              rounded={28}
+                              src={src()}
+                              fit="cover"
+                            />
+                          )}
+                        </Show>
+                      </TvView>
                     </Show>
                     <Show when={nav.id !== "search" && nav.id !== "profiles"}>
                       <Label
@@ -5962,13 +6099,14 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
                         centerY={28}
                         size={26}
                         font={screen() === nav.id ? "Onest700" : "Onest500"}
+                        maxwidth={navLayout()[index()].w - 36}
+                        maxlines={1}
                         content={nav.label}
                         color={
-                          zone() === "nav" && column() === index()
-                            ? "#111113"
-                            : screen() === nav.id
-                              ? palette.text
-                              : palette.body
+                          screen() === nav.id ||
+                          (zone() === "nav" && column() === index())
+                            ? palette.text
+                            : palette.body
                         }
                       />
                       <TvView
@@ -6038,35 +6176,48 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
                   focused={zone() === "hero"}
                 />
               </Show>
-              <Show when={zone() === "rows" && hero()}>
-                {(card) => <BrowsePreview card={card()} />}
-              </Show>
-              <Show when={zone() !== "rows" && hero()}>
+              <Show when={hero()}>
                 {(card) => (
-                  <TvView x={96} y={300}>
+                  <TvView
+                    x={96}
+                    y={zone() === "rows" ? -700 : 300}
+                    w={1100}
+                    transition={{
+                      y: {
+                        duration: 220,
+                        timingFunction: "cubic-bezier(.2,0,0,1)",
+                      },
+                    }}
+                    show={zone() !== "rows"}
+                  >
                     <Show
                       when={card().logo}
                       fallback={
-                        <Label
-                          y={0}
-                          size={zone() === "rows" ? 44 : 64}
-                          font="Onest700"
+                        <DelayedTitle
+                          title={card().title}
+                          y={bottomTitleY(card().title, 48, 800, 160)}
+                          size={48}
+                          lineheight={1.2}
                           maxwidth={800}
+                          maxheight={160}
                           maxlines={2}
-                          content={card().title}
                         />
                       }
                     >
-                      <Logo
-                        title={card().title}
-                        size={zone() === "rows" ? 44 : 64}
-                        src={card().logo!}
-                        h={zone() === "rows" ? 120 : 170}
-                      />
+                      <TvView w={410} h={160} clipping>
+                        <Logo
+                          title={card().title}
+                          size={48}
+                          src={card().logo!}
+                          h={160}
+                          maxWidth={410}
+                          boxH={160}
+                        />
+                      </TvView>
                     </Show>
-                    <Metadata card={card()} y={zone() === "rows" ? 144 : 194} />
+                    <Metadata card={card()} y={188} />
                     <Label
-                      y={zone() === "rows" ? 196 : 244}
+                      y={238}
                       size={26}
                       lineheight={1.45}
                       maxwidth={780}
@@ -6074,176 +6225,197 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
                       color={palette.body}
                       content={card().description ?? ""}
                     />
-                    <Show when={zone() !== "rows"}>
-                      <Button
-                        x={0}
-                        y={348}
-                        w={220}
-                        icon="play"
-                        iconSize={24}
-                        shadow
-                        label="Play"
-                        focused={zone() === "hero" && heroAction() === 0}
-                      />
-                      <BillboardButton
-                        art={billboard}
-                        pageX={336}
-                        pageY={648}
-                        x={240}
-                        y={348}
-                        icon={isSaved(card()) ? "check" : "plus"}
-                        focused={zone() === "hero" && heroAction() === 1}
-                      />
-                      <BillboardButton
-                        art={billboard}
-                        pageX={428}
-                        pageY={648}
-                        x={332}
-                        y={348}
-                        icon="info"
-                        focused={zone() === "hero" && heroAction() === 2}
-                      />
-                      <For each={(home()?.featured ?? []).slice(0, 5)}>
-                        {(_, i) => (
-                          <TvView
-                            x={i() * 24 + (i() > heroSlide() ? 32 : 0)}
-                            y={460}
-                          >
-                            <Show
-                              when={i() === heroSlide()}
-                              fallback={
-                                <TvView
-                                  w={16}
-                                  h={4}
-                                  rounded={2}
-                                  color="rgba(255,255,255,.3)"
-                                />
-                              }
-                            >
-                              <HeroProgress
-                                started={heroCycleStart()}
-                                running={heroActive()}
+                    <Button
+                      x={0}
+                      y={342}
+                      w={220}
+                      h={72}
+                      icon="play"
+                      iconSize={24}
+                      label="Play"
+                      focused={zone() === "hero" && heroAction() === 0}
+                    />
+                    <Button
+                      x={240}
+                      y={342}
+                      w={72}
+                      h={72}
+                      round
+                      icon={isSaved(card()) ? "check" : "plus"}
+                      focused={zone() === "hero" && heroAction() === 1}
+                    />
+                    <Button
+                      x={332}
+                      y={342}
+                      w={72}
+                      h={72}
+                      round
+                      icon="info"
+                      focused={zone() === "hero" && heroAction() === 2}
+                    />
+                    <For each={(home()?.featured ?? []).slice(0, 5)}>
+                      {(_, i) => (
+                        <TvView
+                          x={i() * 24 + (i() > heroSlide() ? 32 : 0)}
+                          y={460}
+                        >
+                          <Show
+                            when={i() === heroSlide()}
+                            fallback={
+                              <TvView
+                                w={16}
+                                h={4}
+                                rounded={2}
+                                color="rgba(255,255,255,.3)"
                               />
-                            </Show>
-                          </TvView>
-                        )}
-                      </For>
-                    </Show>
+                            }
+                          >
+                            <HeroProgress
+                              started={heroCycleStart()}
+                              running={heroActive()}
+                            />
+                          </Show>
+                        </TvView>
+                      )}
+                    </For>
                   </TvView>
                 )}
               </Show>
-              <TvView
-                x={96}
-                y={zone() === "rows" ? 514 : 826}
-                transition={{
-                  y: {
-                    duration: 450,
-                    timingFunction: "cubic-bezier(.2,0,0,1)",
-                  },
-                }}
-                w={1824}
-                h={650}
-                clipping={true}
-              >
-                <For
-                  each={(home()?.rows ?? []).slice(
-                    zone() === "rows" ? row() : 0,
-                    (zone() === "rows" ? row() : 0) + 2,
-                  )}
+              <Show when={screen() === "home" && zone() === "rows" && hero()}>
+                {(card) => <BrowsePreview card={card()} />}
+              </Show>
+              <Show when={home()?.rows?.length}>
+                <TvView
+                  x={96}
+                  y={
+                    zone() === "rows"
+                      ? 545.2 +
+                        (510.8 -
+                          (128 +
+                            ((home()?.rows[
+                              Math.min(row(), home()!.rows.length - 1)
+                            ]?.id === "continue"
+                              ? 237.6
+                              : 382.8))))
+                      : 824
+                  }
+                  transition={{
+                    y: {
+                      duration: 450,
+                      timingFunction: "cubic-bezier(.2,0,0,1)",
+                    },
+                  }}
+                  w={1728}
+                  h={zone() === "rows" ? 511 : 232}
+                  clipping
                 >
-                  {(shelf, index) => (
-                    <TvView y={index() * 384}>
-                      <Label
-                        y={-2}
-                        size={30}
-                        font="Onest600"
-                        letterspacing={-0.3}
-                        content={shelf.title}
-                      />
-                      <Show when={shelf.state === "Ready"}>
-                        <KeyedFor
-                          each={shelf.cards.slice(
-                            zone() === "rows" && index() === 0
-                              ? Math.max(0, column() - 3)
-                              : 0,
-                            (zone() === "rows" && index() === 0
-                              ? Math.max(0, column() - 3)
-                              : 0) +
-                              (shelf.view?.card_shape === "poster" ? 8 : 6),
-                          )}
-                          keyOf={cardKey}
-                        >
-                          {(card, i) => (
-                            <Tile
-                              home
-                              card={card()}
-                              x={
-                                i() *
-                                (shelf.view?.card_shape === "poster"
-                                  ? 248
-                                  : 404)
-                              }
-                              y={50}
-                              w={
-                                shelf.view?.card_shape === "poster" ? 232 : 384
-                              }
-                              h={
-                                shelf.view?.card_shape === "poster" ? 348 : 216
-                              }
-                              poster={shelf.view?.card_shape === "poster"}
-                              focused={
-                                zone() === "rows" &&
-                                index() === 0 &&
-                                i() + Math.max(0, column() - 3) === column()
-                              }
+                  {(() => {
+                    const shelf = () =>
+                      home()!.rows[Math.min(row(), home()!.rows.length - 1)];
+                    const cards = () =>
+                      (shelf()?.cards ?? []).filter(
+                        (card, index, all) =>
+                          all.findIndex(
+                            (other) => cardKey(other) === cardKey(card),
+                          ) === index,
+                      );
+                    const portrait = () => shelf()?.id !== "continue";
+                    const step = () => (portrait() ? 271.2 : 442.4);
+                    const count = () => (portrait() ? 7 : 4);
+                    const start = () =>
+                      zone() === "rows" ? Math.max(0, column() - 2) : 0;
+                    return (
+                      <>
+                        <Label
+                          size={30}
+                          lineheight={1.2}
+                          font="Onest600"
+                          letterspacing={-0.3}
+                          maxwidth={1600}
+                          maxlines={1}
+                          content={shelf()?.title ?? ""}
+                        />
+                        <Show when={shelf()?.state === "Ready"}>
+                          <KeyedFor
+                            each={cards().slice(start(), start() + count())}
+                            keyOf={cardKey}
+                          >
+                            {(card, i) => (
+                              <Tile
+                                poster={portrait()}
+                                card={card()}
+                                x={i() * step()}
+                                y={52}
+                                w={portrait() ? 255.2 : 422.4}
+                                h={portrait() ? 382.8 : 237.6}
+                                focused={
+                                  zone() === "rows" && i() + start() === column()
+                                }
+                              />
+                            )}
+                          </KeyedFor>
+                        </Show>
+                        <Show when={shelf()?.state !== "Ready"}>
+                          <Show when={shelf()?.state === "Failed"}>
+                            <Button
+                              x={0}
+                              y={96}
+                              w={260}
+                              label="Try again"
+                              focused={zone() === "rows"}
                             />
-                          )}
-                        </KeyedFor>
-                      </Show>
-                      <Show when={shelf.state !== "Ready"}>
-                        <Show when={shelf.state === "Failed"}>
-                          <Button
-                            x={0}
-                            y={120}
-                            w={260}
-                            label="Try again"
-                            focused={zone() === "rows" && index() === 0}
+                          </Show>
+                          <Label
+                            y={96}
+                            size={26}
+                            color={palette.muted}
+                            content={
+                              shelf()?.state === "Pending"
+                                ? ""
+                                : (shelf()?.message ?? "Couldn’t load this row.")
+                            }
                           />
                         </Show>
-                        <Label
-                          y={70}
-                          size={26}
-                          color={palette.muted}
-                          content={
-                            shelf.state === "Pending"
-                              ? ""
-                              : (shelf.message ??
-                                (shelf.state === "Empty"
-                                  ? "Nothing here yet."
-                                  : "Couldn’t load this row."))
-                          }
-                        />
-                        <For
-                          each={
-                            shelf.state === "Pending" ? [0, 1, 2, 3, 4] : []
-                          }
-                        >
-                          {(i) => (
-                            <TvView
-                              x={i * 404}
-                              y={50}
-                              w={384}
-                              h={216}
-                              rounded={10}
-                              color={palette.surface}
-                            />
-                          )}
-                        </For>
-                      </Show>
-                    </TvView>
-                  )}
-                </For>
-              </TvView>
+                        <Show when={(home()?.rows.length ?? 0) > 1}>
+                          <TvView x={1708} y={90} w={4} h={220}>
+                            <For each={home()!.rows}>
+                              {(_, i) => {
+                                const countRows = home()!.rows.length;
+                                const gap = Math.min(8, 220 / (countRows * 2));
+                                const unit = Math.min(
+                                  6,
+                                  (220 - gap * (countRows - 1)) /
+                                    (countRows + 2),
+                                );
+                                const total =
+                                  unit * (countRows + 2) +
+                                  gap * (countRows - 1);
+                                let y = (220 - total) / 2;
+                                for (let index = 0; index < i(); index++)
+                                  y +=
+                                    (index === row() ? unit * 3 : unit) + gap;
+                                return (
+                                  <TvView
+                                    y={y}
+                                    w={4}
+                                    h={i() === row() ? unit * 3 : unit}
+                                    rounded={2}
+                                    color={
+                                      i() === row()
+                                        ? palette.text
+                                        : "rgba(255,255,255,.3)"
+                                    }
+                                  />
+                                );
+                              }}
+                            </For>
+                          </TvView>
+                        </Show>
+                      </>
+                    );
+                  })()}
+                </TvView>
+              </Show>
             </Show>
             <Show when={screen() === "detail"}>
               <Show when={detail()}>
@@ -6251,9 +6423,11 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
                   <>
                     <Show
                       when={
+                        value().episodes.length > 0 &&
                         ["episodes", "seasons", "recommendations"].includes(
                           zone(),
-                        ) && value().item.logo
+                        ) &&
+                        value().item.logo
                       }
                     >
                       <TvView x={96} y={54}>
@@ -6267,6 +6441,7 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
                     </Show>
                     <TvView
                       show={
+                        value().episodes.length === 0 ||
                         !["episodes", "seasons", "recommendations"].includes(
                           zone(),
                         )
@@ -6276,7 +6451,9 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
                         ["episodes", "seasons", "recommendations"].includes(
                           zone(),
                         )
-                          ? -480
+                          ? value().episodes.length
+                            ? -480
+                            : -156
                           : 0
                       }
                     >
@@ -6284,11 +6461,18 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
                         <Show
                           when={value().item.logo}
                           fallback={
-                            <Label
+                            <DelayedTitle
+                              title={value().item.title}
+                              y={bottomTitleY(
+                                value().item.title,
+                                56,
+                                value().episodes.length ? 460 : 260,
+                                value().episodes.length ? 134 : 190,
+                              )}
                               size={56}
-                              font="Onest700"
+                              lineheight={1.2}
                               maxwidth={850}
-                              content={value().item.title}
+                              maxlines={2}
                             />
                           }
                         >
@@ -6296,8 +6480,9 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
                             title={value().item.title}
                             size={56}
                             src={value().item.logo!}
-                            h={190}
-                            maxWidth={value().episodes.length ? 460 : 800}
+                            h={value().episodes.length ? 134 : 190}
+                            maxWidth={value().episodes.length ? 460 : 260}
+                            boxH={value().episodes.length ? 134 : 190}
                           />
                         </Show>
                       </TvView>
@@ -6318,13 +6503,9 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
                       <Button
                         x={0}
                         y={value().episodes.length ? 648 : 668}
-                        w={
-                          value().episodes.length || detailAction()?.resume
-                            ? 420
-                            : 260
-                        }
+                        w={detailAction()?.resume ? 420 : 260}
                         icon="play"
-                        label={detailAction()?.label ?? "Play"}
+                        label={detailTarget()?.label ?? "Play"}
                         focused={zone() === "hero" && heroAction() === 0}
                       />
                       <Show when={detailAction()?.resume}>
@@ -6354,35 +6535,13 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
                         />
                       </Show>
                       <Button
-                        x={
-                          value().episodes.length || detailAction()?.resume
-                            ? 440
-                            : 280
-                        }
+                        x={detailAction()?.resume ? 440 : 280}
                         y={value().episodes.length ? 648 : 668}
                         icon={isSaved(value().item) ? "check" : "plus"}
                         round
                         focused={zone() === "hero" && heroAction() === 1}
                       />
-                      <Button
-                        x={
-                          value().episodes.length || detailAction()?.resume
-                            ? 532
-                            : 372
-                        }
-                        y={value().episodes.length ? 648 : 668}
-                        icon="episodes"
-                        round
-                        focused={zone() === "hero" && heroAction() === 2}
-                      />
-                      <Button
-                        x={0}
-                        y={592}
-                        w={386}
-                        h={48}
-                        label="Choose a source"
-                        focused={zone() === "hero" && heroAction() === 3}
-                      />
+
                     </TvView>
                     <TvView
                       x={96}
@@ -6390,9 +6549,11 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
                         ["episodes", "seasons", "recommendations"].includes(
                           zone(),
                         )
-                          ? value().seasons.length
-                            ? 154
-                            : 184
+                          ? value().episodes.length
+                            ? value().seasons.length
+                              ? 154
+                              : 184
+                            : 680
                           : value().seasons.length
                             ? 816
                             : 836
@@ -6514,7 +6675,6 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
                         >
                           {(card, i) => (
                             <Tile
-                              home
                               card={card()}
                               x={i() * 248}
                               y={52}
@@ -6640,11 +6800,13 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
                         ? 236
                         : 244
                   }
-                  w={screen() === "search" ? 1124 : 1824}
+                  w={screen() === "search" ? 1124 : 1720}
                   h={
-                    screen() === "search" && searchCapabilities().channels
-                      ? 388
-                      : 800
+                    screen() === "search"
+                      ? searchCapabilities().channels
+                        ? 406
+                        : 800
+                      : 844
                   }
                   clipping={true}
                 >
@@ -6668,7 +6830,7 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
                     </For>
                   </Show>
                   <KeyedFor
-                    each={page().cards.slice(
+                    each={uniqueCards(page().cards).slice(
                       gridStart(),
                       gridStart() + gridCount(),
                     )}
@@ -6683,11 +6845,11 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
                         }
                         y={
                           Math.floor(i() / gridColumns()) *
-                          (screen() === "search"
-                            ? 388
-                            : screen() === "library"
-                              ? 440
-                              : 384)
+                            (screen() === "search"
+                              ? 388
+                              : screen() === "library"
+                                ? 446
+                                : 460) - gridOffset()
                         }
                         w={screen() === "search" ? 212 : 232}
                         h={screen() === "search" ? 318 : 348}
@@ -6695,9 +6857,7 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
                           zone() === "content" && i() + gridStart() === column()
                         }
                         poster
-                        library={
-                          screen() === "library" || screen() === "search"
-                        }
+                        focusedCaptions={screen() === "search"}
                       />
                     )}
                   </KeyedFor>
@@ -6750,7 +6910,7 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
                     zone() === "search-channels" ? column() : searchChannelFocus
                   }
                   focused={zone() === "search-channels"}
-                  y={searchCapabilities().media ? 584 : 140}
+                  y={searchCapabilities().media ? 650 : 140}
                   pending={searchChannelsPending() || searchChannelPaging()}
                   error={searchChannelError()}
                   retryFocused={zone() === "search-channel-retry"}
@@ -6880,9 +7040,27 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
                   w={640}
                   h={360}
                   rounded={12}
-                  src={channels()[liveChannelIndex()]?.card.landscape}
+                  src={imageSource(channels()[liveChannelIndex()]?.card.landscape, 1280)}
                   fit="cover"
-                />
+                >
+                  <TvView y={270} w={640} h={90} src={livePreviewScrim()} fit="cover" />
+                  <TvView
+                    x={404}
+                    y={322}
+                    w={24}
+                    h={24}
+                    src={icon("play", false, 0, "#F4F2EE")}
+                  />
+                  <Label
+                    x={436}
+                    y={324}
+                    w={188}
+                    align="right"
+                    size={20}
+                    font="Onest600"
+                    content="OK to watch"
+                  />
+                </TvView>
               </Show>
               <For
                 each={[{ id: "all", label: "All" }, ...groups()].slice(
@@ -7130,7 +7308,7 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
                       settingsTab() === i() && zone() === "settings-nav"
                         ? palette.text
                         : settingsTab() === i()
-                          ? "rgba(255,255,255,.14)"
+                          ? "#333333"
                           : "rgba(0,0,0,0)"
                     }
                   >
@@ -7149,11 +7327,7 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
                       x={70}
                       centerY={38}
                       size={26}
-                      font={
-                        settingsTab() === i() && zone() !== "settings-nav"
-                          ? "Onest700"
-                          : "Onest500"
-                      }
+                      font={settingsTab() === i() ? "Onest700" : "Onest500"}
                       content={tab}
                       color={
                         settingsTab() === i() && zone() === "settings-nav"
@@ -7214,7 +7388,10 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
                       y={57}
                       size={20}
                       maxwidth={900}
-                      content={item.description ?? ""}
+                      content={(item.description ?? "").replace(
+                        /^★\s*/,
+                        "e.g. ",
+                      )}
                       color={
                         zone() === "settings-content" &&
                         column() === i() + Math.max(0, column() - 5)
@@ -7229,9 +7406,7 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
                         w={68}
                         h={38}
                         rounded={19}
-                        color={
-                          item.toggle ? palette.accent : "rgba(255,255,255,.18)"
-                        }
+                        color={item.toggle ? palette.accent : "#494949"}
                       >
                         <TvView
                           x={item.toggle ? 34 : 4}
@@ -7239,7 +7414,7 @@ export function createRemoteTvApp(api: RemoteTvApi, platform: string) {
                           w={30}
                           h={30}
                           rounded={15}
-                          color={item.toggle ? "#15130F" : "#B6B4AF"}
+                          color={item.toggle ? palette.bg : palette.text}
                         />
                       </TvView>
                     </Show>

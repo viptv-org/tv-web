@@ -2,6 +2,7 @@
 import { For, Show } from "solid-js";
 import { TvView } from "../runtime";
 import { Button, cardOutline, Label, palette } from "./visuals";
+import { imageSource } from "./image-source";
 import type { Channel } from "./types";
 
 let backdrop: ImageData | undefined;
@@ -107,7 +108,7 @@ export function SearchChannels(props: {
                   y={20}
                   w={316}
                   h={160}
-                  src={channel.card.landscape!}
+                  src={imageSource(channel.card.landscape, 632)}
                   fit="contain"
                 />
               </Show>

@@ -26,7 +26,7 @@ export function LibraryToolbar(props: {
       Math.ceil(canvas.measureText(sortValue()).width),
     ];
   });
-  const sortWidth = () => Math.min(600, sortWidths()[0] + sortWidths()[1] + 96);
+  const sortWidth = () => Math.min(640, sortWidths()[0] + sortWidths()[1] + 120);
   const sortFocused = () => props.focused && props.index === props.types.length;
   return (
     <TvView y={140}>
@@ -113,7 +113,7 @@ export function LibraryToolbar(props: {
               size={24}
               font="Onest600"
               content={sortValue()}
-              maxwidth={sortWidth() - sortWidths()[0] - 96}
+              maxwidth={sortWidths()[1] + 24}
               maxlines={1}
               color={sortFocused() ? "#111113" : palette.text}
             />

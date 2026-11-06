@@ -1,6 +1,7 @@
 /** @jsxImportSource @solidtv/solid */
 import { createEffect, createSignal, onCleanup, Show } from "solid-js";
 import { TvView, TvText } from "../runtime";
+import { imageSource } from "./image-source";
 import { getRenderer } from "@solidtv/solid";
 import { tokens } from "../../theme/viptv-tokens.generated";
 import { buttonShadow } from "./button-shadow";
@@ -114,7 +115,48 @@ export function navIcon(name: string, dark = false, active = false) {
   return value;
 }
 export function Label(props: Record<string, any>) {
-  return <TvText font="Onest" color={palette.text} {...props} lineheight={props.lineheight ?? (props.font === "Onest700" && props.size >= 40 ? 1.15 : undefined)} />;
+  // Keep this a getter: the component body runs once, and a plain value here
+  // froze the first content (the Search field then kept its placeholder).
+  const content = () =>
+    typeof props.content === "string"
+      ? props.content.replace(/[★☆✩⭐]\s*/g, "")
+      : props.content;
+  return <TvText font="Onest" color={palette.text} {...props} content={content()} lineheight={props.lineheight ?? (props.font === "Onest700" && props.size >= 40 ? 1.15 : undefined)} />;
+}
+/** A hero title is only a fallback: delay it so a late-arriving logo never
+ * flashes text first. A card that has no logo still identifies itself. */
+export function DelayedTitle(props: {
+  title: string;
+  y?: number;
+  size: number;
+  font?: string;
+  lineheight?: number;
+  maxwidth?: number;
+  maxheight?: number;
+  maxlines?: number;
+  delay?: number;
+}) {
+  const [shown, setShown] = createSignal(false);
+  createEffect(() => {
+    props.title;
+    setShown(false);
+    const timer = setTimeout(() => setShown(true), props.delay ?? 650);
+    onCleanup(() => clearTimeout(timer));
+  });
+  return (
+    <Show when={shown()}>
+      <Label
+        y={props.y}
+        size={props.size}
+        font={props.font ?? "Onest700"}
+        lineheight={props.lineheight}
+        maxwidth={props.maxwidth}
+        maxheight={props.maxheight}
+        maxlines={props.maxlines}
+        content={props.title}
+      />
+    </Show>
+  );
 }
 export function Button(props: {
   x: number;
@@ -214,13 +256,13 @@ export function Backdrop(props: { src?: string | null; dim?: boolean }) {
       if (cancelled) return;
       setPrevious(reduced ? undefined : current());
       setOpacity(reduced ? 1 : 0);
-      setCurrent(src ?? undefined);
+      setCurrent(src ? imageSource(src, 1920) : undefined);
       if (!reduced) {
         frame = requestAnimationFrame(() => setOpacity(1));
         cleanupTimer = setTimeout(() => setPrevious(undefined), 350);
       }
     };
-    if (src) image.src = src;
+    if (src) image.src = imageSource(src, 1920);
     else {
       setCurrent(undefined);
       setPrevious(undefined);
@@ -261,12 +303,103 @@ export function Backdrop(props: { src?: string | null; dim?: boolean }) {
   );
 }
 
+let topBar: ImageData | undefined;
+/** Scrim.tvTopBar from the Android TV client: ground .94 at the top, .82 at
+ * 72%, transparent at the bar's bottom edge. Kept at the bar's exact aspect so
+ * the texture scales 1:1 with no cropping. */
+export function topBarGradient() {
+  if (!topBar) {
+    topBar = new ImageData(480, 33);
+    for (let y = 0; y < 33; y++) {
+      const t = y / 32,
+        alpha =
+          t < 0.72
+            ? 0.94 + ((0.82 - 0.94) * t) / 0.72
+            : 0.82 * (1 - (t - 0.72) / 0.28);
+      for (let x = 0; x < 480; x++) {
+        const i = (y * 480 + x) * 4;
+        topBar.data[i] = 11;
+        topBar.data[i + 1] = 11;
+        topBar.data[i + 2] = 12;
+        topBar.data[i + 3] = Math.round(alpha * 255);
+      }
+    }
+  }
+  return topBar;
+}
+
+let liveScrim: ImageData | undefined;
+/** The 90px bottom scrim under the Live preview's "OK to watch" row. */
+export function livePreviewScrim() {
+  if (!liveScrim) {
+    liveScrim = new ImageData(512, 72);
+    for (let y = 0; y < 72; y++) {
+      const alpha = 0.65 * Math.pow(y / 71, 1.35);
+      for (let x = 0; x < 512; x++) {
+        const i = (y * 512 + x) * 4;
+        liveScrim.data[i] = 0;
+        liveScrim.data[i + 1] = 0;
+        liveScrim.data[i + 2] = 0;
+        liveScrim.data[i + 3] = Math.round(alpha * 255);
+      }
+    }
+  }
+  return liveScrim;
+}
+
 import vynxcAvatar from "../../../design-contract/viptv-design-system/reference/assets/5112cc304140378385555c10e98d120d.png";
 import zayneAvatar from "../../../design-contract/viptv-design-system/reference/assets/e12f8d0854be9217fda190bd7a21aebd.png";
 export const avatar = (id?: string | null) =>
   id === "vynxc" ? vynxcAvatar : id === "zayne" ? zayneAvatar : undefined;
 /** The reference uses lighten blending for monochrome title artwork. Convert
  * the black matte to alpha in a bounded render texture, preserving its aspect. */
+type LogoPixels = { pixels: ImageData; w: number; h: number };
+const logoCache = new Map<string, LogoPixels>();
+
+type LogoLoad = {
+  height: number;
+  width?: number;
+  maxWidth: number;
+};
+function convertLogo(image: HTMLImageElement, load: LogoLoad): LogoPixels {
+  const aspect = image.width / image.height;
+  const h = load.width
+      ? Math.min(load.height, load.width / aspect)
+      : Math.max(1, Math.round(Math.min(load.height, load.maxWidth / aspect))),
+    w = load.width
+      ? h * aspect
+      : Math.max(1, Math.round(aspect * h));
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.ceil(w);
+  canvas.height = Math.ceil(h);
+  const context = canvas.getContext("2d")!;
+  context.drawImage(image, 0, 0, canvas.width, canvas.height);
+  const data = context.getImageData(0, 0, canvas.width, canvas.height);
+  for (let i = 0; i < data.data.length; i += 4) {
+    const white = Math.max(data.data[i], data.data[i + 1], data.data[i + 2]);
+    data.data[i + 3] = Math.round((data.data[i + 3] * white) / 255);
+    if (white) {
+      data.data[i] = (data.data[i] * 255) / white;
+      data.data[i + 1] = (data.data[i + 1] * 255) / white;
+      data.data[i + 2] = (data.data[i + 2] * 255) / white;
+    }
+  }
+  return { pixels: data, w, h };
+}
+function loadLogo(url: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.crossOrigin = "anonymous";
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error("Logo failed to load"));
+    image.src = url;
+  });
+}
+/** Convert the black matte to alpha once per URL and size. A replacement logo
+ * stays behind the old one until it decodes, so metadata refreshes never flash
+ * the title fallback. The original URL is tried first for speed; the public
+ * artwork proxy is the fallback for hosts that intermittently omit CORS
+ * headers, which would otherwise taint the canvas and drop the logo. */
 export function Logo(props: {
   src: string;
   h: number;
@@ -274,69 +407,79 @@ export function Logo(props: {
   maxWidth?: number;
   title?: string;
   size?: number;
+  /** Bottom-align the logo in a fixed box, as the Android TV hero does. */
+  boxH?: number;
 }) {
-  const [pixels, setPixels] = createSignal<ImageData>(),
-    [dimensions, setDimensions] = createSignal({ w: 0, h: 0 });
+  const key = () =>
+    `${props.src}|${props.h}|${props.w ?? ""}|${props.maxWidth ?? 800}`;
+  const [art, setArt] = createSignal<LogoPixels | undefined>(
+    logoCache.get(key()),
+  );
+  const [failed, setFailed] = createSignal(false);
   createEffect(() => {
     const src = props.src,
-      height = props.h,
-      width = props.w,
-      maxWidth = props.maxWidth ?? 800;
-    setPixels(undefined);
+      load = {
+        height: props.h,
+        width: props.w,
+        maxWidth: props.maxWidth ?? 800,
+      },
+      cacheKey = key();
+    const cached = logoCache.get(cacheKey);
+    if (cached) {
+      setArt(cached);
+      setFailed(false);
+      return;
+    }
+    // A logo that is still loading draws nothing: the title fallback only
+    // appears once the artwork has definitively failed, so a slow refresh never
+    // flashes text over a logo that is about to arrive.
+    setFailed(false);
     let cancelled = false;
-    const image = new Image();
-    image.crossOrigin = "anonymous";
-    image.onload = () => {
-      if (cancelled) return;
-      try {
-        const aspect = image.width / image.height;
-        const h = width ? Math.min(height, width / aspect) : Math.max(1, Math.round(Math.min(height, maxWidth / aspect))),
-          w = width ? h * aspect : Math.max(1, Math.round(aspect * h));
-        const canvas = document.createElement("canvas");
-        canvas.width = Math.ceil(w);
-        canvas.height = Math.ceil(h);
-        const context = canvas.getContext("2d")!;
-        context.drawImage(image, 0, 0, canvas.width, canvas.height);
-        const data = context.getImageData(0, 0, canvas.width, canvas.height);
-        for (let i = 0; i < data.data.length; i += 4) {
-          const white = Math.max(
-            data.data[i],
-            data.data[i + 1],
-            data.data[i + 2],
-          );
-          data.data[i + 3] = Math.round((data.data[i + 3] * white) / 255);
-          if (white) {
-            data.data[i] = (data.data[i] * 255) / white;
-            data.data[i + 1] = (data.data[i + 1] * 255) / white;
-            data.data[i + 2] = (data.data[i + 2] * 255) / white;
-          }
+    const proxied = imageSource(src, 800);
+    const urls = proxied && proxied !== src ? [src, proxied] : [src];
+    void (async () => {
+      for (const url of urls) {
+        try {
+          const value = convertLogo(await loadLogo(url), load);
+          if (cancelled) return;
+          if (logoCache.size >= 64) logoCache.clear();
+          logoCache.set(cacheKey, value);
+          setArt(value);
+          setFailed(false);
+          return;
+        } catch {
+          /* try the proxy, then fall back to the title */
         }
-        setDimensions({ w, h });
-        setPixels(data);
-      } catch {
-        setPixels(undefined);
       }
-    };
-    image.src = src;
+      if (!cancelled && !art()) setFailed(true);
+    })();
     onCleanup(() => {
       cancelled = true;
-      image.onload = null;
     });
   });
   return (
     <Show
-      when={pixels()}
+      when={art()}
       fallback={
-        <Label
-          size={props.size ?? 56}
-          font="Onest700"
-          maxwidth={800}
-          maxlines={2}
-          content={props.title ?? ""}
-        />
+        <Show when={failed()}>
+          <Label
+            size={props.size ?? 56}
+            font="Onest700"
+            maxwidth={props.maxWidth ?? 800}
+            maxlines={2}
+            content={props.title ?? ""}
+          />
+        </Show>
       }
     >
-      {(data) => <TvView w={dimensions().w} h={dimensions().h} src={data()} />}
+      {(data) => (
+        <TvView
+          y={props.boxH ? Math.max(0, props.boxH - data().h) : 0}
+          w={data().w}
+          h={data().h}
+          src={data().pixels}
+        />
+      )}
     </Show>
   );
 }

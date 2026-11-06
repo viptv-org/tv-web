@@ -12,10 +12,11 @@ import type { RendererMain, ShaderNode, WebGlShaderType } from "@solidtv/rendere
 import { sameShader } from "../shaders";
 import { KeyedFor, TvView } from "../runtime";
 import { registerTvShader } from "../shaders";
-import { Label, Logo, palette } from "./visuals";
+import { DelayedTitle, Label, Logo, palette } from "./visuals";
+import { imageSource } from "./image-source";
 import { TitleMetadata } from "./TitleMetadata";
+import { textMetrics } from "./text-measure";
 import type { Card } from "./types";
-import { HomeProgress } from "./HomeTileEffects";
 type BrowsePreviewProps = { uvSize: number[]; uvOrigin: number[] };
 const shader: WebGlShaderType<BrowsePreviewProps> = {
   props: { uvSize: [1, 1], uvOrigin: [0, 0] },
@@ -37,7 +38,37 @@ uniform sampler2D u_texture;varying vec2 v_uv;varying vec2 v_local;varying vec4 
 void main(){vec4 art=texture2D(u_texture,v_uv);vec3 bg=vec3(11.0,11.0,12.0)/255.0;float visible=clamp(v_local.x*1160.0/560.0,0.0,1.0)*(1.0-clamp((v_local.y*620.0-380.0)/241.0,0.0,1.0));gl_FragColor=vec4(mix(bg,art.rgb+bg*(1.0-art.a),visible),1.0)*v_color;}`,
 };
 const registered = new WeakSet<RendererMain>();
-type Frame = { id: number; src: string; width: number; height: number };
+type Frame = {
+  id: number;
+  src: string;
+  width: number;
+  height: number;
+  ambient?: ImageData;
+};
+function ambientArtwork(image: HTMLImageElement): ImageData | undefined {
+  const source = document.createElement("canvas"),
+    output = document.createElement("canvas");
+  source.width = 32;
+  source.height = 18;
+  output.width = 256;
+  output.height = 144;
+  try {
+    const small = source.getContext("2d"),
+      large = output.getContext("2d");
+    if (!small || !large) return undefined;
+    const scale = Math.max(32 / image.naturalWidth, 18 / image.naturalHeight),
+      width = image.naturalWidth * scale,
+      height = image.naturalHeight * scale;
+    small.drawImage(image, (32 - width) / 2, (18 - height) / 2, width, height);
+    large.imageSmoothingEnabled = true;
+    large.drawImage(source, 0, 0, 256, 144);
+    return large.getImageData(0, 0, 256, 144);
+  } catch {
+    return undefined;
+  } finally {
+    source.width = source.height = output.width = output.height = 0;
+  }
+}
 function Artwork(props: { frame: Frame; alpha: number }) {
   const renderer = getRenderer() as RendererMain;
   if (!registered.has(renderer)) {
@@ -52,7 +83,19 @@ function Artwork(props: { frame: Frame; alpha: number }) {
     uvOrigin: [(1 - w) * 0.6, (1 - h) * 0.25],
   }) as ShaderNode;
   return (
-    <TvView
+    <>
+      <Show when={props.frame.ambient}>
+        {(ambient) => (
+          <TvView
+            w={1920}
+            h={1080}
+            src={ambient()}
+            fit="cover"
+            alpha={0.6 * props.alpha}
+          />
+        )}
+      </Show>
+      <TvView
       x={760}
       w={1160}
       h={620}
@@ -62,7 +105,8 @@ function Artwork(props: { frame: Frame; alpha: number }) {
       transition={{
         alpha: { duration: 300, timingFunction: "cubic-bezier(.2,0,0,1)" },
       }}
-    />
+      />
+    </>
   );
 }
 export function BrowseBackdrop(props: { card?: Card | null }) {
@@ -70,9 +114,9 @@ export function BrowseBackdrop(props: { card?: Card | null }) {
     [visible, setVisible] = createSignal(true);
   let serial = 0;
   const selected = createMemo(() =>
-    props.card?.view?.preview
-      ? props.card.view.preview.background
-      : props.card?.landscape,
+    props.card?.view?.preview?.background ??
+    props.card?.landscape ??
+    props.card?.poster,
   );
   const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
   createEffect(() => {
@@ -80,6 +124,7 @@ export function BrowseBackdrop(props: { card?: Card | null }) {
     let cancelled = false,
       raf = 0;
     let timer: ReturnType<typeof setTimeout> | undefined;
+    const loadSrc = src ? imageSource(src, 1160) : undefined;
     const image = new Image();
     image.crossOrigin = "anonymous";
     image.onload = () => {
@@ -90,9 +135,10 @@ export function BrowseBackdrop(props: { card?: Card | null }) {
       }
       const next = {
           id: ++serial,
-          src: src!,
+          src: loadSrc!,
           width: image.naturalWidth,
           height: image.naturalHeight,
+          ambient: ambientArtwork(image),
         },
         previous = frames().slice(-1),
         fade = !reduced && previous.length > 0;
@@ -108,7 +154,7 @@ export function BrowseBackdrop(props: { card?: Card | null }) {
     image.onerror = () => {
       if (!cancelled) setFrames([]);
     };
-    if (src) image.src = src;
+    if (loadSrc) image.src = loadSrc;
     else setFrames([]);
     onCleanup(() => {
       cancelled = true;
@@ -131,27 +177,35 @@ export function BrowseBackdrop(props: { card?: Card | null }) {
   );
 }
 export function BrowsePreview(props: { card: Card }) {
-  const view = () => props.card.view?.preview;
+  const titleY = () => {
+    const width = textMetrics("48px Onest700").measureText(
+      props.card.title ?? "",
+    ).width;
+    const lines = Math.min(2, Math.max(1, Math.ceil(width / 1000)));
+    return 120 - lines * 57.6;
+  };
   return (
     <TvView x={96} y={96}>
       <Show
         when={props.card.logo}
         fallback={
-          <Label
-            size={44}
-            font="Onest700"
-            maxwidth={700}
+          <DelayedTitle
+            title={props.card.title}
+            y={titleY()}
+            size={48}
+            lineheight={1.2}
+            maxwidth={1000}
             maxlines={2}
-            content={props.card.title}
           />
         }
       >
         <Logo
           src={props.card.logo!}
           w={420}
-          h={144}
+          h={120}
           title={props.card.title}
           size={44}
+          boxH={120}
         />
       </Show>
       <TitleMetadata card={props.card} y={144} detail />
@@ -164,22 +218,6 @@ export function BrowsePreview(props: { card: Card }) {
         color={palette.body}
         content={props.card.description ?? ""}
       />
-      <Show when={view()?.progress != null}>
-        <TvView y={336}>
-          <HomeProgress width={160} progress={view()!.progress!} />
-        </TvView>
-      </Show>
-      <Show when={view()?.caption}>
-        <Label
-          x={view()?.progress != null ? 174 : 0}
-          y={324}
-          size={22}
-          font="Onest600"
-          content={view()!.caption!}
-          maxwidth={1100}
-          maxlines={1}
-        />
-      </Show>
     </TvView>
   );
 }

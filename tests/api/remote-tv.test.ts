@@ -568,6 +568,32 @@ it("consumes the Live action and server ranking without inventing a discovery jo
   ]);
 });
 
+it("ranks a large source set in bounded batches and merges the pages", async () => {
+  const batches: string[][] = [];
+  const fetcher = vi.fn(async (_url: RequestInfo | URL, init?: RequestInit) => {
+    const ids = JSON.parse(String(init?.body ?? "{}")).ids as string[];
+    batches.push(ids);
+    return response({
+      streams: ids.map((id) => ({ id, quality_height: 1080 })),
+      best_match_id: ids[0],
+      quality_filters: [{ height: 1080, label: "1080p", count: ids.length }],
+      total: ids.length,
+    });
+  });
+  const api = new RemoteTvApi("https://example.test", store(), fetcher);
+  api.profile = "1";
+  const ids = Array.from({ length: 900 }, (_, index) => `id-${index}`);
+  const page = await api.rankSources(ids, 1080);
+  expect(batches).toHaveLength(3);
+  expect(batches.every((batch) => batch.length <= 400)).toBe(true);
+  expect(page.streams).toHaveLength(900);
+  expect(page.best_match_id).toBe("id-0");
+  expect(page.total).toBe(900);
+  expect(page.quality_filters).toEqual([
+    { height: 1080, label: "1080p", count: 900 },
+  ]);
+});
+
 it("does not invent a Live resume or selection policy for an older response", async () => {
   const api = new RemoteTvApi("https://example.test", store(), async () =>
     response({ streams: [{ id: "live-a" }], live: true }),
