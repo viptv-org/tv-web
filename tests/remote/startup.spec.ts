@@ -94,18 +94,12 @@ test('a stuck entry reaches remote recovery without losing the visible shell', a
   await expect(page.getByRole('button', { name: 'Try again', exact: true })).toBeFocused();
 });
 
-for (const { query, native } of [
-  { query: '', native: false },
-  { query: '?platform=web', native: false },
-  { query: '?platform=vizio', native: true },
-]) {
-  test(`web startup retains React routing: ${native ? 'native host' : query || 'default'}`, async ({ page }) => {
-    if (native) await page.addInitScript(() => Object.defineProperty(window, '__TAURI_INTERNALS__', { value: {} }));
-    await page.route('**/assets/*.js', () => new Promise(() => {}));
-    await page.goto('/tv/' + query, { waitUntil: 'commit' });
-    await expect(page.locator('#root')).toHaveCount(1);
-    await expect(page.locator('#solid-startup')).toHaveCount(0);
-    expect(await page.locator('html').getAttribute('data-tv-startup')).toBeNull();
+for (const entry of ['/tv/', '/tv/?platform=vizio', '/tv/solid.html', '/tv/lightning.html']) {
+  test(`every entry serves the SolidTV TV app: ${entry}`, async ({ page }) => {
+    await page.goto(entry, { waitUntil: 'commit' });
+    await expect(page.locator('#app')).toHaveCount(1);
+    await expect(page.locator('#root')).toHaveCount(0);
+    await expect(page.locator('html')).toHaveAttribute('data-renderer', 'solid');
   });
 }
 
