@@ -830,6 +830,7 @@ export class RemoteTvApi {
       subtitles_off?: boolean;
     } = {},
     replaceSource?: SourceReplacement,
+    direct = false,
   ): Promise<Lease> {
     const requestId = requestUuid();
     let id: string | undefined;
@@ -842,14 +843,22 @@ export class RemoteTvApi {
           request_id: requestId,
           stream_id: source.id,
           client: {
-            platform: this.platform,
+            // A direct session is the browser's own decoder. The backend only
+            // returns original media for a non-Vizio web platform, an https
+            // source and no upstream headers; otherwise it returns a gateway
+            // delivery and the normal path takes over.
+            platform: direct ? "web" : this.platform,
             max_width: 1920,
             max_height: 1080,
-            can_play_direct: false,
-            video_codecs: ["h264"],
-            audio_codecs: ["aac"],
+            can_play_direct: direct,
+            video_codecs: direct
+              ? ["h264", "hevc", "vp9", "av1"]
+              : ["h264"],
+            audio_codecs: direct
+              ? ["aac", "mp3", "ac3", "eac3", "opus"]
+              : ["aac"],
           },
-          force_gateway: true,
+          force_gateway: !direct,
           resume,
           position: position ?? 0,
           ...selection,
@@ -878,7 +887,7 @@ export class RemoteTvApi {
       }
       if (
         !value.delivery ||
-        value.delivery.kind !== "gateway" ||
+        !["gateway", "direct"].includes(value.delivery.kind) ||
         new URL(value.delivery.url).protocol !== "https:"
       )
         throw new RemoteError(
