@@ -1,131 +1,154 @@
 /** @jsxImportSource @solidtv/solid */
-import { createMemo, For, Show } from "solid-js";
+import { createMemo, Show } from "solid-js";
 import { TvView } from "../runtime";
-import { Button, icon, Label, palette } from "./visuals";
-import { textMetrics } from "./text-measure";
+import { icon, Label, palette } from "./visuals";
+import { sdfTextMetrics } from "./text-measure";
 import type { Control, LibraryQuery } from "./types";
 
+const valueLabel = (
+  control: Control | undefined,
+  query: LibraryQuery | undefined,
+  fallback: LibraryQuery | undefined,
+) => {
+  const id = query?.[control?.id ?? ""] ?? fallback?.[control?.id ?? ""];
+  return (
+    control?.choices.find((choice) => choice.value === id)?.label ??
+    control?.choices[0]?.label ??
+    "All"
+  );
+};
+
+const titleWidth = (title: string) =>
+  Math.ceil(sdfTextMetrics("24px Onest600").measureText(`${title}: `).width);
+
+function FilterPill(props: {
+  x: number;
+  title: string;
+  value: string;
+  focused: boolean;
+  color?: string;
+  chevron?: boolean;
+}) {
+  const width = () =>
+    82 +
+    titleWidth(props.title) +
+    Math.ceil(sdfTextMetrics("24px Onest600").measureText(props.value).width);
+  return (
+    <TvView
+      x={props.x}
+      y={0}
+      w={width()}
+      h={64}
+      rounded={32}
+      color={props.focused ? palette.text : (props.color ?? "#2A2A2E")}
+    >
+      <Label
+        x={24}
+        centerY={32}
+        size={24}
+        font="Onest600"
+        content={`${props.title}:`}
+        color={props.focused ? "#4A4945" : palette.muted}
+      />
+      <Label
+        x={24 + titleWidth(props.title) + 6}
+        centerY={32}
+        size={24}
+        font="Onest600"
+        maxwidth={width() - 74 - titleWidth(props.title)}
+        maxlines={1}
+        content={props.value}
+        color={props.focused ? "#111113" : palette.text}
+      />
+      <Show when={props.chevron !== false}>
+        <TvView
+          x={width() - 44}
+          y={20}
+          w={24}
+          h={24}
+          src={icon("down", props.focused)}
+        />
+      </Show>
+    </TvView>
+  );
+}
+
 export function LibraryToolbar(props: {
-  types: Control["choices"];
+  type?: Control;
   sort?: Control;
   filters: boolean;
   query?: LibraryQuery;
+  defaultQuery?: LibraryQuery;
   focused: boolean;
   index: number;
 }) {
-  const first = () =>
-    props.focused && props.index < props.types.length
-      ? Math.max(0, props.index - 3)
-      : 0;
-  const sortValue = () =>
-    props.sort?.choices.find((c) => c.value === props.query?.sort)?.label ?? "";
-  const sortWidths = createMemo(() => {
-    const canvas = textMetrics("24px Onest600");
-    return [
-      Math.ceil(canvas.measureText(props.sort?.label ?? "").width),
-      Math.ceil(canvas.measureText(sortValue()).width),
-    ];
-  });
-  const sortWidth = () => Math.min(600, sortWidths()[0] + sortWidths()[1] + 96);
-  const sortFocused = () => props.focused && props.index === props.types.length;
+  const typeValue = createMemo(() =>
+    valueLabel(props.type, props.query, props.defaultQuery),
+  );
+  const sortValue = createMemo(() =>
+    valueLabel(props.sort, props.query, props.defaultQuery),
+  );
+  const typeWidth = () =>
+    76 +
+    titleWidth(props.type?.label ?? "Type") +
+    Math.ceil(sdfTextMetrics("24px Onest600").measureText(typeValue()).width);
+  const sortX = () => 96 + typeWidth() + 12;
+  const sortWidth = () =>
+    76 +
+    titleWidth(props.sort?.label ?? "Sort") +
+    Math.ceil(sdfTextMetrics("24px Onest600").measureText(sortValue()).width);
+  const clearX = () => sortX() + sortWidth() + 24;
+  const clearVisible = () => true;
   return (
     <TvView y={140}>
-      <Show when={props.types.length}>
-        <TvView
+      <Show when={props.type}>
+        <FilterPill
           x={96}
-          w={Math.min(4, props.types.length) * 168 + 12}
-          h={64}
-          rounded={32}
-          color="#2A2A2E"
-        >
-          <For each={props.types.slice(first(), first() + 4)}>
-            {(item, i) => {
-              const focused = () =>
-                props.focused && props.index === i() + first();
-              return (
-                <TvView
-                  x={6 + i() * 168}
-                  y={6}
-                  w={168}
-                  h={52}
-                  rounded={26}
-                  color={
-                    focused()
-                      ? palette.text
-                      : props.query?.type === item.value
-                        ? palette.bg
-                        : "rgba(0,0,0,0)"
-                  }
-                >
-                  <Label
-                    w={168}
-                    centerY={26}
-                    align="center"
-                    size={24}
-                    font="Onest700"
-                    maxlines={1}
-                    color={
-                      focused()
-                        ? "#111113"
-                        : props.query?.type === item.value
-                          ? palette.text
-                          : palette.muted
-                    }
-                    content={item.label}
-                  />
-                </TvView>
-              );
-            }}
-          </For>
-        </TvView>
-      </Show>
-      <Show when={props.filters && !props.sort}>
-        <Button
-          x={1624}
-          y={0}
-          w={200}
-          h={64}
-          pill
-          label="Filters"
-          focused={props.focused && props.index === props.types.length}
+          title="Type"
+          value={typeValue()}
+          focused={props.focused && props.index === 0}
         />
       </Show>
       <Show when={props.sort}>
-        {(sort) => (
+        <FilterPill
+          x={sortX()}
+          title="Sort"
+          value={sortValue()}
+          focused={props.focused && props.index === 1}
+        />
+      </Show>
+      <Show when={clearVisible()}>
+        <TvView
+          x={clearX()}
+          y={0}
+          w={138}
+          h={64}
+          rounded={32}
+          color={props.focused && props.index === 2 ? palette.text : "rgba(0,0,0,0)"}
+        >
           <TvView
-            x={1824 - sortWidth()}
-            w={sortWidth()}
-            h={64}
-            rounded={32}
-            color={sortFocused() ? palette.text : "rgba(255,255,255,.16)"}
-          >
-            <Label
-              x={24}
-              centerY={32}
-              size={24}
-              font="Onest600"
-              content={sort().label}
-              color={sortFocused() ? "#4A4945" : palette.muted}
-            />
-            <Label
-              x={36 + sortWidths()[0]}
-              centerY={32}
-              size={24}
-              font="Onest600"
-              content={sortValue()}
-              maxwidth={sortWidth() - sortWidths()[0] - 96}
-              maxlines={1}
-              color={sortFocused() ? "#111113" : palette.text}
-            />
-            <TvView
-              x={sortWidth() - 48}
-              y={20}
-              w={24}
-              h={24}
-              src={icon("down", sortFocused())}
-            />
-          </TvView>
-        )}
+            x={18}
+            y={20}
+            w={24}
+            h={24}
+            src={icon(
+              "close",
+              props.focused && props.index === 2,
+            )}
+          />
+          <Label
+            x={52}
+            centerY={32}
+            size={24}
+            font="Onest600"
+            content="Clear"
+            color={
+              props.focused && props.index === 2
+                ? "#111113"
+                : palette.muted
+            }
+          />
+        </TvView>
       </Show>
     </TvView>
   );

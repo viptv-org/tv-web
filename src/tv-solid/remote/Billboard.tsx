@@ -15,6 +15,7 @@ import { KeyedFor, TvView } from "../runtime";
 import { registerTvShader } from "../shaders";
 import { rendererStart } from "../renderer-clock";
 import { icon, palette } from "./visuals";
+import { imageSource } from "./image-source";
 import {
   billboardShader,
   billboardGlassShader,
@@ -67,6 +68,7 @@ export function createBillboardArt(
     let cancelled = false,
       frame = 0;
     let timer: ReturnType<typeof setTimeout> | undefined;
+    const loadSrc = src ? imageSource(src, 1920) : undefined;
     const image = new Image();
     image.crossOrigin = "anonymous";
     image.onload = async () => {
@@ -81,7 +83,7 @@ export function createBillboardArt(
       if (cancelled) return;
       const value = {
         id: ++serial,
-        src: src!,
+        src: loadSrc!,
         width: image.naturalWidth,
         height: image.naturalHeight,
         started: performance.now(),
@@ -101,7 +103,7 @@ export function createBillboardArt(
     image.onerror = () => {
       if (!cancelled) setFrames([]);
     };
-    if (src) image.src = src;
+    if (loadSrc) image.src = loadSrc;
     else setFrames([]);
     onCleanup(() => {
       cancelled = true;

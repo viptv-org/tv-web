@@ -351,6 +351,7 @@ export class RemotePlayback {
     position?: number,
     selection: typeof this.selection = {},
     replacement?: SourceReplacement,
+    direct = false,
   ) {
     const intent = ++this.intentGeneration;
     if (!replacement) this.sourceRetry = undefined;
@@ -368,6 +369,7 @@ export class RemotePlayback {
       position,
       selection,
       replacement,
+      direct,
     );
     if (generation !== this.generation) {
       void this.api.release(`/api/playback/${segment(lease.id)}`);
@@ -392,8 +394,8 @@ export class RemotePlayback {
         startAtSeconds: delivery.position ?? 0,
         timelineOffsetSeconds: delivery.timeline_offset_seconds ?? 0,
         timelineDurationSeconds: delivery.duration,
-        deliveryMode: "managed",
-        deliveryFormat: delivery.format,
+        deliveryMode: delivery.kind === "direct" ? "direct" : "managed",
+        deliveryFormat: delivery.format === "original" ? undefined : delivery.format,
       });
       if (generation !== this.generation)
         throw new DOMException("Playback cancelled", "AbortError");

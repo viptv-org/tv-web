@@ -19,9 +19,43 @@
  * The renderer lays SDF text out itself; this context is only for the layout
  * code that still measures DOM faces (navigation widths, guide columns).
  */
+import { SDF_METRICS } from "./sdf-metrics";
+
 export type TextMeasureContext = CanvasRenderingContext2D & {
   letterSpacing: string;
 };
+
+const fontPattern = /^\s*([\d.]+)px\s+['"]?([A-Za-z0-9]+)['"]?/;
+
+/** The renderer lays text out from SDF atlases, not from DOM faces. Measuring
+ * the canvas font here returned fallback metrics, which truncated the TV nav
+ * and every pill whose width came from this context. Use the atlas advances and
+ * ASCII kerning; unknown glyphs fall back to the real canvas measurement. */
+export function sdfTextWidth(
+  font: string,
+  text: string,
+  letterSpacing = 0,
+): number | undefined {
+  const match = fontPattern.exec(font);
+  if (!match) return undefined;
+  const size = Number(match[1]),
+    family = match[2] === "Onest" ? "Onest400" : match[2],
+    metrics = SDF_METRICS[family] ?? SDF_METRICS[family.replace(/Tabular$/, "")];
+  if (!metrics) return undefined;
+  let total = 0,
+    previous = "";
+  for (const character of Array.from(text)) {
+    const advance = metrics.advance[character];
+    if (advance === undefined) return undefined;
+    total += advance;
+    if (previous) total += metrics.kern[previous + character] ?? 0;
+    previous = character;
+  }
+  return (
+    (total * size) / metrics.size +
+    Math.max(0, Array.from(text).length - 1) * letterSpacing
+  );
+}
 
 let shared: TextMeasureContext | undefined;
 let nativeSpacing = false;
@@ -36,6 +70,35 @@ export function letterSpacingSupported(): boolean {
 /** The shared measure context configured for `font` and `letterSpacing` in px.
  * Any previous caller's letter spacing is reset, so one component's spacing
  * cannot leak into another component's widths. */
+export type SdfTextMeasureContext = {
+  font: string;
+  letterSpacing: number;
+  measureText(text: string): { width: number };
+};
+
+/** A small mutable measurer for components whose widths come from the same SDF
+ * faces the renderer draws. Callers may read/set `font` between measurements. */
+export function sdfTextMetrics(
+  font: string,
+  letterSpacing = 0,
+): SdfTextMeasureContext {
+  const measure: SdfTextMeasureContext = {
+    font,
+    letterSpacing,
+    measureText(text: string) {
+      const width = sdfTextWidth(
+        measure.font,
+        String(text),
+        measure.letterSpacing,
+      );
+      if (width !== undefined) return { width };
+      const fallback = textMetrics(measure.font, measure.letterSpacing);
+      return { width: fallback.measureText(String(text)).width };
+    },
+  };
+  return measure;
+}
+
 export function textMetrics(
   font: string,
   letterSpacing = 0,
@@ -55,6 +118,7 @@ function measureContext(): TextMeasureContext {
     // Read the capability before this module ever writes the property, so an
     // engine without canvas letter spacing cannot report that it has it.
     nativeSpacing = "letterSpacing" in shared;
+
   }
   return shared;
 }
