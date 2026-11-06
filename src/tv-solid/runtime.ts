@@ -1,6 +1,7 @@
 import {
   For,
   batch,
+  createEffect,
   createMemo,
   createContext,
   createComponent,
@@ -29,6 +30,13 @@ import {
   suppressKeyUntilRelease,
   releaseKeySuppression,
 } from "@solidtv/solid/primitives";
+
+// Native fonts publish asynchronously. Text layout memos subscribe to this
+// epoch so a face that becomes measurable after the first frame reflows the
+// shared tree instead of freezing zero-width metrics. The browser never bumps
+// it, so the DOM build is unchanged.
+const [fontEpoch, setFontEpoch] = createSignal(0);
+(globalThis as any).__solidtvNotifyFont = () => setFontEpoch((value) => value + 1);
 
 /** The screen controller contract keeps the existing remote actions intact.
  * Solid owns every signal, component lifetime and rendered node. */
@@ -279,8 +287,10 @@ const names: Record<string, string> = {
   content: "text",
 };
 const colorCache = new Map<string, number>();
-function tvColor(value: string): number {
+function tvColor(value: string | number): number {
   if (!value) return 0;
+  if (typeof value === "number") return value >>> 0;
+  if (typeof value !== "string") return 0;
   if (value.startsWith("#"))
     return parseInt(value.slice(1) + (value.length === 7 ? "ff" : ""), 16);
   const cached = colorCache.get(value);
@@ -381,6 +391,7 @@ export const TvView = (props: Record<string, any>) => visualNode(props);
  * quad tint, so focus changes never evict glyphs or rasterize the same label. */
 export function TvText(props: Record<string, any>): JSX.Element {
   let debugNode: ElementNode | undefined;
+  const [mountedNode, setMountedNode] = createSignal<ElementNode>();
   const scaledSize = () => (props.size ?? 32) * textScale();
   const family = () => sdfFontFamily(props.font ?? "Onest", scaledSize());
   const lineHeight = () =>
@@ -423,6 +434,7 @@ export function TvText(props: Record<string, any>): JSX.Element {
   // node's own line alignment is not needed (and `contain` would feed the
   // measured width back into maxWidth).
   const size = createMemo(() => {
+    fontEpoch();
     const value = textProps();
     return (getRenderer() as RendererMain).measureText(value) ?? { w: value.maxWidth, h: value.lineHeight };
   });
@@ -433,6 +445,16 @@ export function TvText(props: Record<string, any>): JSX.Element {
           get: () => String(props.content ?? ""),
         });
     });
+  // Roku's native text node does not receive the solidtv text props through
+  // the generic prop bridge. Apply the resolved string directly once the
+  // ElementNode has its native node, and keep it in sync on content changes.
+  // The browser renderer receives text through its normal prop path.
+  createEffect(() => {
+    const node = mountedNode() as any;
+    const value = textProps().text;
+    if (node?.lng && (globalThis as any).__SolidTVRokuRenderer)
+      node.lng.text = value;
+  });
   return visualNode(
     {
       get x() {
@@ -500,6 +522,7 @@ export function TvText(props: Record<string, any>): JSX.Element {
       },
       nodeRef: (node: ElementNode) => {
         debugNode = node;
+        setMountedNode(node);
         props.nodeRef?.(node);
       },
     },

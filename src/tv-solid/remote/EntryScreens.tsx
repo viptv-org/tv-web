@@ -59,6 +59,8 @@ function Brand(props: { splash: boolean }) {
     <TvView
       x={(1920 - mark() - gap() - width()) / 2}
       y={props.splash ? 440 : 330}
+      w={mark() + gap() + width()}
+      h={size()}
     >
       <TvView
         y={(size() - mark()) / 2}

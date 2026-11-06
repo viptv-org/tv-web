@@ -1,0 +1,23 @@
+# pnpm 11 refuses to install until every dependency with an install script is
+# either allowed or denied here. Add new entries with `pnpm approve-builds`.
+allowBuilds:
+  "@roku-sdk/tooling": true
+  "@parcel/watcher": false
+  esbuild: false
+  unrs-resolver: false
+minimumReleaseAgeExclude:
+  - '@roku-sdk/ai@2.19.0'
+  - '@roku-sdk/common@2.19.0'
+  - '@roku-sdk/compat@2.19.0'
+  - '@roku-sdk/components@2.19.0'
+  - '@roku-sdk/dev-tools@2.19.0'
+  - '@roku-sdk/interfaces@2.19.0'
+  - '@roku-sdk/native@2.19.0'
+  - '@roku-sdk/navigation@2.19.0'
+  - '@roku-sdk/rsg-ts@2.19.0'
+  - '@roku-sdk/runtime@2.19.0'
+  - '@roku-sdk/sdk-config@2.19.0'
+  - '@roku-sdk/solid@2.19.0'
+  - '@roku-sdk/testing-library@2.19.0'
+  - '@roku-sdk/tooling@2.19.0'
+  - '@roku-sdk/ts-core@2.19.0'
