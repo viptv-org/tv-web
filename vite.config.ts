@@ -4,7 +4,6 @@ import { fileURLToPath } from "node:url";
 import { defineConfig } from "vitest/config";
 import { solidStartup } from "./scripts/solid-startup";
 import {remoteBoundary} from "./scripts/remote-boundary";
-import react from "@vitejs/plugin-react";
 import solid from "vite-plugin-solid";
 // Opt-in LAN preview upstream; defaults to the production origin only when
 // explicitly provided, so dev configurations never silently proxy to prod.
@@ -33,7 +32,7 @@ const previewProxy = () => ({
   },
 });
 export default defineConfig(({ command }) => ({
-  plugins: [solidStartup(), remoteBoundary(), react({ exclude: /src\/tv-solid\// }), solid({ include: /src\/tv-solid\/.*\.tsx$/, solid: { moduleName: "@solidtv/solid", generate: "universal" } })],
+  plugins: [solidStartup(), remoteBoundary(), solid({ include: /src\/tv-solid\/.*\.tsx$/, solid: { moduleName: "@solidtv/solid", generate: "universal" } })],
   // The player contract resolves from the pinned vendored source, not the
   // generated dist-js of a sibling checkout.
   resolve: { dedupe: ["solid-js", "@solidtv/solid"], alias: { "@viptv/video": fileURLToPath(new URL("./vendor/video/src/index.ts", import.meta.url)) } },
