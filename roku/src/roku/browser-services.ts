@@ -596,10 +596,18 @@ export function installBrowserServices(): void {
         const raw = String(init.body);
         try { payload = JSON.parse(raw); } catch { payload = raw; }
       }
-      return postRokuTask<any>(
+      const handle = postRokuTask<any>(
         { op: 'http', url, method, headers, payload } as any,
-        { timeoutMs: 25000, parent: (g as any).__solidtvNativeRoot },
-      ).result.then((result: any) => {
+        { timeoutMs: 20000, parent: (g as any).__solidtvNativeRoot },
+      );
+      // `api.call` aborts its request after 20s. The SceneGraph Task must be
+      // cancelled too, otherwise the UI waits for the task's own timeout while
+      // the caller already believes it timed out.
+      const cancel = () => handle.cancel();
+      init?.signal?.addEventListener('abort', cancel, { once: true });
+      return handle.result.finally(() => {
+        init?.signal?.removeEventListener('abort', cancel);
+      }).then((result: any) => {
         const responseHeaders: Record<string, string> = {};
         const raw = result?.headers;
         if (raw && typeof raw === 'object') {

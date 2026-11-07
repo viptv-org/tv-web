@@ -56,7 +56,6 @@ export function SearchChannels(props: {
           y={-12}
           w={200}
           h={56}
-          pill
           label="Try again"
           focused={props.retryFocused}
         />

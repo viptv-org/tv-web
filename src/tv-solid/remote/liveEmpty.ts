@@ -254,40 +254,8 @@ export const LIVE_ANSWER_T = {
   secondary: { x: LIVE_INSET, y: 370, w: 420, h: 52 } satisfies LiveBox,
 } as const;
 
-/** Six skeleton rows keep the page's own row shape where channel rows start. */
-export const LIVE_SKELETON_ROWS = 6;
-/** Where channel rows start today, in canvas coordinates. */
+/** Where the real Live channel rows begin, in canvas coordinates. */
 export const LIVE_ROW_TOP = 636;
-export const LIVE_ROW_HEIGHT = 72;
-export const LIVE_ROW_STRIDE = 80;
-export const LIVE_ROW_TITLE_WIDTH = 300;
-export const LIVE_ROW_GUIDE_X = 328;
-export const LIVE_ROW_GUIDE_WIDTH = 1400;
-
-/**
- * The loading form's six rows: no copy and no artwork, the page's own row shape
- * (a 300-wide title bar and the 1400-wide guide bar) where channel rows start
- * today, 72 tall and 8 apart. Page-area y, like the other boxes here.
- */
-export function liveSkeletonRows() {
-  return Array.from({ length: LIVE_SKELETON_ROWS }, (_, row) => {
-    const y = LIVE_ROW_TOP - LIVE_PAGE_TOP + row * LIVE_ROW_STRIDE;
-    return {
-      title: {
-        x: LIVE_INSET,
-        y,
-        w: LIVE_ROW_TITLE_WIDTH,
-        h: LIVE_ROW_HEIGHT,
-      } satisfies LiveBox,
-      guide: {
-        x: LIVE_INSET + LIVE_ROW_GUIDE_X,
-        y,
-        w: LIVE_ROW_GUIDE_WIDTH,
-        h: LIVE_ROW_HEIGHT,
-      } satisfies LiveBox,
-    };
-  });
-}
 
 /** The shipped entry draws 1920 × 1080 only, so it always uses the wide crop. */
 export const liveEmptyArtworkSrc = () =>

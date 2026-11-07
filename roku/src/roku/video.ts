@@ -341,26 +341,6 @@ export async function destroy(): Promise<void> {
   notify();
 }
 
-export function getCurrentTime(): number {
-  return currentPosition;
-}
-
-export function getVideoDuration(): number {
-  return currentDuration;
-}
-
-function toMmSs(seconds: number): string {
-  if (typeof seconds !== "number" || !isFinite(seconds) || seconds < 0) return "0:00";
-  const total = Math.floor(seconds);
-  const minutes = Math.floor(total / 60);
-  const rest = total % 60;
-  return minutes + ":" + (rest < 10 ? "0" + rest : String(rest));
-}
-
-export function getTimeFormat(): string {
-  return toMmSs(currentPosition) + " : " + toMmSs(currentDuration);
-}
-
 export default {
   init,
   load,
@@ -368,9 +348,6 @@ export default {
   pause,
   seek,
   handleMediaKey,
-  getCurrentTime,
-  getVideoDuration,
-  getTimeFormat,
   state,
   destroy
 };

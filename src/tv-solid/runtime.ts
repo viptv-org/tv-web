@@ -281,7 +281,6 @@ function useRemoteInput() {
 const names: Record<string, string> = {
   w: "width",
   h: "height",
-  rounded: "borderRadius",
   font: "fontFamily",
   size: "fontSize",
   maxwidth: "maxWidth",
@@ -463,7 +462,6 @@ function visualNode(
         texture: props.texture,
         w: props.w,
         h: props.h,
-        rounded: props.rounded,
         alpha: props.show === false ? 0 : (props.alpha ?? 1),
         fit: props.fit,
         modal: modalLayer,

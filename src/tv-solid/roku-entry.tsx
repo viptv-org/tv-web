@@ -564,10 +564,8 @@ function iconSource(svg: string): { uri: string; color: string } | undefined {
       setProp(visual, "opacity", Number(p.alpha ?? 1));
       setProp(visual, "blendColor", rokuColor(icon?.color ?? "#FFFFFF"));
     } else if (kind === "rect") {
-      const radius = typeof p.rounded === "object" ? Number(p.rounded?.radius ?? 0) : Number(p.rounded ?? 0);
       let borderWidth = 0;
       let borderColor = "0xFFFFFFFF";
-      let borderRadius = radius;
       if (svg && svg.indexOf("<rect") >= 0) {
         const stroke = /stroke=["']([^"']+)["']/.exec(svg)?.[1] ?? "#FFFFFF";
         const strokeOpacity = Number(/stroke-opacity=["']([^"']+)["']/.exec(svg)?.[1] ?? 1);
@@ -577,10 +575,6 @@ function iconSource(svg: string): { uri: string; color: string } | undefined {
           borderColor = hex(((base & 0xffffff00) | Math.round(strokeOpacity * 255)) >>> 0);
         }
         borderWidth = Math.max(1, Number(/stroke-width=["']([^"']+)["']/.exec(svg)?.[1] ?? 1));
-        borderRadius = Math.max(
-          borderRadius,
-          Number(/rx=["']([^"']+)["']/.exec(svg)?.[1] ?? 0),
-        );
       }
       setProp(visual, "color", rokuColor(p.color ?? "rgba(0,0,0,0)"));
       setProp(visual, "width", record.fitWidth ?? width);
@@ -593,17 +587,9 @@ function iconSource(svg: string): { uri: string; color: string } | undefined {
           record.effect = createElement("effect");
           insertNode(record.holder.dom, record.effect);
         }
-        setProp(record.effect, "borderRadius", borderRadius);
+        setProp(record.effect, "borderRadius", 0);
         setProp(record.effect, "borderWidth", borderWidth);
         setProp(record.effect, "borderColor", borderColor);
-        try { setProp(visual, "effect", record.effect); } catch (error) { /* optional field */ }
-      } else if (radius > 0) {
-        if (!record.effect) {
-          record.effect = createElement("effect");
-          insertNode(record.holder.dom, record.effect);
-        }
-        setProp(record.effect, "borderRadius", radius);
-        setProp(record.effect, "borderWidth", 0);
         try { setProp(visual, "effect", record.effect); } catch (error) { /* optional field */ }
       } else {
         clearEffect(record);
@@ -626,13 +612,19 @@ function iconSource(svg: string): { uri: string; color: string } | undefined {
 };
 
 let lastOverlaySync = 0;
+let nativeNeedsSync = true;
+(globalThis as any).__viptvMarkNativeSync = () => {
+  nativeNeedsSync = true;
+};
 (globalThis as any).__viptvSyncOverlays = () => {
+  if (!nativeNeedsSync) return;
   const now =
     typeof performance !== "undefined" && typeof performance.now === "function"
       ? performance.now()
       : Date.now();
   if (now - lastOverlaySync < 32) return;
   lastOverlaySync = now;
+  nativeNeedsSync = false;
   nativeRecords.forEach((record) => {
     try {
       record.sync();

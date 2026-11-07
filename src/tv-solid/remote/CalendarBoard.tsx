@@ -4,6 +4,7 @@ import { TvView } from "../runtime";
 import { Button, Label, palette } from "./visuals";
 import { imageSource } from "./image-source";
 import { sdfTextMetrics } from "./text-measure";
+import { timeOfDay } from "./time";
 import type { CalendarEntry } from "./types";
 
 export type CalendarDay = { key: string; label: string; date: Date };
@@ -29,19 +30,12 @@ export function calendarDays(entries: CalendarEntry[]): CalendarDay[] {
           ? "Today"
           : key === calendarDayKey(tomorrow)
             ? "Tomorrow"
-            : `${date.toLocaleDateString("en-US", {
-                weekday: "short",
-              })} ${date.getDate()}`;
+            : `${["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][date.getDay()]} ${date.getDate()}`;
       return { key, label, date };
     });
 }
 
-const timeLabel = (date: Date) =>
-  date.toLocaleTimeString("en-US", {
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: true,
-  });
+const timeLabel = (date: Date) => timeOfDay(date.getTime());
 
 const remainingLabel = (date: Date) => {
   const minutes = Math.round((date.getTime() - Date.now()) / 60000);

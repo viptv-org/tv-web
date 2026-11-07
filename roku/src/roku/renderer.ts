@@ -6,7 +6,6 @@
  * tick. No WebGL, DOM canvas or second UI is involved.
  */
 
-import { createElement, insertNode, setProp } from '@roku-sdk/solid';
 import { getAppMemoryMonitor } from '@roku-sdk/rsg-ts/runtime';
 import { Animator } from './animation';
 import { Events } from './events';

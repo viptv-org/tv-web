@@ -164,12 +164,10 @@ export function Button(props: {
   y: number;
   w?: number;
   h?: number;
-  pill?: boolean;
   label?: string;
   icon?: string;
   iconSize?: number;
   focused: boolean;
-  round?: boolean;
   disabled?: boolean;
   shadow?: boolean;
 }) {
@@ -207,17 +205,35 @@ export function Button(props: {
     </TvView>
   );
 }
+/** Shared native art plane: one poster, the packaged scrim and an optional
+ * dim. Browser paths use their shader/canvas artwork instead. */
+export function NativeBackdrop(props: {
+  src?: string | null;
+  dim?: number;
+  children?: any;
+}) {
+  return (
+    <TvView w={1920} h={1080} color={palette.bg}>
+      {props.src ? (
+        <TvView
+          w={1920}
+          h={1080}
+          src={imageSource(props.src, 1920)}
+          fit="cover"
+        />
+      ) : undefined}
+      <TvView w={1920} h={1080} src="pkg:/assets/hero-scrim.png" />
+      <TvView w={1920} h={1080} color="#000000" alpha={props.dim ?? 0} />
+      {props.children}
+    </TvView>
+  );
+}
+
 /** One small cached gradient mask replaces five full-screen blend passes.
  * Artwork retains its own texture; focus changes never read back 1080p pixels. */
 export function Backdrop(props: { src?: string | null; dim?: boolean }) {
   if (typeof (globalThis as any).__SolidTVRokuRenderer !== "undefined") {
-    return (
-      <TvView w={1920} h={1080}>
-        {props.src ? <TvView w={1920} h={1080} src={props.src} fit="cover" /> : undefined}
-        <TvView w={1920} h={1080} src="pkg:/assets/hero-scrim.png" />
-        <TvView w={1920} h={1080} color="#000000" alpha={props.dim ? 0.35 : 0} />
-      </TvView>
-    );
+    return <NativeBackdrop src={props.src} dim={props.dim ? 0.35 : 0} />;
   }
   const [current, setCurrent] = createSignal<string>(),
     [previous, setPrevious] = createSignal<string>(),
@@ -432,6 +448,16 @@ type LogoLoad = {
   width?: number;
   maxWidth: number;
 };
+const LOGO_GLOW_SVG =
+  "data:image/svg+xml," +
+  encodeURIComponent(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="600" height="200"><defs><radialGradient id="g" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#FFFFFF" stop-opacity=".36"/><stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/></radialGradient></defs><ellipse cx="300" cy="100" rx="240" ry="55" fill="url(#g)"/></svg>`,
+  );
+const logoGlow = () =>
+  typeof (globalThis as any).__SolidTVRokuRenderer !== "undefined"
+    ? "pkg:/assets/logo-glow.png"
+    : LOGO_GLOW_SVG;
+
 function convertLogo(image: HTMLImageElement, load: LogoLoad): LogoPixels {
   const aspect = image.width / image.height;
   const h = load.width
@@ -446,13 +472,25 @@ function convertLogo(image: HTMLImageElement, load: LogoLoad): LogoPixels {
   const context = canvas.getContext("2d")!;
   context.drawImage(image, 0, 0, canvas.width, canvas.height);
   const data = context.getImageData(0, 0, canvas.width, canvas.height);
-  for (let i = 0; i < data.data.length; i += 4) {
-    const white = Math.max(data.data[i], data.data[i + 1], data.data[i + 2]);
-    data.data[i + 3] = Math.round((data.data[i + 3] * white) / 255);
-    if (white) {
-      data.data[i] = (data.data[i] * 255) / white;
-      data.data[i + 1] = (data.data[i + 1] * 255) / white;
-      data.data[i + 2] = (data.data[i + 2] * 255) / white;
+  // A transparent wordmark already carries its alpha; treating its dark RGB
+  // as a black matte erased black logos completely. Only remove a matte when
+  // the source is fully opaque.
+  let hasAlpha = false;
+  for (let i = 3; i < data.data.length; i += 4) {
+    if (data.data[i] < 250) {
+      hasAlpha = true;
+      break;
+    }
+  }
+  if (!hasAlpha) {
+    for (let i = 0; i < data.data.length; i += 4) {
+      const white = Math.max(data.data[i], data.data[i + 1], data.data[i + 2]);
+      data.data[i + 3] = Math.round((data.data[i + 3] * white) / 255);
+      if (white) {
+        data.data[i] = (data.data[i] * 255) / white;
+        data.data[i + 1] = (data.data[i + 1] * 255) / white;
+        data.data[i + 2] = (data.data[i + 2] * 255) / white;
+      }
     }
   }
   return { pixels: data, w, h };
@@ -481,6 +519,7 @@ export function Logo(props: {
   /** Bottom-align the logo in a fixed box, as the Android TV hero does. */
   boxH?: number;
 }) {
+  const showGlow = () => props.h >= 120;
   if (typeof (globalThis as any).__SolidTVRokuRenderer !== "undefined") {
     // SceneGraph can load the transparent wordmark directly. The browser
     // loader below needs canvas pixels, which Roku cannot provide.
@@ -498,13 +537,23 @@ export function Logo(props: {
           />
         }
       >
-        <TvView
-          w={width()}
-          h={Math.max(1, props.h)}
-          src={imageSource(props.src, width(), Math.max(1, props.h), "inside")}
-          fit="contain"
-          logo
-        />
+        <TvView w={width()} h={Math.max(1, props.h)}>
+          <Show when={showGlow()}>
+            <TvView
+              w={width()}
+              h={Math.max(1, props.h)}
+              src={logoGlow()}
+              fit="cover"
+            />
+          </Show>
+          <TvView
+            w={width()}
+            h={Math.max(1, props.h)}
+            src={imageSource(props.src, width(), Math.max(1, props.h), "inside")}
+            fit="contain"
+            logo
+          />
+        </TvView>
       </Show>
     );
   }
@@ -573,11 +622,24 @@ export function Logo(props: {
     >
       {(data) => (
         <TvView
-          y={props.boxH ? Math.max(0, props.boxH - data().h) : 0}
-          w={data().w}
-          h={data().h}
-          src={data().pixels}
-        />
+          w={props.maxWidth ?? props.w ?? 800}
+          h={props.boxH ?? props.h}
+        >
+          <Show when={showGlow()}>
+            <TvView
+              w={props.maxWidth ?? props.w ?? 800}
+              h={props.boxH ?? props.h}
+              src={logoGlow()}
+              fit="cover"
+            />
+          </Show>
+          <TvView
+            y={props.boxH ? Math.max(0, props.boxH - data().h) : 0}
+            w={data().w}
+            h={data().h}
+            src={data().pixels}
+          />
+        </TvView>
       )}
     </Show>
   );

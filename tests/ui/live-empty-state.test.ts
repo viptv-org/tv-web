@@ -9,10 +9,7 @@ import {
   LIVE_NO_SOURCE_T,
   LIVE_PAGE_HEIGHT,
   LIVE_PAGE_TOP,
-  LIVE_ROW_HEIGHT,
-  LIVE_ROW_STRIDE,
   LIVE_ROW_TOP,
-  LIVE_SKELETON_ROWS,
   liveEmptyArtworkSrc,
   liveFailureBody,
   liveKeepsToday,
@@ -20,7 +17,6 @@ import {
   liveNoChannelsBody,
   liveNoSourceActions,
   liveRecoveryActions,
-  liveSkeletonRows,
   liveViewerOf,
   liveWhoLine,
   pickLiveSpread,
@@ -288,29 +284,7 @@ describe("Live empty state geometry (contract T row, 1920 × 1080)", () => {
   });
 });
 
-describe("Live loading form (LIVE-EMPTY-08)", () => {
-  it("draws six skeleton rows in the page's own row shape", () => {
-    const rows = liveSkeletonRows();
-    expect(rows).toHaveLength(LIVE_SKELETON_ROWS);
-    expect(LIVE_SKELETON_ROWS).toBe(6);
-    // Page-area y, so the first row lands where channel rows start today.
-    expect(LIVE_PAGE_TOP + rows[0].title.y).toBe(LIVE_ROW_TOP);
-    rows.forEach((row, index) => {
-      // 72 tall and 8 apart, from that point.
-      expect(row.title.y).toBe(
-        LIVE_ROW_TOP - LIVE_PAGE_TOP + index * LIVE_ROW_STRIDE,
-      );
-      expect(LIVE_ROW_STRIDE - LIVE_ROW_HEIGHT).toBe(8);
-      expect(row.title.x).toBe(96);
-      expect(row.title.w).toBe(300);
-      expect(row.title.h).toBe(72);
-      expect(row.guide.x).toBe(96 + 328);
-      expect(row.guide.w).toBe(1400);
-      expect(row.guide.h).toBe(72);
-      expect(row.guide.y).toBe(row.title.y);
-    });
-  });
-});
+
 
 describe("Live empty artwork (contract § Artwork)", () => {
   it("loads the contract's wide crop through the app's asset path", () => {

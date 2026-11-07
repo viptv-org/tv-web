@@ -426,6 +426,7 @@ import {
   type PlaybackSegment
 } from "./types";
 import { sdfTextMetrics } from "./text-measure";
+import { clockTime as clock, timeOfDay } from "./time";
 import type { PlayerSnapshot } from "../../../vendor/video/src/types";
 
 type Screen =
@@ -507,15 +508,6 @@ type Overlay =
     };
 const available = (value?: { availability: string }) =>
   value?.availability === "Available";
-const clock = (seconds: number) => {
-  const total = Math.max(0, Math.floor(Number(seconds) || 0));
-  const hours = Math.floor(total / 3600);
-  const minutes = Math.floor((total % 3600) / 60);
-  const rest = total % 60;
-  return hours > 0
-    ? `${hours}:${String(minutes).padStart(2, "0")}:${String(rest).padStart(2, "0")}`
-    : `${minutes}:${String(rest).padStart(2, "0")}`;
-};
 const uniqueCards = (cards: readonly Card[]) =>
   cards.filter(
     (card, index, all) =>
@@ -882,17 +874,38 @@ export function createRemoteTvApp(
         ? Math.floor(selected.start_millis / 1800000) * 1800000
         : base;
     });
-    // Reuse ICU's locale formatter while navigating the guide. Constructing it
-    // for every visible time label dominated the guide's sampled JS work.
-    let guideClock: Intl.DateTimeFormat | undefined;
-    const guideTime = (at: number) => {
-      const date = new Date(at);
-      if (!Number.isFinite(date.getTime())) return date.toLocaleTimeString();
-      guideClock ??= new Intl.DateTimeFormat([], {
-        hour: "numeric",
-        minute: "2-digit",
-      });
-      return guideClock.format(date);
+    const guideTime = timeOfDay;
+    /** Provider live titles sometimes carry a raw ISO kickoff timestamp. */
+    const liveTitle = (value?: string) => {
+      if (!value) return "";
+      const months = [
+        "Jan",
+        "Feb",
+        "Mar",
+        "Apr",
+        "May",
+        "Jun",
+        "Jul",
+        "Aug",
+        "Sep",
+        "Oct",
+        "Nov",
+        "Dec",
+      ];
+      return value
+        .replace(
+          /@\s*(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z)/g,
+          (_, iso: string) => {
+            const date = new Date(iso);
+            if (Number.isNaN(date.getTime())) return "";
+            const hour = date.getHours();
+            return `@ ${months[date.getMonth()]} ${date.getDate()}, ${hour % 12 || 12}:${String(
+              date.getMinutes(),
+            ).padStart(2, "0")} ${hour >= 12 ? "PM" : "AM"}`;
+          },
+        )
+        .replace(/\s+/g, " ")
+        .trim();
     };
     const [search, setSearch] = createSignal(""),
       [searchError, setSearchError] = createSignal(""),
@@ -2473,8 +2486,14 @@ export function createRemoteTvApp(
     async function loadLiveFirstPage(signal: AbortSignal) {
       setLoading(true);
       setLiveFailure("");
+      // Bound the visible loading state so the page offers retry instead of
+      // sitting on a permanent "Loading Live TV…" when discovery stalls.
+      const liveRequest = new AbortController();
+      const cancel = () => liveRequest.abort();
+      signal.addEventListener("abort", cancel, { once: true });
+      const liveTimer = setTimeout(() => liveRequest.abort(), 12000);
       try {
-        const result = await api.live("0", undefined, signal);
+        const result = await api.live("0", undefined, liveRequest.signal);
         adoptLiveSnapshot(result.snapshot_id);
         adoptChannelWindow([result]);
         void call<{ channel_ids: string[] }>(
@@ -2490,11 +2509,11 @@ export function createRemoteTvApp(
         setPrograms({});
         void loadVisibleGuides();
       } catch (e) {
-        if (
-          signal.aborted ||
-          (e instanceof DOMException && e.name === "AbortError")
-        )
+        if (signal.aborted) return;
+        if (liveRequest.signal.aborted) {
+          setLiveFailure("Live TV took too long. Try again.");
           return;
+        }
         // A 401 retires the session; it is not this page's empty state.
         if (e instanceof RemoteError && e.status === 401) {
           fail(e);
@@ -2502,6 +2521,8 @@ export function createRemoteTvApp(
         }
         setLiveFailure(e instanceof Error ? e.message : "");
       } finally {
+        clearTimeout(liveTimer);
+        signal.removeEventListener("abort", cancel);
         if (!signal.aborted) setLoading(false);
       }
       focusLiveSpread();
@@ -4011,7 +4032,6 @@ export function createRemoteTvApp(
      * opens the calibration overlay. Every change is a confirmed server write. */
     function displayItem(
       control: NonNullable<Preferences["controls"]>[number],
-      pref: Preferences,
     ): Item {
       const display = () => preferences()?.display ?? defaultDisplayPreferences;
       const put = async (patch: Partial<DisplayPreferences>) => {
@@ -4267,7 +4287,7 @@ export function createRemoteTvApp(
         setSettingsItems(
           (pref.controls ?? [])
             .filter((control) => control.group === "display")
-            .map((control) => displayItem(control, pref)),
+            .map((control) => displayItem(control)),
         );
       if (tab === 4) {
         const write = await mayWriteHousehold();
@@ -6253,7 +6273,6 @@ export function createRemoteTvApp(
       let hiddenAt = 0,
         awayAt = Date.now();
       const visibility = () => {
-        guideClock = undefined;
         const visible = document.visibilityState === "visible";
         setHeroVisible(visible);
         if (!visible) {
@@ -6942,7 +6961,6 @@ export function createRemoteTvApp(
                       y={338}
                       w={72}
                       h={72}
-                      round
                       icon={isSaved(card()) ? "check" : "plus"}
                       focused={zone() === "hero" && heroAction() === 1}
                     />
@@ -6951,7 +6969,6 @@ export function createRemoteTvApp(
                       y={338}
                       w={72}
                       h={72}
-                      round
                       icon="info"
                       focused={zone() === "hero" && heroAction() === 2}
                     />
@@ -7243,7 +7260,6 @@ export function createRemoteTvApp(
                         x={detailPlayProgress() > 0 ? 440 : 280}
                         y={value().episodes.length ? 648 : 668}
                         icon={isSaved(value().item) ? "check" : "plus"}
-                        round
                         focused={zone() === "hero" && heroAction() === 1}
                       />
 
@@ -7298,7 +7314,6 @@ export function createRemoteTvApp(
                             y={0}
                             w={154}
                             h={52}
-                            pill
                             label={
                               season.season == null
                                 ? "Episodes"
@@ -7489,7 +7504,6 @@ export function createRemoteTvApp(
                     y={page().cards.length ? 128 : 320}
                     w={page().cards.length ? 200 : 260}
                     h={page().cards.length ? 56 : 72}
-                    pill={page().cards.length > 0}
                     label="Try again"
                     focused={zone() === "search-retry"}
                   />
@@ -7613,6 +7627,15 @@ export function createRemoteTvApp(
             <Show when={screen() === "live"}>
               {/* LIVE-EMPTY-001A: one broadcast frame, no chips, no preview, no
                   rows. The crop and its scrim are the contract's own. */}
+              <Label
+                x={96}
+                y={180}
+                size={26}
+                color={palette.muted}
+                content={
+                  liveSpread() === "loading" ? "Loading Live TV…" : ""
+                }
+              />
               <Show when={liveSpread() === "no-source"}>
                 <LiveNoSource
                   viewer={liveViewer()}
@@ -7666,7 +7689,7 @@ export function createRemoteTvApp(
                 maxlines={1}
                 content={(() => {
                   const channel = channels()[liveChannelIndex()];
-                  return [channel?.number, channel?.card.title]
+                  return [channel?.number, liveTitle(channel?.card.title)]
                     .filter(Boolean)
                     .join(" · ");
                 })()}
@@ -7679,9 +7702,10 @@ export function createRemoteTvApp(
                 maxwidth={1000}
                 maxlines={1}
                 content={
-                  currentProgram()?.title ??
-                  channels()[liveChannelIndex()]?.card.subtitle ??
-                  ""
+                  liveTitle(
+                    currentProgram()?.title ??
+                      channels()[liveChannelIndex()]?.card.subtitle,
+                  )
                 }
               />
               <Show when={currentProgram()}>
@@ -7730,7 +7754,7 @@ export function createRemoteTvApp(
                   w={640}
                   h={360}
                   src={imageSource(art(), 1280)}
-                  fit="cover"
+                  fit="contain"
                 >
                   <TvView y={270} w={640} h={90} src={livePreviewScrim()} fit="cover" />
                   <TvView
@@ -7893,7 +7917,7 @@ export function createRemoteTvApp(
                           letterspacing={-0.6}
                           maxwidth={channel.number ? 214 : 264}
                           maxlines={1}
-                          content={channel.card.title}
+                          content={liveTitle(channel.card.title)}
                           color={palette.text}
                         />
                       </TvView>
@@ -8349,7 +8373,6 @@ export function createRemoteTvApp(
                     y={846}
                     w={button.id === "next" ? 216 : 228}
                     h={56}
-                    pill
                     label={button.label}
                     focused={choice() === index() + 1}
                   />

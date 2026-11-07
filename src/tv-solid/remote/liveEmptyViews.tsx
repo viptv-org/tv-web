@@ -18,7 +18,6 @@ import {
   LIVE_PAGE_TOP,
   liveEmptyArtworkSrc,
   liveNoSourceActions,
-  liveSkeletonRows,
   liveWhoLine,
   type LiveBox,
   type LiveRecoveryAction,
@@ -290,37 +289,6 @@ export function LiveAnswer(props: {
             }
             focused={props.focused === index()}
           />
-        )}
-      </For>
-    </TvView>
-  );
-}
-
-/**
- * The loading form: no copy and no artwork, six skeleton channel rows in the
- * page's own row shape where channel rows start today.
- */
-export function LiveSkeletons() {
-  return (
-    <TvView x={0} y={LIVE_PAGE_TOP} w={1920} h={LIVE_PAGE_HEIGHT}>
-      <For each={liveSkeletonRows()}>
-        {(row) => (
-          <>
-            <TvView
-              x={row.title.x}
-              y={row.title.y}
-              w={row.title.w}
-              h={row.title.h}
-              color={palette.surface}
-            />
-            <TvView
-              x={row.guide.x}
-              y={row.guide.y}
-              w={row.guide.w}
-              h={row.guide.h}
-              color={palette.surface}
-            />
-          </>
         )}
       </For>
     </TvView>

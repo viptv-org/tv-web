@@ -1287,6 +1287,10 @@ export class RokuNode extends Events {
 
   flush() {
     if (this._destroyed) return;
+    // The native overlay bridge keeps its own SceneGraph groups, so a parent
+    // transform or opacity change needs one holder sync even when this node
+    // has no native record of its own.
+    (globalThis as any).__viptvMarkNativeSync?.();
     if (this._isText && this._lastFontVersion !== getFontVersion()) this.reflow();
     this.ensureVisual();
     if (this._orderDirty) {

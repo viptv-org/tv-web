@@ -13,6 +13,7 @@ import {
   browseWideScrimGradient,
   Label,
   Logo,
+  NativeBackdrop,
   palette,
 } from "./visuals";
 import { imageSource } from "./image-source";
@@ -193,18 +194,7 @@ export function BrowseBackdrop(props: {
           props.card?.landscape ??
           props.card?.poster);
     return (
-      <TvView w={1920} h={1080} color={palette.bg}>
-        <Show when={background()}>
-          {(src) => (
-            <TvView
-              w={1920}
-              h={1080}
-              src={imageSource(src(), 1920)}
-              fit="cover"
-            />
-          )}
-        </Show>
-        <TvView w={1920} h={1080} src="pkg:/assets/hero-scrim.png" />
+      <NativeBackdrop src={background()}>
         <Show when={props.portrait && props.card?.poster}>
           <TvView
             x={1520}
@@ -215,7 +205,7 @@ export function BrowseBackdrop(props: {
             fit="cover"
           />
         </Show>
-      </TvView>
+      </NativeBackdrop>
     );
   }
   const [frames, setFrames] = createSignal<Frame[]>([]),
