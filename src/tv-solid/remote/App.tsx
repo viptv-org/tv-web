@@ -6814,7 +6814,7 @@ export function createRemoteTvApp(
                     show={zone() !== "rows"}
                   >
                     <Show
-                      when={card().logo}
+                      when={!isRokuUi && card().logo}
                       fallback={
                         <DelayedTitle
                           title={card().title}
@@ -7042,6 +7042,7 @@ export function createRemoteTvApp(
                   <>
                     <Show
                       when={
+                        !isRokuUi &&
                         value().episodes.length > 0 &&
                         ["episodes", "seasons", "recommendations"].includes(
                           zone(),
@@ -7057,6 +7058,25 @@ export function createRemoteTvApp(
                           title={value().item.title}
                         />
                       </TvView>
+                    </Show>
+                    <Show
+                      when={
+                        isRokuUi &&
+                        value().episodes.length > 0 &&
+                        ["episodes", "seasons", "recommendations"].includes(
+                          zone(),
+                        )
+                      }
+                    >
+                      <Label
+                        x={96}
+                        y={54}
+                        size={56}
+                        font="Onest700"
+                        maxwidth={760}
+                        maxlines={1}
+                        content={value().item.title}
+                      />
                     </Show>
                     <TvView
                       show={
@@ -7078,7 +7098,7 @@ export function createRemoteTvApp(
                     >
                       <TvView y={value().episodes.length ? 250 : 220}>
                         <Show
-                          when={value().item.logo}
+                          when={!isRokuUi && value().item.logo}
                           fallback={
                             <DelayedTitle
                               title={value().item.title}

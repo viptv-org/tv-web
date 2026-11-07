@@ -6,7 +6,7 @@ import { Config } from '@solidtv/solid';
 import { createEffect } from 'solid-js';
 import { SceneGraphRenderer } from '../roku/renderer';
 import { installBrowserServices, dispatchNativeKey } from '../roku/browser-services';
-import { loadBundledFonts, loadFace, resolveFontUri } from '../roku/fonts';
+import { loadBundledFonts, loadFace, measureWrapText, resolveFontUri } from '../roku/fonts';
 import { handleMediaKey } from '../roku/video';
 import { postRokuTask } from '../roku/worker-task';
 
@@ -48,6 +48,14 @@ export default defineAnchorNode(
       const face = loadFace(resolveFontUri(family), nativeRoot, Math.max(1, Math.round(size)));
       return face.node;
     };
+    // The native text bridge needs the same MSDF advances the shared layout
+    // uses, otherwise manual line breaks are wider than the Label and Roku
+    // ellipsizes the last visible line.
+    (globalThis as any).__viptvMeasureText = (
+      text: string,
+      family: string | undefined,
+      size: number,
+    ) => measureWrapText(family, undefined, Math.max(1, Number(size) || 32), String(text));
     // Test/deep-link navigation: {"contentId":"/examples"} from an ECP input
     // or launch parameter drives the shared hash router. No effect on normal
     // remote-driven use.

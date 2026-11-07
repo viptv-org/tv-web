@@ -334,14 +334,21 @@ function fontFace(family: string | undefined, size: number): any {
       // Roku's Label wrap behaves inconsistently across firmware builds. Break
       // words here and feed explicit newlines; this keeps multi-line copy
       // readable and matches the layout the shared text measured.
-      const maxWidth = Math.max(1, Number(p.width) || labelWidth) * 0.94;
-      const perCharacter = Math.max(1, (Number(p.textWidth) || labelWidth) / Math.max(1, text.length));
+      const maxWidth = Math.max(1, Number(p.width) || labelWidth) * 0.98;
+      const measureLine = (value: string) => {
+        const fn = (globalThis as any).__viptvMeasureText;
+        if (typeof fn === "function") {
+          const width = Number(fn(value, p.font, size));
+          if (width > 0) return width;
+        }
+        return value.length * size * 0.55;
+      };
       const words = text.split(/\s+/);
       const lines: string[] = [];
       let line = "";
       for (const word of words) {
         const candidate = line ? line + " " + word : word;
-        if (line && candidate.length * perCharacter > maxWidth) {
+        if (line && measureLine(candidate) > maxWidth) {
           lines.push(line);
           line = word;
         } else {
