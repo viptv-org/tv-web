@@ -3,9 +3,6 @@ import { For } from "solid-js";
 import { TvView } from "../runtime";
 import { entryArt } from "../remote/entry-art";
 
-export function isRokuNativeUi() {
-  return typeof (globalThis as any).__SolidTVRokuRenderer !== "undefined";
-}
 
 /** Vite emits imported artwork as { uri, dimensions }; Roku needs the URI. */
 function uriOf(value: any): string {

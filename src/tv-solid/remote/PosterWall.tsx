@@ -7,7 +7,7 @@ import { registerTvShader } from "../shaders";
 import { rendererStart } from "../renderer-clock";
 import { entryArt } from "./entry-art";
 import { welcomeShader } from "./welcome-shader";
-import { NativeWelcomeWall, isRokuNativeUi } from "../platform/welcome-wall";
+import { NativeWelcomeWall } from "../platform/welcome-wall";
 const registered = new WeakSet<RendererMain>();
 
 /** One bounded wall texture keeps forty tile transforms off each frame.
@@ -120,5 +120,7 @@ function BrowserPosterWall() {
 /** The browser wall uses a canvas texture and the shader; the Roku host draws
  * the packaged poster grid and scrim with native Posters. */
 export function PosterWall() {
-  return isRokuNativeUi() ? NativeWelcomeWall() : BrowserPosterWall();
+  return typeof (globalThis as any).__SolidTVRokuRenderer !== "undefined"
+    ? NativeWelcomeWall()
+    : BrowserPosterWall();
 }

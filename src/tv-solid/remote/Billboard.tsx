@@ -62,7 +62,26 @@ export function createBillboardArt(
   let serial = 0;
   const selected = createMemo(source);
   const selectedIdentity = createMemo(identity);
+  const nativeRoku = () =>
+    typeof (globalThis as any).__SolidTVRokuRenderer !== "undefined";
   createEffect(() => {
+    if (nativeRoku()) {
+      const src = selected();
+      const loadSrc = src ? imageSource(src, 1920) : undefined;
+      setFrames(
+        loadSrc
+          ? [{
+              id: ++serial,
+              src: loadSrc,
+              width: 1920,
+              height: 1080,
+              started: performance.now(),
+            }]
+          : [],
+      );
+      setVisible(true);
+      return;
+    }
     const src = selected();
     selectedIdentity();
     let cancelled = false,
@@ -181,6 +200,7 @@ function Photo(props: {
     <TvView
       w={width}
       h={height}
+      fit="cover"
       {...image}
       shader={ended() ? still : moving}
       alpha={props.alpha}
@@ -226,6 +246,9 @@ export function BillboardBackdrop(props: { art: Art }) {
         color={palette.bg}
       />
       <Layers art={props.art} />
+      {typeof (globalThis as any).__SolidTVRokuRenderer !== "undefined" && (
+        <TvView w={1920} h={1080} src="pkg:/assets/hero-scrim.png" />
+      )}
     </TvView>
   );
 }

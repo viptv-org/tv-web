@@ -2069,6 +2069,18 @@ export function createRemoteTvApp(
         return { ...value, logo: fallback.logo };
       return value;
     });
+    const heroArt = createMemo(() => {
+      const card = hero();
+      const nativeRoku =
+        typeof (globalThis as any).__SolidTVRokuRenderer !== "undefined";
+      // SceneGraph posters are reliable for both portrait and landscape art;
+      // prefer the poster when a wide hero URL is unavailable or rejected.
+      return (
+        (nativeRoku ? card?.poster ?? card?.landscape : card?.landscape ?? card?.poster) ??
+        (card as any)?.view?.preview?.background ??
+        undefined
+      );
+    });
     const billboardKey = createMemo(() =>
       screen() === "home" && zone() !== "rows" && hero()
         ? cardKey(hero()!)
@@ -2076,9 +2088,7 @@ export function createRemoteTvApp(
     );
     const billboard = createBillboardArt(
       () =>
-        screen() === "home" && zone() !== "rows"
-          ? hero()?.landscape
-          : undefined,
+        screen() === "home" && zone() !== "rows" ? heroArt() : undefined,
       billboardKey,
     );
     createEffect(() => {
@@ -6500,7 +6510,11 @@ export function createRemoteTvApp(
           };
         },
       },
-      render: () => (
+      render: () => {
+        createEffect(() => {
+          (globalThis as any).__viptvModal = !!(overlay() || error());
+        });
+        return (
         <TvView
           w={1920}
           h={1080}
@@ -6530,7 +6544,7 @@ export function createRemoteTvApp(
               </Show>
               <Show when={screen() === "detail"}>
                 <Backdrop
-                  src={hero()?.landscape}
+                  src={heroArt()}
                   dim={
                     screen() === "detail" &&
                     ["episodes", "seasons", "recommendations"].includes(zone())
@@ -9369,6 +9383,7 @@ export function createRemoteTvApp(
             )}
           </Show>
           <Show when={error() && !overlay()}>
+            <TvView w={1920} h={1080} color="rgba(0,0,0,.55)" />
             <TvView
               x={400}
               y={340}
@@ -9427,7 +9442,8 @@ export function createRemoteTvApp(
             <TvView w={1920} h={1080} color="rgba(11,11,12,.72)" />
           </Show>
         </TvView>
-      ),
+        );
+      },
     });
     return <Root />;
   };

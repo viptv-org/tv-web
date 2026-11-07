@@ -10,6 +10,7 @@
  *
  * Install once, before the shared app is imported.
  */
+import { postRokuTask } from "./worker-task";
 
 type Listener = (event: any) => void;
 
@@ -562,31 +563,55 @@ export function installBrowserServices(): void {
   // Roku's firmware fetch takes a single argument (URL or Request). The shared
   // web API calls fetch(url, { headers }) to send the TMDB Bearer token; the
   // second argument is ignored by the firmware, so translate it into a Request.
-  const firmwareFetch = g.fetch;
-  if (typeof firmwareFetch === 'function' && !g.__solidtvFetchWrapped) {
+  // The firmware fetch Request host object cannot resend a POST body after a
+  // redirect/TLS retry ("rewinding of the data stream failed"). Route the app's
+  // requests through a Task + roUrlTransfer, which is the transport the native
+  // Roku client uses.
+  if (!g.__solidtvFetchWrapped) {
     g.__solidtvFetchWrapped = true;
     g.fetch = (input: any, init?: any) => {
-      try {
-        if (init && typeof init === 'object' && (init.headers || init.method || init.body)) {
-          const Req = g.Request;
-          if (typeof Req === 'function') {
-            // Roku's Request host object rejects DOM-only fields such as the
-            // JS AbortSignal/credentials/redirect. Keep the transport fields
-            // the firmware understands and let the shared timeout controller
-            // resolve independently.
-            const clean: any = {};
-            if (init.method !== undefined) clean.method = String(init.method);
-            if (init.headers !== undefined) clean.headers = init.headers;
-            if (init.body !== undefined) clean.body = String(init.body);
-            if (init.agent !== undefined) clean.agent = init.agent;
-            return firmwareFetch.call(g, new Req(String(input), clean));
-          }
-          console.error('ROKU_FETCH Request is unavailable; request headers would be dropped');
+      const url = typeof input === 'string' ? input : String(input?.url ?? input);
+      const method = String(init?.method ?? 'GET').toUpperCase();
+      const headers: Record<string, string> = {};
+      const source = init?.headers;
+      if (source) {
+        if (Array.isArray(source)) {
+          for (const pair of source) headers[String(pair[0])] = String(pair[1]);
+        } else if (typeof source.forEach === 'function') {
+          source.forEach((value: any, key: string) => { headers[String(key)] = String(value); });
+        } else {
+          for (const key of Object.keys(source)) headers[key] = String(source[key]);
         }
-      } catch (error) {
-        console.error('ROKU_FETCH request init failed: ' + String((error as any)?.stack || error));
       }
-      return firmwareFetch.call(g, input);
+      let payload: any = undefined;
+      if (init?.body !== undefined) {
+        const raw = String(init.body);
+        try { payload = JSON.parse(raw); } catch { payload = raw; }
+      }
+      return postRokuTask<any>(
+        { op: 'http', url, method, headers, payload } as any,
+        { timeoutMs: 25000, parent: (g as any).__solidtvNativeRoot },
+      ).result.then((result: any) => {
+        const responseHeaders: Record<string, string> = {};
+        const raw = result?.headers;
+        if (raw && typeof raw === 'object') {
+          for (const key of Object.keys(raw)) responseHeaders[String(key).toLowerCase()] = String(raw[key]);
+        }
+        const status = Number(result?.status ?? 0);
+        const text = String(result?.body ?? '');
+        return {
+          status,
+          ok: status >= 200 && status < 300,
+          headers: {
+            get(name: string) {
+              return responseHeaders[String(name).toLowerCase()] ?? null;
+            },
+          },
+          body: undefined,
+          text: async () => text,
+          json: async () => JSON.parse(text),
+        };
+      });
     };
   }
 

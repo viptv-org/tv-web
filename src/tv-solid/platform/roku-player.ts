@@ -117,8 +117,12 @@ export class RokuPlayer implements Player {
       },
     };
     this.emit();
-    await nativeVideo.init();
-    await nativeVideo.load({ streamUrl: request.url });
+    try {
+      await nativeVideo.init();
+      await nativeVideo.load({ streamUrl: request.url });
+    } catch (error: any) {
+      throw error;
+    }
     if (request.startAtSeconds !== undefined)
       nativeVideo.seek(Number(request.startAtSeconds) || 0);
     if (request.paused) nativeVideo.pause();

@@ -121,12 +121,6 @@ const plugin = {
     for (const filter of stubs) {
       build.onResolve({ filter }, (args: any) => ({ path: args.path, namespace: 'tvweb-stub' }));
     }
-    // The browser playback module statically imports the HTML/HLS and AVPlay
-    // adapters. Roku gets a native adapter later; use the no-op boundary now
-    // so the shared catalog and UI can boot.
-    build.onResolve({ filter: /^\.\/playback$/ }, () => ({
-      path: path.join(shared, 'tv-solid/platform/roku-playback.ts'),
-    }));
     build.onLoad({ filter: /.*/, namespace: 'tvweb-stub' }, (args: any) => {
       if (args.path === 'qrcode') {
         return {
@@ -138,7 +132,7 @@ const plugin = {
       if (args.path === 'hls.js') {
         return {
           contents:
-            'function Hls() {} Hls.isSupported = function () { return false; }; Hls.Events = {}; Hls.prototype.on = function () {}; Hls.prototype.off = function () {}; Hls.prototype.destroy = function () {}; Hls.prototype.loadSource = function () {}; Hls.prototype.attachMedia = function () {}; Hls.prototype.startLoad = function () {}; Hls.prototype.stopLoad = function () {}; Hls.prototype.recoverMediaError = function () {}; export default Hls;',
+            'function Hls() {} Hls.isSupported = function () { return false; }; Hls.Events = {}; Hls.prototype.on = function () {}; Hls.prototype.off = function () {}; Hls.prototype.destroy = function () {}; Hls.prototype.loadSource = function () {}; Hls.prototype.attachMedia = function () {}; Hls.prototype.startLoad = function () {}; Hls.prototype.stopLoad = function () {}; Hls.prototype.recoverMediaError = function () {}; function FetchLoader() {}; export { FetchLoader }; export default Hls;',
           loader: 'js',
         };
       }

@@ -58,24 +58,22 @@ export class SceneGraphRenderer extends Events {
     // scene (usually inside a Scene with a solid background).
     this.root = new RokuNode(this, { w: APP_W, h: APP_H }, this.nativeRoot || undefined, false);
     this.root.parent = null;
-    // Native-only diagnostics under the shared FPS panel. The panel itself
-    // reports the actual dirty-update rate; this line reports the frame-time
-    // capacity separately so the two cannot be confused.
-    this.perfBox = new RokuNode(this, { w: 330, h: 66, x: 1580, y: 266, zIndex: 10001, color: 0x000000ff }, undefined, false);
-    this.perfBox.parent = this.root;
-    this.perfLabel = new RokuNode(this, {
-      w: 320, h: 30, x: 0, y: 3, fontSize: 14, color: 0xffffffff,
-      text: 'perf: waiting', contain: 'width',
-    }, undefined, true);
-    this.perfLabel.parent = this.perfBox;
-    const initialRoute = (globalThis as any).location?.hash || '';
-    this.routeLabel = new RokuNode(this, {
-      w: 320, h: 26, x: 0, y: 35, fontSize: 12, color: 0xffffffff,
-      text: 'route ' + (initialRoute || '?'), contain: 'width',
-    }, undefined, true);
-    this.routeLabel.parent = this.perfBox;
     (globalThis as any).__rokuRenderer = this;
-    this.fpsTimer = setInterval(() => {
+    if ((globalThis as any).__viptvDebug) {
+      this.perfBox = new RokuNode(this, { w: 330, h: 66, x: 1580, y: 266, zIndex: 10001, color: 0x000000ff }, undefined, false);
+      this.perfBox.parent = this.root;
+      this.perfLabel = new RokuNode(this, {
+        w: 320, h: 30, x: 0, y: 3, fontSize: 14, color: 0xffffffff,
+        text: 'perf: waiting', contain: 'width',
+      }, undefined, true);
+      this.perfLabel.parent = this.perfBox;
+      const initialRoute = (globalThis as any).location?.hash || '';
+      this.routeLabel = new RokuNode(this, {
+        w: 320, h: 26, x: 0, y: 35, fontSize: 12, color: 0xffffffff,
+        text: 'route ' + (initialRoute || '?'), contain: 'width',
+      }, undefined, true);
+      this.routeLabel.parent = this.perfBox;
+      this.fpsTimer = setInterval(() => {
       const updates = this.frameCount;
       const samples = this.flushSamples;
       const avgMs = samples > 0 ? this.flushMsSum / samples : 0;
@@ -109,6 +107,7 @@ export class SceneGraphRenderer extends Events {
         );
       }
     }, 1000);
+    }
     getAppMemoryMonitor()
       .then((monitor) => { this.memMonitor = monitor; })
       .catch((err) => { console.warn('ROKU_MEMORY_MONITOR unavailable: ' + err); });

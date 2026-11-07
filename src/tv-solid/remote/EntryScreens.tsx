@@ -45,15 +45,17 @@ function Brand(props: { splash: boolean }) {
     // The logo is SDF text now: measure the layout the renderer will draw,
     // with the same family, size and letter spacing the label passes.
     const family = sdfFontFamily("Bricolage800", size());
-    return (
+    const measured =
       (getRenderer() as RendererMain).measureText({
         text: "VIPTV",
         fontFamily: family,
         fontSize: size(),
         lineHeight: sdfLineHeight(family, size()),
         letterSpacing: -0.04 * size(),
-      })?.w ?? 0
-    );
+      })?.w ?? 0;
+    // Native font measurement can return 0 until the face publishes. Keep the
+    // brand group centered with the same estimate the native text uses.
+    return measured > 1 ? measured : size() * 5 * 0.55;
   });
   return (
     <TvView

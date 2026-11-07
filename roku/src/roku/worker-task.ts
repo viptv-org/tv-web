@@ -12,7 +12,8 @@ export type WorkerRequest =
   | { op: "echo"; value: any }
   | { op: "sleep"; ms: number }
   | { op: "json"; text: string }
-  | { op: "fetch"; url: string; headers?: Record<string, string> };
+  | { op: "fetch"; url: string; headers?: Record<string, string> }
+  | { op: "http"; url: string; method: string; headers?: Record<string, string>; payload?: any };
 
 interface WorkerResponse<T = any> {
   ok: boolean;

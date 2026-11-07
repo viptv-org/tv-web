@@ -311,7 +311,7 @@ function imageTexture(image: ImageData) {
   if (!texture) {
     texture = ROKU
       ? getRenderer().createTexture("ImageTexture", {
-          src: "pkg:/assets/fallback.png",
+          src: "",
           w: image.width,
           h: image.height,
         })
@@ -343,11 +343,28 @@ function visualNode(
     )
       return;
     if ((key === "src" || key === "texture") && props[key] == null) return;
+    if (
+      key === "src" &&
+      typeof props.src === "string" &&
+      props.src.startsWith("data:image/x-viptv-qr,")
+    ) {
+      Object.defineProperty(mapped, "src", { enumerable: true, get: () => "" });
+      return;
+    }
     if (key === "src" && props.src instanceof ImageData) {
-      Object.defineProperty(mapped, "texture", {
-        enumerable: true,
-        get: () => imageTexture(props.src),
-      });
+      if (ROKU && props.src.width === 480 && props.src.height === 33) {
+        // The shared top-bar scrim is a canvas-generated alpha gradient. Use
+        // the packaged equivalent so the nav remains legible on SceneGraph.
+        Object.defineProperty(mapped, "src", {
+          enumerable: true,
+          get: () => "pkg:/assets/topbar-scrim.png",
+        });
+      } else {
+        Object.defineProperty(mapped, "texture", {
+          enumerable: true,
+          get: () => imageTexture(props.src),
+        });
+      }
       return;
     }
     if (key === "src" && typeof props.src === "string" && props.src.startsWith("data:image/svg+xml")) {
@@ -358,7 +375,7 @@ function visualNode(
         get: () =>
           ROKU
             ? getRenderer().createTexture("ImageTexture", {
-                src: "pkg:/assets/fallback.png",
+                src: "",
                 w: props.w ?? 48,
                 h: props.h ?? 48,
               })
@@ -380,8 +397,27 @@ function visualNode(
             : props[key],
     });
   });
+  if (
+    ROKU &&
+    (props.w ?? 0) >= 1900 &&
+    (props.h ?? 0) >= 1000 &&
+    typeof props.src !== "string"
+  ) {
+    // Full-screen masks/scrims are canvas textures on the browser. Their host
+    // visual would be an opaque white rectangle when the texture is empty.
+    Object.defineProperty(mapped, "color", {
+      enumerable: true,
+      configurable: true,
+      get: () => 0,
+    });
+  }
   if (props.src !== undefined && props.color === undefined)
-    mapped.color = 0xffffffff;
+    mapped.color =
+      ROKU &&
+      (props.src instanceof ImageData ||
+        (typeof props.src === "string" && props.src.startsWith("data:image/svg+xml")))
+        ? 0x00000000
+        : 0xffffffff;
   Object.defineProperty(mapped, "alpha", {
     enumerable: true,
     get: () => (props.show === false ? 0 : (props.alpha ?? 1)),
@@ -412,7 +448,7 @@ function visualNode(
     if (h !== undefined) node.h = h;
     if (
       typeof (globalThis as any).__viptvNativeVisual === "function" &&
-      props.shader === undefined &&
+      (props.shader === undefined || typeof props.src === "string") &&
       (props.src === undefined || typeof props.src === "string") &&
       (props.color !== undefined || props.src !== undefined || props.texture !== undefined)
     ) {
@@ -514,6 +550,7 @@ function rokuText(props: Record<string, any>): JSX.Element {
       color: props.color ?? "#ffffff",
       align: props.align,
       maxlines: props.maxlines,
+      lineHeight: spec().lineHeight,
       alpha: props.alpha ?? 1,
       auto: (props.maxwidth ?? props.w) === undefined,
     });

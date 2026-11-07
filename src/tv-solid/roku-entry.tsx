@@ -124,6 +124,7 @@ type NativeRecord = {
   node: any;
   holder: any;
   visual: any;
+  layer?: any;
   effect?: any;
   key?: string;
   sync: () => void;
@@ -131,9 +132,13 @@ type NativeRecord = {
 
 const nativeRecords = new Map<any, NativeRecord>();
 const nativeFonts = new Map<string, any>();
+let backdropLayer: any = null;
+let backdropScrimLayer: any = null;
 let visualLayer: any = null;
+let chromeLayer: any = null;
 let labelLayer: any = null;
 let qrLayer: any = null;
+let modalLayer: any = null;
 
 function ensureLayers() {
   const root = (globalThis as any).__solidtvNativeRoot;
@@ -143,20 +148,40 @@ function ensureLayers() {
     // High zIndex keeps the native overlay above every shared host visual.
     // The renderer's reorder pass owns these containers, so they cannot be
     // pushed behind the shared tree when a late host visual is inserted.
+    const backdrop = renderer.createNode({ w: 1920, h: 1080, zIndex: 8000 });
+    backdrop.parent = renderer.root;
+    backdropLayer = backdrop.dom;
+    const backdropScrim = renderer.createNode({ w: 1920, h: 1080, zIndex: 8500 });
+    backdropScrim.parent = renderer.root;
+    backdropScrimLayer = backdropScrim.dom;
     const visual = renderer.createNode({ w: 1920, h: 1080, zIndex: 9000 });
     visual.parent = renderer.root;
     visualLayer = visual.dom;
+    const chrome = renderer.createNode({ w: 1920, h: 1080, zIndex: 9500 });
+    chrome.parent = renderer.root;
+    chromeLayer = chrome.dom;
     const text = renderer.createNode({ w: 1920, h: 1080, zIndex: 10000 });
     text.parent = renderer.root;
     labelLayer = text.dom;
     qrLayer = visualLayer;
+    const modal = renderer.createNode({ w: 1920, h: 1080, zIndex: 11000 });
+    modal.parent = renderer.root;
+    modalLayer = modal.dom;
   } else {
+    backdropLayer = createElement("group");
+    insertNode(root, backdropLayer);
+    backdropScrimLayer = createElement("group");
+    insertNode(root, backdropScrimLayer);
     visualLayer = createElement("group");
     insertNode(root, visualLayer);
+    chromeLayer = createElement("group");
+    insertNode(root, chromeLayer);
     labelLayer = createElement("group");
     insertNode(root, labelLayer);
     qrLayer = createElement("group");
     insertNode(root, qrLayer);
+    modalLayer = createElement("group");
+    insertNode(root, modalLayer);
   }
   return root;
 }
@@ -227,7 +252,7 @@ function removeRecord(node: any) {
   if (!record) return;
   nativeRecords.delete(node);
   try {
-    const layer = record.kind === "label" ? labelLayer : record.kind === "qr" ? qrLayer : visualLayer;
+    const layer = record.layer || (record.kind === "label" ? labelLayer : record.kind === "qr" ? qrLayer : visualLayer);
     if (record.visual && record.holder?.dom)
       tmTransaction.removeNode(record.holder.dom, record.visual);
     if (record.holder) record.holder.destroy();
@@ -267,20 +292,62 @@ function fontFace(family: string | undefined, size: number): any {
       removeRecord(node);
       const label = createElement("label");
       const holder = holderAt(node, 1, 1);
-      insertNode(labelLayer, holder.dom);
+      const layer = (globalThis as any).__viptvModal ? modalLayer : labelLayer;
+      insertNode(layer, holder.dom);
       insertNode(holder.dom, label);
-      record = { kind: "label", node, holder, visual: label, sync: () => syncHolder(record!) };
+      record = { kind: "label", node, holder, visual: label, layer, sync: () => syncHolder(record!) };
       nativeRecords.set(node, record);
       syncHolder(record);
     }
     const label = record.visual;
     const size = Math.max(1, Math.round(Number(p.size) || 32));
     setProp(label, "font", fontFace(p.font, size));
-    setProp(label, "text", String(p.text ?? ""));
     const rawWidth = Math.max(1, Number(p.textWidth) || Number(p.width) || 1);
-    const labelWidth = Math.min(1920, Math.ceil(p.maxlines > 0 ? (Number(p.width) || rawWidth) + 8 : rawWidth * 1.2 + 20));
+    const multiline = Number(p.maxlines) > 1;
+    const labelWidth = Math.min(
+      1920,
+      Math.ceil(
+        multiline
+          ? (Number(p.width) || rawWidth) + 8
+          : Number(p.maxlines) === 1
+            ? Math.max(Number(p.width) || rawWidth, rawWidth) + 8
+            : rawWidth * 1.35 + 24,
+      ),
+    );
+    let labelHeight = Math.max(1, Math.ceil(Number(p.height) || size));
+    let text = String(p.text ?? "");
+    if (multiline && labelWidth > 1 && text.length > 0) {
+      // Roku's Label wrap behaves inconsistently across firmware builds. Break
+      // words here and feed explicit newlines; this keeps multi-line copy
+      // readable and matches the layout the shared text measured.
+      const maxWidth = Math.max(1, Number(p.width) || labelWidth) * 0.94;
+      const perCharacter = Math.max(1, (Number(p.textWidth) || labelWidth) / Math.max(1, text.length));
+      const words = text.split(/\s+/);
+      const lines: string[] = [];
+      let line = "";
+      for (const word of words) {
+        const candidate = line ? line + " " + word : word;
+        if (line && candidate.length * perCharacter > maxWidth) {
+          lines.push(line);
+          line = word;
+        } else {
+          line = candidate;
+        }
+      }
+      if (line) lines.push(line);
+      const maxLines = Math.max(1, Number(p.maxlines));
+      if (lines.length > maxLines) {
+        lines.length = maxLines;
+        lines[maxLines - 1] = lines[maxLines - 1].replace(/[\s,.;:!?]*$/, "") + "…";
+      }
+      text = lines.join("\n");
+      labelHeight = Math.max(labelHeight, Math.ceil(lines.length * Number(p.lineHeight || size)) + 10);
+      setProp(label, "wrap", true);
+      setProp(label, "maxLines", lines.length);
+    }
+    setProp(label, "text", text);
     setProp(label, "width", labelWidth);
-    setProp(label, "height", Math.max(1, Math.ceil(Number(p.height) || size)));
+    setProp(label, "height", labelHeight);
     // The shared text node's x already includes its alignment offset, so the
     // native label starts at the holder and paints left-to-right.
     setProp(label, "horizAlign", "left");
@@ -288,7 +355,7 @@ function fontFace(family: string | undefined, size: number): any {
     setProp(label, "color", rokuColor(p.color ?? "#ffffff"));
     if (record.holder) {
       record.holder.w = labelWidth;
-      record.holder.h = Math.max(1, Math.ceil(Number(p.height) || size));
+      record.holder.h = labelHeight;
       record.holder.markTransform();
       record.holder.flush();
     }
@@ -361,19 +428,37 @@ function renderQr(record: NativeRecord, uri: string, width: number, height: numb
     const qr = typeof rawSrc === "string" && rawSrc.indexOf("data:image/x-viptv-qr,") === 0;
     const poster = typeof rawSrc === "string" && rawSrc.length > 0 && !rawSrc.startsWith("data:");
     const kind: NativeRecord["kind"] = qr ? "qr" : poster ? "poster" : "rect";
-    if (kind === "rect" && width >= 1900 && height >= 1000) {
+    const modal = !!(globalThis as any).__viptvModal;
+    if (kind === "rect" && width >= 1900 && height >= 1000 && !modal) {
       removeRecord(node);
       return;
     }
     let record = nativeRecords.get(node);
     if (!record || record.kind !== kind) {
       removeRecord(node);
-      const layer = kind === "qr" ? qrLayer : visualLayer;
+      const chrome = rawSrc === "pkg:/assets/topbar-scrim.png";
+      const heroScrim = rawSrc === "pkg:/assets/hero-scrim.png";
+      const fullScreenBackdrop =
+        kind === "poster" &&
+        width >= 1900 &&
+        height >= 1000 &&
+        !String(rawSrc).includes("welcome-");
+      const layer = modal
+        ? modalLayer
+        : chrome
+          ? chromeLayer
+          : heroScrim
+            ? backdropScrimLayer
+            : fullScreenBackdrop
+              ? backdropLayer
+              : kind === "qr"
+                ? qrLayer
+                : visualLayer;
       const holder = holderAt(node, width, height);
       insertNode(layer, holder.dom);
       const visual = createElement(kind === "poster" ? "poster" : kind === "qr" ? "group" : "rectangle");
       insertNode(holder.dom, visual);
-      record = { kind, node, holder, visual, sync: () => syncHolder(record!) };
+      record = { kind, node, holder, visual, layer, sync: () => syncHolder(record!) };
       nativeRecords.set(node, record);
       if (kind === "poster") setProp(visual, "loadDisplayMode", p.fit === "contain" ? "scaleToFit" : p.fit === "cover" ? "scaleToZoom" : "scaleToFill");
       syncHolder(record);

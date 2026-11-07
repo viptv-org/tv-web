@@ -210,6 +210,15 @@ export function Button(props: {
 /** One small cached gradient mask replaces five full-screen blend passes.
  * Artwork retains its own texture; focus changes never read back 1080p pixels. */
 export function Backdrop(props: { src?: string | null; dim?: boolean }) {
+  if (typeof (globalThis as any).__SolidTVRokuRenderer !== "undefined") {
+    return (
+      <TvView w={1920} h={1080}>
+        {props.src ? <TvView w={1920} h={1080} src={props.src} fit="cover" /> : undefined}
+        <TvView w={1920} h={1080} src="pkg:/assets/hero-scrim.png" />
+        <TvView w={1920} h={1080} color="#000000" alpha={props.dim ? 0.35 : 0} />
+      </TvView>
+    );
+  }
   const [current, setCurrent] = createSignal<string>(),
     [previous, setPrevious] = createSignal<string>(),
     [opacity, setOpacity] = createSignal(1);

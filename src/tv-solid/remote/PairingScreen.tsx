@@ -91,10 +91,16 @@ export function PairingScreen(props: {
         y={315.5}
         size={26}
         lineheight={1.45}
-        maxwidth={760}
-        maxlines={2}
         color={palette.muted}
-        content="Point your camera at the code. You’ll finish on your phone and this TV signs in by itself."
+        content="Point your camera at the code."
+      />
+      <Label
+        x={96}
+        y={353.5}
+        size={26}
+        lineheight={1.45}
+        color={palette.muted}
+        content="You’ll finish on your phone and this TV signs in by itself."
       />
       <TvView
         x={96}
