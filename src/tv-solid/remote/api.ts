@@ -13,6 +13,7 @@ import type {
   Management,
   Page,
   Pairing,
+  PlaybackSegment,
   Preferences,
   Source,
   SourcePage,
@@ -927,5 +928,17 @@ export class RemoteTvApi {
       );
       throw error;
     }
+  }
+
+  async segments(
+    playbackId: string,
+    signal: AbortSignal,
+  ): Promise<{ segments: PlaybackSegment[] }> {
+    return this.call<{ segments: PlaybackSegment[] }>(
+      `/api/playback/${segment(playbackId)}/segments`,
+      "GET",
+      undefined,
+      signal,
+    );
   }
 }

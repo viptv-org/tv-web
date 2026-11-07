@@ -37,7 +37,7 @@ export function PageSkeleton(props: {
     w: number,
     h: number,
     rounded = 6,
-  ) => <TvView x={x} y={y} w={w} h={h} rounded={rounded} color={fill()} />;
+  ) => <TvView x={x} y={y} w={w} h={h} color={fill()} />;
   const posters = (y: number, count = 14) => (
     <For each={Array.from({ length: count })}>
       {(_, index) =>

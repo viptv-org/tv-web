@@ -72,7 +72,6 @@ function Brand(props: { splash: boolean }) {
         y={(size() - mark()) / 2}
         w={mark()}
         h={mark()}
-        rounded={props.splash ? 25 : 22}
         color={palette.accent}
       >
         <Label
@@ -135,7 +134,6 @@ export function EntryScreen(props: { loading: boolean; focused: boolean }) {
             y={584}
             w={360}
             h={72}
-            rounded={12}
             color={props.focused ? palette.text : "rgba(255,255,255,.16)"}
           >
             <Label
@@ -159,7 +157,6 @@ export function EntryScreen(props: { loading: boolean; focused: boolean }) {
         y={600}
         w={240}
         h={4}
-        rounded={2}
         clipping
         color="rgba(255,255,255,.12)"
       >
@@ -167,7 +164,6 @@ export function EntryScreen(props: { loading: boolean; focused: boolean }) {
           x={reduced ? 0 : indicator()}
           w={96}
           h={4}
-          rounded={2}
           color={palette.text}
         />
       </TvView>

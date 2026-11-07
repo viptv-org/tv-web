@@ -97,7 +97,6 @@ import {
 import { imageSource, reloadImages } from "./image-source";
 import { clearLogoCache } from "./visuals";
 import { CalendarBoard, calendarDayKey, calendarDays } from "./CalendarBoard";
-import { PageSkeleton } from "./Skeletons";
 import { sourceAudioSubs, sourceFacts, sourceProvider as providerLabel, sourceQuality, sourceReleaseGroup, sourceReleaseType } from "./source-presentation";
 import {
 
@@ -271,7 +270,7 @@ import {
   pickLiveSpread,
   type LiveRecoveryAction,
 } from "./liveEmpty";
-import { LiveAnswer, LiveNoSource, LiveSkeletons } from "./liveEmptyViews";
+import { LiveAnswer, LiveNoSource } from "./liveEmptyViews";
 import { guideWindowOf } from "./guideWindow";
 import {
   SOURCE_SPINNER_SIZE,
@@ -421,9 +420,10 @@ import {
 
 
 
-  type TitleAction
+  type TitleAction,
 
 
+  type PlaybackSegment
 } from "./types";
 import { sdfTextMetrics } from "./text-measure";
 import type { PlayerSnapshot } from "../../../vendor/video/src/types";
@@ -507,8 +507,15 @@ type Overlay =
     };
 const available = (value?: { availability: string }) =>
   value?.availability === "Available";
-const clock = (seconds: number) =>
-  `${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, "0")}`;
+const clock = (seconds: number) => {
+  const total = Math.max(0, Math.floor(Number(seconds) || 0));
+  const hours = Math.floor(total / 3600);
+  const minutes = Math.floor((total % 3600) / 60);
+  const rest = total % 60;
+  return hours > 0
+    ? `${hours}:${String(minutes).padStart(2, "0")}:${String(rest).padStart(2, "0")}`
+    : `${minutes}:${String(rest).padStart(2, "0")}`;
+};
 const uniqueCards = (cards: readonly Card[]) =>
   cards.filter(
     (card, index, all) =>
@@ -802,17 +809,6 @@ export function createRemoteTvApp(
     const detailPlayRemaining = () =>
       detailTarget()?.remaining ||
       (detailAction()?.resume ? (detailAction()?.remaining_label ?? "") : "");
-    const detailRemainingX = () =>
-      Math.min(
-        300,
-        66 +
-          Math.ceil(
-            sdfTextMetrics("26px Onest700").measureText(
-              detailActionLabel(),
-            ).width,
-          ) +
-          54,
-      );
     const [, setLiveFavorites] = createSignal<Set<string>>();
     const [livePages, setLivePages] = createSignal<LivePage[]>([]),
       [channels, setChannels] = createSignal<Channel[]>([]),
@@ -1142,6 +1138,8 @@ export function createRemoteTvApp(
     const [snapshot, setSnapshot] = createSignal<PlayerSnapshot>(),
       [showControls, setShowControls] = createSignal(true),
       [seek, setSeek] = createSignal<number>(),
+      [seeking, setSeeking] = createSignal(false),
+      [playbackSegments, setPlaybackSegments] = createSignal<PlaybackSegment[]>([]),
       [settingsTab, setSettingsTab] = createSignal(0),
       [settingsItems, setSettingsItems] = createSignal<Item[]>([]),
       // Household writes need an account session. `/api/bootstrap` omits the
@@ -1345,8 +1343,41 @@ export function createRemoteTvApp(
       snapshot();
       return player.actions;
     });
+    const activeSegment = createMemo(() => {
+      const position = (snapshot()?.time.positionSeconds ?? 0) * 1000;
+      return playbackSegments().find(
+        (segment) =>
+          segment.kind !== "credits" &&
+          position >= segment.start_ms &&
+          position < segment.end_ms,
+      );
+    });
+    async function refreshPlaybackSegments() {
+      const id = player.leaseId;
+      if (!id) {
+        setPlaybackSegments([]);
+        return;
+      }
+      try {
+        const value = await api.segments(id, scope.signal);
+        if (player.leaseId === id) setPlaybackSegments(value.segments ?? []);
+      } catch {
+        if (player.leaseId === id) setPlaybackSegments([]);
+      }
+    }
     const playerButtons = createMemo(() => {
       snapshot();
+      // The browser's deferred engine has no capabilities until a session
+      // opens; touching it during first paint aborted startup.
+      let canTracks = false;
+      try {
+        const capabilities = player.player.capabilities;
+        canTracks =
+          !!capabilities.canSelectAudioTrack ||
+          !!capabilities.canSelectTextTrack;
+      } catch {
+        canTracks = false;
+      }
       return [
         {
           id:
@@ -1355,10 +1386,21 @@ export function createRemoteTvApp(
               : "status",
           label: "",
         },
+        ...(activeSegment() && preferences()?.preferences?.skip_intros !== false
+          ? [
+              {
+                id: "skip",
+                label:
+                  activeSegment()?.kind === "recap"
+                    ? "Skip recap"
+                    : "Skip intro",
+              },
+            ]
+          : []),
         ...(playerActions().episodes
           ? [{ id: "episodes", label: "Episodes" }]
           : []),
-        ...(playerActions().tracks
+        ...(playerActions().tracks && canTracks
           ? [{ id: "tracks", label: "Audio & subtitles" }]
           : []),
         ...(playerActions().change_source
@@ -1406,6 +1448,9 @@ export function createRemoteTvApp(
                     {
                       id: "off",
                       label: "Off",
+                      value: player.tracks.text.every((track) => !track.selected)
+                        ? "✓"
+                        : "",
                       run: async () => {
                         await player.selectTrack("text", null);
                         closeOverlay();
@@ -2763,7 +2808,12 @@ export function createRemoteTvApp(
       setError("");
     }
     async function leavePlayer() {
+      clearTimeout(controlsTimer);
       resetScope();
+      setSeek(undefined);
+      setSeeking(false);
+      setPlaybackSegments([]);
+      setShowControls(false);
       await player.stop();
       setPlaybackError("");
       batch(() => {
@@ -2819,6 +2869,14 @@ export function createRemoteTvApp(
         return;
       }
       if (screen() === "player") {
+        if (seek() !== undefined) {
+          setSeek(undefined);
+          return;
+        }
+        if (showControls()) {
+          setShowControls(false);
+          return;
+        }
         await leavePlayer();
         return;
       }
@@ -3795,6 +3853,7 @@ export function createRemoteTvApp(
           );
         started = true;
         setLoading(false);
+        void refreshPlaybackSegments();
         hideControls();
       } catch {
         await player.stop().catch(() => {});
@@ -3824,7 +3883,13 @@ export function createRemoteTvApp(
     function hideControls() {
       clearTimeout(controlsTimer);
       controlsTimer = setTimeout(() => {
-        if (!error() && snapshot()?.state === "playing") setShowControls(false);
+        if (
+          !error() &&
+          !seeking() &&
+          !loading() &&
+          snapshot()?.state === "playing"
+        )
+          setShowControls(false);
       }, 5000);
     }
     async function toggleSaved(card: Card) {
@@ -4837,13 +4902,12 @@ export function createRemoteTvApp(
               Math.max(0, Math.min(value.columns.length - 1, i + dx)),
             );
             setChoice(0);
-          } else
+          } else {
+            const items = value.columns[trackColumn()]?.items ?? [];
             setChoice((i) =>
-              Math.max(
-                0,
-                Math.min(value.columns[trackColumn()].items.length - 1, i + dy),
-              ),
+              Math.max(0, Math.min(items.length - 1, i + dy)),
             );
+          }
           return;
         }
         if (value.kind === "sources") {
@@ -5494,7 +5558,7 @@ export function createRemoteTvApp(
       if (modal) {
         if (modal.kind === "tracks") {
           await run(async () => {
-            await modal.columns[trackColumn()].items[choice()]?.run();
+            await modal.columns[trackColumn()]?.items[choice()]?.run();
           });
           return;
         }
@@ -5618,14 +5682,22 @@ export function createRemoteTvApp(
       if (screen() === "player") {
         if (seek() !== undefined) {
           const position = seek()!;
-          setSeek(undefined);
           if (!playerActions().seek) return;
-          await player.start(
-            activeAction()!.card,
-            activeSource()!,
-            false,
-            position,
-          );
+          setShowControls(true);
+          setSeeking(true);
+          try {
+            await player.start(
+              activeAction()!.card,
+              activeSource()!,
+              false,
+              position,
+            );
+            void refreshPlaybackSegments();
+          } finally {
+            setSeeking(false);
+            setSeek(undefined);
+            hideControls();
+          }
           return;
         }
         const control = playerButtons()[choice()]?.id;
@@ -5646,6 +5718,24 @@ export function createRemoteTvApp(
           const next = await api.next(activeAction()!.card, scope.signal);
           if (next.item) await playIntent(next.item);
           else notify("You’re all caught up.");
+        } else if (control === "skip") {
+          const segment = activeSegment();
+          if (segment) {
+            setShowControls(true);
+            setSeeking(true);
+            try {
+              await player.start(
+                activeAction()!.card,
+                activeSource()!,
+                false,
+                segment.end_ms / 1000,
+              );
+              void refreshPlaybackSegments();
+            } finally {
+              setSeeking(false);
+              hideControls();
+            }
+          }
         } else if (control === "tracks") {
           openTracks();
         } else if (control === "sources") {
@@ -6229,7 +6319,9 @@ export function createRemoteTvApp(
       const source = () =>
         props.poster
           ? (props.card.poster ?? props.card.landscape)
-          : (props.card.landscape ?? props.card.poster);
+          : (props.card.view?.preview?.background ??
+            props.card.landscape ??
+            props.card.poster);
       const [failed, setFailed] = createSignal(false);
       createEffect(() => {
         source();
@@ -6257,14 +6349,13 @@ export function createRemoteTvApp(
           <TvView
             w={props.w}
             h={props.h}
-            rounded={10}
             color={palette.surface}
             clipping
           >
             <Show
               when={!failed() && source()}
               fallback={
-                <TvView w={props.w} h={props.h} rounded={10} color="#1A1A1C">
+                <TvView w={props.w} h={props.h} color="#1A1A1C">
                   <Label
                     x={14}
                     y={props.h - 70}
@@ -6282,13 +6373,12 @@ export function createRemoteTvApp(
               <TvView
                 w={props.w}
                 h={props.h}
-                rounded={10}
                 src={imageSource(source(), props.poster ? 510 : 844)}
                 fit="cover"
                 onError={() => setFailed(true)}
               />
             </Show>
-            <Show when={!isRokuUi && !props.poster && props.card.logo}>
+            <Show when={!props.poster && props.card.logo}>
               <TvView
                 x={18}
                 y={props.h - 74}
@@ -6310,7 +6400,6 @@ export function createRemoteTvApp(
                 y={10}
                 w={badgeWidth()}
                 h={30}
-                rounded={6}
                 color={
                   /new episode/i.test(label() ?? "")
                     ? palette.text
@@ -6349,13 +6438,11 @@ export function createRemoteTvApp(
                 y={props.h - 8}
                 w={props.w - 6}
                 h={5}
-                rounded={2}
                 color="rgba(255,255,255,.25)"
               >
                 <TvView
                   w={(props.w - 6) * Math.max(0, Math.min(1, progress() ?? 0))}
                   h={5}
-                  rounded={2}
                   color={palette.accent}
                 />
               </TvView>
@@ -6371,7 +6458,6 @@ export function createRemoteTvApp(
                 y={(props.h - 72) / 2}
                 w={72}
                 h={72}
-                rounded={36}
                 color="rgba(255,255,255,.16)"
               >
                 <TvView
@@ -6442,7 +6528,6 @@ export function createRemoteTvApp(
                 }
                 w={numeric() ? 136 : 68}
                 h={numeric() ? 76 : 68}
-                rounded={12}
                 color={
                   key() === index() ? palette.text : "rgba(255,255,255,.1)"
                 }
@@ -6581,7 +6666,6 @@ export function createRemoteTvApp(
                 y={44}
                 w={44}
                 h={44}
-                rounded={12}
                 color={palette.accent}
               >
                 <Label
@@ -6609,7 +6693,6 @@ export function createRemoteTvApp(
                     y={38}
                     w={navLayout()[index()].w}
                     h={56}
-                    rounded={8}
                     color={
                       zone() === "nav" &&
                       column() === index() &&
@@ -6654,13 +6737,11 @@ export function createRemoteTvApp(
                         y={-2}
                         w={60}
                         h={60}
-                        rounded={30}
                         color="#212124"
                       />
                       <TvView
                         w={56}
                         h={56}
-                        rounded={28}
                         color="#212124"
                       >
                         <Label
@@ -6695,7 +6776,6 @@ export function createRemoteTvApp(
                             <TvView
                               w={56}
                               h={56}
-                              rounded={28}
                               src={imageSource(src())}
                               fit="cover"
                             />
@@ -6725,7 +6805,6 @@ export function createRemoteTvApp(
                         y={49}
                         w={navLayout()[index()].text}
                         h={3}
-                        rounded={2}
                         color={palette.text}
                       />
                     </Show>
@@ -6814,7 +6893,7 @@ export function createRemoteTvApp(
                     show={zone() !== "rows"}
                   >
                     <Show
-                      when={!isRokuUi && card().logo}
+                      when={card().logo}
                       fallback={
                         <DelayedTitle
                           title={card().title}
@@ -6888,7 +6967,6 @@ export function createRemoteTvApp(
                               <TvView
                                 w={16}
                                 h={4}
-                                rounded={2}
                                 color="rgba(255,255,255,.3)"
                               />
                             }
@@ -6918,7 +6996,7 @@ export function createRemoteTvApp(
                   y={shelfTitleY()}
                   transition={{
                     y: {
-                      duration: 450,
+                      duration: isRokuUi ? 0 : 450,
                       timingFunction: "cubic-bezier(.2,0,0,1)",
                     },
                   }}
@@ -7018,7 +7096,6 @@ export function createRemoteTvApp(
                                     y={y}
                                     w={4}
                                     h={i() === row() ? unit * 3 : unit}
-                                    rounded={2}
                                     color={
                                       i() === row()
                                         ? palette.text
@@ -7042,7 +7119,6 @@ export function createRemoteTvApp(
                   <>
                     <Show
                       when={
-                        !isRokuUi &&
                         value().episodes.length > 0 &&
                         ["episodes", "seasons", "recommendations"].includes(
                           zone(),
@@ -7058,25 +7134,6 @@ export function createRemoteTvApp(
                           title={value().item.title}
                         />
                       </TvView>
-                    </Show>
-                    <Show
-                      when={
-                        isRokuUi &&
-                        value().episodes.length > 0 &&
-                        ["episodes", "seasons", "recommendations"].includes(
-                          zone(),
-                        )
-                      }
-                    >
-                      <Label
-                        x={96}
-                        y={54}
-                        size={56}
-                        font="Onest700"
-                        maxwidth={760}
-                        maxlines={1}
-                        content={value().item.title}
-                      />
                     </Show>
                     <TvView
                       show={
@@ -7098,7 +7155,7 @@ export function createRemoteTvApp(
                     >
                       <TvView y={value().episodes.length ? 250 : 220}>
                         <Show
-                          when={!isRokuUi && value().item.logo}
+                          when={value().item.logo}
                           fallback={
                             <DelayedTitle
                               title={value().item.title}
@@ -7142,41 +7199,34 @@ export function createRemoteTvApp(
                       <Button
                         x={0}
                         y={value().episodes.length ? 648 : 668}
-                        w={detailPlayProgress() > 0 ? 420 : 260}
+                        w={260}
                         icon="play"
                         label={detailActionLabel()}
                         focused={zone() === "hero" && heroAction() === 0}
                       />
                       <Show when={detailPlayProgress() > 0}>
                         <Label
-                          x={detailRemainingX()}
-                          y={673}
-                          size={24}
+                          x={276}
+                          y={value().episodes.length ? 670 : 690}
+                          size={22}
                           font="Onest600"
-                          color={
-                            heroAction() === 0
-                              ? "rgba(17,17,19,.7)"
-                              : "rgba(244,242,238,.7)"
-                          }
+                          maxwidth={150}
+                          maxlines={1}
+                          color={palette.muted}
                           content={detailPlayRemaining()}
                         />
                         <TvView
-                          x={28}
-                          y={(value().episodes.length ? 648 : 668) + 56}
-                          w={364}
+                          x={0}
+                          y={(value().episodes.length ? 648 : 668) + 80}
+                          w={260}
                           h={4}
-                          rounded={2}
-                          color={
-                            heroAction() === 0
-                              ? "rgba(17,17,19,.2)"
-                              : "rgba(244,242,238,.2)"
-                          }
+                          color="rgba(244,242,238,.2)"
                         />
                         <TvView
-                          x={28}
-                          y={(value().episodes.length ? 648 : 668) + 56}
+                          x={0}
+                          y={(value().episodes.length ? 648 : 668) + 80}
                           w={
-                            364 *
+                            260 *
                             Math.max(
                               0,
                               Math.min(
@@ -7186,8 +7236,7 @@ export function createRemoteTvApp(
                             )
                           }
                           h={4}
-                          rounded={2}
-                          color={heroAction() === 0 ? "#111113" : palette.text}
+                          color={palette.text}
                         />
                       </Show>
                       <Button
@@ -7382,7 +7431,6 @@ export function createRemoteTvApp(
                       y={140}
                       w={index() === 0 ? 360 : 200}
                       h={64}
-                      rounded={32}
                       color={
                         zone() === "filters" && column() === index()
                           ? palette.text
@@ -7474,25 +7522,6 @@ export function createRemoteTvApp(
                   }
                   clipping={true}
                 >
-                  <Show
-                    when={
-                      screen() === "search" &&
-                      searchMediaPending() &&
-                      !page().cards.length
-                    }
-                  >
-                    <For each={[0, 1, 2, 3, 4]}>
-                      {(i) => (
-                        <TvView
-                          x={i * 228}
-                          w={212}
-                          h={318}
-                          rounded={10}
-                          color="rgba(255,255,255,.06)"
-                        />
-                      )}
-                    </For>
-                  </Show>
                   <KeyedFor
                     each={uniqueCards(page().cards).slice(
                       gridStart(),
@@ -7600,9 +7629,6 @@ export function createRemoteTvApp(
                   liveSpread() === "failed"
                 }
               >
-                <Show when={liveSpread() === "loading"}>
-                  <LiveSkeletons />
-                </Show>
                 <Show when={liveSpread() === "no-channels"}>
                   <LiveAnswer
                     headline={LIVE_EMPTY_COPY.noChannelsHeadline}
@@ -7621,7 +7647,7 @@ export function createRemoteTvApp(
                 </Show>
               </Show>
               <Show when={liveKeepsToday(liveSpread())}>
-              <TvView x={96} y={130} w={64} h={30} rounded={5} color="#FF5A4E">
+              <TvView x={96} y={130} w={64} h={30} color="#FF5A4E">
                 <Label
                   w={64}
                   centerY={15}
@@ -7703,7 +7729,6 @@ export function createRemoteTvApp(
                   y={120}
                   w={640}
                   h={360}
-                  rounded={12}
                   src={imageSource(art(), 1280)}
                   fit="cover"
                 >
@@ -7761,7 +7786,6 @@ export function createRemoteTvApp(
                       y={512}
                       w={width() + 6}
                       h={64}
-                      rounded={32}
                       color={
                         zone() === "live-groups" ? palette.text : "#2A2A2E"
                       }
@@ -7847,7 +7871,6 @@ export function createRemoteTvApp(
                       <TvView
                         w={300}
                         h={72}
-                        rounded={10}
                         color="rgba(255,255,255,.06)"
                       >
                         <Show when={channel.number}>
@@ -7881,7 +7904,6 @@ export function createRemoteTvApp(
                             <TvView
                               w={1400}
                               h={72}
-                              rounded={12}
                               color={
                                 i() + Math.max(0, guideRowStart()) ===
                                   column() && zone() === "content"
@@ -7936,7 +7958,6 @@ export function createRemoteTvApp(
                                     8,
                                 )}
                                 h={72}
-                                rounded={12}
                                 color={
                                   i() + Math.max(0, guideRowStart()) ===
                                     column() &&
@@ -8026,7 +8047,6 @@ export function createRemoteTvApp(
                     y={196 + i() * 80}
                     w={440}
                     h={72}
-                    rounded={12}
                     color={
                       settingsTab() === i() && zone() === "settings-nav"
                         ? palette.text
@@ -8084,7 +8104,6 @@ export function createRemoteTvApp(
                     y={220 + i() * 108}
                     w={1184}
                     h={96}
-                    rounded={12}
                     color={
                       zone() === "settings-content" &&
                       column() === i() + Math.max(0, column() - 5)
@@ -8128,7 +8147,6 @@ export function createRemoteTvApp(
                         centerY={48}
                         w={68}
                         h={38}
-                        rounded={19}
                         color={item.toggle ? palette.accent : "#494949"}
                       >
                         <TvView
@@ -8136,7 +8154,6 @@ export function createRemoteTvApp(
                           y={4}
                           w={30}
                           h={30}
-                          rounded={15}
                           color={item.toggle ? palette.bg : palette.text}
                         />
                       </TvView>
@@ -8150,7 +8167,6 @@ export function createRemoteTvApp(
                               centerY={48}
                               w={44}
                               h={44}
-                              rounded={22}
                               color={swatch}
                             >
                               <Show
@@ -8225,12 +8241,25 @@ export function createRemoteTvApp(
                 screen() === "player" &&
                 !overlay() &&
                 (showControls() ||
+                  seeking() ||
                   loading() ||
+                  snapshot()?.state === "buffering" ||
                   snapshot()?.state === "ended" ||
                   error())
               }
             >
               <TvView w={1920} h={1080} color="rgba(0,0,0,.35)" />
+              <Show when={seeking() || loading() || snapshot()?.state === "buffering"}>
+                <TvView w={1920} h={1080} color="rgba(0,0,0,.55)" />
+                <Label
+                  w={1920}
+                  centerY={500}
+                  align="center"
+                  size={34}
+                  font="Onest700"
+                  content={seeking() ? "Seeking…" : "Buffering…"}
+                />
+              </Show>
               <Label
                 x={96}
                 y={64}
@@ -8251,8 +8280,7 @@ export function createRemoteTvApp(
                   y={936}
                   w={1728}
                   h={8}
-                  rounded={4}
-                  color="rgba(255,255,255,.3)"
+                  color="rgba(255,255,255,.14)"
                 />
                 {/* The buffer needs its own node: a For created after the played
                     fill would append its quads over it. */}
@@ -8269,8 +8297,7 @@ export function createRemoteTvApp(
                         y={0}
                         w={1728 * segment.width}
                         h={8}
-                        rounded={4}
-                        color={palette.buffered}
+                        color="rgba(255,255,255,.42)"
                       />
                     )}
                   </For>
@@ -8287,7 +8314,6 @@ export function createRemoteTvApp(
                     )
                   }
                   h={8}
-                  rounded={4}
                   color={palette.accent}
                 />
                 <Label
@@ -8307,10 +8333,19 @@ export function createRemoteTvApp(
                   content={clock(snapshot()?.time.durationSeconds ?? 0)}
                 />
               </Show>
+              <Button
+                x={96}
+                y={846}
+                w={140}
+                h={56}
+                icon={snapshot()?.state === "playing" ? "pause" : "play"}
+                label={snapshot()?.state === "playing" ? "Pause" : "Play"}
+                focused={choice() === 0}
+              />
               <For each={playerButtons().slice(1)}>
                 {(button, index) => (
                   <Button
-                    x={button.id === "next" ? 1608 : 96 + index() * 240}
+                    x={button.id === "next" ? 1608 : 260 + index() * 240}
                     y={846}
                     w={button.id === "next" ? 216 : 228}
                     h={56}
@@ -8321,21 +8356,6 @@ export function createRemoteTvApp(
                 )}
               </For>
             </Show>
-            <PageSkeleton
-              screen={screen()}
-              loading={loading()}
-              hasContent={
-                screen() === "home"
-                  ? !!home()
-                  : screen() === "detail"
-                    ? !!detail()
-                    : screen() === "profiles"
-                      ? !!management()
-                      : screen() === "settings"
-                        ? settingsItems().length > 0
-                        : page().cards.length > 0
-              }
-            />
           </TvView>
           <Show when={overlay()}>
             {(modal) => (
@@ -8370,7 +8390,6 @@ export function createRemoteTvApp(
                     y={430}
                     w={700}
                     h={220}
-                    rounded={14}
                     color={palette.surface}
                   >
                     <Label
@@ -8462,7 +8481,6 @@ export function createRemoteTvApp(
                         ) + 6
                       }
                       h={56}
-                      rounded={28}
                       color={
                         sourceFilterFocus() && sourceFacet() === 0
                           ? palette.text
@@ -8536,7 +8554,6 @@ export function createRemoteTvApp(
                         ) + 6
                       }
                       h={56}
-                      rounded={28}
                       color={
                         sourceFilterFocus() && sourceFacet() === 1
                           ? palette.text
@@ -8628,7 +8645,6 @@ export function createRemoteTvApp(
                             y={300 + i() * 120}
                             w={800}
                             h={120}
-                            rounded={12}
                             color={rowFocused() ? palette.text : "#222222"}
                           >
                             <Label
@@ -8675,7 +8691,6 @@ export function createRemoteTvApp(
                                 y={14}
                                 w={136}
                                 h={30}
-                                rounded={6}
                                 color={
                                   rowFocused()
                                     ? "#111113"
@@ -8740,7 +8755,6 @@ export function createRemoteTvApp(
                                 y={42}
                                 w={28}
                                 h={28}
-                                rounded={14}
                                 color="#111113"
                               >
                                 <TvView
@@ -8773,7 +8787,6 @@ export function createRemoteTvApp(
                         y={170}
                         w={800}
                         h={560}
-                        rounded={20}
                         color={palette.surface}
                       >
                         <Label
@@ -8806,7 +8819,6 @@ export function createRemoteTvApp(
                                 y={84 + i() * 60}
                                 w={752}
                                 h={52}
-                                rounded={10}
                                 color={
                                   focused() ? palette.text : "#222222"
                                 }
@@ -8861,7 +8873,6 @@ export function createRemoteTvApp(
                         y={250}
                         w={800}
                         h={430}
-                        rounded={20}
                         color={palette.surface}
                       >
                         <Label
@@ -8894,7 +8905,6 @@ export function createRemoteTvApp(
                                 y={128 + index() * 76}
                                 w={752}
                                 h={64}
-                                rounded={10}
                                 color={focused() ? palette.text : "#222222"}
                               >
                                 <Label
@@ -9058,7 +9068,6 @@ export function createRemoteTvApp(
                           y={230 + i() * 104}
                           w={692}
                           h={88}
-                          rounded={12}
                           color={
                             i() + Math.max(0, choice() - 5) === choice()
                               ? palette.text
@@ -9115,7 +9124,6 @@ export function createRemoteTvApp(
                           y={220}
                           w={280}
                           h={280}
-                          rounded={28}
                           color={palette.surface}
                         >
                           <Show
@@ -9134,7 +9142,6 @@ export function createRemoteTvApp(
                             <TvView
                               w={280}
                               h={280}
-                              rounded={28}
                               src={avatar(profile().avatar_id)}
                               fit="cover"
                             />
@@ -9166,7 +9173,6 @@ export function createRemoteTvApp(
                               }
                               w={1184}
                               h={item.id === "delete" ? 80 : 96}
-                              rounded={16}
                               color={
                                 editor().items[choice()]?.id === item.id
                                   ? palette.text
@@ -9217,7 +9223,6 @@ export function createRemoteTvApp(
                     y={540}
                     w={1920}
                     h={540}
-                    rounded={24}
                     color={palette.surface}
                   >
                     <For
@@ -9251,7 +9256,6 @@ export function createRemoteTvApp(
                                 y={92 + i() * 70}
                                 w={520}
                                 h={64}
-                                rounded={12}
                                 color={
                                   c() === trackColumn() &&
                                   i() + Math.max(0, choice() - 4) === choice()
@@ -9305,7 +9309,6 @@ export function createRemoteTvApp(
                         y={150}
                         w={120}
                         h={120}
-                        rounded={24}
                         color={palette.surface}
                       >
                         <TvView
@@ -9334,7 +9337,6 @@ export function createRemoteTvApp(
                             y={380}
                             w={88}
                             h={104}
-                            rounded={14}
                             color={
                               i === text().length ? palette.text : "#3B3B3A"
                             }
@@ -9344,7 +9346,6 @@ export function createRemoteTvApp(
                               y={2}
                               w={84}
                               h={100}
-                              rounded={12}
                               color="#202020"
                             />
                             <Show when={i < text().length}>
@@ -9353,7 +9354,6 @@ export function createRemoteTvApp(
                                 y={41}
                                 w={22}
                                 h={22}
-                                rounded={11}
                                 color={palette.text}
                               />
                             </Show>
@@ -9394,7 +9394,6 @@ export function createRemoteTvApp(
                       y={195}
                       w={1728}
                       h={88}
-                      rounded={12}
                       color={palette.surface}
                     >
                       <Label
@@ -9425,7 +9424,6 @@ export function createRemoteTvApp(
               y={340}
               w={1120}
               h={350}
-              rounded={18}
               color={palette.surface}
             >
               <Label
@@ -9460,7 +9458,6 @@ export function createRemoteTvApp(
               y={960}
               w={800}
               h={72}
-              rounded={12}
               color={palette.surface}
             >
               <Label

@@ -136,7 +136,6 @@ function EmptyButton(props: {
       y={props.box.y}
       w={width()}
       h={props.box.h}
-      rounded={props.box.h / 2}
       color={props.focused ? palette.text : "rgba(255,255,255,.12)"}
     >
       <Label
@@ -312,7 +311,6 @@ export function LiveSkeletons() {
               y={row.title.y}
               w={row.title.w}
               h={row.title.h}
-              rounded={12}
               color={palette.surface}
             />
             <TvView
@@ -320,7 +318,6 @@ export function LiveSkeletons() {
               y={row.guide.y}
               w={row.guide.w}
               h={row.guide.h}
-              rounded={12}
               color={palette.surface}
             />
           </>

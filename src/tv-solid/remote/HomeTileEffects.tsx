@@ -110,10 +110,10 @@ export function TilePlay(props: { art: TilePlayArt }) {
     >
       <TvView w={72} h={72}>
         <Show when={blur()}>
-          {(pixels) => <TvView w={72} h={72} rounded={36} src={pixels()} />}
+          {(pixels) => <TvView w={72} h={72} src={pixels()} />}
         </Show>
       </TvView>
-      <TvView w={72} h={72} rounded={36} color="rgba(255,255,255,.16)" />
+      <TvView w={72} h={72} color="rgba(255,255,255,.16)" />
       <TvView
         x={24}
         y={22}

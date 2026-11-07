@@ -26,6 +26,7 @@ export const palette = {
 };
 const paths: Record<string, string> = {
   play: "M7 4.5v15a1 1 0 0 0 1.52.85l12-7.5a1 1 0 0 0 0-1.7l-12-7.5A1 1 0 0 0 7 4.5z",
+  pause: "M8 5v14M16 5v14",
   lock: "M6 10h12v11H6zM8 10V6a4 4 0 0 1 8 0v4M12 14v3",
   plus: "M12 5v14M5 12h14",
   info: "M12 16v-4M12 8h.01 M22 12a10 10 0 1 1-20 0 10 10 0 0 1 20 0z",
@@ -49,7 +50,7 @@ const cache = new Map<string, string>();
 export function outline(w:number,h:number,radius:number,width:number,color:string,opacity=1) {
   const key=`outline:${w}:${h}:${radius}:${width}:${color}:${opacity}`;
   let value=cache.get(key);
-  if(!value){value="data:image/svg+xml,"+encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" fill="none"><rect x="${width/2}" y="${width/2}" width="${w-width}" height="${h-width}" rx="${radius-width/2}" stroke="${color}" stroke-opacity="${opacity}" stroke-width="${width}"/></svg>`);cache.set(key,value);}
+  if(!value){value="data:image/svg+xml,"+encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" fill="none"><rect x="${width/2}" y="${width/2}" width="${w-width}" height="${h-width}" rx="0" stroke="${color}" stroke-opacity="${opacity}" stroke-width="${width}"/></svg>`);cache.set(key,value);}
   return value;
 }
 export function cardOutline(w: number, h: number, focused: boolean) {
@@ -59,8 +60,8 @@ export function cardOutline(w: number, h: number, focused: boolean) {
     value = "data:image/svg+xml," + encodeURIComponent(
       `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" fill="none">` +
       (focused
-        ? `<rect x="1.5" y="1.5" width="${w-3}" height="${h-3}" rx="8.5" stroke="white" stroke-width="3"/><rect x="4" y="4" width="${w-8}" height="${h-8}" rx="6" stroke="black" stroke-opacity=".35" stroke-width="2"/>`
-        : `<rect x=".5" y=".5" width="${w-1}" height="${h-1}" rx="9.5" stroke="white" stroke-opacity=".08"/>`) + '</svg>',
+        ? `<rect x="1.5" y="1.5" width="${w-3}" height="${h-3}" rx="0" stroke="white" stroke-width="3"/><rect x="4" y="4" width="${w-8}" height="${h-8}" rx="0" stroke="black" stroke-opacity=".35" stroke-width="2"/>`
+        : `<rect x=".5" y=".5" width="${w-1}" height="${h-1}" rx="0" stroke="white" stroke-opacity=".08"/>`) + '</svg>',
     );
     cache.set(key, value);
   }
@@ -174,11 +175,10 @@ export function Button(props: {
 }) {
   return (
     <TvView x={props.x} y={props.y}>
-    <Show when={props.shadow}><TvView x={-100} y={-100} w={(props.w??72)+200} h={(props.h??72)+200} src={buttonShadow(props.w??72,props.h??72,props.round||props.pill?(props.h??72)/2:12)} show={props.focused}/></Show>
+    <Show when={props.shadow}><TvView x={-100} y={-100} w={(props.w??72)+200} h={(props.h??72)+200} src={buttonShadow(props.w??72,props.h??72,0)} show={props.focused}/></Show>
     <TvView
       w={props.w ?? 72}
       h={props.h ?? 72}
-      rounded={props.round || props.pill ? (props.h ?? 72) / 2 : 12}
       color={props.focused ? palette.text : "rgba(255,255,255,.16)"}
       alpha={props.disabled ? 0.45 : 1}
     >
@@ -481,6 +481,33 @@ export function Logo(props: {
   /** Bottom-align the logo in a fixed box, as the Android TV hero does. */
   boxH?: number;
 }) {
+  if (typeof (globalThis as any).__SolidTVRokuRenderer !== "undefined") {
+    // SceneGraph can load the transparent wordmark directly. The browser
+    // loader below needs canvas pixels, which Roku cannot provide.
+    const width = () => Math.max(1, props.w ?? props.maxWidth ?? 800);
+    return (
+      <Show
+        when={props.src}
+        fallback={
+          <Label
+            size={props.size ?? 56}
+            font="Onest700"
+            maxwidth={width()}
+            maxlines={2}
+            content={props.title ?? ""}
+          />
+        }
+      >
+        <TvView
+          w={width()}
+          h={Math.max(1, props.h)}
+          src={imageSource(props.src, width(), Math.max(1, props.h), "inside")}
+          fit="contain"
+          logo
+        />
+      </Show>
+    );
+  }
   const key = () =>
     `${props.src}|${props.h}|${props.w ?? ""}|${props.maxWidth ?? 800}`;
   const [art, setArt] = createSignal<LogoPixels | undefined>(

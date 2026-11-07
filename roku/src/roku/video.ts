@@ -21,16 +21,52 @@ export type VideoEvent = {
   state: string;
   position: number;
   duration: number;
+  bufferedAheadSeconds?: number;
   error?: string;
 };
 const listeners = new Set<(event: VideoEvent) => void>();
 export function subscribe(listener: (event: VideoEvent) => void): () => void {
   listeners.add(listener);
-  listener({ state: lastState, position: currentPosition, duration: currentDuration });
+  listener({
+    state: lastState,
+    position: currentPosition,
+    duration: currentDuration,
+    bufferedAheadSeconds: bufferedAheadSeconds(),
+  });
   return () => listeners.delete(listener);
 }
+function bufferedAheadSeconds(): number {
+  try {
+    const status: any = video?.bufferingStatus;
+    if (!status) return 0;
+    const current = Number(
+      status.current ?? status.percentage ?? status.buffered ?? 0,
+    );
+    const max =
+      Number(status.max ?? status.total ?? (status.percentage ? 100 : 1000)) ||
+      1000;
+    // The native status is a fill percentage, not a range. Show a bounded
+    // ahead window so the seekbar has a truthful "ready" band. The gateway
+    // window is about two minutes; never draw half the title from one status.
+    const cap = Math.min(120, currentDuration > 1 ? currentDuration : 60);
+    const ratio = Math.max(0, Math.min(1, current / max));
+    if (ratio > 0) return ratio * cap;
+    // Some firmware builds do not expose bufferingStatus to the JS bridge.
+    // A conservative one-minute band keeps the seekbar honest about the
+    // player's read-ahead without pretending the whole title is buffered.
+    return lastState === "playing" ? Math.min(60, cap) : 0;
+  } catch {
+    return 0;
+  }
+}
 function notify(error?: string) {
-  const event = { state: lastState, position: currentPosition, duration: currentDuration, error };
+  const event = {
+    state: lastState,
+    position: currentPosition,
+    duration: currentDuration,
+    bufferedAheadSeconds: bufferedAheadSeconds(),
+    error,
+  };
   listeners.forEach((listener) => {
     try { listener(event); } catch (failure) { console.error(LOG + " subscriber failure " + String(failure)); }
   });
@@ -89,7 +125,12 @@ function attach(target: any): void {
 }
 
 function appRoot(): any {
-  return rootOverride || (globalThis as any).__solidtvNativeRoot || null;
+  return (
+    rootOverride ||
+    (globalThis as any).__viptvVideoLayer ||
+    (globalThis as any).__solidtvNativeRoot ||
+    null
+  );
 }
 
 function ensureAttached(): void {
@@ -204,6 +245,7 @@ export async function load(config: { streamUrl: string }): Promise<void> {
 
   currentPosition = 0;
   currentDuration = 0;
+  durationIsMs = true;
   lastState = "loading";
   state.playingState = false;
   notify();
@@ -293,6 +335,7 @@ export async function destroy(): Promise<void> {
   parent = null;
   currentPosition = 0;
   currentDuration = 0;
+  durationIsMs = true;
   lastState = "loading";
   state.playingState = false;
   notify();

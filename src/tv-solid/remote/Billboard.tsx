@@ -290,7 +290,6 @@ export function BillboardButton(props: {
             <TvView
               w={72}
               h={72}
-              rounded={36}
               color={props.focused ? palette.text : "rgba(255,255,255,.16)"}
             />
           }
@@ -324,7 +323,7 @@ export function HeroProgress(props: { started: number; running: boolean }) {
   return (
     <Show
       when={props.running}
-      fallback={<TvView w={48} h={4} rounded={2} color={palette.text} />}
+      fallback={<TvView w={48} h={4} color={palette.text} />}
     >
       <TvView w={48} h={4} color="#FFFFFF" shader={shader()} />
     </Show>

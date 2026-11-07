@@ -467,6 +467,7 @@ function visualNode(
         alpha: props.show === false ? 0 : (props.alpha ?? 1),
         fit: props.fit,
         modal: modalLayer,
+        logo: props.logo === true,
       });
       const update = () => {
         const current = node as any;

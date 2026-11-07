@@ -53,7 +53,6 @@ export function SearchInput(props: {
         y={140}
         w={520}
         h={72}
-        rounded={12}
         color="#212124"
       >
         <TvView x={20} y={22} w={28} h={28} src={icon("search", false, 2.2)} />
@@ -91,7 +90,6 @@ export function SearchInput(props: {
                 y={index() < 2 ? 0 : (1 + Math.floor((index() - 2) / 6)) * 76}
                 w={index() < 2 ? 254 : 80}
                 h={68}
-                rounded={10}
                 color={selected() ? palette.text : "#212124"}
               >
                 <Show

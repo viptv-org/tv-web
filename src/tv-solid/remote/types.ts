@@ -300,6 +300,12 @@ export interface PlaybackActions {
   subtitle_style: boolean;
   report_progress: boolean;
 }
+export interface PlaybackSegment {
+  kind: "intro" | "recap" | "credits";
+  start_ms: number;
+  end_ms: number;
+}
+
 export interface SourceReplacement {
   playback_id: string;
   observed_position: number;

@@ -127,6 +127,10 @@ type NativeRecord = {
   layer?: any;
   effect?: any;
   key?: string;
+  alpha?: number;
+  fitWidth?: number;
+  fitHeight?: number;
+  fitY?: number;
   sync: () => void;
 };
 
@@ -151,6 +155,10 @@ function ensureLayers() {
     const backdrop = renderer.createNode({ w: 1920, h: 1080, zIndex: 8000 });
     backdrop.parent = renderer.root;
     backdropLayer = backdrop.dom;
+    // The native Video plane belongs above the page background but below the
+    // visual/chrome/text layers. Putting it at the root tail made it paint
+    // over the player controls.
+    (globalThis as any).__viptvVideoLayer = backdropLayer;
     const backdropScrim = renderer.createNode({ w: 1920, h: 1080, zIndex: 8500 });
     backdropScrim.parent = renderer.root;
     backdropScrimLayer = backdropScrim.dom;
@@ -216,7 +224,11 @@ function syncHolder(record: NativeRecord) {
     holder.markTransform();
     holder.flush();
   }
-  if (holder.dom) setProp(holder.dom, "opacity", inheritedAlpha(node));
+  const alpha = inheritedAlpha(node);
+  if (record.alpha !== alpha) {
+    record.alpha = alpha;
+    if (holder.dom) setProp(holder.dom, "opacity", alpha);
+  }
 }
 
 function fontUri(family: string | undefined): string {
@@ -518,10 +530,37 @@ function iconSource(svg: string): { uri: string; color: string } | undefined {
       const key = String(effectiveSrc);
       if (record.key !== key) {
         record.key = key;
+        record.fitWidth = undefined;
+        record.fitHeight = undefined;
+        record.fitY = undefined;
         setProp(visual, "uri", key);
+        if (p.logo) {
+          // Poster scaleToFit centres the bitmap. Measure the loaded source
+          // once and left/bottom-align the fitted logo inside its hero box.
+          setProp(visual, "onLoadStatus", (status: any) => {
+            if (status !== "loaded" && status !== "ready" && status !== "3")
+              return;
+            const bitmapWidth = Number(visual.bitmapWidth || 0);
+            const bitmapHeight = Number(visual.bitmapHeight || 0);
+            if (!(bitmapWidth > 0 && bitmapHeight > 0)) return;
+            const fittedWidth = Math.min(
+              width,
+              height * (bitmapWidth / bitmapHeight),
+            );
+            const fittedHeight = fittedWidth * (bitmapHeight / bitmapWidth);
+            record.fitWidth = Math.max(1, Math.round(fittedWidth));
+            record.fitHeight = Math.max(1, Math.round(fittedHeight));
+            record.fitY = Math.max(0, Math.round(height - fittedHeight));
+            setProp(visual, "width", record.fitWidth);
+            setProp(visual, "height", record.fitHeight);
+            setProp(visual, "translation", [0, record.fitY]);
+          });
+        }
       }
-      setProp(visual, "width", width);
-      setProp(visual, "height", height);
+      setProp(visual, "width", record.fitWidth ?? width);
+      setProp(visual, "height", record.fitHeight ?? height);
+      if (p.logo)
+        setProp(visual, "translation", [0, record.fitY ?? 0]);
       setProp(visual, "opacity", Number(p.alpha ?? 1));
       setProp(visual, "blendColor", rokuColor(icon?.color ?? "#FFFFFF"));
     } else if (kind === "rect") {
@@ -544,8 +583,10 @@ function iconSource(svg: string): { uri: string; color: string } | undefined {
         );
       }
       setProp(visual, "color", rokuColor(p.color ?? "rgba(0,0,0,0)"));
-      setProp(visual, "width", width);
-      setProp(visual, "height", height);
+      setProp(visual, "width", record.fitWidth ?? width);
+      setProp(visual, "height", record.fitHeight ?? height);
+      if (p.logo)
+        setProp(visual, "translation", [0, record.fitY ?? 0]);
       setProp(visual, "opacity", Number(p.alpha ?? 1));
       if (borderWidth > 0) {
         if (!record.effect) {
@@ -584,7 +625,14 @@ function iconSource(svg: string): { uri: string; color: string } | undefined {
   if (node) removeRecord(node);
 };
 
+let lastOverlaySync = 0;
 (globalThis as any).__viptvSyncOverlays = () => {
+  const now =
+    typeof performance !== "undefined" && typeof performance.now === "function"
+      ? performance.now()
+      : Date.now();
+  if (now - lastOverlaySync < 32) return;
+  lastOverlaySync = now;
   nativeRecords.forEach((record) => {
     try {
       record.sync();

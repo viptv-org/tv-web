@@ -107,7 +107,6 @@ export function PairingScreen(props: {
         y={422.9}
         w={340}
         h={340}
-        rounded={20}
         color={props.qr ? "#FFFFFF" : "#212124"}
       >
         <Show when={props.qr}>
@@ -115,7 +114,7 @@ export function PairingScreen(props: {
         </Show>
       </TvView>
       <TvView x={959} y={250} w={2} h={560} color="rgba(255,255,255,.12)" />
-      <TvView x={930} y={500} w={60} h={60} rounded={30} color={palette.bg}>
+      <TvView x={930} y={500} w={60} h={60} color={palette.bg}>
         <TvView w={60} h={60} src={outline(60, 60, 30, 2, "#FFFFFF", 0.12)} />
         <Label
           w={60}
@@ -176,7 +175,6 @@ export function PairingScreen(props: {
         y={codeY()}
         w={640}
         h={120}
-        rounded={16}
         color="rgba(255,255,255,.08)"
       >
         <TvView
@@ -207,7 +205,6 @@ export function PairingScreen(props: {
           y={codeY() + 142}
           w={refreshWidth()}
           h={48}
-          rounded={10}
           color={props.focused ? palette.text : "rgba(255,255,255,.16)"}
         >
           <TvView
@@ -232,7 +229,6 @@ export function PairingScreen(props: {
         y={909}
         w={12}
         h={12}
-        rounded={6}
         color={palette.accent}
         alpha={1 - 0.65 * pulse()}
         scale={1 - 0.2 * pulse()}

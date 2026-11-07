@@ -59,7 +59,6 @@ function ProfileTile(props: {
       <TvView
         w={200}
         h={200}
-        rounded={28}
         clipping
         color={
           props.profile.id === "add"
@@ -105,7 +104,6 @@ function ProfileTile(props: {
             <TvView
               w={200}
               h={200}
-              rounded={28}
               src={imageSource(src())}
               fit="cover"
             />
@@ -200,7 +198,6 @@ export function ProfilesScreen(props: {
           y={780}
           w={300}
           h={72}
-          rounded={12}
           color={palette.text}
         >
           <Label
@@ -230,7 +227,6 @@ export function ProfilesScreen(props: {
           y={780}
           w={300}
           h={72}
-          rounded={12}
           color={
             props.zone === "profile-manage"
               ? palette.text

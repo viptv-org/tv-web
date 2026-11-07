@@ -39,7 +39,6 @@ function FilterPill(props: {
       y={0}
       w={width()}
       h={64}
-      rounded={32}
       color={props.focused ? palette.text : (props.color ?? "#2A2A2E")}
     >
       <Label
@@ -123,7 +122,6 @@ export function LibraryToolbar(props: {
           y={0}
           w={138}
           h={64}
-          rounded={32}
           color={props.focused && props.index === 2 ? palette.text : "rgba(0,0,0,0)"}
         >
           <TvView

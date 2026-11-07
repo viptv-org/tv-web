@@ -133,7 +133,8 @@ test("D-pad focus updates without network requests and restores after details", 
   expect(fixture.requests).toHaveLength(1);
   await page.keyboard.press("Enter");
   await expect(screen(page)).toHaveAttribute("data-tv-screen", "detail");
-  await page.keyboard.press("Escape");
+  await page.keyboard.press("Escape"); // Hide controls.
+  await page.keyboard.press("Escape"); // Leave playback.
   await expect(screen(page)).toHaveAttribute("data-tv-screen", "home");
   await expect(screen(page)).toHaveAttribute("data-tv-focus", before!);
 });
@@ -153,7 +154,8 @@ test("Play requests server selection and displays ranked sources", async ({
       .restart,
   ).toBe(false);
   expect(fixture.requests.some((r) => /\/v[23]\//.test(r.path))).toBe(false);
-  await page.keyboard.press("Escape");
+  await page.keyboard.press("Escape"); // Hide controls.
+  await page.keyboard.press("Escape"); // Leave playback.
   await expect(screen(page)).toHaveAttribute("data-tv-screen", "home");
 });
 test("catalogs and filters use the server control contract", async ({
@@ -291,7 +293,8 @@ test("leaving Search cancels its scheduled work without changing the next screen
   await pauseClock(page);
   await page.keyboard.type("test");
   await page.keyboard.press("Escape");
-  await page.keyboard.press("Escape");
+  await page.keyboard.press("Escape"); // Hide controls.
+  await page.keyboard.press("Escape"); // Leave playback.
   await expect(screen(page)).toHaveAttribute("data-tv-screen", "home");
   // The debounce that would issue the discover request has to elapse and still find nothing to do.
   await page.clock.runFor(200);
@@ -320,7 +323,8 @@ test("real HLS playback reports frames/progress and releases the server lease", 
   await expect
     .poll(() => fixture.requests.some((r) => r.path.endsWith("/first-frame")))
     .toBe(true);
-  await page.keyboard.press("Escape");
+  await page.keyboard.press("Escape"); // Hide controls.
+  await page.keyboard.press("Escape"); // Leave playback.
   await expect(screen(page)).toHaveAttribute("data-tv-screen", "home");
   await expect
     .poll(() =>
@@ -445,7 +449,8 @@ test("Back during source replacement cannot start another lease after release fi
       ),
     )
     .toBe(true);
-  await page.keyboard.press("Escape");
+  await page.keyboard.press("Escape"); // Hide controls.
+  await page.keyboard.press("Escape"); // Leave playback.
   await expect(screen(page)).toHaveAttribute("data-tv-screen", "home");
   await expect(screen(page)).toHaveAttribute("data-tv-ready", "true");
   // Nothing scheduled by the finished release may start another lease.
@@ -725,7 +730,8 @@ test("long add-on lists stay visible and profile activation uses a server intent
   await expect(screen(page)).toHaveAttribute("data-tv-ready", "true");
   await page.keyboard.press("Escape");
   await expect(screen(page)).toHaveAttribute("data-tv-focus", /^settings-nav:/);
-  await page.keyboard.press("Escape");
+  await page.keyboard.press("Escape"); // Hide controls.
+  await page.keyboard.press("Escape"); // Leave playback.
   await expect(screen(page)).toHaveAttribute("data-tv-screen", "home");
 });
 test("live favourites are confirmed by the server without entering VOD metadata flows", async ({
@@ -818,7 +824,8 @@ test("Home hero context actions cannot reuse a hidden catalog card", async ({
   await navigate(page, 2);
   await expect(screen(page)).toHaveAttribute("data-tv-ready", "true");
   await page.keyboard.press("Escape");
-  await page.keyboard.press("Escape");
+  await page.keyboard.press("Escape"); // Hide controls.
+  await page.keyboard.press("Escape"); // Leave playback.
   await expect(screen(page)).toHaveAttribute("data-tv-screen", "home");
   await page.keyboard.press("ContextMenu");
   await expect(screen(page)).toHaveAttribute("data-tv-overlay", "choices");

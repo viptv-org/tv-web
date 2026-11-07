@@ -97,7 +97,6 @@ export function CalendarBoard(props: {
               y={140}
               w={width()}
               h={64}
-              rounded={32}
               color={
                 index() === props.day
                   ? palette.text
@@ -159,7 +158,6 @@ export function CalendarBoard(props: {
               y={250 + index() * 128}
               w={1100}
               h={112}
-              rounded={12}
               color={focused() ? palette.text : "#222222"}
             >
               <Label
@@ -178,14 +176,12 @@ export function CalendarBoard(props: {
                 y={14}
                 w={56}
                 h={84}
-                rounded={8}
                 color={palette.surface}
               >
                 <Show when={entry.card.poster ?? entry.card.landscape}>
                   <TvView
                     w={56}
                     h={84}
-                    rounded={8}
                     src={imageSource(
                       entry.card.poster ?? entry.card.landscape,
                       168,
@@ -245,14 +241,12 @@ export function CalendarBoard(props: {
                 y={250}
                 w={580}
                 h={326}
-                rounded={12}
                 color={palette.surface}
               >
                 <Show when={entry().card.landscape ?? entry().card.poster}>
                   <TvView
                     w={580}
                     h={326}
-                    rounded={12}
                     src={imageSource(
                       entry().card.landscape ?? entry().card.poster,
                       1160,

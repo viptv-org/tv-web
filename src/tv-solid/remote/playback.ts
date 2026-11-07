@@ -144,10 +144,10 @@ export class RemotePlayback {
     };
   }
   get canReplaceSource() {
-    return !!(this.replacementObservation() ?? this.sourceRetry);
+    return !!(this.sourceRetry ?? this.replacementObservation());
   }
   async replaceSource(source: Source) {
-    const context = this.replacementObservation() ?? this.sourceRetry;
+    const context = this.sourceRetry ?? this.replacementObservation();
     if (!context)
       throw new Error("Source changes are unavailable for this playback.");
     await this.replaceWith(source, context);
@@ -358,26 +358,33 @@ export class RemotePlayback {
   ) {
     const intent = ++this.intentGeneration;
     if (!replacement) this.sourceRetry = undefined;
-    await this.stopCurrent(true);
-    if (intent !== this.intentGeneration)
-      throw new DOMException("Playback cancelled", "AbortError");
     this.failing = false;
-    const generation = ++this.generation,
-      scope = new AbortController();
-    this.operation = scope;
+    // Admit the replacement while the current picture is still playing. A
+    // gateway cut can take many seconds; stopping first left the viewer on a
+    // black screen for the whole admission.
+    const admitScope = new AbortController();
+    this.operation = admitScope;
     const lease = await this.api.admit(
       source,
       resume,
-      scope.signal,
+      admitScope.signal,
       position,
       selection,
       replacement,
       direct,
     );
-    if (generation !== this.generation) {
+    if (intent !== this.intentGeneration) {
       void this.api.release(`/api/playback/${segment(lease.id)}`);
       throw new DOMException("Playback cancelled", "AbortError");
     }
+    await this.stopCurrent(true);
+    if (intent !== this.intentGeneration) {
+      void this.api.release(`/api/playback/${segment(lease.id)}`);
+      throw new DOMException("Playback cancelled", "AbortError");
+    }
+    const generation = ++this.generation,
+      scope = new AbortController();
+    this.operation = scope;
     this.lease = lease;
     this.card = card;
     this.source = source;

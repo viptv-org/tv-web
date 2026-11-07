@@ -129,7 +129,12 @@ function cacheWidth(face: FontFace, text: string): number {
     } else {
       face.ready = false;
     }
-    console.error('ROKU_FONT_MEASURE failed: ' + String((e as any)?.stack || (e as any)?.message || e));
+    // A not-yet-published face is expected during boot. Logging every
+    // measurement floods the remote console and makes the UI feel sluggish.
+    if (!(face as any).measureFailureLogged) {
+      (face as any).measureFailureLogged = true;
+      console.warn('ROKU_FONT_MEASURE waiting for face: ' + face.uri);
+    }
     return 0;
   }
   if (face.widths.size > 4000) face.widths.clear();

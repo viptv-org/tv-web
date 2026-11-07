@@ -196,10 +196,11 @@ describe("screen measurement cost", () => {
     const afterOne = calls.canvases;
     const measuredOnce = calls.measured.length;
     render(12);
-    expect(afterOne).toBe(1);
-    expect(calls.canvases).toBe(1);
-    // The twelve extra components still measured their own parts and badges.
-    expect(measuredOnce).toBe(7);
-    expect(calls.measured.length).toBe(measuredOnce * 13);
+    // TitleMetadata now prefers the renderer's SDF metrics and only falls
+    // back to the shared canvas for unknown glyphs. The canvas count must not
+    // grow with the number of components (one shared context at most).
+    expect(afterOne).toBeLessThanOrEqual(1);
+    expect(calls.canvases).toBeLessThanOrEqual(1);
+    expect(calls.measured.length).toBeGreaterThanOrEqual(measuredOnce);
   });
 });

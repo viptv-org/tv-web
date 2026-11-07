@@ -58,16 +58,48 @@ export class RokuPlayer implements Player {
   private listeners = new Set<PlayerListener>();
   private latest: PlayerSnapshot = { ...IDLE_SNAPSHOT, sessionId: 1 };
   private detach: () => void;
+  private timelineOffset = 0;
+  private timelineDuration: number | null = null;
+  private seekTarget: number | null = null;
 
   constructor() {
     this.detach = nativeVideo.subscribe((event) => {
       const state = mapState(event.state);
+      const nativePosition = Number(event.position) || 0;
+      const nativeDuration = Number(event.duration) || 0;
+      let positionSeconds = this.timelineOffset + nativePosition;
+      const durationSeconds =
+        this.timelineDuration ??
+        (nativeDuration > 0 ? this.timelineOffset + nativeDuration : null);
+      // A native seek clears the decoder before the new position is reported.
+      // Hold the requested title time until the host acknowledges it.
+      if (this.seekTarget !== null) {
+        if (
+          (state === "playing" || state === "paused") &&
+          Math.abs(positionSeconds - this.seekTarget) <= 2.5
+        ) {
+          this.seekTarget = null;
+        } else {
+          positionSeconds = this.seekTarget;
+        }
+      }
+      const ahead = Math.max(0, Number(event.bufferedAheadSeconds) || 0);
+      const bufferedRanges =
+        ahead > 0 && durationSeconds
+          ? [
+              {
+                start: positionSeconds,
+                end: Math.min(durationSeconds, positionSeconds + ahead),
+              },
+            ]
+          : [];
       this.latest = {
         ...this.latest,
         state,
         time: {
-          positionSeconds: Number(event.position) || 0,
-          durationSeconds: Number(event.duration) > 0 ? Number(event.duration) : null,
+          positionSeconds,
+          durationSeconds,
+          bufferedRanges,
         },
         diagnostics:
           state === "playing"
@@ -106,14 +138,22 @@ export class RokuPlayer implements Player {
   }
 
   async open(request: OpenPlayerRequest): Promise<void> {
+    this.timelineOffset = Number(request.timelineOffsetSeconds) || 0;
+    this.timelineDuration =
+      Number(request.timelineDurationSeconds) > 0
+        ? Number(request.timelineDurationSeconds)
+        : null;
+    this.seekTarget = null;
     this.latest = {
       ...this.latest,
       state: "opening",
       kind: request.kind,
       error: null,
       time: {
-        positionSeconds: Number(request.startAtSeconds) || 0,
-        durationSeconds: request.timelineDurationSeconds ?? null,
+        positionSeconds:
+          this.timelineOffset + (Number(request.startAtSeconds) || 0),
+        durationSeconds: this.timelineDuration,
+        bufferedRanges: [],
       },
     };
     this.emit();
@@ -138,11 +178,24 @@ export class RokuPlayer implements Player {
   }
 
   async seek(positionSeconds: number): Promise<void> {
-    nativeVideo.seek(positionSeconds);
+    const target = Math.max(0, Number(positionSeconds) || 0);
+    this.seekTarget = target;
+    this.latest = {
+      ...this.latest,
+      time: {
+        ...this.latest.time,
+        positionSeconds: target,
+      },
+    };
+    this.emit();
+    nativeVideo.seek(Math.max(0, target - this.timelineOffset));
   }
 
   async stop(): Promise<void> {
     await nativeVideo.destroy();
+    this.timelineOffset = 0;
+    this.timelineDuration = null;
+    this.seekTarget = null;
     this.latest = { ...this.latest, state: "stopped", error: null };
     this.emit();
   }

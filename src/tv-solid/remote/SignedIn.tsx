@@ -44,10 +44,10 @@ export function SignedIn(props: {
         alpha={entered() ? 1 : 0}
         transition={motion(0)}
       >
-        <TvView x={876} w={168} h={168} rounded={84} color="#0E0E10">
+        <TvView x={876} w={168} h={168} color="#0E0E10">
           <Show when={avatar(profile()?.avatar_id)}>
             {(src) => (
-              <TvView w={168} h={168} rounded={84} src={src()} fit="cover" />
+              <TvView w={168} h={168} src={src()} fit="cover" />
             )}
           </Show>
           <Show when={!avatar(profile()?.avatar_id)}>
@@ -101,13 +101,11 @@ export function SignedIn(props: {
         y={700}
         w={200}
         h={4}
-        rounded={2}
         color="rgba(255,255,255,.12)"
       >
         <TvView
           w={entered() ? 200 : 0}
           h={4}
-          rounded={2}
           color={palette.text}
           transition={
             reduced

@@ -160,7 +160,6 @@ function Artwork(props: { frame: Frame; alpha: number; portrait: boolean }) {
           y={96}
           w={280}
           h={420}
-          rounded={12}
           src={props.frame.src}
           fit="cover"
           alpha={props.alpha}
@@ -184,6 +183,41 @@ export function BrowseBackdrop(props: {
   card?: Card | null;
   portrait?: boolean;
 }) {
+  if (typeof (globalThis as any).__SolidTVRokuRenderer !== "undefined") {
+    // SceneGraph gets the raw poster; the browser's ambient/masked canvas
+    // planes cannot be uploaded. Keep the packaged scrim for legibility.
+    const background = () =>
+      props.portrait
+        ? (props.card?.landscape ?? props.card?.poster)
+        : (props.card?.view?.preview?.background ??
+          props.card?.landscape ??
+          props.card?.poster);
+    return (
+      <TvView w={1920} h={1080} color={palette.bg}>
+        <Show when={background()}>
+          {(src) => (
+            <TvView
+              w={1920}
+              h={1080}
+              src={imageSource(src(), 1920)}
+              fit="cover"
+            />
+          )}
+        </Show>
+        <TvView w={1920} h={1080} src="pkg:/assets/hero-scrim.png" />
+        <Show when={props.portrait && props.card?.poster}>
+          <TvView
+            x={1520}
+            y={96}
+            w={280}
+            h={420}
+            src={imageSource(props.card!.poster!, 560)}
+            fit="cover"
+          />
+        </Show>
+      </TvView>
+    );
+  }
   const [frames, setFrames] = createSignal<Frame[]>([]),
     [visible, setVisible] = createSignal(true);
   let serial = 0;
