@@ -5,6 +5,7 @@ type NativeNode = {
   destroyed?: boolean;
   detachedVisualHolder?: boolean;
   nativeMotionRoot?: boolean;
+  nativeModal?: boolean;
 };
 
 export function motionRoot(node: NativeNode): NativeNode | undefined {
@@ -14,6 +15,14 @@ export function motionRoot(node: NativeNode): NativeNode | undefined {
     if (current.nativeMotionRoot) root = current;
     current = current.parentNode;
   }
+  return root;
+}
+
+/** A separate paint scope keeps each modal above the complete preceding one. */
+export function modalRoot(node: NativeNode): NativeNode | undefined {
+  if (!node.nativeModal) return undefined;
+  let root = node;
+  while (root.parentNode?.nativeModal) root = root.parentNode;
   return root;
 }
 

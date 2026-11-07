@@ -59,3 +59,15 @@ it("updates a moving layer group without resubmitting its stationary children", 
   expect(group).toHaveBeenCalledTimes(60);
   expect(image).not.toHaveBeenCalled();
 });
+
+it("separates modal paint scopes from a shared outer motion transform", async () => {
+  const { modalRoot } = await import("../../src/tv-solid/platform/native-sync");
+  const page = { nativeMotionRoot: true };
+  const panel = { parentNode: page, nativeModal: false };
+  const label = { parentNode: panel, nativeModal: true };
+  expect(modalRoot(label)).toBe(label);
+  panel.nativeModal = true;
+  expect(modalRoot(label)).toBe(panel);
+  const error = { parentNode: page, nativeModal: true };
+  expect(modalRoot(error)).toBe(error);
+});

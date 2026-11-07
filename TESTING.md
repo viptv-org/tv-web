@@ -3020,3 +3020,138 @@ are observed explicitly because SDK node handles do not mirror assigned fields.
 A final hardware trace reports render+swap p95 22.04 ms over 758 samples: the
 60 Hz render-work budget remains unmet. PERFORMANCE.md records methods and
 limitations. Browser and deterministic timing probes do not certify device FPS.
+
+# Roku playback and source qualification — 2026-11-07
+
+The final local gate passes TypeScript, 176 shared tests and 12 native-host tests,
+the production browser build and the native Roku package build. Native-host
+coverage includes decoder startup rejection, stale native callbacks, muted
+paused startup, caption-mode restoration and short HLS time units. Downloaded
+segments use the measured JS SDK `segStartTime` field in milliseconds, including
+string-valued segment durations; no buffer duration is inferred from a fill
+percentage. Read-only native timing statistics contain no URLs or credentials.
+
+The shared player now exposes server-authorized audio/subtitle selection even
+when the native adapter cannot switch original input tracks itself. The server
+replaces the delivery, retaining the title position and paused intent. Native
+WebVTT selection, caption styling and per-playback caption-mode restoration use
+SceneGraph effects. The native size picker offers the three supported sizes.
+Track labels identify languages before technical codec descriptions; selected
+rows use the packaged check icon. Controls retain square geometry. The timeline
+has distinct played/downloaded regions, a seek handle and a time-only draft
+preview; no unavailable thumbnail is fabricated. Modal paint scopes keep
+late-created backgrounds below their own labels and later errors above the
+preceding modal. Physical captures verify restored source-picker headings and
+filter text, the control layout and a visible downloaded band.
+
+Beta gateway qualification is separate from frontend publication. The managed
+beta service runs playback-gateway commit
+`af98cb49cf8fe78254c1ffece5285f362a100314`. Its workspace gate passes 282 tests
+(62 opt-in cases ignored), plus the explicitly executed real FFmpeg 9 fixture
+for disguised fragmented MP4 and an authenticated opaque playlist URL. The beta
+test account now uses the beta gateway; its old production connection remains
+disabled for rollback. Beta disables original gateway passthrough so compatible
+media is copied/remuxed into standard HLS, with transcoding only when needed.
+An isolated actual-source test reports video/audio copy and successfully decodes
+both. Production container identities, images, environment and mounts were
+compared with the pre-change snapshot and remain unchanged. Deployment status,
+log and beta health were checked after the managed update.
+
+Source results are deliberately narrower than whole-title playback claims:
+
+- Loki S1 E1: all 12 VIPTV Sources results were tried in gateway/direct modes.
+  Six CineWave files returned original ranged media and valid gateway HLS.
+  The image-named CineWave HLS manifests contain real fragmented MP4. The 1080p
+  source intermittently returned 404 for an early segment; the 720p source
+  returned 404 at segment 45 (3:00), and 40 of the first 90 segments failed a
+  prefix scan. Selected failures persisted during a slower no-cache retry.
+  Raw image-named HLS played video without audio on Roku and later failed.
+  These results do not establish reliable continuity for those returned URLs.
+- MobLand S1 E1 and Tulsa King S1 E1: both CineWave HLS qualities returned valid
+  segment prefixes at indices 0, 5, 15, 45, 75 and 120, covering sampled points
+  through about eight minutes for MobLand and 20 minutes for Tulsa King. Gateway output starts as standard MPEG-TS HLS. A
+  CineWave original file for MobLand also passed ranged/gateway checks.
+- Obsession, selected from beta's current Popular Movies catalogue: a CineWave
+  file passed ranged/gateway checks; among three additional CineWave HLS results,
+  one starts through the gateway and two still fail. Their source/extractor
+  failure is unresolved; they are not counted as decoder or whole-title passes.
+- VixSrc: fresh results start through the gateway for all three comparison
+  titles. Direct requests requiring headers/audio selection also use gateway
+  delivery. Earlier expired discovery IDs were re-resolved and excluded from
+  playback-failure conclusions. One CineJoy result on Loki now starts through
+  the protected-HLS path; another CineJoy result and FrameX remain unavailable.
+
+Physical qualification uses the TCL 50S435/C157X on Roku OS 16.0.4. Nocturne's
+CineWave HLS gateway delivery remained active for over 30 minutes with AAC audio
+and observed position advancement; the
+owner confirmed audible sound. Loki's CineWave AVC file was separately used for
+real track tests. An audio replacement while paused now produces native Pause
+with recognized H.264/AAC, rather than a closed decoder. Selecting the English
+text track produces native WebVTT; paused selection and resumed playback were
+observed. Subtitle visibility during dialogue still needs owner confirmation.
+Hardware video-plane screenshots cannot qualify the picture or caption text.
+The SDK loader/inspector stalled during diagnostics, including with the prior
+working package; a device restart recovered launch. This is recorded separately
+from app regression coverage.
+
+The six focused Chromium playback-authority cases pass for track focus/style,
+Live track observations, retained replacement intent, paused/playing media seeks
+and denied VOD controls. Two source-hint fixture failures reproduce at the
+preceding performance commit and remain separate. This is not a clean full
+Playwright run or complete device parity. Native Intro/Recap, buffering-triggered
+auto-hide, populated Calendar spacing and matched Android background metrics
+remain unqualified. The prior native render+swap p95 was 22.04 ms over 758
+samples; sustained 60 FPS is not certified by this work.
+
+A later owner retry exposed two further gateway issues. Healthy viewer renewals
+did not prevent the old output being retired by its cache watchdog: caption
+files accumulated after watched AV files were reclaimed. Caption prefix cleanup
+now uses the caption playlist's own timeline and the same consumed-time grace.
+A simulated 20-minute AV/VTT filesystem regression stays under the unchanged
+watchdog. The owner also reported an audio delay and errors when choosing
+subtitles. An API-only rapid track reproduction returned `input_capacity`
+because released jobs remained reserved for the 15-second reuse window. The
+gateway now reclaims fully released owned jobs under admission pressure, retaining
+quota until physical teardown. Confirming an already-selected client track is
+a no-op and never restarts the decoder.
+
+An actual-source decoded-content comparison measured about 0.8 seconds of picture
+shift after seeking with QSV H.264 decoding, although packet timestamps looked
+aligned. Selected English audio matched within 20 ms. Software H.264 decoding
+with QSV encoding removed the measured picture shift. Resumed H.264 transcodes
+use that hybrid path, with additional CPU decoding work; copy/remux and initial
+playback retain their paths. These API/media measurements do not establish
+physical TV lip-sync or visible subtitles. The TV was left alone after the owner
+requested API qualification before further hardware testing.
+
+Two isolated candidate rounds of five immediate actual-source track changes all
+return 201/ready under the original two-input quota. The final resumed SDH
+output's decoded eight-second prefix matches source picture content at the
+sampled frames (100 ms grid); English audio content differs by about 20 ms.
+
+The isolated accelerated caption-cache test also passes after consuming 600.14
+seconds of Loki media: 300 AV segments, 179 current-caption checks and nonempty
+WebVTT cues, with the session still ready. It takes 42.84 wall seconds; this is
+ten minutes of media consumption, not physical viewing time. The original cache
+watchdog remains enabled. Test viewer leases and temporary keys return 204 on
+cleanup.
+
+The managed beta deployment of that qualified revision completes with `done`
+status and HTTP 200 health. Its image/environment/mounts match the intended
+beta-only update; production container identities, images and configuration
+remain unchanged. A public beta TV-API run then passes five successive actual
+track selections (202 → ready), including successful English and SDH WebVTT
+cue retrieval and Off. One earlier harness request incorrectly combined a
+replacement observation with a nonzero top-level position; the server correctly
+rejected it. The corrected harness follows the shipped client's position=0
+replacement contract. Final test leases are released.
+
+After public API qualification, the final client package was sideloaded and
+paired against beta again. Loki S1 E1's CineWave AVC file starts, and selecting
+the normal English subtitle track returns to unobstructed playing state. Roku
+telemetry reports H.264, AAC and WebVTT, no error and advancing position. The
+stream is left playing for owner feedback; visible dialogue captions, physical
+lip-sync and a further long physical caption run remain unconfirmed. The SDK's
+sideload build bump is ephemeral and produces no tracked version-file change.
+The isolated candidate is stopped and the temporary diagnostic key is revoked;
+the account's scoped beta integration remains active.

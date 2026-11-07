@@ -10,6 +10,7 @@ import { createElement, insertNode, setProp, tmTransaction } from "@roku-sdk/sol
 
 export type WorkerRequest =
   | { op: "echo"; value: any }
+  | { op: "caption-mode" }
   | { op: "sleep"; ms: number }
   | { op: "json"; text: string }
   | { op: "fetch"; url: string; headers?: Record<string, string> }

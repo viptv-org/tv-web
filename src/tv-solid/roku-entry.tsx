@@ -16,8 +16,10 @@ import { RemoteTvApi, type SessionStore } from "./remote/api";
 import type { Tokens } from "./remote/types";
 import QRCode from "qrcode/lib/core/qrcode";
 import { createRokuPlayer } from "./platform/roku-player";
-import { NativeSync, motionRoot, opacityWithin } from "./platform/native-sync";
+import { applyCaptionAppearance, playbackStats } from "../../roku/src/roku/video";
+import { NativeSync, motionRoot, modalRoot, opacityWithin } from "./platform/native-sync";
 import { imageSource } from "./remote/image-source";
+import { modalPaintStack } from "./platform/modal-paint-stack";
 
 const STORE_KEY = "viptv-device:roku";
 const API_ORIGIN = "https://beta-viptv.syek.tech";
@@ -118,6 +120,8 @@ native.createShader = () => null;
 
 setRendererStart(native, performance.now());
 (globalThis as any).__viptvCreatePlayer = createRokuPlayer;
+(globalThis as any).__viptvApplyCaptionAppearance = applyCaptionAppearance;
+(globalThis as any).__viptvNativePlaybackStats = playbackStats;
 
 // The shared UI is drawn with SolidTV's renderer nodes, but the browser
 // renderer's text/image visuals are not SceneGraph nodes. This bridge turns
@@ -144,7 +148,7 @@ type NativeRecord = {
   sync: () => void;
 };
 
-type MotionGroup = { root: any; layer: any; holder: any; references: number };
+type MotionGroup = { root: any; layer: any; holder: any; references: number; key: any; paint?: (kind: string, child: any) => void };
 
 const nativeRecords = new Map<any, NativeRecord>();
 const nativeNow = () => performance.now();
@@ -175,30 +179,33 @@ function releaseMotion(record: NativeRecord) {
   if (!group || --group.references > 0) return;
   group.holder.destroy();
   const layers = motionGroups.get(group.root)!;
-  layers.delete(group.layer);
+  layers.delete(group.key);
   if (!layers.size) {
     motionGroups.delete(group.root);
     if (!nativeRecords.has(group.root)) nativeSync.remove(group.root);
   }
 }
 
-function adoptMotion(record: NativeRecord, root: any) {
-  if (record.motion?.root === root) return;
+function adoptMotion(record: NativeRecord, root: any, key = record.layer) {
+  if (!root && !record.motion) return;
+  if (record.motion?.root === root && record.motion?.key === key) return;
   const previous = record.motion;
   if (root) {
     let layers = motionGroups.get(root);
     if (!layers) motionGroups.set(root, layers = new Map());
-    let group = layers.get(record.layer);
+    let group = layers.get(key);
     if (!group) {
       const holder = holderAt(root, Number(root.w) || 1, Number(root.h) || 1);
       insertNode(record.layer, holder.dom, previous?.holder.dom ?? record.holder.dom);
-      group = { root, layer: record.layer, holder, references: 0 };
-      layers.set(record.layer, group);
+      group = { root, layer: record.layer, key, holder, references: 0,
+        paint: record.layer === modalLayer ? modalPaintStack(holder.dom, () => createElement("group"), insertNode) : undefined };
+      layers.set(key, group);
       registerSync(root);
       syncMotion(group);
     }
     group.references++;
-    insertNode(group.holder.dom, record.holder.dom);
+    if (group.paint) group.paint(record.kind, record.holder.dom);
+    else insertNode(group.holder.dom, record.holder.dom);
     releaseMotion(record);
     record.motion = group;
   } else {
@@ -288,8 +295,9 @@ function syncHolder(record: NativeRecord, inherited?: number) {
   const node = record.node;
   const holder = record.holder;
   if (!holder) return;
-  const root = motionRoot(node) as any;
-  adoptMotion(record, root);
+  const modal = record.layer === modalLayer ? modalRoot(node) : undefined;
+  const root = (motionRoot(node) ?? modal) as any;
+  adoptMotion(record, root, modal ?? record.layer);
   const x = Math.round((Number(node.absX || 0) - (root ? Number(root.absX) || 0 : 0)) * 1000) / 1000;
   const y = Math.round((Number(node.absY || 0) - (root ? Number(root.absY) || 0 : 0)) * 1000) / 1000;
   if (holder.x !== x || holder.y !== y) {
@@ -387,16 +395,31 @@ function fontFace(family: string | undefined, size: number): any {
   return font;
 }
 
+function moveLayer(record: NativeRecord, layer: any) {
+  if (record.layer === layer) return;
+  insertNode(layer, record.holder.dom);
+  releaseMotion(record);
+  record.layer = layer;
+  syncHolder(record);
+}
+
+function markModal(node: any, modal: boolean) {
+  if (!node || node.nativeModal === modal) return;
+  node.nativeModal = modal;
+  nativeSync.mark(node);
+}
+
 (globalThis as any).__viptvNativeText = (node: any, p: any) => {
+  markModal(node, p.modal === true);
   try {
     if (!node) return;
     ensureLayers();
     let record = nativeRecords.get(node);
+    const layer = p.modal === true ? modalLayer : labelLayer;
     if (!record || record.kind !== "label") {
       removeRecord(node);
       const label = node.claimVisual?.("label") ?? createElement("label");
       const holder = holderAt(node, 1, 1);
-      const layer = p.modal === true ? modalLayer : labelLayer;
       insertNode(layer, holder.dom);
       insertNode(holder.dom, label);
       record = { kind: "label", node, holder, visual: label, layer, sync: () => syncHolder(record!) };
@@ -404,6 +427,7 @@ function fontFace(family: string | undefined, size: number): any {
       registerSync(node);
       syncHolder(record);
     }
+    moveLayer(record, layer);
     record.ownAlpha = Number(p.alpha ?? 1);
     const label = record.visual;
     const size = Math.max(1, Math.round(Number(p.size) || 32));
@@ -575,6 +599,7 @@ function iconSource(svg: string): { uri: string; color: string } | undefined {
 }
 
 (globalThis as any).__viptvNativeVisual = (node: any, p: any) => {
+  markModal(node, p.modal === true);
   try {
     if (!node) return;
     ensureLayers();
@@ -606,28 +631,28 @@ function iconSource(svg: string): { uri: string; color: string } | undefined {
       return;
     }
     let record = nativeRecords.get(node);
+    const chrome = rawSrc === "pkg:/assets/topbar-scrim.png";
+    const heroScrim = rawSrc === "pkg:/assets/hero-scrim.png";
+    const fullScreenBackdrop =
+      kind === "poster" &&
+      width >= 1900 &&
+      height >= 1000 &&
+      !String(rawSrc).includes("welcome-");
+    const layer = modal
+      ? modalLayer
+      : chrome
+        ? chromeLayer
+        : heroScrim
+          ? backdropScrimLayer
+          : fullScreenBackdrop
+            ? backdropLayer
+            : fullScreenRect
+              ? backdropScrimLayer
+              : kind === "qr"
+                ? qrLayer
+                : visualLayer;
     if (!record || record.kind !== kind) {
       removeRecord(node);
-      const chrome = rawSrc === "pkg:/assets/topbar-scrim.png";
-      const heroScrim = rawSrc === "pkg:/assets/hero-scrim.png";
-      const fullScreenBackdrop =
-        kind === "poster" &&
-        width >= 1900 &&
-        height >= 1000 &&
-        !String(rawSrc).includes("welcome-");
-      const layer = modal
-        ? modalLayer
-        : chrome
-          ? chromeLayer
-          : heroScrim
-            ? backdropScrimLayer
-            : fullScreenBackdrop
-              ? backdropLayer
-              : fullScreenRect
-                ? backdropScrimLayer
-                : kind === "qr"
-                  ? qrLayer
-                  : visualLayer;
       const holder = holderAt(node, width, height);
       insertNode(layer, holder.dom);
       const type = kind === "poster" ? "poster" : kind === "qr" ? "group" : "rectangle";
@@ -639,6 +664,7 @@ function iconSource(svg: string): { uri: string; color: string } | undefined {
       if (kind === "poster") setProp(visual, "loadDisplayMode", p.fit === "contain" ? "scaleToFit" : p.fit === "cover" ? "scaleToZoom" : "scaleToFill");
       syncHolder(record);
     }
+    moveLayer(record, layer);
     record.ownAlpha = Number(p.alpha ?? 1);
     const visual = record.visual;
     if (kind === "qr") {

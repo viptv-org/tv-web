@@ -277,8 +277,8 @@ const KEY_TABLE: { [name: string]: RokuKeySpec } = {
   fwd: { key: 'FastForward', keyCode: 417 },
   fastforward: { key: 'FastForward', keyCode: 417 },
   instantreplay: { key: 'InstantReplay', keyCode: 10232 },
-  info: { key: 'm', keyCode: 77 },
-  options: { key: 'm', keyCode: 77 },
+  info: { key: 'ContextMenu', keyCode: 93 },
+  options: { key: 'ContextMenu', keyCode: 93 },
   home: { key: 'Home', keyCode: 36 },
   stop: { key: 'Stop', keyCode: 413 },
 };
@@ -289,7 +289,7 @@ let doc: any = null;
 let lastHandled = false;
 const keyTarget = new SimpleTarget();
 
-function specFor(key: string): RokuKeySpec {
+export function nativeKeySpec(key: string): RokuKeySpec {
   const raw = String(key || '');
   const lower = raw.toLowerCase();
   if (KEY_TABLE[lower] !== undefined) return KEY_TABLE[lower];
@@ -333,7 +333,7 @@ function makeKeyEvent(type: string, spec: RokuKeySpec, repeat: boolean): RokKeyb
  */
 export function dispatchNativeKey(key: string, press: boolean): boolean {
   if (!installed) installBrowserServices();
-  const spec = specFor(key);
+  const spec = nativeKeySpec(key);
   const id = spec.key || String(key);
   const repeat = press && heldKeys.has(id);
   if (press) heldKeys.add(id);

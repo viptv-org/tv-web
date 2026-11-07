@@ -24,9 +24,11 @@ afterEach(async () => {
   vi.unstubAllGlobals();
 });
 function setup() {
+  let snapshotListener: ((snapshot: any) => void) | undefined;
+  const failure = vi.fn();
   const player = {
     snapshot: { ...IDLE_SNAPSHOT }, capabilities: { platform: "html5" },
-    subscribe: vi.fn(() => () => {}), open: vi.fn(async () => {}),
+    subscribe: vi.fn((listener: any) => { snapshotListener = listener; return () => {}; }), open: vi.fn(async () => {}),
     play: vi.fn(async () => { player.snapshot = { ...player.snapshot, state: "playing" }; }),
     pause: vi.fn(async () => { player.snapshot = { ...player.snapshot, state: "paused" }; }),
     stop: vi.fn(async () => {}), dispose: vi.fn(async () => {}),
@@ -38,9 +40,9 @@ function setup() {
     release: vi.fn(async () => {}), serverNow: Date.now(),
   };
   const controller = new RemotePlayback(api as unknown as RemoteTvApi,
-    "web", document.createElement("video"), vi.fn(), vi.fn());
+    "web", document.createElement("video"), vi.fn(), failure);
   controllers.push(controller);
-  return { controller, player, api };
+  return { controller, player, api, failure, emit: () => snapshotListener?.(player.snapshot) };
 }
 
 describe("remote playback lease transitions", () => {
@@ -59,6 +61,69 @@ describe("remote playback lease transitions", () => {
     expect(paused ? player.pause : player.play).toHaveBeenCalledOnce();
     expect(paused ? player.play : player.pause).not.toHaveBeenCalled();
     expect(api.release).toHaveBeenCalledWith("/api/playback/1");
+  });
+
+  it.each([false, true])("server track replacement preserves paused=%s without native track APIs", async paused => {
+    const { controller, api, player } = setup();
+    await controller.start(card, { id: "source" }, false);
+    if (paused) await player.pause();
+    await controller.selectTrack("audio", 4);
+    expect(api.admit.mock.calls[1][4]).toEqual({ audio_track: 4 });
+    expect(api.admit.mock.calls[1][5]).toMatchObject({ playback_id: "1" });
+    expect(player.open).toHaveBeenLastCalledWith(expect.objectContaining({ paused }));
+    expect(player.snapshot.state).toBe(paused ? "paused" : "playing");
+    expect(api.release).toHaveBeenCalledWith("/api/playback/1");
+  });
+
+  it("carries server-selected subtitle language and explicit Off to the decoder", async () => {
+    const { controller, api, player } = setup();
+    api.admit.mockResolvedValueOnce({ ...lease("subtitles"), delivery: {
+      ...lease("subtitles").delivery!, subtitle_tracks: [
+        { input_index: 7, language: "eng", selected: true, selectable: true, supported: true },
+      ],
+    } });
+    await controller.start(card, { id: "source" }, false);
+    expect(player.open).toHaveBeenLastCalledWith(expect.objectContaining({ preferredSubtitleLanguage: "eng" }));
+    api.admit.mockResolvedValueOnce({ ...lease("off"), delivery: {
+      ...lease("off").delivery!, subtitle_tracks: [
+        { input_index: 7, language: "eng", selected: false, selectable: true, supported: true },
+      ],
+    } });
+    await controller.selectTrack("text", null);
+    expect(player.open).toHaveBeenLastCalledWith(expect.objectContaining({ textTrackId: null }));
+  });
+
+  it.each([false, true])("confirming current tracks never restarts playback with subtitles=%s", async subtitles => {
+    const { controller, api, player } = setup();
+    api.admit.mockResolvedValueOnce({ ...lease("current"), delivery: {
+      ...lease("current").delivery!, subtitles_supported: true,
+      audio_tracks: [{ input_index: 2, selected: true, selectable: true, supported: true }],
+      subtitle_tracks: [{ input_index: 4, selected: subtitles, selectable: true, supported: true }],
+    } });
+    await controller.start(card, { id: "source" }, false);
+    await controller.selectTrack("audio", 2);
+    await controller.selectTrack("text", subtitles ? 4 : null);
+    expect(api.admit).toHaveBeenCalledOnce();
+    expect(player.open).toHaveBeenCalledOnce();
+    expect(api.release).not.toHaveBeenCalled();
+  });
+
+  it("retries terminal playback failure with fresh discovery rather than a retired lease", async () => {
+    const { controller, player, api, failure, emit } = setup();
+    await controller.start(card, { id: "source" }, false);
+    player.snapshot = { ...player.snapshot, state: "error", error: { message: "Media failed" },
+      time: { ...player.snapshot.time, positionSeconds: 123 } } as typeof player.snapshot;
+    emit();await Promise.resolve();
+    expect(controller.canReplaceSource).toBe(false);
+    expect(failure).toHaveBeenCalledWith(expect.any(Error), 123);
+    expect(api.release).toHaveBeenCalledWith("/api/playback/1");
+  });
+  it("drops a replacement binding if admission succeeded but the new decoder failed", async () => {
+    const { controller, player } = setup();
+    await controller.start(card, { id: "source" }, false);
+    player.open.mockRejectedValueOnce(new Error("Decoder failed"));
+    await expect(controller.replaceSource({ id: "next" })).rejects.toThrow("Decoder failed");
+    expect(controller.canReplaceSource).toBe(false);
   });
 
   it("keeps the outgoing lease on replacement failure and uses the new lease on the next replacement", async () => {

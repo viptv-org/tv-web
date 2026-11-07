@@ -216,7 +216,7 @@ test("track focus follows server selection and confirmed subtitle size changes t
   await expect(screen(page)).toHaveAttribute("data-tv-overlay", "tracks");
   await expect(screen(page)).toHaveAttribute("data-tv-focus", /:1$/);
   await page.keyboard.press("ArrowRight");
-  await page.keyboard.press("ArrowDown");
+  await expect(screen(page)).toHaveAttribute("data-tv-focus", /:1$/);
   await page.keyboard.press("ArrowDown");
   await page.keyboard.press("Enter");
   await expect

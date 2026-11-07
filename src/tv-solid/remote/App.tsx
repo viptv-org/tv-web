@@ -135,6 +135,7 @@ import {
 } from "./TitleMetadata";
 import { BrowseBackdrop, BrowsePreview } from "./BrowsePreview";
 import { bufferedSegments } from "./playerTimeline";
+import { trackLabel } from "./track-label";
 import {
 
 
@@ -1082,7 +1083,7 @@ export function createRemoteTvApp(
       {
         id: "direct",
         label: "Direct play",
-        detail: "Try this source in the browser · no transcoder",
+        detail: "Try this source on this device · no transcoder",
       },
       {
         id: "gateway",
@@ -1343,12 +1344,14 @@ export function createRemoteTvApp(
       platform,
       document.getElementById("tv-video") as HTMLVideoElement,
       setSnapshot,
-      (e) => {
+      (e, position) => {
         // A failed source start belongs to the picker, which stays open and
         // marks the row. Only a player failure outside that window owns the
         // full-page recovery card.
         if (openingSource() || overlay()?.kind === "sources") return;
         fail(e);
+        const current = activeAction();
+        if (current) retry = () => void playIntent(current.card, true, false, activeChannel(), false, position);
         setShowControls(true);
       },
     );
@@ -1380,17 +1383,10 @@ export function createRemoteTvApp(
     }
     const playerButtons = createMemo(() => {
       snapshot();
-      // The browser's deferred engine has no capabilities until a session
-      // opens; touching it during first paint aborted startup.
-      let canTracks = false;
-      try {
-        const capabilities = player.player.capabilities;
-        canTracks =
-          !!capabilities.canSelectAudioTrack ||
-          !!capabilities.canSelectTextTrack;
-      } catch {
-        canTracks = false;
-      }
+      // These controls replace the server lease; native track APIs are not
+      // required. Only expose tracks the current server delivery can select.
+      const canTracks = player.tracks.audio.some(track => track.selectable && track.supported !== false)
+        || player.tracks.subtitlesSupported;
       return [
         {
           id:
@@ -1424,6 +1420,17 @@ export function createRemoteTvApp(
           : []),
       ];
     });
+    const playerTools = createMemo(() => {
+      let left = 280;
+      return playerButtons().slice(1).map(button => {
+        const width = button.id === "tracks" ? 304 : button.id === "next" ? 240 : 228;
+        const x = button.id === "next" ? 1584 : left;
+        if (button.id !== "next") left += width + 12;
+        return { ...button, x, width, icon: button.id === "episodes" ? "episodes" : button.id === "tracks" ? "audio" : button.id === "sources" ? "settings" : "chevron" };
+      });
+    });
+    const timelineFraction = () => Math.max(0, Math.min(1,
+      (seek() ?? snapshot()?.time.positionSeconds ?? 0) / (snapshot()?.time.durationSeconds || 1)));
     createEffect(() => {
       const count = playerButtons().length;
       if (screen() === "player" && !overlay() && choice() >= count)
@@ -1445,7 +1452,7 @@ export function createRemoteTvApp(
               )
               .map((track) => ({
                 id: `audio-${track.input_index}`,
-                label: track.title ?? track.language ?? "Audio",
+                label: trackLabel(track, "Audio"),
                 value: track.selected ? "✓" : "",
                 run: async () => {
                   await player.selectTrack("audio", track.input_index);
@@ -1478,7 +1485,7 @@ export function createRemoteTvApp(
                 )
                 .map((track) => ({
                   id: `text-${track.input_index}`,
-                  label: track.title ?? track.language ?? "Subtitle",
+                  label: trackLabel(track, "Subtitle"),
                   value: track.selected ? "✓" : "",
                   run: async () => {
                     await player.selectTrack("text", track.input_index);
@@ -1495,7 +1502,7 @@ export function createRemoteTvApp(
                     preferences()?.controls?.find(
                       (control) => control.id === "subtitle_font_scale",
                     )?.choices ?? []
-                  ).map((option) => ({
+                  ).filter(option => !isRokuUi || Number(option.value) <= 1.25).map((option) => ({
                     id: String(option.value),
                     label: option.label,
                     value:
@@ -4959,10 +4966,9 @@ export function createRemoteTvApp(
         }
         if (value.kind === "tracks") {
           if (dx) {
-            setTrackColumn((i) =>
-              Math.max(0, Math.min(value.columns.length - 1, i + dx)),
-            );
-            setChoice(0);
+            const column = Math.max(0, Math.min(value.columns.length - 1, trackColumn() + dx));
+            setTrackColumn(column);
+            setChoice(Math.max(0, value.columns[column]?.items.findIndex(item => item.value === "✓") ?? 0));
           } else {
             const items = value.columns[trackColumn()]?.items ?? [];
             setChoice((i) =>
@@ -6227,6 +6233,15 @@ export function createRemoteTvApp(
           ? override?.appearance
           : player.subtitleAppearance;
       const preferencesValue = preferences()?.preferences;
+      const nativeAppearance = (globalThis as any).__viptvApplyCaptionAppearance;
+      if (typeof nativeAppearance === "function") {
+        nativeAppearance({
+          font_scale: appearance?.font_scale ?? preferencesValue?.subtitle_font_scale ?? 1,
+          text_color: appearance?.text_color ?? preferencesValue?.subtitle_text_color ?? "#FFFFFF",
+          background_color: appearance?.background_color ?? preferencesValue?.subtitle_background_color ?? "#00000000",
+        });
+        return;
+      }
       let style = document.getElementById("tv-caption-style");
       if (!style) {
         style = document.createElement("style");
@@ -8479,20 +8494,24 @@ export function createRemoteTvApp(
                     1728 *
                     Math.min(
                       1,
-                      (seek() ?? snapshot()?.time.positionSeconds ?? 0) /
+                      (snapshot()?.time.positionSeconds ?? 0) /
                         (snapshot()?.time.durationSeconds || 1),
                     )
                   }
                   h={8}
                   color={palette.accent}
                 />
+                <TvView x={96 + 1728 * timelineFraction() - 6} y={930} w={12} h={20} color={palette.text} />
+                <Show when={seek() !== undefined}>
+                  <TvView x={Math.max(96, Math.min(1704, 96 + 1728 * timelineFraction() - 60))} y={878} w={120} h={44} color={palette.surface}>
+                    <Label centerY={22} w={120} align="center" size={22} font="Onest700" content={clock(seek() ?? 0)} />
+                  </TvView>
+                </Show>
                 <Label
                   x={96}
                   y={970}
                   size={22}
-                  content={clock(
-                    seek() ?? snapshot()?.time.positionSeconds ?? 0,
-                  )}
+                  content={clock(snapshot()?.time.positionSeconds ?? 0)}
                 />
                 <Label
                   x={1660}
@@ -8500,30 +8519,34 @@ export function createRemoteTvApp(
                   w={164}
                   align="right"
                   size={22}
-                  content={clock(snapshot()?.time.durationSeconds ?? 0)}
+                  content={`−${clock(Math.max(0, (snapshot()?.time.durationSeconds ?? 0) - (snapshot()?.time.positionSeconds ?? 0)))}`}
                 />
               </Show>
+              <Show when={seek() === undefined}>
               <Button
                 x={96}
                 y={846}
-                w={140}
+                w={160}
                 h={56}
                 icon={snapshot()?.state === "playing" ? "pause" : "play"}
                 label={snapshot()?.state === "playing" ? "Pause" : "Play"}
                 focused={choice() === 0}
               />
-              <For each={playerButtons().slice(1)}>
+              <For each={playerTools()}>
                 {(button, index) => (
                   <Button
-                    x={button.id === "next" ? 1608 : 260 + index() * 240}
+                    x={button.x}
                     y={846}
-                    w={button.id === "next" ? 216 : 228}
+                    w={button.width}
                     h={56}
                     label={button.label}
+                    icon={button.icon}
+                    iconSize={22}
                     focused={choice() === index() + 1}
                   />
                 )}
               </For>
+              </Show>
             </Show>
           </TvView>
           <Show when={overlay()}>
@@ -8785,6 +8808,8 @@ export function createRemoteTvApp(
                       size={22}
                       font="Onest700"
                       letterspacing={1.4}
+                      maxwidth={800}
+                      maxlines={1}
                       color={palette.muted}
                       content="BEST MATCHES"
                     />
@@ -9110,7 +9135,7 @@ export function createRemoteTvApp(
                           color={palette.muted}
                           maxwidth={752}
                           maxlines={2}
-                          content="Direct play tries the source in this browser first; if it cannot decode, the gateway is used instead."
+                          content="Direct play requires a compatible source. Choose Play with gateway if this device cannot play it."
                         />
                       </TvView>
                     </Show>
@@ -9432,18 +9457,9 @@ export function createRemoteTvApp(
                                     : "rgba(0,0,0,0)"
                                 }
                               >
-                                <Label
-                                  x={20}
-                                  centerY={32}
-                                  size={24}
-                                  content={item.value ?? ""}
-                                  color={
-                                    c() === trackColumn() &&
-                                    i() + Math.max(0, choice() - 4) === choice()
-                                      ? "#111113"
-                                      : palette.text
-                                  }
-                                />
+                                <Show when={item.value === "✓"} fallback={<Label x={20} centerY={32} size={24} content={item.value ?? ""} />}>
+                                  <TvView x={20} y={20} w={24} h={24} src={icon("check", c() === trackColumn() && i() + Math.max(0, choice() - 4) === choice())} />
+                                </Show>
                                 <Label
                                   x={60}
                                   centerY={32}

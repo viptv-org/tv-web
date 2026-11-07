@@ -61,6 +61,9 @@ export class RokuPlayer implements Player {
   private timelineOffset = 0;
   private timelineDuration: number | null = null;
   private seekTarget: number | null = null;
+  private openGeneration = 0;
+  private opening = false;
+  private openingFailure: Error | undefined;
 
   constructor() {
     this.detach = nativeVideo.subscribe((event) => {
@@ -83,16 +86,10 @@ export class RokuPlayer implements Player {
           positionSeconds = this.seekTarget;
         }
       }
-      const ahead = Math.max(0, Number(event.bufferedAheadSeconds) || 0);
-      const bufferedRanges =
-        ahead > 0 && durationSeconds
-          ? [
-              {
-                start: positionSeconds,
-                end: Math.min(durationSeconds, positionSeconds + ahead),
-              },
-            ]
-          : [];
+      const bufferedRanges = (event.bufferedRanges ?? []).map(range => ({
+        start: Math.max(0, this.timelineOffset + range.start),
+        end: Math.min(durationSeconds ?? Infinity, this.timelineOffset + range.end),
+      })).filter(range => range.end > range.start);
       this.latest = {
         ...this.latest,
         state,
@@ -114,6 +111,10 @@ export class RokuPlayer implements Player {
           ? { code: "unknown", message: String(event.error) }
           : null,
       };
+      if (this.opening && state === "error") {
+        this.openingFailure = new Error(event.error || "Roku could not open this source.");
+        return;
+      }
       this.emit();
     });
   }
@@ -138,6 +139,9 @@ export class RokuPlayer implements Player {
   }
 
   async open(request: OpenPlayerRequest): Promise<void> {
+    const generation = ++this.openGeneration;
+    this.opening = true;
+    this.openingFailure = undefined;
     this.timelineOffset = Number(request.timelineOffsetSeconds) || 0;
     this.timelineDuration =
       Number(request.timelineDurationSeconds) > 0
@@ -159,17 +163,50 @@ export class RokuPlayer implements Player {
     this.emit();
     try {
       await nativeVideo.init();
-      await nativeVideo.load({ streamUrl: request.url });
-    } catch (error: any) {
-      throw error;
+      await nativeVideo.load({
+        streamUrl: request.url,
+        paused: request.paused,
+        captionsEnabled: request.preferredSubtitleLanguage !== undefined && request.textTrackId !== null,
+      });
+      if (generation !== this.openGeneration)
+        throw new DOMException("Playback replaced", "AbortError");
+      if (this.openingFailure) throw this.openingFailure;
+    } finally {
+      if (generation === this.openGeneration) this.opening = false;
     }
-    if (request.kind !== "live" && request.startAtSeconds !== undefined)
-      nativeVideo.seek(Number(request.startAtSeconds) || 0);
+    if (request.kind !== "live" && Number(request.startAtSeconds) > 0)
+      nativeVideo.seek(Number(request.startAtSeconds));
     if (request.paused) nativeVideo.pause();
   }
 
   async play(): Promise<void> {
-    nativeVideo.play();
+    if (this.latest.state === "playing") return;
+    const generation = this.openGeneration;
+    this.opening = true;
+    this.openingFailure = undefined;
+    try {
+      await new Promise<void>((resolve, reject) => {
+        let settled = false;
+        let detach = () => {};
+        const finish = (error?: Error) => {
+          if (settled) return;
+          settled = true;
+          clearTimeout(timer);
+          detach();
+          if (error) reject(error); else resolve();
+        };
+        const timer = setTimeout(() => finish(new Error("Roku playback did not start.")), 15000);
+        detach = nativeVideo.subscribe(event => {
+          if (generation !== this.openGeneration) finish(new DOMException("Playback replaced", "AbortError"));
+          else if (event.state === "error") finish(new Error(event.error || "Roku could not decode this source."));
+          else if (event.state === "playing") finish();
+        });
+        if (settled) detach();
+        else nativeVideo.play();
+      });
+    } finally {
+      if (generation === this.openGeneration) this.opening = false;
+    }
   }
 
   async pause(): Promise<void> {
@@ -191,6 +228,9 @@ export class RokuPlayer implements Player {
   }
 
   async stop(): Promise<void> {
+    this.openGeneration++;
+    this.opening = false;
+    this.openingFailure = undefined;
     await nativeVideo.destroy();
     this.timelineOffset = 0;
     this.timelineDuration = null;

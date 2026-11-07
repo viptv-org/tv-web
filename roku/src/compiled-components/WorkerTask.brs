@@ -21,6 +21,9 @@ sub runWorker()
 
     if op = "echo" then
         response = { ok: true, error: "", result: request.value }
+    else if op = "caption-mode" then
+        info = CreateObject("roDeviceInfo")
+        response = { ok: true, error: "", result: info.GetCaptionsMode() }
     else if op = "sleep" then
         ms = 0
         if request.ms <> invalid then ms = Int(request.ms)

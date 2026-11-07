@@ -7,6 +7,29 @@
 
 import { createElement, insertNode, setProp, tmTransaction } from "@roku-sdk/solid";
 
+import { DownloadedSegments, type BufferedRange } from "./buffered-segments";
+
+import { nativeCaptionStyle, type CaptionAppearance } from "./caption-style";
+import { postRokuTask } from "./worker-task";
+
+let captionAppearance: CaptionAppearance = {};
+let appliedCaptionStyle = "";
+export function applyCaptionAppearance(appearance: CaptionAppearance): void {
+  captionAppearance = appearance;
+  const style = nativeCaptionStyle(appearance), key = JSON.stringify(style);
+  if (video && key !== appliedCaptionStyle) {
+    setProp(video, "captionStyle", style);
+    appliedCaptionStyle = key;
+  }
+}
+const downloads = new DownloadedSegments();
+let segmentEvents = 0;
+let lastSegment: (BufferedRange & { kind: number }) | null = null;
+/** Read-only decoder timing diagnostics. Contains no URLs or credentials. */
+export function playbackStats() {
+  return { state: lastState, position: currentPosition, duration: currentDuration,
+    segmentEvents, lastSegment, downloaded: downloads.ranges() };
+}
 const LOG = "ROKU_VIDEO";
 const WIDTH = 1920;
 const HEIGHT = 1080;
@@ -21,7 +44,7 @@ export type VideoEvent = {
   state: string;
   position: number;
   duration: number;
-  bufferedAheadSeconds?: number;
+  bufferedRanges?: BufferedRange[];
   error?: string;
 };
 const listeners = new Set<(event: VideoEvent) => void>();
@@ -31,40 +54,16 @@ export function subscribe(listener: (event: VideoEvent) => void): () => void {
     state: lastState,
     position: currentPosition,
     duration: currentDuration,
-    bufferedAheadSeconds: bufferedAheadSeconds(),
+    bufferedRanges: downloads.ranges().map(range => ({ ...range, start: Math.max(currentPosition, range.start) })).filter(range => range.end > range.start),
   });
   return () => listeners.delete(listener);
-}
-function bufferedAheadSeconds(): number {
-  try {
-    const status: any = video?.bufferingStatus;
-    if (!status) return 0;
-    const current = Number(
-      status.current ?? status.percentage ?? status.buffered ?? 0,
-    );
-    const max =
-      Number(status.max ?? status.total ?? (status.percentage ? 100 : 1000)) ||
-      1000;
-    // The native status is a fill percentage, not a range. Show a bounded
-    // ahead window so the seekbar has a truthful "ready" band. The gateway
-    // window is about two minutes; never draw half the title from one status.
-    const cap = Math.min(120, currentDuration > 1 ? currentDuration : 60);
-    const ratio = Math.max(0, Math.min(1, current / max));
-    if (ratio > 0) return ratio * cap;
-    // Some firmware builds do not expose bufferingStatus to the JS bridge.
-    // A conservative one-minute band keeps the seekbar honest about the
-    // player's read-ahead without pretending the whole title is buffered.
-    return lastState === "playing" ? Math.min(60, cap) : 0;
-  } catch {
-    return 0;
-  }
 }
 function notify(error?: string) {
   const event = {
     state: lastState,
     position: currentPosition,
     duration: currentDuration,
-    bufferedAheadSeconds: bufferedAheadSeconds(),
+    bufferedRanges: downloads.ranges().map(range => ({ ...range, start: Math.max(currentPosition, range.start) })).filter(range => range.end > range.start),
     error,
   };
   listeners.forEach((listener) => {
@@ -74,13 +73,16 @@ function notify(error?: string) {
 
 let video: any = null;
 let content: any = null;
+let captionsEnabled = false;
+let originalCaptionMode: string | undefined;
+let pauseOnStart = false;
+let warmingPaused = false;
 let parent: any = null;
 let rootOverride: any = null;
 let currentPosition = 0;
 let currentDuration = 0;
 let lastState = "none";
 let activeSession = false;
-let durationIsMs = true;
 let backdrop: any = null;
 let pendingAccept: (() => void) | null = null;
 
@@ -95,11 +97,13 @@ export function setVideoRoot(root: any): void {
 function toSeconds(value: any): number {
   const n = Number(value);
   if (!isFinite(n) || n < 0) return 0;
-  return durationIsMs ? n / 1000 : n;
+  return n / 1000;
 }
 
 function safe(handler: (value: any) => void) {
+  const owner = video;
   return (value: any) => {
+    if (video !== owner || !activeSession) return;
     try {
       handler(value);
     } catch (error) {
@@ -150,6 +154,8 @@ export async function init(element?: any): Promise<void> {
   }
 
   video = createElement("video");
+  appliedCaptionStyle = "";
+  applyCaptionAppearance(captionAppearance);
   content = createElement("contentNode");
   backdrop = createElement("rectangle");
   setProp(backdrop, "width", WIDTH);
@@ -167,14 +173,36 @@ export async function init(element?: any): Promise<void> {
   setProp(content, "url", "");
   setProp(video, "content", content);
   ensureAttached();
+  setProp(video, "onDownloadedSegment", safe((value: any) => {
+    segmentEvents++;
+    const range = downloads.observe(value);
+    lastSegment = range ? { ...range, kind: Number(value?.segType ?? value?.SegType) } : null;
+    notify();
+  }));
+  setProp(video, "onAvailableSubtitleTracks", safe((tracks: any) => {
+    if (!captionsEnabled || !Array.isArray(tracks)) return;
+    const name = tracks[0]?.TrackName ?? tracks[0]?.trackName;
+    if (typeof name === "string" && name) setProp(video, "subtitleTrack", name);
+  }));
 
   setProp(
     video,
     "onState",
     safe((value: any) => {
       lastState = String(value);
+      if (lastState === "playing" && pauseOnStart) {
+        pauseOnStart = false;
+        lastState = "buffering";
+        state.playingState = false;
+        setProp(video, "control", "pause");
+        return;
+      }
       state.playingState = lastState === "playing";
-      if (lastState === "buffering" || lastState === "playing" || lastState === "paused") accept();
+      if (lastState === "paused" && warmingPaused) {
+        warmingPaused = false;
+        setProp(video, "mute", false);
+      }
+      if ((!warmingPaused && (lastState === "buffering" || lastState === "playing")) || lastState === "paused") accept();
       if (lastState === "error") console.error(LOG + " state=error");
       notify();
     })
@@ -191,8 +219,6 @@ export async function init(element?: any): Promise<void> {
     video,
     "onDuration",
     safe((value: any) => {
-      const n = Number(value);
-      if (isFinite(n) && n > 0) durationIsMs = n > 10000;
       currentDuration = toSeconds(value);
       notify();
     })
@@ -228,7 +254,7 @@ export async function init(element?: any): Promise<void> {
   attach(target);
 }
 
-export async function load(config: { streamUrl: string }): Promise<void> {
+export async function load(config: { streamUrl: string; captionsEnabled?: boolean; paused?: boolean }): Promise<void> {
   const streamUrl = config && config.streamUrl;
   if (!streamUrl) {
     console.error(LOG + " load: missing streamUrl");
@@ -240,12 +266,28 @@ export async function load(config: { streamUrl: string }): Promise<void> {
   }
 
   ensureAttached();
+  const owner = video;
+  if (config.captionsEnabled && originalCaptionMode === undefined) {
+    let mode: string;
+    try {
+      mode = await postRokuTask<string>({ op: "caption-mode" }, { timeoutMs: 2500, parent: appRoot() }).result;
+    } catch (error) {
+      if (video !== owner) throw new DOMException("Playback replaced", "AbortError");
+      throw error;
+    }
+    if (video !== owner || !activeSession) throw new DOMException("Playback replaced", "AbortError");
+    if (!["Off", "On", "Instant replay", "When mute"].includes(mode))
+      throw new Error("Roku caption setting could not be read.");
+    originalCaptionMode = mode;
+  }
   // Stop the previous stream first, otherwise the node keeps the old manifest.
   setProp(video, "control", "stop");
 
+  downloads.clear();
+  segmentEvents = 0;
+  lastSegment = null;
   currentPosition = 0;
   currentDuration = 0;
-  durationIsMs = true;
   lastState = "loading";
   state.playingState = false;
   notify();
@@ -253,11 +295,27 @@ export async function load(config: { streamUrl: string }): Promise<void> {
   const accepted = new Promise<void>(resolve => {
     pendingAccept = resolve;
   });
-  // Assigning content starts manifest retrieval; playback is left to play().
+  captionsEnabled = config.captionsEnabled === true;
+  setProp(video, "suppressCaptions", !captionsEnabled);
+  if (captionsEnabled) setProp(video, "globalCaptionMode", "On");
+  else if (originalCaptionMode !== undefined) {
+    setProp(video, "globalCaptionMode", originalCaptionMode);
+    originalCaptionMode = undefined;
+  }
+  pauseOnStart = config.paused === true;
+  warmingPaused = pauseOnStart;
+  setProp(video, "autoplayAfterSeek", !pauseOnStart);
+  setProp(video, "mute", pauseOnStart);
   setProp(content, "url", streamUrl);
-  const timer: any = setTimeout(accept, ACCEPT_TIMEOUT_MS);
+  // Prebuffer immediately instead of waiting three seconds before the first
+  // play command. A paused replacement must initialize the decoder first.
+  setProp(video, "control", pauseOnStart ? "play" : "prebuffer");
+  const timer: any = setTimeout(accept, warmingPaused ? 15000 : ACCEPT_TIMEOUT_MS);
   await accepted;
   if (typeof clearTimeout === "function") clearTimeout(timer);
+  if (video !== owner || !activeSession) throw new DOMException("Playback replaced", "AbortError");
+  if (config.paused && lastState !== "paused" && lastState !== "error")
+    throw new Error("Roku did not acknowledge paused playback.");
 }
 
 export function play(): void {
@@ -280,12 +338,19 @@ export function pause(): void {
 }
 
 export function seek(seconds: number): void {
+  downloads.clear();
   if (!video) return;
   const target = typeof seconds === "number" && isFinite(seconds) && seconds > 0 ? seconds : 0;
   setProp(video, "seek", target);
 }
 
 export async function destroy(): Promise<void> {
+  downloads.clear();
+  pauseOnStart = false;
+  warmingPaused = false;
+  if (video && originalCaptionMode !== undefined)
+    setProp(video, "globalCaptionMode", originalCaptionMode);
+  originalCaptionMode = undefined;
   if (video) {
     // Clearing `control` starts a transaction, so the removal below is flushed.
     setProp(video, "control", "stop");
@@ -301,9 +366,11 @@ export async function destroy(): Promise<void> {
   video = null;
   content = null;
   parent = null;
+  downloads.clear();
+  segmentEvents = 0;
+  lastSegment = null;
   currentPosition = 0;
   currentDuration = 0;
-  durationIsMs = true;
   lastState = "loading";
   state.playingState = false;
   notify();

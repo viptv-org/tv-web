@@ -56,7 +56,7 @@ export class RemotePlayback {
     platform: string,
     video: HTMLVideoElement,
     private publish: (snapshot: PlayerSnapshot) => void,
-    private failure: (error: Error) => void,
+    private failure: (error: Error, position?: number) => void,
   ) {
     // AVPlay is a small SDK shim the platform needs from the first session, so
     // it stays in the boot graph. The HTML/HLS engine drags in hls.js (1450 KiB
@@ -167,18 +167,18 @@ export class RemotePlayback {
         undefined,
         selection,
         context.request,
+        false,
+        this.player.snapshot.state === "paused",
       );
       if (this.sourceRetry === context) this.sourceRetry = undefined;
     } catch (error) {
       if (
         this.sourceRetry === context &&
-        error instanceof RemoteError &&
-        [
-          "playback_replacement_invalid",
-          "playback_not_found",
-          "playback_expired",
-          "authorization_expired",
-        ].includes(error.code)
+        (this.lease?.id !== context.request.playback_id ||
+          (error instanceof RemoteError && [
+            "playback_replacement_invalid", "playback_not_found",
+            "playback_expired", "authorization_expired",
+          ].includes(error.code)))
       )
         this.sourceRetry = undefined;
       throw error;
@@ -195,6 +195,10 @@ export class RemotePlayback {
     if (!this.card || !this.source) return;
     if (!this.actions.tracks)
       throw new Error("Track selection is unavailable for this playback.");
+    const tracks = kind === "audio" ? this.tracks.audio : this.tracks.text;
+    if (tracks.some(track => track.selected && track.input_index === index) ||
+        (kind === "text" && index === null && this.tracks.subtitlesSupported &&
+          !tracks.some(track => track.selected))) return;
     const selection = {
       ...this.selection,
       ...(kind === "audio"
@@ -253,10 +257,13 @@ export class RemotePlayback {
   private fail(error: Error) {
     if (this.failing) return;
     this.failing = true;
-    this.sourceRetry = this.replacementObservation() ?? this.sourceRetry;
+    const position = this.player.snapshot.time.positionSeconds;
+    // A terminal decoder failure retires its lease. Only an admission failure
+    // with a still-live outgoing lease can retain a replacement binding.
+    this.sourceRetry = undefined;
     this.intentGeneration++;
     void this.stopCurrent(false).catch(() => {});
-    this.failure(error);
+    this.failure(error, Number.isFinite(position) ? Math.max(0, position) : undefined);
   }
   private schedule() {
     clearTimeout(this.heartbeat);
@@ -414,6 +421,13 @@ export class RemotePlayback {
         deliveryMode: delivery.kind === "direct" ? "direct" : "managed",
         deliveryFormat: delivery.format === "original" ? undefined : delivery.format,
         paused,
+        // The gateway publishes only the server-selected subtitle rendition.
+        // Language carries that presentation intent without passing input-track
+        // indices to a native output-track API.
+        preferredSubtitleLanguage: delivery.subtitle_tracks?.find(track => track.selected)?.language
+          ?? (delivery.subtitle_tracks?.some(track => track.selected) ? "und" : undefined),
+        ...(delivery.subtitle_tracks && !delivery.subtitle_tracks.some(track => track.selected)
+          ? { textTrackId: null } : {}),
       });
       if (generation !== this.generation)
         throw new DOMException("Playback cancelled", "AbortError");
