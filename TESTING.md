@@ -2955,3 +2955,50 @@ allowance is a host test budget, not an input-latency requirement.
 
 Reference-image parity is unmeasured. No physical Tizen, Vizio or webOS device,
 real provider, or deployment is qualified by these browser fixtures.
+
+# Shared Roku/browser playback and rendering sweep
+
+Validation on `feature/roku-tv-web`: all grouped TypeScript checks, 138 unit tests
+in 17 files using a single fork, pinned design/core/video integrity checks, the
+production browser build and the native Roku build pass. Roku output was built
+locally without console stripping, source maps or the SDK's separate typecheck.
+The final package was sideloaded successfully; no hosted deployment was made.
+
+Four controller regressions cover playing/paused seek intent, selected tracks,
+direct mode, outgoing lease retention on failed replacement, fresh replacement
+identity, admission cancellation and late-lease release. Chromium acceptance
+covers 29 scenarios across pairing, playback authority, Search and Settings:
+28 passed together, and the remaining Live explicit-selection case passed its
+focused rerun after selecting the non-best row explicitly. This is combined
+passing evidence, not a single clean 29-case run. Two wider Search scenarios
+(pending-query navigation and channel-only pagination) failed exploration and
+remain outside this passing set. The older Live empty/arrival fixtures still
+use fixed navigation indices; their exploratory failures are not a clean gate.
+Playback and Settings acceptance now locate navigation destinations by identity.
+
+Browser checks include paused/playing media-key seeks with repeat suppression,
+replacement failure retaining playback behind the picker, stale authorization
+fences, track controls, server pause/seek refusals, Settings before loading any
+sources, display preference writes, calibration, late-save focus and screen saver
+wake behavior. Beta-backed Chromium smoke separately reached Home, catalogues,
+Search, Live, My List, profiles, detail, sources and Settings. Real HLS decoded
+at 1920×1080 with advancing media time; the traversal reported no page errors.
+Calendar navigation was reached, but populated content and day-change layout
+were not qualified during that smoke.
+
+Physical Roku evidence is limited to the TCL 50S435/C157X on Roku OS 16.0.4:
+beta pairing/profile selection, Home artwork and labels, source selection,
+detail loading copy, Live guide rendering, Settings entry and tab changes.
+Private captures verify square surfaces and restored hero artwork/gradient
+visibility. Full-screen opaque page grounds are omitted from the scrim layer;
+translucent fills remain above backdrop/video, and modal fills keep their layer.
+Real HLS playback telemetry advanced, paused, and resumed after a paused FF seek;
+a playing FF seek also completed. Gateway-window clocks are distinct from the
+title clock shown by the app. Playback was stopped after the smoke.
+
+Hardware video-plane screenshots cannot qualify the picture or scrim darkness.
+Native Skip Intro/Recap, buffering-triggered auto-hide, forced error-card recovery,
+idle screen saver composition, populated Calendar spacing and matched Android
+background/reference-image measurements remain unverified. Browser fixture
+success is not hardware qualification for Roku, Tizen, Vizio or webOS. No device
+addresses, credentials or private captures are included in the repository.

@@ -131,6 +131,7 @@ type NativeRecord = {
   fitWidth?: number;
   fitHeight?: number;
   fitY?: number;
+  ownAlpha?: number;
   sync: () => void;
 };
 
@@ -224,10 +225,12 @@ function syncHolder(record: NativeRecord) {
     holder.markTransform();
     holder.flush();
   }
-  const alpha = inheritedAlpha(node);
-  if (record.alpha !== alpha) {
+  const alpha = inheritedAlpha(node) * (record.ownAlpha ?? 1);
+  if (record.alpha !== alpha || holder.alpha !== alpha) {
     record.alpha = alpha;
-    if (holder.dom) setProp(holder.dom, "opacity", alpha);
+    holder.alpha = alpha;
+    holder.markTransform();
+    holder.flush();
   }
 }
 
@@ -323,6 +326,7 @@ function fontFace(family: string | undefined, size: number): any {
       nativeRecords.set(node, record);
       syncHolder(record);
     }
+    record.ownAlpha = Number(p.alpha ?? 1);
     const label = record.visual;
     const size = Math.max(1, Math.round(Number(p.size) || 32));
     setProp(label, "font", fontFace(p.font, size));
@@ -406,9 +410,14 @@ function fontFace(family: string | undefined, size: number): any {
 function clearEffect(record: NativeRecord) {
   if (!record.effect) return;
   try {
-    tmTransaction.removeNode(record.visual, record.effect);
+    tmTransaction.removeNode(record.holder.dom, record.effect);
   } catch (error) {
     // Already removed.
+  }
+  try {
+    setProp(record.visual, "effect", null);
+  } catch (error) {
+    // Optional field on this firmware.
   }
   record.effect = undefined;
 }
@@ -452,6 +461,23 @@ function renderQr(record: NativeRecord, uri: string, width: number, height: numb
   }
 }
 
+function colorAlpha(value: any): number {
+  const raw = String(value ?? "");
+  if (!raw || raw === "transparent") return 0;
+  const rgba = /rgba?\(([^)]+)\)/.exec(raw);
+  if (rgba) {
+    const parts = rgba[1].split(",").map((part) => Number(part.trim()));
+    return parts.length === 4 ? Math.max(0, Math.min(1, parts[3])) : 1;
+  }
+  if (raw.startsWith("#")) {
+    const hex = raw.slice(1);
+    if (hex.length === 8)
+      return parseInt(hex.slice(6, 8), 16) / 255;
+    return 1;
+  }
+  return 1;
+}
+
 function iconSource(svg: string): { uri: string; color: string } | undefined {
   const name = /data-icon="([^"]+)"/.exec(svg)?.[1];
   if (!name) return undefined;
@@ -489,7 +515,11 @@ function iconSource(svg: string): { uri: string; color: string } | undefined {
       (typeof rawSrc === "string" && rawSrc.length > 0 && !rawSrc.startsWith("data:"));
     const kind: NativeRecord["kind"] = qr ? "qr" : poster ? "poster" : "rect";
     const modal = p.modal === true;
-    if (kind === "rect" && width >= 1900 && height >= 1000 && !modal) {
+    const fullScreenRect =
+      kind === "rect" && width >= 1900 && height >= 1000 && !modal;
+    const fillAlpha = colorAlpha(p.color) * (Number(p.alpha ?? 1) || 0);
+    // Opaque page grounds would cover the separately layered backdrop art.
+    if (fullScreenRect && (fillAlpha <= 0.001 || fillAlpha >= 0.999)) {
       removeRecord(node);
       return;
     }
@@ -511,9 +541,11 @@ function iconSource(svg: string): { uri: string; color: string } | undefined {
             ? backdropScrimLayer
             : fullScreenBackdrop
               ? backdropLayer
-              : kind === "qr"
-                ? qrLayer
-                : visualLayer;
+              : fullScreenRect
+                ? backdropScrimLayer
+                : kind === "qr"
+                  ? qrLayer
+                  : visualLayer;
       const holder = holderAt(node, width, height);
       insertNode(layer, holder.dom);
       const visual = createElement(kind === "poster" ? "poster" : kind === "qr" ? "group" : "rectangle");
@@ -523,6 +555,7 @@ function iconSource(svg: string): { uri: string; color: string } | undefined {
       if (kind === "poster") setProp(visual, "loadDisplayMode", p.fit === "contain" ? "scaleToFit" : p.fit === "cover" ? "scaleToZoom" : "scaleToFill");
       syncHolder(record);
     }
+    record.ownAlpha = Number(p.alpha ?? 1);
     const visual = record.visual;
     if (kind === "qr") {
       renderQr(record, String(rawSrc), width, height);
@@ -561,7 +594,6 @@ function iconSource(svg: string): { uri: string; color: string } | undefined {
       setProp(visual, "height", record.fitHeight ?? height);
       if (p.logo)
         setProp(visual, "translation", [0, record.fitY ?? 0]);
-      setProp(visual, "opacity", Number(p.alpha ?? 1));
       setProp(visual, "blendColor", rokuColor(icon?.color ?? "#FFFFFF"));
     } else if (kind === "rect") {
       let borderWidth = 0;
@@ -581,7 +613,6 @@ function iconSource(svg: string): { uri: string; color: string } | undefined {
       setProp(visual, "height", record.fitHeight ?? height);
       if (p.logo)
         setProp(visual, "translation", [0, record.fitY ?? 0]);
-      setProp(visual, "opacity", Number(p.alpha ?? 1));
       if (borderWidth > 0) {
         if (!record.effect) {
           record.effect = createElement("effect");

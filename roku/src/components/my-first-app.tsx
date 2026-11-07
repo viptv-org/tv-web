@@ -7,7 +7,6 @@ import { createEffect } from 'solid-js';
 import { SceneGraphRenderer } from '../roku/renderer';
 import { installBrowserServices, dispatchNativeKey } from '../roku/browser-services';
 import { loadBundledFonts, loadFace, measureWrapText, resolveFontUri } from '../roku/fonts';
-import { handleMediaKey } from '../roku/video';
 import { postRokuTask } from '../roku/worker-task';
 
 // Replaced by the host build with the shared demo entry point. Keeping it as
@@ -129,7 +128,6 @@ export default defineAnchorNode(
         handleAllKeys
         gainFocus
         onKeyEvent={({ key, press }: any) => {
-          if (press && handleMediaKey(key)) return true;
           return dispatchNativeKey(key, press);
         }}
       >

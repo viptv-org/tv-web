@@ -163,10 +163,9 @@ export class RokuPlayer implements Player {
     } catch (error: any) {
       throw error;
     }
-    if (request.startAtSeconds !== undefined)
+    if (request.kind !== "live" && request.startAtSeconds !== undefined)
       nativeVideo.seek(Number(request.startAtSeconds) || 0);
     if (request.paused) nativeVideo.pause();
-    else nativeVideo.play();
   }
 
   async play(): Promise<void> {

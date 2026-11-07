@@ -28,6 +28,7 @@ export class RemotePlayback {
   private lease?: Lease;
   private card?: Card;
   private source?: Source;
+  private directMode = false;
   private sourceRetry?: { card: Card; request: SourceReplacement };
   private heartbeat?: ReturnType<typeof setTimeout>;
   private expiry?: ReturnType<typeof setTimeout>;
@@ -167,6 +168,7 @@ export class RemotePlayback {
         selection,
         context.request,
       );
+      if (this.sourceRetry === context) this.sourceRetry = undefined;
     } catch (error) {
       if (
         this.sourceRetry === context &&
@@ -355,13 +357,17 @@ export class RemotePlayback {
     selection: typeof this.selection = {},
     replacement?: SourceReplacement,
     direct = false,
+    paused = false,
   ) {
+    const directMode = direct || (replacement ? this.directMode : false);
     const intent = ++this.intentGeneration;
     if (!replacement) this.sourceRetry = undefined;
     this.failing = false;
     // Admit the replacement while the current picture is still playing. A
     // gateway cut can take many seconds; stopping first left the viewer on a
     // black screen for the whole admission.
+    // A new start supersedes any admission still polling for a previous one.
+    this.operation?.abort();
     const admitScope = new AbortController();
     this.operation = admitScope;
     const lease = await this.api.admit(
@@ -371,7 +377,7 @@ export class RemotePlayback {
       position,
       selection,
       replacement,
-      direct,
+      directMode,
     );
     if (intent !== this.intentGeneration) {
       void this.api.release(`/api/playback/${segment(lease.id)}`);
@@ -389,6 +395,7 @@ export class RemotePlayback {
     this.card = card;
     this.source = source;
     this.selection = selection;
+    this.directMode = directMode;
     this.sequence = 0;
     this.first = false;
     const delivery = lease.delivery!;
@@ -406,10 +413,12 @@ export class RemotePlayback {
         timelineDurationSeconds: delivery.duration,
         deliveryMode: delivery.kind === "direct" ? "direct" : "managed",
         deliveryFormat: delivery.format === "original" ? undefined : delivery.format,
+        paused,
       });
       if (generation !== this.generation)
         throw new DOMException("Playback cancelled", "AbortError");
-      await this.player.play();
+      if (paused) await this.player.pause();
+      else await this.player.play();
       if (generation !== this.generation)
         throw new DOMException("Playback cancelled", "AbortError");
     } catch (error) {
@@ -417,9 +426,29 @@ export class RemotePlayback {
       throw error;
     }
   }
+  /** Seek without losing the current track selection, direct-play mode, or
+   * paused intent. */
+  async seek(
+    positionSeconds: number,
+    paused = this.player.snapshot.state !== "playing",
+  ): Promise<void> {
+    if (!this.lease || !this.card || !this.source) return;
+    await this.start(
+      this.card,
+      this.source,
+      false,
+      positionSeconds,
+      this.selection,
+      undefined,
+      this.directMode,
+      paused,
+    );
+  }
+
   async stop() {
     this.intentGeneration++;
     this.sourceRetry = undefined;
+    this.directMode = false;
     await this.stopCurrent(false);
   }
   private async stopCurrent(waitForControl: boolean) {

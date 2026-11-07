@@ -260,7 +260,7 @@ export function CalendarBoard(props: {
               />
               <Label
                 x={1292}
-                y={690}
+                y={708}
                 size={24}
                 lineheight={1.45}
                 maxwidth={580}
@@ -276,7 +276,7 @@ export function CalendarBoard(props: {
               />
               <Button
                 x={1292}
-                y={806}
+                y={858}
                 w={320}
                 h={64}
                 icon="play"
@@ -286,7 +286,7 @@ export function CalendarBoard(props: {
               />
               <Label
                 x={1292}
-                y={892}
+                y={940}
                 size={22}
                 color={palette.muted}
                 content={`Data from ${

@@ -1043,7 +1043,7 @@ export function createRemoteTvApp(
       const filter = sourceProviderFilter();
       if (filter && !sources().some((source) => providerLabel(source) === filter))
         setSourceProviderFilter(undefined);
-      if (choice() >= visibleSources().length)
+      if (overlay()?.kind === "sources" && choice() >= visibleSources().length)
         setChoice(Math.max(0, visibleSources().length - 1));
     });
     const qualityMenuOptions = createMemo<SourceMenuOption[]>(() => [
@@ -1688,6 +1688,7 @@ export function createRemoteTvApp(
         setPrograms({});
         setGuideInfo({});
         setLiveFavorites(undefined);
+        setLiveIdentity(undefined);
         setManagement(undefined);
         setNavigation(undefined);
         setAccountEmail("");
@@ -2852,6 +2853,12 @@ export function createRemoteTvApp(
         updateSearch(search(), true);
     }
     async function back() {
+      // The error card is painted above any open overlay and blocks movement;
+      // Back must dismiss it first, exactly like OK retries it.
+      if (error()) {
+        setError("");
+        return;
+      }
       if (sourceActions()) {
         setSourceActions(false);
         return;
@@ -2890,6 +2897,7 @@ export function createRemoteTvApp(
         return;
       }
       if (screen() === "player") {
+        if (seeking()) return;
         if (seek() !== undefined) {
           setSeek(undefined);
           return;
@@ -3832,6 +3840,7 @@ export function createRemoteTvApp(
       setShowControls(true);
       setChoice(0);
       setSourceFailure("");
+      setPlaybackSegments([]);
       // The drawer stays up while the chosen stream opens, so its status line
       // reports the contract's `Opening stream…` from the player's real
       // preparation instead of a timer, and a second press cannot start a
@@ -3876,8 +3885,13 @@ export function createRemoteTvApp(
         setLoading(false);
         void refreshPlaybackSegments();
         hideControls();
-      } catch {
-        await player.stop().catch(() => {});
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError")
+          throw error;
+        // A replacement admission failure leaves the outgoing lease alive.
+        // Keep it (and sourceRetry) so the open picker can try another source.
+        if (!replacingSource() || !player.leaseId)
+          await player.stop().catch(() => {});
         setLoading(false);
         setError("");
         setPlaybackError("");
@@ -3885,7 +3899,7 @@ export function createRemoteTvApp(
         // Keep the picker over the page that requested the stream, exactly as
         // the TV drawer does, and mark the row instead of dead-ending in the
         // player's full-screen failure card.
-        if (returnScreen) {
+        if (returnScreen && !player.leaseId) {
           setScreen(returnScreen);
           setZone(returnFocus.zone);
           setColumn(returnFocus.column);
@@ -3913,6 +3927,20 @@ export function createRemoteTvApp(
           setShowControls(false);
       }, 5000);
     }
+    // A timer armed during buffering used to give up and never re-arm. Re-arm
+    // on every transition back to playing so chrome always clears itself.
+    createEffect(() => {
+      const state = snapshot()?.state;
+      if (
+        screen() === "player" &&
+        !overlay() &&
+        state === "playing" &&
+        !seeking() &&
+        !loading() &&
+        !error()
+      )
+        hideControls();
+    });
     async function toggleSaved(card: Card) {
       await run(async () => {
         const key = cardKey(card);
@@ -4162,6 +4190,7 @@ export function createRemoteTvApp(
     });
     async function loadSettings(tab: number, signal: AbortSignal) {
       if (signal.aborted) return;
+      retry = () => void loadSettings(tab, scope.signal).catch(fail);
       settingsScope?.abort();
       settingsScope = new AbortController();
       signal = settingsScope.signal;
@@ -4542,7 +4571,10 @@ export function createRemoteTvApp(
               });
               closeOverlay();
               await refreshProfiles();
-              await loadSettings(6, scope.signal);
+              await loadSettings(
+                settingsTabIndex("Parental controls"),
+                scope.signal,
+              );
             },
           },
           {
@@ -4668,7 +4700,10 @@ export function createRemoteTvApp(
                   configuration: draft,
                 });
                 closeOverlay();
-                await loadSettings(4, scope.signal);
+                await loadSettings(
+                  settingsTabIndex("Source integrations"),
+                  scope.signal,
+                );
               },
             },
             ...(schema.connection_id
@@ -4693,7 +4728,10 @@ export function createRemoteTvApp(
                                 "DELETE",
                               );
                               closeOverlay();
-                              await loadSettings(4, scope.signal);
+                              await loadSettings(
+                                settingsTabIndex("Source integrations"),
+                                scope.signal,
+                              );
                             },
                           },
                         ],
@@ -4708,7 +4746,10 @@ export function createRemoteTvApp(
     async function refreshProfiles() {
       const value = await api.profiles(scope.signal);
       setManagement(value);
-      if (screen() === "settings" && settingsTab() === 0)
+      if (
+        screen() === "settings" &&
+        (settingsTab() === 0 || settingsTab() === 1)
+      )
         setSettingsItems(
           value.profiles.map((profile, index) => ({
             id: profile.id,
@@ -4991,6 +5032,7 @@ export function createRemoteTvApp(
         return;
       }
       if (screen() === "player") {
+        if (seeking()) return;
         setShowControls(true);
         hideControls();
         if (dx && choice() > 0) {
@@ -4998,13 +5040,15 @@ export function createRemoteTvApp(
             Math.max(1, Math.min(playerButtons().length - 1, i + dx)),
           );
         } else if (dx && playerActions().seek) {
+          const duration = Number(snapshot()?.time.durationSeconds);
+          const target =
+            (seek() ?? snapshot()?.time.positionSeconds ?? 0) + dx * 10;
           setSeek(
             Math.max(
               0,
-              Math.min(
-                snapshot()?.time.durationSeconds ?? 0,
-                (seek() ?? snapshot()?.time.positionSeconds ?? 0) + dx * 10,
-              ),
+              Number.isFinite(duration) && duration > 0
+                ? Math.min(duration, target)
+                : target,
             ),
           );
         }
@@ -5114,8 +5158,10 @@ export function createRemoteTvApp(
       if (screen() === "calendar") {
         if (zone() === "calendar-days") {
           const count = calendarDaysList().length;
-          if (dx)
+          if (dx) {
             setCalendarDay((i) => Math.max(0, Math.min(count - 1, i + dx)));
+            setCalendarEntry(0);
+          }
           if (dy > 0) {
             setZone("calendar-list");
             setCalendarEntry(0);
@@ -5703,15 +5749,19 @@ export function createRemoteTvApp(
         if (seek() !== undefined) {
           const position = seek()!;
           if (!playerActions().seek) return;
+          if (
+            Math.abs(
+              position - (snapshot()?.time.positionSeconds ?? 0),
+            ) < 0.5
+          ) {
+            setSeek(undefined);
+            return;
+          }
           setShowControls(true);
           setSeeking(true);
+          setPlaybackSegments([]);
           try {
-            await player.start(
-              activeAction()!.card,
-              activeSource()!,
-              false,
-              position,
-            );
+            await player.seek(position);
             void refreshPlaybackSegments();
           } finally {
             setSeeking(false);
@@ -5743,13 +5793,9 @@ export function createRemoteTvApp(
           if (segment) {
             setShowControls(true);
             setSeeking(true);
+            setPlaybackSegments([]);
             try {
-              await player.start(
-                activeAction()!.card,
-                activeSource()!,
-                false,
-                segment.end_ms / 1000,
-              );
+              await player.seek(segment.end_ms / 1000);
               void refreshPlaybackSegments();
             } finally {
               setSeeking(false);
@@ -6245,12 +6291,31 @@ export function createRemoteTvApp(
             [412, 417].includes(event.keyCode)
           ) {
             event.preventDefault();
-            if (!playerActions().seek) return;
-            setChoice(0);
-            move(
-              event.key === "MediaRewind" || event.keyCode === 412 ? -1 : 1,
+            if (event.repeat || !playerActions().seek || seeking()) return;
+            const direction =
+              event.key === "MediaRewind" || event.keyCode === 412 ? -1 : 1;
+            const duration = Number(snapshot()?.time.durationSeconds);
+            const target =
+              (snapshot()?.time.positionSeconds ?? 0) + direction * 10;
+            const position = Math.max(
               0,
+              Number.isFinite(duration) && duration > 0
+                ? Math.min(duration, target)
+                : target,
             );
+            if (Math.abs(position - (snapshot()?.time.positionSeconds ?? 0)) < 0.5)
+              return;
+            setShowControls(true);
+            setSeeking(true);
+            setPlaybackSegments([]);
+            void player
+              .seek(position)
+              .then(() => void refreshPlaybackSegments())
+              .catch(fail)
+              .finally(() => {
+                setSeeking(false);
+                hideControls();
+              });
             return;
           }
         }
@@ -6643,7 +6708,7 @@ export function createRemoteTvApp(
             {/* The player is a native SceneGraph Video plane under the app's
                 native text/visual layers. Hide the page behind it so stale
                 artwork cannot cover the video. */}
-            <TvView w={1920} h={1080} show={screen() !== "player"}>
+            <TvView w={1920} h={1080} show={screen() !== "player" && !screenSaver()}>
             <TvView w={1920} h={1080}>
               <Show when={screen() === "home" && zone() !== "rows"}>
                 <BillboardBackdrop art={billboard} />
@@ -6658,7 +6723,7 @@ export function createRemoteTvApp(
               </Show>
               <Show when={screen() === "detail"}>
                 <Backdrop
-                  src={heroArt()}
+                  src={heroArt() ?? selected()?.landscape ?? selected()?.poster}
                   dim={
                     screen() === "detail" &&
                     ["episodes", "seasons", "recommendations"].includes(zone())
@@ -6721,7 +6786,13 @@ export function createRemoteTvApp(
                         : "rgba(0,0,0,0)"
                     }
                   >
-                    <Show when={zone() === "nav" && column() === index()}>
+                    <Show
+                      when={
+                        zone() === "nav" &&
+                        column() === index() &&
+                        nav.id !== "profiles"
+                      }
+                    >
                       <TvView
                         w={navLayout()[index()].w}
                         h={56}
@@ -6801,6 +6872,19 @@ export function createRemoteTvApp(
                           )}
                         </Show>
                       </TvView>
+                    </Show>
+                    <Show
+                      when={
+                        zone() === "nav" &&
+                        column() === index() &&
+                        nav.id === "profiles"
+                      }
+                    >
+                      <TvView
+                        w={56}
+                        h={56}
+                        src={outline(56, 56, 28, 3, "#F4F2EE")}
+                      />
                     </Show>
                     <Show when={nav.id !== "search" && nav.id !== "profiles"}>
                       <Label
@@ -7080,12 +7164,14 @@ export function createRemoteTvApp(
                             />
                           </Show>
                           <Label
+                            x={284}
                             y={96}
                             size={26}
+                            maxwidth={900}
                             color={palette.muted}
                             content={
                               shelf()?.state === "Pending"
-                                ? ""
+                                ? "Loading…"
                                 : (shelf()?.message ?? "Couldn’t load this row.")
                             }
                           />
@@ -7130,6 +7216,24 @@ export function createRemoteTvApp(
                 </TvView>
               </Show>
             </Show>
+            <Show when={screen() === "detail" && !detail()}>
+              <Label
+                x={96}
+                y={300}
+                size={48}
+                font="Onest700"
+                maxwidth={800}
+                maxlines={2}
+                content={selected()?.title ?? ""}
+              />
+              <Label
+                x={96}
+                y={370}
+                size={26}
+                color={palette.muted}
+                content="Loading title…"
+              />
+            </Show>
             <Show when={screen() === "detail"}>
               <Show when={detail()}>
                 {(value) => (
@@ -7151,6 +7255,25 @@ export function createRemoteTvApp(
                           title={value().item.title}
                         />
                       </TvView>
+                    </Show>
+                    <Show
+                      when={
+                        !value().item.logo &&
+                        value().episodes.length > 0 &&
+                        ["episodes", "seasons", "recommendations"].includes(
+                          zone(),
+                        )
+                      }
+                    >
+                      <Label
+                        x={96}
+                        y={54}
+                        size={56}
+                        font="Onest700"
+                        maxwidth={760}
+                        maxlines={1}
+                        content={value().item.title}
+                      />
                     </Show>
                     <TvView
                       show={
@@ -7536,6 +7659,20 @@ export function createRemoteTvApp(
                   }
                   clipping={true}
                 >
+                  <Show
+                    when={
+                      screen() === "search" &&
+                      searchMediaPending() &&
+                      !page().cards.length
+                    }
+                  >
+                    <Label
+                      y={100}
+                      size={28}
+                      color={palette.muted}
+                      content="Searching…"
+                    />
+                  </Show>
                   <KeyedFor
                     each={uniqueCards(page().cards).slice(
                       gridStart(),
@@ -8114,6 +8251,15 @@ export function createRemoteTvApp(
                 font="Onest700"
                 content={settingsTabs[settingsTab()]}
               />
+              <Show when={loading() && !settingsItems().length}>
+                <Label
+                  x={640}
+                  y={220}
+                  size={26}
+                  color={palette.muted}
+                  content="Loading settings…"
+                />
+              </Show>
               <For
                 each={settingsItems().slice(
                   zone() === "settings-content" ? Math.max(0, column() - 5) : 0,
@@ -9439,7 +9585,7 @@ export function createRemoteTvApp(
               </ModalLayerContext.Provider>
             )}
           </Show>
-          <Show when={error() && !overlay()}>
+          <Show when={error()}>
             <ModalLayerContext.Provider value={true}>
             <TvView w={1920} h={1080} color="rgba(0,0,0,.55)" />
             <TvView
@@ -9493,10 +9639,12 @@ export function createRemoteTvApp(
             </TvView>
           </Show>
           <Show when={screenSaver()}>
-            <TvView w={1920} h={1080} color="#0B0B0C">
-              <PosterWall />
-            </TvView>
-            <TvView w={1920} h={1080} color="rgba(11,11,12,.72)" />
+            <ModalLayerContext.Provider value={true}>
+              <TvView w={1920} h={1080} color="#0B0B0C">
+                <PosterWall />
+              </TvView>
+              <TvView w={1920} h={1080} color="rgba(11,11,12,.72)" />
+            </ModalLayerContext.Provider>
           </Show>
         </TvView>
         );

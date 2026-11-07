@@ -279,38 +279,6 @@ export function pause(): void {
   state.playingState = false;
 }
 
-/** Write-only `seek` field; the value is seconds from the start of the stream. */
-/** Remote media keys while the Player route is mounted. */
-export function handleMediaKey(key: string): boolean {
-  if (!activeSession) return false;
-  switch (String(key || "").toLowerCase()) {
-    case "play":
-    case "playpause":
-      if (state.playingState) pause();
-      else play();
-      return true;
-    case "pause":
-      pause();
-      return true;
-    case "stop":
-      pause();
-      return true;
-    case "fwd":
-    case "fastforward":
-      seek(currentPosition + 10);
-      return true;
-    case "rev":
-    case "rewind":
-      seek(currentPosition - 10);
-      return true;
-    case "instantreplay":
-      seek(currentPosition - 10);
-      return true;
-    default:
-      return false;
-  }
-}
-
 export function seek(seconds: number): void {
   if (!video) return;
   const target = typeof seconds === "number" && isFinite(seconds) && seconds > 0 ? seconds : 0;
@@ -347,7 +315,6 @@ export default {
   play,
   pause,
   seek,
-  handleMediaKey,
   state,
   destroy
 };

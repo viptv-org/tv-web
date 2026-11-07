@@ -415,13 +415,20 @@ function visualNode(
       get: () => 0,
     });
   }
+  const topBarScrim =
+    ROKU &&
+    props.src instanceof ImageData &&
+    props.src.width === 480 &&
+    props.src.height === 33;
   if (props.src !== undefined && props.color === undefined)
     mapped.color =
-      ROKU &&
+      ROKU && !topBarScrim &&
       (props.src instanceof ImageData ||
         (typeof props.src === "string" && props.src.startsWith("data:image/svg+xml")))
         ? 0x00000000
-        : 0xffffffff;
+        : topBarScrim
+          ? 0x00000000
+          : 0xffffffff;
   Object.defineProperty(mapped, "alpha", {
     enumerable: true,
     get: () => (props.show === false ? 0 : (props.alpha ?? 1)),
@@ -458,7 +465,11 @@ function visualNode(
     ) {
       const spec = () => ({
         color: props.color,
-        src: typeof props.src === "string" ? props.src : undefined,
+        src: topBarScrim
+          ? "pkg:/assets/topbar-scrim.png"
+          : typeof props.src === "string"
+            ? props.src
+            : undefined,
         texture: props.texture,
         w: props.w,
         h: props.h,

@@ -563,6 +563,7 @@ export function Logo(props: {
     logoCache.get(key()),
   );
   const [failed, setFailed] = createSignal(false);
+  let renderedKey = "";
   createEffect(() => {
     imageVersion();
     const src = props.src,
@@ -572,6 +573,11 @@ export function Logo(props: {
         maxWidth: props.maxWidth ?? 800,
       },
       cacheKey = key();
+    if (renderedKey !== cacheKey) {
+      renderedKey = cacheKey;
+      setArt(undefined);
+      setFailed(false);
+    }
     const cached = logoCache.get(cacheKey);
     if (cached) {
       setArt(cached);

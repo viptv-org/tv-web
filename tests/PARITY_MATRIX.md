@@ -490,3 +490,12 @@ Implementation `4cf36237e70b387aacad8a3c5521d5f2ee9eaf9e`;
 | --- | --- | --- | --- | --- | --- | --- |
 | Live/Search page failures and bounded traversal | Thirteen scoped HTTPS Chromium cases pass with mocked HTTP, including four short-page timeout/retry cases, original reverse/revision cases, 200 groups, bounded guides and Search's complete 480-input seven-page roundtrip with playback, exact requests and bounded payloads. | Unmeasured; focus/data assertions only. | Unverified | Unverified | Unverified | Verified for the stated browser scenarios. |
 | Live seven-page roundtrip | Forward 0→240, fixture playback, return focus and reverse 240→70 pass: 410/480 verified directional inputs. The 180-second host deadline prevents final return/request-order qualification. | Unmeasured. | Unverified | Unverified | Unverified | Partial on the software WebGL host; no input-latency or hardware claim. |
+
+# Shared Roku/browser playback and rendering sweep
+
+| Scenario | Browser evidence | Roku evidence | Limits |
+| --- | --- | --- | --- |
+| Seek and source lifecycle | Four controller regressions; Chromium playing/paused FF, repeat suppression, retained playback on replacement failure, explicit retry and authorization fences pass | HLS clock advances; pause, paused FF/resume and playing FF exercised on TCL 50S435/C157X, OS 16.0.4 | Native intro/recap markers and buffering auto-hide unverified |
+| Artwork, opacity and layering | Production build and beta screen traversal; real 1920×1080 HLS decoding | Private captures reviewed for Home hero/gradient, labels, square surfaces, source drawer and Settings; opaque grounds excluded from backdrop scrims | Hardware video-plane picture and scrim darkness, matched Android/reference metrics unverified |
+| Profile menu and Settings | Regression reaches Settings with zero sources; preference writes, calibration, late-save focus and screen saver tests pass | Beta pairing/profile selection, Settings entry and tab changes exercised | Native idle screen saver and forced error-card recovery unverified |
+| Calendar and wider navigation | Calendar route reached; 29 focused browser scenarios have combined passing evidence as recorded in TESTING.md | Live guide exercised; populated Calendar unverified | Two exploratory Search failures and older fixed-index Live empty fixtures remain outside the passing set; no other TV hardware qualified |

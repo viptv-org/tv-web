@@ -10,6 +10,7 @@ import { For, Show, createMemo } from "solid-js";
 import { getRenderer } from "@solidtv/solid";
 import { TvView } from "../runtime";
 import { Label, palette } from "./visuals";
+import { sdfTextMetrics } from "./text-measure";
 import {
   LIVE_ANSWER_T,
   LIVE_EMPTY_COPY,
@@ -108,10 +109,11 @@ function actionWidth(
   padding: number,
   font: string,
 ) {
-  const context = document.createElement("canvas").getContext("2d");
-  if (!context) return text.length * size + padding * 2;
-  context.font = `${size}px ${font}`;
-  return Math.ceil(context.measureText(text).width) + padding * 2;
+  return (
+    Math.ceil(
+      sdfTextMetrics(`${size}px ${font}`).measureText(text).width,
+    ) + padding * 2
+  );
 }
 
 /**

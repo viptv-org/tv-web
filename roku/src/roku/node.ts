@@ -820,13 +820,9 @@ export class RokuNode extends Events {
     this.writeGroupIf('scale', [this._scaleX, this._scaleY]);
     this.writeGroupIf('rotation', this._rotation);
     this.writeGroupIf('scaleRotateCenter', [this._pivotX * this.boxW, this._pivotY * this.boxH]);
-    let alpha = this._alpha;
-    let cursor = this._parent;
-    while (cursor) {
-      alpha *= cursor.alpha;
-      cursor = cursor.parentNode;
-    }
-    this.writeGroupIf('opacity', alpha);
+    // SceneGraph already multiplies a group's opacity into its children.
+    // Writing the cumulative alpha here applied ancestor opacity twice.
+    this.writeGroupIf('opacity', this._alpha);
     this.updateShadow();
   }
 
