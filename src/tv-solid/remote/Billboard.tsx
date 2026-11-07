@@ -237,6 +237,21 @@ function Layers(props: {
   );
 }
 export function BillboardBackdrop(props: { art: Art }) {
+  if (typeof (globalThis as any).__SolidTVRokuRenderer !== "undefined") {
+    // The billboard shader is a WebGL path. SceneGraph gets the same artwork as
+    // a plain Poster with the packaged scrim over it.
+    const frame = () => props.art.frames().at(-1);
+    return (
+      <TvView w={1920} h={1080} color={palette.bg}>
+        <Show when={frame()}>
+          {(value) => (
+            <TvView w={1920} h={1080} src={value().src} fit="cover" />
+          )}
+        </Show>
+        <TvView w={1920} h={1080} src="pkg:/assets/hero-scrim.png" />
+      </TvView>
+    );
+  }
   return (
     <TvView w={1920} h={1080}>
       <TvView
@@ -246,9 +261,6 @@ export function BillboardBackdrop(props: { art: Art }) {
         color={palette.bg}
       />
       <Layers art={props.art} />
-      {typeof (globalThis as any).__SolidTVRokuRenderer !== "undefined" && (
-        <TvView w={1920} h={1080} src="pkg:/assets/hero-scrim.png" />
-      )}
     </TvView>
   );
 }

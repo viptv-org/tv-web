@@ -10,7 +10,11 @@ sub init()
     print "uiResolution: "; uiResolution.name
 
     ' Set a simple background color for the scene
-    m.top.backgroundColor = "0x0B0B0CFF"
+    m.top.backgroundColor = "0x000000FF"
+
+    ' The Scene template ships a Geneva-theme background Poster. Point the
+    ' Scene's background at a black asset instead of the purple wash.
+    m.top.backgroundUri = "pkg:/assets/black.png"
 
     myFirstApp = m.top.findNode("myFirstApp")
     if myFirstApp <> invalid

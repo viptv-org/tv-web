@@ -6,7 +6,7 @@ import {
   onCleanup,
   Show,
 } from "solid-js";
-import { TvView } from "../runtime";
+import { TvView, fontEpochSignal } from "../runtime";
 import { sdfFontFamily, sdfLineHeight } from "../fonts";
 import { getRenderer } from "@solidtv/solid";
 import type { RendererMain } from "@solidtv/renderer";
@@ -42,6 +42,10 @@ function Brand(props: { splash: boolean }) {
     mark = () => (props.splash ? 88 : 80),
     gap = () => (props.splash ? 22 : 20);
   const width = createMemo(() => {
+    // Re-measure when the host publishes the native face. The first frame can
+    // report zero before Bricolage is loaded, and a fallback frozen forever
+    // leaves the brand group visibly off-centre.
+    fontEpochSignal();
     // The logo is SDF text now: measure the layout the renderer will draw,
     // with the same family, size and letter spacing the label passes.
     const family = sdfFontFamily("Bricolage800", size());

@@ -144,10 +144,19 @@ export function delay(ms: number, signal?: AbortSignal): Promise<void> {
     signal?.addEventListener("abort", cancel, { once: true });
   });
 }
-/** Chrome 87 TV receivers have secure random bytes but not randomUUID. */
+/** Chrome 87 TV receivers have secure random bytes but not randomUUID.
+ * SceneGraph's JavaScript engine has no `crypto` object at all; request IDs
+ * only need uniqueness, so fall back to Math.random there. */
 export function requestUuid(): string {
-  if (typeof crypto.randomUUID === "function") return crypto.randomUUID();
-  const bytes = crypto.getRandomValues(new Uint8Array(16));
+  const api = typeof crypto !== "undefined" ? crypto : undefined;
+  let bytes: Uint8Array;
+  if (api && typeof api.getRandomValues === "function") {
+    bytes = api.getRandomValues(new Uint8Array(16));
+  } else {
+    bytes = new Uint8Array(16);
+    for (let i = 0; i < bytes.length; i++)
+      bytes[i] = Math.floor(Math.random() * 256);
+  }
   bytes[6] = (bytes[6] & 15) | 64;
   bytes[8] = (bytes[8] & 63) | 128;
   const value = Array.from(bytes, (byte) =>

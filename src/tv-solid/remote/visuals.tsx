@@ -73,7 +73,7 @@ export function icon(name: string, dark = false, strokeWidth = 2.2, tint?: strin
     value =
       "data:image/svg+xml," +
       encodeURIComponent(
-        `<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="${name === "play" ? (tint ?? (dark ? "#111113" : "#F4F2EE")) : "none"}" stroke="${name === "play" ? "none" : (tint ?? (dark ? "#111113" : "#F4F2EE"))}" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round"><path d="${paths[name] ?? paths.info}"/></svg>`,
+        `<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" data-icon="${name}" fill="${name === "play" ? (tint ?? (dark ? "#111113" : "#F4F2EE")) : "none"}" stroke="${name === "play" ? "none" : (tint ?? (dark ? "#111113" : "#F4F2EE"))}" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round"><path d="${paths[name] ?? paths.info}"/></svg>`,
       );
     cache.set(key, value);
   }
@@ -108,7 +108,7 @@ export function navIcon(name: string, dark = false, active = false) {
     value =
       "data:image/svg+xml," +
       encodeURIComponent(
-        `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">${navIconPaths[name] ?? navIconPaths.About}</svg>`,
+        `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" data-icon="${name}" fill="none" stroke="${stroke}" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">${navIconPaths[name] ?? navIconPaths.About}</svg>`,
       );
     cache.set(key, value);
   }

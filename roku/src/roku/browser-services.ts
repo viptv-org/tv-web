@@ -240,7 +240,15 @@ export class RokURL {
     this.searchParams = new RokSearchParams(this.search);
   }
   toString() {
-    return this.href;
+    const query = this.searchParams.toString();
+    return (
+      this.protocol +
+      '//' +
+      this.host +
+      this.pathname +
+      (query ? '?' + query : '') +
+      this.hash
+    );
   }
 }
 

@@ -164,7 +164,10 @@ import {
  TvView,
 
 
- KeyedFor 
+ KeyedFor,
+
+
+ ModalLayerContext
 
 
 } from "../runtime";
@@ -531,6 +534,9 @@ const bottomTitleY = (
   const lines = Math.min(2, Math.max(1, Math.ceil(measured / width)));
   return box - lines * size * 1.2;
 };
+const isRokuUi =
+  typeof (globalThis as any).__SolidTVRokuRenderer !== "undefined";
+
 const navigationTemplates = [
   { id: "search", label: "" },
   { id: "home", label: "Home" },
@@ -2069,18 +2075,13 @@ export function createRemoteTvApp(
         return { ...value, logo: fallback.logo };
       return value;
     });
-    const heroArt = createMemo(() => {
-      const card = hero();
-      const nativeRoku =
-        typeof (globalThis as any).__SolidTVRokuRenderer !== "undefined";
-      // SceneGraph posters are reliable for both portrait and landscape art;
-      // prefer the poster when a wide hero URL is unavailable or rejected.
-      return (
-        (nativeRoku ? card?.poster ?? card?.landscape : card?.landscape ?? card?.poster) ??
-        (card as any)?.view?.preview?.background ??
-        undefined
-      );
-    });
+    const heroArt = createMemo(
+      () =>
+        hero()?.landscape ??
+        hero()?.poster ??
+        (hero() as any)?.view?.preview?.background ??
+        undefined,
+    );
     const billboardKey = createMemo(() =>
       screen() === "home" && zone() !== "rows" && hero()
         ? cardKey(hero()!)
@@ -6287,7 +6288,7 @@ export function createRemoteTvApp(
                 onError={() => setFailed(true)}
               />
             </Show>
-            <Show when={!props.poster && props.card.logo}>
+            <Show when={!isRokuUi && !props.poster && props.card.logo}>
               <TvView
                 x={18}
                 y={props.h - 74}
@@ -6334,6 +6335,14 @@ export function createRemoteTvApp(
                 />
               </TvView>
             </Show>
+            <Show when={props.focused && isRokuUi}>
+              {/* SceneGraph has no border primitive; four 4px strips match the
+                  Android TV focused-card border without clipping at the edge. */}
+              <TvView w={props.w} h={4} color={palette.text} />
+              <TvView y={props.h - 4} w={props.w} h={4} color={palette.text} />
+              <TvView w={4} h={props.h} color={palette.text} />
+              <TvView x={props.w - 4} w={4} h={props.h} color={palette.text} />
+            </Show>
             <Show when={(progress() ?? 0) > 0}>
               <TvView
                 x={3}
@@ -6351,7 +6360,7 @@ export function createRemoteTvApp(
                 />
               </TvView>
             </Show>
-            <Show when={props.focused}>
+            <Show when={props.focused && !isRokuUi}>
               <TvView
                 w={props.w}
                 h={props.h}
@@ -6511,9 +6520,6 @@ export function createRemoteTvApp(
         },
       },
       render: () => {
-        createEffect(() => {
-          (globalThis as any).__viptvModal = !!(overlay() || error());
-        });
         return (
         <TvView
           w={1920}
@@ -6530,6 +6536,10 @@ export function createRemoteTvApp(
             clipping={sceneWidth() < 1920}
             show={!profileEditor() && overlay()?.kind !== "text"}
           >
+            {/* The player is a native SceneGraph Video plane under the app's
+                native text/visual layers. Hide the page behind it so stale
+                artwork cannot cover the video. */}
+            <TvView w={1920} h={1080} show={screen() !== "player"}>
             <TvView w={1920} h={1080}>
               <Show when={screen() === "home" && zone() !== "rows"}>
                 <BillboardBackdrop art={billboard} />
@@ -6929,8 +6939,10 @@ export function createRemoteTvApp(
                     const portrait = () => shelf()?.id !== "continue";
                     const step = () => (portrait() ? 271.2 : 442.4);
                     const count = () => (portrait() ? 7 : 4);
+                    // Android TV keeps the selected card at the row's leading
+                    // edge until the carousel reaches its last page.
                     const start = () =>
-                      zone() === "rows" ? Math.max(0, column() - 2) : 0;
+                      zone() === "rows" ? Math.max(0, column()) : 0;
                     return (
                       <>
                         <Label
@@ -8187,6 +8199,7 @@ export function createRemoteTvApp(
                 )}
               </For>
             </Show>
+            </TvView>
             <Show
               when={
                 screen() === "player" &&
@@ -8306,6 +8319,7 @@ export function createRemoteTvApp(
           </TvView>
           <Show when={overlay()}>
             {(modal) => (
+              <ModalLayerContext.Provider value={true}>
               <>
                 <TvView w={sceneWidth()} h={1080} color="rgba(0,0,0,.6)" />
                 <Show when={modal().kind === "calibration"}>
@@ -9380,9 +9394,11 @@ export function createRemoteTvApp(
                   </TvView>
                 </Show>
               </>
+              </ModalLayerContext.Provider>
             )}
           </Show>
           <Show when={error() && !overlay()}>
+            <ModalLayerContext.Provider value={true}>
             <TvView w={1920} h={1080} color="rgba(0,0,0,.55)" />
             <TvView
               x={400}
@@ -9416,6 +9432,7 @@ export function createRemoteTvApp(
                 focused={true}
               />
             </TvView>
+            </ModalLayerContext.Provider>
           </Show>
           <Show when={notice() || pending()}>
             <TvView

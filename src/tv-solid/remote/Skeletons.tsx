@@ -104,14 +104,6 @@ export function PageSkeleton(props: {
           {block(984, 380, 200, 200, 28)}
           {block(810, 780, 300, 72, 12)}
         </Match>
-        <Match when={props.screen === "settings"}>
-          {block(96, 140, 320, 64, 12)}
-          {block(96, 224, 320, 64, 12)}
-          {block(96, 308, 320, 64, 12)}
-          {block(500, 140, 900, 72, 12)}
-          {block(500, 232, 900, 72, 12)}
-          {block(500, 324, 900, 72, 12)}
-        </Match>
       </Switch>
     </Show>
   );

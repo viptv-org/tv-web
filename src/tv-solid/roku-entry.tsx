@@ -193,6 +193,17 @@ function holderAt(node: any, w: number, h: number): any {
   return holder;
 }
 
+function inheritedAlpha(node: any): number {
+  let alpha = 1;
+  let parent = node?.parentNode;
+  while (parent) {
+    const value = Number(parent.alpha);
+    if (Number.isFinite(value)) alpha *= value;
+    parent = parent.parentNode;
+  }
+  return Math.max(0, Math.min(1, alpha));
+}
+
 function syncHolder(record: NativeRecord) {
   const node = record.node;
   const holder = record.holder;
@@ -205,6 +216,7 @@ function syncHolder(record: NativeRecord) {
     holder.markTransform();
     holder.flush();
   }
+  if (holder.dom) setProp(holder.dom, "opacity", inheritedAlpha(node));
 }
 
 function fontUri(family: string | undefined): string {
@@ -292,7 +304,7 @@ function fontFace(family: string | undefined, size: number): any {
       removeRecord(node);
       const label = createElement("label");
       const holder = holderAt(node, 1, 1);
-      const layer = (globalThis as any).__viptvModal ? modalLayer : labelLayer;
+      const layer = p.modal === true ? modalLayer : labelLayer;
       insertNode(layer, holder.dom);
       insertNode(holder.dom, label);
       record = { kind: "label", node, holder, visual: label, layer, sync: () => syncHolder(record!) };
@@ -310,7 +322,9 @@ function fontFace(family: string | undefined, size: number): any {
         multiline
           ? (Number(p.width) || rawWidth) + 8
           : Number(p.maxlines) === 1
-            ? Math.max(Number(p.width) || rawWidth, rawWidth) + 8
+            ? Number(p.width) > 0
+              ? Number(p.width) + 8
+              : rawWidth + 8
             : rawWidth * 1.35 + 24,
       ),
     );
@@ -352,6 +366,7 @@ function fontFace(family: string | undefined, size: number): any {
     // native label starts at the holder and paints left-to-right.
     setProp(label, "horizAlign", "left");
     setProp(label, "vertAlign", "center");
+    if (Number(p.maxlines) === 1) setProp(label, "maxLines", 1);
     setProp(label, "color", rokuColor(p.color ?? "#ffffff"));
     if (record.holder) {
       record.holder.w = labelWidth;
@@ -418,6 +433,24 @@ function renderQr(record: NativeRecord, uri: string, width: number, height: numb
   }
 }
 
+function iconSource(svg: string): { uri: string; color: string } | undefined {
+  const name = /data-icon="([^"]+)"/.exec(svg)?.[1];
+  if (!name) return undefined;
+  const slug = name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  const fill = /fill="([^"]+)"/.exec(svg)?.[1];
+  const stroke = /stroke="([^"]+)"/.exec(svg)?.[1];
+  const color =
+    fill && fill !== "none"
+      ? fill
+      : stroke && stroke !== "none"
+        ? stroke
+        : "#FFFFFF";
+  return { uri: "pkg:/assets/icons/" + slug + ".png", color };
+}
+
 (globalThis as any).__viptvNativeVisual = (node: any, p: any) => {
   try {
     if (!node) return;
@@ -425,10 +458,18 @@ function renderQr(record: NativeRecord, uri: string, width: number, height: numb
     const width = Math.max(1, Math.ceil(Number(p.w) || 1));
     const height = Math.max(1, Math.ceil(Number(p.h) || 1));
     const rawSrc = typeof p.src === "string" ? p.src : p.texture?.src;
+    const svg =
+      typeof rawSrc === "string" && rawSrc.startsWith("data:image/svg+xml,")
+        ? decodeURIComponent(rawSrc.slice("data:image/svg+xml,".length))
+        : "";
+    const icon = svg ? iconSource(svg) : undefined;
+    const effectiveSrc = icon?.uri ?? rawSrc;
     const qr = typeof rawSrc === "string" && rawSrc.indexOf("data:image/x-viptv-qr,") === 0;
-    const poster = typeof rawSrc === "string" && rawSrc.length > 0 && !rawSrc.startsWith("data:");
+    const poster =
+      !!icon ||
+      (typeof rawSrc === "string" && rawSrc.length > 0 && !rawSrc.startsWith("data:"));
     const kind: NativeRecord["kind"] = qr ? "qr" : poster ? "poster" : "rect";
-    const modal = !!(globalThis as any).__viptvModal;
+    const modal = p.modal === true;
     if (kind === "rect" && width >= 1900 && height >= 1000 && !modal) {
       removeRecord(node);
       return;
@@ -467,7 +508,7 @@ function renderQr(record: NativeRecord, uri: string, width: number, height: numb
     if (kind === "qr") {
       renderQr(record, String(rawSrc), width, height);
     } else if (kind === "poster") {
-      const key = String(rawSrc);
+      const key = String(effectiveSrc);
       if (record.key !== key) {
         record.key = key;
         setProp(visual, "uri", key);
@@ -475,13 +516,40 @@ function renderQr(record: NativeRecord, uri: string, width: number, height: numb
       setProp(visual, "width", width);
       setProp(visual, "height", height);
       setProp(visual, "opacity", Number(p.alpha ?? 1));
+      setProp(visual, "blendColor", rokuColor(icon?.color ?? "#FFFFFF"));
     } else if (kind === "rect") {
       const radius = typeof p.rounded === "object" ? Number(p.rounded?.radius ?? 0) : Number(p.rounded ?? 0);
+      let borderWidth = 0;
+      let borderColor = "0xFFFFFFFF";
+      let borderRadius = radius;
+      if (svg && svg.indexOf("<rect") >= 0) {
+        const stroke = /stroke=["']([^"']+)["']/.exec(svg)?.[1] ?? "#FFFFFF";
+        const strokeOpacity = Number(/stroke-opacity=["']([^"']+)["']/.exec(svg)?.[1] ?? 1);
+        borderColor = rokuColor(stroke);
+        if (strokeOpacity < 1) {
+          const base = parseInt(borderColor.slice(2), 16) >>> 0;
+          borderColor = hex(((base & 0xffffff00) | Math.round(strokeOpacity * 255)) >>> 0);
+        }
+        borderWidth = Math.max(1, Number(/stroke-width=["']([^"']+)["']/.exec(svg)?.[1] ?? 1));
+        borderRadius = Math.max(
+          borderRadius,
+          Number(/rx=["']([^"']+)["']/.exec(svg)?.[1] ?? 0),
+        );
+      }
       setProp(visual, "color", rokuColor(p.color ?? "rgba(0,0,0,0)"));
       setProp(visual, "width", width);
       setProp(visual, "height", height);
       setProp(visual, "opacity", Number(p.alpha ?? 1));
-      if (radius > 0) {
+      if (borderWidth > 0) {
+        if (!record.effect) {
+          record.effect = createElement("effect");
+          insertNode(record.holder.dom, record.effect);
+        }
+        setProp(record.effect, "borderRadius", borderRadius);
+        setProp(record.effect, "borderWidth", borderWidth);
+        setProp(record.effect, "borderColor", borderColor);
+        try { setProp(visual, "effect", record.effect); } catch (error) { /* optional field */ }
+      } else if (radius > 0) {
         if (!record.effect) {
           record.effect = createElement("effect");
           insertNode(record.holder.dom, record.effect);

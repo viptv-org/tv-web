@@ -36,6 +36,7 @@ import {
 // shared tree instead of freezing zero-width metrics. The browser never bumps
 // it, so the DOM build is unchanged.
 const [fontEpoch, setFontEpoch] = createSignal(0);
+export const fontEpochSignal = () => fontEpoch();
 (globalThis as any).__solidtvNotifyFont = () => setFontEpoch((value) => value + 1);
 
 /** The screen controller contract keeps the existing remote actions intact.
@@ -69,6 +70,9 @@ interface ScreenScope {
   leafFocused: boolean;
 }
 const Scope = createContext<ScreenScope>();
+/** Native SceneGraph cannot express a z-index per node. Shared overlay content
+ * marks its subtree so the Roku host can paint it above ordinary screen text. */
+export const ModalLayerContext = createContext(false);
 const nodeScopes = new WeakMap<ElementNode, ScreenScope>();
 const pendingReleases = new Set<() => void>();
 function unfocusScope(scope: ScreenScope | undefined) {
@@ -328,6 +332,7 @@ function visualNode(
   props: Record<string, any>,
   kind: "node" | "text" = "node",
 ): JSX.Element {
+  const modalLayer = useContext(ModalLayerContext);
   const node = createElement(kind) as ElementNode;
   // The browser renderer reads width/height; the native SceneGraph host's
   // RokuNode reads w/h. Keep the platform mapping in one place so the shared
@@ -369,18 +374,18 @@ function visualNode(
     }
     if (key === "src" && typeof props.src === "string" && props.src.startsWith("data:image/svg+xml")) {
       // The renderer's URL detector recognizes .svg files, not SVG data URIs.
-      // Explicit SVG textures use its SVG rasterizer instead of image workers.
-      Object.defineProperty(mapped, "texture", {
-        enumerable: true,
-        get: () =>
-          ROKU
-            ? getRenderer().createTexture("ImageTexture", {
-                src: "",
-                w: props.w ?? 48,
-                h: props.h ?? 48,
-              })
-            : getRenderer().createTexture("ImageTexture", {src:props.src,type:"svg",w:props.w,h:props.h}),
-      });
+      // SceneGraph cannot rasterize SVG text; the native bridge below maps
+      // icon data URIs to packaged PNGs, so keep the string instead of an
+      // empty texture on Roku.
+      if (!ROKU) {
+        Object.defineProperty(mapped, "texture", {
+          enumerable: true,
+          get: () =>
+            getRenderer().createTexture("ImageTexture", {src:props.src,type:"svg",w:props.w,h:props.h}),
+        });
+      }
+      // Roku: leave the host node without a URI. The native bridge below
+      // maps the SVG to a packaged PNG and owns the SceneGraph poster.
       return;
     }
     const name = ROKU && (key === "w" || key === "h") ? key : (names[key] ?? key);
@@ -459,8 +464,9 @@ function visualNode(
         w: props.w,
         h: props.h,
         rounded: props.rounded,
-        alpha: props.alpha ?? 1,
+        alpha: props.show === false ? 0 : (props.alpha ?? 1),
         fit: props.fit,
+        modal: modalLayer,
       });
       const update = () => {
         const current = node as any;
@@ -496,6 +502,7 @@ export const TvView = (props: Record<string, any>) => visualNode(props);
 /** Keep one visible node. Upload a replacement before swapping; color is a
  * quad tint, so focus changes never evict glyphs or rasterize the same label. */
 function rokuText(props: Record<string, any>): JSX.Element {
+  const modalLayer = useContext(ModalLayerContext);
   const [node, setNode] = createSignal<ElementNode>();
   const spec = createMemo(() => {
     fontEpoch();
@@ -551,7 +558,8 @@ function rokuText(props: Record<string, any>): JSX.Element {
       align: props.align,
       maxlines: props.maxlines,
       lineHeight: spec().lineHeight,
-      alpha: props.alpha ?? 1,
+      alpha: props.show === false ? 0 : (props.alpha ?? 1),
+      modal: modalLayer,
       auto: (props.maxwidth ?? props.w) === undefined,
     });
   };
