@@ -7097,7 +7097,7 @@ export function createRemoteTvApp(
                   y={shelfTitleY()}
                   transition={{
                     y: {
-                      duration: isRokuUi ? 0 : 450,
+                      duration: 450,
                       timingFunction: "cubic-bezier(.2,0,0,1)",
                     },
                   }}

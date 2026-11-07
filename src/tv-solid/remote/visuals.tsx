@@ -1,6 +1,7 @@
 /** @jsxImportSource @solidtv/solid */
 import { createEffect, createSignal, onCleanup, Show } from "solid-js";
-import { TvView, TvText } from "../runtime";
+import { KeyedFor, TvView, TvText } from "../runtime";
+import { ReadyArtwork, type ArtworkFrame } from "../platform/ready-artwork";
 import { imageSource, imageVersion } from "./image-source";
 import { getRenderer } from "@solidtv/solid";
 import { tokens } from "../../theme/viptv-tokens.generated";
@@ -212,16 +213,29 @@ export function NativeBackdrop(props: {
   dim?: number;
   children?: any;
 }) {
+  const [frames, setFrames] = createSignal<ArtworkFrame[]>([]);
+  const views = new Map<number, any>();
+  const buffer = new ReadyArtwork(setFrames, async id => {
+    const view = views.get(id);
+    if (!view) return;
+    const duration = matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 300;
+    const animation = view.animate({ alpha: 1 }, { duration, easing: "ease-out" });
+    animation.start();
+    await animation.waitUntilStopped();
+  });
+  createEffect(() => buffer.request(props.src ? imageSource(props.src, 1920) : undefined));
+  onCleanup(() => buffer.dispose());
   return (
     <TvView w={1920} h={1080} color={palette.bg}>
-      {props.src ? (
-        <TvView
-          w={1920}
-          h={1080}
-          src={imageSource(props.src, 1920)}
-          fit="cover"
-        />
-      ) : undefined}
+      <KeyedFor each={frames()} keyOf={frame => frame.id}>
+        {frame => {
+          const id = frame().id;
+          onCleanup(() => views.delete(id));
+          return <TvView w={1920} h={1080} src={frame().src} alpha={frame().alpha}
+            fit="cover" nodeRef={(view: any) => views.set(id, view)}
+            onLoad={() => buffer.ready(id)} onError={() => buffer.failed(id)} />;
+        }}
+      </KeyedFor>
       <TvView w={1920} h={1080} src="pkg:/assets/hero-scrim.png" />
       <TvView w={1920} h={1080} color="#000000" alpha={props.dim ?? 0} />
       {props.children}

@@ -343,7 +343,7 @@ function visualNode(
   // closures; use forEach so each mapped getter closes over its own key.
   Object.keys(props).forEach((key) => {
     if (
-      ["children", "show", "alpha", "fit", "nodeRef", "onError", "cssLineBox"].includes(key)
+      ["children", "show", "alpha", "fit", "nodeRef", "onError", "onLoad", "cssLineBox"].includes(key)
     )
       return;
     if ((key === "src" || key === "texture") && props[key] == null) return;
@@ -459,8 +459,8 @@ function visualNode(
     if (h !== undefined) node.h = h;
     if (
       typeof (globalThis as any).__viptvNativeVisual === "function" &&
-      (props.shader === undefined || typeof props.src === "string") &&
-      (props.src === undefined || typeof props.src === "string") &&
+      (props.shader === undefined || typeof props.src === "string" || topBarScrim) &&
+      (props.src === undefined || typeof props.src === "string" || topBarScrim) &&
       (props.color !== undefined || props.src !== undefined || props.texture !== undefined)
     ) {
       const spec = () => ({
@@ -477,6 +477,7 @@ function visualNode(
         fit: props.fit,
         modal: modalLayer,
         logo: props.logo === true,
+        onLoad: props.onLoad,
       });
       const update = () => {
         const current = node as any;

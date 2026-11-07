@@ -22,6 +22,7 @@ function versioned(url: string, version: number) {
  * artwork keeps canvas readback and renderer textures same-origin and bounded. */
 const publicHosts = new Set([
   "images.metahub.space",
+  "episodes.metahub.space",
   "live.metahub.space",
   "image.tmdb.org",
   "artworks.thetvdb.com",
@@ -31,6 +32,7 @@ const publicHosts = new Set([
   "i.imgur.com",
   "upload.wikimedia.org",
   "api.dicebear.com",
+  "simkl.in",
 ]);
 
 export function imageSource(
@@ -43,6 +45,20 @@ export function imageSource(
   try {
     const source = new URL(url, location.href),
       version = imageEpoch();
+    if (
+      source.protocol === "https:" && source.hostname === "wsrv.nl" &&
+      !source.username && !source.password && source.searchParams.has("url") &&
+      (width || height)
+    ) {
+      if (width) source.searchParams.set("w", String(Math.max(1, Math.min(3840, Math.ceil(width)))));
+      else source.searchParams.delete("w");
+      if (height) source.searchParams.set("h", String(Math.max(1, Math.min(2160, Math.ceil(height)))));
+      else source.searchParams.delete("h");
+      source.searchParams.delete("dpr");
+      source.searchParams.set("fit", fit);
+      source.searchParams.set("we", "true");
+      return versioned(source.toString(), version);
+    }
     if (source.origin === location.origin || !publicHosts.has(source.hostname))
       return versioned(url, version);
     const proxy = new URL("https://wsrv.nl/");

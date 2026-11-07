@@ -197,9 +197,10 @@ const plugin = {
     build.onLoad({ filter: /[\/]core[\/]lightningInit\.js$/ }, async (args: any) => {
       const source = await readFile(args.path, 'utf8');
       const anchor = 'new lng.RendererMain(settings, rootId)';
-      if (!source.includes(anchor)) throw Error('SolidTV boundary changed');
+      const factory = source.includes('export function setRendererFactory(');
+      if (!factory && !source.includes(anchor)) throw Error('SolidTV boundary changed');
       return {
-        contents: source.replace(anchor, 'new globalThis.__SolidTVRokuRenderer(settings, rootId)'),
+        contents: factory ? source : source.replace(anchor, 'new globalThis.__SolidTVRokuRenderer(settings, rootId)'),
         loader: 'js',
       };
     });

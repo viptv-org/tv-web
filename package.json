@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "vite --host 0.0.0.0",
     "build": "npm run design:check && npm run core:check && npm run video:check && npm run typecheck && vite build",
-    "test": "vitest run",
+    "test": "vitest run --pool=forks --poolOptions.forks.singleFork && npm run test:native",
     "test:watch": "vitest",
     "test:e2e": "playwright test --config=playwright.remote.config.ts",
     "preview": "vite preview --host 0.0.0.0",
@@ -16,7 +16,8 @@
     "core:check": "node scripts/core-sync.mjs check",
     "typecheck": "node scripts/typecheck.mjs",
     "video:check": "node scripts/video-sync.mjs check",
-    "perf:tv": "node tests/preview/remote-entry-perf.mjs"
+    "perf:tv": "node tests/preview/remote-entry-perf.mjs",
+    "test:native": "cd roku && vitest run --config vitest.config.mts"
   },
   "dependencies": {
     "@fontsource-variable/bricolage-grotesque": "^5.3.0",

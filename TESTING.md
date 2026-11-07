@@ -3002,3 +3002,21 @@ idle screen saver composition, populated Calendar spacing and matched Android
 background/reference-image measurements remain unverified. Browser fixture
 success is not hardware qualification for Roku, Tizen, Vizio or webOS. No device
 addresses, credentials or private captures are included in the repository.
+
+# Roku performance regressions
+
+`npm test` includes 159 application/unit cases and two native visual-ownership
+cases. New regressions cover deadline pacing under injected work, pause/restart,
+CSS easing, one Poster/URI per image, real versus stale image readiness, opaque
+SDK handles, original-size packaged masks, dirty-subtree and shallow group
+updates, relative opacity, budget continuation, proxy resizing and bounded
+readiness-gated artwork swaps. Both native host typechecks/builds and the shared
+production browser build pass; the demo host's 78 native tests and offline web
+build pass. Final focused Chromium playback/menu/saver checks pass (five cases).
+
+Private Roku captures were inspected after beta pairing, Home artwork loading,
+row navigation and source-picker opening/cancellation. Real native dimensions
+are observed explicitly because SDK node handles do not mirror assigned fields.
+A final hardware trace reports render+swap p95 22.04 ms over 758 samples: the
+60 Hz render-work budget remains unmet. PERFORMANCE.md records methods and
+limitations. Browser and deterministic timing probes do not certify device FPS.

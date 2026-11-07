@@ -7,6 +7,7 @@
  */
 import "./platform/roku-shims";
 import { createRenderer, Config } from "@solidtv/solid";
+import * as SolidTV from "@solidtv/solid";
 import { createElement, insertNode, setProp, tmTransaction } from "@roku-sdk/solid";
 import { createComponent } from "solid-js";
 import { setRendererStart } from "./renderer-clock";
@@ -15,6 +16,8 @@ import { RemoteTvApi, type SessionStore } from "./remote/api";
 import type { Tokens } from "./remote/types";
 import QRCode from "qrcode/lib/core/qrcode";
 import { createRokuPlayer } from "./platform/roku-player";
+import { NativeSync, motionRoot, opacityWithin } from "./platform/native-sync";
+import { imageSource } from "./remote/image-source";
 
 const STORE_KEY = "viptv-device:roku";
 const API_ORIGIN = "https://beta-viptv.syek.tech";
@@ -42,6 +45,9 @@ const api = new RemoteTvApi(API_ORIGIN, store, undefined, "web");
 
 Config.fontSettings = { fontFamily: "Onest", fontSize: 32 };
 Config.animationsEnabled = true;
+(SolidTV as any).setRendererFactory?.((settings: any, rootId: any) =>
+  new (globalThis as any).__SolidTVRokuRenderer(settings, rootId),
+);
 
 const { renderer, render } = createRenderer(
   {
@@ -132,10 +138,74 @@ type NativeRecord = {
   fitHeight?: number;
   fitY?: number;
   ownAlpha?: number;
+  loadedKey?: string;
+  onLoad?: () => void;
+  motion?: MotionGroup;
   sync: () => void;
 };
 
+type MotionGroup = { root: any; layer: any; holder: any; references: number };
+
 const nativeRecords = new Map<any, NativeRecord>();
+const nativeNow = () => performance.now();
+const nativeSync = new NativeSync(nativeNow);
+const motionGroups = new Map<any, Map<any, MotionGroup>>();
+
+function syncMotion(group: MotionGroup, inherited = inheritedAlpha(group.root)) {
+  const root = group.root;
+  const holder = group.holder;
+  const x = Number(root.absX) || 0, y = Number(root.absY) || 0;
+  const alpha = inherited * (Number(root.alpha) || 0);
+  if (holder.x === x && holder.y === y && holder.alpha === alpha) return;
+  holder.x = x; holder.y = y; holder.alpha = alpha;
+  holder.flush();
+}
+
+function registerSync(node: any) {
+  nativeSync.register(node, inherited => {
+    motionGroups.get(node)?.forEach(group => syncMotion(group, inherited));
+    const record = nativeRecords.get(node);
+    if (record) syncHolder(record, inherited);
+  });
+}
+
+function releaseMotion(record: NativeRecord) {
+  const group = record.motion;
+  record.motion = undefined;
+  if (!group || --group.references > 0) return;
+  group.holder.destroy();
+  const layers = motionGroups.get(group.root)!;
+  layers.delete(group.layer);
+  if (!layers.size) {
+    motionGroups.delete(group.root);
+    if (!nativeRecords.has(group.root)) nativeSync.remove(group.root);
+  }
+}
+
+function adoptMotion(record: NativeRecord, root: any) {
+  if (record.motion?.root === root) return;
+  const previous = record.motion;
+  if (root) {
+    let layers = motionGroups.get(root);
+    if (!layers) motionGroups.set(root, layers = new Map());
+    let group = layers.get(record.layer);
+    if (!group) {
+      const holder = holderAt(root, Number(root.w) || 1, Number(root.h) || 1);
+      insertNode(record.layer, holder.dom, previous?.holder.dom ?? record.holder.dom);
+      group = { root, layer: record.layer, holder, references: 0 };
+      layers.set(record.layer, group);
+      registerSync(root);
+      syncMotion(group);
+    }
+    group.references++;
+    insertNode(group.holder.dom, record.holder.dom);
+    releaseMotion(record);
+    record.motion = group;
+  } else {
+    insertNode(record.layer, record.holder.dom, previous?.holder.dom);
+    releaseMotion(record);
+  }
+}
 const nativeFonts = new Map<string, any>();
 let backdropLayer: any = null;
 let backdropScrimLayer: any = null;
@@ -198,6 +268,7 @@ function ensureLayers() {
 function holderAt(node: any, w: number, h: number): any {
   const renderer = (globalThis as any).__rokuRenderer || (globalThis as any).__SolidTVRokuRenderer;
   const holder = renderer.createNode({ x: 0, y: 0, w, h });
+  holder.detachedVisualHolder = true;
   holder.parent = null;
   return holder;
 }
@@ -213,19 +284,23 @@ function inheritedAlpha(node: any): number {
   return Math.max(0, Math.min(1, alpha));
 }
 
-function syncHolder(record: NativeRecord) {
+function syncHolder(record: NativeRecord, inherited?: number) {
   const node = record.node;
   const holder = record.holder;
   if (!holder) return;
-  const x = Number(node.absX || 0);
-  const y = Number(node.absY || 0);
+  const root = motionRoot(node) as any;
+  adoptMotion(record, root);
+  const x = Math.round((Number(node.absX || 0) - (root ? Number(root.absX) || 0 : 0)) * 1000) / 1000;
+  const y = Math.round((Number(node.absY || 0) - (root ? Number(root.absY) || 0 : 0)) * 1000) / 1000;
   if (holder.x !== x || holder.y !== y) {
     holder.x = x;
     holder.y = y;
     holder.markTransform();
     holder.flush();
   }
-  const alpha = inheritedAlpha(node) * (record.ownAlpha ?? 1);
+  const ownAlpha = Number(node.alpha);
+  const alpha = root ? opacityWithin(node, root) :
+    (inherited ?? inheritedAlpha(node)) * (Number.isFinite(ownAlpha) ? ownAlpha : (record.ownAlpha ?? 1));
   if (record.alpha !== alpha || holder.alpha !== alpha) {
     record.alpha = alpha;
     holder.alpha = alpha;
@@ -278,11 +353,13 @@ function removeRecord(node: any) {
   const record = nativeRecords.get(node);
   if (!record) return;
   nativeRecords.delete(node);
+  if (!motionGroups.has(node)) nativeSync.remove(node);
   try {
     const layer = record.layer || (record.kind === "label" ? labelLayer : record.kind === "qr" ? qrLayer : visualLayer);
     if (record.visual && record.holder?.dom)
       tmTransaction.removeNode(record.holder.dom, record.visual);
     if (record.holder) record.holder.destroy();
+    releaseMotion(record);
     if (layer && record.holder?.dom) tmTransaction.removeNode(layer, record.holder.dom);
   } catch (error) {
     // The owning SceneGraph group may already have been removed.
@@ -317,13 +394,14 @@ function fontFace(family: string | undefined, size: number): any {
     let record = nativeRecords.get(node);
     if (!record || record.kind !== "label") {
       removeRecord(node);
-      const label = createElement("label");
+      const label = node.claimVisual?.("label") ?? createElement("label");
       const holder = holderAt(node, 1, 1);
       const layer = p.modal === true ? modalLayer : labelLayer;
       insertNode(layer, holder.dom);
       insertNode(holder.dom, label);
       record = { kind: "label", node, holder, visual: label, layer, sync: () => syncHolder(record!) };
       nativeRecords.set(node, record);
+      registerSync(node);
       syncHolder(record);
     }
     record.ownAlpha = Number(p.alpha ?? 1);
@@ -508,7 +586,11 @@ function iconSource(svg: string): { uri: string; color: string } | undefined {
         ? decodeURIComponent(rawSrc.slice("data:image/svg+xml,".length))
         : "";
     const icon = svg ? iconSource(svg) : undefined;
-    const effectiveSrc = icon?.uri ?? rawSrc;
+    const effectiveSrc = icon?.uri ?? (
+      typeof rawSrc === "string" && /^https?:\/\//.test(rawSrc)
+        ? imageSource(rawSrc, width, height, p.fit === "contain" ? "inside" : "cover")
+        : rawSrc
+    );
     const qr = typeof rawSrc === "string" && rawSrc.indexOf("data:image/x-viptv-qr,") === 0;
     const poster =
       !!icon ||
@@ -548,10 +630,12 @@ function iconSource(svg: string): { uri: string; color: string } | undefined {
                   : visualLayer;
       const holder = holderAt(node, width, height);
       insertNode(layer, holder.dom);
-      const visual = createElement(kind === "poster" ? "poster" : kind === "qr" ? "group" : "rectangle");
+      const type = kind === "poster" ? "poster" : kind === "qr" ? "group" : "rectangle";
+      const visual = node.claimVisual?.(type) ?? createElement(type);
       insertNode(holder.dom, visual);
       record = { kind, node, holder, visual, layer, sync: () => syncHolder(record!) };
       nativeRecords.set(node, record);
+      registerSync(node);
       if (kind === "poster") setProp(visual, "loadDisplayMode", p.fit === "contain" ? "scaleToFit" : p.fit === "cover" ? "scaleToZoom" : "scaleToFill");
       syncHolder(record);
     }
@@ -561,35 +645,40 @@ function iconSource(svg: string): { uri: string; color: string } | undefined {
       renderQr(record, String(rawSrc), width, height);
     } else if (kind === "poster") {
       const key = String(effectiveSrc);
+      record.onLoad = p.onLoad;
       if (record.key !== key) {
         record.key = key;
+        record.loadedKey = undefined;
         record.fitWidth = undefined;
         record.fitHeight = undefined;
         record.fitY = undefined;
-        setProp(visual, "uri", key);
-        if (p.logo) {
-          // Poster scaleToFit centres the bitmap. Measure the loaded source
-          // once and left/bottom-align the fitted logo inside its hero box.
-          setProp(visual, "onLoadStatus", (status: any) => {
-            if (status !== "loaded" && status !== "ready" && status !== "3")
-              return;
-            const bitmapWidth = Number(visual.bitmapWidth || 0);
-            const bitmapHeight = Number(visual.bitmapHeight || 0);
-            if (!(bitmapWidth > 0 && bitmapHeight > 0)) return;
-            const fittedWidth = Math.min(
-              width,
-              height * (bitmapWidth / bitmapHeight),
-            );
-            const fittedHeight = fittedWidth * (bitmapHeight / bitmapWidth);
-            record.fitWidth = Math.max(1, Math.round(fittedWidth));
-            record.fitHeight = Math.max(1, Math.round(fittedHeight));
-            record.fitY = Math.max(0, Math.round(height - fittedHeight));
-            setProp(visual, "width", record.fitWidth);
-            setProp(visual, "height", record.fitHeight);
-            setProp(visual, "translation", [0, record.fitY]);
-          });
-        }
       }
+      node.loadImage(visual, key, width, height, (poster: any) => {
+        if (record!.key !== key) return;
+        if (p.logo) {
+          const bitmapWidth = Number(poster.bitmapWidth || 0);
+          const bitmapHeight = Number(poster.bitmapHeight || 0);
+          if (bitmapWidth > 0 && bitmapHeight > 0) {
+            const fittedWidth = Math.min(width, height * (bitmapWidth / bitmapHeight));
+            const fittedHeight = fittedWidth * (bitmapHeight / bitmapWidth);
+            const fitWidth = Math.max(1, Math.round(fittedWidth));
+            const fitHeight = Math.max(1, Math.round(fittedHeight));
+            const fitY = Math.max(0, Math.round(height - fittedHeight));
+            if (record!.fitWidth !== fitWidth || record!.fitHeight !== fitHeight || record!.fitY !== fitY) {
+              record!.fitWidth = fitWidth;
+              record!.fitHeight = fitHeight;
+              record!.fitY = fitY;
+              setProp(visual, "width", fitWidth);
+              setProp(visual, "height", fitHeight);
+              setProp(visual, "translation", [0, fitY]);
+            }
+          }
+        }
+        if (record!.loadedKey !== key) {
+          record!.loadedKey = key;
+          record!.onLoad?.();
+        }
+      });
       setProp(visual, "width", record.fitWidth ?? width);
       setProp(visual, "height", record.fitHeight ?? height);
       if (p.logo)
@@ -642,28 +731,12 @@ function iconSource(svg: string): { uri: string; color: string } | undefined {
   if (node) removeRecord(node);
 };
 
-let lastOverlaySync = 0;
-let nativeNeedsSync = true;
-(globalThis as any).__viptvMarkNativeSync = () => {
-  nativeNeedsSync = true;
+(globalThis as any).__viptvMarkNativeSync = (node: any, kind?: string) => {
+  if (motionGroups.has(node) && (kind === "position" || kind === "alpha")) nativeSync.markShallow(node);
+  else nativeSync.mark(node);
 };
-(globalThis as any).__viptvSyncOverlays = () => {
-  if (!nativeNeedsSync) return;
-  const now =
-    typeof performance !== "undefined" && typeof performance.now === "function"
-      ? performance.now()
-      : Date.now();
-  if (now - lastOverlaySync < 32) return;
-  lastOverlaySync = now;
-  nativeNeedsSync = false;
-  nativeRecords.forEach((record) => {
-    try {
-      record.sync();
-    } catch (error) {
-      // A node can be destroyed between layout and the sync pass.
-    }
-  });
-};
+(globalThis as any).__viptvHasNativeSync = () => nativeSync.pending;
+(globalThis as any).__viptvSyncOverlays = (deadline: number) => nativeSync.flush(deadline);
 
 try {
   render(() => createComponent(createRemoteTvApp(api, "web", { initialLoading: false }), {}));

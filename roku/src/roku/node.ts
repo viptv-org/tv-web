@@ -9,6 +9,7 @@
 
 import { createElement, insertNode, setProp, tmTransaction } from '@roku-sdk/solid';
 import { Events } from './events';
+import { PosterImage } from './poster-image';
 import { isColorKey, lerpColor } from './animation';
 import { RokuEffect, toRokuColor } from './effects';
 import { fontMetrics, getFontVersion, loadFace, measureText, measureWrapText, resolveFontUri, webLineHeight } from './fonts';
@@ -64,7 +65,7 @@ export class RokuTexture extends Events {
   textureType: string;
   props: any;
   src: string;
-  state: string = 'loaded';
+  state: string = 'freed';
   destroyed = false;
   constructor(type: string, props: any) {
     super();
@@ -134,6 +135,8 @@ export class RokuNode extends Events {
   readonly renderer: any;
   dom: any;
   visual: any = null;
+  private _claimedVisual: any = null;
+  get nativeVisual() { return this.visual || this._claimedVisual; }
 
   private _parent: RokuNode | null = null;
   private _children: RokuNode[] = [];
@@ -198,7 +201,12 @@ export class RokuNode extends Events {
   private _lastFontVersion = -1;
   private _loadedQueued = false;
   private _imageLoadedEmitted = false;
-  private _imageLoadedTimer: any = null;
+  private _imageRequest: PosterImage | null = null;
+  private _imageUri = '';
+  private _imageOnLoaded?: (poster: any) => void;
+  private _externalVisual = false;
+  detachedVisualHolder = false;
+  nativeMotionRoot = false;
 
   private _src = '';
   private _texture: RokuTexture | null = null;
@@ -413,9 +421,9 @@ export class RokuNode extends Events {
   // ---- geometry / appearance -------------------------------------------
 
   get x() { return this._x; }
-  set x(v: number) { if (v !== this._x) { this._x = num(v, 0); this.markTransform(); } }
+  set x(v: number) { if (v !== this._x) { this._x = num(v, 0); this.markTransform("position"); } }
   get y() { return this._y; }
-  set y(v: number) { if (v !== this._y) { this._y = num(v, 0); this.markTransform(); } }
+  set y(v: number) { if (v !== this._y) { this._y = num(v, 0); this.markTransform("position"); } }
   get w() { return this._isText ? (this._layout ? this._layout.width : this._ownW) : this._w; }
   set w(v: number) {
     if (this._isText) this._maxWidth = num(v, 0);
@@ -444,7 +452,7 @@ export class RokuNode extends Events {
   get boxH() { return this._isText && this._layout ? this._layout.boxH : this._isText ? this._maxHeight : this._h; }
 
   get alpha() { return this._alpha; }
-  set alpha(v: number) { this._alpha = Math.max(0, Math.min(1, num(v, 1))); this.markTransform(); }
+  set alpha(v: number) { this._alpha = Math.max(0, Math.min(1, num(v, 1))); this.markTransform("alpha"); }
   get visible() { return this._alpha > 0; }
   set visible(v: boolean) { this.alpha = v ? 1 : 0; }
 
@@ -579,17 +587,8 @@ export class RokuNode extends Events {
     if (next === this._src) return;
     this._src = next;
     this.markVisual();
-    // SceneGraph does not guarantee an onLoadStatus callback for a cached
-    // texture. Emit a bounded fallback so image-load driven pages complete;
-    // a real status callback clears this timer and emits first.
     this._imageLoadedEmitted = false;
-    if (this._imageLoadedTimer !== null) clearTimeout(this._imageLoadedTimer);
-    this._imageLoadedTimer = setTimeout(() => {
-      this._imageLoadedTimer = null;
-      if (this._destroyed || this._imageLoadedEmitted) return;
-      this._imageLoadedEmitted = true;
-      this.emit('loaded', this, { type: 'image', dimensions: { width: this.boxW, height: this.boxH } });
-    }, 300);
+    this._imageRequest?.invalidate();
   }
   get texture() { return this._texture; }
   set texture(v: RokuTexture | null) { this.setTexture(v); this.markVisual(); }
@@ -624,7 +623,11 @@ export class RokuNode extends Events {
     this._effectDirty = true;
     this.renderer.markDirty(this);
   }
-  markTransform() { this._transformDirty = true; this.renderer.markDirty(this); }
+  markTransform(kind: "position" | "alpha" | "geometry" = "geometry") {
+    this._transformDirty = true;
+    (globalThis as any).__viptvMarkNativeSync?.(this, kind);
+    if (!this.detachedVisualHolder) this.renderer.markDirty(this);
+  }
   markVisual() { this._visualDirty = true; this.renderer.markDirty(this); }
   markClip() { this._clipDirty = true; this.renderer.markDirty(this); }
   requestRender() { this.renderer.markDirty(this); }
@@ -745,6 +748,7 @@ export class RokuNode extends Events {
   // ---- visuals ----------------------------------------------------------
 
   private ensureVisual() {
+    if (this._externalVisual) return;
     if (!this._isText && !this.src && !this._hasColor && !this._shader) {
       // Plain layout containers are transparent. Painting the default white
       // rectangle here covered the app background and every overlay that was
@@ -764,37 +768,59 @@ export class RokuNode extends Events {
     this._written = {};
     if (this._children.length > 0) insertNode(this.dom, visual, this._children[0].dom);
     else insertNode(this.dom, visual);
-    if (type === 'poster') this.hookPoster(visual);
     this._visualDirty = true;
     this._effectDirty = true;
   }
 
-  private hookPoster(poster: any) {
-    setProp(poster, 'onLoadStatus', (status: any) => {
-      const value = String(status);
-      if (value === 'loaded' || value === 'ready' || value === '3') {
-        if (this._imageLoadedEmitted) return;
-        this._imageLoadedEmitted = true;
-        if (this._imageLoadedTimer !== null) { clearTimeout(this._imageLoadedTimer); this._imageLoadedTimer = null; }
-        try {
-          this.emit('loaded', this, {
-            type: 'image',
-            dimensions: { width: this.boxW, height: this.boxH },
-          });
-        } catch (error) {
-          console.error('ROKU_IMAGE_LOADED ' + String((error as any)?.message || error));
+  claimVisual(type: 'poster' | 'rectangle' | 'group' | 'label') {
+    this.ensureVisual();
+    const visual = this.visual;
+    this._externalVisual = true;
+    this.visual = null;
+    if (visual) tmTransaction.removeNode(this.dom, visual);
+    this.clearGradientBands();
+    this.clearGradientOverlay();
+    this.clearShadow();
+    const kind = type === 'rectangle' ? 'rect' : type;
+    if (visual && visual.__type === kind) { this._claimedVisual = visual; return visual; }
+    this._imageRequest?.invalidate();
+    const claimed = createElement(type);
+    (claimed as any).__type = kind;
+    this._claimedVisual = claimed;
+    return claimed;
+  }
+
+  loadImage(poster: any, uri: string, width: number, height: number, onLoaded?: (poster: any) => void) {
+    if (!this._imageRequest || this._imageRequest.poster !== poster) {
+      this._imageRequest?.invalidate();
+      this._imageRequest = new PosterImage(poster, (name, value) => setProp(poster, name, value), (status) => {
+        if (this._destroyed) return;
+        if (status === 'loaded') {
+          if (this._texture) this._texture.state = 'loaded';
+          if (!this._imageLoadedEmitted) {
+            this._imageLoadedEmitted = true;
+            const dimensions = { width: Number(poster.bitmapWidth) || this.boxW, height: Number(poster.bitmapHeight) || this.boxH };
+            this.emit('loaded', this, { type: 'image', dimensions });
+            this._texture?.emit('loaded', this._texture, { dimensions });
+          }
+          this._imageOnLoaded?.(poster);
+          return;
         }
-        return;
-      }
-      if (value !== 'failed') return;
-      if (this._texture) this._texture.emit('failed');
-      if (!this._fallback) return;
-      const next = normalizeUri(this._fallback);
-      if (!next || next === this._src) return;
-      this._src = next;
-      this._written.uri = undefined;
-      this.markVisual();
-    });
+        if (this._texture) { this._texture.state = 'failed'; this._texture.emit('failed'); }
+        this.emit('failed', this, { type: 'image' });
+        const next = normalizeUri(this._fallback);
+        if (this._fallback && next !== this._src) {
+          this.src = next;
+          if (this._externalVisual) this.loadImage(poster, next, width, height, this._imageOnLoaded);
+        }
+      });
+    }
+    const cached = this._imageUri === uri && this._imageRequest.ready;
+    if (this._imageUri !== uri) this._imageLoadedEmitted = false;
+    this._imageUri = uri;
+    this._imageOnLoaded = onLoaded;
+    this._imageRequest.load(uri, width, height);
+    if (cached) onLoaded?.(poster);
   }
 
   private writeIf(name: string, value: any) {
@@ -915,11 +941,8 @@ export class RokuNode extends Events {
       this.writeIf('shaderCompatible', !!this._shader);
       if (this._placeholder) this.writeIf('loadingBitmapUri', normalizeUri(this._placeholder));
       if (this._fallback) this.writeIf('failedBitmapUri', normalizeUri(this._fallback));
-      const uri = this.src;
-      if (this._written.uri !== uri) {
-        this._written.uri = uri;
-        setProp(this.visual, 'uri', uri);
-      }
+      const size = this._sub ? sheetSize(this.src) : null;
+      this.loadImage(this.visual, this.src, size?.[0] ?? w, size?.[1] ?? h);
       if (this._colorTL !== this._colorTR || this._colorTL !== this._colorBL || this._colorTL !== this._colorBR) {
         if (!(globalThis as any).__rokuColorGap) {
           (globalThis as any).__rokuColorGap = true;
@@ -1283,10 +1306,6 @@ export class RokuNode extends Events {
 
   flush() {
     if (this._destroyed) return;
-    // The native overlay bridge keeps its own SceneGraph groups, so a parent
-    // transform or opacity change needs one holder sync even when this node
-    // has no native record of its own.
-    (globalThis as any).__viptvMarkNativeSync?.();
     if (this._isText && this._lastFontVersion !== getFontVersion()) this.reflow();
     this.ensureVisual();
     if (this._orderDirty) {
@@ -1314,6 +1333,7 @@ export class RokuNode extends Events {
   // ---- animation --------------------------------------------------------
 
   animate(props: any, settings: any = {}) {
+    if (this._children.length && Object.keys(props || {}).some(key => key === "x" || key === "y" || key === "alpha")) this.nativeMotionRoot = true;
     const animator = this.renderer.animator;
     if (!animator) return null;
     const controller = animator.create(this, props || {}, settings, () => this.renderer.ensureTicker());
@@ -1323,6 +1343,7 @@ export class RokuNode extends Events {
   }
 
   animateProp(name: string, value: number, settings: any = {}) {
+    if (this._children.length && (name === "x" || name === "y" || name === "alpha")) this.nativeMotionRoot = true;
     const animator = this.renderer.animator;
     if (!animator) return null;
     if (!this._anims) this._anims = new Map();
@@ -1358,12 +1379,13 @@ export class RokuNode extends Events {
   destroy() {
     if (this._destroyed) return;
     this._destroyed = true;
+    this._claimedVisual = null;
     if (this.renderer.animator) this.renderer.animator.removeFor(this);
     const kids = this._children.slice();
     for (let i = 0; i < kids.length; i++) kids[i].destroy();
     this._children.length = 0;
     if (this._shader) this._shader.nodes.delete(this);
-    if (this._imageLoadedTimer !== null) { clearTimeout(this._imageLoadedTimer); this._imageLoadedTimer = null; }
+    this._imageRequest?.invalidate();
     this.clearGradientBands();
     this.clearGradientOverlay();
     this.clearShadow();

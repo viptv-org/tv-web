@@ -8,6 +8,7 @@
 
 import { getAppMemoryMonitor } from '@roku-sdk/rsg-ts/runtime';
 import { Animator } from './animation';
+import { FrameClock } from './frame-clock';
 import { Events } from './events';
 import { fontMetrics, measureText as measureNativeText } from './fonts';
 import { RokuNode, RokuTexture, ShaderHandle } from './node';
@@ -29,8 +30,12 @@ export class SceneGraphRenderer extends Events {
   private nativeRoot: any;
   private dirty = new Set<RokuNode>();
   private flushTimer: any = null;
-  private tickTimer: any = null;
-  private lastTick = 0;
+  private ticker = new FrameClock((elapsed) => {
+    if (this.destroyed || this.animator.paused) return false;
+    this.animator.tick(elapsed);
+    this.flushDirty();
+    return this.animator.running;
+  }, nowMs);
   private shaderTypes = new Map<string, any>();
   private destroyed = false;
   private fpsTimer: any = null;
@@ -161,22 +166,11 @@ export class SceneGraphRenderer extends Events {
   }
 
   ensureTicker() {
-    if (this.tickTimer !== null || this.destroyed) return;
-    this.lastTick = Date.now();
-    this.tickTimer = setTimeout(() => {
-      this.tickTimer = null;
-      if (this.destroyed) return;
-      const now = Date.now();
-      const delta = Math.min(100, now - this.lastTick);
-      this.lastTick = now;
-      this.animator.tick(delta);
-      this.flushDirty();
-      if (this.animator.running) this.ensureTicker();
-    }, 16);
+    if (!this.destroyed && !this.animator.paused) this.ticker.start();
   }
 
   private flushDirty() {
-    if (this.dirty.size === 0) return;
+    if (this.dirty.size === 0 && !(globalThis as any).__viptvHasNativeSync?.()) return;
     // Reuse the array: this runs on every frame, and Array.from allocated a
     // fresh array for each batch.
     const nodes = this.dirtyList;
@@ -192,6 +186,7 @@ export class SceneGraphRenderer extends Events {
     // swaps, virtualized rows, font reflow). Never hold the UI thread for a
     // whole frame: write for at most flushBudgetMs, then requeue the rest.
     const budget = Math.max(1, Number(this.settings?.flushBudgetMs ?? 8));
+    const deadline = start + budget;
     for (let i = 0; i < nodes.length; i++) {
       if (i > 0 && nowMs() - start >= budget) {
         for (let j = i; j < nodes.length; j++) {
@@ -209,7 +204,7 @@ export class SceneGraphRenderer extends Events {
       }
     }
     try {
-      (globalThis as any).__viptvSyncOverlays?.();
+      if ((globalThis as any).__viptvSyncOverlays?.(deadline)) this.scheduleFlush();
     } catch (error) {
       console.error('ROKU_OVERLAY_SYNC ' + String((error as any)?.stack || error));
     }
@@ -287,10 +282,10 @@ export class SceneGraphRenderer extends Events {
     const stats = { visuals: 0, textures: 0, visibleTextures: 0 };
     const walk = (node: any) => {
       if (!node || (node as any)._destroyed) return;
-      const visual = (node as any).visual;
+      const visual = node.nativeVisual;
       if (visual) {
         stats.visuals++;
-        if ((node as any)._src) {
+        if (visual.__type === 'poster') {
           stats.textures++;
           if ((node as any)._alpha > 0.001 && (node as any)._w > 0 && (node as any)._h > 0) {
             stats.visibleTextures++;
@@ -326,7 +321,8 @@ export class SceneGraphRenderer extends Events {
         // Leave the panel at zero rather than inventing a number.
       }
     }
-    const stats = this.lastStats;
+    const stats = this.collectStats();
+    this.lastStats = stats;
     return {
       renderBufferSize: 0,
       textureMemory: 0,
@@ -354,6 +350,7 @@ export class SceneGraphRenderer extends Events {
 
   pause() {
     this.animator.paused = true;
+    this.ticker.stop();
   }
 
   resume() {
@@ -371,9 +368,8 @@ export class SceneGraphRenderer extends Events {
     if (this.fpsTimer !== null) clearInterval(this.fpsTimer);
     this.fpsTimer = null;
     if (this.flushTimer !== null) clearTimeout(this.flushTimer);
-    if (this.tickTimer !== null) clearTimeout(this.tickTimer);
+    this.ticker.stop();
     this.flushTimer = null;
-    this.tickTimer = null;
     this.animator.clear();
     try {
       this.root.destroy();

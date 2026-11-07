@@ -30,6 +30,27 @@ const easings: { [name: string]: Easing } = {
 export function resolveEasing(easing?: string | Easing): Easing {
   if (typeof easing === 'function') return easing;
   if (easing && easings[easing] !== undefined) return easings[easing];
+  const match = easing && /^cubic-bezier\(([^)]+)\)$/.exec(easing);
+  if (match) {
+    const values = match[1].split(',').map(Number);
+    const [x1, y1, x2, y2] = values;
+    if (values.length === 4 && values.every(Number.isFinite) && x1 >= 0 && x1 <= 1 && x2 >= 0 && x2 <= 1) {
+      const curve = (t: number, a: number, b: number) => 3 * (1 - t) * (1 - t) * t * a + 3 * (1 - t) * t * t * b + t * t * t;
+      const resolved: Easing = (progress) => {
+        if (progress <= 0 || progress >= 1) return Math.max(0, Math.min(1, progress));
+        let low = 0, high = 1, t = progress;
+        for (let i = 0; i < 14; i++) {
+          const x = curve(t, x1, x2);
+          if (Math.abs(x - progress) < 0.00001) break;
+          if (x < progress) low = t; else high = t;
+          t = (low + high) / 2;
+        }
+        return curve(t, y1, y2);
+      };
+      easings[easing!] = resolved;
+      return resolved;
+    }
+  }
   return linear;
 }
 
@@ -71,6 +92,7 @@ export interface AnimationSettings {
   duration?: number;
   delay?: number;
   easing?: string | Easing;
+  timingFunction?: string | Easing;
   loop?: boolean;
   repeat?: number;
   repeatDelay?: number;
@@ -358,7 +380,7 @@ export class Animator {
         target: isColor ? 1 : target,
         duration: settings.duration,
         delay: settings.delay,
-        easing: settings.easing,
+        easing: settings.easing ?? settings.timingFunction,
         loop: settings.loop,
         repeat: settings.repeat,
         repeatDelay: settings.repeatDelay,
@@ -380,7 +402,7 @@ export class Animator {
         target: 0,
         duration: settings.duration,
         delay: settings.delay,
-        easing: settings.easing,
+        easing: settings.easing ?? settings.timingFunction,
         onWake: wake,
       });
       const key = '__wait__' + Math.random();

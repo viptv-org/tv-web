@@ -499,3 +499,10 @@ Implementation `4cf36237e70b387aacad8a3c5521d5f2ee9eaf9e`;
 | Artwork, opacity and layering | Production build and beta screen traversal; real 1920×1080 HLS decoding | Private captures reviewed for Home hero/gradient, labels, square surfaces, source drawer and Settings; opaque grounds excluded from backdrop scrims | Hardware video-plane picture and scrim darkness, matched Android/reference metrics unverified |
 | Profile menu and Settings | Regression reaches Settings with zero sources; preference writes, calibration, late-save focus and screen saver tests pass | Beta pairing/profile selection, Settings entry and tab changes exercised | Native idle screen saver and forced error-card recovery unverified |
 | Calendar and wider navigation | Calendar route reached; 29 focused browser scenarios have combined passing evidence as recorded in TESTING.md | Live guide exercised; populated Calendar unverified | Two exploratory Search failures and older fixed-index Live empty fixtures remain outside the passing set; no other TV hardware qualified |
+
+# Roku performance ownership and pacing
+
+| Scenario | Automated evidence | Roku evidence | Limits |
+| --- | --- | --- | --- |
+| Frame pacing, synchronization and visual ownership | Injected-work/pause/easing regressions; 60 updates per 60 simulated ticks; affected-subtree and shallow motion-group updates; one Poster/URI per artwork primitive | Beta Home/rows/source-drawer smoke on TCL 50S435/C157X, OS 16.0.4 | Render+swap p95 22.04 ms over 758 frames; 16.67 ms target unmet, no sustained-FPS claim |
+| Image decode/readiness and background swaps | Native observer and stale-callback tests, opaque handles, size hints before URI, compact packaged masks, proxy variants, bounded two-frame handover | Home imagery and row-preview changes captured privately | Same-origin network bytes are unchanged; only native decode is resized without a server transformation contract |

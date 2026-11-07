@@ -23,6 +23,50 @@ Current anchors: [DESIGN_REF](DESIGN_REF)
 
 ---
 
+# Roku frame pacing and artwork ownership
+
+The native adapters schedule against a monotonic 60 Hz deadline and include
+frame work in elapsed animation time. CSS timing functions are honored. tv-web
+uses one native visual per primitive, dirty-subtree synchronization within the
+flush budget, and shared motion groups per paint layer so a container move does
+not resubmit all of its stationary children. Native row motion uses the shared
+450 ms transition.
+
+Remote Posters receive slot-sized decode bounds before their URI. Packaged masks
+retain their original small decode size. Existing public image-proxy URLs are
+resized to the native slot without nesting the proxy or discarding the source's
+query parameters. Same-origin/authenticated URLs remain intact; their native
+decode is bounded without inventing a server resizing contract. Image readiness
+comes from native observers, including opaque SDK handles; a timeout never
+reports a decoded bitmap. Backgrounds retain the previous opaque image until
+an incoming image is ready and its real fade controller completes. Rapid
+changes are conflated to a bounded current/incoming pair.
+
+Validation: 159 application/unit cases plus two native-node cases pass through
+`npm test`; the demo host passes 78 cases with Node's experimental navigator
+disabled to model the native environment. Grouped TypeScript, both native host
+typechecks, the tv-web production build, both native builds and the demo's offline
+web build pass. Live demo web builds still require the private API key. Twenty-nine
+scoped Chromium cases passed before the final native layering changes, and five
+focused playback/menu/saver cases passed against the resulting browser build.
+
+Deterministic probes execute the actual host code with stub native primitives:
+a 320 ms animation with 8 ms of simulated per-frame work completes at 333.3 ms
+instead of 472 ms; 60 host ticks produce 60 overlay updates instead of 30;
+one logical image produces one Poster and one URI submission; no synthetic
+image-ready event occurs at 300 ms. These are host regressions, not device FPS.
+
+The TCL 50S435/C157X on Roku OS 16.0.4 was sideloaded and exercised against beta
+for pairing, Home imagery, row navigation and source-drawer opening/cancellation.
+The final Perfetto trace contains 758 paired render/swap samples, with render
+plus swap p50 19.75 ms and p95 22.04 ms. The 16.67 ms p95 render-work target is
+still unmet; no sustained 60 FPS qualification is claimed. `scripts/roku-frame-budget.mjs`
+reads actual RenderThr:Main samples and reports this failure instead of inferring
+FPS from dirty updates. Set `TRACE_PROCESSOR` to a current Perfetto trace processor
+and provide a settled, uninstrumented trace without concurrent screenshots.
+
+---
+
 # SolidTV renderer 2.0 migration — 2026-11-05
 
 The TV entry moved from `@solidtv/renderer` 1.9.4 / `@solidtv/solid` 1.6.4 to
