@@ -3088,7 +3088,8 @@ owner confirmed audible sound. Loki's CineWave AVC file was separately used for
 real track tests. An audio replacement while paused now produces native Pause
 with recognized H.264/AAC, rather than a closed decoder. Selecting the English
 text track produces native WebVTT; paused selection and resumed playback were
-observed. Subtitle visibility during dialogue still needs owner confirmation.
+observed. The final owner confirmation of subtitle visibility and audio sync
+is recorded below.
 Hardware video-plane screenshots cannot qualify the picture or caption text.
 The SDK loader/inspector stalled during diagnostics, including with the prior
 working package; a device restart recovered launch. This is recorded separately
@@ -3150,8 +3151,8 @@ After public API qualification, the final client package was sideloaded and
 paired against beta again. Loki S1 E1's CineWave AVC file starts, and selecting
 the normal English subtitle track returns to unobstructed playing state. Roku
 telemetry reports H.264, AAC and WebVTT, no error and advancing position. The
-stream is left playing for owner feedback; visible dialogue captions, physical
-lip-sync and a further long physical caption run remain unconfirmed. The SDK's
+owner confirms that dialogue captions are visible and audio is in sync on this
+final playback. A further long physical caption run remains unqualified. The SDK's
 sideload build bump is ephemeral and produces no tracked version-file change.
 The isolated candidate is stopped and the temporary diagnostic key is revoked;
 the account's scoped beta integration remains active.
