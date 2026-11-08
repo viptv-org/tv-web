@@ -1,3 +1,32 @@
+# Real-beta UI and player navigation pass — 2026-11-08
+
+Paired a browser through the real beta API and reviewed Home, detail, real source
+discovery (210 results), Movies, Series, Anime, Live, Calendar, My List, Search
+and Settings. API responses were not mocked; the candidate TV bundle was served
+locally at the beta origin. Private captures were inspected for spacing/readability.
+The hosted detail page reproduced a persistent white backdrop: initially absent
+image URLs lost their reactive binding. Retaining that binding restores real
+artwork. Source drawer subtitle/hint/filter/group/row bounds are now separated.
+
+Real beta playback decoded 1920x1080 video (10 reported frames), paused, retained
+its selected toolbar button across repeated Up and Down/Up, and released playback.
+Player vertical movement no longer resets horizontal selection; Left/Right can
+reach Play/Pause within the toolbar, and leaving a seek preview cancels it.
+Physical PS4 acceptance of these changes remains pending.
+
+Four artwork regressions pass across Chromium/WebKit and Canvas/WebGL. Canvas
+fixture tests disable workers so fixture HTTP interception also covers image
+loads (WebKit worker requests bypass page routes); real API review uses normal
+runtime workers. Two player regressions pass in both engines, including cancelling
+a seek preview before activating Play without opening another lease. Grouped
+typecheck, 204 shared tests, 15 native tests and production build pass.
+
+The wider pre-change fixture sweep has 18 passes and 14 failures. Several assume
+old navigation positions (for example Live opens Anime after the added Anime tab)
+or omit current supported routes. Those results are retained separately and do
+not establish new regressions or a clean full-suite gate. Real API review does
+not qualify all firmware, every source or whole-title playback.
+
 Beta now serves client `5326b2956e501e4011ee95453dc4453a4d0a29f9`.
 Managed deployment completed; HTTPS entry plus all 59 assets match the validated
 package, and hosted Canvas welcome/Cross-to-pairing works. The backend binary,

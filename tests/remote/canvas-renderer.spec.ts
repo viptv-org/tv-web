@@ -144,3 +144,12 @@ test('retains square startup recovery and saved state when no graphics context i
  await expect(retry).toHaveCSS('border-radius','0px');await expect(page.locator('#solid-startup-mark')).toHaveCSS('border-radius','0px');
  expect(await page.evaluate(()=>localStorage.getItem('graphics-recovery-observation'))).toBe('retained');
 });
+
+for(const canvas of [false,true])test(`detail binds artwork arriving after mount (${canvas?'Canvas':'WebGL'})`,async({page,baseURL})=>{
+ if(canvas)await page.addInitScript(()=>{Object.defineProperty(window,'Worker',{configurable:true,value:undefined});const original=HTMLCanvasElement.prototype.getContext;HTMLCanvasElement.prototype.getContext=function(this:HTMLCanvasElement,type:string,...args:any[]){return type.includes('webgl')?null:original.apply(this,[type,...args] as any);} as typeof original;});
+ await installRemoteBackend(page,baseURL!);await page.goto('/tv/?focusdebug=1');await expect(page.locator('html')).toHaveAttribute('data-tv-ready','true');
+ await page.keyboard.press('ArrowRight');await page.keyboard.press('ArrowRight');await page.keyboard.press('Enter');await expect(page.locator('html')).toHaveAttribute('data-tv-screen','detail');
+ await expect.poll(()=>page.evaluate(()=>{
+  let loaded=0;const walk=(n:any)=>{if(n.width===1920&&n.height===1080&&typeof n.texture?.props?.src==='string'&&n.texture.state==='loaded')loaded++;n.children?.forEach(walk);};walk((window as any).__viptvRenderer.stage.root);return loaded;
+ }),{timeout:15000}).toBeGreaterThan(0);
+});

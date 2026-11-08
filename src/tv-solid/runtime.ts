@@ -346,7 +346,11 @@ function visualNode(
       ["children", "show", "alpha", "fit", "nodeRef", "onError", "onLoad", "cssLineBox"].includes(key)
     )
       return;
-    if (key === "src" && props[key] == null) return;
+    if (key === "src" && props[key] == null) {
+      // Async artwork starts empty; retain the URL binding for its later load.
+      Object.defineProperty(mapped, "src", { enumerable: true, get: () => props.src ?? "" });
+      return;
+    }
     if (key === "texture") {
       Object.defineProperty(mapped, "texture", { enumerable: true, get: () => props.texture ?? null });
       return;

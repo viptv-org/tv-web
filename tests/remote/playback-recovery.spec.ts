@@ -60,3 +60,14 @@ test('an open provider filter keeps the highlighted option as providers arrive',
  fixture.addBestSource();await expect(state).toHaveAttribute('data-tv-sources','9');await page.keyboard.press('Enter');
  await expect(state).toHaveAttribute('data-tv-source-filter','Supplier A');
 });
+
+test('player vertical movement preserves the selected toolbar button and cancels seek previews',async({page,baseURL})=>{
+ const fixture=await installRemoteBackend(page,baseURL!,{media:true,episodeFlow:true});const state=page.locator('html');
+ await page.goto('/tv/?focusdebug=1');await expect(state).toHaveAttribute('data-tv-ready','true');await page.keyboard.press('Enter');await expect(state).toHaveAttribute('data-tv-sources','8');await expect(state).toHaveAttribute('data-tv-ready','true');await page.keyboard.press('Enter');
+ await expect.poll(()=>fixture.requests.some(r=>r.path.endsWith('/first-frame'))).toBe(true);await page.keyboard.press('Space');await expect(state).toHaveAttribute('data-tv-player-state','paused');
+ await page.keyboard.press('ArrowUp');const first=await state.getAttribute('data-tv-source-choice');await page.keyboard.press('ArrowUp');expect(await state.getAttribute('data-tv-source-choice')).toBe(first);
+ await page.keyboard.press('ArrowRight');const selected=await state.getAttribute('data-tv-source-choice');await page.keyboard.press('ArrowDown');await expect(state).toHaveAttribute('data-tv-player-timeline-focus','true');await page.keyboard.press('ArrowUp');expect(await state.getAttribute('data-tv-source-choice')).toBe(selected);
+ for(let i=0;i<5;i++)await page.keyboard.press('ArrowLeft');await expect(state).toHaveAttribute('data-tv-source-choice','0');await expect(state).toHaveAttribute('data-tv-player-timeline-focus','false');
+ await page.keyboard.press('ArrowDown');await page.keyboard.press('ArrowRight');await page.keyboard.press('ArrowUp');await page.keyboard.press('Enter');await expect(state).toHaveAttribute('data-tv-player-state','playing');
+ expect(fixture.requests.filter(r=>r.path==='/api/playback'&&r.method==='POST')).toHaveLength(1);
+});

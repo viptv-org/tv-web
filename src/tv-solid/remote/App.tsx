@@ -1576,6 +1576,8 @@ export function createRemoteTvApp(
         return { ...button, x, width, icon: button.id === "episodes" ? "episodes" : button.id === "tracks" ? "audio" : button.id === "sources" ? "settings" : "chevron" };
       });
     });
+    const [timelineFocused, setTimelineFocused] = createSignal(true);
+    let lastPlayerTool = 1;
     const timelineFraction = () => Math.max(0, Math.min(1,
       (seek() ?? snapshot()?.time.positionSeconds ?? 0) / (snapshot()?.time.durationSeconds || 1)));
     createEffect(() => {
@@ -4044,6 +4046,8 @@ export function createRemoteTvApp(
       setScreen("player");
       setError("");
       setPlaybackError("");
+      setTimelineFocused(true);
+      lastPlayerTool = 1;
       setActiveSource(source);
       setActiveAction(current);
       setActiveChannel(sourceChannel());
@@ -5273,10 +5277,11 @@ export function createRemoteTvApp(
         if (seeking()) return;
         setShowControls(true);
         hideControls();
-        if (dx && choice() > 0) {
+        if (dx && !timelineFocused()) {
           setChoice((i) =>
-            Math.max(1, Math.min(playerButtons().length - 1, i + dx)),
+            Math.max(0, Math.min(playerButtons().length - 1, i + dx)),
           );
+          lastPlayerTool = choice();
         } else if (dx && playerActions().seek) {
           const duration = Number(snapshot()?.time.durationSeconds);
           const target =
@@ -5290,8 +5295,16 @@ export function createRemoteTvApp(
             ),
           );
         }
-        if (dy < 0) setChoice(Math.max(0, playerButtons().findIndex(button => button.id === "skip") >= 0 ? playerButtons().findIndex(button => button.id === "skip") : playerButtons().length > 1 ? 1 : 0));
-        if (dy > 0) setChoice(0);
+        if (dy < 0 && timelineFocused()) {
+          setSeek(undefined);
+          setTimelineFocused(false);
+          setChoice(Math.min(lastPlayerTool, playerButtons().length - 1));
+        }
+        if (dy > 0 && !timelineFocused()) {
+          lastPlayerTool = choice();
+          setTimelineFocused(true);
+          setChoice(0);
+        }
         return;
       }
       if (screen() === "profiles") {
@@ -6408,6 +6421,7 @@ export function createRemoteTvApp(
       );
       document.documentElement.dataset.tvPlaybackError = playbackError();
       document.documentElement.dataset.tvPlayerControls = String(showControls());
+      document.documentElement.dataset.tvPlayerTimelineFocus = String(timelineFocused());
       document.documentElement.dataset.tvPlayerBusy = String(loading() || seeking() || snapshot()?.state === "buffering");
       document.documentElement.dataset.tvSourceIdentity = focusedSource()?.id ?? "";
       document.documentElement.dataset.tvPlayerEpisode = String(activeAction()?.card.identity.episode?.episode ?? "");
@@ -8830,7 +8844,7 @@ export function createRemoteTvApp(
                 h={56}
                 icon={snapshot()?.state === "playing" ? "pause" : "play"}
                 label={snapshot()?.state === "playing" ? "Pause" : "Play"}
-                focused={choice() === 0}
+                focused={choice() === 0 && !timelineFocused()}
               />
               <For each={playerTools()}>
                 {(button, index) => (
@@ -8982,7 +8996,7 @@ export function createRemoteTvApp(
                     <Show when={!sourceMenu() && !sourceActions()}>
                     <Label
                       x={64}
-                      y={162}
+                      y={174}
                       size={17}
                       color={palette.muted}
                       maxwidth={800}
@@ -8991,7 +9005,7 @@ export function createRemoteTvApp(
                     />
                     <TvView
                       x={64}
-                      y={196}
+                      y={216}
                       w={
                         sourceFilterPillWidth(
                           "Quality:",
@@ -9064,7 +9078,7 @@ export function createRemoteTvApp(
                         ) +
                         14
                       }
-                      y={196}
+                      y={216}
                       w={
                         sourceFilterPillWidth(
                           "Source:",
@@ -9130,7 +9144,7 @@ export function createRemoteTvApp(
                     </TvView>
                     <Label
                       x={64}
-                      y={264}
+                      y={288}
                       size={22}
                       font="Onest700"
                       letterspacing={1.4}
@@ -9162,7 +9176,7 @@ export function createRemoteTvApp(
                         return (
                           <TvView
                             x={64}
-                            y={300 + i() * 120}
+                            y={320 + i() * 120}
                             w={800}
                             h={120}
                             color={rowFocused() ? palette.text : "#222222"}
