@@ -1,6 +1,7 @@
 import {
   For,
   batch,
+  createEffect,
   createMemo,
   createContext,
   createComponent,
@@ -29,6 +30,14 @@ import {
   suppressKeyUntilRelease,
   releaseKeySuppression,
 } from "@solidtv/solid/primitives";
+
+// Native fonts publish asynchronously. Text layout memos subscribe to this
+// epoch so a face that becomes measurable after the first frame reflows the
+// shared tree instead of freezing zero-width metrics. The browser never bumps
+// it, so the DOM build is unchanged.
+const [fontEpoch, setFontEpoch] = createSignal(0);
+export const fontEpochSignal = () => fontEpoch();
+(globalThis as any).__solidtvNotifyFont = () => setFontEpoch((value) => value + 1);
 
 /** The screen controller contract keeps the existing remote actions intact.
  * Solid owns every signal, component lifetime and rendered node. */
@@ -61,6 +70,9 @@ interface ScreenScope {
   leafFocused: boolean;
 }
 const Scope = createContext<ScreenScope>();
+/** Native SceneGraph cannot express a z-index per node. Shared overlay content
+ * marks its subtree so the Roku host can paint it above ordinary screen text. */
+export const ModalLayerContext = createContext(false);
 const nodeScopes = new WeakMap<ElementNode, ScreenScope>();
 const pendingReleases = new Set<() => void>();
 function unfocusScope(scope: ScreenScope | undefined) {
@@ -189,6 +201,8 @@ export function defineScreen<
       value: scope,
       get children() {
         return TvView({
+          w: 1920,
+          h: 1080,
           nodeRef: (node: ElementNode) => { scope.node = node; nodeScopes.set(node,scope); },
           onFocus: (current: ElementNode, previous?: ElementNode) => {
             if (current !== scope.node) return;
@@ -267,7 +281,6 @@ function useRemoteInput() {
 const names: Record<string, string> = {
   w: "width",
   h: "height",
-  rounded: "borderRadius",
   font: "fontFamily",
   size: "fontSize",
   maxwidth: "maxWidth",
@@ -278,9 +291,12 @@ const names: Record<string, string> = {
   align: "textAlign",
   content: "text",
 };
+const ROKU = typeof (globalThis as any).__SolidTVRokuRenderer !== "undefined";
 const colorCache = new Map<string, number>();
-function tvColor(value: string): number {
+function tvColor(value: string | number): number {
   if (!value) return 0;
+  if (typeof value === "number") return value >>> 0;
+  if (typeof value !== "string") return 0;
   if (value.startsWith("#"))
     return parseInt(value.slice(1) + (value.length === 7 ? "ff" : ""), 16);
   const cached = colorCache.get(value);
@@ -296,10 +312,16 @@ const imageTextures = new WeakMap<ImageData, ImageTexture>();
 function imageTexture(image: ImageData) {
   let texture = imageTextures.get(image);
   if (!texture) {
-    texture = getRenderer().createTexture("ImageTexture", {
-      src: image,
-      premultiplyAlpha: true,
-    });
+    texture = ROKU
+      ? getRenderer().createTexture("ImageTexture", {
+          src: "",
+          w: image.width,
+          h: image.height,
+        })
+      : getRenderer().createTexture("ImageTexture", {
+          src: image,
+          premultiplyAlpha: true,
+        });
     imageTextures.set(image, texture);
   }
   return texture;
@@ -309,30 +331,63 @@ function visualNode(
   props: Record<string, any>,
   kind: "node" | "text" = "node",
 ): JSX.Element {
+  const modalLayer = useContext(ModalLayerContext);
   const node = createElement(kind) as ElementNode;
-  const mapped: Record<string, any> = { color: 0x00000000, width: 0, height: 0 };
-  for (const key of Object.keys(props)) {
+  // The browser renderer reads width/height; the native SceneGraph host's
+  // RokuNode reads w/h. Keep the platform mapping in one place so the shared
+  // tv-web tree does not have to fork.
+  const mapped: Record<string, any> = ROKU
+    ? { color: 0x00000000, w: 0, h: 0 }
+    : { color: 0x00000000, width: 0, height: 0 };
+  // Roku's JS engine loses per-iteration `const` bindings captured by
+  // closures; use forEach so each mapped getter closes over its own key.
+  Object.keys(props).forEach((key) => {
     if (
-      ["children", "show", "alpha", "fit", "nodeRef", "onError", "cssLineBox"].includes(key)
+      ["children", "show", "alpha", "fit", "nodeRef", "onError", "onLoad", "cssLineBox"].includes(key)
     )
-      continue;
+      return;
+    if ((key === "src" || key === "texture") && props[key] == null) return;
+    if (
+      key === "src" &&
+      typeof props.src === "string" &&
+      props.src.startsWith("data:image/x-viptv-qr,")
+    ) {
+      Object.defineProperty(mapped, "src", { enumerable: true, get: () => "" });
+      return;
+    }
     if (key === "src" && props.src instanceof ImageData) {
-      Object.defineProperty(mapped, "texture", {
-        enumerable: true,
-        get: () => imageTexture(props.src),
-      });
-      continue;
+      if (ROKU && props.src.width === 480 && props.src.height === 33) {
+        // The shared top-bar scrim is a canvas-generated alpha gradient. Use
+        // the packaged equivalent so the nav remains legible on SceneGraph.
+        Object.defineProperty(mapped, "src", {
+          enumerable: true,
+          get: () => "pkg:/assets/topbar-scrim.png",
+        });
+      } else {
+        Object.defineProperty(mapped, "texture", {
+          enumerable: true,
+          get: () => imageTexture(props.src),
+        });
+      }
+      return;
     }
     if (key === "src" && typeof props.src === "string" && props.src.startsWith("data:image/svg+xml")) {
       // The renderer's URL detector recognizes .svg files, not SVG data URIs.
-      // Explicit SVG textures use its SVG rasterizer instead of image workers.
-      Object.defineProperty(mapped, "texture", {
-        enumerable: true,
-        get: () => getRenderer().createTexture("ImageTexture", {src:props.src,type:"svg",w:props.w,h:props.h}),
-      });
-      continue;
+      // SceneGraph cannot rasterize SVG text; the native bridge below maps
+      // icon data URIs to packaged PNGs, so keep the string instead of an
+      // empty texture on Roku.
+      if (!ROKU) {
+        Object.defineProperty(mapped, "texture", {
+          enumerable: true,
+          get: () =>
+            getRenderer().createTexture("ImageTexture", {src:props.src,type:"svg",w:props.w,h:props.h}),
+        });
+      }
+      // Roku: leave the host node without a URI. The native bridge below
+      // maps the SVG to a packaged PNG and owns the SceneGraph poster.
+      return;
     }
-    const name = names[key] ?? key;
+    const name = ROKU && (key === "w" || key === "h") ? key : (names[key] ?? key);
     Object.defineProperty(mapped, name, {
       enumerable: true,
       configurable: true,
@@ -345,9 +400,35 @@ function visualNode(
             ? String(props[key] ?? "")
             : props[key],
     });
+  });
+  if (
+    ROKU &&
+    (props.w ?? 0) >= 1900 &&
+    (props.h ?? 0) >= 1000 &&
+    typeof props.src !== "string"
+  ) {
+    // Full-screen masks/scrims are canvas textures on the browser. Their host
+    // visual would be an opaque white rectangle when the texture is empty.
+    Object.defineProperty(mapped, "color", {
+      enumerable: true,
+      configurable: true,
+      get: () => 0,
+    });
   }
+  const topBarScrim =
+    ROKU &&
+    props.src instanceof ImageData &&
+    props.src.width === 480 &&
+    props.src.height === 33;
   if (props.src !== undefined && props.color === undefined)
-    mapped.color = 0xffffffff;
+    mapped.color =
+      ROKU && !topBarScrim &&
+      (props.src instanceof ImageData ||
+        (typeof props.src === "string" && props.src.startsWith("data:image/svg+xml")))
+        ? 0x00000000
+        : topBarScrim
+          ? 0x00000000
+          : 0xffffffff;
   Object.defineProperty(mapped, "alpha", {
     enumerable: true,
     get: () => (props.show === false ? 0 : (props.alpha ?? 1)),
@@ -358,7 +439,59 @@ function visualNode(
       get: () => ({ resizeMode: { type: props.fit } }),
     });
   if (props.onError) mapped.onEvent = { failed: () => props.onError() };
+  // The shared runtime uses `nodeRef` as a post-render callback, not the
+  // Solid `ref` field. The core ignores it, so call it once the ElementNode
+  // exists; text/native bridges and the screen focus scope depend on this.
+  if (props.nodeRef) onMount(() => props.nodeRef(node));
   spread(node, mapped, true);
+  // The native host's RokuNode reads x/y/w/h from the plain props object.
+  // Ensure the tv-web getters are materialised there as well; the generic
+  // spread path can miss getter-only layout values on the native renderer.
+  if (ROKU) {
+    const read = (value: any) => (typeof value === "function" ? value() : value);
+    const x = read(props.x);
+    const y = read(props.y);
+    const w = read(props.w);
+    const h = read(props.h);
+    if (x !== undefined) node.x = x;
+    if (y !== undefined) node.y = y;
+    if (w !== undefined) node.w = w;
+    if (h !== undefined) node.h = h;
+    if (
+      typeof (globalThis as any).__viptvNativeVisual === "function" &&
+      (props.shader === undefined || typeof props.src === "string" || topBarScrim) &&
+      (props.src === undefined || typeof props.src === "string" || topBarScrim) &&
+      (props.color !== undefined || props.src !== undefined || props.texture !== undefined)
+    ) {
+      const spec = () => ({
+        color: props.color,
+        src: topBarScrim
+          ? "pkg:/assets/topbar-scrim.png"
+          : typeof props.src === "string"
+            ? props.src
+            : undefined,
+        texture: props.texture,
+        w: props.w,
+        h: props.h,
+        alpha: props.show === false ? 0 : (props.alpha ?? 1),
+        fit: props.fit,
+        modal: modalLayer,
+        logo: props.logo === true,
+        onLoad: props.onLoad,
+      });
+      const update = () => {
+        const current = node as any;
+        if (current?.lng?.dom)
+          (globalThis as any).__viptvNativeVisual(current.lng, spec());
+      };
+      createEffect(update);
+      onMount(update);
+      onCleanup(() => {
+        const current = node as any;
+        (globalThis as any).__viptvNativeVisualRemove?.(current?.lng);
+      });
+    }
+  }
   props.nodeRef?.(node);
   // Keep each node's original sibling position even while invisible. Only
   // defer its subtree; late insertion of an outline/image can cover siblings.
@@ -379,8 +512,104 @@ export function setTextScale(value: number) {
 export const TvView = (props: Record<string, any>) => visualNode(props);
 /** Keep one visible node. Upload a replacement before swapping; color is a
  * quad tint, so focus changes never evict glyphs or rasterize the same label. */
+function rokuText(props: Record<string, any>): JSX.Element {
+  const modalLayer = useContext(ModalLayerContext);
+  const [node, setNode] = createSignal<ElementNode>();
+  const spec = createMemo(() => {
+    fontEpoch();
+    const fontSize = Number(props.size ?? 32);
+    const family = sdfFontFamily(props.font ?? "Onest", fontSize);
+    return {
+      text: String(props.content ?? ""),
+      fontFamily: family,
+      fontSize,
+      maxWidth: props.maxwidth ?? props.w ?? 0,
+      maxHeight: props.maxheight ?? 0,
+      maxLines: props.maxlines ?? 0,
+      lineHeight:
+        props.lineheight !== undefined
+          ? fontSize * props.lineheight
+          : sdfLineHeight(family, fontSize),
+      letterSpacing: props.letterspacing ?? 0,
+    };
+  });
+  const size = createMemo(() => {
+    const value = spec();
+    const measured = (getRenderer() as RendererMain).measureText(value);
+    if (measured && Number(measured.w) > 1) return measured;
+    // Native FontMeasure is unavailable until the firmware publishes the
+    // face. Keep the first layout close enough to render and let the font
+    // epoch reflow to the exact width when the host reports readiness.
+    return {
+      w: value.maxWidth || Math.max(1, value.text.length * value.fontSize * 0.55),
+      h: value.lineHeight,
+    };
+  });
+  const boxW = () => props.maxwidth ?? props.w ?? size().w ?? 0;
+  const boxX = () =>
+    (props.x ?? 0) +
+    (boxW() > 0
+      ? Math.max(0, boxW() - (size().w ?? 0)) *
+        (props.align === "right" ? 1 : props.align === "center" ? 0.5 : 0)
+      : 0);
+  const boxY = () =>
+    props.centerY !== undefined
+      ? props.centerY - (size().h ?? 0) / 2
+      : (props.y ?? 0);
+  const update = (current: any) => {
+    if (!current?.lng?.dom) return;
+    (globalThis as any).__viptvNativeText(current.lng, {
+      text: spec().text,
+      width: boxW(),
+      textWidth: size().w ?? 0,
+      height: size().h ?? props.h ?? 0,
+      font: props.font,
+      size: spec().fontSize,
+      color: props.color ?? "#ffffff",
+      align: props.align,
+      maxlines: props.maxlines,
+      lineHeight: spec().lineHeight,
+      alpha: props.show === false ? 0 : (props.alpha ?? 1),
+      modal: modalLayer,
+      auto: (props.maxwidth ?? props.w) === undefined,
+    });
+  };
+  createEffect(() => update(node()));
+  onMount(() => update(node()));
+  onCleanup(() => (globalThis as any).__viptvNativeTextRemove?.(node()?.lng));
+  return visualNode(
+    {
+      get x() {
+        return boxX();
+      },
+      get y() {
+        return boxY();
+      },
+      get w() {
+        return boxW();
+      },
+      get h() {
+        return size().h ?? props.h ?? 0;
+      },
+      get alpha() {
+        return props.alpha ?? 1;
+      },
+      get show() {
+        return props.show ?? true;
+      },
+      nodeRef: (value: ElementNode) => {
+        setNode(value);
+        props.nodeRef?.(value);
+      },
+    },
+    "node",
+  );
+}
+
 export function TvText(props: Record<string, any>): JSX.Element {
+  if (ROKU && typeof (globalThis as any).__viptvNativeText === "function") return rokuText(props);
   let debugNode: ElementNode | undefined;
+  const [mountedNode, setMountedNode] = createSignal<ElementNode>();
   const scaledSize = () => (props.size ?? 32) * textScale();
   const family = () => sdfFontFamily(props.font ?? "Onest", scaledSize());
   const lineHeight = () =>
@@ -423,6 +652,7 @@ export function TvText(props: Record<string, any>): JSX.Element {
   // node's own line alignment is not needed (and `contain` would feed the
   // measured width back into maxWidth).
   const size = createMemo(() => {
+    fontEpoch();
     const value = textProps();
     return (getRenderer() as RendererMain).measureText(value) ?? { w: value.maxWidth, h: value.lineHeight };
   });
@@ -433,6 +663,16 @@ export function TvText(props: Record<string, any>): JSX.Element {
           get: () => String(props.content ?? ""),
         });
     });
+  // Roku's native text node does not receive the solidtv text props through
+  // the generic prop bridge. Apply the resolved string directly once the
+  // ElementNode has its native node, and keep it in sync on content changes.
+  // The browser renderer receives text through its normal prop path.
+  createEffect(() => {
+    const node = mountedNode() as any;
+    const value = textProps().text;
+    if (node?.lng && (globalThis as any).__SolidTVRokuRenderer)
+      node.lng.text = value;
+  });
   return visualNode(
     {
       get x() {
@@ -500,6 +740,7 @@ export function TvText(props: Record<string, any>): JSX.Element {
       },
       nodeRef: (node: ElementNode) => {
         debugNode = node;
+        setMountedNode(node);
         props.nodeRef?.(node);
       },
     },

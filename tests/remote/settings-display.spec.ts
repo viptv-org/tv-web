@@ -1,6 +1,25 @@
 import { test, expect, type Page } from "@playwright/test";
 import { installRemoteBackend } from "../preview/remote-backend";
 
+test("profile menu reaches Settings before any sources have been loaded", async ({ page, baseURL }) => {
+  await installRemoteBackend(page, baseURL!);
+  await page.goto("/tv/?platform=vizio&focusdebug=1");
+  const state = page.locator("html");
+  await expect(state).toHaveAttribute("data-tv-ready", "true");
+  await expect(state).toHaveAttribute("data-tv-sources", "0");
+  await page.keyboard.press("ArrowUp");
+  const ids = (await state.getAttribute("data-tv-navigation"))!.split(",");
+  const current = Number((await state.getAttribute("data-tv-focus"))!.split(":")[1]);
+  for (let step = current; step < ids.indexOf("profiles"); step++) await page.keyboard.press("ArrowRight");
+  await page.keyboard.press("Enter");
+  await expect(state).toHaveAttribute("data-tv-overlay", "choices");
+  await page.keyboard.press("ArrowDown");
+  await expect(state).toHaveAttribute("data-tv-source-choice", "1");
+  await page.keyboard.press("Enter");
+  await expect(state).toHaveAttribute("data-tv-screen", "settings");
+  await expect(state).toHaveAttribute("data-tv-ready", "true");
+});
+
 const screen = (page: Page) => page.locator("html");
 const nodes = (page: Page) =>
   page.evaluate(() => {
@@ -40,16 +59,20 @@ async function boot(
   await expect(screen(page)).toHaveAttribute("data-tv-screen", "home");
   return fixture;
 }
-async function navigate(page: Page, index: number) {
+async function openProfileMenu(page: Page) {
   await page.keyboard.press("ArrowUp");
-  for (let i = 1; i < index; i++) await page.keyboard.press("ArrowRight");
-  for (let i = index; i < 1; i++) await page.keyboard.press("ArrowLeft");
+  const ids = (await screen(page).getAttribute("data-tv-navigation"))!.split(",");
+  const index = ids.indexOf("profiles");
+  expect(index).toBeGreaterThanOrEqual(0);
+  const current = Number((await screen(page).getAttribute("data-tv-focus"))!.split(":")[1]);
+  for (let i = current; i < index; i++) await page.keyboard.press("ArrowRight");
+  for (let i = index; i < current; i++) await page.keyboard.press("ArrowLeft");
   await page.keyboard.press("Enter");
 }
 /** Open Settings and enter the given tab's content (Playback loads first;
  * nav movement tracks the loaded tab, so tab N is N-2 ArrowDowns away). */
 async function openSettingsTab(page: Page, tab: number) {
-  await navigate(page, 6);
+  await openProfileMenu(page);
   await page.keyboard.press("ArrowDown");
   await page.keyboard.press("Enter");
   await expect(screen(page)).toHaveAttribute("data-tv-screen", "settings");
@@ -66,7 +89,7 @@ test("settings nav shows the boards' nine sections with icons in order", async (
   baseURL,
 }) => {
   await boot(page, baseURL!);
-  await navigate(page, 6);
+  await openProfileMenu(page);
   await page.keyboard.press("ArrowDown");
   await page.keyboard.press("Enter");
   await expect(screen(page)).toHaveAttribute("data-tv-screen", "settings");
@@ -145,7 +168,7 @@ test("display tab renders the board rows and adjusts the accent inline", async (
         "Accent colour",
         "Progress bars, marks and toggles",
         "Show ratings on cards",
-        "★ 7.8 under focused titles",
+        "e.g. 7.8 under focused titles",
         "Text size",
         "Reduce motion",
         "Follow TV",

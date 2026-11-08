@@ -1,7 +1,7 @@
 {
   "version": 1,
   "repository": "viptv-org/design",
-  "commit": "8b7f85941addf5a65390fe6eca4f11aba9584a17",
+  "commit": "0cbb058fe1420c5860a48bda6a311fd806443e17",
   "files": {
     "design-contract/.github/pull_request_template.md": {
       "source": ".github/pull_request_template.md",
@@ -13,7 +13,7 @@
     },
     "design-contract/CHANGELOG.md": {
       "source": "CHANGELOG.md",
-      "sha256": "9fcccb323a86dddc1f0af76e9dbddcb0ef7d85821c703ea0b6b3845892be456b"
+      "sha256": "64e066f20fbf4d9c842a5638c5bcd446cf8e307bded3dbffacaa082e42e0179b"
     },
     "design-contract/CONTEXT.md": {
       "source": "CONTEXT.md",
@@ -89,7 +89,7 @@
     },
     "design-contract/docs/platforms/TV_SERVER_WRAPPER.md": {
       "source": "docs/platforms/TV_SERVER_WRAPPER.md",
-      "sha256": "5f9b6765d344aab4319fc723e08227cfa381df104878fbd08c59ba8d1641c078"
+      "sha256": "9f5149ae4a9eccf57723d09ffd13a9ce0e3398c684ef90340a1eca9598ba4fe3"
     },
     "design-contract/docs/playback/BROWSER_MEDIA_PIPELINE.md": {
       "source": "docs/playback/BROWSER_MEDIA_PIPELINE.md",
@@ -161,7 +161,7 @@
     },
     "design-contract/specs/behavior/account-and-profile-settings.md": {
       "source": "specs/behavior/account-and-profile-settings.md",
-      "sha256": "21b11c5800094bce9766543470108fb2544c280c6c1e8bb21dd75b98709b985d"
+      "sha256": "2ff8ab4c0ab2630d9664b1e4e1f7b641a983b7af2db1ce52c5688b8506d640a0"
     },
     "design-contract/specs/behavior/android-tv-media-rows.md": {
       "source": "specs/behavior/android-tv-media-rows.md",
@@ -189,7 +189,11 @@
     },
     "design-contract/specs/behavior/next-episode-autoplay.md": {
       "source": "specs/behavior/next-episode-autoplay.md",
-      "sha256": "cc3820e1b46a0c901913b8e249fa54e8a8697c0ec09ed3fd55fae7de71793ba7"
+      "sha256": "0bb702ae42df498301d36d06be944d6dc873388321d3fd3c82dc93c8ac4af482"
+    },
+    "design-contract/specs/behavior/player-audio-subtitles-panel.md": {
+      "source": "specs/behavior/player-audio-subtitles-panel.md",
+      "sha256": "0b23a115d8a71ee8e358bd3280fee888020ff8b5e764070e969ca4a7f1b3a6ee"
     },
     "design-contract/specs/behavior/pull-to-refresh.md": {
       "source": "specs/behavior/pull-to-refresh.md",
@@ -205,11 +209,15 @@
     },
     "design-contract/specs/behavior/source-best-match.md": {
       "source": "specs/behavior/source-best-match.md",
-      "sha256": "bc275adc73d84a90a17c6b5ab507cf1045fbaacb77338aa2556ad4f27f180a7e"
+      "sha256": "239046809b98619e968d6f0653a1799c954b3632d96e6823352baed5a6733389"
     },
     "design-contract/specs/behavior/source-drawer.md": {
       "source": "specs/behavior/source-drawer.md",
       "sha256": "a3a25bb5deea6bc0df138a3963d48f8ceba4ff2fe55bb1bd3906bf35aaec3067"
+    },
+    "design-contract/specs/behavior/startup-recovery.md": {
+      "source": "specs/behavior/startup-recovery.md",
+      "sha256": "8a29ba64093bd2b4b4d87e8a3c86f93e8b1a6dcabbcafaa6951d7fb66c61104f"
     },
     "design-contract/specs/behavior/stremio-import.md": {
       "source": "specs/behavior/stremio-import.md",
@@ -231,6 +239,10 @@
       "source": "specs/behavior/torrent-runtime-v2.md",
       "sha256": "b09d0cd1b01cd4fb699d1c22dd2aa282cf2349846807b4f5405ba512681a57ba"
     },
+    "design-contract/specs/behavior/tv-browser-renderer.md": {
+      "source": "specs/behavior/tv-browser-renderer.md",
+      "sha256": "808e9c473dcb873ef4209a2c0880c148c54937bc6308cbb6996885c73384d670"
+    },
     "design-contract/specs/behavior/tv-my-list-posters.md": {
       "source": "specs/behavior/tv-my-list-posters.md",
       "sha256": "f7423e409e93f7ca18f4cbd725b359d3b0e8ef697fd24af111f27fdbe6f6c6ab"
@@ -245,7 +257,7 @@
     },
     "design-contract/viptv-design-system/README.md": {
       "source": "viptv-design-system/README.md",
-      "sha256": "712d81509a8b066012679e362a3f7fa3f6405222f9387c1ec3942cbfb593e572"
+      "sha256": "e0033f5930f769a04f8f9e625bd9845aae984ea856b987bf0e50675832332922"
     },
     "design-contract/viptv-design-system/claude-code/.claude/skills/viptv-ui/SKILL.md": {
       "source": "viptv-design-system/claude-code/.claude/skills/viptv-ui/SKILL.md",
@@ -253,15 +265,15 @@
     },
     "design-contract/viptv-design-system/components.md": {
       "source": "viptv-design-system/components.md",
-      "sha256": "e6d308a9f744bdc0304dd8dcc04598c477ebb495785ffeff6c48b1fa76b5458f"
+      "sha256": "b8749aea49b2f47b1d851ae2853d191a53c218b497b2a9240e79db8fa9da752e"
     },
     "design-contract/viptv-design-system/copy.md": {
       "source": "viptv-design-system/copy.md",
-      "sha256": "4ed0b6c2aea263d61428794aba4a7f11d99398e9711b747938ab6e4ded411dba"
+      "sha256": "ec7161905c01262950aa1b5fee3f209c13e2f84dde5cee7460e7fece9e992892"
     },
     "design-contract/viptv-design-system/decisions.md": {
       "source": "viptv-design-system/decisions.md",
-      "sha256": "4555441a934bf61008a745c7c4ee6f54be27bded5cec1352e34af7c545c71891"
+      "sha256": "eea269bea56f869ddf63b503697e6ccbf6cb2bcd6fde82542d56b9c92398d39c"
     },
     "design-contract/viptv-design-system/notes/Desktop app (Tauri) - research and decisions.md": {
       "source": "viptv-design-system/notes/Desktop app (Tauri) - research and decisions.md",
@@ -385,7 +397,7 @@
     },
     "design-contract/assets/FILES.json": {
       "source": "assets/FILES.json",
-      "sha256": "8720f07e04bd811f77e0c30407006ce8604b61834e02bb91e7d7d7025f5cc6d3"
+      "sha256": "e195c22aa3d6041b1b297e06a635ebb3e360357ba25d7ce83e8548363d3f2b04"
     },
     "design-contract/assets/roku/roku/data/avatar-catalog.json": {
       "source": "assets/roku/roku/data/avatar-catalog.json",
@@ -402,6 +414,830 @@
     "public/assets/photography/live-empty-wide.webp": {
       "source": "assets/photography/live-empty-wide.webp",
       "sha256": "aa34ba0293dcb726421ffc79266716f91cc5b3caf779d10492b8a7ba1c89aa11"
+    },
+    "public/assets/player/countdown/ring-000.png": {
+      "source": "assets/player/countdown/ring-000.png",
+      "sha256": "9ca00650f0d25ba626fb3d31657d957cff5c6f03ebeeeb828641501c271aebd0"
+    },
+    "roku/pkg/assets/player/countdown/ring-000.png": {
+      "source": "assets/player/countdown/ring-000.png",
+      "sha256": "9ca00650f0d25ba626fb3d31657d957cff5c6f03ebeeeb828641501c271aebd0"
+    },
+    "public/assets/player/countdown/ring-001.png": {
+      "source": "assets/player/countdown/ring-001.png",
+      "sha256": "6e0ba7194c1d5b407caff0021cc8414c80ef68b808347295f40a06edb9adf2bd"
+    },
+    "roku/pkg/assets/player/countdown/ring-001.png": {
+      "source": "assets/player/countdown/ring-001.png",
+      "sha256": "6e0ba7194c1d5b407caff0021cc8414c80ef68b808347295f40a06edb9adf2bd"
+    },
+    "public/assets/player/countdown/ring-002.png": {
+      "source": "assets/player/countdown/ring-002.png",
+      "sha256": "5dca190409b43a0868c6df66cba26c7498699c3af328d9c95a9c72f29c314620"
+    },
+    "roku/pkg/assets/player/countdown/ring-002.png": {
+      "source": "assets/player/countdown/ring-002.png",
+      "sha256": "5dca190409b43a0868c6df66cba26c7498699c3af328d9c95a9c72f29c314620"
+    },
+    "public/assets/player/countdown/ring-003.png": {
+      "source": "assets/player/countdown/ring-003.png",
+      "sha256": "70f568630594027e13e65908e84987cf36dffbc487ac54ffb8ec57f9c554dc71"
+    },
+    "roku/pkg/assets/player/countdown/ring-003.png": {
+      "source": "assets/player/countdown/ring-003.png",
+      "sha256": "70f568630594027e13e65908e84987cf36dffbc487ac54ffb8ec57f9c554dc71"
+    },
+    "public/assets/player/countdown/ring-004.png": {
+      "source": "assets/player/countdown/ring-004.png",
+      "sha256": "94a6d420f6f4f98c227bade7f3b7e84adf7029e15b83c3d8754e26822964c85b"
+    },
+    "roku/pkg/assets/player/countdown/ring-004.png": {
+      "source": "assets/player/countdown/ring-004.png",
+      "sha256": "94a6d420f6f4f98c227bade7f3b7e84adf7029e15b83c3d8754e26822964c85b"
+    },
+    "public/assets/player/countdown/ring-005.png": {
+      "source": "assets/player/countdown/ring-005.png",
+      "sha256": "ef76f0cf7e9fd8a56ea6dc923629287a9063d49677f2fc283be891fbde3ae8b5"
+    },
+    "roku/pkg/assets/player/countdown/ring-005.png": {
+      "source": "assets/player/countdown/ring-005.png",
+      "sha256": "ef76f0cf7e9fd8a56ea6dc923629287a9063d49677f2fc283be891fbde3ae8b5"
+    },
+    "public/assets/player/countdown/ring-006.png": {
+      "source": "assets/player/countdown/ring-006.png",
+      "sha256": "82f954ad9b73ee61a928ec3172af1d637a9555537e596d2c08e6a68b4446f764"
+    },
+    "roku/pkg/assets/player/countdown/ring-006.png": {
+      "source": "assets/player/countdown/ring-006.png",
+      "sha256": "82f954ad9b73ee61a928ec3172af1d637a9555537e596d2c08e6a68b4446f764"
+    },
+    "public/assets/player/countdown/ring-007.png": {
+      "source": "assets/player/countdown/ring-007.png",
+      "sha256": "3ddebce934585e4537d035643f7f9ebf79203988fb620c6939480ba2915b052b"
+    },
+    "roku/pkg/assets/player/countdown/ring-007.png": {
+      "source": "assets/player/countdown/ring-007.png",
+      "sha256": "3ddebce934585e4537d035643f7f9ebf79203988fb620c6939480ba2915b052b"
+    },
+    "public/assets/player/countdown/ring-008.png": {
+      "source": "assets/player/countdown/ring-008.png",
+      "sha256": "5189c2e3661333ff3d81fdcad71d274b91465697edad717b9aeff924c30882e6"
+    },
+    "roku/pkg/assets/player/countdown/ring-008.png": {
+      "source": "assets/player/countdown/ring-008.png",
+      "sha256": "5189c2e3661333ff3d81fdcad71d274b91465697edad717b9aeff924c30882e6"
+    },
+    "public/assets/player/countdown/ring-009.png": {
+      "source": "assets/player/countdown/ring-009.png",
+      "sha256": "351a092915a818171b34d5f745cf94ffb2f5e1ba04bf215a4c153f23d033e21e"
+    },
+    "roku/pkg/assets/player/countdown/ring-009.png": {
+      "source": "assets/player/countdown/ring-009.png",
+      "sha256": "351a092915a818171b34d5f745cf94ffb2f5e1ba04bf215a4c153f23d033e21e"
+    },
+    "public/assets/player/countdown/ring-010.png": {
+      "source": "assets/player/countdown/ring-010.png",
+      "sha256": "8b4ac1b75e6eba8e9f77a6a4392a71027c2de0544356ed060dcd2c7c609c46e2"
+    },
+    "roku/pkg/assets/player/countdown/ring-010.png": {
+      "source": "assets/player/countdown/ring-010.png",
+      "sha256": "8b4ac1b75e6eba8e9f77a6a4392a71027c2de0544356ed060dcd2c7c609c46e2"
+    },
+    "public/assets/player/countdown/ring-011.png": {
+      "source": "assets/player/countdown/ring-011.png",
+      "sha256": "6cc2f850822f8abd593354fd44d1c97d4116ae60e9de1f2f047e016b24958449"
+    },
+    "roku/pkg/assets/player/countdown/ring-011.png": {
+      "source": "assets/player/countdown/ring-011.png",
+      "sha256": "6cc2f850822f8abd593354fd44d1c97d4116ae60e9de1f2f047e016b24958449"
+    },
+    "public/assets/player/countdown/ring-012.png": {
+      "source": "assets/player/countdown/ring-012.png",
+      "sha256": "3d1b8eb47b874973ebbd6b80cb7b2b6286caafe4415cd79db6e09b9ebebb5013"
+    },
+    "roku/pkg/assets/player/countdown/ring-012.png": {
+      "source": "assets/player/countdown/ring-012.png",
+      "sha256": "3d1b8eb47b874973ebbd6b80cb7b2b6286caafe4415cd79db6e09b9ebebb5013"
+    },
+    "public/assets/player/countdown/ring-013.png": {
+      "source": "assets/player/countdown/ring-013.png",
+      "sha256": "4853a8e40daf47832d6197ad2408768fcf0668cd6750e2dc29b575952365f7be"
+    },
+    "roku/pkg/assets/player/countdown/ring-013.png": {
+      "source": "assets/player/countdown/ring-013.png",
+      "sha256": "4853a8e40daf47832d6197ad2408768fcf0668cd6750e2dc29b575952365f7be"
+    },
+    "public/assets/player/countdown/ring-014.png": {
+      "source": "assets/player/countdown/ring-014.png",
+      "sha256": "2f2d2c282c5b2bb410eb0bb24a51d915905afc44161fad1feaec6db7e65f3042"
+    },
+    "roku/pkg/assets/player/countdown/ring-014.png": {
+      "source": "assets/player/countdown/ring-014.png",
+      "sha256": "2f2d2c282c5b2bb410eb0bb24a51d915905afc44161fad1feaec6db7e65f3042"
+    },
+    "public/assets/player/countdown/ring-015.png": {
+      "source": "assets/player/countdown/ring-015.png",
+      "sha256": "93f108dd36480d9634236f99795691b4128344ed65b1ef565fa96ea8ea0bc55e"
+    },
+    "roku/pkg/assets/player/countdown/ring-015.png": {
+      "source": "assets/player/countdown/ring-015.png",
+      "sha256": "93f108dd36480d9634236f99795691b4128344ed65b1ef565fa96ea8ea0bc55e"
+    },
+    "public/assets/player/countdown/ring-016.png": {
+      "source": "assets/player/countdown/ring-016.png",
+      "sha256": "8a799989285741972739008c26cb5ea45303bbc5981295e5ee6e4ff14054a10b"
+    },
+    "roku/pkg/assets/player/countdown/ring-016.png": {
+      "source": "assets/player/countdown/ring-016.png",
+      "sha256": "8a799989285741972739008c26cb5ea45303bbc5981295e5ee6e4ff14054a10b"
+    },
+    "public/assets/player/countdown/ring-017.png": {
+      "source": "assets/player/countdown/ring-017.png",
+      "sha256": "65565f25df6f99fe7f2d910e36edb0efb891bb8b7a9aae91e215f6a918356425"
+    },
+    "roku/pkg/assets/player/countdown/ring-017.png": {
+      "source": "assets/player/countdown/ring-017.png",
+      "sha256": "65565f25df6f99fe7f2d910e36edb0efb891bb8b7a9aae91e215f6a918356425"
+    },
+    "public/assets/player/countdown/ring-018.png": {
+      "source": "assets/player/countdown/ring-018.png",
+      "sha256": "a388caee455e12e4e206cd7e8d54c7af47db135d680c45984a40a00002c23fed"
+    },
+    "roku/pkg/assets/player/countdown/ring-018.png": {
+      "source": "assets/player/countdown/ring-018.png",
+      "sha256": "a388caee455e12e4e206cd7e8d54c7af47db135d680c45984a40a00002c23fed"
+    },
+    "public/assets/player/countdown/ring-019.png": {
+      "source": "assets/player/countdown/ring-019.png",
+      "sha256": "3b199ab84b5cdb4ad1bf67fb77598c01dfb9aa57eab61786c8dff2c199dcd7e4"
+    },
+    "roku/pkg/assets/player/countdown/ring-019.png": {
+      "source": "assets/player/countdown/ring-019.png",
+      "sha256": "3b199ab84b5cdb4ad1bf67fb77598c01dfb9aa57eab61786c8dff2c199dcd7e4"
+    },
+    "public/assets/player/countdown/ring-020.png": {
+      "source": "assets/player/countdown/ring-020.png",
+      "sha256": "19b1180fa33e93af962e11528b92ce566fd03bb87ae9fde8a62fba6cca162698"
+    },
+    "roku/pkg/assets/player/countdown/ring-020.png": {
+      "source": "assets/player/countdown/ring-020.png",
+      "sha256": "19b1180fa33e93af962e11528b92ce566fd03bb87ae9fde8a62fba6cca162698"
+    },
+    "public/assets/player/countdown/ring-021.png": {
+      "source": "assets/player/countdown/ring-021.png",
+      "sha256": "709a23ff2ea5acfb8d732c148ab309f816cff0c5afd0a2117e69b6382a2050ba"
+    },
+    "roku/pkg/assets/player/countdown/ring-021.png": {
+      "source": "assets/player/countdown/ring-021.png",
+      "sha256": "709a23ff2ea5acfb8d732c148ab309f816cff0c5afd0a2117e69b6382a2050ba"
+    },
+    "public/assets/player/countdown/ring-022.png": {
+      "source": "assets/player/countdown/ring-022.png",
+      "sha256": "1be56d4a5d68efedccc0617a4b9186a60cb7d92f2e2eeaf4ab29f7e2f4c8d0ea"
+    },
+    "roku/pkg/assets/player/countdown/ring-022.png": {
+      "source": "assets/player/countdown/ring-022.png",
+      "sha256": "1be56d4a5d68efedccc0617a4b9186a60cb7d92f2e2eeaf4ab29f7e2f4c8d0ea"
+    },
+    "public/assets/player/countdown/ring-023.png": {
+      "source": "assets/player/countdown/ring-023.png",
+      "sha256": "aa01552928fc99bd5947e98ff6cce6825cbc9d9d7e6667c0286c6b1e6d6cdc60"
+    },
+    "roku/pkg/assets/player/countdown/ring-023.png": {
+      "source": "assets/player/countdown/ring-023.png",
+      "sha256": "aa01552928fc99bd5947e98ff6cce6825cbc9d9d7e6667c0286c6b1e6d6cdc60"
+    },
+    "public/assets/player/countdown/ring-024.png": {
+      "source": "assets/player/countdown/ring-024.png",
+      "sha256": "847b32f0dc6a99247c7462c727a7a0f4251dc25de8cce7cd8dda3412db079a72"
+    },
+    "roku/pkg/assets/player/countdown/ring-024.png": {
+      "source": "assets/player/countdown/ring-024.png",
+      "sha256": "847b32f0dc6a99247c7462c727a7a0f4251dc25de8cce7cd8dda3412db079a72"
+    },
+    "public/assets/player/countdown/ring-025.png": {
+      "source": "assets/player/countdown/ring-025.png",
+      "sha256": "2991251c6c4e4841089f546152a6972e129bc70054405a1dd3cc0130c8541a92"
+    },
+    "roku/pkg/assets/player/countdown/ring-025.png": {
+      "source": "assets/player/countdown/ring-025.png",
+      "sha256": "2991251c6c4e4841089f546152a6972e129bc70054405a1dd3cc0130c8541a92"
+    },
+    "public/assets/player/countdown/ring-026.png": {
+      "source": "assets/player/countdown/ring-026.png",
+      "sha256": "02f95f67209791f18dccdf31f2b3fc614f74a19d8781728396e8ab7145cf6e6d"
+    },
+    "roku/pkg/assets/player/countdown/ring-026.png": {
+      "source": "assets/player/countdown/ring-026.png",
+      "sha256": "02f95f67209791f18dccdf31f2b3fc614f74a19d8781728396e8ab7145cf6e6d"
+    },
+    "public/assets/player/countdown/ring-027.png": {
+      "source": "assets/player/countdown/ring-027.png",
+      "sha256": "cacc183896398e4fba7a4555347eae53de1f0f4f04d99ac97a8bf4e1e6b326cb"
+    },
+    "roku/pkg/assets/player/countdown/ring-027.png": {
+      "source": "assets/player/countdown/ring-027.png",
+      "sha256": "cacc183896398e4fba7a4555347eae53de1f0f4f04d99ac97a8bf4e1e6b326cb"
+    },
+    "public/assets/player/countdown/ring-028.png": {
+      "source": "assets/player/countdown/ring-028.png",
+      "sha256": "10ae731914f08c0dfb46427c473894ac5b80e0116544dc0f1fcf580ad0b3d8e3"
+    },
+    "roku/pkg/assets/player/countdown/ring-028.png": {
+      "source": "assets/player/countdown/ring-028.png",
+      "sha256": "10ae731914f08c0dfb46427c473894ac5b80e0116544dc0f1fcf580ad0b3d8e3"
+    },
+    "public/assets/player/countdown/ring-029.png": {
+      "source": "assets/player/countdown/ring-029.png",
+      "sha256": "16aef2faba4d53b468d2c7df8f67fdce9d14bc249113f28062ed55c343240b17"
+    },
+    "roku/pkg/assets/player/countdown/ring-029.png": {
+      "source": "assets/player/countdown/ring-029.png",
+      "sha256": "16aef2faba4d53b468d2c7df8f67fdce9d14bc249113f28062ed55c343240b17"
+    },
+    "public/assets/player/countdown/ring-030.png": {
+      "source": "assets/player/countdown/ring-030.png",
+      "sha256": "21cdc1a3627227c4201de30674cd01bceae8b1d0468b1ba9d39d7f1067bf5df3"
+    },
+    "roku/pkg/assets/player/countdown/ring-030.png": {
+      "source": "assets/player/countdown/ring-030.png",
+      "sha256": "21cdc1a3627227c4201de30674cd01bceae8b1d0468b1ba9d39d7f1067bf5df3"
+    },
+    "public/assets/player/countdown/ring-031.png": {
+      "source": "assets/player/countdown/ring-031.png",
+      "sha256": "9c4619efbce0134f95f5e84ddaf3a97b6580d74006f086756d3ba9f53f147f4b"
+    },
+    "roku/pkg/assets/player/countdown/ring-031.png": {
+      "source": "assets/player/countdown/ring-031.png",
+      "sha256": "9c4619efbce0134f95f5e84ddaf3a97b6580d74006f086756d3ba9f53f147f4b"
+    },
+    "public/assets/player/countdown/ring-032.png": {
+      "source": "assets/player/countdown/ring-032.png",
+      "sha256": "e654aa2c905042b0ae43e42ddbcd954f9d45efa0741fb45a72870c5666439796"
+    },
+    "roku/pkg/assets/player/countdown/ring-032.png": {
+      "source": "assets/player/countdown/ring-032.png",
+      "sha256": "e654aa2c905042b0ae43e42ddbcd954f9d45efa0741fb45a72870c5666439796"
+    },
+    "public/assets/player/countdown/ring-033.png": {
+      "source": "assets/player/countdown/ring-033.png",
+      "sha256": "46f8d4f1e837fc65216c0c239064658f0266e2b63293fc652609f0bff57bef09"
+    },
+    "roku/pkg/assets/player/countdown/ring-033.png": {
+      "source": "assets/player/countdown/ring-033.png",
+      "sha256": "46f8d4f1e837fc65216c0c239064658f0266e2b63293fc652609f0bff57bef09"
+    },
+    "public/assets/player/countdown/ring-034.png": {
+      "source": "assets/player/countdown/ring-034.png",
+      "sha256": "84fe8a3c9360ac767a762a4153e9891a6fb7757dbc291e26894800c7a7bc842f"
+    },
+    "roku/pkg/assets/player/countdown/ring-034.png": {
+      "source": "assets/player/countdown/ring-034.png",
+      "sha256": "84fe8a3c9360ac767a762a4153e9891a6fb7757dbc291e26894800c7a7bc842f"
+    },
+    "public/assets/player/countdown/ring-035.png": {
+      "source": "assets/player/countdown/ring-035.png",
+      "sha256": "56df420cae4506a0dc9bfa6df3dba8fa00dc07522e729a7ad4e3916214bd5b35"
+    },
+    "roku/pkg/assets/player/countdown/ring-035.png": {
+      "source": "assets/player/countdown/ring-035.png",
+      "sha256": "56df420cae4506a0dc9bfa6df3dba8fa00dc07522e729a7ad4e3916214bd5b35"
+    },
+    "public/assets/player/countdown/ring-036.png": {
+      "source": "assets/player/countdown/ring-036.png",
+      "sha256": "64078c213b48910bc91f388639eaee80d1ba99a7aa47ad12ecff9369df83b77b"
+    },
+    "roku/pkg/assets/player/countdown/ring-036.png": {
+      "source": "assets/player/countdown/ring-036.png",
+      "sha256": "64078c213b48910bc91f388639eaee80d1ba99a7aa47ad12ecff9369df83b77b"
+    },
+    "public/assets/player/countdown/ring-037.png": {
+      "source": "assets/player/countdown/ring-037.png",
+      "sha256": "89350b7bb79ed504310e1c3fa702683a4f748db5768bc9c1bcb80bb1e2b6d414"
+    },
+    "roku/pkg/assets/player/countdown/ring-037.png": {
+      "source": "assets/player/countdown/ring-037.png",
+      "sha256": "89350b7bb79ed504310e1c3fa702683a4f748db5768bc9c1bcb80bb1e2b6d414"
+    },
+    "public/assets/player/countdown/ring-038.png": {
+      "source": "assets/player/countdown/ring-038.png",
+      "sha256": "e558a93f5e19b0914a22ca0f5c2d75937357e16e06da76cf64afe4662a3dd506"
+    },
+    "roku/pkg/assets/player/countdown/ring-038.png": {
+      "source": "assets/player/countdown/ring-038.png",
+      "sha256": "e558a93f5e19b0914a22ca0f5c2d75937357e16e06da76cf64afe4662a3dd506"
+    },
+    "public/assets/player/countdown/ring-039.png": {
+      "source": "assets/player/countdown/ring-039.png",
+      "sha256": "e6d77579b142de81ee9683e4aa85ddc4e0667f8f5b7de00a3b1cbbf1507ee447"
+    },
+    "roku/pkg/assets/player/countdown/ring-039.png": {
+      "source": "assets/player/countdown/ring-039.png",
+      "sha256": "e6d77579b142de81ee9683e4aa85ddc4e0667f8f5b7de00a3b1cbbf1507ee447"
+    },
+    "public/assets/player/countdown/ring-040.png": {
+      "source": "assets/player/countdown/ring-040.png",
+      "sha256": "a6269b5ce90707c451e2366a3c355b9790a81565c4565e74428c760f7f5de8f4"
+    },
+    "roku/pkg/assets/player/countdown/ring-040.png": {
+      "source": "assets/player/countdown/ring-040.png",
+      "sha256": "a6269b5ce90707c451e2366a3c355b9790a81565c4565e74428c760f7f5de8f4"
+    },
+    "public/assets/player/countdown/ring-041.png": {
+      "source": "assets/player/countdown/ring-041.png",
+      "sha256": "ba710e68e8b21c7311322f40063e26b4d4ca85b5cf6502ce8120227d7ae25e2a"
+    },
+    "roku/pkg/assets/player/countdown/ring-041.png": {
+      "source": "assets/player/countdown/ring-041.png",
+      "sha256": "ba710e68e8b21c7311322f40063e26b4d4ca85b5cf6502ce8120227d7ae25e2a"
+    },
+    "public/assets/player/countdown/ring-042.png": {
+      "source": "assets/player/countdown/ring-042.png",
+      "sha256": "a8dc1f4232d0fd7672e20d2df0fc23e0b7dac3d8068554a7622c74ef5b991a41"
+    },
+    "roku/pkg/assets/player/countdown/ring-042.png": {
+      "source": "assets/player/countdown/ring-042.png",
+      "sha256": "a8dc1f4232d0fd7672e20d2df0fc23e0b7dac3d8068554a7622c74ef5b991a41"
+    },
+    "public/assets/player/countdown/ring-043.png": {
+      "source": "assets/player/countdown/ring-043.png",
+      "sha256": "053d45af7a617886d7877cb4330cb56ee446972168e15f3b97095474999644f7"
+    },
+    "roku/pkg/assets/player/countdown/ring-043.png": {
+      "source": "assets/player/countdown/ring-043.png",
+      "sha256": "053d45af7a617886d7877cb4330cb56ee446972168e15f3b97095474999644f7"
+    },
+    "public/assets/player/countdown/ring-044.png": {
+      "source": "assets/player/countdown/ring-044.png",
+      "sha256": "b751e51993394bc80346ce44b3353568514f318c4bdb1b79cbf6c04d7211ca05"
+    },
+    "roku/pkg/assets/player/countdown/ring-044.png": {
+      "source": "assets/player/countdown/ring-044.png",
+      "sha256": "b751e51993394bc80346ce44b3353568514f318c4bdb1b79cbf6c04d7211ca05"
+    },
+    "public/assets/player/countdown/ring-045.png": {
+      "source": "assets/player/countdown/ring-045.png",
+      "sha256": "d974d9a9dbbcaef4e6b59c93129cb97873870008be083d6785c92f2bf3b82930"
+    },
+    "roku/pkg/assets/player/countdown/ring-045.png": {
+      "source": "assets/player/countdown/ring-045.png",
+      "sha256": "d974d9a9dbbcaef4e6b59c93129cb97873870008be083d6785c92f2bf3b82930"
+    },
+    "public/assets/player/countdown/ring-046.png": {
+      "source": "assets/player/countdown/ring-046.png",
+      "sha256": "e7f09fb98e58ca8de12273e11822a9b36a8130d407b032ba284cf0d26640c715"
+    },
+    "roku/pkg/assets/player/countdown/ring-046.png": {
+      "source": "assets/player/countdown/ring-046.png",
+      "sha256": "e7f09fb98e58ca8de12273e11822a9b36a8130d407b032ba284cf0d26640c715"
+    },
+    "public/assets/player/countdown/ring-047.png": {
+      "source": "assets/player/countdown/ring-047.png",
+      "sha256": "cebadc0f8a50405f103808599e65c312a95850d0e500e48c7afaa211e850c85f"
+    },
+    "roku/pkg/assets/player/countdown/ring-047.png": {
+      "source": "assets/player/countdown/ring-047.png",
+      "sha256": "cebadc0f8a50405f103808599e65c312a95850d0e500e48c7afaa211e850c85f"
+    },
+    "public/assets/player/countdown/ring-048.png": {
+      "source": "assets/player/countdown/ring-048.png",
+      "sha256": "83efc03ad89b1e1e8a28816bbfcd95669b656a1bd461148011c93882fbf2ecea"
+    },
+    "roku/pkg/assets/player/countdown/ring-048.png": {
+      "source": "assets/player/countdown/ring-048.png",
+      "sha256": "83efc03ad89b1e1e8a28816bbfcd95669b656a1bd461148011c93882fbf2ecea"
+    },
+    "public/assets/player/countdown/ring-049.png": {
+      "source": "assets/player/countdown/ring-049.png",
+      "sha256": "64be0179addd185b45a8e85f42ac0c398cbecd18b2c3e478e9c5297cc316b831"
+    },
+    "roku/pkg/assets/player/countdown/ring-049.png": {
+      "source": "assets/player/countdown/ring-049.png",
+      "sha256": "64be0179addd185b45a8e85f42ac0c398cbecd18b2c3e478e9c5297cc316b831"
+    },
+    "public/assets/player/countdown/ring-050.png": {
+      "source": "assets/player/countdown/ring-050.png",
+      "sha256": "d994842ec08d57376b748f5061cce02c07c390e52252cb352c4c2daf21894ca0"
+    },
+    "roku/pkg/assets/player/countdown/ring-050.png": {
+      "source": "assets/player/countdown/ring-050.png",
+      "sha256": "d994842ec08d57376b748f5061cce02c07c390e52252cb352c4c2daf21894ca0"
+    },
+    "public/assets/player/countdown/ring-051.png": {
+      "source": "assets/player/countdown/ring-051.png",
+      "sha256": "9e0c63894ec06d19087a3abe91aaff9fd3bc8667c88ef92a4664dc1463210e20"
+    },
+    "roku/pkg/assets/player/countdown/ring-051.png": {
+      "source": "assets/player/countdown/ring-051.png",
+      "sha256": "9e0c63894ec06d19087a3abe91aaff9fd3bc8667c88ef92a4664dc1463210e20"
+    },
+    "public/assets/player/countdown/ring-052.png": {
+      "source": "assets/player/countdown/ring-052.png",
+      "sha256": "a0801b3f20c0e1a8800e5347d858cb099b9c82350fb32e745b8eca1bbdbb5bee"
+    },
+    "roku/pkg/assets/player/countdown/ring-052.png": {
+      "source": "assets/player/countdown/ring-052.png",
+      "sha256": "a0801b3f20c0e1a8800e5347d858cb099b9c82350fb32e745b8eca1bbdbb5bee"
+    },
+    "public/assets/player/countdown/ring-053.png": {
+      "source": "assets/player/countdown/ring-053.png",
+      "sha256": "2a0cc9ddc3083880b7e9174a0a7f7d8ad852de0ab1353bc854f9c70771ee2746"
+    },
+    "roku/pkg/assets/player/countdown/ring-053.png": {
+      "source": "assets/player/countdown/ring-053.png",
+      "sha256": "2a0cc9ddc3083880b7e9174a0a7f7d8ad852de0ab1353bc854f9c70771ee2746"
+    },
+    "public/assets/player/countdown/ring-054.png": {
+      "source": "assets/player/countdown/ring-054.png",
+      "sha256": "6192522b1b0192aca3cb4f287a062d2f6152cb524adf1d946204235f99545f17"
+    },
+    "roku/pkg/assets/player/countdown/ring-054.png": {
+      "source": "assets/player/countdown/ring-054.png",
+      "sha256": "6192522b1b0192aca3cb4f287a062d2f6152cb524adf1d946204235f99545f17"
+    },
+    "public/assets/player/countdown/ring-055.png": {
+      "source": "assets/player/countdown/ring-055.png",
+      "sha256": "6114f3c6c5cd655eb3ce12f82a1ef97e9bbf2ede67f4418428eb43de72a85001"
+    },
+    "roku/pkg/assets/player/countdown/ring-055.png": {
+      "source": "assets/player/countdown/ring-055.png",
+      "sha256": "6114f3c6c5cd655eb3ce12f82a1ef97e9bbf2ede67f4418428eb43de72a85001"
+    },
+    "public/assets/player/countdown/ring-056.png": {
+      "source": "assets/player/countdown/ring-056.png",
+      "sha256": "bc9026da9200d19f4e91f1beb6253ff85817ff1c38023ea52b6b807a8fb8b190"
+    },
+    "roku/pkg/assets/player/countdown/ring-056.png": {
+      "source": "assets/player/countdown/ring-056.png",
+      "sha256": "bc9026da9200d19f4e91f1beb6253ff85817ff1c38023ea52b6b807a8fb8b190"
+    },
+    "public/assets/player/countdown/ring-057.png": {
+      "source": "assets/player/countdown/ring-057.png",
+      "sha256": "74b8c5c0325d877ce798e51e21f4c14b2656a640b7cae5c97f842e5b6446afb7"
+    },
+    "roku/pkg/assets/player/countdown/ring-057.png": {
+      "source": "assets/player/countdown/ring-057.png",
+      "sha256": "74b8c5c0325d877ce798e51e21f4c14b2656a640b7cae5c97f842e5b6446afb7"
+    },
+    "public/assets/player/countdown/ring-058.png": {
+      "source": "assets/player/countdown/ring-058.png",
+      "sha256": "1b18ee924ec0f16a04aea89c63b6322acf4a015e91a0e46acca26b51ad5a4ec8"
+    },
+    "roku/pkg/assets/player/countdown/ring-058.png": {
+      "source": "assets/player/countdown/ring-058.png",
+      "sha256": "1b18ee924ec0f16a04aea89c63b6322acf4a015e91a0e46acca26b51ad5a4ec8"
+    },
+    "public/assets/player/countdown/ring-059.png": {
+      "source": "assets/player/countdown/ring-059.png",
+      "sha256": "9e9862ab8017b29d9c83a7381dec807650b4e35d5f5dea8b09efd4410e2a08a8"
+    },
+    "roku/pkg/assets/player/countdown/ring-059.png": {
+      "source": "assets/player/countdown/ring-059.png",
+      "sha256": "9e9862ab8017b29d9c83a7381dec807650b4e35d5f5dea8b09efd4410e2a08a8"
+    },
+    "public/assets/player/countdown/ring-060.png": {
+      "source": "assets/player/countdown/ring-060.png",
+      "sha256": "7d74ab1be46902b9851e4e2d841b5cbbad100463aec52eeeab9c7ebb7e39f143"
+    },
+    "roku/pkg/assets/player/countdown/ring-060.png": {
+      "source": "assets/player/countdown/ring-060.png",
+      "sha256": "7d74ab1be46902b9851e4e2d841b5cbbad100463aec52eeeab9c7ebb7e39f143"
+    },
+    "public/assets/player/countdown/ring-061.png": {
+      "source": "assets/player/countdown/ring-061.png",
+      "sha256": "4ce9142d604af92da3275c6ad272e7394e441211b0bbf2a0baaa1b28c1f0b9b2"
+    },
+    "roku/pkg/assets/player/countdown/ring-061.png": {
+      "source": "assets/player/countdown/ring-061.png",
+      "sha256": "4ce9142d604af92da3275c6ad272e7394e441211b0bbf2a0baaa1b28c1f0b9b2"
+    },
+    "public/assets/player/countdown/ring-062.png": {
+      "source": "assets/player/countdown/ring-062.png",
+      "sha256": "ceb4459eade913d52513108efa98a6ddba070463ba0009eca5496223de38c656"
+    },
+    "roku/pkg/assets/player/countdown/ring-062.png": {
+      "source": "assets/player/countdown/ring-062.png",
+      "sha256": "ceb4459eade913d52513108efa98a6ddba070463ba0009eca5496223de38c656"
+    },
+    "public/assets/player/countdown/ring-063.png": {
+      "source": "assets/player/countdown/ring-063.png",
+      "sha256": "16551b658d9ba19a391b3fe838180d8da8dcbba73cec20fc699f43e983147994"
+    },
+    "roku/pkg/assets/player/countdown/ring-063.png": {
+      "source": "assets/player/countdown/ring-063.png",
+      "sha256": "16551b658d9ba19a391b3fe838180d8da8dcbba73cec20fc699f43e983147994"
+    },
+    "public/assets/player/countdown/ring-064.png": {
+      "source": "assets/player/countdown/ring-064.png",
+      "sha256": "744eb3273eea3ba18590fa6854075fcac37215d577ce913d03dd0d7a5534ceed"
+    },
+    "roku/pkg/assets/player/countdown/ring-064.png": {
+      "source": "assets/player/countdown/ring-064.png",
+      "sha256": "744eb3273eea3ba18590fa6854075fcac37215d577ce913d03dd0d7a5534ceed"
+    },
+    "public/assets/player/countdown/ring-065.png": {
+      "source": "assets/player/countdown/ring-065.png",
+      "sha256": "f3e3e36f3e00390b9a4f7bc3b9ee946d77e2bfd77a9c63b63da68c57765c3d33"
+    },
+    "roku/pkg/assets/player/countdown/ring-065.png": {
+      "source": "assets/player/countdown/ring-065.png",
+      "sha256": "f3e3e36f3e00390b9a4f7bc3b9ee946d77e2bfd77a9c63b63da68c57765c3d33"
+    },
+    "public/assets/player/countdown/ring-066.png": {
+      "source": "assets/player/countdown/ring-066.png",
+      "sha256": "2094b20426d1b02760d9ed90687b1abc92a09cb99614beb2eb70b459a526fd15"
+    },
+    "roku/pkg/assets/player/countdown/ring-066.png": {
+      "source": "assets/player/countdown/ring-066.png",
+      "sha256": "2094b20426d1b02760d9ed90687b1abc92a09cb99614beb2eb70b459a526fd15"
+    },
+    "public/assets/player/countdown/ring-067.png": {
+      "source": "assets/player/countdown/ring-067.png",
+      "sha256": "463b78c2b7dee6d33a0094b6628c0a86f0da22ecde25a12616b848da613e3709"
+    },
+    "roku/pkg/assets/player/countdown/ring-067.png": {
+      "source": "assets/player/countdown/ring-067.png",
+      "sha256": "463b78c2b7dee6d33a0094b6628c0a86f0da22ecde25a12616b848da613e3709"
+    },
+    "public/assets/player/countdown/ring-068.png": {
+      "source": "assets/player/countdown/ring-068.png",
+      "sha256": "49354cfde6c054377e95ab617cde80913a058cbd312ec135733e996e69a80df1"
+    },
+    "roku/pkg/assets/player/countdown/ring-068.png": {
+      "source": "assets/player/countdown/ring-068.png",
+      "sha256": "49354cfde6c054377e95ab617cde80913a058cbd312ec135733e996e69a80df1"
+    },
+    "public/assets/player/countdown/ring-069.png": {
+      "source": "assets/player/countdown/ring-069.png",
+      "sha256": "347100c736658661528ca468ce2fb1f2cdad3b639e5ce4d8090385c3a74e15f0"
+    },
+    "roku/pkg/assets/player/countdown/ring-069.png": {
+      "source": "assets/player/countdown/ring-069.png",
+      "sha256": "347100c736658661528ca468ce2fb1f2cdad3b639e5ce4d8090385c3a74e15f0"
+    },
+    "public/assets/player/countdown/ring-070.png": {
+      "source": "assets/player/countdown/ring-070.png",
+      "sha256": "23a276d03f257caf037f458cdcc076b8caa927f279664815592b7c9457a4f0c5"
+    },
+    "roku/pkg/assets/player/countdown/ring-070.png": {
+      "source": "assets/player/countdown/ring-070.png",
+      "sha256": "23a276d03f257caf037f458cdcc076b8caa927f279664815592b7c9457a4f0c5"
+    },
+    "public/assets/player/countdown/ring-071.png": {
+      "source": "assets/player/countdown/ring-071.png",
+      "sha256": "e1588dfb18894071d0bb2fb2798f857530fe638d63593569a5bc58b3f472b968"
+    },
+    "roku/pkg/assets/player/countdown/ring-071.png": {
+      "source": "assets/player/countdown/ring-071.png",
+      "sha256": "e1588dfb18894071d0bb2fb2798f857530fe638d63593569a5bc58b3f472b968"
+    },
+    "public/assets/player/countdown/ring-072.png": {
+      "source": "assets/player/countdown/ring-072.png",
+      "sha256": "bf43041e05e8f7368bfeeca1ad1dbb7ba0c483bb6c8c85ee8ed15f214fa7232a"
+    },
+    "roku/pkg/assets/player/countdown/ring-072.png": {
+      "source": "assets/player/countdown/ring-072.png",
+      "sha256": "bf43041e05e8f7368bfeeca1ad1dbb7ba0c483bb6c8c85ee8ed15f214fa7232a"
+    },
+    "public/assets/player/countdown/ring-073.png": {
+      "source": "assets/player/countdown/ring-073.png",
+      "sha256": "f0e9ae183c3d2568bb8a2e003e6fc2717a40d310a59a07288d0057f0d741487a"
+    },
+    "roku/pkg/assets/player/countdown/ring-073.png": {
+      "source": "assets/player/countdown/ring-073.png",
+      "sha256": "f0e9ae183c3d2568bb8a2e003e6fc2717a40d310a59a07288d0057f0d741487a"
+    },
+    "public/assets/player/countdown/ring-074.png": {
+      "source": "assets/player/countdown/ring-074.png",
+      "sha256": "c3a11dae0b76d6d2eba9b63badf9b3f8596982686658f4fe2a66b068d1af3764"
+    },
+    "roku/pkg/assets/player/countdown/ring-074.png": {
+      "source": "assets/player/countdown/ring-074.png",
+      "sha256": "c3a11dae0b76d6d2eba9b63badf9b3f8596982686658f4fe2a66b068d1af3764"
+    },
+    "public/assets/player/countdown/ring-075.png": {
+      "source": "assets/player/countdown/ring-075.png",
+      "sha256": "d7f7ed0639079a7d3ba9ced9a0b8c09bbe6ba5e69a13b94009a2a620cb6f09ad"
+    },
+    "roku/pkg/assets/player/countdown/ring-075.png": {
+      "source": "assets/player/countdown/ring-075.png",
+      "sha256": "d7f7ed0639079a7d3ba9ced9a0b8c09bbe6ba5e69a13b94009a2a620cb6f09ad"
+    },
+    "public/assets/player/countdown/ring-076.png": {
+      "source": "assets/player/countdown/ring-076.png",
+      "sha256": "7e448d40ce79c844ade01a28c76993aacd617e1074cac3e0c6cee0b56f93b96c"
+    },
+    "roku/pkg/assets/player/countdown/ring-076.png": {
+      "source": "assets/player/countdown/ring-076.png",
+      "sha256": "7e448d40ce79c844ade01a28c76993aacd617e1074cac3e0c6cee0b56f93b96c"
+    },
+    "public/assets/player/countdown/ring-077.png": {
+      "source": "assets/player/countdown/ring-077.png",
+      "sha256": "2080b64c6c9ecdb571e386b03aa4d6815dfcb13a430d9bf107e7fedf16197d37"
+    },
+    "roku/pkg/assets/player/countdown/ring-077.png": {
+      "source": "assets/player/countdown/ring-077.png",
+      "sha256": "2080b64c6c9ecdb571e386b03aa4d6815dfcb13a430d9bf107e7fedf16197d37"
+    },
+    "public/assets/player/countdown/ring-078.png": {
+      "source": "assets/player/countdown/ring-078.png",
+      "sha256": "950d3ea3dac777d2c2038a660275a8320b1b3d201691eed075aa9c9038690475"
+    },
+    "roku/pkg/assets/player/countdown/ring-078.png": {
+      "source": "assets/player/countdown/ring-078.png",
+      "sha256": "950d3ea3dac777d2c2038a660275a8320b1b3d201691eed075aa9c9038690475"
+    },
+    "public/assets/player/countdown/ring-079.png": {
+      "source": "assets/player/countdown/ring-079.png",
+      "sha256": "234ccada2972bc3ad905fc71fda89dada898ce187d4098f29246c82279e39eea"
+    },
+    "roku/pkg/assets/player/countdown/ring-079.png": {
+      "source": "assets/player/countdown/ring-079.png",
+      "sha256": "234ccada2972bc3ad905fc71fda89dada898ce187d4098f29246c82279e39eea"
+    },
+    "public/assets/player/countdown/ring-080.png": {
+      "source": "assets/player/countdown/ring-080.png",
+      "sha256": "c70b9531c3d35419a8145b73556af44feaa06960420f39a2fbfafd3ee5e7f3b8"
+    },
+    "roku/pkg/assets/player/countdown/ring-080.png": {
+      "source": "assets/player/countdown/ring-080.png",
+      "sha256": "c70b9531c3d35419a8145b73556af44feaa06960420f39a2fbfafd3ee5e7f3b8"
+    },
+    "public/assets/player/countdown/ring-081.png": {
+      "source": "assets/player/countdown/ring-081.png",
+      "sha256": "d2242e6e90f8a15d8ed7ec4d6d48c938dc63140b4f581327580876a54a6ece23"
+    },
+    "roku/pkg/assets/player/countdown/ring-081.png": {
+      "source": "assets/player/countdown/ring-081.png",
+      "sha256": "d2242e6e90f8a15d8ed7ec4d6d48c938dc63140b4f581327580876a54a6ece23"
+    },
+    "public/assets/player/countdown/ring-082.png": {
+      "source": "assets/player/countdown/ring-082.png",
+      "sha256": "161f1f5e10152ca8779737c1a42d40fc766f82be665012dd2499a09e23896929"
+    },
+    "roku/pkg/assets/player/countdown/ring-082.png": {
+      "source": "assets/player/countdown/ring-082.png",
+      "sha256": "161f1f5e10152ca8779737c1a42d40fc766f82be665012dd2499a09e23896929"
+    },
+    "public/assets/player/countdown/ring-083.png": {
+      "source": "assets/player/countdown/ring-083.png",
+      "sha256": "d9518c729a77258edbb29f2a9698824a6e5fffc7e0beaf86ff4ed92c2c92de7f"
+    },
+    "roku/pkg/assets/player/countdown/ring-083.png": {
+      "source": "assets/player/countdown/ring-083.png",
+      "sha256": "d9518c729a77258edbb29f2a9698824a6e5fffc7e0beaf86ff4ed92c2c92de7f"
+    },
+    "public/assets/player/countdown/ring-084.png": {
+      "source": "assets/player/countdown/ring-084.png",
+      "sha256": "1147dfeb034b866d47d71c53f2bd0f39f3918b3c57478fffdfcb05cb9fb84ed0"
+    },
+    "roku/pkg/assets/player/countdown/ring-084.png": {
+      "source": "assets/player/countdown/ring-084.png",
+      "sha256": "1147dfeb034b866d47d71c53f2bd0f39f3918b3c57478fffdfcb05cb9fb84ed0"
+    },
+    "public/assets/player/countdown/ring-085.png": {
+      "source": "assets/player/countdown/ring-085.png",
+      "sha256": "828f0e685d3da091cd799fa872f46319e60db33cf9b141b83ba6e1fae39da29d"
+    },
+    "roku/pkg/assets/player/countdown/ring-085.png": {
+      "source": "assets/player/countdown/ring-085.png",
+      "sha256": "828f0e685d3da091cd799fa872f46319e60db33cf9b141b83ba6e1fae39da29d"
+    },
+    "public/assets/player/countdown/ring-086.png": {
+      "source": "assets/player/countdown/ring-086.png",
+      "sha256": "d083159c0fc4377b5c98f08a18bf7be074dab7fcf791a4c708748dd56a6fd844"
+    },
+    "roku/pkg/assets/player/countdown/ring-086.png": {
+      "source": "assets/player/countdown/ring-086.png",
+      "sha256": "d083159c0fc4377b5c98f08a18bf7be074dab7fcf791a4c708748dd56a6fd844"
+    },
+    "public/assets/player/countdown/ring-087.png": {
+      "source": "assets/player/countdown/ring-087.png",
+      "sha256": "68ace3aeeda97c0ef7c5a4b29ad5521914173df4ce0b03e2aad8b70bdb189d75"
+    },
+    "roku/pkg/assets/player/countdown/ring-087.png": {
+      "source": "assets/player/countdown/ring-087.png",
+      "sha256": "68ace3aeeda97c0ef7c5a4b29ad5521914173df4ce0b03e2aad8b70bdb189d75"
+    },
+    "public/assets/player/countdown/ring-088.png": {
+      "source": "assets/player/countdown/ring-088.png",
+      "sha256": "3e618ce1337e451ef6d384237846e6cb7a63debf107eadf9fd66a7f3706df417"
+    },
+    "roku/pkg/assets/player/countdown/ring-088.png": {
+      "source": "assets/player/countdown/ring-088.png",
+      "sha256": "3e618ce1337e451ef6d384237846e6cb7a63debf107eadf9fd66a7f3706df417"
+    },
+    "public/assets/player/countdown/ring-089.png": {
+      "source": "assets/player/countdown/ring-089.png",
+      "sha256": "554e042ce9eb030243d9bd16294ad6beb7bb884ff46fbb8dc1e5f5dac79c61d2"
+    },
+    "roku/pkg/assets/player/countdown/ring-089.png": {
+      "source": "assets/player/countdown/ring-089.png",
+      "sha256": "554e042ce9eb030243d9bd16294ad6beb7bb884ff46fbb8dc1e5f5dac79c61d2"
+    },
+    "public/assets/player/countdown/ring-090.png": {
+      "source": "assets/player/countdown/ring-090.png",
+      "sha256": "6ed237de4ff7573db31e452c27e3a8a57990bf31f2295d72564f1fc339f91513"
+    },
+    "roku/pkg/assets/player/countdown/ring-090.png": {
+      "source": "assets/player/countdown/ring-090.png",
+      "sha256": "6ed237de4ff7573db31e452c27e3a8a57990bf31f2295d72564f1fc339f91513"
+    },
+    "public/assets/player/countdown/ring-091.png": {
+      "source": "assets/player/countdown/ring-091.png",
+      "sha256": "3fe45cfa93e94296c4cf2763d00ac4c05d8dfb8570a0b312cc256fb831e294da"
+    },
+    "roku/pkg/assets/player/countdown/ring-091.png": {
+      "source": "assets/player/countdown/ring-091.png",
+      "sha256": "3fe45cfa93e94296c4cf2763d00ac4c05d8dfb8570a0b312cc256fb831e294da"
+    },
+    "public/assets/player/countdown/ring-092.png": {
+      "source": "assets/player/countdown/ring-092.png",
+      "sha256": "dbcc0ff85ce53e121fdf3f45a4c8be1455e09e4ad65411360c633dfc51dd98c2"
+    },
+    "roku/pkg/assets/player/countdown/ring-092.png": {
+      "source": "assets/player/countdown/ring-092.png",
+      "sha256": "dbcc0ff85ce53e121fdf3f45a4c8be1455e09e4ad65411360c633dfc51dd98c2"
+    },
+    "public/assets/player/countdown/ring-093.png": {
+      "source": "assets/player/countdown/ring-093.png",
+      "sha256": "fc2e7fdcf60ee0ccb3ef48eafa23dc9818a4d1cde8b45d3d339de35a89d04e36"
+    },
+    "roku/pkg/assets/player/countdown/ring-093.png": {
+      "source": "assets/player/countdown/ring-093.png",
+      "sha256": "fc2e7fdcf60ee0ccb3ef48eafa23dc9818a4d1cde8b45d3d339de35a89d04e36"
+    },
+    "public/assets/player/countdown/ring-094.png": {
+      "source": "assets/player/countdown/ring-094.png",
+      "sha256": "4183360c6de11e6c421a80d72f90a344968abe9e11c0691fa584d91dd3df04fb"
+    },
+    "roku/pkg/assets/player/countdown/ring-094.png": {
+      "source": "assets/player/countdown/ring-094.png",
+      "sha256": "4183360c6de11e6c421a80d72f90a344968abe9e11c0691fa584d91dd3df04fb"
+    },
+    "public/assets/player/countdown/ring-095.png": {
+      "source": "assets/player/countdown/ring-095.png",
+      "sha256": "50de7790f9bd0c8d05ae608a5b1f9fc6e123e8eec5d8670c9901c95b46302fbd"
+    },
+    "roku/pkg/assets/player/countdown/ring-095.png": {
+      "source": "assets/player/countdown/ring-095.png",
+      "sha256": "50de7790f9bd0c8d05ae608a5b1f9fc6e123e8eec5d8670c9901c95b46302fbd"
+    },
+    "public/assets/player/countdown/ring-096.png": {
+      "source": "assets/player/countdown/ring-096.png",
+      "sha256": "ff12ad8f0ee4fb00f0c9f24d882f264c73e0f4f1edb492f57ab799b176f93271"
+    },
+    "roku/pkg/assets/player/countdown/ring-096.png": {
+      "source": "assets/player/countdown/ring-096.png",
+      "sha256": "ff12ad8f0ee4fb00f0c9f24d882f264c73e0f4f1edb492f57ab799b176f93271"
+    },
+    "public/assets/player/countdown/ring-097.png": {
+      "source": "assets/player/countdown/ring-097.png",
+      "sha256": "97141bd1a12b2c91e2b59ba8bcd5cc0460ea031cdd0b6a4886d9c7a6e61eca36"
+    },
+    "roku/pkg/assets/player/countdown/ring-097.png": {
+      "source": "assets/player/countdown/ring-097.png",
+      "sha256": "97141bd1a12b2c91e2b59ba8bcd5cc0460ea031cdd0b6a4886d9c7a6e61eca36"
+    },
+    "public/assets/player/countdown/ring-098.png": {
+      "source": "assets/player/countdown/ring-098.png",
+      "sha256": "27634c9ea883965e64cc995a67f8349cfe2f37c5bc6ea4e0eba93f933d48f2a4"
+    },
+    "roku/pkg/assets/player/countdown/ring-098.png": {
+      "source": "assets/player/countdown/ring-098.png",
+      "sha256": "27634c9ea883965e64cc995a67f8349cfe2f37c5bc6ea4e0eba93f933d48f2a4"
+    },
+    "public/assets/player/countdown/ring-099.png": {
+      "source": "assets/player/countdown/ring-099.png",
+      "sha256": "ad849faa80147da651655ab5d1f8a61abbceb95f0814c6217cfe38e61ad2af51"
+    },
+    "roku/pkg/assets/player/countdown/ring-099.png": {
+      "source": "assets/player/countdown/ring-099.png",
+      "sha256": "ad849faa80147da651655ab5d1f8a61abbceb95f0814c6217cfe38e61ad2af51"
+    },
+    "public/assets/player/countdown/ring-100.png": {
+      "source": "assets/player/countdown/ring-100.png",
+      "sha256": "89940a591fc6598561304e77dda0d5c0bedd6df47358ac474da254a1dfdcb1a7"
+    },
+    "roku/pkg/assets/player/countdown/ring-100.png": {
+      "source": "assets/player/countdown/ring-100.png",
+      "sha256": "89940a591fc6598561304e77dda0d5c0bedd6df47358ac474da254a1dfdcb1a7"
+    },
+    "public/assets/player/countdown/ring-atlas.png": {
+      "source": "assets/player/countdown/ring-atlas.png",
+      "sha256": "cce33958e909c14a49d9502f2cb20776ea179cde562da9756de5e1689ad4313e"
+    },
+    "roku/pkg/assets/player/countdown/ring-atlas.png": {
+      "source": "assets/player/countdown/ring-atlas.png",
+      "sha256": "cce33958e909c14a49d9502f2cb20776ea179cde562da9756de5e1689ad4313e"
+    },
+    "public/assets/player/end-scrim.png": {
+      "source": "assets/player/end-scrim.png",
+      "sha256": "6000186a53617df2992613c624239efeb0a69890be99ff7dfe09faed6e59dfd3"
+    },
+    "roku/pkg/assets/player/end-scrim.png": {
+      "source": "assets/player/end-scrim.png",
+      "sha256": "6000186a53617df2992613c624239efeb0a69890be99ff7dfe09faed6e59dfd3"
     },
     "public/assets/avatar-catalog/README.md": {
       "source": "assets/roku/roku/images/avatar-catalog/README.md",

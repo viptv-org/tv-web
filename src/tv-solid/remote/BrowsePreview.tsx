@@ -7,72 +7,216 @@ import {
   onCleanup,
   Show,
 } from "solid-js";
-import { getRenderer } from "@solidtv/solid";
-import type { RendererMain, ShaderNode, WebGlShaderType } from "@solidtv/renderer";
-import { sameShader } from "../shaders";
 import { KeyedFor, TvView } from "../runtime";
-import { registerTvShader } from "../shaders";
-import { Label, Logo, palette } from "./visuals";
+import {
+  bottomScrimGradient,
+  browseWideScrimGradient,
+  Label,
+  Logo,
+  NativeBackdrop,
+  palette,
+} from "./visuals";
+import { imageSource } from "./image-source";
 import { TitleMetadata } from "./TitleMetadata";
+import { sdfTextMetrics } from "./text-measure";
 import type { Card } from "./types";
-import { HomeProgress } from "./HomeTileEffects";
-type BrowsePreviewProps = { uvSize: number[]; uvOrigin: number[] };
-const shader: WebGlShaderType<BrowsePreviewProps> = {
-  props: { uvSize: [1, 1], uvOrigin: [0, 0] },
-  update(this: any) {
-    const p = this.props as BrowsePreviewProps;
-    this.uniform2fa("u_uvSize", p.uvSize);
-    this.uniform2fa("u_uvOrigin", p.uvOrigin);
-  },
-  canBatch: sameShader,
-  vertex: `
-precision highp float;
-attribute vec2 a_position;attribute vec2 a_nodeCoords;attribute vec4 a_color;
-uniform vec2 u_resolution;uniform float u_pixelRatio;uniform vec2 u_uvOrigin;uniform vec2 u_uvSize;
-varying vec2 v_uv;varying vec2 v_local;varying vec4 v_color;
-void main(){v_uv=u_uvOrigin+a_nodeCoords*u_uvSize;v_local=a_nodeCoords;v_color=a_color;gl_Position=vec4(a_position*u_pixelRatio*vec2(2.0/u_resolution.x,-2.0/u_resolution.y)+vec2(-1.0,1.0),0.0,1.0);}`,
-  fragment: `
-precision highp float;
-uniform sampler2D u_texture;varying vec2 v_uv;varying vec2 v_local;varying vec4 v_color;
-void main(){vec4 art=texture2D(u_texture,v_uv);vec3 bg=vec3(11.0,11.0,12.0)/255.0;float visible=clamp(v_local.x*1160.0/560.0,0.0,1.0)*(1.0-clamp((v_local.y*620.0-380.0)/241.0,0.0,1.0));gl_FragColor=vec4(mix(bg,art.rgb+bg*(1.0-art.a),visible),1.0)*v_color;}`,
+type Frame = {
+  id: number;
+  src: string;
+  width: number;
+  height: number;
+  ambient?: ImageData;
+  plane?: ImageData;
 };
-const registered = new WeakSet<RendererMain>();
-type Frame = { id: number; src: string; width: number; height: number };
-function Artwork(props: { frame: Frame; alpha: number }) {
-  const renderer = getRenderer() as RendererMain;
-  if (!registered.has(renderer)) {
-    registerTvShader(renderer, "tvBrowsePreview", shader);
-    registered.add(renderer);
+function ambientArtwork(image: HTMLImageElement): ImageData | undefined {
+  const output = document.createElement("canvas");
+  output.width = 480;
+  output.height = 270;
+  try {
+    const context = output.getContext("2d");
+    if (!context) return undefined;
+    const scale = Math.max(480 / image.naturalWidth, 270 / image.naturalHeight),
+      width = image.naturalWidth * scale,
+      height = image.naturalHeight * scale;
+    const filtered = context as CanvasRenderingContext2D & {
+      filter?: string;
+    };
+    if (filtered.filter !== undefined) {
+      filtered.filter = "blur(26px)";
+      context.drawImage(
+        image,
+        (480 - width) / 2,
+        (270 - height) / 2,
+        width,
+        height,
+      );
+      filtered.filter = "none";
+    } else {
+      const source = document.createElement("canvas");
+      source.width = 60;
+      source.height = 34;
+      const small = source.getContext("2d");
+      if (!small) return undefined;
+      const smallScale = Math.max(
+        60 / image.naturalWidth,
+        34 / image.naturalHeight,
+      );
+      small.drawImage(
+        image,
+        (60 - image.naturalWidth * smallScale) / 2,
+        (34 - image.naturalHeight * smallScale) / 2,
+        image.naturalWidth * smallScale,
+        image.naturalHeight * smallScale,
+      );
+      context.imageSmoothingEnabled = true;
+      context.drawImage(source, 0, 0, 480, 270);
+      source.width = source.height = 0;
+    }
+    return context.getImageData(0, 0, 480, 270);
+  } catch {
+    return undefined;
+  } finally {
+    output.width = output.height = 0;
   }
-  const scale = Math.max(1160 / props.frame.width, 620 / props.frame.height),
-    w = 1160 / (props.frame.width * scale),
-    h = 620 / (props.frame.height * scale);
-  const paint = renderer.createShader("tvBrowsePreview", {
-    uvSize: [w, h],
-    uvOrigin: [(1 - w) * 0.6, (1 - h) * 0.25],
-  }) as ShaderNode;
+}
+/** The sharp landscape plane, pre-masked at its left edge. The renderer's
+ * custom shader path is not dependable on every TV browser, so the fade is
+ * baked into the texture: the plane starts transparent and becomes fully
+ * opaque over its left 560 logical pixels, revealing the blurred ambient
+ * artwork underneath instead of a hard vertical seam. */
+function landscapePlane(image: HTMLImageElement): ImageData | undefined {
+  const width = 580,
+    height = 310,
+    output = document.createElement("canvas");
+  output.width = width;
+  output.height = height;
+  try {
+    const context = output.getContext("2d");
+    if (!context) return undefined;
+    const scale = Math.max(
+        width / image.naturalWidth,
+        height / image.naturalHeight,
+      ),
+      drawWidth = image.naturalWidth * scale,
+      drawHeight = image.naturalHeight * scale;
+    context.drawImage(
+      image,
+      (width - drawWidth) / 2,
+      (height - drawHeight) / 2,
+      drawWidth,
+      drawHeight,
+    );
+    const mask = context.createLinearGradient(0, 0, width, 0);
+    mask.addColorStop(0, "rgba(0,0,0,0)");
+    mask.addColorStop(0.15, "rgba(0,0,0,.25)");
+    mask.addColorStop(0.48, "rgba(0,0,0,1)");
+    mask.addColorStop(1, "rgba(0,0,0,1)");
+    context.globalCompositeOperation = "destination-in";
+    context.fillStyle = mask;
+    context.fillRect(0, 0, width, height);
+    context.globalCompositeOperation = "source-over";
+    return context.getImageData(0, 0, width, height);
+  } catch {
+    return undefined;
+  } finally {
+    output.width = output.height = 0;
+  }
+}
+function Artwork(props: { frame: Frame; alpha: number; portrait: boolean }) {
   return (
-    <TvView
-      x={760}
-      w={1160}
-      h={620}
-      src={props.frame.src}
-      shader={paint}
-      alpha={props.alpha}
-      transition={{
-        alpha: { duration: 300, timingFunction: "cubic-bezier(.2,0,0,1)" },
-      }}
-    />
+    <>
+      <Show when={props.frame.ambient}>
+        {(ambient) => (
+          <TvView
+            w={1920}
+            h={620}
+            src={ambient()}
+            fit="cover"
+            alpha={(props.portrait ? 0.45 : 0.6) * props.alpha}
+          />
+        )}
+      </Show>
+      <TvView
+        w={1920}
+        h={620}
+        src={browseWideScrimGradient()}
+        fit="cover"
+        alpha={props.portrait ? 0.65 : 1}
+      />
+      <Show when={!props.portrait}>
+        <TvView
+          x={760}
+          w={1160}
+          h={620}
+          src={props.frame.plane ?? props.frame.src}
+          alpha={props.alpha}
+          transition={{
+            alpha: { duration: 300, timingFunction: "cubic-bezier(.2,0,0,1)" },
+          }}
+        />
+      </Show>
+      <Show when={props.portrait}>
+        <TvView
+          x={1520}
+          y={96}
+          w={280}
+          h={420}
+          src={props.frame.src}
+          fit="cover"
+          alpha={props.alpha}
+          transition={{
+            alpha: { duration: 300, timingFunction: "cubic-bezier(.2,0,0,1)" },
+          }}
+        />
+      </Show>
+      <TvView
+        y={380}
+        w={1920}
+        h={240}
+        src={bottomScrimGradient()}
+        fit="cover"
+        alpha={props.alpha}
+      />
+    </>
   );
 }
-export function BrowseBackdrop(props: { card?: Card | null }) {
+export function BrowseBackdrop(props: {
+  card?: Card | null;
+  portrait?: boolean;
+}) {
+  if (typeof (globalThis as any).__SolidTVRokuRenderer !== "undefined") {
+    // SceneGraph gets the raw poster; the browser's ambient/masked canvas
+    // planes cannot be uploaded. Keep the packaged scrim for legibility.
+    const background = () =>
+      props.portrait
+        ? (props.card?.landscape ?? props.card?.poster)
+        : (props.card?.view?.preview?.background ??
+          props.card?.landscape ??
+          props.card?.poster);
+    return (
+      <NativeBackdrop src={background()}>
+        <Show when={props.portrait && props.card?.poster}>
+          <TvView
+            x={1520}
+            y={96}
+            w={280}
+            h={420}
+            src={imageSource(props.card!.poster!, 560)}
+            fit="cover"
+          />
+        </Show>
+      </NativeBackdrop>
+    );
+  }
   const [frames, setFrames] = createSignal<Frame[]>([]),
     [visible, setVisible] = createSignal(true);
   let serial = 0;
   const selected = createMemo(() =>
-    props.card?.view?.preview
-      ? props.card.view.preview.background
-      : props.card?.landscape,
+    props.portrait
+      ? (props.card?.poster ?? props.card?.landscape)
+      : (props.card?.view?.preview?.background ??
+        props.card?.landscape ??
+        props.card?.poster),
   );
   const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
   createEffect(() => {
@@ -80,6 +224,7 @@ export function BrowseBackdrop(props: { card?: Card | null }) {
     let cancelled = false,
       raf = 0;
     let timer: ReturnType<typeof setTimeout> | undefined;
+    const loadSrc = src ? imageSource(src, 1160) : undefined;
     const image = new Image();
     image.crossOrigin = "anonymous";
     image.onload = () => {
@@ -90,9 +235,11 @@ export function BrowseBackdrop(props: { card?: Card | null }) {
       }
       const next = {
           id: ++serial,
-          src: src!,
+          src: loadSrc!,
           width: image.naturalWidth,
           height: image.naturalHeight,
+          ambient: ambientArtwork(image),
+          plane: landscapePlane(image),
         },
         previous = frames().slice(-1),
         fade = !reduced && previous.length > 0;
@@ -108,7 +255,7 @@ export function BrowseBackdrop(props: { card?: Card | null }) {
     image.onerror = () => {
       if (!cancelled) setFrames([]);
     };
-    if (src) image.src = src;
+    if (loadSrc) image.src = loadSrc;
     else setFrames([]);
     onCleanup(() => {
       cancelled = true;
@@ -123,6 +270,7 @@ export function BrowseBackdrop(props: { card?: Card | null }) {
         {(frame, i) => (
           <Artwork
             frame={frame()}
+            portrait={!!props.portrait}
             alpha={i() === frames().length - 1 ? (visible() ? 1 : 0) : 1}
           />
         )}
@@ -130,17 +278,32 @@ export function BrowseBackdrop(props: { card?: Card | null }) {
     </TvView>
   );
 }
-export function BrowsePreview(props: { card: Card }) {
-  const view = () => props.card.view?.preview;
+export function BrowsePreview(props: { card: Card; summaryBottom?: number }) {
+  /** The summary sits in the space between the navigation and the focused
+   * row's shelf, not pinned to the top of a full-screen backdrop. */
+  const summaryY = () => {
+    const bottom = props.summaryBottom ?? 690,
+      body = 310;
+    return Math.max(96, 132 + Math.max(0, bottom - 40 - 132 - body) / 2);
+  };
+  const titleY = () => {
+    const width = sdfTextMetrics("48px Onest700").measureText(
+      props.card.title ?? "",
+    ).width;
+    const lines = Math.min(2, Math.max(1, Math.ceil(width / 1000)));
+    return 120 - lines * 57.6;
+  };
   return (
-    <TvView x={96} y={96}>
+    <TvView x={96} y={summaryY()}>
       <Show
         when={props.card.logo}
         fallback={
           <Label
-            size={44}
+            y={titleY()}
+            size={48}
             font="Onest700"
-            maxwidth={700}
+            lineheight={1.2}
+            maxwidth={1000}
             maxlines={2}
             content={props.card.title}
           />
@@ -149,9 +312,10 @@ export function BrowsePreview(props: { card: Card }) {
         <Logo
           src={props.card.logo!}
           w={420}
-          h={144}
+          h={120}
           title={props.card.title}
           size={44}
+          boxH={120}
         />
       </Show>
       <TitleMetadata card={props.card} y={144} detail />
@@ -164,22 +328,6 @@ export function BrowsePreview(props: { card: Card }) {
         color={palette.body}
         content={props.card.description ?? ""}
       />
-      <Show when={view()?.progress != null}>
-        <TvView y={336}>
-          <HomeProgress width={160} progress={view()!.progress!} />
-        </TvView>
-      </Show>
-      <Show when={view()?.caption}>
-        <Label
-          x={view()?.progress != null ? 174 : 0}
-          y={324}
-          size={22}
-          font="Onest600"
-          content={view()!.caption!}
-          maxwidth={1100}
-          maxlines={1}
-        />
-      </Show>
     </TvView>
   );
 }

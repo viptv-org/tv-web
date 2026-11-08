@@ -1,11 +1,11 @@
-# Shared Tizen and Vizio application
+# Shared SolidTV viewing client
 
-Implements viptv-org/design#4 and TV_IMPLEMENTATION.md at DESIGN_REF. One React TV UI/controller owns remote focus, 700ms hold, all Roku-baseline screens and user actions. Platform packaging and src/player provide AVPlay for Tizen or HTML media for Vizio/server-compatible delivery. The existing backend remains authoritative for profiles, queue/history and media preparation. No separate Tizen versus Vizio UI forks.
+Implements viptv-org/design#4 and TV_IMPLEMENTATION.md at DESIGN_REF. One SolidTV application owns remote focus, the 700ms hold, screens and user actions across browser TVs and Roku. Browsers use the v2 WebGL renderer when available and lazily load the existing Canvas renderer otherwise. Roku uses native SceneGraph primitives. The backend remains authoritative for profiles, queue/history, source ranking and media preparation.
 
-Acceptance: real backend device-auth integration; complete design scenario matrix through browser remote automation; visual geometry and responsive TV scaling verified with privately inspected screenshots; typed player contract tests for both external engines; production build, unsigned Tizen candidate and hosted Vizio bundle; CI checks and documented signing/device limitations. Test coverage is reported honestly by scenario and runtime, not a universal physical-device percentage. Transcoding remains last resort. Roku runtime and existing user data remain unchanged.
+Acceptance separates browser automation, actual media and physical-device evidence. The shared remote layout fits the available viewport without requesting fullscreen at startup. Playback uses the pinned video adapters and real media; direct/copy/remux remain preferred where supported. Signing, firmware, controller input and performance limits are recorded in TESTING.md.
 
 Implementation checkpoint: IMPLEMENTATION.md. Spec issue: https://github.com/viptv-org/tv-web/issues/1. Execution/acceptance issue: https://github.com/viptv-org/tv-web/issues/2.
 
-## Responsive viewing client
+## Hosted entry
 
-Implementation ticket: [#3](https://github.com/viptv-org/tv-web/issues/3). The approved responsive renderer shares this application's controller and generated core with the TV renderer. Plain browsers use responsive layout; explicit Tizen/Vizio or `?layout=tv` preserve remote layout. Design pin includes RESPONSIVE_PRODUCTION.md and RESPONSIVE_VIPTV_ALIGNMENT.md (RUI-018–021). The account/admin web repository remains separate; deploy this viewing bundle alongside it rather than duplicating logic. Native Tauri hosts must register the core SmartCast commands and HTTP plugin; browser execution alone does not verify native packaging or playback.
+`/tv/`, `solid.html` and the legacy `lightning.html` alias start the same SolidTV application. Hosting packages contain the emitted TV import graph. The account/admin surface remains separately owned; publishing the TV bundle does not replace it. Native desktop hosts retain their own fullscreen, transport and decoder acceptance requirements.

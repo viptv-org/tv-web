@@ -2,6 +2,7 @@ import { TizenAvplayAdapter } from "../../../vendor/video/src/tizen-avplay";
 import type { Player, PlayerSnapshot } from "../../../vendor/video/src/types";
 import { RemoteTvApi, RemoteError, segment } from "./api";
 import { DeferredPlayer } from "./deferred-player";
+import { ensureTizenSurface } from "../platform/tizen-host";
 import type {
   Card,
   Lease,
@@ -28,10 +29,12 @@ export class RemotePlayback {
   private lease?: Lease;
   private card?: Card;
   private source?: Source;
+  private directMode = false;
   private sourceRetry?: { card: Card; request: SourceReplacement };
   private heartbeat?: ReturnType<typeof setTimeout>;
   private expiry?: ReturnType<typeof setTimeout>;
   private operation?: AbortController;
+  private admitting = false;
   private generation = 0;
   private intentGeneration=0;
   private sequence = 0;
@@ -55,19 +58,23 @@ export class RemotePlayback {
     platform: string,
     video: HTMLVideoElement,
     private publish: (snapshot: PlayerSnapshot) => void,
-    private failure: (error: Error) => void,
+    private failure: (error: Error, position?: number) => void,
+    private presented?: (leaseId: string, card: Card, source: Source) => void,
   ) {
     // AVPlay is a small SDK shim the platform needs from the first session, so
     // it stays in the boot graph. The HTML/HLS engine drags in hls.js (1450 KiB
     // of source, most of the TV entry's largest chunk) and is only reachable
     // from a session, so `playback.ts` fetches it through `import()` in
     // `hls-engine.ts` instead of importing it here.
+    const nativePlayer = (globalThis as any).__viptvCreatePlayer;
     this.player =
-      platform === "tizen" && "webapis" in window
-        ? new TizenAvplayAdapter()
-        : new DeferredPlayer(async () =>
-            (await import("./hls-engine")).createHtmlHlsPlayer(video),
-          );
+      typeof nativePlayer === "function"
+        ? nativePlayer()
+        : platform === "tizen" && (window as any).webapis?.avplay
+          ? (ensureTizenSurface(), new TizenAvplayAdapter())
+          : new DeferredPlayer(async () =>
+              (await import("./hls-engine")).createHtmlHlsPlayer(video),
+            );
     this.unsubscribe = this.player.subscribe((snapshot) => {
       const previous = this.lastState;
       this.lastState = snapshot.state;
@@ -90,10 +97,13 @@ export class RemotePlayback {
           this.first = true;
           this.sourceRetry = undefined;
           this.lastProgress = Date.now();
+          if (this.card && this.source) {
+            try { this.presented?.(lease.id, this.card, this.source); } catch { /* persistence never interrupts video */ }
+          }
           void api
             .call(`/api/playback/${segment(lease.id)}/first-frame`, "POST", {})
             .catch((error) => {
-              if (this.lease?.id === lease.id) this.fail(error);
+              if (this.lease?.id === lease.id && this.player.snapshot.state !== "ended") this.fail(error);
             });
           this.event("start");
         } else if (this.first && previous !== "playing") {
@@ -107,8 +117,11 @@ export class RemotePlayback {
       }
       if (snapshot.state === "paused" && previous !== "paused")
         this.event("pause");
-      if (snapshot.state === "ended" && previous !== "ended")
+      if (snapshot.state === "ended" && previous !== "ended") {
+        clearTimeout(this.heartbeat);
+        clearTimeout(this.expiry);
         this.event("stop", true);
+      }
       if (snapshot.error) this.fail(new Error(snapshot.error.message));
     });
     document.addEventListener("visibilitychange", this.foreground);
@@ -124,6 +137,7 @@ export class RemotePlayback {
   get leaseId() {
     return this.lease?.id;
   }
+  get hasPresentedFrame() { return this.first && !!this.lease; }
   get actions(): PlaybackActions {
     return this.lease?.actions ?? noActions;
   }
@@ -141,10 +155,10 @@ export class RemotePlayback {
     };
   }
   get canReplaceSource() {
-    return !!(this.replacementObservation() ?? this.sourceRetry);
+    return !!(this.sourceRetry ?? this.replacementObservation());
   }
   async replaceSource(source: Source) {
-    const context = this.replacementObservation() ?? this.sourceRetry;
+    const context = this.sourceRetry ?? this.replacementObservation();
     if (!context)
       throw new Error("Source changes are unavailable for this playback.");
     await this.replaceWith(source, context);
@@ -163,17 +177,18 @@ export class RemotePlayback {
         undefined,
         selection,
         context.request,
+        false,
+        this.player.snapshot.state === "paused",
       );
+      if (this.sourceRetry === context) this.sourceRetry = undefined;
     } catch (error) {
       if (
         this.sourceRetry === context &&
-        error instanceof RemoteError &&
-        [
-          "playback_replacement_invalid",
-          "playback_not_found",
-          "playback_expired",
-          "authorization_expired",
-        ].includes(error.code)
+        (this.lease?.id !== context.request.playback_id ||
+          (error instanceof RemoteError && [
+            "playback_replacement_invalid", "playback_not_found",
+            "playback_expired", "authorization_expired",
+          ].includes(error.code)))
       )
         this.sourceRetry = undefined;
       throw error;
@@ -190,6 +205,10 @@ export class RemotePlayback {
     if (!this.card || !this.source) return;
     if (!this.actions.tracks)
       throw new Error("Track selection is unavailable for this playback.");
+    const tracks = kind === "audio" ? this.tracks.audio : this.tracks.text;
+    if (tracks.some(track => track.selected && track.input_index === index) ||
+        (kind === "text" && index === null && this.tracks.subtitlesSupported &&
+          !tracks.some(track => track.selected))) return;
     const selection = {
       ...this.selection,
       ...(kind === "audio"
@@ -214,7 +233,7 @@ export class RemotePlayback {
     );
   }
   private foreground = () => {
-    if (document.visibilityState !== "visible" || !this.lease) return;
+    if (document.visibilityState !== "visible" || !this.lease || this.player.snapshot.state === "ended") return;
     const lease = this.lease,
       activity = this.activity,
       playing = this.player.snapshot.state === "playing";
@@ -242,19 +261,23 @@ export class RemotePlayback {
           await this.player.play();
       })
       .catch((error) => {
-        if (this.lease?.id === lease.id) this.fail(error);
+        if (this.lease?.id === lease.id && this.player.snapshot.state !== "ended") this.fail(error);
       });
   };
   private fail(error: Error) {
     if (this.failing) return;
     this.failing = true;
-    this.sourceRetry = this.replacementObservation() ?? this.sourceRetry;
+    const position = this.player.snapshot.time.positionSeconds;
+    // A terminal decoder failure retires its lease. Only an admission failure
+    // with a still-live outgoing lease can retain a replacement binding.
+    this.sourceRetry = undefined;
     this.intentGeneration++;
     void this.stopCurrent(false).catch(() => {});
-    this.failure(error);
+    this.failure(error, Number.isFinite(position) ? Math.max(0, position) : undefined);
   }
   private schedule() {
     clearTimeout(this.heartbeat);
+    if (this.player.snapshot.state === "ended") return;
     clearTimeout(this.expiry);
     const lease = this.lease;
     if (!lease) return;
@@ -282,7 +305,7 @@ export class RemotePlayback {
             this.schedule();
           })
           .catch((error) => {
-            if (this.lease?.id === lease.id) this.fail(error);
+            if (this.lease?.id === lease.id && this.player.snapshot.state !== "ended") this.fail(error);
           });
       },
       Math.max(1, lease.renew_after_seconds) * 1000,
@@ -351,32 +374,44 @@ export class RemotePlayback {
     position?: number,
     selection: typeof this.selection = {},
     replacement?: SourceReplacement,
+    direct = false,
+    paused = false,
   ) {
+    const directMode = direct || (replacement ? this.directMode : false);
     const intent = ++this.intentGeneration;
     if (!replacement) this.sourceRetry = undefined;
-    await this.stopCurrent(true);
-    if (intent !== this.intentGeneration)
-      throw new DOMException("Playback cancelled", "AbortError");
     this.failing = false;
-    const generation = ++this.generation,
-      scope = new AbortController();
-    this.operation = scope;
-    const lease = await this.api.admit(
-      source,
-      resume,
-      scope.signal,
-      position,
-      selection,
-      replacement,
-    );
-    if (generation !== this.generation) {
+    // Admit the replacement while the current picture is still playing. A
+    // gateway cut can take many seconds; stopping first left the viewer on a
+    // black screen for the whole admission.
+    // A new start supersedes any admission still polling for a previous one.
+    this.operation?.abort();
+    const admitScope = new AbortController();
+    this.operation = admitScope;
+    this.admitting = true;
+    let lease: Lease;
+    try {
+      lease = await this.api.admit(source, resume, admitScope.signal, position, selection, replacement, directMode);
+    } finally {
+      if (this.operation === admitScope) this.admitting = false;
+    }
+    if (intent !== this.intentGeneration) {
       void this.api.release(`/api/playback/${segment(lease.id)}`);
       throw new DOMException("Playback cancelled", "AbortError");
     }
+    await this.stopCurrent(true);
+    if (intent !== this.intentGeneration) {
+      void this.api.release(`/api/playback/${segment(lease.id)}`);
+      throw new DOMException("Playback cancelled", "AbortError");
+    }
+    const generation = ++this.generation,
+      scope = new AbortController();
+    this.operation = scope;
     this.lease = lease;
     this.card = card;
     this.source = source;
     this.selection = selection;
+    this.directMode = directMode;
     this.sequence = 0;
     this.first = false;
     const delivery = lease.delivery!;
@@ -392,12 +427,21 @@ export class RemotePlayback {
         startAtSeconds: delivery.position ?? 0,
         timelineOffsetSeconds: delivery.timeline_offset_seconds ?? 0,
         timelineDurationSeconds: delivery.duration,
-        deliveryMode: "managed",
-        deliveryFormat: delivery.format,
+        deliveryMode: delivery.kind === "direct" ? "direct" : "managed",
+        deliveryFormat: delivery.format === "original" ? undefined : delivery.format,
+        paused,
+        // The gateway publishes only the server-selected subtitle rendition.
+        // Language carries that presentation intent without passing input-track
+        // indices to a native output-track API.
+        preferredSubtitleLanguage: delivery.subtitle_tracks?.find(track => track.selected)?.language
+          ?? (delivery.subtitle_tracks?.some(track => track.selected) ? "und" : undefined),
+        ...(delivery.subtitle_tracks && !delivery.subtitle_tracks.some(track => track.selected)
+          ? { textTrackId: null } : {}),
       });
       if (generation !== this.generation)
         throw new DOMException("Playback cancelled", "AbortError");
-      await this.player.play();
+      if (paused) await this.player.pause();
+      else await this.player.play();
       if (generation !== this.generation)
         throw new DOMException("Playback cancelled", "AbortError");
     } catch (error) {
@@ -405,10 +449,37 @@ export class RemotePlayback {
       throw error;
     }
   }
+  /** Seek without losing the current track selection, direct-play mode, or
+   * paused intent. */
+  async seek(
+    positionSeconds: number,
+    paused = this.player.snapshot.state !== "playing",
+  ): Promise<void> {
+    if (!this.lease || !this.card || !this.source) return;
+    await this.start(
+      this.card,
+      this.source,
+      false,
+      positionSeconds,
+      this.selection,
+      undefined,
+      this.directMode,
+      paused,
+    );
+  }
+
   async stop() {
     this.intentGeneration++;
     this.sourceRetry = undefined;
+    this.directMode = false;
     await this.stopCurrent(false);
+  }
+  /** Cancel an incoming admission without stopping its outgoing picture. */
+  cancelPendingStart(): boolean {
+    if (!this.admitting) return false;
+    this.intentGeneration++;
+    this.operation?.abort();
+    return true;
   }
   private async stopCurrent(waitForControl: boolean) {
     this.generation++;
@@ -417,7 +488,7 @@ export class RemotePlayback {
     clearTimeout(this.expiry);
     // Observation bookkeeping must never prevent the platform decoder stopping.
     try {
-      this.event("stop");
+      if (this.player.snapshot.state !== "ended") this.event("stop");
     } catch {
       /* the view/auth scope may already be retired */
     }

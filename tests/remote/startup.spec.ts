@@ -126,7 +126,8 @@ for (const entry of ['/tv/solid.html?platform=vizio', '/tv/lightning.html?platfo
     await expect(page.locator('html')).toHaveAttribute('data-tv-ready', 'true');
     await page.keyboard.press('Enter');
     await expect.poll(() => page.locator('video').evaluate(video => (video as HTMLVideoElement).currentTime)).toBeGreaterThan(0.2);
-    await page.evaluate(() => history.back());
+    await page.evaluate(() => history.back()); // Hide controls.
+    await page.evaluate(() => history.back()); // Leave playback.
     await expect(page.locator('html')).toHaveAttribute('data-tv-screen', 'home');
     await expect.poll(() => fixture.requests.some(request => request.path === '/api/playback/fixture-playback' && request.method === 'DELETE')).toBe(true);
     await expect(page.locator('canvas').first()).toBeVisible();

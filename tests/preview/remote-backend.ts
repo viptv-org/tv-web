@@ -124,7 +124,7 @@ async function installRendererCompat(page: Page): Promise<void> {
       requestRender: () => renderer.requestRender(),
     });
 
-    const compatRenderer = (renderer: any) => ({
+    const compatRenderer = (renderer: any) => renderer.getCapabilities?.().renderMode === "canvas" ? renderer : ({
       get stage() {
         return compatStage(renderer);
       },
@@ -147,6 +147,11 @@ async function installRendererCompat(page: Page): Promise<void> {
 }
 
 export async function installRemoteBackend(page:Page,origin:string,options:{
+    episodeFlow?: boolean;
+    sourceAudioLanguages?: string[];
+    selectedAudioLanguage?: string;
+    pendingContinuation?: boolean;
+    reuseMatch?: boolean;
     session?: boolean;
     empty?: boolean;
     fail?: boolean;
@@ -154,6 +159,7 @@ export async function installRemoteBackend(page:Page,origin:string,options:{
     addons?: number;
     best?: boolean;
     captionTracks?: boolean;
+    captionMedia?: boolean;
     channelSearch?: boolean;
     delayLibrary?: boolean;
     emptySources?: boolean;
@@ -199,7 +205,7 @@ export async function installRemoteBackend(page:Page,origin:string,options:{
  const seriesCard:Card={...card,identity:{kind:'series',id:'fixture-series',ids:[]},title:'Monster',subtitle:'S1 E2 · 38m left',progress:.38,view:{...card.view!,preview:{background:null,caption:'Resume S1 E2',progress:.38,action:'details' as const}}};
  const cards:Card[]=cardImages.map((image,i)=>({...card,identity:{...card.identity,id:`movie-${i}`},title:cardTitles[i],landscape:art(image),poster:art(image),logo:null,badges:i===1?['New episode']:[],view:{...card.view!,preview:{...card.view!.preview!,action:'details' as const}}}));
  cards[0]=seriesCard as typeof card;
- let profile:string|null='1',library:Card[]=[],revision=0,liveRevision=0;
+ let profile:string|null='1',library:Card[]=[],revision=0,liveRevision=0,configurationRevision=0,failedAdmissions=0,pendingContinuation=options.pendingContinuation ?? false;
  let liveChannelCount=options.liveChannels,liveAvailability=options.liveAvailability??'Available';
  // Incremental source discovery: events accumulate, waiters long-poll until a
  // new event arrives or discovery completes.
@@ -228,10 +234,11 @@ export async function installRemoteBackend(page:Page,origin:string,options:{
   {id:"screen_saver_minutes",group:"display",label:"Screen saver",description:"Dims to slow-moving art when nothing is playing",choices:[{label:"Off",value:0},{label:"After 2 minutes",value:2},{label:"After 5 minutes",value:5},{label:"After 10 minutes",value:10}]},
   {id:"screen_inset",group:"display",label:"Fit to screen",description:"Use if the edges of the picture are cut off",kind:"calibration",min:0,max:20,step:1}
  ],preferences:{source_selection:'ask',max_quality_height:null,preferred_audio_language:null,preferred_subtitle_language:null,subtitle_mode:'never',subtitles_enabled:false,subtitle_font_scale:1,subtitle_text_color:'#ffffff',subtitle_background_color:'#000000',hdr_preference:'any',next_episode_button:true,skip_intros:false,match_frame_rate:true},display:{accent_color:'#F5C542',show_ratings:true,text_size:'default',reduce_motion:'follow',screen_saver_minutes:5,screen_inset:0}};
- const home={hero:card,featured:[card,...cards.slice(0,4)],rows:[{id:'continue',title:'Continue Watching',state:'Ready' as const,cards:options.empty?[]:cards},{id:'popular',title:'Popular movies',state:'Ready' as const,cards}],complete:true,revision:0};
+ if (options.episodeFlow) { preferences.preferences.skip_intros = true; preferences.preferences.remembered_source_reuse = true; }
+ const home={hero:options.episodeFlow ? {...seriesCard,progress:0,subtitle:"S1 E1",view:{...seriesCard.view!,preview:{...seriesCard.view!.preview!,action:"play" as const}}} : card,featured:[options.episodeFlow ? {...seriesCard,progress:0} : card,...cards.slice(0,4)],rows:[{id:'continue',title:'Continue Watching',state:'Ready' as const,cards:options.empty?[]:cards},{id:'popular',title:'Popular movies',state:'Ready' as const,cards}],complete:true,revision:0};
   let navigationIds = options.navigation ?? ["search", "home", "movie", "series", "live", "library", "profiles"];
   const navigationLabels: Record<string, string> = { search:"Search", home:"Home", movie:"Movies", series:"Series", live:"Live", library:"My List", profiles:"Profile" };
- const bootstrap=():Bootstrap=>({contract_version:3,navigation: options.omitNavigation ? undefined : (options.navigationByProfile?.[profile ?? ""] ?? navigationIds).map(id => ({id,label:navigationLabels[id] ?? id,...(id === "search" ? {media_search:options.mediaSearch !== false,channel_search:options.channelSearch === true} : {})})),identity:{profile_id:profile},profile_management:management,home,preferences,library:{cards:library,complete:true},integrations:[],revisions:{library:revision}});
+ const bootstrap=():Bootstrap=>({contract_version:3,navigation: options.omitNavigation ? undefined : (options.navigationByProfile?.[profile ?? ""] ?? navigationIds).map(id => ({id,label:navigationLabels[id] ?? id,...(id === "search" ? {media_search:options.mediaSearch !== false,channel_search:options.channelSearch === true} : {})})),identity:{profile_id:profile},profile_management:management,home,preferences,library:{cards:library,complete:true},integrations:[],revisions:{library:revision,...(options.episodeFlow ? {configuration:configurationRevision} : {})}});
  await page.addInitScript(({origin,session})=>{if(session)localStorage.setItem(`viptv-device:${origin}`,JSON.stringify({accessToken:'fixture-access',refreshToken:'fixture-refresh'}));},{origin,session:options.session!==false});
   const addonStates = new Map<string, boolean>();
   for (let i = 1; i <= (options.addons ?? 0); i++) addonStates.set(`addon:${i}`, true);
@@ -248,11 +255,18 @@ export async function installRemoteBackend(page:Page,origin:string,options:{
   const catalogCards:Card[]=cardImages.map((image,i)=>({...card,identity:{...card.identity,id:`catalog-${i}`},title:`Catalog ${i}`,landscape:art(image),poster:art(image),logo:null,badges:[]}));
  let catalogView = catalogCards;
   let sourceEpisode = false, leaseEpisode = false, leaseLive = false, leaseCount = 0, leasePosition = 0;
+  let admissionGate: Promise<void> | undefined;
   const leases = new Map<string, any>();
   const liveFavoriteIds = new Set<string>();
   let replacementFailed = false;
  await page.route('**/media/**',async route=>{
   const name=new URL(route.request().url()).pathname.split('/').pop()!;
+  if (options.captionMedia) {
+   if (name === 'index.m3u8') return route.fulfill({ contentType:'application/vnd.apple.mpegurl', body:'#EXTM3U\n#EXT-X-MEDIA:TYPE=SUBTITLES,GROUP-ID="subs",NAME="English",LANGUAGE="en",DEFAULT=NO,AUTOSELECT=NO,URI="captions.m3u8"\n#EXT-X-STREAM-INF:BANDWIDTH=180000,CODECS="avc1.640029,mp4a.40.2",SUBTITLES="subs"\nvideo.m3u8\n' });
+   if (name === 'captions.m3u8') return route.fulfill({contentType:'application/vnd.apple.mpegurl',body:'#EXTM3U\n#EXT-X-VERSION:3\n#EXT-X-TARGETDURATION:5\n#EXTINF:5,\ncaptions.vtt\n#EXT-X-ENDLIST\n'});
+   if (name === 'captions.vtt') return route.fulfill({contentType:'text/vtt',body:'WEBVTT\n\n00:00:00.000 --> 00:00:05.000\nCaption pipeline check\n'});
+   if (name === 'video.m3u8') return route.fulfill({contentType:'application/vnd.apple.mpegurl',body:readFileSync(resolve('tests/fixtures/hls/index.m3u8'))});
+  }
   const file=name==='index.m3u8'?'index.m3u8':/^segment\d+\.ts$/.test(name)?name.replace(/\.ts$/,'.bin'):null;
   if(!file)return route.abort();
   await route.fulfill({body:readFileSync(resolve('tests/fixtures/hls',file)),contentType:file==='index.m3u8'?'application/vnd.apple.mpegurl':'video/mp2t'});
@@ -271,7 +285,7 @@ export async function installRemoteBackend(page:Page,origin:string,options:{
       return send({access_token:'fixture-access',refresh_token:'fixture-refresh',expires_in:1800,account_id:1,session_id:'fixture-session',profile_id:profile});
     }
   if(path==='/api/profiles')return send(management);
-  if(path.endsWith('/revisions'))return send({library:revision});
+  if(path.endsWith('/revisions'))return send({library:revision,...(options.episodeFlow ? {configuration:configurationRevision} : {})});
   if(path.endsWith('/home'))return send(home);
   if (path === "/api/auth/device/refresh" && options.expireOnPreference) return send({error:"unauthorized"},401);
   if(path.endsWith('/preferences')){if(request.method()==='PUT'){if(options.expireOnPreference)return send({error:"unauthorized"},401);if(options.holdPreference)await preferenceGate;preferences.revision++;if(body.preferences)preferences.preferences=body.preferences;if(body.display)preferences.display=body.display;}return send(preferences);}
@@ -304,14 +318,19 @@ export async function installRemoteBackend(page:Page,origin:string,options:{
       }
       return send({item:card,episodes:[],recommendations:cards,seasons:[],next_cursor:null});
     }
+  if(path.endsWith('/continue/next') && options.episodeFlow){
+      if(pendingContinuation)return send({status:'Pending'});
+      const episode=body.identity.episode?.episode ?? 1;
+      return send(episode>=3 ? {status:'CaughtUp'} : {status:'Next',item:{...seriesCard,progress:0,identity:{kind:'series',id:`episode-${episode+1}`,ids:[],episode:{order:'aired',season:1,episode:episode+1}},parent_identity:seriesCard.identity,title:`Episode ${episode+1}`,subtitle:`S1 E${episode+1}`}});
+  }
   if(path.endsWith('/viewing-action')){
-      const played=body.card;
-      const resolved=played.identity.kind==='series'?{...played,identity:{kind:'series',id:'episode-1',ids:[],episode:{order:'s1e1',season:1,episode:1}},subtitle:'S1 E1',parent_identity:played.identity}:played;
+      const played=options.episodeFlow ? {...seriesCard,...body.card,title:body.card.identity.episode ? `Episode ${body.card.identity.episode.episode}` : seriesCard.title} : body.card;
+      const resolved=played.identity.kind==='series' && !played.identity.episode?{...played,identity:{kind:'series',id:'episode-1',ids:[],episode:{order:'s1e1',season:1,episode:1}},subtitle:'S1 E1',parent_identity:played.identity}:played;
       return send({card:resolved,label:played.progress?'Resume':'Play',resume:!!played.progress,source_selection:'ask'});
     }
   if(path==='/api/streams'){sourceEpisode=body.type==="series";return send({id:'job-1'});}
     if(/\/live\/[^/]+\/sources$/.test(path))return send({streams:[{id:"live-stream-0",name:"Live source A"},{id:"live-stream-1",name:"Live source B"}],live:true,action:{card:{identity:{kind:"live",id:path.split('/').at(-2)!,ids:[]},provider_id:"m3u:1",title:"Server live channel",badges:[],poster:null,landscape:null,logo:null},label:"Watch live",resume:false,source_selection:options.best?"best":"ask"}});
-  const streams=Array.from({length:8},(_,i)=>{const h=i<2?2160:i<5?1080:720;const name=i%2?'[Provider 2]':'LordStreams';const quality=h>=2160?'4K':`${h}p`;return {id:`stream-${i}`,name,detail:'WEB-DL · HEVC · 5.1 · 18.4 GB',quality_height:h,view:{title:name,body:'WEB-DL · HEVC · 5.1 · 18.4 GB',quality_label:quality,format_label:i===0?'HDR10 · Dolby Atmos':'HEVC',addon_label:`[Add-on ${i%2?'B':'A'}]`,provider_label:name}};});
+  const streams=Array.from({length:8},(_,i)=>{const h=i<2?2160:i<5?1080:720;const name=i%2?'[Provider 2]':'LordStreams';const quality=h>=2160?'4K':`${h}p`;return {id:`stream-${i}`,source_addon_id:'addon:fixture',audio_languages:options.sourceAudioLanguages ?? ['en'],presentation:{provider_name:i%2?'Supplier B':'Supplier A'},name,detail:'WEB-DL · HEVC · 5.1 · 18.4 GB',quality_height:h,view:{title:name,body:'WEB-DL · HEVC · 5.1 · 18.4 GB',quality_label:quality,format_label:i===0?'HDR10 · Dolby Atmos':'HEVC',addon_label:`[Add-on ${i%2?'B':'A'}]`,provider_label:name}};});
   if(path==='/api/streams/job-1'){
       const after=Number(url.searchParams.get('after')??0);
       if(options.finding&&!discoveryEvents.length)discoveryEvents.push({streams});
@@ -335,7 +354,8 @@ export async function installRemoteBackend(page:Page,origin:string,options:{
       const counts=new Map<number,number>();
       for(const s of pool)counts.set(s.quality_height,(counts.get(s.quality_height)??0)+1);
       const quality_filters=[...counts.entries()].sort((a,b)=>b[0]-a[0]).map(([height,count])=>({height,label:height>=2160?'4K':`${height}p`,count}));
-      return send({streams:matching,best_match_id:matching[0]?.id??null,quality_filters,total:matching.length});
+      return send({streams:matching,best_match_id:matching[0]?.id??null,best_match_fully_matches:true,automatic_source_ids:matching.map(s=>s.id),
+        ...(options.episodeFlow ? {source_reuse_supported:true,source_reuse_ids:body.remembered_source || body.cross_title_source ? options.reuseMatch === false ? [] : ['stream-0','stream-2','stream-4','stream-6'] : [],source_reuse_preferred:true,source_reuse_fully_matches:options.reuseMatch !== false} : {}),quality_filters,total:matching.length});
     }
   if(path.endsWith('/live/channels')){
       const searching = url.searchParams.has("search");
@@ -361,6 +381,9 @@ export async function installRemoteBackend(page:Page,origin:string,options:{
       });
     }
   if (path === "/api/playback" && options.media) {
+      const gate = admissionGate;admissionGate = undefined;
+      if (gate) await gate;
+      if (failedAdmissions > 0) { failedAdmissions--;return send({error_code:"unplayable",error:"Source unavailable"},502); }
       if (body.replace_source && options.failReplacementOnce && !replacementFailed) {
         replacementFailed = true;
         return send({error_code:"gateway_capacity",error:"Playback capacity is currently full."},503);
@@ -386,7 +409,8 @@ export async function installRemoteBackend(page:Page,origin:string,options:{
           timeline_offset_seconds: 0,
           duration: 5,
           live: leaseLive,
-          ...(options.captionTracks ? {subtitles_supported:true,subtitle_tracks:[{input_index:2,title:"English",language:"en",selected:true,selectable:true,supported:true}],subtitle_appearance:{font_scale:1,text_color:"#FFFFFF",background_color:"#00000000"}} : {}),
+          ...(options.selectedAudioLanguage ? {audio_tracks:[{input_index:0,language:options.selectedAudioLanguage,selected:true,supported:true,selectable:true}]} : {}),
+          ...(options.captionTracks ? {subtitles_supported:true,subtitle_tracks:[{input_index:2,title:"English",language:"en",selected:!options.captionMedia || body.subtitles_off !== true,selectable:true,supported:true}],subtitle_appearance:{font_scale:1,text_color:"#FFFFFF",background_color:"#00000000"}} : {}),
         },
       };
       leases.set(leaseId, lease);
@@ -400,6 +424,7 @@ export async function installRemoteBackend(page:Page,origin:string,options:{
       if(stored)return send({...stored,expires_at:Math.floor(Date.now()/1000)+3600});
       return send({status:"ready",expires_at:Math.floor(Date.now()/1000)+3600,renew_after_seconds:1});
     }
+    if (/^\/api\/playback\/fixture-playback(?:-\d+)?\/segments$/.test(path)) return send({segments: options.episodeFlow ? [{kind:'intro',start_ms:0,end_ms:2000}] : []});
     if (/^\/api\/playback\/fixture-playback(?:-\d+)?\/first-frame$/.test(path))
       return send({status:"ok"});
     if (/^\/api\/playback\/fixture-playback(?:-\d+)?\/(progress|stop)$/.test(path))
@@ -457,6 +482,10 @@ export async function installRemoteBackend(page:Page,origin:string,options:{
   return send({error:`Unhandled fixture ${request.method()} ${path}`},404);
  });
  return {
+  holdNextAdmission() { let release!: () => void;admissionGate = new Promise<void>(resolve => { release = resolve; });return release; },
+  completeContinuation() { pendingContinuation = false; },
+  failNextAdmissions(value: number) { failedAdmissions = value; },
+  setConfigurationRevision(value: number) { configurationRevision = value; },
   requests,
   addonEnabled: (id: string) => addonStates.get(id),
   card,

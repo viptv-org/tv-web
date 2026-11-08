@@ -1,6 +1,18 @@
 import { test, expect, type Page } from "@playwright/test";
 import { installRemoteBackend } from "../preview/remote-backend";
 const screen = (page: Page) => page.locator("html");
+async function navigateToLive(page: Page) {
+  await page.keyboard.press("ArrowUp");
+  const ids = (await screen(page).getAttribute("data-tv-navigation"))!.split(",");
+  const target = ids.indexOf("live");
+  expect(target).toBeGreaterThanOrEqual(0);
+  const current = Number((await screen(page).getAttribute("data-tv-focus"))!.split(":")[1]);
+  for (let i = current; i < target; i++) await page.keyboard.press("ArrowRight");
+  for (let i = target; i < current; i++) await page.keyboard.press("ArrowLeft");
+  await page.keyboard.press("Enter");
+  await expect(screen(page)).toHaveAttribute("data-tv-screen", "live");
+  await expect(screen(page)).toHaveAttribute("data-tv-ready", "true");
+}
 test("Live consumes the named best source and an explicit source change still requires selection", async ({
   page,
   baseURL,
@@ -11,16 +23,7 @@ test("Live consumes the named best source and an explicit source change still re
   });
   await page.goto("/tv/?platform=vizio");
   await expect(screen(page)).toHaveAttribute("data-tv-ready", "true");
-  for (const key of [
-    "ArrowUp",
-    "ArrowRight",
-    "ArrowRight",
-    "ArrowRight",
-    "Enter",
-  ])
-    await page.keyboard.press(key);
-  await expect(screen(page)).toHaveAttribute("data-tv-screen", "live");
-  await expect(screen(page)).toHaveAttribute("data-tv-ready", "true");
+  await navigateToLive(page);
   expect(fixture.requests.some((r) => r.path === "/api/playback")).toBe(false);
   await page.keyboard.press("Enter");
   await expect
@@ -47,6 +50,7 @@ test("Live consumes the named best source and an explicit source change still re
   await expect(screen(page)).toHaveAttribute("data-tv-sources", "2");
   await page.waitForTimeout(200);
   expect(fixture.requests.filter((r) => r.path === "/api/playback")).toHaveLength(1);
+  await page.keyboard.press("ArrowUp");
   await page.keyboard.press("Enter");
   await expect
     .poll(() => fixture.requests.filter((r) => r.path === "/api/playback").length)
@@ -59,11 +63,7 @@ async function play(page: Page, live = false) {
   await page.goto("/tv/?platform=vizio&focusdebug=1");
   await expect(screen(page)).toHaveAttribute("data-tv-screen", "home");
   if (live) {
-    await page.keyboard.press("ArrowUp");
-    for (let i = 0; i < 3; i++) await page.keyboard.press("ArrowRight");
-    await page.keyboard.press("Enter");
-    await expect(screen(page)).toHaveAttribute("data-tv-screen", "live");
-    await expect(screen(page)).toHaveAttribute("data-tv-ready", "true");
+    await navigateToLive(page);
   }
   await page.keyboard.press("Enter");
   await expect(screen(page)).toHaveAttribute(
@@ -216,7 +216,7 @@ test("track focus follows server selection and confirmed subtitle size changes t
   await expect(screen(page)).toHaveAttribute("data-tv-overlay", "tracks");
   await expect(screen(page)).toHaveAttribute("data-tv-focus", /:1$/);
   await page.keyboard.press("ArrowRight");
-  await page.keyboard.press("ArrowDown");
+  await expect(screen(page)).toHaveAttribute("data-tv-focus", /:1$/);
   await page.keyboard.press("ArrowDown");
   await page.keyboard.press("Enter");
   await expect
@@ -256,17 +256,10 @@ test("a failed source replacement retains its server-bound intent for a later ex
   await expect(screen(page)).toHaveAttribute("data-tv-ready", "true");
   expect(
     await page.locator("video").evaluate((v) => (v as HTMLVideoElement).paused),
-  ).toBe(true);
-  await page.keyboard.press("Enter");
+  ).toBe(false);
+  await expect(screen(page)).toHaveAttribute("data-tv-screen", "player");
   await expect(screen(page)).toHaveAttribute("data-tv-overlay", "sources");
   await expect(screen(page)).toHaveAttribute("data-tv-sources", "8");
-  await expect(screen(page)).toHaveAttribute("data-tv-ready", "true");
-  await page.keyboard.press("Escape"); // Cancellation restores the failed-player state.
-  await expect(screen(page)).toHaveAttribute("data-tv-overlay", "");
-  await page.keyboard.press("Enter");
-  await expect(screen(page)).toHaveAttribute("data-tv-overlay", "sources");
-  await expect(screen(page)).toHaveAttribute("data-tv-sources", "8");
-  await expect(screen(page)).toHaveAttribute("data-tv-ready", "true");
   await page.keyboard.press("ArrowDown");
   await page.keyboard.press("ArrowDown");
   await page.keyboard.press("Enter");
@@ -403,6 +396,23 @@ test("manual replacement reports the admitted clock and executes the server-retu
       page.evaluate(() => (window as any).__mediaSeekTargets.includes(0.25)),
     )
     .toBe(true);
+});
+
+for (const paused of [false, true]) test(`media seek preserves paused=${paused} and ignores repeats`, async ({ page, baseURL }) => {
+  const fixture = await installRemoteBackend(page, baseURL!, { media: true });
+  await play(page);
+  if (paused) {
+    await page.evaluate(() => window.dispatchEvent(new KeyboardEvent("keydown", { key: "MediaPause", bubbles: true })));
+    await expect.poll(() => page.locator("video").evaluate((v) => (v as HTMLVideoElement).paused)).toBe(true);
+  }
+  await page.evaluate(() => {
+    window.dispatchEvent(new KeyboardEvent("keydown", { key: "MediaFastForward", bubbles: true }));
+    window.dispatchEvent(new KeyboardEvent("keydown", { key: "MediaFastForward", repeat: true, bubbles: true }));
+  });
+  await expect.poll(() => fixture.requests.filter((r) => r.path === "/api/playback").length).toBe(2);
+  await expect(screen(page)).toHaveAttribute("data-tv-ready", "true");
+  await expect.poll(() => page.locator("video").evaluate((v) => (v as HTMLVideoElement).paused)).toBe(paused);
+  expect(fixture.requests.filter((r) => r.path === "/api/playback")[1].body.position).toBeGreaterThan(0);
 });
 
 test("a VOD decoder also obeys explicit server refusal of pause and seek", async ({

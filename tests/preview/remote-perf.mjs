@@ -279,7 +279,7 @@ try {
         retained: window.__viptvRemoteMetrics?.(),
         js: performance
           .getEntriesByType("resource")
-          .filter((e) => e.name.includes(".js"))
+          .filter((e) => /\.(?:m?js)$/.test(new URL(e.name).pathname))
           .reduce((n, e) => n + e.decodedBodySize, 0),
       };
     });

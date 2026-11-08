@@ -17,9 +17,93 @@ file hashes to
 `dd498823558f6a77c39da086bff820f8ab125a86ce94383662425bfb6d147f69`.
 
 Current anchors: [DESIGN_REF](DESIGN_REF)
-`8b7f85941addf5a65390fe6eca4f11aba9584a17`, [VIDEO_REF](VIDEO_REF)
-`4b52aa5bfaf7f993ad6aa791e759f884ff4e23fd` and [CORE_REF](CORE_REF)
+`1f68aa8280a4152f687013cf8246a5fbebebc902`, [VIDEO_REF](VIDEO_REF)
+`f89e094ef5974a34aa803f93f96cc611607f7e1e` and [CORE_REF](CORE_REF)
 `b6ee0548753483c9627cb1c73e7761b62f936933`.
+
+---
+
+# Preferred-source latency and native frame timing — 2026-11-08
+
+Next-episode preparation retains the first server-qualified preferred-source
+snapshot and cancels unrelated discovery. It opens no second playback lease.
+A regression with a provider that never completes prepares within three seconds
+and hands off without another discovery in Chromium, Firefox and WebKit. This
+is controlled browser evidence, not an upstream provider latency guarantee.
+
+A settled physical-Roku Home workload, with no simultaneous screenshots or
+builds, contains 399 paired native render/swap samples. Render plus swap p50 is
+18.15 ms, p95 22.02 ms and p99 46.68 ms; 239 samples exceed 16.67 ms. Render
+alone p95 is 4.32 ms and swap p95 is 19.21 ms. These separate percentiles are
+diagnostic and are not additive. The device reports 2160p60 output and OpenGL.
+
+The 16.67 ms p95 target remains unmet. Graphics-FPS readings during intermittent
+remote input include idle periods and do not establish sustained presentation.
+A subsequent continuous diagnostic moves an existing native card with the
+actual Animator for nine seconds. It records 539 ticks, with elapsed tick p50
+16.68 ms and p95 17.75 ms, while steady graphics-FPS readings are about 48.
+The original card position and Animator tick function are restored afterwards.
+
+A temporary local diagnostic build then animates a small rectangle through
+SceneGraph's own Animation node. It also reports about 48 graphics FPS, both
+over Home and with all app-owned root children temporarily hidden. The native
+probe is removed and the root alpha values restored after nine seconds. Roku's
+system Home screen, under alternating Left/Right input every 200 ms, likewise
+settles near 48 graphics FPS in this session. These comparisons suggest the
+current JavaScript clock is not the limiting factor in this diagnostic; they
+do not establish a firmware cap or qualify ordinary app navigation at 60 FPS.
+
+The [graphics-FPS endpoint](https://developer.roku.com/dev/docs/external-control-api)
+measures graphics separately from video. Begin/end readings include idle and
+are excluded from the steady diagnostic observation. The clean application
+build was sideloaded again and its inspector confirms the temporary hooks are
+absent. Native compositor/presentation performance remains open; the render
+phase alone does not qualify 60 FPS. See [TESTING.md](TESTING.md) for playback
+and platform acceptance limits.
+
+---
+
+# Roku frame pacing and artwork ownership
+
+The native adapters schedule against a monotonic 60 Hz deadline and include
+frame work in elapsed animation time. CSS timing functions are honored. tv-web
+uses one native visual per primitive, dirty-subtree synchronization within the
+flush budget, and shared motion groups per paint layer so a container move does
+not resubmit all of its stationary children. Native row motion uses the shared
+450 ms transition.
+
+Remote Posters receive slot-sized decode bounds before their URI. Packaged masks
+retain their original small decode size. Existing public image-proxy URLs are
+resized to the native slot without nesting the proxy or discarding the source's
+query parameters. Same-origin/authenticated URLs remain intact; their native
+decode is bounded without inventing a server resizing contract. Image readiness
+comes from native observers, including opaque SDK handles; a timeout never
+reports a decoded bitmap. Backgrounds retain the previous opaque image until
+an incoming image is ready and its real fade controller completes. Rapid
+changes are conflated to a bounded current/incoming pair.
+
+Validation: 159 application/unit cases plus two native-node cases pass through
+`npm test`; the demo host passes 78 cases with Node's experimental navigator
+disabled to model the native environment. Grouped TypeScript, both native host
+typechecks, the tv-web production build, both native builds and the demo's offline
+web build pass. Live demo web builds still require the private API key. Twenty-nine
+scoped Chromium cases passed before the final native layering changes, and five
+focused playback/menu/saver cases passed against the resulting browser build.
+
+Deterministic probes execute the actual host code with stub native primitives:
+a 320 ms animation with 8 ms of simulated per-frame work completes at 333.3 ms
+instead of 472 ms; 60 host ticks produce 60 overlay updates instead of 30;
+one logical image produces one Poster and one URI submission; no synthetic
+image-ready event occurs at 300 ms. These are host regressions, not device FPS.
+
+The TCL 50S435/C157X on Roku OS 16.0.4 was sideloaded and exercised against beta
+for pairing, Home imagery, row navigation and source-drawer opening/cancellation.
+The final Perfetto trace contains 758 paired render/swap samples, with render
+plus swap p50 19.75 ms and p95 22.04 ms. The 16.67 ms p95 render-work target is
+still unmet; no sustained 60 FPS qualification is claimed. `scripts/roku-frame-budget.mjs`
+reads actual RenderThr:Main samples and reports this failure instead of inferring
+FPS from dirty updates. Set `TRACE_PROCESSOR` to a current Perfetto trace processor
+and provide a settled, uninstrumented trace without concurrent screenshots.
 
 ---
 

@@ -1,5 +1,6 @@
 import type {
   Bootstrap,
+  CalendarSnapshot,
   Card,
   Controls,
   Detail,
@@ -12,6 +13,7 @@ import type {
   Management,
   Page,
   Pairing,
+  PlaybackSegment,
   Preferences,
   Source,
   SourcePage,
@@ -99,7 +101,12 @@ async function snapshotText(
     void response.body?.cancel().catch(() => {});
     throw tooLarge();
   }
-  if (!response.body) return "";
+  if (!response.body) {
+    // Roku's fetch Response exposes text() but not a WHATWG ReadableStream.
+    const text = await response.text();
+    if (text.length > limit) throw tooLarge();
+    return text;
+  }
   const reader = response.body.getReader(),
     decoder = new TextDecoder();
   let received = 0;
@@ -138,10 +145,19 @@ export function delay(ms: number, signal?: AbortSignal): Promise<void> {
     signal?.addEventListener("abort", cancel, { once: true });
   });
 }
-/** Chrome 87 TV receivers have secure random bytes but not randomUUID. */
+/** Chrome 87 TV receivers have secure random bytes but not randomUUID.
+ * SceneGraph's JavaScript engine has no `crypto` object at all; request IDs
+ * only need uniqueness, so fall back to Math.random there. */
 export function requestUuid(): string {
-  if (typeof crypto.randomUUID === "function") return crypto.randomUUID();
-  const bytes = crypto.getRandomValues(new Uint8Array(16));
+  const api = typeof crypto !== "undefined" ? crypto : undefined;
+  let bytes: Uint8Array;
+  if (api && typeof api.getRandomValues === "function") {
+    bytes = api.getRandomValues(new Uint8Array(16));
+  } else {
+    bytes = new Uint8Array(16);
+    for (let i = 0; i < bytes.length; i++)
+      bytes[i] = Math.floor(Math.random() * 256);
+  }
   bytes[6] = (bytes[6] & 15) | 64;
   bytes[8] = (bytes[8] & 63) | 128;
   const value = Array.from(bytes, (byte) =>
@@ -175,6 +191,7 @@ export function originFields(card: Card): Record<string, unknown> {
 }
 /** Only HTTP, session rotation and operation lifetimes; no client engine. */
 export class RemoteTvApi {
+  private sourceReuseSupported = false;
   private tokens: Tokens | null = null;
   private refreshFlight?: Promise<void>;
   private identityFlight?: Promise<AccountIdentity>;
@@ -229,7 +246,7 @@ export class RemoteTvApi {
     signal: AbortSignal | undefined,
     access?: string,
   ): Promise<T> {
-    if (!path.startsWith("/api/") || path.includes("://"))
+    if (typeof path !== "string" || !path.startsWith("/api/") || path.includes("://"))
       throw new Error("Invalid API path");
     abort(signal);
     const request = new AbortController();
@@ -254,7 +271,7 @@ export class RemoteTvApi {
       const serverDate = Date.parse(response.headers.get("date") ?? "");
       if (Number.isFinite(serverDate))
         this.clockOffset = serverDate - Date.now();
-      text = await snapshotText(response, request.signal);
+        text = await snapshotText(response, request.signal);
     } catch (error) {
       if (!signal?.aborted && request.signal.aborted)
         throw new RemoteError(
@@ -504,6 +521,9 @@ export class RemoteTvApi {
   home(signal?: AbortSignal) {
     return this.call<Home>(this.scoped("/home"), "GET", undefined, signal);
   }
+  calendar(signal?: AbortSignal) {
+    return this.call<CalendarSnapshot>("/api/calendar", "GET", undefined, signal);
+  }
   profiles(signal?: AbortSignal) {
     return this.call<Management>("/api/profiles", "GET", undefined, signal);
   }
@@ -613,6 +633,7 @@ export class RemoteTvApi {
     signal: AbortSignal,
     channel?: string,
     quality: () => number | undefined = () => undefined,
+    reuse?: import('./device-playback').SourceReuseContext,
   ): Promise<Source[]> {
     const started = await this.call<{
       id?: string;
@@ -648,7 +669,7 @@ export class RemoteTvApi {
       const ids = started.streams.map((source) => source.id);
       const height = quality();
       const result = {
-        ...(await this.rankSources(ids, height, signal)),
+        ...(await this.rankSources(ids, height, signal, reuse)),
         action: started.action,
       };
       publish(result.streams, result, ids, height);
@@ -681,7 +702,7 @@ export class RemoteTvApi {
         after += page.events.length;
         if (ids.size && page.events.length) {
           const height = quality();
-          const result = await this.rankSources([...ids], height, signal);
+          const result = await this.rankSources([...ids], height, signal, reuse);
           ranked = result.streams;
           publish(ranked, result, [...ids], height);
         }
@@ -726,26 +747,71 @@ export class RemoteTvApi {
     }
   }
 
-  rankSources(ids: string[], height?: number, signal?: AbortSignal) {
-    return this.call<SourcePage>(
-      this.scoped("/source-ranking"),
-      "POST",
-      {
-        ids,
-        device_max_height: Math.min(
-          4320,
-          Math.max(
-            144,
-            Math.round(
-              (globalThis.screen?.height || 1080) *
-                (globalThis.devicePixelRatio || 1),
-            ),
-          ),
+  async rankSources(
+    ids: string[],
+    height?: number,
+    signal?: AbortSignal,
+    reuse?: import('./device-playback').SourceReuseContext,
+  ): Promise<SourcePage> {
+    // A title can produce well over a thousand add-on sources. The server
+    // caps request bodies at 64 KiB, and a single ranking request with every
+    // UUID then answers 413 — which used to leave the picker empty. Rank in
+    // bounded batches and merge the pages back into one ranked list.
+    const unique = [...new Set(ids)];
+    const deviceMaxHeight = Math.min(
+      4320,
+      Math.max(
+        144,
+        Math.round(
+          (globalThis.screen?.height || 1080) *
+            (globalThis.devicePixelRatio || 1),
         ),
-        quality_height: height,
-      },
-      signal,
+      ),
     );
+    const batch = 400;
+    const pages: SourcePage[] = [];
+    const hasMemory = !!(reuse?.title || reuse?.across);
+    const rank = async (ids: string[]): Promise<SourcePage> => {
+      const body = { ids, device_max_height: deviceMaxHeight, quality_height: height };
+      const memory = { ...(reuse?.title ? { remembered_source: reuse.title } : {}),
+        ...(reuse?.across ? { cross_title_source: reuse.across } : {}) };
+      const sentMemory = this.sourceReuseSupported && hasMemory;
+      let result = await this.call<SourcePage>(this.scoped("/source-ranking"), "POST",
+        { ...body, ...(sentMemory ? memory : {}) }, signal);
+      this.sourceReuseSupported = result.source_reuse_supported === true;
+      // Old servers reject unknown fields. Negotiate through their ordinary
+      // rank response before sending optional device-memory observations.
+      if (this.sourceReuseSupported && hasMemory && !sentMemory)
+        result = await this.call<SourcePage>(this.scoped("/source-ranking"), "POST", { ...body, ...memory }, signal);
+      return result;
+    };
+    for (let start = 0; start < unique.length; start += batch) {
+      if (signal?.aborted) throw signal.reason ?? new DOMException("Aborted", "AbortError");
+      pages.push(await rank(unique.slice(start, start + batch)));
+    }
+    if (!pages.length) return { streams: [], quality_filters: [], total: 0 };
+    if (pages.length === 1) return pages[0];
+    // Top-five base and top-three reuse rows from each sorted batch contain
+    // the global top-three start candidates. Rust makes the final decision;
+    // the client never compares quality/provider/language ranking keys.
+    const shortlist = [...new Set(pages.flatMap(page => [
+      ...(page.best_match_ids ?? (page.best_match_id ? [page.best_match_id] : [])),
+      ...(page.automatic_source_ids ?? []).slice(0, 3),
+      ...(page.source_reuse_ids ?? []).slice(0, 3),
+    ]))];
+    const decision = shortlist.length > batch ? await this.rankSources(shortlist, height, signal, reuse)
+      : shortlist.length ? await rank(shortlist) : pages[0];
+    const seen = new Set<string>();
+    const streams: Source[] = [];
+    for (const page of [decision, ...pages]) for (const source of page.streams)
+      if (!seen.has(source.id)) { seen.add(source.id); streams.push(source); }
+    const filters = new Map<number, { height: number; label: string; count: number }>();
+    for (const page of pages) for (const filter of page.quality_filters) {
+      const current = filters.get(filter.height);
+      filters.set(filter.height, { ...filter, count: (current?.count ?? 0) + filter.count });
+    }
+    return { ...decision, streams, quality_filters: [...filters.values()].sort((a, b) => b.height - a.height),
+      total: pages.reduce((total, page) => total + page.total, 0) };
   }
   async admit(
     source: Source,
@@ -758,6 +824,7 @@ export class RemoteTvApi {
       subtitles_off?: boolean;
     } = {},
     replaceSource?: SourceReplacement,
+    direct = false,
   ): Promise<Lease> {
     const requestId = requestUuid();
     let id: string | undefined;
@@ -770,14 +837,22 @@ export class RemoteTvApi {
           request_id: requestId,
           stream_id: source.id,
           client: {
-            platform: this.platform,
+            // A direct session is the browser's own decoder. The backend only
+            // returns original media for a non-Vizio web platform, an https
+            // source and no upstream headers; otherwise it returns a gateway
+            // delivery and the normal path takes over.
+            platform: direct ? "web" : this.platform,
             max_width: 1920,
             max_height: 1080,
-            can_play_direct: false,
-            video_codecs: ["h264"],
-            audio_codecs: ["aac"],
+            can_play_direct: direct,
+            video_codecs: direct
+              ? ["h264", "hevc", "vp9", "av1"]
+              : ["h264"],
+            audio_codecs: direct
+              ? ["aac", "mp3", "ac3", "eac3", "opus"]
+              : ["aac"],
           },
-          force_gateway: true,
+          force_gateway: !direct,
           resume,
           position: position ?? 0,
           ...selection,
@@ -806,7 +881,7 @@ export class RemoteTvApi {
       }
       if (
         !value.delivery ||
-        value.delivery.kind !== "gateway" ||
+        !["gateway", "direct"].includes(value.delivery.kind) ||
         new URL(value.delivery.url).protocol !== "https:"
       )
         throw new RemoteError(
@@ -832,5 +907,17 @@ export class RemoteTvApi {
       );
       throw error;
     }
+  }
+
+  async segments(
+    playbackId: string,
+    signal: AbortSignal,
+  ): Promise<{ segments: PlaybackSegment[] }> {
+    return this.call<{ segments: PlaybackSegment[] }>(
+      `/api/playback/${segment(playbackId)}/segments`,
+      "GET",
+      undefined,
+      signal,
+    );
   }
 }

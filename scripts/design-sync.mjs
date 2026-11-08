@@ -62,6 +62,12 @@ if (command === "sync") {
   // ship; everything else stays in design as the authoritative source.
   const artworkTrees = [
     {
+      prefix: "assets/player/",
+      target: "public/assets/player/",
+      mirror: "roku/pkg/assets/player/",
+      shipped: (name) => name.endsWith(".png"),
+    },
+    {
       prefix: "assets/roku/roku/images/",
       target: "public/assets/",
       // The launcher mark, the generated and character avatars
@@ -139,6 +145,11 @@ if (command === "sync") {
     const bytes = git(repo, ["show", `${commit}:${source}`]);
     imports.push({ destination, bytes });
     files[destination] = { source, sha256: digest(bytes) };
+    if (tree?.mirror) {
+      const nativeDestination = `${tree.mirror}${source.slice(tree.prefix.length)}`;
+      imports.push({ destination: nativeDestination, bytes });
+      files[nativeDestination] = { source, sha256: digest(bytes) };
+    }
   }
   // Resolve every source before changing the working tree. Retired artwork is
   // removed only when the preceding lock identifies it as design-managed.
@@ -178,7 +189,7 @@ if (command === "sync") {
       !safe(path) ||
       !safe(entry.source) ||
       !(
-        path.startsWith("design-contract/") || path.startsWith("public/assets/")
+        path.startsWith("design-contract/") || path.startsWith("public/assets/") || path.startsWith("roku/pkg/assets/player/")
       )
     )
       throw Error(`Invalid snapshot path: ${path}`);
@@ -193,6 +204,8 @@ if (command === "sync") {
   for (const path of list("public/assets"))
     if (!lock.files[path])
       throw Error(`App artwork is not in the design pin: ${path}`);
+  for (const path of list("roku/pkg/assets/player"))
+    if (!lock.files[path]) throw Error(`Native app artwork is not in the design pin: ${path}`);
   if (command === "freshness") {
     if (!repo)
       throw Error("Usage: node scripts/design-sync.mjs freshness ../design");

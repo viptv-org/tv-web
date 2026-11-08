@@ -48,8 +48,7 @@ export default defineConfig(({ command }) => ({
         chunkFileNames: `assets/[name]-${assetTag}-[hash].js`,
         assetFileNames: `assets/[name]-${assetTag}-[hash][extname]`,
       } } : {}),
-      // The bootstrap selects SolidTV for TV queries and React for web/desktop.
-      // Direct SolidTV/legacy URLs remain compatible.
+      // Every hosted entry starts the same SolidTV application.
       input: {
         app: resolve(import.meta.dirname, "index.html"),
         solid: resolve(import.meta.dirname, "solid.html"),

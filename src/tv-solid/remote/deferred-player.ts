@@ -21,14 +21,21 @@ export class DeferredPlayer implements Player {
   private pending?: Promise<Player>;
   private detach?: () => void;
   private latest: PlayerSnapshot = IDLE_SNAPSHOT;
+  private operation = 0;
+  private disposed = false;
   private readonly listeners = new Set<PlayerListener>();
 
   constructor(private readonly create: () => Promise<Player>) {}
 
   /** Resolve the engine once. A failed load is retried by the next command. */
   load(): Promise<Player> {
+    if (this.disposed) return Promise.reject(new DOMException('Player disposed', 'AbortError'));
     this.pending ??= this.create().then(
-      (engine) => {
+      async (engine) => {
+        if (this.disposed) {
+          await engine.dispose();
+          throw new DOMException('Player disposed', 'AbortError');
+        }
         this.engine = engine;
         this.detach = engine.subscribe((snapshot) => {
           this.latest = snapshot;
@@ -67,7 +74,10 @@ export class DeferredPlayer implements Player {
   }
 
   async open(request: OpenPlayerRequest) {
-    await (await this.load()).open(request);
+    const operation = ++this.operation;
+    const engine = await this.load();
+    if (operation !== this.operation) return;
+    await engine.open(request);
   }
 
   async play() {
@@ -91,10 +101,13 @@ export class DeferredPlayer implements Player {
   }
 
   async stop() {
+    this.operation++;
     await this.engine?.stop();
   }
 
   async dispose() {
+    this.operation++;
+    this.disposed = true;
     this.detach?.();
     this.detach = undefined;
     this.listeners.clear();

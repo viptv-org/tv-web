@@ -9,7 +9,7 @@ import {
 } from "solid-js";
 import { TvView } from "../runtime";
 import { icon, Label, outline, palette } from "./visuals";
-import { textMetrics } from "./text-measure";
+import { sdfTextMetrics } from "./text-measure";
 import type { Pairing } from "./types";
 import { easeProgress } from "./motion";
 
@@ -48,9 +48,9 @@ export function PairingScreen(props: {
   const remainingText = () =>
     `${Math.floor(remaining() / 60)}:${String(remaining() % 60).padStart(2, "0")}`;
   const address = () =>
-    props.pairing?.verification_uri.replace(/^https:\/\//, "") ?? "";
+    String(props.pairing?.verification_uri ?? "").replace(/^https:\/\//, "");
   const lines = createMemo(() => {
-    const ctx = textMetrics("44px Onest700");
+    const ctx = sdfTextMetrics("44px Onest700");
     return Math.max(
       1,
       Math.min(2, Math.ceil(ctx.measureText(address()).width / 698)),
@@ -59,13 +59,13 @@ export function PairingScreen(props: {
   const step2 = () => 375.5 + 63.8 * lines() + 32;
   const codeY = () => step2() + 66;
   const refreshX = createMemo(() => {
-    const ctx = textMetrics("22px Onest");
+    const ctx = sdfTextMetrics("22px Onest");
     return (
       1126 + ctx.measureText(`Code expires in ${remainingText()}`).width + 24
     );
   });
   const refreshWidth = createMemo(() => {
-    const ctx = textMetrics("22px Onest600");
+    const ctx = sdfTextMetrics("22px Onest600");
     return ctx.measureText("New code").width + 68;
   });
   return (
@@ -91,17 +91,22 @@ export function PairingScreen(props: {
         y={315.5}
         size={26}
         lineheight={1.45}
-        maxwidth={760}
-        maxlines={2}
         color={palette.muted}
-        content="Point your camera at the code. You’ll finish on your phone and this TV signs in by itself."
+        content="Point your camera at the code."
+      />
+      <Label
+        x={96}
+        y={353.5}
+        size={26}
+        lineheight={1.45}
+        color={palette.muted}
+        content="You’ll finish on your phone and this TV signs in by itself."
       />
       <TvView
         x={96}
         y={422.9}
         w={340}
         h={340}
-        rounded={20}
         color={props.qr ? "#FFFFFF" : "#212124"}
       >
         <Show when={props.qr}>
@@ -109,7 +114,7 @@ export function PairingScreen(props: {
         </Show>
       </TvView>
       <TvView x={959} y={250} w={2} h={560} color="rgba(255,255,255,.12)" />
-      <TvView x={930} y={500} w={60} h={60} rounded={30} color={palette.bg}>
+      <TvView x={930} y={500} w={60} h={60} color={palette.bg}>
         <TvView w={60} h={60} src={outline(60, 60, 30, 2, "#FFFFFF", 0.12)} />
         <Label
           w={60}
@@ -170,7 +175,6 @@ export function PairingScreen(props: {
         y={codeY()}
         w={640}
         h={120}
-        rounded={16}
         color="rgba(255,255,255,.08)"
       >
         <TvView
@@ -201,7 +205,6 @@ export function PairingScreen(props: {
           y={codeY() + 142}
           w={refreshWidth()}
           h={48}
-          rounded={10}
           color={props.focused ? palette.text : "rgba(255,255,255,.16)"}
         >
           <TvView
@@ -226,7 +229,6 @@ export function PairingScreen(props: {
         y={909}
         w={12}
         h={12}
-        rounded={6}
         color={palette.accent}
         alpha={1 - 0.65 * pulse()}
         scale={1 - 0.2 * pulse()}

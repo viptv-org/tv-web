@@ -79,7 +79,7 @@ their pinned episode presentation until they explicitly adopt this addition.
 2. **TV subtitles and audio:** one scrolling list in the right panel. The list opens focused on the current track.
 3. **TV pairing code expiry:** a persistent expired state (the code struck through, "This code expired.", Try again focused, QR dimmed), plus a web page where the code is typed ("Link your TV").
 4. **Protected profiles:** a lock badge only. The PIN is asked for when the profile is opened.
-5. **Hiding from Continue Watching:** one menu item, "Remove from Continue Watching", followed by an Undo dialog.
+5. **Hiding from Continue Watching:** one menu item, "Remove from Continue Watching", followed by the removal toast with **Undo** (§9).
 6. **Touch overflow:** a visible ⋯ on phone cards (long-press still works).
 7. **Sign-out copy:** "Sign out of VIPTV on this phone?" on phone, "Sign out of VIPTV on this device?" on tablet, desktop and web, "Sign out of this TV?" on TV.
 8. **Desktop keyboard focus:** an off-white 2 px ring with a 2 px ground-coloured gap, shown on `:focus-visible` only. Never accent.

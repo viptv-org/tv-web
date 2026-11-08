@@ -1,6 +1,8 @@
 /** @jsxImportSource @solidtv/solid */
 import { createEffect, createSignal, onCleanup, Show } from "solid-js";
-import { TvView, TvText } from "../runtime";
+import { KeyedFor, TvView, TvText } from "../runtime";
+import { ReadyArtwork, type ArtworkFrame } from "../platform/ready-artwork";
+import { imageSource, imageVersion } from "./image-source";
 import { getRenderer } from "@solidtv/solid";
 import { tokens } from "../../theme/viptv-tokens.generated";
 import { buttonShadow } from "./button-shadow";
@@ -25,6 +27,7 @@ export const palette = {
 };
 const paths: Record<string, string> = {
   play: "M7 4.5v15a1 1 0 0 0 1.52.85l12-7.5a1 1 0 0 0 0-1.7l-12-7.5A1 1 0 0 0 7 4.5z",
+  pause: "M8 5v14M16 5v14",
   lock: "M6 10h12v11H6zM8 10V6a4 4 0 0 1 8 0v4M12 14v3",
   plus: "M12 5v14M5 12h14",
   info: "M12 16v-4M12 8h.01 M22 12a10 10 0 1 1-20 0 10 10 0 0 1 20 0z",
@@ -48,7 +51,7 @@ const cache = new Map<string, string>();
 export function outline(w:number,h:number,radius:number,width:number,color:string,opacity=1) {
   const key=`outline:${w}:${h}:${radius}:${width}:${color}:${opacity}`;
   let value=cache.get(key);
-  if(!value){value="data:image/svg+xml,"+encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" fill="none"><rect x="${width/2}" y="${width/2}" width="${w-width}" height="${h-width}" rx="${radius-width/2}" stroke="${color}" stroke-opacity="${opacity}" stroke-width="${width}"/></svg>`);cache.set(key,value);}
+  if(!value){value="data:image/svg+xml,"+encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" fill="none"><rect x="${width/2}" y="${width/2}" width="${w-width}" height="${h-width}" rx="0" stroke="${color}" stroke-opacity="${opacity}" stroke-width="${width}"/></svg>`);cache.set(key,value);}
   return value;
 }
 export function cardOutline(w: number, h: number, focused: boolean) {
@@ -58,8 +61,8 @@ export function cardOutline(w: number, h: number, focused: boolean) {
     value = "data:image/svg+xml," + encodeURIComponent(
       `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" fill="none">` +
       (focused
-        ? `<rect x="1.5" y="1.5" width="${w-3}" height="${h-3}" rx="8.5" stroke="white" stroke-width="3"/><rect x="4" y="4" width="${w-8}" height="${h-8}" rx="6" stroke="black" stroke-opacity=".35" stroke-width="2"/>`
-        : `<rect x=".5" y=".5" width="${w-1}" height="${h-1}" rx="9.5" stroke="white" stroke-opacity=".08"/>`) + '</svg>',
+        ? `<rect x="1.5" y="1.5" width="${w-3}" height="${h-3}" rx="0" stroke="white" stroke-width="3"/><rect x="4" y="4" width="${w-8}" height="${h-8}" rx="0" stroke="black" stroke-opacity=".35" stroke-width="2"/>`
+        : `<rect x=".5" y=".5" width="${w-1}" height="${h-1}" rx="0" stroke="white" stroke-opacity=".08"/>`) + '</svg>',
     );
     cache.set(key, value);
   }
@@ -72,7 +75,7 @@ export function icon(name: string, dark = false, strokeWidth = 2.2, tint?: strin
     value =
       "data:image/svg+xml," +
       encodeURIComponent(
-        `<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="${name === "play" ? (tint ?? (dark ? "#111113" : "#F4F2EE")) : "none"}" stroke="${name === "play" ? "none" : (tint ?? (dark ? "#111113" : "#F4F2EE"))}" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round"><path d="${paths[name] ?? paths.info}"/></svg>`,
+        `<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" data-icon="${name}" fill="${name === "play" ? (tint ?? (dark ? "#111113" : "#F4F2EE")) : "none"}" stroke="${name === "play" ? "none" : (tint ?? (dark ? "#111113" : "#F4F2EE"))}" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round"><path d="${paths[name] ?? paths.info}"/></svg>`,
       );
     cache.set(key, value);
   }
@@ -107,36 +110,74 @@ export function navIcon(name: string, dark = false, active = false) {
     value =
       "data:image/svg+xml," +
       encodeURIComponent(
-        `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">${navIconPaths[name] ?? navIconPaths.About}</svg>`,
+        `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" data-icon="${name}" fill="none" stroke="${stroke}" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">${navIconPaths[name] ?? navIconPaths.About}</svg>`,
       );
     cache.set(key, value);
   }
   return value;
 }
 export function Label(props: Record<string, any>) {
-  return <TvText font="Onest" color={palette.text} {...props} lineheight={props.lineheight ?? (props.font === "Onest700" && props.size >= 40 ? 1.15 : undefined)} />;
+  // Keep this a getter: the component body runs once, and a plain value here
+  // froze the first content (the Search field then kept its placeholder).
+  const content = () =>
+    typeof props.content === "string"
+      ? props.content.replace(/[★☆✩⭐]\s*/g, "")
+      : props.content;
+  return <TvText font="Onest" color={palette.text} {...props} content={content()} lineheight={props.lineheight ?? (props.font === "Onest700" && props.size >= 40 ? 1.15 : undefined)} />;
+}
+/** A hero title is only a fallback: delay it so a late-arriving logo never
+ * flashes text first. A card that has no logo still identifies itself. */
+export function DelayedTitle(props: {
+  title: string;
+  y?: number;
+  size: number;
+  font?: string;
+  lineheight?: number;
+  maxwidth?: number;
+  maxheight?: number;
+  maxlines?: number;
+  delay?: number;
+}) {
+  const [shown, setShown] = createSignal(false);
+  createEffect(() => {
+    props.title;
+    setShown(false);
+    const timer = setTimeout(() => setShown(true), props.delay ?? 650);
+    onCleanup(() => clearTimeout(timer));
+  });
+  return (
+    <Show when={shown()}>
+      <Label
+        y={props.y}
+        size={props.size}
+        font={props.font ?? "Onest700"}
+        lineheight={props.lineheight}
+        maxwidth={props.maxwidth}
+        maxheight={props.maxheight}
+        maxlines={props.maxlines}
+        content={props.title}
+      />
+    </Show>
+  );
 }
 export function Button(props: {
   x: number;
   y: number;
   w?: number;
   h?: number;
-  pill?: boolean;
   label?: string;
   icon?: string;
   iconSize?: number;
   focused: boolean;
-  round?: boolean;
   disabled?: boolean;
   shadow?: boolean;
 }) {
   return (
     <TvView x={props.x} y={props.y}>
-    <Show when={props.shadow}><TvView x={-100} y={-100} w={(props.w??72)+200} h={(props.h??72)+200} src={buttonShadow(props.w??72,props.h??72,props.round||props.pill?(props.h??72)/2:12)} show={props.focused}/></Show>
+    <Show when={props.shadow}><TvView x={-100} y={-100} w={(props.w??72)+200} h={(props.h??72)+200} src={buttonShadow(props.w??72,props.h??72,0)} show={props.focused}/></Show>
     <TvView
       w={props.w ?? 72}
       h={props.h ?? 72}
-      rounded={props.round || props.pill ? (props.h ?? 72) / 2 : 12}
       color={props.focused ? palette.text : "rgba(255,255,255,.16)"}
       alpha={props.disabled ? 0.45 : 1}
     >
@@ -165,9 +206,49 @@ export function Button(props: {
     </TvView>
   );
 }
+/** Shared native art plane: one poster, the packaged scrim and an optional
+ * dim. Browser paths use their shader/canvas artwork instead. */
+export function NativeBackdrop(props: {
+  src?: string | null;
+  dim?: number;
+  children?: any;
+}) {
+  const [frames, setFrames] = createSignal<ArtworkFrame[]>([]);
+  const views = new Map<number, any>();
+  const buffer = new ReadyArtwork(setFrames, async id => {
+    const view = views.get(id);
+    if (!view) return;
+    const duration = matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 300;
+    const animation = view.animate({ alpha: 1 }, { duration, easing: "ease-out" });
+    animation.start();
+    await animation.waitUntilStopped();
+  });
+  createEffect(() => buffer.request(props.src ? imageSource(props.src, 1920) : undefined));
+  onCleanup(() => buffer.dispose());
+  return (
+    <TvView w={1920} h={1080} color={palette.bg}>
+      <KeyedFor each={frames()} keyOf={frame => frame.id}>
+        {frame => {
+          const id = frame().id;
+          onCleanup(() => views.delete(id));
+          return <TvView w={1920} h={1080} src={frame().src} alpha={frame().alpha}
+            fit="cover" nodeRef={(view: any) => views.set(id, view)}
+            onLoad={() => buffer.ready(id)} onError={() => buffer.failed(id)} />;
+        }}
+      </KeyedFor>
+      <TvView w={1920} h={1080} src="pkg:/assets/hero-scrim.png" />
+      <TvView w={1920} h={1080} color="#000000" alpha={props.dim ?? 0} />
+      {props.children}
+    </TvView>
+  );
+}
+
 /** One small cached gradient mask replaces five full-screen blend passes.
  * Artwork retains its own texture; focus changes never read back 1080p pixels. */
 export function Backdrop(props: { src?: string | null; dim?: boolean }) {
+  if (typeof (globalThis as any).__SolidTVRokuRenderer !== "undefined") {
+    return <NativeBackdrop src={props.src} dim={props.dim ? 0.35 : 0} />;
+  }
   const [current, setCurrent] = createSignal<string>(),
     [previous, setPrevious] = createSignal<string>(),
     [opacity, setOpacity] = createSignal(1);
@@ -214,13 +295,13 @@ export function Backdrop(props: { src?: string | null; dim?: boolean }) {
       if (cancelled) return;
       setPrevious(reduced ? undefined : current());
       setOpacity(reduced ? 1 : 0);
-      setCurrent(src ?? undefined);
+      setCurrent(src ? imageSource(src, 1920) : undefined);
       if (!reduced) {
         frame = requestAnimationFrame(() => setOpacity(1));
         cleanupTimer = setTimeout(() => setPrevious(undefined), 350);
       }
     };
-    if (src) image.src = src;
+    if (src) image.src = imageSource(src, 1920);
     else {
       setCurrent(undefined);
       setPrevious(undefined);
@@ -261,12 +342,187 @@ export function Backdrop(props: { src?: string | null; dim?: boolean }) {
   );
 }
 
+let topBar: ImageData | undefined;
+/** Scrim.tvTopBar from the Android TV client: ground .94 at the top, .82 at
+ * 72%, transparent at the bar's bottom edge. Kept at the bar's exact aspect so
+ * the texture scales 1:1 with no cropping. */
+export function topBarGradient() {
+  if (!topBar) {
+    topBar = new ImageData(480, 33);
+    for (let y = 0; y < 33; y++) {
+      const t = y / 32,
+        alpha =
+          t < 0.72
+            ? 0.94 + ((0.82 - 0.94) * t) / 0.72
+            : 0.82 * (1 - (t - 0.72) / 0.28);
+      for (let x = 0; x < 480; x++) {
+        const i = (y * 480 + x) * 4;
+        topBar.data[i] = 11;
+        topBar.data[i + 1] = 11;
+        topBar.data[i + 2] = 12;
+        topBar.data[i + 3] = Math.round(alpha * 255);
+      }
+    }
+  }
+  return topBar;
+}
+
+let browseWideScrim: ImageData | undefined;
+/** The wide left scrim from TvHomeBackdrop's hero backdrop. It darkens the
+ * ambient plane under the browse summary so the sharp art has no visible edge. */
+export function browseWideScrimGradient() {
+  if (!browseWideScrim) {
+    browseWideScrim = new ImageData(480, 155);
+    for (let y = 0; y < 155; y++)
+      for (let x = 0; x < 480; x++) {
+        const t = x / 479,
+          alpha = t < 0.625 ? 0.92 * Math.pow(1 - t / 0.625, 1.15) : 0,
+          i = (y * 480 + x) * 4;
+        browseWideScrim.data[i] = 11;
+        browseWideScrim.data[i + 1] = 11;
+        browseWideScrim.data[i + 2] = 12;
+        browseWideScrim.data[i + 3] = Math.round(alpha * 255);
+      }
+  }
+  return browseWideScrim;
+}
+
+let leftScrim: ImageData | undefined;
+/** The browsing plane's 560px horizontal dissolve into the page background. */
+export function leftScrimGradient() {
+  if (!leftScrim) {
+    leftScrim = new ImageData(140, 155);
+    for (let y = 0; y < 155; y++)
+      for (let x = 0; x < 140; x++) {
+        const alpha = Math.pow(1 - x / 139, 1.25),
+          i = (y * 140 + x) * 4;
+        leftScrim.data[i] = 11;
+        leftScrim.data[i + 1] = 11;
+        leftScrim.data[i + 2] = 12;
+        leftScrim.data[i + 3] = Math.round(alpha * 255);
+      }
+  }
+  return leftScrim;
+}
+
+let bottomScrim: ImageData | undefined;
+/** The 240px bottom fade under the browsing artwork. */
+export function bottomScrimGradient() {
+  if (!bottomScrim) {
+    bottomScrim = new ImageData(480, 60);
+    for (let y = 0; y < 60; y++) {
+      const alpha = Math.pow(y / 59, 1.25);
+      for (let x = 0; x < 480; x++) {
+        const i = (y * 480 + x) * 4;
+        bottomScrim.data[i] = 11;
+        bottomScrim.data[i + 1] = 11;
+        bottomScrim.data[i + 2] = 12;
+        bottomScrim.data[i + 3] = Math.round(alpha * 255);
+      }
+    }
+  }
+  return bottomScrim;
+}
+
+let liveScrim: ImageData | undefined;
+/** The 90px bottom scrim under the Live preview's "OK to watch" row. */
+export function livePreviewScrim() {
+  if (!liveScrim) {
+    liveScrim = new ImageData(512, 72);
+    for (let y = 0; y < 72; y++) {
+      const alpha = 0.65 * Math.pow(y / 71, 1.35);
+      for (let x = 0; x < 512; x++) {
+        const i = (y * 512 + x) * 4;
+        liveScrim.data[i] = 0;
+        liveScrim.data[i + 1] = 0;
+        liveScrim.data[i + 2] = 0;
+        liveScrim.data[i + 3] = Math.round(alpha * 255);
+      }
+    }
+  }
+  return liveScrim;
+}
+
 import vynxcAvatar from "../../../design-contract/viptv-design-system/reference/assets/5112cc304140378385555c10e98d120d.png";
 import zayneAvatar from "../../../design-contract/viptv-design-system/reference/assets/e12f8d0854be9217fda190bd7a21aebd.png";
 export const avatar = (id?: string | null) =>
   id === "vynxc" ? vynxcAvatar : id === "zayne" ? zayneAvatar : undefined;
 /** The reference uses lighten blending for monochrome title artwork. Convert
  * the black matte to alpha in a bounded render texture, preserving its aspect. */
+type LogoPixels = { pixels: ImageData; w: number; h: number };
+const logoCache = new Map<string, LogoPixels>();
+/** An idle wake invalidates converted logo pixels too; the source URLs are not
+ * enough because a cached logo never reaches the renderer's texture loader. */
+export function clearLogoCache() {
+  logoCache.clear();
+}
+
+type LogoLoad = {
+  height: number;
+  width?: number;
+  maxWidth: number;
+};
+const LOGO_GLOW_SVG =
+  "data:image/svg+xml," +
+  encodeURIComponent(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="600" height="200"><defs><radialGradient id="g" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#FFFFFF" stop-opacity=".36"/><stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/></radialGradient></defs><ellipse cx="300" cy="100" rx="240" ry="55" fill="url(#g)"/></svg>`,
+  );
+const logoGlow = () =>
+  typeof (globalThis as any).__SolidTVRokuRenderer !== "undefined"
+    ? "pkg:/assets/logo-glow.png"
+    : LOGO_GLOW_SVG;
+
+function convertLogo(image: HTMLImageElement, load: LogoLoad): LogoPixels {
+  const aspect = image.width / image.height;
+  const h = load.width
+      ? Math.min(load.height, load.width / aspect)
+      : Math.max(1, Math.round(Math.min(load.height, load.maxWidth / aspect))),
+    w = load.width
+      ? h * aspect
+      : Math.max(1, Math.round(aspect * h));
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.ceil(w);
+  canvas.height = Math.ceil(h);
+  const context = canvas.getContext("2d")!;
+  context.drawImage(image, 0, 0, canvas.width, canvas.height);
+  const data = context.getImageData(0, 0, canvas.width, canvas.height);
+  // A transparent wordmark already carries its alpha; treating its dark RGB
+  // as a black matte erased black logos completely. Only remove a matte when
+  // the source is fully opaque.
+  let hasAlpha = false;
+  for (let i = 3; i < data.data.length; i += 4) {
+    if (data.data[i] < 250) {
+      hasAlpha = true;
+      break;
+    }
+  }
+  if (!hasAlpha) {
+    for (let i = 0; i < data.data.length; i += 4) {
+      const white = Math.max(data.data[i], data.data[i + 1], data.data[i + 2]);
+      data.data[i + 3] = Math.round((data.data[i + 3] * white) / 255);
+      if (white) {
+        data.data[i] = (data.data[i] * 255) / white;
+        data.data[i + 1] = (data.data[i + 1] * 255) / white;
+        data.data[i + 2] = (data.data[i + 2] * 255) / white;
+      }
+    }
+  }
+  return { pixels: data, w, h };
+}
+function loadLogo(url: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.crossOrigin = "anonymous";
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error("Logo failed to load"));
+    image.src = url;
+  });
+}
+/** Convert the black matte to alpha once per URL and size. A replacement logo
+ * stays behind the old one until it decodes, so metadata refreshes never flash
+ * the title fallback. The original URL is tried first for speed; the public
+ * artwork proxy is the fallback for hosts that intermittently omit CORS
+ * headers, which would otherwise taint the canvas and drop the logo. */
 export function Logo(props: {
   src: string;
   h: number;
@@ -274,69 +530,137 @@ export function Logo(props: {
   maxWidth?: number;
   title?: string;
   size?: number;
+  /** Bottom-align the logo in a fixed box, as the Android TV hero does. */
+  boxH?: number;
 }) {
-  const [pixels, setPixels] = createSignal<ImageData>(),
-    [dimensions, setDimensions] = createSignal({ w: 0, h: 0 });
-  createEffect(() => {
-    const src = props.src,
-      height = props.h,
-      width = props.w,
-      maxWidth = props.maxWidth ?? 800;
-    setPixels(undefined);
-    let cancelled = false;
-    const image = new Image();
-    image.crossOrigin = "anonymous";
-    image.onload = () => {
-      if (cancelled) return;
-      try {
-        const aspect = image.width / image.height;
-        const h = width ? Math.min(height, width / aspect) : Math.max(1, Math.round(Math.min(height, maxWidth / aspect))),
-          w = width ? h * aspect : Math.max(1, Math.round(aspect * h));
-        const canvas = document.createElement("canvas");
-        canvas.width = Math.ceil(w);
-        canvas.height = Math.ceil(h);
-        const context = canvas.getContext("2d")!;
-        context.drawImage(image, 0, 0, canvas.width, canvas.height);
-        const data = context.getImageData(0, 0, canvas.width, canvas.height);
-        for (let i = 0; i < data.data.length; i += 4) {
-          const white = Math.max(
-            data.data[i],
-            data.data[i + 1],
-            data.data[i + 2],
-          );
-          data.data[i + 3] = Math.round((data.data[i + 3] * white) / 255);
-          if (white) {
-            data.data[i] = (data.data[i] * 255) / white;
-            data.data[i + 1] = (data.data[i + 1] * 255) / white;
-            data.data[i + 2] = (data.data[i + 2] * 255) / white;
-          }
+  const showGlow = () => props.h >= 120;
+  if (typeof (globalThis as any).__SolidTVRokuRenderer !== "undefined") {
+    // SceneGraph can load the transparent wordmark directly. The browser
+    // loader below needs canvas pixels, which Roku cannot provide.
+    const width = () => Math.max(1, props.w ?? props.maxWidth ?? 800);
+    return (
+      <Show
+        when={props.src}
+        fallback={
+          <Label
+            size={props.size ?? 56}
+            font="Onest700"
+            maxwidth={width()}
+            maxlines={2}
+            content={props.title ?? ""}
+          />
         }
-        setDimensions({ w, h });
-        setPixels(data);
-      } catch {
-        setPixels(undefined);
+      >
+        <TvView w={width()} h={Math.max(1, props.h)}>
+          <Show when={showGlow()}>
+            <TvView
+              w={width()}
+              h={Math.max(1, props.h)}
+              src={logoGlow()}
+              fit="cover"
+            />
+          </Show>
+          <TvView
+            w={width()}
+            h={Math.max(1, props.h)}
+            src={imageSource(props.src, width(), Math.max(1, props.h), "inside")}
+            fit="contain"
+            logo
+          />
+        </TvView>
+      </Show>
+    );
+  }
+  const key = () =>
+    `${props.src}|${props.h}|${props.w ?? ""}|${props.maxWidth ?? 800}`;
+  const [art, setArt] = createSignal<LogoPixels | undefined>(
+    logoCache.get(key()),
+  );
+  const [failed, setFailed] = createSignal(false);
+  let renderedKey = "";
+  createEffect(() => {
+    imageVersion();
+    const src = props.src,
+      load = {
+        height: props.h,
+        width: props.w,
+        maxWidth: props.maxWidth ?? 800,
+      },
+      cacheKey = key();
+    if (renderedKey !== cacheKey) {
+      renderedKey = cacheKey;
+      setArt(undefined);
+      setFailed(false);
+    }
+    const cached = logoCache.get(cacheKey);
+    if (cached) {
+      setArt(cached);
+      setFailed(false);
+      return;
+    }
+    // A logo that is still loading draws nothing: the title fallback only
+    // appears once the artwork has definitively failed, so a slow refresh never
+    // flashes text over a logo that is about to arrive.
+    setFailed(false);
+    let cancelled = false;
+    const proxied = imageSource(src, 800);
+    const urls = proxied && proxied !== src ? [src, proxied] : [src];
+    void (async () => {
+      for (const url of urls) {
+        try {
+          const value = convertLogo(await loadLogo(url), load);
+          if (cancelled) return;
+          if (logoCache.size >= 64) logoCache.clear();
+          logoCache.set(cacheKey, value);
+          setArt(value);
+          setFailed(false);
+          return;
+        } catch {
+          /* try the proxy, then fall back to the title */
+        }
       }
-    };
-    image.src = src;
+      if (!cancelled && !art()) setFailed(true);
+    })();
     onCleanup(() => {
       cancelled = true;
-      image.onload = null;
     });
   });
   return (
     <Show
-      when={pixels()}
+      when={art()}
       fallback={
-        <Label
-          size={props.size ?? 56}
-          font="Onest700"
-          maxwidth={800}
-          maxlines={2}
-          content={props.title ?? ""}
-        />
+        <Show when={failed()}>
+          <Label
+            size={props.size ?? 56}
+            font="Onest700"
+            maxwidth={props.maxWidth ?? 800}
+            maxlines={2}
+            content={props.title ?? ""}
+          />
+        </Show>
       }
     >
-      {(data) => <TvView w={dimensions().w} h={dimensions().h} src={data()} />}
+      {(data) => (
+        <TvView
+          w={props.maxWidth ?? props.w ?? 800}
+          h={props.boxH ?? props.h}
+        >
+          <Show when={showGlow()}>
+            <TvView
+              w={props.maxWidth ?? props.w ?? 800}
+              h={props.boxH ?? props.h}
+              src={logoGlow()}
+              fit="cover"
+            />
+          </Show>
+          <TvView
+            y={props.boxH ? Math.max(0, props.boxH - data().h) : 0}
+            w={data().w}
+            h={data().h}
+            src={data().pixels}
+          />
+        </TvView>
+      )}
     </Show>
   );
 }

@@ -1,3 +1,4 @@
+import './platform/tv-compat';
 import {
   Config,
   createRenderer,
@@ -9,6 +10,9 @@ import type { RendererMain } from "@solidtv/renderer";
 import { sdfFonts } from "./fonts";
 import { tvShaderName } from "./shaders";
 import { setRendererStart } from "./renderer-clock";
+import { reloadImages } from "./remote/image-source";
+import { prepareTizenHost } from "./platform/tizen-host";
+import { prepareBrowserRenderer } from "./platform/browser-renderer";
 import "../theme/viptv-tokens.generated.css";
 
 import { RemoteTvApi } from "./remote/api";
@@ -54,7 +58,7 @@ async function start() {
     performance.mark("viptv:init-start");
   // Prefetch each face once through SolidTV before synchronous WebGL setup.
   // The renderer attaches the prefetched faces when its stage is available.
-  const dependencies = Promise.all([import("./remote/App")]);
+  const dependencies = Promise.all([import("./remote/App"), prepareTizenHost(platform)]);
   const styles = Promise.all(
     Array.from(document.querySelectorAll<HTMLLinkElement>('link[rel="stylesheet"][media="print"]')).map(
       (link) => link.sheet ? Promise.resolve() : new Promise<void>((resolve, reject) => {
@@ -65,7 +69,9 @@ async function start() {
   );
   // Renderer 2.x draws SDF text only: every face the entry names is an
   // atlas (see src/tv-solid/sdf and fonts.ts).
-  const rendererFonts = loadFonts(sdfFonts);
+  const host = await prepareBrowserRenderer();
+  document.documentElement.dataset.rendererBackend = host.mode;
+  const sdfReady = host.mode === "webgl" ? loadFonts(sdfFonts) : undefined;
   Config.fontSettings = { fontFamily: "Onest", fontSize: 32 };
   Config.animationsEnabled = !matchMedia("(prefers-reduced-motion: reduce)")
     .matches;
@@ -73,25 +79,20 @@ async function start() {
     {
       appWidth: 1920,
       appHeight: 1080,
-      deviceLogicalPixelRatio: window.innerWidth / 1920,
+      deviceLogicalPixelRatio: Math.min(window.innerWidth / 1920, window.innerHeight / 1080),
       devicePhysicalPixelRatio: window.devicePixelRatio || 1,
       clearColor: 0x00000000,
-      // Renderer 2.0 changed these defaults. Keep 1.10's TV pacing and loader
-      // limits: an uncapped loop on a software rasteriser starves the timers
-      // this app runs on, and the larger decode window changes TV memory use.
       targetFPS: 60,
-      boundsMargin: 200,
-      imageDecodeConcurrency: 4,
-      textureProcessingTimeLimit: 10,
-      textureMemory: {
-        criticalThreshold: 64 * 1024 * 1024,
-        targetThresholdLevel: 0.65,
-        cleanupInterval: 2000,
-      },
       textBaselineMode: "linebox",
+      canvas: host.canvas,
     },
     "app",
   );
+  host.canvas.style.position = "absolute";
+  host.canvas.style.left = "50%";
+  host.canvas.style.top = "50%";
+  host.canvas.style.transform = "translate(-50%, -50%)";
+  const rendererFonts = host.loadFonts ? host.loadFonts(renderer) : sdfReady;
   // @solidtv/solid 1.7 no longer registers its built-in shader types itself;
   // without them every `color`/`rounded` node draws as an unrounded quad.
   registerDefaultShaders(renderer as RendererMain);
@@ -102,10 +103,12 @@ async function start() {
       __viptvRenderer?: typeof renderer;
       __viptvShaderName?: typeof tvShaderName;
       __viptvRendererStart?: () => number;
+      __viptvReloadImages?: () => void;
     };
     debug.__viptvRenderer = renderer;
     debug.__viptvShaderName = tvShaderName;
     debug.__viptvRendererStart = () => rendererStartAt;
+    debug.__viptvReloadImages = reloadImages;
   }
   if (new URLSearchParams(location.search).has("perfdebug"))
     (

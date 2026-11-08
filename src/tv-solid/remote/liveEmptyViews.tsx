@@ -10,6 +10,7 @@ import { For, Show, createMemo } from "solid-js";
 import { getRenderer } from "@solidtv/solid";
 import { TvView } from "../runtime";
 import { Label, palette } from "./visuals";
+import { sdfTextMetrics } from "./text-measure";
 import {
   LIVE_ANSWER_T,
   LIVE_EMPTY_COPY,
@@ -18,7 +19,6 @@ import {
   LIVE_PAGE_TOP,
   liveEmptyArtworkSrc,
   liveNoSourceActions,
-  liveSkeletonRows,
   liveWhoLine,
   type LiveBox,
   type LiveRecoveryAction,
@@ -109,10 +109,11 @@ function actionWidth(
   padding: number,
   font: string,
 ) {
-  const context = document.createElement("canvas").getContext("2d");
-  if (!context) return text.length * size + padding * 2;
-  context.font = `${size}px ${font}`;
-  return Math.ceil(context.measureText(text).width) + padding * 2;
+  return (
+    Math.ceil(
+      sdfTextMetrics(`${size}px ${font}`).measureText(text).width,
+    ) + padding * 2
+  );
 }
 
 /**
@@ -136,7 +137,6 @@ function EmptyButton(props: {
       y={props.box.y}
       w={width()}
       h={props.box.h}
-      rounded={props.box.h / 2}
       color={props.focused ? palette.text : "rgba(255,255,255,.12)"}
     >
       <Label
@@ -291,39 +291,6 @@ export function LiveAnswer(props: {
             }
             focused={props.focused === index()}
           />
-        )}
-      </For>
-    </TvView>
-  );
-}
-
-/**
- * The loading form: no copy and no artwork, six skeleton channel rows in the
- * page's own row shape where channel rows start today.
- */
-export function LiveSkeletons() {
-  return (
-    <TvView x={0} y={LIVE_PAGE_TOP} w={1920} h={LIVE_PAGE_HEIGHT}>
-      <For each={liveSkeletonRows()}>
-        {(row) => (
-          <>
-            <TvView
-              x={row.title.x}
-              y={row.title.y}
-              w={row.title.w}
-              h={row.title.h}
-              rounded={12}
-              color={palette.surface}
-            />
-            <TvView
-              x={row.guide.x}
-              y={row.guide.y}
-              w={row.guide.w}
-              h={row.guide.h}
-              rounded={12}
-              color={palette.surface}
-            />
-          </>
         )}
       </For>
     </TvView>

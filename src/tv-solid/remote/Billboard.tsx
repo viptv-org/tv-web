@@ -14,7 +14,8 @@ import type { RendererMain, ShaderNode } from "@solidtv/renderer";
 import { KeyedFor, TvView } from "../runtime";
 import { registerTvShader } from "../shaders";
 import { rendererStart } from "../renderer-clock";
-import { icon, palette } from "./visuals";
+import { icon, NativeBackdrop, palette } from "./visuals";
+import { imageSource } from "./image-source";
 import {
   billboardShader,
   billboardGlassShader,
@@ -61,12 +62,32 @@ export function createBillboardArt(
   let serial = 0;
   const selected = createMemo(source);
   const selectedIdentity = createMemo(identity);
+  const nativeRoku = () =>
+    typeof (globalThis as any).__SolidTVRokuRenderer !== "undefined";
   createEffect(() => {
+    if (nativeRoku()) {
+      const src = selected();
+      const loadSrc = src ? imageSource(src, 1920) : undefined;
+      setFrames(
+        loadSrc
+          ? [{
+              id: ++serial,
+              src: loadSrc,
+              width: 1920,
+              height: 1080,
+              started: performance.now(),
+            }]
+          : [],
+      );
+      setVisible(true);
+      return;
+    }
     const src = selected();
     selectedIdentity();
     let cancelled = false,
       frame = 0;
     let timer: ReturnType<typeof setTimeout> | undefined;
+    const loadSrc = src ? imageSource(src, 1920) : undefined;
     const image = new Image();
     image.crossOrigin = "anonymous";
     image.onload = async () => {
@@ -81,7 +102,7 @@ export function createBillboardArt(
       if (cancelled) return;
       const value = {
         id: ++serial,
-        src: src!,
+        src: loadSrc!,
         width: image.naturalWidth,
         height: image.naturalHeight,
         started: performance.now(),
@@ -101,7 +122,7 @@ export function createBillboardArt(
     image.onerror = () => {
       if (!cancelled) setFrames([]);
     };
-    if (src) image.src = src;
+    if (loadSrc) image.src = loadSrc;
     else setFrames([]);
     onCleanup(() => {
       cancelled = true;
@@ -179,6 +200,7 @@ function Photo(props: {
     <TvView
       w={width}
       h={height}
+      fit="cover"
       {...image}
       shader={ended() ? still : moving}
       alpha={props.alpha}
@@ -215,6 +237,10 @@ function Layers(props: {
   );
 }
 export function BillboardBackdrop(props: { art: Art }) {
+  if (typeof (globalThis as any).__SolidTVRokuRenderer !== "undefined") {
+    const frame = () => props.art.frames().at(-1);
+    return <NativeBackdrop src={frame()?.src} />;
+  }
   return (
     <TvView w={1920} h={1080}>
       <TvView
@@ -253,7 +279,6 @@ export function BillboardButton(props: {
             <TvView
               w={72}
               h={72}
-              rounded={36}
               color={props.focused ? palette.text : "rgba(255,255,255,.16)"}
             />
           }
@@ -287,7 +312,7 @@ export function HeroProgress(props: { started: number; running: boolean }) {
   return (
     <Show
       when={props.running}
-      fallback={<TvView w={48} h={4} rounded={2} color={palette.text} />}
+      fallback={<TvView w={48} h={4} color={palette.text} />}
     >
       <TvView w={48} h={4} color="#FFFFFF" shader={shader()} />
     </Show>

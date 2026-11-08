@@ -102,27 +102,31 @@ rather than widening that tolerance. These are web-TV states, not Roku redesigns
 ## Home billboard motion
 
 Use Tv3Home's nine-second featured indicator and fourteen-second ease-out
-artwork zoom from 100% to 106%, centered on the displayed image. The image uses
-cover sizing at center/30%; the fixed left, bottom and navigation masks do not
-zoom. Round secondary controls retain the reference 24px backdrop blur and
-30px glyphs; the primary filled Play glyph is 24px. Foreground controls and copy
-remain above asynchronously loaded artwork.
+artwork zoom from 100% to 106%, centered on the displayed image. Within a pass
+each title holds for its nine seconds while its artwork runs the
+fourteen-second zoom. The image uses cover sizing at center/30%; the fixed
+left, bottom and navigation masks do not zoom. Round secondary controls retain
+the reference 24px backdrop blur and 30px glyphs; the primary filled Play glyph
+is 24px. Foreground controls and copy remain above asynchronously loaded
+artwork.
 
-The client advances only through the server's featured order. Remote activity
-restarts the nine-second presentation cycle; rows, menus, pending/error states
-and hidden-page lifecycle pause it. Returning to an active billboard starts a
-fresh cycle. A new featured identity restarts the artwork effect, even if its
-image URL is shared; unrelated metadata changes do not reload artwork. Reduced
-motion keeps artwork at 100%, disables automatic cycling and shows a static
-indicator. Auto-cycling must never request viewing intent, sources or playback.
+The client presents the server's featured order once per activation, then parks:
+after the last title it holds that slide and retires the artwork clock, so the
+indicator stops and nothing draws until remote activity or a new featured
+identity starts a fresh pass. Rows, menus, pending/error states and hidden-page
+lifecycle pause the pass. Returning to an active billboard starts a fresh pass.
+A new featured identity restarts the artwork effect, even if its image URL is
+shared; unrelated metadata changes do not reload artwork. Reduced motion keeps
+artwork at 100%, disables automatic cycling and shows a static indicator.
+Auto-cycling must never request viewing intent, sources or playback.
 
-Retire the image animation clock after fourteen seconds and cancel obsolete
-image loads/timers on navigation or profile retirement. Use bounded renderer
-state for animation; do not accumulate a shader-cache entry per frame. Verify
-visible zoom, the nine-second boundary, interaction/menu/visibility pause,
-reduced motion, foreground layering and sustained frame timing. These controls
-are presentation of server data and do not decide resume, playback or episode
-continuation policy.
+Cancel obsolete image loads/timers on navigation or profile retirement. Use
+bounded renderer state for animation; do not accumulate a shader-cache entry
+per frame. Verify visible zoom, the nine-second boundary,
+interaction/menu/visibility pause, reduced motion, foreground layering, a
+parked billboard drawing zero frames and sustained frame timing during a pass.
+These controls are presentation of server data and do not decide resume,
+playback or episode continuation policy.
 
 ## Focused-title Browse presentation
 

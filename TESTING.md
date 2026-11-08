@@ -1,3 +1,202 @@
+# Canvas fallback and live episode handoff — 2026-11-08
+
+The hosted entries use the shared SolidTV application. WebGL-capable browsers
+retain renderer 2.0.7; unavailable WebGL selects the existing 1.10.2 Canvas
+renderer and Canvas text engine through the shared framework factory. Canvas
+fonts use WOFF and actual browser measurements; SDF atlases are not requested.
+The startup logo tile and recovery button are square. The authored canvas fits
+and centers in a 1540 × 754 console-browser window without requesting fullscreen.
+Navigation text and fallback badge backgrounds fit their actual rendered labels.
+The unreferenced React appearance module is removed.
+
+Framework pin: `vynxc/solid` main `de6c0454d092c62ec093aff31a2398fd2ad2faab`.
+Its build passes, 738 tests pass with 13 skipped, and lint passes with existing
+warnings. Its public export contract includes both renderer factory methods.
+Git preparation builds its distribution without requiring global pnpm.
+Design pin: `0cbb058` (full revision in DESIGN_REF).
+
+Client checks: grouped typecheck, 204 shared and 15 native tests, production
+build and Roku build pass. The combined Chromium/Firefox/WebKit matrix reports
+63 passing Canvas/episode cases; its controller shell terminated after the pass
+summary. A separate focused Canvas matrix completes cleanly with 12 passes.
+These exercise real Canvas 2D rendering and decoded HLS with WebGL disabled,
+prepared Next, font widths, square failure recovery, viewport fitting, and the
+unchanged WebGL path without a Canvas-chunk fetch. Private screenshots were
+inspected; no pixel-perfect parity or PS4 hardware qualification is claimed.
+
+Backend `28818eb` is deployed to beta after an online SQLite backup and integrity
+check. Deployment is done, the running image/binary match, and authenticated
+ranking reports source_reuse_supported=true. Environment, mounts, devices and
+network settings are unchanged; all other service container IDs are unchanged.
+The initial backend-only rollout preserved the served frontend hashes.
+
+Actual Roku after that rollout: persisted CineWave/English memory starts Loki
+episode 1 without a picker; final-three-minute discovery prepares episode 2;
+manual Next reaches episode 2; a real episode end shows the ten-second countdown
+and automatically starts episode 3 without a picker. Telemetry confirms advancing
+H.264/AAC playback. The measured countdown-close to playing/ready sample is about
+6.2 seconds, not an instantaneous decoder handoff. Long-hold source override also
+opens the picker. Native HTTP admission counts were not observed; the no-extra-
+preparation-admission assertion is browser evidence. The native 60 FPS target and
+physical PS4 input/media acceptance remain unqualified.
+
+# Preferred-source preparation and sustained playback follow-up — 2026-11-08
+
+Preparation now stops waiting for unrelated providers once the server reports a
+qualifying preferred source. Its own discovery is cancelled after the ranked
+snapshot is retained, without opening a playback lease or stopping the current
+video. The slow-provider regression fails on the earlier build and passes in
+Chromium, Firefox and WebKit, including using that cached result without another
+source discovery. Eligibility, language matching and ranking remain server facts.
+
+A successful manual source choice now records the server-selected delivery
+audio language when available. The actual bilingual CineWave source selected
+English, so the stored observation is `eng` rather than both English and Hindi.
+Source-reported languages remain the fallback when delivery metadata is unknown.
+Design pin: `1f68aa8280a4152f687013cf8246a5fbebebc902`.
+
+A real Roku run exposed another gateway issue: the 13.2 GiB 1080p AVC source
+started successfully but was retired by the unchanged cache watchdog. An API/
+browser reproduction decoded picture and PCM audio before failing around 33
+seconds; aggregate cache reached 390.4 MiB, beyond the 384 MiB limit. Gateway
+`a3dc95d` selects its existing bounded encoder for known high-rate VOD HLS while
+preserving ordinary copy/original/streaming paths. The candidate stayed decoded
+for 160 seconds and its measured cache peaked at 51.9 MiB. Content samples align
+picture on a 100 ms grid and English audio within about 20 ms. This trades the
+original high video bitrate for bounded managed playback; Direct is unchanged.
+
+That gateway revision is deployed to beta through the managed Compose entry
+after an online SQLite backup. The deployment is `done`, HTTPS readiness is 200,
+and only the beta gateway container ID changed. All other container IDs stayed
+the same. The physical Roku subsequently advanced beyond 332 seconds on the
+same source with H.264/AAC, no playback error, successful pause, paused 10-second
+seek and resume. A post-deployment browser run decoded 102 seconds with PCM
+audio and a healthy lease. These samples do not establish whole-title or
+whole-catalog continuity.
+
+The Roku also reached a real episode end after seeking to the last 20 seconds:
+Up Next opened with its ten-second countdown and packaged ring; Right cancelled
+and Back dismissed it. A reproduced return-flow defect kept ended controls
+visible. The corrected native capture has no player chrome after dismissal,
+and the next Select reveals it without restarting. Browser tests cover that
+flow and ensure a later Media Play restarts through fresh source discovery.
+The known VOD clock now reaches its exact end despite firmware's one-second
+notifications. Reduced motion keeps the full play glyph; cancelling the count
+restores it too. Hardware-plane last-frame visibility cannot be proved by Roku
+screenshots and remains a separate physical observation.
+
+Current checks pass: 204 shared tests, 15 native tests, grouped typecheck,
+production build, native Roku build, 17 complete Chromium episode cases and 12
+focused Chromium/Firefox/WebKit source/language/end/replay cases. The gateway
+workspace passes 285 tests with 62 opt-in cases ignored. All screenshots,
+credentials, source URLs and device identifiers remain outside this repository.
+
+Still unqualified: live preferred-source autoplay/handoff on Roku requires the
+application backend's new ranking capability. Beta currently returns no such
+capability; the previously requested application-backend deployment approval is
+still pending. No hosted application-backend/frontend update was performed.
+The final native Home trace has 399 paired render/swap samples: p50 18.15 ms,
+p95 22.02 ms and p99 46.68 ms. Render alone is 4.32 ms at p95; swap is
+19.21 ms. The output reports 2160p60, but the 16.67 ms frame-work target still
+fails. Intermittent-key graphics-FPS samples include idle and cannot establish
+sustained presentation.
+
+Follow-up continuous diagnostics separate the clock from presentation: an
+existing card's nine-second Animator motion records 539 ticks (elapsed tick
+p50 16.68 ms, p95 17.75 ms), with steady graphics FPS about 48. A temporary
+native SceneGraph Animation also reports about 48, including with the app's
+root children hidden; those values are restored and the probe removed. Roku's
+system Home under continuous alternating input similarly settles near 48 in
+this session. This supports investigating presentation beyond the JavaScript
+clock; it does not establish a firmware cap or qualify 60 FPS. The clean
+710180-byte client was sideloaded again, and its inspector confirms no
+temporary animation hooks remain. No sustained 60 FPS qualification is claimed.
+
+# Remembered sources and episode handoff — 2026-11-08
+
+The shared TV application now remembers a successful manual source choice per
+server, profile and title (episodes use their series). It persists only the
+add-on connection, structured supplier and reported audio languages, after a
+presented frame. Expiring source IDs, stream URLs and credentials never enter that
+store. Browser local storage and Roku's flushed native registry share the same
+bounded format: 200 records and 16 KiB. Automatic fallbacks never overwrite a
+manual choice. Cross-show reuse is optional and off by default; autoplay is
+local to the device and on by default. Both switches persist without adding
+unsupported fields to profile preference requests.
+
+Matching remains Rust policy: core `071854f3fe317177d9e82aceeb39edd9b8037537`
+is imported into the backend engine snapshot. It prefers the selected supplier
+and add-on, then eligible sources in the remembered language, retaining existing
+ranking and hard filters. Known audio never falls back to unknown/different
+audio. The server negotiates this capability before the client sends memory
+observations; an older server opens the picker instead of guessing a match.
+This engine-only extension does not change existing ranking or the unused
+native/WASM bridge, so the TV client's legacy CORE_REF is unchanged.
+
+Next-episode identity comes from the continuation API. Discovery begins in the
+last three minutes, after the current frame and manual-choice write, without a
+second lease or decoder. Preparation has a 45-second deadline, a 15-minute TTL,
+and scope/source/preference/configuration cancellation. Next consumes it once
+and revalidates metadata/configuration; pending metadata remains retryable.
+Fresh automatic startup tries at most three server-ranked candidates, with a
+two-second fallback notice, then leaves the annotated picker available.
+
+Next bypasses the ordinary Ask default. A 700 ms hold on Play or Next explicitly
+opens source selection. At the end, the last frame stays under a ten-second
+countdown; input cancels it, Back dismisses the panel, and deadline-frame input
+wins. Movies, Live and finales have no invented successor. Skip Intro/Recap now
+also has a standalone shortcut when controls hide, using valid server markers
+and preserving paused intent and tracks. No markers means no shortcut.
+
+Design pin: `fdf24421668651816a310e0e18fc3c90998bfd03`. The authored horizontal
+scrim and countdown artwork are hash-pinned and mirrored into the Roku package;
+the browser reuses an atlas and native Roku uses small packaged PNG frames.
+Reduced motion omits the ring/movement. Countdown paint updates are quantized
+to the 101 authored frames rather than publishing every animation frame.
+
+Fresh validation:
+
+- Grouped typecheck, 203 shared tests and 14 native tests pass. Core engine:
+  171 tests pass, including six matching-policy regressions; type generation
+  has no output changes.
+- Backend Cargo gates pass: 917 default tests and 929 with live-runtime;
+  respectively 12 and 13 existing external-service/binary cases are ignored.
+  Engine snapshot integrity and design validation pass.
+- Browser production build and Roku local build pass; design/core/video
+  integrity checks pass. A shared-host I/O stall caused an existing timing
+  test to time out initially; the unchanged full suite passes with heavy
+  linking serialized away from the frontend gate.
+- Chromium, Firefox and WebKit: 30 decoded-HLS episode/source cases pass,
+  including prepared handoff, countdown/cancellation, durable reuse, strict
+  missing-match recovery, three-attempt fallback, paused marker seek,
+  configuration invalidation, and long-hold Next. Three additional Settings
+  cases pass and confirm device switches never enter profile PUT payloads.
+- Seventeen existing player authority/platform cases passed in Chromium,
+  including Live, tracks, authorization loss, replacement recovery and paused
+  media-key seek. These include browser platform flags and a simulated AVPlay
+  boundary; they do not qualify physical Samsung, LG or Vizio TVs.
+- Physical Roku: the shared build is sideloaded. Pairing, Home and Playback
+  settings render; sign-in and an explicit autoplay-off value survive closing
+  and relaunching the channel. Autoplay was restored on afterward. The beta
+  test profile had Next episode visibility off; it is now on, while Skip Intro
+  remains enabled. No credentials or device identifiers are recorded here.
+
+The Chromium acceptance batch passes all 29 episode, Settings, platform
+and player-authority cases. Firefox/WebKit pass four further prepared-handoff
+and pending-metadata recovery cases. The motion-enabled end-panel scrim, ring,
+spacing and square actions were privately inspected; its pointer cancellation
+case passes. A further Chromium/Firefox/WebKit regression verifies Back during
+incoming admission restores the outgoing episode's UI and paused decoder,
+without releasing its lease. Full-screen reference pixel parity is not measured.
+
+Remaining acceptance: live Roku remembered-source matching,
+end-panel handoff and supplier fallback need the new backend capability on beta;
+no hosted backend/frontend deployment is included in the current delivery.
+Roku registry persistence is physical-device evidence, not qualification of
+unexecuted end-of-episode playback. Five-day persistence is tested with a new
+storage instance and advanced clock, not a five-day physical soak. No new
+60 FPS certification is claimed. Older checkpoints below remain historical.
+
 # TV-only tree — 2026-11-06
 
 The React responsive web client, its entry selection, tests and dependencies
@@ -2955,3 +3154,285 @@ allowance is a host test budget, not an input-latency requirement.
 
 Reference-image parity is unmeasured. No physical Tizen, Vizio or webOS device,
 real provider, or deployment is qualified by these browser fixtures.
+
+# Shared Roku/browser playback and rendering sweep
+
+Validation on `feature/roku-tv-web`: all grouped TypeScript checks, 138 unit tests
+in 17 files using a single fork, pinned design/core/video integrity checks, the
+production browser build and the native Roku build pass. Roku output was built
+locally without console stripping, source maps or the SDK's separate typecheck.
+The final package was sideloaded successfully; no hosted deployment was made.
+
+Four controller regressions cover playing/paused seek intent, selected tracks,
+direct mode, outgoing lease retention on failed replacement, fresh replacement
+identity, admission cancellation and late-lease release. Chromium acceptance
+covers 29 scenarios across pairing, playback authority, Search and Settings:
+28 passed together, and the remaining Live explicit-selection case passed its
+focused rerun after selecting the non-best row explicitly. This is combined
+passing evidence, not a single clean 29-case run. Two wider Search scenarios
+(pending-query navigation and channel-only pagination) failed exploration and
+remain outside this passing set. The older Live empty/arrival fixtures still
+use fixed navigation indices; their exploratory failures are not a clean gate.
+Playback and Settings acceptance now locate navigation destinations by identity.
+
+Browser checks include paused/playing media-key seeks with repeat suppression,
+replacement failure retaining playback behind the picker, stale authorization
+fences, track controls, server pause/seek refusals, Settings before loading any
+sources, display preference writes, calibration, late-save focus and screen saver
+wake behavior. Beta-backed Chromium smoke separately reached Home, catalogues,
+Search, Live, My List, profiles, detail, sources and Settings. Real HLS decoded
+at 1920×1080 with advancing media time; the traversal reported no page errors.
+Calendar navigation was reached, but populated content and day-change layout
+were not qualified during that smoke.
+
+Physical Roku evidence is limited to the TCL 50S435/C157X on Roku OS 16.0.4:
+beta pairing/profile selection, Home artwork and labels, source selection,
+detail loading copy, Live guide rendering, Settings entry and tab changes.
+Private captures verify square surfaces and restored hero artwork/gradient
+visibility. Full-screen opaque page grounds are omitted from the scrim layer;
+translucent fills remain above backdrop/video, and modal fills keep their layer.
+Real HLS playback telemetry advanced, paused, and resumed after a paused FF seek;
+a playing FF seek also completed. Gateway-window clocks are distinct from the
+title clock shown by the app. Playback was stopped after the smoke.
+
+Hardware video-plane screenshots cannot qualify the picture or scrim darkness.
+Native Skip Intro/Recap, buffering-triggered auto-hide, forced error-card recovery,
+idle screen saver composition, populated Calendar spacing and matched Android
+background/reference-image measurements remain unverified. Browser fixture
+success is not hardware qualification for Roku, Tizen, Vizio or webOS. No device
+addresses, credentials or private captures are included in the repository.
+
+# Roku performance regressions
+
+`npm test` includes 159 application/unit cases and two native visual-ownership
+cases. New regressions cover deadline pacing under injected work, pause/restart,
+CSS easing, one Poster/URI per image, real versus stale image readiness, opaque
+SDK handles, original-size packaged masks, dirty-subtree and shallow group
+updates, relative opacity, budget continuation, proxy resizing and bounded
+readiness-gated artwork swaps. Both native host typechecks/builds and the shared
+production browser build pass; the demo host's 78 native tests and offline web
+build pass. Final focused Chromium playback/menu/saver checks pass (five cases).
+
+Private Roku captures were inspected after beta pairing, Home artwork loading,
+row navigation and source-picker opening/cancellation. Real native dimensions
+are observed explicitly because SDK node handles do not mirror assigned fields.
+A final hardware trace reports render+swap p95 22.04 ms over 758 samples: the
+60 Hz render-work budget remains unmet. PERFORMANCE.md records methods and
+limitations. Browser and deterministic timing probes do not certify device FPS.
+
+# Roku playback and source qualification — 2026-11-07
+
+The final local gate passes TypeScript, 176 shared tests and 12 native-host tests,
+the production browser build and the native Roku package build. Native-host
+coverage includes decoder startup rejection, stale native callbacks, muted
+paused startup, caption-mode restoration and short HLS time units. Downloaded
+segments use the measured JS SDK `segStartTime` field in milliseconds, including
+string-valued segment durations; no buffer duration is inferred from a fill
+percentage. Read-only native timing statistics contain no URLs or credentials.
+
+The shared player now exposes server-authorized audio/subtitle selection even
+when the native adapter cannot switch original input tracks itself. The server
+replaces the delivery, retaining the title position and paused intent. Native
+WebVTT selection, caption styling and per-playback caption-mode restoration use
+SceneGraph effects. The native size picker offers the three supported sizes.
+Track labels identify languages before technical codec descriptions; selected
+rows use the packaged check icon. Controls retain square geometry. The timeline
+has distinct played/downloaded regions, a seek handle and a time-only draft
+preview; no unavailable thumbnail is fabricated. Modal paint scopes keep
+late-created backgrounds below their own labels and later errors above the
+preceding modal. Physical captures verify restored source-picker headings and
+filter text, the control layout and a visible downloaded band.
+
+Beta gateway qualification is separate from frontend publication. The managed
+beta service runs playback-gateway commit
+`af98cb49cf8fe78254c1ffece5285f362a100314`. Its workspace gate passes 282 tests
+(62 opt-in cases ignored), plus the explicitly executed real FFmpeg 9 fixture
+for disguised fragmented MP4 and an authenticated opaque playlist URL. The beta
+test account now uses the beta gateway; its old production connection remains
+disabled for rollback. Beta disables original gateway passthrough so compatible
+media is copied/remuxed into standard HLS, with transcoding only when needed.
+An isolated actual-source test reports video/audio copy and successfully decodes
+both. Production container identities, images, environment and mounts were
+compared with the pre-change snapshot and remain unchanged. Deployment status,
+log and beta health were checked after the managed update.
+
+Source results are deliberately narrower than whole-title playback claims:
+
+- Loki S1 E1: all 12 VIPTV Sources results were tried in gateway/direct modes.
+  Six CineWave files returned original ranged media and valid gateway HLS.
+  The image-named CineWave HLS manifests contain real fragmented MP4. The 1080p
+  source intermittently returned 404 for an early segment; the 720p source
+  returned 404 at segment 45 (3:00), and 40 of the first 90 segments failed a
+  prefix scan. Selected failures persisted during a slower no-cache retry.
+  Raw image-named HLS played video without audio on Roku and later failed.
+  These results do not establish reliable continuity for those returned URLs.
+- MobLand S1 E1 and Tulsa King S1 E1: both CineWave HLS qualities returned valid
+  segment prefixes at indices 0, 5, 15, 45, 75 and 120, covering sampled points
+  through about eight minutes for MobLand and 20 minutes for Tulsa King. Gateway output starts as standard MPEG-TS HLS. A
+  CineWave original file for MobLand also passed ranged/gateway checks.
+- Obsession, selected from beta's current Popular Movies catalogue: a CineWave
+  file passed ranged/gateway checks; among three additional CineWave HLS results,
+  one starts through the gateway and two still fail. Their source/extractor
+  failure is unresolved; they are not counted as decoder or whole-title passes.
+- VixSrc: fresh results start through the gateway for all three comparison
+  titles. Direct requests requiring headers/audio selection also use gateway
+  delivery. Earlier expired discovery IDs were re-resolved and excluded from
+  playback-failure conclusions. One CineJoy result on Loki now starts through
+  the protected-HLS path; another CineJoy result and FrameX remain unavailable.
+
+Physical qualification uses the TCL 50S435/C157X on Roku OS 16.0.4. Nocturne's
+CineWave HLS gateway delivery remained active for over 30 minutes with AAC audio
+and observed position advancement; the
+owner confirmed audible sound. Loki's CineWave AVC file was separately used for
+real track tests. An audio replacement while paused now produces native Pause
+with recognized H.264/AAC, rather than a closed decoder. Selecting the English
+text track produces native WebVTT; paused selection and resumed playback were
+observed. The final owner confirmation of subtitle visibility and audio sync
+is recorded below.
+Hardware video-plane screenshots cannot qualify the picture or caption text.
+The SDK loader/inspector stalled during diagnostics, including with the prior
+working package; a device restart recovered launch. This is recorded separately
+from app regression coverage.
+
+The six focused Chromium playback-authority cases pass for track focus/style,
+Live track observations, retained replacement intent, paused/playing media seeks
+and denied VOD controls. Two source-hint fixture failures reproduce at the
+preceding performance commit and remain separate. This is not a clean full
+Playwright run or complete device parity. Native Intro/Recap, buffering-triggered
+auto-hide, populated Calendar spacing and matched Android background metrics
+remain unqualified. The prior native render+swap p95 was 22.04 ms over 758
+samples; sustained 60 FPS is not certified by this work.
+
+A later owner retry exposed two further gateway issues. Healthy viewer renewals
+did not prevent the old output being retired by its cache watchdog: caption
+files accumulated after watched AV files were reclaimed. Caption prefix cleanup
+now uses the caption playlist's own timeline and the same consumed-time grace.
+A simulated 20-minute AV/VTT filesystem regression stays under the unchanged
+watchdog. The owner also reported an audio delay and errors when choosing
+subtitles. An API-only rapid track reproduction returned `input_capacity`
+because released jobs remained reserved for the 15-second reuse window. The
+gateway now reclaims fully released owned jobs under admission pressure, retaining
+quota until physical teardown. Confirming an already-selected client track is
+a no-op and never restarts the decoder.
+
+An actual-source decoded-content comparison measured about 0.8 seconds of picture
+shift after seeking with QSV H.264 decoding, although packet timestamps looked
+aligned. Selected English audio matched within 20 ms. Software H.264 decoding
+with QSV encoding removed the measured picture shift. Resumed H.264 transcodes
+use that hybrid path, with additional CPU decoding work; copy/remux and initial
+playback retain their paths. These API/media measurements do not establish
+physical TV lip-sync or visible subtitles. The TV was left alone after the owner
+requested API qualification before further hardware testing.
+
+Two isolated candidate rounds of five immediate actual-source track changes all
+return 201/ready under the original two-input quota. The final resumed SDH
+output's decoded eight-second prefix matches source picture content at the
+sampled frames (100 ms grid); English audio content differs by about 20 ms.
+
+The isolated accelerated caption-cache test also passes after consuming 600.14
+seconds of Loki media: 300 AV segments, 179 current-caption checks and nonempty
+WebVTT cues, with the session still ready. It takes 42.84 wall seconds; this is
+ten minutes of media consumption, not physical viewing time. The original cache
+watchdog remains enabled. Test viewer leases and temporary keys return 204 on
+cleanup.
+
+The managed beta deployment of that qualified revision completes with `done`
+status and HTTP 200 health. Its image/environment/mounts match the intended
+beta-only update; production container identities, images and configuration
+remain unchanged. A public beta TV-API run then passes five successive actual
+track selections (202 → ready), including successful English and SDH WebVTT
+cue retrieval and Off. One earlier harness request incorrectly combined a
+replacement observation with a nonzero top-level position; the server correctly
+rejected it. The corrected harness follows the shipped client's position=0
+replacement contract. Final test leases are released.
+
+After public API qualification, the final client package was sideloaded and
+paired against beta again. Loki S1 E1's CineWave AVC file starts, and selecting
+the normal English subtitle track returns to unobstructed playing state. Roku
+telemetry reports H.264, AAC and WebVTT, no error and advancing position. The
+owner confirms that dialogue captions are visible and audio is in sync on this
+final playback. A further long physical caption run remains unqualified. The SDK's
+sideload build bump is ephemeral and produces no tracked version-file change.
+The isolated candidate is stopped and the temporary diagnostic key is revoked;
+the account's scoped beta integration remains active.
+
+# Browser playback and platform boundaries — 2026-11-08
+
+The video library now owns the subtitle/AVPlay corrections, adopted through
+VIDEO_REF and the immutable vendor lock. The HTML adapter applies server-selected
+output subtitles, explicit Off and late native text-track discovery. It waits
+until hls.js completes its default-track event before applying the selection.
+A native HLS MIME hint is insufficient evidence of subtitle support: if the
+requested rendition never appears, the adapter retries the same URL once with
+MSE, retaining position and paused intent. A native HLS attempt that never
+reaches metadata is bounded as well. No source/provider selection or network
+policy is bypassed.
+
+Samsung effects recognize `track_lang`, select native output track indices,
+wait for PLAYING/PAUSED before HLS TEXT selection and avoid duplicate Play/Pause
+calls after preparation. Paused intent survives buffering callbacks. The shared
+host creates the AVPlay object beneath the canvas and can load the system SDK
+in a packaged file context. Hosted Tizen pages retain the HTML path; Samsung
+explicitly excludes Tizen APIs from hosted applications. The current HTTPS
+redirect launcher is not a complete native AVPlay package. Local assets,
+authenticated API transport, signing and device acceptance remain required;
+see platform/tizen/README.md. Browser decoder probes do not qualify AVPlay.
+
+The deferred browser engine now fences stopped, superseded and disposed opens
+while its chunk is still loading. Tests verify that a late engine cannot start
+retired media or publish into a disposed view.
+
+The new full-app browser cases use the repository's real synthetic H.264/AAC
+transport-stream fixture plus a WebVTT rendition with DEFAULT/AUTOSELECT off.
+They assert decoded dimensions/frames, active visible-mode caption cues,
+pause/resume and stopped media cleanup for web, webOS, Vizio and hosted-Tizen
+queries. Separate injected-AVPlay cases assert its surface, output-track index,
+state legality and paused subtitle replacement; those are SDK simulation, not
+native Samsung video decoding. Browser controls are exercised after the source
+drawer closes and the app reports ready.
+
+Actual beta-provider checks are separate from API fixtures. Loki S1 E1's CineWave
+AVC file and MobLand S1 E1's CineWave HLS gateway delivery both pass in Chromium,
+Firefox and WebKit: decoded frames, nonzero decoded PCM samples, pause, a seek
+inside the exposed seekable window while paused, resume and Stop. Loki also
+presents English WebVTT and honors Off. The WebKit motion probe observes 14 frame
+callbacks with advancing presentation time. All six test leases are released.
+These short runs do not establish whole-title continuity. An original raw
+MobLand Direct Play URL still times out; gateway success is not counted as an
+original direct-play pass. A request carrying explicit subtitle Off uses gateway
+delivery and is recorded separately from that raw direct test.
+
+Firefox runs with an isolated software-GL display; WebKit uses isolated runtime
+libraries and TLS modules. An isolated null audio sink supports PCM measurements.
+No global packages, production services or browser CORS policy were changed.
+Public beta media uses normal TLS verification; local fixture TLS is test-only.
+A private browser capture confirms that the picture, caption and canvas controls
+are composed visibly. No source URLs, tokens, device addresses or captures are
+included here. The Roku package is rebuilt, without interrupting its confirmed
+TV playback. Physical Vizio testing was set aside at the owner's request.
+Samsung/LG emulator or simulator results, codec/DRM parity and physical TV
+qualification are not claimed. The earlier native 60 FPS budget remains
+unqualified; this browser work does not replace that device measurement.
+
+A further legacy-engine regression removes Array.at and Object.fromEntries
+before app startup. The previous production bundle fails that case. Lightweight
+ES2017-compatible helpers now load before the renderer and app; existing host
+implementations remain unchanged. Object.fromEntries defines own data properties
+for untrusted keys, including __proto__, and retains symbol/duplicate-key
+semantics. Dedicated checks cover the prototype boundary and array-index
+semantics. This targets known API gaps, not a claim to emulate a whole firmware.
+[LG documents Chromium 87 for webOS TV 22](https://webostv.developer.lge.com/develop/specifications/web-api-and-web-engine);
+[Samsung documents Chromium M69 for Tizen 5.5](https://developer.samsung.com/smarttv/develop/specifications/web-engine-specifications.html).
+Full engine/firmware acceptance remains separate.
+
+Final delivery gate: video-library typecheck/build and 183 single-fork cases
+pass; tv-web typecheck, 182 shared plus 12 native-host cases, browser build and
+Roku package build pass. The final immutable video source is
+`f89e094ef5974a34aa803f93f96cc611607f7e1e`. The full-app matrix passes 18 cases
+across Chromium, Firefox and WebKit: five real-media profiles (including the
+legacy-API profile) and one injected SDK-boundary case per browser. Six existing
+Chromium playback-authority checks also pass, for 24 targeted browser cases.
+This is not a clean run of the entire remote suite; previously documented
+source-hint baseline failures remain separate. No hosted frontend deployment,
+Samsung/LG emulator execution, native Tizen release or physical TV qualification
+is included in this delivery.

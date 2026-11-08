@@ -6,7 +6,7 @@ import {
   onCleanup,
   Show,
 } from "solid-js";
-import { TvView } from "../runtime";
+import { TvView, fontEpochSignal } from "../runtime";
 import { sdfFontFamily, sdfLineHeight } from "../fonts";
 import { getRenderer } from "@solidtv/solid";
 import type { RendererMain } from "@solidtv/renderer";
@@ -42,29 +42,36 @@ function Brand(props: { splash: boolean }) {
     mark = () => (props.splash ? 88 : 80),
     gap = () => (props.splash ? 22 : 20);
   const width = createMemo(() => {
+    // Re-measure when the host publishes the native face. The first frame can
+    // report zero before Bricolage is loaded, and a fallback frozen forever
+    // leaves the brand group visibly off-centre.
+    fontEpochSignal();
     // The logo is SDF text now: measure the layout the renderer will draw,
     // with the same family, size and letter spacing the label passes.
     const family = sdfFontFamily("Bricolage800", size());
-    return (
+    const measured =
       (getRenderer() as RendererMain).measureText({
         text: "VIPTV",
         fontFamily: family,
         fontSize: size(),
         lineHeight: sdfLineHeight(family, size()),
         letterSpacing: -0.04 * size(),
-      })?.w ?? 0
-    );
+      })?.w ?? 0;
+    // Native font measurement can return 0 until the face publishes. Keep the
+    // brand group centered with the same estimate the native text uses.
+    return measured > 1 ? measured : size() * 5 * 0.55;
   });
   return (
     <TvView
       x={(1920 - mark() - gap() - width()) / 2}
       y={props.splash ? 440 : 330}
+      w={mark() + gap() + width()}
+      h={size()}
     >
       <TvView
         y={(size() - mark()) / 2}
         w={mark()}
         h={mark()}
-        rounded={props.splash ? 25 : 22}
         color={palette.accent}
       >
         <Label
@@ -127,7 +134,6 @@ export function EntryScreen(props: { loading: boolean; focused: boolean }) {
             y={584}
             w={360}
             h={72}
-            rounded={12}
             color={props.focused ? palette.text : "rgba(255,255,255,.16)"}
           >
             <Label
@@ -151,7 +157,6 @@ export function EntryScreen(props: { loading: boolean; focused: boolean }) {
         y={600}
         w={240}
         h={4}
-        rounded={2}
         clipping
         color="rgba(255,255,255,.12)"
       >
@@ -159,7 +164,6 @@ export function EntryScreen(props: { loading: boolean; focused: boolean }) {
           x={reduced ? 0 : indicator()}
           w={96}
           h={4}
-          rounded={2}
           color={palette.text}
         />
       </TvView>

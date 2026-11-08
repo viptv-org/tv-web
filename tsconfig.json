@@ -33,5 +33,9 @@
     "tests",
     "vite.config.ts",
     "playwright.config.ts"
+  ],
+  "exclude": [
+    "src/tv-solid/roku-entry.tsx",
+    "src/tv-solid/platform/roku-player.ts"
   ]
 }

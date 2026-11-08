@@ -2,6 +2,7 @@
 import { For, Show } from "solid-js";
 import { TvView } from "../runtime";
 import { Button, cardOutline, Label, palette } from "./visuals";
+import { imageSource } from "./image-source";
 import type { Channel } from "./types";
 
 let backdrop: ImageData | undefined;
@@ -55,7 +56,6 @@ export function SearchChannels(props: {
           y={-12}
           w={200}
           h={56}
-          pill
           label="Try again"
           focused={props.retryFocused}
         />
@@ -68,25 +68,10 @@ export function SearchChannels(props: {
           content="No matching channels"
         />
       </Show>
-      <Show when={props.pending}>
-        <For each={[0, 1, 2]}>
-          {(i) => (
-            <TvView
-              show={start() + i < 0 || start() + i >= props.channels.length}
-              x={i * 376}
-              y={56}
-              w={356}
-              h={200}
-              rounded={10}
-              color="rgba(255,255,255,.06)"
-            />
-          )}
-        </For>
-      </Show>
       <For each={props.channels.slice(first(), start() + 3)}>
         {(channel, i) => (
           <TvView x={(first() - start() + i()) * 376} y={56}>
-            <TvView w={356} h={200} rounded={10} src={channelBackdrop()}>
+            <TvView w={356} h={200} src={channelBackdrop()}>
               <Show
                 when={channel.card.landscape}
                 fallback={
@@ -107,11 +92,11 @@ export function SearchChannels(props: {
                   y={20}
                   w={316}
                   h={160}
-                  src={channel.card.landscape!}
+                  src={imageSource(channel.card.landscape, 632)}
                   fit="contain"
                 />
               </Show>
-              <TvView x={12} y={12} w={60} h={28} rounded={6} color="#E5484D">
+              <TvView x={12} y={12} w={60} h={28} color="#E5484D">
                 <Label
                   w={60}
                   centerY={14}

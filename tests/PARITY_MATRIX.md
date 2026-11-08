@@ -1,3 +1,18 @@
+# Shared TV source reuse and episode handoff — 2026-11-08
+
+| Surface | Browser execution | Roku evidence / limits |
+| --- | --- | --- |
+| Manual source memory, supplier/language matching and opt-in cross-show reuse | Rust policy/HTTP regressions; decoded HLS and durable storage across Chromium, Firefox and WebKit; selected delivery language wins over bilingual source metadata | Native registry save/relaunch and English-only observation verified; new ranking capability still requires beta backend rollout |
+| Last-three-minute preparation and controlled Next | No extra admission, one cache consumption, expiry/cancellation, configuration fences and bounded startup fallback; preferred result does not wait for a stalled provider | Shared build compiles and is sideloaded; live successor handoff not yet qualified |
+| End-only autoplay and manual override | Ten-second countdown, input/Back cancellation, next-frame race fence, autoplay-off, 700 ms hold, hidden ended controls and fresh Media Play replay verified | Real episode end, ten-second packaged countdown, Right cancellation, Back dismissal and first-Select reveal verified; automatic successor playback awaits backend capability |
+| Standalone Intro/Recap | Valid markers only; paused seek and missing markers covered | Uses native TvView/TvText; physical marker action not newly qualified |
+| Platform playback preservation | Existing Live, track, replacement, authorization and native-SDK boundary cases pass | Samsung/LG/Vizio physical qualification remains separate |
+| High-rate CineWave continuity | Actual beta browser decoded 102 seconds with PCM after gateway rollout | Same previously failing source advances beyond 332 seconds with H.264/AAC; pause, paused seek and resume verified; whole-title continuity unqualified |
+| Native frame pacing | Browser simulation does not qualify native presentation | Final Home trace render plus swap p95 22.02 ms; 16.67 ms target remains unmet. Continuous JS, native Animation, minimal scene and system Home diagnostics report about 48 graphics FPS in this session; clean client restored |
+
+Exact pins, commands, outcomes and remaining gates are recorded in [TESTING.md](../TESTING.md).
+The sections below are historical checkpoints.
+
 # SolidTV startup and loading acceptance
 
 | Contract | Implementation / execution | Functional evidence | Visual evidence | Tizen | Vizio | webOS | Disposition |
@@ -24,7 +39,7 @@ The authoritative outstanding-work inventory is
 parity. See the latest [testing checkpoint](../TESTING.md) for reproduced
 regressions, bounded guide measurements and validation scope.
 
-The adopted design contract pin is `8b7f85941addf5a65390fe6eca4f11aba9584a17`
+The adopted design contract pin is `1f68aa8280a4152f687013cf8246a5fbebebc902`
 ([DESIGN_REF](../DESIGN_REF)). Design revisions cited inside the dated
 checkpoints below record the pin each checkpoint was measured against; they are
 historical, and none of them is the current pin.
@@ -490,3 +505,19 @@ Implementation `4cf36237e70b387aacad8a3c5521d5f2ee9eaf9e`;
 | --- | --- | --- | --- | --- | --- | --- |
 | Live/Search page failures and bounded traversal | Thirteen scoped HTTPS Chromium cases pass with mocked HTTP, including four short-page timeout/retry cases, original reverse/revision cases, 200 groups, bounded guides and Search's complete 480-input seven-page roundtrip with playback, exact requests and bounded payloads. | Unmeasured; focus/data assertions only. | Unverified | Unverified | Unverified | Verified for the stated browser scenarios. |
 | Live seven-page roundtrip | Forward 0→240, fixture playback, return focus and reverse 240→70 pass: 410/480 verified directional inputs. The 180-second host deadline prevents final return/request-order qualification. | Unmeasured. | Unverified | Unverified | Unverified | Partial on the software WebGL host; no input-latency or hardware claim. |
+
+# Shared Roku/browser playback and rendering sweep
+
+| Scenario | Browser evidence | Roku evidence | Limits |
+| --- | --- | --- | --- |
+| Seek and source lifecycle | Four controller regressions; Chromium playing/paused FF, repeat suppression, retained playback on replacement failure, explicit retry and authorization fences pass | HLS clock advances; pause, paused FF/resume and playing FF exercised on TCL 50S435/C157X, OS 16.0.4 | Native intro/recap markers and buffering auto-hide unverified |
+| Artwork, opacity and layering | Production build and beta screen traversal; real 1920×1080 HLS decoding | Private captures reviewed for Home hero/gradient, labels, square surfaces, source drawer and Settings; opaque grounds excluded from backdrop scrims | Hardware video-plane picture and scrim darkness, matched Android/reference metrics unverified |
+| Profile menu and Settings | Regression reaches Settings with zero sources; preference writes, calibration, late-save focus and screen saver tests pass | Beta pairing/profile selection, Settings entry and tab changes exercised | Native idle screen saver and forced error-card recovery unverified |
+| Calendar and wider navigation | Calendar route reached; 29 focused browser scenarios have combined passing evidence as recorded in TESTING.md | Live guide exercised; populated Calendar unverified | Two exploratory Search failures and older fixed-index Live empty fixtures remain outside the passing set; no other TV hardware qualified |
+
+# Roku performance ownership and pacing
+
+| Scenario | Automated evidence | Roku evidence | Limits |
+| --- | --- | --- | --- |
+| Frame pacing, synchronization and visual ownership | Injected-work/pause/easing regressions; 60 updates per 60 simulated ticks; affected-subtree and shallow motion-group updates; one Poster/URI per artwork primitive | Beta Home/rows/source-drawer smoke on TCL 50S435/C157X, OS 16.0.4 | Render+swap p95 22.04 ms over 758 frames; 16.67 ms target unmet, no sustained-FPS claim |
+| Image decode/readiness and background swaps | Native observer and stale-callback tests, opaque handles, size hints before URI, compact packaged masks, proxy variants, bounded two-frame handover | Home imagery and row-preview changes captured privately | Same-origin network bytes are unchanged; only native decode is resized without a server transformation contract |

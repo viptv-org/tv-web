@@ -10,8 +10,8 @@ editing the account's display name or username have no route; the phone
 **Watch on TV** page has no **Open the remote** action and no **Remote button**,
 **Vibrate on press**, **Keep screen on**, **Change TV** or **Forget this TV**
 rows yet, and the error and permission lifecycle plus the browser dialog are
-app#489 and later, still proposed (`components.md` §11). A TV signs in with
-**Account › Add a device**, not the phone remote.
+app#489 and later, still proposed (`components.md` §11). A TV signs in from
+another device's **Account › Add a device**, not the phone remote.
 
 Source revisions: the KMP app's Settings at app `62e0c949`
 (`features/settings/`, `state/ControllerAccountDevices.kt`,
@@ -66,7 +66,7 @@ Every row below is one setting or one action, with its real owner. "Account" and
 | VOD match overrides | Account owner; members read | `GET/PUT /iptv/matches` |
 | Playback gateways and access grants | Gateway owner; shared accounts read and check capacity | `GET/POST/PATCH/PUT/DELETE /gateways*`; `POST /gateways/:id/check` stays open to a member |
 | Devices and sessions | Account owner for sign-outs; members read | `GET /account/devices` for an account session only — a paired TV or other device session is refused `403 account_session_required`; `GET /auth/sessions` for any account session; `DELETE /account/devices`, `DELETE /account/devices/:id`, `DELETE /auth/sessions` owner-only |
-| Add a device (pairing code approval) | Account | `POST /auth/device/lookup|approve|deny` |
+| Add a device (pairing code approval) | Account | `POST /auth/device/lookup|approve|deny` for an account session only — a paired TV or other device session is refused `403 account_session_required` |
 | Delete account | Account | `DELETE /auth/account` (username, password, household PIN) |
 | Profile name and avatar | Profile | `PATCH /profiles/:id`, `DELETE /profiles/:id` |
 | Kids flag and age limit | Profile | `GET/PUT /profiles/:id/kids` |
@@ -86,7 +86,7 @@ owner-only. A member account session writing it answers `403 owner_required`
 answers `403 account_session_required`. The reads of those same inventories stay
 open to any account session — a member still browses the household's PIN status,
 add-ons, connections, matches, gateways, devices and sessions, and checks a
-shared gateway's capacity — and the credential, pairing, profile and
+shared gateway's capacity — and the credential, profile and
 parental-policy routes stay self-service for any account session. `GET /auth/me`
 reports `capabilities.manage_account` only for the owner.
 
@@ -134,10 +134,11 @@ where the platform implements it.
   non-television Android UI modes, so Android TV, iOS, desktop and web show no
   row. The setup flow and remote surface ship per `components.md` §11.
 - **Account** holds the household's own state, and it is visible to everyone
-  signed in: signing out and approving a device must stay reachable from a
-  member's TV and phone. See [Account](#account) for the rows a device session
-  cannot use. **Add a device** is the only place a TV signs in: the TV shows a
-  code, and this page approves it.
+  signed in: signing out stays reachable from every device, a member's TV and
+  phone included. See [Account](#account) for the rows a device session cannot
+  use. **Add a device** is the only place a TV signs in, and only an account
+  session can approve it: the TV shows a code, and a phone, computer or the web
+  dashboard approves it.
 
 Local mode (no server) keeps the same shell. Profile and Playback rows that need
 a server are absent rather than disabled, This device keeps its rows, and
@@ -278,7 +279,11 @@ Title **Account**. Rows, in order, each its own page or dialog:
    Only the account owner can sign a device out; a member reads the same list.
    It is an account-session page: a device session gets no list, and the row
    reads **Manage on the web** and opens the server dashboard instead.
-5. **Add a device** — the page where a TV signs in. **Add a device**, with
+5. **Add a device** — the page where a TV signs in, opened from a device that
+   holds an account session. A paired TV or other device session has no such
+   row, and the server refuses its approval with `403 account_session_required`,
+   so a TV viewer pairs another TV from a phone, computer or the web dashboard.
+   **Add a device**, with
    **"Open VIPTV on the other device, choose Sign in, then enter the code it
    shows."** — or **"…then scan the code it shows."** where the platform offers
    scanning — then the 8-character code and **Continue**, **Sign in this
@@ -312,8 +317,9 @@ Title **Account**. Rows, in order, each its own page or dialog:
 12. **Delete account** — danger, last, the page in
     [Delete account](#delete-account).
 
-A TV device session cannot manage the account and cannot read the devices list:
-the server answers `account_session_required` to either. On TV, **Password**,
+A TV device session cannot manage the account, cannot read the devices list and
+cannot approve a pairing code: the server answers `account_session_required` to
+all three, and the app does not offer the rows. On TV, **Password**,
 **Household PIN** and **Delete account** are shown disabled with **"Manage this
 from a signed-in phone, computer or the web dashboard."**, and the **Devices &
 sessions** row reads **Manage on the web** and opens the server dashboard, not a
@@ -326,8 +332,8 @@ A member account session reads the household's inventory but cannot write it:
 sessions** answer `403 owner_required` ("Only the account owner can change
 household settings."). The reads stay open — a member still lists add-ons,
 connections, matches, gateways, devices and sessions, and checks a shared
-gateway's capacity — while password, delete-account, pairing, profile and
-parental-policy routes stay self-service for any account session.
+gateway's capacity — while password, delete-account, profile and parental-policy
+routes stay self-service for any account session.
 
 Account-level pages sit after **Source integrations** and before **Sign out**:
 **Xtream connections**, **VOD matches** and **Playback gateways**. Gateway
@@ -611,7 +617,7 @@ empty and the PIN is well formed), secondary **Cancel**.
 | Sign out | Danger row → confirmation | Danger row → confirmation | Danger row → confirmation (`Tv3SignOut`) |
 | Household PIN | Own page with 4–8 digit fields | Own page | Last row of Parental controls |
 | Devices | Own page | Own page | **Manage on the web** row: a device session cannot read the list |
-| Add a device | Own page, code entry | Own page, code entry | Not on TV; a TV shows the code and is signed in from a phone, computer or the web dashboard |
+| Add a device | Own page, code entry | Own page, code entry | Not on TV; a TV shows the code and is signed in from a phone, computer or the web dashboard that holds an account session |
 
 Every action keeps a stated equivalent. TV shows the account rows it cannot use
 as disabled with the reason, the Devices & sessions row becomes **Manage on the
@@ -696,6 +702,10 @@ web**, and the pages that need a browser session say where to use them.
     answers `403 owner_required` ("Only the account owner can change household
     settings.") while the account owner's same write succeeds; a paired TV answers
     `403 account_session_required` on the same writes.
+20. **ACCT-SPLIT-20** A paired TV or other device session gets no **Add a device**
+    row on any layout, and its approval answers `403 account_session_required`;
+    an account session's **Add a device** approves a code as before, and the TV
+    keeps **Sign out**.
 
 ## Superseded
 
@@ -717,8 +727,9 @@ web**, and the pages that need a browser session say where to use them.
 - The issue text's "sign-in email" is corrected here: there is no email. The
   household writes are gated by the server's owner role — a member answers
   `403 owner_required`, a paired TV `403 account_session_required` — while the
-  other reads, credential, pairing, profile and parental-policy routes stay with
-  any account session; the devices list is account-session only.
+  other reads, credential, profile and parental-policy routes stay with
+  any account session; the devices list and pairing approval are
+  account-session only.
 
 ## Unknowns
 
