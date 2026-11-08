@@ -1,4 +1,8 @@
 /** @jsxImportSource @solidtv/solid */
+import { DevicePlayback, deviceProfileKey, deviceTitleKey } from "./device-playback";
+import { EpisodePreparation, episodeKey, sourceStartIds, type PreparedEpisode, type EpisodePreparationState } from "./episode-preparation";
+import { AutoplayCountdown, type CountdownState } from "./autoplay-countdown";
+import { reducedMotion } from "./motion";
 import {
 
 
@@ -502,6 +506,7 @@ type Overlay =
       submit: (value: string) => Promise<void>;
     }
   | { kind: "sources"; title: string }
+  | { kind: "next"; title: string; items: Item[] }
   | {
       kind: "tracks";
       title: string;
@@ -1009,6 +1014,24 @@ export function createRemoteTvApp(
       // long as the player is preparing it, which is what the contract's
       // `Opening stream…` state reports.
       [openingSource, setOpeningSource] = createSignal<Source>();
+    const [playbackRevision, setPlaybackRevision] = createSignal("");
+    const playbackRevisionKey = (value: Record<string, number | string>) => JSON.stringify([value.configuration, value.addons, value.policy, value.preferences]);
+    async function checkPlaybackRevision() {
+      const value = await call<Record<string, number | string>>(api.scoped("/revisions"));
+      if (playbackRevisionKey(value) === playbackRevision()) return;
+      const fresh = await api.preferences(scope.signal);
+      batch(() => { setPreferences(fresh);setPlaybackRevision(playbackRevisionKey(value)); });
+    }
+    const [sourceMemoryPending, setSourceMemoryPending] = createSignal(0);
+    const [presentationRevision, setPresentationRevision] = createSignal(0);
+    const [deviceRevision, setDeviceRevision] = createSignal(0);
+    const devicePlayback = new DevicePlayback(undefined, () => setDeviceRevision(v => v + 1));
+    const deviceScope = () => deviceProfileKey(api.origin, api.profile);
+    const [episodeState, setEpisodeState] = createSignal<EpisodePreparationState>({ status: "idle", preparing: false });
+    const [countdownState, setCountdownState] = createSignal<CountdownState>({ running: false, remaining: null, progress: 0 });
+    const [advancing, setAdvancing] = createSignal(false);
+    let nextIntent = 0, sourceAttempt = 0, sourceIntent = 0, dismissedEnd = "", manualPresentation: { source: string; card: string; scope: string; title: string } | undefined;
+    const countdown = new AutoplayCountdown(setCountdownState);
     const [calendar, setCalendar] = createSignal<CalendarSnapshot>();
     const [calendarDay, setCalendarDay] = createSignal(0);
     const [calendarEntry, setCalendarEntry] = createSignal(0);
@@ -1354,7 +1377,108 @@ export function createRemoteTvApp(
         if (current) retry = () => void playIntent(current.card, true, false, activeChannel(), false, position);
         setShowControls(true);
       },
+      (_lease, card, source) => {
+        const observation = manualPresentation;
+        const remember = observation && observation.source === source.id && observation.card === episodeKey(card) && observation.scope === deviceScope()
+          && preferences()?.preferences.remembered_source_reuse !== false && source.source_addon_id;
+        if (!remember) { setPresentationRevision(v => v + 1);return; }
+        manualPresentation = undefined;
+        batch(() => { setSourceMemoryPending(v => v + 1);setPresentationRevision(v => v + 1); });
+        void devicePlayback.remember(observation.scope, observation.title, {
+          provider_id: source.source_addon_id!,
+          provider_name: source.presentation?.provider_name,
+          audio_languages: source.audio_languages ?? [],
+        }).catch(() => notify("Couldn’t save this source choice on this device.")).finally(() => setSourceMemoryPending(v => Math.max(0, v - 1)));
+      },
     );
+    const episodes = new EpisodePreparation(
+      (card, signal) => api.next(card, signal),
+      discoverEpisode,
+      setEpisodeState,
+    );
+    async function sourceMemory(card: Card) {
+      if (preferences()?.preferences.remembered_source_reuse === false) return {};
+      return devicePlayback.context(deviceScope(), deviceTitleKey(deviceScope(), card));
+    }
+    async function discoverEpisode(card: Card, signal: AbortSignal): Promise<Omit<PreparedEpisode, "created">> {
+      const resolved = await api.titleAction(card, true, signal);
+      const memory = await sourceMemory(resolved.card);
+      let page: SourcePage | undefined;
+      const streams = await api.sources(resolved.card, (_rows, value) => { page = value; }, signal, undefined, () => undefined, memory);
+      if (!page || signal.aborted) throw new DOMException("Preparation cancelled", "AbortError");
+      page = { ...page, streams };
+      const remembered = !!(memory.title || memory.across);
+      return { card: resolved.card, action: resolved, page, ids: sourceStartIds(page, remembered), memory: remembered };
+    }
+    createEffect(() => {
+      const current = activeAction()?.card;
+      const state = screen();
+      const source = activeSource()?.id;
+      const revision = preferences()?.revision;
+      const device = deviceRevision();
+      if (state !== "player" || activeChannel() || !current?.identity.episode || !current.parent_identity || !source) {
+        episodes.clear();countdown.cancel();return;
+      }
+      const key = JSON.stringify([api.scopeEpoch, api.profile, episodeKey(current), source, revision, device, playbackRevision()]);
+      if (episodes.configure(key, current, scope.signal)) void episodes.refresh();
+    });
+    createEffect(() => {
+      presentationRevision();
+      const time = snapshot()?.time;
+      const next = episodeState();
+      if (screen() === "player" && next.item && time && Number.isFinite(time.durationSeconds) && time.durationSeconds !== null && time.durationSeconds > 0 &&
+          time.durationSeconds - time.positionSeconds <= 180 && player.hasPresentedFrame && !sourceMemoryPending() && !openingSource() && !advancing()) void episodes.prepare();
+    });
+    const endScope = () => `${api.scopeEpoch}:${player.leaseId ?? ""}`;
+    function dismissNext() {
+      nextIntent++;setAdvancing(false);
+      countdown.cancel();dismissedEnd = endScope();
+      setOverlay(undefined);setShowControls(false);
+    }
+    createEffect(() => {
+      deviceRevision();
+      const next = episodeState();
+      if (screen() !== "player" || snapshot()?.state !== "ended" || advancing() || openingSource() || sourceLoading() || loading() || error()) return;
+      if (next.status !== "ready") countdown.cancel();
+      if (!next.item) {
+        if (overlay()?.kind === "next") dismissNext();
+        return;
+      }
+      if (next.status !== "ready" || dismissedEnd === endScope() || overlay() && overlay()?.kind !== "next") return;
+      if (!overlay()) openOverlay({ kind: "next", title: "Up next", items: [] });
+      const target = episodeKey(next.item), ended = endScope();
+      countdown.start(ended, devicePlayback.autoplay, () => screen() === "player" && snapshot()?.state === "ended" &&
+        overlay()?.kind === "next" && !advancing() && episodeState().status === "ready" && !!episodeState().item && episodeKey(episodeState().item!) === target,
+        () => { void advanceEpisode().catch(fail); });
+    });
+    const continuationPoll = setInterval(() => {
+      const time = snapshot()?.time;
+      const due = snapshot()?.state === "ended" || time?.durationSeconds && time.durationSeconds - time.positionSeconds <= 180;
+      const retry = due && ["loading", "error"].includes(episodeState().status);
+      if (screen() === "player" && !advancing() && (overlay()?.kind === "next" || retry)) void episodes.refresh();
+    }, 2000);
+    const nextPanelMotion = {
+      y: { duration: 450, delay: 350, timingFunction: "cubic-bezier(.2,0,0,1)" },
+      alpha: { duration: 450, delay: 350, timingFunction: "cubic-bezier(.2,0,0,1)" },
+    };
+    onCleanup(() => { clearInterval(continuationPoll);countdown.cancel();episodes.clear(); });
+    async function advanceEpisode(forcePicker = false) {
+      if (advancing()) return;
+      const ticket = ++nextIntent;
+      countdown.cancel();setAdvancing(true);
+      try {
+        const expected = episodeState().item;
+        await checkPlaybackRevision();
+        if (ticket !== nextIntent || scope.signal.aborted || screen() !== "player") return;
+        const card = await episodes.refresh();
+        if (ticket !== nextIntent || scope.signal.aborted || screen() !== "player") return;
+        if (!card) { notify("There’s no next episode available.");return; }
+        if (expected && episodeKey(expected) !== episodeKey(card)) { notify("The next episode changed. Press Next to continue.");return; }
+        const prepared = forcePicker ? undefined : episodes.take(card);
+        setOverlay(undefined);
+        await playIntent(card, forcePicker, true, undefined, false, 0, !forcePicker, prepared);
+      } finally { if (ticket === nextIntent) setAdvancing(false); }
+    }
     const playerActions = createMemo(() => {
       snapshot();
       return player.actions;
@@ -1363,7 +1487,9 @@ export function createRemoteTvApp(
       const position = (snapshot()?.time.positionSeconds ?? 0) * 1000;
       return playbackSegments().find(
         (segment) =>
-          segment.kind !== "credits" &&
+          segment.kind !== "credits" && Number.isFinite(segment.start_ms) && Number.isFinite(segment.end_ms) &&
+          segment.start_ms >= 0 && segment.end_ms > segment.start_ms &&
+          (!(snapshot()?.time.durationSeconds! > 0) || segment.end_ms <= (snapshot()!.time.durationSeconds ?? 0) * 1000) &&
           position >= segment.start_ms &&
           position < segment.end_ms,
       );
@@ -1395,7 +1521,7 @@ export function createRemoteTvApp(
               : "status",
           label: "",
         },
-        ...(activeSegment() && preferences()?.preferences?.skip_intros !== false
+        ...(activeSegment() && playerActions().seek && preferences()?.preferences?.skip_intros !== false
           ? [
               {
                 id: "skip",
@@ -1415,7 +1541,7 @@ export function createRemoteTvApp(
         ...(playerActions().change_source
           ? [{ id: "sources", label: "Source" }]
           : []),
-        ...(playerActions().next_episode
+        ...(playerActions().next_episode && episodeState().status !== "none"
           ? [{ id: "next", label: "Next episode" }]
           : []),
       ];
@@ -1632,6 +1758,8 @@ export function createRemoteTvApp(
       }
     };
     function resetScope() {
+      manualPresentation = undefined;
+      nextIntent++;setAdvancing(false);sourceAttempt++;sourceIntent++;countdown.cancel();episodes.clear();
       setSignedIn(undefined);
       setCanManageAccount(undefined);
       clearTimeout(overlayTimer);
@@ -1727,6 +1855,7 @@ export function createRemoteTvApp(
         setHome(stremioHome(value.home ?? undefined));
         setSaved(new Map());
         lastRevisions = JSON.stringify(value.revisions ?? {});
+        setPlaybackRevision(playbackRevisionKey(value.revisions ?? {}));
         setLoading(false);
         setScreen(api.profile ? "home" : "profiles");
         setZone(api.profile ? "hero" : "profiles");
@@ -1840,11 +1969,11 @@ export function createRemoteTvApp(
           if (
             !api.profile ||
             document.visibilityState !== "visible" ||
-            screen() === "player" ||
-            overlay() ||
+            (screen() !== "player" && overlay()) ||
             pending()
           )
             return;
+          if (screen() === "player") { await checkPlaybackRevision();return; }
           const signal = scope.signal,
             profile = api.profile;
           const revision = await call<Record<string, number | string>>(
@@ -2779,6 +2908,7 @@ export function createRemoteTvApp(
       }
     }
     function closeOverlay() {
+      sourceIntent++;
       sourceScope?.abort();
       sourceScope = undefined;
       overlayParents.length = 0;
@@ -2860,11 +2990,13 @@ export function createRemoteTvApp(
         updateSearch(search(), true);
     }
     async function back() {
-      // The error card is painted above any open overlay and blocks movement;
-      // Back must dismiss it first, exactly like OK retries it.
-      if (error()) {
-        setError("");
-        return;
+      nextIntent++;setAdvancing(false);
+      countdown.cancel();
+      if (error()) { setError("");return; }
+      if (overlay()?.kind === "next") { dismissNext();return; }
+      if (sourceLoading() && !overlay() || openingSource()) {
+        sourceAttempt++;sourceIntent++;sourceScope?.abort();setSourceLoading(false);setLoading(false);
+        if (player.cancelPendingStart()) { setOpeningSource(undefined);return; }
       }
       if (sourceActions()) {
         setSourceActions(false);
@@ -3699,7 +3831,12 @@ export function createRemoteTvApp(
       channel?: string,
       replaceCurrent = false,
       position?: number,
+      automaticNext = false,
+      prepared?: PreparedEpisode,
     ) {
+      const intent = ++sourceIntent, epoch = api.scopeEpoch;
+      manualPresentation = undefined;
+      countdown.cancel();
       sourceStartPosition = restart
         ? 0
         : Math.max(0, position ?? cardResumePosition(card));
@@ -3725,7 +3862,13 @@ export function createRemoteTvApp(
       sourceFilterGeneration++;
       setSourceFilterFocus(false);
       setSourceLoading(true);
-      openOverlay({ kind: "sources", title: "Choose a source" });
+      const initialMemory = channel || forcePicker ? {} : await sourceMemory(card);
+      const remembered = !!(initialMemory.title || initialMemory.across);
+      if (intent !== sourceIntent || operation.signal.aborted || epoch !== api.scopeEpoch) return;
+      const hidden = !forcePicker && (automaticNext || remembered);
+      if (hidden && screen() !== "player") overlayFocus = { zone: zone(), column: column(), row: row(), choice: choice() };
+      if (hidden) { setOverlay(undefined);setLoading(true); }
+      else openOverlay({ kind: "sources", title: "Choose a source" });
       retry = () =>
         void playIntent(
           card,
@@ -3736,17 +3879,25 @@ export function createRemoteTvApp(
           sourceStartPosition,
         );
       try {
-        let resolved = channel
+        let resolved = prepared?.action ?? (channel
           ? undefined
-          : await api.titleAction(card, restart, operation.signal);
+          : await api.titleAction(card, restart, operation.signal));
         if (resolved) {
           setAction(resolved);
           setPickerCard(resolved.card);
         }
-        const ranked = await api.sources(
+        let finalPage = prepared?.page;
+        const memory = channel || forcePicker ? {} : await sourceMemory(resolved?.card ?? card);
+        let firstMatch!: (rows: Source[]) => void;
+        const firstReady = new Promise<Source[]>(resolve => { firstMatch = resolve; });
+        const discovery = prepared ? Promise.resolve(prepared.page.streams) : api.sources(
           resolved?.card ?? card,
           (value, page, ids, height) => {
             if (sourceScope !== operation || operation.signal.aborted) return;
+            finalPage = page;
+            const memoryMatch = !!(memory.title || memory.across);
+            if (!forcePicker && (memoryMatch ? page.source_reuse_preferred === true && page.source_reuse_fully_matches === true
+                : (automaticNext || resolved?.source_selection === "best") && page.best_match_fully_matches === true)) firstMatch(value);
             if (page.action) {
               resolved = page.action;
               setAction(page.action);
@@ -3789,23 +3940,37 @@ export function createRemoteTvApp(
           },
           operation.signal,
           channel,
-          () => sourceHeight(),
+          () => undefined,
+          memory,
         );
+        const ranked = await Promise.race([discovery, firstReady]);
+        if (intent !== sourceIntent || epoch !== api.scopeEpoch || operation.signal.aborted) return;
+        setLoading(false);
+        if (finalPage) { setSourcePage(finalPage);reconcileSources(ranked); }
+        const hasMemory = !!(memory.title || memory.across);
+        const automatic = !forcePicker && (automaticNext || hasMemory || resolved?.source_selection === "best");
+        if (automatic && finalPage && resolved) {
+          const ids = sourceStartIds(finalPage, hasMemory).slice(0, 3);
+          for (let index = 0; index < ids.length; index++) {
+            if (intent !== sourceIntent || epoch !== api.scopeEpoch || scope.signal.aborted) return;
+            const source = ranked.find(row => row.id === ids[index]);
+            if (!source) continue;
+            if (index) {
+              notify("Trying the next matching source…");
+              await new Promise(resolve => setTimeout(resolve, 2000));
+              if (intent !== sourceIntent || epoch !== api.scopeEpoch || scope.signal.aborted) return;
+            }
+            if (await playSource(source, false, false)) { setSourceLoading(false);return; }
+          }
+        }
         setSourceLoading(false);
-        if (
-          !forcePicker &&
-          !manualSourceSelection &&
-          resolved?.source_selection === "best" &&
-          !operation.signal.aborted
-        ) {
-          const best = ranked.find(
-            (source) => source.id === sourcePage()?.best_match_id,
-          );
-          if (best) await playSource(best);
+        if (intent === sourceIntent && !scope.signal.aborted && (hidden || automatic)) {
+          setLoading(false);openOverlay({ kind: "sources", title: "Choose a source" });
         }
       } catch (e) {
         if (sourceScope !== operation) return;
-        setSourceLoading(false);
+        setSourceLoading(false);setLoading(false);
+        if (hidden && intent === sourceIntent && !operation.signal.aborted) openOverlay({ kind: "sources", title: "Choose a source" });
         if (sources().length && !(e instanceof DOMException))
           notify(
             "Some sources did not respond. You can choose an available source.",
@@ -3813,9 +3978,13 @@ export function createRemoteTvApp(
         else fail(e);
       }
     }
-    async function playSource(source: Source, direct = false) {
+    async function playSource(source: Source, direct = false, manual = true): Promise<boolean> {
       const current = action();
-      if (!current) return;
+      if (!current) return false;
+      const attempt = ++sourceAttempt;
+      if (manual) sourceIntent++;
+      const outgoing = { lease: player.leaseId, action: activeAction(), source: activeSource(), channel: activeChannel() };
+      manualPresentation = manual ? { source: source.id, card: episodeKey(current.card), scope: deviceScope(), title: deviceTitleKey(deviceScope(), current.card) } : undefined;
       const channel = sourceChannel();
       retry = () =>
         void playIntent(
@@ -3888,16 +4057,27 @@ export function createRemoteTvApp(
             current.resume || sourceStartPosition > 0,
             sourceStartPosition,
           );
+        const frameDeadline = Date.now() + 20000;
+        while (!manual && !player.hasPresentedFrame && player.leaseId && attempt === sourceAttempt && Date.now() < frameDeadline)
+          await new Promise(resolve => setTimeout(resolve, 25));
+        if (attempt !== sourceAttempt) throw new DOMException("Playback cancelled", "AbortError");
+        if (!manual && !player.hasPresentedFrame) throw new Error("This source didn’t present a video frame.");
         started = true;
         setLoading(false);
         void refreshPlaybackSegments();
         hideControls();
       } catch (error) {
-        if (error instanceof DOMException && error.name === "AbortError")
-          throw error;
+        // Cancellation can leave the outgoing lease alive too. Restore its UI
+        // only while this attempt still owns it; never rewind a newer attempt.
+        const retained = outgoing.lease && player.leaseId === outgoing.lease;
+        if (retained && activeAction() === current && activeSource() === source) {
+          setActiveAction(outgoing.action);setActiveSource(outgoing.source);setActiveChannel(outgoing.channel);
+        }
+        if (error instanceof DOMException && error.name === "AbortError") throw error;
         // A replacement admission failure leaves the outgoing lease alive.
         // Keep it (and sourceRetry) so the open picker can try another source.
-        if (!replacingSource() || !player.leaseId)
+        if (attempt === sourceAttempt) manualPresentation = undefined;
+        if (!retained && (!replacingSource() || !player.leaseId))
           await player.stop().catch(() => {});
         setLoading(false);
         setError("");
@@ -3916,11 +4096,12 @@ export function createRemoteTvApp(
           "This source couldn't start. Choose another source.",
         );
       } finally {
-        setOpeningSource(undefined);
+        if (attempt === sourceAttempt) setOpeningSource(undefined);
         // Only the drawer this stream was successfully chosen from. A failed
         // start stays open so the next source is one press away.
         if (started && overlay()?.kind === "sources") setOverlay(undefined);
       }
+      return started;
     }
     function hideControls() {
       clearTimeout(controlsTimer);
@@ -4319,6 +4500,18 @@ export function createRemoteTvApp(
               };
             }),
         );
+      if (tab === 2) {
+        await devicePlayback.ready;
+        const local = (id: string, label: string, description: string, on: boolean, save: () => Promise<void>): Item => ({
+          id, label, description, toggle: on, value: "", run: async () => { await save();await loadSettings(settingsTabIndex("Playback"), scope.signal); },
+        });
+        setSettingsItems(items => [...items,
+          local("device-autoplay", "Autoplay next episode", "Starts the next episode after a ten-second countdown on this device.", devicePlayback.autoplay,
+            () => devicePlayback.setAutoplay(!devicePlayback.autoplay)),
+          local("device-source-across", "Use source choice across shows", "Try your last source choice for new shows and movies on this device.", devicePlayback.across(deviceScope()),
+            () => devicePlayback.setAcross(deviceScope(), !devicePlayback.across(deviceScope()))),
+        ]);
+      }
       if (tab === 6)
         setSettingsItems(
           (pref.controls ?? [])
@@ -4926,6 +5119,7 @@ export function createRemoteTvApp(
       });
     }
     function move(dx: number, dy: number) {
+      countdown.cancel();
       channelPending = undefined;
       if (screen() === "pairing") {
         setPairingFocused(true);
@@ -4962,6 +5156,10 @@ export function createRemoteTvApp(
                 avatar,
             );
           }
+          return;
+        }
+        if (value.kind === "next") {
+          if (dx) setChoice(i => Math.max(0, Math.min(1, i + dx)));
           return;
         }
         if (value.kind === "tracks") {
@@ -5058,7 +5256,7 @@ export function createRemoteTvApp(
             ),
           );
         }
-        if (dy < 0) setChoice(playerButtons().length > 1 ? 1 : 0);
+        if (dy < 0) setChoice(Math.max(0, playerButtons().findIndex(button => button.id === "skip") >= 0 ? playerButtons().findIndex(button => button.id === "skip") : playerButtons().length > 1 ? 1 : 0));
         if (dy > 0) setChoice(0);
         return;
       }
@@ -5613,6 +5811,7 @@ export function createRemoteTvApp(
       else updateSearch(next);
     }
     async function activate() {
+      countdown.cancel();
       channelPending = undefined;
       restartHeroCycling();
       const canLeaveLoading =
@@ -5628,6 +5827,10 @@ export function createRemoteTvApp(
       }
       const modal = overlay();
       if (modal) {
+        if (modal.kind === "next") {
+          if (choice() === 0) await advanceEpisode();else dismissNext();
+          return;
+        }
         if (modal.kind === "tracks") {
           await run(async () => {
             await modal.columns[trackColumn()]?.items[choice()]?.run();
@@ -5776,24 +5979,14 @@ export function createRemoteTvApp(
           }
           return;
         }
-        const control = playerButtons()[choice()]?.id;
-        if (
-          snapshot()?.state === "ended" &&
-          control === "timeline" &&
-          !playerActions().next_episode
-        ) {
-          if (playerActions().restart)
-            await player.start(activeAction()!.card, activeSource()!, false, 0);
+        const control = !showControls() && activeSegment() && playerActions().seek && preferences()?.preferences.skip_intros !== false
+          ? "skip" : playerButtons()[choice()]?.id;
+        if (snapshot()?.state === "ended" && control === "timeline") {
+          await playIntent(activeAction()!.card, false, true);
           return;
         }
-        if (
-          playerActions().next_episode &&
-          ((snapshot()?.state === "ended" && control === "timeline") ||
-            control === "next")
-        ) {
-          const next = await api.next(activeAction()!.card, scope.signal);
-          if (next.item) await playIntent(next.item);
-          else notify("You’re all caught up.");
+        if (control === "next") {
+          await advanceEpisode();
         } else if (control === "skip") {
           const segment = activeSegment();
           if (segment) {
@@ -6055,9 +6248,16 @@ export function createRemoteTvApp(
       // The hero term identifies the billboard only while the billboard is the
       // focused element. On a rows card the hero is the delayed preview, which
       // changes 400ms into a hold and would otherwise defeat the 700ms timer.
-      return JSON.stringify([screen(),zone(),column(),row(),heroAction(),zone()==="hero"?(hero()?cardKey(hero()!):null):null,focusedCard()?cardKey(focusedCard()!):null,heroAction()===1&&hero()?isSaved(hero()!):null]);
+      return JSON.stringify([screen(),screen() === "player" ? choice() : null,zone(),column(),row(),heroAction(),zone()==="hero"?(hero()?cardKey(hero()!):null):null,focusedCard()?cardKey(focusedCard()!):null,heroAction()===1&&hero()?isSaved(hero()!):null]);
     }
     function menu() {
+      countdown.cancel();
+      if (overlay()?.kind === "next") { if (choice() === 0) void advanceEpisode(true).catch(fail);return; }
+      if (screen() === "player" && !overlay()) {
+        if (playerButtons()[choice()]?.id === "next") void advanceEpisode(true).catch(fail);
+        else if (activeAction()) void playIntent(activeAction()!.card, true, false, activeChannel(), player.canReplaceSource).catch(fail);
+        return;
+      }
       if (sourceActions()) return;
       if (
         overlay()?.kind === "sources" &&
@@ -6170,6 +6370,10 @@ export function createRemoteTvApp(
         snapshot()?.state ?? "",
       );
       document.documentElement.dataset.tvPlaybackError = playbackError();
+      document.documentElement.dataset.tvPlayerEpisode = String(activeAction()?.card.identity.episode?.episode ?? "");
+      document.documentElement.dataset.tvNextStatus = episodeState().status;
+      document.documentElement.dataset.tvNextPrepared = String(!!episodeState().prepared);
+      document.documentElement.dataset.tvAutoplayCountdown = String(countdownState().remaining ?? "");
       document.documentElement.dataset.tvSourceMenu = sourceMenu() ?? "";
       document.documentElement.dataset.tvSourceFilterFocus = String(
         sourceFilterFocus(),
@@ -6265,6 +6469,7 @@ export function createRemoteTvApp(
       if (inputRequested) return;
       inputRequested = true;
       const input = (event: KeyboardEvent) => {
+        countdown.cancel();
         if (event.ctrlKey || event.metaKey || event.altKey) return;
         if (
           screen() === "welcome" &&
@@ -6346,6 +6551,21 @@ export function createRemoteTvApp(
         }
       };
       const cancelHold = () => clearTimeout(holdTimer);
+      const pointer = (event: PointerEvent) => {
+        countdown.cancel();
+        if (overlay()?.kind !== "next") return;
+        const bounds = document.getElementById("app")?.getBoundingClientRect();
+        if (!bounds || !bounds.width || !bounds.height) return;
+        const x = (event.clientX - bounds.left) * 1920 / bounds.width;
+        const y = (event.clientY - bounds.top) * 1080 / bounds.height;
+        if (y >= 493 && y <= 565 && x >= 1040 && x <= 1824) {
+          if (x <= 1468) void advanceEpisode().catch(fail);
+          else if (x >= 1484) dismissNext();
+        }
+      };
+      const cancelCountdown = () => countdown.cancel();
+      window.addEventListener("pointerdown", pointer);
+      window.addEventListener("touchstart", cancelCountdown);
       const suspend = () => {
         cancelHold();
         if (screen() === "player") void leavePlayer().catch(fail);
@@ -6379,6 +6599,8 @@ export function createRemoteTvApp(
       document.addEventListener("visibilitychange", visibility);
       document.addEventListener("webOSRelaunch", relaunch);
       onCleanup(() => {
+        window.removeEventListener("pointerdown", pointer);
+        window.removeEventListener("touchstart", cancelCountdown);
         window.removeEventListener("keydown", input);
         window.removeEventListener("blur", cancelHold);
         window.removeEventListener("blur", away);
@@ -6649,30 +6871,37 @@ export function createRemoteTvApp(
     const Root = defineScreen({
       input: {
         left() {
+          countdown.cancel();
           if (dismissScreenSaver()) return;
           move(-1, 0);
         },
         right() {
+          countdown.cancel();
           if (dismissScreenSaver()) return;
           move(1, 0);
         },
         up() {
+          countdown.cancel();
           if (dismissScreenSaver()) return;
           move(0, -1);
         },
         down() {
+          countdown.cancel();
           if (dismissScreenSaver()) return;
           move(0, 1);
         },
         back() {
+          countdown.cancel();
           if (dismissScreenSaver()) return;
           void back().catch(fail);
         },
         menu() {
+          countdown.cancel();
           if (dismissScreenSaver()) return;
           menu();
         },
         enter(event?: KeyboardEvent) {
+          countdown.cancel();
           if (dismissScreenSaver()) return;
           // A held Enter auto-repeats; only the first keydown arms the hold
           // timer, so repeats must not reset it or the 700ms menu never fires.
@@ -6683,13 +6912,14 @@ export function createRemoteTvApp(
             pressedOverlay = overlay();
           let held = false;
           clearTimeout(holdTimer);
-          if (!overlay() || overlay()?.kind === "sources")
+          if (!overlay() || overlay()?.kind === "sources" || overlay()?.kind === "next")
             holdTimer = setTimeout(() => {
               (window as any).__holdPending = pending();
               (window as any).__holdLoading = loading();
               if (target === pressTarget() && !pending() && !loading()) {
                 held = true;
-                menu();
+                if (!overlay() && zone() === "hero" && heroAction() === 0 && hero()) void playIntent(hero()!, true).catch(fail);
+                else menu();
               }
             }, 700);
           return () => {
@@ -8421,6 +8651,12 @@ export function createRemoteTvApp(
               </For>
             </Show>
             </TvView>
+            <Show when={screen() === "player" && !overlay() && advancing()}>
+              <Label x={96} y={790} size={26} content="Preparing next episode…" />
+            </Show>
+            <Show when={screen() === "player" && !overlay() && !showControls() && !loading() && !seeking() && !error() && activeSegment() && playerActions().seek && preferences()?.preferences.skip_intros !== false}>
+              <Button x={1596} y={746} w={228} h={56} label={activeSegment()?.kind === "recap" ? "Skip recap" : "Skip intro"} focused={false} />
+            </Show>
             <Show
               when={
                 screen() === "player" &&
@@ -8553,7 +8789,33 @@ export function createRemoteTvApp(
             {(modal) => (
               <ModalLayerContext.Provider value={true}>
               <>
-                <TvView w={sceneWidth()} h={1080} color="rgba(0,0,0,.6)" />
+                <Show when={modal().kind !== "next"}>
+                  <TvView w={sceneWidth()} h={1080} color="rgba(0,0,0,.6)" />
+                </Show>
+                <Show when={modal().kind === "next"}>
+                  <TvView w={1920} h={1080} src={`${import.meta.env.BASE_URL}assets/player/end-scrim.png`} />
+                  <TvView x={96} y={reducedMotion() || overlayEntered() ? 616 : 632} alpha={reducedMotion() || overlayEntered() ? 1 : 0} transition={reducedMotion() ? undefined : nextPanelMotion}>
+                    <Label w={900} maxlines={1} size={22} content={`${activeAction()?.card.title ?? "Episode"} · Credits`} color={palette.body} />
+                  </TvView>
+                  <TvView x={1040} y={reducedMotion() || overlayEntered() ? 120 : 136} w={784} h={520} alpha={reducedMotion() || overlayEntered() ? 1 : 0} transition={reducedMotion() ? undefined : nextPanelMotion}>
+                    <Label size={24} content="Next episode" color={palette.body} />
+                    <Label y={53} w={784} size={52} font="Onest700" letterspacing={-1.04} content={`${episodeState().item?.identity.episode?.episode ?? ""}. ${episodeState().item?.title ?? ""}`} maxlines={2} />
+                    <Label y={191} w={784} size={30} content={episodeState().item?.subtitle ?? ""} maxlines={1} />
+                    <Label y={239} w={784} size={26} lineheight={1.45} color={palette.body} content={episodeState().item?.description ?? ""} maxlines={3} />
+                    <Button x={0} y={373} w={428} h={72} icon={countdownState().running ? "play" : undefined} iconSize={18} label={countdownState().running ? `Next episode in ${countdownState().remaining}` : "Play next episode"} focused={choice() === 0} />
+                    <Button x={444} y={373} w={340} h={72} label="Keep watching credits" focused={choice() === 1} />
+                    <Show when={countdownState().running && !reducedMotion()}>
+                      <Show when={isRokuUi} fallback={
+                        <TvView x={17} y={389} w={40} h={40} clipping={true}>
+                          <TvView x={-(Math.round(countdownState().progress * 100) % 10) * 40} y={-Math.floor(Math.round(countdownState().progress * 100) / 10) * 40} w={400} h={440} src={`${import.meta.env.BASE_URL}assets/player/countdown/ring-atlas.png`} />
+                        </TvView>
+                      }>
+                        <TvView x={17} y={389} w={40} h={40} src={`${import.meta.env.BASE_URL}assets/player/countdown/ring-${String(Math.round(countdownState().progress * 100)).padStart(3, "0")}.png`} />
+                      </Show>
+                    </Show>
+                    <Label y={451} w={784} size={22} content={countdownState().running ? "Starts automatically. Press any button to cancel." : "Nothing plays on its own."} color={palette.body} />
+                  </TvView>
+                </Show>
                 <Show when={modal().kind === "calibration"}>
                   {/* No reference board exists for the calibration sheet; the
                       frame marks the working safe area in the accent colour

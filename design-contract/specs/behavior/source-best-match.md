@@ -124,12 +124,21 @@ ranking order never reads it, and the proposed [series
 memory](#order-each-key-breaks-ties-of-the-previous-one) stays a separate
 [core#32](https://github.com/viptv-org/core/issues/32) item.
 
-**Stored:** the add-on's `provider_id` and the source's audio languages, never
+**Stored:** the add-on's `provider_id` and the source's audio languages and optional structured supplier name, never
 the source id or URL, because both expire and are resolved again from a fresh
 discovery. One entry per profile and title, in the device's own store, at most
-200 titles and 8 languages per title; it survives restarts and never leaves the
-device. An episode is stored as its series, so every later episode inherits it;
+200 titles and 8 languages per title; it survives restarts and is stored only
+on that device, without account synchronization. The server-authoritative TV
+wrapper sends bounded supplier/language observations with a ranking request;
+the service uses them for that request and does not persist the device history.
+An episode is stored as its series, so every later episode inherits it;
 a movie is stored as itself.
+
+An add-on that multiplexes suppliers may report a structured `provider_name`
+(such as CineStream). Reuse prefers that supplier within the remembered add-on
+first, then the add-on, then the ranked same-language alternatives. The client
+does not parse release labels or choose rows itself; the server returns eligible
+reuse IDs, preserving hard filters.
 
 **Written** only by a source the viewer picked by hand that reached a presented
 frame. A failed start, an undecodable start and an abandoned pick clear the
@@ -153,6 +162,22 @@ The remembered start is a Best match start, so its failures fall back over the
 ranked rows and end on the picker with the `Didn’t start` labels.
 **Choose source** always opens the picker, and so does any title without an
 entry. Another profile never inherits one.
+
+## Cross-title reuse (owner clarification 2026-11-08)
+
+Proposed, opt-in; off by default. Settings › Playback adds **Use source choice
+across shows**, described as **Try this profile’s manually chosen source for
+other titles on this device.** It is scoped to the device and profile. The
+existing remembered-source reuse switch controls all reuse.
+
+A title-specific memory takes precedence. Otherwise the enabled cross-title
+choice is matched by the same server-owned supplier/add-on/language rules. A
+successful manual pick while enabled updates that cross-title choice; an
+automatic start or fallback never updates it. The first enable may adopt the
+last successful manual choice. Disabling/re-enabling preserves an existing
+cross-title choice; manual exceptions while disabled update only their titles.
+No suitable same-language candidate opens the picker. Explicit Choose source
+and long-hold actions always ask. Expiring source IDs/URLs are never persisted.
 
 ## Ranking
 

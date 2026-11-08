@@ -106,8 +106,9 @@ the preparation and its request.
 
 ### Picking an episode
 
-The player's Episodes list asks for every episode that is not the resolved
-successor, whether the profile is on **Best match** or **Always ask**: the best
+The player's Episodes list uses a successful remembered series choice for
+ordinary activation (owner clarification 2026-11-08). Without that memory,
+episodes that are not the resolved successor keep the ordinary flow: the best
 match starts on its own on **Best match**, the picker opens on **Always ask**.
 The episode lists in Details, and **Choose source** in a title menu, always ask.
 
@@ -411,3 +412,27 @@ reduced motion the visible number is the only progress.
   ([app#475](https://github.com/viptv-org/app/issues/475)).
 - Canvas boards for the countdown state, the cancelled state and the
   Settings › Playback row are still needed.
+
+## Shared TV implementation assets and segment actions (2026-11-08)
+
+Proposed TV-web/Roku adoption: the authored 40 px countdown ring is packaged as
+a 2x atlas and tiny native PNG frames under assets/player/countdown. The native
+view uses bounded packaged-frame updates; the browser reuses one atlas texture.
+No SVG rasterization or network image loading is required by the native host.
+The end-panel scrim is the authored horizontal alpha ramp in assets/player.
+Generated assets come from assets/player/generate.py, never app captures.
+
+Skip intro and Skip recap remain manual actions from server segment markers.
+With controls hidden, a glass shortcut appears at (1596,746), 228×56, using the
+shared 24 px button text. Up reveals the transport and focuses the same skip
+action; OK activates it. Existing play/pause meanings remain unchanged. With
+controls visible, the action stays in the transport tools. Its seek preserves
+paused intent and selected tracks. No marker or an unavailable seek action
+means no shortcut; markers are never guessed from elapsed time. Invalid marker
+intervals are ignored, and source changes/seeks clear obsolete markers.
+
+A new Up Next panel uses the TV column geometry above, keeping square corners
+per the owner’s shared-TV direction. Any key-down, pointer/touch press, Back,
+profile/title change, error, hidden document or seek-away cancels its countdown.
+A last-tick cancellation wins before the next-frame handoff. Device autoplay is
+on by default and persists independently of profile preferences.

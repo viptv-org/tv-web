@@ -191,6 +191,7 @@ export function originFields(card: Card): Record<string, unknown> {
 }
 /** Only HTTP, session rotation and operation lifetimes; no client engine. */
 export class RemoteTvApi {
+  private sourceReuseSupported = false;
   private tokens: Tokens | null = null;
   private refreshFlight?: Promise<void>;
   private identityFlight?: Promise<AccountIdentity>;
@@ -632,6 +633,7 @@ export class RemoteTvApi {
     signal: AbortSignal,
     channel?: string,
     quality: () => number | undefined = () => undefined,
+    reuse?: import('./device-playback').SourceReuseContext,
   ): Promise<Source[]> {
     const started = await this.call<{
       id?: string;
@@ -667,7 +669,7 @@ export class RemoteTvApi {
       const ids = started.streams.map((source) => source.id);
       const height = quality();
       const result = {
-        ...(await this.rankSources(ids, height, signal)),
+        ...(await this.rankSources(ids, height, signal, reuse)),
         action: started.action,
       };
       publish(result.streams, result, ids, height);
@@ -700,7 +702,7 @@ export class RemoteTvApi {
         after += page.events.length;
         if (ids.size && page.events.length) {
           const height = quality();
-          const result = await this.rankSources([...ids], height, signal);
+          const result = await this.rankSources([...ids], height, signal, reuse);
           ranked = result.streams;
           publish(ranked, result, [...ids], height);
         }
@@ -749,6 +751,7 @@ export class RemoteTvApi {
     ids: string[],
     height?: number,
     signal?: AbortSignal,
+    reuse?: import('./device-playback').SourceReuseContext,
   ): Promise<SourcePage> {
     // A title can produce well over a thousand add-on sources. The server
     // caps request bodies at 64 KiB, and a single ranking request with every
@@ -767,72 +770,48 @@ export class RemoteTvApi {
     );
     const batch = 400;
     const pages: SourcePage[] = [];
+    const hasMemory = !!(reuse?.title || reuse?.across);
+    const rank = async (ids: string[]): Promise<SourcePage> => {
+      const body = { ids, device_max_height: deviceMaxHeight, quality_height: height };
+      const memory = { ...(reuse?.title ? { remembered_source: reuse.title } : {}),
+        ...(reuse?.across ? { cross_title_source: reuse.across } : {}) };
+      const sentMemory = this.sourceReuseSupported && hasMemory;
+      let result = await this.call<SourcePage>(this.scoped("/source-ranking"), "POST",
+        { ...body, ...(sentMemory ? memory : {}) }, signal);
+      this.sourceReuseSupported = result.source_reuse_supported === true;
+      // Old servers reject unknown fields. Negotiate through their ordinary
+      // rank response before sending optional device-memory observations.
+      if (this.sourceReuseSupported && hasMemory && !sentMemory)
+        result = await this.call<SourcePage>(this.scoped("/source-ranking"), "POST", { ...body, ...memory }, signal);
+      return result;
+    };
     for (let start = 0; start < unique.length; start += batch) {
-      if (signal?.aborted) throw signal.reason ?? new Error("Aborted");
-      pages.push(
-        await this.call<SourcePage>(
-          this.scoped("/source-ranking"),
-          "POST",
-          {
-            ids: unique.slice(start, start + batch),
-            device_max_height: deviceMaxHeight,
-            quality_height: height,
-          },
-          signal,
-        ),
-      );
+      if (signal?.aborted) throw signal.reason ?? new DOMException("Aborted", "AbortError");
+      pages.push(await rank(unique.slice(start, start + batch)));
     }
-    if (!pages.length)
-      return { streams: [], quality_filters: [], total: 0 };
+    if (!pages.length) return { streams: [], quality_filters: [], total: 0 };
     if (pages.length === 1) return pages[0];
-    const labels = new Map<number, string>();
-    for (const page of pages)
-      for (const filter of page.quality_filters)
-        labels.set(filter.height, filter.label);
+    // Top-five base and top-three reuse rows from each sorted batch contain
+    // the global top-three start candidates. Rust makes the final decision;
+    // the client never compares quality/provider/language ranking keys.
+    const shortlist = [...new Set(pages.flatMap(page => [
+      ...(page.best_match_ids ?? (page.best_match_id ? [page.best_match_id] : [])),
+      ...(page.automatic_source_ids ?? []).slice(0, 3),
+      ...(page.source_reuse_ids ?? []).slice(0, 3),
+    ]))];
+    const decision = shortlist.length > batch ? await this.rankSources(shortlist, height, signal, reuse)
+      : shortlist.length ? await rank(shortlist) : pages[0];
     const seen = new Set<string>();
     const streams: Source[] = [];
-    let bestMatch: string | null = null;
-    let bestHeight = -1;
-    for (const page of pages) {
-      if (page.best_match_id) {
-        const candidate = page.streams.find(
-          (source) => source.id === page.best_match_id,
-        );
-        const candidateHeight = candidate?.quality_height ?? 0;
-        if (candidateHeight > bestHeight) {
-          bestMatch = page.best_match_id;
-          bestHeight = candidateHeight;
-        }
-      }
-      for (const source of page.streams)
-        if (!seen.has(source.id)) {
-          seen.add(source.id);
-          streams.push(source);
-        }
+    for (const page of [decision, ...pages]) for (const source of page.streams)
+      if (!seen.has(source.id)) { seen.add(source.id); streams.push(source); }
+    const filters = new Map<number, { height: number; label: string; count: number }>();
+    for (const page of pages) for (const filter of page.quality_filters) {
+      const current = filters.get(filter.height);
+      filters.set(filter.height, { ...filter, count: (current?.count ?? 0) + filter.count });
     }
-    streams.sort(
-      (left, right) =>
-        (right.quality_height ?? 0) - (left.quality_height ?? 0),
-    );
-    const counts = new Map<number, number>();
-    for (const stream of streams)
-      if (stream.quality_height)
-        counts.set(
-          stream.quality_height,
-          (counts.get(stream.quality_height) ?? 0) + 1,
-        );
-    return {
-      streams,
-      best_match_id: bestMatch,
-      quality_filters: [...counts]
-        .map(([filterHeight, count]) => ({
-          height: filterHeight,
-          label: labels.get(filterHeight) ?? `${filterHeight}p`,
-          count,
-        }))
-        .sort((left, right) => right.height - left.height),
-      total: streams.length,
-    };
+    return { ...decision, streams, quality_filters: [...filters.values()].sort((a, b) => b.height - a.height),
+      total: pages.reduce((total, page) => total + page.total, 0) };
   }
   async admit(
     source: Source,

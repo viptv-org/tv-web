@@ -20,23 +20,25 @@ import { applyCaptionAppearance, playbackStats } from "../../roku/src/roku/video
 import { NativeSync, motionRoot, modalRoot, opacityWithin } from "./platform/native-sync";
 import { imageSource } from "./remote/image-source";
 import { modalPaintStack } from "./platform/modal-paint-stack";
+import { deviceStorage } from "../../roku/src/roku/device-storage";
 
-const STORE_KEY = "viptv-device:roku";
 const API_ORIGIN = "https://beta-viptv.syek.tech";
+const sessionStorage = deviceStorage("viptv-session", "tokens");
+(globalThis as any).__viptvDevicePlaybackPort = deviceStorage("viptv-playback", "settings-v1");
 
 const store: SessionStore = {
   async load() {
     try {
-      return JSON.parse(localStorage.getItem(STORE_KEY) || "null") as Tokens | null;
+      return JSON.parse(await sessionStorage.load() || "null") as Tokens | null;
     } catch {
       return null;
     }
   },
   async save(tokens) {
-    localStorage.setItem(STORE_KEY, JSON.stringify(tokens));
+    await sessionStorage.save(JSON.stringify(tokens));
   },
   async clear() {
-    localStorage.removeItem(STORE_KEY);
+    await sessionStorage.clear();
   },
   withLock(work) {
     return work();

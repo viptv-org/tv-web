@@ -46,6 +46,7 @@ viptv-design-system/
 5. **Exactly one focused element on TV.** Focus is an off-white fill (buttons and rows) or a 4 px white ring (image tiles). Focus never changes an element's size. TV has no accent buttons.
 6. **Loading is a skeleton, never a "Loading…" screen.** (First loads; a pull-to-refresh over shown content uses the pull indicator, [REFRESH-PULL-001](../specs/behavior/pull-to-refresh.md).) There are no "Load more" buttons: more items load as you scroll.
 7. **Accessible as drawn.** Use real `<button>`, `<a href>` and `<input>` + `<label>`. Icon-only buttons get an `aria-label`. Text contrast is at least 4.5:1.
+8. **Instant feedback.** No action may show nothing for more than about 100 ms. Every action responds in the frame it is made: a pressed state; then an optimistic change wherever the result is predictable (a selection, a toggle, a chip pick, a My List add); otherwise a pending indicator on the element that was acted on, never a spinner elsewhere. Repeat taps de-duplicate, and a failure reverts with an inline error and Retry.
 
 ## Platforms at a glance
 

@@ -328,6 +328,13 @@ export interface SourcePage {
   selection_note?: string;
   streams: Source[];
   best_match_id?: string | null;
+  best_match_ids?: string[];
+  best_match_fully_matches?: boolean;
+  automatic_source_ids?: string[];
+  source_reuse_supported?: boolean;
+  source_reuse_ids?: string[];
+  source_reuse_preferred?: boolean;
+  source_reuse_fully_matches?: boolean;
   quality_filters: { height: number; label: string; count: number }[];
   total: number;
 }

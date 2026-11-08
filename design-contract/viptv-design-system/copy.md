@@ -19,7 +19,26 @@ Continue Watching card, caught up (a series the profile has finished as far as i
 - An episode with no season reads **`E4`**. The air date is the month and day, in the device's locale and never the year (**`4 nov.`** in French).
 - Spoken as drawn: "Show, S3 E4 · Watched, S3 E5 · Nov 4" on phone, tablet, desktop and web; "Show, S3 E4, Watched, S3 E5 · Nov 4" on TV.
 
+Details episode selector, air date and upcoming (EPISODE-AIR-DATE-001):
+
+- A released episode shows its air date under the caption: month, day and year in the device's locale (**`Mar 4, 2026`**, French **`4 mars 2026`**).
+- A planned episode shows **`Upcoming · Airs Mar 11`** under the caption; with no announced date it shows **`Upcoming`** alone. The upcoming air date is month and day only, no year.
+- An episode with no date that is not upcoming shows no date; the row stays the same height whether or not a date exists.
+- Opening an upcoming episode explains **`This episode isn't out yet.`** instead of fetching sources.
+
+Title detail Starring line:
+
+- The detail hero reads **`Starring [names]`** — up to three top-billed cast names, comma-separated, in billing order — on one muted line under the description. A title with no cast names shows no Starring line.
+
 Responsive player picture mode (WEB-PLAYER-FIT-001): visible toggle **"Fit"** / **"Fill"**; accessible actions **"Fill video"** / **"Fit video"**.
+
+Player Audio & subtitles panel ([PLAY-TRACKS-001](../specs/behavior/player-audio-subtitles-panel.md)):
+
+- Panel title **Audio & subtitles**; accessible pane name **Audio and subtitles**; the × is **Close track selection**.
+- Audio column heading **Audio**, collapsed to **Default audio** with zero or one track.
+- Subtitles column heading **Subtitles**; the first row is **Off**; the empty note is **No subtitle tracks available**. A subtitle row's primary line is the language name (**English**, **Croatian**) and its secondary line the source (**OpenSubtitles v3**); several sources of one language join with ** · **.
+- Inline settings rows share the Settings page copy: **Show subtitles** (**Always** · **When audio isn’t [language]** · **Never**), **Language** (**Default** when none), **Size** (**Small** · **Medium** · **Large**), **Background** (**None** · **Box**).
+- The footer link stays **Subtitles & audio settings**.
 
 Next-episode end panel (PLAY-NEXT-AUTOPLAY-001):
 - TV: eyebrow **"Next episode"**; primary **"Next episode in [N]"** while counting, otherwise **"Play next episode"**; secondary **"Keep watching credits"**; caption **"[Series] · Credits"**.
@@ -31,9 +50,13 @@ Source groups (proposed, SRC-BEST-MATCH-001): source list group headers **"Best 
 
 Source picker status (proposed, [SRC-DRAWER-001](../specs/behavior/source-drawer.md#no-best-match-hint)): no layout shows a hint about how Play picks a source. **"Play always starts the best match. Change … in Settings › Playback."** is retired on phone, tablet, desktop/web and TV. The TV status line under the list reads **"Finding sources"** while nothing has arrived, **"Still checking sources"** once sources have arrived but discovery is still in flight, and **"Opening stream…"** (or the current opening stage) while a stream opens. It is hidden otherwise.
 
+Phone title source-summary row (AND-043): accessible name **"Choose source"**. With a best source it reads a quality badge — **"Auto"** when the source reports no quality — then **`[provider] · [N sources]`**, singular **`1 source`**. A settled discovery with no rows reads **"No sources found"**; a failed or timed-out discovery with no rows reads **"Sources unavailable"**.
+
 Pull-to-refresh (proposed, [REFRESH-PULL-001](../specs/behavior/pull-to-refresh.md#copy)): no copy. The indicator has no label, and no toast or error reports the result. An expired session shows the existing **"Session expired. Sign in again."** on sign-in.
 
 App update screens (proposed, [AND-APP-UPDATE-001](../specs/behavior/app-updates.md#updating-screen)): choosing **Install** covers the app with the Updating screen. Title **"Updating VIPTV to [versionName]…"**; while the APK is written into Android's installer session the body reads **"Writing the update. Android asks you to confirm before it installs."** and the progress reads **"[N]%"**; while Android's confirmation is up the body reads **"Confirm the update in the dialog Android is showing."** and the bar is indeterminate. The line under it reads **"VIPTV restarts by itself when the update is installed."**, or **"VIPTV closes when the update is installed. Open it again to finish."** where the app cannot reopen itself. The permission step is the same screen: **"Allow updates"**, **"Allow VIPTV to install apps in the screen that opens, then come back to finish the update."**, **"The update continues by itself when you come back."**, **"Open settings"** · **"Later"** (Fire TV without that screen: the settings path and **"Try again"** · **"Later"**). An install Android rejects comes back on the prompt as **"Couldn't update VIPTV"**, **"Android didn't install the update."**, **"Try again"** · **"Later"**. After the relaunch **"Updated to [versionName]"** sits at the bottom for six seconds.
+
+Server-required update (proposed, [AND-APP-UPDATE-001](../specs/behavior/app-updates.md)): a `client_update_required` answer raises a notice titled **"Update required"** reading **"Update VIPTV to use this server's current catalog and playback APIs."** with **"Update"** · **"Not now"**; **Update** opens the in-app updater on Android and reloads the page on the web, and desktop, which has no in-app delivery path, shows **"Not now"** alone.
 
 Filter bar and chip lists (FILTER-CHIP-001, `components.md` §2): a chip reads **"[Title]: [value]"** — "Genre: Any", "Genre: Comedy", "Sort: Popular", "Type: All", "Quality: All", "Source: All sources", "Catalog: Popular" — and an unset required chip reads **"[Title]: Required"**. The row ends with **"Clear"** (an × icon and the word) while any filter is set. A list's search field is **"Search [title]"** ("Search genre", "Search catalogs", "Search lists", "Search sources") and a text filter's field is **"Enter [title]"**; pointer layouts add **"Press Enter to apply"**. Rows read **"Current"** on a single choice's pick, **"· unavailable"** on an option that cannot be picked, and the clearing row is **"Any"**, or the control's own **"All"** / **"All sources"**. An empty search says **"No matches for [text]"**. The sheet's accessible close label is "Close".
 
@@ -47,6 +70,9 @@ Filter bar and chip lists (FILTER-CHIP-001, `components.md` §2): a chip reads *
 | Discover, required filter | Choose the required filters to browse this catalog. |
 | Discover, no titles | No titles yet |
 | Search, no results | No matching titles |
+| Search, no query | **Recent** · **Clear** · **Trending searches** |
+| Search, provider failed | **This search provider could not respond. Try again.** · **Try again** |
+| Search, some results unavailable | **Some search results are unavailable. Try again.** · **Try again** |
 | Live, no source (LIVE-EMPTY-001) | Eyebrow **LIVE TV** · **Live TV isn't set up yet.** · **Add an IPTV connection with Xtream or M3U, or install a live add-on. Channels, the guide and favourites appear here.** · **Set up live TV** · **Add-ons** |
 | Live, no source, member (LIVE-EMPTY-001) | **Only the household owner can set up live TV.** |
 | Live, no source, paired TV (LIVE-EMPTY-001) | **Manage live TV from a signed-in phone, computer or the web dashboard.** |
@@ -64,6 +90,7 @@ Filter bar and chip lists (FILTER-CHIP-001, `components.md` §2): a chip reads *
 | Sources, in-progress label after rows | Still checking sources |
 | Sources, none | No sources available. Check your add-ons in Settings. |
 | Sources, filtered out | No matching sources. Choose another provider or quality. |
+| Sources, failed | **Couldn't load sources.** · the message the request read, otherwise **Something went wrong. Try again.** · **Try again** |
 | Live details, no guide | No guide information. You can still watch this channel. |
 | Local mode, no addons | Install an addon to start browsing. |
 
@@ -82,17 +109,32 @@ request that fails with no page is a failure, not an empty answer: it reads
 channels came back.**
 ([viptv-org/app#541](https://github.com/viptv-org/app/issues/541)).
 
+A search result area's failure line sits under the heading of the provider that
+failed, and under the scope row when no provider returned anything. Its **Try
+again** re-runs the query the viewer already typed, for every provider, so
+nothing has to be retyped
+([viptv-org/app#821](https://github.com/viptv-org/app/pull/822)). A failure line
+repeats once per failed provider and never replaces the results that loaded.
+
+## Live
+
+Live preview (LIVE-PREVIEW-001): the preview frames the programme the guide picked by the clock, not by the selection. Phone draws the **LIVE** badge, the progress bar and **"[N] min left"** only while it is on air; before it starts the line reads **"Starts at [time] · [N] min"**, where [N] is the programme's own length, and after it ends **"Ended"**. A programme that is not on air carries no LIVE badge and no bar. TV and the desktop preview keep their **"start – end"** line and append **" · [N] min left"** while it is on air, **" · [N] min"** before it starts and **" · Ended"** after it ends.
+
 ## Toasts, notices and loading
 
 - Added to My List
-- Removed from Continue Watching (a dialog with Undo / Done)
+- Removed from My List (**Undo**, §9 toast)
+- Removed from Continue Watching (**Undo**, §9 toast)
 - Could not save your profile. Please try again. (error, Dismiss)
 - [VIPTV could not start.] (startup error, Try again)
 - The stream could not seek there. (player notice)
 - Preparing playback…
 - Loading more titles… / Loading more channels… / Loading more channels… [120] of [860]
+- Paging footer: a finished list reads **"You’ve reached the end."**; a later page that fails reads **"Couldn’t load more"** with a **Retry** button.
 - Still checking [2] addons
-- Can't reach the backend. The connection was refused, so the backend is down or unreachable. Retrying every 10 seconds; this clears itself once the backend answers.
+- Partial add-on failure (ADDON-FAILURE-001): a Browse/Discover page that loaded shows this above the grid and a Details page near the metadata, only when some results loaded — **`[Add-on] didn't respond`** (two add-ons: **`[Add-on] and [Add-on] didn't respond`**; more: **`[Add-on] and [N] more didn't respond`**) with the action **Manage add-ons** opening Settings › Add-ons. It never replaces or hides the results that loaded.
+- Can't reach the backend. The backend is down or unreachable. Retrying in [n] seconds; this clears itself once the backend answers.
+- Pending labels (on the acted element, never a toast; §1 button state): **Saving…** · **Removing…** · **Installing…** · **Connecting…** · **Checking…** · **Signing in…** · the play-trigger **Starting playback** (accessible name). The failure line that follows a revert is the existing inline error with **Retry**, not a toast.
 
 ## Errors
 
@@ -105,6 +147,7 @@ channels came back.**
 - That does not look like an addon URL.
 - This addon is already installed.
 - This source could not be played / The selected source did not become ready in time.
+- Playback failure page: **This source stopped working**; `[Source] didn’t respond. Choose another source.` (`to continue from [time]` when playback had a position above 0); **Try [next source]**, **Choose another source**, **Back**.
 - Playback could not be restored
 - The TV could not complete this request.
 - VIPTV receiver is unavailable (HTTP [status]). The TV was not launched.
@@ -178,6 +221,7 @@ recovery dialog and can be quoted when reporting a failure.
 - Use without an account: "Your addons and playback stay on this device. No account, profiles, or sync." (local builds only)
 - TV: "Visit this address, then enter the code shown below." [viptv.syek.tech/device] [AB12CD34EF]
 - Desktop: Continue in browser. "Sign in securely in your browser. This window will connect automatically."
+- Startup recovery ([STARTUP-RECOVERY-001](../specs/behavior/startup-recovery.md)): when the saved session can't reach the server, the entry screen shows the reason — **"Could not reach your server. Check the connection and try again."** for a transport failure, the server's own message on a 5xx — and **"Try again"** under it. An expired session reads the existing **"Session expired. Sign in again."** and offers no action.
 - Profiles: Who's watching? · Manage profiles · Add a profile · Edit profile · "A space for their favorites, shows, and discoveries." · Find your favorite · "[468] avatars. Pick a world, then pick your character."
 
 

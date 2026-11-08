@@ -1,5 +1,77 @@
 # Design changes
 
+## 2026-11-06 — The toast carries a removal's Undo, and My List removals get a line
+
+[app#892](https://github.com/viptv-org/app/issues/892) needs one notice surface for every
+completed save and removal. [components.md §9](viptv-design-system/components.md#9-feedback)
+now says the toast may carry **Undo**: a removal notice lasts 8 s, the action is a text
+button at the end of the copy's line, Undo puts the title back where it was and dismisses
+the notice, one notice shows at a time and a newer one replaces the old one, and a toast
+never takes focus by itself — on T, Up from the page's topmost control reaches its action
+and Down returns, as the backend banner's Dismiss does. [copy.md](viptv-design-system/copy.md#toasts-notices-and-loading)
+gains **Removed from My List** and records both removals as the §9 toast with **Undo**,
+replacing the Undo-dialog wording; [decisions.md](viptv-design-system/decisions.md#settled-with-the-product-owner)
+§Settled 5 follows.
+
+Refs [design#137](https://github.com/viptv-org/design/issues/137), [app#892](https://github.com/viptv-org/app/issues/892).
+
+## 2026-11-05 — A Live preview frames its programme by the clock
+
+[LIVE-PREVIEW-001](viptv-design-system/copy.md#live) records that the Live page's preview follows the clock, not the guide's selection: phone draws the **LIVE** badge, the progress bar and **"[N] min left"** only while the programme is on air, **"Starts at [time] · [N] min"** with the programme's own length before it starts and **"Ended"** after it ends. A programme that is not on air carries no LIVE badge and no bar. TV and the desktop preview keep their **"start – end"** line and append the same state. [copy.md](viptv-design-system/copy.md#live) gains the section and [components.md §3](viptv-design-system/components.md#3-badges-and-indicators) the rule that the badge marks only what is on air.
+
+Refs [design#135](https://github.com/viptv-org/design/issues/135), [app#893](https://github.com/viptv-org/app/issues/893).
+
+## 2026-11-05 — The player's failure page is one page with one set of copy
+
+The owner decided [design#128](https://github.com/viptv-org/design/issues/128): every platform draws the same failure page from the same state. [components.md §10](viptv-design-system/components.md#10-player-controls) records it — **"This source stopped working"**, the source's failure (`[Source] didn’t respond. Choose another source.`, adding `to continue from [time]` when playback had a position above 0), then **Try [next source]** / **Choose another source** / **Back**. The Details disclosure is dropped because nothing implements it, phone and desktop said "Choose a source" where TV said "Choose another source"; all of them say **Choose another source** now. [copy.md](viptv-design-system/copy.md#errors) gains the strings. The `M3PlayerError`, `D3PlayerError` and `Tv3PlayerError` boards and their WebP exports are re-rendered with the new copy.
+
+Refs [design#128](https://github.com/viptv-org/design/issues/128), [app#848](https://github.com/viptv-org/app/issues/848).
+
+## 2026-11-04 — The player Audio & subtitles panel is redesigned with inline subtitle settings
+
+[PLAY-TRACKS-001](specs/behavior/player-audio-subtitles-panel.md) records the owner-requested redesign of the player Audio & subtitles panel (app#647): subtitle rows become one line per language with the source as a quieter secondary line, grouped when several sources offer the same language, ellipsizing instead of wrapping, with equal row heights and a fixed selection-mark slot; the Audio column collapses to a single **Default audio** line with zero or one track; and the profile's subtitle settings — **Subtitles**, **Subtitle language**, **Size** (Small / Medium / Large) and **Background** (None / Box) — sit compactly in the panel, saved and applied live where the player supports it. [copy.md](viptv-design-system/copy.md#names) gains the panel strings and [components.md](viptv-design-system/components.md#10-player-controls) the panel geometry and rules. The `W3PlayerAudio` board is superseded until the canvas re-exports it.
+
+Refs [app#647](https://github.com/viptv-org/app/issues/647).
+
+## 2026-11-03 — The phone title source-summary row records real quality/provider/count
+
+[AND-043](docs/platforms/ANDROID_DESIGN.md#and-043--title-source-summary-and-episode-watching-marker-2026-10-02) already defined the phone source summary and episode watching marker as proposed; the shipped phone surface is now recorded in the normative files so the title page has a matching component and copy spec. [components.md](viptv-design-system/components.md#6-cards-and-tiles) gains the AND-043 row and [copy.md](viptv-design-system/copy.md#names) its strings: a full-width 58 dp row under the primary Play/Resume action that reads the best source's quality badge (or **Auto**), **provider · N sources** and a chevron, opens the source picker without starting playback, and shows a skeleton before a source arrives, **No sources found** for a settled empty result and **Sources unavailable** for a failed or timed-out one. Records app PR [#582](https://github.com/viptv-org/app/pull/582) (app#560, branch `fix/560-phone-series-info`, targeting `edge`).
+
+Refs [app#560](https://github.com/viptv-org/app/issues/560).
+
+## 2026-11-03 — Episode rows show their air date and mark planned episodes as upcoming
+
+[EPISODE-AIR-DATE-001](viptv-design-system/components.md#6-cards-and-tiles) records app PR
+[#580](https://github.com/viptv-org/app/pull/580) (app#574, branch
+`feat/574-episode-air-dates`, targeting `edge`): the Details episode selector
+shows each episode's release date under the caption — month, day and year in the
+device's locale. A future date, or no date later than the last released episode,
+is upcoming: the row shows **Upcoming · Airs [month day]** (or **Upcoming** with
+no date), mutes its title, drops the play affordance and explains **This episode
+isn't out yet.** instead of fetching sources. Row height is unchanged whether or
+not a date exists, and player episode pickers are unchanged.
+[copy.md](viptv-design-system/copy.md#names) gains the selector copy and
+[components.md](viptv-design-system/components.md#6-cards-and-tiles) the
+EPISODE-AIR-DATE-001 entry.
+
+Refs [app#574](https://github.com/viptv-org/app/issues/574).
+
+## 2026-11-03 — The saved session's failed launch is retried, then retriable
+
+[STARTUP-RECOVERY-001](specs/behavior/startup-recovery.md) records app PR
+[#563](https://github.com/viptv-org/app/pull/563) (app#557, branch
+`fix/557-post-update-launch-hang`, targeting `edge`): a saved session whose
+first launch refresh hits a transport or 5xx failure retries quietly after 1 s,
+2 s and 4 s before the entry screen shows anything; when every attempt fails the
+reason line reads **Could not reach your server. Check the connection and try
+again.** (transport) or the server's own message (5xx), with **Try again** below
+it on every layout, and a return to the app retries by itself. An expired
+session still goes straight to sign-in with **Session expired. Sign in again.**
+and is never retried. [copy.md](viptv-design-system/copy.md#sign-in) gains the
+**Try again** entry copy.
+
+Refs [app#557](https://github.com/viptv-org/app/issues/557).
+
 ## 2026-11-02 — A failed first Live request is a failure, not an empty page
 
 [LIVE-EMPTY-001](specs/behavior/live-empty-state.md) records app `1ca77237` on

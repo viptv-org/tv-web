@@ -584,7 +584,7 @@ it("ranks a large source set in bounded batches and merges the pages", async () 
   api.profile = "1";
   const ids = Array.from({ length: 900 }, (_, index) => `id-${index}`);
   const page = await api.rankSources(ids, 1080);
-  expect(batches).toHaveLength(3);
+  expect(batches).toHaveLength(4);
   expect(batches.every((batch) => batch.length <= 400)).toBe(true);
   expect(page.streams).toHaveLength(900);
   expect(page.best_match_id).toBe("id-0");
@@ -947,4 +947,23 @@ it("keeps metadata lookup selectors free of artwork and long synopsis fields", a
   expect(selector.description).toBeUndefined();
   expect(selector.landscape).toBeUndefined();
   expect(url.href.length).toBeLessThan(1500);
+});
+
+it("negotiates source-memory support before sending observations to a strict server", async () => {
+ const bodies:any[]=[];
+ const api=new RemoteTvApi("https://example.test",store(),async (_url,init)=>{
+   const body=JSON.parse(String(init?.body));bodies.push(body);
+   return response({streams:[{id:'fresh'}],quality_filters:[],total:1,source_reuse_supported:true,source_reuse_ids:body.remembered_source?['fresh']:[]});
+ });api.profile='1';
+ const choice={provider_id:'addon:one',provider_name:'CineStream',audio_languages:['en']};
+ expect((await api.rankSources(['fresh'],undefined,undefined,{title:choice})).source_reuse_ids).toEqual(['fresh']);
+ expect(bodies).toHaveLength(2);expect(bodies[0]).not.toHaveProperty('remembered_source');expect(bodies[1].remembered_source).toEqual(choice);
+ await api.rankSources(['fresh'],undefined,undefined,{title:choice});expect(bodies).toHaveLength(3);
+});
+it("keeps older ranking servers compatible without sending unsupported memory fields", async () => {
+ const bodies:any[]=[];const api=new RemoteTvApi('https://example.test',store(),async(_url,init)=>{
+   bodies.push(JSON.parse(String(init?.body)));return response({streams:[{id:'ordinary'}],best_match_id:'ordinary',quality_filters:[],total:1});
+ });api.profile='1';
+ const page=await api.rankSources(['ordinary'],undefined,undefined,{title:{provider_id:'addon:one',audio_languages:['en']}});
+ expect(page.source_reuse_ids).toBeUndefined();expect(bodies).toHaveLength(1);expect(bodies[0]).not.toHaveProperty('remembered_source');
 });

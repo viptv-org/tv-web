@@ -22,8 +22,9 @@ const controllers: RemotePlayback[] = [];
 afterEach(async () => {
   await Promise.all(controllers.splice(0).map(controller => controller.dispose()));
   vi.unstubAllGlobals();
+  vi.useRealTimers();
 });
-function setup() {
+function setup(presented = vi.fn()) {
   let snapshotListener: ((snapshot: any) => void) | undefined;
   const failure = vi.fn();
   const player = {
@@ -37,12 +38,12 @@ function setup() {
   let nextId = 0;
   const api = {
     admit: vi.fn(async (..._args: unknown[]) => lease(String(++nextId))),
-    release: vi.fn(async () => {}), serverNow: Date.now(),
+    release: vi.fn(async () => {}), call: vi.fn(async (..._args: any[]) => ({})), serverNow: Date.now(),
   };
   const controller = new RemotePlayback(api as unknown as RemoteTvApi,
-    "web", document.createElement("video"), vi.fn(), failure);
+    "web", document.createElement("video"), vi.fn(), failure, presented);
   controllers.push(controller);
-  return { controller, player, api, failure, emit: () => snapshotListener?.(player.snapshot) };
+  return { controller, player, api, failure, presented, emit: () => snapshotListener?.(player.snapshot) };
 }
 
 describe("remote playback lease transitions", () => {
@@ -160,4 +161,42 @@ describe("remote playback lease transitions", () => {
     expect(player.open).toHaveBeenCalledOnce();
     expect(controller.leaseId).toBe("1");
   });
+});
+
+
+it("observes a source only once after a presented frame, never from admission alone", async () => {
+ const { controller,player,presented,emit }=setup();await controller.start(card,{id:"manual"},false);
+ expect(presented).not.toHaveBeenCalled();
+ player.snapshot={...player.snapshot,diagnostics:{engine:"native-html",transport:"hls",firstFrameMs:0}};emit();emit();
+ expect(presented).toHaveBeenCalledOnce();expect(presented).toHaveBeenCalledWith("1",card,{id:"manual"});
+});
+it("cancels an incoming admission while retaining the outgoing lease and releases a late result", async () => {
+ const { controller,api,player }=setup();await controller.start(card,{id:"outgoing"},false);player.stop.mockClear();
+ let finish!:(value:Lease)=>void;api.admit.mockImplementationOnce(()=>new Promise(resolve=>{finish=resolve;}));
+ const incoming=controller.start(card,{id:"incoming"},false);expect(controller.cancelPendingStart()).toBe(true);
+ expect(controller.leaseId).toBe("1");expect(player.stop).not.toHaveBeenCalled();
+ finish(lease("late"));await expect(incoming).rejects.toMatchObject({name:"AbortError"});
+ expect(controller.leaseId).toBe("1");expect(api.release).toHaveBeenCalledWith("/api/playback/late");
+});
+it("keeps the final frame available after terminal authorization until Next or Back", async () => {
+ vi.useFakeTimers();const {controller,api,player,emit,failure}=setup();await controller.start(card,{id:"source"},false);player.stop.mockClear();
+ player.snapshot={...player.snapshot,diagnostics:{engine:"native-html",transport:"hls",firstFrameMs:0}};emit();
+ player.snapshot={...player.snapshot,state:"ended"};emit();
+ await vi.advanceTimersByTimeAsync(3601000);
+ expect(api.call.mock.calls.filter(([path])=>String(path).endsWith("/heartbeat"))).toHaveLength(0);
+ expect(failure).not.toHaveBeenCalled();expect(controller.leaseId).toBe("1");expect(player.stop).not.toHaveBeenCalled();
+});
+
+it("records completion once and does not overwrite it with an ordinary stop when advancing", async () => {
+ const {controller,api,player,emit}=setup();
+ Object.assign(api,{profile:"1",scopeEpoch:0,scoped:()=>"/api/profiles/1"});
+ api.admit.mockResolvedValueOnce({...lease("completed"),actions:{...lease("completed").actions!,report_progress:true}});
+ await controller.start(card,{id:"source"},false);
+ player.snapshot={...player.snapshot,diagnostics:{engine:"native-html",transport:"hls",firstFrameMs:0}};emit();
+ player.snapshot={...player.snapshot,state:"ended"};emit();
+ await controller.stop();await Promise.resolve();await Promise.resolve();
+ await vi.waitFor(() => {
+  const events=api.call.mock.calls.filter(([path])=>String(path).endsWith("/playback-events")).map(([_path,_method,body])=>body);
+  expect(events.filter(body=>body.event==="stop")).toEqual([expect.objectContaining({ended:true})]);
+ });
 });

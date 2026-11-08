@@ -1,3 +1,88 @@
+# Remembered sources and episode handoff — 2026-11-08
+
+The shared TV application now remembers a successful manual source choice per
+server, profile and title (episodes use their series). It persists only the
+add-on connection, structured supplier and reported audio languages, after a
+presented frame. Expiring source IDs, stream URLs and credentials never enter that
+store. Browser local storage and Roku's flushed native registry share the same
+bounded format: 200 records and 16 KiB. Automatic fallbacks never overwrite a
+manual choice. Cross-show reuse is optional and off by default; autoplay is
+local to the device and on by default. Both switches persist without adding
+unsupported fields to profile preference requests.
+
+Matching remains Rust policy: core `071854f3fe317177d9e82aceeb39edd9b8037537`
+is imported into the backend engine snapshot. It prefers the selected supplier
+and add-on, then eligible sources in the remembered language, retaining existing
+ranking and hard filters. Known audio never falls back to unknown/different
+audio. The server negotiates this capability before the client sends memory
+observations; an older server opens the picker instead of guessing a match.
+This engine-only extension does not change existing ranking or the unused
+native/WASM bridge, so the TV client's legacy CORE_REF is unchanged.
+
+Next-episode identity comes from the continuation API. Discovery begins in the
+last three minutes, after the current frame and manual-choice write, without a
+second lease or decoder. Preparation has a 45-second deadline, a 15-minute TTL,
+and scope/source/preference/configuration cancellation. Next consumes it once
+and revalidates metadata/configuration; pending metadata remains retryable.
+Fresh automatic startup tries at most three server-ranked candidates, with a
+two-second fallback notice, then leaves the annotated picker available.
+
+Next bypasses the ordinary Ask default. A 700 ms hold on Play or Next explicitly
+opens source selection. At the end, the last frame stays under a ten-second
+countdown; input cancels it, Back dismisses the panel, and deadline-frame input
+wins. Movies, Live and finales have no invented successor. Skip Intro/Recap now
+also has a standalone shortcut when controls hide, using valid server markers
+and preserving paused intent and tracks. No markers means no shortcut.
+
+Design pin: `fdf24421668651816a310e0e18fc3c90998bfd03`. The authored horizontal
+scrim and countdown artwork are hash-pinned and mirrored into the Roku package;
+the browser reuses an atlas and native Roku uses small packaged PNG frames.
+Reduced motion omits the ring/movement. Countdown paint updates are quantized
+to the 101 authored frames rather than publishing every animation frame.
+
+Fresh validation:
+
+- Grouped typecheck, 203 shared tests and 14 native tests pass. Core engine:
+  171 tests pass, including six matching-policy regressions; type generation
+  has no output changes.
+- Backend Cargo gates pass: 917 default tests and 929 with live-runtime;
+  respectively 12 and 13 existing external-service/binary cases are ignored.
+  Engine snapshot integrity and design validation pass.
+- Browser production build and Roku local build pass; design/core/video
+  integrity checks pass. A shared-host I/O stall caused an existing timing
+  test to time out initially; the unchanged full suite passes with heavy
+  linking serialized away from the frontend gate.
+- Chromium, Firefox and WebKit: 30 decoded-HLS episode/source cases pass,
+  including prepared handoff, countdown/cancellation, durable reuse, strict
+  missing-match recovery, three-attempt fallback, paused marker seek,
+  configuration invalidation, and long-hold Next. Three additional Settings
+  cases pass and confirm device switches never enter profile PUT payloads.
+- Seventeen existing player authority/platform cases passed in Chromium,
+  including Live, tracks, authorization loss, replacement recovery and paused
+  media-key seek. These include browser platform flags and a simulated AVPlay
+  boundary; they do not qualify physical Samsung, LG or Vizio TVs.
+- Physical Roku: the shared build is sideloaded. Pairing, Home and Playback
+  settings render; sign-in and an explicit autoplay-off value survive closing
+  and relaunching the channel. Autoplay was restored on afterward. The beta
+  test profile had Next episode visibility off; it is now on, while Skip Intro
+  remains enabled. No credentials or device identifiers are recorded here.
+
+The Chromium acceptance batch passes all 29 episode, Settings, platform
+and player-authority cases. Firefox/WebKit pass four further prepared-handoff
+and pending-metadata recovery cases. The motion-enabled end-panel scrim, ring,
+spacing and square actions were privately inspected; its pointer cancellation
+case passes. A further Chromium/Firefox/WebKit regression verifies Back during
+incoming admission restores the outgoing episode's UI and paused decoder,
+without releasing its lease. Full-screen reference pixel parity is not measured.
+
+Remaining acceptance: live Roku remembered-source matching,
+end-panel handoff and supplier fallback need the new backend capability on beta;
+no hosted backend/frontend deployment is included in the current delivery.
+Roku registry persistence is physical-device evidence, not qualification of
+unexecuted end-of-episode playback. Five-day persistence is tested with a new
+storage instance and advanced clock, not a five-day physical soak. No new
+60 FPS certification is claimed. Older checkpoints below remain historical.
+
 # TV-only tree — 2026-11-06
 
 The React responsive web client, its entry selection, tests and dependencies
