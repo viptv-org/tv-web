@@ -2,6 +2,7 @@ import { TizenAvplayAdapter } from "../../../vendor/video/src/tizen-avplay";
 import type { Player, PlayerSnapshot } from "../../../vendor/video/src/types";
 import { RemoteTvApi, RemoteError, segment } from "./api";
 import { DeferredPlayer } from "./deferred-player";
+import { ensureTizenSurface } from "../platform/tizen-host";
 import type {
   Card,
   Lease,
@@ -67,8 +68,8 @@ export class RemotePlayback {
     this.player =
       typeof nativePlayer === "function"
         ? nativePlayer()
-        : platform === "tizen" && "webapis" in window
-          ? new TizenAvplayAdapter()
+        : platform === "tizen" && (window as any).webapis?.avplay
+          ? (ensureTizenSurface(), new TizenAvplayAdapter())
           : new DeferredPlayer(async () =>
               (await import("./hls-engine")).createHtmlHlsPlayer(video),
             );

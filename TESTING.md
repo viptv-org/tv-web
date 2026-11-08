@@ -3156,3 +3156,84 @@ final playback. A further long physical caption run remains unqualified. The SDK
 sideload build bump is ephemeral and produces no tracked version-file change.
 The isolated candidate is stopped and the temporary diagnostic key is revoked;
 the account's scoped beta integration remains active.
+
+# Browser playback and platform boundaries — 2026-11-08
+
+The video library now owns the subtitle/AVPlay corrections, adopted through
+VIDEO_REF and the immutable vendor lock. The HTML adapter applies server-selected
+output subtitles, explicit Off and late native text-track discovery. It waits
+until hls.js completes its default-track event before applying the selection.
+A native HLS MIME hint is insufficient evidence of subtitle support: if the
+requested rendition never appears, the adapter retries the same URL once with
+MSE, retaining position and paused intent. A native HLS attempt that never
+reaches metadata is bounded as well. No source/provider selection or network
+policy is bypassed.
+
+Samsung effects recognize `track_lang`, select native output track indices,
+wait for PLAYING/PAUSED before HLS TEXT selection and avoid duplicate Play/Pause
+calls after preparation. Paused intent survives buffering callbacks. The shared
+host creates the AVPlay object beneath the canvas and can load the system SDK
+in a packaged file context. Hosted Tizen pages retain the HTML path; Samsung
+explicitly excludes Tizen APIs from hosted applications. The current HTTPS
+redirect launcher is not a complete native AVPlay package. Local assets,
+authenticated API transport, signing and device acceptance remain required;
+see platform/tizen/README.md. Browser decoder probes do not qualify AVPlay.
+
+The deferred browser engine now fences stopped, superseded and disposed opens
+while its chunk is still loading. Tests verify that a late engine cannot start
+retired media or publish into a disposed view.
+
+The new full-app browser cases use the repository's real synthetic H.264/AAC
+transport-stream fixture plus a WebVTT rendition with DEFAULT/AUTOSELECT off.
+They assert decoded dimensions/frames, active visible-mode caption cues,
+pause/resume and stopped media cleanup for web, webOS, Vizio and hosted-Tizen
+queries. Separate injected-AVPlay cases assert its surface, output-track index,
+state legality and paused subtitle replacement; those are SDK simulation, not
+native Samsung video decoding. Browser controls are exercised after the source
+drawer closes and the app reports ready.
+
+Actual beta-provider checks are separate from API fixtures. Loki S1 E1's CineWave
+AVC file and MobLand S1 E1's CineWave HLS gateway delivery both pass in Chromium,
+Firefox and WebKit: decoded frames, nonzero decoded PCM samples, pause, a seek
+inside the exposed seekable window while paused, resume and Stop. Loki also
+presents English WebVTT and honors Off. The WebKit motion probe observes 14 frame
+callbacks with advancing presentation time. All six test leases are released.
+These short runs do not establish whole-title continuity. An original raw
+MobLand Direct Play URL still times out; gateway success is not counted as an
+original direct-play pass. A request carrying explicit subtitle Off uses gateway
+delivery and is recorded separately from that raw direct test.
+
+Firefox runs with an isolated software-GL display; WebKit uses isolated runtime
+libraries and TLS modules. An isolated null audio sink supports PCM measurements.
+No global packages, production services or browser CORS policy were changed.
+Public beta media uses normal TLS verification; local fixture TLS is test-only.
+A private browser capture confirms that the picture, caption and canvas controls
+are composed visibly. No source URLs, tokens, device addresses or captures are
+included here. The Roku package is rebuilt, without interrupting its confirmed
+TV playback. Physical Vizio testing was set aside at the owner's request.
+Samsung/LG emulator or simulator results, codec/DRM parity and physical TV
+qualification are not claimed. The earlier native 60 FPS budget remains
+unqualified; this browser work does not replace that device measurement.
+
+A further legacy-engine regression removes Array.at and Object.fromEntries
+before app startup. The previous production bundle fails that case. Lightweight
+ES2017-compatible helpers now load before the renderer and app; existing host
+implementations remain unchanged. Object.fromEntries defines own data properties
+for untrusted keys, including __proto__, and retains symbol/duplicate-key
+semantics. Dedicated checks cover the prototype boundary and array-index
+semantics. This targets known API gaps, not a claim to emulate a whole firmware.
+[LG documents Chromium 87 for webOS TV 22](https://webostv.developer.lge.com/develop/specifications/web-api-and-web-engine);
+[Samsung documents Chromium M69 for Tizen 5.5](https://developer.samsung.com/smarttv/develop/specifications/web-engine-specifications.html).
+Full engine/firmware acceptance remains separate.
+
+Final delivery gate: video-library typecheck/build and 183 single-fork cases
+pass; tv-web typecheck, 182 shared plus 12 native-host cases, browser build and
+Roku package build pass. The final immutable video source is
+`f89e094ef5974a34aa803f93f96cc611607f7e1e`. The full-app matrix passes 18 cases
+across Chromium, Firefox and WebKit: five real-media profiles (including the
+legacy-API profile) and one injected SDK-boundary case per browser. Six existing
+Chromium playback-authority checks also pass, for 24 targeted browser cases.
+This is not a clean run of the entire remote suite; previously documented
+source-hint baseline failures remain separate. No hosted frontend deployment,
+Samsung/LG emulator execution, native Tizen release or physical TV qualification
+is included in this delivery.

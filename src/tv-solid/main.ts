@@ -1,3 +1,4 @@
+import './platform/tv-compat';
 import {
   Config,
   createRenderer,
@@ -10,6 +11,7 @@ import { sdfFonts } from "./fonts";
 import { tvShaderName } from "./shaders";
 import { setRendererStart } from "./renderer-clock";
 import { reloadImages } from "./remote/image-source";
+import { prepareTizenHost } from "./platform/tizen-host";
 import "../theme/viptv-tokens.generated.css";
 
 import { RemoteTvApi } from "./remote/api";
@@ -55,7 +57,7 @@ async function start() {
     performance.mark("viptv:init-start");
   // Prefetch each face once through SolidTV before synchronous WebGL setup.
   // The renderer attaches the prefetched faces when its stage is available.
-  const dependencies = Promise.all([import("./remote/App")]);
+  const dependencies = Promise.all([import("./remote/App"), prepareTizenHost(platform)]);
   const styles = Promise.all(
     Array.from(document.querySelectorAll<HTMLLinkElement>('link[rel="stylesheet"][media="print"]')).map(
       (link) => link.sheet ? Promise.resolve() : new Promise<void>((resolve, reject) => {

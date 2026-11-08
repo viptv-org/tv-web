@@ -154,6 +154,7 @@ export async function installRemoteBackend(page:Page,origin:string,options:{
     addons?: number;
     best?: boolean;
     captionTracks?: boolean;
+    captionMedia?: boolean;
     channelSearch?: boolean;
     delayLibrary?: boolean;
     emptySources?: boolean;
@@ -253,6 +254,12 @@ export async function installRemoteBackend(page:Page,origin:string,options:{
   let replacementFailed = false;
  await page.route('**/media/**',async route=>{
   const name=new URL(route.request().url()).pathname.split('/').pop()!;
+  if (options.captionMedia) {
+   if (name === 'index.m3u8') return route.fulfill({ contentType:'application/vnd.apple.mpegurl', body:'#EXTM3U\n#EXT-X-MEDIA:TYPE=SUBTITLES,GROUP-ID="subs",NAME="English",LANGUAGE="en",DEFAULT=NO,AUTOSELECT=NO,URI="captions.m3u8"\n#EXT-X-STREAM-INF:BANDWIDTH=180000,CODECS="avc1.640029,mp4a.40.2",SUBTITLES="subs"\nvideo.m3u8\n' });
+   if (name === 'captions.m3u8') return route.fulfill({contentType:'application/vnd.apple.mpegurl',body:'#EXTM3U\n#EXT-X-VERSION:3\n#EXT-X-TARGETDURATION:5\n#EXTINF:5,\ncaptions.vtt\n#EXT-X-ENDLIST\n'});
+   if (name === 'captions.vtt') return route.fulfill({contentType:'text/vtt',body:'WEBVTT\n\n00:00:00.000 --> 00:00:05.000\nCaption pipeline check\n'});
+   if (name === 'video.m3u8') return route.fulfill({contentType:'application/vnd.apple.mpegurl',body:readFileSync(resolve('tests/fixtures/hls/index.m3u8'))});
+  }
   const file=name==='index.m3u8'?'index.m3u8':/^segment\d+\.ts$/.test(name)?name.replace(/\.ts$/,'.bin'):null;
   if(!file)return route.abort();
   await route.fulfill({body:readFileSync(resolve('tests/fixtures/hls',file)),contentType:file==='index.m3u8'?'application/vnd.apple.mpegurl':'video/mp2t'});
@@ -386,7 +393,7 @@ export async function installRemoteBackend(page:Page,origin:string,options:{
           timeline_offset_seconds: 0,
           duration: 5,
           live: leaseLive,
-          ...(options.captionTracks ? {subtitles_supported:true,subtitle_tracks:[{input_index:2,title:"English",language:"en",selected:true,selectable:true,supported:true}],subtitle_appearance:{font_scale:1,text_color:"#FFFFFF",background_color:"#00000000"}} : {}),
+          ...(options.captionTracks ? {subtitles_supported:true,subtitle_tracks:[{input_index:2,title:"English",language:"en",selected:!options.captionMedia || body.subtitles_off !== true,selectable:true,supported:true}],subtitle_appearance:{font_scale:1,text_color:"#FFFFFF",background_color:"#00000000"}} : {}),
         },
       };
       leases.set(leaseId, lease);

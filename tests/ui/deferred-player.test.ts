@@ -53,6 +53,46 @@ function engine() {
 const request: OpenPlayerRequest = { url: '/media/playlist.m3u8', kind: 'vod' };
 
 describe('DeferredPlayer', () => {
+  it('does not open an engine that finishes loading after Stop', async () => {
+    const inner = engine();
+    let loaded!: (value: Player) => void;
+    const player = new DeferredPlayer(() => new Promise(resolve => { loaded = resolve; }));
+    const opening = player.open(request);
+    await player.stop();
+    loaded(inner);
+    await opening;
+    expect(inner.open).not.toHaveBeenCalled();
+    await player.open(request);
+    expect(inner.open).toHaveBeenCalledOnce();
+  });
+
+  it('opens only the newest request when sessions race the initial chunk load', async () => {
+    const inner = engine();
+    let loaded!: (value: Player) => void;
+    const player = new DeferredPlayer(() => new Promise(resolve => { loaded = resolve; }));
+    const first = player.open(request);
+    const second = player.open({ ...request, url: '/media/newest.m3u8' });
+    loaded(inner);
+    await Promise.all([first, second]);
+    expect(inner.open).toHaveBeenCalledOnce();
+    expect(inner.open).toHaveBeenCalledWith(expect.objectContaining({ url: '/media/newest.m3u8' }));
+  });
+
+  it('disposes a late engine without subscribing or reviving a disposed player', async () => {
+    const inner = engine();
+    let loaded!: (value: Player) => void;
+    const player = new DeferredPlayer(() => new Promise(resolve => { loaded = resolve; }));
+    const seen = vi.fn(); player.subscribe(seen);
+    const opening = player.open(request);
+    const cancelled = expect(opening).rejects.toMatchObject({ name: 'AbortError' });
+    await player.dispose();
+    loaded(inner);
+    await cancelled;
+    inner.emit({ ...IDLE_SNAPSHOT, state: 'playing' });
+    expect(inner.dispose).toHaveBeenCalledOnce();
+    expect(inner.open).not.toHaveBeenCalled();
+    expect(seen).not.toHaveBeenCalled();
+  });
   it('does not fetch an engine until a session opens', async () => {
     const create = vi.fn(async () => engine());
     const player = new DeferredPlayer(create);
