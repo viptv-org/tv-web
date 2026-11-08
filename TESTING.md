@@ -1,30 +1,70 @@
 # Core-owned provider-first discovery
 
-Canonical Core `cf99a361e07c0b453040e92fcfac378b205320e1` owns preference
+Canonical Core `1ea4de65493b9c3036d51ab46040d8ff69d1b999` owns preference
 precedence, stable/legacy supplier resolution, selected-language eligibility,
 early readiness and the five-second preferred/fallback policy. SDK
-`523f87ccebb47accd078534d3169ecd639af9f4f` dispatches the selected supplier outside
+`4dd3a114235d0569afccb3ffc3f07da440b0c6c1` dispatches the selected supplier outside
 normal fanout, reuses verified metadata and publishes probe completions. Backend
-`bb5834bdee95442334e8765e583f62d239a83170` enforces job/source scope and defers
+`8b0293d2071d21c30a1aa9cb7821ff55e3d0cbf7` enforces job/source scope and defers
 unrelated discovery. Client flags negotiate optional fields with older servers.
 
-Core: 180 checks passed, one ignored. SDK: 32 passed. Backend: 921 default checks
-and 933 live-runtime checks passed, with 12/13 existing ignored cases. Tests cover
+Core: 180 checks passed, one ignored. SDK: 33 engine/probe, eight CineWave and
+eight cache checks passed. Backend: 924 default checks and 936 live-runtime checks
+passed, with 12/13 existing ignored cases. Tests cover
 preferred A without requesting the other 29, five-second deadline, cancellation,
 changed configuration, selected audio versus available tracks and lower soft quality.
 Server tests used a package-local debug-symbol override to fit the shared build
 host; production profile/settings are unchanged.
 
 Client grouped typecheck, 213 shared tests, 15 native tests and production build
-pass. Fifteen Chromium/Firefox/WebKit source-reuse scenarios pass, including stable
-supplier identity, early readiness despite a soft quality mismatch, startup fallback,
+pass. Eighteen Chromium/Firefox/WebKit source-reuse and manual-override scenarios
+pass, including stable supplier identity, early readiness despite a soft quality mismatch, startup fallback,
 no language match and the three-attempt cap. Provider-first fixture cases isolate
 continuation preparation so request counts refer to the tested episode. Explicit
 spoken-language intent reaches admission; manual tracks/direct play retain control.
 
+CineWave incremental extraction publishes direct and embed results without waiting
+for its remaining lookups. Validation batches run concurrently with bounded shared
+probe capacity. Regression coverage includes a stalled hub, stalled embeds and a
+stalled probe while another extraction becomes ready. Discovery reuses its verified
+metadata proof with local authority revalidation; identity checks skip recommendations.
+Changed identity assertions and revoked configuration remain rejected.
+
+The Roku build passes (718945 JavaScript bytes). Sideload and the native inspector
+could not reach the configured device; physical Roku and PS4 acceptance is incomplete.
+
 No default or existing setting values changed. Automatic fallback preserves manual
-preferences. Real-beta, deployed-asset and physical-device evidence for this release
-is pending; browser/SDK boundaries do not establish firmware qualification.
+preferences. Beta runs backend `8b0293d` with TV client `9b6ef7c`. Managed deployment,
+HTTPS health, Canvas welcome-to-pairing and all 59 TV asset hashes pass. The root
+frontend, runtime configuration and unrelated containers are retained. Two announced
+beta restart windows were used: the combined release and its real-acceptance fixes.
+Production was not deployed.
+
+Real hosted-beta acceptance used persisted manual CineWave/English preferences and
+the existing cross-show toggle, with no API or media mocks. A different movie and a
+relaunched Continue Watching card both admitted only CineWave, showed no source picker,
+decoded 1920x1080 video and retained the manual preference. Selected English delivery
+tracks and PCM samples were observed. Readiness did not require a perfect soft match.
+
+| Real API entry | Preferred phase ready | Play to admission | Play to first-frame signal |
+| --- | --- | --- | --- |
+| Different movie: Interstellar | 1.026 s | 1.638 s | 10.428 s |
+| Relaunch, Continue Watching: Interstellar | 0.888 s | 1.608 s | 9.636 s |
+
+Preferred timings start at the server phase; admission/frame timings start at Select.
+The full under-five-second playback target remains unmet in these runs: gateway
+preparation plus decoder startup took another 8.0–8.8 s after admission. Raw supplier
+response, validation and first audible audio were not individually isolated by these
+hosted traces. This is browser/API evidence; it does not establish firmware timing
+or lip sync.
+
+Continue Watching for Inception produced no eligible CineWave result before the
+5.007 s deadline. Broad fallback excluded that supplier, decoded actual video with
+nonzero PCM, kept the picker hidden and preserved the original preference. Admission
+occurred at 6.005 s and the first-frame signal at 12.557 s. An earlier run took about
+21 s, demonstrating that upstream/delivery latency is not a fixed guarantee.
+
+Earlier release checkpoints follow.
 
 Beta seek client `6e60ea6de0fb0c8cf6cab76433c8bc9c349fec82` is deployed.
 Managed rollout is done; health, entry and all 59 asset hashes plus hosted Canvas

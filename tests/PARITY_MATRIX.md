@@ -1,10 +1,16 @@
 # Provider-first discovery
 
-Core `cf99a36`, SDK `523f87c`, backend `bb5834b`, design `059b763`.
-Core/SDK/server checks and 15 three-engine source-reuse cases pass for preferred
+Core `1ea4de6`, SDK `4dd3a11`, backend `8b0293d`, design `059b763`.
+Core/SDK/server checks and 18 three-engine source-reuse/override cases pass for preferred
 supplier dispatch, language eligibility, deadline/fallback and durable device
-settings. Real-beta and physical PS4/Roku acceptance for this release is pending.
-No renderer-specific source-selection policy is introduced.
+settings. Real hosted beta validates CineWave first, no picker, confirmed English
+and unchanged manual memory for a different movie and relaunched Continue Watching.
+Admission takes 1.61–1.64 s; first-frame signals take 9.64–10.43 s. The full five-second
+startup target remains unmet because of preparation/decode time after admission.
+Inception exercises the five-second preferred deadline and successful fallback without
+changing the saved preference. The managed beta release, 59 assets and Canvas pairing
+are verified. Roku builds but the device is unreachable; physical PS4/Roku acceptance
+is incomplete. No renderer-specific source-selection policy is introduced.
 
 # Shared TV source reuse and episode handoff — 2026-11-08
 
