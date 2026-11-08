@@ -257,7 +257,7 @@ function useRemoteInput() {
   useFocusManager({
     Left: ["ArrowLeft", 37], Right: ["ArrowRight", 39],
     Up: ["ArrowUp", 38], Down: ["ArrowDown", 40], Enter: ["Enter", 13],
-    Back: ["Escape", "Backspace", "GoBack", 10009, 461, 8, 27],
+    Back: ["Escape", "Backspace", "GoBack", "BrowserBack", 10009, 461, 8, 27],
     Menu: ["ContextMenu", 457, 93],
   });
   const blur = () => {

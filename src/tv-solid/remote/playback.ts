@@ -30,6 +30,7 @@ export class RemotePlayback {
   private card?: Card;
   private source?: Source;
   private directMode = false;
+  private seekView?: { time: PlayerSnapshot["time"]; actions: PlaybackActions; lease: Lease; opened: boolean };
   private sourceRetry?: { card: Card; request: SourceReplacement };
   private heartbeat?: ReturnType<typeof setTimeout>;
   private expiry?: ReturnType<typeof setTimeout>;
@@ -78,7 +79,7 @@ export class RemotePlayback {
     this.unsubscribe = this.player.subscribe((snapshot) => {
       const previous = this.lastState;
       this.lastState = snapshot.state;
-      publish(snapshot);
+      this.present(snapshot);
       const lease = this.lease;
       if (snapshot.state === "playing" && lease) {
         // HTML supplies measured decoded-frame evidence. AVPlay exposes an
@@ -123,24 +124,39 @@ export class RemotePlayback {
         clearTimeout(this.expiry);
         this.event("stop", true);
       }
-      if (snapshot.error) this.fail(new Error(snapshot.error.message));
+      // Once a seek retires its lease, late decoder/network errors belong
+      // to that paused outgoing picture, not the incoming admission.
+      if (snapshot.error && !(this.seekView && !this.lease)) this.fail(new Error(snapshot.error.message));
     });
     document.addEventListener("visibilitychange", this.foreground);
     window.addEventListener("keydown", this.interaction, true);
     window.addEventListener("pointerdown", this.interaction, true);
   }
+  private present(snapshot: PlayerSnapshot) {
+    let held = this.seekView;
+    if (held && held.opened &&
+        ["ready", "playing", "paused"].includes(snapshot.state) &&
+        Math.abs(snapshot.time.positionSeconds - held.time.positionSeconds) < 2 &&
+        (snapshot.time.durationSeconds !== null || held.time.durationSeconds === null)) {
+      this.seekView = undefined;
+      held = undefined;
+    }
+    this.publish(held && (!snapshot.error || !this.lease)
+      ? { ...snapshot, error: null, state: snapshot.state === "paused" ? "paused" : "buffering", time: held.time }
+      : snapshot);
+  }
   private interaction = () => {
     this.activity++;
   };
   get subtitleAppearance() {
-    return this.lease?.delivery?.subtitle_appearance;
+    return (this.lease ?? this.seekView?.lease)?.delivery?.subtitle_appearance;
   }
   get leaseId() {
     return this.lease?.id;
   }
   get hasPresentedFrame() { return this.first && !!this.lease; }
   get actions(): PlaybackActions {
-    return this.lease?.actions ?? noActions;
+    return this.lease?.actions ?? this.seekView?.actions ?? noActions;
   }
   private replacementObservation() {
     if (!this.lease || !this.card || !this.actions.change_source)
@@ -196,10 +212,11 @@ export class RemotePlayback {
     }
   }
   get tracks() {
+    const lease = this.lease ?? this.seekView?.lease;
     return {
-      audio: this.lease?.delivery?.audio_tracks ?? [],
-      text: this.lease?.delivery?.subtitle_tracks ?? [],
-      subtitlesSupported: this.lease?.delivery?.subtitles_supported === true,
+      audio: lease?.delivery?.audio_tracks ?? [],
+      text: lease?.delivery?.subtitle_tracks ?? [],
+      subtitlesSupported: lease?.delivery?.subtitles_supported === true,
     };
   }
   async selectTrack(kind: "audio" | "text", index: number | null) {
@@ -251,7 +268,7 @@ export class RemotePlayback {
         if (value.status !== "ready")
           throw new Error("Playback authorization ended.");
         this.lease = value;
-        this.publish({ ...this.player.snapshot });
+        this.present({ ...this.player.snapshot });
         this.schedule();
         if (
           this.lease?.id === lease.id &&
@@ -268,7 +285,7 @@ export class RemotePlayback {
   private fail(error: Error) {
     if (this.failing) return;
     this.failing = true;
-    const position = this.player.snapshot.time.positionSeconds;
+    const position = this.seekView?.time.positionSeconds ?? this.player.snapshot.time.positionSeconds;
     // A terminal decoder failure retires its lease. Only an admission failure
     // with a still-live outgoing lease can retain a replacement binding.
     this.sourceRetry = undefined;
@@ -302,7 +319,7 @@ export class RemotePlayback {
             if (value.status !== "ready")
               throw new Error("Playback authorization ended.");
             this.lease = value;
-            this.publish({ ...this.player.snapshot });
+            this.present({ ...this.player.snapshot });
             this.schedule();
           })
           .catch((error) => {
@@ -377,7 +394,9 @@ export class RemotePlayback {
     replacement?: SourceReplacement,
     direct = false,
     paused = false,
+    retireForSeek = false,
   ) {
+    this.seekView = undefined;
     const directMode = direct || (replacement ? this.directMode : false);
     const intent = ++this.intentGeneration;
     if (!replacement) this.sourceRetry = undefined;
@@ -387,6 +406,18 @@ export class RemotePlayback {
     // black screen for the whole admission.
     // A new start supersedes any admission still polling for a previous one.
     this.operation?.abort();
+    if (retireForSeek && this.lease) {
+      // Hold the paused decoder picture while freeing the old gateway slot.
+      // Managed seeks need a new producer; overlapping leases can exhaust it.
+      if (this.player.snapshot.state !== "paused") await this.player.pause();
+      if (intent !== this.intentGeneration) throw new DOMException("Playback cancelled", "AbortError");
+      const outgoing = this.lease;
+      this.event("stop");
+      clearTimeout(this.heartbeat);clearTimeout(this.expiry);
+      this.lease = undefined;
+      if (outgoing) await this.api.release(`/api/playback/${segment(outgoing.id)}`);
+      if (intent !== this.intentGeneration) throw new DOMException("Playback cancelled", "AbortError");
+    }
     const admitScope = new AbortController();
     this.operation = admitScope;
     this.admitting = true;
@@ -457,19 +488,27 @@ export class RemotePlayback {
     paused = this.player.snapshot.state !== "playing",
   ): Promise<void> {
     if (!this.lease || !this.card || !this.source) return;
-    await this.start(
-      this.card,
-      this.source,
-      false,
-      positionSeconds,
-      this.selection,
-      undefined,
-      this.directMode,
-      paused,
+    const held = { time: { ...(this.seekView?.time ?? this.player.snapshot.time), positionSeconds }, actions: this.actions, lease: this.lease, opened: false };
+    const opening = this.start(
+      this.card, this.source, false, positionSeconds, this.selection,
+      undefined, this.directMode, paused, true,
     );
+    this.seekView = held;
+    this.present(this.player.snapshot);
+    let completed = false;
+    try { await opening; completed = true; }
+    finally {
+      if (this.seekView === held) {
+        if (!completed) this.seekView = undefined;
+        held.opened = true;
+        if (this.lease) this.present(this.player.snapshot);
+        else this.seekView = undefined;
+      }
+    }
   }
 
   async stop() {
+    this.seekView = undefined;
     this.intentGeneration++;
     this.sourceRetry = undefined;
     this.directMode = false;

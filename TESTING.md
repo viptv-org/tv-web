@@ -1,3 +1,30 @@
+# Stable seek presentation and PS4 Back — 2026-11-08
+
+Real beta playback reproduced a separate gateway-capacity refusal when a seek
+admitted a second producer before retiring the outgoing lease. Managed seeks now
+pause the existing picture, release that slot, then admit/open the requested
+position. Source-replacement semantics remain unchanged. Late errors from the
+retired picture cannot cancel the new seek admission.
+
+Timeline presentation retains the requested position, duration, available controls
+and tracks through internal stopped/opening snapshots and delayed metadata. A
+superseded seek cannot publish over its successor, failed admission restores the
+remaining outgoing presentation when available, and a second early seek preserves
+known duration. Raw decoder facts/progress reporting remain separate.
+
+Real beta paused seek requested 13.185784 seconds, admitted that exact gateway
+offset, retained duration with zero zero-position/duration samples, then resumed
+and advanced beyond the target. Sampling interval was 5 ms; this is browser/API
+evidence, not frame-perfect physical PS4 qualification. Six nearby browser cases
+pass in Chromium/WebKit (paused seek, player navigation, paused Skip intro).
+
+PS4 cancels delivered Back defaults in capture while preserving propagation to
+shared navigation, including when the video element has keyboard focus. Editable
+fields retain Backspace behavior; other browsers are unchanged. BrowserBack also
+maps to shared Back. Unit tests cover this event boundary; browser-reserved,
+noncancelable fullscreen exit and physical PS4 behavior remain unverified. The
+app does not force fullscreen back on after exit.
+
 Beta resume client `709e610aeaaca32e422e861e5738b31aafab01c8` is deployed.
 Managed rollout is done; HTTPS health, entry and all 59 asset hashes, plus hosted
 Canvas pairing, pass. The first health probe timed out during rollout; the fresh

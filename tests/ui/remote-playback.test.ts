@@ -40,10 +40,11 @@ function setup(presented = vi.fn()) {
     admit: vi.fn(async (..._args: unknown[]) => lease(String(++nextId))),
     release: vi.fn(async () => {}), call: vi.fn(async (..._args: any[]) => ({})), serverNow: Date.now(),
   };
+  const publish = vi.fn();
   const controller = new RemotePlayback(api as unknown as RemoteTvApi,
-    "web", document.createElement("video"), vi.fn(), failure, presented);
+    "web", document.createElement("video"), publish, failure, presented);
   controllers.push(controller);
-  return { controller, player, api, failure, presented, emit: () => snapshotListener?.(player.snapshot) };
+  return { controller, player, api, failure, presented, publish, emit: () => snapshotListener?.(player.snapshot) };
 }
 
 describe("remote playback lease transitions", () => {
@@ -59,8 +60,8 @@ describe("remote playback lease transitions", () => {
       { id: "source" }, false, expect.any(AbortSignal), 120, selection, undefined, true,
     ]);
     expect(player.open).toHaveBeenLastCalledWith(expect.objectContaining({ paused }));
-    expect(paused ? player.pause : player.play).toHaveBeenCalledOnce();
-    expect(paused ? player.play : player.pause).not.toHaveBeenCalled();
+    expect(player.pause).toHaveBeenCalledOnce(); // outgoing hold or incoming paused intent
+    expect(player.play).toHaveBeenCalledTimes(paused ? 0 : 1);
     expect(api.release).toHaveBeenCalledWith("/api/playback/1");
   });
 
@@ -199,4 +200,26 @@ it("records completion once and does not overwrite it with an ordinary stop when
   const events=api.call.mock.calls.filter(([path])=>String(path).endsWith("/playback-events")).map(([_path,_method,body])=>body);
   expect(events.filter(body=>body.event==="stop")).toEqual([expect.objectContaining({ended:true})]);
  });
+});
+
+it("holds seek target/duration and controls through stopped/preparing decoder snapshots", async () => {
+ const {controller,player,publish,emit,api}=setup();api.admit.mockResolvedValueOnce({...lease("tracks"),delivery:{...lease("tracks").delivery!,audio_tracks:[{input_index:2,language:"en",selected:true,supported:true,selectable:true}]}});await controller.start(card,{id:"source"},false);
+ player.snapshot={...player.snapshot,time:{positionSeconds:30,durationSeconds:600}};
+ let finish!:()=>void;player.open.mockImplementationOnce(async()=>{player.snapshot={...player.snapshot,state:"opening",time:{positionSeconds:0,durationSeconds:null}};emit();await new Promise<void>(resolve=>{finish=resolve});player.snapshot={...player.snapshot,state:"ready",time:{positionSeconds:120,durationSeconds:600}};emit();});
+ player.stop.mockImplementationOnce(async()=>{player.snapshot={...player.snapshot,state:"stopped",time:{positionSeconds:0,durationSeconds:null}};emit();expect(controller.actions.seek).toBe(true);expect(controller.tracks.audio).toHaveLength(1);});
+ publish.mockClear();const seeking=controller.seek(120,false);await vi.waitFor(()=>expect(finish).toBeDefined());
+ expect(publish.mock.calls.every(([snapshot])=>snapshot.time.positionSeconds===120&&snapshot.time.durationSeconds===600)).toBe(true);
+ finish();await seeking;expect(publish).toHaveBeenLastCalledWith(expect.objectContaining({time:{positionSeconds:120,durationSeconds:600}}));
+});
+
+it("keeps the seek presentation after open resolves until real position metadata arrives", async()=>{
+ const {controller,player,publish,emit}=setup();await controller.start(card,{id:"source"},false);player.snapshot={...player.snapshot,time:{positionSeconds:30,durationSeconds:600}};
+ player.open.mockImplementationOnce(async()=>{player.snapshot={...player.snapshot,state:"opening",time:{positionSeconds:0,durationSeconds:null}};emit();});
+ await controller.seek(120,false);expect(publish).toHaveBeenLastCalledWith(expect.objectContaining({time:{positionSeconds:120,durationSeconds:600}}));
+ await controller.seek(180,false);expect(publish).toHaveBeenLastCalledWith(expect.objectContaining({time:{positionSeconds:180,durationSeconds:600}}));
+ player.snapshot={...player.snapshot,time:{positionSeconds:180,durationSeconds:600}};emit();expect(publish).toHaveBeenLastCalledWith(player.snapshot);
+});
+
+it("releases the outgoing seek lease before admission without stopping its decoder picture",async()=>{
+ const {controller,player,api,emit,failure}=setup();await controller.start(card,{id:"source"},false);player.stop.mockClear();api.admit.mockImplementationOnce(async()=>{expect(api.release).toHaveBeenCalledWith("/api/playback/1");expect(player.pause).toHaveBeenCalledOnce();expect(player.stop).not.toHaveBeenCalled();player.snapshot={...player.snapshot,state:"error",error:{code:"connection-failed",message:"Retired stream closed"}};emit();expect(failure).not.toHaveBeenCalled();return lease("seek");});await controller.seek(60,false);expect(player.stop).toHaveBeenCalledOnce();
 });

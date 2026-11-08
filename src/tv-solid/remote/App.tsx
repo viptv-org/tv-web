@@ -6428,6 +6428,9 @@ export function createRemoteTvApp(
       );
       document.documentElement.dataset.tvPlaybackError = playbackError();
       document.documentElement.dataset.tvPlayerControls = String(showControls());
+      document.documentElement.dataset.tvPlayerSeeking = String(seeking());
+      document.documentElement.dataset.tvPlayerPosition = String(snapshot()?.time.positionSeconds ?? "");
+      document.documentElement.dataset.tvPlayerDuration = String(snapshot()?.time.durationSeconds ?? "");
       document.documentElement.dataset.tvPlayerTimelineFocus = String(timelineFocused());
       document.documentElement.dataset.tvSourcePreparing = String(sourceLoading() && !overlay());
       document.documentElement.dataset.tvPlayerBusy = String(loading() || seeking() || snapshot()?.state === "buffering");

@@ -8,6 +8,12 @@ export function installPs4Input(): () => void {
     document.dispatchEvent(key);
   };
   const keyboard = (event: KeyboardEvent) => {
+    if (document.documentElement.dataset.tvStartup === "ready" &&
+        (["Escape", "Backspace", "GoBack", "BrowserBack"].includes(event.key) || [8, 27, 461, 10009].includes(event.keyCode))) {
+      const target = event.target;
+      if (!(target instanceof Element && target.closest("input,textarea,select"))) event.preventDefault();
+      return; // Preserve propagation to the shared TV Back handler.
+    }
     if (!event.isTrusted || (event.key !== "Enter" && event.keyCode !== 13)) return;
     const target = event.target;
     if (target instanceof Element && target.closest("button,a,input,select,textarea,video")) return;
