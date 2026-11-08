@@ -57,9 +57,18 @@ The final native Home trace has 399 paired render/swap samples: p50 18.15 ms,
 p95 22.02 ms and p99 46.68 ms. Render alone is 4.32 ms at p95; swap is
 19.21 ms. The output reports 2160p60, but the 16.67 ms frame-work target still
 fails. Intermittent-key graphics-FPS samples include idle and cannot establish
-sustained presentation. An optional continuous diagnostic failed to start and
-produced no usable evidence; the app was relaunched to discard instrumentation.
-No sustained 60 FPS qualification is claimed.
+sustained presentation.
+
+Follow-up continuous diagnostics separate the clock from presentation: an
+existing card's nine-second Animator motion records 539 ticks (elapsed tick
+p50 16.68 ms, p95 17.75 ms), with steady graphics FPS about 48. A temporary
+native SceneGraph Animation also reports about 48, including with the app's
+root children hidden; those values are restored and the probe removed. Roku's
+system Home under continuous alternating input similarly settles near 48 in
+this session. This supports investigating presentation beyond the JavaScript
+clock; it does not establish a firmware cap or qualify 60 FPS. The clean
+710180-byte client was sideloaded again, and its inspector confirms no
+temporary animation hooks remain. No sustained 60 FPS qualification is claimed.
 
 # Remembered sources and episode handoff — 2026-11-08
 

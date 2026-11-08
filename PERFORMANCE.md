@@ -39,10 +39,27 @@ diagnostic and are not additive. The device reports 2160p60 output and OpenGL.
 
 The 16.67 ms p95 target remains unmet. Graphics-FPS readings during intermittent
 remote input include idle periods and do not establish sustained presentation.
-A separate continuous diagnostic failed to start and supplies no evidence.
-Native compositor/presentation performance remains open; the render phase alone
-does not qualify 60 FPS. See [TESTING.md](TESTING.md) for playback and platform
-acceptance limits.
+A subsequent continuous diagnostic moves an existing native card with the
+actual Animator for nine seconds. It records 539 ticks, with elapsed tick p50
+16.68 ms and p95 17.75 ms, while steady graphics-FPS readings are about 48.
+The original card position and Animator tick function are restored afterwards.
+
+A temporary local diagnostic build then animates a small rectangle through
+SceneGraph's own Animation node. It also reports about 48 graphics FPS, both
+over Home and with all app-owned root children temporarily hidden. The native
+probe is removed and the root alpha values restored after nine seconds. Roku's
+system Home screen, under alternating Left/Right input every 200 ms, likewise
+settles near 48 graphics FPS in this session. These comparisons suggest the
+current JavaScript clock is not the limiting factor in this diagnostic; they
+do not establish a firmware cap or qualify ordinary app navigation at 60 FPS.
+
+The [graphics-FPS endpoint](https://developer.roku.com/dev/docs/external-control-api)
+measures graphics separately from video. Begin/end readings include idle and
+are excluded from the steady diagnostic observation. The clean application
+build was sideloaded again and its inspector confirms the temporary hooks are
+absent. Native compositor/presentation performance remains open; the render
+phase alone does not qualify 60 FPS. See [TESTING.md](TESTING.md) for playback
+and platform acceptance limits.
 
 ---
 
