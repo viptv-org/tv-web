@@ -148,6 +148,8 @@ async function installRendererCompat(page: Page): Promise<void> {
 
 export async function installRemoteBackend(page:Page,origin:string,options:{
     episodeFlow?: boolean;
+    sourceAudioLanguages?: string[];
+    selectedAudioLanguage?: string;
     pendingContinuation?: boolean;
     reuseMatch?: boolean;
     session?: boolean;
@@ -328,7 +330,7 @@ export async function installRemoteBackend(page:Page,origin:string,options:{
     }
   if(path==='/api/streams'){sourceEpisode=body.type==="series";return send({id:'job-1'});}
     if(/\/live\/[^/]+\/sources$/.test(path))return send({streams:[{id:"live-stream-0",name:"Live source A"},{id:"live-stream-1",name:"Live source B"}],live:true,action:{card:{identity:{kind:"live",id:path.split('/').at(-2)!,ids:[]},provider_id:"m3u:1",title:"Server live channel",badges:[],poster:null,landscape:null,logo:null},label:"Watch live",resume:false,source_selection:options.best?"best":"ask"}});
-  const streams=Array.from({length:8},(_,i)=>{const h=i<2?2160:i<5?1080:720;const name=i%2?'[Provider 2]':'LordStreams';const quality=h>=2160?'4K':`${h}p`;return {id:`stream-${i}`,source_addon_id:'addon:fixture',audio_languages:['en'],presentation:{provider_name:i%2?'Supplier B':'Supplier A'},name,detail:'WEB-DL · HEVC · 5.1 · 18.4 GB',quality_height:h,view:{title:name,body:'WEB-DL · HEVC · 5.1 · 18.4 GB',quality_label:quality,format_label:i===0?'HDR10 · Dolby Atmos':'HEVC',addon_label:`[Add-on ${i%2?'B':'A'}]`,provider_label:name}};});
+  const streams=Array.from({length:8},(_,i)=>{const h=i<2?2160:i<5?1080:720;const name=i%2?'[Provider 2]':'LordStreams';const quality=h>=2160?'4K':`${h}p`;return {id:`stream-${i}`,source_addon_id:'addon:fixture',audio_languages:options.sourceAudioLanguages ?? ['en'],presentation:{provider_name:i%2?'Supplier B':'Supplier A'},name,detail:'WEB-DL · HEVC · 5.1 · 18.4 GB',quality_height:h,view:{title:name,body:'WEB-DL · HEVC · 5.1 · 18.4 GB',quality_label:quality,format_label:i===0?'HDR10 · Dolby Atmos':'HEVC',addon_label:`[Add-on ${i%2?'B':'A'}]`,provider_label:name}};});
   if(path==='/api/streams/job-1'){
       const after=Number(url.searchParams.get('after')??0);
       if(options.finding&&!discoveryEvents.length)discoveryEvents.push({streams});
@@ -353,7 +355,7 @@ export async function installRemoteBackend(page:Page,origin:string,options:{
       for(const s of pool)counts.set(s.quality_height,(counts.get(s.quality_height)??0)+1);
       const quality_filters=[...counts.entries()].sort((a,b)=>b[0]-a[0]).map(([height,count])=>({height,label:height>=2160?'4K':`${height}p`,count}));
       return send({streams:matching,best_match_id:matching[0]?.id??null,best_match_fully_matches:true,automatic_source_ids:matching.map(s=>s.id),
-        ...(options.episodeFlow ? {source_reuse_supported:true,source_reuse_ids:body.remembered_source || body.cross_title_source ? options.reuseMatch === false ? [] : ['stream-0','stream-2','stream-4','stream-6'] : [],source_reuse_preferred:true} : {}),quality_filters,total:matching.length});
+        ...(options.episodeFlow ? {source_reuse_supported:true,source_reuse_ids:body.remembered_source || body.cross_title_source ? options.reuseMatch === false ? [] : ['stream-0','stream-2','stream-4','stream-6'] : [],source_reuse_preferred:true,source_reuse_fully_matches:options.reuseMatch !== false} : {}),quality_filters,total:matching.length});
     }
   if(path.endsWith('/live/channels')){
       const searching = url.searchParams.has("search");
@@ -407,6 +409,7 @@ export async function installRemoteBackend(page:Page,origin:string,options:{
           timeline_offset_seconds: 0,
           duration: 5,
           live: leaseLive,
+          ...(options.selectedAudioLanguage ? {audio_tracks:[{input_index:0,language:options.selectedAudioLanguage,selected:true,supported:true,selectable:true}]} : {}),
           ...(options.captionTracks ? {subtitles_supported:true,subtitle_tracks:[{input_index:2,title:"English",language:"en",selected:!options.captionMedia || body.subtitles_off !== true,selectable:true,supported:true}],subtitle_appearance:{font_scale:1,text_color:"#FFFFFF",background_color:"#00000000"}} : {}),
         },
       };

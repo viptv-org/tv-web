@@ -17,9 +17,32 @@ file hashes to
 `dd498823558f6a77c39da086bff820f8ab125a86ce94383662425bfb6d147f69`.
 
 Current anchors: [DESIGN_REF](DESIGN_REF)
-`8b7f85941addf5a65390fe6eca4f11aba9584a17`, [VIDEO_REF](VIDEO_REF)
-`4b52aa5bfaf7f993ad6aa791e759f884ff4e23fd` and [CORE_REF](CORE_REF)
+`1f68aa8280a4152f687013cf8246a5fbebebc902`, [VIDEO_REF](VIDEO_REF)
+`f89e094ef5974a34aa803f93f96cc611607f7e1e` and [CORE_REF](CORE_REF)
 `b6ee0548753483c9627cb1c73e7761b62f936933`.
+
+---
+
+# Preferred-source latency and native frame timing — 2026-11-08
+
+Next-episode preparation retains the first server-qualified preferred-source
+snapshot and cancels unrelated discovery. It opens no second playback lease.
+A regression with a provider that never completes prepares within three seconds
+and hands off without another discovery in Chromium, Firefox and WebKit. This
+is controlled browser evidence, not an upstream provider latency guarantee.
+
+A settled physical-Roku Home workload, with no simultaneous screenshots or
+builds, contains 399 paired native render/swap samples. Render plus swap p50 is
+18.15 ms, p95 22.02 ms and p99 46.68 ms; 239 samples exceed 16.67 ms. Render
+alone p95 is 4.32 ms and swap p95 is 19.21 ms. These separate percentiles are
+diagnostic and are not additive. The device reports 2160p60 output and OpenGL.
+
+The 16.67 ms p95 target remains unmet. Graphics-FPS readings during intermittent
+remote input include idle periods and do not establish sustained presentation.
+A separate continuous diagnostic failed to start and supplies no evidence.
+Native compositor/presentation performance remains open; the render phase alone
+does not qualify 60 FPS. See [TESTING.md](TESTING.md) for playback and platform
+acceptance limits.
 
 ---
 

@@ -86,6 +86,12 @@ export class RokuPlayer implements Player {
           positionSeconds = this.seekTarget;
         }
       }
+      // Firmware may finish between one-second clock notifications. The
+      // known VOD end is authoritative for the UI and completion observation.
+      if (state === "ended" && this.latest.kind === "vod" && durationSeconds !== null && Number.isFinite(durationSeconds)) {
+        this.seekTarget = null;
+        positionSeconds = durationSeconds;
+      }
       const bufferedRanges = (event.bufferedRanges ?? []).map(range => ({
         start: Math.max(0, this.timelineOffset + range.start),
         end: Math.min(durationSeconds ?? Infinity, this.timelineOffset + range.end),

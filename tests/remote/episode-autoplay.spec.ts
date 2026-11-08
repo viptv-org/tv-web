@@ -181,3 +181,49 @@ test('Back during next-episode admission restores the outgoing episode and its p
  expect(fixture.requests.filter(r=>r.path==='/api/playback/fixture-playback'&&r.method==='DELETE')).toHaveLength(0);
  release();
 });
+
+test('prepares the preferred source before a slow provider finishes without opening a second lease',async({page,baseURL})=>{
+ const fixture=await installRemoteBackend(page,baseURL!,{media:true,episodeFlow:true,finding:true});
+ try {
+  await playFirst(page);
+  await expect(page.locator('html')).toHaveAttribute('data-tv-next-prepared','true',{timeout:3000});
+  expect(fixture.requests.filter(r=>r.path==='/api/playback'&&r.method==='POST')).toHaveLength(1);
+  expect(fixture.requests.filter(r=>r.path==='/api/streams'&&r.body.episode===2)).toHaveLength(1);
+  await page.evaluate(()=>{for(const type of ['keydown','keyup'])window.dispatchEvent(new KeyboardEvent(type,{key:'MediaPause',keyCode:19,bubbles:true}));});
+  await expect(page.locator('html')).toHaveAttribute('data-tv-player-state','paused');
+  await page.keyboard.press('ArrowUp');for(let i=0;i<3;i++)await page.keyboard.press('ArrowRight');await page.keyboard.press('Enter');
+  await expect.poll(()=>fixture.requests.filter(r=>r.path==='/api/playback'&&r.method==='POST').length).toBe(2);
+  await expect(page.locator('html')).toHaveAttribute('data-tv-overlay','');
+  expect(fixture.requests.filter(r=>r.path==='/api/streams'&&r.body.episode===2)).toHaveLength(1);
+ } finally { fixture.completeDiscovery(); }
+});
+
+test('remembers the selected delivery language instead of every language in a bilingual source',async({page,baseURL})=>{
+ await installRemoteBackend(page,baseURL!,{media:true,episodeFlow:true,sourceAudioLanguages:['en','hi'],selectedAudioLanguage:'eng'});
+ await playFirst(page);
+ const entries=await page.evaluate(()=>JSON.parse(localStorage.getItem('viptv-device-playback:v1')||'{}').entries);
+ expect(entries.length).toBeGreaterThan(0);
+ for(const [,source] of entries)expect(source.audio_languages).toEqual(['eng']);
+});
+
+test('Back hides ended-player controls and the next Select only reveals them',async({page,baseURL})=>{
+ const fixture=await installRemoteBackend(page,baseURL!,{media:true,episodeFlow:true});await playFirst(page);
+ const state=page.locator('html');await expect(state).toHaveAttribute('data-tv-overlay','next',{timeout:15000});
+ const texts=()=>page.evaluate(()=>{const values:string[]=[];const visit=(node:any)=>{if(node.isRenderable&&node.viptvText)values.push(node.viptvText);node.children?.forEach(visit);};visit((window as any).__viptvRenderer.stage.root);return values;});
+ await page.keyboard.press('Escape');await expect(state).toHaveAttribute('data-tv-overlay','');
+ await expect.poll(texts).not.toContain('Play');
+ await page.keyboard.press('Enter');await expect.poll(texts).toContain('Play');
+ await expect(state).toHaveAttribute('data-tv-player-state','ended');
+ expect(fixture.requests.filter(r=>r.path==='/api/playback'&&r.method==='POST')).toHaveLength(1);
+});
+
+test('Media Play after dismissing Up Next reveals controls then restarts through fresh source discovery',async({page,baseURL})=>{
+ const fixture=await installRemoteBackend(page,baseURL!,{media:true,episodeFlow:true});await playFirst(page);
+ const state=page.locator('html');await expect(state).toHaveAttribute('data-tv-overlay','next',{timeout:15000});await page.keyboard.press('Escape');
+ const play=()=>page.evaluate(()=>{for(const type of ['keydown','keyup'])window.dispatchEvent(new KeyboardEvent(type,{key:'MediaPlay',keyCode:415,bubbles:true}));});
+ await play();await expect(state).toHaveAttribute('data-tv-player-state','ended');
+ expect(fixture.requests.filter(r=>r.path==='/api/playback'&&r.method==='POST')).toHaveLength(1);
+ await play();await expect.poll(()=>fixture.requests.filter(r=>r.path==='/api/playback'&&r.method==='POST').length).toBe(2);
+ expect(fixture.requests.filter(r=>r.path==='/api/streams'&&r.body.episode===1)).toHaveLength(2);
+ expect(fixture.requests.filter(r=>r.path.endsWith('/viewing-action')).slice(-1)[0].body.restart).toBe(true);
+});

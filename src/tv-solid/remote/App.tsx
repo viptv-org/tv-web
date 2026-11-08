@@ -1,6 +1,6 @@
 /** @jsxImportSource @solidtv/solid */
 import { DevicePlayback, deviceProfileKey, deviceTitleKey } from "./device-playback";
-import { EpisodePreparation, episodeKey, sourceStartIds, type PreparedEpisode, type EpisodePreparationState } from "./episode-preparation";
+import { EpisodePreparation, episodeKey, sourceStartIds, sourcePageReady, type PreparedEpisode, type EpisodePreparationState } from "./episode-preparation";
 import { AutoplayCountdown, type CountdownState } from "./autoplay-countdown";
 import { reducedMotion } from "./motion";
 import {
@@ -1384,10 +1384,11 @@ export function createRemoteTvApp(
         if (!remember) { setPresentationRevision(v => v + 1);return; }
         manualPresentation = undefined;
         batch(() => { setSourceMemoryPending(v => v + 1);setPresentationRevision(v => v + 1); });
+        const language = player.tracks.audio.find(track => track.selected && track.language)?.language;
         void devicePlayback.remember(observation.scope, observation.title, {
           provider_id: source.source_addon_id!,
           provider_name: source.presentation?.provider_name,
-          audio_languages: source.audio_languages ?? [],
+          audio_languages: language ? [language] : source.audio_languages ?? [],
         }).catch(() => notify("Couldn’t save this source choice on this device.")).finally(() => setSourceMemoryPending(v => Math.max(0, v - 1)));
       },
     );
@@ -1403,12 +1404,28 @@ export function createRemoteTvApp(
     async function discoverEpisode(card: Card, signal: AbortSignal): Promise<Omit<PreparedEpisode, "created">> {
       const resolved = await api.titleAction(card, true, signal);
       const memory = await sourceMemory(resolved.card);
-      let page: SourcePage | undefined;
-      const streams = await api.sources(resolved.card, (_rows, value) => { page = value; }, signal, undefined, () => undefined, memory);
-      if (!page || signal.aborted) throw new DOMException("Preparation cancelled", "AbortError");
-      page = { ...page, streams };
+      if (signal.aborted) throw new DOMException("Preparation cancelled", "AbortError");
+      const operation = new AbortController(), cancel = () => operation.abort();
+      signal.addEventListener("abort", cancel, { once: true });
       const remembered = !!(memory.title || memory.across);
-      return { card: resolved.card, action: resolved, page, ids: sourceStartIds(page, remembered), memory: remembered };
+      let page: SourcePage | undefined, ready!: (rows: Source[]) => void;
+      const firstReady = new Promise<Source[]>(resolve => { ready = resolve; });
+      try {
+        const discovery = api.sources(resolved.card, (rows, value) => {
+          if (operation.signal.aborted) return;
+          page = value;
+          if (sourcePageReady(value, remembered)) ready(rows);
+        }, operation.signal, undefined, () => undefined, memory);
+        // A qualifying preferred supplier need not wait behind unrelated slow
+        // providers. Both readiness and candidate IDs remain server decisions.
+        const streams = await Promise.race([discovery, firstReady]);
+        if (!page || signal.aborted) throw new DOMException("Preparation cancelled", "AbortError");
+        page = { ...page, streams: [...streams] };
+        return { card: resolved.card, action: resolved, page, ids: sourceStartIds(page, remembered), memory: remembered };
+      } finally {
+        signal.removeEventListener("abort", cancel);
+        operation.abort();
+      }
     }
     createEffect(() => {
       const current = activeAction()?.card;
@@ -1430,6 +1447,12 @@ export function createRemoteTvApp(
           time.durationSeconds - time.positionSeconds <= 180 && player.hasPresentedFrame && !sourceMemoryPending() && !openingSource() && !advancing()) void episodes.prepare();
     });
     const endScope = () => `${api.scopeEpoch}:${player.leaseId ?? ""}`;
+    function revealEndedControls(): boolean {
+      if (screen() !== "player" || overlay() || showControls() || error() ||
+          snapshot()?.state !== "ended" || dismissedEnd !== endScope()) return false;
+      setShowControls(true);setChoice(0);
+      return true;
+    }
     function dismissNext() {
       nextIntent++;setAdvancing(false);
       countdown.cancel();dismissedEnd = endScope();
@@ -3896,8 +3919,7 @@ export function createRemoteTvApp(
             if (sourceScope !== operation || operation.signal.aborted) return;
             finalPage = page;
             const memoryMatch = !!(memory.title || memory.across);
-            if (!forcePicker && (memoryMatch ? page.source_reuse_preferred === true && page.source_reuse_fully_matches === true
-                : (automaticNext || resolved?.source_selection === "best") && page.best_match_fully_matches === true)) firstMatch(value);
+            if (!forcePicker && (memoryMatch || automaticNext || resolved?.source_selection === "best") && sourcePageReady(page, memoryMatch)) firstMatch(value);
             if (page.action) {
               resolved = page.action;
               setAction(page.action);
@@ -5134,6 +5156,7 @@ export function createRemoteTvApp(
       if (overlayClosing() || error()) return;
       // The picker is terminal while the chosen stream opens.
       if (openingSource()) return;
+      if (revealEndedControls()) return;
       pendingFocus = undefined;
       restartHeroCycling();
       if (loading() && screen() === "welcome") return;
@@ -5812,6 +5835,7 @@ export function createRemoteTvApp(
     }
     async function activate() {
       countdown.cancel();
+      if (revealEndedControls()) return;
       channelPending = undefined;
       restartHeroCycling();
       const canLeaveLoading =
@@ -6252,6 +6276,7 @@ export function createRemoteTvApp(
     }
     function menu() {
       countdown.cancel();
+      if (revealEndedControls()) return;
       if (overlay()?.kind === "next") { if (choice() === 0) void advanceEpisode(true).catch(fail);return; }
       if (screen() === "player" && !overlay()) {
         if (playerButtons()[choice()]?.id === "next") void advanceEpisode(true).catch(fail);
@@ -6495,7 +6520,15 @@ export function createRemoteTvApp(
             [10252, 415, 19].includes(event.keyCode)
           ) {
             event.preventDefault();
-            if (event.repeat || !playerActions().pause) return;
+            if (event.repeat) return;
+            if (revealEndedControls()) return;
+            if (snapshot()?.state === "ended") {
+              const pause = event.key === "MediaPause" || event.keyCode === 19;
+              if (!pause && playerActions().restart && activeAction())
+                void playIntent(activeAction()!.card, false, true).catch(fail);
+              return;
+            }
+            if (!playerActions().pause) return;
             const play =
               event.key === "MediaPlay" ||
               event.keyCode === 415 ||
@@ -6511,7 +6544,7 @@ export function createRemoteTvApp(
             [412, 417].includes(event.keyCode)
           ) {
             event.preventDefault();
-            if (event.repeat || !playerActions().seek || seeking()) return;
+            if (event.repeat || revealEndedControls() || !playerActions().seek || seeking()) return;
             const direction =
               event.key === "MediaRewind" || event.keyCode === 412 ? -1 : 1;
             const duration = Number(snapshot()?.time.durationSeconds);
@@ -6902,6 +6935,7 @@ export function createRemoteTvApp(
         },
         enter(event?: KeyboardEvent) {
           countdown.cancel();
+          if (revealEndedControls()) return undefined;
           if (dismissScreenSaver()) return;
           // A held Enter auto-repeats; only the first keydown arms the hold
           // timer, so repeats must not reset it or the 700ms menu never fires.
@@ -8665,7 +8699,7 @@ export function createRemoteTvApp(
                   seeking() ||
                   loading() ||
                   snapshot()?.state === "buffering" ||
-                  snapshot()?.state === "ended" ||
+                  (snapshot()?.state === "ended" && dismissedEnd !== endScope()) ||
                   error())
               }
             >
@@ -8802,7 +8836,7 @@ export function createRemoteTvApp(
                     <Label y={53} w={784} size={52} font="Onest700" letterspacing={-1.04} content={`${episodeState().item?.identity.episode?.episode ?? ""}. ${episodeState().item?.title ?? ""}`} maxlines={2} />
                     <Label y={191} w={784} size={30} content={episodeState().item?.subtitle ?? ""} maxlines={1} />
                     <Label y={239} w={784} size={26} lineheight={1.45} color={palette.body} content={episodeState().item?.description ?? ""} maxlines={3} />
-                    <Button x={0} y={373} w={428} h={72} icon={countdownState().running ? "play" : undefined} iconSize={18} label={countdownState().running ? `Next episode in ${countdownState().remaining}` : "Play next episode"} focused={choice() === 0} />
+                    <Button x={0} y={373} w={428} h={72} icon="play" iconSize={countdownState().running && !reducedMotion() ? 18 : 24} label={countdownState().running ? `Next episode in ${countdownState().remaining}` : "Play next episode"} focused={choice() === 0} />
                     <Button x={444} y={373} w={340} h={72} label="Keep watching credits" focused={choice() === 1} />
                     <Show when={countdownState().running && !reducedMotion()}>
                       <Show when={isRokuUi} fallback={

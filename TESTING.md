@@ -1,3 +1,66 @@
+# Preferred-source preparation and sustained playback follow-up — 2026-11-08
+
+Preparation now stops waiting for unrelated providers once the server reports a
+qualifying preferred source. Its own discovery is cancelled after the ranked
+snapshot is retained, without opening a playback lease or stopping the current
+video. The slow-provider regression fails on the earlier build and passes in
+Chromium, Firefox and WebKit, including using that cached result without another
+source discovery. Eligibility, language matching and ranking remain server facts.
+
+A successful manual source choice now records the server-selected delivery
+audio language when available. The actual bilingual CineWave source selected
+English, so the stored observation is `eng` rather than both English and Hindi.
+Source-reported languages remain the fallback when delivery metadata is unknown.
+Design pin: `1f68aa8280a4152f687013cf8246a5fbebebc902`.
+
+A real Roku run exposed another gateway issue: the 13.2 GiB 1080p AVC source
+started successfully but was retired by the unchanged cache watchdog. An API/
+browser reproduction decoded picture and PCM audio before failing around 33
+seconds; aggregate cache reached 390.4 MiB, beyond the 384 MiB limit. Gateway
+`a3dc95d` selects its existing bounded encoder for known high-rate VOD HLS while
+preserving ordinary copy/original/streaming paths. The candidate stayed decoded
+for 160 seconds and its measured cache peaked at 51.9 MiB. Content samples align
+picture on a 100 ms grid and English audio within about 20 ms. This trades the
+original high video bitrate for bounded managed playback; Direct is unchanged.
+
+That gateway revision is deployed to beta through the managed Compose entry
+after an online SQLite backup. The deployment is `done`, HTTPS readiness is 200,
+and only the beta gateway container ID changed. All other container IDs stayed
+the same. The physical Roku subsequently advanced beyond 332 seconds on the
+same source with H.264/AAC, no playback error, successful pause, paused 10-second
+seek and resume. A post-deployment browser run decoded 102 seconds with PCM
+audio and a healthy lease. These samples do not establish whole-title or
+whole-catalog continuity.
+
+The Roku also reached a real episode end after seeking to the last 20 seconds:
+Up Next opened with its ten-second countdown and packaged ring; Right cancelled
+and Back dismissed it. A reproduced return-flow defect kept ended controls
+visible. The corrected native capture has no player chrome after dismissal,
+and the next Select reveals it without restarting. Browser tests cover that
+flow and ensure a later Media Play restarts through fresh source discovery.
+The known VOD clock now reaches its exact end despite firmware's one-second
+notifications. Reduced motion keeps the full play glyph; cancelling the count
+restores it too. Hardware-plane last-frame visibility cannot be proved by Roku
+screenshots and remains a separate physical observation.
+
+Current checks pass: 204 shared tests, 15 native tests, grouped typecheck,
+production build, native Roku build, 17 complete Chromium episode cases and 12
+focused Chromium/Firefox/WebKit source/language/end/replay cases. The gateway
+workspace passes 285 tests with 62 opt-in cases ignored. All screenshots,
+credentials, source URLs and device identifiers remain outside this repository.
+
+Still unqualified: live preferred-source autoplay/handoff on Roku requires the
+application backend's new ranking capability. Beta currently returns no such
+capability; the previously requested application-backend deployment approval is
+still pending. No hosted application-backend/frontend update was performed.
+The final native Home trace has 399 paired render/swap samples: p50 18.15 ms,
+p95 22.02 ms and p99 46.68 ms. Render alone is 4.32 ms at p95; swap is
+19.21 ms. The output reports 2160p60, but the 16.67 ms frame-work target still
+fails. Intermittent-key graphics-FPS samples include idle and cannot establish
+sustained presentation. An optional continuous diagnostic failed to start and
+produced no usable evidence; the app was relaunched to discard instrumentation.
+No sustained 60 FPS qualification is claimed.
+
 # Remembered sources and episode handoff — 2026-11-08
 
 The shared TV application now remembers a successful manual source choice per

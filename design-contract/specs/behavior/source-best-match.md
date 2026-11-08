@@ -134,6 +134,12 @@ the service uses them for that request and does not persist the device history.
 An episode is stored as its series, so every later episode inherits it;
 a movie is stored as itself.
 
+The TV wrapper observes the server-selected delivery audio language when it is
+known. Otherwise it retains the source's reported languages. A bilingual source
+played in English therefore remembers English, rather than treating a later
+Hindi-only source as the same language. Normalization and matching remain Rust
+policy; the client does not infer a language from release labels.
+
 An add-on that multiplexes suppliers may report a structured `provider_name`
 (such as CineStream). Reuse prefers that supplier within the remembered add-on
 first, then the add-on, then the ranked same-language alternatives. The client

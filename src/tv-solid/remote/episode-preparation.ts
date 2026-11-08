@@ -19,6 +19,13 @@ export function sourceStartIds(page: SourcePage, memory: boolean): string[] {
   return memory ? page.source_reuse_supported === true ? page.source_reuse_ids ?? [] : []
     : page.automatic_source_ids ?? (page.best_match_id ? [page.best_match_id] : []);
 }
+/** Read only the server's readiness decision; never compare source ranking keys here. */
+export function sourcePageReady(page: SourcePage, memory: boolean): boolean {
+  const ready = memory
+    ? page.source_reuse_preferred === true && page.source_reuse_fully_matches === true
+    : page.best_match_fully_matches === true;
+  return ready && sourceStartIds(page, memory).some(id => page.streams.some(row => row.id === id));
+}
 export interface PreparedEpisode {
   card: Card;
   action: TitleAction;

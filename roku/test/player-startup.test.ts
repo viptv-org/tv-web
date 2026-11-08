@@ -42,3 +42,11 @@ it("waits for actual playing before completing startup", async () => {
   await player.play();
   expect(player.snapshot.state).toBe("playing");
 });
+
+it("reports the known VOD end even when firmware finishes before its final clock tick",async()=>{
+ const player=new RokuPlayer();native.load.mockResolvedValueOnce(undefined);
+ await player.open({url:"https://media.example/index.m3u8",kind:"vod",timelineOffsetSeconds:100,timelineDurationSeconds:120});
+ await player.seek(115);
+ emit({state:"finished",position:19.1,duration:20});
+ expect(player.snapshot.state).toBe("ended");expect(player.snapshot.time.positionSeconds).toBe(120);
+});

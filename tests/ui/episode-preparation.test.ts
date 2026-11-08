@@ -1,5 +1,5 @@
 import { afterEach, expect, it, vi } from 'vitest';
-import { EpisodePreparation, sourceStartIds, type PreparedEpisode } from '../../src/tv-solid/remote/episode-preparation';
+import { EpisodePreparation, sourceStartIds, sourcePageReady, type PreparedEpisode } from '../../src/tv-solid/remote/episode-preparation';
 import type { Card } from '../../src/tv-solid/remote/types';
 const card: Card = { identity: { kind: 'series', id: 'episode-1', ids: [], episode: { order: 'aired', season: 1, episode: 1 } }, parent_identity: { kind: 'series', id: 'series', ids: [] }, provider_id: 'meta', title: 'One', badges: [] };
 const next: Card = { ...card, identity: { ...card.identity, id: 'episode-2', episode: { order: 'aired', season: 1, episode: 2 } } };
@@ -48,4 +48,14 @@ it('keeps pending metadata retryable instead of treating it as a finale',async()
  const {preparation:p,resolve}=setup();resolve.mockResolvedValueOnce({status:'Pending',item:undefined as any});
  await p.refresh();expect(p.state.status).toBe('loading');expect(p.state.item).toBeUndefined();
  await p.refresh();expect(p.state.status).toBe('ready');expect(p.state.item).toEqual(next);
+});
+
+it('accepts an early preferred source only when the server confirms it is ready and present',()=>{
+ const page={streams:[{id:'preferred'}],quality_filters:[],total:1,source_reuse_supported:true,source_reuse_ids:['preferred'],source_reuse_preferred:true,source_reuse_fully_matches:true};
+ expect(sourcePageReady(page,true)).toBe(true);
+ expect(sourcePageReady({...page,source_reuse_preferred:false},true)).toBe(false);
+ expect(sourcePageReady({...page,source_reuse_fully_matches:false},true)).toBe(false);
+ expect(sourcePageReady({...page,source_reuse_supported:false},true)).toBe(false);
+ expect(sourcePageReady({...page,streams:[]},true)).toBe(false);
+ expect(sourcePageReady({...page,best_match_fully_matches:true,automatic_source_ids:['preferred']},false)).toBe(true);
 });

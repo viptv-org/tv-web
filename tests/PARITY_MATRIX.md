@@ -2,11 +2,13 @@
 
 | Surface | Browser execution | Roku evidence / limits |
 | --- | --- | --- |
-| Manual source memory, supplier/language matching and opt-in cross-show reuse | Rust policy/HTTP regressions; decoded HLS and durable storage across Chromium, Firefox and WebKit | Native registry save/relaunch verified; new ranking capability still requires beta backend rollout |
-| Last-three-minute preparation and controlled Next | No extra admission, one cache consumption, expiry/cancellation, configuration fences and bounded startup fallback | Shared build compiles and is sideloaded; live successor handoff not yet qualified |
-| End-only autoplay and manual override | Ten-second countdown, input/Back cancellation, next-frame race fence, autoplay-off and 700 ms hold verified | Native remote end/countdown scenarios remain unexecuted |
+| Manual source memory, supplier/language matching and opt-in cross-show reuse | Rust policy/HTTP regressions; decoded HLS and durable storage across Chromium, Firefox and WebKit; selected delivery language wins over bilingual source metadata | Native registry save/relaunch and English-only observation verified; new ranking capability still requires beta backend rollout |
+| Last-three-minute preparation and controlled Next | No extra admission, one cache consumption, expiry/cancellation, configuration fences and bounded startup fallback; preferred result does not wait for a stalled provider | Shared build compiles and is sideloaded; live successor handoff not yet qualified |
+| End-only autoplay and manual override | Ten-second countdown, input/Back cancellation, next-frame race fence, autoplay-off, 700 ms hold, hidden ended controls and fresh Media Play replay verified | Real episode end, ten-second packaged countdown, Right cancellation, Back dismissal and first-Select reveal verified; automatic successor playback awaits backend capability |
 | Standalone Intro/Recap | Valid markers only; paused seek and missing markers covered | Uses native TvView/TvText; physical marker action not newly qualified |
 | Platform playback preservation | Existing Live, track, replacement, authorization and native-SDK boundary cases pass | Samsung/LG/Vizio physical qualification remains separate |
+| High-rate CineWave continuity | Actual beta browser decoded 102 seconds with PCM after gateway rollout | Same previously failing source advances beyond 332 seconds with H.264/AAC; pause, paused seek and resume verified; whole-title continuity unqualified |
+| Native frame pacing | Browser simulation does not qualify native presentation | Final Home trace render plus swap p95 22.02 ms; 16.67 ms target remains unmet |
 
 Exact pins, commands, outcomes and remaining gates are recorded in [TESTING.md](../TESTING.md).
 The sections below are historical checkpoints.
@@ -37,7 +39,7 @@ The authoritative outstanding-work inventory is
 parity. See the latest [testing checkpoint](../TESTING.md) for reproduced
 regressions, bounded guide measurements and validation scope.
 
-The adopted design contract pin is `fdf24421668651816a310e0e18fc3c90998bfd03`
+The adopted design contract pin is `1f68aa8280a4152f687013cf8246a5fbebebc902`
 ([DESIGN_REF](../DESIGN_REF)). Design revisions cited inside the dated
 checkpoints below record the pin each checkpoint was measured against; they are
 historical, and none of them is the current pin.
