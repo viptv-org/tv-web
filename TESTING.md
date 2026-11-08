@@ -1,3 +1,9 @@
+Beta client `32f643e520cd7e5402970dc5319e831b574968a9` is deployed. Managed
+rollout completed, entry plus 59 asset hashes match, and hosted Canvas pairing
+passes. Runtime environment/mounts/network/devices and all other containers are
+retained. Roku build passes (714377 JavaScript bytes). Physical PS4 retest remains
+pending while the owner is away.
+
 # Real-beta UI and player navigation pass — 2026-11-08
 
 Paired a browser through the real beta API and reviewed Home, detail, real source
@@ -17,7 +23,7 @@ Physical PS4 acceptance of these changes remains pending.
 Four artwork regressions pass across Chromium/WebKit and Canvas/WebGL. Canvas
 fixture tests disable workers so fixture HTTP interception also covers image
 loads (WebKit worker requests bypass page routes); real API review uses normal
-runtime workers. Two player regressions pass in both engines, including cancelling
+runtime workers. The player regression passes in both engines, including cancelling
 a seek preview before activating Play without opening another lease. Grouped
 typecheck, 204 shared tests, 15 native tests and production build pass.
 
