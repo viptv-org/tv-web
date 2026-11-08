@@ -1,3 +1,8 @@
+The beta TV entry and all 59 packaged assets for client `49e493c` match the
+qualified release bytes. Managed deployment reports done, HTTPS health is ready,
+and hosted Canvas startup plus focused Cross activation opens pairing. The
+backend remains `28818eb`; all other running container IDs are preserved.
+
 # PS4 native playback evidence and Canvas text updates — 2026-11-08
 
 The owner reports video/audio initially playing but then being stopped by the
