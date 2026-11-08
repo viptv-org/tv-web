@@ -6597,7 +6597,20 @@ export function createRemoteTvApp(
         }
       };
       const cancelCountdown = () => countdown.cancel();
+      const welcomeClick = (event: MouseEvent) => {
+        if (screen() !== "welcome" || loading() || error() || overlay() ||
+            document.documentElement.dataset.tvStartup === "failed" || event.button !== 0) return;
+        const canvas = document.querySelector<HTMLCanvasElement>("#app canvas");
+        const bounds = canvas?.getBoundingClientRect();
+        if (!bounds?.width || !bounds.height) return;
+        const x = (event.clientX - bounds.left) * 1920 / bounds.width;
+        const y = (event.clientY - bounds.top) * 1080 / bounds.height;
+        if (x >= 780 && x <= 1140 && y >= 584 && y <= 656) {
+          event.preventDefault();void beginPairing();
+        }
+      };
       window.addEventListener("pointerdown", pointer);
+      window.addEventListener("click", welcomeClick);
       window.addEventListener("touchstart", cancelCountdown);
       const suspend = () => {
         cancelHold();
@@ -6633,6 +6646,7 @@ export function createRemoteTvApp(
       document.addEventListener("webOSRelaunch", relaunch);
       onCleanup(() => {
         window.removeEventListener("pointerdown", pointer);
+        window.removeEventListener("click", welcomeClick);
         window.removeEventListener("touchstart", cancelCountdown);
         window.removeEventListener("keydown", input);
         window.removeEventListener("blur", cancelHold);

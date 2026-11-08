@@ -24,10 +24,12 @@ export function createCanvasRenderer(settings: object, root: string | HTMLElemen
   const renderer = new RendererMain({ ...settings, renderEngine: CanvasRenderer, fontEngines: [CanvasTextRenderer] } as Partial<RendererMainSettings>, root);
   const adapter = renderer as RendererMain & {
     registerShaderType(name: string, type: unknown): void;
+    requestRender(): void;
     memoryInfo(): ReturnType<typeof renderer.stage.txMemManager.getMemoryInfo>;
     measureText(spec: TextSpec): { w: number; h: number };
   };
   adapter.registerShaderType = (name, type) => renderer.stage.shManager.registerShaderType(name, (shaderTypes[name] ?? type) as never);
+  adapter.requestRender = () => renderer.stage.requestRender();
   adapter.memoryInfo = () => renderer.stage.txMemManager.getMemoryInfo();
   adapter.measureText = spec => {
     const family = spec.fontFamily ?? "Onest", size = spec.fontSize ?? 32;

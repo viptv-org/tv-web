@@ -13,6 +13,9 @@ native SceneGraph host.
 Scale the authored canvas uniformly to fit the available browser viewport,
 including a console window with browser chrome visible. Center it without
 cropping controls. Startup does not request browser fullscreen.
+Pointer activation of Sign in uses the displayed canvas bounds and starts the
+same pairing flow as Enter. Canvas precomposes the GPU-only welcome treatment
+into a static wall; it does not redraw a static image on every animation frame.
 
 Load the selected backend's fonts before mounting text. Canvas uses browser
 fonts with the existing family names and metrics; it does not request SDF

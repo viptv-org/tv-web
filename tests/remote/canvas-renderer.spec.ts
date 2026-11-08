@@ -1,6 +1,25 @@
 import { test, expect } from '@playwright/test';
 import { installRemoteBackend } from '../preview/remote-backend';
 
+test('signed-out Canvas startup clears recovery and Sign in opens pairing with pointer and Enter',async({page,baseURL},testInfo)=>{
+ await page.setViewportSize({width:1540,height:754});await page.emulateMedia({reducedMotion:'no-preference'});
+ await page.addInitScript(()=>{const getContext=HTMLCanvasElement.prototype.getContext;HTMLCanvasElement.prototype.getContext=function(this:HTMLCanvasElement,type:string,...args:any[]){return type.includes('webgl')?null:getContext.apply(this,[type,...args] as any);} as typeof getContext;});
+ const errors:string[]=[];page.on('pageerror',error=>errors.push(error.message));
+ await installRemoteBackend(page,baseURL!,{session:false});
+ await page.route('**/api/auth/device/token',route=>route.fulfill({status:401,json:{error_code:'authorization_pending'}}));
+ await page.goto('/tv/?focusdebug=1');
+ const state=page.locator('html');await expect(state).toHaveAttribute('data-tv-screen','welcome');await expect(state).toHaveAttribute('data-tv-startup','ready');
+ await expect(page.locator('#solid-startup')).toHaveCount(0);
+ await expect.poll(()=>page.locator('#app canvas').evaluate(element=>{const canvas=element as HTMLCanvasElement,p=canvas.getContext('2d')!.getImageData(Math.floor(canvas.width/2),Math.floor(canvas.height/2),1,1).data;return Math.max(p[0],p[1],p[2]);})).toBeLessThan(100);
+ await page.screenshot({path:testInfo.outputPath('canvas-welcome.png')});
+ const bounds=await page.locator('#app canvas').boundingBox();if(!bounds)throw Error('Canvas bounds absent');
+ await page.mouse.click(bounds.x+bounds.width*960/1920,bounds.y+bounds.height*620/1080);
+ await expect(state).toHaveAttribute('data-tv-screen','pairing');await expect(state).toHaveAttribute('data-tv-ready','true');
+ await page.screenshot({path:testInfo.outputPath('canvas-pairing.png')});
+ await page.keyboard.press('Escape');await expect(state).toHaveAttribute('data-tv-screen','welcome');await page.keyboard.press('Enter');
+ await expect(state).toHaveAttribute('data-tv-screen','pairing');expect(errors).toEqual([]);
+});
+
 test('automatically renders the shared TV screens and prepared Next with Canvas when WebGL is absent',async({page,baseURL},testInfo)=>{
  await page.addInitScript(()=>{
   const getContext=HTMLCanvasElement.prototype.getContext;

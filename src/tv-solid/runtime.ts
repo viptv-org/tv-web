@@ -346,7 +346,11 @@ function visualNode(
       ["children", "show", "alpha", "fit", "nodeRef", "onError", "onLoad", "cssLineBox"].includes(key)
     )
       return;
-    if ((key === "src" || key === "texture") && props[key] == null) return;
+    if (key === "src" && props[key] == null) return;
+    if (key === "texture") {
+      Object.defineProperty(mapped, "texture", { enumerable: true, get: () => props.texture ?? null });
+      return;
+    }
     if (
       key === "src" &&
       typeof props.src === "string" &&

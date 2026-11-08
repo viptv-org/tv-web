@@ -1,3 +1,19 @@
+# Signed-out Canvas startup hotfix — 2026-11-08
+
+The deployed signed-out path exposed two gaps missed by the signed-in cases:
+legacy Canvas needed a requestRender adapter, and an initially absent asynchronous
+texture binding was discarded. Both are corrected. The Canvas welcome wall is
+composed once with the existing dark vignette; it uses no WebGL shader or idle
+animation loop. Poster tiles are square. Sign in accepts pointer activation in
+the fitted canvas and the existing Enter action.
+
+The reproduced white welcome and blocked sign-in fail before the fix. Signed-out
+startup, recovery removal, dark background, click-to-pairing, Back and Enter pass
+in Chromium, Firefox and WebKit without WebGL and with motion enabled. The full
+Canvas matrix passes 15 cases; grouped typecheck, production build and 219 unit/
+native tests pass. Private welcome/pairing captures are inspected separately
+from physical PS4 qualification, which still requires the owner's retest.
+
 # Canvas fallback and live episode handoff — 2026-11-08
 
 The hosted entries use the shared SolidTV application. WebGL-capable browsers

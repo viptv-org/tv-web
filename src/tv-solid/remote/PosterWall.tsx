@@ -16,9 +16,10 @@ const registered = new WeakSet<RendererMain>();
 function BrowserPosterWall() {
   const renderer = getRenderer() as RendererMain,
     [wall, setWall] = createSignal<ImageTexture>();
+  const canvasMode = renderer.getCapabilities().renderMode === ("canvas" as string);
   const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
   const name = reduced ? "tvWelcomeStatic" : "tvWelcomeMotion";
-  if (!registered.has(renderer)) {
+  if (!canvasMode && !registered.has(renderer)) {
     registerTvShader(renderer, "tvWelcomeStatic", welcomeShader);
     registerTvShader(renderer, "tvWelcomeMotion", {
       ...welcomeShader,
@@ -27,7 +28,7 @@ function BrowserPosterWall() {
     registered.add(renderer);
   }
   // u_time is the renderer's elapsed time in 2.0; the drift starts at 0.
-  const shader = renderer.createShader(name, {
+  const shader = canvasMode ? undefined : renderer.createShader(name, {
     startedAt: reduced ? 0 : performance.now() - rendererStart(renderer),
   }) as ShaderNode;
   let active = true;
@@ -35,7 +36,7 @@ function BrowserPosterWall() {
   // the renderer's idle pass would freeze it after the texture settles. While
   // the motion shader is mounted, request a frame each rAF so the drift stays
   // live; cleanup stops it the moment the wall leaves the screen.
-  if (!reduced) {
+  if (!reduced && !canvasMode) {
     let frame = 0;
     const drive = () => {
       if (!active) return;
@@ -73,11 +74,7 @@ function BrowserPosterWall() {
         y = Math.floor(i / 10) * 372;
       ctx.save();
       ctx.beginPath();
-      ctx.moveTo(x + 10, y);
-      ctx.arcTo(x + 236, y, x + 236, y + 354, 10);
-      ctx.arcTo(x + 236, y + 354, x, y + 354, 10);
-      ctx.arcTo(x, y + 354, x, y, 10);
-      ctx.arcTo(x, y, x + 236, y, 10);
+      ctx.rect(x, y, 236, 354);
       ctx.clip();
       const scale = Math.max(
           236 / image.naturalWidth,
@@ -98,9 +95,24 @@ function BrowserPosterWall() {
       );
       ctx.restore();
     }
+    let pixels: ImageData;
+    if (canvasMode) {
+      const composed = document.createElement("canvas");
+      composed.width = 1920;composed.height = 1080;
+      const paint = composed.getContext("2d")!;
+      paint.fillStyle = "#0b0b0c";paint.fillRect(0, 0, 1920, 1080);
+      paint.globalAlpha = 0.32;
+      paint.drawImage(canvas, 60, 100, 1920, 1080, 0, 0, 1920, 1080);
+      paint.globalAlpha = 1;
+      paint.translate(960, 540);paint.scale(1152, 756);
+      const vignette = paint.createRadialGradient(0, 0, 0, 0, 0, 1);
+      vignette.addColorStop(0, "rgba(11,11,12,.92)");vignette.addColorStop(.55, "rgba(11,11,12,.75)");vignette.addColorStop(1, "rgba(11,11,12,.45)");
+      paint.fillStyle = vignette;paint.fillRect(-960/1152, -540/756, 1920/1152, 1080/756);
+      pixels = paint.getImageData(0, 0, 1920, 1080);
+    } else pixels = ctx.getImageData(0, 0, canvas.width, canvas.height);
     const texture = renderer.createTexture("ImageTexture", {
-      src: ctx.getImageData(0, 0, canvas.width, canvas.height),
-      key: "tv-welcome-wall-v1",
+      src: pixels,
+      key: canvasMode ? "tv-welcome-wall-canvas-v1" : "tv-welcome-wall-v1",
       premultiplyAlpha: true,
     });
     setWall(texture);
