@@ -152,6 +152,7 @@ export async function installRemoteBackend(page:Page,origin:string,options:{
     selectedAudioLanguage?: string;
     pendingContinuation?: boolean;
     reuseMatch?: boolean;
+    reusePreferred?: boolean;
     session?: boolean;
     empty?: boolean;
     fail?: boolean;
@@ -355,7 +356,7 @@ export async function installRemoteBackend(page:Page,origin:string,options:{
       for(const s of pool)counts.set(s.quality_height,(counts.get(s.quality_height)??0)+1);
       const quality_filters=[...counts.entries()].sort((a,b)=>b[0]-a[0]).map(([height,count])=>({height,label:height>=2160?'4K':`${height}p`,count}));
       return send({streams:matching,best_match_id:matching[0]?.id??null,best_match_fully_matches:true,automatic_source_ids:matching.map(s=>s.id),
-        ...(options.episodeFlow ? {source_reuse_supported:true,source_reuse_ids:body.remembered_source || body.cross_title_source ? options.reuseMatch === false ? [] : ['stream-0','stream-2','stream-4','stream-6'] : [],source_reuse_preferred:true,source_reuse_fully_matches:options.reuseMatch !== false} : {}),quality_filters,total:matching.length});
+        ...(options.episodeFlow ? {source_reuse_supported:true,source_reuse_ids:body.remembered_source || body.cross_title_source ? options.reuseMatch === false ? [] : ['stream-0','stream-2','stream-4','stream-6'] : [],source_reuse_preferred:options.reusePreferred !== false,source_reuse_fully_matches:options.reuseMatch !== false} : {}),quality_filters,total:matching.length});
     }
   if(path.endsWith('/live/channels')){
       const searching = url.searchParams.has("search");

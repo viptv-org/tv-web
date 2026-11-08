@@ -3018,8 +3018,10 @@ export function createRemoteTvApp(
       if (error()) { setError("");return; }
       if (overlay()?.kind === "next") { dismissNext();return; }
       if (sourceLoading() && !overlay() || openingSource()) {
+        const cancelInPlace = screen() !== "player" && !openingSource();
         sourceAttempt++;sourceIntent++;sourceScope?.abort();setSourceLoading(false);setLoading(false);
         if (player.cancelPendingStart()) { setOpeningSource(undefined);return; }
+        if (cancelInPlace) return;
       }
       if (sourceActions()) {
         setSourceActions(false);
@@ -3925,7 +3927,12 @@ export function createRemoteTvApp(
         }
         let finalPage = prepared?.page;
         const memory = channel || forcePicker ? {} : await sourceMemory(resolved?.card ?? card);
+        let preferredWaitElapsed = false;
         let firstMatch!: (rows: Source[]) => void;
+        const matchTimer = !forcePicker && (memory.title || memory.across) ? setTimeout(() => {
+          preferredWaitElapsed = true;
+          if (finalPage && sourcePageReady(finalPage, true, false)) firstMatch(finalPage.streams);
+        }, 3000) : undefined;
         const firstReady = new Promise<Source[]>(resolve => { firstMatch = resolve; });
         const discovery = prepared ? Promise.resolve(prepared.page.streams) : api.sources(
           resolved?.card ?? card,
@@ -3933,7 +3940,7 @@ export function createRemoteTvApp(
             if (sourceScope !== operation || operation.signal.aborted) return;
             finalPage = page;
             const memoryMatch = !!(memory.title || memory.across);
-            if (!forcePicker && (memoryMatch || automaticNext || resolved?.source_selection === "best") && sourcePageReady(page, memoryMatch)) firstMatch(value);
+            if (!forcePicker && (memoryMatch || automaticNext || resolved?.source_selection === "best") && sourcePageReady(page, memoryMatch, !preferredWaitElapsed)) firstMatch(value);
             if (page.action) {
               resolved = page.action;
               setAction(page.action);
@@ -3979,7 +3986,7 @@ export function createRemoteTvApp(
           () => undefined,
           memory,
         );
-        const ranked = await Promise.race([discovery, firstReady]);
+        const ranked = await Promise.race([discovery, firstReady]).finally(() => clearTimeout(matchTimer));
         if (intent !== sourceIntent || epoch !== api.scopeEpoch || operation.signal.aborted) return;
         setLoading(false);
         if (finalPage) { setSourcePage(finalPage);reconcileSources(ranked); }
@@ -6422,6 +6429,7 @@ export function createRemoteTvApp(
       document.documentElement.dataset.tvPlaybackError = playbackError();
       document.documentElement.dataset.tvPlayerControls = String(showControls());
       document.documentElement.dataset.tvPlayerTimelineFocus = String(timelineFocused());
+      document.documentElement.dataset.tvSourcePreparing = String(sourceLoading() && !overlay());
       document.documentElement.dataset.tvPlayerBusy = String(loading() || seeking() || snapshot()?.state === "buffering");
       document.documentElement.dataset.tvSourceIdentity = focusedSource()?.id ?? "";
       document.documentElement.dataset.tvPlayerEpisode = String(activeAction()?.card.identity.episode?.episode ?? "");
@@ -9940,6 +9948,14 @@ export function createRemoteTvApp(
               </>
               </ModalLayerContext.Provider>
             )}
+          </Show>
+          <Show when={sourceLoading() && !overlay() && screen() !== "player" && !error()}>
+            <ModalLayerContext.Provider value={true}>
+              <TvView x={480} y={864} w={960} h={144} color={palette.surface}>
+                <Label x={32} y={24} size={28} font="Onest700" content="Finding a matching source…" />
+                <Label x={32} y={76} size={22} color={palette.muted} content="Press Back to cancel" />
+              </TvView>
+            </ModalLayerContext.Provider>
           </Show>
           <Show when={error()}>
             <ModalLayerContext.Provider value={true}>

@@ -78,3 +78,10 @@ Player Up enters the control row once; further Up stays on the same button.
 Down returns to the timeline, remembering the horizontal button for the next Up.
 Left/Right seeks only on the timeline and traverses buttons only in the row,
 including Play/Pause. Leaving a seek preview vertically cancels the preview.
+
+Continue Watching/source reuse reports “Finding a matching source…” immediately
+while the picker is hidden; Back cancels without leaving the originating card.
+The remembered supplier gets a three-second discovery head start. Thereafter a
+server-approved, fully matching reuse candidate may start while other providers
+are still discovering. Never substitute an unknown/different remembered language.
+The feedback stays visible through the transition into player preparation.

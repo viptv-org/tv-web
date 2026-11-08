@@ -1,3 +1,22 @@
+# Continue Watching responsiveness — 2026-11-08
+
+Real beta API timing from Continue Watching: action 489 ms; first ranked sources
+available at 1.3 s; unrelated providers continued for 23 s. A remembered exact
+supplier previously delayed early start even with an eligible same-language
+alternative. The supplier now gets a three-second discovery head start; after
+that only server-approved fully matching reuse IDs can start early. Unknown or
+different remembered languages are never substituted. The hidden-picker path
+immediately shows Finding a matching source… / Press Back to cancel; cancellation
+keeps the originating card and aborts discovery without starting another lease.
+
+Two real API remembered resumes decoded video in 7880 ms and 4918 ms. The latter
+resolved action in 240 ms, obtained a ranked match by 1158 ms and admitted at
+1176 ms; remaining time includes managed stream preparation and first decode.
+This is not a universal five-second guarantee or physical PS4 qualification.
+All 12 Chromium/Firefox/WebKit cases pass for bounded preference wait, visible
+preparation, cancellation, no-language-match behavior and the three-attempt cap.
+No backend or gateway code changed.
+
 Beta client `32f643e520cd7e5402970dc5319e831b574968a9` is deployed. Managed
 rollout completed, entry plus 59 asset hashes match, and hosted Canvas pairing
 passes. Runtime environment/mounts/network/devices and all other containers are

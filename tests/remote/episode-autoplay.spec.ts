@@ -227,3 +227,11 @@ test('Media Play after dismissing Up Next reveals controls then restarts through
  expect(fixture.requests.filter(r=>r.path==='/api/streams'&&r.body.episode===1)).toHaveLength(2);
  expect(fixture.requests.filter(r=>r.path.endsWith('/viewing-action')).slice(-1)[0].body.restart).toBe(true);
 });
+
+for(const cancel of [false,true])test(`remembered Continue Watching reports preparation and bounds supplier wait (cancel=${cancel})`,async({page,baseURL})=>{
+ const fixture=await installRemoteBackend(page,baseURL!,{media:true,episodeFlow:true,finding:true,reusePreferred:false});await playFirst(page);
+ await page.reload();const state=page.locator('html');await expect(state).toHaveAttribute('data-tv-ready','true');const started=Date.now();await page.keyboard.press('Enter');
+ await expect(state).toHaveAttribute('data-tv-source-preparing','true',{timeout:1500});await expect(state).toHaveAttribute('data-tv-overlay','');
+ if(cancel){await page.keyboard.press('Escape');await expect(state).toHaveAttribute('data-tv-source-preparing','false');await expect(state).toHaveAttribute('data-tv-screen','home');await page.waitForTimeout(3500);expect(fixture.requests.filter(r=>r.path==='/api/playback'&&r.method==='POST')).toHaveLength(1);}
+ else{await expect.poll(()=>fixture.requests.filter(r=>r.path==='/api/playback'&&r.method==='POST').length,{timeout:6000}).toBe(2);expect(Date.now()-started).toBeGreaterThanOrEqual(2800);await expect(state).toHaveAttribute('data-tv-player-state','playing');await expect(state).toHaveAttribute('data-tv-overlay','');}
+});

@@ -54,6 +54,10 @@ it('accepts an early preferred source only when the server confirms it is ready 
  const page={streams:[{id:'preferred'}],quality_filters:[],total:1,source_reuse_supported:true,source_reuse_ids:['preferred'],source_reuse_preferred:true,source_reuse_fully_matches:true};
  expect(sourcePageReady(page,true)).toBe(true);
  expect(sourcePageReady({...page,source_reuse_preferred:false},true)).toBe(false);
+ expect(sourcePageReady({...page,source_reuse_preferred:false},true,false)).toBe(true);
+ expect(sourcePageReady({...page,source_reuse_fully_matches:false},true,false)).toBe(false);
+ expect(sourcePageReady({...page,source_reuse_supported:false},true,false)).toBe(false);
+ expect(sourcePageReady({...page,source_reuse_ids:[]},true,false)).toBe(false);
  expect(sourcePageReady({...page,source_reuse_fully_matches:false},true)).toBe(false);
  expect(sourcePageReady({...page,source_reuse_supported:false},true)).toBe(false);
  expect(sourcePageReady({...page,streams:[]},true)).toBe(false);
