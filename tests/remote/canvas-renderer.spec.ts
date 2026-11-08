@@ -1,6 +1,23 @@
 import { test, expect } from '@playwright/test';
 import { installRemoteBackend } from '../preview/remote-backend';
 
+test('PS4 Cross clicks activate the focused navigation item and source row',async({page,baseURL})=>{
+ await page.addInitScript(()=>{
+  Object.defineProperty(navigator,'userAgent',{configurable:true,get:()=> 'Mozilla/5.0 (PlayStation 4 12.00) AppleWebKit/605.1.15'});
+  const getContext=HTMLCanvasElement.prototype.getContext;HTMLCanvasElement.prototype.getContext=function(this:HTMLCanvasElement,type:string,...args:any[]){return type.includes('webgl')?null:getContext.apply(this,[type,...args] as any);} as typeof getContext;
+ });
+ const fixture=await installRemoteBackend(page,baseURL!,{media:true,episodeFlow:true});await page.goto('/tv/?focusdebug=1');
+ const state=page.locator('html');await expect(state).toHaveAttribute('data-tv-startup','ready');await expect(state).toHaveAttribute('data-tv-ready','true');
+ await page.keyboard.press('ArrowUp');await page.keyboard.press('ArrowLeft');
+ await page.mouse.click(20,20);await expect(state).toHaveAttribute('data-tv-screen','search');
+ for(let i=0;i<5&&!(await state.getAttribute('data-tv-focus'))?.startsWith('nav:');i++)await page.keyboard.press('ArrowUp');
+ await expect(state).toHaveAttribute('data-tv-focus',/^nav:/);await page.keyboard.press('ArrowRight');await page.mouse.click(20,20);await expect(state).toHaveAttribute('data-tv-screen','home');
+ await page.mouse.click(20,20);await expect(state).toHaveAttribute('data-tv-overlay','sources');await expect(state).toHaveAttribute('data-tv-sources','8');await expect(state).toHaveAttribute('data-tv-ready','true');
+ await page.keyboard.press('ArrowDown');await expect(state).toHaveAttribute('data-tv-source-choice','1');
+ await page.mouse.click(20,20);await expect(state).toHaveAttribute('data-tv-player-state','playing');await expect(state).toHaveAttribute('data-tv-overlay','');
+ expect(fixture.requests.filter(r=>r.path==='/api/playback'&&r.method==='POST')).toHaveLength(1);
+});
+
 test('signed-out Canvas startup clears recovery and Sign in opens pairing with pointer and Enter',async({page,baseURL},testInfo)=>{
  await page.setViewportSize({width:1540,height:754});await page.emulateMedia({reducedMotion:'no-preference'});
  await page.addInitScript(()=>{const getContext=HTMLCanvasElement.prototype.getContext;HTMLCanvasElement.prototype.getContext=function(this:HTMLCanvasElement,type:string,...args:any[]){return type.includes('webgl')?null:getContext.apply(this,[type,...args] as any);} as typeof getContext;});

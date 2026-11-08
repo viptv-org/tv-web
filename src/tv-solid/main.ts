@@ -13,6 +13,7 @@ import { setRendererStart } from "./renderer-clock";
 import { reloadImages } from "./remote/image-source";
 import { prepareTizenHost } from "./platform/tizen-host";
 import { prepareBrowserRenderer } from "./platform/browser-renderer";
+import { installPs4Input } from "./platform/ps4-input";
 import "../theme/viptv-tokens.generated.css";
 
 import { RemoteTvApi } from "./remote/api";
@@ -54,6 +55,7 @@ const api = new RemoteTvApi(
 );
 
 async function start() {
+  const removePs4Input = installPs4Input();
   if (new URLSearchParams(location.search).has("perfdebug"))
     performance.mark("viptv:init-start");
   // Prefetch each face once through SolidTV before synchronous WebGL setup.
@@ -143,6 +145,7 @@ async function start() {
   if (import.meta.hot)
     import.meta.hot.dispose(() => {
       dispose();
+      removePs4Input();
     });
   if (new URLSearchParams(location.search).has("perfdebug"))
     performance.mark("viptv:launch-return");

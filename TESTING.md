@@ -1,3 +1,16 @@
+# PS4 Cross activation — 2026-11-08
+
+The owner confirms physical PS4 Canvas startup and pairing after the signed-out
+hotfix, then reports directional focus working while Cross does not select.
+The PS4 input adapter maps page clicks to the existing focused Enter action and
+normalizes native Enter codes. It leaves native HTML controls alone and fences
+a click following an already handled Enter. Browser regressions select navigation
+and a non-first source row with Cross-style clicks and decode real HLS. This
+qualifies the tested input boundary; physical navigation/playback awaits retest.
+
+The hosting workflow uses Node 24 and installs the Roku host's pinned dependencies
+before the shared/native unit command, matching its declared runtime requirement.
+
 # Signed-out Canvas startup hotfix — 2026-11-08
 
 The deployed signed-out path exposed two gaps missed by the signed-in cases:

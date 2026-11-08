@@ -16,6 +16,10 @@ cropping controls. Startup does not request browser fullscreen.
 Pointer activation of Sign in uses the displayed canvas bounds and starts the
 same pairing flow as Enter. Canvas precomposes the GPU-only welcome treatment
 into a static wall; it does not redraw a static image on every animation frame.
+PS4 Cross page clicks activate the currently focused TV item through the shared
+Enter path. Directional navigation remains unchanged; native HTML controls keep
+their browser click behavior. An already handled native Enter must not activate
+the item again through its following click.
 
 Load the selected backend's fonts before mounting text. Canvas uses browser
 fonts with the existing family names and metrics; it does not request SDF
