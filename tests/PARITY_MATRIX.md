@@ -8,7 +8,7 @@
 | Standalone Intro/Recap | Valid markers only; paused seek and missing markers covered | Uses native TvView/TvText; physical marker action not newly qualified |
 | Platform playback preservation | Existing Live, track, replacement, authorization and native-SDK boundary cases pass | Samsung/LG/Vizio physical qualification remains separate |
 | High-rate CineWave continuity | Actual beta browser decoded 102 seconds with PCM after gateway rollout | Same previously failing source advances beyond 332 seconds with H.264/AAC; pause, paused seek and resume verified; whole-title continuity unqualified |
-| Browser Canvas fallback and PS4 controls | 15 Canvas startup/media/layout/recovery cases plus three Cross-selection cases pass across Chromium, Firefox and WebKit; deployed asset hashes and actual beta sign-in checked | Owner confirms physical PS4 rendering and pairing; Cross navigation fix awaits retest; physical media unqualified |
+| Browser Canvas fallback and PS4 controls | 15 Canvas startup/media/layout/recovery cases plus three Cross-selection cases pass across Chromium, Firefox and WebKit; deployed asset hashes and actual beta sign-in checked | Owner confirms physical PS4 rendering and pairing; owner confirms physical navigation and Cross selection; physical media unqualified |
 | Native frame pacing | Browser simulation does not qualify native presentation | Final Home trace render plus swap p95 22.02 ms; 16.67 ms target remains unmet. Continuous JS, native Animation, minimal scene and system Home diagnostics report about 48 graphics FPS in this session; clean client restored |
 
 Exact pins, commands, outcomes and remaining gates are recorded in [TESTING.md](../TESTING.md).

@@ -6,7 +6,8 @@ The PS4 input adapter maps page clicks to the existing focused Enter action and
 normalizes native Enter codes. It leaves native HTML controls alone and fences
 a click following an already handled Enter. Browser regressions select navigation
 and a non-first source row with Cross-style clicks and decode real HLS. This
-qualifies the tested input boundary; physical navigation/playback awaits retest.
+qualifies the tested input boundary. The owner subsequently confirms physical
+PS4 navigation and Cross selection; physical media remains pending.
 
 The hosting workflow uses Node 24 and installs the Roku host's pinned dependencies
 before the shared/native unit command, matching its declared runtime requirement.
