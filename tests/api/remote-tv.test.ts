@@ -967,3 +967,27 @@ it("keeps older ranking servers compatible without sending unsupported memory fi
  const page=await api.rankSources(['ordinary'],undefined,undefined,{title:{provider_id:'addon:one',audio_languages:['en']}});
  expect(page.source_reuse_ids).toBeUndefined();expect(bodies).toHaveLength(1);expect(bodies[0]).not.toHaveProperty('remembered_source');
 });
+
+it('sends the remembered stable supplier in initial discovery only after capability negotiation',async()=>{
+ const calls:{path:string;body:any}[]=[];const choice={provider_id:'vsources:1',source_id:'supplier-a',provider_name:'Supplier A',audio_languages:['en']};
+ const api=new RemoteTvApi('https://example.test',store(),async(url,init)=>{
+  const path=new URL(String(url)).pathname;const body=init?.body?JSON.parse(String(init.body)):undefined;calls.push({path,body});
+  if(path==='/api/bootstrap')return response({contract_version:3,profile_management:{profiles:[]},identity:{profile_id:'1'},preferred_source_discovery_supported:true});
+  if(path==='/api/streams')return response({id:'job'});
+  if(path==='/api/streams/job')return response({events:[{streams:[{id:'ready'}]}],phase:'preferred',done:true});
+  return response({streams:[{id:'ready'}],quality_filters:[],total:1,source_reuse_supported:true,source_reuse_ready:true,source_reuse_ids:['ready']});
+ });await api.bootstrap();let page:any;await api.sources(card,(_rows,p)=>{page=p},new AbortController().signal,undefined,undefined,{title:choice});
+ expect(calls.find(c=>c.path==='/api/streams')?.body.remembered_source).toEqual(choice);expect(calls.filter(c=>c.path.endsWith('/source-ranking'))).toHaveLength(1);expect(page.discovery_phase).toBe('preferred');expect(page.source_reuse_ready).toBe(true);
+});
+it('strips the new supplier id from legacy ranking requests',async()=>{
+ const bodies:any[]=[];const api=new RemoteTvApi('https://example.test',store(),async(_url,init)=>{const body=JSON.parse(String(init?.body));bodies.push(body);return response({streams:[{id:'ready'}],quality_filters:[],total:1,source_reuse_supported:true});});api.profile='1';await api.rankSources(['ready'],undefined,undefined,{title:{provider_id:'addon:1',source_id:'new-field',audio_languages:['en']}});expect(bodies[1].remembered_source).not.toHaveProperty('source_id');
+});
+it('carries the Core-selected spoken language into playback without overriding explicit tracks or direct play',async()=>{
+ const bodies:any[]=[];const api=new RemoteTvApi('https://example.test',store(),async(url,init)=>{
+  if(new URL(String(url)).pathname==='/api/bootstrap')return response({contract_version:3,profile_management:{profiles:[]},identity:{profile_id:'1'},preferred_source_discovery_supported:true});
+  bodies.push(JSON.parse(String(init?.body)));return response({id:'lease',status:'ready',expires_at:Date.now()/1000+60,renew_after_seconds:20,delivery:{kind:'gateway',url:'https://media.example/index.m3u8',format:'hls'}});
+ });await api.bootstrap();const source={id:'ready',reuse_audio_language:'en'},signal=new AbortController().signal;
+ await api.admit(source,false,signal);expect(bodies[0].audio_language).toBe('en');
+ await api.admit(source,false,signal,0,{audio_track:2});expect(bodies[1]).not.toHaveProperty('audio_language');
+ await api.admit(source,false,signal,0,{},undefined,true);expect(bodies[2]).not.toHaveProperty('audio_language');
+});

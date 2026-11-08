@@ -1385,8 +1385,9 @@ export function createRemoteTvApp(
         const language = player.tracks.audio.find(track => track.selected && track.language)?.language;
         void devicePlayback.remember(observation.scope, observation.title, {
           provider_id: source.source_addon_id!,
+          source_id: source.presentation?.source_id,
           provider_name: source.presentation?.provider_name,
-          audio_languages: language ? [language] : source.audio_languages ?? [],
+          audio_languages: language ? [language] : source.audio_languages?.length === 1 ? source.audio_languages : [],
         }).catch(() => notify("Couldn’t save this source choice on this device.")).finally(() => setSourceMemoryPending(v => Math.max(0, v - 1)));
       },
     );
@@ -3825,7 +3826,12 @@ export function createRemoteTvApp(
         const before = previous.get(source.id);
         if (!before) return source;
         const bv = before.view, sv = source.view;
-        return before.name === source.name &&
+        return before.source_addon_id === source.source_addon_id &&
+          before.reuse_audio_language === source.reuse_audio_language &&
+          before.presentation?.source_id === source.presentation?.source_id &&
+          before.presentation?.provider_name === source.presentation?.provider_name &&
+          JSON.stringify(before.audio_languages) === JSON.stringify(source.audio_languages) &&
+          before.name === source.name &&
           before.title === source.title &&
           before.detail === source.detail &&
           before.quality_height === source.quality_height &&
@@ -3882,6 +3888,7 @@ export function createRemoteTvApp(
       sourceScope?.abort();
       const operation = new AbortController();
       sourceScope = operation;
+      let ownedOperation = operation;
       setPickerCard(card);
       setSourceChannel(channel);
       setReplacingSource(replaceCurrent);
@@ -3929,7 +3936,7 @@ export function createRemoteTvApp(
         const memory = channel || forcePicker ? {} : await sourceMemory(resolved?.card ?? card);
         let preferredWaitElapsed = false;
         let firstMatch!: (rows: Source[]) => void;
-        const matchTimer = !forcePicker && (memory.title || memory.across) ? setTimeout(() => {
+        const matchTimer = !api.preferredSourceDiscoverySupported && !forcePicker && (memory.title || memory.across) ? setTimeout(() => {
           preferredWaitElapsed = true;
           if (finalPage && sourcePageReady(finalPage, true, false)) firstMatch(finalPage.streams);
         }, 3000) : undefined;
@@ -3991,29 +3998,56 @@ export function createRemoteTvApp(
         setLoading(false);
         if (finalPage) { setSourcePage(finalPage);reconcileSources(ranked); }
         const hasMemory = !!(memory.title || memory.across);
-        const automatic = !forcePicker && (automaticNext || hasMemory || resolved?.source_selection === "best");
+        const automatic = !forcePicker && !manualSourceSelection && (automaticNext || hasMemory || resolved?.source_selection === "best");
         if (automatic && finalPage && resolved) {
-          const ids = sourceStartIds(finalPage, hasMemory).slice(0, 3);
-          for (let index = 0; index < ids.length; index++) {
+          let page = finalPage, rows = ranked, expanded = false, attempts = 0;
+          let ids = sourceStartIds(page, hasMemory);
+          const tried = new Set<string>();
+          while (attempts < 3) {
             if (intent !== sourceIntent || epoch !== api.scopeEpoch || scope.signal.aborted) return;
-            const source = ranked.find(row => row.id === ids[index]);
+            const id = ids.find(id => !tried.has(id));
+            if (!id) {
+              if (!api.preferredSourceDiscoverySupported || page.discovery_phase !== "preferred" || expanded) break;
+              expanded = true;
+              const fallback = new AbortController();sourceScope = fallback;ownedOperation = fallback;
+              setSourceLoading(true);setLoading(true);
+              let fallbackPage: SourcePage | undefined;
+              let ready!: (rows: Source[]) => void;
+              const first = new Promise<Source[]>(resolve => { ready = resolve; });
+              const discovery = api.sources(resolved.card, (value, result, allIds) => {
+                if (sourceScope !== fallback || fallback.signal.aborted) return;
+                fallbackPage = result;setSourcePage(result);setAllSourceIds(allIds);reconcileSources(value);
+                if (sourcePageReady(result, hasMemory)) ready(value);
+              }, fallback.signal, undefined, () => undefined, memory, true);
+              rows = await Promise.race([discovery, first]);
+              if (fallback.signal.aborted || intent !== sourceIntent || epoch !== api.scopeEpoch) return;
+              setLoading(false);
+              if (!fallbackPage) break;
+              page = fallbackPage;ids = sourceStartIds(page, hasMemory);
+              continue;
+            }
+            tried.add(id);
+            const source = rows.find(row => row.id === id);
             if (!source) continue;
-            if (index) {
+            if (attempts) {
               notify("Trying the next matching source…");
               await new Promise(resolve => setTimeout(resolve, 2000));
               if (intent !== sourceIntent || epoch !== api.scopeEpoch || scope.signal.aborted) return;
             }
+            attempts++;
             if (await playSource(source, false, false)) { setSourceLoading(false);return; }
           }
         }
+
         setSourceLoading(false);
         if (intent === sourceIntent && !scope.signal.aborted && (hidden || automatic)) {
+          if (!sourceFailure()) setSourceFailure("No matching source could start. Choose a source.");
           setLoading(false);openOverlay({ kind: "sources", title: "Choose a source" });
         }
       } catch (e) {
-        if (sourceScope !== operation) return;
+        if (sourceScope !== ownedOperation) return;
         setSourceLoading(false);setLoading(false);
-        if (hidden && intent === sourceIntent && !operation.signal.aborted) openOverlay({ kind: "sources", title: "Choose a source" });
+        if (hidden && intent === sourceIntent && !ownedOperation.signal.aborted) openOverlay({ kind: "sources", title: "Choose a source" });
         if (sources().length && !(e instanceof DOMException))
           notify(
             "Some sources did not respond. You can choose an available source.",
@@ -6432,6 +6466,7 @@ export function createRemoteTvApp(
       document.documentElement.dataset.tvPlayerPosition = String(snapshot()?.time.positionSeconds ?? "");
       document.documentElement.dataset.tvPlayerDuration = String(snapshot()?.time.durationSeconds ?? "");
       document.documentElement.dataset.tvPlayerTimelineFocus = String(timelineFocused());
+      document.documentElement.dataset.tvSourcePhase = sourcePage()?.discovery_phase ?? "";
       document.documentElement.dataset.tvSourcePreparing = String(sourceLoading() && !overlay());
       document.documentElement.dataset.tvPlayerBusy = String(loading() || seeking() || snapshot()?.state === "buffering");
       document.documentElement.dataset.tvSourceIdentity = focusedSource()?.id ?? "";

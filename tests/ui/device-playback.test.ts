@@ -49,3 +49,6 @@ it('retains confirmed settings if durable storage rejects a save',async()=>{
  await expect(device.setAutoplay(false)).rejects.toThrow('full');expect(device.autoplay).toBe(true);
  await device.setAutoplay(false);expect(device.autoplay).toBe(false);
 });
+it('retains stable supplier identity through persistence and legacy setting toggles',async()=>{
+ const port=storage(),device=new DevicePlayback(port);await device.ready;await device.remember(scope,'movie-one',{...a,source_id:'supplier-a'});await device.setAcross(scope,true);const restored=new DevicePlayback(port);await restored.ready;expect((await restored.context(scope,'movie-two')).across).toEqual({...a,source_id:'supplier-a'});await restored.setAcross(scope,false);expect((await restored.context(scope,'movie-two')).across).toBeUndefined();expect((await restored.context(scope,'movie-one')).title?.source_id).toBe('supplier-a');
+});

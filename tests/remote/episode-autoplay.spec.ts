@@ -235,3 +235,23 @@ for(const cancel of [false,true])test(`remembered Continue Watching reports prep
  if(cancel){await page.keyboard.press('Escape');await expect(state).toHaveAttribute('data-tv-source-preparing','false');await expect(state).toHaveAttribute('data-tv-screen','home');await page.waitForTimeout(3500);expect(fixture.requests.filter(r=>r.path==='/api/playback'&&r.method==='POST')).toHaveLength(1);}
  else{await expect.poll(()=>fixture.requests.filter(r=>r.path==='/api/playback'&&r.method==='POST').length,{timeout:6000}).toBe(2);expect(Date.now()-started).toBeGreaterThanOrEqual(2800);await expect(state).toHaveAttribute('data-tv-player-state','playing');await expect(state).toHaveAttribute('data-tv-overlay','');}
 });
+
+for(const failed of [false,true])test(`provider-first reuse sends the stable preference and handles startup fallback (failed=${failed})`,async({page,baseURL})=>{
+ const fixture=await installRemoteBackend(page,baseURL!,{media:true,episodeFlow:true,pendingContinuation:true,finding:true,preferredDiscovery:true,preferredLowQuality:true});await playFirst(page);
+ const remembered=await page.evaluate(()=>localStorage.getItem('viptv-device-playback:v1'));expect(remembered).toContain('supplier-a');if(failed)fixture.failNextAdmissions(1);
+ await page.reload();const state=page.locator('html');await expect(state).toHaveAttribute('data-tv-ready','true');await page.keyboard.press('Enter');
+ await expect.poll(()=>fixture.requests.filter(r=>r.path==='/api/playback'&&r.method==='POST').length,{timeout:12000}).toBe(failed?3:2);
+ await expect(state).toHaveAttribute('data-tv-overlay','');await expect(state).toHaveAttribute('data-tv-player-state','playing');
+ const discoveries=fixture.requests.filter(r=>r.path==='/api/streams'&&r.method==='POST');expect(discoveries[1].body.remembered_source.source_id).toBe('supplier-a');
+ if(failed){expect(discoveries[2].body.exclude_preferred_source).toBe(true);expect(fixture.requests.filter(r=>r.path==='/api/playback'&&r.method==='POST').at(-1)?.body.stream_id).toBe('stream-1');}
+ else expect(discoveries).toHaveLength(2);
+ expect(fixture.requests.filter(r=>r.path==='/api/playback'&&r.method==='POST').at(-1)?.body.audio_language).toBe('en');
+ expect(await page.evaluate(()=>localStorage.getItem('viptv-device-playback:v1'))).toBe(remembered);
+});
+
+test('manual interaction cancels automatic startup while discovery remains available',async({page,baseURL})=>{
+ const fixture=await installRemoteBackend(page,baseURL!,{media:true,finding:true});let release!:()=>void;const gate=new Promise<void>(resolve=>{release=resolve;});
+ await page.route('**/viewing-action',route=>route.fulfill({json:{card:fixture.card,label:'Play',resume:false,source_selection:'best'}}));await page.route('**/source-ranking',async route=>{await gate;await route.fallback();});
+ const state=page.locator('html');await page.goto('/tv/?focusdebug=1');await expect(state).toHaveAttribute('data-tv-ready','true');await page.keyboard.press('Enter');await expect(state).toHaveAttribute('data-tv-overlay','sources');await page.keyboard.press('ArrowDown');release();await expect(state).toHaveAttribute('data-tv-sources','8');await expect(state).toHaveAttribute('data-tv-ready','true');await page.waitForTimeout(500);
+ expect(fixture.requests.filter(r=>r.path==='/api/playback'&&r.method==='POST')).toHaveLength(0);await expect(state).toHaveAttribute('data-tv-overlay','sources');
+});

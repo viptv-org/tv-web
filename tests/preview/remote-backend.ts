@@ -153,6 +153,8 @@ export async function installRemoteBackend(page:Page,origin:string,options:{
     pendingContinuation?: boolean;
     reuseMatch?: boolean;
     reusePreferred?: boolean;
+    preferredDiscovery?: boolean;
+    preferredLowQuality?: boolean;
     session?: boolean;
     empty?: boolean;
     fail?: boolean;
@@ -239,7 +241,7 @@ export async function installRemoteBackend(page:Page,origin:string,options:{
  const home={hero:options.episodeFlow ? {...seriesCard,progress:0,subtitle:"S1 E1",view:{...seriesCard.view!,preview:{...seriesCard.view!.preview!,action:"play" as const}}} : card,featured:[options.episodeFlow ? {...seriesCard,progress:0} : card,...cards.slice(0,4)],rows:[{id:'continue',title:'Continue Watching',state:'Ready' as const,cards:options.empty?[]:cards},{id:'popular',title:'Popular movies',state:'Ready' as const,cards}],complete:true,revision:0};
   let navigationIds = options.navigation ?? ["search", "home", "movie", "series", "live", "library", "profiles"];
   const navigationLabels: Record<string, string> = { search:"Search", home:"Home", movie:"Movies", series:"Series", live:"Live", library:"My List", profiles:"Profile" };
- const bootstrap=():Bootstrap=>({contract_version:3,navigation: options.omitNavigation ? undefined : (options.navigationByProfile?.[profile ?? ""] ?? navigationIds).map(id => ({id,label:navigationLabels[id] ?? id,...(id === "search" ? {media_search:options.mediaSearch !== false,channel_search:options.channelSearch === true} : {})})),identity:{profile_id:profile},profile_management:management,home,preferences,library:{cards:library,complete:true},integrations:[],revisions:{library:revision,...(options.episodeFlow ? {configuration:configurationRevision} : {})}});
+ const bootstrap=():Bootstrap=>({contract_version:3,...(options.preferredDiscovery ? {preferred_source_discovery_supported:true} : {}),navigation: options.omitNavigation ? undefined : (options.navigationByProfile?.[profile ?? ""] ?? navigationIds).map(id => ({id,label:navigationLabels[id] ?? id,...(id === "search" ? {media_search:options.mediaSearch !== false,channel_search:options.channelSearch === true} : {})})),identity:{profile_id:profile},profile_management:management,home,preferences,library:{cards:library,complete:true},integrations:[],revisions:{library:revision,...(options.episodeFlow ? {configuration:configurationRevision} : {})}});
  await page.addInitScript(({origin,session})=>{if(session)localStorage.setItem(`viptv-device:${origin}`,JSON.stringify({accessToken:'fixture-access',refreshToken:'fixture-refresh'}));},{origin,session:options.session!==false});
   const addonStates = new Map<string, boolean>();
   for (let i = 1; i <= (options.addons ?? 0); i++) addonStates.set(`addon:${i}`, true);
@@ -255,6 +257,7 @@ export async function installRemoteBackend(page:Page,origin:string,options:{
   let activationRejected = false;
   const catalogCards:Card[]=cardImages.map((image,i)=>({...card,identity:{...card.identity,id:`catalog-${i}`},title:`Catalog ${i}`,landscape:art(image),poster:art(image),logo:null,badges:[]}));
  let catalogView = catalogCards;
+  let discoveryPhase: "preferred"|"fallback" = "fallback", excludedSupplier: string|undefined, preferredSupplier: string|undefined;
   let sourceEpisode = false, leaseEpisode = false, leaseLive = false, leaseCount = 0, leasePosition = 0;
   let admissionGate: Promise<void> | undefined;
   const leases = new Map<string, any>();
@@ -329,18 +332,27 @@ export async function installRemoteBackend(page:Page,origin:string,options:{
       const resolved=played.identity.kind==='series' && !played.identity.episode?{...played,identity:{kind:'series',id:'episode-1',ids:[],episode:{order:'s1e1',season:1,episode:1}},subtitle:'S1 E1',parent_identity:played.identity}:played;
       return send({card:resolved,label:played.progress?'Resume':'Play',resume:!!played.progress,source_selection:'ask'});
     }
-  if(path==='/api/streams'){sourceEpisode=body.type==="series";return send({id:'job-1'});}
+  if(path==='/api/streams'){
+    sourceEpisode=body.type==="series";
+    const memory=body.remembered_source??body.cross_title_source;
+    discoveryPhase=options.preferredDiscovery&&memory&&!body.exclude_preferred_source?'preferred':'fallback';
+    const supplier=memory?.source_id??(memory?.provider_name==='Supplier B'?'supplier-b':'supplier-a');
+    preferredSupplier=discoveryPhase==='preferred'?supplier:undefined;
+    excludedSupplier=options.preferredDiscovery&&body.exclude_preferred_source?supplier:undefined;
+    return send({id:'job-1'});
+  }
     if(/\/live\/[^/]+\/sources$/.test(path))return send({streams:[{id:"live-stream-0",name:"Live source A"},{id:"live-stream-1",name:"Live source B"}],live:true,action:{card:{identity:{kind:"live",id:path.split('/').at(-2)!,ids:[]},provider_id:"m3u:1",title:"Server live channel",badges:[],poster:null,landscape:null,logo:null},label:"Watch live",resume:false,source_selection:options.best?"best":"ask"}});
-  const streams=Array.from({length:8},(_,i)=>{const h=i<2?2160:i<5?1080:720;const name=i%2?'[Provider 2]':'LordStreams';const quality=h>=2160?'4K':`${h}p`;return {id:`stream-${i}`,source_addon_id:'addon:fixture',audio_languages:options.sourceAudioLanguages ?? ['en'],presentation:{provider_name:i%2?'Supplier B':'Supplier A'},name,detail:'WEB-DL · HEVC · 5.1 · 18.4 GB',quality_height:h,view:{title:name,body:'WEB-DL · HEVC · 5.1 · 18.4 GB',quality_label:quality,format_label:i===0?'HDR10 · Dolby Atmos':'HEVC',addon_label:`[Add-on ${i%2?'B':'A'}]`,provider_label:name}};});
+  const streams=Array.from({length:8},(_,i)=>{const h=i<2?2160:i<5?1080:720;const name=i%2?'[Provider 2]':'LordStreams';const quality=h>=2160?'4K':`${h}p`;return {id:`stream-${i}`,source_addon_id:'addon:fixture',audio_languages:options.sourceAudioLanguages ?? ['en'],presentation:{source_id:i%2?'supplier-b':'supplier-a',provider_name:i%2?'Supplier B':'Supplier A'},name,detail:'WEB-DL · HEVC · 5.1 · 18.4 GB',quality_height:h,view:{title:name,body:'WEB-DL · HEVC · 5.1 · 18.4 GB',quality_label:quality,format_label:i===0?'HDR10 · Dolby Atmos':'HEVC',addon_label:`[Add-on ${i%2?'B':'A'}]`,provider_label:name}};});
   if(path==='/api/streams/job-1'){
+      const publishDiscovery=(events:any[],done:boolean)=>send({events:events.map(event=>({...event,streams:event.streams.filter((source:any)=>(!preferredSupplier||source.presentation?.source_id===preferredSupplier)&&(!excludedSupplier||source.presentation?.source_id!==excludedSupplier)).slice(0,preferredSupplier?1:undefined)})),done,...(options.preferredDiscovery?{phase:discoveryPhase}:{})});
       const after=Number(url.searchParams.get('after')??0);
       if(options.finding&&!discoveryEvents.length)discoveryEvents.push({streams});
-      if(!options.finding)return send({events:discoveryEvents.length?discoveryEvents.slice(after):[{streams}],done:true});
+      if(!options.finding)return publishDiscovery(discoveryEvents.length?discoveryEvents.slice(after):[{streams}],true);
       // finding: long-poll until new events arrive or discovery completes
       const deadline=Date.now()+9000;
       for(;;){
-        if(discoveryEvents.length>after||discoveryDone)return send({events:discoveryEvents.slice(after),done:discoveryDone});
-        if(Date.now()>deadline)return send({events:[],done:discoveryDone});
+        if(discoveryEvents.length>after||discoveryDone)return publishDiscovery(discoveryEvents.slice(after),discoveryDone);
+        if(Date.now()>deadline)return publishDiscovery([],discoveryDone);
         await new Promise<void>(resolve=>{discoveryWaiters.push(resolve);setTimeout(resolve,300);});
       }
     }
@@ -350,13 +362,14 @@ export async function installRemoteBackend(page:Page,origin:string,options:{
       const heightFilter=typeof body.quality_height==='number'?body.quality_height:null;
       const wanted:string[]=Array.isArray(body.ids)?body.ids:[];
       const allSources:any[]=[...streams,...discoveryEvents.flatMap(e=>e.streams)];
-      const pool:any[]=wanted.length?wanted.map(id=>allSources.find(s=>s.id===id)).filter(Boolean):streams;
+      const pool:any[]=(wanted.length?wanted.map(id=>allSources.find(s=>s.id===id)).filter(Boolean):streams).map(source=>options.preferredLowQuality&&discoveryPhase==='preferred'?{...source,quality_height:720,view:{...source.view,quality_label:'720p'}}:source);
       const matching=(heightFilter==null?pool:pool.filter(s=>s.quality_height===heightFilter)).slice().sort((a,b)=>((b.best?1:0)-(a.best?1:0))||((b.quality_height??0)-(a.quality_height??0)));
+      if(options.preferredDiscovery&&(body.remembered_source||body.cross_title_source)&&options.reuseMatch!==false)for(const source of matching)source.reuse_audio_language='en';
       const counts=new Map<number,number>();
       for(const s of pool)counts.set(s.quality_height,(counts.get(s.quality_height)??0)+1);
       const quality_filters=[...counts.entries()].sort((a,b)=>b[0]-a[0]).map(([height,count])=>({height,label:height>=2160?'4K':`${height}p`,count}));
       return send({streams:matching,best_match_id:matching[0]?.id??null,best_match_fully_matches:true,automatic_source_ids:matching.map(s=>s.id),
-        ...(options.episodeFlow ? {source_reuse_supported:true,source_reuse_ids:body.remembered_source || body.cross_title_source ? options.reuseMatch === false ? [] : ['stream-0','stream-2','stream-4','stream-6'] : [],source_reuse_preferred:options.reusePreferred !== false,source_reuse_fully_matches:options.reuseMatch !== false} : {}),quality_filters,total:matching.length});
+        ...(options.episodeFlow ? {source_reuse_supported:true,...(options.preferredDiscovery?{source_reuse_ready:options.reuseMatch!==false}:{}),source_reuse_ids:body.remembered_source || body.cross_title_source ? options.reuseMatch === false ? [] : options.preferredDiscovery?matching.map(s=>s.id):['stream-0','stream-2','stream-4','stream-6'] : [],source_reuse_preferred:options.preferredDiscovery?discoveryPhase==='preferred':options.reusePreferred !== false,source_reuse_fully_matches:options.reuseMatch !== false&&!options.preferredLowQuality} : {}),quality_filters,total:matching.length});
     }
   if(path.endsWith('/live/channels')){
       const searching = url.searchParams.has("search");

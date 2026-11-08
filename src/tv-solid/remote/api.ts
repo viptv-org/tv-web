@@ -192,6 +192,7 @@ export function originFields(card: Card): Record<string, unknown> {
 /** Only HTTP, session rotation and operation lifetimes; no client engine. */
 export class RemoteTvApi {
   private sourceReuseSupported = false;
+  preferredSourceDiscoverySupported = false;
   private tokens: Tokens | null = null;
   private refreshFlight?: Promise<void>;
   private identityFlight?: Promise<AccountIdentity>;
@@ -465,6 +466,8 @@ export class RemoteTvApi {
     const profile = String(value.identity.profile_id ?? "");
     if (this.profile && profile !== this.profile) this.epoch++;
     this.profile = profile;
+    this.preferredSourceDiscoverySupported = value.preferred_source_discovery_supported === true;
+    this.sourceReuseSupported = this.preferredSourceDiscoverySupported;
     return value;
   }
   async selectProfile(id: string, signal?: AbortSignal) {
@@ -634,6 +637,7 @@ export class RemoteTvApi {
     channel?: string,
     quality: () => number | undefined = () => undefined,
     reuse?: import('./device-playback').SourceReuseContext,
+    excludePreferred = false,
   ): Promise<Source[]> {
     const started = await this.call<{
       id?: string;
@@ -653,6 +657,12 @@ export class RemoteTvApi {
             season: card.identity.episode?.season,
             episode: card.identity.episode?.episode,
             ...originFields(card),
+            ...(this.preferredSourceDiscoverySupported && (reuse?.title || reuse?.across) ? {
+              ...(reuse.title ? { remembered_source: this.memoryWire(reuse.title) } : {}),
+              ...(reuse.across ? { cross_title_source: this.memoryWire(reuse.across) } : {}),
+              device_max_height: this.deviceHeight(),
+              ...(excludePreferred ? { exclude_preferred_source: true } : {}),
+            } : {}),
           },
       signal,
     );
@@ -691,6 +701,7 @@ export class RemoteTvApi {
         const page = await this.call<{
           events: { streams?: Source[] }[];
           done: boolean;
+          phase?: "preferred" | "fallback";
         }>(
           `/api/streams/${segment(started.id)}?after=${after}&wait_ms=10000`,
           "GET",
@@ -703,6 +714,7 @@ export class RemoteTvApi {
         if (ids.size && page.events.length) {
           const height = quality();
           const result = await this.rankSources([...ids], height, signal, reuse);
+          if (this.preferredSourceDiscoverySupported) result.discovery_phase = page.phase;
           ranked = result.streams;
           publish(ranked, result, [...ids], height);
         }
@@ -747,6 +759,14 @@ export class RemoteTvApi {
     }
   }
 
+  private deviceHeight() {
+    return Math.min(4320, Math.max(144, Math.round((globalThis.screen?.height || 1080) * (globalThis.devicePixelRatio || 1))));
+  }
+  private memoryWire(value: import('./device-playback').SourceChoice) {
+    if (this.preferredSourceDiscoverySupported) return value;
+    const { source_id: _sourceId, ...legacy } = value;
+    return legacy;
+  }
   async rankSources(
     ids: string[],
     height?: number,
@@ -758,23 +778,14 @@ export class RemoteTvApi {
     // UUID then answers 413 — which used to leave the picker empty. Rank in
     // bounded batches and merge the pages back into one ranked list.
     const unique = [...new Set(ids)];
-    const deviceMaxHeight = Math.min(
-      4320,
-      Math.max(
-        144,
-        Math.round(
-          (globalThis.screen?.height || 1080) *
-            (globalThis.devicePixelRatio || 1),
-        ),
-      ),
-    );
+    const deviceMaxHeight = this.deviceHeight();
     const batch = 400;
     const pages: SourcePage[] = [];
     const hasMemory = !!(reuse?.title || reuse?.across);
     const rank = async (ids: string[]): Promise<SourcePage> => {
       const body = { ids, device_max_height: deviceMaxHeight, quality_height: height };
-      const memory = { ...(reuse?.title ? { remembered_source: reuse.title } : {}),
-        ...(reuse?.across ? { cross_title_source: reuse.across } : {}) };
+      const memory = { ...(reuse?.title ? { remembered_source: this.memoryWire(reuse.title) } : {}),
+        ...(reuse?.across ? { cross_title_source: this.memoryWire(reuse.across) } : {}) };
       const sentMemory = this.sourceReuseSupported && hasMemory;
       let result = await this.call<SourcePage>(this.scoped("/source-ranking"), "POST",
         { ...body, ...(sentMemory ? memory : {}) }, signal);
@@ -783,6 +794,7 @@ export class RemoteTvApi {
       // rank response before sending optional device-memory observations.
       if (this.sourceReuseSupported && hasMemory && !sentMemory)
         result = await this.call<SourcePage>(this.scoped("/source-ranking"), "POST", { ...body, ...memory }, signal);
+      if (!this.preferredSourceDiscoverySupported) delete result.source_reuse_ready;
       return result;
     };
     for (let start = 0; start < unique.length; start += batch) {
@@ -856,6 +868,7 @@ export class RemoteTvApi {
           resume,
           position: position ?? 0,
           ...selection,
+          ...(this.preferredSourceDiscoverySupported && !direct && selection.audio_track === undefined && source.reuse_audio_language ? { audio_language: source.reuse_audio_language } : {}),
           ...(replaceSource ? { replace_source: replaceSource } : {}),
         },
         signal,

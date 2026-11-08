@@ -1,3 +1,31 @@
+# Core-owned provider-first discovery
+
+Canonical Core `cf99a361e07c0b453040e92fcfac378b205320e1` owns preference
+precedence, stable/legacy supplier resolution, selected-language eligibility,
+early readiness and the five-second preferred/fallback policy. SDK
+`523f87ccebb47accd078534d3169ecd639af9f4f` dispatches the selected supplier outside
+normal fanout, reuses verified metadata and publishes probe completions. Backend
+`bb5834bdee95442334e8765e583f62d239a83170` enforces job/source scope and defers
+unrelated discovery. Client flags negotiate optional fields with older servers.
+
+Core: 180 checks passed, one ignored. SDK: 32 passed. Backend: 921 default checks
+and 933 live-runtime checks passed, with 12/13 existing ignored cases. Tests cover
+preferred A without requesting the other 29, five-second deadline, cancellation,
+changed configuration, selected audio versus available tracks and lower soft quality.
+Server tests used a package-local debug-symbol override to fit the shared build
+host; production profile/settings are unchanged.
+
+Client grouped typecheck, 213 shared tests, 15 native tests and production build
+pass. Fifteen Chromium/Firefox/WebKit source-reuse scenarios pass, including stable
+supplier identity, early readiness despite a soft quality mismatch, startup fallback,
+no language match and the three-attempt cap. Provider-first fixture cases isolate
+continuation preparation so request counts refer to the tested episode. Explicit
+spoken-language intent reaches admission; manual tracks/direct play retain control.
+
+No default or existing setting values changed. Automatic fallback preserves manual
+preferences. Real-beta, deployed-asset and physical-device evidence for this release
+is pending; browser/SDK boundaries do not establish firmware qualification.
+
 Beta seek client `6e60ea6de0fb0c8cf6cab76433c8bc9c349fec82` is deployed.
 Managed rollout is done; health, entry and all 59 asset hashes plus hosted Canvas
 pairing pass. Backend/root frontend and runtime configuration are preserved;

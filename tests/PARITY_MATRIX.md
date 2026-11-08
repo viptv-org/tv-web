@@ -1,3 +1,11 @@
+# Provider-first discovery
+
+Core `cf99a36`, SDK `523f87c`, backend `bb5834b`, design `059b763`.
+Core/SDK/server checks and 15 three-engine source-reuse cases pass for preferred
+supplier dispatch, language eligibility, deadline/fallback and durable device
+settings. Real-beta and physical PS4/Roku acceptance for this release is pending.
+No renderer-specific source-selection policy is introduced.
+
 # Shared TV source reuse and episode handoff — 2026-11-08
 
 | Surface | Browser execution | Roku evidence / limits |

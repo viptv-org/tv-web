@@ -126,6 +126,7 @@ export interface Preferences {
   display?: DisplayPreferences;
 }
 export interface Bootstrap {
+  preferred_source_discovery_supported?: boolean;
   contract_version: number;
   navigation?: {
     id: string;
@@ -185,6 +186,7 @@ export interface Source {
   seeders?: number;
   source_name?: string;
   source_addon_id?: string;
+  reuse_audio_language?: string;
   presentation?: {
     quality?: string;
     container?: string;
@@ -192,6 +194,7 @@ export interface Source {
     video_codec?: string;
     audio_codecs?: string[];
     provider_name?: string;
+    source_id?: string;
     size_label?: string;
     size_bytes?: number | null;
     [key: string]: unknown;
@@ -332,6 +335,8 @@ export interface SourcePage {
   best_match_fully_matches?: boolean;
   automatic_source_ids?: string[];
   source_reuse_supported?: boolean;
+  source_reuse_ready?: boolean;
+  discovery_phase?: "preferred" | "fallback";
   source_reuse_ids?: string[];
   source_reuse_preferred?: boolean;
   source_reuse_fully_matches?: boolean;

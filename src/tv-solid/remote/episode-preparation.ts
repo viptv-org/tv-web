@@ -21,7 +21,9 @@ export function sourceStartIds(page: SourcePage, memory: boolean): string[] {
 }
 /** Read only the server's readiness decision; never compare source ranking keys here. */
 export function sourcePageReady(page: SourcePage, memory: boolean, preferredOnly = true): boolean {
-  const ready = memory
+  const ready = memory && page.source_reuse_ready !== undefined
+    ? page.source_reuse_ready === true
+    : memory
     ? (!preferredOnly || page.source_reuse_preferred === true) && page.source_reuse_fully_matches === true
     : page.best_match_fully_matches === true;
   return ready && sourceStartIds(page, memory).some(id => page.streams.some(row => row.id === id));

@@ -2,6 +2,7 @@ import type { Card } from './types';
 
 export interface SourceChoice {
   provider_id: string;
+  source_id?: string;
   provider_name?: string;
   audio_languages: string[];
 }
@@ -19,9 +20,9 @@ const text = (value: unknown, max = 256): value is string => typeof value === 's
   !!value.trim() && bytes(value) <= max && !/[\u0000-\u001f\u007f]/.test(value) && !value.includes('://');
 function choice(value: unknown): SourceChoice | undefined {
   const v = value as Partial<SourceChoice> | null;
-  if (!v || !text(v.provider_id) || v.provider_name !== undefined && !text(v.provider_name) ||
+  if (!v || !text(v.provider_id) || v.source_id !== undefined && !text(v.source_id) || v.provider_name !== undefined && !text(v.provider_name) ||
       !Array.isArray(v.audio_languages) || v.audio_languages.length > 8 || !v.audio_languages.every(s => text(s, 32))) return;
-  return { provider_id: v.provider_id, ...(v.provider_name ? { provider_name: v.provider_name } : {}), audio_languages: [...new Set(v.audio_languages)] };
+  return { provider_id: v.provider_id, ...(v.source_id ? { source_id: v.source_id } : {}), ...(v.provider_name ? { provider_name: v.provider_name } : {}), audio_languages: [...new Set(v.audio_languages)] };
 }
 const validKey = (key: unknown): key is string => typeof key === 'string' && key.length > 0 && key.length <= 1024;
 export const deviceProfileKey = (origin: string, profile: string) => JSON.stringify([new URL(origin).origin, profile]);

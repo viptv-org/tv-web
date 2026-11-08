@@ -1,7 +1,7 @@
 {
   "version": 1,
   "repository": "viptv-org/design",
-  "commit": "337efdea2b91816ee8a140f7e401fa6375bb920b",
+  "commit": "059b76344f4fed0639bedf8f89e0bd6e2b22cecd",
   "files": {
     "design-contract/.github/pull_request_template.md": {
       "source": ".github/pull_request_template.md",
@@ -195,6 +195,10 @@
       "source": "specs/behavior/player-audio-subtitles-panel.md",
       "sha256": "0b23a115d8a71ee8e358bd3280fee888020ff8b5e764070e969ca4a7f1b3a6ee"
     },
+    "design-contract/specs/behavior/provider-first-discovery.md": {
+      "source": "specs/behavior/provider-first-discovery.md",
+      "sha256": "b02120d7cbb223c795f240e1c90fe8ce7d84791cddd44d8a3859bbfd9f454eb1"
+    },
     "design-contract/specs/behavior/pull-to-refresh.md": {
       "source": "specs/behavior/pull-to-refresh.md",
       "sha256": "0821ff0affe3d5d27186aa25fc6609f20d2904e77f616fd3e01a3130864b2d77"
@@ -241,7 +245,7 @@
     },
     "design-contract/specs/behavior/tv-browser-renderer.md": {
       "source": "specs/behavior/tv-browser-renderer.md",
-      "sha256": "579eb59426e069d332a02c129a9c88e274d5b00c34992437aab71943e9ec2bda"
+      "sha256": "c00263dbc7a03562fcbdc55dee34b9bcd6150ed19b1cf53561dd03a35e1320db"
     },
     "design-contract/specs/behavior/tv-my-list-posters.md": {
       "source": "specs/behavior/tv-my-list-posters.md",
