@@ -21,6 +21,15 @@ Enter path. Directional navigation remains unchanged; native HTML controls keep
 their browser click behavior. An already handled native Enter must not activate
 the item again through its following click.
 
+Canvas text updates keep the currently loaded glyph texture until the replacement
+is loaded, then swap it atomically. Empty text clears immediately; superseded or
+destroyed labels release pending resources. Do not blank labels between updates.
+
+Hosts with unreliable native video frame reporting may explicitly use observed
+playing, decode-ready media and advancing playback time as presentation evidence.
+Do not invent a frame count. Keep ordinary frame-counter checks and failure bounds
+on other hosts, and reject metadata-only, seek-only or stalled observations.
+
 Load the selected backend's fonts before mounting text. Canvas uses browser
 fonts with the existing family names and metrics; it does not request SDF
 atlases. A WebGL launch must not fetch the Canvas backend. Native browser video

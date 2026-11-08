@@ -1,6 +1,36 @@
 import { test, expect } from '@playwright/test';
 import { installRemoteBackend } from '../preview/remote-backend';
 
+test('Canvas text stays painted through repeated updates and clears intentionally empty text',async({page,baseURL})=>{
+ await page.addInitScript(()=>{const original=HTMLCanvasElement.prototype.getContext;HTMLCanvasElement.prototype.getContext=function(this:HTMLCanvasElement,type:string,...args:any[]){return type.includes('webgl')?null:original.apply(this,[type,...args] as any);} as typeof original;});
+ await installRemoteBackend(page,baseURL!);await page.goto('/tv/?focusdebug=1');await expect(page.locator('html')).toHaveAttribute('data-tv-startup','ready');
+ const facts=await page.evaluate(async()=>{
+  const renderer=(window as any).__viptvRenderer;
+  const plate=renderer.createNode({parent:renderer.root,x:1600,y:500,w:220,h:90,color:0x000000ff,zIndex:100000});
+  const label=renderer.createTextNode({parent:renderer.root,x:1600,y:500,text:'5000',fontFamily:'Onest700',fontSize:48,color:0xffffffff,zIndex:100001});
+  const frame=()=>new Promise<void>(resolve=>requestAnimationFrame(()=>resolve()));
+  for(let i=0;i<60&&!label.textureLoaded;i++)await frame();
+  const ctx=(document.querySelector('#app canvas') as HTMLCanvasElement).getContext('2d')!;
+  const white=()=>{const pixels=ctx.getImageData(1600,500,220,90).data;let count=0;for(let i=0;i<pixels.length;i+=4)if(pixels[i]>200&&pixels[i+1]>200&&pixels[i+2]>200)count++;return count;};
+  let blank=0;for(let i=0;i<72;i++){if(i%4===0)label.text=String(5001+i);await frame();if(white()<20)blank++;}
+  label.text='';for(let i=0;i<4;i++)await frame();const empty=white();
+  label.text='pending';label.destroy();plate.destroy();for(let i=0;i<4;i++)await frame();return{blank,empty};
+ });
+ expect(facts.blank).toBe(0);expect(facts.empty).toBe(0);
+});
+
+test('PS4 playback survives zero frame reports with real advancing HLS media',async({page,baseURL})=>{
+ await page.addInitScript(()=>{
+  Object.defineProperty(navigator,'userAgent',{configurable:true,get:()=> 'Mozilla/5.0 (PlayStation 4 12.00) AppleWebKit/605.1.15'});
+  Object.defineProperty(HTMLVideoElement.prototype,'getVideoPlaybackQuality',{configurable:true,value:()=>({totalVideoFrames:0,droppedVideoFrames:0,corruptedVideoFrames:0,creationTime:performance.now()})});
+ });
+ const fixture=await installRemoteBackend(page,baseURL!,{media:true});await page.goto('/tv/?focusdebug=1');const state=page.locator('html');await expect(state).toHaveAttribute('data-tv-ready','true');
+ await page.keyboard.press('Enter');await expect(state).toHaveAttribute('data-tv-overlay','sources');await expect(state).toHaveAttribute('data-tv-sources','8');await expect(state).toHaveAttribute('data-tv-ready','true');await page.keyboard.press('Enter');
+ await expect.poll(()=>fixture.requests.some(r=>r.path.endsWith('/first-frame'))).toBe(true);
+ await expect.poll(()=>page.locator('video').evaluate(v=>(v as HTMLVideoElement).currentTime),{timeout:15000}).toBeGreaterThan(3);
+ expect(await state.getAttribute('data-tv-playback-error')).toBe('');expect(fixture.requests.filter(r=>r.path==='/api/playback'&&r.method==='POST')).toHaveLength(1);
+});
+
 test('PS4 Cross clicks activate the focused navigation item and source row',async({page,baseURL})=>{
  await page.addInitScript(()=>{
   Object.defineProperty(navigator,'userAgent',{configurable:true,get:()=> 'Mozilla/5.0 (PlayStation 4 12.00) AppleWebKit/605.1.15'});
@@ -69,6 +99,17 @@ test('automatically renders the shared TV screens and prepared Next with Canvas 
  await expect(state).toHaveAttribute('data-tv-sources','8');await expect(state).toHaveAttribute('data-tv-ready','true');await page.keyboard.press('Enter');
  await expect(state).toHaveAttribute('data-tv-player-state','playing');await expect(state).toHaveAttribute('data-tv-overlay','');
  await expect.poll(()=>page.locator('video').evaluate(v=>(v as HTMLVideoElement).videoWidth)).toBe(160);
+ await expect.poll(()=>fixture.requests.some(request=>request.path.endsWith('/first-frame'))).toBe(true);
+ await page.evaluate(()=>{for(const type of ['keydown','keyup'])document.dispatchEvent(new KeyboardEvent(type,{key:'MediaPause',keyCode:19,bubbles:true,cancelable:true}));});
+ await expect(state).toHaveAttribute('data-tv-player-state','paused');await page.keyboard.press('ArrowDown');
+ const stable=await page.evaluate(async()=>{
+  const renderer=(window as any).__viptvRenderer;
+  const find=()=>{let id:number|undefined;const walk=(n:any)=>{if(n.viptvText==='Source'&&n.isRenderable)id=n.id;n.children?.forEach(walk);};walk(renderer.stage.root);return id;};
+  for(let i=0;i<60&&find()===undefined;i++)await new Promise<void>(resolve=>requestAnimationFrame(()=>resolve()));
+  const before=find();for(let i=0;i<10;i++)document.querySelector('video')!.dispatchEvent(new Event('timeupdate'));
+  await new Promise<void>(resolve=>requestAnimationFrame(()=>requestAnimationFrame(()=>resolve())));return {before,after:find()};
+ });
+ expect(stable.before).toBeDefined();expect(stable.after).toBe(stable.before);
  await page.screenshot({path:testInfo.outputPath('canvas-player.png')});
  await expect(state).toHaveAttribute('data-tv-next-prepared','true');
  expect(fixture.requests.filter(r=>r.path==='/api/playback'&&r.method==='POST')).toHaveLength(1);

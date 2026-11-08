@@ -85,6 +85,7 @@ export class RemotePlayback {
         // advancing SDK media clock; physical video presentation is a device gate.
         const decoded =
           snapshot.diagnostics?.firstFrameMs !== undefined ||
+          snapshot.diagnostics?.presentationEvidence === "media-progress" ||
           (snapshot.diagnostics?.presentedFrames ?? 0) > 0 ||
           (snapshot.diagnostics?.presentedFrames === undefined &&
             this.player.capabilities.platform !== "tizen" &&

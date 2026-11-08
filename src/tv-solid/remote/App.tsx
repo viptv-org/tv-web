@@ -1568,7 +1568,7 @@ export function createRemoteTvApp(
           ? [{ id: "next", label: "Next episode" }]
           : []),
       ];
-    });
+    }, undefined, { equals: (a, b) => a.length === b.length && a.every((button, index) => button.id === b[index].id && button.label === b[index].label) });
     const playerTools = createMemo(() => {
       let left = 280;
       return playerButtons().slice(1).map(button => {

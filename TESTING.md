@@ -1,3 +1,25 @@
+# PS4 native playback evidence and Canvas text updates — 2026-11-08
+
+The owner reports video/audio initially playing but then being stopped by the
+zero-decoded-frame watchdog. PS4 explicitly opts into native presentation evidence
+from an observed playing event, decode-ready media and advancing time. No frame
+count or dimensions are invented. Metadata-only, seek-only and stalled states
+remain failures; other hosts retain their ordinary counter checks. Video pin:
+`fd2f20ad01072fa23a0ca9c276ff5463f2fd4088`; its typecheck/build and 185 tests pass.
+
+The pinned Canvas 1.10.2 patch keeps loaded glyph pixels until their replacement
+is loaded and swaps ownership atomically. Superseded/destroyed replacements release
+pending resources; intentionally empty labels clear. Unpatched browser regression:
+36 blank frames; patched: zero. The patch is applied reproducibly after install
+and was verified by reversing/reapplying it. Player control descriptors also
+retain identity across clock-only updates, avoiding Source/track-label remounts.
+
+All 24 Canvas/input/media cases pass across Chromium, Firefox and WebKit; the
+stronger stable-control check passes in each engine after waiting for first-frame
+acknowledgment and pausing the five-second fixture. These decode actual HLS while
+frame reports are forced to zero. Grouped typecheck, production build and all
+219 shared/native tests pass. Physical PS4 video/text acceptance awaits retest.
+
 # PS4 Cross activation — 2026-11-08
 
 The owner confirms physical PS4 Canvas startup and pairing after the signed-out

@@ -1,7 +1,7 @@
 {
   "version": 1,
   "repository": "viptv-org/design",
-  "commit": "0490138f338d442235af119ba1f34d752382b040",
+  "commit": "3b02507edbb188b91405f39b20bd1140eb71a59c",
   "files": {
     "design-contract/.github/pull_request_template.md": {
       "source": ".github/pull_request_template.md",
@@ -241,7 +241,7 @@
     },
     "design-contract/specs/behavior/tv-browser-renderer.md": {
       "source": "specs/behavior/tv-browser-renderer.md",
-      "sha256": "f8960d66896f898c1514151e4213c7160daaed396698d76a9d2a1bb9644aba64"
+      "sha256": "93fbbb0b32c51898668b506a58a7378a9e8a158b4f79a0463598e5f6d6829314"
     },
     "design-contract/specs/behavior/tv-my-list-posters.md": {
       "source": "specs/behavior/tv-my-list-posters.md",

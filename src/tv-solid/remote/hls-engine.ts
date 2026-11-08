@@ -11,5 +11,5 @@ import type { Player } from "../../../vendor/video/src/types";
  * engine before the first session.
  */
 export function createHtmlHlsPlayer(video: HTMLVideoElement): Player {
-  return new VizioHtml5Adapter(video);
+  return new VizioHtml5Adapter(video, { unreliableFrameReporting: /PlayStation\s*4/i.test(navigator.userAgent) });
 }

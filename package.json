@@ -5,6 +5,7 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
+    "postinstall": "patch-package",
     "dev": "vite --host 0.0.0.0",
     "build": "npm run design:check && npm run core:check && npm run video:check && npm run typecheck && vite build",
     "test": "vitest run --pool=forks --poolOptions.forks.singleFork && npm run test:native",
@@ -43,6 +44,7 @@
     "@types/node": "22.10.2",
     "@types/qrcode": "1.5.5",
     "jsdom": "26.0.0",
+    "patch-package": "8.0.1",
     "typescript": "5.7.3",
     "vite": "6.1.0",
     "vite-plugin-solid": "2.11.14",
