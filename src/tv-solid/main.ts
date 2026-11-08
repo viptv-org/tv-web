@@ -12,6 +12,7 @@ import { tvShaderName } from "./shaders";
 import { setRendererStart } from "./renderer-clock";
 import { reloadImages } from "./remote/image-source";
 import { prepareTizenHost } from "./platform/tizen-host";
+import { prepareBrowserRenderer } from "./platform/browser-renderer";
 import "../theme/viptv-tokens.generated.css";
 
 import { RemoteTvApi } from "./remote/api";
@@ -68,7 +69,9 @@ async function start() {
   );
   // Renderer 2.x draws SDF text only: every face the entry names is an
   // atlas (see src/tv-solid/sdf and fonts.ts).
-  const rendererFonts = loadFonts(sdfFonts);
+  const host = await prepareBrowserRenderer();
+  document.documentElement.dataset.rendererBackend = host.mode;
+  const sdfReady = host.mode === "webgl" ? loadFonts(sdfFonts) : undefined;
   Config.fontSettings = { fontFamily: "Onest", fontSize: 32 };
   Config.animationsEnabled = !matchMedia("(prefers-reduced-motion: reduce)")
     .matches;
@@ -76,14 +79,20 @@ async function start() {
     {
       appWidth: 1920,
       appHeight: 1080,
-      deviceLogicalPixelRatio: window.innerWidth / 1920,
+      deviceLogicalPixelRatio: Math.min(window.innerWidth / 1920, window.innerHeight / 1080),
       devicePhysicalPixelRatio: window.devicePixelRatio || 1,
       clearColor: 0x00000000,
       targetFPS: 60,
       textBaselineMode: "linebox",
+      canvas: host.canvas,
     },
     "app",
   );
+  host.canvas.style.position = "absolute";
+  host.canvas.style.left = "50%";
+  host.canvas.style.top = "50%";
+  host.canvas.style.transform = "translate(-50%, -50%)";
+  const rendererFonts = host.loadFonts ? host.loadFonts(renderer) : sdfReady;
   // @solidtv/solid 1.7 no longer registers its built-in shader types itself;
   // without them every `color`/`rounded` node draws as an unrounded quad.
   registerDefaultShaders(renderer as RendererMain);

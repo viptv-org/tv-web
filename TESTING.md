@@ -1,3 +1,45 @@
+# Canvas fallback and live episode handoff — 2026-11-08
+
+The hosted entries use the shared SolidTV application. WebGL-capable browsers
+retain renderer 2.0.7; unavailable WebGL selects the existing 1.10.2 Canvas
+renderer and Canvas text engine through the shared framework factory. Canvas
+fonts use WOFF and actual browser measurements; SDF atlases are not requested.
+The startup logo tile and recovery button are square. The authored canvas fits
+and centers in a 1540 × 754 console-browser window without requesting fullscreen.
+Navigation text and fallback badge backgrounds fit their actual rendered labels.
+The unreferenced React appearance module is removed.
+
+Framework pin: `vynxc/solid` main `de6c0454d092c62ec093aff31a2398fd2ad2faab`.
+Its build passes, 738 tests pass with 13 skipped, and lint passes with existing
+warnings. Its public export contract includes both renderer factory methods.
+Git preparation builds its distribution without requiring global pnpm.
+Design pin: `0cbb058` (full revision in DESIGN_REF).
+
+Client checks: grouped typecheck, 204 shared and 15 native tests, production
+build and Roku build pass. The combined Chromium/Firefox/WebKit matrix reports
+63 passing Canvas/episode cases; its controller shell terminated after the pass
+summary. A separate focused Canvas matrix completes cleanly with 12 passes.
+These exercise real Canvas 2D rendering and decoded HLS with WebGL disabled,
+prepared Next, font widths, square failure recovery, viewport fitting, and the
+unchanged WebGL path without a Canvas-chunk fetch. Private screenshots were
+inspected; no pixel-perfect parity or PS4 hardware qualification is claimed.
+
+Backend `28818eb` is deployed to beta after an online SQLite backup and integrity
+check. Deployment is done, the running image/binary match, and authenticated
+ranking reports source_reuse_supported=true. Environment, mounts, devices and
+network settings are unchanged; all other service container IDs are unchanged.
+The initial backend-only rollout preserved the served frontend hashes.
+
+Actual Roku after that rollout: persisted CineWave/English memory starts Loki
+episode 1 without a picker; final-three-minute discovery prepares episode 2;
+manual Next reaches episode 2; a real episode end shows the ten-second countdown
+and automatically starts episode 3 without a picker. Telemetry confirms advancing
+H.264/AAC playback. The measured countdown-close to playing/ready sample is about
+6.2 seconds, not an instantaneous decoder handoff. Long-hold source override also
+opens the picker. Native HTTP admission counts were not observed; the no-extra-
+preparation-admission assertion is browser evidence. The native 60 FPS target and
+physical PS4 input/media acceptance remain unqualified.
+
 # Preferred-source preparation and sustained playback follow-up — 2026-11-08
 
 Preparation now stops waiting for unrelated providers once the server reports a

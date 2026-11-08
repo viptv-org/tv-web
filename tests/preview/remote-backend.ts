@@ -124,7 +124,7 @@ async function installRendererCompat(page: Page): Promise<void> {
       requestRender: () => renderer.requestRender(),
     });
 
-    const compatRenderer = (renderer: any) => ({
+    const compatRenderer = (renderer: any) => renderer.getCapabilities?.().renderMode === "canvas" ? renderer : ({
       get stage() {
         return compatStage(renderer);
       },

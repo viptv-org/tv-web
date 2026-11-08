@@ -6681,19 +6681,19 @@ export function createRemoteTvApp(
         source();
         setFailed(false);
       });
+      const label = () =>
+        props.card.view?.tile_badge?.label ??
+        props.card.badges.find((badge) => !/simkl/i.test(badge)) ??
+        null;
       const badgeWidth = createMemo(() => {
         const context = sdfTextMetrics("18px Onest700");
         return Math.min(
           props.w - 20,
           Math.ceil(
-            context.measureText(props.card.view?.tile_badge?.label ?? "").width,
+            context.measureText(label() ?? "").width,
           ) + 20,
         );
       });
-      const label = () =>
-        props.card.view?.tile_badge?.label ??
-        props.card.badges.find((badge) => !/simkl/i.test(badge)) ??
-        null;
       const meta = () =>
         props.card.subtitle ||
         props.card.view?.compact_metadata_parts?.join(" · ") ||

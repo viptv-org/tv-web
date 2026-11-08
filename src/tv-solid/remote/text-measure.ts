@@ -86,6 +86,8 @@ export function sdfTextMetrics(
     font,
     letterSpacing,
     measureText(text: string) {
+      if (typeof document !== "undefined" && document.documentElement.dataset.rendererBackend === "canvas")
+        return { width: canvasTextWidth(measure.font, String(text), measure.letterSpacing) };
       const width = sdfTextWidth(
         measure.font,
         String(text),
@@ -97,6 +99,15 @@ export function sdfTextMetrics(
     },
   };
   return measure;
+}
+
+export function canvasTextWidth(font: string, text: string, letterSpacing = 0): number {
+  const context = textMetrics(font, 0);
+  if (!letterSpacing) return context.measureText(text).width;
+  let width = 0;
+  for (let i = 0; i < text.length; i++)
+    if (text[i] !== "\u200b") width += context.measureText(text[i]).width + letterSpacing;
+  return width;
 }
 
 export function textMetrics(

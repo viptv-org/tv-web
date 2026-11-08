@@ -2,13 +2,13 @@
 #solid-startup{display:none;position:fixed;inset:0;z-index:4;background:#0B0B0C;color:#F4F2EE;font-family:Onest,system-ui,sans-serif;align-items:center;justify-content:center;flex-direction:column;gap:2.4vh}
 html[data-tv-startup] #solid-startup{display:flex}
 #solid-startup-brand{display:flex;align-items:center;gap:1.1vw;font-weight:800;font-size:clamp(24px,3.2vw,58px);letter-spacing:-.04em;line-height:1}
-#solid-startup-mark{display:grid;place-items:center;width:1.55em;height:1.55em;border-radius:.28em;background:#F5C542;color:#15130F;font-size:.72em;font-weight:800}
+#solid-startup-mark{display:grid;place-items:center;width:1.55em;height:1.55em;border-radius:0;background:#F5C542;color:#15130F;font-size:.72em;font-weight:800}
 #solid-startup-spinner{width:clamp(20px,1.7vw,34px);height:clamp(20px,1.7vw,34px);border:3px solid rgba(255,255,255,.18);border-top-color:#F5C542;border-radius:50%;animation:solid-startup-spin 1s linear infinite}
 @keyframes solid-startup-spin{to{transform:rotate(360deg)}}
 @media (prefers-reduced-motion:reduce){#solid-startup-spinner{animation-duration:3s}}
 #solid-startup-recovery{display:none;position:absolute;left:5%;top:43.5%;font-size:1.3542vw}
 #solid-startup-recovery p{margin:0 0 2.5vw}
-#solid-startup-recovery button{height:3.75vw;min-width:12.5vw;padding:0 1.875vw;border:0;border-radius:1.875vw;background:#212124;color:#F4F2EE;font:700 1.3542vw Onest,sans-serif}
+#solid-startup-recovery button{height:3.75vw;min-width:12.5vw;padding:0 1.875vw;border:0;border-radius:0;background:#212124;color:#F4F2EE;font:700 1.3542vw Onest,sans-serif}
 #solid-startup-recovery button:focus{outline:none;background:#F4F2EE;color:#111113}
 html[data-tv-startup="failed"] #solid-startup-brand,
 html[data-tv-startup="failed"] #solid-startup-spinner{display:none}
