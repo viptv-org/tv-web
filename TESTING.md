@@ -1,3 +1,10 @@
+Beta resume client `709e610aeaaca32e422e861e5738b31aafab01c8` is deployed.
+Managed rollout is done; HTTPS health, entry and all 59 asset hashes, plus hosted
+Canvas pairing, pass. The first health probe timed out during rollout; the fresh
+verification passes. Other containers, runtime configuration, backend binary and
+root frontend are preserved. Typecheck, 219 shared/native tests, browser build
+and Roku build pass. Physical PS4 timing remains unmeasured.
+
 # Continue Watching responsiveness — 2026-11-08
 
 Real beta API timing from Continue Watching: action 489 ms; first ranked sources
