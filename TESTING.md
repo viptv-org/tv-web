@@ -1,3 +1,10 @@
+Beta seek client `6e60ea6de0fb0c8cf6cab76433c8bc9c349fec82` is deployed.
+Managed rollout is done; health, entry and all 59 asset hashes plus hosted Canvas
+pairing pass. Backend/root frontend and runtime configuration are preserved;
+unrelated containers are unchanged. Typecheck, 209 shared tests, 15 native tests,
+production browser build and Roku build pass. Physical PS4 fullscreen behavior
+remains unverified.
+
 # Stable seek presentation and PS4 Back — 2026-11-08
 
 Real beta playback reproduced a separate gateway-capacity refusal when a seek
