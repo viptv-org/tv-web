@@ -1,3 +1,15 @@
+Beta now serves client `5326b2956e501e4011ee95453dc4453a4d0a29f9`.
+Managed deployment completed; HTTPS entry plus all 59 assets match the validated
+package, and hosted Canvas welcome/Cross-to-pairing works. The backend binary,
+root frontend, environment, mounts, network mode and devices are retained; every
+other running container ID is unchanged. The database backup passes quick_check.
+
+Final grouped typecheck, 204 shared tests, 15 native tests, production browser build
+and Roku build pass. The three nearby scenarios (Skip intro, the three-attempt
+startup cap and late-source focus) pass across browser engines. The Firefox focus
+case initially sent Down before initial ranking arrived; waiting for actual rows
+and input readiness fixes that test race without relaxing its identity assertions.
+
 # Shared playback recovery and source stability — 2026-11-08
 
 The owner confirms Torrentio plays on physical PS4, but reports stuck Buffering
