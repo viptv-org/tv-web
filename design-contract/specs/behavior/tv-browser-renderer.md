@@ -26,9 +26,17 @@ is loaded, then swap it atomically. Empty text clears immediately; superseded or
 destroyed labels release pending resources. Do not blank labels between updates.
 
 Hosts with unreliable native video frame reporting may explicitly use observed
-playing, decode-ready media and advancing playback time as presentation evidence.
+playback time advancing across wall-clock samples as presentation evidence.
+A native engine need not repeat `playing` or update frame/ready-state APIs.
+Buffering notifications do not erase clock evidence; seeks and pauses reset the
+sampling window. Advancing media recovers a stale buffering state without waiting
+for another `playing` event. This also applies to ordinary HTML playback when
+its decoded-frame APIs establish video presentation.
 Do not invent a frame count. Keep ordinary frame-counter checks and failure bounds
 on other hosts, and reject metadata-only, seek-only or stalled observations.
+Control auto-hide measures five seconds of viewer inactivity; routine position
+and buffer snapshots must not restart that timer. After presentation succeeds,
+mid-playback buffering does not initiate another automatic source attempt.
 
 Load the selected backend's fonts before mounting text. Canvas uses browser
 fonts with the existing family names and metrics; it does not request SDF

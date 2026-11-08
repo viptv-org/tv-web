@@ -1,7 +1,7 @@
 {
   "version": 1,
   "repository": "viptv-org/design",
-  "commit": "3b02507edbb188b91405f39b20bd1140eb71a59c",
+  "commit": "b5c3387145cca9de78383a3f825afa715125cbcd",
   "files": {
     "design-contract/.github/pull_request_template.md": {
       "source": ".github/pull_request_template.md",
@@ -209,7 +209,7 @@
     },
     "design-contract/specs/behavior/source-best-match.md": {
       "source": "specs/behavior/source-best-match.md",
-      "sha256": "239046809b98619e968d6f0653a1799c954b3632d96e6823352baed5a6733389"
+      "sha256": "376cf56d9cad77d2a778686bcb211f3d16d78b161ee71b7ee4c23947bb082615"
     },
     "design-contract/specs/behavior/source-drawer.md": {
       "source": "specs/behavior/source-drawer.md",
@@ -241,7 +241,7 @@
     },
     "design-contract/specs/behavior/tv-browser-renderer.md": {
       "source": "specs/behavior/tv-browser-renderer.md",
-      "sha256": "93fbbb0b32c51898668b506a58a7378a9e8a158b4f79a0463598e5f6d6829314"
+      "sha256": "e8b1b80c87c9427e01aa33f03feb08f6ee1b91adecba1638ee7e20df7789ce48"
     },
     "design-contract/specs/behavior/tv-my-list-posters.md": {
       "source": "specs/behavior/tv-my-list-posters.md",

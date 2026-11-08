@@ -1,3 +1,35 @@
+# Shared playback recovery and source stability — 2026-11-08
+
+The owner confirms Torrentio plays on physical PS4, but reports stuck Buffering
+on resume, automatic startup retries despite visible playback, persistent controls
+and source/filter selection shifts during discovery. CineWave can still fail;
+this change does not establish that every upstream source is playable.
+
+HTML adapters now recover stale buffering from advancing decoded media without
+requiring another playing event. The explicit PS4 frame-reporting fallback samples
+the media clock across elapsed wall time, including coarse events and buffering.
+It does not require reliable ready-state/frame APIs or invent frame counts.
+Paused, stalled and seek-only clocks still fail the bounded startup check. Tizen
+also recovers from successive advancing SDK clock callbacks when buffering-complete
+is missing, while preserving paused intent. Canonical video pin: `d55ad9d6c1681eb8fa249101b68fc2afb6f86b39`;
+192 video tests, typecheck and build pass.
+
+Controls use a five-second inactivity deadline preserved across clock updates and
+brief buffering. Discovery appends new rows once the viewer interacts, retains
+focus by identity within the filtered list, and snapshots open filter options.
+Automatic candidate ordering remains server-owned. Design pin:
+`b5c3387145cca9de78383a3f825afa715125cbcd`.
+
+All 54 Canvas/platform/recovery cases pass across Chromium, Firefox and WebKit.
+They decode actual HLS, exercise a nonzero remembered Resume position with missing
+playing events, verify that only one new lease starts, cross the prior watchdog
+boundary, and check controls hide again after input. Filtered-row and open-provider
+selection survive higher-ranked arrivals. The canonical adapter tests additionally
+cover coarse clocks without ready-state reports, seeking, stalled/paused media,
+and Tizen buffering recovery. Browser/SDK-boundary evidence does not qualify
+Samsung, LG, Vizio or PS4 firmware. Physical acceptance of this new batch remains
+pending; no new upstream-source or native frame-rate qualification is claimed.
+
 The beta TV entry and all 59 packaged assets for client `49e493c` match the
 qualified release bytes. Managed deployment reports done, HTTPS health is ready,
 and hosted Canvas startup plus focused Cross activation opens pairing. The

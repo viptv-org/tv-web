@@ -344,9 +344,14 @@ marker does not move.
    a selected row (the source currently playing or last chosen), initial focus
    goes to that row instead, as today, and stays on it while better rows
    arrive.
-4. **After the viewer navigates (TV, desktop/web keyboard):** focus stays on
+4. **After the viewer navigates (TV, desktop/web keyboard):** retain the shown
+   row order for that discovery and append new identities below existing rows.
+   Update facts in place. An explicit quality filter may replace its result set;
+   subsequent arrivals append again. An open filter menu retains its option
+   identities/order until closed, including while providers finish discovery.
+   Focus stays on
    the same source, identified by its stable row identity, never by index,
-   while rows are inserted or moved around it and even when it changes group.
+   using the currently filtered visible list, rather than the unfiltered index.
    The list scrolls so the focused row keeps its on-screen position where the
    list length allows; otherwise the minimal scroll keeps it fully visible.
 5. **After the viewer scrolls (phone, tablet, pointer):** the scroll anchor is

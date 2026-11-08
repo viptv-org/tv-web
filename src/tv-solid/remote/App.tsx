@@ -1098,10 +1098,8 @@ export function createRemoteTvApp(
         provider: label,
       })),
     ]);
-    const sourceMenuOptions = () =>
-      sourceMenu() === "provider"
-        ? providerMenuOptions()
-        : qualityMenuOptions();
+    const [openSourceMenuOptions, setOpenSourceMenuOptions] = createSignal<SourceMenuOption[]>([]);
+    const sourceMenuOptions = () => openSourceMenuOptions();
     const sourceActionOptions = [
       {
         id: "direct",
@@ -3801,7 +3799,20 @@ export function createRemoteTvApp(
       }, 180);
     }
     function reconcileSources(value: Source[]) {
-      const focused = sources()[choice()]?.id;
+      const focused = focusedSource()?.id;
+      // Once the viewer interacts, late discovery must not move rows under
+      // focus. Ranking still chooses automatic candidates from the server page.
+      if (manualSourceSelection) {
+        const incoming = new Map(value.map(source => [source.id, source]));
+        value = [
+          ...sources().flatMap(source => {
+            const next = incoming.get(source.id);
+            incoming.delete(source.id);
+            return next ? [next] : [];
+          }),
+          ...incoming.values(),
+        ];
+      }
       // Reuse the previous object reference for any source whose rendered data
       // is unchanged, so a discovery re-rank repositions rows without
       // re-rendering (flashing) the ones that did not actually change.
@@ -3823,17 +3834,18 @@ export function createRemoteTvApp(
           ? before
           : source;
       });
-      setSources(stable);
-      const index = stable.findIndex((source) => source.id === focused);
-      setChoice(
-        index >= 0 ? index : Math.max(0, Math.min(choice(), stable.length - 1)),
-      );
+      batch(() => {
+        setSources(stable);
+        const visible = visibleSources();
+        const index = visible.findIndex(source => source.id === focused);
+        setChoice(index >= 0 ? index : Math.max(0, Math.min(choice(), visible.length - 1)));
+      });
     }
     /** Until the viewer moves, the focused row follows the server's best match
      * as discovery grows instead of staying on whatever stream arrived first. */
     function focusBestMatch(page: SourcePage) {
       if (manualSourceSelection || !page.best_match_id) return;
-      const index = page.streams.findIndex(
+      const index = visibleSources().findIndex(
         (source) => source.id === page.best_match_id,
       );
       if (index >= 0) setChoice(index);
@@ -4125,31 +4137,30 @@ export function createRemoteTvApp(
       }
       return started;
     }
-    function hideControls() {
+    let controlsHideAt = 0;
+    function hideControls(activity = true) {
+      if (activity || !controlsHideAt) controlsHideAt = Date.now() + 5000;
       clearTimeout(controlsTimer);
       controlsTimer = setTimeout(() => {
         if (
-          !error() &&
+          !error() && !overlay() &&
           !seeking() &&
           !loading() &&
           snapshot()?.state === "playing"
         )
           setShowControls(false);
-      }, 5000);
+      }, Math.max(0, controlsHideAt - Date.now()));
     }
     // A timer armed during buffering used to give up and never re-arm. Re-arm
     // on every transition back to playing so chrome always clears itself.
+    const controlsCanAutoHide = createMemo(() =>
+      screen() === "player" && !overlay() && snapshot()?.state === "playing" &&
+      !seeking() && !loading() && !error(),
+    );
     createEffect(() => {
-      const state = snapshot()?.state;
-      if (
-        screen() === "player" &&
-        !overlay() &&
-        state === "playing" &&
-        !seeking() &&
-        !loading() &&
-        !error()
-      )
-        hideControls();
+      // Memo equality keeps position/buffer snapshots from rearming this timer.
+      if (controlsCanAutoHide()) hideControls(false);
+      else clearTimeout(controlsTimer);
     });
     async function toggleSaved(card: Card) {
       await run(async () => {
@@ -5929,9 +5940,10 @@ export function createRemoteTvApp(
           }
           if (sourceFilterFocus()) {
             const kind = sourceFacet() === 0 ? "quality" : "provider";
-            setSourceMenu(kind);
             const options =
               kind === "quality" ? qualityMenuOptions() : providerMenuOptions();
+            setOpenSourceMenuOptions(options);
+            setSourceMenu(kind);
             const selected =
               kind === "quality"
                 ? options.findIndex(
@@ -6267,7 +6279,7 @@ export function createRemoteTvApp(
     }
     function pressTarget(){
       const modal=overlay();
-      if(modal?.kind==='sources')return JSON.stringify(['sources',sourceFilterFocus()?['filter',sourcePage()?.quality_filters?.[sourceFacet()-1]?.height]:['source',sources()[choice()]?.id],selected()?cardKey(selected()!):null]);
+      if(modal?.kind==='sources')return JSON.stringify(['sources',sourceFilterFocus()?['filter',sourcePage()?.quality_filters?.[sourceFacet()-1]?.height]:['source',focusedSource()?.id],selected()?cardKey(selected()!):null]);
       if(modal)return JSON.stringify([modal.kind,modal.kind==='text'?key():choice()]);
       // The hero term identifies the billboard only while the billboard is the
       // focused element. On a rows card the hero is the delayed preview, which
@@ -6395,6 +6407,9 @@ export function createRemoteTvApp(
         snapshot()?.state ?? "",
       );
       document.documentElement.dataset.tvPlaybackError = playbackError();
+      document.documentElement.dataset.tvPlayerControls = String(showControls());
+      document.documentElement.dataset.tvPlayerBusy = String(loading() || seeking() || snapshot()?.state === "buffering");
+      document.documentElement.dataset.tvSourceIdentity = focusedSource()?.id ?? "";
       document.documentElement.dataset.tvPlayerEpisode = String(activeAction()?.card.identity.episode?.episode ?? "");
       document.documentElement.dataset.tvNextStatus = episodeState().status;
       document.documentElement.dataset.tvNextPrepared = String(!!episodeState().prepared);
@@ -6496,6 +6511,7 @@ export function createRemoteTvApp(
       const input = (event: KeyboardEvent) => {
         countdown.cancel();
         if (event.ctrlKey || event.metaKey || event.altKey) return;
+        if (screen() === "player" && !overlay()) hideControls();
         if (
           screen() === "welcome" &&
           (event.key === "Enter" || event.keyCode === 13)

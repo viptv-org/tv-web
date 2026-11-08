@@ -544,7 +544,8 @@ test("source focus survives incremental reranking and user input cancels automat
   // The renderer now runs a 60 fps loop; give the frozen clock one frame so
   // the discovery update is painted and focus can follow the new best source.
   await page.clock.runFor(32);
-  await expect(screen(page)).toHaveAttribute("data-tv-focus", /:2$/);
+  await expect(screen(page)).toHaveAttribute("data-tv-source-choice", "1");
+  await expect(screen(page)).toHaveAttribute("data-tv-source-identity", "stream-1");
   fixture.completeDiscovery();
   await expect(screen(page)).not.toHaveAttribute(
     "data-tv-source-status",
