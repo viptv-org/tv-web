@@ -21,6 +21,25 @@ const renderer = { markDirty: vi.fn(), animator: { removeFor: vi.fn() } };
 beforeEach(() => { graphics.nodes.length = 0; graphics.writes.length = 0; });
 afterEach(() => vi.useRealTimers());
 
+it("keeps transparent layout containers as groups without allocating painted rectangles", () => {
+  const node=new RokuNode(renderer,{w:1920,h:1080,color:0});node.flush();
+  expect(node.visual).toBeNull();expect(graphics.nodes.filter(n=>n.type==='rectangle')).toHaveLength(0);
+  node.color=0x0b0b0cff;node.flush();expect(node.visual).not.toBeNull();
+  node.color=0;node.flush();expect(node.visual).toBeNull();expect(node.dom.children).toHaveLength(0);
+  node.destroy();
+});
+
+it("retains a visible gradient even when its first corner is transparent", () => {
+  const node=new RokuNode(renderer,{w:400,h:225,color:0,colorBottom:0x000000ff});node.flush();
+  expect(node.visual).not.toBeNull();node.destroy();
+});
+
+it("keeps a transparent visual explicitly claimed for a native border", () => {
+  const node=new RokuNode(renderer,{w:400,h:225,color:0});node.flush();
+  const border=node.claimVisual('rectangle');node.flush();
+  expect(node.nativeVisual).toBe(border);node.destroy();
+});
+
 it("transfers a Poster to the layer bridge without constructing or submitting another image", () => {
   const node = new RokuNode(renderer, { w: 400, h: 225, src: "https://example.test/image.jpg" });
   node.flush();

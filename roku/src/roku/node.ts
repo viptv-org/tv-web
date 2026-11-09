@@ -749,10 +749,17 @@ export class RokuNode extends Events {
 
   private ensureVisual() {
     if (this._externalVisual) return;
-    if (!this._isText && !this.src && !this._hasColor && !this._shader) {
-      // Plain layout containers are transparent. Painting the default white
-      // rectangle here covered the app background and every overlay that was
-      // ordered before the container.
+    const emptyColor = ((this._colorTL | this._colorTR | this._colorBL | this._colorBR) & 255) === 0;
+    if (!this._isText && !this.src && !this._shader && (!this._hasColor || emptyColor)) {
+      if (this.visual) {
+        tmTransaction.removeNode(this.dom, this.visual);
+        this.visual = null;
+        this._effect = null;
+        this._written = {};
+      }
+      this.clearGradientBands();
+      this.clearGradientOverlay();
+      this.clearShadow();
       return;
     }
     const type = this._isText ? 'label' : this.src ? 'poster' : 'rect';

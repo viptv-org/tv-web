@@ -30,10 +30,16 @@ export class SceneGraphRenderer extends Events {
   private nativeRoot: any;
   private dirty = new Set<RokuNode>();
   private flushTimer: any = null;
+  private inAnimationFrame = false;
   private ticker = new FrameClock((elapsed) => {
     if (this.destroyed || this.animator.paused) return false;
-    this.animator.tick(elapsed);
-    this.flushDirty();
+    this.inAnimationFrame = true;
+    try {
+      this.animator.tick(elapsed);
+      this.flushDirty();
+    } finally {
+      this.inAnimationFrame = false;
+    }
     return this.animator.running;
   }, nowMs);
   private shaderTypes = new Map<string, any>();
@@ -125,7 +131,7 @@ export class SceneGraphRenderer extends Events {
   markDirty(node: RokuNode) {
     if (this.destroyed) return;
     this.dirty.add(node);
-    this.scheduleFlush();
+    if (!this.inAnimationFrame) this.scheduleFlush();
   }
 
   requestRender() {

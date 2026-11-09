@@ -3731,3 +3731,15 @@ repeated frame traces and the final account handoff remain pending at this
 implementation checkpoint. Normal exit/relaunch and the preceding cold update
 retained sign-in. The owner confirmed audible, synchronized audio during the
 preceding real playback checkpoint; final media telemetry is recorded separately.
+
+Native follow-up: empty layout containers no longer allocate transparent painted
+rectangles, and animation ticks do not queue a redundant immediate flush. Host
+coverage is now 18 tests (256 unit tests total). On the same Home row state,
+transparent rectangles fell from 71 to 9; posters and labels remained 33/42.
+The three fixed 32-key navigation traces after this change report render+swap
+p95 of 22.04/21.89/21.83 ms. The unchanged 16.67 ms qualification gate fails;
+these results do not establish 60 FPS. The first trace includes more initial
+work; subsequent traces are warm. Earlier system-Home and minimal native-scene
+diagnostics on this device reported approximately 48 FPS as well. This is an
+observed environment result, not a universal hardware limit. Further compositor
+or SDK scheduling work is outside this owner-scoped TV-web refinement.
