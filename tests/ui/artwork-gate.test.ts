@@ -45,3 +45,12 @@ it("returning to the displayed card cancels a pending replacement immediately", 
   gate.request("profile","a","first updated",["logo"]);show.mockClear();
   gate.settled(old,"logo");expect(show).not.toHaveBeenCalled();
 });
+
+it("holds the painted frame while a row selection settles and rejects its abandoned incoming image", () => {
+  const {gate,show,pending}=setup();gate.request("profile","a","painted",[]);
+  gate.request("profile","b","unseen featured",["background"]);const old=pending().id;
+  show.mockClear();gate.hold("profile");gate.settled(old,"background");
+  expect(show).not.toHaveBeenCalled();
+  gate.request("profile","c","row target",["background"]);gate.settled(pending().id,"background");
+  expect(show).toHaveBeenCalledWith("row target",new Set());
+});

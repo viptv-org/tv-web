@@ -668,6 +668,8 @@ function iconSource(svg: string): { uri: string; color: string } | undefined {
       !String(rawSrc).includes("welcome-");
     const layer = modal
       ? modalLayer
+      : p.focusRing === true
+        ? chromeLayer
       : chrome
         ? backdropScrimLayer
         : heroScrim

@@ -4,6 +4,7 @@ import { KeyedFor, TvView } from "../runtime";
 import { Button, icon, Label, palette } from "./visuals";
 import { reducedMotion } from "./motion";
 import { railLayout } from "./rail-layout";
+import { homeCardSize, focusFrameEdges } from "./focus-frame";
 import { cardKey, type Card, type Row } from "./types";
 
 const MOTION = {
@@ -67,9 +68,10 @@ export function HomeShelves(props: {
           const indices = createMemo(() => new Map(cards().map((card, index) => [cardKey(card), index])));
           const selected = () => model().index === props.row;
           const portrait = () => model().row.id !== "continue";
-          const width = () => portrait() ? 255.2 : 423.4;
-          const height = () => portrait() ? 382.8 : 237.6;
-          const step = () => portrait() ? 271.2 : 442.4;
+          const width = () => homeCardSize(portrait()).width;
+          const height = () => homeCardSize(portrait()).height;
+          const step = () => homeCardSize(portrait()).step;
+          const edges = createMemo(() => focusFrameEdges(width(),height()));
           const index = () => selected() ? props.column : remembered.get(model().row.id) ?? 0;
           const layout = createMemo(() => railLayout(cards().length, index(), step(), width()));
           const y = () => origin() + model().offset;
@@ -92,11 +94,10 @@ export function HomeShelves(props: {
                 }}
               </KeyedFor>
             </TvView>
-            <TvView x={layout().focus} y={y() + 52} w={width()} h={height()} alpha={selected() && props.focused ? 1 : 0} transition={motion}>
-              <TvView w={width()} h={4} color={palette.text} />
-              <TvView y={height() - 4} w={width()} h={4} color={palette.text} />
-              <TvView w={4} h={height()} color={palette.text} />
-              <TvView x={width() - 4} w={4} h={height()} color={palette.text} />
+            <TvView x={layout().focus} y={y() + 52} w={width()} h={height()} alpha={selected() && props.focused ? 1 : 0} transition={motion} zIndex={1}>
+              <KeyedFor each={edges()} keyOf={edge => edge.id}>
+                {edge => <TvView x={edge().x} y={edge().y} w={edge().w} h={edge().h} color={palette.text} focusRing />}
+              </KeyedFor>
               <Show when={typeof (globalThis as any).__SolidTVRokuRenderer === "undefined"}>
                 <TvView x={(width() - 72) / 2} y={(height() - 72) / 2} w={72} h={72} color="rgba(255,255,255,.16)">
                   <TvView x={22} y={21} w={28} h={30} src={icon("play", false, 0, palette.text)} />

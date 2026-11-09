@@ -10,6 +10,13 @@ export class ArtworkGate<T> {
   constructor(private show: (value: T | undefined, failed: ReadonlySet<string>) => void,
     private prepare: (request: ArtworkRequest<T> | undefined) => void) {}
 
+  hold(scope: string) {
+    if (scope !== this.scope) {
+      this.scope=scope;this.currentKey="";this.currentFailed=new Set();this.show(undefined,new Set());
+    }
+    this.pending=undefined;this.prepare(undefined);
+  }
+
   request(scope: string, key: string, value: T | undefined, resources: string[]) {
     if (scope !== this.scope) { this.scope=scope;this.currentKey="";this.currentFailed=new Set();this.pending=undefined;this.show(undefined,new Set()); }
     if (value === undefined) { this.currentKey="";this.pending=undefined;this.prepare(undefined);this.show(undefined,new Set());return; }

@@ -70,6 +70,7 @@ async function installRendererCompat(page: Page): Promise<void> {
         : srcTexture(node);
       if (texture) props.src = texture.props?.src;
       const compat: any = {
+        id: node.id,
         isRenderable:
           worldAlpha > 0 &&
           (shader !== null || node.texture !== undefined || node.text !== undefined) &&

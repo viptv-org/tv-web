@@ -85,9 +85,9 @@ test("Home moves a stable rail and shelf while retaining the focus anchor",async
   const position=()=>page.evaluate(()=>{
     let first:any,heading:any,outline=Infinity;
     function walk(n:any){
-      if(n.props.w>423&&n.props.w<424&&n.props.h>237&&n.props.h<238&&n.texture?.props?.src?.includes('a5729872fdf6d97950dabed6371ef4d6.jpg'))first={id:n.id,x:n.absX};
+      if(n.props.w===424&&n.props.h===238&&n.texture?.props?.src?.includes('a5729872fdf6d97950dabed6371ef4d6.jpg'))first={id:n.id,x:n.absX};
       if(n.viptvText==='Second shelf for scrolling')heading={id:n.id,y:n.absY};
-      if(n.isRenderable&&n.props.w===4&&n.props.h>237&&n.props.h<238)outline=Math.min(outline,n.absX);
+      if(n.isRenderable&&n.props.w===4&&n.props.h===230)outline=Math.min(outline,n.absX);
       n.children?.forEach(walk);
     }
     walk((window as any).__viptvRenderer.stage.root);return{first,heading,outline};
@@ -106,4 +106,42 @@ test("Home moves a stable rail and shelf while retaining the focus anchor",async
   await page.clock.runFor(200);
   expect(Math.round((await position()).heading.y)).toBe(545);
   expect(fixture.requests.some(r=>r.path.startsWith('/api/meta/')||r.path==='/api/streams')).toBe(false);
+});
+
+test("entering Continue Watching fades from the displayed featured image directly to its row target",async({page,baseURL})=>{
+  await page.emulateMedia({reducedMotion:"no-preference"});await page.clock.install();
+  const fixture=await installRemoteBackend(page,baseURL!);const home=fixture.bootstrap().home!;
+  const first={...fixture.card,logo:null,description:"First featured synopsis"};
+  const second={...fixture.cards[2],logo:null,description:"Second featured synopsis"};
+  const target={...fixture.cards[4],logo:null,description:"Continue target synopsis"};
+  home.hero=first;home.featured=[first,second];home.rows=[{...home.rows[0],id:"continue",cards:[target]}];
+  const photos=()=>page.evaluate(()=>{
+    const src:string[]=[];function walk(n:any){if(n.isRenderable&&n.props.w===1920&&n.props.h===1080&&typeof n.texture?.props?.src==='string'&&n.texture.props.src.includes('/fixture/'))src.push(n.texture.props.src);n.children?.forEach(walk);}
+    walk((window as any).__viptvRenderer.stage.root);return src;
+  });
+  await page.goto('/tv/?focusdebug=1');await expect.poll(()=>texts(page)).toContain(first.description);
+  await page.clock.fastForward(9100);await expect.poll(async()=>{await page.clock.runFor(16);return texts(page);}).toContain(second.description);
+  await page.clock.runFor(200);await page.keyboard.press('ArrowDown');
+  const seen=new Set<string>();
+  for(let i=0;i<28;i++){await page.clock.runFor(32);for(const src of await photos())seen.add(src);}
+  await expect.poll(async()=>{await page.clock.runFor(32);return texts(page);}).toContain(target.description);
+  expect([...seen]).not.toContain(first.landscape);
+  expect([...seen]).toContain(second.landscape);expect([...seen]).toContain(target.landscape);
+});
+
+test("a prepared clearlogo keeps the same rendered node when its hero becomes visible",async({page,baseURL})=>{
+  const fixture=await installRemoteBackend(page,baseURL!);const home=fixture.bootstrap().home!;
+  const card={...fixture.card,logo:'https://images.metahub.space/logo/medium/tt123/img',description:'Stable prepared logo'};
+  home.hero=card;home.featured=[card];
+  await page.route('**/api/bootstrap',route=>route.fulfill({json:{...fixture.bootstrap(),clearlogo_image_supported:true}}));
+  await page.route('**/api/images/clearlogo/v1/tt123.png',route=>route.fulfill({path:referenceRoot+'/assets/274e704ffc2eeb3e73918396e294edb0.png',contentType:'image/png'}));
+  let release!:()=>void;const held=new Promise<void>(resolve=>{release=resolve;});
+  await page.route('**/fixture/a5729872fdf6d97950dabed6371ef4d6.jpg',async route=>{await held;await route.fallback().catch(()=>{});});
+  const logo=()=>page.evaluate(()=>{
+    let found:{id:number;loaded:boolean}|undefined;function walk(n:any){if(n.texture?.props?.src?.includes?.('/api/images/clearlogo/'))found={id:n.id,loaded:n.texture.state==='loaded'};n.children?.forEach(walk);}
+    walk((window as any).__viptvRenderer.stage.root);return found;
+  });
+  await page.goto('/tv/?focusdebug=1');await expect.poll(async()=>!!(await logo())?.loaded).toBe(true);
+  const before=(await logo())!.id;expect(typeof before).toBe('number');release();await expect.poll(()=>texts(page)).toContain(card.description);
+  await page.waitForTimeout(250);expect((await logo())?.id).toBe(before);
 });

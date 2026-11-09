@@ -105,6 +105,7 @@ import { CalendarBoard, calendarDayKey, calendarDays } from "./CalendarBoard";
 import { StatusDialog } from "./StatusDialog";
 import { initialSeasonIndex, seasonLabel, episodeActionLabel, seasonEpisodes } from "./seasons";
 import { HomeShelves } from "./HomeShelves";
+import { homeCardSize, focusFrameEdges } from "./focus-frame";
 import { BusyIndicator, BusySpinner } from "./BusyIndicator";
 import { createCoherentHero, HeroArtwork } from "./CoherentHero";
 import { presentationCard, presentationKey } from "./presentation-card";
@@ -2287,11 +2288,20 @@ export function createRemoteTvApp(
         return { ...value, logo: fallback.logo };
       return value;
     });
+    const heroLogoBox = () => screen() === "detail"
+      ? detailHasEpisodes() && ["episodes","seasons","recommendations"].includes(zone())
+        ? {x:96,y:54,width:220,height:68}
+        : {x:96,y:detailHasEpisodes() ? 250 : 220,width:640,height:detailHasEpisodes() ? 134 : 190}
+      : zone() === "rows" ? {x:96,y:Math.max(96,132+Math.max(0,shelfTitleY()-40-132-310)/2),width:640,height:120}
+      : {x:96,y:330,width:640,height:160};
     const heroPresentation = createCoherentHero(
       () => screen() === "home" || screen() === "detail" ? hero() ?? undefined : undefined,
       () => `${deviceScope()}:${screen()}`,
       () => screen() === "detail" ? "detail" : zone() !== "rows" ? "hero"
         : home()?.rows[row()]?.id === "continue" ? "landscape" : "portrait",
+      heroLogoBox,
+      () => screen() !== "home" || zone() !== "rows" || !!previewCard() && !!focusedCard() &&
+        presentationKey(previewCard()!) === presentationKey(focusedCard()!),
     );
     const displayHero = heroPresentation.card;
     const detailForDisplay = createMemo(() => detail() && displayHero() && presentationKey(detail()!.item) === presentationKey(displayHero()!)
@@ -6755,6 +6765,7 @@ export function createRemoteTvApp(
       focusBorder?: boolean;
       preload?: boolean;
     }) {
+      const edges = createMemo(() => focusFrameEdges(props.w,props.h));
       const progress = () =>
         props.card.progress ?? props.card.view?.progress ?? null;
       const source = () =>
@@ -6868,12 +6879,9 @@ export function createRemoteTvApp(
               </TvView>
             </Show>
             <Show when={props.focused && props.focusBorder !== false && isRokuUi}>
-              {/* SceneGraph has no border primitive; four 4px strips match the
-                  Android TV focused-card border without clipping at the edge. */}
-              <TvView w={props.w} h={4} color={palette.text} />
-              <TvView y={props.h - 4} w={props.w} h={4} color={palette.text} />
-              <TvView w={4} h={props.h} color={palette.text} />
-              <TvView x={props.w - 4} w={4} h={props.h} color={palette.text} />
+              <KeyedFor each={edges()} keyOf={edge => edge.id}>
+                {edge => <TvView x={edge().x} y={edge().y} w={edge().w} h={edge().h} color={palette.text} focusRing />}
+              </KeyedFor>
             </Show>
             <Show when={(progress() ?? 0) > 0}>
               <TvView
@@ -7078,12 +7086,7 @@ export function createRemoteTvApp(
                 artwork cannot cover the video. */}
             <TvView w={1920} h={1080} show={screen() !== "player" && !screenSaver()}>
             <HeroArtwork presentation={heroPresentation}
-              logoBox={screen() === "detail"
-                ? detailHasEpisodes() && ["episodes","seasons","recommendations"].includes(zone())
-                  ? {x:96,y:54,width:220,height:68}
-                  : {x:96,y:detailHasEpisodes() ? 250 : 220,width:640,height:detailHasEpisodes() ? 134 : 190}
-                : zone() === "rows" ? {x:96,y:Math.max(96,132+Math.max(0,shelfTitleY()-40-132-310)/2),width:640,height:120}
-                : {x:96,y:330,width:640,height:160}}
+              logoBox={heroLogoBox()}
               dim={screen() === "detail" && ["episodes","seasons","recommendations"].includes(zone())
                 ? typeof (globalThis as any).__SolidTVRokuRenderer !== "undefined" ? .35 : .5 : 0} />
             <Show
@@ -7337,7 +7340,7 @@ export function createRemoteTvApp(
                   focused={zone() === "hero"}
                 />
               </Show>
-              <Show when={displayHero()}>
+              <Show when={heroPresentation.mode() === "hero" ? displayHero() : undefined}>
                 {(card) => (
                   <TvView
                     x={96}
@@ -7424,7 +7427,7 @@ export function createRemoteTvApp(
                   </TvView>
                 )}
               </Show>
-              <Show when={screen() === "home" && zone() === "rows" && displayHero()}>
+              <Show when={screen() === "home" && zone() === "rows" && heroPresentation.mode() !== "hero" && displayHero()}>
                 {(card) => (
                   <BrowsePreview
                     card={card()}
@@ -7438,7 +7441,7 @@ export function createRemoteTvApp(
                   focused={zone() === "rows"} top={shelfTitleY()}
                   renderTile={(card, _index, x, focused, portrait) => (
                     <Tile card={card()} x={x()} y={0}
-                      w={portrait() ? 255.2 : 423.4} h={portrait() ? 382.8 : 237.6}
+                      w={homeCardSize(portrait()).width} h={homeCardSize(portrait()).height}
                       poster={portrait()} focused={focused()} focusBorder={false} preload />
                   )} />
               </Show>

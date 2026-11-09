@@ -343,7 +343,7 @@ function visualNode(
   // closures; use forEach so each mapped getter closes over its own key.
   Object.keys(props).forEach((key) => {
     if (
-      ["children", "show", "alpha", "fit", "preload", "nodeRef", "onError", "onLoad", "cssLineBox"].includes(key)
+      ["children", "show", "alpha", "fit", "preload", "focusRing", "nodeRef", "onError", "onLoad", "cssLineBox"].includes(key)
     )
       return;
     if (key === "src" && props[key] == null) {
@@ -488,6 +488,7 @@ function visualNode(
         fit: props.fit,
         modal: modalLayer,
         logo: props.logo === true,
+        focusRing: props.focusRing === true,
         onLoad: props.onLoad,
       });
       const update = () => {

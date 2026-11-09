@@ -9,12 +9,13 @@ import { backdropScrimSource } from "./tv-artwork.generated";
 import { reducedMotion } from "./motion";
 import type { Card } from "./types";
 
-type Presentation = { card: Card; background?: string; poster?: string };
+type HeroMode = "hero" | "landscape" | "portrait" | "detail";
+type Presentation = { card: Card; background?: string; poster?: string; kind: HeroMode; logoBox: HeroLogoBox };
 type Frame = Presentation & { id: number; failed: ReadonlySet<string>; staged?: boolean };
 export type HeroLogoBox = { x: number; y: number; width: number; height: number };
 
 export function createCoherentHero(source: Accessor<Card | undefined>, scope: Accessor<string>,
-  mode: Accessor<"hero" | "landscape" | "portrait" | "detail">) {
+  mode: Accessor<HeroMode>, logoBox: Accessor<HeroLogoBox>, ready: Accessor<boolean>) {
   const [shown, setShown] = createSignal<Card>();
   const [current, setCurrent] = createSignal<Frame>();
   const [retiring, setRetiring] = createSignal<Frame>();
@@ -43,13 +44,15 @@ export function createCoherentHero(source: Accessor<Card | undefined>, scope: Ac
   });
   let previousScope="";
   createEffect(() => {
-    const currentScope=scope(), next=source(), kind=mode();
+    const currentScope=scope();
+    if (!ready()) {gate.hold(currentScope);return;}
+    const next=source(), kind=mode(), box=logoBox();
     const card=next ? presentationCard(currentScope === previousScope ? untrack(shown) : undefined,next) : undefined;
     previousScope=currentScope;
     const background=kind === "landscape" ? card?.view?.preview?.background ?? card?.landscape ?? card?.poster : card?.landscape ?? card?.poster;
     const poster=kind === "portrait" ? card?.poster ?? undefined : undefined;
     gate.request(currentScope,JSON.stringify([card && presentationKey(card),background,poster,card?.logo,kind]),
-      card ? {card,background:background ?? undefined,poster} : undefined,
+      card ? {card,background:background ?? undefined,poster,kind,logoBox:box} : undefined,
       [...(background ? ["background"] : []),...(poster ? ["poster"] : []),...(card?.logo ? ["logo"] : [])]);
   });
   createEffect(() => {
@@ -63,7 +66,7 @@ export function createCoherentHero(source: Accessor<Card | undefined>, scope: Ac
     if (request) return [...(displayed ? [displayed] : []),{...request.value,id:request.id,failed:new Set<string>(),staged:true}];
     return [...(outgoing ? [outgoing] : []),...(displayed ? [displayed] : [])];
   });
-  return {card:shown,frames,current:() => current()?.id,
+  return {card:shown,frames,current:() => current()?.id,mode:() => current()?.kind,
     settled:(id:number,resource:string,failed=false) => gate.settled(id,resource,failed)};
 }
 
@@ -72,6 +75,7 @@ export function HeroArtwork(props: { presentation: ReturnType<typeof createCoher
   return <TvView w={1920} h={1080}>
     <KeyedFor each={props.presentation.frames()} keyOf={frame => frame.id}>{frame => {
       const id=frame().id;
+      const box=() => frame().kind === "detail" ? props.logoBox : frame().logoBox;
       const done=(name:string,failed=false) => {void Promise.resolve().then(() => props.presentation.settled(id,name,failed));};
       return <TvView w={1920} h={1080} alpha={props.presentation.current() === id ? 1 : 0}
         transition={frame().staged ? undefined : {alpha:{duration:reducedMotion() ? 0 : 150,easing:"ease-out"}}}>
@@ -83,10 +87,11 @@ export function HeroArtwork(props: { presentation: ReturnType<typeof createCoher
           <TvView x={1520} y={96} w={280} h={420} fit="cover" preload src={imageSource(frame().poster,imagePixels(280),imagePixels(420))}
             onLoad={() => done("poster")} onError={() => done("poster",true)} />
         </Show>
-        <TvView x={props.logoBox.x} y={props.logoBox.y}>
-          {frame().card.logo && !frame().failed.has("logo") && <Logo src={frame().card.logo!}
-            h={props.logoBox.height} maxWidth={props.logoBox.width} boxH={props.logoBox.height} fade={false}
-            onReady={() => done("logo")} onError={() => done("logo",true)} />}
+        <TvView x={box().x} y={box().y}>
+          <Show when={!!frame().card.logo && !frame().failed.has("logo")}>
+            <Logo src={frame().card.logo!} h={box().height} maxWidth={box().width} boxH={box().height} fade={false}
+              onReady={() => done("logo")} onError={() => done("logo",true)} />
+          </Show>
         </TvView>
       </TvView>;
     }}</KeyedFor>
