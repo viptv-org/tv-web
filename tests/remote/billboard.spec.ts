@@ -10,7 +10,7 @@ const inspect=(page:Page)=>page.evaluate(()=>{
   if(n.isRenderable){
    if(n.viptvText)texts.push(n.viptvText);
    const key=n.shader?.shaderKey;
-   if(key?.startsWith('tvBillboard')&&n.props.w===1920&&n.texture?.state==='loaded')photos.push({key,zoom:n.shader.uniforms.single.u_zoom.value,src:n.texture.props.src,alpha:n.worldAlpha});
+   if(n.props.w===1920&&n.props.h===1080&&n.texture?.state==='loaded'&&typeof n.texture.props.src==='string'&&n.texture.props.src.includes('/fixture/'))photos.push({key:'static',zoom:1,src:n.texture.props.src,alpha:n.worldAlpha});
    if(key==='tvHeroProgress')cycle=n.shader.uniforms.single.u_startedAt.value+(window as any).__viptvRenderer.stage.startTime;
   }
   n.children?.forEach(visit);
@@ -89,17 +89,17 @@ test('Home pauses while hidden and restarts complete passes on visibility and re
  expectNoPlayback(fixture);
 });
 
-for(const reduced of [false,true])test(`Home ${reduced?'keeps reduced motion still':'zooms to 106 percent then retires its animation clock'}`,async({page,baseURL})=>{
+for(const reduced of [false,true])test(`Home keeps artwork still with ${reduced?'reduced':'normal'} motion`,async({page,baseURL})=>{
  await open(page,baseURL!,reduced,1);
  const first=await inspect(page);const clip={x:1100,y:200,width:500,height:300};
  const pixels=PNG.sync.read(await page.screenshot({clip})).data;
  await page.clock.fastForward(7000);await page.clock.runFor(32);
  const later=PNG.sync.read(await page.screenshot({clip})).data;
- expect(pixels.equals(later)).toBe(reduced);
+ expect(pixels.equals(later)).toBe(true);
  expect((await inspect(page)).cache).toBeLessThanOrEqual(first.cache);
  await page.clock.fastForward(7500);await page.clock.runFor(32);
  const settled=await inspect(page);expect(settled.photos).toHaveLength(1);
- expect(settled.photos[0].key).toBe('tvBillboard');expect(settled.photos[0].zoom).toBe(reduced?1:1.06);
+ expect(settled.photos[0].key).toBe('static');expect(settled.photos[0].zoom).toBe(1);
  expect(settled.texts).toContain('First server choice');expect(settled.cycle).toBeUndefined();
  expect(settled.cache).toBeLessThanOrEqual(first.cache);
 });

@@ -1,0 +1,109 @@
+import {test,expect,type Page} from "@playwright/test";
+import {installRemoteBackend,referenceRoot} from "../preview/remote-backend";
+
+const state=(page:Page)=>page.locator("html");
+const texts=(page:Page)=>page.evaluate(()=>{
+  const result:string[]=[];
+  function walk(node:any){if(node.isRenderable&&node.viptvText)result.push(node.viptvText);node.children?.forEach(walk);}
+  walk((window as any).__viptvRenderer.stage.root);return result;
+});
+
+test("hero waits for both replacement images while retaining its current synopsis",async({page,baseURL})=>{
+  await page.emulateMedia({reducedMotion:"no-preference"});
+  await page.clock.install();
+  const fixture=await installRemoteBackend(page,baseURL!);
+  const home=fixture.bootstrap().home!, first={...fixture.card,description:"First coherent synopsis"};
+  const next={...fixture.cards[2],description:"Second coherent synopsis",logo:`${baseURL}/held-logo.png`,landscape:`${baseURL}/held-background.jpg`};
+  home.hero=first;home.featured=[first,next];
+  let releaseLogo!:()=>void,releaseBackground!:()=>void;
+  const logo=new Promise<void>(resolve=>{releaseLogo=resolve;}),background=new Promise<void>(resolve=>{releaseBackground=resolve;});
+  let logoRequested=false,backgroundRequested=false;
+  await page.route("**/held-logo.png",async route=>{logoRequested=true;await logo;await route.fulfill({path:referenceRoot+"/assets/274e704ffc2eeb3e73918396e294edb0.png",contentType:"image/png"});});
+  await page.route("**/held-background.jpg",async route=>{backgroundRequested=true;await background;await route.fulfill({path:referenceRoot+"/assets/3da010bb588e70c5323088b2c66658fe.jpg",contentType:"image/jpeg"});});
+  await page.goto("/tv/?focusdebug=1");await expect(state(page)).toHaveAttribute("data-tv-ready","true");
+  await expect.poll(()=>texts(page)).toContain("First coherent synopsis");
+  await page.clock.fastForward(9100);
+  await expect.poll(()=>logoRequested&&backgroundRequested).toBe(true);
+  expect(await texts(page)).toContain("First coherent synopsis");
+  releaseBackground();await page.clock.runFor(100);
+  expect(await texts(page)).not.toContain("Second coherent synopsis");
+  releaseLogo();
+  await expect.poll(async()=>{await page.clock.runFor(32);return texts(page);}).toContain("Second coherent synopsis");
+  expect(await texts(page)).not.toContain("First coherent synopsis");
+});
+
+test("blank refreshes retain a known synopsis without crossing a title boundary",async({page,baseURL})=>{
+  await page.clock.install();const fixture=await installRemoteBackend(page,baseURL!);
+  const home=fixture.bootstrap().home!;home.featured=[fixture.card];home.hero=fixture.card;
+  fixture.card.description="A stable public synopsis";
+  await page.goto("/tv/?focusdebug=1");await expect(state(page)).toHaveAttribute("data-tv-ready","true");
+  await expect.poll(()=>texts(page)).toContain("A stable public synopsis");
+  fixture.card.description="";fixture.card.logo=null;fixture.reviseCatalog([1,0]);
+  await page.clock.fastForward(15100);await page.clock.runFor(200);
+  await expect.poll(()=>fixture.requests.filter(r=>r.path==="/api/bootstrap").length).toBeGreaterThan(1);
+  expect(await texts(page)).toContain("A stable public synopsis");
+  home.hero={...fixture.cards[3],description:"Another title's synopsis"};home.featured=[home.hero];fixture.reviseCatalog([0,1]);
+  await page.clock.fastForward(15100);
+  await expect.poll(async()=>{await page.clock.runFor(32);return texts(page);}).toContain("Another title's synopsis");
+  expect(await texts(page)).not.toContain("A stable public synopsis");
+});
+
+test("specials do not become the default season and remain explicitly selectable",async({page,baseURL})=>{
+  const fixture=await installRemoteBackend(page,baseURL!,{seasonPages:true});
+  const series=fixture.cards[0];
+  const episode=(season:number,index:number)=>({...series,identity:{...series.identity,id:`s${season}e${index}`,episode:{season,episode:index,order:`s${season}e${index}`}},title:season===0?"A special":"A regular episode",parent_identity:series.identity});
+  const seasons=[{season:0,episode_count:1,offset:0},{season:1,episode_count:1,offset:1}];
+  await page.route("**/api/meta/**",route=>{
+    const offset=Number(new URL(route.request().url()).searchParams.get("offset")??0);
+    return route.fulfill({json:{item:series,seasons,episodes:[episode(offset===0?0:1,1)],recommendations:[],next_cursor:null}});
+  });
+  await page.goto("/tv/?focusdebug=1");await expect(state(page)).toHaveAttribute("data-tv-ready","true");
+  await page.keyboard.press("ArrowDown");await page.keyboard.press("Enter");
+  await expect(state(page)).toHaveAttribute("data-tv-screen","detail");await expect(state(page)).toHaveAttribute("data-tv-ready","true");
+  await expect.poll(()=>texts(page)).toContain("Season 1");
+  expect(await texts(page)).not.toContain("Season 0");
+  await page.keyboard.press("ArrowDown");await page.keyboard.press("Enter");
+  await expect(state(page)).toHaveAttribute("data-tv-overlay","choices");
+  await expect.poll(()=>texts(page)).toContain("Specials");
+  await page.keyboard.press("ArrowUp");await page.keyboard.press("Enter");
+  await expect(state(page)).toHaveAttribute("data-tv-overlay","");
+  await expect.poll(()=>texts(page)).toContain("A special");
+  expect(await texts(page)).not.toContain("A regular episode");
+});
+
+test("Home moves a stable rail and shelf while retaining the focus anchor",async({page,baseURL})=>{
+  await page.emulateMedia({reducedMotion:"no-preference"});
+  await page.clock.install();
+  const fixture=await installRemoteBackend(page,baseURL!);
+  const home=fixture.bootstrap().home!;
+  home.rows=[{...home.rows[0],id:"continue",cards:fixture.cards},
+    {...home.rows[0],id:"second",title:"Second shelf for scrolling",cards:fixture.cards}];
+  await page.goto("/tv/?focusdebug=1");await expect(state(page)).toHaveAttribute("data-tv-ready","true");
+  await page.keyboard.press("ArrowDown");await expect(state(page)).toHaveAttribute("data-tv-focus",/^rows:0:0:/);
+  await page.clock.pauseAt(new Date(await page.evaluate(()=>Date.now()+1000)));
+  await page.clock.runFor(300);
+  const position=()=>page.evaluate(()=>{
+    let first:any,heading:any,outline=Infinity;
+    function walk(n:any){
+      if(n.props.w>423&&n.props.w<424&&n.props.h>237&&n.props.h<238&&n.texture?.props?.src?.includes('a5729872fdf6d97950dabed6371ef4d6.jpg'))first={id:n.id,x:n.absX};
+      if(n.viptvText==='Second shelf for scrolling')heading={id:n.id,y:n.absY};
+      if(n.isRenderable&&n.props.w===4&&n.props.h>237&&n.props.h<238)outline=Math.min(outline,n.absX);
+      n.children?.forEach(walk);
+    }
+    walk((window as any).__viptvRenderer.stage.root);return{first,heading,outline};
+  });
+  const before=await position();expect(before.first).toBeDefined();expect(before.outline).toBeCloseTo(96,0);
+  await page.keyboard.press("ArrowRight");await page.clock.runFor(70);
+  const middle=await position();expect(middle.first.id).toBe(before.first.id);
+  expect(middle.first.x).toBeLessThan(before.first.x-8);expect(middle.first.x).toBeGreaterThan(before.first.x-434);
+  expect(middle.outline).toBeCloseTo(96,0);
+  await page.clock.runFor(200);
+  expect(Math.round((await position()).first.x)).toBe(-346);
+  const prior=(await position()).heading;
+  await page.keyboard.press("ArrowDown");await page.clock.runFor(70);
+  const moving=(await position()).heading;
+  expect(moving.id).toBe(prior.id);expect(moving.y).toBeLessThan(prior.y-8);expect(moving.y).toBeGreaterThan(553);
+  await page.clock.runFor(200);
+  expect(Math.round((await position()).heading.y)).toBe(545);
+  expect(fixture.requests.some(r=>r.path.startsWith('/api/meta/')||r.path==='/api/streams')).toBe(false);
+});

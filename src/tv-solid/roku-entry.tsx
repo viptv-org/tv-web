@@ -18,6 +18,8 @@ import QRCode from "qrcode/lib/core/qrcode";
 import { createRokuPlayer } from "./platform/roku-player";
 import { applyCaptionAppearance, playbackStats } from "../../roku/src/roku/video";
 import { NativeSync, motionRoot, modalRoot, opacityWithin } from "./platform/native-sync";
+import { nativeClip, localNativeClip } from "./platform/native-clipping";
+import { logoLayout } from "./platform/logo-layout";
 import { imageSource } from "./remote/image-source";
 import { modalPaintStack } from "./platform/modal-paint-stack";
 import { deviceStorage } from "../../roku/src/roku/device-storage";
@@ -150,17 +152,35 @@ type NativeRecord = {
   sync: () => void;
 };
 
-type MotionGroup = { root: any; layer: any; holder: any; references: number; key: any; paint?: (kind: string, child: any) => void };
+type MotionGroup = { root: any; layer: any; holder: any; clipper: any; references: number; key: any; paint?: (kind: string, child: any) => void };
 
 const nativeRecords = new Map<any, NativeRecord>();
 const nativeNow = () => performance.now();
 const nativeSync = new NativeSync(nativeNow);
 const motionGroups = new Map<any, Map<any, MotionGroup>>();
 
+function applyNativeClip(holder: any, clip: number[] | false) {
+  const previous = holder.clipping;
+  if (clip === previous || (Array.isArray(clip) && Array.isArray(previous) &&
+      clip.every((value, index) => value === previous[index]))) return;
+  holder.clipping = clip;
+  holder.flush();
+}
+
 function syncMotion(group: MotionGroup, inherited = inheritedAlpha(group.root)) {
   const root = group.root;
   const holder = group.holder;
-  const x = Number(root.absX) || 0, y = Number(root.absY) || 0;
+  // The viewport stays still while its child group moves. Applying this clip
+  // to each card would move the clipping rectangle with the card instead.
+  const bounds = nativeClip(root.parentNode) ?? { x: 0, y: 0, w: 1920, h: 1080 };
+  const clipper = group.clipper;
+  if (clipper.x !== bounds.x || clipper.y !== bounds.y || clipper.w !== bounds.w || clipper.h !== bounds.h) {
+    clipper.x = bounds.x;clipper.y = bounds.y;clipper.w = bounds.w;clipper.h = bounds.h;
+    clipper.flush();
+  }
+  applyNativeClip(clipper, [0, 0, bounds.w, bounds.h]);
+  applyNativeClip(holder, localNativeClip(root, root.parentNode));
+  const x = (Number(root.absX) || 0) - bounds.x, y = (Number(root.absY) || 0) - bounds.y;
   const alpha = inherited * (Number(root.alpha) || 0);
   if (holder.x === x && holder.y === y && holder.alpha === alpha) return;
   holder.x = x; holder.y = y; holder.alpha = alpha;
@@ -180,6 +200,7 @@ function releaseMotion(record: NativeRecord) {
   record.motion = undefined;
   if (!group || --group.references > 0) return;
   group.holder.destroy();
+  group.clipper.destroy();
   const layers = motionGroups.get(group.root)!;
   layers.delete(group.key);
   if (!layers.size) {
@@ -198,8 +219,10 @@ function adoptMotion(record: NativeRecord, root: any, key = record.layer) {
     let group = layers.get(key);
     if (!group) {
       const holder = holderAt(root, Number(root.w) || 1, Number(root.h) || 1);
-      insertNode(record.layer, holder.dom, previous?.holder.dom ?? record.holder.dom);
-      group = { root, layer: record.layer, key, holder, references: 0,
+      const clipper = holderAt(root, 1920, 1080);
+      insertNode(record.layer, clipper.dom, previous?.clipper.dom ?? record.holder.dom);
+      insertNode(clipper.dom, holder.dom);
+      group = { root, layer: record.layer, key, holder, clipper, references: 0,
         paint: record.layer === modalLayer ? modalPaintStack(holder.dom, () => createElement("group"), insertNode) : undefined };
       layers.set(key, group);
       registerSync(root);
@@ -211,7 +234,7 @@ function adoptMotion(record: NativeRecord, root: any, key = record.layer) {
     releaseMotion(record);
     record.motion = group;
   } else {
-    insertNode(record.layer, record.holder.dom, previous?.holder.dom);
+    insertNode(record.layer, record.holder.dom, previous?.clipper.dom);
     releaseMotion(record);
   }
 }
@@ -297,9 +320,12 @@ function syncHolder(record: NativeRecord, inherited?: number) {
   const node = record.node;
   const holder = record.holder;
   if (!holder) return;
+  const rotation=Number(node.rotation)||0;
+  if (holder.rotation !== rotation) {holder.rotation=rotation;holder.flush();}
   const modal = record.layer === modalLayer ? modalRoot(node) : undefined;
   const root = (motionRoot(node) ?? modal) as any;
   adoptMotion(record, root, modal ?? record.layer);
+  applyNativeClip(holder, localNativeClip(node, root));
   const x = Math.round((Number(node.absX || 0) - (root ? Number(root.absX) || 0 : 0)) * 1000) / 1000;
   const y = Math.round((Number(node.absY || 0) - (root ? Number(root.absY) || 0 : 0)) * 1000) / 1000;
   if (holder.x !== x || holder.y !== y) {
@@ -643,7 +669,7 @@ function iconSource(svg: string): { uri: string; color: string } | undefined {
     const layer = modal
       ? modalLayer
       : chrome
-        ? chromeLayer
+        ? backdropScrimLayer
         : heroScrim
           ? backdropScrimLayer
           : fullScreenBackdrop
@@ -686,12 +712,10 @@ function iconSource(svg: string): { uri: string; color: string } | undefined {
         if (p.logo) {
           const bitmapWidth = Number(poster.bitmapWidth || 0);
           const bitmapHeight = Number(poster.bitmapHeight || 0);
-          if (bitmapWidth > 0 && bitmapHeight > 0) {
-            const fittedWidth = Math.min(width, height * (bitmapWidth / bitmapHeight));
-            const fittedHeight = fittedWidth * (bitmapHeight / bitmapWidth);
-            const fitWidth = Math.max(1, Math.round(fittedWidth));
-            const fitHeight = Math.max(1, Math.round(fittedHeight));
-            const fitY = Math.max(0, Math.round(height - fittedHeight));
+          const geometry = logoLayout(width, height, bitmapWidth, bitmapHeight);
+          if (!geometry) return;
+          {
+            const fitWidth = geometry.width, fitHeight = geometry.height, fitY = geometry.y;
             if (record!.fitWidth !== fitWidth || record!.fitHeight !== fitHeight || record!.fitY !== fitY) {
               record!.fitWidth = fitWidth;
               record!.fitHeight = fitHeight;
@@ -767,7 +791,7 @@ function iconSource(svg: string): { uri: string; color: string } | undefined {
 (globalThis as any).__viptvSyncOverlays = (deadline: number) => nativeSync.flush(deadline);
 
 try {
-  render(() => createComponent(createRemoteTvApp(api, "web", { initialLoading: false }), {}));
+  render(() => createComponent(createRemoteTvApp(api, "web"), {}));
 
 
 // Font faces publish asynchronously after the shared entry mounts. Bump the

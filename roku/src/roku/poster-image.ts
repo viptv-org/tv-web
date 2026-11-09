@@ -18,6 +18,10 @@ export class PosterImage {
     const generation = ++this.generation;
     const cached = this.poster.uri === uri && this.isLoaded(this.poster.loadStatus) &&
       Number(this.poster.bitmapWidth) > 0 && Number(this.poster.bitmapHeight) > 0;
+    if (!cached) {
+      this.poster.bitmapWidth = 0;
+      this.poster.bitmapHeight = 0;
+    }
     let settled = false;
     const status = (value: any) => {
       if (generation !== this.generation || !uri || settled) return;

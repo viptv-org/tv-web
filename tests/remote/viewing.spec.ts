@@ -71,9 +71,10 @@ test("episode season navigation consumes the server offset and recommendations r
   await page.keyboard.press("Enter");
   await expect(screen(page)).toHaveAttribute("data-tv-ready", "true");
   await page.keyboard.press("ArrowDown");
-  await page.keyboard.press("ArrowUp");
   await expect(screen(page)).toHaveAttribute("data-tv-focus", /^seasons:/);
-  await page.keyboard.press("ArrowRight");
+  await page.keyboard.press("Enter");
+  await expect(screen(page)).toHaveAttribute("data-tv-overlay", "choices");
+  await page.keyboard.press("ArrowDown");
   await page.keyboard.press("Enter");
   await expect(screen(page)).toHaveAttribute("data-tv-focus", /^episodes:0:/);
   expect(

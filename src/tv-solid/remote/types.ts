@@ -127,6 +127,7 @@ export interface Preferences {
 }
 export interface Bootstrap {
   preferred_source_discovery_supported?: boolean;
+  clearlogo_image_supported?: boolean;
   contract_version: number;
   navigation?: {
     id: string;

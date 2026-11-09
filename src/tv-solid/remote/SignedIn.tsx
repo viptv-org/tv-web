@@ -16,22 +16,14 @@ export function SignedIn(props: {
       (profile) => profile.id === props.bootstrap.identity.profile_id,
     );
   const account = () => props.bootstrap.identity.account;
-  const motion = (delay: number) =>
-    reduced
-      ? undefined
-      : {
-          y: { duration: 500, delay, timingFunction: "cubic-bezier(.2,0,0,1)" },
-          alpha: {
-            duration: 500,
-            delay,
-            timingFunction: "cubic-bezier(.2,0,0,1)",
-          },
-        };
+  const motion = () => reduced ? undefined : {
+    alpha: { duration: 150, timingFunction: "cubic-bezier(.2,0,0,1)" },
+  };
   onMount(() => {
     let frame = requestAnimationFrame(() => {
       frame = requestAnimationFrame(() => setEntered(true));
     });
-    const timer = setTimeout(props.onComplete, 2500);
+    const timer = setTimeout(props.onComplete, 800);
     onCleanup(() => {
       cancelAnimationFrame(frame);
       clearTimeout(timer);
@@ -40,9 +32,9 @@ export function SignedIn(props: {
   return (
     <>
       <TvView
-        y={entered() ? 300 : 316}
+        y={300}
         alpha={entered() ? 1 : 0}
-        transition={motion(0)}
+        transition={motion()}
       >
         <TvView x={876} w={168} h={168} color="#0E0E10">
           <Show when={avatar(profile()?.avatar_id)}>
@@ -63,14 +55,14 @@ export function SignedIn(props: {
         </TvView>
       </TvView>
       <TvView
-        y={entered() ? 510 : 526}
+        y={504}
         alpha={entered() ? 1 : 0}
-        transition={motion(100)}
+        transition={motion()}
       >
         <Label
           w={1920}
           align="center"
-          size={56}
+          size={48}
           font="Onest700"
           letterspacing={-1.12}
           content={
@@ -82,9 +74,9 @@ export function SignedIn(props: {
       </TvView>
       <Show when={account()?.username}>
         <TvView
-          y={entered() ? 590 : 606}
+          y={598}
           alpha={entered() ? 1 : 0}
-          transition={motion(180)}
+          transition={motion()}
         >
           <Label
             w={1920}
@@ -98,7 +90,7 @@ export function SignedIn(props: {
       </Show>
       <TvView
         x={860}
-        y={700}
+        y={680}
         w={200}
         h={4}
         color="rgba(255,255,255,.12)"
@@ -110,7 +102,7 @@ export function SignedIn(props: {
           transition={
             reduced
               ? undefined
-              : { w: { duration: 2500, timingFunction: "linear" } }
+              : { w: { duration: 800, timingFunction: "linear" } }
           }
         />
       </TvView>

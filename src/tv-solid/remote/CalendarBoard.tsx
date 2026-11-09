@@ -200,7 +200,7 @@ export function CalendarBoard(props: {
                 size={22}
                 maxwidth={600}
                 maxlines={1}
-                content={`S${entry.season ?? 1} E${entry.episode ?? 1}${
+                content={`${entry.season === 0 ? `Special ${entry.episode ?? 1}` : `S${entry.season ?? 1} E${entry.episode ?? 1}`}${
                   entry.episode_title ? ` · ${entry.episode_title}` : ""
                 }${entry.card.subtitle ? ` · ${entry.card.subtitle}` : ""}`}
                 color={focused() ? "#4A4945" : palette.muted}

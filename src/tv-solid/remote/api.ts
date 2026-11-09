@@ -23,6 +23,7 @@ import type {
 } from "./types";
 import { validateChannelPage } from "./channelWindow";
 import { refusalMessage } from "./refusals";
+import { configureImageDelivery } from "./image-source";
 export class RemoteError extends Error {
   constructor(
     readonly status: number,
@@ -467,6 +468,7 @@ export class RemoteTvApi {
     if (this.profile && profile !== this.profile) this.epoch++;
     this.profile = profile;
     this.preferredSourceDiscoverySupported = value.preferred_source_discovery_supported === true;
+    configureImageDelivery(value.clearlogo_image_supported === true);
     this.sourceReuseSupported = this.preferredSourceDiscoverySupported;
     return value;
   }

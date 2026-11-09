@@ -141,7 +141,7 @@ describe("The shipped TV entry runs this code (#34)", () => {
     expect(entry).toContain('open: overlay()?.kind === "sources"');
     expect(entry).toContain("sourceStatusCopy(sourceSpread())");
     expect(entry).toContain("sourceEmptyCopy(sourceSpread())");
-    expect(entry).toContain("sourceSpinnerSrc(palette.accent)");
+    expect(entry).toContain("<BusySpinner x={64} y={964} size={SOURCE_SPINNER_SIZE}");
   });
 
   it("no longer invents a source-drawer status line", () => {

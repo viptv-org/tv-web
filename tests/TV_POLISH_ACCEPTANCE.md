@@ -40,7 +40,7 @@ Keep credentials, device identifiers and private captures outside Git.
 
 ## Episodes and session behavior
 
-- [ ] Read app's Android TV season selector and match its established dropdown behavior.
+- [ ] Compare app's Android TV season strip and phone/desktop picker; verify the compact TV-web chooser's remote behavior.
 - [ ] Use the supplied special-season name, or an appropriate Special(s) label, rather
       than exposing the implementation value “Season 0”.
 - [ ] Default to a regular season when one is available. Preserve an explicitly chosen
@@ -87,3 +87,7 @@ The current build reaches beta sign-in, profile selection and Home. Private nati
 captures also cover Movies, Series, Anime, Calendar, My List, Live and movie details.
 These initial observations are not completion of the checklist above. Evidence and
 final disposition belong in TESTING.md and tests/PARITY_MATRIX.md after verification.
+
+Implementation is tracked in tv-web #103 with backend caching in backend #308.
+The focused browser artwork, season and motion scenarios pass; final physical
+acceptance and the account handoff are still pending. See TESTING.md.

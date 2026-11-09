@@ -3700,3 +3700,34 @@ This is not a clean run of the entire remote suite; previously documented
 source-hint baseline failures remain separate. No hosted frontend deployment,
 Samsung/LG emulator execution, native Tizen release or physical TV qualification
 is included in this delivery.
+
+## TV polish implementation checkpoint (2026-11-09)
+
+Tracked by tv-web #103 and backend #308. This checkpoint implements coordinated
+hero fades, stable bounded Home rails, native clipping and logo geometry,
+compact dialogs, a shared player busy indicator, welcome/profile spacing,
+Specials and the compact season chooser, and physical-size image delivery.
+Backend implementation 2fcdc54 adds shared persistent public Cinemeta metadata
+and bounded prepared clearlogos; default/live-runtime suites pass 936/948 tests
+and the engine pin check passes. Production is unchanged.
+
+Client typecheck, 238 shared unit tests, 15 native-host tests, production browser
+build and native Roku build pass. The current native payload is 711721 JS bytes.
+The twelve focused browser artwork/season/motion scenarios pass, including
+coordinated loads, stale refreshes, cancellation, normal/reduced static artwork,
+explicit Specials and intermediate horizontal/vertical group positions. These
+animation checks use controlled browser time; physical frame timing is separate.
+
+The older viewing suite has thirteen failures reproduced against the served beta
+baseline, primarily stale navigation assumptions, plus a three-second lease
+fixture race. The fixture now rounds its short expiry upward so the one-second
+renewal has a real scheduling margin; expiry/release assertions remain intact.
+The baseline failure list remains separate from the new acceptance scenarios.
+The test renderer inspection now respects ancestor opacity instead of counting
+hidden prepared nodes as painted content.
+
+Physical Roku final-package acceptance, real-beta shared-cache/clearlogo checks,
+repeated frame traces and the final account handoff remain pending at this
+implementation checkpoint. Normal exit/relaunch and the preceding cold update
+retained sign-in. The owner confirmed audible, synchronized audio during the
+preceding real playback checkpoint; final media telemetry is recorded separately.
