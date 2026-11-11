@@ -14,19 +14,15 @@ import { reloadImages } from "./remote/image-source";
 import { prepareTizenHost } from "./platform/tizen-host";
 import { prepareBrowserRenderer } from "./platform/browser-renderer";
 import { installPs4Input } from "./platform/ps4-input";
+import { resolveTvPlatform } from "./platform/tv-platform";
 import "../theme/viptv-tokens.generated.css";
 
 import { RemoteTvApi } from "./remote/api";
 import { createBrowserSessionStore } from "./platform/browser-session-store";
 
 document.documentElement.dataset.renderer = "solid";
-const platformParam = new URLSearchParams(location.search).get("platform");
-const platform =
-  platformParam === "vizio" ||
-  platformParam === "webos" ||
-  platformParam === "tizen"
-    ? platformParam
-    : "web";
+const platform = resolveTvPlatform(location.search, navigator.userAgent);
+document.documentElement.dataset.tvPlatform = platform;
 const origin = import.meta.env.VITE_API_ORIGIN || location.origin;
 const key = `viptv-device:${origin}`;
 

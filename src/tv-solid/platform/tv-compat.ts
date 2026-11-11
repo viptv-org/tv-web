@@ -1,5 +1,18 @@
 /** ES2017 TV engines predate these APIs used by the shared UI and renderer. */
 export function installTvCompatibility(): void {
+  if (typeof Promise.allSettled !== 'function') Object.defineProperty(Promise, 'allSettled', {
+    configurable: true, writable: true,
+    value: function (this: PromiseConstructor, values: Iterable<unknown>) {
+      const Constructor = this;
+      return new Constructor<PromiseSettledResult<unknown>[]>((resolve, reject) => {
+        const settled = Array.from(values, value => Constructor.resolve(value).then(
+          value => ({ status: 'fulfilled' as const, value }),
+          reason => ({ status: 'rejected' as const, reason }),
+        ));
+        Constructor.all(settled).then(resolve, reject);
+      });
+    },
+  });
   if (typeof Array.prototype.at !== 'function') Object.defineProperty(Array.prototype, 'at', {
     configurable: true, writable: true,
     value: function (this: ArrayLike<unknown> | null, index: number) {

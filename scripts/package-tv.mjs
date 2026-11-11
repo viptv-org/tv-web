@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { verifyTvPackage } from './tv-package-check.mjs';
+import { stageTvLauncher } from './tv-launcher.mjs';
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const target = process.argv[2] ?? 'hosting';
@@ -37,19 +38,11 @@ try {
     await rm(archive, { force: true });
     run('zip', ['-q', '-r', archive, '.'], stage);
   } else {
-    const url = new URL(process.env[`VIPTV_${target.toUpperCase()}_HOSTED_URL`] ?? `https://viptv.syek.tech/tv/?platform=${target}`);
-    if (url.protocol !== 'https:' || url.username || url.password || url.hash || !/^\/tv\/?$/.test(url.pathname) || url.searchParams.get('platform') !== target) throw Error('Hosted URL must be credential-free HTTPS /tv/?platform=' + target);
-    await cp(join(root, 'public/assets/viptv-mark.png'), join(stage, 'icon.png'));
-    const literal = JSON.stringify(url.href).replaceAll('<', '\\u003c');
-    await writeFile(join(stage, 'index.html'), `<!doctype html><html><head><meta charset="utf-8"><title>VIPTV</title></head><body style="background:#0b0b0c;color:#f4f2ee">Opening VIPTV…<script>location.replace(${literal})</script></body></html>`);
+    await stageTvLauncher({ root, stage, target, version, hostedUrl: process.env[`VIPTV_${target.toUpperCase()}_HOSTED_URL`] });
     if (target === 'webos') {
-      await writeFile(join(stage, 'appinfo.json'), JSON.stringify({ id: 'tech.syek.viptv', version, vendor: 'VIPTV', type: 'web', main: 'index.html', title: 'VIPTV', icon: 'icon.png', resolution: '1920x1080', disableBackHistoryAPI: true }, null, 2));
       run('ares-package', [stage, '--outdir', output, '--no-minify']);
     } else {
       if (!process.env.TIZEN_PROFILE) throw Error('TIZEN_PROFILE is required; unsigned WGTs are not installable');
-      let config = await readFile(join(root, 'platform/tizen/config.xml'), 'utf8');
-      config = config.replace('launcher.html', 'index.html').replace('assets/viptv-mark.png', 'icon.png').replace(/version="0\.1\.0"/, `version="${version}"`);
-      await writeFile(join(stage, 'config.xml'), config);
       run('tizen', ['package', '-t', 'wgt', '-s', process.env.TIZEN_PROFILE, '--', stage]);
       const packageName = (await readdir(stage)).find(name => name.endsWith('.wgt'));
       if (!packageName) throw Error('Tizen SDK did not produce a signed WGT');

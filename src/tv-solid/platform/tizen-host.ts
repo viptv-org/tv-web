@@ -1,6 +1,8 @@
 /** Samsung's system SDK is available to packaged apps, not hosted pages. */
 export async function prepareTizenHost(platform: string): Promise<void> {
-  if (platform !== 'tizen' || location.protocol !== 'file:' || hasAvplay()) return;
+  if (platform !== 'tizen') return;
+  registerTizenMediaKeys();
+  if (location.protocol !== 'file:' || hasAvplay()) return;
   await new Promise<void>((resolve, reject) => {
     const script = document.createElement('script');
     const finish = (error?: Error) => {
@@ -14,6 +16,32 @@ export async function prepareTizenHost(platform: string): Promise<void> {
     script.src = '$WEBAPIS/webapis/webapis.js';
     document.head.appendChild(script);
   });
+}
+
+type TizenHost = Window & {
+  tizen?: {
+    tvinputdevice?: { registerKey(name: string): void };
+    application?: { getCurrentApplication(): { exit(): void } };
+  };
+};
+
+export function registerTizenMediaKeys(): string[] {
+  const input = (window as TizenHost).tizen?.tvinputdevice;
+  if (!input) return [];
+  const registered: string[] = [];
+  for (const name of ['MediaPlay', 'MediaPause', 'MediaPlayPause', 'MediaStop', 'MediaRewind', 'MediaFastForward']) {
+    try {
+      input.registerKey(name);
+      registered.push(name);
+    } catch { /* Unsupported keys must not disable the remaining remote. */ }
+  }
+  return registered;
+}
+
+export function exitTizen(): void {
+  const application = (window as TizenHost).tizen?.application;
+  if (application) application.getCurrentApplication().exit();
+  else window.close();
 }
 
 function hasAvplay(): boolean {
