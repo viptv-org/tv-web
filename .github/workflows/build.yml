@@ -18,11 +18,15 @@ jobs:
         with:
           node-version: '24'
           cache: npm
-          cache-dependency-path: |
-            package-lock.json
-            roku/package-lock.json
+          cache-dependency-path: package-lock.json
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: roku/package.json
+          run_install: false
       - run: npm ci
-      - run: npm ci --prefix roku
+      - name: Install Roku lockfile dependencies
+        working-directory: roku
+        run: pnpm install --frozen-lockfile
       - run: npm test
       - run: npm run build
       - run: node scripts/package-tv.mjs hosting
