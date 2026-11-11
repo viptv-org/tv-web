@@ -3992,29 +3992,41 @@ or new physical-TV qualification is implied.
 
 ## TV composition cleanup
 
-The shared canvas app now composes focused screen/panel views, feature navigation,
-held-input and overlay lifecycles, detail/source presentation, profile edits,
-revisioned preference controls and bounded Live guide requests. Feature ports are
-constructed once; key handlers retain their existing routing order and do not add
-backend or Core projections. Profile switching and source admission keep their
-existing root cleanup/cancellation sequence.
+`App.tsx` now creates state, binds typed feature ports and sequences cross-feature
+transactions. Focused modules own the screen/panel views, household settings and
+forms, library/catalog controls, generation-owned collection and channel paging,
+Search debounce/media fan-out, source intent/discovery/startup, prepared episode
+sources, track/season pickers, revision transport and feature refreshes, menus,
+remote navigation, keyboard/media input and host listener/caption effects.
 
-After integration with the current playback handoff changes, production integrity,
-type and build checks pass, as do all 324 shared unit tests. Focused HTTPS browser
-batches cover Home/header and recycled WebGL/Canvas focus, detail seasons and
-recommendations, Search/media/channel retry, source filters, track and profile
-focus, Display writes and late confirmations, guide failures/delays, Next countdown
-and manual panels, Samsung Return precedence and admitted-replacement cancellation.
-The final rebased acceptance batch passes 13 cases; the Home/billboard/detail batch
-passes 17, including bounded shelf/poster reuse. Reviewed captures cover profiles,
-episode focus, source picker, both Next modes and Cancel-default exit confirmation.
-These are browser fixtures and short decoded-media checks, not new device evidence.
+Root scope reset, profile switching, Back/history, playback UI rollback and bootstrap
+application keep their original statement order. Feature ports are constructed
+once; input handlers add no backend or Core projections. Revision adapters commit
+in the original synchronous phase, and listener/style disposers retain their root
+effect owners. This is a module extraction, with no new application state model or
+untyped application context. The root is about 3.4k lines, down from about 8.9k.
 
-`App.tsx` is reduced from about 8.9k to 5.6k lines. It still owns coupled source
-discovery/admission, session/bootstrap/history, catalog/channel paging, household
-settings loading and root activation routing. Those workflows need further scoped
-controller design; this pass does not claim complete separation of the application.
-Combined hardware qualification remains a separate gate.
+After rebasing onto the current hero-layer/mask and playback handoff fixes,
+production integrity/type/build checks and all 336 shared units pass. The final
+rebased browser gate passes 15 cases, including bright WebGL/Canvas hero layers,
+slow-art recovery, source controls and one-Back replacement cancellation. Ownership
+regressions cover stale page/rank replies, remembered-choice cancellation, polling
+retirement and detached host listeners. Permission-sensitive settings tests retain
+the exact confirmed-write/close/reload order.
+
+Focused HTTPS browser batches cover settings/capabilities, query drafts and late
+reads, source/seek/skip/Next actions, profile dialogs, paired sign-in, screen saver,
+renderer recovery and window focus/visibility. Both Live and Search traverse 241
+channels across seven pages and reverse with bounded payloads, exact server
+requests, retained focus, retries and snapshot replacement. Source replacement
+retains the parent’s one-Back cancellation contract. Navigation helpers resolve
+server route IDs; playback return distinguishes hiding controls from leaving the
+player, while preserving the original lease/window/card assertions.
+
+Reviewed private captures cover episode focus, profiles, source picker, both Next
+modes, bright hero/portrait layers and Cancel-default exit confirmation. This is
+browser fixture and short decoded-media evidence. Combined physical-device
+qualification remains a separate gate.
 
 ## Hero artwork paint order
 
