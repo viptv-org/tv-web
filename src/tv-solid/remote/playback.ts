@@ -435,6 +435,7 @@ export class RemotePlayback {
     const retiring = this.stopCurrent(true);
     const handoff = new AbortController();
     this.operation = handoff;
+    this.admitting = true;
     try {
       await inScope(retiring, handoff.signal);
       if (intent !== this.intentGeneration)
@@ -442,6 +443,8 @@ export class RemotePlayback {
     } catch (error) {
       void this.api.release(`/api/playback/${segment(lease.id)}`);
       throw error;
+    } finally {
+      if (this.operation === handoff) this.admitting = false;
     }
     const generation = ++this.generation,
       scope = new AbortController();

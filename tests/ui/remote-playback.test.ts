@@ -100,6 +100,7 @@ describe("remote playback lease transitions", () => {
     const outcome = opening.catch(error => error);
     try {
       await vi.waitFor(() => expect(api.release).toHaveBeenCalledWith("/api/playback/1"));
+      expect(controller.cancelPendingStart()).toBe(true);
       await controller.stop();
       await vi.waitFor(() => expect(api.release).toHaveBeenCalledWith("/api/playback/2"));
       expect(await outcome).toMatchObject({ name: "AbortError" });
