@@ -611,11 +611,7 @@ test("loading My List cannot activate stale cards from the previous catalog", as
   await expect(screen(page)).toHaveAttribute("data-tv-screen", "home");
   await navigate(page, "movie");
   await expect(screen(page)).toHaveAttribute("data-tv-ready", "true");
-  await page.keyboard.press("ArrowUp");
-  await page.keyboard.press("ArrowRight");
-  await page.keyboard.press("ArrowRight");
-  await page.keyboard.press("ArrowRight");
-  await page.keyboard.press("Enter");
+  await navigate(page, "library");
   await expect(screen(page)).toHaveAttribute("data-tv-screen", "library");
   await page.keyboard.press("Enter");
   await expect(screen(page)).toHaveAttribute("data-tv-ready", "true");
@@ -840,9 +836,10 @@ test("Home hero context actions cannot reuse a hidden catalog card", async ({
   await navigate(page, "movie");
   await expect(screen(page)).toHaveAttribute("data-tv-ready", "true");
   await page.keyboard.press("Escape");
-  await page.keyboard.press("Escape"); // Hide controls.
-  await page.keyboard.press("Escape"); // Leave playback.
+  await expect(screen(page)).toHaveAttribute("data-tv-focus", /^nav:/);
+  await page.keyboard.press("Escape");
   await expect(screen(page)).toHaveAttribute("data-tv-screen", "home");
+  await expect(screen(page)).toHaveAttribute("data-tv-focus", /^hero:/);
   await page.keyboard.press("ContextMenu");
   await expect(screen(page)).toHaveAttribute("data-tv-overlay", "choices");
   await page.keyboard.press("Enter");

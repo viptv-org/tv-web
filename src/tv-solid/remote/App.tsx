@@ -125,6 +125,11 @@ import { createHeroCycle } from "./hero-cycle-controller";
 import { createIdleScreenSaver } from "./idle-screen-saver";
 import { createTextKeyboard } from "./text-keyboard";
 import { createHeldSelect } from "./held-select";
+import { createLibraryControls } from "./library/controls";
+import { createDetailPager } from "./paging/detail";
+import { createCatalogPager } from "./paging/catalog";
+import { createHomePager } from "./paging/home";
+import { createCatalogControls } from "./catalog-controls";
 import { createProfileManagement } from "./profile-management";
 import { createProfilePreferenceRows } from "./settings/profile-preferences";
 import { createDevicePreferenceRows } from "./settings/device-preferences";
@@ -152,12 +157,10 @@ import {
   type Card,
   type Catalog,
   type Channel,
-  type Control,
   type Controls,
   type Detail,
   type Home,
   type LibraryPage,
-  type LibraryQuery,
   type LivePage,
   type Management,
   type Page,
@@ -1627,141 +1630,11 @@ export function createRemoteTvApp(
       setLibrary(value);
       return value;
     }
-    const libraryType = createMemo(() =>
-      library()?.controls?.find((c) => c.id === "type"),
-    );
-    const librarySort = createMemo(() =>
-      library()?.controls?.find((c) => c.id === "sort"),
-    );
-    const libraryDefaultQuery = () => {
-      const base = library()?.default_query ?? library()?.query ?? {};
-      const lastWatched = librarySort()?.choices.find(
-        (choice) => choice.value === "last_watched",
-      );
-      return lastWatched ? { ...base, sort: lastWatched.value } : base;
-    };
-    const libraryFilters = createMemo(() =>
-      (library()?.controls ?? []).filter(
-        (c) => c.id !== "type" && c.id !== "sort" && c.choices.length,
-      ),
-    );
-    const libraryControlCount = () => 2 + 1;
-    let libraryApplying = false;
-    async function applyLibrary(values: LibraryQuery) {
-      libraryApplying = true;
-      try {
-        const value = await loadLibrary("0", restartPaging(), values);
-        replacePage(value);
-      } finally {
-        libraryApplying = false;
-      }
-    }
-    function chooseLibrary(control: Control) {
-      openOverlay({
-        kind: "choices",
-        title: control.label,
-        items: [
-          ...control.choices.map((item) => ({
-            id: item.value,
-            label: item.label,
-            value:
-              String(library()?.query?.[control.id] ?? "") === item.value
-                ? "✓"
-                : "",
-            run: async () => {
-              await applyLibrary({
-                ...library()?.query,
-                [control.id]: item.value,
-              });
-              closeOverlay();
-            },
-          })),
-          ...(libraryFilters().length
-            ? [{ id: "filters", label: "Filters", run: libraryFilterDialog }]
-            : []),
-        ],
+    const {type: libraryType, sort: librarySort, filters: libraryFilters, defaults: libraryDefaultQuery,
+      count: libraryControlCount, applying: libraryApplying, apply: applyLibrary, choose: chooseLibrary} = createLibraryControls({
+        current: library, selection: {current: choice, set: setChoice}, dialogs: {open: openOverlay, close: closeOverlay},
+        apply: async values => { const value = await loadLibrary("0", restartPaging(), values); replacePage(value); },
       });
-      setChoice(
-        Math.max(
-          0,
-          control.choices.findIndex(
-            (item) =>
-              item.value === String(library()?.query?.[control.id] ?? ""),
-          ),
-        ),
-      );
-    }
-    function libraryFilterDialog() {
-      let draft = { ...library()?.query };
-      const show = (focused = 0) => {
-        openOverlay({
-          kind: "choices",
-          title: "Filters",
-          items: [
-            ...libraryFilters().map((control) => ({
-              id: control.id,
-              label: control.label,
-              value:
-                control.choices.find(
-                  (item) => item.value === String(draft[control.id] ?? ""),
-                )?.label ?? "",
-              run: () => {
-                const index = choice();
-                openOverlay(
-                  {
-                    kind: "choices",
-                    title: control.label,
-                    items: control.choices.map((item) => ({
-                      id: item.value,
-                      label: item.label,
-                      value:
-                        item.value === String(draft[control.id] ?? "")
-                          ? "✓"
-                          : "",
-                      run: () => {
-                        draft[control.id] = item.value;
-                        show(index);
-                      },
-                    })),
-                  },
-                  true,
-                );
-                setChoice(
-                  Math.max(
-                    0,
-                    control.choices.findIndex(
-                      (item) => item.value === String(draft[control.id] ?? ""),
-                    ),
-                  ),
-                );
-              },
-            })),
-            ...(library()?.default_query
-              ? [
-                  {
-                    id: "clear",
-                    label: "Clear",
-                    run: () => {
-                      draft = { ...library()!.default_query! };
-                      show(libraryFilters().length);
-                    },
-                  },
-                ]
-              : []),
-            {
-              id: "apply",
-              label: "Apply",
-              run: async () => {
-                await applyLibrary(draft);
-                closeOverlay();
-              },
-            },
-          ],
-        });
-        setChoice(focused);
-      };
-      show();
-    }
     function replaceHome(value: Home | undefined) {
       rememberHomeRow();
       const shelf = home()?.rows[row()],
@@ -2171,7 +2044,7 @@ export function createRemoteTvApp(
     function dismissOverlay() {
       if (sourceActions()) { setSourceActions(false); return; }
       if (sourceMenu()) { setSourceMenu(undefined); return; }
-      if (libraryApplying) restartPaging();
+      if (libraryApplying()) restartPaging();
       if (!overlays.restoreParent()) closeOverlay();
     }
     async function leavePlayer() {
@@ -2546,8 +2419,15 @@ export function createRemoteTvApp(
         }
       }
     }
+    const pageRequestOwner = {generation: () => pageGeneration, busy: () => pageBusy, setBusy: (value: boolean) => {pageBusy = value;},
+      signal: pageSignal, cancelFocus: () => {pendingFocus = undefined;}, settleFocus: settlePendingFocus, fail};
+    const detailPager = createDetailPager({owner: pageRequestOwner, current: detail, adopt: setDetail, selected, season: seasonIndex,
+      episodeCount: () => detailEpisodes().length, request: (card, cursor, signal) => api.detail(card, cursor, signal)});
+    const catalogPager = createCatalogPager({owner: pageRequestOwner, current: page, adopt: setPage, library: () => screen() === "library",
+      discover: (cursor, signal) => api.discover(browseQuery(cursor), signal), readLibrary: loadLibrary});
+    const loadHomePage = createHomePager({owner: pageRequestOwner, rows: () => home()?.rows ?? [], row, column, adopt: setHome,
+      request: (values, signal) => api.discover(values, signal)});
     async function more() {
-      const generation = pageGeneration;
       if (
         screen() === "live" ||
         (screen() === "search" && zone() === "search-channels")
@@ -2555,91 +2435,12 @@ export function createRemoteTvApp(
         await moreChannels("next");
         return;
       }
-      if (screen() === "detail") {
-        const current = detail(),
-          card = selected();
-        if (pageBusy || !current?.next_cursor || !card) return;
-        const count = current.seasons[seasonIndex()]?.episode_count;
-        if (count != null && detailEpisodes().length >= count) return;
-        pageBusy = true;
-        try {
-          const next = await api.detail(
-            card,
-            current.next_cursor,
-            pageSignal(),
-          );
-          if (generation !== pageGeneration) return;
-          if (next.next_cursor === current.next_cursor)
-            throw new Error("The server repeated an episode page.");
-          setDetail({
-            ...next,
-            episodes: [...current.episodes, ...next.episodes],
-          });
-        } catch (error) {
-          if (generation === pageGeneration) {
-            pendingFocus = undefined;
-            fail(error);
-          }
-        } finally {
-          if (generation === pageGeneration) {
-            pageBusy = false;
-            settlePendingFocus();
-          }
-        }
-        return;
-      }
-      if (pageBusy || !page().next_cursor) return;
-      pageBusy = true;
-      const cursor = page().next_cursor!,
-        signal = pageSignal();
-      try {
-        let result: Page;
-        if (screen() === "library") result = await loadLibrary(cursor, signal);
-        else result = await api.discover(browseQuery(cursor), signal);
-        if (generation !== pageGeneration) return;
-        if (result.next_cursor === cursor)
-          throw new Error("The server repeated a page.");
-        setPage((old) => ({
-          ...result,
-          cards: [...old.cards, ...result.cards],
-        }));
-      } catch (e) {
-        if (generation === pageGeneration) {
-          pendingFocus = undefined;
-          fail(e);
-        }
-      } finally {
-        if (generation === pageGeneration) {
-          pageBusy = false;
-          settlePendingFocus();
-        }
-      }
+      if (screen() === "detail") { await detailPager(); return; }
+      await catalogPager();
     }
-    function browseQuery(skip = "0") {
-      const current = catalog(),
-        anime = STREMIO_ONLY && screen() === "anime";
-      return {
-        type: anime ? "series" : screen(),
-        catalog: current?.id,
-        addon_id: current?.addon_id,
-        skip,
-        ...(anime ? { genre: "Animation" } : {}),
-        values: Object.entries(filters())
-          .filter(([id]) => !(anime && id === "genre"))
-          .map(([id, values]) => ({ id, values })),
-      };
-    }
-    async function loadBrowse() {
-      const signal = restartPaging();
-      setLoading(true);
-      setPage({ cards: [], complete: true });
-      try {
-        setPage(await api.discover(browseQuery(), signal));
-        setColumn(0);
-      } finally {
-        if (!signal.aborted) setLoading(false);
-      }
-    }
+    const {query: browseQuery, load: loadBrowse, choose: filtersOverlay} = createCatalogControls({screen, stremioOnly: STREMIO_ONLY, catalog,
+      filters: {current: filters, set: setFilters}, page: setPage, loading: setLoading, column: setColumn, restart: restartPaging,
+      discover: (values, signal) => api.discover(values, signal), dialogs: {open: openOverlay, close: closeOverlay}});
     const liveGuides = createLiveGuideController({scope: () => scope, channels, channelIndex: liveChannelIndex,
       rowStart: guideRowStart, programs: {current: programs, set: setPrograms}, info: {set: setGuideInfo},
       selection: {current: currentProgram, set: setProgramIndex}, notify,
@@ -3308,41 +3109,6 @@ export function createRemoteTvApp(
         notify(receipt.saved ? "Added to My List" : "Removed from My List");
       });
     }
-    function filtersOverlay(control: Control) {
-      const chosen = filters()[control.id] ?? [];
-      openOverlay({
-        kind: "choices",
-        title: control.label,
-        items: [
-          {
-            id: "clear",
-            label: "All",
-            run: async () => {
-              setFilters((old) => ({ ...old, [control.id]: [] }));
-              closeOverlay();
-              await loadBrowse();
-            },
-          },
-          ...control.choices.map((item) => ({
-            id: item.value,
-            label: item.label,
-            value: chosen.includes(item.value) ? "✓" : "",
-            run: async () => {
-              const values = filters()[control.id] ?? [];
-              const next =
-                control.maximum_selections && control.maximum_selections > 1
-                  ? values.includes(item.value)
-                    ? values.filter((v) => v !== item.value)
-                    : [...values, item.value].slice(-control.maximum_selections)
-                  : [item.value];
-              setFilters((old) => ({ ...old, [control.id]: next }));
-              closeOverlay();
-              await loadBrowse();
-            },
-          })),
-        ],
-      });
-    }
     function edit(
       title: string,
       submit: (value: string) => Promise<void>,
@@ -3754,68 +3520,6 @@ export function createRemoteTvApp(
       );
       if (screen() === "live") void loadGuide(column());
       if (column() >= items.length - columns * 2) void more();
-    }
-    async function loadHomePage() {
-      const generation = pageGeneration;
-      const current = home()?.rows[row()];
-      if (
-        !current?.next_cursor ||
-        !current.browse ||
-        current.browse.target !== "Discover" ||
-        pageBusy ||
-        column() < current.cards.length - 5
-      )
-        return;
-      pageBusy = true;
-      const identityFields = new Set([
-        "type",
-        "catalog",
-        "connection_id",
-        "addon_id",
-      ]);
-      const values = {
-        ...Object.fromEntries(
-          current.browse.query
-            .filter((field) => identityFields.has(field.id))
-            .map((field) => [field.id, field.values[0]]),
-        ),
-        values: current.browse.query.filter(
-          (field) => !identityFields.has(field.id),
-        ),
-      };
-      try {
-        const result = await api.discover(
-          { ...values, skip: current.next_cursor },
-          pageSignal(),
-        );
-        if (generation !== pageGeneration) return;
-        setHome((old) =>
-          old
-            ? {
-                ...old,
-                rows: old.rows.map((r) =>
-                  r.id === current.id
-                    ? {
-                        ...r,
-                        cards: [...r.cards, ...result.cards],
-                        next_cursor: result.next_cursor,
-                      }
-                    : r,
-                ),
-              }
-            : old,
-        );
-      } catch (e) {
-        if (generation === pageGeneration) {
-          pendingFocus = undefined;
-          fail(e);
-        }
-      } finally {
-        if (generation === pageGeneration) {
-          pageBusy = false;
-          settlePendingFocus();
-        }
-      }
     }
     function keyboardActivate(isOverlay: boolean) {
       const index = key();
