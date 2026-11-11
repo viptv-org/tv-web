@@ -21,6 +21,7 @@ import { NativeSync, motionRoot, modalRoot, opacityWithin } from "./platform/nat
 import { nativeClip, localNativeClip } from "./platform/native-clipping";
 import { logoLayout } from "./platform/logo-layout";
 import { imageSource } from "./remote/image-source";
+import { nativePaintOrder } from "./platform/native-paint-order";
 import { modalPaintStack } from "./platform/modal-paint-stack";
 import { deviceStorage } from "../../roku/src/roku/device-storage";
 
@@ -152,7 +153,7 @@ type NativeRecord = {
   sync: () => void;
 };
 
-type MotionGroup = { root: any; layer: any; holder: any; clipper: any; references: number; key: any; paint?: (kind: string, child: any) => void };
+type MotionGroup = { root: any; layer: any; holder: any; clipper: any; references: number; members: NativeRecord[]; key: any; paint?: (kind: string, child: any) => void };
 
 const nativeRecords = new Map<any, NativeRecord>();
 const nativeNow = () => performance.now();
@@ -198,7 +199,10 @@ function registerSync(node: any) {
 function releaseMotion(record: NativeRecord) {
   const group = record.motion;
   record.motion = undefined;
-  if (!group || --group.references > 0) return;
+  if (!group) return;
+  const index = group.members.indexOf(record);
+  if (index >= 0) group.members.splice(index, 1);
+  if (--group.references > 0) return;
   group.holder.destroy();
   group.clipper.destroy();
   const layers = motionGroups.get(group.root)!;
@@ -222,7 +226,7 @@ function adoptMotion(record: NativeRecord, root: any, key = record.layer) {
       const clipper = holderAt(root, 1920, 1080);
       insertNode(record.layer, clipper.dom, previous?.clipper.dom ?? record.holder.dom);
       insertNode(clipper.dom, holder.dom);
-      group = { root, layer: record.layer, key, holder, clipper, references: 0,
+      group = { root, layer: record.layer, key, holder, clipper, references: 0, members: [],
         paint: record.layer === modalLayer ? modalPaintStack(holder.dom, () => createElement("group"), insertNode) : undefined };
       layers.set(key, group);
       registerSync(root);
@@ -230,7 +234,12 @@ function adoptMotion(record: NativeRecord, root: any, key = record.layer) {
     }
     group.references++;
     if (group.paint) group.paint(record.kind, record.holder.dom);
-    else insertNode(group.holder.dom, record.holder.dom);
+    else {
+      let index = 0;
+      while (index < group.members.length && nativePaintOrder(group.members[index].node, record.node) <= 0) index++;
+      insertNode(group.holder.dom, record.holder.dom, group.members[index]?.holder.dom);
+      group.members.splice(index, 0, record);
+    }
     releaseMotion(record);
     record.motion = group;
   } else {

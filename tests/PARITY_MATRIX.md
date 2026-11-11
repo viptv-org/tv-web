@@ -547,3 +547,5 @@ Implementation `4cf36237e70b387aacad8a3c5521d5f2ee9eaf9e`;
 | Native ancestor coordinates | Mounted coordinates, 27 direction combinations, reparenting and linear traversal bound pass in both native hosts | Candidate starts and renders Home; one navigation comparison shows no meaningful stall reduction |
 | Vertical scrolling | Native adapter logic is testable without hardware | Timer gaps still reach about 700 ms in the fixed-key run; smooth motion remains unqualified |
 | TypeScript runtime | SDK in-memory component testing is available; native boundary tests pass | Hermes CPU profiling works on the real device; in-memory tests do not establish firmware or GPU parity |
+
+| Home shelf/card reuse | Seven-row reversal plus horizontal slot wrap retain shelf/poster IDs and display changed artwork; all seven polish cases pass | Corrected native background/poster ordering inspected; ten-key timer maximum remains 795 ms, so motion acceptance is open |

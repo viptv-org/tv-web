@@ -16,7 +16,8 @@ The owner-authorized TV-web refinement keeps the design pin and other client
 repositories unchanged. Hero artwork uses a short coordinated fade; logos have
 no horizontal entrance or glow. The active and incoming artwork nodes are reused
 through the fade, with a text fallback for failed artwork. Home keeps a fixed
-focus anchor and moves bounded rails as groups. Only neighboring shelves and the
+focus anchor, reuses three shelves with up to twelve card slots each, and moves
+vertical content under one parent transform. Only neighboring shelves and the
 current/incoming hero remain prepared; there is no persistent client metadata or
 image database. Image requests match the physical stage size.
 

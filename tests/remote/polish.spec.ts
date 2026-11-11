@@ -145,3 +145,41 @@ test("a prepared clearlogo keeps the same rendered node when its hero becomes vi
   const before=(await logo())!.id;expect(typeof before).toBe('number');release();await expect.poll(()=>texts(page)).toContain(card.description);
   await page.waitForTimeout(250);expect((await logo())?.id).toBe(before);
 });
+
+test("Home reuses bounded shelf and poster nodes across vertical reversals",async({page,baseURL})=>{
+  test.setTimeout(90000);
+  await page.emulateMedia({reducedMotion:"no-preference"});await page.clock.install();
+  const fixture=await installRemoteBackend(page,baseURL!),home=fixture.bootstrap().home!;
+  home.rows=Array.from({length:7},(_,row)=>({...home.rows[0],id:`pool-${row}`,title:`Pooled shelf ${row}`,
+    cards:Array.from({length:40},(_,index)=>{const card=fixture.cards[(row+index)%fixture.cards.length];return {...card,identity:{...card.identity,id:`pool-${row}-${index}`}};})}));
+  await page.goto('/tv/?focusdebug=1');await expect(state(page)).toHaveAttribute('data-tv-ready','true');
+  await page.keyboard.press('ArrowDown');await expect(state(page)).toHaveAttribute('data-tv-focus',/^rows:0:0:/);
+  await page.clock.runFor(500);
+  const nodes=()=>page.evaluate(()=>{
+    const labels:Record<string,number>={},posters:number[]=[],visible:string[]=[];
+    function walk(n:any){
+      if(n.viptvText?.startsWith('Pooled shelf '))labels[n.viptvText]=n.id;
+      if(n.props.w===256&&n.props.h===383&&n.texture?.props?.src?.includes('/fixture/')){
+        posters.push(n.id);if(n.isRenderable&&Math.abs(n.absX-96)<1&&n.absY>530&&n.absY<700)visible.push(n.texture.props.src);
+      }
+      n.children?.forEach(walk);
+    }
+    walk((window as any).__viptvRenderer.stage.root);return{labels,posters:posters.sort((a,b)=>a-b),visible};
+  });
+  const initial=await nodes();expect(Object.keys(initial.labels)).toHaveLength(3);expect(initial.posters.length).toBeGreaterThan(0);
+  let previous=0;
+  for(const row of [1,2,3,4,5,6,5,4,3,2,1,0]){
+    await page.keyboard.press(row>previous?'ArrowDown':'ArrowUp');previous=row;
+    await expect(state(page)).toHaveAttribute('data-tv-focus',new RegExp(`^rows:0:${row}:0:`));await page.clock.runFor(300);
+    const current=await nodes();expect(Object.keys(current.labels)).toHaveLength(3);
+    expect(current.posters).toEqual(initial.posters);
+    expect(current.visible).toEqual([home.rows[row].cards[0].poster]);
+    for(const [title,id] of Object.entries(current.labels))expect(id).toBe(initial.labels[`Pooled shelf ${Number(title.split(' ').at(-1))%3}`]);
+  }
+  for(let column=1;column<=14;column++){
+    await page.keyboard.press('ArrowRight');await page.clock.runFor(250);
+    await expect(state(page)).toHaveAttribute('data-tv-focus',new RegExp(`^rows:${column}:0:`));
+    const current=await nodes();expect(current.posters).toEqual(initial.posters);
+    expect(current.visible).toEqual([home.rows[0].cards[column].poster]);
+  }
+});

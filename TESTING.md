@@ -3773,3 +3773,30 @@ No beta server rollout or new playback qualification is included in this check.
 The SDK testing library can execute TypeScript components against an in-memory
 SceneGraph under Jest without a Roku. Existing native-adapter tests mock the SDK
 boundary; neither approach emulates Hermes scheduling or the physical compositor.
+
+
+## Bounded Home shelf reuse
+
+Home keeps three reusable shelf slots and at most twelve card slots per shelf.
+One parent owns vertical translation; recycled rows change their local position
+without animating across the viewport. Derived selection, dimensions and offsets
+use equality-filtered memos. The full bounded card window remains mounted so a
+slot is available when its index wraps; this avoids retiring it just before reuse.
+Native moving groups insert visuals in logical tree order, retaining backgrounds
+below posters and overlays above them, independently of the order of adoption.
+
+Validation: application typecheck, browser production build and native package
+build pass; 242 shared unit tests and 22 native tests pass. All seven polish browser
+cases pass, including intermediate scrolling, the fixed focus anchor, prepared
+logos, seven-row vertical reversal and horizontal scrolling through a card-slot
+cycle. The reuse test rotates artwork as identities change and asserts both the
+same node IDs and the correct visible replacement image.
+
+The physical Roku candidate renders poster images above their backgrounds after
+vertical recycling. An initial shared-layer prototype exposed incorrect paint
+order; that candidate was replaced and the corrected rendering inspected on the
+device. The ten-key timer probe reports p95 64.29 ms, maximum 795.02 ms and seven
+gaps over 100 ms. These exploratory runs do not prove improved worst-case latency
+or smooth presentation. A subsequent Hermes profile still shows ancestor position
+and clipping work prominently. Render-thread animation, rapid-input latency and
+physical intermediate-frame cadence remain open; this is not performance acceptance.
