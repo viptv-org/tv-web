@@ -1,3 +1,36 @@
+# Combined Roku and browser acceptance — 2026-11-11
+
+TV source 052a255 uses the final feature composition, fixed hero paint bands and
+pinned contrast mask. The isolated locked dependency graphs pass 336 shared and
+34 native tests, application/native typechecks, integrity and production builds.
+The combined Chromium gate passes 37 cases spanning Home focus, hero pixels,
+delayed artwork, context-loss recovery, session storage, Skip/Recap, playback
+authority, Calendar and Samsung Return. An authenticated real-beta API sweep
+also reaches all navigation screens without a startup fullscreen request.
+
+Roku package 11130 is installed and version-checked. HLS/H.264/AAC playback
+advances, pause holds, a managed ten-second seek retains paused intent, resume
+advances, controls hide and Back restores Home. Both opening/seek leases were
+released with HTTP 200; native media closes without an error. An expired access
+token renewed through the real device grant, and normal exit/relaunch reaches
+signed-in Home again. Private UI captures verify hero readability, undimmed
+foreground art and the aligned portrait spacing. Decoder telemetry, not a black
+video-plane screenshot, supplies the media evidence.
+
+An earlier first selection from a four-row partial discovery did not start.
+Its original admission/native error was not captured. Later discovery produced
+267 rows and a successful selection; the two source identities were not the
+same. This is an unclassified source failure, not evidence of a diagnosed or
+fixed native regression. The successful delivery exposed no caption tracks;
+physical caption selection, audible output/lip sync and sustained 60 FPS remain
+unqualified. Browser/simulator marker and track checks are documented separately.
+
+Backend main 3703d03 matches the release-tested tree: 940 default/952 live-runtime
+checks, canonical source integrity and optimized build pass, as does edge CI.
+Core main 7921f313 and video main ffa11e26 are merged; their immutable consumer pins
+remain eee3d90 and f0fff094. Beta served-artifact and dedicated-account setup
+checks follow deployment; production is unchanged.
+
 # LG webOS and Samsung package boundaries
 
 Host changes `6e64769` and native packaging `393598d` preserve the shared TV

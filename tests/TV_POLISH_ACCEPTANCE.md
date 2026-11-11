@@ -31,14 +31,14 @@ image loading; a unit-test pass or high average FPS is insufficient.
 
 ## Foundation and platform requirements
 
-- [ ] Qualify navigation and artwork latency on the real Roku, including the My List
+- [x] Qualify navigation and artwork latency on the real Roku, including the My List
       row on Home; distinguish API refetch, image readiness and input handling.
-- [ ] Audit Program, Render and Task thread ownership; use real background execution
+- [x] Audit Program, Render and Task thread ownership; use real background execution
       where supported and keep synchronous CPU work from blocking navigation.
       Document unsupported worker APIs honestly and verify cancellation/cleanup.
-- [ ] Establish meaningful headless native-host tests and native TypeScript checks;
+- [x] Establish meaningful headless native-host tests and native TypeScript checks;
       compiler/bundler success alone does not prove firmware behavior.
-- [ ] Split large application and native-adapter modules into small focused files
+- [x] Split large application and native-adapter modules into small focused files
       after behavior/performance is verified; remove fragile build-time patches
       where a proper pinned framework fix can replace them.
 - [ ] Complete the whole-app UI and functionality sweep after performance work.
@@ -46,9 +46,9 @@ image loading; a unit-test pass or high average FPS is insufficient.
       Samsung exit confirmation, browse spacing, welcome/profile/recovery layouts
       and decoded-media player authority. Physical follow-up and remaining exact
       title/provider sequences stay open; see TESTING.md.
-- [ ] Investigate early PlayStation logout, including refresh rotation, cross-window
+- [x] Investigate early PlayStation logout, including refresh rotation, cross-window
       coordination, storage and suspended-browser recovery; preserve revocation safety.
-- [ ] Support LG webOS and Samsung Tizen packaging, remote input, playback and recovery;
+- [x] Support LG webOS and Samsung Tizen packaging, remote input, playback and recovery;
       test official emulators where feasible and browser/vendor API boundaries.
       No physical LG/Samsung devices are available; report that qualification limit.
 
@@ -57,16 +57,16 @@ image loading; a unit-test pass or high average FPS is insufficient.
 - [x] Restore each Home row's last focused card and horizontal position on vertical return.
 - [x] Keep top-navigation movement from scrolling or changing Continue Watching.
 - [x] Reset recycled shelf positions before they enter view; verify WebGL, Canvas and Roku behavior within their recorded test scope.
-- [ ] Audit the other screens and overlays for the same shared-index/state leakage.
+- [x] Audit the other screens and overlays for the same shared-index/state leakage.
 
 ## Hero, artwork and motion
 
-- [ ] Remove the hero logo's horizontal entrance/teleport; use a short, simple fade.
-- [ ] Coordinate backdrop, transparent logo and metadata as one stable presentation;
+- [x] Remove the hero logo's horizontal entrance/teleport; use a short, simple fade.
+- [x] Coordinate backdrop, transparent logo and metadata as one stable presentation;
       prevent independently arriving art and repeated description disappearance.
 - [ ] Reproduce the reported Collision Course (2026) metadata flash and distinguish
       stale callbacks, incomplete updates and mixed provider origins.
-- [ ] Remove the unwanted white/gray hero band and keep navigation gradients beneath
+- [x] Remove the unwanted white/gray hero band and keep navigation gradients beneath
       navigation labels, icons and focus treatment.
 - [ ] Improve transparent-logo sizing within a stable layout slot, preserving aspect
       ratio and avoiding layout displacement or ad hoc scaling.
@@ -74,50 +74,50 @@ image loading; a unit-test pass or high average FPS is insufficient.
       the processed image and keep filtering off the Roku client.
 - [x] Align the hero portrait preview with the profile edge and add clear vertical
       spacing below the avatar; verify browser geometry and the physical Roku.
-- [ ] Preserve the Home rows' fixed focus anchor while replacing card teleportation
+- [x] Preserve the Home rows' fixed focus anchor while replacing card teleportation
       with smooth group motion. Check vertical transitions and fast repeated input.
 - [ ] Compare implementation and device traces with the Solid TV demo's examples.
 
 ## Spacing, loading and screens
 
 - [ ] Review all screens and overlays, beyond the examples explicitly reported.
-- [ ] Reduce excessive separation between browse filters and their catalog/trending
+- [x] Reduce excessive separation between browse filters and their catalog/trending
       control; apply consistent padding and gaps on Movies, Series and Anime.
-- [ ] Center and coordinate player buffering text/spinner without overlapping labels.
-- [ ] Size short error/confirmation dialogs to their content with consistent padding;
+- [x] Center and coordinate player buffering text/spinner without overlapping labels.
+- [x] Size short error/confirmation dialogs to their content with consistent padding;
       the sign-in recovery message must not occupy most of the display.
-- [ ] Align the welcome wordmark/V mark and sign-in action as a coherent group.
-- [ ] Check a single composed welcome background instead of many independently loaded
+- [x] Align the welcome wordmark/V mark and sign-in action as a coherent group.
+- [x] Check a single composed welcome background instead of many independently loaded
       poster images, retaining the existing visual direction.
-- [ ] Refine profile-selection and pre-profile loading spacing and transitions.
+- [x] Refine profile-selection and pre-profile loading spacing and transitions.
 - [ ] Recheck captions, focus, drawers, empty/error states, calendar and player layout
       for clipping, inconsistent alignment, unnecessary motion and layout shifts.
 
 ## Episodes and session behavior
 
 - [ ] Compare app's Android TV season strip and phone/desktop picker; verify the compact TV-web chooser's remote behavior.
-- [ ] Use the supplied special-season name, or an appropriate Special(s) label, rather
+- [x] Use the supplied special-season name, or an appropriate Special(s) label, rather
       than exposing the implementation value “Season 0”.
-- [ ] Default to a regular season when one is available. Preserve an explicitly chosen
+- [x] Default to a regular season when one is available. Preserve an explicitly chosen
       special season or an actual resume target in it; keep those episodes accessible.
-- [ ] Verify Roku sign-in and selected profile survive normal app exit/relaunch;
+- [x] Verify Roku sign-in and selected profile survive normal app exit/relaunch;
       distinguish registry persistence from expired/revoked server credentials.
 - [ ] Exercise real playback, source reuse, paused/playing seek, track controls,
       intro/next/autoplay, controls hiding, source failures and Back recovery.
 
 ## Latency, images and shared metadata caching
 
-- [ ] Measure network preparation, UI processing, image readiness and rendering
+- [x] Measure network preparation, UI processing, image readiness and rendering
       separately; do not label a network delay as a rendering fix or vice versa.
-- [ ] Reuse existing image proxy facilities such as wsrv with appropriate decode sizes,
+- [x] Reuse existing image proxy facilities such as wsrv with appropriate decode sizes,
       transparent-image handling and caching; avoid duplicate artwork work.
 - [ ] Use aggressive shared caching for public Cinemeta metadata, with a documented
       refresh/invalidation policy suitable for movies versus changing series/episodes.
-- [ ] Inspect actual API response personalization before considering Cloudflare caching.
+- [x] Inspect actual API response personalization before considering Cloudflare caching.
       Auth/profile/watch-state/source-credential data must remain correctly isolated.
-- [ ] Prefer caching raw public provider metadata on the backend if current API routes
+- [x] Prefer caching raw public provider metadata on the backend if current API routes
       cannot safely share an edge cache. Do not redesign the API solely for caching.
-- [ ] Add no heavyweight client metadata cache or persistent client image database;
+- [x] Add no heavyweight client metadata cache or persistent client image database;
       keep decoded images and temporary presentation state bounded on weak devices.
 - [ ] Record before/after native frame timing, input/navigation latency, artwork readiness
       and memory across repeated navigation; leave unsupported targets explicit.
