@@ -132,7 +132,7 @@ test("D-pad focus updates without network requests and restores after details", 
   expect(fixture.requests).toHaveLength(1);
   await page.keyboard.press("Enter");
   await expect(screen(page)).toHaveAttribute("data-tv-screen", "detail");
-  await page.keyboard.press("Escape"); // Cancel the pending decoder handoff.
+  await page.keyboard.press("Escape"); // Return to the remembered Home card.
   await expect(screen(page)).toHaveAttribute("data-tv-screen", "home");
   await expect(screen(page)).toHaveAttribute("data-tv-focus", before!);
 });
@@ -462,8 +462,7 @@ test("Back releases an admitted replacement without opening its decoder after cl
   expect(admissions()).toHaveLength(2);
   expect(admissions()[1].body.replace_source).toMatchObject({ playback_id: "fixture-playback" });
   const replacementReleased = released("fixture-playback-2");
-  await page.keyboard.press("Escape"); // Hide controls.
-  await page.keyboard.press("Escape"); // Leave playback.
+  await page.keyboard.press("Escape"); // Cancel the pending decoder handoff.
   await expect(screen(page)).toHaveAttribute("data-tv-screen", "home");
   await expect(screen(page)).toHaveAttribute("data-tv-ready", "true");
   await Promise.all([outgoingReleased, replacementReleased]);
