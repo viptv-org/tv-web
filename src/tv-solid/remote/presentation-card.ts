@@ -8,9 +8,10 @@ export function presentationKey(card: Card): string {
     card.identity.kind, card.identity.id, episode?.order, episode?.season, episode?.episode]);
 }
 
-/** A partial refresh must not erase visual facts already shown for this selection.
- * This holds one displayed card; it is not a client metadata cache. */
-export function presentationCard(previous: Card | undefined, next: Card): Card {
+/** Partial refreshes retain visual facts for the displayed or preparing selection. */
+export function presentationCard(previous: Card | undefined, next: Card, pending?: Card): Card {
+  if (pending && presentationKey(pending) === presentationKey(next))
+    previous = presentationCard(previous, pending);
   if (!previous || presentationKey(previous) !== presentationKey(next)) return next;
   const value = (next: string | null | undefined, prior: string | null | undefined) => next?.trim() ? next : prior;
   return { ...next, description: value(next.description,previous.description),

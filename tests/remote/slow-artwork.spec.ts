@@ -27,7 +27,8 @@ for (const first of [true, false]) test(`slow ${first ? 'first' : 'replacement'}
   await page.clock.install();
   const fixture = await installRemoteBackend(page, baseURL!);
   const home = fixture.bootstrap().home!;
-  const slow = { ...fixture.card, identity: { ...fixture.card.identity, id: 'slow-title' }, description: 'Slow title synopsis', logo: `${baseURL}/slow-logo.png`, landscape: `${baseURL}/slow-background.jpg` };
+  const synopsis = 'Slow title synopsis';
+  const slow = { ...fixture.card, identity: { ...fixture.card.identity, id: 'slow-title' }, description: synopsis, logo: `${baseURL}/slow-logo.png`, landscape: `${baseURL}/slow-background.jpg` };
   const initial = { ...fixture.card, description: 'Current title synopsis' };
   home.hero = first ? slow : initial;
   home.featured = first ? [slow] : [initial, slow];
@@ -38,7 +39,7 @@ for (const first of [true, false]) test(`slow ${first ? 'first' : 'replacement'}
   await page.route('**/slow-background.jpg', async route => { await background; await route.fulfill({ path: referenceRoot + '/assets/3da010bb588e70c5323088b2c66658fe.jpg', contentType: 'image/jpeg' }).catch(() => {}); });
   await page.goto('/tv/?focusdebug=1');
   await expect(page.locator('html')).toHaveAttribute('data-tv-ready', 'true');
-  await expect.poll(() => texts(page)).toContain(first ? slow.description : initial.description);
+  await expect.poll(() => texts(page)).toContain(first ? synopsis : initial.description);
   if (!first) {
     await expect.poll(() => page.evaluate(src => {
       let painted = false;
@@ -52,14 +53,20 @@ for (const first of [true, false]) test(`slow ${first ? 'first' : 'replacement'}
   await page.clock.fastForward(5000);
   expect((await artwork(page)).map(node => node.id).sort()).toEqual(prepared);
   expect((await artwork(page)).some(node => node.visible)).toBe(false);
-  expect(await texts(page)).toContain(first ? slow.description : initial.description);
+  expect(await texts(page)).toContain(first ? synopsis : initial.description);
+  if (!first) {
+    slow.description = '';
+    fixture.reviseCatalog([1, 0]);
+    await page.clock.fastForward(1500);
+    await expect.poll(() => fixture.requests.filter(request => request.path === '/api/bootstrap').length).toBeGreaterThan(1);
+  }
   releaseBackground();
   await page.clock.runFor(100);
   expect((await artwork(page)).some(node => node.visible)).toBe(false);
   releaseLogo();
   await expect.poll(async () => { await page.clock.runFor(32); return artwork(page); }).toEqual(expect.arrayContaining(prepared.map(id => expect.objectContaining({ id, visible: true }))));
   await expect.poll(async () => (await artwork(page)).filter(node => node.visible)).toHaveLength(2);
-  await expect.poll(() => texts(page)).toContain(slow.description);
+  await expect.poll(() => texts(page)).toContain(synopsis);
   if (!first) expect(await texts(page)).not.toContain(initial.description);
 });
 

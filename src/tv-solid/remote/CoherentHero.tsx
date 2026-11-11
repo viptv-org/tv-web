@@ -50,8 +50,9 @@ export function createCoherentHero(source: Accessor<Card | undefined>, scope: Ac
     const currentScope=scope();
     if (!ready()) {gate.hold(currentScope);return;}
     const next=source(), kind=mode(), box=logoBox();
-    const previous = currentScope === previousScope ? untrack(shown) ?? untrack(pending)?.value.card : undefined;
-    const card=next ? presentationCard(previous,next) : undefined;
+    const sameScope = currentScope === previousScope;
+    const card=next ? presentationCard(sameScope ? untrack(shown) : undefined, next,
+      sameScope ? untrack(pending)?.value.card : undefined) : undefined;
     previousScope=currentScope;
     const background=kind === "landscape" ? card?.view?.preview?.background ?? card?.landscape ?? card?.poster : card?.landscape ?? card?.poster;
     const poster=kind === "portrait" ? card?.poster ?? undefined : undefined;

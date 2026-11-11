@@ -27,3 +27,16 @@ it("does not mix two episodes or different metadata connection incarnations", ()
   const b = { ...a, metadata_origin: { ...a.metadata_origin!, incarnation: "b" }, description: null } as Card;
   expect(presentationCard(a, b).description).toBeNull();
 });
+
+it("retains the incoming synopsis while another title is still displayed", () => {
+  const incoming = { ...first, identity: { ...first.identity, id: "incoming" }, description: "Prepared synopsis" };
+  const refreshed = { ...incoming, description: null, progress: .3 };
+  expect(presentationCard(first, refreshed, incoming)).toMatchObject({ description: "Prepared synopsis", progress: .3 });
+  expect(presentationCard(first, { ...refreshed, description: "Corrected incoming synopsis" }, incoming).description)
+    .toBe("Corrected incoming synopsis");
+});
+
+it("never borrows pending metadata from another authority", () => {
+  const incoming = { ...first, provider_id: "simkl", description: "Other authority" };
+  expect(presentationCard(undefined, { ...first, description: null }, incoming).description).toBeNull();
+});
