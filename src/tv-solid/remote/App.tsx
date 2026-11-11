@@ -128,6 +128,7 @@ import { createHeroCycle } from "./hero-cycle-controller";
 import { createIdleScreenSaver } from "./idle-screen-saver";
 import { createTextKeyboard } from "./text-keyboard";
 import { createHeldSelect } from "./held-select";
+import { createOverlayController } from "./overlay-controller";
 import { createSettingsNavigation } from "./navigation/settings";
 import { createProfilesNavigation } from "./navigation/profiles";
 import { createCalendarNavigation } from "./navigation/calendar";
@@ -435,11 +436,7 @@ export function createRemoteTvApp(
       [signedIn, setSignedIn] = createSignal<Bootstrap>(),
       [qr, setQr] = createSignal("");
     const [trackColumn, setTrackColumn] = createSignal(0);
-    const [overlayEntered, setOverlayEntered] = createSignal(false),
-      [overlayClosing, setOverlayClosing] = createSignal(false),
-      [accountEmail, setAccountEmail] = createSignal(""),
-      [overlaySettled, setOverlaySettled] = createSignal(false);
-    const overlayParents: { value: Overlay; choice: number }[] = [];
+    const [accountEmail, setAccountEmail] = createSignal("");
     const [calibrationValue, setCalibrationValue] = createSignal(0);
     function reloadIdleImages() {
       clearLogoCache();
@@ -448,13 +445,16 @@ export function createRemoteTvApp(
     const { active: screenSaver, dismiss: dismissScreenSaver } = createIdleScreenSaver({
       minutes: screenSaverMinutes, playing: () => screen() === "player", onWake: reloadIdleImages,
     });
-    let overlayFrame = 0,
-      overlayTimer: ReturnType<typeof setTimeout> | undefined;
-
-    const [overlay, setOverlay] = createSignal<Overlay>(),
-      [choice, setChoice] = createSignal(0);
+    const [choice, setChoice] = createSignal(0);
     const { text, setText, key, setKey, upper: keyboardUpper, setUpper: setKeyboardUpper,
       symbols: keyboardSymbols, setSymbols: setKeyboardSymbols, characters: keyboardCharacters } = createTextKeyboard();
+    const overlays = createOverlayController({
+      focus: {screen, capture: () => ({zone: zone(), column: column(), row: row(), choice: choice()}), selection: choice,
+        select: index => { setChoice(index); }, restore: focus => { setZone(focus.zone); setColumn(focus.column); setRow(focus.row); setChoice(focus.choice); }},
+      text: {clear: () => { setText(""); }, begin: initial => { setKeyboardUpper(false); setKeyboardSymbols(false); setText(initial); setKey(0); }},
+      errors: {clear: () => { setError(""); }, restore: () => { setError(screen() === "player" ? playbackError() : ""); }},
+    });
+    const {current: overlay, entered: overlayEntered, closing: overlayClosing, settled: overlaySettled, open: openOverlay} = overlays;
     const [sourcePage, setSourcePage] = createSignal<SourcePage>(),
       [allSourceIds, setAllSourceIds] = createSignal<string[]>([]),
       [sourceFacet, setSourceFacet] = createSignal(0),
@@ -668,7 +668,6 @@ export function createRemoteTvApp(
     let retry: () => void = () => void start(),
       returnScreen: Screen = "home",
       returnFocus = { zone: "hero", column: 0, row: 0 },
-      overlayFocus = { zone: "hero", column: 0, row: 0, choice: 0 },
       lastRevisions = "",
       searchMediaFocus = 0,
       searchChannelFocus = 0,
@@ -908,7 +907,7 @@ export function createRemoteTvApp(
     function dismissNext() {
       nextIntent++;setAdvancing(false);
       countdown.cancel();dismissedEnd = endScope();
-      setOverlay(undefined);setShowControls(false);
+      overlays.hide();setShowControls(false);
     }
     createEffect(() => {
       deviceRevision();
@@ -946,7 +945,7 @@ export function createRemoteTvApp(
         if (!card) { notify("There’s no next episode available.");return; }
         if (expected && episodeKey(expected) !== episodeKey(card)) { notify("The next episode changed. Press Next to continue.");return; }
         const prepared = forcePicker ? undefined : episodes.take(card);
-        setOverlay(undefined);
+        overlays.hide();
         await playIntent(card, forcePicker, true, undefined, false, 0, !forcePicker, prepared);
       } finally { if (ticket === nextIntent) setAdvancing(false); }
     }
@@ -1214,12 +1213,7 @@ export function createRemoteTvApp(
       nextIntent++;setAdvancing(false);sourceAttempt++;sourceIntent++;countdown.cancel();episodes.clear();
       setSignedIn(undefined);
       setCanManageAccount(undefined);
-      clearTimeout(overlayTimer);
-      cancelAnimationFrame(overlayFrame);
-      overlayParents.length = 0;
-      setOverlayClosing(false);
-      setOverlaySettled(false);
-      setOverlayEntered(false);
+      overlays.retireAnimations();
       scope.abort();
       searchScope?.abort();
       setSearchChannelPaging(false);
@@ -1235,7 +1229,7 @@ export function createRemoteTvApp(
       sourceScope = undefined;
       setLoading(false);
       setError("");
-      setOverlay(undefined);
+      overlays.hide();
       setText("");
       pageBusy = false;
       heldSelect.cancel();
@@ -2323,100 +2317,19 @@ export function createRemoteTvApp(
         fail(e);
       }
     }
-    function openOverlay(value: Overlay, child = false) {
-      clearTimeout(overlayTimer);
-      cancelAnimationFrame(overlayFrame);
-      setOverlayClosing(false);
-      if (child && overlay())
-        overlayParents.push({ value: overlay()!, choice: choice() });
-      else overlayParents.length = 0;
-      overlayFocus = {
-        zone: zone(),
-        column: column(),
-        row: row(),
-        choice: choice(),
-      };
-      setChoice(0);
-      setError("");
-      const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
-      setOverlayEntered(reduced);
-      setOverlaySettled(reduced);
-      setOverlay(value);
-      if (!reduced)
-        overlayFrame = requestAnimationFrame(() => {
-          setOverlayEntered(true);
-          overlayTimer = setTimeout(() => setOverlaySettled(true), 320);
-        });
-      if (value.kind === "text") {
-        setKeyboardUpper(false);
-        setKeyboardSymbols(false);
-        setText(value.initial ?? "");
-        setKey(0);
-      }
-    }
     function closeOverlay(restoreFocus = true) {
       sourceIntent++;
       sourceScope?.abort();
       sourceScope = undefined;
       setSourceLoading(false);
       setSourceFiltering(false);
-      overlayParents.length = 0;
-      clearTimeout(overlayTimer);
-      cancelAnimationFrame(overlayFrame);
-      const focus = overlayFocus,
-        current = overlay();
-      const closingScreen = screen(), closingZone = zone(), closingColumn = column(), closingRow = row();
-      const finish = () => {
-        if (current && overlay() !== current) return;
-        const restore = restoreFocus && !!current && screen() === closingScreen &&
-          zone() === closingZone && column() === closingColumn && row() === closingRow;
-        setOverlay(undefined);
-        setOverlayClosing(false);
-        setOverlaySettled(false);
-        setOverlayEntered(false);
-        setText("");
-        setError(screen() === "player" ? playbackError() : "");
-        if (!restore) return;
-        setZone(focus.zone);
-        setColumn(focus.column);
-        setRow(focus.row);
-        setChoice(focus.choice);
-      };
-      const animated =
-        current &&
-        (current.kind === "sources" ||
-          current.kind === "tracks" ||
-          ((current.kind === "choices" || current.kind === "confirm") &&
-            !current.profile));
-      if (animated && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
-        setOverlayClosing(true);
-        overlayTimer = setTimeout(finish, 200);
-      } else finish();
+      overlays.close(restoreFocus);
     }
     function dismissOverlay() {
-      if (sourceActions()) {
-        setSourceActions(false);
-        return;
-      }
-      if (sourceMenu()) {
-        setSourceMenu(undefined);
-        return;
-      }
+      if (sourceActions()) { setSourceActions(false); return; }
+      if (sourceMenu()) { setSourceMenu(undefined); return; }
       if (libraryApplying) restartPaging();
-      const previous = overlayParents.pop();
-      if (!previous) {
-        closeOverlay();
-        return;
-      }
-      clearTimeout(overlayTimer);
-      cancelAnimationFrame(overlayFrame);
-      setOverlayClosing(false);
-      setOverlaySettled(true);
-      setOverlayEntered(true);
-      setOverlay(previous.value);
-      setChoice(previous.choice);
-      setText("");
-      setError("");
+      if (!overlays.restoreParent()) closeOverlay();
     }
     async function leavePlayer() {
       clearTimeout(controlsTimer);
@@ -3365,8 +3278,8 @@ export function createRemoteTvApp(
       const remembered = !!(initialMemory.title || initialMemory.across);
       if (intent !== sourceIntent || operation.signal.aborted || epoch !== api.scopeEpoch) return;
       const hidden = !forcePicker && (automaticNext || remembered);
-      if (hidden && screen() !== "player") overlayFocus = { zone: zone(), column: column(), row: row(), choice: choice() };
-      if (hidden) { setOverlay(undefined);setLoading(true); }
+      if (hidden && screen() !== "player") overlays.captureOrigin();
+      if (hidden) { overlays.hide();setLoading(true); }
       else openOverlay({ kind: "sources", title: "Choose a source" });
       retry = () =>
         void playIntent(
@@ -3527,9 +3440,9 @@ export function createRemoteTvApp(
       if (screen() !== "player") {
         returnScreen = screen();
         returnFocus = {
-          zone: overlayFocus.zone,
-          column: overlayFocus.column,
-          row: overlayFocus.row,
+          zone: overlays.origin().zone,
+          column: overlays.origin().column,
+          row: overlays.origin().row,
         };
       }
       sourceScope?.abort();
@@ -3631,7 +3544,7 @@ export function createRemoteTvApp(
         if (attempt === sourceAttempt) setOpeningSource(undefined);
         // Only the drawer this stream was successfully chosen from. A failed
         // start stays open so the next source is one press away.
-        if (started && overlay()?.kind === "sources") setOverlay(undefined);
+        if (started && overlay()?.kind === "sources") overlays.hide();
       }
       return started;
     }
@@ -6052,8 +5965,7 @@ export function createRemoteTvApp(
     onCleanup(() => {
       alive = false;
       heldSelect.cancel();
-      clearTimeout(overlayTimer);
-      cancelAnimationFrame(overlayFrame);
+      overlays.dispose();
       scope.abort();
       settingsScope?.abort();
       sourceScope?.abort();
