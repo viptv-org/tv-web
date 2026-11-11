@@ -134,8 +134,7 @@ test("D-pad focus updates without network requests and restores after details", 
   expect(fixture.requests).toHaveLength(1);
   await page.keyboard.press("Enter");
   await expect(screen(page)).toHaveAttribute("data-tv-screen", "detail");
-  await page.keyboard.press("Escape"); // Hide controls.
-  await page.keyboard.press("Escape"); // Leave playback.
+  await page.keyboard.press("Escape"); // Cancel the pending decoder handoff.
   await expect(screen(page)).toHaveAttribute("data-tv-screen", "home");
   await expect(screen(page)).toHaveAttribute("data-tv-focus", before!);
 });
@@ -411,7 +410,7 @@ test("source quality selection is delegated to the server", async ({
     .toBe(true);
 });
 
-test("Back during source replacement cannot start another lease after release finishes", async ({
+test("Back releases an admitted replacement without opening its decoder after cleanup", async ({
   page,
   baseURL,
 }) => {
@@ -419,6 +418,14 @@ test("Back during source replacement cannot start another lease after release fi
     media: true,
     slowRelease: true,
   });
+  const replacementMedia: string[] = [];
+  page.on("request", request => {
+    const path = new URL(request.url()).pathname;
+    if (path.startsWith("/media/fixture-playback-2/")) replacementMedia.push(path);
+  });
+  const released = (id: string) => page.waitForResponse(response =>
+    response.request().method() === "DELETE" && new URL(response.url()).pathname === `/api/playback/${id}`,
+  );
   await page.clock.install();
   await page.goto("/tv/?platform=vizio");
   await expect(screen(page)).toHaveAttribute("data-tv-screen", "home");
@@ -441,6 +448,7 @@ test("Back during source replacement cannot start another lease after release fi
     )
     .toBe(2);
   await page.keyboard.press("ArrowDown");
+  const outgoingReleased = released("fixture-playback");
   await page.keyboard.press("Enter");
   await expect
     .poll(() =>
@@ -450,16 +458,19 @@ test("Back during source replacement cannot start another lease after release fi
       ),
     )
     .toBe(true);
+  const admissions = () => fixture.requests.filter(request => request.path === "/api/playback");
+  expect(admissions()).toHaveLength(2);
+  expect(admissions()[1].body.replace_source).toMatchObject({ playback_id: "fixture-playback" });
+  const replacementReleased = released("fixture-playback-2");
   await page.keyboard.press("Escape"); // Hide controls.
   await page.keyboard.press("Escape"); // Leave playback.
   await expect(screen(page)).toHaveAttribute("data-tv-screen", "home");
   await expect(screen(page)).toHaveAttribute("data-tv-ready", "true");
-  // Nothing scheduled by the finished release may start another lease.
+  await Promise.all([outgoingReleased, replacementReleased]);
   await pauseClock(page);
   await page.clock.runFor(500);
-  expect(
-    fixture.requests.filter((r) => r.path === "/api/playback"),
-  ).toHaveLength(1);
+  expect(admissions()).toHaveLength(2);
+  expect(replacementMedia).toEqual([]);
 });
 
 test("lease expiry stops cached media even while a heartbeat is stalled", async ({
