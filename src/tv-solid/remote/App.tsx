@@ -41,6 +41,7 @@ import { PlayerControlsView } from "./PlayerControlsView";
 import { SettingsView } from "./SettingsView";
 import { BrowseControls } from "./BrowseControls";
 import { OverlayViewport } from "./OverlayViewport";
+import { createLiveGuideController } from "./live/guide-controller";
 import { LiveGuideGrid } from "./live/LiveGuideGrid";
 import { LiveGroupSelector } from "./live/LiveGroupSelector";
 import { LiveHero } from "./live/LiveHero";
@@ -1121,9 +1122,7 @@ export function createRemoteTvApp(
         setHeroAction(0);
         setSaved(new Map());
       });
-      guideTimes.clear();
-      for (const flight of guideFlights.values()) flight.abort();
-      guideFlights.clear();
+      liveGuides.dispose();
     }
     function applyBootstrap(value: Bootstrap) {
       clearProfileView();
@@ -2632,137 +2631,14 @@ export function createRemoteTvApp(
         if (!signal.aborted) setLoading(false);
       }
     }
-    const guideFlights = new Map<string, AbortController>();
-    const guideTimes = new Map<string, number>();
-    let guideGeneration = 0;
-    function retireLiveGuides() {
-      guideGeneration++;
-      for (const flight of guideFlights.values()) flight.abort();
-      guideFlights.clear();
-      guideTimes.clear();
-      setPrograms({});
-      setGuideInfo({});
-      setProgramIndex(0);
-    }
+    const liveGuides = createLiveGuideController({scope: () => scope, channels, channelIndex: liveChannelIndex,
+      rowStart: guideRowStart, programs: {current: programs, set: setPrograms}, info: {set: setGuideInfo},
+      selection: {current: currentProgram, set: setProgramIndex}, notify,
+      request: (id, signal) => call<Guide>(api.scoped(`/live/${segment(id)}/guide`), "GET", undefined, signal)});
+    const {retire: retireLiveGuides, load: loadGuide, loadVisible: loadVisibleGuides} = liveGuides;
     function adoptLiveSnapshot(id: string) {
       if (id !== liveSnapshot()) retireLiveGuides();
       setLiveSnapshot(id);
-    }
-    const guideKeep = () =>
-      new Set(
-        channels()
-          .slice(Math.max(0, liveChannelIndex() - 10), liveChannelIndex() + 15)
-          .map((channel) => channel.id),
-      );
-    function trimGuides() {
-      const keep = guideKeep();
-      batch(() => {
-        setPrograms((old) =>
-          Object.fromEntries(
-            Object.entries(old).filter(([id]) => keep.has(id)),
-          ),
-        );
-        setGuideInfo((old) =>
-          Object.fromEntries(
-            Object.entries(old).filter(([id]) => keep.has(id)),
-          ),
-        );
-      });
-      for (const id of guideTimes.keys())
-        if (!keep.has(id)) guideTimes.delete(id);
-    }
-    async function loadGuide(index: number, force = false) {
-      const channel = channels()[index];
-      if (
-        !channel ||
-        (!force &&
-          programs()[channel.id] &&
-          Date.now() - (guideTimes.get(channel.id) ?? 0) < 30_000) ||
-        (guideFlights.has(channel.id) &&
-          !guideFlights.get(channel.id)!.signal.aborted)
-      )
-        return;
-      const owner = scope;
-      const request = new AbortController();
-      const cancel = () => request.abort();
-      if (owner.signal.aborted) return;
-      owner.signal.addEventListener("abort", cancel, { once: true });
-      guideFlights.set(channel.id, request);
-      const focusedProgram =
-        channels()[liveChannelIndex()]?.id === channel.id
-          ? currentProgram()?.id
-          : undefined;
-      try {
-        const result = await call<Guide>(
-          api.scoped(`/live/${segment(channel.id)}/guide`),
-          "GET",
-          undefined,
-          request.signal,
-        );
-        if (
-          scope !== owner ||
-          request.signal.aborted ||
-          !guideKeep().has(channel.id)
-        )
-          return;
-        guideTimes.set(channel.id, Date.now());
-        batch(() => {
-          setPrograms((old) => ({ ...old, [channel.id]: result.programs }));
-          setGuideInfo((old) => ({ ...old, [channel.id]: result.view }));
-          if (channels()[liveChannelIndex()]?.id === channel.id) {
-            const retained = result.programs.findIndex(
-              (program) => program.id === focusedProgram,
-            );
-            setProgramIndex(
-              retained >= 0
-                ? retained
-                : Math.max(
-                    0,
-                    result.programs.findIndex(
-                      (program) =>
-                        program.id === result.view?.current_program_id,
-                    ),
-                  ),
-            );
-          }
-        });
-        trimGuides();
-      } catch (e) {
-        if (
-          scope === owner &&
-          !request.signal.aborted &&
-          !(e instanceof DOMException)
-        )
-          notify("Programme information is unavailable.");
-      } finally {
-        owner.signal.removeEventListener("abort", cancel);
-        if (guideFlights.get(channel.id) === request)
-          guideFlights.delete(channel.id);
-      }
-    }
-    async function loadVisibleGuides(force = false) {
-      const owner = scope,
-        ticket = ++guideGeneration;
-      const start = Math.max(0, guideRowStart()),
-        end = guideRowStart() + 5;
-      const visible = new Set(
-        channels()
-          .slice(start, end)
-          .map((channel) => channel.id),
-      );
-      for (const [id, flight] of guideFlights)
-        if (!visible.has(id)) flight.abort();
-      trimGuides();
-      for (let i = start; i < Math.min(channels().length, end); i += 3) {
-        if (owner !== scope || owner.signal.aborted || ticket !== guideGeneration)
-          return;
-        await Promise.all(
-          Array.from(
-            { length: Math.min(3, channels().length - i, end - i) },
-            (_, n) => loadGuide(i + n, force),
-          ),
-        );
-      }
     }
     onMount(() => {
       const timer = setInterval(() => {
@@ -2782,9 +2658,7 @@ export function createRemoteTvApp(
       };
       target.__viptvRemoteMetrics = () => ({
         guideSnapshots: Object.keys(programs()).length,
-        guideRequestsInFlight: [...guideFlights.values()].filter(
-          (request) => !request.signal.aborted,
-        ).length,
+        guideRequestsInFlight: liveGuides.inFlight(),
         catalogCards: page().cards.length,
         // The payload metrics measure the bounded retained render window,
         // not the accumulated focus list, which legitimately spans every
