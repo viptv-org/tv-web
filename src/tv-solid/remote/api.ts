@@ -482,7 +482,7 @@ export class RemoteTvApi {
     return this.bootstrap(signal);
   }
   async signOut() {
-    await this.call("/api/auth/logout", "POST");
+    await this.call("/api/auth/logout", "POST", {});
     this.epoch++;
     this.authEpoch++;
     this.profile = "";
