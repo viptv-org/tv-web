@@ -2,6 +2,7 @@ import { TizenAvplayAdapter } from "../../../vendor/video/src/tizen-avplay";
 import type { Player, PlayerSnapshot } from "../../../vendor/video/src/types";
 import { RemoteTvApi, RemoteError, segment } from "./api";
 import { DeferredPlayer } from "./deferred-player";
+import { inScope } from "./operation-scope";
 import { ensureTizenSurface } from "../platform/tizen-host";
 import type {
   Card,
@@ -431,10 +432,16 @@ export class RemotePlayback {
       void this.api.release(`/api/playback/${segment(lease.id)}`);
       throw new DOMException("Playback cancelled", "AbortError");
     }
-    await this.stopCurrent(true);
-    if (intent !== this.intentGeneration) {
+    const retiring = this.stopCurrent(true);
+    const handoff = new AbortController();
+    this.operation = handoff;
+    try {
+      await inScope(retiring, handoff.signal);
+      if (intent !== this.intentGeneration)
+        throw new DOMException("Playback cancelled", "AbortError");
+    } catch (error) {
       void this.api.release(`/api/playback/${segment(lease.id)}`);
-      throw new DOMException("Playback cancelled", "AbortError");
+      throw error;
     }
     const generation = ++this.generation,
       scope = new AbortController();

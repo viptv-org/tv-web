@@ -91,6 +91,35 @@ describe("remote playback lease transitions", () => {
     expect(api.release).toHaveBeenCalledWith("/api/playback/1");
   });
 
+  it("releases an admitted replacement when Back cancels pending decoder cleanup", async () => {
+    const { controller, api, player } = setup();
+    await controller.start(card, { id: "source" }, false);
+    let finish!: () => void;
+    player.stop.mockImplementationOnce(() => new Promise<void>(resolve => { finish = resolve; }));
+    const opening = controller.start(card, { id: "second" }, false);
+    const outcome = opening.catch(error => error);
+    try {
+      await vi.waitFor(() => expect(api.release).toHaveBeenCalledWith("/api/playback/1"));
+      await controller.stop();
+      await vi.waitFor(() => expect(api.release).toHaveBeenCalledWith("/api/playback/2"));
+      expect(await outcome).toMatchObject({ name: "AbortError" });
+      expect(player.open).toHaveBeenCalledTimes(1);
+    } finally {
+      finish();
+      await outcome;
+    }
+  });
+
+  it("releases an admitted replacement if the outgoing decoder cannot stop", async () => {
+    const { controller, api, player } = setup();
+    await controller.start(card, { id: "source" }, false);
+    player.stop.mockRejectedValueOnce(new Error("Native close failed"));
+    await expect(controller.start(card, { id: "second" }, false)).rejects.toThrow("Native close failed");
+    expect(api.release).toHaveBeenCalledWith("/api/playback/1");
+    expect(api.release).toHaveBeenCalledWith("/api/playback/2");
+    expect(player.open).toHaveBeenCalledTimes(1);
+  });
+
   it.each([false, true])("seeking preserves tracks and direct mode with paused=%s", async paused => {
     const { controller, api, player } = setup();
     const selection = { audio_track: 2, subtitle_track: 3 };

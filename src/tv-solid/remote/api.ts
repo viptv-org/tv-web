@@ -1,3 +1,4 @@
+import { inScope } from "./operation-scope";
 import { runtimeObserver } from "../platform/runtime-observation";
 let requestSequence = 0;
 import type {
@@ -64,29 +65,6 @@ export function query(values: Record<string, unknown>): string {
 }
 export function abort(signal?: AbortSignal) {
   if (signal?.aborted) throw new DOMException("Cancelled", "AbortError");
-}
-function inScope<T>(work: Promise<T>, signal?: AbortSignal): Promise<T> {
-  if (!signal) return work;
-  return new Promise((resolve, reject) => {
-    const cancel = () => {
-      signal.removeEventListener("abort", cancel);
-      reject(new DOMException("Cancelled", "AbortError"));
-    };
-    signal.addEventListener("abort", cancel, { once: true });
-    if (signal.aborted) cancel();
-    // Observe both outcomes even after cancellation. The shared operation must
-    // finish (and save a consumed token rotation) for other active views.
-    void work.then(
-      (value) => {
-        signal.removeEventListener("abort", cancel);
-        resolve(value);
-      },
-      (error) => {
-        signal.removeEventListener("abort", cancel);
-        reject(error);
-      },
-    );
-  });
 }
 async function snapshotText(
   response: Response,
