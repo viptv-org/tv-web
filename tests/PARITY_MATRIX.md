@@ -1,3 +1,14 @@
+# LG webOS and Samsung qualification
+
+| Boundary | Browser / package evidence | Emulator / physical limits |
+| --- | --- | --- |
+| Shared host detection, numeric Back, legacy Search and media lifecycle |33 Chromium/Firefox/WebKit cases pass; explicit API/image origins covered by focused units | No physical LG/Samsung devices available |
+| Samsung local package |43-file/8.6MiB verified local closure; two file-entry/SDK cases pass; signing/API-origin gates retained | No signed WGT, actual Samsung file-origin API transport or AVPlay decoding claim |
+| LG webOS host | Official CLI3.2.6 builds the hosted IPK; shared HTML HLS/caption and authority/recovery tests pass | Official LG22/Chrome87 forced-Canvas Home/media/caption run passes; ordinary WebGL startup and no-bitmap guest presentation fail; LG26 initial guest attempt fails |
+| Original Live-empty / retired-hint follow-up | Four Live-empty cases land on Anime via stale fixed navigation; two source-hint cases miss the injected label before checking the hint | Failed assertions remain visible and unchanged |
+
+Detailed commands and disposition: [platform qualification](../platform/QUALIFICATION.md).
+
 # Provider-first discovery
 
 Core `1ea4de6`, SDK `4dd3a11`, backend `8b0293d`, design `059b763`.

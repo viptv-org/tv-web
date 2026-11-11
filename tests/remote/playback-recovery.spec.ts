@@ -1,3 +1,4 @@
+import { remoteTvEntry } from "../preview/platform-entry";
 import {test,expect} from '@playwright/test';
 import {installRemoteBackend} from '../preview/remote-backend';
 
@@ -24,7 +25,7 @@ for (const ps4 of [false,true]) test(`remembered resume clears stale buffering a
   },true);
  },ps4);
  const fixture=await installRemoteBackend(page,baseURL!,{media:true,episodeFlow:true});
- const state=page.locator('html');await page.goto('/tv/?focusdebug=1');await expect(state).toHaveAttribute('data-tv-ready','true');
+ const state=page.locator('html');await page.goto(remoteTvEntry("web", true));await expect(state).toHaveAttribute('data-tv-ready','true');
  await page.keyboard.press('Enter');await expect(state).toHaveAttribute('data-tv-sources','8');await expect(state).toHaveAttribute('data-tv-ready','true');await page.keyboard.press('Enter');
  await expect.poll(()=>page.evaluate(()=>localStorage.getItem('viptv-device-playback:v1'))).toContain('Supplier A');
  fixture.bootstrap().home!.hero!.progress=.0002;
@@ -44,7 +45,7 @@ for (const ps4 of [false,true]) test(`remembered resume clears stale buffering a
 
 test('filtered source focus survives a higher-ranked arrival',async({page,baseURL})=>{
  const fixture=await installRemoteBackend(page,baseURL!,{finding:true,media:true});const state=page.locator('html');
- await page.goto('/tv/?focusdebug=1');await expect(state).toHaveAttribute('data-tv-ready','true');await page.keyboard.press('Enter');await expect(state).toHaveAttribute('data-tv-sources','8');await expect(state).toHaveAttribute('data-tv-ready','true');
+ await page.goto(remoteTvEntry("web", true));await expect(state).toHaveAttribute('data-tv-ready','true');await page.keyboard.press('Enter');await expect(state).toHaveAttribute('data-tv-sources','8');await expect(state).toHaveAttribute('data-tv-ready','true');
  await page.keyboard.press('ArrowUp');await page.keyboard.press('ArrowRight');await page.keyboard.press('Enter');
  await expect(state).toHaveAttribute('data-tv-source-menu','provider');await page.keyboard.press('ArrowDown');await page.keyboard.press('ArrowDown');await page.keyboard.press('Enter');
  await expect(state).toHaveAttribute('data-tv-source-filter','Supplier B');await page.keyboard.press('ArrowDown');await page.keyboard.press('ArrowDown');
@@ -55,7 +56,7 @@ test('filtered source focus survives a higher-ranked arrival',async({page,baseUR
 
 test('an open provider filter keeps the highlighted option as providers arrive',async({page,baseURL})=>{
  const fixture=await installRemoteBackend(page,baseURL!,{finding:true});const state=page.locator('html');
- await page.goto('/tv/?focusdebug=1');await expect(state).toHaveAttribute('data-tv-ready','true');await page.keyboard.press('Enter');await expect(state).toHaveAttribute('data-tv-sources','8');await expect(state).toHaveAttribute('data-tv-ready','true');
+ await page.goto(remoteTvEntry("web", true));await expect(state).toHaveAttribute('data-tv-ready','true');await page.keyboard.press('Enter');await expect(state).toHaveAttribute('data-tv-sources','8');await expect(state).toHaveAttribute('data-tv-ready','true');
  await page.keyboard.press('ArrowUp');await page.keyboard.press('ArrowRight');await page.keyboard.press('Enter');await page.keyboard.press('ArrowDown');
  fixture.addBestSource();await expect(state).toHaveAttribute('data-tv-sources','9');await page.keyboard.press('Enter');
  await expect(state).toHaveAttribute('data-tv-source-filter','Supplier A');
@@ -63,7 +64,7 @@ test('an open provider filter keeps the highlighted option as providers arrive',
 
 test('player vertical movement preserves the selected toolbar button and cancels seek previews',async({page,baseURL})=>{
  const fixture=await installRemoteBackend(page,baseURL!,{media:true,episodeFlow:true});const state=page.locator('html');
- await page.goto('/tv/?focusdebug=1');await expect(state).toHaveAttribute('data-tv-ready','true');await page.keyboard.press('Enter');await expect(state).toHaveAttribute('data-tv-sources','8');await expect(state).toHaveAttribute('data-tv-ready','true');await page.keyboard.press('Enter');
+ await page.goto(remoteTvEntry("web", true));await expect(state).toHaveAttribute('data-tv-ready','true');await page.keyboard.press('Enter');await expect(state).toHaveAttribute('data-tv-sources','8');await expect(state).toHaveAttribute('data-tv-ready','true');await page.keyboard.press('Enter');
  await expect.poll(()=>fixture.requests.some(r=>r.path.endsWith('/first-frame'))).toBe(true);await page.keyboard.press('Space');await expect(state).toHaveAttribute('data-tv-player-state','paused');
  await page.keyboard.press('ArrowUp');const first=await state.getAttribute('data-tv-source-choice');await page.keyboard.press('ArrowUp');expect(await state.getAttribute('data-tv-source-choice')).toBe(first);
  await page.keyboard.press('ArrowRight');const selected=await state.getAttribute('data-tv-source-choice');await page.keyboard.press('ArrowDown');await expect(state).toHaveAttribute('data-tv-player-timeline-focus','true');await page.keyboard.press('ArrowUp');expect(await state.getAttribute('data-tv-source-choice')).toBe(selected);
@@ -73,7 +74,7 @@ test('player vertical movement preserves the selected toolbar button and cancels
 });
 
 test('paused seek retains timeline duration and position through replacement',async({page,baseURL})=>{
- const fixture=await installRemoteBackend(page,baseURL!,{media:true,captionTracks:true});const state=page.locator('html');await page.goto('/tv/?focusdebug=1');await expect(state).toHaveAttribute('data-tv-ready','true');await page.keyboard.press('Enter');await expect(state).toHaveAttribute('data-tv-sources','8');await expect(state).toHaveAttribute('data-tv-ready','true');await page.keyboard.press('Enter');await expect.poll(()=>fixture.requests.some(r=>r.path.endsWith('/first-frame'))).toBe(true);await page.keyboard.press('Space');await expect(state).toHaveAttribute('data-tv-player-state','paused');
+ const fixture=await installRemoteBackend(page,baseURL!,{media:true,captionTracks:true});const state=page.locator('html');await page.goto(remoteTvEntry("web", true));await expect(state).toHaveAttribute('data-tv-ready','true');await page.keyboard.press('Enter');await expect(state).toHaveAttribute('data-tv-sources','8');await expect(state).toHaveAttribute('data-tv-ready','true');await page.keyboard.press('Enter');await expect.poll(()=>fixture.requests.some(r=>r.path.endsWith('/first-frame'))).toBe(true);await page.keyboard.press('Space');await expect(state).toHaveAttribute('data-tv-player-state','paused');
  await page.evaluate(()=>{(window as any).__seekValues=[];new MutationObserver(()=>{const d=document.documentElement.dataset;if(d.tvPlayerSeeking==='true')(window as any).__seekValues.push([Number(d.tvPlayerPosition),Number(d.tvPlayerDuration)]);}).observe(document.documentElement,{attributes:true,attributeFilter:['data-tv-player-position','data-tv-player-duration']});});
  await page.keyboard.press('ArrowDown');await page.keyboard.press('ArrowRight');await page.keyboard.press('Enter');await expect.poll(()=>fixture.requests.filter(r=>r.path==='/api/playback'&&r.method==='POST').length).toBe(2);await expect(state).toHaveAttribute('data-tv-player-seeking','false');await expect(state).toHaveAttribute('data-tv-player-state','paused');await expect(state).toHaveAttribute('data-tv-player-position','5');
  expect(await page.evaluate(()=>(window as any).__seekValues.every((v:number[])=>v[0]===5&&v[1]===5))).toBe(true);

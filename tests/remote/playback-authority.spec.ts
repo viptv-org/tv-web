@@ -1,3 +1,4 @@
+import { remoteTvEntry } from "../preview/platform-entry";
 import { test, expect, type Page } from "@playwright/test";
 import { installRemoteBackend } from "../preview/remote-backend";
 const screen = (page: Page) => page.locator("html");
@@ -21,7 +22,7 @@ test("Live consumes the named best source and an explicit source change still re
     media: true,
     best: true,
   });
-  await page.goto("/tv/?platform=vizio");
+  await page.goto(remoteTvEntry("vizio"));
   await expect(screen(page)).toHaveAttribute("data-tv-ready", "true");
   await navigateToLive(page);
   expect(fixture.requests.some((r) => r.path === "/api/playback")).toBe(false);
@@ -60,7 +61,7 @@ test("Live consumes the named best source and an explicit source change still re
   ).toBe("live-stream-0");
 });
 async function play(page: Page, live = false) {
-  await page.goto("/tv/?platform=vizio&focusdebug=1");
+  await page.goto(remoteTvEntry("vizio", true));
   await expect(screen(page)).toHaveAttribute("data-tv-screen", "home");
   if (live) {
     await navigateToLive(page);

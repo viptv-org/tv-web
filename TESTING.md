@@ -1,3 +1,28 @@
+# LG webOS and Samsung package boundaries
+
+Host changes `6e64769` and native packaging `393598d` preserve the shared TV
+application. Samsung defaults to a local relative-base asset closure and an
+explicit HTTPS API origin; the redirect alternative is `tizen-hosted`. The
+unsigned local closure is43 files/8.6MiB; two file-entry browser/SDK cases pass.
+LG's hosted IPK is built/inspected with official CLI3.2.6. Missing signing
+profile/API origin and insecure API origin fail closed; no signed WGT is claimed.
+
+Grouped typecheck and hosted/relative production builds pass. Thirty-eight
+focused unit cases pass. The final hosted build passes33 host/media/SDK/lifecycle
+cases across Chromium, Firefox and WebKit; each webOS/Tizen query also passes17
+Chromium authority/recovery cases. Owned HLS video decodes with active WebVTT;
+SDK fixtures establish API/state contracts without native Samsung decoding.
+
+Official LG22 simulator1.4.1/Chrome87 reaches Home, paints a settled Canvas UI and
+decodes160px HLS/nine frames with active captions when WebGL is disabled by the
+test harness. Ordinary WebGL startup hangs; disabling createImageBitmap unblocks
+application state/media but fails guest visual presentation. LG26's initial
+white guest/inspector attempt also fails. These outcomes are not physical-device
+qualification. The four existing Live-empty cases stop on Anime through stale
+fixed navigation; two source-hint cases fail before their hint assertion.
+Assertions are retained. Commands, limits and official sources:
+[platform qualification](platform/QUALIFICATION.md).
+
 # Core-owned provider-first discovery
 
 Canonical Core `1ea4de65493b9c3036d51ab46040d8ff69d1b999` owns preference
