@@ -87,6 +87,10 @@ import {
   edgeRequest,
   type PageDirection
 } from "./channelWindow";
+import { applyCaptionAppearance } from "./player/caption-appearance";
+import { createKeyboardInput } from "./input/keyboard";
+import { createPlayerMediaKeys } from "./input/player-media";
+import { installWindowInputs } from "./input/window-bindings";
 import { createTrackPicker } from "./player/tracks";
 import { defineScreen, TvView } from "../runtime";
 import {
@@ -2972,23 +2976,7 @@ export function createRemoteTvApp(
           ? override?.appearance
           : player.subtitleAppearance;
       const preferencesValue = preferences()?.preferences;
-      const nativeAppearance = (globalThis as any).__viptvApplyCaptionAppearance;
-      if (typeof nativeAppearance === "function") {
-        nativeAppearance({
-          font_scale: appearance?.font_scale ?? preferencesValue?.subtitle_font_scale ?? 1,
-          text_color: appearance?.text_color ?? preferencesValue?.subtitle_text_color ?? "#FFFFFF",
-          background_color: appearance?.background_color ?? preferencesValue?.subtitle_background_color ?? "#00000000",
-        });
-        return;
-      }
-      let style = document.getElementById("tv-caption-style");
-      if (!style) {
-        style = document.createElement("style");
-        style.id = "tv-caption-style";
-        document.head.append(style);
-      }
-      style.textContent = `#tv-video::cue { font-size: ${2.2 * Number(appearance?.font_scale ?? preferencesValue?.subtitle_font_scale ?? 1)}vw; color: ${String(appearance?.text_color ?? preferencesValue?.subtitle_text_color ?? "#FFFFFF")}; background-color: ${String(appearance?.background_color ?? preferencesValue?.subtitle_background_color ?? "#00000000")}; }`;
-      onCleanup(() => style?.remove());
+      applyCaptionAppearance(appearance, preferencesValue);
     });
     // Roku's native host mounts the shared root without running the app
     // component's onMount in some launch paths. Start boot from a one-shot
@@ -3003,171 +2991,14 @@ export function createRemoteTvApp(
     createEffect(() => {
       if (inputRequested) return;
       inputRequested = true;
-      const input = (event: KeyboardEvent) => {
-        countdown.cancel();
-        if (event.ctrlKey || event.metaKey || event.altKey) return;
-        if (screen() === "player" && !overlay()) hideControls();
-        if (
-          screen() === "welcome" &&
-          (event.key === "Enter" || event.keyCode === 13)
-        ) {
-          event.preventDefault();
-          void beginPairing();
-          return;
-        }
-        if (
-          screen() === "player" &&
-          (event.key === "MediaStop" || event.keyCode === 413)
-        ) {
-          event.preventDefault();
-          if (!event.repeat) void leavePlayer().catch(fail);
-          return;
-        }
-        if (screen() === "player" && !overlay()) {
-          if (
-            ["MediaPlayPause", "MediaPlay", "MediaPause", " "].includes(
-              event.key,
-            ) ||
-            [10252, 415, 19].includes(event.keyCode)
-          ) {
-            event.preventDefault();
-            if (event.repeat) return;
-            if (revealEndedControls()) return;
-            if (snapshot()?.state === "ended") {
-              const pause = event.key === "MediaPause" || event.keyCode === 19;
-              if (!pause && playerActions().restart && activeAction())
-                void playIntent(activeAction()!.card, false, true).catch(fail);
-              return;
-            }
-            if (!playerActions().pause) return;
-            const play =
-              event.key === "MediaPlay" ||
-              event.keyCode === 415 ||
-              (!(["MediaPause"].includes(event.key) || event.keyCode === 19) &&
-                snapshot()?.state !== "playing");
-            void (play ? player.player.play() : player.player.pause()).catch(
-              fail,
-            );
-            return;
-          }
-          if (
-            ["MediaFastForward", "MediaRewind"].includes(event.key) ||
-            [412, 417].includes(event.keyCode)
-          ) {
-            event.preventDefault();
-            if (event.repeat || revealEndedControls() || !playerActions().seek || seeking()) return;
-            const direction =
-              event.key === "MediaRewind" || event.keyCode === 412 ? -1 : 1;
-            const duration = Number(snapshot()?.time.durationSeconds);
-            const target =
-              (snapshot()?.time.positionSeconds ?? 0) + direction * 10;
-            const position = Math.max(
-              0,
-              Number.isFinite(duration) && duration > 0
-                ? Math.min(duration, target)
-                : target,
-            );
-            if (Math.abs(position - (snapshot()?.time.positionSeconds ?? 0)) < 0.5)
-              return;
-            setShowControls(true);
-            setSeeking(true);
-            setPlaybackSegments([]);
-            void player
-              .seek(position)
-              .then(() => void refreshPlaybackSegments())
-              .catch(fail)
-              .finally(() => {
-                setSeeking(false);
-                hideControls();
-              });
-            return;
-          }
-        }
-        if (
-          (overlay()?.kind === "text" ||
-            (screen() === "search" && zone() === "keyboard")) &&
-          event.key.length === 1
-        ) {
-          event.preventDefault();
-          if (overlay()?.kind === "text")
-            setText((value) => (value + event.key).slice(0, 2048));
-          else updateSearch(search() + event.key);
-        }
-      };
-      const cancelHold = () => heldSelect.cancel();
-      const pointer = (event: PointerEvent) => {
-        countdown.cancel();
-        if (overlay()?.kind !== "next") return;
-        const bounds = document.getElementById("app")?.getBoundingClientRect();
-        if (!bounds || !bounds.width || !bounds.height) return;
-        const x = (event.clientX - bounds.left) * 1920 / bounds.width;
-        const y = (event.clientY - bounds.top) * 1080 / bounds.height;
-        if (y >= 493 && y <= 565 && x >= 1040 && x <= 1824) {
-          if (x <= 1468) void advanceEpisode().catch(fail);
-          else if (x >= 1484) dismissNext();
-        }
-      };
-      const cancelCountdown = () => countdown.cancel();
-      const welcomeClick = (event: MouseEvent) => {
-        if (screen() !== "welcome" || loading() || error() || overlay() ||
-            document.documentElement.dataset.tvStartup === "failed" || event.button !== 0) return;
-        const canvas = document.querySelector<HTMLCanvasElement>("#app canvas");
-        const bounds = canvas?.getBoundingClientRect();
-        if (!bounds?.width || !bounds.height) return;
-        const x = (event.clientX - bounds.left) * 1920 / bounds.width;
-        const y = (event.clientY - bounds.top) * 1080 / bounds.height;
-        if (x >= 780 && x <= 1140 && y >= 584 && y <= 656) {
-          event.preventDefault();void beginPairing();
-        }
-      };
-      window.addEventListener("pointerdown", pointer);
-      window.addEventListener("click", welcomeClick);
-      window.addEventListener("touchstart", cancelCountdown);
-      const suspend = () => {
-        cancelHold();
-        if (screen() === "player") void leavePlayer().catch(fail);
-      };
-      let hiddenAt = 0,
-        awayAt = Date.now();
-      const visibility = () => {
-        const visible = document.visibilityState === "visible";
-        setHeroVisible(visible);
-        if (!visible) {
-          hiddenAt = Date.now();
-          suspend();
-        } else if (hiddenAt && Date.now() - hiddenAt > 5_000) {
-          hiddenAt = 0;
-          reloadIdleImages();
-        }
-      };
-      const away = () => {
-        awayAt = Date.now();
-      };
-      const back = () => {
-        if (Date.now() - awayAt > 30_000) reloadIdleImages();
-        awayAt = Date.now();
-      };
-      const relaunch = () => window.focus();
-      window.addEventListener("blur", cancelHold);
-      window.addEventListener("blur", away);
-      window.addEventListener("focus", back);
-      window.addEventListener("keydown", input);
-      window.addEventListener("pagehide", suspend);
-      document.addEventListener("visibilitychange", visibility);
-      document.addEventListener("webOSRelaunch", relaunch);
-      onCleanup(() => {
-        window.removeEventListener("pointerdown", pointer);
-        window.removeEventListener("click", welcomeClick);
-        window.removeEventListener("touchstart", cancelCountdown);
-        window.removeEventListener("keydown", input);
-        window.removeEventListener("blur", cancelHold);
-        window.removeEventListener("blur", away);
-        window.removeEventListener("focus", back);
-        window.removeEventListener("pagehide", suspend);
-        document.removeEventListener("visibilitychange", visibility);
-        document.removeEventListener("webOSRelaunch", relaunch);
-        heldSelect.cancel();
-      });
+      const input = createKeyboardInput({screen, overlay, zone, cancelCountdown: () => countdown.cancel(), hideControls,
+        pair: beginPairing, stop: leavePlayer, text: setText, query: search, search: updateSearch, fail,
+        media: createPlayerMediaKeys({player, snapshot, actions: playerActions, active: activeAction, seeking: {current: seeking, set: setSeeking},
+          revealEnded: revealEndedControls, play: playIntent, chrome: {show: setShowControls, hide: hideControls},
+          segments: {clear: () => {setPlaybackSegments([]);}, refresh: refreshPlaybackSegments}, fail})});
+      onCleanup(installWindowInputs({keyboard: input, screen, overlay, loading, error, pair: beginPairing, stop: leavePlayer,
+        next: {advance: advanceEpisode, dismiss: dismissNext}, cancelHold: () => heldSelect.cancel(), cancelCountdown: () => countdown.cancel(),
+        visible: setHeroVisible, wake: reloadIdleImages, fail}));
     });
     onCleanup(() => {
       alive = false;
