@@ -1,12 +1,12 @@
 import type { Accessor, Setter } from "solid-js";
-import type { Catalog, Control, Page } from "./types";
+import type { Catalog, Control, Controls, Page } from "./types";
 import type { Screen } from "./app-types";
-import type { DialogActions } from "./feature-ports";
+import type { DialogActions, TextPrompt } from "./feature-ports";
 import type { RemoteTvApi } from "./api";
 
 export function createCatalogControls(options: {
   screen: Accessor<Screen>; stremioOnly: boolean;
-  catalog: Accessor<Catalog | undefined>;
+  catalog: Accessor<Catalog | undefined>; controls: Accessor<Controls | undefined>; selectCatalog: Setter<Catalog | undefined>; prompt: TextPrompt;
   filters: {current: Accessor<Record<string, string[]>>; set: Setter<Record<string, string[]>>};
   page: Setter<Page>; loading: Setter<boolean>; column: Setter<number>;
   restart: () => AbortSignal; discover: RemoteTvApi["discover"];
@@ -75,5 +75,48 @@ export function createCatalogControls(options: {
       ],
     });
   }
-  return {query: browseQuery, load: loadBrowse, choose: filtersOverlay};
+  function activate(column: number) {
+    if (column === 0)
+      openOverlay({
+        kind: "choices",
+        title: "Choose a catalog",
+        items: (options.controls()?.catalogs ?? []).map((c) => ({
+          id: c.id,
+          label: c.name,
+          description: c.connection_name,
+          run: async () => {
+            options.selectCatalog(c);
+            setFilters({});
+            closeOverlay();
+            await loadBrowse();
+          },
+        })),
+      });
+    else
+      openOverlay({
+        kind: "choices",
+        title: "Filters",
+        items: (catalog()?.controls ?? []).map((control) => ({
+          id: control.id,
+          label: control.label,
+          value: (filters()[control.id] ?? [])
+            .map(
+              (value) =>
+                control.choices.find((choice) => choice.value === value)
+                  ?.label ?? value,
+            )
+            .join(", "),
+          run: () => {
+            if (control.choices.length) filtersOverlay(control);
+            else
+              options.prompt(control.label, async (value) => {
+                setFilters((old) => ({ ...old, [control.id]: [value] }));
+                closeOverlay();
+                await loadBrowse();
+              });
+          },
+        })),
+      });
+  }
+  return {activate, query: browseQuery, load: loadBrowse, choose: filtersOverlay};
 }

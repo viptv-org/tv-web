@@ -32,7 +32,7 @@ import { reloadImages } from "./image-source";
 import { clearLogoCache } from "./visuals";
 import { CalendarBoard, calendarDayKey, calendarDays } from "./CalendarBoard";
 import { StatusDialog } from "./StatusDialog";
-import { initialSeasonIndex, seasonLabel, seasonEpisodes } from "./seasons";
+import { initialSeasonIndex, seasonEpisodes } from "./seasons";
 import { RowFocus } from "./row-focus";
 import { HomeContent } from "./HomeContent";
 
@@ -54,6 +54,16 @@ import { SourceOptionsMenu } from "./source-picker/SourceOptionsMenu";
 import { SourceHeading } from "./source-picker/SourceHeading";
 import { SourceFilters } from "./source-picker/SourceFilters";
 import { SourceList } from "./source-picker/SourceList";
+import { createRevisionPoller } from "./session/revisions";
+import { createLiveMenu } from "./menus/live";
+import { createCardMenu } from "./menus/card";
+import { createPlayerActivation } from "./activation/player";
+import { createSeasonPicker } from "./activation/seasons";
+import { createSourceRows } from "./source-picker/rows";
+import { createSourcePublisher } from "./source-picker/publisher";
+import { createSourceActivation } from "./source-picker/activation";
+import { startAutomaticSources } from "./source-picker/automatic-start";
+import { startSourceCandidate } from "./source-picker/start-candidate";
 import { sourceActionOptions, type SourceMenuOption } from "./source-picker/options";
 import { TopNavigation } from "./TopNavigation";
 import { ProfileEditorView } from "./ProfileEditorView";
@@ -509,18 +519,22 @@ export function createRemoteTvApp(
       sourceScope: AbortController | undefined,
       searchScope: AbortController | undefined,
       alive = true,
-      revisionTimer: ReturnType<typeof setTimeout> | undefined,
       noticeTimer: ReturnType<typeof setTimeout> | undefined,
       searchTimer: ReturnType<typeof setTimeout> | undefined,
       controlsTimer: ReturnType<typeof setTimeout> | undefined;
     let retry: () => void = () => void start(),
       returnScreen: Screen = "home",
       returnFocus = { zone: "hero", column: 0, row: 0 },
-      lastRevisions = "",
       searchMediaFocus = 0,
       searchChannelFocus = 0,
       pageBusy = false,
       pageGeneration = 0;
+    const revisions = createRevisionPoller({ready: () => !!api.profile && document.visibilityState === "visible" && !(screen() !== "player" && overlay()) && !pending(),
+      playing: () => screen() === "player", blocked: () => !!overlay() || pending(), alive: () => alive,
+      profile: () => api.profile, signal: () => scope.signal, read: signal => call<Record<string, number | string>>(api.scoped("/revisions"), "GET", undefined, signal),
+      bootstrap: signal => api.bootstrap(signal), playback: checkPlaybackRevision, reset: resetScope, adoptBootstrap: applyBootstrap,
+      apply: applyRevision, fail: error => fail(error)});
+    const scheduleRevisions = revisions.schedule;
     let channelPending: { from: string; direction: PageDirection } | undefined;
     let channelRetry: PageDirection | undefined;
     function adoptChannelWindow(pages: LivePage[], searching = false) {
@@ -1027,7 +1041,7 @@ export function createRemoteTvApp(
       if (!alive || (e instanceof DOMException && e.name === "AbortError"))
         return;
       if (e instanceof RemoteError && e.status === 401) {
-        clearTimeout(revisionTimer);
+        revisions.stop();
         api.retireProfile();
         resetScope();
         void player.stop().catch(() => {});
@@ -1149,7 +1163,7 @@ export function createRemoteTvApp(
         setPreferences(value.preferences ?? undefined);
         setHome(stremioHome(value.home ?? undefined));
         setSaved(new Map());
-        lastRevisions = JSON.stringify(value.revisions ?? {});
+        revisions.adopt(value.revisions ?? {});
         setPlaybackRevision(playbackRevisionKey(value.revisions ?? {}));
         setLoading(false);
         setScreen(api.profile ? "home" : "profiles");
@@ -1257,153 +1271,111 @@ export function createRemoteTvApp(
         clearTimeout(timer);
       });
     });
-    function scheduleRevisions() {
-      clearTimeout(revisionTimer);
-      revisionTimer = setTimeout(async () => {
-        try {
-          if (
-            !api.profile ||
-            document.visibilityState !== "visible" ||
-            (screen() !== "player" && overlay()) ||
-            pending()
-          )
-            return;
-          if (screen() === "player") { await checkPlaybackRevision();return; }
-          const signal = scope.signal,
-            profile = api.profile;
-          const revision = await call<Record<string, number | string>>(
-            api.scoped("/revisions"),
-            "GET",
-            undefined,
-            signal,
-          );
-          if (JSON.stringify(revision) === lastRevisions) return;
-          const fresh = await api.bootstrap(signal);
-          if (api.profile !== profile) {
-            resetScope();
-            applyBootstrap(fresh);
-            return;
-          }
-          if (overlay() || pending()) return;
-          const focusedNav =
-            zone() === "nav" ? navs()[column()]?.id : undefined;
-          setNavigation(fresh.navigation);
-          if (
-            ["movie", "series", "anime", "search", "live", "calendar", "library"].includes(
-              screen(),
-            ) &&
-            !navs().some((item) => item.id === screen())
-          ) {
-            resetScope();
-            applyBootstrap(fresh);
-            return;
-          }
-          if (focusedNav)
-            setColumn(
-              navIndex(
-                navs().some((item) => item.id === focusedNav)
-                  ? focusedNav
-                  : "home",
-              ),
-            );
-          restartPaging();
-          invalidateHistory();
-          setManagement(fresh.profile_management);
-          setPreferences(fresh.preferences ?? undefined);
-          replaceHome(stremioHome(fresh.home ?? undefined));
-          setSaved(new Map());
-          const view = screen();
-          if (view === "library") replacePage(await loadLibrary("0", signal));
-          else if (view === "movie" || view === "series" || view === "anime")
-            replacePage(await api.discover(browseQuery(), signal));
-          else if (view === "search" && search()) updateSearch(search(), true);
-          else if (view === "detail" && selected()) {
-            const previous = detail(), selectedCard = selected()!, generation = pageGeneration;
-            const season = previous?.seasons[seasonIndex()];
-            const [value, intent] = await Promise.all([
-              api.detail(selectedCard, String(season?.offset ?? 0), signal),
-              api.titleAction(selected()!, false, signal),
-            ]);
-            if (overlay() || pending() || signal.aborted || scope.signal !== signal || screen() !== "detail" || pageGeneration !== generation ||
-                api.profile !== profile || !selected() || cardKey(selected()!) !== cardKey(selectedCard)) return;
-            const key = focusedCard() ? cardKey(focusedCard()!) : undefined;
-            const nextSeason = season ? value.seasons.findIndex(item => item.season === season.season) : -1;
-            batch(() => {
-              setDetail({ ...value, item: presentationCard(previous?.item, value.item) });
-              setDetailAction(intent);
-              setSeasonIndex(nextSeason >= 0 ? nextSeason : initialSeasonIndex(value, selectedCard, intent));
-              if (zone() === "episodes" || zone() === "recommendations")
-                setColumn(
-                  focusIndex(
-                    zone() === "recommendations" || !(value.seasons.length || value.episodes.length)
-                      ? value.recommendations
-                      : seasonEpisodes(value, nextSeason >= 0 ? nextSeason : initialSeasonIndex(value, selectedCard, intent)),
-                    key,
-                    column(),
-                  ),
-                );
-              else if (zone() === "seasons")
-                setColumn(
-                  Math.min(column(), Math.max(0, value.seasons.length - 1)),
-                );
-            });
-          } else if (view === "settings")
-            await loadSettings(settingsTab(), signal);
-          else if (view === "live") {
-            const value = await refreshChannelPage(false, signal);
-            const focused = channels()[liveChannelIndex()]?.id;
-            // A page that had nothing to show and now has rows lands the remote
-            // on the first row instead of leaving focus on the navigation
-            // (LIVE-EMPTY-13).
-            const arrived = !channels().length && !!value.channels.length;
-            batch(() => {
-              adoptLiveSnapshot(value.snapshot_id);
-              adoptChannelWindow([value]);
-              setGroups(value.groups);
-              setLiveFailure("");
-              if (zone() === "live-groups")
-                setColumn(Math.min(column(), value.groups.length));
-              else if (zone() === "content")
-                // Focus is the channel's index in the accumulated list, which
-                // the refresh merges into — not its slot within the refreshed
-                // page alone.
-                setColumn(
-                  Math.max(
-                    0,
-                    channels().findIndex(
-                      (channel) => channel.id === focused,
-                    ),
-                  ),
-                );
-              else if (
-                arrived &&
-                (zone() === "live-empty" || zone() === "nav")
-              ) {
-                setZone("content");
-                setColumn(0);
-              }
-              setPrograms({});
-              setGuideInfo({});
-            });
-            void loadVisibleGuides();
-          }
-          // Commit the observed revision only after its dependent reads succeeded.
-          lastRevisions = JSON.stringify(fresh.revisions ?? revision);
-        } catch (error) {
-          if (error instanceof RemoteError && error.status === 401) fail(error);
-          else if (error instanceof RemoteError && error.status === 403) {
-            try {
-              const fresh = await api.bootstrap(scope.signal);
-              resetScope();
-              applyBootstrap(fresh);
-            } catch (next) {
-              fail(next);
-            }
-          }
-        } finally {
-          if (alive) scheduleRevisions();
+    async function applyRevision(fresh: Bootstrap, signal: AbortSignal, profile: string, commit: () => void) {
+        const focusedNav =
+          zone() === "nav" ? navs()[column()]?.id : undefined;
+        setNavigation(fresh.navigation);
+        if (
+          ["movie", "series", "anime", "search", "live", "calendar", "library"].includes(
+            screen(),
+          ) &&
+          !navs().some((item) => item.id === screen())
+        ) {
+          resetScope();
+          applyBootstrap(fresh);
+          return;
         }
-      }, 15000);
+        if (focusedNav)
+          setColumn(
+            navIndex(
+              navs().some((item) => item.id === focusedNav)
+                ? focusedNav
+                : "home",
+            ),
+          );
+        restartPaging();
+        invalidateHistory();
+        setManagement(fresh.profile_management);
+        setPreferences(fresh.preferences ?? undefined);
+        replaceHome(stremioHome(fresh.home ?? undefined));
+        setSaved(new Map());
+        const view = screen();
+        if (view === "library") replacePage(await loadLibrary("0", signal));
+        else if (view === "movie" || view === "series" || view === "anime")
+          replacePage(await api.discover(browseQuery(), signal));
+        else if (view === "search" && search()) updateSearch(search(), true);
+        else if (view === "detail" && selected()) {
+          const previous = detail(), selectedCard = selected()!, generation = pageGeneration;
+          const season = previous?.seasons[seasonIndex()];
+          const [value, intent] = await Promise.all([
+            api.detail(selectedCard, String(season?.offset ?? 0), signal),
+            api.titleAction(selected()!, false, signal),
+          ]);
+          if (overlay() || pending() || signal.aborted || scope.signal !== signal || screen() !== "detail" || pageGeneration !== generation ||
+              api.profile !== profile || !selected() || cardKey(selected()!) !== cardKey(selectedCard)) return;
+          const key = focusedCard() ? cardKey(focusedCard()!) : undefined;
+          const nextSeason = season ? value.seasons.findIndex(item => item.season === season.season) : -1;
+          batch(() => {
+            setDetail({ ...value, item: presentationCard(previous?.item, value.item) });
+            setDetailAction(intent);
+            setSeasonIndex(nextSeason >= 0 ? nextSeason : initialSeasonIndex(value, selectedCard, intent));
+            if (zone() === "episodes" || zone() === "recommendations")
+              setColumn(
+                focusIndex(
+                  zone() === "recommendations" || !(value.seasons.length || value.episodes.length)
+                    ? value.recommendations
+                    : seasonEpisodes(value, nextSeason >= 0 ? nextSeason : initialSeasonIndex(value, selectedCard, intent)),
+                  key,
+                  column(),
+                ),
+              );
+            else if (zone() === "seasons")
+              setColumn(
+                Math.min(column(), Math.max(0, value.seasons.length - 1)),
+              );
+          });
+        } else if (view === "settings")
+          await loadSettings(settingsTab(), signal);
+        else if (view === "live") {
+          const value = await refreshChannelPage(false, signal);
+          const focused = channels()[liveChannelIndex()]?.id;
+          // A page that had nothing to show and now has rows lands the remote
+          // on the first row instead of leaving focus on the navigation
+          // (LIVE-EMPTY-13).
+          const arrived = !channels().length && !!value.channels.length;
+          batch(() => {
+            adoptLiveSnapshot(value.snapshot_id);
+            adoptChannelWindow([value]);
+            setGroups(value.groups);
+            setLiveFailure("");
+            if (zone() === "live-groups")
+              setColumn(Math.min(column(), value.groups.length));
+            else if (zone() === "content")
+              // Focus is the channel's index in the accumulated list, which
+              // the refresh merges into — not its slot within the refreshed
+              // page alone.
+              setColumn(
+                Math.max(
+                  0,
+                  channels().findIndex(
+                    (channel) => channel.id === focused,
+                  ),
+                ),
+              );
+            else if (
+              arrived &&
+              (zone() === "live-empty" || zone() === "nav")
+            ) {
+              setZone("content");
+              setColumn(0);
+            }
+            setPrograms({});
+            setGuideInfo({});
+          });
+          void loadVisibleGuides();
+        }
+        // Commit only after the dependent feature reads succeeded, before yielding.
+        commit();
     }
     const focusedCard = createMemo(() => {
       if (screen() === "search" && zone() === "search-channels")
@@ -2438,7 +2410,7 @@ export function createRemoteTvApp(
       if (screen() === "detail") { await detailPager(); return; }
       await catalogPager();
     }
-    const {query: browseQuery, load: loadBrowse, choose: filtersOverlay} = createCatalogControls({screen, stremioOnly: STREMIO_ONLY, catalog,
+    const {query: browseQuery, activate: activateCatalog} = createCatalogControls({screen, stremioOnly: STREMIO_ONLY, catalog, controls, selectCatalog: setCatalog, prompt: edit,
       filters: {current: filters, set: setFilters}, page: setPage, loading: setLoading, column: setColumn, restart: restartPaging,
       discover: (values, signal) => api.discover(values, signal), dialogs: {open: openOverlay, close: closeOverlay}});
     const liveGuides = createLiveGuideController({scope: () => scope, channels, channelIndex: liveChannelIndex,
@@ -2688,63 +2660,11 @@ export function createRemoteTvApp(
             });
       }, 180);
     }
-    function reconcileSources(value: Source[]) {
-      const focused = focusedSource()?.id;
-      // Once the viewer interacts, late discovery must not move rows under
-      // focus. Ranking still chooses automatic candidates from the server page.
-      if (manualSourceSelection) {
-        const incoming = new Map(value.map(source => [source.id, source]));
-        value = [
-          ...sources().flatMap(source => {
-            const next = incoming.get(source.id);
-            incoming.delete(source.id);
-            return next ? [next] : [];
-          }),
-          ...incoming.values(),
-        ];
-      }
-      // Reuse the previous object reference for any source whose rendered data
-      // is unchanged, so a discovery re-rank repositions rows without
-      // re-rendering (flashing) the ones that did not actually change.
-      const previous = new Map(sources().map((source) => [source.id, source]));
-      const stable = value.map((source) => {
-        const before = previous.get(source.id);
-        if (!before) return source;
-        const bv = before.view, sv = source.view;
-        return before.source_addon_id === source.source_addon_id &&
-          before.reuse_audio_language === source.reuse_audio_language &&
-          before.presentation?.source_id === source.presentation?.source_id &&
-          before.presentation?.provider_name === source.presentation?.provider_name &&
-          JSON.stringify(before.audio_languages) === JSON.stringify(source.audio_languages) &&
-          before.name === source.name &&
-          before.title === source.title &&
-          before.detail === source.detail &&
-          before.quality_height === source.quality_height &&
-          (before as Source & { best?: unknown }).best === (source as Source & { best?: unknown }).best &&
-          bv?.title === sv?.title &&
-          bv?.body === sv?.body &&
-          bv?.quality_label === sv?.quality_label &&
-          bv?.format_label === sv?.format_label &&
-          bv?.addon_label === sv?.addon_label
-          ? before
-          : source;
-      });
-      batch(() => {
-        setSources(stable);
-        const visible = visibleSources();
-        const index = visible.findIndex(source => source.id === focused);
-        setChoice(index >= 0 ? index : Math.max(0, Math.min(choice(), visible.length - 1)));
-      });
-    }
-    /** Until the viewer moves, the focused row follows the server's best match
-     * as discovery grows instead of staying on whatever stream arrived first. */
-    function focusBestMatch(page: SourcePage) {
-      if (manualSourceSelection || !page.best_match_id) return;
-      const index = visibleSources().findIndex(
-        (source) => source.id === page.best_match_id,
-      );
-      if (index >= 0) setChoice(index);
-    }
+    const {reconcile: reconcileSources, focusBest: focusBestMatch} = createSourceRows({rows: sources, adopt: setSources,
+      visible: visibleSources, focused: focusedSource, manual: () => manualSourceSelection, selection: {current: choice, set: setChoice}});
+    const publishSources = createSourcePublisher({api, owns: operation => sourceScope === operation,
+      generation: {next: () => ++sourceFilterGeneration, current: () => sourceFilterGeneration}, height: sourceHeight,
+      ids: setAllSourceIds, page: setSourcePage, filtering: setSourceFiltering, reconcile: reconcileSources, focusBest: focusBestMatch, fail});
     /** The app resumes from the card's own progress, and the server may key
      * that progress to a different metadata provider than the stream. Sending
      * the position explicitly makes the button and the decoder agree. */
@@ -2838,40 +2758,7 @@ export function createRemoteTvApp(
               setAction(page.action);
               setPickerCard(page.action.card);
             }
-            const ticket = ++sourceFilterGeneration;
-            setAllSourceIds(ids);
-            setSourcePage(page);
-            if (height === sourceHeight()) {
-              reconcileSources(value);
-              focusBestMatch(page);
-              setSourceFiltering(false);
-            } else {
-              const wanted = sourceHeight();
-              setSourceFiltering(true);
-              void api
-                .rankSources(ids, wanted, operation.signal)
-                .then((result) => {
-                  if (
-                    ticket === sourceFilterGeneration &&
-                    sourceScope === operation &&
-                    !operation.signal.aborted
-                  ) {
-                    setSourcePage(result);
-                    reconcileSources(result.streams);
-                    focusBestMatch(result);
-                    setSourceFiltering(false);
-                  }
-                })
-                .catch((error) => {
-                  if (
-                    ticket === sourceFilterGeneration &&
-                    sourceScope === operation
-                  ) {
-                    setSourceFiltering(false);
-                    fail(error);
-                  }
-                });
-            }
+            publishSources(operation, value, page, ids, height);
           },
           operation.signal,
           channel,
@@ -2885,43 +2772,15 @@ export function createRemoteTvApp(
         const hasMemory = !!(memory.title || memory.across);
         const automatic = !forcePicker && !manualSourceSelection && (automaticNext || hasMemory || resolved?.source_selection === "best");
         if (automatic && finalPage && resolved) {
-          let page = finalPage, rows = ranked, expanded = false, attempts = 0;
-          let ids = sourceStartIds(page, hasMemory);
-          const tried = new Set<string>();
-          while (attempts < 3) {
-            if (intent !== sourceIntent || epoch !== api.scopeEpoch || scope.signal.aborted) return;
-            const id = ids.find(id => !tried.has(id));
-            if (!id) {
-              if (!api.preferredSourceDiscoverySupported || page.discovery_phase !== "preferred" || expanded) break;
-              expanded = true;
-              const fallback = new AbortController();sourceScope = fallback;ownedOperation = fallback;
-              setSourceLoading(true);setLoading(true);
-              let fallbackPage: SourcePage | undefined;
-              let ready!: (rows: Source[]) => void;
-              const first = new Promise<Source[]>(resolve => { ready = resolve; });
-              const discovery = api.sources(resolved.card, (value, result, allIds) => {
-                if (sourceScope !== fallback || fallback.signal.aborted) return;
-                fallbackPage = result;setSourcePage(result);setAllSourceIds(allIds);reconcileSources(value);
-                if (sourcePageReady(result, hasMemory)) ready(value);
-              }, fallback.signal, undefined, () => undefined, memory, true);
-              rows = await Promise.race([discovery, first]);
-              if (fallback.signal.aborted || intent !== sourceIntent || epoch !== api.scopeEpoch) return;
-              setLoading(false);
-              if (!fallbackPage) break;
-              page = fallbackPage;ids = sourceStartIds(page, hasMemory);
-              continue;
-            }
-            tried.add(id);
-            const source = rows.find(row => row.id === id);
-            if (!source) continue;
-            if (attempts) {
-              notify("Trying the next matching source…");
-              await new Promise(resolve => setTimeout(resolve, 2000));
-              if (intent !== sourceIntent || epoch !== api.scopeEpoch || scope.signal.aborted) return;
-            }
-            attempts++;
-            if (await playSource(source, false, false)) { setSourceLoading(false);return; }
-          }
+          const result = await startAutomaticSources({api, page: finalPage, rows: ranked, action: () => resolved!, memory, hasMemory,
+            active: () => intent === sourceIntent && epoch === api.scopeEpoch && !scope.signal.aborted,
+            intent: () => intent === sourceIntent && epoch === api.scopeEpoch, owns: operation => sourceScope === operation,
+            fallback: operation => {sourceScope = operation;ownedOperation = operation;setSourceLoading(true);setLoading(true);},
+            publish: (value, page, ids) => {setSourcePage(page);setAllSourceIds(ids);reconcileSources(value);}, ready: () => {setLoading(false);},
+            play: source => playSource(source, false, false), notify});
+          if (result === "cancelled") return;
+          if (result === "started") {setSourceLoading(false);return;}
+
         }
 
         setSourceLoading(false);
@@ -2990,42 +2849,8 @@ export function createRemoteTvApp(
       document.getElementById("video-layer")!.style.display = "block";
       let started = false;
       try {
-        if (replacingSource()) await player.replaceSource(source);
-        else if (direct) {
-          try {
-            await player.start(
-              current.card,
-              source,
-              current.resume || sourceStartPosition > 0,
-              sourceStartPosition,
-              {},
-              undefined,
-              true,
-            );
-          } catch (error) {
-            if (error instanceof DOMException && error.name === "AbortError")
-              throw error;
-            await player.stop().catch(() => {});
-            notify("Direct play didn't start; trying the gateway.");
-            await player.start(
-              current.card,
-              source,
-              current.resume || sourceStartPosition > 0,
-              sourceStartPosition,
-            );
-          }
-        } else
-          await player.start(
-            current.card,
-            source,
-            current.resume || sourceStartPosition > 0,
-            sourceStartPosition,
-          );
-        const frameDeadline = Date.now() + 20000;
-        while (!manual && !player.hasPresentedFrame && player.leaseId && attempt === sourceAttempt && Date.now() < frameDeadline)
-          await new Promise(resolve => setTimeout(resolve, 25));
-        if (attempt !== sourceAttempt) throw new DOMException("Playback cancelled", "AbortError");
-        if (!manual && !player.hasPresentedFrame) throw new Error("This source didn’t present a video frame.");
+        await startSourceCandidate({player, source, action: current, direct, manual, replacing: replacingSource(), position: () => sourceStartPosition,
+          current: () => attempt === sourceAttempt, notify});
         started = true;
         setLoading(false);
         void refreshPlaybackSegments();
@@ -3567,6 +3392,22 @@ export function createRemoteTvApp(
       if (isOverlay) setText(next.slice(0, 2048));
       else updateSearch(next);
     }
+    const activateSources = createSourceActivation({rows: {all: sources, visible: visibleSources, set: setSources, ids: allSourceIds, page: setSourcePage},
+      selection: {value: choice, set: setChoice}, actions: {open: sourceActions, set: setSourceActions, choice: sourceActionChoice},
+      menu: {kind: sourceMenu, set: setSourceMenu, choices: sourceMenuOptions, remember: setOpenSourceMenuOptions, choice: sourceMenuChoice, select: setSourceMenuChoice},
+      filters: {focused: sourceFilterFocus, facet: sourceFacet, quality: {value: sourceHeight, set: setSourceHeight, choices: qualityMenuOptions},
+        provider: {value: sourceProviderFilter, set: setSourceProviderFilter, choices: providerMenuOptions}}, loading: sourceLoading,
+      filtering: {value: sourceFiltering, set: setSourceFiltering}, manual: () => {manualSourceSelection = true;},
+      generation: {next: () => ++sourceFilterGeneration, current: () => sourceFilterGeneration}, operation: () => sourceScope,
+      signal: () => sourceScope?.signal ?? scope.signal, rank: (ids, height, signal, reuse) => api.rankSources(ids, height, signal, reuse), play: playSource});
+    const activatePlayer = createPlayerActivation({player, snapshot, actions: playerActions, action: activeAction, channel: activeChannel, choice, buttons: playerButtons,
+      timeline: {value: seek, set: setSeek, seeking: setSeeking}, chrome: {visible: showControls, set: setShowControls, hide: hideControls},
+      segments: {active: activeSegment, clear: () => {setPlaybackSegments([]);}, refresh: refreshPlaybackSegments},
+      skipEnabled: () => preferences()?.preferences.skip_intros !== false, next: advanceEpisode, tracks: openTracks, play: playIntent,
+      details: card => api.detail(card, "0", scope.signal), dialogs: {open: openOverlay}});
+    const chooseSeason = createSeasonPicker({current: detail, adopt: setDetail, season: {current: seasonIndex, set: setSeasonIndex},
+      focus: navigationFocus, choice: setChoice, loading: setLoading, rememberedEpisode: () => detailFocus.resolve(detailRow("episodes")), restart: restartPaging,
+      request: (card, cursor, signal) => api.detail(card, cursor, signal), open: openOverlay, close: closeOverlay});
     async function activate() {
       countdown.cancel();
       if (revealEndedControls()) return;
@@ -3603,85 +3444,8 @@ export function createRemoteTvApp(
           return;
         }
         if (modal.kind === "text") keyboardActivate(true);
-        else if (modal.kind === "sources") {
-          if (sourceActions()) {
-            const action = sourceActionChoice(),
-              source = visibleSources()[choice()];
-            setSourceActions(false);
-            if (!source) return;
-            if (action === 0) await playSource(source, true);
-            else if (action === 1) await playSource(source, false);
-            return;
-          }
-          // The overlay opens the instant the user asks for sources; the ranked
-          // list lands a beat later. A select that lands during that first load
-          // waits for it rather than falling through to an empty list.
-          if (!sourceFilterFocus() && !sources().length && (sourceLoading() || sourceFiltering())) {
-            const operation = sourceScope;
-            const deadline = Date.now() + 10000;
-            while (
-              !sources().length &&
-              (sourceLoading() || sourceFiltering()) &&
-              sourceScope === operation &&
-              Date.now() < deadline
-            )
-              await new Promise((resolve) => setTimeout(resolve, 25));
-          }
-          if (sourceMenu()) {
-            const kind = sourceMenu();
-            const option = sourceMenuOptions()[sourceMenuChoice()];
-            setSourceMenu(undefined);
-            if (!option) return;
-            if (kind === "quality") {
-              const height = option.height;
-              setSourceHeight(height);
-              manualSourceSelection = true;
-              setSourceFiltering(true);
-              const ticket = ++sourceFilterGeneration,
-                signal = sourceScope?.signal ?? scope.signal;
-              try {
-                const result = await api.rankSources(
-                  allSourceIds(),
-                  height,
-                  signal,
-                );
-                if (ticket === sourceFilterGeneration && !signal.aborted) {
-                  setSourcePage(result);
-                  setSources(result.streams);
-                  setChoice(0);
-                }
-              } finally {
-                if (ticket === sourceFilterGeneration)
-                  setSourceFiltering(false);
-              }
-            } else {
-              setSourceProviderFilter(option.provider);
-              manualSourceSelection = true;
-              setChoice(0);
-            }
-            return;
-          }
-          if (sourceFilterFocus()) {
-            const kind = sourceFacet() === 0 ? "quality" : "provider";
-            const options =
-              kind === "quality" ? qualityMenuOptions() : providerMenuOptions();
-            setOpenSourceMenuOptions(options);
-            setSourceMenu(kind);
-            const selected =
-              kind === "quality"
-                ? options.findIndex(
-                    (option) => option.height === sourceHeight(),
-                  )
-                : options.findIndex(
-                    (option) => option.provider === sourceProviderFilter(),
-                  );
-            setSourceMenuChoice(Math.max(0, selected));
-            return;
-          }
-          if (sourceFiltering()) return;
-          const source = visibleSources()[choice()];
-          if (source) await playSource(source);
-        } else
+        else if (modal.kind === "sources") await activateSources();
+        else
           await run(async () => {
             await modal.items[choice()]?.run();
           });
@@ -3713,84 +3477,7 @@ export function createRemoteTvApp(
         await selectProfile(column());
         return;
       }
-      if (screen() === "player") {
-        if (seek() !== undefined) {
-          const position = seek()!;
-          if (!playerActions().seek) return;
-          if (
-            Math.abs(
-              position - (snapshot()?.time.positionSeconds ?? 0),
-            ) < 0.5
-          ) {
-            setSeek(undefined);
-            return;
-          }
-          setShowControls(true);
-          setSeeking(true);
-          setPlaybackSegments([]);
-          try {
-            await player.seek(position);
-            void refreshPlaybackSegments();
-          } finally {
-            setSeeking(false);
-            setSeek(undefined);
-            hideControls();
-          }
-          return;
-        }
-        const control = !showControls() && activeSegment() && playerActions().seek && preferences()?.preferences.skip_intros !== false
-          ? "skip" : playerButtons()[choice()]?.id;
-        if (snapshot()?.state === "ended" && control === "timeline") {
-          await playIntent(activeAction()!.card, false, true);
-          return;
-        }
-        if (control === "next") {
-          await advanceEpisode();
-        } else if (control === "skip") {
-          const segment = activeSegment();
-          if (segment) {
-            setShowControls(true);
-            setSeeking(true);
-            setPlaybackSegments([]);
-            try {
-              await player.seek(segment.end_ms / 1000);
-              void refreshPlaybackSegments();
-            } finally {
-              setSeeking(false);
-              hideControls();
-            }
-          }
-        } else if (control === "tracks") {
-          openTracks();
-        } else if (control === "sources") {
-          await playIntent(
-            activeAction()!.card,
-            true,
-            false,
-            activeChannel(),
-            true,
-          );
-        } else if (control === "episodes") {
-          const result = await api.detail(
-            activeAction()!.card,
-            "0",
-            scope.signal,
-          );
-          openOverlay({
-            kind: "choices",
-            title: "Episodes",
-            items: result.episodes.map((card) => ({
-              id: card.identity.id,
-              label: card.subtitle ?? card.title,
-              run: () => playIntent(card),
-            })),
-          });
-        } else if (control === "timeline" && playerActions().pause) {
-          if (snapshot()?.state === "playing") await player.player.pause();
-          else await player.player.play();
-        }
-        return;
-      }
+      if (screen() === "player") { await activatePlayer(); return; }
       if (zone() === "nav") {
         const nav = navs()[column()];
         if (!nav) return;
@@ -3830,27 +3517,7 @@ export function createRemoteTvApp(
           });
         return;
       }
-      if (screen() === "detail" && zone() === "seasons") {
-        const value = detail();
-        if (!value?.seasons.length) return;
-        openOverlay({ kind: "choices", title: "Seasons", items: value.seasons.map((season, index) => ({
-          id: String(season.season), label: seasonLabel(season.season),
-          value: `${season.episode_count} episode${season.episode_count === 1 ? "" : "s"}`,
-          run: async () => {
-            closeOverlay(false);
-            if (index === seasonIndex()) { setColumn(detailFocus.resolve(detailRow("episodes")));setZone("episodes");return; }
-            const signal = restartPaging();
-            setLoading(true);
-            try {
-              const next = await api.detail(value.item, String(season.offset), signal);
-              if (signal.aborted) return;
-              batch(() => { setDetail(next);setSeasonIndex(index);setColumn(0);setZone("episodes"); });
-            } finally { if (!signal.aborted) setLoading(false); }
-          },
-        })) });
-        setChoice(seasonIndex());
-        return;
-      }
+      if (screen() === "detail" && zone() === "seasons") { chooseSeason(); return; }
       if (screen() === "search" && zone() === "keyboard") {
         const index = key();
         updateSearch(
@@ -3890,50 +3557,7 @@ export function createRemoteTvApp(
           await run(() => applyLibrary(libraryDefaultQuery()));
         return;
       }
-      if (zone() === "filters") {
-        if (column() === 0)
-          openOverlay({
-            kind: "choices",
-            title: "Choose a catalog",
-            items: (controls()?.catalogs ?? []).map((c) => ({
-              id: c.id,
-              label: c.name,
-              description: c.connection_name,
-              run: async () => {
-                setCatalog(c);
-                setFilters({});
-                closeOverlay();
-                await loadBrowse();
-              },
-            })),
-          });
-        else
-          openOverlay({
-            kind: "choices",
-            title: "Filters",
-            items: (catalog()?.controls ?? []).map((control) => ({
-              id: control.id,
-              label: control.label,
-              value: (filters()[control.id] ?? [])
-                .map(
-                  (value) =>
-                    control.choices.find((choice) => choice.value === value)
-                      ?.label ?? value,
-                )
-                .join(", "),
-              run: () => {
-                if (control.choices.length) filtersOverlay(control);
-                else
-                  edit(control.label, async (value) => {
-                    setFilters((old) => ({ ...old, [control.id]: [value] }));
-                    closeOverlay();
-                    await loadBrowse();
-                  });
-              },
-            })),
-          });
-        return;
-      }
+      if (zone() === "filters") { activateCatalog(column()); return; }
       if (
         screen() === "home" &&
         zone() === "rows" &&
@@ -4012,6 +3636,10 @@ export function createRemoteTvApp(
       // changes 400ms into a hold and would otherwise defeat the 700ms timer.
       return JSON.stringify([screen(),screen() === "player" ? choice() : null,zone(),column(),row(),heroAction(),zone()==="hero"?(hero()?cardKey(hero()!):null):null,focusedCard()?cardKey(focusedCard()!):null,heroAction()===1&&hero()?isSaved(hero()!):null]);
     }
+    const showLiveMenu = createLiveMenu({request: call, path: path => api.scoped(path), favorites: setLiveFavorites,
+      dialogs: {open: openOverlay, close: closeOverlay}, play: playIntent, fail});
+    const showCardMenu = createCardMenu({dialogs: {open: openOverlay, close: closeOverlay}, details: openDetail,
+      play: playIntent, saved: isSaved, toggleSaved});
     function menu() {
       countdown.cancel();
       if (revealEndedControls()) return;
@@ -4048,36 +3676,7 @@ export function createRemoteTvApp(
             ? searchChannels()[column()]
             : undefined;
       if (channel) {
-        void call<{ channel_ids: string[] }>(api.scoped("/live/favorites"))
-          .then((value) => {
-            const saved = value.channel_ids.includes(channel.id);
-            setLiveFavorites(new Set(value.channel_ids));
-            openOverlay({
-              kind: "choices",
-              title: channel.card.title,
-              items: [
-                {
-                  id: "play",
-                  label: "Watch live",
-                  run: () => playIntent(channel.card, false, false, channel.id),
-                },
-                {
-                  id: "favorite",
-                  label: saved ? "Remove from favourites" : "Add to favourites",
-                  run: async () => {
-                    const receipt = await call<{ channel_ids: string[] }>(
-                      api.scoped(`/live/${segment(channel.id)}/favorite`),
-                      saved ? "DELETE" : "PUT",
-                      {},
-                    );
-                    setLiveFavorites(new Set(receipt.channel_ids));
-                    closeOverlay();
-                  },
-                },
-              ],
-            });
-          })
-          .catch(fail);
+        showLiveMenu(channel);
         return;
       }
       if (screen() === "profiles") {
@@ -4086,36 +3685,7 @@ export function createRemoteTvApp(
       }
       if (["nav", "filters", "keyboard", "seasons"].includes(zone())) return;
       const card = zone() === "hero" ? hero() : focusedCard();
-      if (card)
-        openOverlay({
-          kind: "choices",
-          title: card.title,
-          items: [
-            {
-              id: "detail",
-              label: "More information",
-              run: async () => {
-                closeOverlay();
-                await openDetail(card);
-              },
-            },
-            {
-              id: "sources",
-              label: "Choose a source",
-              run: () => playIntent(card, true),
-            },
-            {
-              id: "restart",
-              label: "Play from start",
-              run: () => playIntent(card, false, true),
-            },
-            {
-              id: "save",
-              label: isSaved(card) ? "Remove from My List" : "Add to My List",
-              run: () => toggleSaved(card),
-            },
-          ],
-        });
+      if (card) showCardMenu(card);
     }
     createEffect(() => {
       const state = screen();
@@ -4402,7 +3972,7 @@ export function createRemoteTvApp(
       scope.abort();
       settingsScope?.abort();
       sourceScope?.abort();
-      clearTimeout(revisionTimer);
+      revisions.stop();
       clearTimeout(noticeTimer);
       clearTimeout(searchTimer);
       clearTimeout(controlsTimer);
