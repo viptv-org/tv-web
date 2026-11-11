@@ -3,7 +3,7 @@ import type { Screen, Item, Overlay } from "./app-types";
 import { runtimeObserver } from "../platform/runtime-observation";
 import { exitTizen } from "../platform/tizen-host";
 import { DevicePlayback, deviceProfileKey, deviceTitleKey } from "./device-playback";
-import { EpisodePreparation, episodeKey, sourceStartIds, sourcePageReady, type PreparedEpisode, type EpisodePreparationState } from "./episode-preparation";
+import { EpisodePreparation, episodeKey, type EpisodePreparationState } from "./episode-preparation";
 import { AutoplayCountdown, type CountdownState } from "./autoplay-countdown";
 import { Show, batch, createEffect, createMemo, createSignal, onCleanup, untrack, onMount } from "solid-js";
 import {
@@ -54,6 +54,9 @@ import { SourceOptionsMenu } from "./source-picker/SourceOptionsMenu";
 import { SourceHeading } from "./source-picker/SourceHeading";
 import { SourceFilters } from "./source-picker/SourceFilters";
 import { SourceList } from "./source-picker/SourceList";
+import { createDetailRefresh } from "./detail-refresh";
+import { createLiveRefresh } from "./live/revision-refresh";
+import { createSearchController, type SearchRequests } from "./search/controller";
 import { createPairingFlow } from "./session/pairing";
 import { createRevisionPoller } from "./session/revisions";
 import { createLiveMenu } from "./menus/live";
@@ -63,7 +66,8 @@ import { createSeasonPicker } from "./activation/seasons";
 import { createSourceRows } from "./source-picker/rows";
 import { createSourcePublisher } from "./source-picker/publisher";
 import { createSourceActivation } from "./source-picker/activation";
-import { startAutomaticSources } from "./source-picker/automatic-start";
+import { createEpisodeDiscovery } from "./source-picker/prepare-episode";
+import { createSourceIntent } from "./source-picker/intent";
 import { startSourceCandidate } from "./source-picker/start-candidate";
 import { sourceActionOptions, type SourceMenuOption } from "./source-picker/options";
 import { TopNavigation } from "./TopNavigation";
@@ -83,7 +87,7 @@ import {
   edgeRequest,
   type PageDirection
 } from "./channelWindow";
-import { trackLabel } from "./track-label";
+import { createTrackPicker } from "./player/tracks";
 import { defineScreen, TvView } from "../runtime";
 import {
  exitWebos 
@@ -151,6 +155,8 @@ import { createPreferenceControls } from "./preference-controls";
 import { createOverlayController } from "./overlay-controller";
 import { createDetailPresentation } from "./detail-presentation";
 import { createSourcePresentation } from "./source-picker/presentation";
+import { createLiveNavigation } from "./navigation/live";
+import { createContentNavigation } from "./navigation/content";
 import { createHeroNavigation } from "./navigation/hero";
 import { createHomeRowsNavigation } from "./navigation/home";
 import { createSourceNavigation } from "./navigation/sources";
@@ -517,11 +523,10 @@ export function createRemoteTvApp(
       settingsScope: AbortController | undefined,
       pagingScope: AbortController | undefined,
       sourceScope: AbortController | undefined,
-      searchScope: AbortController | undefined,
       alive = true,
       noticeTimer: ReturnType<typeof setTimeout> | undefined,
-      searchTimer: ReturnType<typeof setTimeout> | undefined,
       controlsTimer: ReturnType<typeof setTimeout> | undefined;
+    const searchRequests: SearchRequests = {};
     let retry: () => void = () => void start(),
       returnScreen: Screen = "home",
       returnFocus = { zone: "hero", column: 0, row: 0 },
@@ -705,6 +710,7 @@ export function createRemoteTvApp(
         }).catch(() => notify("Couldn’t save this source choice on this device.")).finally(() => setSourceMemoryPending(v => Math.max(0, v - 1)));
       },
     );
+    const discoverEpisode = createEpisodeDiscovery({api, memory: sourceMemory});
     const episodes = new EpisodePreparation(
       (card, signal) => api.next(card, signal),
       discoverEpisode,
@@ -713,32 +719,6 @@ export function createRemoteTvApp(
     async function sourceMemory(card: Card) {
       if (preferences()?.preferences.remembered_source_reuse === false) return {};
       return devicePlayback.context(deviceScope(), deviceTitleKey(deviceScope(), card));
-    }
-    async function discoverEpisode(card: Card, signal: AbortSignal): Promise<Omit<PreparedEpisode, "created">> {
-      const resolved = await api.titleAction(card, true, signal);
-      const memory = await sourceMemory(resolved.card);
-      if (signal.aborted) throw new DOMException("Preparation cancelled", "AbortError");
-      const operation = new AbortController(), cancel = () => operation.abort();
-      signal.addEventListener("abort", cancel, { once: true });
-      const remembered = !!(memory.title || memory.across);
-      let page: SourcePage | undefined, ready!: (rows: Source[]) => void;
-      const firstReady = new Promise<Source[]>(resolve => { ready = resolve; });
-      try {
-        const discovery = api.sources(resolved.card, (rows, value) => {
-          if (operation.signal.aborted) return;
-          page = value;
-          if (sourcePageReady(value, remembered)) ready(rows);
-        }, operation.signal, undefined, () => undefined, memory);
-        // A qualifying preferred supplier need not wait behind unrelated slow
-        // providers. Both readiness and candidate IDs remain server decisions.
-        const streams = await Promise.race([discovery, firstReady]);
-        if (!page || signal.aborted) throw new DOMException("Preparation cancelled", "AbortError");
-        page = { ...page, streams: [...streams] };
-        return { card: resolved.card, action: resolved, page, ids: sourceStartIds(page, remembered), memory: remembered };
-      } finally {
-        signal.removeEventListener("abort", cancel);
-        operation.abort();
-      }
     }
     createEffect(() => {
       const current = activeAction()?.card;
@@ -894,129 +874,10 @@ export function createRemoteTvApp(
         setChoice(Math.max(0, count - 1));
       if (!playerActions().seek) setSeek(undefined);
     });
-    function openTracks() {
-      setTrackColumn(0);
-      openOverlay({
-        kind: "tracks",
-        title: "Audio & subtitles",
-        columns: [
-          {
-            title: "Audio",
-            items: player.tracks.audio
-              .filter(
-                (track) =>
-                  track.selectable === true && track.supported !== false,
-              )
-              .map((track) => ({
-                id: `audio-${track.input_index}`,
-                label: trackLabel(track, "Audio"),
-                value: track.selected ? "✓" : "",
-                run: async () => {
-                  await player.selectTrack("audio", track.input_index);
-                  closeOverlay();
-                },
-              })),
-          },
-          {
-            title: "Subtitles",
-            items: [
-              ...(player.tracks.subtitlesSupported
-                ? [
-                    {
-                      id: "off",
-                      label: "Off",
-                      value: player.tracks.text.every((track) => !track.selected)
-                        ? "✓"
-                        : "",
-                      run: async () => {
-                        await player.selectTrack("text", null);
-                        closeOverlay();
-                      },
-                    },
-                  ]
-                : []),
-              ...player.tracks.text
-                .filter(
-                  (track) =>
-                    track.selectable === true && track.supported !== false,
-                )
-                .map((track) => ({
-                  id: `text-${track.input_index}`,
-                  label: trackLabel(track, "Subtitle"),
-                  value: track.selected ? "✓" : "",
-                  run: async () => {
-                    await player.selectTrack("text", track.input_index);
-                    closeOverlay();
-                  },
-                })),
-            ],
-          },
-          ...(playerActions().subtitle_style
-            ? [
-                {
-                  title: "Subtitle size",
-                  items: (
-                    preferences()?.controls?.find(
-                      (control) => control.id === "subtitle_font_scale",
-                    )?.choices ?? []
-                  ).filter(option => !isRokuUi || Number(option.value) <= 1.25).map((option) => ({
-                    id: String(option.value),
-                    label: option.label,
-                    value:
-                      preferences()?.preferences.subtitle_font_scale ===
-                      option.value
-                        ? "✓"
-                        : "",
-                    run: async () => {
-                      const previous = preferences()!;
-                      const leaseId = player.leaseId;
-                      const receipt = await call<Preferences>(
-                        api.scoped("/preferences"),
-                        "PUT",
-                        {
-                          revision: previous.revision,
-                          preferences: {
-                            ...previous.preferences,
-                            subtitle_font_scale: option.value,
-                          },
-                        },
-                      );
-                      setPreferences(receipt);
-                      const p = receipt.preferences;
-                      if (
-                        leaseId &&
-                        player.leaseId === leaseId &&
-                        typeof p.subtitle_font_scale === "number" &&
-                        typeof p.subtitle_text_color === "string" &&
-                        typeof p.subtitle_background_color === "string"
-                      ) {
-                        setCaptionOverride({
-                          leaseId,
-                          appearance: {
-                            font_scale: p.subtitle_font_scale,
-                            text_color: p.subtitle_text_color,
-                            background_color: p.subtitle_background_color,
-                          },
-                        });
-                      }
-                      closeOverlay();
-                    },
-                  })),
-                },
-              ]
-            : []),
-        ].filter((column) => column.items.length),
-      });
-      const modal = overlay();
-      if (modal?.kind === "tracks")
-        setChoice(
-          Math.max(
-            0,
-            modal.columns[0]?.items.findIndex((item) => item.value === "✓") ??
-              0,
-          ),
-        );
-    }
+    const openTracks = createTrackPicker({player, roku: isRokuUi, selection: {column: setTrackColumn, row: setChoice},
+      dialogs: {current: overlay, open: openOverlay, close: closeOverlay},
+      subtitle: {enabled: () => playerActions().subtitle_style, current: preferences, adopt: setPreferences, request: call,
+        path: () => api.scoped("/preferences"), override: setCaptionOverride}});
     const [fontsReady, setFontsReady] = createSignal(false);
     onMount(() => {
       void document.fonts.ready.then(() => setFontsReady(true));
@@ -1077,7 +938,7 @@ export function createRemoteTvApp(
       setCanManageAccount(undefined);
       overlays.retireAnimations();
       scope.abort();
-      searchScope?.abort();
+      searchRequests.scope?.abort();
       setSearchChannelPaging(false);
       setSearchError("");
       settingsScope?.abort();
@@ -1097,7 +958,7 @@ export function createRemoteTvApp(
       heldSelect.cancel();
       sourceFilterGeneration++;
       pageGeneration++;
-      clearTimeout(searchTimer);
+      clearTimeout(searchRequests.timer);
       return scope.signal;
     }
     function clearProfileView() {
@@ -1237,6 +1098,12 @@ export function createRemoteTvApp(
         clearTimeout(timer);
       });
     });
+    const refreshDetail = createDetailRefresh({api, detail: {current: detail, set: setDetail, action: setDetailAction}, selected,
+      focused: () => focusedCard(), season: {current: seasonIndex, set: setSeasonIndex}, generation: () => pageGeneration,
+      current: (signal, profile, generation, card) => !overlay() && !pending() && !signal.aborted && scope.signal === signal && screen() === "detail" && pageGeneration === generation &&
+        api.profile === profile && !!selected() && cardKey(selected()!) === cardKey(card), focus: {zone, column, setColumn}, resolve: focusIndex});
+    const refreshLive = createLiveRefresh({channels, index: liveChannelIndex, read: signal => refreshChannelPage(false, signal), snapshot: adoptLiveSnapshot, window: adoptChannelWindow,
+      groups: setGroups, failure: setLiveFailure, focus: {zone, column, setZone, setColumn}, clearGuides: () => {setPrograms({});setGuideInfo({});}, loadGuides: () => loadVisibleGuides()});
     async function applyRevision(fresh: Bootstrap, signal: AbortSignal, profile: string, commit: () => void) {
         const focusedNav =
           zone() === "nav" ? navs()[column()]?.id : undefined;
@@ -1271,74 +1138,13 @@ export function createRemoteTvApp(
           replacePage(await api.discover(browseQuery(), signal));
         else if (view === "search" && search()) updateSearch(search(), true);
         else if (view === "detail" && selected()) {
-          const previous = detail(), selectedCard = selected()!, generation = pageGeneration;
-          const season = previous?.seasons[seasonIndex()];
-          const [value, intent] = await Promise.all([
-            api.detail(selectedCard, String(season?.offset ?? 0), signal),
-            api.titleAction(selected()!, false, signal),
-          ]);
-          if (overlay() || pending() || signal.aborted || scope.signal !== signal || screen() !== "detail" || pageGeneration !== generation ||
-              api.profile !== profile || !selected() || cardKey(selected()!) !== cardKey(selectedCard)) return;
-          const key = focusedCard() ? cardKey(focusedCard()!) : undefined;
-          const nextSeason = season ? value.seasons.findIndex(item => item.season === season.season) : -1;
-          batch(() => {
-            setDetail({ ...value, item: presentationCard(previous?.item, value.item) });
-            setDetailAction(intent);
-            setSeasonIndex(nextSeason >= 0 ? nextSeason : initialSeasonIndex(value, selectedCard, intent));
-            if (zone() === "episodes" || zone() === "recommendations")
-              setColumn(
-                focusIndex(
-                  zone() === "recommendations" || !(value.seasons.length || value.episodes.length)
-                    ? value.recommendations
-                    : seasonEpisodes(value, nextSeason >= 0 ? nextSeason : initialSeasonIndex(value, selectedCard, intent)),
-                  key,
-                  column(),
-                ),
-              );
-            else if (zone() === "seasons")
-              setColumn(
-                Math.min(column(), Math.max(0, value.seasons.length - 1)),
-              );
-          });
+          await refreshDetail(signal, profile, commit);
+          return;
         } else if (view === "settings")
           await loadSettings(settingsTab(), signal);
         else if (view === "live") {
-          const value = await refreshChannelPage(false, signal);
-          const focused = channels()[liveChannelIndex()]?.id;
-          // A page that had nothing to show and now has rows lands the remote
-          // on the first row instead of leaving focus on the navigation
-          // (LIVE-EMPTY-13).
-          const arrived = !channels().length && !!value.channels.length;
-          batch(() => {
-            adoptLiveSnapshot(value.snapshot_id);
-            adoptChannelWindow([value]);
-            setGroups(value.groups);
-            setLiveFailure("");
-            if (zone() === "live-groups")
-              setColumn(Math.min(column(), value.groups.length));
-            else if (zone() === "content")
-              // Focus is the channel's index in the accumulated list, which
-              // the refresh merges into — not its slot within the refreshed
-              // page alone.
-              setColumn(
-                Math.max(
-                  0,
-                  channels().findIndex(
-                    (channel) => channel.id === focused,
-                  ),
-                ),
-              );
-            else if (
-              arrived &&
-              (zone() === "live-empty" || zone() === "nav")
-            ) {
-              setZone("content");
-              setColumn(0);
-            }
-            setPrograms({});
-            setGuideInfo({});
-          });
-          void loadVisibleGuides();
+          await refreshLive(signal, commit);
+          return;
         }
         // Commit only after the dependent feature reads succeeded, before yielding.
         commit();
@@ -2130,7 +1936,7 @@ export function createRemoteTvApp(
       signal: pageSignal, cancelFocus: () => {pendingFocus = undefined;}, settleFocus: settlePendingFocus, fail};
     const channelPaging = {owner: pageRequestOwner, focus: {zone, column, setZone, setColumn}, screen, overlay: () => !!overlay(),
       windows: {pages: (searching: boolean) => searching ? searchChannelPages() : livePages(), values: (searching: boolean) => searching ? searchChannels() : channels(), adopt: adoptChannelWindow},
-      search: {query: search, remembered: () => searchChannelFocus, remember: (index: number) => {searchChannelFocus = index;}, signal: searchSignal,
+      search: {query: search, remembered: () => searchChannelFocus, remember: (index: number) => {searchChannelFocus = index;}, signal: () => searchSignal(),
         paging: setSearchChannelPaging, error: setSearchChannelError, refresh: (value: string) => updateSearch(value)},
       live: {group: liveGroup, index: liveChannelIndex, retire: () => retireLiveGuides(), guides: () => loadVisibleGuides(), reload: loadLiveGroup},
       pending: {current: () => channelPending, set: (value: typeof channelPending) => {channelPending = value;}},
@@ -2238,174 +2044,13 @@ export function createRemoteTvApp(
         if (!signal.aborted) setLoading(false);
       }
     }
-    function searchSignal() {
-      if (!searchScope || searchScope.signal.aborted) {
-        const owner = scope,
-          request = new AbortController();
-        const cancel = () => request.abort();
-        owner.signal.addEventListener("abort", cancel, { once: true });
-        request.signal.addEventListener(
-          "abort",
-          () => owner.signal.removeEventListener("abort", cancel),
-          { once: true },
-        );
-        if (owner.signal.aborted) request.abort();
-        searchScope = request;
-      }
-      return searchScope.signal;
-    }
-    /** Media search through Stremio only. The server's `all` search fans out
-     * to Simkl, whose rejected request used to hide every Stremio result. */
-    async function searchStremio(value: string, signal: AbortSignal) {
-      const results = await Promise.allSettled([
-        api.discover(
-          { type: "movie", provider_id: "stremio", search: value },
-          signal,
-        ),
-        api.discover(
-          { type: "series", provider_id: "stremio", search: value },
-          signal,
-        ),
-      ]);
-      const pages = results.flatMap((result) =>
-        result.status === "fulfilled" ? [result.value] : [],
-      );
-      if (!pages.length) {
-        const failure = results.find((result) => result.status === "rejected");
-        throw failure && failure.status === "rejected"
-          ? failure.reason
-          : new Error("Search is unavailable. Try again.");
-      }
-      const cards: Card[] = [],
-        seen = new Set<string>();
-      for (const page of pages)
-        for (const card of page.cards) {
-          const key = cardKey(card);
-          if (seen.has(key)) continue;
-          seen.add(key);
-          cards.push(card);
-        }
-      return {
-        cards,
-        complete: pages.every((page) => page.complete),
-        next_cursor: null,
-      };
-    }
-    function updateSearch(value: string, retain = false) {
-      value = Array.from(value).slice(0, 256).join("");
-      retain = retain && value === search();
-      searchScope?.abort();
-      clearTimeout(searchTimer);
-      restartPaging();
-      const signal = searchSignal();
-      const capabilities = searchCapabilities();
-      const current = () =>
-        !signal.aborted &&
-        searchScope?.signal === signal &&
-        screen() === "search" &&
-        search() === value;
-      const settle = () =>
-        setLoading(
-          !page().cards.length &&
-            !searchChannels().length &&
-            (searchMediaPending() || searchChannelsPending()),
-        );
-      batch(() => {
-        setSearch(value);
-        if (!retain || !capabilities.media)
-          setPage({ cards: [], complete: !value });
-        if (!retain || !capabilities.channels) {
-          setSearchChannels([]);
-          setSearchChannelPages([]);
-        }
-        if (!retain) {
-          searchMediaFocus = 0;
-          searchChannelFocus = 0;
-        }
-        if (
-          (!capabilities.media &&
-            ["content", "search-retry"].includes(zone())) ||
-          (!capabilities.channels &&
-            ["search-channels", "search-channel-retry"].includes(zone()))
-        )
-          setZone("keyboard");
-        setError("");
-        setSearchError("");
-        setSearchChannelError("");
-        setSearchChannelPaging(false);
-        setSearchMediaPending(!!value && capabilities.media);
-        setSearchChannelsPending(!!value && capabilities.channels);
-        settle();
-      });
-      retry = () => updateSearch(value, true);
-      searchTimer = setTimeout(() => {
-        if (!value || !current()) return;
-        if (capabilities.media)
-          void searchStremio(value, signal)
-            .then((result) => {
-              if (current()) replacePage(result);
-            })
-            .catch((error) => {
-              if (!current()) return;
-              if (error instanceof RemoteError && error.status === 401)
-                fail(error);
-              else
-                setSearchError(
-                  error instanceof Error
-                    ? error.message
-                    : "Search is unavailable. Try again.",
-                );
-            })
-            .finally(() => {
-              if (current())
-                batch(() => {
-                  setSearchMediaPending(false);
-                  settle();
-                });
-            });
-        if (capabilities.channels)
-          void refreshChannelPage(true, signal)
-            .then((result) => {
-              if (!current()) return;
-              const focused =
-                searchChannels()[
-                  zone() === "search-channels" ? column() : searchChannelFocus
-                ]?.id;
-              batch(() => {
-                adoptChannelWindow([result], true);
-                searchChannelFocus = Math.max(
-                  0,
-                  result.channels.findIndex(
-                    (channel) => channel.id === focused,
-                  ),
-                );
-                if (zone() === "search-channels") setColumn(searchChannelFocus);
-                if (result.availability !== "Available")
-                  setSearchChannelError(
-                    result.reason ?? "Channel search is unavailable.",
-                  );
-              });
-            })
-            .catch((error) => {
-              if (!current()) return;
-              if (error instanceof RemoteError && error.status === 401)
-                fail(error);
-              else
-                setSearchChannelError(
-                  error instanceof Error
-                    ? error.message
-                    : "Channels are unavailable. Try again.",
-                );
-            })
-            .finally(() => {
-              if (current())
-                batch(() => {
-                  setSearchChannelsPending(false);
-                  settle();
-                });
-            });
-      }, 180);
-    }
+    const {signal: searchSignal, update: updateSearch} = createSearchController({requests: searchRequests, parent: () => scope, screen,
+      focus: {zone, column, setZone, setColumn}, query: {current: search, set: setSearch}, capabilities: searchCapabilities,
+      media: {page, set: setPage, replace: replacePage, error: setSearchError, pending: {current: searchMediaPending, set: setSearchMediaPending}, remember: index => {searchMediaFocus = index;}},
+      channels: {current: searchChannels, set: setSearchChannels, pages: setSearchChannelPages, error: setSearchChannelError, paging: setSearchChannelPaging,
+        pending: {current: searchChannelsPending, set: setSearchChannelsPending}, remembered: () => searchChannelFocus, remember: index => {searchChannelFocus = index;},
+        read: signal => refreshChannelPage(true, signal), adopt: page => adoptChannelWindow([page], true)},
+      discover: (query, signal) => api.discover(query, signal), restart: restartPaging, loading: setLoading, error: setError, retry: work => {retry = work;}, fail});
     const {reconcile: reconcileSources, focusBest: focusBestMatch} = createSourceRows({rows: sources, adopt: setSources,
       visible: visibleSources, focused: focusedSource, manual: () => manualSourceSelection, selection: {current: choice, set: setChoice}});
     const publishSources = createSourcePublisher({api, owns: operation => sourceScope === operation,
@@ -2420,131 +2065,45 @@ export function createRemoteTvApp(
       const runtime = card.metadata?.runtime_minutes ?? 0;
       return runtime > 0 ? progress * runtime * 60 : 0;
     }
-    async function playIntent(
-      card: Card,
-      forcePicker = false,
-      restart = false,
-      channel?: string,
-      replaceCurrent = false,
-      position?: number,
-      automaticNext = false,
-      prepared?: PreparedEpisode,
-    ) {
-      const intent = ++sourceIntent, epoch = api.scopeEpoch;
-      manualPresentation = undefined;
-      countdown.cancel();
-      sourceStartPosition = restart
-        ? 0
-        : Math.max(0, position ?? cardResumePosition(card));
-      sourceScope?.abort();
-      const operation = new AbortController();
-      sourceScope = operation;
-      let ownedOperation = operation;
-      setPickerCard(card);
-      setSourceChannel(channel);
-      setReplacingSource(replaceCurrent);
-      setAction(undefined);
-      setSources([]);
-      setAllSourceIds([]);
-      setSourcePage(undefined);
-      setSourceFacet(0);
-      setSourceHeight(undefined);
-      setSourceFiltering(false);
-      setSourceProviderFilter(undefined);
-      setSourceMenu(undefined);
-      setSourceActions(false);
-      setSourceFailure("");
-      setFailedSources(new Set<string>());
-      manualSourceSelection = false;
-      sourceFilterGeneration++;
-      setSourceFilterFocus(false);
-      setSourceLoading(true);
-      const initialMemory = channel || forcePicker ? {} : await sourceMemory(card);
-      const remembered = !!(initialMemory.title || initialMemory.across);
-      if (intent !== sourceIntent || operation.signal.aborted || epoch !== api.scopeEpoch) return;
-      const hidden = !forcePicker && (automaticNext || remembered);
-      if (hidden && screen() !== "player") overlays.captureOrigin();
-      if (hidden) { overlays.hide();setLoading(true); }
-      else openOverlay({ kind: "sources", title: "Choose a source" });
-      retry = () =>
-        void playIntent(
-          card,
-          forcePicker,
-          restart,
-          channel,
-          replaceCurrent,
-          sourceStartPosition,
-        );
-      try {
-        let resolved = prepared?.action ?? (channel
-          ? undefined
-          : await api.titleAction(card, restart, operation.signal));
-        if (resolved) {
-          setAction(resolved);
-          setPickerCard(resolved.card);
-        }
-        let finalPage = prepared?.page;
-        const memory = channel || forcePicker ? {} : await sourceMemory(resolved?.card ?? card);
-        let preferredWaitElapsed = false;
-        let firstMatch!: (rows: Source[]) => void;
-        const matchTimer = !api.preferredSourceDiscoverySupported && !forcePicker && (memory.title || memory.across) ? setTimeout(() => {
-          preferredWaitElapsed = true;
-          if (finalPage && sourcePageReady(finalPage, true, false)) firstMatch(finalPage.streams);
-        }, 3000) : undefined;
-        const firstReady = new Promise<Source[]>(resolve => { firstMatch = resolve; });
-        const discovery = prepared ? Promise.resolve(prepared.page.streams) : api.sources(
-          resolved?.card ?? card,
-          (value, page, ids, height) => {
-            if (sourceScope !== operation || operation.signal.aborted) return;
-            finalPage = page;
-            const memoryMatch = !!(memory.title || memory.across);
-            if (!forcePicker && (memoryMatch || automaticNext || resolved?.source_selection === "best") && sourcePageReady(page, memoryMatch, !preferredWaitElapsed)) firstMatch(value);
-            if (page.action) {
-              resolved = page.action;
-              setAction(page.action);
-              setPickerCard(page.action.card);
-            }
-            publishSources(operation, value, page, ids, height);
-          },
-          operation.signal,
-          channel,
-          () => undefined,
-          memory,
-        );
-        const ranked = await Promise.race([discovery, firstReady]).finally(() => clearTimeout(matchTimer));
-        if (intent !== sourceIntent || epoch !== api.scopeEpoch || operation.signal.aborted) return;
-        setLoading(false);
-        if (finalPage) { setSourcePage(finalPage);reconcileSources(ranked); }
-        const hasMemory = !!(memory.title || memory.across);
-        const automatic = !forcePicker && !manualSourceSelection && (automaticNext || hasMemory || resolved?.source_selection === "best");
-        if (automatic && finalPage && resolved) {
-          const result = await startAutomaticSources({api, page: finalPage, rows: ranked, action: () => resolved!, memory, hasMemory,
-            active: () => intent === sourceIntent && epoch === api.scopeEpoch && !scope.signal.aborted,
-            intent: () => intent === sourceIntent && epoch === api.scopeEpoch, owns: operation => sourceScope === operation,
-            fallback: operation => {sourceScope = operation;ownedOperation = operation;setSourceLoading(true);setLoading(true);},
-            publish: (value, page, ids) => {setSourcePage(page);setAllSourceIds(ids);reconcileSources(value);}, ready: () => {setLoading(false);},
-            play: source => playSource(source, false, false), notify});
-          if (result === "cancelled") return;
-          if (result === "started") {setSourceLoading(false);return;}
-
-        }
-
-        setSourceLoading(false);
-        if (intent === sourceIntent && !scope.signal.aborted && (hidden || automatic)) {
-          if (!sourceFailure()) setSourceFailure("No matching source could start. Choose a source.");
-          setLoading(false);openOverlay({ kind: "sources", title: "Choose a source" });
-        }
-      } catch (e) {
-        if (sourceScope !== ownedOperation) return;
-        setSourceLoading(false);setLoading(false);
-        if (hidden && intent === sourceIntent && !ownedOperation.signal.aborted) openOverlay({ kind: "sources", title: "Choose a source" });
-        if (sources().length && !(e instanceof DOMException))
-          notify(
-            "Some sources did not respond. You can choose an available source.",
-          );
-        else fail(e);
-      }
-    }
+    const playIntent = createSourceIntent({api,
+      begin: (card, restart, channel, replaceCurrent, position) => {
+        const id = ++sourceIntent, epoch = api.scopeEpoch;
+        manualPresentation = undefined;
+        countdown.cancel();
+        sourceStartPosition = restart
+          ? 0
+          : Math.max(0, position ?? cardResumePosition(card));
+        sourceScope?.abort();
+        const operation = new AbortController();
+        sourceScope = operation;
+        setPickerCard(card);
+        setSourceChannel(channel);
+        setReplacingSource(replaceCurrent);
+        setAction(undefined);
+        setSources([]);
+        setAllSourceIds([]);
+        setSourcePage(undefined);
+        setSourceFacet(0);
+        setSourceHeight(undefined);
+        setSourceFiltering(false);
+        setSourceProviderFilter(undefined);
+        setSourceMenu(undefined);
+        setSourceActions(false);
+        setSourceFailure("");
+        setFailedSources(new Set<string>());
+        manualSourceSelection = false;
+        sourceFilterGeneration++;
+        setSourceFilterFocus(false);
+        setSourceLoading(true);
+        return {id, epoch, operation};
+      }, owner: {intent: () => sourceIntent, epoch: () => api.scopeEpoch, operation: () => sourceScope,
+        replace: operation => {sourceScope = operation;}, aborted: () => scope.signal.aborted},
+      position: () => sourceStartPosition, manual: () => manualSourceSelection, playerScreen: () => screen() === "player", memory: sourceMemory,
+      presentation: {capture: overlays.captureOrigin, hide: overlays.hide, show: () => openOverlay({kind: "sources", title: "Choose a source"})},
+      resolve: action => {setAction(action);setPickerCard(action.card);}, retry: work => {retry = work;},
+      page: setSourcePage, ids: setAllSourceIds, loading: setLoading, discovering: setSourceLoading,
+      failure: {current: sourceFailure, set: setSourceFailure}, rows: sources, reconcile: reconcileSources, publish: publishSources,
+      play: playSource, notify, fail});
     async function playSource(source: Source, direct = false, manual = true): Promise<boolean> {
       const current = action();
       if (!current) return false;
@@ -2571,8 +2130,8 @@ export function createRemoteTvApp(
       }
       sourceScope?.abort();
       if (screen() === "search") {
-        searchScope?.abort();
-        clearTimeout(searchTimer);
+        searchRequests.scope?.abort();
+        clearTimeout(searchRequests.timer);
       }
       setScreen("player");
       setError("");
@@ -2909,6 +2468,17 @@ export function createRemoteTvApp(
         remembered: () => searchMediaFocus, remember: index => {searchMediaFocus = index;}, move: index => moveToItem(index, page().cards.length)},
       channels: {count: () => searchChannels().length, error: searchChannelError, enabled: () => searchCapabilities().channels,
         remembered: () => searchChannelFocus, remember: index => {searchChannelFocus = index;}, move: step => moveChannel(step, true)}});
+    const navigateLive = createLiveNavigation({focus: navigationFocus,
+      emptyActions: () => liveSpread() === "no-source" ? liveNoSourceActions(liveViewer()).length : liveRecovery().length,
+      navIndex: () => navIndex("live"), channels: () => channels().length, groups: () => groups().length,
+      programs: {set: setProgramIndex, count: () => programs()[channels()[column()]?.id]?.length ?? 1}, moveChannel: step => moveChannel(step, false)});
+    const navigateContent = createContentNavigation({screen, focus: navigationFocus, navIndex, libraryControls: libraryControlCount,
+      catalogFilters: () => (catalog()?.controls.length ?? 0) > 0,
+      content: {count: () => screen() === "detail" ? detailHasEpisodes() ? detailEpisodes().length : detail()?.recommendations.length ?? 0 : page().cards.length,
+        columns: () => screen() === "live" ? 1 : screen() === "search" ? 5 : screen() === "detail" ? 4 : 7,
+        cursor: () => page().next_cursor, remembered: () => contentFocus.resolve(contentRow())},
+      search: {needsRetry: searchNeedsRetry, remember: index => {searchMediaFocus = index;}},
+      paging: {move: moveToItem, more: () => {void more();}}, loadGuide: index => {void loadGuide(index);}});
     function move(dx: number, dy: number) {
       rememberContentFocus();
       rememberDetailFocus();
@@ -2977,120 +2547,8 @@ export function createRemoteTvApp(
       if (zone() === "hero") { navigateHero(dx, dy, screen()); return; }
       if (screen() === "home" && zone() === "rows") { navigateHomeRows(dx, dy); return; }
       if (screen() === "search" && navigateSearch(dx, dy)) return;
-      if (screen() === "live" && zone() === "live-empty") {
-        // Down reaches the second action, Up returns to the navigation, and
-        // Left and Right do nothing on either action.
-        const count =
-          liveSpread() === "no-source"
-            ? liveNoSourceActions(liveViewer()).length
-            : liveRecovery().length;
-        if (dy < 0) {
-          setZone("nav");
-          setColumn(navIndex("live"));
-        } else if (dy > 0)
-          setColumn((i) => Math.min(Math.max(0, count - 1), i + 1));
-        return;
-      }
-      if (screen() === "live" && zone() === "live-groups") {
-        if (dy > 0) {
-          // A page that is empty only because of its filter has no row for the
-          // focus to land on, so the chips stay the page's own stop.
-          if (!channels().length) return;
-          setZone("content");
-          setColumn(0);
-        } else if (dy < 0) {
-          setZone("nav");
-          setColumn(navIndex("live"));
-        } else setColumn((i) => Math.max(0, Math.min(groups().length, i + dx)));
-        return;
-      }
-      if (screen() === "live" && zone() === "content") {
-        if (dx) {
-          setProgramIndex((i) =>
-            Math.max(
-              0,
-              Math.min(
-                (programs()[channels()[column()]?.id]?.length ?? 1) - 1,
-                i + dx,
-              ),
-            ),
-          );
-          return;
-        }
-        if (dy) moveChannel(dy, false);
-        return;
-      }
-      if (zone() === "library-controls") {
-        if (dy < 0) {
-          setZone("nav");
-          setColumn(navIndex("library"));
-        } else if (dy > 0) {
-          setZone("content");
-          setColumn(contentFocus.resolve(contentRow()));
-        } else
-          setColumn((i) =>
-            Math.max(0, Math.min(libraryControlCount() - 1, i + dx)),
-          );
-        return;
-      }
-      if (zone() === "filters") {
-        if (dy < 0) {
-          setZone("nav");
-          setColumn(navIndex(screen()));
-        } else if (dy > 0) {
-          setZone("content");
-          setColumn(contentFocus.resolve(contentRow()));
-        } else
-          setColumn((i) =>
-            Math.max(
-              0,
-              Math.min((catalog()?.controls.length ?? 0) > 0 ? 1 : 0, i + dx),
-            ),
-          );
-        return;
-      }
-      const items =
-        screen() === "detail"
-          ? detailHasEpisodes()
-            ? detailEpisodes()
-            : (detail()?.recommendations ?? [])
-          : page().cards;
-      const columns =
-        screen() === "live"
-          ? 1
-          : screen() === "search"
-            ? 5
-            : screen() === "detail"
-              ? 4
-              : 7;
-      if (dy < 0 && column() < columns) {
-        if (screen() === "search") searchMediaFocus = column();
-        const targetZone =
-          screen() === "detail"
-            ? "hero"
-            : screen() === "movie" || screen() === "series" || screen() === "anime"
-              ? "filters"
-              : screen() === "library" && libraryControlCount()
-                ? "library-controls"
-                : screen() === "search" && searchNeedsRetry()
-                  ? "search-retry"
-                  : "nav";
-        setZone(targetZone);
-        setColumn(targetZone === "nav" ? navIndex(screen()) : 0);
-        return;
-      }
-      if (screen() === "search" && dx < 0 && column() % 5 === 0) {
-        searchMediaFocus = column();
-        setZone("keyboard");
-        return;
-      }
-      moveToItem(
-        column() + dx + dy * columns,
-        items.length,
-        page().next_cursor,
-      );
-      if (screen() === "live") void loadGuide(column());
-      if (column() >= items.length - columns * 2) void more();
+      if (screen() === "live" && navigateLive(dx, dy)) return;
+      navigateContent(dx, dy);
     }
     function keyboardActivate(isOverlay: boolean) {
       const index = key();
@@ -3720,7 +3178,7 @@ export function createRemoteTvApp(
       sourceScope?.abort();
       revisions.stop();
       clearTimeout(noticeTimer);
-      clearTimeout(searchTimer);
+      clearTimeout(searchRequests.timer);
       clearTimeout(controlsTimer);
       void player.dispose();
     });

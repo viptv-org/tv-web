@@ -136,6 +136,7 @@ describe("The shipped TV entry runs this code (#34)", () => {
   );
 
   const footer = readFileSync(resolve(root, "src/tv-solid/remote/source-picker/SourceFooter.tsx"), "utf8");
+  const startup = readFileSync(resolve(root, "src/tv-solid/remote/source-picker/start-candidate.ts"), "utf8");
   const projection = readFileSync(resolve(root, "src/tv-solid/remote/source-picker/presentation.ts"), "utf8");
 
   it("renders the contract's states from the shared module", () => {
@@ -166,8 +167,9 @@ describe("The shipped TV entry runs this code (#34)", () => {
     expect(entry).toContain("[openingSource, setOpeningSource]");
     expect(entry).toContain("setOpeningSource(source);");
     expect(entry.indexOf("setOpeningSource(source);")).toBeLessThan(
-      entry.indexOf("await player.start("),
+      entry.indexOf("await startSourceCandidate("),
     );
+    expect(startup).toContain("await player.start(");
     expect(entry).toContain("opening: () => !!openingSource()");
     expect(projection).toContain("opening: !!options.opening()");
   });
