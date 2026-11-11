@@ -1,32 +1,30 @@
-import { getRegistry } from '@roku-sdk/rsg-ts/runtime';
-import type { Registry } from '@roku-sdk/interfaces';
+import { postRokuTask, RokuTaskResponseError, type WorkerRequest } from './worker-task';
 
-let pendingRegistry: Promise<Registry> | undefined;
-let writes: Promise<void> = Promise.resolve();
-function deadline<T>(operation: Promise<T>): Promise<T> {
-  let timer: ReturnType<typeof setTimeout> | undefined;
-  return Promise.race([operation, new Promise<T>((_, reject) => {
-    timer = setTimeout(() => reject(new Error('Device storage did not respond.')), 5000);
-  })]).finally(() => clearTimeout(timer));
-}
-function registry() {
-  return pendingRegistry ??= deadline(getRegistry()).catch(error => { pendingRegistry = undefined;throw error; });
-}
-export function deviceStorage(sectionName: string, key: string) {
-  const update = (value: string | null) => {
-    const operation = writes.catch(() => {}).then(async () => {
-      const owner = await registry(), section = owner.create(sectionName);
-      if (value === null) {
-        if (!section.exists(key)) return;
-        if (!section.delete(key)) throw new Error('Device settings could not be removed.');
-      } else if (!section.write(key, value)) throw new Error('Device settings could not be saved.');
-      if (!await deadline(owner.flush())) throw new Error('Device settings could not be saved.');
+let operations: Promise<void> = Promise.resolve();
+let uncertain: Error | undefined;
+
+/** Use the BrightScript section's Flush, rather than the SDK Registry cache. */
+export function deviceStorage(section: string, key: string) {
+  const execute = (request: WorkerRequest): Promise<string | null> => {
+    const operation = operations.then(async () => {
+      if (uncertain) throw uncertain;
+      try {
+        return await postRokuTask<string | null>(request, { timeoutMs: 5000 }).result;
+      } catch (error) {
+        // STOP is requested on timeout/cancellation, but its completion is not
+        // acknowledged. Do not allow a later clear/write to race that Task.
+        // An explicit response means the worker finished its storage effects.
+        if (!(error instanceof RokuTaskResponseError))
+          uncertain = new Error('Device storage did not finish. Relaunch the app to retry.');
+        throw error;
+      }
     });
-    writes = operation;return operation;
+    operations = operation.then(() => {}, () => {});
+    return operation;
   };
   return {
-    async load() { await writes.catch(() => {});return (await registry()).create(sectionName).read(key); },
-    save: (value: string) => update(value),
-    clear: () => update(null),
+    load: () => execute({ op: 'storage', action: 'load', section, key }),
+    async save(value: string) { await execute({ op: 'storage', action: 'save', section, key, value }); },
+    async clear() { await execute({ op: 'storage', action: 'clear', section, key }); },
   };
 }

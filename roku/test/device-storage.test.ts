@@ -1,25 +1,69 @@
-import { afterEach, expect, it, vi } from 'vitest';
-const fake=vi.hoisted(()=>({sections:new Map<string,Map<string,string>>(),write:true,flush:vi.fn(async()=>true)}));
-vi.mock('@roku-sdk/rsg-ts/runtime',()=>({getRegistry:async()=>({
- create(name:string){if(!fake.sections.has(name))fake.sections.set(name,new Map());const values=fake.sections.get(name)!;return{
-  read:(key:string)=>values.get(key)??null,exists:(key:string)=>values.has(key),delete:(key:string)=>values.delete(key),
-  write:(key:string,value:string)=>{if(!fake.write)return false;values.set(key,value);return true;}
- };},flush:fake.flush,
-})}));
-import {deviceStorage}from'../src/roku/device-storage';
-afterEach(()=>{fake.sections.clear();fake.write=true;fake.flush.mockReset().mockResolvedValue(true);});
-it('flushes durable token/settings changes and reads them from a new port without relying on localStorage',async()=>{
- const first=deviceStorage('session','tokens');await first.save('opaque-session');
- expect(fake.flush).toHaveBeenCalledOnce();expect(await deviceStorage('session','tokens').load()).toBe('opaque-session');
- const settings=deviceStorage('playback','settings');await settings.save('{"autoplay":false}');
- expect(await first.load()).toBe('opaque-session');
- await first.clear();await first.clear();expect(await first.load()).toBeNull();expect(await settings.load()).toBe('{"autoplay":false}');
- expect(fake.flush).toHaveBeenCalledTimes(3);
+import { beforeEach, expect, it, vi } from 'vitest';
+const fake = vi.hoisted(() => ({ post: vi.fn() }));
+vi.mock('../src/roku/worker-task', () => ({
+  postRokuTask: fake.post,
+  RokuTaskResponseError: class extends Error {},
+}));
+import { RokuTaskResponseError } from '../src/roku/worker-task';
+beforeEach(() => { vi.resetModules(); fake.post.mockReset(); });
+
+it('sends scoped native operations, including every repeated clear', async () => {
+  const { deviceStorage } = await import('../src/roku/device-storage');
+  const values = new Map<string, string>();
+  fake.post.mockImplementation(request => ({ result: Promise.resolve().then(() => {
+    const key = request.section + '/' + request.key;
+    if (request.action === 'load') return values.get(key) ?? null;
+    if (request.action === 'save') values.set(key, request.value);
+    else values.delete(key);
+    return null;
+  }) }));
+  const session = deviceStorage('viptv-session', 'tokens');
+  const settings = deviceStorage('viptv-playback', 'settings-v1');
+  await session.save('opaque-session'); await settings.save('opaque-settings');
+  expect(await deviceStorage('viptv-session', 'tokens').load()).toBe('opaque-session');
+  await session.clear(); await session.clear();
+  expect(await session.load()).toBeNull();
+  expect(await settings.load()).toBe('opaque-settings');
+  expect(fake.post.mock.calls.filter(([request]) => request.action === 'clear')).toHaveLength(2);
+  expect(fake.post).toHaveBeenCalledWith({op:'storage',action:'save',section:'viptv-session',key:'tokens',value:'opaque-session'}, {timeoutMs:5000});
 });
-it('reports rejected writes/flushes and recovers the serial queue for a later retry',async()=>{
- const port=deviceStorage('playback','settings');fake.write=false;
- await expect(port.save('one')).rejects.toThrow('could not be saved');expect(fake.flush).not.toHaveBeenCalled();
- fake.write=true;fake.flush.mockResolvedValueOnce(false);
- await expect(port.save('two')).rejects.toThrow('could not be saved');
- await port.save('three');expect(await port.load()).toBe('three');
+
+it('waits for a write acknowledgement before starting a later clear or read', async () => {
+  const { deviceStorage } = await import('../src/roku/device-storage');
+  let complete!: (value: null) => void;
+  fake.post.mockReturnValueOnce({result:new Promise(resolve => { complete = resolve; })})
+    .mockReturnValue({result:Promise.resolve(null)});
+  const port = deviceStorage('viptv-session', 'tokens');
+  const save = port.save('opaque'); const clear = port.clear(); const read = port.load();
+  await Promise.resolve(); expect(fake.post).toHaveBeenCalledTimes(1);
+  complete(null); await Promise.all([save, clear, read]);
+  expect(fake.post.mock.calls.map(([request]) => request.action)).toEqual(['save','clear','load']);
+});
+
+it('permits a clear retry after an acknowledged native flush failure', async () => {
+  const { deviceStorage } = await import('../src/roku/device-storage');
+  fake.post.mockReturnValueOnce({result:Promise.reject(new RokuTaskResponseError('Device settings could not be saved.'))})
+    .mockReturnValue({result:Promise.resolve(null)});
+  const port = deviceStorage('viptv-session', 'tokens');
+  await expect(port.save('opaque')).rejects.toThrow('could not be saved');
+  await port.clear();
+  expect(fake.post.mock.calls.map(([request]) => request.action)).toEqual(['save','clear']);
+});
+
+it('quarantines an uncertain timeout so a late save cannot race a later clear', async () => {
+  const { deviceStorage } = await import('../src/roku/device-storage');
+  let timeout!: (error: Error) => void;
+  let finishNative!: () => void;
+  let nativeValue: string | null = null;
+  const lateNative = new Promise<void>(resolve => { finishNative = () => { nativeValue = 'late-save'; resolve(); }; });
+  fake.post.mockReturnValue({result:new Promise((_, reject) => { timeout = reject; })});
+  const port = deviceStorage('viptv-session', 'tokens');
+  const save = expect(port.save('late-save')).rejects.toThrow('timed out');
+  const clear = expect(port.clear()).rejects.toThrow('did not finish');
+  await Promise.resolve(); timeout(new Error('WorkerTask timed out after 5000ms'));
+  await Promise.all([save, clear]);
+  finishNative(); await lateNative;
+  expect(nativeValue).toBe('late-save');
+  await expect(deviceStorage('viptv-playback', 'settings-v1').save('other')).rejects.toThrow('did not finish');
+  expect(fake.post).toHaveBeenCalledTimes(1);
 });

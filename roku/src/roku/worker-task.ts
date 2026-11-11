@@ -14,7 +14,12 @@ export type WorkerRequest =
   | { op: "sleep"; ms: number }
   | { op: "json"; text: string }
   | { op: "fetch"; url: string; headers?: Record<string, string> }
+  | { op: "storage"; action: "load" | "clear"; section: string; key: string }
+  | { op: "storage"; action: "save"; section: string; key: string; value: string }
   | { op: "http"; url: string; method: string; headers?: Record<string, string>; payload?: any };
+
+/** A response acknowledges that the worker has finished its requested effects. */
+export class RokuTaskResponseError extends Error {}
 
 interface WorkerResponse<T = any> {
   ok: boolean;
@@ -81,7 +86,7 @@ export function postRokuTask<T = any>(
     setProp(task, "request", request);
     setProp(task, "onResponse", (response: WorkerResponse<T>) => {
       if (!response || response.ok !== true) {
-        finish(() => rejectResult(new Error(response?.error || "WorkerTask failed")));
+        finish(() => rejectResult(new RokuTaskResponseError(response?.error || "WorkerTask failed")));
         return;
       }
       finish(() => resolveResult(response.result as T));
