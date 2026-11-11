@@ -126,6 +126,8 @@ import { createHeroCycle } from "./hero-cycle-controller";
 import { createIdleScreenSaver } from "./idle-screen-saver";
 import { createTextKeyboard } from "./text-keyboard";
 import { createHeldSelect } from "./held-select";
+import { createProfileManagement } from "./profile-management";
+import { createPreferenceControls } from "./preference-controls";
 import { createOverlayController } from "./overlay-controller";
 import { createDetailPresentation } from "./detail-presentation";
 import { createSourcePresentation } from "./source-picker/presentation";
@@ -143,7 +145,6 @@ import {
   type Control,
   type Controls,
   type Detail,
-  type DisplayPreferences,
   type Home,
   type LibraryPage,
   type LibraryQuery,
@@ -3492,141 +3493,9 @@ export function createRemoteTvApp(
     /** The existing Settings section by name, so a copy change moves no code. */
     const settingsTabIndex = (label: string) =>
       Math.max(0, settingsTabs.indexOf(label));
-    async function preferenceChoice(
-      field: string,
-      label: string,
-      values: [string, string | number | boolean | null][],
-    ) {
-      openOverlay({
-        kind: "choices",
-        title: label,
-        items: values.map(([name, value]) => ({
-          id: String(value),
-          label: name,
-          value: preferences()?.preferences[field] === value ? "✓" : "",
-          run: async () => {
-            const previous = preferences()!;
-            const receipt = await call<Preferences>(
-              api.scoped("/preferences"),
-              "PUT",
-              {
-                revision: previous.revision,
-                preferences: { ...previous.preferences, [field]: value },
-              },
-            );
-            setPreferences(receipt);
-            closeOverlay();
-            await loadSettings(settingsTab(), scope.signal);
-          },
-        })),
-      });
-    }
-    /** Tv3SetDisplay rows: swatches and toggles adjust inline; text size,
-     * motion and screen saver use the shared choice overlay; Fit to screen
-     * opens the calibration overlay. Every change is a confirmed server write. */
-    function displayItem(
-      control: NonNullable<Preferences["controls"]>[number],
-    ): Item {
-      const display = () => preferences()?.display ?? defaultDisplayPreferences;
-      const put = async (patch: Partial<DisplayPreferences>) => {
-        const previous = preferences()!;
-        const receipt = await call<Preferences>(
-          api.scoped("/preferences"),
-          "PUT",
-          {
-            revision: previous.revision,
-            display: { ...previous.display, ...patch },
-          },
-        );
-        setPreferences(receipt);
-        await loadSettings(settingsTab(), scope.signal);
-      };
-      const choices = control.choices ?? [];
-      const current = display()[control.id as keyof DisplayPreferences];
-      if (control.kind === "swatches") {
-        const colors = choices.map((choice) => String(choice.value));
-        const step = async (direction: number) => {
-          const index = colors.indexOf(String(current));
-          const next =
-            colors[(index + direction + colors.length) % colors.length];
-          if (next && next !== current) await put({ accent_color: next });
-        };
-        return {
-          id: control.id,
-          label: control.label,
-          description: control.description,
-          swatches: colors,
-          value: String(current),
-          run: () => step(1),
-          cycle: step,
-        };
-      }
-      if (
-        choices.length === 2 &&
-        choices.every((choice) => typeof choice.value === "boolean")
-      ) {
-        const flip = async () => {
-          await put({ [control.id]: !current } as Partial<DisplayPreferences>);
-        };
-        return {
-          id: control.id,
-          label: control.label,
-          description: control.description,
-          toggle: current === true,
-          value: "",
-          run: flip,
-          cycle: flip,
-        };
-      }
-      if (control.kind === "calibration") {
-        return {
-          id: control.id,
-          label: control.label,
-          description: control.description,
-          value: "",
-          run: () => {
-            setCalibrationValue(display().screen_inset);
-            openOverlay({
-              kind: "calibration",
-              title: control.label,
-              min: control.min ?? 0,
-              max: control.max ?? 20,
-              value: display().screen_inset,
-              save: (next) => put({ screen_inset: next }),
-            });
-          },
-        };
-      }
-      return {
-        id: control.id,
-        label: control.label,
-        description: control.description,
-        value:
-          choices.find((choice) => choice.value === current)?.label ??
-          String(current ?? ""),
-        chevron: true,
-        run: () =>
-          openOverlay({
-            kind: "choices",
-            title: control.label,
-            items: choices.map((choice) => ({
-              id: String(choice.value),
-              label: choice.label,
-              value:
-                display()[control.id as keyof DisplayPreferences] ===
-                choice.value
-                  ? "✓"
-                  : "",
-              run: async () => {
-                await put({
-                  [control.id]: choice.value,
-                } as Partial<DisplayPreferences>);
-                closeOverlay();
-              },
-            })),
-          }),
-      };
-    }
+    const {choice: preferenceChoice, displayItem} = createPreferenceControls({current: preferences, adopt: setPreferences,
+      request: call, path: () => api.scoped("/preferences"), reload: () => loadSettings(settingsTab(), scope.signal),
+      dialogs: {open: openOverlay, close: closeOverlay}, calibrate: setCalibrationValue});
     /** Household writes (add-ons, source integrations, the parent PIN, kids
      * limits) are refused to a paired device session by the server's owner
      * guard. `/api/bootstrap` does not project that capability, so it is asked
@@ -4241,126 +4110,8 @@ export function createRemoteTvApp(
           })),
         );
     }
-    function manageProfile(index: number) {
-      const current = management()?.profiles[index];
-      if (!current) return;
-      const capabilities = management()?.capabilities;
-      if (
-        !available(capabilities?.rename) &&
-        management()?.parent.pin_configured
-      ) {
-        edit(
-          "Parent PIN",
-          async (pin) => {
-            await call("/api/parent/unlock", "POST", { pin });
-            await refreshProfiles();
-            manageProfile(index);
-          },
-          "",
-          true,
-        );
-        return;
-      }
-      openOverlay({
-        kind: "choices",
-        title: "Edit profile",
-        profile: current,
-        items: [
-          ...(available(capabilities?.rename)
-            ? [
-                {
-                  id: "rename",
-                  label: "Name",
-                  value: current.name,
-                  run: () =>
-                    edit(
-                      "Profile name",
-                      async (name) => {
-                        await call(
-                          `/api/profiles/${segment(current.id)}`,
-                          "PATCH",
-                          { name },
-                        );
-                        await refreshProfiles();
-                        dismissOverlay();
-                      },
-                      current.name,
-                    ),
-                },
-              ]
-            : []),
-          ...(available(capabilities?.avatar)
-            ? [
-                {
-                  id: "avatar",
-                  label: "Change avatar",
-                  run: () =>
-                    openOverlay(
-                      {
-                        kind: "choices",
-                        title: "Choose an avatar",
-                        items: (management()?.avatar_ids ?? []).map((id) => ({
-                          id,
-                          label:
-                            id === "initial-pink"
-                              ? "Pink initial"
-                              : id === "initial-blue"
-                                ? "Blue initial"
-                                : id,
-                          run: async () => {
-                            await call(
-                              `/api/profiles/${segment(current.id)}`,
-                              "PATCH",
-                              { avatar_id: id },
-                            );
-                            await refreshProfiles();
-                            dismissOverlay();
-                          },
-                        })),
-                      },
-                      true,
-                    ),
-                },
-              ]
-            : []),
-          ...(current.can_delete && available(capabilities?.delete)
-            ? [
-                {
-                  id: "delete",
-                  label: "Delete profile",
-                  run: () =>
-                    openOverlay(
-                      {
-                        kind: "confirm",
-                        title: `Delete ${current.name}?`,
-                        items: [
-                          {
-                            id: "cancel",
-                            label: "Cancel",
-                            run: dismissOverlay,
-                          },
-                          {
-                            id: "delete",
-                            label: "Delete profile",
-                            run: async () => {
-                              await call(
-                                `/api/profiles/${segment(current.id)}`,
-                                "DELETE",
-                              );
-                              await refreshProfiles();
-                              closeOverlay();
-                            },
-                          },
-                        ],
-                      },
-                      true,
-                    ),
-                },
-              ]
-            : []),
-        ],
-      });
-    }
+    const manageProfile = createProfileManagement({current: management, request: call, refresh: refreshProfiles,
+      dialogs: {open: openOverlay, close: closeOverlay, dismiss: dismissOverlay}, prompt: edit});
     async function selectProfile(index: number) {
       const profile = management()?.profiles[index];
       if (!profile) {
