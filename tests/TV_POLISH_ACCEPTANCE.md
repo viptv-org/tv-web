@@ -40,8 +40,10 @@ image loading; a unit-test pass or high average FPS is insufficient.
       navigation labels, icons and focus treatment.
 - [ ] Improve transparent-logo sizing within a stable layout slot, preserving aspect
       ratio and avoiding layout displacement or ad hoc scaling.
-- [ ] Check native blur support and measured cost. Use a cheap supported treatment;
-      avoid expensive simulated blur when the device cannot provide it efficiently.
+- [x] Use the owner-selected public image proxy for focused-backdrop blur; verify
+      the processed image and keep filtering off the Roku client.
+- [x] Align the hero portrait preview with the profile edge and add clear vertical
+      spacing below the avatar; verify browser geometry and the physical Roku.
 - [ ] Preserve the Home rows' fixed focus anchor while replacing card teleportation
       with smooth group motion. Check vertical transitions and fast repeated input.
 - [ ] Compare implementation and device traces with the Solid TV demo's examples.

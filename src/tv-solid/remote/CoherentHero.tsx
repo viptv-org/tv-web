@@ -9,6 +9,8 @@ import { backdropScrimSource } from "./tv-artwork.generated";
 import { reducedMotion } from "./motion";
 import type { Card } from "./types";
 
+const POSTER_BOX = { x: 1584, y: 144, width: 240, height: 360 };
+
 type HeroMode = "hero" | "landscape" | "portrait" | "detail";
 type Presentation = { card: Card; background?: string; poster?: string; kind: HeroMode; logoBox: HeroLogoBox };
 type Frame = Presentation & { id: number; failed: ReadonlySet<string>; staged?: boolean };
@@ -30,7 +32,8 @@ export function createCoherentHero(source: Accessor<Card | undefined>, scope: Ac
       const old=untrack(current);
       setRetiring(old);setCurrent({...value,id:request.id,failed:new Set(failed)});setPending(undefined);
       clearTimeout(retireTimer);
-      retireTimer=setTimeout(() => setRetiring(undefined),reducedMotion() ? 0 : 160);
+      if (typeof (globalThis as any).__SolidTVRokuRenderer === "undefined")
+        retireTimer=setTimeout(() => setRetiring(undefined),reducedMotion() ? 0 : 160);
     }
     setShown(previous => {
       const card=presentationCard(previous,value.card);
@@ -67,6 +70,7 @@ export function createCoherentHero(source: Accessor<Card | undefined>, scope: Ac
     return [...(outgoing ? [outgoing] : []),...(displayed ? [displayed] : [])];
   });
   return {card:shown,frames,current:() => current()?.id,mode:() => current()?.kind,
+    retiring:() => retiring()?.id, retire:(id:number) => { if (untrack(retiring)?.id === id) setRetiring(undefined); },
     settled:(id:number,resource:string,failed=false) => gate.settled(id,resource,failed)};
 }
 
@@ -75,16 +79,26 @@ export function HeroArtwork(props: { presentation: ReturnType<typeof createCoher
   return <TvView w={1920} h={1080}>
     <KeyedFor each={props.presentation.frames()} keyOf={frame => frame.id}>{frame => {
       const id=frame().id;
+      const [root,setRoot]=createSignal<any>();
+      createEffect(() => {
+        if (typeof (globalThis as any).__SolidTVRokuRenderer === "undefined" || props.presentation.retiring() !== id) return;
+        const node=root();if (!node) return;
+        const timer=setTimeout(() => {
+          const animation=node.lng?.animation?.("alpha");
+          void (animation?.waitUntilStopped() ?? Promise.resolve()).then(() => props.presentation.retire(id));
+        },0);
+        onCleanup(() => clearTimeout(timer));
+      });
       const box=() => frame().kind === "detail" ? props.logoBox : frame().logoBox;
       const done=(name:string,failed=false) => {void Promise.resolve().then(() => props.presentation.settled(id,name,failed));};
-      return <TvView w={1920} h={1080} alpha={props.presentation.current() === id ? 1 : 0}
+      return <TvView nodeRef={setRoot} w={1920} h={1080} alpha={props.presentation.current() === id ? 1 : 0}
         transition={frame().staged ? undefined : {alpha:{duration:reducedMotion() ? 0 : 150,easing:"ease-out"}}}>
         <Show when={frame().background && !frame().failed.has("background")}>
-          <TvView w={1920} h={1080} fit="cover" preload src={imageSource(frame().background,imagePixels(1920),imagePixels(1080))}
+          <TvView w={1920} h={1080} fit="cover" preload src={imageSource(frame().background,imagePixels(1920),imagePixels(1080),"cover",frame().kind === "portrait" || frame().kind === "landscape" ? 16 : undefined)}
             onLoad={() => done("background")} onError={() => done("background",true)} />
         </Show>
         <Show when={frame().poster && !frame().failed.has("poster")}>
-          <TvView x={1520} y={96} w={280} h={420} fit="cover" preload src={imageSource(frame().poster,imagePixels(280),imagePixels(420))}
+          <TvView x={POSTER_BOX.x} y={POSTER_BOX.y} w={POSTER_BOX.width} h={POSTER_BOX.height} fit="cover" preload src={imageSource(frame().poster,imagePixels(POSTER_BOX.width),imagePixels(POSTER_BOX.height))}
             onLoad={() => done("poster")} onError={() => done("poster",true)} />
         </Show>
         <TvView x={box().x} y={box().y}>

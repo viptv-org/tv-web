@@ -63,8 +63,14 @@ export function imageSource(
   width?: number,
   height?: number,
   fit: "cover" | "inside" = "cover",
+  blur?: number,
 ): string {
   if (!url) return "";
+  const applyBlur = (parameters: URLSearchParams) => {
+    if (blur === undefined) return;
+    if (Number.isFinite(blur) && blur > 0) parameters.set("blur", String(Math.max(0.3, Math.min(1000, blur))));
+    else parameters.delete("blur");
+  };
   try {
     const source = new URL(url, location.href),
       version = imageEpoch();
@@ -80,6 +86,7 @@ export function imageSource(
       source.searchParams.delete("dpr");
       source.searchParams.set("fit", fit);
       source.searchParams.set("we", "true");
+      applyBlur(source.searchParams);
       return versioned(source.toString(), version);
     }
     const publicProxy = source.origin === location.origin && source.protocol === "https:" &&
@@ -96,6 +103,7 @@ export function imageSource(
     proxy.searchParams.set("output", "webp");
     proxy.searchParams.set("q", "65");
     proxy.searchParams.set("we", "true");
+    applyBlur(proxy.searchParams);
     return versioned(proxy.toString(), version);
   } catch {
     return url;

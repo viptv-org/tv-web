@@ -333,6 +333,12 @@ function visualNode(
 ): JSX.Element {
   const modalLayer = useContext(ModalLayerContext);
   const node = createElement(kind) as ElementNode;
+  const transitions = props.transition;
+  if (ROKU && 'children' in props && transitions &&
+    ['x','y','alpha'].some(key => key in props && (transitions === true || transitions[key]))) {
+    (node.lng as any).nativeMotionRoot = true;
+    (node.lng as any).nativeCompositorPrepared = true;
+  }
   // The browser renderer reads width/height; the native SceneGraph host's
   // RokuNode reads w/h. Keep the platform mapping in one place so the shared
   // tv-web tree does not have to fork.

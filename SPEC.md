@@ -25,7 +25,9 @@ The compact season chooser labels season zero “Specials”, initially focuses 
 regular season, and retains explicit or resumed specials. Android TV's current
 reference uses a strip; its phone/desktop surfaces use a picker. This TV-web
 chooser is an owner-scoped refinement, not a claim that Android TV uses a dropdown.
-Roku uses packaged scrims and artwork rather than simulated blur. Recovery dialogs
+Focused shelf backdrops use Gaussian blur through the existing public image proxy.
+The portrait preview is 240×360 at (1584,144), aligned to the 96px right inset with
+50px clearance below the profile avatar. Roku uses packaged scrims. Recovery dialogs
 and player busy indicators share compact, consistently padded layouts.
 
 Public Cinemeta metadata caching and optional prepared clearlogos are provided by
@@ -33,3 +35,14 @@ the companion backend change. Authenticated metadata responses retain their
 private cache policy; image and metadata preparation stay off constrained clients
 where the server supports it. TESTING.md records browser and hardware acceptance
 separately.
+
+
+## Native motion
+
+Roku scroll containers and hero opacity transitions use render-thread SceneGraph
+animations. Native groups preserve nested transforms, stationary clipping and
+logical paint order. TypeScript owns target values and lifecycle state; native
+acknowledgements complete each run. Unsupported easing/repeat modes retain the
+JavaScript driver. Hidden-renderer pause/resume and disposal also control native
+runs. Hero retirement waits for native completion. Motion layers are prepared
+when shared views mount, and coordinate caches invalidate on geometry changes.

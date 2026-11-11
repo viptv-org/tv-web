@@ -183,3 +183,33 @@ test("Home reuses bounded shelf and poster nodes across vertical reversals",asyn
     expect(current.visible).toEqual([home.rows[0].cards[column].poster]);
   }
 });
+
+test("focused hero poster aligns to the profile edge with clearance and uses a blurred proxy backdrop",async({page,baseURL})=>{
+  const fixture=await installRemoteBackend(page,baseURL!),home=fixture.bootstrap().home!;
+  const card={...fixture.card,identity:{...fixture.card.identity,id:'proxy-preview'},logo:null,
+    description:'Proxy backdrop and aligned portrait preview',poster:'https://image.tmdb.org/t/p/original/preview-poster.jpg',
+    landscape:'https://image.tmdb.org/t/p/original/preview-background.jpg'};
+  home.rows=[{...home.rows[0],id:'portrait-row',cards:[card]}];
+  const requests:URL[]=[];
+  await page.route('https://wsrv.nl/**',async route=>{
+    requests.push(new URL(route.request().url()));
+    await route.fulfill({path:referenceRoot+'/assets/3da010bb588e70c5323088b2c66658fe.jpg',contentType:'image/jpeg'});
+  });
+  await page.goto('/tv/?focusdebug=1');await expect(state(page)).toHaveAttribute('data-tv-ready','true');
+  await page.keyboard.press('ArrowDown');await expect.poll(()=>texts(page)).toContain(card.description);
+  const boxes=await page.evaluate(()=>{
+    let poster:any,avatar:any;
+    function walk(n:any){
+      if(n.isRenderable&&n.props.w===240&&n.props.h===360)poster={x:n.absX,y:n.absY,w:240,h:360};
+      if(n.isRenderable&&n.props.w===56&&n.props.h===56&&n.absX>1700)avatar={x:n.absX,y:n.absY,w:56,h:56};
+      n.children?.forEach(walk);
+    }
+    walk((window as any).__viptvRenderer.stage.root);return{poster,avatar};
+  });
+  expect(boxes.poster).toBeDefined();expect(boxes.avatar).toBeDefined();
+  expect(boxes.poster.x+boxes.poster.w).toBe(boxes.avatar.x+boxes.avatar.w);
+  expect(boxes.poster.y-boxes.avatar.y-boxes.avatar.h).toBeGreaterThanOrEqual(48);
+  expect(boxes.poster.y+boxes.poster.h).toBeLessThan(530);
+  expect(requests.some(url=>url.searchParams.get('blur')==='16'&&url.searchParams.get('w')==='1920')).toBe(true);
+  expect(requests.some(url=>url.searchParams.get('w')==='240'&&!url.searchParams.has('blur'))).toBe(true);
+});

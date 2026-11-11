@@ -18,9 +18,11 @@ import QRCode from "qrcode/lib/core/qrcode";
 import { createRokuPlayer } from "./platform/roku-player";
 import { applyCaptionAppearance, playbackStats } from "../../roku/src/roku/video";
 import { NativeSync, motionRoot, modalRoot, opacityWithin } from "./platform/native-sync";
-import { nativeClip, localNativeClip } from "./platform/native-clipping";
+import { localNativeClip } from "./platform/native-clipping";
 import { logoLayout } from "./platform/logo-layout";
 import { imageSource } from "./remote/image-source";
+import { CompositorAnimation, compositorEasing, type MotionKey, type MotionFeedback } from "../../roku/src/roku/compositor-animation";
+import { motionGroupGeometry } from "./platform/native-motion-geometry";
 import { nativePaintOrder } from "./platform/native-paint-order";
 import { modalPaintStack } from "./platform/modal-paint-stack";
 import { deviceStorage } from "../../roku/src/roku/device-storage";
@@ -153,7 +155,7 @@ type NativeRecord = {
   sync: () => void;
 };
 
-type MotionGroup = { root: any; layer: any; holder: any; clipper: any; references: number; members: NativeRecord[]; key: any; paint?: (kind: string, child: any) => void };
+type MotionGroup = { root: any; layer: any; holder: any; clipper: any; references: number; members: { node: any; holder: any }[]; parent?: MotionGroup; key: any; paint?: (kind: string, child: any) => void };
 
 const nativeRecords = new Map<any, NativeRecord>();
 const nativeNow = () => performance.now();
@@ -168,85 +170,151 @@ function applyNativeClip(holder: any, clip: number[] | false) {
   holder.flush();
 }
 
-function syncMotion(group: MotionGroup, inherited = inheritedAlpha(group.root)) {
-  const root = group.root;
-  const holder = group.holder;
-  // The viewport stays still while its child group moves. Applying this clip
-  // to each card would move the clipping rectangle with the card instead.
-  const bounds = nativeClip(root.parentNode) ?? { x: 0, y: 0, w: 1920, h: 1080 };
-  const clipper = group.clipper;
-  if (clipper.x !== bounds.x || clipper.y !== bounds.y || clipper.w !== bounds.w || clipper.h !== bounds.h) {
-    clipper.x = bounds.x;clipper.y = bounds.y;clipper.w = bounds.w;clipper.h = bounds.h;
+function syncMotion(group: MotionGroup) {
+  const holder = group.holder, clipper = group.clipper;
+  const geometry = motionGroupGeometry(group.root, group.parent?.root);
+  if (clipper.x !== geometry.clipX || clipper.y !== geometry.clipY || clipper.w !== geometry.width || clipper.h !== geometry.height) {
+    clipper.x = geometry.clipX;clipper.y = geometry.clipY;clipper.w = geometry.width;clipper.h = geometry.height;
     clipper.flush();
   }
-  applyNativeClip(clipper, [0, 0, bounds.w, bounds.h]);
-  applyNativeClip(holder, localNativeClip(root, root.parentNode));
-  const x = (Number(root.absX) || 0) - bounds.x, y = (Number(root.absY) || 0) - bounds.y;
-  const alpha = inherited * (Number(root.alpha) || 0);
+  applyNativeClip(clipper, geometry.viewport);
+  applyNativeClip(holder, geometry.localClip);
+  const { x, y, alpha } = geometry;
   if (holder.x === x && holder.y === y && holder.alpha === alpha) return;
-  holder.x = x; holder.y = y; holder.alpha = alpha;
-  holder.flush();
+  holder.x = x;holder.y = y;holder.alpha = alpha;holder.flush();
 }
 
 function registerSync(node: any) {
   nativeSync.register(node, inherited => {
-    motionGroups.get(node)?.forEach(group => syncMotion(group, inherited));
+    motionGroups.get(node)?.forEach(group => syncMotion(group));
     const record = nativeRecords.get(node);
     if (record) syncHolder(record, inherited);
   });
 }
 
-function releaseMotion(record: NativeRecord) {
-  const group = record.motion;
-  record.motion = undefined;
-  if (!group) return;
-  const index = group.members.indexOf(record);
-  if (index >= 0) group.members.splice(index, 1);
+function insertMotionMember(group: MotionGroup, member: { node: any; holder: any }, kind?: string) {
+  if (group.paint && kind) group.paint(kind, member.holder.dom);
+  else {
+    let index = 0;
+    while (index < group.members.length && nativePaintOrder(group.members[index].node, member.node) <= 0) index++;
+    insertNode(group.holder.dom, member.holder.dom, group.members[index]?.holder.dom);
+    group.members.splice(index, 0, member);
+  }
+}
+
+function releaseGroup(group: MotionGroup) {
   if (--group.references > 0) return;
-  group.holder.destroy();
-  group.clipper.destroy();
+  group.holder.destroy();group.clipper.destroy();
   const layers = motionGroups.get(group.root)!;
   layers.delete(group.key);
   if (!layers.size) {
     motionGroups.delete(group.root);
     if (!nativeRecords.has(group.root)) nativeSync.remove(group.root);
   }
+  if (group.parent) {
+    const index = group.parent.members.findIndex(member => member.holder === group.clipper);
+    if (index >= 0) group.parent.members.splice(index, 1);
+    releaseGroup(group.parent);
+  }
+}
+
+function releaseMotion(record: NativeRecord) {
+  const group = record.motion;record.motion = undefined;
+  if (!group) return;
+  const index = group.members.indexOf(record);
+  if (index >= 0) group.members.splice(index, 1);
+  releaseGroup(group);
+}
+
+function ensureMotionGroup(root: any, layer: any, key: any): MotionGroup {
+  let layers = motionGroups.get(root);
+  if (!layers) motionGroups.set(root, layers = new Map());
+  const existing = layers.get(key);
+  if (existing) return existing;
+  const parentRoot = motionRoot(root.parentNode);
+  const parent = parentRoot ? ensureMotionGroup(parentRoot, layer, key) : undefined;
+  const holder = holderAt(root, Number(root.w) || 1, Number(root.h) || 1, true);
+  const clipper = holderAt(root, 1920, 1080);
+  const group: MotionGroup = { root, layer, key, holder, clipper, parent, references: 0, members: [],
+    paint: layer === modalLayer ? modalPaintStack(holder.dom, () => createElement("group"), insertNode) : undefined };
+  if (parent) { parent.references++;insertMotionMember(parent, {node:root,holder:clipper}); }
+  else insertNode(layer, clipper.dom);
+  insertNode(clipper.dom, holder.dom);
+  layers.set(key, group);registerSync(root);syncMotion(group);
+  return group;
 }
 
 function adoptMotion(record: NativeRecord, root: any, key = record.layer) {
   if (!root && !record.motion) return;
   if (record.motion?.root === root && record.motion?.key === key) return;
-  const previous = record.motion;
   if (root) {
-    let layers = motionGroups.get(root);
-    if (!layers) motionGroups.set(root, layers = new Map());
-    let group = layers.get(key);
-    if (!group) {
-      const holder = holderAt(root, Number(root.w) || 1, Number(root.h) || 1);
-      const clipper = holderAt(root, 1920, 1080);
-      insertNode(record.layer, clipper.dom, previous?.clipper.dom ?? record.holder.dom);
-      insertNode(clipper.dom, holder.dom);
-      group = { root, layer: record.layer, key, holder, clipper, references: 0, members: [],
-        paint: record.layer === modalLayer ? modalPaintStack(holder.dom, () => createElement("group"), insertNode) : undefined };
-      layers.set(key, group);
-      registerSync(root);
-      syncMotion(group);
-    }
-    group.references++;
-    if (group.paint) group.paint(record.kind, record.holder.dom);
-    else {
-      let index = 0;
-      while (index < group.members.length && nativePaintOrder(group.members[index].node, record.node) <= 0) index++;
-      insertNode(group.holder.dom, record.holder.dom, group.members[index]?.holder.dom);
-      group.members.splice(index, 0, record);
-    }
-    releaseMotion(record);
-    record.motion = group;
+    const group = ensureMotionGroup(root, record.layer, key);
+    group.references++;insertMotionMember(group, record, record.kind);
+    releaseMotion(record);record.motion = group;
   } else {
-    insertNode(record.layer, record.holder.dom, previous?.clipper.dom);
+    insertNode(record.layer, record.holder.dom, record.motion?.clipper.dom);
     releaseMotion(record);
   }
 }
+
+(globalThis as any).__viptvCanNativeAnimate = (node: any, key: string, settings: any) =>
+  !!compositorEasing(settings) && ['x', 'y', 'alpha'].includes(key) && !!motionGroups.get(node)?.size;
+
+(globalThis as any).__viptvCreateNativeAnimation = (node: any, key: string, target: number, settings: any) => {
+  const easing = compositorEasing(settings);
+  if (!easing || !node.children?.length || !['x', 'y', 'alpha'].includes(key)) return;
+  node.nativeMotionRoot = true;
+  // Adopt before changing the model target so the compositor retains its live start.
+  const walk = (current: any) => {
+    const record = nativeRecords.get(current);
+    if (record) syncHolder(record);
+    for (const child of current.children ?? []) walk(child);
+  };
+  if (!node.nativeCompositorPrepared) { walk(node);node.nativeCompositorPrepared = true; }
+  let groups = [...(motionGroups.get(node)?.values() ?? [])];
+  if (!groups.length) return;
+  const property = key as MotionKey;
+  let alive = true, activeSerial = 0;
+  const unlock = () => { for (const group of groups) group.holder.nativeMotionOwned?.delete(property); };
+  const sink = {
+    prepare() { groups = [...(motionGroups.get(node)?.values() ?? [])];for (const group of groups) { group.holder.nativeMotionOwned ??= new Set();group.holder.nativeMotionOwned.add(property); } },
+    send(action: any, serial: number, _to: number, duration: number, ease: string, reply: (feedback: MotionFeedback) => void) {
+      activeSerial = serial;
+      const waiting = new Set(groups);
+      let answered = false, anyPaused = false;
+      const modelValue = Number(node[property]);
+      groups.forEach(group => {
+        syncMotion(group);
+        const nativeTarget = Number(group.holder[property]);
+        const factor = property === 'alpha' ? (group.parent ? opacityWithin(node.parentNode, group.parent.root) : inheritedAlpha(node)) :
+          property === 'x' && node.rtlResolved ? -1 : 1;
+        const event = 'on' + property[0].toUpperCase() + property.slice(1) + 'State';
+        setProp(group.holder.dom, event, (feedback: MotionFeedback) => {
+          if (!alive || answered || serial !== activeSerial || feedback.serial !== serial || group.holder.destroyed) return;
+          if (feedback.state !== 'stopped' && feedback.state !== 'paused') return;
+          if (action !== 'pause' && feedback.state === 'paused') return;
+          anyPaused ||= feedback.state === 'paused';waiting.delete(group);
+          if (waiting.size) return;
+          answered = true;
+          const value = factor ? modelValue + (feedback.value - nativeTarget) / factor : modelValue;
+          const state = anyPaused ? 'paused' : 'stopped';
+          if (state === 'stopped') unlock();
+          reply({ ...feedback, state, value });
+        });
+        setProp(group.holder.dom, property + 'Request', { serial, action, to: nativeTarget, duration: duration / 1000, easing: ease });
+      });
+    },
+    dispose() {
+      alive = false;
+      for (const group of groups) if (!group.holder.destroyed)
+        setProp(group.holder.dom, property + 'Request', {serial:-1,action:'stop'});
+      unlock();
+    },
+  };
+  return new CompositorAnimation(Number(node[property]), target, Math.max(0, settings.duration ?? 0), easing,
+    value => { if (!node.destroyed) { node[property] = value;node.requestRender(); } }, sink);
+};
+
 const nativeFonts = new Map<string, any>();
 let backdropLayer: any = null;
 let backdropScrimLayer: any = null;
@@ -306,9 +374,9 @@ function ensureLayers() {
   return root;
 }
 
-function holderAt(node: any, w: number, h: number): any {
+function holderAt(node: any, w: number, h: number, compositorHolder = false): any {
   const renderer = (globalThis as any).__rokuRenderer || (globalThis as any).__SolidTVRokuRenderer;
-  const holder = renderer.createNode({ x: 0, y: 0, w, h });
+  const holder = renderer.createNode({ x: 0, y: 0, w, h, compositorHolder });
   holder.detachedVisualHolder = true;
   holder.parent = null;
   return holder;

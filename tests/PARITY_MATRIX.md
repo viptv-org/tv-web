@@ -549,3 +549,13 @@ Implementation `4cf36237e70b387aacad8a3c5521d5f2ee9eaf9e`;
 | TypeScript runtime | SDK in-memory component testing is available; native boundary tests pass | Hermes CPU profiling works on the real device; in-memory tests do not establish firmware or GPU parity |
 
 | Home shelf/card reuse | Seven-row reversal plus horizontal slot wrap retain shelf/poster IDs and display changed artwork; all seven polish cases pass | Corrected native background/poster ordering inspected; ten-key timer maximum remains 795 ms, so motion acceptance is open |
+
+
+## Native motion and preview artwork
+
+| Area | Automated evidence | Physical Roku evidence / limits |
+|---|---|---|
+| Scroll and hero fade compositor | Native completion, pause/resume, retarget, stale acknowledgement, disposal and nested geometry cases pass | Positions and opacity continue during a measured 1000 ms JS block; presented FPS and overall input latency remain unqualified |
+| Proxy backdrop blur | URL effect preservation and private-image transport cases pass; live proxy returns processed image | Softened backdrop and sharp poster inspected |
+| Hero portrait placement | Right edge matches profile avatar, at least 48px top clearance, bottom above shelf | Updated 240×360 preview at (1584,144) inspected |
+| Shared browser behavior | Eight polish cases pass, including recycled artwork identity and fixed focus | Physical PS4 follow-up remains separate |

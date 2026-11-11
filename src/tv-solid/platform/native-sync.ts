@@ -9,13 +9,12 @@ type NativeNode = {
 };
 
 export function motionRoot(node: NativeNode): NativeNode | undefined {
-  let root: NativeNode | undefined;
   let current: NativeNode | null | undefined = node;
   while (current) {
-    if (current.nativeMotionRoot) root = current;
+    if (current.nativeMotionRoot) return current;
     current = current.parentNode;
   }
-  return root;
+  return undefined;
 }
 
 /** A separate paint scope keeps each modal above the complete preceding one. */

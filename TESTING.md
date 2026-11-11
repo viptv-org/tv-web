@@ -3800,3 +3800,44 @@ gaps over 100 ms. These exploratory runs do not prove improved worst-case latenc
 or smooth presentation. A subsequent Hermes profile still shows ancestor position
 and clipping work prominently. Render-thread animation, rapid-input latency and
 physical intermediate-frame cadence remain open; this is not performance acceptance.
+
+
+## Render-thread motion and proxy artwork
+
+The owner reported continued choppiness after the earlier pooling/cache builds.
+Those builds do not satisfy motion acceptance. Scroll positions and hero fades
+now use native SceneGraph Animation nodes through a small motion-group adapter;
+JavaScript does not advance these animations frame by frame. Nested groups retain
+local clipping and opacity, callbacks are fenced by run serial, and replaced runs
+are disposed before their delayed acknowledgements can publish. Initial view
+mounting prepares motion layers before navigation. A native fade acknowledgement
+retires its outgoing artwork frame.
+
+Physical proof deliberately blocked the Program/JavaScript thread for 1000 ms.
+During that interval, native scene queries showed the three shelf layers advancing
+in lockstep through y≈122,98,73. A separate opacity run continued through roughly
+82%,70%,59%. Both restored their original values. This proves independence from
+the blocked JavaScript thread; it does not measure presented FPS or certify all
+input latency. A focus-normalized navigation probe still measured about 60.53 ms
+p95 and 938.47 ms maximum timer delay. Earlier exploratory probes did not record
+initial focus and are not controlled before/after comparisons. Rapid reversals
+from confirmed Home hero focus settle with all native controllers stopped.
+Overall responsiveness and the remaining physical playback/platform scenarios
+remain open.
+
+The owner explicitly selected proxy blur. Focused shelf backdrops request
+`blur=16`; posters and logos retain their normal image requests. Existing sizing
+passes preserve the effect without nesting proxy URLs. Authenticated image URLs
+retain their direct transport. A live public proxy request returned HTTP 200 and
+the processed image. This follows the [proxy blur API](https://wsrv.nl/docs/adjustment#blur-blur).
+The physical Roku shows the softened backdrop with a sharp portrait preview.
+The preview's right edge aligns with the profile avatar; its 50px top clearance
+and bottom above the shelf are checked in browser geometry and inspected on Roku.
+
+Validation: browser production build, application typecheck, native VIPTV package
+build, 245 shared tests, 33 native tests and all eight polish browser cases pass.
+The SolidTV demo native host has the common coordinate cache, native lifecycle
+support and motion-group component mirrored locally; its build and all 93 native
+host unit tests pass. The demo's own UI still needs compositor wiring and physical
+qualification. No production/beta server rollout or new playback qualification is
+included in this checkpoint.

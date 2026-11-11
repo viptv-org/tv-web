@@ -58,3 +58,17 @@ it("resizes the known public Simkl proxy while leaving account images private", 
       expect(imageSource(url,255)).toBe(url);
   } finally {vi.unstubAllGlobals();}
 });
+
+
+it("blurs public backdrops at the proxy and preserves blur through native sizing", () => {
+  const source="https://image.tmdb.org/t/p/original/backdrop.jpg";
+  const blurred=new URL(imageSource(source,1920,1080,"cover",16));
+  expect(blurred.hostname).toBe("wsrv.nl");expect(blurred.searchParams.get("blur")).toBe("16");
+  expect(blurred.searchParams.get("url")).toBe(source);
+  const native=new URL(imageSource(blurred.toString(),1920,1080));
+  expect(native.searchParams.get("blur")).toBe("16");expect(native.searchParams.get("url")).toBe(source);
+  expect(new URL(imageSource(source,240,360)).searchParams.has("blur")).toBe(false);
+  expect(new URL(imageSource(blurred.toString(),1920,1080,"cover",0)).searchParams.has("blur")).toBe(false);
+  const privateImage=new URL("/api/profiles/1/avatar?signature=private",location.href).toString();
+  expect(imageSource(privateImage,240,360,"cover",16)).toBe(privateImage);
+});

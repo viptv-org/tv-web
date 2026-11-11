@@ -5,6 +5,8 @@
  */
 
 import { Events } from './events';
+import type { CompositorAnimation } from './compositor-animation';
+type AnimationEntry = Animation | CompositorAnimation;
 
 export type Easing = (t: number) => number;
 export type AnimationControllerState = 'scheduled' | 'running' | 'paused' | 'stopped';
@@ -274,12 +276,12 @@ export class Animation extends Events {
 
 export class AnimationController extends Events {
   state: AnimationControllerState = 'scheduled';
-  private entries: Animation[];
+  private entries: AnimationEntry[];
   private settings: AnimationSettings;
   private stopPromise: Promise<void> | null = null;
   private resolveStop: (() => void) | null = null;
 
-  constructor(entries: Animation[], settings: AnimationSettings = {}) {
+  constructor(entries: AnimationEntry[], settings: AnimationSettings = {}) {
     super();
     this.entries = entries;
     this.settings = settings;
@@ -292,8 +294,9 @@ export class AnimationController extends Events {
 
   start(): this {
     if (this.state === 'stopped') return this;
+    const paused = this.state === 'paused';
     this.state = 'running';
-    for (let i = 0; i < this.entries.length; i++) this.entries[i].start();
+    for (let i = 0; i < this.entries.length; i++) { if (paused) this.entries[i].resume();else this.entries[i].start(); }
     if (this.entries.length === 0 || this.entries.every((entry) => entry.done)) this.finish();
     return this;
   }
@@ -321,8 +324,8 @@ export class AnimationController extends Events {
     return this;
   }
   retarget(value: number): this {
-    for (let i = 0; i < this.entries.length; i++) this.entries[i].retarget(value);
     this.state = 'running';
+    for (let i = 0; i < this.entries.length; i++) this.entries[i].retarget(value);
     return this;
   }
   waitUntilStopped(): Promise<void> {
@@ -334,6 +337,7 @@ export class AnimationController extends Events {
     }
     return this.stopPromise;
   }
+  get nativeClock(): boolean { return this.entries.some(entry => !!(entry as CompositorAnimation).nativeClock); }
   get progress(): number {
     return this.entries.length > 0 ? 1 : 0;
   }
@@ -352,26 +356,49 @@ export class AnimationController extends Events {
 }
 
 interface Track {
-  animation: Animation;
+  animation: AnimationEntry;
   remove: boolean;
 }
 
 export class Animator {
   private tracks = new Map<any, Map<string, Track>>();
-  paused = false;
+  private _paused = false;
+  private pausedNative = new Set<CompositorAnimation>();
+  get paused() { return this._paused; }
+  set paused(value: boolean) {
+    if (value === this._paused) return;
+    this._paused = value;
+    if (value) this.tracks.forEach(map => map.forEach(track => {
+      const animation = track.animation as CompositorAnimation;
+      if (animation.nativeClock && animation.running) { this.pausedNative.add(animation);animation.pause(); }
+    }));
+    else {
+      this.pausedNative.forEach(animation => { if (!animation.done) animation.resume(); });
+      this.pausedNative.clear();
+    }
+  }
+
+  private registerNativePause(animation: CompositorAnimation) {
+    animation.on('start', () => {
+      if (this.paused && animation.running) { this.pausedNative.add(animation);animation.pause(); }
+    });
+  }
 
   create(node: any, props: any, settings: AnimationSettings, wake: () => void): AnimationController {
     const map = this.tracks.get(node) || new Map<string, Track>();
     this.tracks.set(node, map);
-    const entries: Animation[] = [];
+    const entries: AnimationEntry[] = [];
     for (const key in props) {
       const target = props[key];
       if (typeof target !== 'number') continue;
       const existing = map.get(key);
-      if (existing) existing.animation.stop();
+      if (existing) {
+        existing.animation.stop();
+        if ((existing.animation as CompositorAnimation).nativeClock) existing.animation.remove();
+      }
       const current = typeof node[key] === 'number' ? node[key] : 0;
       const isColor = isColorKey(key);
-      const animation = new Animation({
+      const animation = (globalThis as any).__viptvCreateNativeAnimation?.(node, key, target, settings) as CompositorAnimation | undefined ?? new Animation({
         // Colours are interpolated channel-by-channel. Treating a packed
         // 0xRRGGBBAA value as one number produced random low bytes on the Roku
         // JS engine (large-number arithmetic), so the intermediate fills
@@ -391,6 +418,7 @@ export class Animator {
           node.requestRender();
         },
       });
+      if ((animation as CompositorAnimation).nativeClock) this.registerNativePause(animation as CompositorAnimation);
       map.set(key, { animation, remove: !!settings.remove });
       entries.push(animation);
     }
@@ -416,7 +444,7 @@ export class Animator {
     if (this.paused) return;
     this.tracks.forEach((map, node) => {
       map.forEach((track, key) => {
-        if (track.animation.done) return;
+        if (track.animation.done || (track.animation as CompositorAnimation).nativeClock) return;
         const alive = track.animation.tick(delta);
         if (!alive) {
           if (track.remove) {
@@ -432,7 +460,7 @@ export class Animator {
   removeFor(node: any) {
     const map = this.tracks.get(node);
     if (map) {
-      map.forEach((track) => track.animation.remove());
+      map.forEach((track) => { this.pausedNative.delete(track.animation as CompositorAnimation);track.animation.remove(); });
       this.tracks.delete(node);
     }
   }
@@ -440,13 +468,14 @@ export class Animator {
   get running(): boolean {
     for (const map of this.tracks.values()) {
       for (const track of map.values()) {
-        if (track.animation.running) return true;
+        if (track.animation.running && !(track.animation as CompositorAnimation).nativeClock) return true;
       }
     }
     return false;
   }
 
   clear() {
-    this.tracks.clear();
+    this.tracks.forEach(map => map.forEach(track => track.animation.remove()));
+    this.tracks.clear();this.pausedNative.clear();
   }
 }
