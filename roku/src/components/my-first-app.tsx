@@ -2,12 +2,13 @@ import { defineAnchorNode } from '@roku-sdk/rsg-ts';
 import { useLaunchConfig } from '@roku-sdk/rsg-ts/runtime';
 import { KeyHandler } from '@roku-sdk/components';
 import { createElement, setProp, insertNode, onMount, onCleanup } from '@roku-sdk/solid';
-import { Config } from '@solidtv/solid';
+import type { RendererFactory } from '@solidtv/solid';
 import { createEffect } from 'solid-js';
 import { SceneGraphRenderer } from '../roku/renderer';
 import { installBrowserServices, dispatchNativeKey } from '../roku/browser-services';
 import { loadBundledFonts, loadFace, measureWrapText, resolveFontUri } from '../roku/fonts';
 import { postRokuTask } from '../roku/worker-task';
+import { installSolidHost } from '../roku/solid-host';
 
 // Replaced by the host build with the shared demo entry point. Keeping it as
 // an identifier lets the host tsconfig stay scoped to this package while the
@@ -18,11 +19,6 @@ declare const SOLIDTV_SHARED_ENTRY: string;
 // calls createRenderer during its own module evaluation, which can run before
 // the component setup callback on a cold launch.
 (globalThis as any).__SolidTVRokuRenderer = SceneGraphRenderer;
-
-// The focus manager calls preventDefault() only when this is enabled. The Roku
-// KeyHandler uses the return value to decide whether the Scene should handle
-// the key; without this an unhandled Back could never exit the channel.
-Config.preventDefaultOnHandledKeys = true;
 
 /**
  * Roku host for the shared SolidTV demo. The SceneGraph group is the app root;
@@ -90,6 +86,8 @@ export default defineAnchorNode(
       console.log('SOLIDTV_DEMO onMount');
       installBrowserServices();
       try {
+        await installSolidHost((settings, rootId) =>
+          new SceneGraphRenderer(settings, rootId) as unknown as ReturnType<RendererFactory>);
         // Start font publication in parallel with the shared app import. The
         // font-version reflow corrects any first-frame metrics; waiting for
         // all faces made the dev-channel launch much slower without changing
