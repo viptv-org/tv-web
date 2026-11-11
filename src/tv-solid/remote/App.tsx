@@ -139,6 +139,11 @@ import { createHeroCycle } from "./hero-cycle-controller";
 import { createIdleScreenSaver } from "./idle-screen-saver";
 import { createTextKeyboard } from "./text-keyboard";
 import { createHeldSelect } from "./held-select";
+import { createSettingsNavigation } from "./navigation/settings";
+import { createProfilesNavigation } from "./navigation/profiles";
+import { createCalendarNavigation } from "./navigation/calendar";
+import { createDetailNavigation } from "./navigation/detail";
+import { createPlayerNavigation } from "./navigation/player";
 import {
   cardKey,
   type Bootstrap,
@@ -1100,7 +1105,6 @@ export function createRemoteTvApp(
       });
     });
     const [timelineFocused, setTimelineFocused] = createSignal(true);
-    let lastPlayerTool = 1;
     createEffect(() => {
       const count = playerButtons().length;
       if (screen() === "player" && !overlay() && choice() >= count)
@@ -3615,7 +3619,7 @@ export function createRemoteTvApp(
       setError("");
       setPlaybackError("");
       setTimelineFocused(true);
-      lastPlayerTool = 1;
+      playerNavigation.reset();
       setActiveSource(source);
       setActiveAction(current);
       setActiveChannel(sourceChannel());
@@ -4727,6 +4731,24 @@ export function createRemoteTvApp(
         applyBootstrap(await api.selectProfile(profile.id, scope.signal));
       });
     }
+    const navigationFocus = { zone, column, setZone, setColumn };
+    const navigateSettings = createSettingsNavigation({ focus: navigationFocus, tab: settingsTab,
+      tabCount: settingsTabs.length, items: settingsItems, load: tab => { void loadSettings(tab, scope.signal).catch(fail); }, fail });
+    const navigateProfiles = createProfilesNavigation({ focus: navigationFocus,
+      count: () => management()?.profiles.length ?? 0, canCreate: () => available(management()?.capabilities.create), canManage: canManageProfiles });
+    const navigateCalendar = createCalendarNavigation({ focus: navigationFocus,
+      days: {index: calendarDay, set: setCalendarDay, count: () => calendarDaysList().length},
+      entries: {index: calendarEntry, set: setCalendarEntry, count: () => calendarDayEntries().length}, navIndex: () => navIndex("calendar") });
+    const navigateDetail = createDetailNavigation({ focus: navigationFocus,
+      season: {index: seasonIndex, count: () => detail()?.seasons.length ?? 0},
+      episodes: {enabled: detailHasEpisodes, count: () => detailEpisodes().length, cursor: detailCursor},
+      recommendations: () => detail()?.recommendations.length ?? 0, remembered: region => detailFocus.resolve(detailRow(region)),
+      paging: {move: moveToItem, more: () => { void more(); }} });
+    const playerNavigation = createPlayerNavigation({
+      selection: {index: choice, set: setChoice, timeline: timelineFocused, setTimeline: setTimelineFocused},
+      timeline: {seeking, allowed: () => playerActions().seek, duration: () => snapshot()?.time.durationSeconds,
+        position: () => snapshot()?.time.positionSeconds ?? 0, preview: seek, setPreview: setSeek},
+      controls: {count: () => playerButtons().length, show: () => { setShowControls(true); }, activity: hideControls} });
     function move(dx: number, dy: number) {
       rememberContentFocus();
       rememberDetailFocus();
@@ -4847,61 +4869,8 @@ export function createRemoteTvApp(
           );
         return;
       }
-      if (screen() === "player") {
-        if (seeking()) return;
-        setShowControls(true);
-        hideControls();
-        if (dx && !timelineFocused()) {
-          setChoice((i) =>
-            Math.max(0, Math.min(playerButtons().length - 1, i + dx)),
-          );
-          lastPlayerTool = choice();
-        } else if (dx && playerActions().seek) {
-          const duration = Number(snapshot()?.time.durationSeconds);
-          const target =
-            (seek() ?? snapshot()?.time.positionSeconds ?? 0) + dx * 10;
-          setSeek(
-            Math.max(
-              0,
-              Number.isFinite(duration) && duration > 0
-                ? Math.min(duration, target)
-                : target,
-            ),
-          );
-        }
-        if (dy < 0 && timelineFocused()) {
-          setSeek(undefined);
-          setTimelineFocused(false);
-          setChoice(Math.min(lastPlayerTool, playerButtons().length - 1));
-        }
-        if (dy > 0 && !timelineFocused()) {
-          lastPlayerTool = choice();
-          setTimelineFocused(true);
-          setChoice(0);
-        }
-        return;
-      }
-      if (screen() === "profiles") {
-        if (dy > 0) {
-          if (canManageProfiles()) setZone("profile-manage");
-          return;
-        }
-        if (dy < 0) {
-          setZone("profiles");
-          return;
-        }
-        setColumn((i) =>
-          Math.max(
-            0,
-            Math.min(
-              (management()?.profiles.length ?? 0) -
-                (available(management()?.capabilities.create) ? 0 : 1),
-              i + dx,
-            ),
-          ),
-        );
-        return;
-      }
+      if (screen() === "player") { playerNavigation.move(dx, dy); return; }
+      if (screen() === "profiles") { navigateProfiles(dx, dy); return; }
       if (zone() === "nav") {
         setColumn((i) => Math.max(0, Math.min(navs().length - 1, i + dx)));
         if (dy > 0) {
@@ -4939,117 +4908,9 @@ export function createRemoteTvApp(
         }
         return;
       }
-      if (screen() === "settings") {
-        if (zone() === "settings-nav") {
-          if (dy < 0 && settingsTab() === 0) return;
-          if (dy) {
-            const next = Math.max(
-              0,
-              Math.min(settingsTabs.length - 1, settingsTab() + dy),
-            );
-            void loadSettings(next, scope.signal).catch(fail);
-          }
-          if (dx > 0) {
-            setZone("settings-content");
-            setColumn(0);
-          }
-        } else {
-          // Inline display controls (swatches, toggles) own Left/Right while
-          // focused; every adjustment is a confirmed server write.
-          const item = settingsItems()[column()];
-          if (dx && item?.cycle) {
-            void Promise.resolve(item.cycle(dx)).catch(fail);
-            return;
-          }
-          if (dx < 0) setZone("settings-nav");
-          setColumn((i) =>
-            Math.max(0, Math.min(settingsItems().length - 1, i + dy)),
-          );
-        }
-        return;
-      }
-      if (screen() === "detail" && zone() === "seasons") {
-        setColumn(seasonIndex());
-        if (dy < 0) {
-          setZone("hero");
-          setColumn(0);
-        }
-        if (dy > 0) {
-          setZone("episodes");
-          setColumn(detailFocus.resolve(detailRow("episodes")));
-        }
-        return;
-      }
-      if (screen() === "calendar") {
-        if (zone() === "calendar-days") {
-          const count = calendarDaysList().length;
-          if (dx) {
-            setCalendarDay((i) => Math.max(0, Math.min(count - 1, i + dx)));
-            setCalendarEntry(0);
-          }
-          if (dy > 0 && calendarDayEntries().length) {
-            setZone("calendar-list");
-            setCalendarEntry(0);
-          }
-          if (dy < 0) {
-            setZone("nav");
-            setColumn(navIndex("calendar"));
-          }
-        } else if (zone() === "calendar-list") {
-          if (dy < 0 && calendarEntry() === 0) setZone("calendar-days");
-          else if (dy)
-            setCalendarEntry((i) =>
-              Math.max(
-                0,
-                Math.min(calendarDayEntries().length - 1, i + dy),
-              ),
-            );
-          else if (dx > 0) setZone("calendar-watch");
-        } else if (zone() === "calendar-watch") {
-          if (dx < 0 || dy < 0) setZone("calendar-list");
-        }
-        return;
-      }
-      if (screen() === "detail" && zone() === "episodes") {
-        if (dy < 0) {
-          setZone(detail()?.seasons.length ? "seasons" : "hero");
-          setColumn(seasonIndex());
-          return;
-        }
-        if (
-          dy > 0 &&
-          detailHasEpisodes() &&
-          detail()?.recommendations.length
-        ) {
-          setZone("recommendations");
-          setColumn(detailFocus.resolve(detailRow("recommendations")));
-          return;
-        }
-        const items = detailHasEpisodes()
-          ? detailEpisodes()
-          : (detail()?.recommendations ?? []);
-        moveToItem(
-          column() + dx,
-          items.length,
-          detailHasEpisodes() ? detailCursor() : undefined,
-        );
-        if (column() >= items.length - 4) void more();
-        return;
-      }
-      if (screen() === "detail" && zone() === "recommendations") {
-        if (dy < 0) {
-          setZone("episodes");
-          setColumn(detailFocus.resolve(detailRow("episodes")));
-          return;
-        }
-        setColumn((i) =>
-          Math.max(
-            0,
-            Math.min((detail()?.recommendations.length ?? 1) - 1, i + dx),
-          ),
-        );
-        return;
-      }
+      if (screen() === "settings") { navigateSettings(dx, dy); return; }
+      if (screen() === "detail" && navigateDetail(dx, dy)) return;
+      if (screen() === "calendar") { navigateCalendar(dx, dy); return; }
       if (zone() === "hero") {
         setHeroAction((i) =>
           Math.max(0, Math.min(screen() === "home" ? 2 : 1, i + dx)),
