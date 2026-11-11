@@ -114,8 +114,6 @@ diagnostics, not current LG22 outcomes. Physical LG/Samsung codecs, audible
 output, DRM, mediaOption, installed-state persistence, firmware lifecycle,
 performance and real remote input remain unqualified.
 
-The existing Live-empty/source-hint follow-up remains failed in this worktree:
-four Live-empty cases stop on Anime because their fixed three-Right navigation
-sequence no longer reaches Live; two source-hint cases open the drawer but do
-not observe the injected source label, so hint absence is not reached. Their
-assertions remain unchanged. These results are not counted as platform passes.
+The shared UI audit corrected Live-empty route navigation and source-hint fixture
+provider fields. Their focused cases pass with the original behavior assertions;
+they are separate from the platform media results above.

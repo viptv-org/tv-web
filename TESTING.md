@@ -37,9 +37,8 @@ English cue. Track modes, active cue contents and that visible cue are verified;
 this is not a complete caption-style pixel sweep. Physical LG/Samsung
 codecs, audible output, DRM, firmware lifecycle and remote behavior remain
 unqualified. Earlier LG26/bitmap-disable diagnostics are not current LG22 passes.
-The four existing Live-empty cases stop on Anime through stale
-fixed navigation; two source-hint cases fail before their hint assertion.
-Assertions are retained. Commands, limits and official sources:
+Live-empty and source-hint fixtures now navigate by route identity and use the
+canonical provider fields; their focused acceptance cases pass. Commands, limits and official sources:
 [platform qualification](platform/QUALIFICATION.md).
 
 # Core-owned provider-first discovery
