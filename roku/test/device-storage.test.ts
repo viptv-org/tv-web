@@ -12,9 +12,12 @@ it('sends scoped native operations, including every repeated clear', async () =>
   const values = new Map<string, string>();
   fake.post.mockImplementation(request => ({ result: Promise.resolve().then(() => {
     const key = request.section + '/' + request.key;
-    if (request.action === 'load') return values.get(key) ?? null;
+    if (request.action === 'load') {
+      const value = values.get(key);
+      return value === 'null' ? null : value ?? null;
+    }
     if (request.action === 'save') values.set(key, request.value);
-    else values.delete(key);
+    else values.set(key, 'null');
     return null;
   }) }));
   const session = deviceStorage('viptv-session', 'tokens');
@@ -23,6 +26,8 @@ it('sends scoped native operations, including every repeated clear', async () =>
   expect(await deviceStorage('viptv-session', 'tokens').load()).toBe('opaque-session');
   await session.clear(); await session.clear();
   expect(await session.load()).toBeNull();
+  expect(values.get('viptv-session/tokens')).toBe('null');
+  expect([...values.values()]).not.toContain('opaque-session');
   expect(await settings.load()).toBe('opaque-settings');
   expect(fake.post.mock.calls.filter(([request]) => request.action === 'clear')).toHaveLength(2);
   expect(fake.post).toHaveBeenCalledWith({op:'storage',action:'save',section:'viptv-session',key:'tokens',value:'opaque-session'}, {timeoutMs:5000});
@@ -48,6 +53,29 @@ it('permits a clear retry after an acknowledged native flush failure', async () 
   await expect(port.save('opaque')).rejects.toThrow('could not be saved');
   await port.clear();
   expect(fake.post.mock.calls.map(([request]) => request.action)).toEqual(['save','clear']);
+});
+
+it('retries a failed clear and preserves legacy records while empty records load as absent', async () => {
+  const { deviceStorage } = await import('../src/roku/device-storage');
+  const legacy = JSON.stringify({accessToken:'old-access',refreshToken:'old-refresh',sessionId:'legacy'});
+  let physical = legacy;
+  let failClear = true;
+  let clears = 0;
+  fake.post.mockImplementation(request => ({result:Promise.resolve().then(() => {
+    if (request.action === 'load') return physical === 'null' ? null : physical;
+    expect(request.action).toBe('clear'); clears++;
+    if (failClear) { failClear = false; throw new RokuTaskResponseError('Device settings could not be saved.'); }
+    physical = 'null'; return null;
+  })}));
+  const port = deviceStorage('viptv-session','tokens');
+  expect(await port.load()).toBe(legacy);
+  await expect(port.clear()).rejects.toThrow('could not be saved');
+  expect(physical).toBe(legacy);
+  await port.clear(); await port.clear();
+  expect(physical).toBe('null');
+  expect(physical).not.toMatch(/access|refresh|legacy/);
+  expect(await port.load()).toBeNull();
+  expect(clears).toBe(3);
 });
 
 it('quarantines an uncertain timeout so a late save cannot race a later clear', async () => {

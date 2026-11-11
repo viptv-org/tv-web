@@ -109,22 +109,25 @@ function storageOperation(request as Object) as Object
     if action = "load" then
         value = invalid
         if section.Exists(key) then value = section.Read(key)
+        if value <> invalid then
+            if value = "null" then value = invalid
+        end if
         return { ok: true, result: value }
     else if action = "save" then
         if not section.Write(key, request.value) then
             return { ok: false, error: "Device settings could not be saved." }
         end if
     else if action = "clear" then
-        if section.Exists(key) then
-            if not section.Delete(key) then
-                return { ok: false, error: "Device settings could not be removed." }
-            end if
+        ' Keep a neutral record: removing the final key restored old credentials
+        ' on the qualified device after reboot. Overwrites survived that boundary.
+        if not section.Write(key, "null") then
+            return { ok: false, error: "Device settings could not be removed." }
         end if
     else
         return { ok: false, error: "Invalid device storage operation." }
     end if
 
-    ' Flush even an already-absent key: a prior delete may only be visible in RAM.
+    ' Every clear, including a repeated clear, must persist its neutral record.
     if not section.Flush() then
         return { ok: false, error: "Device settings could not be saved." }
     end if
@@ -132,8 +135,10 @@ function storageOperation(request as Object) as Object
         if not section.Exists(key) or section.Read(key) <> request.value then
             return { ok: false, error: "Device settings could not be verified." }
         end if
-    else if section.Exists(key) then
-        return { ok: false, error: "Device settings could not be removed." }
+    else
+        if not section.Exists(key) or section.Read(key) <> "null" then
+            return { ok: false, error: "Device settings could not be removed." }
+        end if
     end if
     return { ok: true, result: invalid }
 end function
