@@ -54,6 +54,7 @@ import { SourceOptionsMenu } from "./source-picker/SourceOptionsMenu";
 import { SourceHeading } from "./source-picker/SourceHeading";
 import { SourceFilters } from "./source-picker/SourceFilters";
 import { SourceList } from "./source-picker/SourceList";
+import { createPairingFlow } from "./session/pairing";
 import { createRevisionPoller } from "./session/revisions";
 import { createLiveMenu } from "./menus/live";
 import { createCardMenu } from "./menus/card";
@@ -80,9 +81,6 @@ import { presentationCard, presentationKey } from "./presentation-card";
 import {
   channelKey,
   edgeRequest,
-  joinChannelWindow,
-  pageRequest,
-  samePageRequest,
   type PageDirection
 } from "./channelWindow";
 import { trackLabel } from "./track-label";
@@ -95,7 +93,6 @@ import {
   RemoteTvApi,
   lookupSelector,
   RemoteError,
-  delay,
   query,
   segment,
   type AccountIdentity
@@ -136,6 +133,9 @@ import { createIdleScreenSaver } from "./idle-screen-saver";
 import { createTextKeyboard } from "./text-keyboard";
 import { createHeldSelect } from "./held-select";
 import { createLibraryControls } from "./library/controls";
+import { createChannelRefresh } from "./paging/channel-refresh";
+import { createChannelPager } from "./paging/channel-pages";
+import { createChannelMovement } from "./paging/channel-movement";
 import { createDetailPager } from "./paging/detail";
 import { createCatalogPager } from "./paging/catalog";
 import { createHomePager } from "./paging/home";
@@ -1184,61 +1184,27 @@ export function createRemoteTvApp(
         fail(e);
       }
     }
-    async function beginPairing() {
-      if (screen() !== "pairing") setPairingFocused(false);
-      const signal = resetScope();
-      setScreen("pairing");
-      setPairing(undefined);
-      setQr("");
-      setLoading(true);
-      retry = () => void beginPairing();
-      try {
-        const value = await api.pair(signal);
-        setPairing(value);
-        const expires = performance.now() + value.expires_in * 1000;
-        setPairingDeadline(expires);
-        // Pairing is the only QR consumer in the TV entry, so the 70 KiB
-        // encoder is fetched by the screen that draws one, not by every boot.
-        const { default: QRCode } = await import("qrcode");
-        const codeImage = await QRCode.toDataURL(
-          value.verification_uri_complete ?? value.verification_uri,
-          { width: 300, margin: 2 },
-        );
-        if (signal.aborted) return;
-        setQr(codeImage);
-        setLoading(false);
-        let interval = value.interval;
-        while (performance.now() < expires) {
-          await delay(interval * 1000, signal);
-          try {
-            await api.claim(value.device_code, signal);
-            const authenticated = await api.bootstrap(signal);
-            batch(() => {
-              setSignedIn(authenticated);
-              setPairing(undefined);
-              setQr("");
-              setScreen("signed-in");
-              setZone("confirmation");
-              setColumn(0);
-              setRow(0);
-            });
-            return;
-          } catch (e) {
-            if (
-              e instanceof RemoteError &&
-              (e.code === "authorization_pending" || e.status === 429)
-            ) {
-              if (e.status === 429) interval = Math.min(60, interval + 5);
-              continue;
-            }
-            throw e;
-          }
-        }
-        throw new Error("This code has expired. Get a new code.");
-      } catch (e) {
-        fail(e);
-      }
-    }
+    const beginPairing = createPairingFlow({api, retry: work => {retry = () => void work();}, fail,
+      begin: () => {
+        if (screen() !== "pairing") setPairingFocused(false);
+        const signal = resetScope();
+        setScreen("pairing");
+        setPairing(undefined);
+        setQr("");
+        setLoading(true);
+        return signal;
+      }, issued: setPairing, deadline: setPairingDeadline, qr: setQr, ready: () => {setLoading(false);},
+      complete: authenticated => {
+        batch(() => {
+          setSignedIn(authenticated);
+          setPairing(undefined);
+          setQr("");
+          setScreen("signed-in");
+          setZone("confirmation");
+          setColumn(0);
+          setRow(0);
+        });
+      }});
     function finishSignIn() {
       const authenticated = signedIn();
       if (!authenticated || screen() !== "signed-in") return;
@@ -2160,239 +2126,19 @@ export function createRemoteTvApp(
         await navigate("profiles");
       else await navigate("home");
     }
-    async function refreshChannelPage(
-      searching: boolean,
-      signal: AbortSignal,
-    ): Promise<LivePage> {
-      const generation = pageGeneration;
-      const pages = () => (searching ? searchChannelPages() : livePages());
-      const focused = () =>
-        searching
-          ? searchChannels()[
-              zone() === "search-channels" ? column() : searchChannelFocus
-            ]
-          : channels()[liveChannelIndex()];
-      const focusedPage = () => {
-        const card = focused();
-        return card
-          ? pages().find((page) =>
-              page.channels.some(
-                (channel) => channelKey(channel) === channelKey(card),
-              ),
-            )
-          : undefined;
-      };
-      for (;;) {
-        const target = focusedPage() ?? pages()[0];
-        const request = target
-          ? pageRequest(target)
-          : { cursor: "0", limit: 40, page_size: 40 };
-        const snapshot = pages()[0]?.snapshot_id;
-        const value = await api.live(
-          request.cursor,
-          searching ? undefined : liveGroup(),
-          signal,
-          searching ? search() : undefined,
-          target ? request : undefined,
-        );
-        if (generation !== pageGeneration || signal.aborted)
-          throw new DOMException("Retired channel refresh", "AbortError");
-        if (snapshot && value.snapshot_id !== snapshot) {
-          adoptChannelWindow([], searching);
-          if (!searching) retireLiveGuides();
-          const first =
-            request.cursor === "0"
-              ? value
-              : await api.live(
-                  "0",
-                  searching ? undefined : liveGroup(),
-                  signal,
-                  searching ? search() : undefined,
-                );
-          if (generation !== pageGeneration || signal.aborted)
-            throw new DOMException("Retired channel refresh", "AbortError");
-          return first;
-        }
-        const latest = focusedPage();
-        // Focus remains interactive during refresh. If it crossed a retained
-        // page, fetch that page instead of replacing its current focus with 0.
-        if (latest && !samePageRequest(request, pageRequest(latest))) continue;
-        return value;
-      }
-    }
-    function moveChannel(step: number, searching: boolean) {
-      const pages = searching ? searchChannelPages() : livePages();
-      const values = searching ? searchChannels() : channels();
-      const direction: PageDirection = step < 0 ? "previous" : "next";
-      const next = column() + step;
-      if (next < 0 && !edgeRequest(pages, "previous")) {
-        setZone(searching ? "keyboard" : "live-groups");
-        setColumn(0);
-        return;
-      }
-      if (next >= 0 && next < values.length) setColumn(next);
-      else if (edgeRequest(pages, direction) && values[column()])
-        channelPending = { from: channelKey(values[column()]), direction };
-      if (searching) searchChannelFocus = column();
-      else {
-        const id = channels()[column()]?.id;
-        setProgramIndex(
-          Math.max(
-            0,
-            (programs()[id] ?? []).findIndex(
-              (p) => p.id === guideInfo()[id]?.current_program_id,
-            ),
-          ),
-        );
-        void loadVisibleGuides();
-      }
-      // Only actual directional movement prefetches. Applying a short reverse
-      // page never initiates a compensating forward request by itself.
-      // The trigger is the focused channel's position within the bounded render
-      // window, not the global accumulated index: the window is what a page
-      // fetch slides.
-      const windowChannels = pages.flatMap((page) => page.channels);
-      const focusedChannel = values[column()];
-      const windowIndex = focusedChannel
-        ? windowChannels.findIndex(
-            (channel) => channelKey(channel) === channelKey(focusedChannel),
-          )
-        : -1;
-      if (
-        (step < 0 && windowIndex >= 0 && windowIndex < 6) ||
-        (step > 0 && windowIndex >= 0 && windowIndex >= windowChannels.length - 6)
-      )
-        void moreChannels(direction);
-    }
-    async function moreChannels(direction: PageDirection) {
-      const searching = screen() === "search",
-        expectedScreen = screen(),
-        expectedZone = zone();
-      const pages = () => (searching ? searchChannelPages() : livePages());
-      const values = () => (searching ? searchChannels() : channels());
-      const request = edgeRequest(pages(), direction),
-        generation = pageGeneration;
-      if (pageBusy || !request) return;
-      pageBusy = true;
-      const signal = searching ? searchSignal() : pageSignal();
-      if (searching) setSearchChannelPaging(true);
-      else retry = () => void moreChannels(direction);
-      try {
-        const value = await api.live(
-          request.cursor,
-          searching ? undefined : liveGroup(),
-          signal,
-          searching ? search() : undefined,
-          request,
-        );
-        if (
-          signal.aborted ||
-          generation !== pageGeneration ||
-          screen() !== expectedScreen ||
-          zone() !== expectedZone ||
-          overlay() ||
-          !samePageRequest(request, edgeRequest(pages(), direction))
-        )
-          return;
-        if (value.snapshot_id !== pages()[0]?.snapshot_id) {
-          if (searching) updateSearch(search());
-          else {
-            adoptChannelWindow([]);
-            retireLiveGuides();
-            await loadLiveGroup(liveGroup()).catch(fail);
-          }
-          return;
-        }
-        const focused = values()[column()];
-        const next = joinChannelWindow(pages(), value, direction);
-        const items = next.flatMap((page) => page.channels);
-        const anchor = focused
-          ? items.findIndex(
-              (channel) => channelKey(channel) === channelKey(focused),
-            )
-          : -1;
-        // The user may have reversed into the page we would evict while the
-        // request was in flight. Discard that prefetch instead of moving focus.
-        if (anchor < 0) return;
-        const advance =
-          channelPending?.from === channelKey(focused) &&
-          channelPending.direction === direction;
-        const index = Math.max(
-          0,
-          Math.min(
-            items.length - 1,
-            anchor + (advance ? (direction === "next" ? 1 : -1) : 0),
-          ),
-        );
-        batch(() => {
-          adoptChannelWindow(next, searching);
-          // Focus is the channel's position in the accumulated list.
-          const globalIndex = channels().findIndex(
-            (channel) => channelKey(channel) === channelKey(items[index]),
-          );
-          setColumn(globalIndex >= 0 ? globalIndex : index);
-          if (searching) {
-            searchChannelFocus = index;
-            setSearchChannelError("");
-          }
-        });
-        channelPending = undefined;
-        channelRetry = undefined;
-        if (!searching) void loadVisibleGuides();
-      } catch (error) {
-        if (
-          generation !== pageGeneration ||
-          signal.aborted ||
-          screen() !== expectedScreen ||
-          zone() !== expectedZone ||
-          overlay()
-        )
-          return;
-        const focused = values()[column()];
-        const currentPages = pages();
-        const evicted =
-          currentPages.length > 1
-            ? currentPages[direction === "next" ? 0 : currentPages.length - 1]
-            : undefined;
-        if (
-          !(error instanceof RemoteError && error.status === 401) &&
-          (!samePageRequest(request, edgeRequest(pages(), direction)) ||
-            (focused &&
-              evicted?.channels.some(
-                (channel) => channelKey(channel) === channelKey(focused),
-              )))
-        )
-          return;
-        channelPending = undefined;
-        channelRetry = direction;
-        if (error instanceof RemoteError && error.status === 401) fail(error);
-        else if (searching)
-          setSearchChannelError(
-            error instanceof Error
-              ? error.message
-              : "Channels are unavailable. Try again.",
-          );
-        else fail(error);
-      } finally {
-        if (generation === pageGeneration) {
-          pageBusy = false;
-          if (searching) setSearchChannelPaging(false);
-          const waiting = channelPending;
-          const focused = values()[column()];
-          if (
-            waiting &&
-            focused &&
-            waiting.from === channelKey(focused) &&
-            screen() === expectedScreen &&
-            zone() === expectedZone &&
-            !overlay()
-          )
-            void moreChannels(waiting.direction);
-        }
-      }
-    }
     const pageRequestOwner = {generation: () => pageGeneration, busy: () => pageBusy, setBusy: (value: boolean) => {pageBusy = value;},
       signal: pageSignal, cancelFocus: () => {pendingFocus = undefined;}, settleFocus: settlePendingFocus, fail};
+    const channelPaging = {owner: pageRequestOwner, focus: {zone, column, setZone, setColumn}, screen, overlay: () => !!overlay(),
+      windows: {pages: (searching: boolean) => searching ? searchChannelPages() : livePages(), values: (searching: boolean) => searching ? searchChannels() : channels(), adopt: adoptChannelWindow},
+      search: {query: search, remembered: () => searchChannelFocus, remember: (index: number) => {searchChannelFocus = index;}, signal: searchSignal,
+        paging: setSearchChannelPaging, error: setSearchChannelError, refresh: (value: string) => updateSearch(value)},
+      live: {group: liveGroup, index: liveChannelIndex, retire: () => retireLiveGuides(), guides: () => loadVisibleGuides(), reload: loadLiveGroup},
+      pending: {current: () => channelPending, set: (value: typeof channelPending) => {channelPending = value;}},
+      retry: (value: PageDirection | undefined) => {channelRetry = value;}, retryAction: (action: () => void) => {retry = action;},
+      request: (...args: Parameters<RemoteTvApi["live"]>) => api.live(...args)};
+    const refreshChannelPage = createChannelRefresh(channelPaging);
+    const moreChannels = createChannelPager(channelPaging);
+    const moveChannel = createChannelMovement({...channelPaging, programs, guides: guideInfo, selectProgram: setProgramIndex, more: moreChannels});
     const detailPager = createDetailPager({owner: pageRequestOwner, current: detail, adopt: setDetail, selected, season: seasonIndex,
       episodeCount: () => detailEpisodes().length, request: (card, cursor, signal) => api.detail(card, cursor, signal)});
     const catalogPager = createCatalogPager({owner: pageRequestOwner, current: page, adopt: setPage, library: () => screen() === "library",
