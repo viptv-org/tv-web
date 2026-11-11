@@ -47,10 +47,10 @@ import { CalendarBoard, calendarDayKey, calendarDays } from "./CalendarBoard";
 import { StatusDialog } from "./StatusDialog";
 import { initialSeasonIndex, seasonLabel, episodeActionLabel, seasonEpisodes } from "./seasons";
 import { RowFocus } from "./row-focus";
-import { HomeShelves } from "./HomeShelves";
-import { homeCardSize } from "./focus-frame";
+import { HomeContent } from "./HomeContent";
 import { MediaTile as Tile } from "./MediaTile";
 import { DetailContent } from "./DetailContent";
+import { PlayerControlsView } from "./PlayerControlsView";
 import { SettingsView } from "./SettingsView";
 import { BrowseControls } from "./BrowseControls";
 import { OverlayViewport } from "./OverlayViewport";
@@ -63,8 +63,7 @@ import { TextEntryPanel } from "./TextEntryPanel";
 import { CalibrationPanel } from "./CalibrationPanel";
 import { TracksDrawer } from "./TracksDrawer";
 import { ChoiceDrawer } from "./ChoiceDrawer";
-import { bottomTitleY } from "./title-layout";
-import { BusyIndicator, BusySpinner } from "./BusyIndicator";
+import { BusySpinner } from "./BusyIndicator";
 import { createCoherentHero, HeroArtwork } from "./CoherentHero";
 import { presentationCard, presentationKey } from "./presentation-card";
 import { sourceAudioSubs, sourceFacts, sourceProvider as providerLabel, sourceQuality, sourceReleaseGroup, sourceReleaseType } from "./source-presentation";
@@ -76,15 +75,7 @@ import {
   samePageRequest,
   type PageDirection
 } from "./channelWindow";
-import {
- TitleMetadata as Metadata 
-} from "./TitleMetadata";
-import { BrowsePreview } from "./BrowsePreview";
-import { bufferedSegments } from "./playerTimeline";
 import { trackLabel } from "./track-label";
-import {
-  HeroProgress
-} from "./Billboard";
 import {
  defineScreen,
  TvView,
@@ -146,6 +137,8 @@ import {
 } from "./display";
 import { createHeroCycle } from "./hero-cycle-controller";
 import { createIdleScreenSaver } from "./idle-screen-saver";
+import { createTextKeyboard } from "./text-keyboard";
+import { createHeldSelect } from "./held-select";
 import {
   cardKey,
   type Bootstrap,
@@ -174,7 +167,7 @@ import {
   type PlaybackSegment
 } from "./types";
 import { sdfTextMetrics } from "./text-measure";
-import { clockTime as clock, timeOfDay } from "./time";
+import { timeOfDay } from "./time";
 import type { PlayerSnapshot } from "../../../vendor/video/src/types";
 
 const available = (value?: { availability: string }) =>
@@ -221,52 +214,6 @@ function stremioHome(value: Home | undefined): Home | undefined {
       : value.hero,
   };
 }
-
-const letters = "abcdefghijklmnopqrstuvwxyz1234567890@./:_-".split("");
-const symbols = [
-  "@",
-  ".",
-  "/",
-  ":",
-  "_",
-  "-",
-  "?",
-  "=",
-  "&",
-  "%",
-  "+",
-  "#",
-  "[",
-  "]",
-  "!",
-  "$",
-  "(",
-  ")",
-  "*",
-  "~",
-  ",",
-  ";",
-  "\\",
-  "'",
-  '"',
-  "|",
-  "^",
-  "{",
-  "}",
-  "<",
-  ">",
-  "`",
-  "1",
-  "2",
-  "3",
-  "4",
-  "5",
-  "6",
-  "7",
-  "8",
-  "9",
-  "0",
-];
 
 export function createRemoteTvApp(
   api: RemoteTvApi,
@@ -541,15 +488,6 @@ export function createRemoteTvApp(
       [pairingFocused, setPairingFocused] = createSignal(false),
       [signedIn, setSignedIn] = createSignal<Bootstrap>(),
       [qr, setQr] = createSignal("");
-    const [keyboardUpper, setKeyboardUpper] = createSignal(false),
-      [keyboardSymbols, setKeyboardSymbols] = createSignal(false);
-    const keyboardCharacters = createMemo(() =>
-      keyboardSymbols()
-        ? symbols
-        : letters.map((letter) =>
-            keyboardUpper() ? letter.toUpperCase() : letter,
-          ),
-    );
     const [trackColumn, setTrackColumn] = createSignal(0);
     const [overlayEntered, setOverlayEntered] = createSignal(false),
       [overlayClosing, setOverlayClosing] = createSignal(false),
@@ -568,9 +506,9 @@ export function createRemoteTvApp(
       overlayTimer: ReturnType<typeof setTimeout> | undefined;
 
     const [overlay, setOverlay] = createSignal<Overlay>(),
-      [choice, setChoice] = createSignal(0),
-      [text, setText] = createSignal(""),
-      [key, setKey] = createSignal(0);
+      [choice, setChoice] = createSignal(0);
+    const { text, setText, key, setKey, upper: keyboardUpper, setUpper: setKeyboardUpper,
+      symbols: keyboardSymbols, setSymbols: setKeyboardSymbols, characters: keyboardCharacters } = createTextKeyboard();
     const [sourcePage, setSourcePage] = createSignal<SourcePage>(),
       [allSourceIds, setAllSourceIds] = createSignal<string[]>([]),
       [sourceFacet, setSourceFacet] = createSignal(0),
@@ -594,8 +532,18 @@ export function createRemoteTvApp(
       [sourceFiltering, setSourceFiltering] = createSignal(false);
     let manualSourceSelection = false,
       sourceStartPosition = 0,
-      sourceFilterGeneration = 0,
-      holdTimer: ReturnType<typeof setTimeout> | undefined;
+      sourceFilterGeneration = 0;
+    const heldSelect = createHeldSelect({
+      target: pressTarget, layer: overlay,
+      allowed: () => !overlay() || overlay()?.kind === "sources" || overlay()?.kind === "next",
+      blocked: () => pending() || loading(),
+      onTimer: () => { (window as any).__holdPending = pending(); (window as any).__holdLoading = loading(); },
+      hold: () => {
+        if (!overlay() && zone() === "hero" && heroAction() === 0 && hero()) void playIntent(hero()!, true).catch(fail);
+        else menu();
+      },
+      activate: () => { void activate().catch(fail); },
+    });
     const [sources, setSources] = createSignal<Source[]>([]),
       [sourceLoading, setSourceLoading] = createSignal(false),
       [action, setAction] = createSignal<TitleAction>(),
@@ -1153,8 +1101,6 @@ export function createRemoteTvApp(
     });
     const [timelineFocused, setTimelineFocused] = createSignal(true);
     let lastPlayerTool = 1;
-    const timelineFraction = () => Math.max(0, Math.min(1,
-      (seek() ?? snapshot()?.time.positionSeconds ?? 0) / (snapshot()?.time.durationSeconds || 1)));
     createEffect(() => {
       const count = playerButtons().length;
       if (screen() === "player" && !overlay() && choice() >= count)
@@ -1366,7 +1312,7 @@ export function createRemoteTvApp(
       setOverlay(undefined);
       setText("");
       pageBusy = false;
-      clearTimeout(holdTimer);
+      heldSelect.cancel();
       sourceFilterGeneration++;
       pageGeneration++;
       clearTimeout(searchTimer);
@@ -1764,7 +1710,7 @@ export function createRemoteTvApp(
       count: () => home()?.featured.length ?? 0,
       enabled: () => screen() === "home" && zone() !== "rows" && !overlay() && !pending() && !loading() && !error(),
     });
-    const { slide: heroSlide, active: heroActive, started: heroCycleStart,
+    const { slide: heroSlide,
       reset: resetHeroCycle, restart: restartHeroCycling, setVisible: setHeroVisible } = heroCycle;
     const [previewCard, setPreviewCard] = createSignal<Card>();
     let previewGeneration = 0, previewScope = "";
@@ -6245,7 +6191,7 @@ export function createRemoteTvApp(
           else updateSearch(search() + event.key);
         }
       };
-      const cancelHold = () => clearTimeout(holdTimer);
+      const cancelHold = () => heldSelect.cancel();
       const pointer = (event: PointerEvent) => {
         countdown.cancel();
         if (overlay()?.kind !== "next") return;
@@ -6317,12 +6263,12 @@ export function createRemoteTvApp(
         window.removeEventListener("pagehide", suspend);
         document.removeEventListener("visibilitychange", visibility);
         document.removeEventListener("webOSRelaunch", relaunch);
-        clearTimeout(holdTimer);
+        heldSelect.cancel();
       });
     });
     onCleanup(() => {
       alive = false;
-      clearTimeout(holdTimer);
+      heldSelect.cancel();
       clearTimeout(overlayTimer);
       cancelAnimationFrame(overlayFrame);
       scope.abort();
@@ -6379,29 +6325,7 @@ export function createRemoteTvApp(
           if (event?.repeat) return undefined;
           restartHeroCycling();
           if (overlay()?.kind === "sources") manualSourceSelection = true;
-          const target = pressTarget(),
-            pressedOverlay = overlay();
-          let held = false;
-          clearTimeout(holdTimer);
-          if (!overlay() || overlay()?.kind === "sources" || overlay()?.kind === "next")
-            holdTimer = setTimeout(() => {
-              (window as any).__holdPending = pending();
-              (window as any).__holdLoading = loading();
-              if (target === pressTarget() && !pending() && !loading()) {
-                held = true;
-                if (!overlay() && zone() === "hero" && heroAction() === 0 && hero()) void playIntent(hero()!, true).catch(fail);
-                else menu();
-              }
-            }, 700);
-          return () => {
-            clearTimeout(holdTimer);
-            if (
-              !held &&
-              overlay() === pressedOverlay &&
-              target === pressTarget()
-            )
-              void activate().catch(fail);
-          };
+          return heldSelect.press();
         },
       },
       render: () => {
@@ -6488,135 +6412,9 @@ export function createRemoteTvApp(
               />
             </Show>
             <Show when={screen() === "home"}>
-              <Show when={home()?.complete && !hero()}>
-                <Label
-                  x={96}
-                  y={300}
-                  size={44}
-                  font="Onest700"
-                  content="Nothing here yet"
-                />
-                <Label
-                  x={96}
-                  y={375}
-                  size={28}
-                  color={palette.muted}
-                  maxwidth={1000}
-                  content="Add an add-on in Settings to find something to watch."
-                />
-                <Button
-                  x={96}
-                  y={480}
-                  w={320}
-                  label="Open Settings"
-                  focused={zone() === "hero"}
-                />
-              </Show>
-              <Show when={heroPresentation.mode() === "hero" ? displayHero() : undefined}>
-                {(card) => (
-                  <TvView
-                    x={96}
-                    y={zone() === "rows" ? -700 : 330}
-                    w={1100}
-                    transition={{
-                      y: {
-                        duration: 220,
-                        timingFunction: "cubic-bezier(.2,0,0,1)",
-                      },
-                    }}
-                    show={zone() !== "rows"}
-                  >
-                    <Show when={!card().logo}><Label
-                          content={card().title}
-                          font="Onest700"
-                          y={bottomTitleY(card().title, 48, 800, 160)}
-                          size={48}
-                          lineheight={1.2}
-                          maxwidth={800}
-                          maxheight={160}
-                          maxlines={2}
-                        /></Show>
-                    <Metadata card={card()} y={188} />
-                    <Label
-                      y={234}
-                      size={26}
-                      lineheight={1.45}
-                      maxwidth={780}
-                      maxlines={2}
-                      color={palette.body}
-                      content={card().description ?? ""}
-                    />
-                    <Button
-                      x={0}
-                      y={338}
-                      w={220}
-                      h={72}
-                      icon="play"
-                      iconSize={24}
-                      label="Play"
-                      focused={zone() === "hero" && heroAction() === 0}
-                    />
-                    <Button
-                      x={240}
-                      y={338}
-                      w={72}
-                      h={72}
-                      icon={isSaved(card()) ? "check" : "plus"}
-                      focused={zone() === "hero" && heroAction() === 1}
-                    />
-                    <Button
-                      x={332}
-                      y={338}
-                      w={72}
-                      h={72}
-                      icon="info"
-                      focused={zone() === "hero" && heroAction() === 2}
-                    />
-                    <For each={(home()?.featured ?? []).slice(0, 5)}>
-                      {(_, i) => (
-                        <TvView
-                          x={i() * 24 + (i() > heroSlide() ? 32 : 0)}
-                          y={450}
-                        >
-                          <Show
-                            when={i() === heroSlide()}
-                            fallback={
-                              <TvView
-                                w={16}
-                                h={4}
-                                color="rgba(255,255,255,.3)"
-                              />
-                            }
-                          >
-                            <HeroProgress
-                              started={heroCycleStart()}
-                              running={heroActive()}
-                            />
-                          </Show>
-                        </TvView>
-                      )}
-                    </For>
-                  </TvView>
-                )}
-              </Show>
-              <Show when={screen() === "home" && zone() === "rows" && heroPresentation.mode() !== "hero" && displayHero()}>
-                {(card) => (
-                  <BrowsePreview
-                    card={card()}
-                    externalLogo
-                    summaryBottom={shelfTitleY()}
-                  />
-                )}
-              </Show>
-              <Show when={home()?.rows?.length}>
-                <HomeShelves rows={home()!.rows} row={row()} column={column()}
-                  focused={zone() === "rows"} columnForRow={shelf => homeRowFocus.resolve(shelf)} top={shelfTitleY()}
-                  renderTile={(card, _index, x, focused, portrait) => (
-                    <Tile card={card()} x={x()} y={0}
-                      w={homeCardSize(portrait()).width} h={homeCardSize(portrait()).height}
-                      poster={portrait()} focused={focused()} focusBorder={false} preload />
-                  )} />
-              </Show>
+              <HomeContent home={home()} hasHero={!!hero()} presentation={{card: displayHero, mode: heroPresentation.mode}}
+                focus={{zone, row, column, action: heroAction}} billboard={heroCycle}
+                shelfTop={shelfTitleY()} columnForRow={shelf => homeRowFocus.resolve(shelf)} isSaved={isSaved} />
             </Show>
             <Show when={screen() === "detail"}>
               <DetailContent detail={detailForDisplay()} selectedTitle={selected()?.title}
@@ -7267,113 +7065,8 @@ export function createRemoteTvApp(
                   error())
               }
             >
-              <TvView w={1920} h={1080} color="rgba(0,0,0,.35)" />
-              <Show when={seeking() || loading() || snapshot()?.state === "buffering"}>
-                <TvView w={1920} h={1080} color="rgba(0,0,0,.55)" />
-                <BusyIndicator label={seeking() ? "Seeking…" : "Buffering…"} />
-              </Show>
-              <Label
-                x={96}
-                y={64}
-                size={30}
-                font="Onest700"
-                content={activeAction()?.card.title ?? ""}
-              />
-              <Label
-                x={96}
-                y={110}
-                size={24}
-                content={activeAction()?.card.subtitle ?? ""}
-                color={palette.body}
-              />
-              <Show when={playerActions().seek}>
-                <TvView
-                  x={96}
-                  y={936}
-                  w={1728}
-                  h={8}
-                  color="rgba(255,255,255,.14)"
-                />
-                {/* The buffer needs its own node: a For created after the played
-                    fill would append its quads over it. */}
-                <TvView x={96} y={936} w={1728} h={8}>
-                  <For
-                    each={bufferedSegments(
-                      snapshot()?.time.bufferedRanges,
-                      snapshot()?.time.durationSeconds,
-                    )}
-                  >
-                    {(segment) => (
-                      <TvView
-                        x={1728 * segment.left}
-                        y={0}
-                        w={1728 * segment.width}
-                        h={8}
-                        color="rgba(255,255,255,.42)"
-                      />
-                    )}
-                  </For>
-                </TvView>
-                <TvView
-                  x={96}
-                  y={936}
-                  w={
-                    1728 *
-                    Math.min(
-                      1,
-                      (snapshot()?.time.positionSeconds ?? 0) /
-                        (snapshot()?.time.durationSeconds || 1),
-                    )
-                  }
-                  h={8}
-                  color={palette.accent}
-                />
-                <TvView x={96 + 1728 * timelineFraction() - 6} y={930} w={12} h={20} color={palette.text} />
-                <Show when={seek() !== undefined}>
-                  <TvView x={Math.max(96, Math.min(1704, 96 + 1728 * timelineFraction() - 60))} y={878} w={120} h={44} color={palette.surface}>
-                    <Label centerY={22} w={120} align="center" size={22} font="Onest700" content={clock(seek() ?? 0)} />
-                  </TvView>
-                </Show>
-                <Label
-                  x={96}
-                  y={970}
-                  size={22}
-                  content={clock(snapshot()?.time.positionSeconds ?? 0)}
-                />
-                <Label
-                  x={1660}
-                  y={970}
-                  w={164}
-                  align="right"
-                  size={22}
-                  content={`−${clock(Math.max(0, (snapshot()?.time.durationSeconds ?? 0) - (snapshot()?.time.positionSeconds ?? 0)))}`}
-                />
-              </Show>
-              <Show when={seek() === undefined}>
-              <Button
-                x={96}
-                y={846}
-                w={160}
-                h={56}
-                icon={snapshot()?.state === "playing" ? "pause" : "play"}
-                label={snapshot()?.state === "playing" ? "Pause" : "Play"}
-                focused={choice() === 0 && !timelineFocused()}
-              />
-              <For each={playerTools()}>
-                {(button, index) => (
-                  <Button
-                    x={button.x}
-                    y={846}
-                    w={button.width}
-                    h={56}
-                    label={button.label}
-                    icon={button.icon}
-                    iconSize={22}
-                    focused={choice() === index() + 1}
-                  />
-                )}
-              </For>
-              </Show>
+              <PlayerControlsView playback={{snapshot, card: () => activeAction()?.card, canSeek: () => playerActions().seek, tools: playerTools}}
+                focus={{selected: choice, timeline: timelineFocused, preview: seek}} activity={{loading, seeking}} />
             </Show>
           </TvView>
           <Show when={overlay()}>
