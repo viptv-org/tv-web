@@ -135,13 +135,16 @@ describe("The shipped TV entry runs this code (#34)", () => {
     "utf8",
   );
 
+  const footer = readFileSync(resolve(root, "src/tv-solid/remote/source-picker/SourceFooter.tsx"), "utf8");
+
   it("renders the contract's states from the shared module", () => {
     expect(entry).toContain('from "./sourceStatus"');
     expect(entry).toContain("pickSourceSpread({");
     expect(entry).toContain('open: overlay()?.kind === "sources"');
     expect(entry).toContain("sourceStatusCopy(sourceSpread())");
     expect(entry).toContain("sourceEmptyCopy(sourceSpread())");
-    expect(entry).toContain("<BusySpinner x={64} y={964} size={SOURCE_SPINNER_SIZE}");
+    expect(entry).toContain("<SourceFooter");
+    expect(footer).toContain("<BusySpinner x={64} y={964} size={SOURCE_SPINNER_SIZE}");
   });
 
   it("no longer invents a source-drawer status line", () => {

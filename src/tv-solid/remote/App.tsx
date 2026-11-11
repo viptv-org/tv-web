@@ -54,6 +54,15 @@ import { PlayerControlsView } from "./PlayerControlsView";
 import { SettingsView } from "./SettingsView";
 import { BrowseControls } from "./BrowseControls";
 import { OverlayViewport } from "./OverlayViewport";
+import { SlidingDrawer } from "./SlidingDrawer";
+import { SourceFooter } from "./source-picker/SourceFooter";
+import { SourceActionsPanel } from "./source-picker/SourceActionsPanel";
+import { SourceOptionsMenu } from "./source-picker/SourceOptionsMenu";
+import { SourceHeading } from "./source-picker/SourceHeading";
+import { SourceFilters } from "./source-picker/SourceFilters";
+import { SourceList } from "./source-picker/SourceList";
+import { sourceActionOptions, type SourceMenuOption } from "./source-picker/options";
+import { filterTitleWidth as sourceFilterTitleWidth } from "./filter-pill-layout";
 import { TopNavigation } from "./TopNavigation";
 import { ProfileEditorView } from "./ProfileEditorView";
 import { availableNavigation } from "./navigation-model";
@@ -63,10 +72,9 @@ import { TextEntryPanel } from "./TextEntryPanel";
 import { CalibrationPanel } from "./CalibrationPanel";
 import { TracksDrawer } from "./TracksDrawer";
 import { ChoiceDrawer } from "./ChoiceDrawer";
-import { BusySpinner } from "./BusyIndicator";
 import { createCoherentHero, HeroArtwork } from "./CoherentHero";
 import { presentationCard, presentationKey } from "./presentation-card";
-import { sourceAudioSubs, sourceFacts, sourceProvider as providerLabel, sourceQuality, sourceReleaseGroup, sourceReleaseType } from "./source-presentation";
+import { sourceProvider as providerLabel } from "./source-presentation";
 import {
   channelKey,
   edgeRequest,
@@ -116,7 +124,6 @@ import {
 import { LiveAnswer, LiveNoSource } from "./liveEmptyViews";
 import { guideWindowOf } from "./guideWindow";
 import {
-  SOURCE_SPINNER_SIZE,
   pickSourceSpread,
   sourceEmptyCopy,
   sourceStatusCopy,
@@ -182,13 +189,7 @@ const uniqueCards = (cards: readonly Card[]) =>
     (card, index, all) =>
       all.findIndex((other) => cardKey(other) === cardKey(card)) === index,
   );
-type SourceMenuOption = {
-  id: string;
-  label: string;
-  count: number;
-  height?: number;
-  provider?: string;
-};
+
 
 const isRokuUi =
   typeof (globalThis as any).__SolidTVRokuRenderer !== "undefined";
@@ -648,21 +649,6 @@ export function createRemoteTvApp(
     ]);
     const [openSourceMenuOptions, setOpenSourceMenuOptions] = createSignal<SourceMenuOption[]>([]);
     const sourceMenuOptions = () => openSourceMenuOptions();
-    const sourceActionOptions = [
-      {
-        id: "direct",
-        label: "Direct play",
-        detail: "Try this source on this device · no transcoder",
-      },
-      {
-        id: "gateway",
-        label: "Play with gateway",
-        detail: "Server delivery · transcodes when needed",
-      },
-      { id: "cancel", label: "Cancel", detail: "" },
-    ];
-    const sourceFilterTitleWidth = (text: string) =>
-      Math.ceil(sdfTextMetrics("24px Onest600").measureText(text).width);
     const sourceQualityValue = () => {
       const height = sourceHeight();
       if (height === undefined) return "All";
@@ -675,10 +661,6 @@ export function createRemoteTvApp(
     const sourceProviderValue = () =>
       sourceProviderFilter() ?? "All sources";
     const focusedSource = () => visibleSources()[choice()];
-    const sourceFilterPillWidth = (title: string, value: string) =>
-      76 +
-      sourceFilterTitleWidth(title) +
-      Math.ceil(sdfTextMetrics("24px Onest600").measureText(value).width);
     const sourceAddonCount = () =>
       new Set(
         sources()
@@ -6941,588 +6923,22 @@ export function createRemoteTvApp(
                   <CalibrationPanel title={modal().title} value={calibrationValue()} />
                 </Show>
                 <Show when={modal().kind === "sources"}>
-                  <TvView
-                    x={overlayEntered() && !overlayClosing() ? 960 : 1920}
-                    w={960}
-                    h={1080}
-                    color={palette.surface}
-                    transition={{
-                      x: {
-                        duration: overlayClosing() ? 200 : 300,
-                        timingFunction: overlayClosing()
-                          ? "cubic-bezier(.3,0,1,1)"
-                          : "cubic-bezier(0,0,0,1)",
-                      },
-                    }}
-                  >
-                    <Label
-                      x={64}
-                      y={72}
-                      size={44}
-                      font="Onest700"
-                      content="Choose a source"
-                    />
-                    <Label
-                      x={64}
-                      y={138}
-                      size={24}
-                      color={palette.muted}
-                      maxwidth={800}
-                      maxlines={1}
-                      content={
-                        sourceLoading() && !sources().length
-                          ? `${pickerCard()?.title ?? ""} · finding sources`
-                          : `${pickerCard()?.title ?? ""} · ${
-                              sourcePage()?.total ?? sources().length
-                            } sources${
-                              sourceAddonCount()
-                                ? ` from ${sourceAddonCount()} ${
-                                    sourceAddonCount() === 1
-                                      ? "add-on"
-                                      : "add-ons"
-                                  }`
-                                : ""
-                            }`
-                      }
-                    />
+                  <SlidingDrawer width={960} entered={overlayEntered()} closing={overlayClosing()}>
+                    <SourceHeading title={pickerCard()?.title ?? ""} checking={sourceLoading() && !sources().length}
+                      count={sourcePage()?.total ?? sources().length} addons={sourceAddonCount()} />
                     <Show when={!sourceMenu() && !sourceActions()}>
-                    <Label
-                      x={64}
-                      y={174}
-                      size={17}
-                      color={palette.muted}
-                      maxwidth={800}
-                      maxlines={1}
-                      content="Hold OK on a source for direct play"
-                    />
-                    <TvView
-                      x={64}
-                      y={216}
-                      w={
-                        sourceFilterPillWidth(
-                          "Quality:",
-                          sourceQualityValue(),
-                        ) + 6
-                      }
-                      h={56}
-                      color={
-                        sourceFilterFocus() && sourceFacet() === 0
-                          ? palette.text
-                          : "#2A2A2E"
-                      }
-                    >
-                      <Label
-                        x={24}
-                        centerY={32}
-                        size={24}
-                        font="Onest600"
-                        content="Quality:"
-                        color={
-                          sourceFilterFocus() && sourceFacet() === 0
-                            ? "#4A4945"
-                            : palette.muted
-                        }
-                      />
-                      <Label
-                        x={24 + sourceFilterTitleWidth("Quality:") + 6}
-                        centerY={28}
-                        size={24}
-                        font="Onest600"
-                        maxwidth={
-                          sourceFilterPillWidth(
-                            "Quality:",
-                            sourceQualityValue(),
-                          ) -
-                          74 -
-                          sourceFilterTitleWidth("Quality:")
-                        }
-                        maxlines={1}
-                        content={sourceQualityValue()}
-                        color={
-                          sourceFilterFocus() && sourceFacet() === 0
-                            ? "#111113"
-                            : palette.text
-                        }
-                      />
-                      <TvView
-                        x={
-                          sourceFilterPillWidth(
-                            "Quality:",
-                            sourceQualityValue(),
-                          ) -
-                          44
-                        }
-                        y={16}
-                        w={24}
-                        h={24}
-                        src={icon(
-                          "down",
-                          sourceFilterFocus() && sourceFacet() === 0,
-                        )}
-                      />
-                    </TvView>
-                    <TvView
-                      x={
-                        64 +
-                        sourceFilterPillWidth(
-                          "Quality:",
-                          sourceQualityValue(),
-                        ) +
-                        14
-                      }
-                      y={216}
-                      w={
-                        sourceFilterPillWidth(
-                          "Source:",
-                          sourceProviderValue(),
-                        ) + 6
-                      }
-                      h={56}
-                      color={
-                        sourceFilterFocus() && sourceFacet() === 1
-                          ? palette.text
-                          : "#2A2A2E"
-                      }
-                    >
-                      <Label
-                        x={24}
-                        centerY={32}
-                        size={24}
-                        font="Onest600"
-                        content="Source:"
-                        color={
-                          sourceFilterFocus() && sourceFacet() === 1
-                            ? "#4A4945"
-                            : palette.muted
-                        }
-                      />
-                      <Label
-                        x={24 + sourceFilterTitleWidth("Source:") + 6}
-                        centerY={28}
-                        size={24}
-                        font="Onest600"
-                        maxwidth={
-                          sourceFilterPillWidth(
-                            "Source:",
-                            sourceProviderValue(),
-                          ) -
-                          74 -
-                          sourceFilterTitleWidth("Source:")
-                        }
-                        maxlines={1}
-                        content={sourceProviderValue()}
-                        color={
-                          sourceFilterFocus() && sourceFacet() === 1
-                            ? "#111113"
-                            : palette.text
-                        }
-                      />
-                      <TvView
-                        x={
-                          sourceFilterPillWidth(
-                            "Source:",
-                            sourceProviderValue(),
-                          ) -
-                          44
-                        }
-                        y={16}
-                        w={24}
-                        h={24}
-                        src={icon(
-                          "down",
-                          sourceFilterFocus() && sourceFacet() === 1,
-                        )}
-                      />
-                    </TvView>
-                    <Label
-                      x={64}
-                      y={288}
-                      size={22}
-                      font="Onest700"
-                      letterspacing={1.4}
-                      maxwidth={800}
-                      maxlines={1}
-                      color={palette.muted}
-                      content="BEST MATCHES"
-                    />
-                    <For
-                      each={visibleSources().slice(
-                        Math.max(0, choice() - 4),
-                        Math.max(0, choice() - 4) + 5,
-                      )}
-                    >
-                      {(source, i) => {
-                        const rowFocused = () =>
-                          i() + Math.max(0, choice() - 4) === choice() &&
-                          !sourceFilterFocus();
-                        const title = () => sourceReleaseGroup(source);
-                        const titleWidth = () =>
-                          Math.min(
-                            420,
-                            Math.ceil(
-                              sdfTextMetrics("26px Onest600").measureText(
-                                title(),
-                              ).width,
-                            ),
-                          );
-                        return (
-                          <TvView
-                            x={64}
-                            y={320 + i() * 120}
-                            w={800}
-                            h={120}
-                            color={rowFocused() ? palette.text : "#222222"}
-                          >
-                            <Label
-                              x={28}
-                              y={16}
-                              size={30}
-                              font="Onest700"
-                              maxwidth={116}
-                              maxlines={1}
-                              content={sourceQuality(source)}
-                              color={
-                                rowFocused() ? "#111113" : palette.text
-                              }
-                            />
-                            <Label
-                              x={28}
-                              y={54}
-                              size={18}
-                              font="Onest600"
-                              maxwidth={116}
-                              maxlines={1}
-                              content={sourceReleaseType(source) ?? ""}
-                              color={
-                                rowFocused() ? "#444444" : palette.muted
-                              }
-                            />
-                            <Label
-                              x={164}
-                              y={14}
-                              size={26}
-                              font="Onest600"
-                              maxwidth={420}
-                              maxlines={1}
-                              content={title()}
-                              color={
-                                rowFocused() ? "#111113" : palette.text
-                              }
-                            />
-                            <Show
-                              when={source.id === sourcePage()?.best_match_id}
-                            >
-                              <TvView
-                                x={180 + titleWidth()}
-                                y={14}
-                                w={136}
-                                h={30}
-                                color={
-                                  rowFocused()
-                                    ? "#111113"
-                                    : "rgba(244,242,238,.16)"
-                                }
-                              >
-                                <Label
-                                  w={136}
-                                  centerY={15}
-                                  align="center"
-                                  size={18}
-                                  font="Onest700"
-                                  content="Best match"
-                                  color={
-                                    rowFocused()
-                                      ? palette.text
-                                      : palette.accent
-                                  }
-                                />
-                              </TvView>
-                            </Show>
-                            <Show when={failedSources().has(source.id)}>
-                              <Label
-                                x={600}
-                                y={80}
-                                w={172}
-                                align="right"
-                                size={18}
-                                font="Onest700"
-                                content="Didn't start"
-                                color={
-                                  rowFocused() ? "#8F2B22" : "#FF7A6E"
-                                }
-                              />
-                            </Show>
-                            <Label
-                              x={164}
-                              y={52}
-                              size={18}
-                              font="Onest600"
-                              maxwidth={420}
-                              maxlines={1}
-                              content={sourceAudioSubs(source)}
-                              color={
-                                rowFocused() ? "#4A4945" : palette.muted
-                              }
-                            />
-                            <Label
-                              x={164}
-                              y={80}
-                              size={18}
-                              maxwidth={420}
-                              maxlines={1}
-                              content={sourceFacts(source).join(" · ")}
-                              color={
-                                rowFocused() ? "#4A4945" : palette.muted
-                              }
-                            />
-                            <Show when={rowFocused()}>
-                              <TvView
-                                x={744}
-                                y={42}
-                                w={28}
-                                h={28}
-                                color="#111113"
-                              >
-                                <TvView
-                                  x={4}
-                                  y={4}
-                                  w={20}
-                                  h={20}
-                                  src={icon(
-                                    "check",
-                                    false,
-                                    2.4,
-                                    "#F4F2EE",
-                                  )}
-                                />
-                              </TvView>
-                            </Show>
-                          </TvView>
-                        );
-                      }}
-                    </For>
+                    <SourceFilters quality={sourceQualityValue()} provider={sourceProviderValue()} focused={sourceFilterFocus() ? sourceFacet() : undefined} />
+                    <SourceList sources={visibleSources()} selected={choice()} focused={!sourceFilterFocus()}
+                      bestMatch={sourcePage()?.best_match_id ?? undefined} failed={failedSources()} />
                     </Show>
                     <Show when={sourceMenu()}>
-                      <TvView
-                        w={960}
-                        h={1080}
-                        color="rgba(0,0,0,.55)"
-                      />
-                      <TvView
-                        x={64}
-                        y={170}
-                        w={800}
-                        h={560}
-                        color={palette.surface}
-                      >
-                        <Label
-                          x={28}
-                          y={24}
-                          size={32}
-                          font="Onest700"
-                          content={
-                            sourceMenu() === "quality" ? "Quality" : "Source"
-                          }
-                        />
-                        <For
-                          each={sourceMenuOptions().slice(
-                            Math.max(0, sourceMenuChoice() - 4),
-                            Math.max(0, sourceMenuChoice() - 4) + 7,
-                          )}
-                        >
-                          {(option, i) => {
-                            const start = () =>
-                              Math.max(0, sourceMenuChoice() - 4);
-                            const focused = () =>
-                              i() + start() === sourceMenuChoice();
-                            const selected = () =>
-                              sourceMenu() === "quality"
-                                ? option.height === sourceHeight()
-                                : option.provider === sourceProviderFilter();
-                            return (
-                              <TvView
-                                x={24}
-                                y={84 + i() * 60}
-                                w={752}
-                                h={52}
-                                color={
-                                  focused() ? palette.text : "#222222"
-                                }
-                              >
-                                <Label
-                                  x={20}
-                                  centerY={26}
-                                  size={24}
-                                  font="Onest600"
-                                  maxwidth={520}
-                                  maxlines={1}
-                                  content={option.label}
-                                  color={
-                                    focused() ? "#111113" : palette.text
-                                  }
-                                />
-                                <Label
-                                  x={580}
-                                  w={120}
-                                  align="right"
-                                  centerY={26}
-                                  size={20}
-                                  content={String(option.count)}
-                                  color={
-                                    focused() ? "#444444" : palette.muted
-                                  }
-                                />
-                                <Show when={selected()}>
-                                  <TvView
-                                    x={704}
-                                    y={16}
-                                    w={20}
-                                    h={20}
-                                    src={icon(
-                                      "check",
-                                      focused(),
-                                      2.4,
-                                      focused() ? "#111113" : "#F4F2EE",
-                                    )}
-                                  />
-                                </Show>
-                              </TvView>
-                            );
-                          }}
-                        </For>
-                      </TvView>
+                      <SourceOptionsMenu kind={sourceMenu()!} options={sourceMenuOptions()} selected={sourceMenuChoice()}
+                        matches={option => sourceMenu() === "quality" ? option.height === sourceHeight() : option.provider === sourceProviderFilter()} />
                     </Show>
-                    <Show when={sourceActions()}>
-                      <TvView w={960} h={1080} color="rgba(0,0,0,.55)" />
-                      <TvView
-                        x={64}
-                        y={250}
-                        w={800}
-                        h={430}
-                        color={palette.surface}
-                      >
-                        <Label
-                          x={28}
-                          y={24}
-                          size={32}
-                          font="Onest700"
-                          content="Play source"
-                        />
-                        <Show when={focusedSource()}>
-                          {(source) => (
-                            <Label
-                              x={28}
-                              y={70}
-                              size={22}
-                              color={palette.muted}
-                              maxwidth={744}
-                              maxlines={2}
-                              content={`${sourceQuality(source())} · ${sourceReleaseGroup(source())}`}
-                            />
-                          )}
-                        </Show>
-                        <For each={sourceActionOptions}>
-                          {(option, index) => {
-                            const focused = () =>
-                              sourceActionChoice() === index();
-                            return (
-                              <TvView
-                                x={24}
-                                y={128 + index() * 76}
-                                w={752}
-                                h={64}
-                                color={focused() ? palette.text : "#222222"}
-                              >
-                                <Label
-                                  x={20}
-                                  y={10}
-                                  size={24}
-                                  font="Onest600"
-                                  maxwidth={700}
-                                  maxlines={1}
-                                  content={option.label}
-                                  color={focused() ? "#111113" : palette.text}
-                                />
-                                <Show when={option.detail}>
-                                  <Label
-                                    x={20}
-                                    y={39}
-                                    size={16}
-                                    maxwidth={700}
-                                    maxlines={1}
-                                    content={option.detail}
-                                    color={
-                                      focused() ? "#4A4945" : palette.muted
-                                    }
-                                  />
-                                </Show>
-                              </TvView>
-                            );
-                          }}
-                        </For>
-                        <Label
-                          x={24}
-                          y={370}
-                          size={17}
-                          color={palette.muted}
-                          maxwidth={752}
-                          maxlines={2}
-                          content="Direct play requires a compatible source. Choose Play with gateway if this device cannot play it."
-                        />
-                      </TvView>
-                    </Show>
-                    <Show when={sourceEmptyCopy(sourceSpread())}>
-                      <Label
-                        x={64}
-                        y={340}
-                        size={28}
-                        maxwidth={800}
-                        content={sourceEmptyCopy(sourceSpread())}
-                      />
-                    </Show>
-                    <Show
-                      when={
-                        !sourceEmptyCopy(sourceSpread()) &&
-                        sources().length > 0 &&
-                        visibleSources().length === 0
-                      }
-                    >
-                      <Label
-                        x={64}
-                        y={340}
-                        size={26}
-                        maxwidth={800}
-                        color={palette.muted}
-                        content="No sources match these filters."
-                      />
-                    </Show>
-                    <Show when={sourceFailure()}>
-                      <Label
-                        x={64}
-                        y={932}
-                        size={20}
-                        font="Onest600"
-                        maxwidth={800}
-                        maxlines={1}
-                        color="#FF7A6E"
-                        content={sourceFailure()}
-                      />
-                    </Show>
-                    {/* SRC-DRAWER-10: the status line sits under the list and
-                        is absent while the picker is idle. */}
-                    <Show when={sourceStatusCopy(sourceSpread())}>
-                      <BusySpinner x={64} y={964} size={SOURCE_SPINNER_SIZE} />
-                      <Label
-                        x={64 + SOURCE_SPINNER_SIZE + 12}
-                        y={960}
-                        size={22}
-                        maxwidth={800}
-                        maxlines={1}
-                        color={palette.muted}
-                        content={sourceStatusCopy(sourceSpread())}
-                      />
-                    </Show>
-                  </TvView>
+                    <Show when={sourceActions()}><SourceActionsPanel source={focusedSource()} selected={sourceActionChoice()} /></Show>
+                    <SourceFooter empty={sourceEmptyCopy(sourceSpread())} status={sourceStatusCopy(sourceSpread())} failure={sourceFailure()}
+                      filtered={!sourceEmptyCopy(sourceSpread()) && sources().length > 0 && visibleSources().length === 0} />
+                  </SlidingDrawer>
                 </Show>
                 <Show
                   when={

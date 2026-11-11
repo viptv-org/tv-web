@@ -396,7 +396,9 @@ test("source quality selection is delegated to the server", async ({
     )
     .toBe(true);
   await page.keyboard.press("ArrowUp");
-  await page.keyboard.press("ArrowRight");
+  await page.keyboard.press("Enter");
+  await expect(screen(page)).toHaveAttribute("data-tv-source-menu", "quality");
+  await page.keyboard.press("ArrowDown");
   await page.keyboard.press("Enter");
   await expect
     .poll(() =>

@@ -1,25 +1,13 @@
 /** @jsxImportSource @solidtv/solid */
 import { For } from "solid-js";
 import { TvView } from "../runtime";
+import { SlidingDrawer } from "./SlidingDrawer";
 import { Label, palette } from "./visuals";
 import type { Overlay } from "./app-types";
 
 export function ChoiceDrawer(props: { dialog: Extract<Overlay, { kind: "choices" | "confirm" }>; selected: number; entered: boolean; closing: boolean }) {
   return <>
-    <TvView
-      x={props.entered && !props.closing ? 1100 : 1920}
-      w={820}
-      h={1080}
-      color={palette.surface}
-      transition={{
-        x: {
-          duration: props.closing ? 200 : 300,
-          timingFunction: props.closing
-            ? "cubic-bezier(.3,0,1,1)"
-            : "cubic-bezier(0,0,0,1)",
-        },
-      }}
-    >
+    <SlidingDrawer width={820} entered={props.entered} closing={props.closing}>
       <Label
         x={64}
         y={72}
@@ -86,6 +74,6 @@ export function ChoiceDrawer(props: { dialog: Extract<Overlay, { kind: "choices"
           </TvView>
         )}
       </For>
-    </TvView>
+    </SlidingDrawer>
   </>;
 }
