@@ -1,5 +1,6 @@
 import {test,expect,type Page} from '@playwright/test';
 import {installRemoteBackend} from '../preview/remote-backend';
+import {openNavigation} from './navigation-helpers';
 
 const texts=(page:Page)=>page.evaluate(()=>{
   const found:string[]=[];
@@ -9,14 +10,15 @@ const texts=(page:Page)=>page.evaluate(()=>{
 });
 const shown=(page:Page,value:string)=>texts(page).then(found=>found.some(text=>text.includes(value)));
 /** The grid's time header, drawn four half hours from the page's window. */
-const headerLabels=(page:Page)=>texts(page).then(found=>found.filter(text=>/^\d{1,2}:\d{2}/.test(text)));
+const headerLabels=(page:Page)=>page.evaluate(()=>{
+ const labels:string[]=[];function walk(node:any){if(node.isRenderable&&node.absY===592&&/^\d{1,2}:\d{2}/.test(node.viptvText??''))labels.push(node.viptvText);node.children?.forEach(walk);}
+ walk((window as any).__viptvRenderer.stage.root);return labels;
+});
 
 async function openLive(page:Page){
   await page.goto('/tv/?platform=vizio&focusdebug=1');
   await expect(page.locator('html')).toHaveAttribute('data-tv-ready','true');
-  await page.keyboard.press('ArrowUp');
-  for(let i=0;i<3;i++)await page.keyboard.press('ArrowRight');
-  await page.keyboard.press('Enter');
+  await openNavigation(page,'live');
   await expect(page.locator('html')).toHaveAttribute('data-tv-channel-id','channel-0');
 }
 

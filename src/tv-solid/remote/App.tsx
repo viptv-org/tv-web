@@ -5,17 +5,7 @@ import { exitTizen } from "../platform/tizen-host";
 import { DevicePlayback, deviceProfileKey, deviceTitleKey } from "./device-playback";
 import { EpisodePreparation, episodeKey, sourceStartIds, sourcePageReady, type PreparedEpisode, type EpisodePreparationState } from "./episode-preparation";
 import { AutoplayCountdown, type CountdownState } from "./autoplay-countdown";
-import {
-  For,
-  Show,
-  batch,
-  createEffect,
-  createMemo,
-  createSignal,
-  onCleanup,
-  untrack,
-  onMount
-} from "solid-js";
+import { Show, batch, createEffect, createMemo, createSignal, onCleanup, untrack, onMount } from "solid-js";
 import {
  EntryScreen 
 } from "./EntryScreens";
@@ -34,26 +24,28 @@ import {
 import {
  LibraryToolbar 
 } from "./LibraryToolbar";
-import {
- SearchInput,
- searchLetters 
-} from "./SearchInput";
+import { searchLetters } from "./SearchInput";
 import {
  SearchChannels 
 } from "./SearchChannels";
-import { imageSource, reloadImages } from "./image-source";
+import { reloadImages } from "./image-source";
 import { clearLogoCache } from "./visuals";
 import { CalendarBoard, calendarDayKey, calendarDays } from "./CalendarBoard";
 import { StatusDialog } from "./StatusDialog";
 import { initialSeasonIndex, seasonLabel, episodeActionLabel, seasonEpisodes } from "./seasons";
 import { RowFocus } from "./row-focus";
 import { HomeContent } from "./HomeContent";
-import { MediaTile as Tile } from "./MediaTile";
+
 import { DetailContent } from "./DetailContent";
 import { PlayerControlsView } from "./PlayerControlsView";
 import { SettingsView } from "./SettingsView";
 import { BrowseControls } from "./BrowseControls";
 import { OverlayViewport } from "./OverlayViewport";
+import { LiveGuideGrid } from "./live/LiveGuideGrid";
+import { LiveGroupSelector } from "./live/LiveGroupSelector";
+import { LiveHero } from "./live/LiveHero";
+import { SearchHeader } from "./SearchHeader";
+import { CatalogGrid } from "./CatalogGrid";
 import { SlidingDrawer } from "./SlidingDrawer";
 import { SourceFooter } from "./source-picker/SourceFooter";
 import { SourceActionsPanel } from "./source-picker/SourceActionsPanel";
@@ -62,10 +54,10 @@ import { SourceHeading } from "./source-picker/SourceHeading";
 import { SourceFilters } from "./source-picker/SourceFilters";
 import { SourceList } from "./source-picker/SourceList";
 import { sourceActionOptions, type SourceMenuOption } from "./source-picker/options";
-import { filterTitleWidth as sourceFilterTitleWidth } from "./filter-pill-layout";
 import { TopNavigation } from "./TopNavigation";
 import { ProfileEditorView } from "./ProfileEditorView";
 import { availableNavigation } from "./navigation-model";
+
 import { NextEpisodePanel } from "./NextEpisodePanel";
 import { KeyboardView } from "./KeyboardView";
 import { TextEntryPanel } from "./TextEntryPanel";
@@ -84,21 +76,11 @@ import {
   type PageDirection
 } from "./channelWindow";
 import { trackLabel } from "./track-label";
-import {
- defineScreen,
- TvView,
- KeyedFor,
-} from "../runtime";
+import { defineScreen, TvView } from "../runtime";
 import {
  exitWebos 
 } from "../webos";
-import {
-  Button,
-  Label,
-  icon,
-  palette,
-  livePreviewScrim,
-} from "./visuals";
+import { Button, Label, palette } from "./visuals";
 import {
   RemoteTvApi,
   lookupSelector,
@@ -178,19 +160,10 @@ import {
   type TitleAction,
   type PlaybackSegment
 } from "./types";
-import { sdfTextMetrics } from "./text-measure";
-import { timeOfDay } from "./time";
 import type { PlayerSnapshot } from "../../../vendor/video/src/types";
 
 const available = (value?: { availability: string }) =>
   value?.availability === "Available";
-const uniqueCards = (cards: readonly Card[]) =>
-  cards.filter(
-    (card, index, all) =>
-      all.findIndex((other) => cardKey(other) === cardKey(card)) === index,
-  );
-
-
 const isRokuUi =
   typeof (globalThis as any).__SolidTVRokuRenderer !== "undefined";
 
@@ -446,39 +419,6 @@ export function createRemoteTvApp(
         ? Math.floor(selected.start_millis / 1800000) * 1800000
         : base;
     });
-    const guideTime = timeOfDay;
-    /** Provider live titles sometimes carry a raw ISO kickoff timestamp. */
-    const liveTitle = (value?: string) => {
-      if (!value) return "";
-      const months = [
-        "Jan",
-        "Feb",
-        "Mar",
-        "Apr",
-        "May",
-        "Jun",
-        "Jul",
-        "Aug",
-        "Sep",
-        "Oct",
-        "Nov",
-        "Dec",
-      ];
-      return value
-        .replace(
-          /@\s*(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z)/g,
-          (_, iso: string) => {
-            const date = new Date(iso);
-            if (Number.isNaN(date.getTime())) return "";
-            const hour = date.getHours();
-            return `@ ${months[date.getMonth()]} ${date.getDate()}, ${hour % 12 || 12}:${String(
-              date.getMinutes(),
-            ).padStart(2, "0")} ${hour >= 12 ? "PM" : "AM"}`;
-          },
-        )
-        .replace(/\s+/g, " ")
-        .trim();
-    };
     const [search, setSearch] = createSignal(""),
       [searchError, setSearchError] = createSignal(""),
       [searchChannelError, setSearchChannelError] = createSignal(""),
@@ -6286,44 +6226,8 @@ export function createRemoteTvApp(
                   focused={zone() === "filters"} index={column()} />
               </Show>
               <Show when={screen() === "search"}>
-                <SearchInput
-                  value={search()}
-                  index={key()}
-                  focused={zone() === "keyboard"}
-                />
-                <Show when={searchCapabilities().media}>
-                  <Label
-                    x={700}
-                    y={140}
-                    size={30}
-                    font="Onest600"
-                    letterspacing={-0.3}
-                    content="Top results"
-                  />
-                </Show>
-                <Show when={searchNeedsRetry()}>
-                  <Label
-                    x={page().cards.length ? 880 : 700}
-                    y={page().cards.length ? 146 : 220}
-                    size={page().cards.length ? 20 : 28}
-                    maxwidth={page().cards.length ? 700 : 1100}
-                    maxlines={page().cards.length ? 1 : 2}
-                    content={
-                      searchError() ||
-                      (page().cards.length
-                        ? "Partial results"
-                        : "Some search results are unavailable.")
-                    }
-                  />
-                  <Button
-                    x={page().cards.length ? 1624 : 700}
-                    y={page().cards.length ? 128 : 320}
-                    w={page().cards.length ? 200 : 260}
-                    h={page().cards.length ? 56 : 72}
-                    label="Try again"
-                    focused={zone() === "search-retry"}
-                  />
-                </Show>
+                <SearchHeader query={search()} selected={key()} keyboardFocused={zone() === "keyboard"} media={searchCapabilities().media}
+                  retry={searchNeedsRetry()} resultCount={page().cards.length} error={searchError()} retryFocused={zone() === "search-retry"} />
               </Show>
               <Show
                 when={
@@ -6333,105 +6237,9 @@ export function createRemoteTvApp(
                   (screen() !== "search" || searchCapabilities().media)
                 }
               >
-                <TvView
-                  x={screen() === "search" ? 700 : 96}
-                  y={
-                    screen() === "search"
-                      ? 196
-                      : screen() === "library"
-                        ? 236
-                        : 244
-                  }
-                  w={screen() === "search" ? 1124 : 1720}
-                  h={
-                    screen() === "search"
-                      ? searchCapabilities().channels
-                        ? 406
-                        : 800
-                      : 844
-                  }
-                  clipping={true}
-                >
-                  <Show
-                    when={
-                      screen() === "search" &&
-                      searchMediaPending() &&
-                      !page().cards.length
-                    }
-                  >
-                    <Label
-                      y={100}
-                      size={28}
-                      color={palette.muted}
-                      content="Searching…"
-                    />
-                  </Show>
-                  <KeyedFor
-                    each={uniqueCards(page().cards).slice(
-                      gridStart(),
-                      gridStart() + gridCount(),
-                    )}
-                    keyOf={cardKey}
-                  >
-                    {(card, i) => (
-                      <Tile
-                        card={card()}
-                        x={
-                          (i() % gridColumns()) *
-                          (screen() === "search" ? 228 : 248)
-                        }
-                        y={
-                          Math.floor(i() / gridColumns()) *
-                            (screen() === "search"
-                              ? 388
-                              : screen() === "library"
-                                ? 446
-                                : 460) - gridOffset()
-                        }
-                        w={screen() === "search" ? 212 : 232}
-                        h={screen() === "search" ? 318 : 348}
-                        focused={
-                          zone() === "content" && i() + gridStart() === column()
-                        }
-                        poster
-                        focusedCaptions={screen() === "search"}
-                      />
-                    )}
-                  </KeyedFor>
-                  <Show
-                    when={
-                      !loading() &&
-                      !page().cards.length &&
-                      !(
-                        screen() === "search" &&
-                        (searchNeedsRetry() || searchMediaPending())
-                      )
-                    }
-                  >
-                    <Label
-                      y={100}
-                      size={32}
-                      font="Onest600"
-                      content={
-                        screen() === "search" && !search()
-                          ? "Find something to watch"
-                          : screen() === "library"
-                            ? "Your list is empty"
-                            : "Nothing matches"
-                      }
-                    />
-                    <Label
-                      y={160}
-                      size={26}
-                      color={palette.muted}
-                      content={
-                        screen() === "library"
-                          ? "Add a title to find it here."
-                          : "Try a different search or filter."
-                      }
-                    />
-                  </Show>
-                </TvView>
+                <CatalogGrid screen={screen()} cards={page().cards} window={{start: gridStart, count: gridCount, columns: gridColumns, offset: gridOffset}}
+                  focus={{active: () => zone() === "content", index: column}} loading={loading()}
+                  search={{channels: () => searchCapabilities().channels, pending: searchMediaPending, retry: searchNeedsRetry, query: search}} />
               </Show>
               <Show
                 when={
@@ -6500,383 +6308,10 @@ export function createRemoteTvApp(
                 </Show>
               </Show>
               <Show when={liveKeepsToday(liveSpread())}>
-              <TvView x={96} y={130} w={64} h={30} color="#FF5A4E">
-                <Label
-                  w={64}
-                  centerY={15}
-                  align="center"
-                  size={20}
-                  font="Onest700"
-                  content="LIVE"
-                />
-              </TvView>
-              <Label
-                x={176}
-                y={130}
-                size={24}
-                color={palette.muted}
-                maxwidth={920}
-                maxlines={1}
-                content={(() => {
-                  const channel = channels()[liveChannelIndex()];
-                  return [channel?.number, liveTitle(channel?.card.title)]
-                    .filter(Boolean)
-                    .join(" · ");
-                })()}
-              />
-              <Label
-                x={96}
-                y={174}
-                size={56}
-                font="Onest700"
-                maxwidth={1000}
-                maxlines={1}
-                content={
-                  liveTitle(
-                    currentProgram()?.title ??
-                      channels()[liveChannelIndex()]?.card.subtitle,
-                  )
-                }
-              />
-              <Show when={currentProgram()}>
-                {(p) => (
-                  <>
-                    <Label
-                      x={96}
-                      y={250}
-                      size={24}
-                      font="Onest500"
-                      content={`${guideTime(p().start_millis)} – ${guideTime(
-                        p().end_millis,
-                      )}${
-                        p().end_millis > Date.now()
-                          ? ` · ${Math.max(
-                              1,
-                              Math.round(
-                                (p().end_millis - Date.now()) / 60000,
-                              ),
-                            )} min left`
-                          : ""
-                      }`}
-                    />
-                    <Label
-                      x={96}
-                      y={316}
-                      size={28}
-                      maxwidth={1000}
-                      maxlines={3}
-                      content={p().description ?? ""}
-                    />
-                  </>
-                )}
-              </Show>
-              <Show
-                when={
-                  currentProgram()?.artwork ??
-                  channels()[liveChannelIndex()]?.card.landscape ??
-                  channels()[liveChannelIndex()]?.card.poster
-                }
-              >
-                {(art) => (
-                <TvView
-                  x={1184}
-                  y={120}
-                  w={640}
-                  h={360}
-                  src={imageSource(art(), 1280)}
-                  fit="contain"
-                >
-                  <TvView y={270} w={640} h={90} src={livePreviewScrim()} fit="cover" />
-                  <TvView
-                    x={404}
-                    y={322}
-                    w={24}
-                    h={24}
-                    src={icon("play", false, 0, "#F4F2EE")}
-                  />
-                  <Label
-                    x={436}
-                    y={324}
-                    w={188}
-                    align="right"
-                    size={20}
-                    font="Onest600"
-                    content="OK to watch"
-                  />
-                </TvView>
-                )}
-              </Show>
-              <Show when={groups().length}>
-                {(() => {
-                  const groupList = () => [
-                    { id: "all", label: "All" },
-                    ...groups(),
-                  ];
-                  const label = () => {
-                    const index =
-                      zone() === "live-groups"
-                        ? column()
-                        : liveGroup()
-                          ? groupList().findIndex(
-                              (group) => group.id === liveGroup(),
-                            )
-                          : 0;
-                    return groupList()[Math.max(0, index)]?.label ?? "All";
-                  };
-                  const width = () => {
-                    const title = "Group:";
-                    const value = label();
-                    const context = sdfTextMetrics("24px Onest600");
-                    return Math.min(
-                      520,
-                      76 +
-                        Math.ceil(context.measureText(title).width) +
-                        Math.ceil(context.measureText(value).width),
-                    );
-                  };
-                  return (
-                    <TvView
-                      x={96}
-                      y={512}
-                      w={width() + 6}
-                      h={64}
-                      color={
-                        zone() === "live-groups" ? palette.text : "#2A2A2E"
-                      }
-                    >
-                      <Label
-                        x={24}
-                        centerY={32}
-                        size={24}
-                        font="Onest600"
-                        content="Group:"
-                        color={
-                          zone() === "live-groups"
-                            ? "#4A4945"
-                            : palette.muted
-                        }
-                      />
-                      <Label
-                        x={24 + sourceFilterTitleWidth("Group:") + 6}
-                        centerY={32}
-                        size={24}
-                        font="Onest600"
-                        maxwidth={
-                          width() -
-                          74 -
-                          sourceFilterTitleWidth("Group:")
-                        }
-                        maxlines={1}
-                        content={label()}
-                        color={
-                          zone() === "live-groups"
-                            ? "#111113"
-                            : palette.text
-                        }
-                      />
-                      <TvView
-                        x={width() - 44}
-                        y={20}
-                        w={24}
-                        h={24}
-                        src={icon("down", zone() === "live-groups")}
-                      />
-                    </TvView>
-                  );
-                })()}
-              </Show>
-              {/* The header belongs to the grid, not to one row: it reads the
-                  page's window for as long as there are channels to draw. */}
-              <Show when={channels().length}>
-                <For each={[0, 1, 2, 3]}>
-                  {(i) => (
-                    <Label
-                      x={420 + i * 350}
-                      y={592}
-                      size={20}
-                      font="Onest600"
-                      color={palette.muted}
-                      content={
-                        i === 0
-                          ? guideTime(guideStart())
-                          : guideTime(guideStart() + i * 1800000).replace(
-                              /\s?(AM|PM)/i,
-                              "",
-                            )
-                      }
-                    />
-                  )}
-                </For>
-              </Show>
-              <TvView x={96} y={636} w={1728} h={408} clipping={true}>
-                <For
-                  each={channels().slice(
-                    Math.max(0, guideRowStart()),
-                    guideRowStart() + 5,
-                  )}
-                >
-                  {(channel, i) => (
-                    <TvView
-                      y={
-                        (i() + Math.max(0, guideRowStart()) - guideRowStart()) *
-                        80
-                      }
-                    >
-                      <TvView
-                        w={300}
-                        h={72}
-                        color="rgba(255,255,255,.06)"
-                      >
-                        <Show when={channel.number}>
-                          <Label
-                            x={18}
-                            centerY={36}
-                            size={22}
-                            font="Onest600"
-                            maxwidth={34}
-                            maxlines={1}
-                            content={channel.number ?? ""}
-                            color={palette.muted}
-                          />
-                        </Show>
-                        <Label
-                          x={channel.number ? 68 : 18}
-                          centerY={36}
-                          size={30}
-                          font="Bricolage800"
-                          letterspacing={-0.6}
-                          maxwidth={channel.number ? 214 : 264}
-                          maxlines={1}
-                          content={liveTitle(channel.card.title)}
-                          color={palette.text}
-                        />
-                      </TvView>
-                      <TvView x={328} w={1400} h={72} clipping={true}>
-                        <Show
-                          when={programs()[channel.id]?.length}
-                          fallback={
-                            <TvView
-                              w={1400}
-                              h={72}
-                              color={
-                                i() + Math.max(0, guideRowStart()) ===
-                                  column() && zone() === "content"
-                                  ? palette.text
-                                  : palette.surface
-                              }
-                            >
-                              <Label
-                                x={20}
-                                centerY={36}
-                                size={24}
-                                content="Programme information unavailable"
-                                color={
-                                  i() + Math.max(0, guideRowStart()) ===
-                                    column() && zone() === "content"
-                                    ? "#111113"
-                                    : palette.muted
-                                }
-                              />
-                            </TvView>
-                          }
-                        >
-                          <For
-                            each={(programs()[channel.id] ?? [])
-                              .filter(
-                                (p) =>
-                                  p.end_millis > guideStart() &&
-                                  p.start_millis < guideStart() + 7200000,
-                              )
-                              .slice(0, 12)}
-                          >
-                            {(program) => (
-                              <TvView
-                                x={Math.max(
-                                  0,
-                                  ((program.start_millis - guideStart()) /
-                                    7200000) *
-                                    1400,
-                                )}
-                                w={Math.max(
-                                  12,
-                                  ((Math.min(
-                                    guideStart() + 7200000,
-                                    program.end_millis,
-                                  ) -
-                                    Math.max(
-                                      guideStart(),
-                                      program.start_millis,
-                                    )) /
-                                    7200000) *
-                                    1400 -
-                                    8,
-                                )}
-                                h={72}
-                                color={
-                                  i() + Math.max(0, guideRowStart()) ===
-                                    column() &&
-                                  program.id === currentProgram()?.id &&
-                                  zone() === "content"
-                                    ? palette.text
-                                    : "#212124"
-                                }
-                              >
-                                <Label
-                                  x={20}
-                                  centerY={36}
-                                  size={24}
-                                  maxwidth={Math.max(
-                                    0,
-                                    ((Math.min(
-                                      guideStart() + 7200000,
-                                      program.end_millis,
-                                    ) -
-                                      Math.max(
-                                        guideStart(),
-                                        program.start_millis,
-                                      )) /
-                                      7200000) *
-                                      1400 -
-                                      48,
-                                  )}
-                                  maxlines={1}
-                                  content={program.title}
-                                  color={
-                                    i() + Math.max(0, guideRowStart()) ===
-                                      column() &&
-                                    program.id === currentProgram()?.id &&
-                                    zone() === "content"
-                                      ? "#111113"
-                                      : palette.text
-                                  }
-                                />
-                              </TvView>
-                            )}
-                          </For>
-                        </Show>
-                      </TvView>
-                    </TvView>
-                  )}
-                </For>
-                <Show when={channels().length}>
-                  <TvView
-                    x={
-                      328 +
-                      Math.max(
-                        0,
-                        Math.min(
-                          1400,
-                          ((guideWindow().now - guideStart()) / 7200000) *
-                            1400,
-                        ),
-                      )
-                    }
-                    w={2}
-                    h={400}
-                    color="#FF5A4E"
-                  />
-                </Show>
-              </TvView>
+              <LiveHero channel={channels()[liveChannelIndex()]} program={currentProgram()} />
+              <Show when={groups().length}><LiveGroupSelector groups={groups()} group={liveGroup()} focused={zone() === "live-groups"} selected={column()} /></Show>
+              <LiveGuideGrid channels={channels()} programs={programs()} window={{row: guideRowStart, start: guideStart, now: () => guideWindow().now}}
+                selection={{index: column, active: () => zone() === "content", program: () => currentProgram()?.id}} />
               {/* LIVE-EMPTY-11: a page that is empty because of its filter
                   says so, under the chips that are its focus stop, instead of
                   reading as a missing source. */}
