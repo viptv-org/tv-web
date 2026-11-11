@@ -32,8 +32,9 @@ fresh Canvas host; ordinary Canvas Home/media and nine ownership/two real
 context-loss browser regressions pass. No global bitmap disable or UA rule ships.
 
 Actual simulator-window captures show video and controls; a Canvas capture also
-shows the caption. Healthy-WebGL subtitle evidence establishes track modes and
-active cue contents, not a complete caption-paint sweep. Physical LG/Samsung
+shows the caption. The reviewed healthy-WebGL paused window also shows the active
+English cue. Track modes, active cue contents and that visible cue are verified;
+this is not a complete caption-style pixel sweep. Physical LG/Samsung
 codecs, audible output, DRM, firmware lifecycle and remote behavior remain
 unqualified. Earlier LG26/bitmap-disable diagnostics are not current LG22 passes.
 The four existing Live-empty cases stop on Anime through stale

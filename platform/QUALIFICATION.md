@@ -107,8 +107,8 @@ Private proof artifacts: lg-native-context-confirm.log,
 lg-startup-probe.log, lg-player-report.json and lg-player-final.log, with actual
 simulator-window captures. Both video and controls are visibly painted; the
 Canvas caption is visible in its capture. Healthy-WebGL subtitle assertions
-verify track modes and active cue contents; its single paused capture does not
-establish caption pixels or a complete caption-paint sweep. Earlier LG26's white
+verify track modes and active cue contents, and its reviewed paused window shows
+the active English cue. This is not a complete caption-style pixel sweep. Earlier LG26's white
 guest/CDP timeout and bitmap-disable black presentation remain historical failed
 diagnostics, not current LG22 outcomes. Physical LG/Samsung codecs, audible
 output, DRM, mediaOption, installed-state persistence, firmware lifecycle,
