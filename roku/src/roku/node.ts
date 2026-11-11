@@ -529,11 +529,22 @@ export class RokuNode extends Events {
   }
 
   get absX(): number {
-    const own = this._x - this._mountX * this.boxW;
-    if (!this._parent) return own;
-    let x = this._parent.absX + own;
-    if (this.rtlResolved) x = this._parent.absX + (this._parent.boxW - this._x - this.boxW) - this._mountX * this.boxW;
-    return x;
+    let x = 0, left = 0, right = 0;
+    let node: RokuNode | null = this;
+    while (node) {
+      const parent: RokuNode | null = node._parent;
+      const width = node.boxW;
+      const mounted = node._mountX * width;
+      left += node._x - mounted;
+      right += parent ? parent.boxW - node._x - width - mounted : node._x - mounted;
+      // An explicit direction resolves the accumulated inheriting descendants.
+      if (node._rtl !== null) {
+        x += node._rtl ? right : left;
+        left = 0; right = 0;
+      }
+      node = parent;
+    }
+    return x + left;
   }
   get absY(): number { return (this._parent ? this._parent.absY : 0) + this._y - this._mountY * this.boxH; }
 

@@ -68,3 +68,34 @@ it("does not report decoded imagery when no native status arrives", () => {
   expect(loaded).toHaveBeenCalledOnce();
   node.destroy();
 });
+
+
+it("preserves mounted coordinates through inherited direction overrides and reparenting", () => {
+  for (const a of [undefined, false, true]) for (const b of [undefined, false, true]) for (const c of [undefined, false, true]) {
+    const root = new RokuNode(renderer, { x: 13, w: 1000, mountX: 0.1, rtl: a });
+    const middle = new RokuNode(renderer, { x: 29, w: 400, mountX: 0.25, rtl: b });
+    const leaf = new RokuNode(renderer, { x: 31, w: 80, mountX: 0.5, rtl: c });
+    middle.parent = root; leaf.parent = middle;
+    const rootX = 13 - 100;
+    const middleRtl = b ?? a ?? false, leafRtl = c ?? middleRtl;
+    const middleX = rootX + (middleRtl ? 1000 - 29 - 400 : 29) - 100;
+    expect(leaf.absX).toBeCloseTo(middleX + (leafRtl ? 400 - 31 - 80 : 31) - 40);
+    middle.x = 41; middle.w = 500;
+    expect(leaf.absX).toBeCloseTo(rootX + (middleRtl ? 1000 - 41 - 500 : 41) - 125 + (leafRtl ? 500 - 31 - 80 : 31) - 40);
+    leaf.parent = root;
+    expect(leaf.absX).toBeCloseTo(rootX + ((c ?? a ?? false) ? 1000 - 31 - 80 : 31) - 40);
+  }
+});
+
+it.each([undefined, false, true])("reads ancestor geometry only linearly with root direction %s", rtl => {
+  let node = new RokuNode(renderer, { x: 10, w: 100, rtl });
+  const nodes = [node];
+  for (let i = 1; i < 12; i++) {
+    const child = new RokuNode(renderer, { x: 10, w: 100 });
+    child.parent = node; nodes.push(child); node = child;
+  }
+  let reads = 0;
+  for (const item of nodes) Object.defineProperty(item, "boxW", { get: () => { reads++; return 100; } });
+  expect(node.absX).toBe(rtl ? -100 : 120);
+  expect(reads).toBeLessThanOrEqual(nodes.length * 2);
+});

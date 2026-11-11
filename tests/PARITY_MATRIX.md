@@ -538,3 +538,12 @@ Implementation `4cf36237e70b387aacad8a3c5521d5f2ee9eaf9e`;
 | --- | --- | --- | --- |
 | Frame pacing, synchronization and visual ownership | Injected-work/pause/easing regressions; 60 updates per 60 simulated ticks; affected-subtree and shallow motion-group updates; one Poster/URI per artwork primitive | Beta Home/rows/source-drawer smoke on TCL 50S435/C157X, OS 16.0.4 | Render+swap p95 22.04 ms over 758 frames; 16.67 ms target unmet, no sustained-FPS claim |
 | Image decode/readiness and background swaps | Native observer and stale-callback tests, opaque handles, size hints before URI, compact packaged masks, proxy variants, bounded two-frame handover | Home imagery and row-preview changes captured privately | Same-origin network bytes are unchanged; only native decode is resized without a server transformation contract |
+
+
+## Roku-first performance checkpoint
+
+| Area | Headless evidence | Physical evidence / remaining gap |
+|---|---|---|
+| Native ancestor coordinates | Mounted coordinates, 27 direction combinations, reparenting and linear traversal bound pass in both native hosts | Candidate starts and renders Home; one navigation comparison shows no meaningful stall reduction |
+| Vertical scrolling | Native adapter logic is testable without hardware | Timer gaps still reach about 700 ms in the fixed-key run; smooth motion remains unqualified |
+| TypeScript runtime | SDK in-memory component testing is available; native boundary tests pass | Hermes CPU profiling works on the real device; in-memory tests do not establish firmware or GPU parity |

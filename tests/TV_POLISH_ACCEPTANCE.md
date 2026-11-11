@@ -1,10 +1,33 @@
 # TV polish acceptance — 2026-11-09
 
 Owner-requested refinement of the existing shared TV app, without a redesign or
-framework migration. Implementation stays in tv-web. Read app's Android TV UI and
-the Solid TV demo as references. Backend changes are permitted for server-side
+framework migration. Roku performance work covers both the SolidTV fork/native
+host and tv-web. Read app's Android TV UI as a reference. Backend changes are permitted for server-side
 metadata caching; investigate Cloudflare suitability before changing caching rules.
 Keep credentials, device identifiers and private captures outside Git.
+
+## Execution priority and evidence gates
+
+1. Establish physical Roku baselines for vertical scrolling, horizontal repeats,
+   reversals and artwork transitions. Record input acknowledgement, JavaScript
+   stalls, native synchronization and actual visual motion separately. Aggregate
+   render FPS alone cannot qualify scrolling.
+2. Fix the measured bottlenecks in the SolidTV fork/native host and VIPTV. Evaluate
+   render-thread animation, bounded node reuse and prioritized visual publication;
+   preserve shared sources, clipping, focus order and animation lifecycle behavior.
+3. Add headless TypeScript/native-adapter regression coverage and investigate the
+   available native blur path and its measured cost. In-memory SDK tests establish
+   behavior, not Hermes compatibility, GPU performance or physical presentation.
+4. Complete the artwork, spacing, player, loading, season and session checks below,
+   preserving browser and PS4 behavior. UI polish follows Roku performance work.
+5. Run final real-media and physical-device acceptance, provision the dedicated
+   beta account as specified in the private handoff, verify persistence and leave
+   a working app. Commit/push verified changes and qualify beta served artifacts;
+   retain explicit gaps rather than declaring untested requirements complete.
+
+All remaining checklist items stay in scope. Performance completion requires
+repeatable physical-device evidence, including fast vertical reversals under
+image loading; a unit-test pass or high average FPS is insufficient.
 
 ## Hero, artwork and motion
 

@@ -3741,5 +3741,35 @@ p95 of 22.04/21.89/21.83 ms. The unchanged 16.67 ms qualification gate fails;
 these results do not establish 60 FPS. The first trace includes more initial
 work; subsequent traces are warm. Earlier system-Home and minimal native-scene
 diagnostics on this device reported approximately 48 FPS as well. This is an
-observed environment result, not a universal hardware limit. Further compositor
-or SDK scheduling work is outside this owner-scoped TV-web refinement.
+observed environment result, not a universal hardware limit. Compositor and SDK scheduling work remain required under the Roku-first
+performance scope.
+
+
+## Roku-first performance investigation
+
+Physical Home navigation still has severe JavaScript stalls. A 16 ms timer probe
+observed a maximum gap of 1,281 ms during vertical input; its overall p95 was
+19.5 ms, illustrating why averages do not qualify motion. A separate Hermes CPU
+profile recorded 6,227 samples, including 3,651 under the key-event callback.
+Repeated ancestor-coordinate/direction reads, node construction and young-generation
+collection appear in the profile. This is CPU evidence, not presented-frame data.
+
+The native coordinate getter now walks ancestors once, including mixed inherited
+RTL overrides and mounts. The regression's 12-level RTL tree previously required
+10,236 width reads per lookup; the bound is now 24. Native tests cover all 27
+three-level direction combinations, geometry updates, reparenting and deep LTR/RTL.
+The same change and tests are applied in the SolidTV demo native host.
+
+Validation: application typecheck, native package build, 22 VIPTV native tests and
+6 SolidTV native-node tests pass. The candidate was cold-installed on the physical
+Roku, starts signed in and renders Home after repeated vertical navigation.
+A ten-key Down/Up comparison from relaunched Home measured timer p95/max of
+70.24/693.73 ms for the preceding package and 71.49/714.36 ms for the candidate.
+These single exploratory runs show no meaningful Home-scroll improvement; the
+scaling fix does not establish performance acceptance. Visible intermediate-frame
+cadence, blur, render-thread animation and bounded node reuse remain unqualified.
+No beta server rollout or new playback qualification is included in this check.
+
+The SDK testing library can execute TypeScript components against an in-memory
+SceneGraph under Jest without a Roku. Existing native-adapter tests mock the SDK
+boundary; neither approach emulates Hermes scheduling or the physical compositor.
