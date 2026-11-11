@@ -132,6 +132,11 @@ import { createPreferenceControls } from "./preference-controls";
 import { createOverlayController } from "./overlay-controller";
 import { createDetailPresentation } from "./detail-presentation";
 import { createSourcePresentation } from "./source-picker/presentation";
+import { createHeroNavigation } from "./navigation/hero";
+import { createHomeRowsNavigation } from "./navigation/home";
+import { createSourceNavigation } from "./navigation/sources";
+import { createOverlayNavigation } from "./navigation/overlays";
+import { createSearchNavigation } from "./navigation/search";
 import { createSettingsNavigation } from "./navigation/settings";
 import { createProfilesNavigation } from "./navigation/profiles";
 import { createCalendarNavigation } from "./navigation/calendar";
@@ -4043,6 +4048,23 @@ export function createRemoteTvApp(
       timeline: {seeking, allowed: () => playerActions().seek, duration: () => snapshot()?.time.durationSeconds,
         position: () => snapshot()?.time.positionSeconds ?? 0, preview: seek, setPreview: setSeek},
       controls: {count: () => playerButtons().length, show: () => { setShowControls(true); }, activity: hideControls} });
+    const navigateHero = createHeroNavigation({focus: navigationFocus, action: setHeroAction, row: setRow, homeNavIndex: () => navIndex("home"),
+      home: {rows: () => home()?.rows ?? [], resolve: index => homeRowFocus.resolve(home()?.rows[index]), remember: rememberHomeRow},
+      detail: {hasEpisodes: detailHasEpisodes, recommendations: () => detail()?.recommendations.length ?? 0, seasons: () => detail()?.seasons.length ?? 0}});
+    const navigateHomeRows = createHomeRowsNavigation({focus: navigationFocus, row: {index: row, set: setRow},
+      rows: () => home()?.rows ?? [], resolve: shelf => homeRowFocus.resolve(shelf), remember: rememberHomeRow, load: loadHomePage, move: moveToItem});
+    const navigateSources = createSourceNavigation({manual: () => { manualSourceSelection = true; },
+      actions: {open: () => !!sourceActions(), set: setSourceActionChoice, count: () => sourceActionOptions.length},
+      menu: {open: () => !!sourceMenu(), set: setSourceMenuChoice, count: () => sourceMenuOptions().length},
+      filters: {focused: sourceFilterFocus, focus: setSourceFilterFocus, facet: setSourceFacet},
+      rows: {index: choice, set: setChoice, count: () => visibleSources().length}});
+    const navigateOverlay = createOverlayNavigation({selection: {index: choice, set: setChoice}, tracks: {index: trackColumn, set: setTrackColumn},
+      calibration: {value: calibrationValue, set: setCalibrationValue, preview: applyScreenInset}, keyboard: setKey, sources: navigateSources});
+    const navigateSearch = createSearchNavigation({focus: navigationFocus, keyboard: {index: key, set: setKey}, navIndex: () => navIndex("search"),
+      media: {count: () => page().cards.length, error: searchError, needsRetry: searchNeedsRetry,
+        remembered: () => searchMediaFocus, remember: index => {searchMediaFocus = index;}, move: index => moveToItem(index, page().cards.length)},
+      channels: {count: () => searchChannels().length, error: searchChannelError, enabled: () => searchCapabilities().channels,
+        remembered: () => searchChannelFocus, remember: index => {searchChannelFocus = index;}, move: step => moveChannel(step, true)}});
     function move(dx: number, dy: number) {
       rememberContentFocus();
       rememberDetailFocus();
@@ -4065,104 +4087,7 @@ export function createRemoteTvApp(
       pendingFocus = undefined;
       restartHeroCycling();
       if (loading() && screen() === "welcome") return;
-      if (overlay()) {
-        const value = overlay()!;
-        if (
-          (value.kind === "choices" || value.kind === "confirm") &&
-          value.profile
-        ) {
-          const avatar = value.items.findIndex((item) => item.id === "avatar"),
-            right = value.items
-              .map((_, index) => index)
-              .filter((index) => index !== avatar);
-          if (dx < 0 && avatar >= 0) setChoice(avatar);
-          else if (dx > 0) setChoice(right[0] ?? avatar);
-          else if (dy) {
-            const index = right.indexOf(choice());
-            setChoice(
-              right[Math.max(0, Math.min(right.length - 1, index + dy))] ??
-                avatar,
-            );
-          }
-          return;
-        }
-        if (value.kind === "next") {
-          if (dx) setChoice(i => Math.max(0, Math.min(1, i + dx)));
-          return;
-        }
-        if (value.kind === "tracks") {
-          if (dx) {
-            const column = Math.max(0, Math.min(value.columns.length - 1, trackColumn() + dx));
-            setTrackColumn(column);
-            setChoice(Math.max(0, value.columns[column]?.items.findIndex(item => item.value === "✓") ?? 0));
-          } else {
-            const items = value.columns[trackColumn()]?.items ?? [];
-            setChoice((i) =>
-              Math.max(0, Math.min(items.length - 1, i + dy)),
-            );
-          }
-          return;
-        }
-        if (value.kind === "sources") {
-          manualSourceSelection = true;
-          if (sourceActions()) {
-            if (dy)
-              setSourceActionChoice((i) =>
-                Math.max(
-                  0,
-                  Math.min(sourceActionOptions.length - 1, i + dy),
-                ),
-              );
-            return;
-          }
-          if (sourceMenu()) {
-            const count = sourceMenuOptions().length;
-            if (dy)
-              setSourceMenuChoice((i) =>
-                Math.max(0, Math.min(count - 1, i + dy)),
-              );
-            return;
-          }
-          if (sourceFilterFocus()) {
-            if (dy > 0) setSourceFilterFocus(false);
-            else if (dx)
-              setSourceFacet((i) => Math.max(0, Math.min(1, i + dx)));
-          } else if (dy < 0 && choice() === 0) {
-            setSourceFilterFocus(true);
-            setSourceFacet(0);
-          } else
-            setChoice((i) =>
-              Math.max(0, Math.min(visibleSources().length - 1, i + dy)),
-            );
-          return;
-        }
-        if (value.kind === "calibration") {
-          if (dx) {
-            const next = Math.max(
-              value.min,
-              Math.min(value.max, calibrationValue() + dx),
-            );
-            setCalibrationValue(next);
-            applyScreenInset(next);
-          }
-          return;
-        }
-        if (value.kind === "text") {
-          setKey((i) =>
-            Math.max(
-              0,
-              Math.min(
-                value.numeric ? 11 : 47,
-                i + dx + dy * (value.numeric ? 3 : 6),
-              ),
-            ),
-          );
-        } else
-          setChoice((i) =>
-            Math.max(0, Math.min(value.items.length - 1, i + dy)),
-          );
-        return;
-      }
+      if (overlay()) { navigateOverlay(overlay()!, dx, dy); return; }
       if (screen() === "player") { playerNavigation.move(dx, dy); return; }
       if (screen() === "profiles") { navigateProfiles(dx, dy); return; }
       if (zone() === "nav") {
@@ -4205,171 +4130,9 @@ export function createRemoteTvApp(
       if (screen() === "settings") { navigateSettings(dx, dy); return; }
       if (screen() === "detail" && navigateDetail(dx, dy)) return;
       if (screen() === "calendar") { navigateCalendar(dx, dy); return; }
-      if (zone() === "hero") {
-        setHeroAction((i) =>
-          Math.max(0, Math.min(screen() === "home" ? 2 : 1, i + dx)),
-        );
-        if (dy < 0 && screen() !== "detail") {
-          setZone("nav");
-          setColumn(navIndex("home"));
-        }
-        if (dy > 0) {
-          if (screen() === "home") {
-            const first =
-              home()?.rows.findIndex(
-                (shelf) => shelf.cards.length > 0 || shelf.state === "Failed",
-              ) ?? -1;
-            if (first < 0) return;
-            batch(() => {
-              setRow(first);
-              setColumn(homeRowFocus.resolve(home()?.rows[first]));
-              setZone("rows");
-            });
-            rememberHomeRow();
-            return;
-          } else {
-            if (!detailHasEpisodes() && !detail()?.recommendations.length)
-              return;
-            setZone(detail()?.seasons.length ? "seasons" : "episodes");
-            setRow(0);
-          }
-          setColumn(0);
-        }
-        return;
-      }
-      if (screen() === "home" && zone() === "rows") {
-        rememberHomeRow();
-        if (dy < 0 && row() === 0) {
-          setZone("hero");
-          return;
-        }
-        if (dy) {
-          const rows = home()?.rows ?? [];
-          let next = row() + dy;
-          while (
-            next >= 0 &&
-            next < rows.length &&
-            !rows[next].cards.length &&
-            rows[next].state !== "Failed"
-          )
-            next += dy;
-          if (next < 0) {
-            setZone("hero");
-            return;
-          }
-          if (next >= rows.length) return;
-          batch(() => { setRow(next);setColumn(homeRowFocus.resolve(rows[next])); });
-        }
-        const cards = home()?.rows[row()]?.cards ?? [];
-        if (dx) moveToItem(
-          column() + dx,
-          cards.length,
-          home()?.rows[row()]?.next_cursor,
-        );
-        rememberHomeRow();
-        void loadHomePage();
-        return;
-      }
-      if (screen() === "search" && zone() === "keyboard") {
-        const index = key(),
-          col = index < 2 ? index * 3 : (index - 2) % 6;
-        if (dy < 0 && index < 2) {
-          setZone("nav");
-          setColumn(navIndex("search"));
-        } else if (
-          dx > 0 &&
-          (index === 1 || col === 5) &&
-          (page().cards.length ||
-            searchChannels().length ||
-            searchError() ||
-            searchChannelError())
-        ) {
-          setZone(
-            page().cards.length
-              ? "content"
-              : searchChannels().length
-                ? "search-channels"
-                : searchError()
-                  ? "search-retry"
-                  : "search-channel-retry",
-          );
-          setColumn(0);
-        } else if (index < 2) {
-          if (dy > 0) setKey(2 + index * 3);
-          else if (dx) setKey(Math.max(0, Math.min(1, index + dx)));
-        } else if (dy < 0 && index < 8) setKey(col < 3 ? 0 : 1);
-        else if (dy) setKey(Math.max(2, Math.min(37, index + dy * 6)));
-        else if (dx && col + dx >= 0 && col + dx < 6) setKey(index + dx);
-        return;
-      }
-      if (
-        screen() === "search" &&
-        ["search-retry", "search-channel-retry"].includes(zone())
-      ) {
-        if (dx < 0) setZone("keyboard");
-        if (dy < 0) {
-          if (zone() === "search-channel-retry" && searchError())
-            setZone("search-retry");
-          else {
-            setZone("nav");
-            setColumn(navIndex("search"));
-          }
-        }
-        if (dy > 0) {
-          if (zone() === "search-retry" && page().cards.length) {
-            setZone("content");
-            setColumn(Math.min(searchMediaFocus, page().cards.length - 1));
-          } else if (searchChannels().length) {
-            setZone("search-channels");
-            setColumn(
-              Math.min(searchChannelFocus, searchChannels().length - 1),
-            );
-          } else if (searchChannelError()) setZone("search-channel-retry");
-        }
-        return;
-      }
-      if (screen() === "search" && zone() === "search-channels") {
-        searchChannelFocus = column();
-        if (dy < 0) {
-          setZone(
-            searchChannelError()
-              ? "search-channel-retry"
-              : page().cards.length
-                ? "content"
-                : searchError()
-                  ? "search-retry"
-                  : "keyboard",
-          );
-          setColumn(
-            Math.min(searchMediaFocus, Math.max(0, page().cards.length - 1)),
-          );
-        } else if (dx) moveChannel(dx, true);
-        return;
-      }
-      if (
-        screen() === "search" &&
-        zone() === "content" &&
-        searchCapabilities().channels
-      ) {
-        searchMediaFocus = column();
-        if (dy > 0) {
-          if (searchChannels().length) {
-            setZone("search-channels");
-            setColumn(
-              Math.min(searchChannelFocus, searchChannels().length - 1),
-            );
-          } else if (searchChannelError()) setZone("search-channel-retry");
-        } else if (dy < 0) {
-          setZone(searchNeedsRetry() ? "search-retry" : "nav");
-          setColumn(navIndex("search"));
-        } else if (dx < 0 && column() === 0) setZone("keyboard");
-        else {
-          moveToItem(column() + dx, page().cards.length);
-          searchMediaFocus = column();
-        }
-        return;
-      }
-
+      if (zone() === "hero") { navigateHero(dx, dy, screen()); return; }
+      if (screen() === "home" && zone() === "rows") { navigateHomeRows(dx, dy); return; }
+      if (screen() === "search" && navigateSearch(dx, dy)) return;
       if (screen() === "live" && zone() === "live-empty") {
         // Down reaches the second action, Up returns to the navigation, and
         // Left and Right do nothing on either action.
