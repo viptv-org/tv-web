@@ -6,268 +6,101 @@ import { EpisodePreparation, episodeKey, sourceStartIds, sourcePageReady, type P
 import { AutoplayCountdown, type CountdownState } from "./autoplay-countdown";
 import { reducedMotion } from "./motion";
 import {
-
-
-
   For,
-
-
-
   Show,
-
-
-
   batch,
-
-
-
   createEffect,
-
-
-
   createMemo,
-
-
-
   createSignal,
-
-
-
   onCleanup,
   untrack,
-
-
-
   onMount
-
-
 } from "solid-js";
 import {
-
-
  EntryScreen 
-
-
 } from "./EntryScreens";
 import {
-
-
  PairingScreen 
-
-
 } from "./PairingScreen";
 import {
-
-
  ProfilesScreen 
-
-
 } from "./ProfilesScreen";
 import {
-
-
  SignedIn 
-
-
 } from "./SignedIn";
 import {
-
-
  PosterWall 
-
-
 } from "./PosterWall";
 import {
-
-
  LibraryToolbar 
-
-
 } from "./LibraryToolbar";
 import {
-
-
  SearchInput,
-
-
  searchLetters 
-
-
 } from "./SearchInput";
 import {
-
-
  SearchChannels 
-
-
 } from "./SearchChannels";
-import { imagePixels, imageSource, reloadImages } from "./image-source";
+import { imageSource, reloadImages } from "./image-source";
 import { clearLogoCache } from "./visuals";
 import { CalendarBoard, calendarDayKey, calendarDays } from "./CalendarBoard";
 import { StatusDialog } from "./StatusDialog";
 import { initialSeasonIndex, seasonLabel, episodeActionLabel, seasonEpisodes } from "./seasons";
 import { RowFocus } from "./row-focus";
 import { HomeShelves } from "./HomeShelves";
-import { homeCardSize, focusFrameEdges } from "./focus-frame";
+import { homeCardSize } from "./focus-frame";
+import { MediaTile as Tile } from "./MediaTile";
+import { DetailContent } from "./DetailContent";
+import { bottomTitleY } from "./title-layout";
 import { BusyIndicator, BusySpinner } from "./BusyIndicator";
 import { createCoherentHero, HeroArtwork } from "./CoherentHero";
 import { presentationCard, presentationKey } from "./presentation-card";
 import { sourceAudioSubs, sourceFacts, sourceProvider as providerLabel, sourceQuality, sourceReleaseGroup, sourceReleaseType } from "./source-presentation";
 import {
-
-
-
   channelKey,
-
-
-
   edgeRequest,
-
-
-
   joinChannelWindow,
-
-
-
   pageRequest,
-
-
-
   samePageRequest,
-
-
-
   type PageDirection
-
-
 } from "./channelWindow";
 import {
-
-
  TitleMetadata as Metadata 
-
-
 } from "./TitleMetadata";
 import { BrowsePreview } from "./BrowsePreview";
 import { bufferedSegments } from "./playerTimeline";
 import { trackLabel } from "./track-label";
 import {
-
-
-
-
-
-
-
-
-
- 
-
-
   HeroProgress
-
-
 } from "./Billboard";
 import {
-
-
  defineScreen,
-
-
  TvView,
-
-
  KeyedFor,
-
-
  ModalLayerContext
-
-
 } from "../runtime";
 import {
-
-
  exitWebos 
-
-
 } from "../webos";
 import {
-
-
-
-
-
-
   Button,
-
-
-
   Label,
-
-
-
-  Logo,
-
-
-
   icon,
-
-
-
   palette,
-
   topBarGradient,
-
   livePreviewScrim,
-
-
   avatar,
-
-
-
-  cardOutline,
-
-
-
   navIcon,
-
-
-
   outline
-
-
 } from "./visuals";
 import {
-
-
-
   RemoteTvApi,
-
-
-
   lookupSelector,
-
-
-
   RemoteError,
-
-
-
   delay,
-
-
-
   query,
-
-
-
   segment,
-
-
-
   type AccountIdentity
-
-
 } from "./api";
 import {
   LIVE_EMPTY_COPY,
@@ -291,35 +124,18 @@ import {
   sourceStatusCopy,
 } from "./sourceStatus";
 import {
-
   ACCOUNT_SESSION_REQUIRED,
-
   ACCOUNT_SESSION_REQUIRED_ROW,
-
   offersHouseholdWrite
-
 } from "./refusals";
 import {
-
-
  RemotePlayback 
-
-
 } from "./playback";
 import {
-
-
   applyDisplayPreferences,
-
-
   applyScreenInset,
-
-
   defaultDisplayPreferences,
-
-
   screenSaverMinutes
-
 } from "./display";
 import {
   HERO_SLIDE_MS,
@@ -330,108 +146,31 @@ import {
   startHeroRotation,
 } from "./heroCycle";
 import {
-
-
-
   cardKey,
-
-
-
   type Bootstrap,
-
-
-
   type Card,
-
-
-
   type Catalog,
-
-
-
   type Channel,
-
-
-
   type Control,
-
-
-
   type Controls,
-
-
-
   type Detail,
-
-
-
   type DisplayPreferences,
-
-
-
   type Home,
-
-
-
   type LibraryPage,
-
-
-
   type LibraryQuery,
-
-
-
   type LivePage,
-
-
-
   type Management,
-
-
-
   type Page,
-
-
-
   type Pairing,
-
-
-
   type Preferences,
-
-
-
   type Profile,
-
-
-
   type Program,
-
-
-
   type Guide,
-
-
-
   type CalendarEntry,
-
-
-
   type CalendarSnapshot,
-
-
-
   type Source,
-
-
-
   type SourcePage,
-
-
-
   type TitleAction,
-
-
   type PlaybackSegment
 } from "./types";
 import { sdfTextMetrics } from "./text-measure";
@@ -523,8 +262,6 @@ const uniqueCards = (cards: readonly Card[]) =>
     (card, index, all) =>
       all.findIndex((other) => cardKey(other) === cardKey(card)) === index,
   );
-/** Bottom-align a 1-2 line title in a fixed hero logo box, as TvHeroSummary
- * and TvDetailHero do in the Android TV client. */
 type SourceMenuOption = {
   id: string;
   label: string;
@@ -533,16 +270,6 @@ type SourceMenuOption = {
   provider?: string;
 };
 
-const bottomTitleY = (
-  title: string,
-  size: number,
-  width: number,
-  box: number,
-) => {
-  const measured = sdfTextMetrics(`${size}px Onest700`).measureText(title).width;
-  const lines = Math.min(2, Math.max(1, Math.ceil(measured / width)));
-  return box - lines * size * 1.2;
-};
 const isRokuUi =
   typeof (globalThis as any).__SolidTVRokuRenderer !== "undefined";
 
@@ -6833,200 +6560,6 @@ export function createRemoteTvApp(
       clearTimeout(controlsTimer);
       void player.dispose();
     });
-    function Tile(props: {
-      card: Card;
-      x: number;
-      y: number;
-      w: number;
-      h: number;
-      focused: boolean;
-      poster?: boolean;
-      focusedCaptions?: boolean;
-      focusBorder?: boolean;
-      preload?: boolean;
-    }) {
-      const edges = createMemo(() => focusFrameEdges(props.w,props.h));
-      const progress = () =>
-        props.card.progress ?? props.card.view?.progress ?? null;
-      const source = () =>
-        props.poster
-          ? (props.card.poster ?? props.card.landscape)
-          : (props.card.view?.preview?.background ??
-            props.card.landscape ??
-            props.card.poster);
-      const [failed, setFailed] = createSignal(false);
-      createEffect(() => {
-        source();
-        setFailed(false);
-      });
-      const label = () =>
-        props.card.view?.tile_badge?.label ??
-        props.card.badges.find((badge) => !/simkl/i.test(badge)) ??
-        null;
-      const badgeWidth = createMemo(() => {
-        const context = sdfTextMetrics("18px Onest700");
-        return Math.min(
-          props.w - 20,
-          Math.ceil(
-            context.measureText(label() ?? "").width,
-          ) + 20,
-        );
-      });
-      const meta = () =>
-        props.card.subtitle ||
-        props.card.view?.compact_metadata_parts?.join(" · ") ||
-        "";
-      return (
-        <TvView x={props.x} y={props.y} w={props.w} h={props.h + 80} clipping>
-          <TvView
-            w={props.w}
-            h={props.h}
-            color={palette.surface}
-            clipping
-          >
-            <Show
-              when={!failed() && source()}
-              fallback={
-                <TvView w={props.w} h={props.h} color="#1A1A1C">
-                  <Label
-                    x={14}
-                    y={props.h - 70}
-                    size={props.poster ? 24 : 22}
-                    lineheight={1.2}
-                    font="Onest600"
-                    maxwidth={props.w - 28}
-                    maxlines={2}
-                    content={props.card.title}
-                    color="rgba(244,242,238,.9)"
-                  />
-                </TvView>
-              }
-            >
-              <TvView
-                w={props.w}
-                h={props.h}
-                src={imageSource(source(), imagePixels(props.w), imagePixels(props.h))}
-                preload={props.preload}
-                fit="cover"
-                onError={() => setFailed(true)}
-              />
-            </Show>
-            <Show when={!props.poster && props.card.logo}>
-              <TvView
-                x={18}
-                y={props.h - 74}
-                w={props.w * 0.62}
-                h={56}
-                clipping
-              >
-                <Logo
-                  src={props.card.logo!}
-                  h={56}
-                  size={28}
-                  maxWidth={props.w * 0.62}
-                  title={props.card.title}
-                />
-              </TvView>
-            </Show>
-            <Show when={label()}>
-              <TvView
-                x={10}
-                y={10}
-                w={badgeWidth()}
-                h={30}
-                color={
-                  /new episode/i.test(label() ?? "")
-                    ? palette.text
-                    : label() === "LIVE"
-                      ? "#E5484D"
-                      : "rgba(11,11,12,.8)"
-                }
-              >
-                <Label
-                  x={10}
-                  centerY={15}
-                  size={18}
-                  font="Onest700"
-                  maxwidth={props.w - 30}
-                  maxlines={1}
-                  content={label() ?? ""}
-                  color={
-                    /new episode/i.test(label() ?? "")
-                      ? "#111113"
-                      : palette.text
-                  }
-                />
-              </TvView>
-            </Show>
-            <Show when={props.focused && props.focusBorder !== false && isRokuUi}>
-              <KeyedFor each={edges()} keyOf={edge => edge.id}>
-                {edge => <TvView x={edge().x} y={edge().y} w={edge().w} h={edge().h} color={palette.text} focusRing />}
-              </KeyedFor>
-            </Show>
-            <Show when={(progress() ?? 0) > 0}>
-              <TvView
-                x={3}
-                y={props.h - 8}
-                w={props.w - 6}
-                h={5}
-                color="rgba(255,255,255,.25)"
-              >
-                <TvView
-                  w={(props.w - 6) * Math.max(0, Math.min(1, progress() ?? 0))}
-                  h={5}
-                  color={palette.accent}
-                />
-              </TvView>
-            </Show>
-            <Show when={props.focused && props.focusBorder !== false && !isRokuUi}>
-              <TvView
-                w={props.w}
-                h={props.h}
-                src={cardOutline(props.w, props.h, true)}
-              />
-              <TvView
-                x={(props.w - 72) / 2}
-                y={(props.h - 72) / 2}
-                w={72}
-                h={72}
-                color="rgba(255,255,255,.16)"
-              >
-                <TvView
-                  x={22}
-                  y={21}
-                  w={28}
-                  h={30}
-                  src={icon("play", false, 0, "#F4F2EE")}
-                />
-              </TvView>
-            </Show>
-          </TvView>
-          <Show when={!props.poster || props.focused || props.focusedCaptions}>
-            <TvView y={props.h + 14} w={props.w} h={66} clipping>
-              <Label
-                y={0}
-                size={24}
-                lineheight={1.2}
-                font="Onest600"
-                maxwidth={props.w}
-                maxlines={1}
-                content={props.card.title}
-                color={palette.text}
-              />
-              <Label
-                y={33}
-                size={20}
-                lineheight={1.3}
-                maxwidth={props.w}
-                maxlines={1}
-                content={meta()}
-                color={palette.muted}
-              />
-            </TvView>
-          </Show>
-        </TvView>
-      );
-    }
     function keyboard(isModal = false) {
       const numeric = () =>
         isModal &&
@@ -7526,265 +7059,13 @@ export function createRemoteTvApp(
                   )} />
               </Show>
             </Show>
-            <Show when={screen() === "detail" && !detailForDisplay()}>
-              <Label
-                x={96}
-                y={300}
-                size={48}
-                font="Onest700"
-                maxwidth={800}
-                maxlines={2}
-                content={selected()?.title ?? ""}
-              />
-              <Label
-                x={96}
-                y={370}
-                size={26}
-                color={palette.muted}
-                content="Loading title…"
-              />
-            </Show>
             <Show when={screen() === "detail"}>
-              <Show when={detailForDisplay()}>
-                {(value) => (
-                  <>
-                    <Show
-                      when={
-                        !value().item.logo &&
-                        detailHasEpisodes() &&
-                        ["episodes", "seasons", "recommendations"].includes(
-                          zone(),
-                        )
-                      }
-                    >
-                      <Label
-                        x={96}
-                        y={54}
-                        size={56}
-                        font="Onest700"
-                        maxwidth={760}
-                        maxlines={1}
-                        content={value().item.title}
-                      />
-                    </Show>
-                    <TvView
-                      show={
-                        !detailHasEpisodes() ||
-                        !["episodes", "seasons", "recommendations"].includes(
-                          zone(),
-                        )
-                      }
-                      x={96}
-                      y={
-                        ["episodes", "seasons", "recommendations"].includes(
-                          zone(),
-                        )
-                          ? detailHasEpisodes()
-                            ? -480
-                            : -156
-                          : 0
-                      }
-                    >
-                      <TvView y={detailHasEpisodes() ? 250 : 220}>
-                        <Show when={!value().item.logo}><Label
-                              content={value().item.title}
-                              font="Onest700"
-                              y={bottomTitleY(
-                                value().item.title,
-                                56,
-                                640,
-                                detailHasEpisodes() ? 134 : 190,
-                              )}
-                              size={56}
-                              lineheight={1.2}
-                              maxwidth={850}
-                              maxlines={2}
-                            /></Show>
-                      </TvView>
-                      <Metadata
-                        card={value().item}
-                        y={detailHasEpisodes() ? 410 : 432}
-                        detail
-                      />
-                      <Label
-                        y={detailHasEpisodes() ? 460 : 482}
-                        size={26}
-                        lineheight={1.45}
-                        maxwidth={800}
-                        maxlines={3}
-                        color={palette.body}
-                        content={value().item.description ?? ""}
-                      />
-                      <Button
-                        x={0}
-                        y={detailHasEpisodes() ? 648 : 668}
-                        w={260}
-                        icon="play"
-                        label={detailActionLabel()}
-                        focused={zone() === "hero" && heroAction() === 0}
-                      />
-                      <Show when={detailPlayProgress() > 0}>
-                        <Label
-                          x={276}
-                          y={detailHasEpisodes() ? 670 : 690}
-                          size={22}
-                          font="Onest600"
-                          maxwidth={150}
-                          maxlines={1}
-                          color={palette.muted}
-                          content={detailPlayRemaining()}
-                        />
-                        <TvView
-                          x={0}
-                          y={(detailHasEpisodes() ? 648 : 668) + 80}
-                          w={260}
-                          h={4}
-                          color="rgba(244,242,238,.2)"
-                        />
-                        <TvView
-                          x={0}
-                          y={(detailHasEpisodes() ? 648 : 668) + 80}
-                          w={
-                            260 *
-                            Math.max(
-                              0,
-                              Math.min(
-                                1,
-                                detailPlayProgress(),
-                              ),
-                            )
-                          }
-                          h={4}
-                          color={palette.text}
-                        />
-                      </Show>
-                      <Button
-                        x={detailPlayProgress() > 0 ? 440 : 280}
-                        y={detailHasEpisodes() ? 648 : 668}
-                        icon={isSaved(value().item) ? "check" : "plus"}
-                        focused={zone() === "hero" && heroAction() === 1}
-                      />
-
-                    </TvView>
-                    <TvView
-                      x={96}
-                      y={
-                        ["episodes", "seasons", "recommendations"].includes(
-                          zone(),
-                        )
-                          ? detailHasEpisodes()
-                            ? value().seasons.length
-                              ? 154
-                              : 184
-                            : 680
-                          : value().seasons.length
-                            ? 816
-                            : 836
-                      }
-                      w={1824}
-                      h={850}
-                      clipping={true}
-                    >
-                      <Show when={!value().seasons.length}>
-                        <Label
-                          size={30}
-                          font="Onest600"
-                          content={
-                            detailHasEpisodes()
-                              ? "Episodes"
-                              : "More Like This"
-                          }
-                        />
-                      </Show>
-                      <Show when={value().seasons.length}>
-                        <Label x={0} centerY={26} size={30} font="Onest600" content="Episodes" />
-                        <TvView x={192}>
-                          <Button x={0} y={0} w={260} h={52}
-                            label={seasonLabel(value().seasons[seasonIndex()]?.season)}
-                            focused={zone() === "seasons"} />
-                          <TvView x={220} y={14} w={24} h={24} src={icon("down", zone() === "seasons")} />
-                        </TvView>
-                        <Label x={480} centerY={26} size={22} color={palette.muted}
-                          content={`${value().seasons[seasonIndex()]?.episode_count ?? 0} episodes`} />
-                      </Show>
-                      <Show when={detailHasEpisodes() && !detailEpisodes().length}>
-                        <Label y={96} size={26} color={palette.muted} content="No episodes in this season yet." />
-                      </Show>
-                      <KeyedFor
-                        each={(detailHasEpisodes()
-                          ? detailEpisodes()
-                          : value().recommendations
-                        ).slice(
-                          Math.floor(detailColumn("episodes") / (detailHasEpisodes() ? 4 : 7)) * (detailHasEpisodes() ? 4 : 7),
-                          Math.floor(detailColumn("episodes") / (detailHasEpisodes() ? 4 : 7)) * (detailHasEpisodes() ? 4 : 7) + 8,
-                        )}
-                        keyOf={cardKey}
-                      >
-                        {(card, i) => (
-                          <Tile
-                            card={card()}
-                            x={i() * (detailHasEpisodes() ? 472 : 248)}
-                            y={
-                              value().seasons.length
-                                ? zone() === "hero"
-                                  ? 72
-                                  : 82
-                                : 52
-                            }
-                            w={detailHasEpisodes() ? 448 : 232}
-                            h={detailHasEpisodes() ? 252 : 348}
-                            poster={!detailHasEpisodes()}
-                            focused={
-                              zone() === "episodes" &&
-                              i() ===
-                                column() % (detailHasEpisodes() ? 4 : 7)
-                            }
-                          />
-                        )}
-                      </KeyedFor>
-                    </TvView>
-                    <Show
-                      when={
-                        detailHasEpisodes() &&
-                        value().recommendations.length &&
-                        ["episodes", "seasons", "recommendations"].includes(
-                          zone(),
-                        )
-                      }
-                    >
-                      <TvView x={96} y={676} w={1824} h={404} clipping>
-                        <Label
-                          size={30}
-                          font="Onest600"
-                          content="More Like This"
-                        />
-                        <KeyedFor
-                          each={value().recommendations.slice(
-                            Math.floor(detailColumn("recommendations") / 7) * 7,
-                            Math.floor(detailColumn("recommendations") / 7) * 7 + 8,
-                          )}
-                          keyOf={cardKey}
-                        >
-                          {(card, i) => (
-                            <Tile
-                              card={card()}
-                              x={i() * 248}
-                              y={52}
-                              w={232}
-                              h={348}
-                              poster
-                              focused={
-                                zone() === "recommendations" &&
-                                column() % 7 === i()
-                              }
-                            />
-                          )}
-                        </KeyedFor>
-                      </TvView>
-                    </Show>
-                  </>
-                )}
-              </Show>
+              <DetailContent detail={detailForDisplay()} selectedTitle={selected()?.title}
+                hasEpisodes={detailHasEpisodes()} episodes={detailEpisodes()} zone={zone()} column={column()}
+                heroAction={heroAction()} seasonIndex={seasonIndex()} episodeColumn={detailColumn("episodes")}
+                recommendationColumn={detailColumn("recommendations")} actionLabel={detailActionLabel()}
+                progress={detailPlayProgress()} remaining={detailPlayRemaining()}
+                saved={!!detailForDisplay() && isSaved(detailForDisplay()!.item)} />
             </Show>
             <Show
               when={["movie", "series", "anime", "library", "search"].includes(screen())}

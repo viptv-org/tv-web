@@ -60,7 +60,7 @@ test('rounded opacity is applied once to rendered pixels',async({page,baseURL})=
   expect(Array.from(png.data.subarray(i,i+3))).toEqual([128,104,39]);
 });
 
-test('profile controls follow server management capabilities and maintain remote focus',async({page,baseURL})=>{
+test('profile controls follow server management capabilities and maintain remote focus',async({page,baseURL},testInfo)=>{
   const fixture=await installRemoteBackend(page,baseURL!,{session:false,pairingApproved:true,pairingProfile:false});
   const management=fixture.bootstrap().profile_management!;
   for(const name of ['create','rename','avatar','delete'])management.capabilities[name]={availability:'Unavailable'} as any;
@@ -71,6 +71,7 @@ test('profile controls follow server management capabilities and maintain remote
   await page.keyboard.press('Enter');
   await expect(state(page)).toHaveAttribute('data-tv-screen','profiles');
   expect((await nodes(page)).some(n=>n.text==='Add profile'||n.text==='Manage profiles')).toBe(false);
+  await page.screenshot({path:testInfo.outputPath('profile-selector.png')});
   const focus=await state(page).getAttribute('data-tv-focus');
   await page.keyboard.press('ArrowDown');
   await expect(state(page)).toHaveAttribute('data-tv-focus',focus!);
@@ -80,7 +81,7 @@ test('profile controls follow server management capabilities and maintain remote
   expect(fixture.requests.filter(r=>r.path==='/api/auth/profile').at(-1)?.body).toEqual({profile_id:'2'});
 });
 
-for(const reduced of [true,false])test(`composed welcome stays stable and pairing respects reduced motion (${reduced})`,async({page,baseURL})=>{
+for(const reduced of [true,false])test(`composed welcome stays stable and pairing respects reduced motion (${reduced})`,async({page,baseURL},testInfo)=>{
   await page.emulateMedia({reducedMotion:reduced?'reduce':'no-preference'});
   await installRemoteBackend(page,baseURL!,{session:false});
   const artRequests:string[]=[];
@@ -96,6 +97,7 @@ for(const reduced of [true,false])test(`composed welcome stays stable and pairin
   await page.waitForTimeout(300);
   const after=PNG.sync.read(await page.screenshot({clip:{x:0,y:0,width:500,height:200}})).data;
   expect(before.equals(after)).toBe(true);
+  await page.screenshot({path:testInfo.outputPath('composed-welcome.png')});
   await page.keyboard.press('Enter');
   await expect(state(page)).toHaveAttribute('data-tv-screen','pairing');
   await expect(state(page)).toHaveAttribute('data-tv-ready','true');
