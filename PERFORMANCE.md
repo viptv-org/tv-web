@@ -1,29 +1,29 @@
 # Native compositor and Home readiness — 2026-11-11
 
-Roku build11128 (TV source92d3eb7, Solid fork451dcbcc, Solid1.9.17) runs shelf
+Roku build 11128 (TV source 92d3eb7, Solid fork 451dcbcc, Solid 1.9.17) runs shelf
 translations and hero opacity through SceneGraph Animation. The bridge keeps
 ancestor visibility separate from animated opacity and fences retired animation
 callbacks. HTTP uses existing Task workers. The actual device exposes neither
 Worker nor SharedWorker; JSON parsing still runs in the Program context.
 
-During a deliberate1,000ms Program-thread block, native shelf translations kept
-advancing across three paint layers:121.4,98.7 and72.8 pixels at the sampled
-450/750/1,050ms points. Independent opacity samples were82%,70% and59%. The
+During a deliberate 1,000 ms Program-thread block, native shelf translations kept
+advancing across three paint layers: 121.4, 98.7 and 72.8 pixels at the sampled
+450/750/1,050 ms points. Independent opacity samples were 82%, 70% and 59%. The
 original geometry/opacity was restored afterward. This establishes independent
 native motion, not a measured presented frame rate.
 
-Three serialized navigation traces recorded147,194 and197 paired native frames.
-Render+swap p95 was22.04,24.04 and21.92ms, exceeding the16.67ms budget. Render-only
-p95 was4.73,4.74 and4.56ms; swap waiting dominated. The budget remains failed.
-No sustained60FPS or physical-device parity claim follows from these traces.
+Three serialized navigation traces recorded 147, 194 and 197 paired native frames.
+Render+swap p95 was 22.04, 24.04 and 21.92 ms, exceeding the 16.67 ms budget. Render-only
+p95 was 4.73, 4.74 and 4.56 ms; swap waiting dominated. The budget remains failed.
+No sustained 60 FPS or physical-device parity claim follows from these traces.
 Capture requires run_as_process=1 and re-enabling tracing after a device reboot;
 see [Roku tracing prerequisites](https://developer.roku.com/dev/docs/app-tracing).
 
 The reported Home My List delay was measured separately on the prior native
 preview candidate. Repeated row transitions made no list API requests and did
-not replace card-poster URIs. Shortening preview settle400→120ms and decoding
-the proxy-blurred backdrop at960×540 changed warm artwork readiness from about
-454→205ms (first request788→561ms). Sampled key handling was31–47ms during rapid
+not replace card-poster URIs. Shortening preview settle 400→120 ms and decoding
+the proxy-blurred backdrop at 960×540 changed warm artwork readiness from about
+454→205 ms (first request 788→561 ms). Sampled key handling was 31–47 ms during rapid
 navigation. These are scoped observations, not a controlled universal latency
 benchmark or a guarantee about upstream providers.
 
