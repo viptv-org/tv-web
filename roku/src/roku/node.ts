@@ -10,44 +10,22 @@
 import { createElement, insertNode, setProp, tmTransaction } from '@roku-sdk/solid';
 import { Events } from './events';
 import { PosterImage } from './poster-image';
-import { isColorKey, lerpColor } from './animation';
+import { isColorKey, lerpColor } from './animation-color';
+import { finiteNumber as num, sameValue as same } from './node-values';
+import { RokuTexture, normalizeUri, sheetSize } from './node-textures';
+import { ShaderHandle } from './shader-handle';
 import { RokuEffect, toRokuColor } from './effects';
 import { fontMetrics, getFontVersion, loadFace, measureText, measureWrapText, resolveFontUri, webLineHeight } from './fonts';
 import { layoutText, TextAlign, TextContain, TextLayoutResult, VerticalAlign, WordBreak } from './text-layout';
+
+export { RokuTexture } from './node-textures';
+export { ShaderHandle } from './shader-handle';
 
 const APP_W = 1920;
 const APP_H = 1080;
 let nextUid = 1;
 let geometryEpoch = 0;
 
-function num(value: any, fallback: number): number {
-  return typeof value === 'number' && isFinite(value) ? value : fallback;
-}
-function same(a: any, b: any): boolean {
-  if (a === b) return true;
-  if (Array.isArray(a) && Array.isArray(b)) {
-    if (a.length !== b.length) return false;
-    for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false;
-    return true;
-  }
-  return false;
-}
-const SHEET_SIZES: Record<string, [number, number]> = {
-  'pkg:/assets/icons_white.png': [375, 100],
-  'pkg:/assets/icons.png': [375, 100],
-};
-function sheetSize(src: string): [number, number] | null {
-  return SHEET_SIZES[normalizeUri(src)] || null;
-}
-function normalizeUri(src: string): string {
-  if (!src) return '';
-  if (src.indexOf('file:///app/') === 0) return 'pkg:/' + src.slice(13);
-  if (src.indexOf('pkg:/') === 0) return src;
-  if (src.charAt(0) === '/') return 'pkg:' + src;
-  if (src.indexOf('./') === 0) return 'pkg:/' + src.slice(2);
-  if (/^https?:\/\//.test(src)) return src;
-  return 'pkg:/' + src;
-}
 function weightOf(family: string, weight: any): { family: string; weight: number } {
   let fam = String(family || 'Roboto');
   let w = weight;
@@ -60,61 +38,6 @@ function weightOf(family: string, weight: any): { family: string; weight: number
     w = /bold|black|heavy|semibold|demibold/i.test(w) ? 700 : 400;
   }
   return { family: fam, weight: typeof w === 'number' ? w : 400 };
-}
-
-export class RokuTexture extends Events {
-  textureType: string;
-  props: any;
-  src: string;
-  state: string = 'freed';
-  destroyed = false;
-  constructor(type: string, props: any) {
-    super();
-    this.textureType = type;
-    this.props = props || {};
-    if (type === 'SubTexture' && this.props.texture) this.src = this.props.texture.src;
-    else this.src = normalizeUri(this.props.src || '');
-  }
-  get w() {
-    return num(this.props.w, 0);
-  }
-  get h() {
-    return num(this.props.h, 0);
-  }
-  destroy() {
-    this.destroyed = true;
-    this.removeAllListeners();
-  }
-}
-
-/** Renderer shader handle. Mutable props are proxied so Effects re-apply. */
-export class ShaderHandle {
-  shaderType: string;
-  name: string;
-  props: any;
-  nodes = new Set<RokuNode>();
-  destroyed = false;
-  constructor(name: string, props: any) {
-    this.name = name;
-    this.shaderType = name;
-    const raw = props || {};
-    this.props = new Proxy(raw, {
-      set: (target: any, key: string, value: any) => {
-        target[key] = value;
-        this.nodes.forEach((node) => node.effectDirty());
-        return true;
-      },
-      deleteProperty: (target: any, key: string) => {
-        delete target[key];
-        this.nodes.forEach((node) => node.effectDirty());
-        return true;
-      },
-    });
-  }
-  destroy() {
-    this.destroyed = true;
-    this.nodes.clear();
-  }
 }
 
 /**
