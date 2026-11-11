@@ -7,7 +7,7 @@ vi.mock('@roku-sdk/solid', () => ({
 }));
 import { postRokuTask, RokuTaskResponseError } from '../src/roku/worker-task';
 beforeEach(() => { vi.useFakeTimers(); host.props = {}; host.remove.mockClear(); host.set.mockClear(); });
-afterEach(() => { vi.useRealTimers(); });
+afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); });
 
 it('distinguishes a completed worker failure from an unconfirmed timeout', async () => {
   const request = {op:'storage',action:'clear',section:'viptv-session',key:'tokens'} as const;
@@ -32,4 +32,17 @@ it('marks cancellation as unconfirmed while keeping successful responses intact'
   const complete = postRokuTask<string>({op:'echo',value:'opaque'}, {parent:{}});
   host.props.onResponse({ok:true,result:'opaque'});
   await expect(complete.result).resolves.toBe('opaque');
+});
+
+it.each([undefined, {}, {ok:'false'}])('quarantines a malformed worker reply before a queued clear (%j)', async response => {
+  vi.resetModules();
+  vi.stubGlobal('__solidtvNativeRoot', {});
+  const { deviceStorage } = await import('../src/roku/device-storage');
+  const port = deviceStorage('viptv-session', 'tokens');
+  const save = expect(port.save('opaque')).rejects.toThrow('WorkerTask failed');
+  const clear = expect(port.clear()).rejects.toThrow('did not finish');
+  await Promise.resolve();
+  host.props.onResponse(response);
+  await Promise.all([save, clear]);
+  expect(host.set.mock.calls.filter(([key, value]) => key === 'control' && value === 'RUN')).toHaveLength(1);
 });

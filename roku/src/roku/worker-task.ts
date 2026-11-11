@@ -86,7 +86,11 @@ export function postRokuTask<T = any>(
     setProp(task, "request", request);
     setProp(task, "onResponse", (response: WorkerResponse<T>) => {
       if (!response || response.ok !== true) {
-        finish(() => rejectResult(new RokuTaskResponseError(response?.error || "WorkerTask failed")));
+        const message = response?.error || "WorkerTask failed";
+        const error = response?.ok === false
+          ? new RokuTaskResponseError(message)
+          : new Error(message);
+        finish(() => rejectResult(error));
         return;
       }
       finish(() => resolveResult(response.result as T));
