@@ -72,22 +72,47 @@ isolated GTK, GSettings, Mesa/EGL and TLS dependencies on the server; initial
 runtime-launch failures did not require product changes.
 
 LG official simulator execution is separate from desktop browser evidence.
-The webOS26 simulator1.5.0 shell/RCU starts under isolated Xvfb, but its guest
-initially stays white and app-target CDP times out. The browser endpoint reports
-Chrome120/Electron28.3.3. This is a failed app qualification attempt, not a
-startup or media pass. The webOS22 simulator1.4.1 runs Chrome87.0.4280.141;
-it reaches the shared WebGL startup, then fails to become ready before the
-watchdog, with no API fixture calls observed. All font resources complete in
-under120ms and the page is visible. Forcing the existing Canvas fallback in
-that simulator reaches Home and decodes the HLS fixture (160px, nine decoded
-frames, advancing clock and an active WebVTT cue). A settled private Canvas
-Home capture shows the hero, copy, controls, avatar and cards painted. Disabling createImageBitmap
-also unblocks WebGL application state and decoding, but leaves a failed black
-guest presentation in the inspected capture. These are diagnostic changes in
-the test harness, not product defaults or a general LG pass. The ordinary
-WebGL startup and simulator visual gate remain failed. Codec, audio, DRM,
-installed-state persistence, firmware lifecycle, performance and physical
-remote behavior remain device gates.
+The current owned webOS22 simulator 1.4.1 / Chromium 87 player run keeps WebGL and
+native createImageBitmap intact. The existing five-second 160×90 H.264/AAC HLS
+fixture advances 3.085 seconds / 77 decoded frames with zero reported drops; its AAC
+byte counter reaches 14480. Pause holds 1.027559 seconds unchanged for 700 ms. A
+paused managed rewind reaches 0 and holds it for 500 ms, then resumes. English WebVTT
+selection/Off changes real showing-track and active-cue state while preserving
+pause through replacements. Numeric LG Back 461 and MediaStop 413 each return to
+Home, restore focus and reset the decoder: paused, time 0, dimensions/frame/audio
+counters 0, NETWORK_EMPTY, HAVE_NOTHING, no source attribute/buffers and hidden
+video layer. All six admitted leases are released; no JavaScript errors occur.
+The read-only currentSrc getter retains its last blob string after that reset;
+no product override conceals it.
+
+The runner uses owned Xvfb, --disable-gpu and --disable-dev-shm-usage, a
+self-signed-localhost certificate exception, disabled core dumps and a bounded
+preflight for 1.5 GiB headroom beyond cgroup anon/kernel/shmem usage. This container
+has a 5 GiB memory limit and 64 MiB /dev/shm. A prior Mojo resource-exhaustion crash
+was an invalid harness run; no controlled A/B isolates its trigger. These flags
+are not app defaults, and the fixture's reload clock is not a cold-launch or
+hardware performance benchmark. This short clip does not qualify multi-audio
+switching, long-run stability or higher-resolution/HDR/DRM sources.
+
+Earlier constrained ordinary runs had a lost WebGL context, a stopped frame
+loop and valid decoded font atlases awaiting upload: decoding had completed.
+The startup guard retires the lost renderer/canvas and retries once with the
+existing Canvas host before mounting the application. That automatic recovery
+painted Home in both guest and simulator-window captures and decoded HLS with an
+active caption. Nine ownership units and two browser cases using the actual
+WEBGL_lose_context extension cover loss before construction and during font
+upload. No bitmap API disable or UA-specific renderer selection ships.
+
+Private proof artifacts: lg-native-context-confirm.log,
+lg-startup-probe.log, lg-player-report.json and lg-player-final.log, with actual
+simulator-window captures. Both video and controls are visibly painted; the
+Canvas caption is visible in its capture. Healthy-WebGL subtitle assertions
+verify track modes and active cue contents; its single paused capture does not
+establish caption pixels or a complete caption-paint sweep. Earlier LG26's white
+guest/CDP timeout and bitmap-disable black presentation remain historical failed
+diagnostics, not current LG22 outcomes. Physical LG/Samsung codecs, audible
+output, DRM, mediaOption, installed-state persistence, firmware lifecycle,
+performance and real remote input remain unqualified.
 
 The existing Live-empty/source-hint follow-up remains failed in this worktree:
 four Live-empty cases stop on Anime because their fixed three-Right navigation

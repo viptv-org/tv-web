@@ -4,7 +4,8 @@
 | --- | --- | --- |
 | Shared host detection, numeric Back, legacy Search and media lifecycle |33 Chromium/Firefox/WebKit cases pass; explicit API/image origins covered by focused units | No physical LG/Samsung devices available |
 | Samsung local package |43-file/8.6MiB verified local closure; two file-entry/SDK cases pass; signing/API-origin gates retained | No signed WGT, actual Samsung file-origin API transport or AVPlay decoding claim |
-| LG webOS host | Official CLI3.2.6 builds the hosted IPK; shared HTML HLS/caption and authority/recovery tests pass | Official LG22/Chrome87 forced-Canvas Home/media/caption run passes; ordinary WebGL startup and no-bitmap guest presentation fail; LG26 initial guest attempt fails |
+| LG webOS player | Official LG22 / Chromium 87: healthy WebGL, real 160×90 HLS 3.085 s / 77 frames, stable pause/paused seek/resume, WebVTT selection/Off, Back/Stop and all six lease releases pass; CLI3.2.6 IPK built/inspected | Owned software-graphics runner and synthetic media; physical codecs/audio/DRM/remote unqualified; read-only currentSrc retains stale metadata after otherwise complete reset |
+| LG startup graphics | Directly observed context loss is recovered through a fresh Canvas host; visible Home/media plus nine ownership/two real context-loss browser cases pass | No shipped bitmap disable/UA exception; healthy-WebGL cue state and Canvas caption pixels verified separately; no comprehensive caption-paint or hardware claim |
 | Original Live-empty / retired-hint follow-up | Four Live-empty cases land on Anime via stale fixed navigation; two source-hint cases miss the injected label before checking the hint | Failed assertions remain visible and unchanged |
 
 Detailed commands and disposition: [platform qualification](../platform/QUALIFICATION.md).

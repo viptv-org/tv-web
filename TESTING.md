@@ -13,12 +13,30 @@ cases across Chromium, Firefox and WebKit; each webOS/Tizen query also passes17
 Chromium authority/recovery cases. Owned HLS video decodes with active WebVTT;
 SDK fixtures establish API/state contracts without native Samsung decoding.
 
-Official LG22 simulator1.4.1/Chrome87 reaches Home, paints a settled Canvas UI and
-decodes160px HLS/nine frames with active captions when WebGL is disabled by the
-test harness. Ordinary WebGL startup hangs; disabling createImageBitmap unblocks
-application state/media but fails guest visual presentation. LG26's initial
-white guest/inspector attempt also fails. These outcomes are not physical-device
-qualification. The four existing Live-empty cases stop on Anime through stale
+Official LG22 simulator 1.4.1 / Chromium 87 passes the extended player run with
+healthy WebGL and unchanged native APIs: owned 160×90 H.264/AAC HLS advances
+3.085 seconds / 77 frames with zero reported drops and a positive AAC byte counter.
+Pause holds its clock for 700 ms; paused rewind holds position 0 for 500 ms; resume,
+English WebVTT selection/Off, numeric Back 461 and MediaStop 413 pass. Both exits
+restore Home/focus, reset media to NETWORK_EMPTY/HAVE_NOTHING with no source
+attribute or buffers, and release all six admitted leases. The SDK retains a
+stale read-only currentSrc blob string after reset; it is recorded rather than
+artificially cleared.
+
+The owned Xvfb runner uses --disable-gpu, --disable-dev-shm-usage and a bounded
+1.5 GiB memory-headroom preflight in this 5 GiB container. Those are simulator
+settings, not product defaults or a hardware/performance qualification. Earlier
+constrained runs directly observed context loss with valid decoded font atlases
+waiting on a stopped loop. Startup recovery now retires that renderer and uses a
+fresh Canvas host; ordinary Canvas Home/media and nine ownership/two real
+context-loss browser regressions pass. No global bitmap disable or UA rule ships.
+
+Actual simulator-window captures show video and controls; a Canvas capture also
+shows the caption. Healthy-WebGL subtitle evidence establishes track modes and
+active cue contents, not a complete caption-paint sweep. Physical LG/Samsung
+codecs, audible output, DRM, firmware lifecycle and remote behavior remain
+unqualified. Earlier LG26/bitmap-disable diagnostics are not current LG22 passes.
+The four existing Live-empty cases stop on Anime through stale
 fixed navigation; two source-hint cases fail before their hint assertion.
 Assertions are retained. Commands, limits and official sources:
 [platform qualification](platform/QUALIFICATION.md).
