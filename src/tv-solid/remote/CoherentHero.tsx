@@ -90,11 +90,15 @@ export function HeroArtwork(props: { presentation: ReturnType<typeof createCoher
         onCleanup(() => clearTimeout(timer));
       });
       const box=() => frame().kind === "detail" ? props.logoBox : frame().logoBox;
+      const preview=() => frame().kind === "portrait" || frame().kind === "landscape";
+      const backdropWidth=() => imagePixels(preview() ? 960 : 1920);
+      const backdropHeight=() => imagePixels(preview() ? 540 : 1080);
       const done=(name:string,failed=false) => {void Promise.resolve().then(() => props.presentation.settled(id,name,failed));};
       return <TvView nodeRef={setRoot} w={1920} h={1080} alpha={props.presentation.current() === id ? 1 : 0}
         transition={frame().staged ? undefined : {alpha:{duration:reducedMotion() ? 0 : 150,easing:"ease-out"}}}>
         <Show when={frame().background && !frame().failed.has("background")}>
-          <TvView w={1920} h={1080} fit="cover" preload src={imageSource(frame().background,imagePixels(1920),imagePixels(1080),"cover",frame().kind === "portrait" || frame().kind === "landscape" ? 16 : undefined)}
+          <TvView w={1920} h={1080} decodeWidth={backdropWidth()} decodeHeight={backdropHeight()} fit="cover" preload
+            src={imageSource(frame().background,backdropWidth(),backdropHeight(),"cover",preview() ? backdropWidth() / 120 : undefined)}
             onLoad={() => done("background")} onError={() => done("background",true)} />
         </Show>
         <Show when={frame().poster && !frame().failed.has("poster")}>

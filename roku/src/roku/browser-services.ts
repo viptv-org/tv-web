@@ -342,7 +342,10 @@ export function dispatchNativeKey(key: string, press: boolean): boolean {
   // The focus manager, the demo's debug label and useMouse all listen on
   // document. Dispatching once avoids double-handling.
   const doc = (globalThis as any).document;
+  const observe = (globalThis as any).__solidtvRuntimeObserver;
+  if (typeof observe === 'function') { try { observe({phase:'key-start',at:performance.now(),key:spec.key,press}); } catch {} }
   doc.dispatchEvent(event);
+  if (typeof observe === 'function') { try { observe({phase:'key-end',at:performance.now(),key:spec.key,press}); } catch {} }
   // The focus manager calls preventDefault() for keys it handled; an
   // unhandled Back therefore returns false and reaches the Scene exit path.
   lastHandled = event.defaultPrevented === true;

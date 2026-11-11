@@ -1,5 +1,6 @@
 /** @jsxImportSource @solidtv/solid */
 import { createEffect, createMemo, createSignal, onCleanup, Show, type Accessor, type JSX } from "solid-js";
+import type { ElementNode } from "@solidtv/solid";
 import { KeyedFor, TvView } from "../runtime";
 import { Button, icon, Label, palette } from "./visuals";
 import { reducedMotion } from "./motion";
@@ -20,14 +21,12 @@ export function HomeShelves(props: {
   row: number;
   column: number;
   focused: boolean;
+  columnForRow: (row: Row) => number;
   top: number;
   renderTile: (card: Accessor<Card>, index: Accessor<number>, x: Accessor<number>, focused: Accessor<boolean>, portrait: Accessor<boolean>) => JSX.Element;
 }) {
-  const remembered = new Map<string, number>();
   const [moving, setMoving] = createSignal(false);
   const motion = reducedMotion() ? undefined : MOTION;
-  createEffect(() => { const ids = new Set(props.rows.map(row => row.id));for (const id of remembered.keys()) if (!ids.has(id)) remembered.delete(id); });
-  createEffect(() => { const row = props.rows[props.row];if (row) remembered.set(row.id, props.column); });
   let priorRow = props.row;
   createEffect(() => {
     const row = props.row;
@@ -78,9 +77,27 @@ export function HomeShelves(props: {
           const height = createMemo(() => homeCardSize(portrait()).height);
           const step = createMemo(() => homeCardSize(portrait()).step);
           const edges = createMemo(() => focusFrameEdges(width(),height()));
-          const index = createMemo(() => selected() ? props.column : remembered.get(model().row.id) ?? 0);
+          const index = createMemo(() => selected() && props.focused ? props.column : props.columnForRow(model().row));
           const layout = createMemo(() => railLayout(cards().length, index(), step(), width()));
           const y = createMemo(() => model().offset);
+          const [railNode,setRailNode] = createSignal<ElementNode>();
+          const [focusNode,setFocusNode] = createSignal<ElementNode>();
+          let slotId = model().row.id, alive = true;
+          onCleanup(() => { alive = false; });
+          createEffect(() => {
+            const id = model().row.id;
+            if (!motion || id === slotId) return;
+            slotId = id;
+            // Reset after the shared prop effects, before the next paint.
+            void Promise.resolve().then(() => {
+              if (!alive || model().row.id !== id) return;
+              const snap = (node: ElementNode | undefined, x: number) => {
+                if (node && 'animateProp' in node.lng && typeof node.lng.animateProp === 'function')
+                  node.lng.animateProp('x', x, {duration:0});
+              };
+              snap(railNode(), -layout().offset);snap(focusNode(), layout().focus);
+            });
+          });
           const alpha = createMemo(() => selected() || moving() ? 1 : 0);
           const rendered = createMemo(() => {
             const start = Math.min(layout().start, Math.max(0, cards().length - CARD_SLOTS));
@@ -96,7 +113,7 @@ export function HomeShelves(props: {
               </Show>
             </TvView>
             <TvView y={y() + 52} alpha={alpha()}>
-            <TvView x={-layout().offset} transition={motion}>
+            <TvView nodeRef={setRailNode} x={-layout().offset} transition={motion}>
               <KeyedFor each={rendered()} keyOf={entry => entry.index % CARD_SLOTS}>
                 {entry => {
                   const absolute = createMemo(() => entry().index);
@@ -106,7 +123,7 @@ export function HomeShelves(props: {
             </TvView>
             </TvView>
             <TvView y={y() + 52}>
-            <TvView x={layout().focus} w={width()} h={height()} alpha={selected() && props.focused ? 1 : 0} transition={motion} zIndex={1}>
+            <TvView nodeRef={setFocusNode} x={layout().focus} w={width()} h={height()} alpha={selected() && props.focused ? 1 : 0} transition={motion} zIndex={1}>
               <KeyedFor each={edges()} keyOf={edge => edge.id}>
                 {edge => <TvView x={edge().x} y={edge().y} w={edge().w} h={edge().h} color={palette.text} focusRing />}
               </KeyedFor>

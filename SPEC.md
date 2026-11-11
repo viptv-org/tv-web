@@ -26,6 +26,9 @@ regular season, and retains explicit or resumed specials. Android TV's current
 reference uses a strip; its phone/desktop surfaces use a picker. This TV-web
 chooser is an owner-scoped refinement, not a claim that Android TV uses a dropdown.
 Focused shelf backdrops use Gaussian blur through the existing public image proxy.
+Their 960×540 decode target is independent of the 1920×1080 display rectangle;
+blur sigma scales with source width (8 at 960px). Focus settles for 120ms before
+preparing a replacement, and the displayed artwork remains until readiness.
 The portrait preview is 240×360 at (1584,144), aligned to the 96px right inset with
 50px clearance below the profile avatar. Roku uses packaged scrims. Recovery dialogs
 and player busy indicators share compact, consistently padded layouts.
@@ -46,3 +49,9 @@ acknowledgements complete each run. Unsupported easing/repeat modes retain the
 JavaScript driver. Hidden-renderer pause/resume and disposal also control native
 runs. Hero retirement waits for native completion. Motion layers are prepared
 when shared views mount, and coordinate caches invalidate on geometry changes.
+
+
+Home stores each row's focused card separately from the navigation bar. Vertical
+return resolves that card's identity against the current row; missing cards clamp
+to a valid position. Header navigation cannot move an inactive rail. Reused rendering
+slots reset to their new row's position before painting.

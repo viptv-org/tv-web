@@ -182,6 +182,7 @@ test("Home reuses bounded shelf and poster nodes across vertical reversals",asyn
     const current=await nodes();expect(current.posters).toEqual(initial.posters);
     expect(current.visible).toEqual([home.rows[0].cards[column].poster]);
   }
+  expect(fixture.requests.filter(request=>request.path.endsWith('/home')||request.path.endsWith('/library'))).toHaveLength(0);
 });
 
 test("focused hero poster aligns to the profile edge with clearance and uses a blurred proxy backdrop",async({page,baseURL})=>{
@@ -210,6 +211,6 @@ test("focused hero poster aligns to the profile edge with clearance and uses a b
   expect(boxes.poster.x+boxes.poster.w).toBe(boxes.avatar.x+boxes.avatar.w);
   expect(boxes.poster.y-boxes.avatar.y-boxes.avatar.h).toBeGreaterThanOrEqual(48);
   expect(boxes.poster.y+boxes.poster.h).toBeLessThan(530);
-  expect(requests.some(url=>url.searchParams.get('blur')==='16'&&url.searchParams.get('w')==='1920')).toBe(true);
+  expect(requests.some(url=>url.searchParams.get('blur')==='8'&&url.searchParams.get('w')==='960')).toBe(true);
   expect(requests.some(url=>url.searchParams.get('w')==='240'&&!url.searchParams.has('blur'))).toBe(true);
 });

@@ -3841,3 +3841,58 @@ support and motion-group component mirrored locally; its build and all 93 native
 host unit tests pass. The demo's own UI still needs compositor wiring and physical
 qualification. No production/beta server rollout or new playback qualification is
 included in this checkpoint.
+
+
+## Home My List investigation
+
+The owner clarified that the slow area is the My List row on Home. A real-device
+trace of repeated Continue Watching ↔ My List navigation recorded no API requests
+and no card-poster URI replacements. My List had 12 cards and Home was complete.
+The work was in hero artwork: a 400ms settle delay preceded replacement image
+requests, with another roughly 340ms on the first measured backdrop/logo load.
+Warm replacement readiness was about 450ms after the key event.
+
+The settle delay is now 120ms. Blurred previews request 960×540 pixels with blur=8
+while their display rectangle remains 1920×1080. Explicit decode hints pass through
+the native image bridge, so a later sizing pass cannot silently restore a full-size
+decode. Sharp featured backdrops and foreground artwork retain their sizing.
+The same five-key device workload measured first My List artwork readiness at
+561ms (previously 788ms) and warm revisits at about 205ms (previously 453–458ms).
+Key-handler work remained about 43–76ms. A rapid alternating-key run settled back
+on the intended My List row; its only API request was the normal revision poll.
+These are scoped observations, not universal latency/FPS guarantees.
+
+Opt-in local runtime observations separate key handling, API read/parse/normalization
+and image readiness. They capture no headers or response bodies and send/store
+nothing themselves. The device reports Worker and SharedWorker as unavailable.
+The installed SDK and [current Roku overview](https://developer.roku.com/dev/docs/rsg-sdk-standing-docs-getting-started-overview)
+describe separate Program/Render contexts and future Web Workers. Existing HTTP
+transport already executes in real Task threads; additional threads are not the
+measured missing piece for this Home row.
+
+The separate top-level My List tab also clears/refetches on entry. That finding is
+not the user's Home-row report; its retention experiment is deferred rather than
+presented as the fix. Full UI cleanup, remaining input latency, shared native-host
+integration and LG/webOS/Tizen qualification remain active work.
+
+
+## Home row focus isolation
+
+Both owner-reported index defects reproduced before the fix: vertical return from
+My List reset Continue Watching from card5 to card0; top navigation changed the
+rail offset from -2116 to -346.4. Home now owns one row-focus store, keyed by row
+and card identity. Only row interaction updates it; the renderer uses the shared
+column only while that shelf has focus. Refresh/reordering resolves the saved
+identity, removed cards clamp to a valid index, and profile changes clear the store.
+
+A further fast-recycling regression showed a returning shelf sliding horizontally
+through unrelated indices. Recycled rails/focus frames now reset after prop updates
+before painting. The pinned Canvas patch stops a replaced property-animation
+controller so an old transition cannot overwrite that reset.
+
+All four new focus cases pass (including WebGL and Canvas recycling), along with
+the existing eight polish cases. Full unit/native checks pass (251+33). On the real
+Roku, row0 card5 restored at x=-2116 after visiting My List; all six top-nav moves
+kept x=-2116, and returning through the hero retained card5. The final native build
+was installed and that physical check passed again. Broader screen/overlay focus
+isolation is included in the remaining functionality sweep.

@@ -1,3 +1,5 @@
+import { imageDecodeSize } from "./platform/image-decode-size";
+import { runtimeObserver } from "./platform/runtime-observation";
 /**
  * Roku entry for the shared tv-web SolidTV application.
  *
@@ -173,8 +175,8 @@ function applyNativeClip(holder: any, clip: number[] | false) {
 function syncMotion(group: MotionGroup) {
   const holder = group.holder, clipper = group.clipper;
   const geometry = motionGroupGeometry(group.root, group.parent?.root);
-  if (clipper.x !== geometry.clipX || clipper.y !== geometry.clipY || clipper.w !== geometry.width || clipper.h !== geometry.height) {
-    clipper.x = geometry.clipX;clipper.y = geometry.clipY;clipper.w = geometry.width;clipper.h = geometry.height;
+  if (clipper.x !== geometry.clipX || clipper.y !== geometry.clipY || clipper.w !== geometry.width || clipper.h !== geometry.height || clipper.alpha !== geometry.inheritedAlpha) {
+    clipper.x = geometry.clipX;clipper.y = geometry.clipY;clipper.w = geometry.width;clipper.h = geometry.height;clipper.alpha = geometry.inheritedAlpha;
     clipper.flush();
   }
   applyNativeClip(clipper, geometry.viewport);
@@ -286,8 +288,7 @@ function adoptMotion(record: NativeRecord, root: any, key = record.layer) {
       groups.forEach(group => {
         syncMotion(group);
         const nativeTarget = Number(group.holder[property]);
-        const factor = property === 'alpha' ? (group.parent ? opacityWithin(node.parentNode, group.parent.root) : inheritedAlpha(node)) :
-          property === 'x' && node.rtlResolved ? -1 : 1;
+        const factor = property === 'x' && node.rtlResolved ? -1 : 1;
         const event = 'on' + property[0].toUpperCase() + property.slice(1) + 'State';
         setProp(group.holder.dom, event, (feedback: MotionFeedback) => {
           if (!alive || answered || serial !== activeSerial || feedback.serial !== serial || group.holder.destroyed) return;
@@ -710,6 +711,7 @@ function iconSource(svg: string): { uri: string; color: string } | undefined {
     ensureLayers();
     const width = Math.max(1, Math.ceil(Number(p.w) || 1));
     const height = Math.max(1, Math.ceil(Number(p.h) || 1));
+    const decode = imageDecodeSize(width, height, p.decodeWidth, p.decodeHeight);
     const rawSrc = typeof p.src === "string" ? p.src : p.texture?.src;
     const svg =
       typeof rawSrc === "string" && rawSrc.startsWith("data:image/svg+xml,")
@@ -718,7 +720,7 @@ function iconSource(svg: string): { uri: string; color: string } | undefined {
     const icon = svg ? iconSource(svg) : undefined;
     const effectiveSrc = icon?.uri ?? (
       typeof rawSrc === "string" && /^https?:\/\//.test(rawSrc)
-        ? imageSource(rawSrc, width, height, p.fit === "contain" ? "inside" : "cover")
+        ? imageSource(rawSrc, decode.width, decode.height, p.fit === "contain" ? "inside" : "cover")
         : rawSrc
     );
     const qr = typeof rawSrc === "string" && rawSrc.indexOf("data:image/x-viptv-qr,") === 0;
@@ -780,13 +782,14 @@ function iconSource(svg: string): { uri: string; color: string } | undefined {
       const key = String(effectiveSrc);
       record.onLoad = p.onLoad;
       if (record.key !== key) {
+        runtimeObserver()?.({phase:"image-start",at:performance.now(),node:node.id,width,height,decodeWidth:decode.width,decodeHeight:decode.height});
         record.key = key;
         record.loadedKey = undefined;
         record.fitWidth = undefined;
         record.fitHeight = undefined;
         record.fitY = undefined;
       }
-      node.loadImage(visual, key, width, height, (poster: any) => {
+      node.loadImage(visual, key, decode.width, decode.height, (poster: any) => {
         if (record!.key !== key) return;
         if (p.logo) {
           const bitmapWidth = Number(poster.bitmapWidth || 0);
@@ -807,6 +810,7 @@ function iconSource(svg: string): { uri: string; color: string } | undefined {
         }
         if (record!.loadedKey !== key) {
           record!.loadedKey = key;
+          runtimeObserver()?.({phase:"image-ready",at:performance.now(),node:node.id,width,height,decodeWidth:decode.width,decodeHeight:decode.height});
           record!.onLoad?.();
         }
       });

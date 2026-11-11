@@ -1,3 +1,5 @@
+import { runtimeObserver } from "../platform/runtime-observation";
+let requestSequence = 0;
 import type {
   Bootstrap,
   CalendarSnapshot,
@@ -251,6 +253,8 @@ export class RemoteTvApi {
     if (typeof path !== "string" || !path.startsWith("/api/") || path.includes("://"))
       throw new Error("Invalid API path");
     abort(signal);
+    const observe = runtimeObserver(), observation = observe ? ++requestSequence : 0;
+    observe?.({phase:"http-start",at:performance.now(),request:observation,path:path.split("?")[0],method});
     const request = new AbortController();
     const cancel = () => request.abort();
     signal?.addEventListener("abort", cancel, { once: true });
@@ -274,6 +278,7 @@ export class RemoteTvApi {
       if (Number.isFinite(serverDate))
         this.clockOffset = serverDate - Date.now();
         text = await snapshotText(response, request.signal);
+        observe?.({phase:"http-read",at:performance.now(),request:observation,characters:text.length,status:response.status});
     } catch (error) {
       if (!signal?.aborted && request.signal.aborted)
         throw new RemoteError(
@@ -297,6 +302,7 @@ export class RemoteTvApi {
         "The server returned an invalid response.",
       );
     }
+    observe?.({phase:"http-json",at:performance.now(),request:observation});
     if (!response.ok) {
       const code = String(value.error_code ?? value.error ?? "request_failed");
       throw new RemoteError(
@@ -323,6 +329,7 @@ export class RemoteTvApi {
       }
     };
     images(value);
+    observe?.({phase:"http-ready",at:performance.now(),request:observation});
     return value as T;
   }
   async call<T>(

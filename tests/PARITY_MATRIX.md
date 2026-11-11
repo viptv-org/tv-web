@@ -559,3 +559,7 @@ Implementation `4cf36237e70b387aacad8a3c5521d5f2ee9eaf9e`;
 | Proxy backdrop blur | URL effect preservation and private-image transport cases pass; live proxy returns processed image | Softened backdrop and sharp poster inspected |
 | Hero portrait placement | Right edge matches profile avatar, at least 48px top clearance, bottom above shelf | Updated 240×360 preview at (1584,144) inspected |
 | Shared browser behavior | Eight polish cases pass, including recycled artwork identity and fixed focus | Physical PS4 follow-up remains separate |
+
+| Home My List preview | Existing coherent-artwork cases pass; shelf reuse now also asserts no Home/Library API reads; decode sizing is bounded separately from display size | No list/card refetch observed. Warm preview readiness about205ms vs453–458ms; first observed visit561ms vs788ms. Overall performance acceptance remains open |
+
+| Home focus isolation | Four regressions pass: remembered row/hero return, top-nav isolation, WebGL/Canvas recycled-row reset; identity refresh/clamp/profile clear covered in units | Roku card5 returns at the same x=-2116 offset and header navigation leaves it fixed; broader focus sweep remains open |

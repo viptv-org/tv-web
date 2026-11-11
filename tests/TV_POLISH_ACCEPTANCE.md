@@ -29,6 +29,32 @@ All remaining checklist items stay in scope. Performance completion requires
 repeatable physical-device evidence, including fast vertical reversals under
 image loading; a unit-test pass or high average FPS is insufficient.
 
+## Foundation and platform requirements
+
+- [ ] Qualify navigation and artwork latency on the real Roku, including the My List
+      row on Home; distinguish API refetch, image readiness and input handling.
+- [ ] Audit Program, Render and Task thread ownership; use real background execution
+      where supported and keep synchronous CPU work from blocking navigation.
+      Document unsupported worker APIs honestly and verify cancellation/cleanup.
+- [ ] Establish meaningful headless native-host tests and native TypeScript checks;
+      compiler/bundler success alone does not prove firmware behavior.
+- [ ] Split large application and native-adapter modules into small focused files
+      after behavior/performance is verified; remove fragile build-time patches
+      where a proper pinned framework fix can replace them.
+- [ ] Complete the whole-app UI and functionality sweep after performance work.
+- [ ] Investigate early PlayStation logout, including refresh rotation, cross-window
+      coordination, storage and suspended-browser recovery; preserve revocation safety.
+- [ ] Support LG webOS and Samsung Tizen packaging, remote input, playback and recovery;
+      test official emulators where feasible and browser/vendor API boundaries.
+      No physical LG/Samsung devices are available; report that qualification limit.
+
+## Newly reported focus regressions
+
+- [x] Restore each Home row's last focused card and horizontal position on vertical return.
+- [x] Keep top-navigation movement from scrolling or changing Continue Watching.
+- [x] Reset recycled shelf positions before they enter view; verify WebGL, Canvas and Roku behavior within their recorded test scope.
+- [ ] Audit the other screens and overlays for the same shared-index/state leakage.
+
 ## Hero, artwork and motion
 
 - [ ] Remove the hero logo's horizontal entrance/teleport; use a short, simple fade.

@@ -206,3 +206,25 @@ index e9c264b..7884147 100644
      if (this._waitingForFont === true && this.fontHandler) {
        this.fontHandler.stopWaitingForFont(this.textProps.fontFamily, this);
      }
+diff --git a/node_modules/@solidtv/renderer-canvas/src/core/CoreNode.ts b/node_modules/@solidtv/renderer-canvas/src/core/CoreNode.ts
+--- a/node_modules/@solidtv/renderer-canvas/src/core/CoreNode.ts
++++ b/node_modules/@solidtv/renderer-canvas/src/core/CoreNode.ts
+@@ -2821,6 +2821,7 @@
+           return controller.start();
+         }
+       }
++      existing?.controller.stop();
+     } else {
+       animations = this._animations = {};
+     }
+diff --git a/node_modules/@solidtv/renderer-canvas/dist/src/core/CoreNode.js b/node_modules/@solidtv/renderer-canvas/dist/src/core/CoreNode.js
+--- a/node_modules/@solidtv/renderer-canvas/dist/src/core/CoreNode.js
++++ b/node_modules/@solidtv/renderer-canvas/dist/src/core/CoreNode.js
+@@ -1861,6 +1861,7 @@
+                     return controller.start();
+                 }
+             }
++            existing?.controller.stop();
+         }
+         else {
+             animations = this._animations = {};

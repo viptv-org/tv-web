@@ -1,4 +1,5 @@
 /** @jsxImportSource @solidtv/solid */
+import { runtimeObserver } from "../platform/runtime-observation";
 import { DevicePlayback, deviceProfileKey, deviceTitleKey } from "./device-playback";
 import { EpisodePreparation, episodeKey, sourceStartIds, sourcePageReady, type PreparedEpisode, type EpisodePreparationState } from "./episode-preparation";
 import { AutoplayCountdown, type CountdownState } from "./autoplay-countdown";
@@ -104,6 +105,7 @@ import { clearLogoCache } from "./visuals";
 import { CalendarBoard, calendarDayKey, calendarDays } from "./CalendarBoard";
 import { StatusDialog } from "./StatusDialog";
 import { initialSeasonIndex, seasonLabel, episodeActionLabel, seasonEpisodes } from "./seasons";
+import { RowFocus } from "./row-focus";
 import { HomeShelves } from "./HomeShelves";
 import { homeCardSize, focusFrameEdges } from "./focus-frame";
 import { BusyIndicator, BusySpinner } from "./BusyIndicator";
@@ -640,12 +642,14 @@ export function createRemoteTvApp(
   options: { autoStart?: boolean; initialLoading?: boolean } = {},
 ) {
   return () => {
+    const homeRowFocus = new RowFocus<Card>(cardKey);
     const [screen, setScreen] = createSignal<Screen>("welcome"),
       [home, setHome] = createSignal<Home>(),
       [management, setManagement] = createSignal<Management>(),
       [navigation, setNavigation] = createSignal<Bootstrap["navigation"]>(),
       [library, setLibrary] = createSignal<LibraryPage>(),
       [preferencesSignal, setPreferencesSignal] = createSignal<Preferences>();
+    createEffect(() => homeRowFocus.retain(home()?.rows ?? []));
     /** Server preference snapshots drive the display settings immediately;
      * clearing the profile restores the designed defaults. */
     const adoptPreferences = (value: Preferences | undefined) => {
@@ -1319,6 +1323,7 @@ export function createRemoteTvApp(
       if (pending.index < length || !next) {
         pendingFocus = undefined;
         setColumn(Math.max(0, Math.min(length - 1, pending.index)));
+        rememberHomeRow();
         if (screen() === "live") void loadVisibleGuides();
       } else if (!pageBusy) {
         if (shelf) void loadHomePage();
@@ -1802,6 +1807,7 @@ export function createRemoteTvApp(
       return scope.signal;
     }
     function clearProfileView() {
+      homeRowFocus.clear();
       history.length = 0;
       batch(() => {
         setCaptionOverride(undefined);
@@ -2240,6 +2246,8 @@ export function createRemoteTvApp(
     let previewCandidate: Card | undefined;
     createEffect(() => {
       const focused = focusedCard(), active = zone() === "rows", currentScope = deviceScope();
+      runtimeObserver()?.({phase:"home-focus",at:performance.now(),row:row(),rowId:home()?.rows[row()]?.id,
+        cards:home()?.rows[row()]?.cards.length,complete:home()?.complete,active});
       const previous = previewScope === currentScope ? previewCandidate ?? untrack(previewCard) : undefined;
       previewScope = currentScope;
       const card = focused && active ? presentationCard(previous, focused) : undefined;
@@ -2251,7 +2259,7 @@ export function createRemoteTvApp(
       const timer = setTimeout(() => {
         if (generation === previewGeneration)
           setPreviewCard(active ? card : undefined);
-      }, 400);
+      }, 120);
       onCleanup(() => clearTimeout(timer));
     });
     const shelfTitleY = () => {
@@ -2325,7 +2333,11 @@ export function createRemoteTvApp(
       setHeroRotation((current) => restartHeroRotation(current));
       resetHeroCycle();
     });
+    function rememberHomeRow() {
+      if (screen() === "home" && zone() === "rows") homeRowFocus.remember(home()?.rows[row()], column());
+    }
     function remember() {
+      rememberHomeRow();
       history.push({
         screen: screen(),
         zone: zone(),
@@ -2513,6 +2525,7 @@ export function createRemoteTvApp(
       show();
     }
     function replaceHome(value: Home | undefined) {
+      rememberHomeRow();
       const shelf = home()?.rows[row()],
         focused = shelf?.cards[column()];
       const nextRow = Math.max(
@@ -3027,6 +3040,7 @@ export function createRemoteTvApp(
         updateSearch(search(), true);
     }
     async function back() {
+      rememberHomeRow();
       nextIntent++;setAdvancing(false);
       countdown.cancel();
       if (error()) { setError("");return; }
@@ -5545,8 +5559,13 @@ export function createRemoteTvApp(
                 (shelf) => shelf.cards.length > 0 || shelf.state === "Failed",
               ) ?? -1;
             if (first < 0) return;
-            setRow(first);
-            setZone("rows");
+            batch(() => {
+              setRow(first);
+              setColumn(homeRowFocus.resolve(home()?.rows[first]));
+              setZone("rows");
+            });
+            rememberHomeRow();
+            return;
           } else {
             if (!detailHasEpisodes() && !detail()?.recommendations.length)
               return;
@@ -5558,6 +5577,7 @@ export function createRemoteTvApp(
         return;
       }
       if (screen() === "home" && zone() === "rows") {
+        rememberHomeRow();
         if (dy < 0 && row() === 0) {
           setZone("hero");
           return;
@@ -5577,14 +5597,15 @@ export function createRemoteTvApp(
             return;
           }
           if (next >= rows.length) return;
-          setRow(next);
+          batch(() => { setRow(next);setColumn(homeRowFocus.resolve(rows[next])); });
         }
         const cards = home()?.rows[row()]?.cards ?? [];
-        moveToItem(
-          dy ? 0 : column() + dx,
+        if (dx) moveToItem(
+          column() + dx,
           cards.length,
           home()?.rows[row()]?.next_cursor,
         );
+        rememberHomeRow();
         void loadHomePage();
         return;
       }
@@ -7438,7 +7459,7 @@ export function createRemoteTvApp(
               </Show>
               <Show when={home()?.rows?.length}>
                 <HomeShelves rows={home()!.rows} row={row()} column={column()}
-                  focused={zone() === "rows"} top={shelfTitleY()}
+                  focused={zone() === "rows"} columnForRow={shelf => homeRowFocus.resolve(shelf)} top={shelfTitleY()}
                   renderTile={(card, _index, x, focused, portrait) => (
                     <Tile card={card()} x={x()} y={0}
                       w={homeCardSize(portrait()).width} h={homeCardSize(portrait()).height}
