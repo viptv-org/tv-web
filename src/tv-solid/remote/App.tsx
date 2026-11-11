@@ -645,6 +645,7 @@ export function createRemoteTvApp(
   return () => {
     const homeRowFocus = new RowFocus<Card>(cardKey);
     const contentFocus = new RowFocus<Card>(cardKey);
+    const detailFocus = new RowFocus<Card>(cardKey);
     const [screen, setScreen] = createSignal<Screen>("welcome"),
       [home, setHome] = createSignal<Home>(),
       [management, setManagement] = createSignal<Management>(),
@@ -1811,6 +1812,7 @@ export function createRemoteTvApp(
     function clearProfileView() {
       homeRowFocus.clear();
       contentFocus.clear();
+      detailFocus.clear();
       history.length = 0;
       batch(() => {
         setCaptionOverride(undefined);
@@ -2153,6 +2155,20 @@ export function createRemoteTvApp(
       if (["movie", "series", "anime", "library"].includes(screen()) && zone() === "content")
         contentFocus.remember(contentRow(), column());
     }
+    function detailRow(kind: "episodes" | "recommendations") {
+      const value = detail();
+      return {
+        id: JSON.stringify([value && presentationKey(value.item), kind, kind === "episodes" ? seasonIndex() : undefined]),
+        cards: kind === "episodes" && detailHasEpisodes() ? detailEpisodes() : value?.recommendations ?? [],
+      };
+    }
+    const detailColumn = (kind: "episodes" | "recommendations") => zone() === kind ? column() : detailFocus.resolve(detailRow(kind));
+    function rememberDetailFocus() {
+      const region = zone();
+      if (screen() === "detail" && (region === "episodes" || region === "recommendations"))
+        detailFocus.remember(detailRow(region), column());
+    }
+    createEffect(() => detailFocus.retain([detailRow("episodes"), detailRow("recommendations")]));
     const gridColumns = () => (screen() === "search" ? 5 : 7);
     const gridStart = () => {
       const index =
@@ -2348,6 +2364,7 @@ export function createRemoteTvApp(
     function remember() {
       rememberHomeRow();
       rememberContentFocus();
+      rememberDetailFocus();
       history.push({
         screen: screen(),
         zone: zone(),
@@ -3068,6 +3085,7 @@ export function createRemoteTvApp(
     async function back() {
       rememberHomeRow();
       rememberContentFocus();
+      rememberDetailFocus();
       nextIntent++;setAdvancing(false);
       countdown.cancel();
       if (error()) { setError("");return; }
@@ -5264,6 +5282,7 @@ export function createRemoteTvApp(
     }
     function move(dx: number, dy: number) {
       rememberContentFocus();
+      rememberDetailFocus();
       countdown.cancel();
       channelPending = undefined;
       if (screen() === "pairing") {
@@ -5510,7 +5529,7 @@ export function createRemoteTvApp(
         }
         if (dy > 0) {
           setZone("episodes");
-          setColumn(0);
+          setColumn(detailFocus.resolve(detailRow("episodes")));
         }
         return;
       }
@@ -5556,7 +5575,7 @@ export function createRemoteTvApp(
           detail()?.recommendations.length
         ) {
           setZone("recommendations");
-          setColumn(0);
+          setColumn(detailFocus.resolve(detailRow("recommendations")));
           return;
         }
         const items = detailHasEpisodes()
@@ -5573,7 +5592,7 @@ export function createRemoteTvApp(
       if (screen() === "detail" && zone() === "recommendations") {
         if (dy < 0) {
           setZone("episodes");
-          setColumn(0);
+          setColumn(detailFocus.resolve(detailRow("episodes")));
           return;
         }
         setColumn((i) =>
@@ -6243,7 +6262,7 @@ export function createRemoteTvApp(
           value: `${season.episode_count} episode${season.episode_count === 1 ? "" : "s"}`,
           run: async () => {
             closeOverlay(false);
-            if (index === seasonIndex()) { setColumn(0);setZone("episodes");return; }
+            if (index === seasonIndex()) { setColumn(detailFocus.resolve(detailRow("episodes")));setZone("episodes");return; }
             const signal = restartPaging();
             setLoading(true);
             try {
@@ -7696,16 +7715,8 @@ export function createRemoteTvApp(
                           ? detailEpisodes()
                           : value().recommendations
                         ).slice(
-                          zone() === "episodes"
-                            ? Math.floor(
-                                column() / (detailHasEpisodes() ? 4 : 7),
-                              ) * (detailHasEpisodes() ? 4 : 7)
-                            : 0,
-                          (zone() === "episodes"
-                            ? Math.floor(
-                                column() / (detailHasEpisodes() ? 4 : 7),
-                              ) * (detailHasEpisodes() ? 4 : 7)
-                            : 0) + 8,
+                          Math.floor(detailColumn("episodes") / (detailHasEpisodes() ? 4 : 7)) * (detailHasEpisodes() ? 4 : 7),
+                          Math.floor(detailColumn("episodes") / (detailHasEpisodes() ? 4 : 7)) * (detailHasEpisodes() ? 4 : 7) + 8,
                         )}
                         keyOf={cardKey}
                       >
@@ -7749,12 +7760,8 @@ export function createRemoteTvApp(
                         />
                         <KeyedFor
                           each={value().recommendations.slice(
-                            zone() === "recommendations"
-                              ? Math.floor(column() / 7) * 7
-                              : 0,
-                            (zone() === "recommendations"
-                              ? Math.floor(column() / 7) * 7
-                              : 0) + 8,
+                            Math.floor(detailColumn("recommendations") / 7) * 7,
+                            Math.floor(detailColumn("recommendations") / 7) * 7 + 8,
                           )}
                           keyOf={cardKey}
                         >
