@@ -574,3 +574,15 @@ Implementation `4cf36237e70b387aacad8a3c5521d5f2ee9eaf9e`;
 | Home My List preview | Existing coherent-artwork cases pass; shelf reuse now also asserts no Home/Library API reads; decode sizing is bounded separately from display size | No list/card refetch observed. Warm preview readiness about205ms vs453–458ms; first observed visit561ms vs788ms. Overall performance acceptance remains open |
 
 | Home focus isolation | Four regressions pass: remembered row/hero return, top-nav isolation, WebGL/Canvas recycled-row reset; identity refresh/clamp/profile clear covered in units | Roku card5 returns at the same x=-2116 offset and header navigation leaves it fixed; broader focus sweep remains open |
+
+## Shared UI focus and recovery audit
+
+| Area | Browser evidence | Device limits |
+|---|---|---|
+| Catalog/Anime/Library focus | Header and filter navigation keep deep grids stationary; selected identity survives reordered refreshes | Native/browser-TV firmware follow-up pending |
+| Detail and Calendar focus | Independent episode/recommendation selections; season/hero return; Calendar date return, empty focus and withdrawn routes/history | No new physical-device claim |
+| Source cancellation | Retired discovery no longer consumes a later Back; initial admission cancels to the originating page; outgoing replacement lease remains protected | Actual device cancellation timing remains separate |
+| Samsung root Return | Hero, rows, header and signed-out root confirm; Cancel is default; affirmative exit and history/drawer precedence use a simulated application API | Samsung signing/firmware qualification pending |
+| Layout and media preservation | Current browse actions/progress, composed welcome, Library controls, compact recovery, consistent selector gaps, centered managed-seek activity, track/style and playback-authority regressions | Exact reported title/provider sequence and physical caption presentation remain unqualified |
+| Slow artwork | Initial text and mounted preparation; valid delayed completion beyond 2500ms; coherent replacement and canceled-node retirement | Native callback timing and exact first-title follow-up pending |
+| Skip/Playback settings | Intro/Recap range boundaries, visible shortcut/toolbar, paused Select seek, invalid/disabled markers; distinct server settings and device autoplay order/copy | Provider-specific markers and physical shortcut acceptance remain separate |

@@ -42,6 +42,10 @@ image loading; a unit-test pass or high average FPS is insufficient.
       after behavior/performance is verified; remove fragile build-time patches
       where a proper pinned framework fix can replace them.
 - [ ] Complete the whole-app UI and functionality sweep after performance work.
+      Browser coverage now includes catalog/detail/Calendar focus, source Back,
+      Samsung exit confirmation, browse spacing, welcome/profile/recovery layouts
+      and decoded-media player authority. Physical follow-up and remaining exact
+      title/provider sequences stay open; see TESTING.md.
 - [ ] Investigate early PlayStation logout, including refresh rotation, cross-window
       coordination, storage and suspended-browser recovery; preserve revocation safety.
 - [ ] Support LG webOS and Samsung Tizen packaging, remote input, playback and recovery;

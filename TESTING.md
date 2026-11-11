@@ -3938,3 +3938,36 @@ These are browser simulations, not physical PlayStation qualification. Permanent
 denied storage cannot retain sign-in after the document closes. Browsers without
 Web Locks still lack cross-context rotation coordination; a lost server rotation
 response remains unrecoverable under the current replay-revocation contract.
+
+## Shared TV functionality audit
+
+Isolated HTTPS fixtures and short decoded HLS media cover catalog/Anime/Library
+header isolation, reordered-card restoration, independent detail rails, season/hero
+return, Calendar empty/navigation/history states and source Back cancellation.
+Samsung root Return confirms with Cancel selected; drawer, pairing, player and
+history behavior retain precedence. This exercises a simulated Samsung exit API.
+
+Current Browse/Welcome/Library tests preserve card progress and server actions,
+one composed welcome image, Type/Sort/default/draft controls and confirmed writes.
+Reviewed captures cover welcome, profiles, detail, selector spacing, playback
+settings, Intro/Recap, centered seek, recovery and the Next panel. Recovery also
+has a pixel regression for late screen text leaking through its opaque surface.
+
+Waiting images are not failures: first title text appears while prepared nodes
+wait, delayed valid completion beyond 2500ms remains eligible, replacements retain
+the current coherent presentation and canceled scopes retire staged nodes. Detail,
+card, settings, browse and overlay presentation use focused components; policy
+and effect ownership remain in the controller.
+
+Intro/Recap shortcuts respect server marker ranges, seek capability and the profile
+switch. Tests cover toolbar/standalone visibility, inclusive start/exclusive end,
+invalid/credits/disabled ranges, Select-to-end and paused intent. Device Autoplay
+follows Next episode button with pinned copy, separately from server Next/skip/source
+preferences. Countdown, cancellation, prepared handoff, manual mode and persistent
+switches are exercised. Shared units: 272 pass; production integrity/type/build
+checks pass. Final combined integration checks remain a separate gate.
+
+Exact Collision Course/provider sequences, actual provider marker availability,
+long-title continuity and physical caption/input/paint acceptance remain separate.
+Native performance and sign-in evidence retain their own limits. No deployment
+or new physical-TV qualification is implied.
