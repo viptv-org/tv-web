@@ -51,3 +51,12 @@ export function loadCanvasFonts(renderer: unknown) {
   ];
   return Promise.all(faces.map(([families, fontUrl]) => stage.loadFont("canvas", { fontFamily: families, fontUrl, metrics: { ...sdfFontMetrics(families[0]), lineGap: 0 } })));
 }
+
+export function disposeCanvasRenderer(renderer: unknown): void {
+  const active = renderer as RendererMain;
+  active.pause({ immediate: true });
+  active.root.destroy();
+  active.stage.cleanup(true);
+  active.stage.cleanupTextRenderers();
+  active.removeAllListeners();
+}
