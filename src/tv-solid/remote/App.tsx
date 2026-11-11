@@ -1,5 +1,5 @@
 /** @jsxImportSource @solidtv/solid */
-import type { Screen, IntegrationSchema, Item, Overlay } from "./app-types";
+import type { Screen, Item, Overlay } from "./app-types";
 import { runtimeObserver } from "../platform/runtime-observation";
 import { exitTizen } from "../platform/tizen-host";
 import { DevicePlayback, deviceProfileKey, deviceTitleKey } from "./device-playback";
@@ -110,8 +110,6 @@ import {
   sourceStatusCopy,
 } from "./sourceStatus";
 import {
-  ACCOUNT_SESSION_REQUIRED,
-  ACCOUNT_SESSION_REQUIRED_ROW,
   offersHouseholdWrite
 } from "./refusals";
 import {
@@ -128,6 +126,12 @@ import { createIdleScreenSaver } from "./idle-screen-saver";
 import { createTextKeyboard } from "./text-keyboard";
 import { createHeldSelect } from "./held-select";
 import { createProfileManagement } from "./profile-management";
+import { createProfilePreferenceRows } from "./settings/profile-preferences";
+import { createDevicePreferenceRows } from "./settings/device-preferences";
+import { accountSettings } from "./settings/account";
+import { createAddonSettings } from "./settings/addons";
+import { createIntegrationSettings } from "./settings/integrations";
+import { createParentSettings } from "./settings/parental";
 import { createPreferenceControls } from "./preference-controls";
 import { createOverlayController } from "./overlay-controller";
 import { createDetailPresentation } from "./detail-presentation";
@@ -3402,6 +3406,16 @@ export function createRemoteTvApp(
         if (alive) setLiveIdentity(value);
       });
     });
+    const profilePreferenceRows = createProfilePreferenceRows({current: preferences, adopt: setPreferences, request: call,
+      path: () => api.scoped("/preferences"), reload: () => loadSettings(settingsTab(), scope.signal), choose: preferenceChoice});
+    const devicePreferenceRows = createDevicePreferenceRows({device: devicePlayback, scope: deviceScope,
+      reload: () => loadSettings(settingsTabIndex("Playback"), scope.signal)});
+    const householdSettings = {request: call, path: (path: string) => api.scoped(path), mayWrite: mayWriteHousehold,
+      dialogs: {open: openOverlay, close: closeOverlay, dismiss: dismissOverlay}, prompt: edit, notify};
+    const addonSettings = createAddonSettings({...householdSettings, reload: () => loadSettings(settingsTabIndex("Add-ons"), scope.signal)});
+    const integrationSettings = createIntegrationSettings({...householdSettings, reload: () => loadSettings(settingsTabIndex("Source integrations"), scope.signal)});
+    const parentSettings = createParentSettings({...householdSettings, profiles: management, refreshProfiles,
+      reload: () => loadSettings(settingsTabIndex("Parental controls"), scope.signal)});
     async function loadSettings(tab: number, signal: AbortSignal) {
       if (signal.aborted) return;
       retry = () => void loadSettings(tab, scope.signal).catch(fail);
@@ -3415,40 +3429,15 @@ export function createRemoteTvApp(
         // Account: server identity facts plus this device's sign-out. The
         // boards' Devices row needs account-wide revocation, which the
         // producer deliberately does not offer — the row stays absent.
-        setSettingsItems([
-          {
-            id: "email",
-            label: "Email",
-            value: accountEmail() || "—",
-            run: () => {},
-          },
-          {
-            id: "logout",
-            label: "Sign out of this TV",
-            run: () =>
-              openOverlay({
-                kind: "confirm",
-                title: "Sign out of this TV?",
-                description:
-                  "Your profiles, My List and progress stay on your account.",
-                items: [
-                  { id: "cancel", label: "Stay signed in", run: closeOverlay },
-                  {
-                    id: "confirm",
-                    label: "Sign out",
-                    run: async () => {
-                      await player.stop();
-                      await api.signOut();
-                      resetScope();
-                      clearProfileView();
-                      setScreen("welcome");
-                      setLoading(false);
-                    },
-                  },
-                ],
-              }),
-          },
-        ]);
+        setSettingsItems(accountSettings({email: accountEmail, dialogs: {open: openOverlay, close: closeOverlay}, signOut: async () => {
+          await player.stop();
+          await api.signOut();
+          resetScope();
+          clearProfileView();
+          setScreen("welcome");
+          setLoading(false);
+        }}));
+
         setLoading(false);
         return;
       }
@@ -3468,309 +3457,17 @@ export function createRemoteTvApp(
       }
       const pref = await api.preferences(signal);
       setPreferences(pref);
-      if (tab === 2 || tab === 3)
-        setSettingsItems(
-          (pref.controls ?? [])
-            .filter(
-              (control) =>
-                control.group === (tab === 2 ? "playback" : "subtitles") &&
-                control.choices,
-            )
-            .map((control) => {
-              const choices = control.choices!;
-              const isToggle =
-                choices.length === 2 &&
-                choices.every((choice) => typeof choice.value === "boolean");
-              if (isToggle) {
-                const on = pref.preferences[control.id] === true;
-                const flip = async () => {
-                  const previous = preferences()!;
-                  const receipt = await call<Preferences>(
-                    api.scoped("/preferences"),
-                    "PUT",
-                    {
-                      revision: previous.revision,
-                      preferences: {
-                        ...previous.preferences,
-                        [control.id]: !on,
-                      },
-                    },
-                  );
-                  setPreferences(receipt);
-                  await loadSettings(settingsTab(), scope.signal);
-                };
-                return {
-                  id: control.id,
-                  label: control.label,
-                  description: control.description,
-                  toggle: on,
-                  value: "",
-                  run: flip,
-                };
-              }
-              return {
-                id: control.id,
-                label: control.label,
-                description: control.description,
-                value:
-                  choices.find(
-                    (choice) => choice.value === pref.preferences[control.id],
-                  )?.label ?? String(pref.preferences[control.id] ?? ""),
-                chevron: true,
-                run: () =>
-                  preferenceChoice(
-                    control.id,
-                    control.label,
-                    choices.map((choice) => [choice.label, choice.value]),
-                  ),
-              };
-            }),
-        );
-      if (tab === 2) {
-        await devicePlayback.ready;
-        const local = (id: string, label: string, description: string, on: boolean, save: () => Promise<void>): Item => ({
-          id, label, description, toggle: on, value: "", run: async () => { await save();await loadSettings(settingsTabIndex("Playback"), scope.signal); },
-        });
-        setSettingsItems(items => {
-          const index = items.findIndex(item => item.id === "next_episode_button") + 1;
-          return [...items.slice(0, index),
-            local("device-autoplay", "Autoplay next episode", "Plays the next episode after a 10-second countdown. Applies to this device.", devicePlayback.autoplay,
-              () => devicePlayback.setAutoplay(!devicePlayback.autoplay)),
-            ...items.slice(index),
-            local("device-source-across", "Use source choice across shows", "Try your last source choice for new shows and movies on this device.", devicePlayback.across(deviceScope()),
-              () => devicePlayback.setAcross(deviceScope(), !devicePlayback.across(deviceScope()))),
-          ];
-        });
-      }
+      if (tab === 2 || tab === 3) setSettingsItems(profilePreferenceRows(pref, tab));
+      if (tab === 2) setSettingsItems(await devicePreferenceRows());
       if (tab === 6)
         setSettingsItems(
           (pref.controls ?? [])
             .filter((control) => control.group === "display")
             .map((control) => displayItem(control)),
         );
-      if (tab === 4) {
-        const write = await mayWriteHousehold();
-        const [inventory, states] = await Promise.all([
-          call<{ items: { id: number; name: string; enabled: boolean }[] }>(
-            "/api/addons?limit=200",
-            "GET",
-            undefined,
-            signal,
-          ),
-          call<{ addons: { connection_id: string; enabled: boolean }[] }>(
-            api.scoped("/addon-activation"),
-            "GET",
-            undefined,
-            signal,
-          ),
-        ]);
-        setSettingsItems([
-          // Installing and removing add-ons is an account-owner write. A paired
-          // TV can only enable an installed add-on for its own profile.
-          ...(write
-            ? [
-                {
-                  id: "add",
-                  label: "Add by address",
-                  run: () =>
-                    edit("Add-on address", async (address) => {
-                      const installed = await call<{ id: number }>(
-                        "/api/addons",
-                        "POST",
-                        { manifest_url: address },
-                      );
-                      await call(api.scoped("/addon-activation"), "PUT", {
-                        connection_id: `addon:${installed.id}`,
-                        enabled: true,
-                      });
-                      closeOverlay();
-                      await loadSettings(tab, scope.signal);
-                    }),
-                },
-              ]
-            : [
-                {
-                  id: "add",
-                  label: "Add or remove add-ons",
-                  value: "On the web",
-                  description: ACCOUNT_SESSION_REQUIRED_ROW,
-                  run: () => notify(ACCOUNT_SESSION_REQUIRED),
-                },
-              ]),
-          ...inventory.items.map((addon) => {
-            const state = states.addons.find(
-              (item) => item.connection_id === `addon:${addon.id}`,
-            );
-            return {
-              id: String(addon.id),
-              label: addon.name,
-              value: state
-                ? state.enabled
-                  ? "Enabled"
-                  : "Disabled"
-                : "Disabled for account",
-              run: () =>
-                !write && !state
-                  ? notify(ACCOUNT_SESSION_REQUIRED)
-                  : openOverlay({
-                      kind: "choices",
-                      title: addon.name,
-                      items: [
-                        ...(state
-                          ? [
-                              {
-                                id: "enabled",
-                                label: state.enabled
-                                  ? "Disable for this profile"
-                                  : "Enable for this profile",
-                                run: async () => {
-                                  await call(
-                                    api.scoped("/addon-activation"),
-                                    "PUT",
-                                    {
-                                      connection_id: state.connection_id,
-                                      enabled: !state.enabled,
-                                    },
-                                  );
-                                  closeOverlay();
-                                  await loadSettings(tab, scope.signal);
-                                },
-                              },
-                            ]
-                          : []),
-                        ...(write
-                          ? [
-                              {
-                                id: "remove",
-                                label: "Remove add-on",
-                                run: () =>
-                                  openOverlay(
-                                    {
-                                      kind: "confirm",
-                                      title: `Remove ${addon.name}?`,
-                                      items: [
-                                        {
-                                          id: "cancel",
-                                          label: "Cancel",
-                                          run: dismissOverlay,
-                                        },
-                                        {
-                                          id: "remove",
-                                          label: "Remove",
-                                          run: async () => {
-                                            await call(
-                                              `/api/addons/${addon.id}`,
-                                              "DELETE",
-                                            );
-                                            closeOverlay();
-                                            await loadSettings(
-                                              tab,
-                                              scope.signal,
-                                            );
-                                          },
-                                        },
-                                      ],
-                                    },
-                                    true,
-                                  ),
-                              },
-                            ]
-                          : []),
-                      ],
-                    }),
-            };
-          }),
-        ]);
-      }
-      if (tab === 5) await loadIntegrations(signal);
-      if (tab === 7) {
-        const write = await mayWriteHousehold();
-        const status = await call<{
-          pin_configured: boolean;
-          unlocked: boolean;
-        }>("/api/parent/status", "GET", undefined, signal);
-        const rows: Item[] = [];
-        // Unlocking is a device-session write the server allows; setting or
-        // changing the PIN is an account-owner write it refuses.
-        if (!status.pin_configured && !write)
-          rows.push({
-            id: "unlock",
-            label: "Set parent PIN",
-            value: "On the web",
-            description: ACCOUNT_SESSION_REQUIRED_ROW,
-            run: () => notify(ACCOUNT_SESSION_REQUIRED),
-          });
-        else if (!status.pin_configured || !status.unlocked)
-          rows.push({
-            id: "unlock",
-            label: status.pin_configured
-              ? "Unlock parent controls"
-              : "Set parent PIN",
-            run: () =>
-              edit(
-                status.pin_configured ? "Parent PIN" : "Set parent PIN",
-                async (pin) => {
-                  await call(
-                    status.pin_configured
-                      ? "/api/parent/unlock"
-                      : "/api/parent/pin",
-                    status.pin_configured ? "POST" : "PUT",
-                    { pin },
-                  );
-                  closeOverlay();
-                  await refreshProfiles();
-                  await loadSettings(tab, scope.signal);
-                },
-                "",
-                true,
-              ),
-          });
-        if (status.pin_configured && !write)
-          rows.push({
-            id: "pin",
-            label: "Change parent PIN",
-            value: "On the web",
-            description: ACCOUNT_SESSION_REQUIRED_ROW,
-            run: () => notify(ACCOUNT_SESSION_REQUIRED),
-          });
-        if (status.pin_configured && write)
-          rows.push({
-            id: "pin",
-            label: "Change parent PIN",
-            run: () =>
-              edit(
-                "Current parent PIN",
-                async (current_pin) => {
-                  edit(
-                    "New parent PIN",
-                    async (pin) => {
-                      await call("/api/parent/pin", "PUT", {
-                        current_pin,
-                        pin,
-                      });
-                      closeOverlay();
-                      await loadSettings(tab, scope.signal);
-                    },
-                    "",
-                    true,
-                  );
-                },
-                "",
-                true,
-              ),
-          });
-        // A kids limit is read and written through the account-session guard,
-        // so a paired TV cannot even show the current value.
-        if (status.unlocked && write)
-          for (const profile of management()?.profiles ?? [])
-            rows.push({
-              id: profile.id,
-              label: profile.name,
-              description: "Manage this profile’s age limit",
-              run: () => parentPolicy(profile.id, profile.name),
-            });
-        setSettingsItems(rows);
-      }
+      if (tab === 4) setSettingsItems(await addonSettings(signal));
+      if (tab === 5) setSettingsItems(await integrationSettings(signal));
+      if (tab === 7) setSettingsItems(await parentSettings(signal));
       if (tab === 8)
         setSettingsItems([
           {
@@ -3782,196 +3479,6 @@ export function createRemoteTvApp(
           },
         ]);
       setLoading(false);
-    }
-    async function parentPolicy(id: string, name: string) {
-      const path = `/api/profiles/${segment(id)}/kids`;
-      const policy = await call<{ enabled: boolean; max_age: number }>(path);
-      openOverlay({
-        kind: "choices",
-        title: name,
-        items: [
-          {
-            id: "enabled",
-            label: "Kids profile",
-            value: policy.enabled ? "On" : "Off",
-            run: async () => {
-              await call(path, "PUT", {
-                enabled: !policy.enabled,
-                max_age: policy.max_age,
-              });
-              closeOverlay();
-              await refreshProfiles();
-              await loadSettings(
-                settingsTabIndex("Parental controls"),
-                scope.signal,
-              );
-            },
-          },
-          {
-            id: "age",
-            label: "Maximum age",
-            value: String(policy.max_age),
-            run: () =>
-              edit(
-                "Maximum age",
-                async (value) => {
-                  await call(path, "PUT", {
-                    enabled: policy.enabled,
-                    max_age: Number(value),
-                  });
-                  closeOverlay();
-                  await parentPolicy(id, name);
-                },
-                String(policy.max_age),
-              ),
-          },
-        ],
-      });
-    }
-    async function loadIntegrations(signal: AbortSignal) {
-      const write = await mayWriteHousehold();
-      const value = await call<{
-        revision: number;
-        schemas: IntegrationSchema[];
-      }>(api.scoped("/source-integrations"), "GET", undefined, signal);
-      setSettingsItems(
-        value.schemas
-          .filter(
-            (schema) =>
-              schema.runtime_enabled && schema.state !== "Unavailable",
-          )
-          .map((schema) => ({
-            id: schema.plugin_id,
-            label: schema.name,
-            value:
-              schema.state === "Ready" ? "Connected" : write ? "Set up" : "",
-            // Saving or removing an integration is an account-owner write; the
-            // TV only reads it. Saying so beats a form that cannot save.
-            description: write
-              ? schema.saved_provider_count
-                ? `${schema.saved_provider_count} providers`
-                : undefined
-              : ACCOUNT_SESSION_REQUIRED_ROW,
-            run: write
-              ? () => integrationForm(schema, value.revision)
-              : () => notify(ACCOUNT_SESSION_REQUIRED),
-          })),
-      );
-    }
-    function integrationForm(schema: IntegrationSchema, revision: number) {
-      const draft: Record<string, string | string[]> = {};
-      const openForm = () =>
-        openOverlay({
-          kind: "choices",
-          title: schema.name,
-          items: [
-            ...schema.credential_fields.map((field) => ({
-              id: field.id,
-              label: field.label,
-              value: draft[field.id]
-                ? "Entered"
-                : schema.state === "Ready"
-                  ? "Saved"
-                  : "",
-              run: () =>
-                edit(
-                  field.label,
-                  async (value) => {
-                    draft[field.id] = value;
-                    openForm();
-                  },
-                  "",
-                  field.secret,
-                ),
-            })),
-            ...(schema.provider_choices.length
-              ? [
-                  {
-                    id: "providers",
-                    label: "Providers",
-                    value: `${(draft.providers as string[] | undefined)?.length ?? schema.saved_provider_count ?? 0} selected`,
-                    run: () =>
-                      openOverlay({
-                        kind: "choices",
-                        title: "Providers",
-                        items: [
-                          ...schema.provider_choices.map((provider) => ({
-                            id: provider.id,
-                            label: provider.label,
-                            value: (
-                              draft.providers as string[] | undefined
-                            )?.includes(provider.id)
-                              ? "✓"
-                              : "",
-                            run: () => {
-                              const selected =
-                                (draft.providers as string[] | undefined) ?? [];
-                              draft.providers = selected.includes(provider.id)
-                                ? selected.filter((id) => id !== provider.id)
-                                : [...selected, provider.id].slice(
-                                    -schema.maximum_providers,
-                                  );
-                              openForm();
-                            },
-                          })),
-                          { id: "done", label: "Done", run: openForm },
-                        ],
-                      }),
-                  },
-                ]
-              : []),
-            {
-              id: "save",
-              label: "Save",
-              run: async () => {
-                await call(api.scoped("/source-integrations"), "PUT", {
-                  revision,
-                  plugin_id: schema.plugin_id,
-                  configuration: draft,
-                });
-                closeOverlay();
-                await loadSettings(
-                  settingsTabIndex("Source integrations"),
-                  scope.signal,
-                );
-              },
-            },
-            ...(schema.connection_id
-              ? [
-                  {
-                    id: "remove",
-                    label: "Remove integration",
-                    run: () =>
-                      openOverlay({
-                        kind: "confirm",
-                        title: `Remove ${schema.name}?`,
-                        items: [
-                          { id: "cancel", label: "Cancel", run: openForm },
-                          {
-                            id: "remove",
-                            label: "Remove",
-                            run: async () => {
-                              await call(
-                                api.scoped(
-                                  `/source-integrations/${segment(schema.connection_id!)}?revision=${revision}`,
-                                ),
-                                "DELETE",
-                              );
-                              closeOverlay();
-                              await loadSettings(
-                                settingsTabIndex("Source integrations"),
-                                scope.signal,
-                              );
-                            },
-                          },
-                        ],
-                      }),
-                  },
-                ]
-              : []),
-          ],
-        });
-      openForm();
     }
     async function refreshProfiles() {
       const value = await api.profiles(scope.signal);
