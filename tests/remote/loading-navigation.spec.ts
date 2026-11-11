@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { installRemoteBackend } from '../preview/remote-backend';
+import { openNavigation } from './navigation-helpers';
 
 for (const target of ['discover', 'detail', 'live']) {
   test(`Back abandons delayed ${target} and rejects its late response`, async ({ page, baseURL }) => {
@@ -19,9 +20,7 @@ for (const target of ['discover', 'detail', 'live']) {
       await page.keyboard.press('ArrowDown');
       await page.keyboard.press('Enter');
     } else {
-      await page.keyboard.press('ArrowUp');
-      for (let i = 0; i < (target === 'live' ? 3 : 1); i++) await page.keyboard.press('ArrowRight');
-      await page.keyboard.press('Enter');
+      await openNavigation(page, target === 'live' ? 'live' : 'movie');
     }
     await expect.poll(() => requested).toBe(true);
     await expect(page.locator('html')).toHaveAttribute('data-tv-ready', 'false');
@@ -29,8 +28,7 @@ for (const target of ['discover', 'detail', 'live']) {
     await page.keyboard.press('Escape');
     if (target !== 'detail') {
       await expect(page.locator('html')).toHaveAttribute('data-tv-focus', /^nav:/);
-      for (let i = 0; i < (target === 'live' ? 3 : 1); i++) await page.keyboard.press('ArrowLeft');
-      await page.keyboard.press('Enter');
+      await openNavigation(page, 'home');
     }
     await expect(page.locator('html')).toHaveAttribute('data-tv-screen', 'home');
     release();
@@ -80,7 +78,10 @@ for (const failure of ['stalled', 'rejected']) {
         function visit(node: any) { if (node.isRenderable && node.viptvText) text.push(node.viptvText); node.children?.forEach(visit); }
         visit((window as any).__viptvRenderer.stage.root);
         return text;
-      })).toContain('Couldn’t connect. Try again.');
+      })).toContain("This source couldn't start. Choose another source.");
+      await expect(page.locator('html')).toHaveAttribute('data-tv-overlay', 'sources');
+      await expect(page.locator('html')).toHaveAttribute('data-tv-screen', 'home');
+      await page.keyboard.press('Escape');
     }
     await page.keyboard.press('Enter');
     await expect(page.locator('html')).toHaveAttribute('data-tv-overlay', 'sources');
@@ -94,3 +95,22 @@ for (const failure of ['stalled', 'rejected']) {
     await expect(page.locator('#solid-startup')).toHaveCount(0);
   });
 }
+
+test('dismissing discovery clears its activity so the next detail Back restores Home immediately', async ({ page, baseURL }) => {
+  await installRemoteBackend(page, baseURL!, { finding: true });
+  const state = page.locator('html');
+  await page.goto('/tv/?focusdebug=1');
+  await expect(state).toHaveAttribute('data-tv-ready', 'true');
+  await page.keyboard.press('Enter');
+  await expect(state).toHaveAttribute('data-tv-sources', '8');
+  await page.keyboard.press('Escape');
+  await expect(state).toHaveAttribute('data-tv-overlay', '');
+  await page.keyboard.press('ArrowDown');
+  await page.keyboard.press('ArrowRight');
+  await page.keyboard.press('Enter');
+  await expect(state).toHaveAttribute('data-tv-screen', 'detail');
+  await expect(state).toHaveAttribute('data-tv-ready', 'true');
+  await page.keyboard.press('Escape');
+  await expect(state).toHaveAttribute('data-tv-screen', 'home');
+  await expect(state).toHaveAttribute('data-tv-focus', /^rows:1:0:/);
+});

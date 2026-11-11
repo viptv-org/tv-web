@@ -1,5 +1,6 @@
 /** @jsxImportSource @solidtv/solid */
 import { runtimeObserver } from "../platform/runtime-observation";
+import { exitTizen } from "../platform/tizen-host";
 import { DevicePlayback, deviceProfileKey, deviceTitleKey } from "./device-playback";
 import { EpisodePreparation, episodeKey, sourceStartIds, sourcePageReady, type PreparedEpisode, type EpisodePreparationState } from "./episode-preparation";
 import { AutoplayCountdown, type CountdownState } from "./autoplay-countdown";
@@ -643,6 +644,7 @@ export function createRemoteTvApp(
 ) {
   return () => {
     const homeRowFocus = new RowFocus<Card>(cardKey);
+    const contentFocus = new RowFocus<Card>(cardKey);
     const [screen, setScreen] = createSignal<Screen>("welcome"),
       [home, setHome] = createSignal<Home>(),
       [management, setManagement] = createSignal<Management>(),
@@ -1808,6 +1810,7 @@ export function createRemoteTvApp(
     }
     function clearProfileView() {
       homeRowFocus.clear();
+      contentFocus.clear();
       history.length = 0;
       batch(() => {
         setCaptionOverride(undefined);
@@ -2144,12 +2147,18 @@ export function createRemoteTvApp(
         ? page().cards[column()]
         : undefined;
     });
+    const contentRow = () => ({ id: screen(), cards: page().cards });
+    const contentColumn = () => zone() === "content" ? column() : contentFocus.resolve(contentRow());
+    function rememberContentFocus() {
+      if (["movie", "series", "anime", "library"].includes(screen()) && zone() === "content")
+        contentFocus.remember(contentRow(), column());
+    }
     const gridColumns = () => (screen() === "search" ? 5 : 7);
     const gridStart = () => {
       const index =
         screen() === "search" && zone() !== "content"
           ? searchMediaFocus
-          : column();
+          : screen() === "search" ? column() : contentColumn();
       return (
         Math.max(
           0,
@@ -2166,7 +2175,7 @@ export function createRemoteTvApp(
     // is the overlap needed for the 424px row (348 poster + 76 captions) to fit
     // under the 236px page offset. The container clips the row above.
     const gridOffset = () =>
-      screen() !== "search" && column() >= gridColumns() ? 26 : 0;
+      screen() !== "search" && contentColumn() >= gridColumns() ? 26 : 0;
     const searchNeedsRetry = () =>
       searchCapabilities().media &&
       !!search() &&
@@ -2338,6 +2347,7 @@ export function createRemoteTvApp(
     }
     function remember() {
       rememberHomeRow();
+      rememberContentFocus();
       history.push({
         screen: screen(),
         zone: zone(),
@@ -2367,14 +2377,17 @@ export function createRemoteTvApp(
         : Math.max(0, Math.min(fallback, cards.length - 1));
     }
     function replacePage(value: Page) {
-      const focused = page().cards[column()];
+      rememberContentFocus();
+      const previousColumn = screen() === "search" ? column() : contentColumn();
+      const focused = page().cards[previousColumn];
       const index = focusIndex(
         value.cards,
         focused ? cardKey(focused) : undefined,
-        column(),
+        previousColumn,
       );
       batch(() => {
         setPage(value);
+        contentFocus.remember(contentRow(), index);
         if (zone() === "content") setColumn(index);
       });
       const modal = overlay();
@@ -2784,6 +2797,7 @@ export function createRemoteTvApp(
         await openLiveSettings(settingsTabIndex("Source integrations"));
     }
     async function navigate(target: Screen) {
+      contentFocus.clear();
       if (screen() === "player") await player.stop();
       const signal = resetScope();
       if (target === "settings") {
@@ -2958,6 +2972,8 @@ export function createRemoteTvApp(
       sourceIntent++;
       sourceScope?.abort();
       sourceScope = undefined;
+      setSourceLoading(false);
+      setSourceFiltering(false);
       overlayParents.length = 0;
       clearTimeout(overlayTimer);
       cancelAnimationFrame(overlayFrame);
@@ -3039,8 +3055,19 @@ export function createRemoteTvApp(
       )
         updateSearch(search(), true);
     }
+    function confirmExit() {
+      openOverlay({
+        kind: "confirm",
+        title: "Exit VIPTV?",
+        items: [
+          { id: "cancel", label: "Cancel", run: closeOverlay },
+          { id: "exit", label: "Exit", run: exitTizen },
+        ],
+      });
+    }
     async function back() {
       rememberHomeRow();
+      rememberContentFocus();
       nextIntent++;setAdvancing(false);
       countdown.cancel();
       if (error()) { setError("");return; }
@@ -3048,7 +3075,14 @@ export function createRemoteTvApp(
       if (sourceLoading() && !overlay() || openingSource()) {
         const cancelInPlace = screen() !== "player" && !openingSource();
         sourceAttempt++;sourceIntent++;sourceScope?.abort();setSourceLoading(false);setLoading(false);
-        if (player.cancelPendingStart()) { setOpeningSource(undefined);return; }
+        if (player.cancelPendingStart()) {
+          setOpeningSource(undefined);
+          if (!player.leaseId && screen() === "player") {
+            closeOverlay(false);
+            await leavePlayer();
+          }
+          return;
+        }
         if (cancelInPlace) return;
       }
       if (sourceActions()) {
@@ -3075,6 +3109,7 @@ export function createRemoteTvApp(
         (screen() === "welcome" || (screen() === "profiles" && !api.profile))
       ) {
         if (platform === "webos") exitWebos();
+        else if (platform === "tizen") confirmExit();
         return;
       }
       if (overlay()) {
@@ -3119,6 +3154,8 @@ export function createRemoteTvApp(
       const previous = history.pop();
       if (previous) {
         await restorePrevious(previous);
+      } else if (platform === "tizen" && screen() === "home") {
+        confirmExit();
       } else if (
         zone() !== "nav" &&
         !["welcome", "profiles"].includes(screen())
@@ -5226,6 +5263,7 @@ export function createRemoteTvApp(
       });
     }
     function move(dx: number, dy: number) {
+      rememberContentFocus();
       countdown.cancel();
       channelPending = undefined;
       if (screen() === "pairing") {
@@ -5418,7 +5456,7 @@ export function createRemoteTvApp(
             focusLiveSpread();
             return;
           }
-          setColumn(0);
+          setColumn(["movie", "series", "anime"].includes(screen()) ? contentFocus.resolve(contentRow()) : 0);
           setZone(
             screen() === "home" || screen() === "detail"
               ? "hero"
@@ -5758,7 +5796,7 @@ export function createRemoteTvApp(
           setColumn(navIndex("library"));
         } else if (dy > 0) {
           setZone("content");
-          setColumn(0);
+          setColumn(contentFocus.resolve(contentRow()));
         } else
           setColumn((i) =>
             Math.max(0, Math.min(libraryControlCount() - 1, i + dx)),
@@ -5771,7 +5809,7 @@ export function createRemoteTvApp(
           setColumn(navIndex(screen()));
         } else if (dy > 0) {
           setZone("content");
-          setColumn(0);
+          setColumn(contentFocus.resolve(contentRow()));
         } else
           setColumn((i) =>
             Math.max(

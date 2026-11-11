@@ -5,7 +5,8 @@ export async function openNavigation(page: Page, id: string): Promise<number> {
   const ids = (await state.getAttribute('data-tv-navigation'))?.split(',') ?? [];
   const index = ids.indexOf(id);
   expect(index, `Available navigation contains ${id}`).toBeGreaterThanOrEqual(0);
-  await page.keyboard.press('Escape');
+  if (!(await state.getAttribute('data-tv-focus'))?.startsWith('nav:'))
+    await page.keyboard.press('Escape');
   await expect(state).toHaveAttribute('data-tv-focus', /^nav:/);
   for (let i = 0; i < ids.length; i++) await page.keyboard.press('ArrowLeft');
   for (let i = 0; i < index; i++) await page.keyboard.press('ArrowRight');
