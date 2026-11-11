@@ -36,6 +36,7 @@ for (const selectionNote of selectionNotes) {
               id: `stream-${index}`,
               name: title,
               quality_height: 1080,
+              presentation: { provider_name: title },
               view: {
                 title,
                 body: "WEB-DL · H.264 · AAC",
