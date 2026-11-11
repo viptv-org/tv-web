@@ -1,0 +1,711 @@
+diff --git a/node_modules/@solidtv/renderer/dist/src/core/textures/ImageWorker.d.ts b/node_modules/@solidtv/renderer/dist/src/core/textures/ImageWorker.d.ts
+--- a/node_modules/@solidtv/renderer/dist/src/core/textures/ImageWorker.d.ts
++++ b/node_modules/@solidtv/renderer/dist/src/core/textures/ImageWorker.d.ts
+@@ -19,7 +19,7 @@
+  * `createThis` as its receiver, so the main thread can pass
+  * `platform.createImageBitmap` without binding it.
+  */
+-export declare function decodeImageBlob(create: (...args: unknown[]) => Promise<ImageBitmap>, createThis: unknown, blob: Blob, premultiplyAlpha: boolean | null, sx: number | null, sy: number | null, sw: number | null, sh: number | null, supportsOptions: boolean, supportsFull: boolean, premultiplyHonored: boolean | null): Promise<DecodedImage>;
++export declare function decodeImageBlob(create: (...args: unknown[]) => Promise<ImageBitmap>, createThis: unknown, blob: Blob | HTMLCanvasElement, premultiplyAlpha: boolean | null, sx: number | null, sy: number | null, sw: number | null, sh: number | null, supportsOptions: boolean, supportsFull: boolean, premultiplyHonored: boolean | null, timeoutMs?: number): Promise<DecodedImage>;
+ /** The worker's source text. */
+ export declare function imageWorkerSource(): string;
+ /**
+diff --git a/node_modules/@solidtv/renderer/dist/src/core/textures/ImageWorker.js b/node_modules/@solidtv/renderer/dist/src/core/textures/ImageWorker.js
+--- a/node_modules/@solidtv/renderer/dist/src/core/textures/ImageWorker.js
++++ b/node_modules/@solidtv/renderer/dist/src/core/textures/ImageWorker.js
+@@ -13,10 +13,11 @@
+  * `createThis` as its receiver, so the main thread can pass
+  * `platform.createImageBitmap` without binding it.
+  */
+-export function decodeImageBlob(create, createThis, blob, premultiplyAlpha, sx, sy, sw, sh, supportsOptions, supportsFull, premultiplyHonored) {
++export function decodeImageBlob(create, createThis, blob, premultiplyAlpha, sx, sy, sw, sh, supportsOptions, supportsFull, premultiplyHonored, timeoutMs) {
+     var withAlphaChannel = premultiplyAlpha !== undefined && premultiplyAlpha !== null
+         ? premultiplyAlpha
+-        : blob.type.indexOf('image/png') !== -1;
++        : typeof blob.type === 'string' &&
++            blob.type.indexOf('image/png') !== -1;
+     var useGlPremultiply = withAlphaChannel === true && premultiplyHonored === false;
+     var options = {
+         premultiplyAlpha: withAlphaChannel === true && useGlPremultiply === false
+@@ -25,21 +26,54 @@
+         colorSpaceConversion: 'none',
+         imageOrientation: 'none',
+     };
+-    var pending;
+-    if (supportsFull === true && sw !== null && sh !== null) {
+-        pending = create.call(createThis, blob, sx === null ? 0 : sx, sy === null ? 0 : sy, sw, sh, options);
+-    }
+-    else if (supportsOptions === false && supportsFull === false) {
+-        // Chrome 50 to 52: no options. The browser default premultiplies, so
+-        // WebGL must not premultiply again, except where the default returns
+-        // straight alpha (premultiplyHonored false).
+-        pending = create.call(createThis, blob);
+-    }
+-    else {
+-        pending = create.call(createThis, blob, options);
+-    }
+-    return pending.then(function (data) {
+-        return { data: data, premultiplyAlpha: useGlPremultiply };
++    return new Promise(function (resolve, reject) {
++        var finished = false;
++        // The serialized worker needs a self-contained decode deadline.
++        var timer = setTimeout(function () {
++            finished = true;
++            var error = new Error('Image bitmap decoding timed out');
++            error.name = 'ImageBitmapTimeoutError';
++            reject(error);
++        }, timeoutMs === undefined ? 2000 : timeoutMs);
++        var pending;
++        try {
++            if (supportsFull === true && sw !== null && sh !== null) {
++                pending = create.call(createThis, blob, sx === null ? 0 : sx, sy === null ? 0 : sy, sw, sh, options);
++            }
++            else if (supportsOptions === false && supportsFull === false) {
++                // Chrome 50 to 52: no options. The browser default premultiplies, so
++                // WebGL must not premultiply again, except where the default returns
++                // straight alpha (premultiplyHonored false).
++                pending = create.call(createThis, blob);
++            }
++            else {
++                pending = create.call(createThis, blob, options);
++            }
++        }
++        catch (error) {
++            clearTimeout(timer);
++            reject(error);
++            return;
++        }
++        pending.then(function (data) {
++            if (finished === true) {
++                try {
++                    if (typeof data.close === 'function')
++                        data.close();
++                }
++                catch (_error) { }
++                return;
++            }
++            finished = true;
++            clearTimeout(timer);
++            resolve({ data: data, premultiplyAlpha: useGlPremultiply });
++        }, function (error) {
++            if (finished === true)
++                return;
++            finished = true;
++            clearTimeout(timer);
++            reject(error);
++        });
+     });
+ }
+ /**
+@@ -96,7 +130,11 @@
+                 decode(createImageBitmap, undefined, xhr.response, request.premultiplyAlpha, request.sx, request.sy, request.sw, request.sh, supportsOptions, supportsFull, premultiplyHonored).then(function (result) {
+                     scope.postMessage({ id: id, data: result }, [result.data]);
+                 }, function (error) {
+-                    scope.postMessage({ id: id, error: error.message });
++                    scope.postMessage({
++                        id: id,
++                        error: error.message,
++                        errorName: error.name,
++                    });
+                 });
+             };
+             xhr.onerror = function () {
+@@ -205,7 +243,10 @@
+         this.pending.delete(id);
+         const error = message.error;
+         if (error !== undefined) {
+-            settle[1](new Error(error));
++            const failure = new Error(error);
++            if (typeof message.errorName === 'string')
++                failure.name = message.errorName;
++            settle[1](failure);
+         }
+         else {
+             settle[0](message.data);
+@@ -237,10 +278,9 @@
+     /** Fail every request in flight with `message`. */
+     rejectAll(message) {
+         const pending = this.pending;
+-        pending.forEach((settle) => {
++        pending.forEach(settle => {
+             settle[1](new Error(message));
+         });
+         pending.clear();
+     }
+ }
+-//# sourceMappingURL=ImageWorker.js.map
+\ No newline at end of file
+diff --git a/node_modules/@solidtv/renderer/dist/src/core/textures/probes.js b/node_modules/@solidtv/renderer/dist/src/core/textures/probes.js
+--- a/node_modules/@solidtv/renderer/dist/src/core/textures/probes.js
++++ b/node_modules/@solidtv/renderer/dist/src/core/textures/probes.js
+@@ -1,3 +1,8 @@
++import { decodeImageBlob } from './ImageWorker.js';
++const PROBE_TIMEOUT = 2000;
++function probeBitmap(platform, blob, options = false, full = false, premultiply = false) {
++    return decodeImageBlob(platform.createImageBitmap, platform, blob, premultiply, full ? 0 : null, full ? 0 : null, full ? 1 : null, full ? 1 : null, options, full, null, PROBE_TIMEOUT).then(decoded => decoded.data);
++}
+ export function validateCreateImageBitmap(platform) {
+     // Test if createImageBitmap is supported using a simple 1x1 PNG image
+     // prettier-ignore
+@@ -43,26 +48,24 @@
+     let basic;
+     try {
+         blob = new Blob([pngBinaryData], { type: 'image/png' });
+-        basic = platform.createImageBitmap(blob);
++        basic = probeBitmap(platform, blob);
+     }
+     catch (e) {
+         return Promise.reject(e);
+     }
+     return basic
+-        .then((bitmap) => {
++        .then(bitmap => {
+         bitmap.close?.();
+         support.basic = true;
+         // Test createImageBitmap with options support
+-        return decodes(() => platform.createImageBitmap(blob, { premultiplyAlpha: 'none' }));
++        return decodes(() => probeBitmap(platform, blob, true));
+     })
+-        .then((options) => {
++        .then(options => {
+         support.options = options;
+         // Test createImageBitmap with full options support
+-        return decodes(() => platform.createImageBitmap(blob, 0, 0, 1, 1, {
+-            premultiplyAlpha: 'none',
+-        }));
++        return decodes(() => probeBitmap(platform, blob, false, true));
+     })
+-        .then((full) => {
++        .then(full => {
+         support.full = full;
+         // premultiplyHonored is resolved separately by the caller (it may be a
+         // forced override or an explicit opt-in to the probe), so it is left as
+@@ -84,7 +87,7 @@
+         return Promise.resolve(false);
+     }
+     return pending
+-        .then((bitmap) => {
++        .then(bitmap => {
+         bitmap.close?.();
+         return true;
+     })
+@@ -133,16 +136,12 @@
+     let decoded;
+     try {
+         const blob = new Blob([STRAIGHT_ALPHA_TEST_PNG], { type: 'image/png' });
+-        decoded = platform.createImageBitmap(blob, {
+-            premultiplyAlpha: 'premultiply',
+-            colorSpaceConversion: 'none',
+-            imageOrientation: 'none',
+-        });
++        decoded = probeBitmap(platform, blob, true, false, true);
+     }
+     catch (e) {
+         return Promise.resolve(null);
+     }
+-    return decoded.then((bitmap) => readBack(platform, bitmap), () => null);
++    return decoded.then(bitmap => readBack(platform, bitmap), () => null);
+ }
+ /**
+  * The probe's GL half: upload `bitmap` with GL-side premultiply off and read
+@@ -198,4 +197,3 @@
+         gl.getExtension('WEBGL_lose_context')?.loseContext();
+     }
+ }
+-//# sourceMappingURL=probes.js.map
+\ No newline at end of file
+diff --git a/node_modules/@solidtv/renderer/dist/src/core/textures/sources.js b/node_modules/@solidtv/renderer/dist/src/core/textures/sources.js
+--- a/node_modules/@solidtv/renderer/dist/src/core/textures/sources.js
++++ b/node_modules/@solidtv/renderer/dist/src/core/textures/sources.js
+@@ -66,9 +66,12 @@
+         return worker
+             .getImage(url, premultiply, props.sx ?? null, props.sy ?? null, props.sw ?? null, props.sh ?? null)
+             .then(toLoaded, (error) => {
+-            // The worker crashed with this request in flight: load it on the
+-            // main thread rather than fail it. A request the worker answered
+-            // with an error still fails, and so does one its destroy ended.
++            // A decode timeout uses the image element; a crash uses the main
++            // thread. Other worker errors and destruction still fail the load.
++            if (error instanceof Error &&
++                error.name === 'ImageBitmapTimeoutError') {
++                return loadElement(ctx.platform, url, premultiply);
++            }
+             if (worker.crashed === true) {
+                 return fetchAndDecode(ctx, url, props, premultiply);
+             }
+@@ -83,7 +86,7 @@
+ }
+ /** Fetch `url` and decode it on the main thread. */
+ function fetchAndDecode(ctx, url, props, premultiply) {
+-    return ctx.platform.fetch(url, 'blob').then((b) => decodeBlob(ctx, b, props, premultiply));
++    return ctx.platform.fetch(url, 'blob').then(b => decodeBlob(ctx, b, props, premultiply));
+ }
+ function decodeBlob(ctx, blob, props, premultiply) {
+     const support = ctx.support;
+@@ -91,7 +94,7 @@
+         return loadElement(ctx.platform, blob, premultiply);
+     }
+     const platform = ctx.platform;
+-    return decodeImageBlob(platform.createImageBitmap, platform, blob, premultiply, props.sx ?? null, props.sy ?? null, props.sw ?? null, props.sh ?? null, support.options, support.full, support.premultiplyHonored).then(toLoaded);
++    return decodeImageBlob(platform.createImageBitmap, platform, blob, premultiply, props.sx ?? null, props.sy ?? null, props.sw ?? null, props.sh ?? null, support.options, support.full, support.premultiplyHonored).then(toLoaded, () => loadElement(platform, blob, premultiply));
+ }
+ /**
+  * The `<img>` path, the floor where createImageBitmap is missing. An
+@@ -99,22 +102,19 @@
+  * (UNPACK_PREMULTIPLY_ALPHA_WEBGL) unless the texture's premultiplyAlpha
+  * is false, and with that off texImage2D decodes the image again. No crop
+  * on this path (1.10). An `<img>` has no timeout of its own: one still
+- * loading a URL after REQUEST_TIMEOUT fails and is stopped
++ * loading after REQUEST_TIMEOUT fails and is stopped
+  * (failAfterTimeout), rather than hold its loader slot for good.
+  */
+ function loadElement(platform, src, premultiply) {
+     const img = platform.createImage();
+-    // A data URI or a Blob loads locally: only a URL is cross-origin, and
+-    // only a URL can stall.
++    // Only remote URLs need cross-origin image requests.
+     const remote = typeof src === 'string' && isBase64Image(src) === false;
+     if (remote === true) {
+         img.crossOrigin = 'anonymous';
+     }
+     const name = typeof src === 'string' ? src : 'a Blob';
+     const loading = new Promise((resolve, reject) => {
+-        const timeout = remote === true
+-            ? failAfterTimeout(platform, img, reject, `Image loading timed out for ${name}`)
+-            : null;
++        const timeout = failAfterTimeout(platform, img, reject, `Image loading timed out for ${name}`);
+         img.onload = () => {
+             settled(timeout);
+             resolve();
+@@ -145,4 +145,3 @@
+         URL.revokeObjectURL(objectUrl);
+     }
+ }
+-//# sourceMappingURL=sources.js.map
+\ No newline at end of file
+diff --git a/node_modules/@solidtv/renderer/dist/src/core/textures/svg.js b/node_modules/@solidtv/renderer/dist/src/core/textures/svg.js
+--- a/node_modules/@solidtv/renderer/dist/src/core/textures/svg.js
++++ b/node_modules/@solidtv/renderer/dist/src/core/textures/svg.js
+@@ -1,5 +1,6 @@
+ import { isBase64Image } from '../../common/utils.js';
+ import { REQUEST_TIMEOUT } from '../../platform/Platform.js';
++import { decodeImageBlob } from './ImageWorker.js';
+ /** A URL ending in .svg, with or without a query string (1.10). */
+ export function isSvgImage(url) {
+     return /\.(svg)(\?.*)?$/.test(url);
+@@ -73,16 +74,13 @@
+ export function loadSvg(ctx, url, width, height, sx, sy, sw, sh) {
+     const platform = ctx.platform;
+     const img = platform.createImage();
+-    // A data URI loads locally: only a URL is cross-origin, and only a URL
+-    // can stall.
++    // Only remote URLs need cross-origin image requests.
+     const remote = isBase64Image(url) === false;
+     if (remote === true) {
+         img.crossOrigin = 'anonymous';
+     }
+     return new Promise((resolve, reject) => {
+-        const timeout = remote === true
+-            ? failAfterTimeout(platform, img, reject, `SVG loading timed out: ${url}`)
+-            : null;
++        const timeout = failAfterTimeout(platform, img, reject, `SVG loading timed out: ${url}`);
+         img.onload = () => {
+             settled(timeout);
+             resolve();
+@@ -116,10 +114,9 @@
+         if (ctx.support === null) {
+             return imageData();
+         }
+-        return platform.createImageBitmap(canvas).then((bitmap) => {
++        return decodeImageBlob(platform.createImageBitmap, platform, canvas, false, null, null, null, null, false, false, null).then(({ data: bitmap }) => {
+             freeCanvas(canvas);
+             return { data: bitmap, w, h, premultiply: false };
+         }, imageData);
+     });
+ }
+-//# sourceMappingURL=svg.js.map
+\ No newline at end of file
+diff --git a/node_modules/@solidtv/renderer/src/core/textures/ImageWorker.ts b/node_modules/@solidtv/renderer/src/core/textures/ImageWorker.ts
+--- a/node_modules/@solidtv/renderer/src/core/textures/ImageWorker.ts
++++ b/node_modules/@solidtv/renderer/src/core/textures/ImageWorker.ts
+@@ -26,7 +26,7 @@
+ export function decodeImageBlob(
+   create: (...args: unknown[]) => Promise<ImageBitmap>,
+   createThis: unknown,
+-  blob: Blob,
++  blob: Blob | HTMLCanvasElement,
+   premultiplyAlpha: boolean | null,
+   sx: number | null,
+   sy: number | null,
+@@ -35,11 +35,13 @@
+   supportsOptions: boolean,
+   supportsFull: boolean,
+   premultiplyHonored: boolean | null,
++  timeoutMs?: number,
+ ): Promise<DecodedImage> {
+   var withAlphaChannel =
+     premultiplyAlpha !== undefined && premultiplyAlpha !== null
+       ? premultiplyAlpha
+-      : blob.type.indexOf('image/png') !== -1;
++      : typeof (blob as Blob).type === 'string' &&
++        (blob as Blob).type.indexOf('image/png') !== -1;
+   var useGlPremultiply =
+     withAlphaChannel === true && premultiplyHonored === false;
+   var options = {
+@@ -50,27 +52,62 @@
+     colorSpaceConversion: 'none',
+     imageOrientation: 'none',
+   };
+-  var pending: Promise<ImageBitmap>;
+-  if (supportsFull === true && sw !== null && sh !== null) {
+-    pending = create.call(
+-      createThis,
+-      blob,
+-      sx === null ? 0 : sx,
+-      sy === null ? 0 : sy,
+-      sw,
+-      sh,
+-      options,
++  return new Promise<DecodedImage>(function (resolve, reject) {
++    var finished = false;
++    // The serialized worker needs a self-contained decode deadline.
++    var timer = setTimeout(
++      function () {
++        finished = true;
++        var error = new Error('Image bitmap decoding timed out');
++        error.name = 'ImageBitmapTimeoutError';
++        reject(error);
++      },
++      timeoutMs === undefined ? 2000 : timeoutMs,
+     );
+-  } else if (supportsOptions === false && supportsFull === false) {
+-    // Chrome 50 to 52: no options. The browser default premultiplies, so
+-    // WebGL must not premultiply again, except where the default returns
+-    // straight alpha (premultiplyHonored false).
+-    pending = create.call(createThis, blob);
+-  } else {
+-    pending = create.call(createThis, blob, options);
+-  }
+-  return pending.then(function (data) {
+-    return { data: data, premultiplyAlpha: useGlPremultiply };
++    var pending: Promise<ImageBitmap>;
++    try {
++      if (supportsFull === true && sw !== null && sh !== null) {
++        pending = create.call(
++          createThis,
++          blob,
++          sx === null ? 0 : sx,
++          sy === null ? 0 : sy,
++          sw,
++          sh,
++          options,
++        );
++      } else if (supportsOptions === false && supportsFull === false) {
++        // Chrome 50 to 52: no options. The browser default premultiplies, so
++        // WebGL must not premultiply again, except where the default returns
++        // straight alpha (premultiplyHonored false).
++        pending = create.call(createThis, blob);
++      } else {
++        pending = create.call(createThis, blob, options);
++      }
++    } catch (error) {
++      clearTimeout(timer);
++      reject(error);
++      return;
++    }
++    pending.then(
++      function (data) {
++        if (finished === true) {
++          try {
++            if (typeof data.close === 'function') data.close();
++          } catch (_error) {}
++          return;
++        }
++        finished = true;
++        clearTimeout(timer);
++        resolve({ data: data, premultiplyAlpha: useGlPremultiply });
++      },
++      function (error) {
++        if (finished === true) return;
++        finished = true;
++        clearTimeout(timer);
++        reject(error);
++      },
++    );
+   });
+ }
+ 
+@@ -147,7 +184,11 @@
+             scope.postMessage({ id: id, data: result }, [result.data]);
+           },
+           function (error: Error) {
+-            scope.postMessage({ id: id, error: error.message });
++            scope.postMessage({
++              id: id,
++              error: error.message,
++              errorName: error.name,
++            });
+           },
+         );
+       };
+@@ -280,7 +321,10 @@
+     this.pending.delete(id);
+     const error = message.error as string | undefined;
+     if (error !== undefined) {
+-      settle[1](new Error(error));
++      const failure = new Error(error);
++      if (typeof message.errorName === 'string')
++        failure.name = message.errorName;
++      settle[1](failure);
+     } else {
+       settle[0](message.data as DecodedImage);
+     }
+@@ -315,7 +359,7 @@
+   /** Fail every request in flight with `message`. */
+   private rejectAll(message: string): void {
+     const pending = this.pending;
+-    pending.forEach((settle) => {
++    pending.forEach(settle => {
+       settle[1](new Error(message));
+     });
+     pending.clear();
+diff --git a/node_modules/@solidtv/renderer/src/core/textures/probes.ts b/node_modules/@solidtv/renderer/src/core/textures/probes.ts
+--- a/node_modules/@solidtv/renderer/src/core/textures/probes.ts
++++ b/node_modules/@solidtv/renderer/src/core/textures/probes.ts
+@@ -1,4 +1,30 @@
+ import type { Platform } from '../../platform/Platform.js';
++import { decodeImageBlob } from './ImageWorker.js';
++
++const PROBE_TIMEOUT = 2000;
++
++function probeBitmap(
++  platform: Platform,
++  blob: Blob,
++  options = false,
++  full = false,
++  premultiply = false,
++): Promise<ImageBitmap> {
++  return decodeImageBlob(
++    platform.createImageBitmap as (...args: unknown[]) => Promise<ImageBitmap>,
++    platform,
++    blob,
++    premultiply,
++    full ? 0 : null,
++    full ? 0 : null,
++    full ? 1 : null,
++    full ? 1 : null,
++    options,
++    full,
++    null,
++    PROBE_TIMEOUT,
++  ).then(decoded => decoded.data);
++}
+ 
+ // Ported from 1.10 (main:src/core/lib/validateImageBitmap.ts). The
+ // premultiply probe drives a throwaway WebGL context of its own, not the
+@@ -68,29 +94,23 @@
+   let basic: Promise<ImageBitmap>;
+   try {
+     blob = new Blob([pngBinaryData], { type: 'image/png' });
+-    basic = platform.createImageBitmap(blob);
++    basic = probeBitmap(platform, blob);
+   } catch (e) {
+     return Promise.reject(e);
+   }
+   return basic
+-    .then((bitmap) => {
++    .then(bitmap => {
+       bitmap.close?.();
+       support.basic = true;
+       // Test createImageBitmap with options support
+-      return decodes(() =>
+-        platform.createImageBitmap(blob, { premultiplyAlpha: 'none' }),
+-      );
++      return decodes(() => probeBitmap(platform, blob, true));
+     })
+-    .then((options) => {
++    .then(options => {
+       support.options = options;
+       // Test createImageBitmap with full options support
+-      return decodes(() =>
+-        platform.createImageBitmap(blob, 0, 0, 1, 1, {
+-          premultiplyAlpha: 'none',
+-        }),
+-      );
++      return decodes(() => probeBitmap(platform, blob, false, true));
+     })
+-    .then((full) => {
++    .then(full => {
+       support.full = full;
+       // premultiplyHonored is resolved separately by the caller (it may be a
+       // forced override or an explicit opt-in to the probe), so it is left as
+@@ -112,7 +132,7 @@
+     return Promise.resolve(false);
+   }
+   return pending
+-    .then((bitmap) => {
++    .then(bitmap => {
+       bitmap.close?.();
+       return true;
+     })
+@@ -165,16 +185,12 @@
+   let decoded: Promise<ImageBitmap>;
+   try {
+     const blob = new Blob([STRAIGHT_ALPHA_TEST_PNG], { type: 'image/png' });
+-    decoded = platform.createImageBitmap(blob, {
+-      premultiplyAlpha: 'premultiply',
+-      colorSpaceConversion: 'none',
+-      imageOrientation: 'none',
+-    });
++    decoded = probeBitmap(platform, blob, true, false, true);
+   } catch (e) {
+     return Promise.resolve(null);
+   }
+   return decoded.then(
+-    (bitmap) => readBack(platform, bitmap),
++    bitmap => readBack(platform, bitmap),
+     () => null,
+   );
+ }
+diff --git a/node_modules/@solidtv/renderer/src/core/textures/sources.ts b/node_modules/@solidtv/renderer/src/core/textures/sources.ts
+--- a/node_modules/@solidtv/renderer/src/core/textures/sources.ts
++++ b/node_modules/@solidtv/renderer/src/core/textures/sources.ts
+@@ -129,9 +129,14 @@
+         props.sh ?? null,
+       )
+       .then(toLoaded, (error: unknown) => {
+-        // The worker crashed with this request in flight: load it on the
+-        // main thread rather than fail it. A request the worker answered
+-        // with an error still fails, and so does one its destroy ended.
++        // A decode timeout uses the image element; a crash uses the main
++        // thread. Other worker errors and destruction still fail the load.
++        if (
++          error instanceof Error &&
++          error.name === 'ImageBitmapTimeoutError'
++        ) {
++          return loadElement(ctx.platform, url, premultiply);
++        }
+         if (worker.crashed === true) {
+           return fetchAndDecode(ctx, url, props, premultiply);
+         }
+@@ -152,7 +157,7 @@
+   props: ImageTextureProps,
+   premultiply: boolean,
+ ): Promise<LoadedImage> {
+-  return (ctx.platform.fetch(url, 'blob') as Promise<Blob>).then((b) =>
++  return (ctx.platform.fetch(url, 'blob') as Promise<Blob>).then(b =>
+     decodeBlob(ctx, b, props, premultiply),
+   );
+ }
+@@ -180,7 +185,7 @@
+     support.options,
+     support.full,
+     support.premultiplyHonored,
+-  ).then(toLoaded);
++  ).then(toLoaded, () => loadElement(platform, blob, premultiply));
+ }
+ 
+ /**
+@@ -189,7 +194,7 @@
+  * (UNPACK_PREMULTIPLY_ALPHA_WEBGL) unless the texture's premultiplyAlpha
+  * is false, and with that off texImage2D decodes the image again. No crop
+  * on this path (1.10). An `<img>` has no timeout of its own: one still
+- * loading a URL after REQUEST_TIMEOUT fails and is stopped
++ * loading after REQUEST_TIMEOUT fails and is stopped
+  * (failAfterTimeout), rather than hold its loader slot for good.
+  */
+ function loadElement(
+@@ -198,23 +203,19 @@
+   premultiply: boolean,
+ ): Promise<LoadedImage> {
+   const img = platform.createImage();
+-  // A data URI or a Blob loads locally: only a URL is cross-origin, and
+-  // only a URL can stall.
++  // Only remote URLs need cross-origin image requests.
+   const remote = typeof src === 'string' && isBase64Image(src) === false;
+   if (remote === true) {
+     img.crossOrigin = 'anonymous';
+   }
+   const name = typeof src === 'string' ? src : 'a Blob';
+   const loading = new Promise<void>((resolve, reject) => {
+-    const timeout =
+-      remote === true
+-        ? failAfterTimeout(
+-            platform,
+-            img,
+-            reject,
+-            `Image loading timed out for ${name}`,
+-          )
+-        : null;
++    const timeout = failAfterTimeout(
++      platform,
++      img,
++      reject,
++      `Image loading timed out for ${name}`,
++    );
+     img.onload = () => {
+       settled(timeout);
+       resolve();
+diff --git a/node_modules/@solidtv/renderer/src/core/textures/svg.ts b/node_modules/@solidtv/renderer/src/core/textures/svg.ts
+--- a/node_modules/@solidtv/renderer/src/core/textures/svg.ts
++++ b/node_modules/@solidtv/renderer/src/core/textures/svg.ts
+@@ -1,5 +1,6 @@
+ import { isBase64Image } from '../../common/utils.js';
+ import { REQUEST_TIMEOUT, type Platform } from '../../platform/Platform.js';
++import { decodeImageBlob } from './ImageWorker.js';
+ import type { LoadedImage, SourceContext } from './sources.js';
+ 
+ /** A URL ending in .svg, with or without a query string (1.10). */
+@@ -109,22 +110,18 @@
+ ): Promise<LoadedImage> {
+   const platform = ctx.platform;
+   const img = platform.createImage();
+-  // A data URI loads locally: only a URL is cross-origin, and only a URL
+-  // can stall.
++  // Only remote URLs need cross-origin image requests.
+   const remote = isBase64Image(url) === false;
+   if (remote === true) {
+     img.crossOrigin = 'anonymous';
+   }
+   return new Promise<void>((resolve, reject) => {
+-    const timeout =
+-      remote === true
+-        ? failAfterTimeout(
+-            platform,
+-            img,
+-            reject,
+-            `SVG loading timed out: ${url}`,
+-          )
+-        : null;
++    const timeout = failAfterTimeout(
++      platform,
++      img,
++      reject,
++      `SVG loading timed out: ${url}`,
++    );
+     img.onload = () => {
+       settled(timeout);
+       resolve();
+@@ -157,7 +154,21 @@
+     if (ctx.support === null) {
+       return imageData();
+     }
+-    return platform.createImageBitmap(canvas).then((bitmap): LoadedImage => {
++    return decodeImageBlob(
++      platform.createImageBitmap as (
++        ...args: unknown[]
++      ) => Promise<ImageBitmap>,
++      platform,
++      canvas,
++      false,
++      null,
++      null,
++      null,
++      null,
++      false,
++      false,
++      null,
++    ).then(({ data: bitmap }): LoadedImage => {
+       freeCanvas(canvas);
+       return { data: bitmap, w, h, premultiply: false };
+     }, imageData);
