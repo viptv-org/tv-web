@@ -7,7 +7,7 @@ export function welcomeWallSource() {
 export function backdropScrimSource() {
   return typeof (globalThis as any).__SolidTVRokuRenderer !== "undefined"
     ? "pkg:/assets/hero-scrim.png"
-    : `${import.meta.env.BASE_URL}tv-artwork/aa0b61ccc544e76a7e18.png`;
+    : `${import.meta.env.BASE_URL}tv-artwork/87b1f851442b89b94153.png`;
 }
 export function topbarScrimSource() {
   return typeof (globalThis as any).__SolidTVRokuRenderer !== "undefined"

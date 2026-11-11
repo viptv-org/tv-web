@@ -4029,3 +4029,12 @@ first/replacement artwork after the former deadline, and abandoned callbacks.
 Production integrity/type/build checks and 29 targeted unit cases pass. Native
 retirement units verify both opacity completion orders and cancellation; no new
 physical-device or native pixel qualification is implied.
+
+The procedural hero mask now matches the pinned TV wide and tall contrast stops.
+Regeneration uses `scripts/build-tv-artwork.py`, updating both packaged/browser
+PNGs and their source/output hashes. Additional WebGL/Canvas pixels verify the
+right edge of the 800px synopsis column over white artwork stays below 45 per
+channel. Mask composition at (850,550) changes from approximately 170 with the
+former stops to 31 with the pinned stops; (80,550) is approximately 22. Both bright
+hero browser cases and the full production integrity/type/build checks pass with
+the regenerated assets. Logo and portrait pixels remain undimmed in both renderers.

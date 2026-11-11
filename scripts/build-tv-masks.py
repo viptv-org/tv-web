@@ -13,10 +13,16 @@ mask = Image.new("RGBA", (512, 288))
 for y in range(mask.height):
     for x in range(mask.width):
         px, py = (x + .5) / 512 * 1920, (y + .5) / 288 * 1080
-        left = .85 - .3 * px / 652.8 if px < 652.8 else .55 * (1 - (px - 652.8) / 537.6) if px < 1190.4 else 0
-        bottom = 0 if py < 560 else .92 * (py - 560) / 286 if py < 846 else .92 + .08 * (py - 846) / 234
-        top = .7 * (1 - py / 200) if py < 200 else 0
-        mask.putpixel((x, y), (11, 11, 12, round((1 - (1-left) * (1-bottom) * (1-top)) * 255)))
+        # Pinned TV hero contrast: wide 95%, 90% at 46%, 55% at 62%, clear;
+        # tall 30%, clear at 45%, 90% at 80%, ground. Composite once so the
+        # same mask protects every backdrop without tinting foreground art.
+        left = (.95 - .05 * px / 883.2 if px < 883.2 else
+                .90 - .35 * (px - 883.2) / 307.2 if px < 1190.4 else
+                .55 * (1 - (px - 1190.4) / 729.6))
+        vertical = (.30 * (1 - py / 486) if py < 486 else
+                    .90 * (py - 486) / 378 if py < 864 else
+                    .90 + .10 * (py - 864) / 216)
+        mask.putpixel((x, y), (11, 11, 12, round((1 - (1-left) * (1-vertical)) * 255)))
 save("hero-scrim.png", mask)
 
 top = Image.new("RGBA", (480, 33))

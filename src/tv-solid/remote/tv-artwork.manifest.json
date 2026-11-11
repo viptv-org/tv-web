@@ -2,7 +2,7 @@
   "version": 1,
   "inputs": {
     "scripts/build-welcome-wall.py": "a162d689392c510d43f0ef5425114fff891b0d3d809d4bc7f6ff2fdd4eaacfdc",
-    "scripts/build-tv-masks.py": "7a10a620e1029d24412e09bd9765fd2f5f723c1caa23264be21945e8b65d9f45",
+    "scripts/build-tv-masks.py": "202e8f2ee456700fb74860f325a0b0af690214831f97e5f0d2eb9d54a0989dba",
     "scripts/build-tv-artwork.py": "70ea9a8c882808eadc65afaacb23e4e4b4a0fe1f0f5bb46281d0f87b27193060",
     "src/tv-solid/remote/entry-art.ts": "09f27c83e682cb7f3b0f80cdc2f2ec4db14248b47efcc589e804b7da99bc26c9",
     "design-contract/viptv-design-system/reference/assets/c5e059aaab8694dc24d6eac5443251d7.jpg": "290439c61708aeabc75e7870f420400884e7a97c5807dac9f76916eadb6ec37e",
@@ -27,13 +27,13 @@
     "roku/pkg/assets/welcome-vignette.png": "7d664b2e103f134394a6518b6b22fb2af5d836188cc1626ccfc8574e7714aed9"
   },
   "outputs": {
-    "src/tv-solid/remote/tv-artwork.generated.ts": "08a3cc07fdd588ad0af7c9c19ea39fc39b9a5c3a4d2f20ce7984effd7e957c17",
+    "src/tv-solid/remote/tv-artwork.generated.ts": "5a7808dfce1188e3c284b3e7248cca7074037736940d717f0331a3117058373a",
     "public/tv-artwork/b1e715feceeb80c8ca5f.webp": "b1e715feceeb80c8ca5f7a28a96f55e99b3211b9f9032bf98ce4262ec24e7c9b",
-    "public/tv-artwork/aa0b61ccc544e76a7e18.png": "aa0b61ccc544e76a7e1837bfff705aafdc8210949af6b56f5fa051a7ecf796ab",
+    "public/tv-artwork/87b1f851442b89b94153.png": "87b1f851442b89b941531155dd1822e6ea8354735a63cfb06ec38841cc6f639f",
     "public/tv-artwork/c6969dbaed3efaa17faf.png": "c6969dbaed3efaa17fafe57b3f48edd18401226099523a5c5d4ff3a0b3143091",
     "public/tv-artwork/def1c4a9b28e94569adc.png": "def1c4a9b28e94569adc1466927c20951f5ac56b2b7b2200feb1d4d3be076172",
     "roku/pkg/assets/welcome-wall.webp": "b1e715feceeb80c8ca5f7a28a96f55e99b3211b9f9032bf98ce4262ec24e7c9b",
-    "roku/pkg/assets/hero-scrim.png": "aa0b61ccc544e76a7e1837bfff705aafdc8210949af6b56f5fa051a7ecf796ab",
+    "roku/pkg/assets/hero-scrim.png": "87b1f851442b89b941531155dd1822e6ea8354735a63cfb06ec38841cc6f639f",
     "roku/pkg/assets/topbar-scrim.png": "c6969dbaed3efaa17fafe57b3f48edd18401226099523a5c5d4ff3a0b3143091",
     "roku/pkg/assets/busy-spinner.png": "def1c4a9b28e94569adc1466927c20951f5ac56b2b7b2200feb1d4d3be076172"
   }
