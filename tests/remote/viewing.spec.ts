@@ -1,5 +1,6 @@
 import { test, expect, type Page } from "@playwright/test";
 import { installRemoteBackend } from "../preview/remote-backend";
+import { openNavigation } from "./navigation-helpers";
 const screen = (page: Page) => page.locator("html");
 const MEDIA_PROGRESS_TIMEOUT_MS = 20_000;
 const mediaTime = (page: Page) =>
@@ -32,7 +33,7 @@ test("a rejected add-on mutation retains confirmed state and retries the same in
   });
   await page.goto("/tv/?platform=vizio");
   await expect(screen(page)).toHaveAttribute("data-tv-screen", "home");
-  await navigate(page, 6);
+  await navigate(page, "profiles");
   await page.keyboard.press("ArrowDown");
   await page.keyboard.press("Enter");
   await expect(screen(page)).toHaveAttribute("data-tv-ready", "true");
@@ -100,12 +101,9 @@ async function boot(page: Page, origin: string) {
   await expect(screen(page)).toHaveAttribute("data-tv-ready", "true");
   return fixture;
 }
-async function navigate(page: Page, index: number) {
+async function navigate(page: Page, id: string) {
   await expect(screen(page)).toHaveAttribute("data-tv-ready", "true");
-  await page.keyboard.press("ArrowUp");
-  for (let i = 1; i < index; i++) await page.keyboard.press("ArrowRight");
-  for (let i = index; i < 1; i++) await page.keyboard.press("ArrowLeft");
-  await page.keyboard.press("Enter");
+  await openNavigation(page, id);
 }
 
 test("TV startup loads one server bootstrap and no legacy engine", async ({
@@ -163,7 +161,7 @@ test("catalogs and filters use the server control contract", async ({
   baseURL,
 }) => {
   const fixture = await boot(page, baseURL!);
-  await navigate(page, 2);
+  await navigate(page, "movie");
   await expect(screen(page)).toHaveAttribute("data-tv-screen", "movie");
   await expect
     .poll(() => fixture.requests.some((r) => r.path === "/api/discover"))
@@ -184,7 +182,7 @@ test("profile changes clear the previous view and bootstrap the new scope", asyn
   baseURL,
 }) => {
   const fixture = await boot(page, baseURL!);
-  await navigate(page, 6);
+  await navigate(page, "profiles");
   await page.keyboard.press("Enter");
   await expect(screen(page)).toHaveAttribute("data-tv-screen", "profiles");
   await expect(screen(page)).toHaveAttribute("data-tv-ready", "true");
@@ -203,7 +201,7 @@ test("settings save server-confirmed preference revisions", async ({
   baseURL,
 }) => {
   const fixture = await boot(page, baseURL!);
-  await navigate(page, 6);
+  await navigate(page, "profiles");
   await page.keyboard.press("ArrowDown");
   await page.keyboard.press("Enter");
   await expect(screen(page)).toHaveAttribute("data-tv-screen", "settings");
@@ -248,7 +246,7 @@ test("search uses server results after text input", async ({
   baseURL,
 }) => {
   const fixture = await boot(page, baseURL!);
-  await navigate(page, 0);
+  await navigate(page, "search");
   await expect(screen(page)).toHaveAttribute("data-tv-screen", "search");
   await page.keyboard.type("monster");
   await expect
@@ -262,7 +260,7 @@ test("live guide remains silent until explicit playback", async ({
   baseURL,
 }) => {
   const fixture = await boot(page, baseURL!);
-  await navigate(page, 4);
+  await navigate(page, "live");
   await expect(screen(page)).toHaveAttribute("data-tv-screen", "live");
   await page.keyboard.press("ArrowDown");
   await expect
@@ -288,7 +286,7 @@ test("leaving Search cancels its scheduled work without changing the next screen
 }) => {
   await page.clock.install();
   const fixture = await boot(page, baseURL!);
-  await navigate(page, 0);
+  await navigate(page, "search");
   await expect(screen(page)).toHaveAttribute("data-tv-screen", "search");
   await pauseClock(page);
   await page.keyboard.type("test");
@@ -518,7 +516,7 @@ test("profile editor matches the supported fields and Back restores its child fo
   baseURL,
 }) => {
   await boot(page, baseURL!);
-  await navigate(page, 6);
+  await navigate(page, "profiles");
   await page.keyboard.press("Enter");
   await expect(screen(page)).toHaveAttribute("data-tv-screen", "profiles");
   await expect(screen(page)).toHaveAttribute("data-tv-ready", "true");
@@ -609,7 +607,7 @@ test("loading My List cannot activate stale cards from the previous catalog", as
   });
   await page.goto("/tv/?platform=vizio");
   await expect(screen(page)).toHaveAttribute("data-tv-screen", "home");
-  await navigate(page, 2);
+  await navigate(page, "movie");
   await expect(screen(page)).toHaveAttribute("data-tv-ready", "true");
   await page.keyboard.press("ArrowUp");
   await page.keyboard.press("ArrowRight");
@@ -692,7 +690,7 @@ test("long add-on lists stay visible and profile activation uses a server intent
   const fixture = await installRemoteBackend(page, baseURL!, { addons: 12 });
   await page.goto("/tv/?platform=vizio&focusdebug=1");
   await expect(screen(page)).toHaveAttribute("data-tv-screen", "home");
-  await navigate(page, 6);
+  await navigate(page, "profiles");
   await page.keyboard.press("ArrowDown");
   await page.keyboard.press("Enter");
   await expect(screen(page)).toHaveAttribute("data-tv-screen", "settings");
@@ -755,7 +753,7 @@ test("live favourites are confirmed by the server without entering VOD metadata 
   baseURL,
 }) => {
   const fixture = await boot(page, baseURL!);
-  await navigate(page, 4);
+  await navigate(page, "live");
   await expect(screen(page)).toHaveAttribute("data-tv-screen", "live");
   await expect(screen(page)).toHaveAttribute("data-tv-ready", "true");
   await page.keyboard.press("ContextMenu");
@@ -784,7 +782,7 @@ test("the remote keyboard can enter URL punctuation and case-sensitive credentia
   });
   await page.goto("/tv/?platform=vizio");
   await expect(screen(page)).toHaveAttribute("data-tv-screen", "home");
-  await navigate(page, 6);
+  await navigate(page, "profiles");
   await page.keyboard.press("ArrowDown");
   await page.keyboard.press("Enter");
   await expect(screen(page)).toHaveAttribute("data-tv-ready", "true");
@@ -837,7 +835,7 @@ test("Home hero context actions cannot reuse a hidden catalog card", async ({
   baseURL,
 }) => {
   const fixture = await boot(page, baseURL!);
-  await navigate(page, 2);
+  await navigate(page, "movie");
   await expect(screen(page)).toHaveAttribute("data-tv-ready", "true");
   await page.keyboard.press("Escape");
   await page.keyboard.press("Escape"); // Hide controls.

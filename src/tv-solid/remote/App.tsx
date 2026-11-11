@@ -1,10 +1,10 @@
 /** @jsxImportSource @solidtv/solid */
+import type { Screen, IntegrationSchema, Item, Overlay } from "./app-types";
 import { runtimeObserver } from "../platform/runtime-observation";
 import { exitTizen } from "../platform/tizen-host";
 import { DevicePlayback, deviceProfileKey, deviceTitleKey } from "./device-playback";
 import { EpisodePreparation, episodeKey, sourceStartIds, sourcePageReady, type PreparedEpisode, type EpisodePreparationState } from "./episode-preparation";
 import { AutoplayCountdown, type CountdownState } from "./autoplay-countdown";
-import { reducedMotion } from "./motion";
 import {
   For,
   Show,
@@ -54,6 +54,15 @@ import { DetailContent } from "./DetailContent";
 import { SettingsView } from "./SettingsView";
 import { BrowseControls } from "./BrowseControls";
 import { OverlayViewport } from "./OverlayViewport";
+import { TopNavigation } from "./TopNavigation";
+import { ProfileEditorView } from "./ProfileEditorView";
+import { availableNavigation } from "./navigation-model";
+import { NextEpisodePanel } from "./NextEpisodePanel";
+import { KeyboardView } from "./KeyboardView";
+import { TextEntryPanel } from "./TextEntryPanel";
+import { CalibrationPanel } from "./CalibrationPanel";
+import { TracksDrawer } from "./TracksDrawer";
+import { ChoiceDrawer } from "./ChoiceDrawer";
 import { bottomTitleY } from "./title-layout";
 import { BusyIndicator, BusySpinner } from "./BusyIndicator";
 import { createCoherentHero, HeroArtwork } from "./CoherentHero";
@@ -89,10 +98,7 @@ import {
   Label,
   icon,
   palette,
-  topBarGradient,
   livePreviewScrim,
-  avatar,
-  outline
 } from "./visuals";
 import {
   RemoteTvApi,
@@ -138,14 +144,8 @@ import {
   defaultDisplayPreferences,
   screenSaverMinutes
 } from "./display";
-import {
-  HERO_SLIDE_MS,
-  advanceHeroRotation,
-  clampHeroRotation,
-  heroRotationRunning,
-  restartHeroRotation,
-  startHeroRotation,
-} from "./heroCycle";
+import { createHeroCycle } from "./hero-cycle-controller";
+import { createIdleScreenSaver } from "./idle-screen-saver";
 import {
   cardKey,
   type Bootstrap,
@@ -164,7 +164,6 @@ import {
   type Page,
   type Pairing,
   type Preferences,
-  type Profile,
   type Program,
   type Guide,
   type CalendarEntry,
@@ -178,84 +177,6 @@ import { sdfTextMetrics } from "./text-measure";
 import { clockTime as clock, timeOfDay } from "./time";
 import type { PlayerSnapshot } from "../../../vendor/video/src/types";
 
-type Screen =
-  | "welcome"
-  | "pairing"
-  | "signed-in"
-  | "profiles"
-  | "home"
-  | "movie"
-  | "series"
-  | "anime"
-  | "calendar"
-  | "search"
-  | "live"
-  | "library"
-  | "detail"
-  | "settings"
-  | "player";
-interface IntegrationSchema {
-  plugin_id: string;
-  name: string;
-  state: string;
-  runtime_enabled: boolean;
-  credential_fields: {
-    id: string;
-    label: string;
-    secret: boolean;
-    required: boolean;
-  }[];
-  connection_id?: string;
-  provider_choices: { id: string; label: string }[];
-  maximum_providers: number;
-  saved_provider_count?: number;
-}
-type Item = {
-  id: string;
-  label: string;
-  value?: string;
-  description?: string;
-  run: () => void | Promise<void>;
-  /** Inline left/right adjustment for display rows (swatches, toggles). */
-  cycle?: (direction: number) => void | Promise<void>;
-  /** Boolean display rows render the reference toggle instead of a value. */
-  toggle?: boolean;
-  /** Accent rows render the palette swatches; value is the current hex. */
-  swatches?: string[];
-  /** Rows opening a value picker carry the boards' trailing chevron. */
-  chevron?: boolean;
-};
-type Overlay =
-  | {
-      kind: "choices" | "confirm";
-      title: string;
-      description?: string;
-      items: Item[];
-      profile?: Profile;
-    }
-  | {
-      kind: "calibration";
-      title: string;
-      min: number;
-      max: number;
-      value: number;
-      save: (value: number) => void | Promise<void>;
-    }
-  | {
-      kind: "text";
-      title: string;
-      secret?: boolean;
-      numeric?: boolean;
-      initial?: string;
-      submit: (value: string) => Promise<void>;
-    }
-  | { kind: "sources"; title: string }
-  | { kind: "next"; title: string; items: Item[] }
-  | {
-      kind: "tracks";
-      title: string;
-      columns: { title: string; items: Item[] }[];
-    };
 const available = (value?: { availability: string }) =>
   value?.availability === "Available";
 const uniqueCards = (cards: readonly Card[]) =>
@@ -274,17 +195,6 @@ type SourceMenuOption = {
 const isRokuUi =
   typeof (globalThis as any).__SolidTVRokuRenderer !== "undefined";
 
-const navigationTemplates = [
-  { id: "search", label: "" },
-  { id: "home", label: "Home" },
-  { id: "movie", label: "Movies" },
-  { id: "series", label: "Series" },
-  { id: "anime", label: "Anime" },
-  { id: "live", label: "Live" },
-  { id: "calendar", label: "Calendar" },
-  { id: "library", label: "My List" },
-  { id: "profiles", label: "Profile" },
-] as const;
 /** Simkl is temporarily off: its search endpoint rejects this account's
  * requests. Configured Stremio providers supply catalogs and media search until the
  * Simkl integration is re-authorized. User-owned Continue/My List rows stay
@@ -311,13 +221,6 @@ function stremioHome(value: Home | undefined): Home | undefined {
       : value.hero,
   };
 }
-type NavId = (typeof navigationTemplates)[number]["id"];
-type NavigationItem = {
-  id: NavId;
-  label: string;
-  media_search?: boolean;
-  channel_search?: boolean;
-};
 
 const letters = "abcdefghijklmnopqrstuvwxyz1234567890@./:_-".split("");
 const symbols = [
@@ -389,35 +292,7 @@ export function createRemoteTvApp(
     };
     const preferences = preferencesSignal;
     const setPreferences = adoptPreferences;
-    const navs = createMemo<NavigationItem[]>(() => {
-      const source =
-        navigation() ??
-        navigationTemplates.filter(
-          (item) => item.id === "home" || item.id === "profiles",
-        );
-      const byId = new Map(source.map((item) => [item.id, item]));
-      const order = [
-        "search",
-        "home",
-        "movie",
-        "series",
-        "anime",
-        "live",
-        "calendar",
-        "library",
-        "profiles",
-      ];
-      return order.flatMap((id) => {
-        const template = navigationTemplates.find((item) => item.id === id);
-        if (!template) return [];
-        const item = byId.get(id);
-        if (item) return [{ ...item, id: template.id }];
-        // The Android TV rail always keeps Anime; the web navigation contract
-        // predates the catalog even though discovery-controls supports it.
-        if (id === "anime") return [{ id: template.id, label: template.label }];
-        return [];
-      });
-    });
+    const navs = createMemo(() => availableNavigation(navigation()));
     const navIndex = (id: string) =>
       Math.max(
         0,
@@ -682,31 +557,13 @@ export function createRemoteTvApp(
       [overlaySettled, setOverlaySettled] = createSignal(false);
     const overlayParents: { value: Overlay; choice: number }[] = [];
     const [calibrationValue, setCalibrationValue] = createSignal(0);
-    /** Server-owned screen saver: after the profile's idle minutes with
-     * nothing playing, dim to slow-moving art. The wake key is swallowed. */
-    const [screenSaver, setScreenSaver] = createSignal(false);
-    let lastActivity = Date.now();
-    const screenSaverTimer = setInterval(() => {
-      const minutes = screenSaverMinutes();
-      if (!minutes || screenSaver() || screen() === "player") return;
-      if (Date.now() - lastActivity >= minutes * 60_000) setScreenSaver(true);
-    }, 15_000);
-    onCleanup(() => clearInterval(screenSaverTimer));
-    /** Returns true when a key woke the saver, swallowing that key press. */
     function reloadIdleImages() {
       clearLogoCache();
       reloadImages();
     }
-    function dismissScreenSaver(): boolean {
-      if (screenSaver()) {
-        setScreenSaver(false);
-        lastActivity = Date.now();
-        reloadIdleImages();
-        return true;
-      }
-      lastActivity = Date.now();
-      return false;
-    }
+    const { active: screenSaver, dismiss: dismissScreenSaver } = createIdleScreenSaver({
+      minutes: screenSaverMinutes, playing: () => screen() === "player", onWake: reloadIdleImages,
+    });
     let overlayFrame = 0,
       overlayTimer: ReturnType<typeof setTimeout> | undefined;
 
@@ -1200,10 +1057,6 @@ export function createRemoteTvApp(
       const retry = due && ["loading", "error"].includes(episodeState().status);
       if (screen() === "player" && !advancing() && (overlay()?.kind === "next" || retry)) void episodes.refresh();
     }, 2000);
-    const nextPanelMotion = {
-      y: { duration: 450, delay: 350, timingFunction: "cubic-bezier(.2,0,0,1)" },
-      alpha: { duration: 450, delay: 350, timingFunction: "cubic-bezier(.2,0,0,1)" },
-    };
     onCleanup(() => { clearInterval(continuationPoll);countdown.cancel();episodes.clear(); });
     async function advanceEpisode(forcePicker = false) {
       if (advancing()) return;
@@ -1435,24 +1288,6 @@ export function createRemoteTvApp(
     onMount(() => {
       void document.fonts.ready.then(() => setFontsReady(true));
     });
-    const navLayout = createMemo(() => {
-      fontsReady();
-      let x = 300;
-      return navs().map((nav) => {
-        if (nav.id === "profiles") return { x: 1768, w: 56, text: 0 };
-        if (nav.id === "search") {
-          const box = { x, w: 56, text: 0 };
-          x += 56 + 8;
-          return box;
-        }
-        const context = sdfTextMetrics("26px Onest500");
-        context.font = `26px ${screen() === nav.id ? "Onest700" : "Onest500"}`;
-        const text = Math.ceil(context.measureText(nav.label).width);
-        const box = { x, w: text + 36, text };
-        x += box.w + 8;
-        return box;
-      });
-    });
     const sceneWidth = createMemo(() => {
       const value = overlay();
       if (!overlaySettled() || overlayClosing() || !value) return 1920;
@@ -1581,7 +1416,7 @@ export function createRemoteTvApp(
         setGroups([]);
         setLiveGroup(undefined);
         setSettingsItems([]);
-        setHeroRotation(startHeroRotation(0));
+        heroCycle.clear();
         setHeroAction(0);
         setSaved(new Map());
       });
@@ -1925,75 +1760,12 @@ export function createRemoteTvApp(
       !!search() &&
       !searchMediaPending() &&
       (!!searchError() || !page().complete);
-    const [heroRotation, setHeroRotation] = createSignal(
-      startHeroRotation(home()?.featured.length ?? 0),
-    );
-    const [heroCycleStart, setHeroCycleStart] = createSignal(performance.now());
-    const [heroVisible, setHeroVisible] = createSignal(
-      document.visibilityState === "visible",
-    );
-    const heroMotion = !matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const heroSlide = () => heroRotation().slide;
-    const heroFeatured = () => home()?.featured.length ?? 0;
-    // A pass ends once every featured title has been presented; the rotation
-    // then parks. That is what lets idle Home stop redrawing: a parked pass
-    // schedules no advance and its indicator is the static one, so only the
-    // pinned fourteen-second artwork zoom is left to retire.
-    const heroCycling = createMemo(() =>
-      heroRotationRunning(heroRotation(), heroFeatured()),
-    );
-    const heroActive = createMemo(
-      () =>
-        screen() === "home" &&
-        zone() !== "rows" &&
-        !overlay() &&
-        !pending() &&
-        !loading() &&
-        !error() &&
-        heroVisible() &&
-        heroMotion &&
-        heroCycling(),
-    );
-    const resetHeroCycle = () => setHeroCycleStart(performance.now());
-    // Remote activity restarts the presentation cycle, and with it a full pass
-    // through the server's featured order.
-    const restartHeroCycling = () => {
-      setHeroRotation((current) => restartHeroRotation(current));
-      resetHeroCycle();
-    };
-    let wasHeroActive = false;
-    createEffect(() => {
-      const active = heroActive();
-      let started = heroCycleStart();
-      if (!active) {
-        wasHeroActive = false;
-        return;
-      }
-      if (!wasHeroActive) {
-        wasHeroActive = true;
-        started = performance.now();
-        // Becoming active again — a returned-to Home, a closed menu, a visible
-        // page — is a fresh presentation: the contract's "returning to an
-        // active billboard starts a fresh cycle" rule, applied to the pass.
-        setHeroRotation((current) =>
-          current.shown > 1 ? restartHeroRotation(current) : current,
-        );
-        setHeroCycleStart(started);
-      }
-      const timer = setTimeout(
-        () => {
-          if (!heroActive()) return;
-          const next = advanceHeroRotation(heroRotation(), heroFeatured());
-          if (!next) return;
-          batch(() => {
-            setHeroRotation(next);
-            resetHeroCycle();
-          });
-        },
-        Math.max(0, HERO_SLIDE_MS - (performance.now() - started)),
-      );
-      onCleanup(() => clearTimeout(timer));
+    const heroCycle = createHeroCycle({
+      count: () => home()?.featured.length ?? 0,
+      enabled: () => screen() === "home" && zone() !== "rows" && !overlay() && !pending() && !loading() && !error(),
     });
+    const { slide: heroSlide, active: heroActive, started: heroCycleStart,
+      reset: resetHeroCycle, restart: restartHeroCycling, setVisible: setHeroVisible } = heroCycle;
     const [previewCard, setPreviewCard] = createSignal<Card>();
     let previewGeneration = 0, previewScope = "";
     let previewCandidate: Card | undefined;
@@ -2083,8 +1855,7 @@ export function createRemoteTvApp(
       const order = (home()?.featured ?? []).map(cardKey).join("|");
       if (!order || order === heroOrder) return;
       heroOrder = order;
-      setHeroRotation((current) => restartHeroRotation(current));
-      resetHeroCycle();
+      restartHeroCycling();
     });
     function rememberHomeRow() {
       if (screen() === "home" && zone() === "rows") homeRowFocus.remember(home()?.rows[row()], column());
@@ -2300,9 +2071,7 @@ export function createRemoteTvApp(
         const nextFocused = value?.rows[nextRow]?.cards[nextColumn];
         if (zone() !== "rows" || !nextFocused || !previewCard() || presentationKey(previewCard()!) !== presentationKey(nextFocused))
           setPreviewCard(undefined);
-        setHeroRotation((current) =>
-          clampHeroRotation(current, value?.featured.length ?? 0),
-        );
+        heroCycle.clamp(value?.featured.length ?? 0);
         if (screen() === "home" && zone() === "rows") {
           setRow(nextRow);
           setColumn(nextColumn);
@@ -6566,55 +6335,8 @@ export function createRemoteTvApp(
       void player.dispose();
     });
     function keyboard(isModal = false) {
-      const numeric = () =>
-        isModal &&
-        overlay()?.kind === "text" &&
-        (overlay() as Extract<Overlay, { kind: "text" }>).numeric;
-      const keys = () =>
-        numeric()
-          ? ["1", "2", "3", "4", "5", "6", "7", "8", "9", "⌫", "0", "Done"]
-          : [
-              ...keyboardCharacters(),
-              keyboardUpper() ? "aa" : "Aa",
-              "Space",
-              "⌫",
-              keyboardSymbols() ? "ABC" : "#+=",
-              isModal ? "Done" : "Search",
-              isModal ? "Cancel" : "Clear",
-            ];
-      return (
-        <TvView
-          x={numeric() ? 744 : 96}
-          y={numeric() ? 540 : isModal ? 350 : 280}
-        >
-          <For each={keys()}>
-            {(letter, index) => (
-              <TvView
-                x={(index() % (numeric() ? 3 : 6)) * (numeric() ? 148 : 78)}
-                y={
-                  Math.floor(index() / (numeric() ? 3 : 6)) *
-                  (numeric() ? 88 : 78)
-                }
-                w={numeric() ? 136 : 68}
-                h={numeric() ? 76 : 68}
-                color={
-                  key() === index() ? palette.text : "rgba(255,255,255,.1)"
-                }
-              >
-                <Label
-                  centerY={numeric() ? 38 : 34}
-                  w={numeric() ? 136 : 68}
-                  align="center"
-                  size={letter.length > 1 ? 18 : numeric() ? 32 : 26}
-                  font="Onest600"
-                  content={letter}
-                  color={key() === index() ? "#111113" : palette.text}
-                />
-              </TvView>
-            )}
-          </For>
-        </TvView>
-      );
+      return <KeyboardView numeric={!!(isModal && overlay()?.kind === "text" && (overlay() as Extract<Overlay, { kind: "text" }>).numeric)}
+        modal={isModal} letters={keyboardCharacters()} upper={keyboardUpper()} symbols={keyboardSymbols()} selected={key()} />;
     }
     const Root = defineScreen({
       input: {
@@ -6720,176 +6442,8 @@ export function createRemoteTvApp(
                 screen() !== "detail"
               }
             >
-              <TvView w={1920} h={132} src={topBarGradient()} fit="cover" />
-              <TvView
-                x={96}
-                y={44}
-                w={44}
-                h={44}
-                color={palette.accent}
-              >
-                <Label
-                  w={44}
-                  centerY={22}
-                  align="center"
-                  size={28}
-                  font="Bricolage800"
-                  content="V"
-                  color="#15130F"
-                />
-              </TvView>
-              <Label
-                x={152}
-                centerY={66}
-                font="Bricolage800"
-                size={32}
-                letterspacing={-0.96}
-                content="VIPTV"
-              />
-              <For each={navs()}>
-                {(nav, index) => (
-                  <TvView
-                    x={navLayout()[index()].x}
-                    y={38}
-                    w={navLayout()[index()].w}
-                    h={56}
-                    color={
-                      zone() === "nav" &&
-                      column() === index() &&
-                      nav.id !== "search" &&
-                      nav.id !== "profiles"
-                        ? "#212124"
-                        : "rgba(0,0,0,0)"
-                    }
-                  >
-                    <Show
-                      when={
-                        zone() === "nav" &&
-                        column() === index() &&
-                        nav.id !== "profiles"
-                      }
-                    >
-                      <TvView
-                        w={navLayout()[index()].w}
-                        h={56}
-                        src={outline(
-                          navLayout()[index()].w,
-                          56,
-                          nav.id === "search" || nav.id === "profiles"
-                            ? 28
-                            : 8,
-                          3,
-                          "#F4F2EE",
-                        )}
-                      />
-                    </Show>
-                    <Show when={nav.id === "search"}>
-                      <TvView
-                        x={13}
-                        y={13}
-                        w={30}
-                        h={30}
-                        src={icon(
-                          "search",
-                          false,
-                          2.2,
-                          palette.text,
-                        )}
-                      />
-                    </Show>
-                    <Show when={nav.id === "profiles"}>
-                      <TvView
-                        x={-2}
-                        y={-2}
-                        w={60}
-                        h={60}
-                        color="#212124"
-                      />
-                      <TvView
-                        w={56}
-                        h={56}
-                        color="#212124"
-                      >
-                        <Label
-                          w={56}
-                          centerY={28}
-                          align="center"
-                          size={26}
-                          font="Onest700"
-                          content={
-                            (
-                              management()?.profiles.find(
-                                (p) => p.id === api.profile,
-                              )?.name ?? "?"
-                            )
-                              .slice(0, 1)
-                              .toUpperCase()
-                          }
-                        />
-                        <Show
-                          when={
-                            management()?.profiles.find(
-                              (p) => p.id === api.profile,
-                            )?.avatar_url ??
-                            avatar(
-                              management()?.profiles.find(
-                                (p) => p.id === api.profile,
-                              )?.avatar_id,
-                            )
-                          }
-                        >
-                          {(src) => (
-                            <TvView
-                              w={56}
-                              h={56}
-                              src={imageSource(src())}
-                              fit="cover"
-                            />
-                          )}
-                        </Show>
-                      </TvView>
-                    </Show>
-                    <Show
-                      when={
-                        zone() === "nav" &&
-                        column() === index() &&
-                        nav.id === "profiles"
-                      }
-                    >
-                      <TvView
-                        w={56}
-                        h={56}
-                        src={outline(56, 56, 28, 3, "#F4F2EE")}
-                      />
-                    </Show>
-                    <Show when={nav.id !== "search" && nav.id !== "profiles"}>
-                      <Label
-                        x={18}
-                        centerY={28}
-                        size={26}
-                        font={screen() === nav.id ? "Onest700" : "Onest500"}
-                        maxwidth={navLayout()[index()].text}
-                        maxlines={1}
-                        content={nav.label}
-                        color={
-                          screen() === nav.id ||
-                          (zone() === "nav" && column() === index())
-                            ? palette.text
-                            : palette.body
-                        }
-                      />
-                      <TvView
-                        show={screen() === nav.id}
-                        x={18}
-                        y={49}
-                        w={navLayout()[index()].text}
-                        h={3}
-                        color={palette.text}
-                      />
-                    </Show>
-                  </TvView>
-                )}
-              </For>
+              <TopNavigation items={navs()} screen={screen()} selected={zone() === "nav" ? column() : undefined}
+                profile={management()?.profiles.find(profile => profile.id === api.profile)} fontReady={fontsReady()} />
             </Show>
             <Show when={screen() === "welcome"}>
               <EntryScreen
@@ -7826,82 +7380,11 @@ export function createRemoteTvApp(
             {(modal) => (
               <OverlayViewport order={10} shade={modal().kind !== "next" ? "rgba(0,0,0,.6)" : undefined} shadeWidth={sceneWidth()}>
                 <Show when={modal().kind === "next"}>
-                  <TvView w={1920} h={1080} zIndex={-1} src={`${import.meta.env.BASE_URL}assets/player/end-scrim.png`} />
-                  <TvView x={96} y={reducedMotion() || overlayEntered() ? 616 : 632} alpha={reducedMotion() || overlayEntered() ? 1 : 0} transition={reducedMotion() ? undefined : nextPanelMotion}>
-                    <Label w={900} maxlines={1} size={22} content={`${activeAction()?.card.title ?? "Episode"} · Credits`} color={palette.body} />
-                  </TvView>
-                  <TvView x={1040} y={reducedMotion() || overlayEntered() ? 120 : 136} w={784} h={520} alpha={reducedMotion() || overlayEntered() ? 1 : 0} transition={reducedMotion() ? undefined : nextPanelMotion}>
-                    <Label size={24} content="Next episode" color={palette.body} />
-                    <Label y={53} w={784} size={52} font="Onest700" letterspacing={-1.04} content={`${episodeState().item?.identity.episode?.episode ?? ""}. ${episodeState().item?.title ?? ""}`} maxlines={2} />
-                    <Label y={191} w={784} size={30} content={episodeState().item?.subtitle ?? ""} maxlines={1} />
-                    <Label y={239} w={784} size={26} lineheight={1.45} color={palette.body} content={episodeState().item?.description ?? ""} maxlines={3} />
-                    <Button x={0} y={373} w={428} h={72} icon="play" iconSize={countdownState().running && !reducedMotion() ? 18 : 24} label={countdownState().running ? `Next episode in ${countdownState().remaining}` : "Play next episode"} focused={choice() === 0} />
-                    <Button x={444} y={373} w={340} h={72} label="Keep watching credits" focused={choice() === 1} />
-                    <Show when={countdownState().running && !reducedMotion()}>
-                      <Show when={isRokuUi} fallback={
-                        <TvView x={17} y={389} w={40} h={40} clipping={true}>
-                          <TvView x={-(Math.round(countdownState().progress * 100) % 10) * 40} y={-Math.floor(Math.round(countdownState().progress * 100) / 10) * 40} w={400} h={440} src={`${import.meta.env.BASE_URL}assets/player/countdown/ring-atlas.png`} />
-                        </TvView>
-                      }>
-                        <TvView x={17} y={389} w={40} h={40} src={`${import.meta.env.BASE_URL}assets/player/countdown/ring-${String(Math.round(countdownState().progress * 100)).padStart(3, "0")}.png`} />
-                      </Show>
-                    </Show>
-                    <Label y={451} w={784} size={22} content={countdownState().running ? "Starts automatically. Press any button to cancel." : "Nothing plays on its own."} color={palette.body} />
-                  </TvView>
+                  <NextEpisodePanel currentTitle={activeAction()?.card.title ?? "Episode"} episode={episodeState().item}
+                    countdown={countdownState()} selected={choice()} entered={overlayEntered()} />
                 </Show>
                 <Show when={modal().kind === "calibration"}>
-                  {/* No reference board exists for the calibration sheet; the
-                      frame marks the working safe area in the accent colour
-                      while the stage transform previews it live. */}
-                  <TvView
-                    x={Math.round((calibrationValue() * 1920) / 100)}
-                    y={Math.round((calibrationValue() * 1080) / 100)}
-                    w={Math.round(1920 * (1 - (2 * calibrationValue()) / 100))}
-                    h={Math.round(1080 * (1 - (2 * calibrationValue()) / 100))}
-                    src={outline(
-                      Math.max(
-                        8,
-                        Math.round(1920 * (1 - (2 * calibrationValue()) / 100)),
-                      ),
-                      Math.max(
-                        8,
-                        Math.round(1080 * (1 - (2 * calibrationValue()) / 100)),
-                      ),
-                      4,
-                      3,
-                      palette.accent,
-                    )}
-                  />
-                  <TvView
-                    x={610}
-                    y={430}
-                    w={700}
-                    h={220}
-                    color={palette.surface}
-                  >
-                    <Label
-                      x={40}
-                      y={36}
-                      size={40}
-                      font="Onest700"
-                      content={modal().title}
-                    />
-                    <Label
-                      x={40}
-                      y={100}
-                      size={64}
-                      font="Onest700"
-                      color={palette.accent}
-                      content={`${calibrationValue()}%`}
-                    />
-                    <Label
-                      x={40}
-                      y={180}
-                      size={20}
-                      color={palette.muted}
-                      content="Left and right adjust. OK saves; Back restores."
-                    />
-                  </TvView>
+                  <CalibrationPanel title={modal().title} value={calibrationValue()} />
                 </Show>
                 <Show when={modal().kind === "sources"}>
                   <TvView
@@ -8494,396 +7977,17 @@ export function createRemoteTvApp(
                     !profileEditor()
                   }
                 >
-                  <TvView
-                    x={overlayEntered() && !overlayClosing() ? 1100 : 1920}
-                    w={820}
-                    h={1080}
-                    color={palette.surface}
-                    transition={{
-                      x: {
-                        duration: overlayClosing() ? 200 : 300,
-                        timingFunction: overlayClosing()
-                          ? "cubic-bezier(.3,0,1,1)"
-                          : "cubic-bezier(0,0,0,1)",
-                      },
-                    }}
-                  >
-                    <Label
-                      x={64}
-                      y={72}
-                      size={44}
-                      font="Onest700"
-                      maxwidth={692}
-                      maxlines={2}
-                      content={modal().title}
-                    />
-                    <Label
-                      x={64}
-                      y={150}
-                      size={22}
-                      maxwidth={692}
-                      maxlines={2}
-                      color={palette.muted}
-                      content={
-                        (
-                          modal() as Extract<
-                            Overlay,
-                            { kind: "choices" | "confirm" }
-                          >
-                        ).description ?? ""
-                      }
-                    />
-                    <For
-                      each={(
-                        modal() as Extract<
-                          Overlay,
-                          { kind: "choices" | "confirm" }
-                        >
-                      ).items.slice(
-                        Math.max(0, choice() - 5),
-                        Math.max(0, choice() - 5) + 7,
-                      )}
-                    >
-                      {(item, i) => (
-                        <TvView
-                          x={64}
-                          y={230 + i() * 104}
-                          w={692}
-                          h={88}
-                          color={
-                            i() + Math.max(0, choice() - 5) === choice()
-                              ? palette.text
-                              : "#212124"
-                          }
-                        >
-                          <Label
-                            x={24}
-                            centerY={44}
-                            size={26}
-                            font="Onest600"
-                            maxwidth={570}
-                            maxlines={1}
-                            content={item.label}
-                            color={
-                              i() + Math.max(0, choice() - 5) === choice()
-                                ? "#111113"
-                                : palette.text
-                            }
-                          />
-                          <Label
-                            x={600}
-                            centerY={44}
-                            size={22}
-                            content={item.value ?? ""}
-                            color={
-                              i() + Math.max(0, choice() - 5) === choice()
-                                ? "#111113"
-                                : palette.text
-                            }
-                          />
-                        </TvView>
-                      )}
-                    </For>
-                  </TvView>
+                  <ChoiceDrawer dialog={modal() as Extract<Overlay, { kind: "choices" | "confirm" }>} selected={choice()} entered={overlayEntered()} closing={overlayClosing()} />
                 </Show>
                 <Show when={profileEditor()}>
-                  {(editor) => {
-                    const profile = () =>
-                      management()?.profiles.find(
-                        (p) => p.id === editor().profile!.id,
-                      ) ?? editor().profile!;
-                    return (
-                      <TvView w={1920} h={1080} color={palette.bg}>
-                        <Label
-                          x={96}
-                          y={96}
-                          size={56}
-                          font="Onest700"
-                          content="Edit profile"
-                        />
-                        <TvView
-                          x={156}
-                          y={220}
-                          w={280}
-                          h={280}
-                          color={palette.surface}
-                        >
-                          <Show
-                            when={avatar(profile().avatar_id)}
-                            fallback={
-                              <Label
-                                w={280}
-                                centerY={140}
-                                align="center"
-                                size={96}
-                                font="Onest700"
-                                content={profile().name.slice(0, 1)}
-                              />
-                            }
-                          >
-                            <TvView
-                              w={280}
-                              h={280}
-                              src={avatar(profile().avatar_id)}
-                              fit="cover"
-                            />
-                          </Show>
-                        </TvView>
-                        <Show
-                          when={editor().items.some(
-                            (item) => item.id === "avatar",
-                          )}
-                        >
-                          <Button
-                            x={156}
-                            y={524}
-                            w={280}
-                            label="Change avatar"
-                            focused={editor().items[choice()]?.id === "avatar"}
-                          />
-                        </Show>
-                        <For
-                          each={editor().items.filter(
-                            (item) => item.id !== "avatar",
-                          )}
-                        >
-                          {(item, index) => (
-                            <TvView
-                              x={640}
-                              y={
-                                item.id === "delete" ? 784 : 220 + index() * 108
-                              }
-                              w={1184}
-                              h={item.id === "delete" ? 80 : 96}
-                              color={
-                                editor().items[choice()]?.id === item.id
-                                  ? palette.text
-                                  : "#1B1B1D"
-                              }
-                            >
-                              <Label
-                                x={28}
-                                centerY={item.id === "delete" ? 40 : 48}
-                                size={28}
-                                font="Onest600"
-                                content={item.label}
-                                color={
-                                  item.id === "delete"
-                                    ? "#FF8A7E"
-                                    : editor().items[choice()]?.id === item.id
-                                      ? "#111113"
-                                      : palette.text
-                                }
-                              />
-                              <Label
-                                x={720}
-                                centerY={48}
-                                w={430}
-                                maxlines={1}
-                                align="right"
-                                size={26}
-                                content={
-                                  item.id === "rename"
-                                    ? profile().name + "  ›"
-                                    : ""
-                                }
-                                color={
-                                  editor().items[choice()]?.id === item.id
-                                    ? "#444444"
-                                    : palette.muted
-                                }
-                              />
-                            </TvView>
-                          )}
-                        </For>
-                      </TvView>
-                    );
-                  }}
+                  {editor => <ProfileEditorView profile={management()?.profiles.find(profile => profile.id === editor().profile!.id) ?? editor().profile!}
+                    items={editor().items} selected={choice()} />}
                 </Show>
                 <Show when={modal().kind === "tracks"}>
-                  <TvView
-                    y={540}
-                    w={1920}
-                    h={540}
-                    color={palette.surface}
-                  >
-                    <For
-                      each={
-                        (modal() as Extract<Overlay, { kind: "tracks" }>)
-                          .columns
-                      }
-                    >
-                      {(column, c) => (
-                        <TvView x={96 + c() * 600}>
-                          <Label
-                            y={48}
-                            size={24}
-                            font="Onest600"
-                            color={palette.muted}
-                            content={column.title}
-                          />
-                          <For
-                            each={column.items.slice(
-                              c() === trackColumn()
-                                ? Math.max(0, choice() - 4)
-                                : 0,
-                              (c() === trackColumn()
-                                ? Math.max(0, choice() - 4)
-                                : 0) + 5,
-                            )}
-                          >
-                            {(item, i) => (
-                              <TvView
-                                x={-20}
-                                y={92 + i() * 70}
-                                w={520}
-                                h={64}
-                                color={
-                                  c() === trackColumn() &&
-                                  i() + Math.max(0, choice() - 4) === choice()
-                                    ? palette.text
-                                    : "rgba(0,0,0,0)"
-                                }
-                              >
-                                <Show when={item.value === "✓"} fallback={<Label x={20} centerY={32} size={24} content={item.value ?? ""} />}>
-                                  <TvView x={20} y={20} w={24} h={24} src={icon("check", c() === trackColumn() && i() + Math.max(0, choice() - 4) === choice())} />
-                                </Show>
-                                <Label
-                                  x={60}
-                                  centerY={32}
-                                  size={26}
-                                  maxwidth={440}
-                                  maxlines={1}
-                                  content={item.label}
-                                  color={
-                                    c() === trackColumn() &&
-                                    i() + Math.max(0, choice() - 4) === choice()
-                                      ? "#111113"
-                                      : palette.text
-                                  }
-                                />
-                              </TvView>
-                            )}
-                          </For>
-                        </TvView>
-                      )}
-                    </For>
-                  </TvView>
+                  <TracksDrawer columns={(modal() as Extract<Overlay, { kind: "tracks" }>).columns} column={trackColumn()} selected={choice()} />
                 </Show>
                 <Show when={modal().kind === "text"}>
-                  <TvView w={1920} h={1080} color={palette.bg}>
-                    <Show
-                      when={
-                        (modal() as Extract<Overlay, { kind: "text" }>).numeric
-                      }
-                    >
-                      <TvView
-                        x={900}
-                        y={150}
-                        w={120}
-                        h={120}
-                        color={palette.surface}
-                      >
-                        <TvView
-                          x={32}
-                          y={32}
-                          w={56}
-                          h={56}
-                          src={icon("lock")}
-                        />
-                      </TvView>
-                      <For
-                        each={Array.from(
-                          { length: Math.max(4, Math.min(8, text().length)) },
-                          (_, i) => i,
-                        )}
-                      >
-                        {(i) => (
-                          <TvView
-                            x={
-                              (1920 -
-                                Math.max(4, Math.min(8, text().length)) * 106 +
-                                18) /
-                                2 +
-                              i * 106
-                            }
-                            y={380}
-                            w={88}
-                            h={104}
-                            color={
-                              i === text().length ? palette.text : "#3B3B3A"
-                            }
-                          >
-                            <TvView
-                              x={2}
-                              y={2}
-                              w={84}
-                              h={100}
-                              color="#202020"
-                            />
-                            <Show when={i < text().length}>
-                              <TvView
-                                x={33}
-                                y={41}
-                                w={22}
-                                h={22}
-                                color={palette.text}
-                              />
-                            </Show>
-                          </TvView>
-                        )}
-                      </For>
-                    </Show>
-                    <Label
-                      x={
-                        (modal() as Extract<Overlay, { kind: "text" }>).numeric
-                          ? 0
-                          : 96
-                      }
-                      w={
-                        (modal() as Extract<Overlay, { kind: "text" }>).numeric
-                          ? 1920
-                          : 1728
-                      }
-                      align={
-                        (modal() as Extract<Overlay, { kind: "text" }>).numeric
-                          ? "center"
-                          : "left"
-                      }
-                      y={
-                        (modal() as Extract<Overlay, { kind: "text" }>).numeric
-                          ? 300
-                          : 80
-                      }
-                      size={44}
-                      font="Onest700"
-                      content={modal().title}
-                    />
-                    <TvView
-                      show={
-                        !(modal() as Extract<Overlay, { kind: "text" }>).numeric
-                      }
-                      x={96}
-                      y={195}
-                      w={1728}
-                      h={88}
-                      color={palette.surface}
-                    >
-                      <Label
-                        x={24}
-                        centerY={44}
-                        size={32}
-                        maxwidth={1680}
-                        maxlines={1}
-                        content={
-                          (modal() as Extract<Overlay, { kind: "text" }>).secret
-                            ? "•".repeat(text().length)
-                            : text()
-                        }
-                      />
-                    </TvView>
-                    {keyboard(true)}
-                  </TvView>
+                  <TextEntryPanel title={modal().title} numeric={!!(modal() as Extract<Overlay, { kind: "text" }>).numeric} secret={!!(modal() as Extract<Overlay, { kind: "text" }>).secret} text={text()}>{keyboard(true)}</TextEntryPanel>
                 </Show>
               </OverlayViewport>
             )}
