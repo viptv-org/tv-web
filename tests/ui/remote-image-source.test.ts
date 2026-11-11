@@ -1,5 +1,7 @@
-import { expect, it, vi } from "vitest";
-import { clearlogoSource, configureImageDelivery, imagePixels, imageSource } from "../../src/tv-solid/remote/image-source";
+import { afterEach, expect, it, vi } from "vitest";
+import { clearlogoSource, configureImageApiOrigin, configureImageDelivery, imagePixels, imageSource } from "../../src/tv-solid/remote/image-source";
+
+afterEach(() => { configureImageApiOrigin(); configureImageDelivery(false); vi.unstubAllGlobals(); });
 
 it("resizes existing proxy requests to the slot without nesting or losing source parameters", () => {
   const asset = "https://image.tmdb.org/t/p/original/image.png?token=fixture&part=2";
@@ -71,4 +73,26 @@ it("blurs public backdrops at the proxy and preserves blur through native sizing
   expect(new URL(imageSource(blurred.toString(),1920,1080,"cover",0)).searchParams.has("blur")).toBe(false);
   const privateImage=new URL("/api/profiles/1/avatar?signature=private",location.href).toString();
   expect(imageSource(privateImage,240,360,"cover",16)).toBe(privateImage);
+});
+
+it.each(['file:///package/index.html', 'https://roku.local/'])('resolves prepared image APIs at the configured backend from %s', entry => {
+  vi.stubGlobal('location', new URL(entry));
+  configureImageApiOrigin('https://api.example.com');
+  configureImageDelivery(true);
+  expect(clearlogoSource('https://images.metahub.space/logo/medium/tt123/img')).toBe('https://api.example.com/api/images/clearlogo/v1/tt123.png');
+  const publicImage = 'https://api.example.com/api/images/simkl/posters/11/abc_m.webp';
+  const resized = new URL(imageSource(publicImage, 960, 540, 'cover', 8));
+  expect(resized.hostname).toBe('wsrv.nl');
+  expect(resized.searchParams.get('url')).toBe(publicImage);
+  expect(resized.searchParams.get('blur')).toBe('8');
+  const privateImage = 'https://api.example.com/api/profiles/1/avatar?signature=private';
+  expect(imageSource(privateImage, 255, 383, 'cover', 8)).toBe(privateImage);
+});
+
+it('rejects credential-bearing image origins and never proxies a private backend', () => {
+  for (const origin of ['http://api.example.com', 'https://user:secret@api.example.com', 'https://api.example.com/path', 'https://api.example.com/?token=private'])
+    expect(() => configureImageApiOrigin(origin)).toThrow();
+  configureImageApiOrigin('https://backend.internal');
+  const source = 'https://backend.internal/api/images/simkl/posters/11/abc_m.webp';
+  expect(imageSource(source, 960, 540, 'cover', 8)).toBe(source);
 });

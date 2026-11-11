@@ -24,6 +24,10 @@ export function javascriptReferences(code) {
   return references;
 }
 
+function moduleReferences(code) {
+  return new Set(Array.from(code.matchAll(/\b(?:from|import)(?:\(\s*)?["']([^"']+)["']/g), match => match[1]));
+}
+
 /** Script/link targets and inline `srcset`-free asset URLs in a document. */
 export function markupReferences(code) {
   const references = new Set();
@@ -79,8 +83,12 @@ export async function scanTvPackage(directory, manifest) {
           : undefined;
     if (!read) continue;
     const code = await readFile(join(directory, file), 'utf8');
+    const modules = extension === '.js' ? moduleReferences(code) : new Set();
     for (const reference of read(code)) {
-      const target = resolveReference(file, reference, base);
+      // BASE_URL public paths resolve from the document, unlike module imports.
+      const target = base === './' && extension === '.js' && reference.startsWith('./assets/') && !modules.has(reference)
+        ? posix.normalize(reference.slice(2))
+        : resolveReference(file, reference, base);
       if (target === null || present.has(target)) continue;
       if (unreachable.has(target)) declared.push({ from: file, to: target });
       else missing.push({ from: file, to: target, reference });

@@ -6,6 +6,14 @@ import { createSignal } from "solid-js";
 const [imageEpoch, setImageEpoch] = createSignal(0);
 const [clearlogosSupported, setClearlogosSupported] = createSignal(false);
 export function configureImageDelivery(clearlogos: boolean) { setClearlogosSupported(clearlogos); }
+let imageApiOrigin: string | undefined;
+export function configureImageApiOrigin(origin?: string) {
+  if (origin === undefined) { imageApiOrigin = undefined; return; }
+  const url = new URL(origin);
+  if (url.protocol !== "https:" || url.username || url.password || url.pathname !== "/" || url.search || url.hash)
+    throw new Error("Images require a credential-free HTTPS API origin.");
+  imageApiOrigin = url.origin;
+}
 
 export function clearlogoSource(raw: string): string | undefined {
   if (!clearlogosSupported()) return;
@@ -16,7 +24,7 @@ export function clearlogoSource(raw: string): string | undefined {
     const match = /^\/logo\/(?:small|medium|large)\/(tt\d{1,16})\/img$/.exec(url.pathname);
     if (url.protocol !== "https:" || url.hostname !== "images.metahub.space" || url.port ||
         url.username || url.password || url.search || url.hash || !match) return;
-    return versioned(new URL(`/api/images/clearlogo/v1/${match[1]}.png`, location.href).toString(), imageEpoch());
+    return versioned(new URL(`/api/images/clearlogo/v1/${match[1]}.png`, imageApiOrigin ?? location.origin).toString(), imageEpoch());
   } catch { return; }
 }
 export function reloadImages() {
@@ -89,7 +97,7 @@ export function imageSource(
       applyBlur(source.searchParams);
       return versioned(source.toString(), version);
     }
-    const publicProxy = source.origin === location.origin && source.protocol === "https:" &&
+    const publicProxy = source.origin === (imageApiOrigin ?? location.origin) && source.protocol === "https:" &&
       !source.search && !source.hash && !source.username && !source.password &&
       !/^\d+(?:\.\d+){3}$/.test(source.hostname) && !/^(?:localhost)$|\.(?:local|test|internal)$/.test(source.hostname) &&
       /^\/api\/images\/simkl\/(?:posters|fanart|episodes)\/[A-Za-z0-9/]+_(?:s|cm|c|ca|m|w|medium|mobile|s48|d)\.(?:webp|jpg|png|gif)$/.test(source.pathname);

@@ -10,20 +10,23 @@ import type { RendererMain } from "@solidtv/renderer";
 import { sdfFonts } from "./fonts";
 import { tvShaderName } from "./shaders";
 import { setRendererStart } from "./renderer-clock";
-import { reloadImages } from "./remote/image-source";
+import { configureImageApiOrigin, reloadImages } from "./remote/image-source";
 import { prepareTizenHost } from "./platform/tizen-host";
 import { prepareBrowserRenderer } from "./platform/browser-renderer";
 import { installPs4Input } from "./platform/ps4-input";
 import { resolveTvPlatform } from "./platform/tv-platform";
+import { packagedTvHost, tvApiOrigin } from "./platform/packaged-host";
 import "../theme/viptv-tokens.generated.css";
 
 import { RemoteTvApi } from "./remote/api";
 import { createBrowserSessionStore } from "./platform/browser-session-store";
 
 document.documentElement.dataset.renderer = "solid";
-const platform = resolveTvPlatform(location.search, navigator.userAgent);
+const packageHost = packagedTvHost();
+const platform = packageHost?.platform ?? resolveTvPlatform(location.search, navigator.userAgent);
 document.documentElement.dataset.tvPlatform = platform;
-const origin = import.meta.env.VITE_API_ORIGIN || location.origin;
+const origin = tvApiOrigin();
+configureImageApiOrigin(origin);
 const key = `viptv-device:${origin}`;
 
 const api = new RemoteTvApi(

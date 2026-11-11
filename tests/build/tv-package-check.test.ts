@@ -95,6 +95,16 @@ describe('TV package check', () => {
     expect(report.problems[0]).toContain('assets/hls-Y.js');
   });
 
+  it('resolves relative-base public artwork from the document while retaining module-relative imports', async () => {
+    const directory = stage({
+      'index.html': '<script type="module" src="./assets/app.js"></script>',
+      'assets/app.js': 'const picture="./assets/photo.webp";import("./assets/lazy.js");',
+      'assets/photo.webp': '',
+    });
+    const report = await scanTvPackage(directory, { base: './', files: ['index.html', 'assets/app.js', 'assets/photo.webp'] });
+    expect(report.missing).toEqual([{ from: 'assets/app.js', reference: './assets/lazy.js', to: 'assets/assets/lazy.js' }]);
+  });
+
   it('allows only references the build declared unreachable for a TV', async () => {
     const directory = stage({
       'assets/app-X.js': 'const react=()=>import("./main-REACT.js");const load=()=>import("./hls-Y.js");',
