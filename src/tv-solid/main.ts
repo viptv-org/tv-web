@@ -17,7 +17,7 @@ import { installPs4Input } from "./platform/ps4-input";
 import "../theme/viptv-tokens.generated.css";
 
 import { RemoteTvApi } from "./remote/api";
-import type { Tokens } from "./remote/types";
+import { createBrowserSessionStore } from "./platform/browser-session-store";
 
 document.documentElement.dataset.renderer = "solid";
 const platformParam = new URLSearchParams(location.search).get("platform");
@@ -32,24 +32,7 @@ const key = `viptv-device:${origin}`;
 
 const api = new RemoteTvApi(
   origin,
-  {
-    withLock: navigator.locks
-      ? (work) => navigator.locks.request(key, work)
-      : undefined,
-    async load() {
-      try {
-        return JSON.parse(localStorage.getItem(key) || "null") as Tokens | null;
-      } catch {
-        return null;
-      }
-    },
-    async save(tokens) {
-      localStorage.setItem(key, JSON.stringify(tokens));
-    },
-    async clear() {
-      localStorage.removeItem(key);
-    },
-  },
+  createBrowserSessionStore(key, () => localStorage, navigator.locks),
   undefined,
   platform,
 );

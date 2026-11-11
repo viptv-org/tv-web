@@ -172,6 +172,51 @@ describe("server-only TV transport", () => {
     expect(rotations).toBe(1);
     expect(storage.save).toHaveBeenCalledTimes(1);
   });
+  it("retains a consumed rotation when persistence fails and never reloads its old grant", async () => {
+    const storage = store();
+    storage.save.mockRejectedValue(new DOMException("Full", "QuotaExceededError"));
+    const refreshed: string[] = [];
+    let validAccess = "";
+    const fetcher = vi.fn(async (url: RequestInfo | URL, init?: RequestInit) => {
+      if (String(url).endsWith("/refresh")) {
+        refreshed.push(JSON.parse(String(init?.body)).refresh_token);
+        validAccess = `access-${refreshed.length}`;
+        return response({
+          access_token: validAccess,
+          refresh_token: `refresh-${refreshed.length}`,
+        });
+      }
+      const bearer = (init?.headers as Record<string, string>).Authorization;
+      return validAccess && bearer === `Bearer ${validAccess}`
+        ? response({ ok: true }) : response({}, 401);
+    });
+    const api = new RemoteTvApi("https://example.test", storage, fetcher);
+    await api.restore();
+    await expect(api.call("/api/one")).resolves.toEqual({ ok: true });
+    // Expire the current access token independently of the unchanged durable grant.
+    validAccess = "expired";
+    expect(await api.restore()).toBe(true);
+    await expect(api.call("/api/two")).resolves.toEqual({ ok: true });
+    expect(refreshed).toEqual(["refresh-old", "refresh-1"]);
+    expect(await storage.load()).toMatchObject({ refreshToken: "refresh-old" });
+    expect(storage.clear).not.toHaveBeenCalled();
+  });
+  it("retries an unsaved rotation on the next authenticated request", async () => {
+    const storage = store();
+    storage.save.mockRejectedValueOnce(new DOMException("Full", "QuotaExceededError"));
+    const api = new RemoteTvApi("https://example.test", storage, async (url, init) => {
+      if (String(url).endsWith("/refresh"))
+        return response({ access_token: "next", refresh_token: "refresh-next" });
+      return (init?.headers as Record<string, string>).Authorization === "Bearer next"
+        ? response({ ok: true }) : response({}, 401);
+    });
+    await api.restore();
+    await expect(api.call("/api/one")).resolves.toEqual({ ok: true });
+    expect(await storage.load()).toMatchObject({ refreshToken: "refresh-old" });
+    await expect(api.call("/api/two")).resolves.toEqual({ ok: true });
+    expect(await storage.load()).toMatchObject({ refreshToken: "refresh-next" });
+    expect(storage.save).toHaveBeenCalledTimes(2);
+  });
   it("preserves durable authentication when refresh fails transiently", async () => {
     const storage = store();
     const api = new RemoteTvApi(

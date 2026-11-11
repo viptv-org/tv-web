@@ -3896,3 +3896,20 @@ Roku, row0 card5 restored at x=-2116 after visiting My List; all six top-nav mov
 kept x=-2116, and returning through the hero retained card5. The final native build
 was installed and that physical check passed again. Broader screen/overlay focus
 isolation is included in the remaining functionality sweep.
+
+## Browser session persistence under storage failures
+
+Focused API regressions reproduce a successful refresh whose credential write
+throws, followed by another expired access token. The active grant retains the
+consumed rotation's successor, skips the obsolete durable value and retries
+persistence on the next authenticated request. The browser store retains its
+active value when storage access is denied, removes obsolete durable credentials
+best-effort after a failed write, and keeps local sign-out effective when removal
+is denied. Only the small device credential record is persisted.
+
+`tests/remote/session-persistence.spec.ts` exercises HTTPS browser refresh without
+Web Locks, a second access expiry, normal reload persistence and failed writes.
+These are browser simulations, not physical PlayStation qualification. Permanently
+denied storage cannot retain sign-in after the document closes. Browsers without
+Web Locks still lack cross-context rotation coordination; a lost server rotation
+response remains unrecoverable under the current replay-revocation contract.

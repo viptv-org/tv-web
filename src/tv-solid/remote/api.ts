@@ -197,6 +197,7 @@ export class RemoteTvApi {
   private sourceReuseSupported = false;
   preferredSourceDiscoverySupported = false;
   private tokens: Tokens | null = null;
+  private pendingTokens?: Tokens;
   private refreshFlight?: Promise<void>;
   private identityFlight?: Promise<AccountIdentity>;
   private epoch = 0;
@@ -230,6 +231,7 @@ export class RemoteTvApi {
     this.fetcher = fetcher ?? globalThis.fetch.bind(globalThis);
   }
   async restore() {
+    if (this.pendingTokens) return true;
     this.tokens = await this.store.load();
     if (
       this.tokens &&
@@ -345,6 +347,10 @@ export class RemoteTvApi {
       if (epoch !== this.epoch)
         throw new DOMException("Session changed", "AbortError");
     };
+    if (this.pendingTokens) {
+      await this.persistTokens();
+      current();
+    }
     try {
       const result = await this.exchange<T>(path, method, body, signal, token);
       current();
@@ -383,7 +389,7 @@ export class RemoteTvApi {
     if (!this.refreshFlight) {
       const epoch = this.authEpoch;
       const rotate = async () => {
-        const saved = await this.store.load();
+        const saved = this.pendingTokens ?? await this.store.load();
         if (epoch !== this.authEpoch) return;
         if (saved && saved.refreshToken !== this.tokens?.refreshToken) {
           this.tokens = saved;
@@ -404,6 +410,7 @@ export class RemoteTvApi {
             epoch === this.authEpoch
           ) {
             this.tokens = null;
+            this.pendingTokens = undefined;
             await this.store.clear();
           }
           throw error;
@@ -434,9 +441,20 @@ export class RemoteTvApi {
       accountId: String(value.account_id ?? ""),
       sessionId: String(value.session_id ?? ""),
     };
-    await this.store.save(tokens);
     this.tokens = tokens;
+    this.pendingTokens = tokens;
     this.identityFlight = undefined;
+    await this.persistTokens();
+  }
+  private async persistTokens() {
+    const tokens = this.pendingTokens;
+    if (!tokens) return;
+    try {
+      await this.store.save(tokens);
+      if (this.pendingTokens === tokens) this.pendingTokens = undefined;
+    } catch {
+      // A consumed refresh token must never replace its unsaved successor.
+    }
   }
   pair(signal?: AbortSignal) {
     return this.exchange<Pairing>(
@@ -491,6 +509,7 @@ export class RemoteTvApi {
     this.authEpoch++;
     this.profile = "";
     this.tokens = null;
+    this.pendingTokens = undefined;
     this.identityFlight = undefined;
     await this.store.clear();
   }
