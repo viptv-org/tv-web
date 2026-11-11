@@ -11,11 +11,8 @@ const artwork = (page: Page) => page.evaluate(() => {
   const nodes: { id: number; src: string; visible: boolean }[] = [];
   function walk(node: any) {
     const src = node.texture?.props?.src;
-    let parent = node.parent, slowFrame = false;
-    for (let depth = 0; parent && depth < 4; depth++, parent = parent.parent)
-      if (parent.children?.some((child:any) => typeof child.texture?.props?.src === 'string' && child.texture.props.src.includes('/slow-background.jpg'))) slowFrame = true;
-    if (src && (typeof src === 'string' && src.includes('/slow-') || slowFrame))
-      nodes.push({ id: node.id, src: typeof src === 'string' ? src : 'prepared-logo-bitmap', visible: node.isRenderable });
+    if (typeof src === 'string' && (src.includes('/slow-') || src.includes('/api/images/clearlogo/v1/tt999.png')))
+      nodes.push({ id: node.id, src, visible: node.isRenderable });
     node.children?.forEach(walk);
   }
   walk((window as any).__viptvRenderer.stage.root);
@@ -28,14 +25,18 @@ for (const first of [true, false]) test(`slow ${first ? 'first' : 'replacement'}
   const fixture = await installRemoteBackend(page, baseURL!);
   const home = fixture.bootstrap().home!;
   const synopsis = 'Slow title synopsis';
-  const slow = { ...fixture.card, identity: { ...fixture.card.identity, id: 'slow-title' }, description: synopsis, logo: `${baseURL}/slow-logo.png`, landscape: `${baseURL}/slow-background.jpg` };
+  const slow = { ...fixture.card, identity: { ...fixture.card.identity, id: 'slow-title' }, description: synopsis, logo: 'https://images.metahub.space/logo/medium/tt999/img', landscape: `${baseURL}/slow-background.jpg` };
   const initial = { ...fixture.card, description: 'Current title synopsis' };
   home.hero = first ? slow : initial;
   home.featured = first ? [slow] : [initial, slow];
+  await page.route('**/api/bootstrap', route => {
+    fixture.requests.push({ method: route.request().method(), path: '/api/bootstrap', body: route.request().postDataJSON() });
+    return route.fulfill({ json: { ...fixture.bootstrap(), clearlogo_image_supported: true } });
+  });
   let releaseLogo!: () => void, releaseBackground!: () => void;
   const logo = new Promise<void>(resolve => { releaseLogo = resolve; });
   const background = new Promise<void>(resolve => { releaseBackground = resolve; });
-  await page.route('**/slow-logo.png', async route => { await logo; await route.fulfill({ path: referenceRoot + '/assets/274e704ffc2eeb3e73918396e294edb0.png', contentType: 'image/png' }).catch(() => {}); });
+  await page.route('**/api/images/clearlogo/v1/tt999.png', async route => { await logo; await route.fulfill({ path: referenceRoot + '/assets/274e704ffc2eeb3e73918396e294edb0.png', contentType: 'image/png' }).catch(() => {}); });
   await page.route('**/slow-background.jpg', async route => { await background; await route.fulfill({ path: referenceRoot + '/assets/3da010bb588e70c5323088b2c66658fe.jpg', contentType: 'image/jpeg' }).catch(() => {}); });
   await page.goto('/tv/?focusdebug=1');
   await expect(page.locator('html')).toHaveAttribute('data-tv-ready', 'true');

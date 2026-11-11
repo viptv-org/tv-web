@@ -4015,3 +4015,17 @@ discovery/admission, session/bootstrap/history, catalog/channel paging, househol
 settings loading and root activation routing. Those workflows need further scoped
 controller design; this pass does not claim complete separation of the application.
 Combined hardware qualification remains a separate gate.
+
+## Hero artwork paint order
+
+The hero keeps dynamic backdrop frames and foreground artwork in fixed sibling
+containers, with one permanent scrim between them. Flat-white artwork browser
+regression coverage verifies the live backdrop/scrim/logo order, retained prepared
+node identities, dark synopsis/shelf backgrounds, and undimmed green clearlogos
+and portrait previews in WebGL and Canvas. The previous scene painted white (255)
+at (80,550); the corrected scene paints below 65 at that point. Existing focused
+browser cases cover coordinated replacement, synopsis authority, prepared logos,
+first/replacement artwork after the former deadline, and abandoned callbacks.
+Production integrity/type/build checks and 29 targeted unit cases pass. Native
+retirement units verify both opacity completion orders and cancellation; no new
+physical-device or native pixel qualification is implied.
