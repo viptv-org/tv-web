@@ -1,6 +1,9 @@
 import { expect, test, type Page } from '@playwright/test';
 import { installRemoteBackend } from '../preview/remote-backend';
 import { openNavigation } from './navigation-helpers';
+import { createRequire } from 'node:module';
+
+const { PNG } = createRequire(import.meta.url)('pngjs');
 
 const state = (page: Page) => page.locator('html');
 const scene = (page: Page) => page.evaluate(() => {
@@ -41,6 +44,10 @@ test('a short recovery message uses a compact centered dialog with padded action
   const action = (await scene(page)).find(node => node.text === 'Try again');
   expect(action.x).toBeGreaterThan(title.parent.x + 24);
   expect(action.y).toBeGreaterThan(title.y + 80);
+  const gap = PNG.sync.read(await page.screenshot({ clip: { x: title.parent.x + 40, y: title.parent.y + 82, width: 560, height: 12 } }));
+  const colors = new Set<string>();
+  for (let index = 0; index < gap.data.length; index += 4) colors.add(gap.data.subarray(index, index + 4).toString('hex'));
+  expect([...colors]).toEqual(['161618ff']);
   await page.screenshot({ path: testInfo.outputPath('short-recovery.png') });
 });
 

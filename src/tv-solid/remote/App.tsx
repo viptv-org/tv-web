@@ -51,6 +51,9 @@ import { HomeShelves } from "./HomeShelves";
 import { homeCardSize } from "./focus-frame";
 import { MediaTile as Tile } from "./MediaTile";
 import { DetailContent } from "./DetailContent";
+import { SettingsView } from "./SettingsView";
+import { BrowseControls } from "./BrowseControls";
+import { OverlayViewport } from "./OverlayViewport";
 import { bottomTitleY } from "./title-layout";
 import { BusyIndicator, BusySpinner } from "./BusyIndicator";
 import { createCoherentHero, HeroArtwork } from "./CoherentHero";
@@ -77,7 +80,6 @@ import {
  defineScreen,
  TvView,
  KeyedFor,
- ModalLayerContext
 } from "../runtime";
 import {
  exitWebos 
@@ -90,7 +92,6 @@ import {
   topBarGradient,
   livePreviewScrim,
   avatar,
-  navIcon,
   outline
 } from "./visuals";
 import {
@@ -7082,45 +7083,8 @@ export function createRemoteTvApp(
                 />
               </Show>
               <Show when={screen() === "movie" || screen() === "series" || screen() === "anime"}>
-                <For
-                  each={[
-                    {
-                      id: "catalog",
-                      label: catalog()?.name ?? "Choose a catalog",
-                    },
-                    ...((catalog()?.controls.length ?? 0) > 0
-                      ? [{ id: "filters", label: "Filters" }]
-                      : []),
-                  ]}
-                >
-                  {(control, index) => (
-                    <TvView
-                      x={index() === 0 ? 96 : 480 + (index() - 1) * 224}
-                      y={140}
-                      w={index() === 0 ? 360 : 200}
-                      h={64}
-                      color={
-                        zone() === "filters" && column() === index()
-                          ? palette.text
-                          : "rgba(255,255,255,.12)"
-                      }
-                    >
-                      <Label
-                        x={22}
-                        centerY={32}
-                        size={23}
-                        maxwidth={index() === 0 ? 316 : 156}
-                        maxlines={1}
-                        content={control.label}
-                        color={
-                          zone() === "filters" && column() === index()
-                            ? "#111113"
-                            : palette.text
-                        }
-                      />
-                    </TvView>
-                  )}
-                </For>
+                <BrowseControls catalog={catalog()?.name ?? "Choose a catalog"} filters={(catalog()?.controls.length ?? 0) > 0}
+                  focused={zone() === "filters"} index={column()} />
               </Show>
               <Show when={screen() === "search"}>
                 <SearchInput
@@ -7723,217 +7687,8 @@ export function createRemoteTvApp(
               </Show>
             </Show>
             <Show when={screen() === "settings"}>
-              <TvView w={560} h={1080} color={palette.surface} />
-              <Label
-                x={96}
-                y={96}
-                size={44}
-                font="Onest700"
-                content="Settings"
-              />
-              <For each={settingsTabs}>
-                {(tab, i) => (
-                  <TvView
-                    x={72}
-                    y={196 + i() * 80}
-                    w={440}
-                    h={72}
-                    color={
-                      settingsTab() === i() && zone() === "settings-nav"
-                        ? palette.text
-                        : settingsTab() === i()
-                          ? "#333333"
-                          : "rgba(0,0,0,0)"
-                    }
-                  >
-                    <TvView
-                      x={24}
-                      centerY={36}
-                      w={28}
-                      h={28}
-                      src={navIcon(
-                        tab,
-                        settingsTab() === i() && zone() === "settings-nav",
-                        settingsTab() === i(),
-                      )}
-                    />
-                    <Label
-                      x={70}
-                      centerY={38}
-                      size={26}
-                      font={settingsTab() === i() ? "Onest700" : "Onest500"}
-                      content={tab}
-                      color={
-                        settingsTab() === i() && zone() === "settings-nav"
-                          ? "#111113"
-                          : settingsTab() === i()
-                            ? palette.text
-                            : palette.muted
-                      }
-                    />
-                  </TvView>
-                )}
-              </For>
-              <Label
-                x={640}
-                y={96}
-                size={40}
-                font="Onest700"
-                content={settingsTabs[settingsTab()]}
-              />
-              <Show when={loading() && !settingsItems().length}>
-                <Label
-                  x={640}
-                  y={220}
-                  size={26}
-                  color={palette.muted}
-                  content="Loading settings…"
-                />
-              </Show>
-              <For
-                each={settingsItems().slice(
-                  zone() === "settings-content" ? Math.max(0, column() - 5) : 0,
-                  (zone() === "settings-content"
-                    ? Math.max(0, column() - 5)
-                    : 0) + 7,
-                )}
-              >
-                {(item, i) => (
-                  <TvView
-                    x={640}
-                    y={220 + i() * 108}
-                    w={1184}
-                    h={96}
-                    color={
-                      zone() === "settings-content" &&
-                      column() === i() + Math.max(0, column() - 5)
-                        ? palette.text
-                        : palette.surface
-                    }
-                  >
-                    <Label
-                      x={28}
-                      centerY={item.description ? 32 : 48}
-                      size={26}
-                      font="Onest600"
-                      maxwidth={730}
-                      content={item.label}
-                      color={
-                        zone() === "settings-content" &&
-                        column() === i() + Math.max(0, column() - 5)
-                          ? "#111113"
-                          : palette.text
-                      }
-                    />
-                    <Label
-                      x={28}
-                      y={57}
-                      size={20}
-                      maxwidth={900}
-                      content={(item.description ?? "").replace(
-                        /^★\s*/,
-                        "e.g. ",
-                      )}
-                      color={
-                        zone() === "settings-content" &&
-                        column() === i() + Math.max(0, column() - 5)
-                          ? "#4A4945"
-                          : palette.muted
-                      }
-                    />
-                    <Show when={item.toggle !== undefined}>
-                      <TvView
-                        x={1088}
-                        centerY={48}
-                        w={68}
-                        h={38}
-                        color={item.toggle ? palette.accent : "#494949"}
-                      >
-                        <TvView
-                          x={item.toggle ? 34 : 4}
-                          y={4}
-                          w={30}
-                          h={30}
-                          color={item.toggle ? palette.bg : palette.text}
-                        />
-                      </TvView>
-                    </Show>
-                    <Show when={item.swatches}>
-                      {(colors: () => string[]) => (
-                        <For each={colors()}>
-                          {(swatch, index) => (
-                            <TvView
-                              x={926 + index() * 62}
-                              centerY={48}
-                              w={44}
-                              h={44}
-                              color={swatch}
-                            >
-                              <Show
-                                when={
-                                  swatch === item.value &&
-                                  zone() === "settings-content" &&
-                                  column() === i() + Math.max(0, column() - 5)
-                                }
-                              >
-                                <TvView
-                                  x={-6}
-                                  y={-6}
-                                  w={56}
-                                  h={56}
-                                  src={outline(56, 56, 28, 3, "#F4F2EE")}
-                                />
-                                <TvView
-                                  x={-3}
-                                  y={-3}
-                                  w={50}
-                                  h={50}
-                                  src={outline(50, 50, 25, 3, "#0B0B0C")}
-                                />
-                              </Show>
-                            </TvView>
-                          )}
-                        </For>
-                      )}
-                    </Show>
-                    <Show when={item.toggle === undefined && !item.swatches}>
-                      <Label
-                        x={760}
-                        centerY={48}
-                        w={item.chevron ? 360 : 390}
-                        align="right"
-                        size={24}
-                        maxlines={1}
-                        content={item.value ?? (item.chevron ? "" : "›")}
-                        color={
-                          zone() === "settings-content" &&
-                          column() === i() + Math.max(0, column() - 5)
-                            ? "#111113"
-                            : palette.muted
-                        }
-                      />
-                      <Show when={item.chevron}>
-                        <TvView
-                          x={1128}
-                          centerY={48}
-                          w={24}
-                          h={24}
-                          src={icon(
-                            "chevron",
-                            zone() === "settings-content" &&
-                              column() === i() + Math.max(0, column() - 5),
-                            2.2,
-                            zone() === "settings-content" &&
-                              column() === i() + Math.max(0, column() - 5)
-                              ? "#4A4945"
-                              : "#B6B4AF",
-                          )}
-                        />
-                      </Show>
-                    </Show>
-                  </TvView>
-                )}
-              </For>
+              <SettingsView tabs={settingsTabs} tab={settingsTab()} items={settingsItems()}
+                zone={zone()} column={column()} loading={loading()} />
             </Show>
             </TvView>
             <Show when={screen() === "player" && !overlay() && advancing()}>
@@ -8065,13 +7820,9 @@ export function createRemoteTvApp(
           </TvView>
           <Show when={overlay()}>
             {(modal) => (
-              <ModalLayerContext.Provider value={true}>
-              <>
-                <Show when={modal().kind !== "next"}>
-                  <TvView w={sceneWidth()} h={1080} color="rgba(0,0,0,.6)" />
-                </Show>
+              <OverlayViewport order={10} shade={modal().kind !== "next" ? "rgba(0,0,0,.6)" : undefined} shadeWidth={sceneWidth()}>
                 <Show when={modal().kind === "next"}>
-                  <TvView w={1920} h={1080} src={`${import.meta.env.BASE_URL}assets/player/end-scrim.png`} />
+                  <TvView w={1920} h={1080} zIndex={-1} src={`${import.meta.env.BASE_URL}assets/player/end-scrim.png`} />
                   <TvView x={96} y={reducedMotion() || overlayEntered() ? 616 : 632} alpha={reducedMotion() || overlayEntered() ? 1 : 0} transition={reducedMotion() ? undefined : nextPanelMotion}>
                     <Label w={900} maxlines={1} size={22} content={`${activeAction()?.card.title ?? "Episode"} · Credits`} color={palette.body} />
                   </TvView>
@@ -9130,27 +8881,25 @@ export function createRemoteTvApp(
                     {keyboard(true)}
                   </TvView>
                 </Show>
-              </>
-              </ModalLayerContext.Provider>
+              </OverlayViewport>
             )}
           </Show>
           <Show when={sourceLoading() && !overlay() && screen() !== "player" && !error()}>
-            <ModalLayerContext.Provider value={true}>
-              <TvView x={480} y={864} w={960} h={144} color={palette.surface}>
+            <OverlayViewport order={15}>
+              <TvView x={480} y={864} w={960} h={144} zIndex={1} color={palette.surface}>
                 <Label x={32} y={24} size={28} font="Onest700" content="Finding a matching source…" />
                 <Label x={32} y={76} size={22} color={palette.muted} content="Press Back to cancel" />
               </TvView>
-            </ModalLayerContext.Provider>
+            </OverlayViewport>
           </Show>
           <Show when={error()}>
-            <ModalLayerContext.Provider value={true}>
-            <TvView w={1920} h={1080} color="rgba(0,0,0,.55)" />
+            <OverlayViewport order={20} shade="rgba(0,0,0,.55)">
             <StatusDialog
               title="Couldn’t continue"
               message={error()}
               action={screen() === "player" ? "Choose a source" : "Try again"}
             />
-            </ModalLayerContext.Provider>
+            </OverlayViewport>
           </Show>
           <Show when={notice() || pending()}>
             <TvView
@@ -9170,12 +8919,12 @@ export function createRemoteTvApp(
             </TvView>
           </Show>
           <Show when={screenSaver()}>
-            <ModalLayerContext.Provider value={true}>
-              <TvView w={1920} h={1080} color="#0B0B0C">
+            <OverlayViewport order={40}>
+              <TvView w={1920} h={1080} zIndex={-1} color="#0B0B0C">
                 <PosterWall />
               </TvView>
               <TvView w={1920} h={1080} color="rgba(11,11,12,.72)" />
-            </ModalLayerContext.Provider>
+            </OverlayViewport>
           </Show>
         </TvView>
         );
