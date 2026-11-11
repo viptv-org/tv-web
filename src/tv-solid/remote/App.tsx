@@ -2012,7 +2012,7 @@ export function createRemoteTvApp(
             zone() === "nav" ? navs()[column()]?.id : undefined;
           setNavigation(fresh.navigation);
           if (
-            ["movie", "series", "anime", "search", "live", "library"].includes(
+            ["movie", "series", "anime", "search", "live", "calendar", "library"].includes(
               screen(),
             ) &&
             !navs().some((item) => item.id === screen())
@@ -2577,7 +2577,7 @@ export function createRemoteTvApp(
     }
     async function restorePrevious(previous: (typeof history)[number]) {
       if (
-        ["movie", "series", "anime", "search", "live", "library"].includes(
+        ["movie", "series", "anime", "search", "live", "calendar", "library"].includes(
           previous.screen,
         ) &&
         !navs().some((item) => item.id === previous.screen)
@@ -5462,7 +5462,9 @@ export function createRemoteTvApp(
               ? "hero"
               : screen() === "settings"
                 ? "settings-nav"
-                : screen() === "search"
+                : screen() === "calendar"
+                  ? "calendar-days"
+                  : screen() === "search"
                   ? "keyboard"
                   : screen() === "library" && libraryControlCount()
                     ? "library-controls"
@@ -5519,7 +5521,7 @@ export function createRemoteTvApp(
             setCalendarDay((i) => Math.max(0, Math.min(count - 1, i + dx)));
             setCalendarEntry(0);
           }
-          if (dy > 0) {
+          if (dy > 0 && calendarDayEntries().length) {
             setZone("calendar-list");
             setCalendarEntry(0);
           }
