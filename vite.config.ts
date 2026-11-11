@@ -35,7 +35,7 @@ export default defineConfig(({ command }) => ({
   plugins: [solidStartup(), remoteBoundary(), solid({ include: /src\/tv-solid\/.*\.tsx$/, solid: { moduleName: "@solidtv/solid", generate: "universal" } })],
   // The player contract resolves from the pinned vendored source, not the
   // generated dist-js of a sibling checkout.
-  resolve: { dedupe: ["solid-js", "@solidtv/solid"], alias: { "@viptv/video": fileURLToPath(new URL("./vendor/video/src/index.ts", import.meta.url)) } },
+  resolve: { dedupe: ["solid-js", "@solidtv/solid", "@solidtv/renderer"], alias: { "@viptv/video": fileURLToPath(new URL("./vendor/video/src/index.ts", import.meta.url)) } },
   base: command === "build" ? "/tv/" : "/",
   // TV entrypoints retain ES2017. BigInt exists only in the lazily imported
   // MediaBunny chunk, gated on a modern WebCodecs runtime before import.
