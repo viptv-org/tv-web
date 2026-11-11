@@ -132,6 +132,7 @@ test("D-pad focus updates without network requests and restores after details", 
   expect(fixture.requests).toHaveLength(1);
   await page.keyboard.press("Enter");
   await expect(screen(page)).toHaveAttribute("data-tv-screen", "detail");
+  await expect(screen(page)).toHaveAttribute("data-tv-ready", "true");
   await page.keyboard.press("Escape"); // Return to the remembered Home card.
   await expect(screen(page)).toHaveAttribute("data-tv-screen", "home");
   await expect(screen(page)).toHaveAttribute("data-tv-focus", before!);

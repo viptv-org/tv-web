@@ -32,7 +32,7 @@ import { reloadImages } from "./image-source";
 import { clearLogoCache } from "./visuals";
 import { CalendarBoard, calendarDayKey, calendarDays } from "./CalendarBoard";
 import { StatusDialog } from "./StatusDialog";
-import { initialSeasonIndex, seasonLabel, episodeActionLabel, seasonEpisodes } from "./seasons";
+import { initialSeasonIndex, seasonLabel, seasonEpisodes } from "./seasons";
 import { RowFocus } from "./row-focus";
 import { HomeContent } from "./HomeContent";
 
@@ -66,7 +66,6 @@ import { TracksDrawer } from "./TracksDrawer";
 import { ChoiceDrawer } from "./ChoiceDrawer";
 import { createCoherentHero, HeroArtwork } from "./CoherentHero";
 import { presentationCard, presentationKey } from "./presentation-card";
-import { sourceProvider as providerLabel } from "./source-presentation";
 import {
   channelKey,
   edgeRequest,
@@ -106,7 +105,6 @@ import {
 import { LiveAnswer, LiveNoSource } from "./liveEmptyViews";
 import { guideWindowOf } from "./guideWindow";
 import {
-  pickSourceSpread,
   sourceEmptyCopy,
   sourceStatusCopy,
 } from "./sourceStatus";
@@ -129,6 +127,8 @@ import { createIdleScreenSaver } from "./idle-screen-saver";
 import { createTextKeyboard } from "./text-keyboard";
 import { createHeldSelect } from "./held-select";
 import { createOverlayController } from "./overlay-controller";
+import { createDetailPresentation } from "./detail-presentation";
+import { createSourcePresentation } from "./source-picker/presentation";
 import { createSettingsNavigation } from "./navigation/settings";
 import { createProfilesNavigation } from "./navigation/profiles";
 import { createCalendarNavigation } from "./navigation/calendar";
@@ -253,100 +253,10 @@ export function createRemoteTvApp(
       [controls, setControls] = createSignal<Controls>(),
       [catalog, setCatalog] = createSignal<Catalog>(),
       [filters, setFilters] = createSignal<Record<string, string[]>>({});
-    const continuingCard = (item: Card) => {
-      const row = home()?.rows?.find((value) => value.id === "continue");
-      return (row?.cards ?? []).find((card) => {
-        const progress = card.progress ?? 0;
-        if (progress <= 0 || progress >= 1) return false;
-        if (item.identity.kind === "movie")
-          return (
-            card.identity.kind === "movie" &&
-            card.identity.id === item.identity.id &&
-            card.identity.episode == null
-          );
-        if (item.identity.kind === "series" && item.identity.episode == null)
-          return (
-            card.identity.kind === "series" &&
-            card.parent_identity?.id === item.identity.id &&
-            (card.identity.episode?.episode ?? 0) > 0
-          );
-        return false;
+    const {hasEpisodes: detailHasEpisodes, episodes: detailEpisodes, cursor: detailCursor, target: detailTarget,
+      label: detailActionLabel, progress: detailPlayProgress, remaining: detailPlayRemaining} = createDetailPresentation({
+        home, detail, action: detailAction, selected, season: seasonIndex,
       });
-    };
-    const remainingLabel = (card: Card) => {
-      const progress = card.progress ?? 0,
-        runtime = card.metadata?.runtime_minutes ?? 0;
-      if (runtime > 0)
-        return `${Math.max(1, Math.round((1 - progress) * runtime))}m left`;
-      return "";
-    };
-    const detailHasEpisodes = () => !!(detail()?.seasons.length || detail()?.episodes.length);
-    const detailEpisodes = createMemo(() => seasonEpisodes(detail(), seasonIndex()));
-    const detailCursor = () => {
-      const value = detail(), count = value?.seasons[seasonIndex()]?.episode_count;
-      return count != null && detailEpisodes().length >= count ? null : value?.next_cursor;
-    };
-    const detailTarget = createMemo(() => {
-      const value = detail();
-      if (!value) return undefined;
-      const action = detailAction();
-      const regular = (card: Card | undefined) =>
-        card?.identity.episode != null &&
-        (card.identity.episode.season ?? 1) > 0;
-      let card: Card | undefined = action?.card.identity.episode && (action.resume || selected()?.identity.episode)
-        ? action.card
-        : regular(action?.card)
-          ? action!.card
-        : regular(value.item)
-          ? value.item
-          : [...value.episodes]
-              .filter((episode) => regular(episode))
-              .sort((left, right) => {
-                const season =
-                  (left.identity.episode?.season ?? 1) -
-                  (right.identity.episode?.season ?? 1);
-                return season
-                  ? season
-                  : (left.identity.episode?.episode ?? 0) -
-                      (right.identity.episode?.episode ?? 0);
-              })[0];
-      if (!card && value.item.identity.kind !== "series") card = value.item;
-      if (!card && action?.card.identity.episode && !value.seasons.some(season => season.season > 0)) card = action.card;
-      if (!card) return undefined;
-      const resume = !!action?.resume && action.card === card;
-      const verb = resume ? "Resume" : "Play";
-      const label = episodeActionLabel(card, verb);
-      // The app's detail screen resumes from the Continue Watching rows even
-      // when the title was opened from My List, whose cards carry no progress.
-      // The continue card is also the right play target: it holds the exact
-      // episode and provider fields.
-      if (!selected()?.identity.episode && !value.item.identity.episode) {
-        const continuing = continuingCard(value.item);
-        if (continuing) {
-          const progress = continuing.progress ?? 0;
-          return {
-            card: continuing,
-            label: episodeActionLabel(continuing, "Resume"),
-            progress,
-            remaining: remainingLabel(continuing),
-          };
-        }
-      }
-      return {
-        card,
-        label,
-        progress: action?.resume ? (action.progress ?? 0) : 0,
-        remaining: action?.remaining_label ?? "",
-      };
-    });
-    const detailActionLabel = () =>
-      detailTarget()?.label ?? detailAction()?.label ?? "Play";
-    const detailPlayProgress = () =>
-      detailTarget()?.progress ??
-      (detailAction()?.resume ? (detailAction()?.progress ?? 0) : 0);
-    const detailPlayRemaining = () =>
-      detailTarget()?.remaining ||
-      (detailAction()?.resume ? (detailAction()?.remaining_label ?? "") : "");
     const [, setLiveFavorites] = createSignal<Set<string>>();
     const [livePages, setLivePages] = createSignal<LivePage[]>([]),
       [channels, setChannels] = createSignal<Channel[]>([]),
@@ -538,90 +448,14 @@ export function createRemoteTvApp(
         );
       });
     });
-    const sourceProviders = createMemo(() => {
-      const counts = new Map<string, number>();
-      for (const source of sources()) {
-        const label = providerLabel(source);
-        counts.set(label, (counts.get(label) ?? 0) + 1);
-      }
-      return [...counts].sort(([left], [right]) => left.localeCompare(right));
-    });
-    const visibleSources = createMemo(() => {
-      const filter = sourceProviderFilter();
-      return filter
-        ? sources().filter((source) => providerLabel(source) === filter)
-        : sources();
-    });
-    createEffect(() => {
-      const filter = sourceProviderFilter();
-      if (filter && !sources().some((source) => providerLabel(source) === filter))
-        setSourceProviderFilter(undefined);
-      if (overlay()?.kind === "sources" && choice() >= visibleSources().length)
-        setChoice(Math.max(0, visibleSources().length - 1));
-    });
-    const qualityMenuOptions = createMemo<SourceMenuOption[]>(() => [
-      {
-        id: "quality-all",
-        label: "All",
-        count: sourcePage()?.total ?? sources().length,
-        height: undefined,
-      },
-      ...(sourcePage()?.quality_filters ?? []).map((filter) => ({
-        id: `quality-${filter.height}`,
-        label: filter.label,
-        count: filter.count,
-        height: filter.height,
-      })),
-    ]);
-    const providerMenuOptions = createMemo<SourceMenuOption[]>(() => [
-      {
-        id: "provider-all",
-        label: "All sources",
-        count: sources().length,
-        provider: undefined,
-      },
-      ...sourceProviders().map(([label, count]) => ({
-        id: `provider-${label}`,
-        label,
-        count,
-        provider: label,
-      })),
-    ]);
+    const {providers: sourceProviders, visible: visibleSources, qualityOptions: qualityMenuOptions, providerOptions: providerMenuOptions,
+      quality: sourceQualityValue, provider: sourceProviderValue, focused: focusedSource, addonCount: sourceAddonCount, spread: sourceSpread} = createSourcePresentation({
+        sources, page: sourcePage, provider: {current: sourceProviderFilter, clear: () => { setSourceProviderFilter(undefined); }}, height: sourceHeight,
+        open: () => overlay()?.kind === "sources", opening: () => !!openingSource(), loading: sourceLoading,
+        selection: {index: choice, select: index => { setChoice(index); }},
+      });
     const [openSourceMenuOptions, setOpenSourceMenuOptions] = createSignal<SourceMenuOption[]>([]);
     const sourceMenuOptions = () => openSourceMenuOptions();
-    const sourceQualityValue = () => {
-      const height = sourceHeight();
-      if (height === undefined) return "All";
-      return (
-        sourcePage()?.quality_filters.find(
-          (filter) => filter.height === height,
-        )?.label ?? `${height}p`
-      );
-    };
-    const sourceProviderValue = () =>
-      sourceProviderFilter() ?? "All sources";
-    const focusedSource = () => visibleSources()[choice()];
-    const sourceAddonCount = () =>
-      new Set(
-        sources()
-          .map(
-            (source) =>
-              source.source_addon_id ??
-              source.view?.addon_label ??
-              source.source_name ??
-              "",
-          )
-          .filter(Boolean),
-      ).size;
-    // The picker's own facts decide its copy (SRC-DRAWER-001): discovery is the
-    // first source request, opening is real playback preparation.
-    const sourceSpread = () =>
-      pickSourceSpread({
-        open: overlay()?.kind === "sources",
-        opening: !!openingSource(),
-        discovering: sourceLoading(),
-        rows: sources().length,
-      });
     const [snapshot, setSnapshot] = createSignal<PlayerSnapshot>(),
       [showControls, setShowControls] = createSignal(true),
       [seek, setSeek] = createSignal<number>(),

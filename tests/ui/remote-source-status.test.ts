@@ -136,11 +136,13 @@ describe("The shipped TV entry runs this code (#34)", () => {
   );
 
   const footer = readFileSync(resolve(root, "src/tv-solid/remote/source-picker/SourceFooter.tsx"), "utf8");
+  const projection = readFileSync(resolve(root, "src/tv-solid/remote/source-picker/presentation.ts"), "utf8");
 
   it("renders the contract's states from the shared module", () => {
     expect(entry).toContain('from "./sourceStatus"');
-    expect(entry).toContain("pickSourceSpread({");
-    expect(entry).toContain('open: overlay()?.kind === "sources"');
+    expect(entry).toContain("createSourcePresentation({");
+    expect(projection).toContain("pickSourceSpread({");
+    expect(entry).toContain('open: () => overlay()?.kind === "sources"');
     expect(entry).toContain("sourceStatusCopy(sourceSpread())");
     expect(entry).toContain("sourceEmptyCopy(sourceSpread())");
     expect(entry).toContain("<SourceFooter");
@@ -166,6 +168,7 @@ describe("The shipped TV entry runs this code (#34)", () => {
     expect(entry.indexOf("setOpeningSource(source);")).toBeLessThan(
       entry.indexOf("await player.start("),
     );
-    expect(entry).toContain("opening: !!openingSource()");
+    expect(entry).toContain("opening: () => !!openingSource()");
+    expect(projection).toContain("opening: !!options.opening()");
   });
 });
