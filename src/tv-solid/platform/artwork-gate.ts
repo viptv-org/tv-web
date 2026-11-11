@@ -21,7 +21,7 @@ export class ArtworkGate<T> {
     if (scope !== this.scope) { this.scope=scope;this.currentKey="";this.currentFailed=new Set();this.pending=undefined;this.show(undefined,new Set()); }
     if (value === undefined) { this.currentKey="";this.pending=undefined;this.prepare(undefined);this.show(undefined,new Set());return; }
     if (key === this.currentKey) { this.pending=undefined;this.prepare(undefined);this.show(value,this.currentFailed);return; }
-    if (key === this.pending?.key) { this.pending.value=value;return; }
+    if (key === this.pending?.key) { this.pending={...this.pending,value};this.prepare(this.pending);return; }
     const request = this.pending = { id: ++this.serial, key, value, waiting: new Set(resources), failed: new Set<string>() };
     this.prepare(request);
     if (!request.waiting.size) this.finish(request.id);
@@ -34,8 +34,7 @@ export class ArtworkGate<T> {
   }
   finish(id: number) {
     const request=this.pending;
-    if (!request || request.id !== id) return;
-    for (const resource of request.waiting) request.failed.add(resource);
+    if (!request || request.id !== id || request.waiting.size) return;
     this.pending=undefined;this.currentKey=request.key;
     this.currentFailed=request.failed;
     this.show(request.value,request.failed);this.prepare(undefined);

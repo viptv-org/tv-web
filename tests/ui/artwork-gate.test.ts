@@ -22,16 +22,23 @@ it("keeps the current presentation and fences superseded artwork callbacks", () 
 });
 it("updates pending metadata without restarting the artwork request", () => {
   const {gate,show,pending}=setup();gate.request("profile","a","summary",["logo"]);const id=pending().id;
-  gate.request("profile","a","description",["logo"]);expect(pending().id).toBe(id);
+  gate.request("profile","a","description",["logo"]);expect(pending().id).toBe(id);expect(pending().value).toBe("description");
   gate.settled(id,"logo");expect(show).toHaveBeenLastCalledWith("description",new Set());
 });
-it("settles failed or timed out resources once and keeps their fallback on refresh", () => {
+it("settles actual failures once and keeps their fallback on refresh", () => {
   const {gate,show,pending}=setup();gate.request("profile","a","first",["background","logo"]);const id=pending().id;
-  gate.settled(id,"background");gate.finish(id);
+  gate.settled(id,"background");gate.settled(id,"logo",true);
   expect(show).toHaveBeenLastCalledWith("first",new Set(["logo"]));show.mockClear();
   gate.settled(id,"logo");expect(show).not.toHaveBeenCalled();
   gate.request("profile","a","updated",["background","logo"]);
   expect(show).toHaveBeenLastCalledWith("updated",new Set(["logo"]));
+});
+it("keeps waiting artwork eligible for valid completion after a deadline", () => {
+  const {gate,show,pending}=setup();gate.request("profile","a","first",["background","logo"]);
+  const id=pending().id;show.mockClear();
+  gate.finish(id);expect(show).not.toHaveBeenCalled();expect(pending().id).toBe(id);
+  gate.settled(id,"background");expect(show).not.toHaveBeenCalled();
+  gate.settled(id,"logo");expect(show).toHaveBeenLastCalledWith("first",new Set());
 });
 it("clears another profile's presentation and invalidates its pending loads", () => {
   const {gate,show,pending}=setup();gate.request("one","a","old",["logo"]);const old=pending().id;

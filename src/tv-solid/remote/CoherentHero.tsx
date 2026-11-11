@@ -50,7 +50,8 @@ export function createCoherentHero(source: Accessor<Card | undefined>, scope: Ac
     const currentScope=scope();
     if (!ready()) {gate.hold(currentScope);return;}
     const next=source(), kind=mode(), box=logoBox();
-    const card=next ? presentationCard(currentScope === previousScope ? untrack(shown) : undefined,next) : undefined;
+    const previous = currentScope === previousScope ? untrack(shown) ?? untrack(pending)?.value.card : undefined;
+    const card=next ? presentationCard(previous,next) : undefined;
     previousScope=currentScope;
     const background=kind === "landscape" ? card?.view?.preview?.background ?? card?.landscape ?? card?.poster : card?.landscape ?? card?.poster;
     const poster=kind === "portrait" ? card?.poster ?? undefined : undefined;
@@ -58,18 +59,17 @@ export function createCoherentHero(source: Accessor<Card | undefined>, scope: Ac
       card ? {card,background:background ?? undefined,poster,kind,logoBox:box} : undefined,
       [...(background ? ["background"] : []),...(poster ? ["poster"] : []),...(card?.logo ? ["logo"] : [])]);
   });
-  createEffect(() => {
-    const request=pending();if (!request) return;
-    const timer=setTimeout(() => gate.finish(request.id),2500);
-    onCleanup(() => clearTimeout(timer));
-  });
   onCleanup(() => {clearTimeout(retireTimer);gate.request("disposed","",undefined,[]);});
   const frames=createMemo(() => {
     const displayed=current(), request=pending(), outgoing=retiring();
     if (request) return [...(displayed ? [displayed] : []),{...request.value,id:request.id,failed:new Set<string>(),staged:true}];
     return [...(outgoing ? [outgoing] : []),...(displayed ? [displayed] : [])];
   });
-  return {card:shown,frames,current:() => current()?.id,mode:() => current()?.kind,
+  const displayCard = createMemo(() => {
+    const displayed = shown(), preparing = pending()?.value.card;
+    return displayed ?? (preparing ? {...preparing,logo:null} : undefined);
+  });
+  return {card:displayCard,frames,current:() => current()?.id,mode:() => current()?.kind ?? pending()?.value.kind,
     retiring:() => retiring()?.id, retire:(id:number) => { if (untrack(retiring)?.id === id) setRetiring(undefined); },
     settled:(id:number,resource:string,failed=false) => gate.settled(id,resource,failed)};
 }

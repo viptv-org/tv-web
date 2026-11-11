@@ -7,6 +7,10 @@ const texts=(page:Page)=>page.evaluate(()=>{
   function walk(node:any){if(node.isRenderable&&node.viptvText)result.push(node.viptvText);node.children?.forEach(walk);}
   walk((window as any).__viptvRenderer.stage.root);return result;
 });
+const backdrops=(page:Page)=>page.evaluate(()=>{
+  const src:string[]=[];function walk(n:any){if(n.isRenderable&&n.props.w===1920&&n.props.h===1080&&typeof n.texture?.props?.src==='string'&&n.texture.props.src.includes('/fixture/'))src.push(n.texture.props.src);n.children?.forEach(walk);}
+  walk((window as any).__viptvRenderer.stage.root);return src;
+});
 
 test("hero waits for both replacement images while retaining its current synopsis",async({page,baseURL})=>{
   await page.emulateMedia({reducedMotion:"no-preference"});
@@ -22,6 +26,7 @@ test("hero waits for both replacement images while retaining its current synopsi
   await page.route("**/held-background.jpg",async route=>{backgroundRequested=true;await background;await route.fulfill({path:referenceRoot+"/assets/3da010bb588e70c5323088b2c66658fe.jpg",contentType:"image/jpeg"});});
   await page.goto("/tv/?focusdebug=1");await expect(state(page)).toHaveAttribute("data-tv-ready","true");
   await expect.poll(()=>texts(page)).toContain("First coherent synopsis");
+  await expect.poll(()=>backdrops(page)).toContain(first.landscape);
   await page.clock.fastForward(9100);
   await expect.poll(()=>logoRequested&&backgroundRequested).toBe(true);
   expect(await texts(page)).toContain("First coherent synopsis");
@@ -120,7 +125,9 @@ test("entering Continue Watching fades from the displayed featured image directl
     walk((window as any).__viptvRenderer.stage.root);return src;
   });
   await page.goto('/tv/?focusdebug=1');await expect.poll(()=>texts(page)).toContain(first.description);
+  await expect.poll(()=>backdrops(page)).toContain(first.landscape);
   await page.clock.fastForward(9100);await expect.poll(async()=>{await page.clock.runFor(16);return texts(page);}).toContain(second.description);
+  await expect.poll(()=>backdrops(page)).toContain(second.landscape);
   await page.clock.runFor(200);await page.keyboard.press('ArrowDown');
   const seen=new Set<string>();
   for(let i=0;i<28;i++){await page.clock.runFor(32);for(const src of await photos())seen.add(src);}
