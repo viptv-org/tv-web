@@ -156,6 +156,7 @@ export default {
       build_version: 1,
       ui_resolutions: 'fhd',
       rsg_version: '2.0',
+      run_as_process: 1,
       splash_color: '0x0B0B0CFF',
       splash_min_time: 1,
     },
