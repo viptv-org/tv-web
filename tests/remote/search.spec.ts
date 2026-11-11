@@ -17,19 +17,20 @@ async function texts(page: Page) {
 
 test('Search typing and navigation stay available while a query is pending',async({page,baseURL})=>{
   await installRemoteBackend(page,baseURL!);
-  const queries:string[]=[];
+  const queries:{term:string;kind:string}[]=[];
   let release!:()=>void;
   const held=new Promise<void>(resolve=>{release=resolve;});
   await page.route('**/api/discover?**',async route=>{
-    queries.push(new URL(route.request().url()).searchParams.get('search')!);
+    const parameters=new URL(route.request().url()).searchParams;
+    queries.push({term:parameters.get('search')!,kind:parameters.get('type')!});
     await held;await route.fulfill({status:503,json:{error:'Retired search failure'}}).catch(()=>{});
   });
   await search(page);
   await page.keyboard.press('Enter');
-  await expect.poll(()=>queries).toEqual(['a']);
+  await expect.poll(()=>queries.map(query=>`${query.term}:${query.kind}`).sort()).toEqual(['a:movie','a:series']);
   await expect(state(page)).toHaveAttribute('data-tv-ready','false');
   await page.keyboard.press('ArrowRight');await page.keyboard.press('Enter');
-  await expect.poll(()=>queries).toEqual(['a','ab']);
+  await expect.poll(()=>queries.map(query=>`${query.term}:${query.kind}`).sort()).toEqual(['a:movie','a:series','ab:movie','ab:series']);
   for(const key of ['ArrowUp','ArrowUp','ArrowRight','Enter'])await page.keyboard.press(key);
   await expect(state(page)).toHaveAttribute('data-tv-screen','home');
   await expect(state(page)).toHaveAttribute('data-tv-ready','true');
@@ -111,6 +112,8 @@ test('channel-only Search pages server results and plays through the channel sou
   expect(fixture.requests.some(r=>r.path==='/api/streams'||r.path.startsWith('/api/meta/'))).toBe(false);
   await page.keyboard.press('Enter');
   await expect.poll(()=>page.locator('video').evaluate(v=>(v as HTMLVideoElement).currentTime)).toBeGreaterThan(.2);
+  await page.keyboard.press('Escape');
+  await expect(state(page)).toHaveAttribute('data-tv-player-controls','false');
   await page.keyboard.press('Escape');
   await expect(state(page)).toHaveAttribute('data-tv-screen','search');
   await expect(state(page)).toHaveAttribute('data-tv-focus',/^search-channels:40:/);

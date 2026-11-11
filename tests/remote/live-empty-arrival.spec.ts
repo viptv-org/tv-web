@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { installRemoteBackend } from "../preview/remote-backend";
+import { openNavigation } from './navigation-helpers';
 
 test.use({ reducedMotion: "no-preference" });
 
@@ -18,9 +19,7 @@ for (const empty of [
   const state = page.locator("html");
   await page.goto("/tv/?platform=vizio&focusdebug=1");
   await expect(state).toHaveAttribute("data-tv-ready", "true");
-  await page.keyboard.press("ArrowUp");
-  for (let i = 0; i < 3; i++) await page.keyboard.press("ArrowRight");
-  await page.keyboard.press("Enter");
+  const liveIndex = await openNavigation(page, 'live');
   await expect(state).toHaveAttribute("data-tv-live-spread", empty.spread);
   if (pageAction) {
     await expect.poll(() => page.evaluate(action => {
@@ -34,7 +33,7 @@ for (const empty of [
     }, empty.action)).toBe(true);
     await page.keyboard.press("ArrowDown");
     await expect(state).toHaveAttribute("data-tv-focus", /^live-empty:0:/);
-  } else await expect(state).toHaveAttribute("data-tv-focus", /^nav:4:/);
+  } else await expect(state).toHaveAttribute("data-tv-focus", new RegExp(`^nav:${liveIndex}:`));
   await page.evaluate(() => {
     const renderer = (window as any).__viptvRenderer;
     (window as any).__arrivalFrames = [];

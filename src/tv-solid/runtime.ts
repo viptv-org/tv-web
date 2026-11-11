@@ -333,6 +333,12 @@ function visualNode(
 ): JSX.Element {
   const modalLayer = useContext(ModalLayerContext);
   const node = createElement(kind) as ElementNode;
+  const transitions = props.transition;
+  if (ROKU && 'children' in props && transitions &&
+    ['x','y','alpha'].some(key => key in props && (transitions === true || transitions[key]))) {
+    (node.lng as any).nativeMotionRoot = true;
+    (node.lng as any).nativeCompositorPrepared = true;
+  }
   // The browser renderer reads width/height; the native SceneGraph host's
   // RokuNode reads w/h. Keep the platform mapping in one place so the shared
   // tv-web tree does not have to fork.
@@ -343,7 +349,7 @@ function visualNode(
   // closures; use forEach so each mapped getter closes over its own key.
   Object.keys(props).forEach((key) => {
     if (
-      ["children", "show", "alpha", "fit", "nodeRef", "onError", "onLoad", "cssLineBox"].includes(key)
+      ["children", "show", "alpha", "fit", "preload", "decodeWidth", "decodeHeight", "focusRing", "nodeRef", "onError", "onLoad", "cssLineBox"].includes(key)
     )
       return;
     if (key === "src" && props[key] == null) {
@@ -441,12 +447,15 @@ function visualNode(
     enumerable: true,
     get: () => (props.show === false ? 0 : (props.alpha ?? 1)),
   });
-  if (props.fit !== undefined)
+  if (props.fit !== undefined || props.preload !== undefined)
     Object.defineProperty(mapped, "textureOptions", {
       enumerable: true,
-      get: () => ({ resizeMode: { type: props.fit } }),
+      get: () => ({ ...props.textureOptions, ...(props.fit ? { resizeMode: { type: props.fit } } : {}),
+        ...(props.preload !== undefined ? { preload: props.preload } : {}) }),
     });
-  if (props.onError) mapped.onEvent = { failed: () => props.onError() };
+  if (props.onError || props.onLoad)
+    mapped.onEvent = ROKU ? { failed: () => props.onError?.() }
+      : { failed: () => props.onError?.(), loaded: () => props.onLoad?.() };
   // The shared runtime uses `nodeRef` as a post-render callback, not the
   // Solid `ref` field. The core ignores it, so call it once the ElementNode
   // exists; text/native bridges and the screen focus scope depend on this.
@@ -485,6 +494,9 @@ function visualNode(
         fit: props.fit,
         modal: modalLayer,
         logo: props.logo === true,
+        focusRing: props.focusRing === true,
+        decodeWidth: props.decodeWidth,
+        decodeHeight: props.decodeHeight,
         onLoad: props.onLoad,
       });
       const update = () => {

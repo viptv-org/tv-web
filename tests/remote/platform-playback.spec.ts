@@ -1,5 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 import { installRemoteBackend } from '../preview/remote-backend';
+import { installTizenSdkBoundary } from '../preview/tizen-sdk';
 
 async function mediaKey(page: Page, key: 'MediaPlay' | 'MediaPause' | 'MediaStop') {
   await page.evaluate(key => {
@@ -48,38 +49,7 @@ for (const profile of ['web', 'webos', 'vizio', 'tizen', 'legacy-webos']) {
 
 test('Tizen SDK boundary keeps native output below controls and preserves paused subtitle replacement', async ({ page, baseURL }) => {
   await installRemoteBackend(page, baseURL!, { media: true, captionTracks: true, captionMedia: true });
-  await page.addInitScript(() => {
-    let state = 'NONE', clock = 0, listener: any = {};
-    const calls: { play: number; pause: number; subtitles: number[]; silent: boolean[] } = { play: 0, pause: 0, subtitles: [], silent: [] };
-    const avplay = {
-      open() {
-        if (!document.querySelector('#video-layer object[type="application/avplayer"]')) throw Error('Native surface missing');
-        state = 'IDLE'; clock = 0;
-      },
-      close() { state = 'NONE'; }, stop() { state = 'IDLE'; },
-      setListener(value: any) { listener = value; },
-      prepareAsync(ready: () => void) { state = 'READY'; setTimeout(ready, 0); },
-      play() {
-        if (!['READY', 'PAUSED'].includes(state)) throw Error(`Invalid SDK play in ${state}`);
-        state = 'PLAYING'; calls.play++; clock = 1000;
-        const current = listener; setTimeout(() => current.oncurrentplaytime?.(clock), 0);
-      },
-      pause() {
-        if (state !== 'PLAYING') throw Error(`Invalid SDK pause in ${state}`);
-        state = 'PAUSED'; calls.pause++;
-      },
-      seekTo(ms: number, done: () => void) { clock = ms; done(); },
-      getCurrentTime() { return clock; }, getDuration() { return 5000; },
-      getTotalTrackInfo() { return [{ index: 8, type: 'TEXT', extra_info: '{"track_lang":"en"}' }]; },
-      setSelectTrack(_kind: string, index: number) {
-        if (!['PLAYING', 'PAUSED'].includes(state)) throw Error('TEXT selection before playback');
-        calls.subtitles.push(index);
-      },
-      setSilentSubtitle(value: boolean) { calls.silent.push(value); },
-      setDisplayRect() {},
-    };
-    Object.assign(window, { webapis: { avplay }, __tizenBoundaryCalls: calls });
-  });
+  await installTizenSdkBoundary(page);
   await page.goto('/tv/?platform=tizen&focusdebug=1');
   const screen = page.locator('html');
   await expect(screen).toHaveAttribute('data-tv-ready', 'true');
@@ -91,6 +61,7 @@ test('Tizen SDK boundary keeps native output below controls and preserves paused
   await expect(page.locator('#tv-avplay')).toHaveAttribute('type', 'application/avplayer');
   expect(await page.locator('#tv-video').evaluate(video => (video as HTMLVideoElement).currentSrc)).toBe('');
   const calls = () => page.evaluate(() => (window as any).__tizenBoundaryCalls);
+  expect((await calls()).keys).toEqual(['MediaPlay', 'MediaPause', 'MediaPlayPause', 'MediaStop', 'MediaRewind', 'MediaFastForward']);
   await expect.poll(async () => (await calls()).subtitles).toEqual([8]);
   expect((await calls()).play).toBe(1);
   await mediaKey(page, 'MediaPause');
@@ -107,3 +78,21 @@ test('Tizen SDK boundary keeps native output below controls and preserves paused
   await mediaKey(page, 'MediaStop');
   await expect(screen).toHaveAttribute('data-tv-screen', 'home');
 });
+
+for (const platform of ['webos', 'tizen']) {
+  test(`${platform} retires playback and its lease when the host hides the page`, async ({ page, baseURL }) => {
+    const fixture = await installRemoteBackend(page, baseURL!, { media: true });
+    await page.goto(`/tv/?platform=${platform}`);
+    const root = page.locator('html');
+    await expect(root).toHaveAttribute('data-tv-ready', 'true');
+    await page.keyboard.press('Enter');
+    await expect(root).toHaveAttribute('data-tv-sources', '8');
+    await expect(root).toHaveAttribute('data-tv-ready', 'true');
+    await page.keyboard.press('Enter');
+    await expect.poll(() => page.locator('video').evaluate(video => (video as HTMLVideoElement).videoWidth)).toBe(160);
+    await page.evaluate(() => window.dispatchEvent(new Event('pagehide')));
+    await expect(root).toHaveAttribute('data-tv-screen', 'home');
+    await expect.poll(() => page.locator('video').evaluate(video => video.getAttribute('src') ?? '')).toBe('');
+    await expect.poll(() => fixture.requests.some(request => request.method === 'DELETE' && request.path === '/api/playback/fixture-playback')).toBe(true);
+  });
+}

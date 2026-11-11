@@ -1,3 +1,6 @@
+import { inScope } from "./operation-scope";
+import { runtimeObserver } from "../platform/runtime-observation";
+let requestSequence = 0;
 import type {
   Bootstrap,
   CalendarSnapshot,
@@ -23,6 +26,7 @@ import type {
 } from "./types";
 import { validateChannelPage } from "./channelWindow";
 import { refusalMessage } from "./refusals";
+import { configureImageDelivery } from "./image-source";
 export class RemoteError extends Error {
   constructor(
     readonly status: number,
@@ -61,29 +65,6 @@ export function query(values: Record<string, unknown>): string {
 }
 export function abort(signal?: AbortSignal) {
   if (signal?.aborted) throw new DOMException("Cancelled", "AbortError");
-}
-function inScope<T>(work: Promise<T>, signal?: AbortSignal): Promise<T> {
-  if (!signal) return work;
-  return new Promise((resolve, reject) => {
-    const cancel = () => {
-      signal.removeEventListener("abort", cancel);
-      reject(new DOMException("Cancelled", "AbortError"));
-    };
-    signal.addEventListener("abort", cancel, { once: true });
-    if (signal.aborted) cancel();
-    // Observe both outcomes even after cancellation. The shared operation must
-    // finish (and save a consumed token rotation) for other active views.
-    void work.then(
-      (value) => {
-        signal.removeEventListener("abort", cancel);
-        resolve(value);
-      },
-      (error) => {
-        signal.removeEventListener("abort", cancel);
-        reject(error);
-      },
-    );
-  });
 }
 async function snapshotText(
   response: Response,
@@ -194,6 +175,7 @@ export class RemoteTvApi {
   private sourceReuseSupported = false;
   preferredSourceDiscoverySupported = false;
   private tokens: Tokens | null = null;
+  private pendingTokens?: Tokens;
   private refreshFlight?: Promise<void>;
   private identityFlight?: Promise<AccountIdentity>;
   private epoch = 0;
@@ -227,6 +209,7 @@ export class RemoteTvApi {
     this.fetcher = fetcher ?? globalThis.fetch.bind(globalThis);
   }
   async restore() {
+    if (this.pendingTokens) return true;
     this.tokens = await this.store.load();
     if (
       this.tokens &&
@@ -250,6 +233,8 @@ export class RemoteTvApi {
     if (typeof path !== "string" || !path.startsWith("/api/") || path.includes("://"))
       throw new Error("Invalid API path");
     abort(signal);
+    const observe = runtimeObserver(), observation = observe ? ++requestSequence : 0;
+    observe?.({phase:"http-start",at:performance.now(),request:observation,path:path.split("?")[0],method});
     const request = new AbortController();
     const cancel = () => request.abort();
     signal?.addEventListener("abort", cancel, { once: true });
@@ -273,6 +258,7 @@ export class RemoteTvApi {
       if (Number.isFinite(serverDate))
         this.clockOffset = serverDate - Date.now();
         text = await snapshotText(response, request.signal);
+        observe?.({phase:"http-read",at:performance.now(),request:observation,characters:text.length,status:response.status});
     } catch (error) {
       if (!signal?.aborted && request.signal.aborted)
         throw new RemoteError(
@@ -296,6 +282,7 @@ export class RemoteTvApi {
         "The server returned an invalid response.",
       );
     }
+    observe?.({phase:"http-json",at:performance.now(),request:observation});
     if (!response.ok) {
       const code = String(value.error_code ?? value.error ?? "request_failed");
       throw new RemoteError(
@@ -322,6 +309,7 @@ export class RemoteTvApi {
       }
     };
     images(value);
+    observe?.({phase:"http-ready",at:performance.now(),request:observation});
     return value as T;
   }
   async call<T>(
@@ -337,6 +325,10 @@ export class RemoteTvApi {
       if (epoch !== this.epoch)
         throw new DOMException("Session changed", "AbortError");
     };
+    if (this.pendingTokens) {
+      await this.persistTokens();
+      current();
+    }
     try {
       const result = await this.exchange<T>(path, method, body, signal, token);
       current();
@@ -375,7 +367,7 @@ export class RemoteTvApi {
     if (!this.refreshFlight) {
       const epoch = this.authEpoch;
       const rotate = async () => {
-        const saved = await this.store.load();
+        const saved = this.pendingTokens ?? await this.store.load();
         if (epoch !== this.authEpoch) return;
         if (saved && saved.refreshToken !== this.tokens?.refreshToken) {
           this.tokens = saved;
@@ -396,6 +388,7 @@ export class RemoteTvApi {
             epoch === this.authEpoch
           ) {
             this.tokens = null;
+            this.pendingTokens = undefined;
             await this.store.clear();
           }
           throw error;
@@ -426,9 +419,20 @@ export class RemoteTvApi {
       accountId: String(value.account_id ?? ""),
       sessionId: String(value.session_id ?? ""),
     };
-    await this.store.save(tokens);
     this.tokens = tokens;
+    this.pendingTokens = tokens;
     this.identityFlight = undefined;
+    await this.persistTokens();
+  }
+  private async persistTokens() {
+    const tokens = this.pendingTokens;
+    if (!tokens) return;
+    try {
+      await this.store.save(tokens);
+      if (this.pendingTokens === tokens) this.pendingTokens = undefined;
+    } catch {
+      // A consumed refresh token must never replace its unsaved successor.
+    }
   }
   pair(signal?: AbortSignal) {
     return this.exchange<Pairing>(
@@ -467,6 +471,7 @@ export class RemoteTvApi {
     if (this.profile && profile !== this.profile) this.epoch++;
     this.profile = profile;
     this.preferredSourceDiscoverySupported = value.preferred_source_discovery_supported === true;
+    configureImageDelivery(value.clearlogo_image_supported === true);
     this.sourceReuseSupported = this.preferredSourceDiscoverySupported;
     return value;
   }
@@ -482,6 +487,7 @@ export class RemoteTvApi {
     this.authEpoch++;
     this.profile = "";
     this.tokens = null;
+    this.pendingTokens = undefined;
     this.identityFlight = undefined;
     await this.store.clear();
   }

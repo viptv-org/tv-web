@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<component name="SolidMotionGroup" extends="Group">
+  <interface>
+    <field id="xRequest" type="assocarray" onChange="onXRequest" />
+    <field id="yRequest" type="assocarray" onChange="onYRequest" />
+    <field id="alphaRequest" type="assocarray" onChange="onAlphaRequest" />
+    <field id="xState" type="assocarray" />
+    <field id="yState" type="assocarray" />
+    <field id="alphaState" type="assocarray" />
+    <field id="motionX" type="float" onChange="onXValue" />
+    <field id="motionY" type="float" onChange="onYValue" />
+  </interface>
+  <script type="text/brightscript" uri="SolidMotionGroup.brs" />
+</component>

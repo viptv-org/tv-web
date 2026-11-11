@@ -34,6 +34,18 @@ it("rejects stale completions and never turns failures into successful loads", (
   expect(publish).toHaveBeenCalledTimes(1);
 });
 
+it("does not reuse the previous image's aspect while a replacement loads", () => {
+  const { image, poster } = setup();
+  image.load("first.png", 640, 160);
+  poster.onBitmapWidth(640);poster.onBitmapHeight(64);poster.onLoadStatus("ready");
+  image.load("second.png", 640, 160);
+  expect(poster.bitmapWidth).toBe(0);
+  expect(poster.bitmapHeight).toBe(0);
+  poster.onBitmapWidth(200);poster.onBitmapHeight(200);
+  expect(poster.bitmapWidth).toBe(200);
+  expect(poster.bitmapHeight).toBe(200);
+});
+
 it("acknowledges an already loaded matching bitmap without inventing a timeout", () => {
   const { image, publish } = setup({ uri: "cached.jpg", loadStatus: "ready", bitmapWidth: 400, bitmapHeight: 225 });
   image.load("cached.jpg", 400, 225);

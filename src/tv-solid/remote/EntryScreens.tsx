@@ -86,6 +86,7 @@ function Brand(props: { splash: boolean }) {
       </TvView>
       <Label
         x={mark() + gap()}
+        centerY={size() / 2}
         size={size()}
         lineheight={1}
         font="Bricolage800"

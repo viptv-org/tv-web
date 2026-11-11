@@ -10,43 +10,22 @@
 import { createElement, insertNode, setProp, tmTransaction } from '@roku-sdk/solid';
 import { Events } from './events';
 import { PosterImage } from './poster-image';
-import { isColorKey, lerpColor } from './animation';
+import { isColorKey, lerpColor } from './animation-color';
+import { finiteNumber as num, sameValue as same } from './node-values';
+import { RokuTexture, normalizeUri, sheetSize } from './node-textures';
+import { ShaderHandle } from './shader-handle';
 import { RokuEffect, toRokuColor } from './effects';
 import { fontMetrics, getFontVersion, loadFace, measureText, measureWrapText, resolveFontUri, webLineHeight } from './fonts';
 import { layoutText, TextAlign, TextContain, TextLayoutResult, VerticalAlign, WordBreak } from './text-layout';
 
+export { RokuTexture } from './node-textures';
+export { ShaderHandle } from './shader-handle';
+
 const APP_W = 1920;
 const APP_H = 1080;
 let nextUid = 1;
+let geometryEpoch = 0;
 
-function num(value: any, fallback: number): number {
-  return typeof value === 'number' && isFinite(value) ? value : fallback;
-}
-function same(a: any, b: any): boolean {
-  if (a === b) return true;
-  if (Array.isArray(a) && Array.isArray(b)) {
-    if (a.length !== b.length) return false;
-    for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false;
-    return true;
-  }
-  return false;
-}
-const SHEET_SIZES: Record<string, [number, number]> = {
-  'pkg:/assets/icons_white.png': [375, 100],
-  'pkg:/assets/icons.png': [375, 100],
-};
-function sheetSize(src: string): [number, number] | null {
-  return SHEET_SIZES[normalizeUri(src)] || null;
-}
-function normalizeUri(src: string): string {
-  if (!src) return '';
-  if (src.indexOf('file:///app/') === 0) return 'pkg:/' + src.slice(13);
-  if (src.indexOf('pkg:/') === 0) return src;
-  if (src.charAt(0) === '/') return 'pkg:' + src;
-  if (src.indexOf('./') === 0) return 'pkg:/' + src.slice(2);
-  if (/^https?:\/\//.test(src)) return src;
-  return 'pkg:/' + src;
-}
 function weightOf(family: string, weight: any): { family: string; weight: number } {
   let fam = String(family || 'Roboto');
   let w = weight;
@@ -59,61 +38,6 @@ function weightOf(family: string, weight: any): { family: string; weight: number
     w = /bold|black|heavy|semibold|demibold/i.test(w) ? 700 : 400;
   }
   return { family: fam, weight: typeof w === 'number' ? w : 400 };
-}
-
-export class RokuTexture extends Events {
-  textureType: string;
-  props: any;
-  src: string;
-  state: string = 'freed';
-  destroyed = false;
-  constructor(type: string, props: any) {
-    super();
-    this.textureType = type;
-    this.props = props || {};
-    if (type === 'SubTexture' && this.props.texture) this.src = this.props.texture.src;
-    else this.src = normalizeUri(this.props.src || '');
-  }
-  get w() {
-    return num(this.props.w, 0);
-  }
-  get h() {
-    return num(this.props.h, 0);
-  }
-  destroy() {
-    this.destroyed = true;
-    this.removeAllListeners();
-  }
-}
-
-/** Renderer shader handle. Mutable props are proxied so Effects re-apply. */
-export class ShaderHandle {
-  shaderType: string;
-  name: string;
-  props: any;
-  nodes = new Set<RokuNode>();
-  destroyed = false;
-  constructor(name: string, props: any) {
-    this.name = name;
-    this.shaderType = name;
-    const raw = props || {};
-    this.props = new Proxy(raw, {
-      set: (target: any, key: string, value: any) => {
-        target[key] = value;
-        this.nodes.forEach((node) => node.effectDirty());
-        return true;
-      },
-      deleteProperty: (target: any, key: string) => {
-        delete target[key];
-        this.nodes.forEach((node) => node.effectDirty());
-        return true;
-      },
-    });
-  }
-  destroy() {
-    this.destroyed = true;
-    this.nodes.clear();
-  }
 }
 
 /**
@@ -140,6 +64,10 @@ export class RokuNode extends Events {
 
   private _parent: RokuNode | null = null;
   private _children: RokuNode[] = [];
+  private _worldEpoch = -1;
+  private _worldX = 0;
+  private _worldY = 0;
+  private _worldRtl = false;
   private _x = 0;
   private _y = 0;
   private _w = 0;
@@ -207,6 +135,8 @@ export class RokuNode extends Events {
   private _externalVisual = false;
   detachedVisualHolder = false;
   nativeMotionRoot = false;
+  nativeCompositorPrepared = false;
+  nativeMotionOwned?: Set<string>;
 
   private _src = '';
   private _texture: RokuTexture | null = null;
@@ -243,7 +173,7 @@ export class RokuNode extends Events {
     this.renderer = renderer;
     this.stage = renderer;
     this._isText = text;
-    this.dom = existingRoot || createElement('group');
+    this.dom = existingRoot || createElement(props.compositorHolder ? 'SolidMotionGroup' : 'group');
     const p = props || {};
     this._color = p.color !== undefined ? p.color : 0xffffffff;
     // A missing corner on a gradient view is transparent on the web. Keep
@@ -320,6 +250,8 @@ export class RokuNode extends Events {
         case 'pivotY': this._pivotY = num(value, 0.5); break;
         case 'rotation': this._rotation = num(value, 0); break;
         case 'zIndex': this._zIndex = num(value, 0); this.markOrder(); break;
+        case 'nativeMotionRoot': this.nativeMotionRoot = !!value; break;
+        case 'nativeCompositorPrepared': this.nativeCompositorPrepared = !!value; break;
         case 'rtl': this._rtl = value === undefined ? null : !!value; break;
         case 'clipping':
           this._clipping = value === true || Array.isArray(value) ? value : false;
@@ -365,6 +297,7 @@ export class RokuNode extends Events {
   get parent() { return this._parent; }
   set parent(value: RokuNode | null) {
     if (value === this._parent) return;
+    geometryEpoch++;
     if (this._parent) {
       const old = this._parent;
       this._parent = null;
@@ -397,6 +330,7 @@ export class RokuNode extends Events {
       tmTransaction.removeNode(child.parent.dom, child.dom);
     }
     child._parent = this;
+    geometryEpoch++;
     const at = before ? this._children.indexOf(before) : -1;
     if (at < 0) this._children.push(child);
     else this._children.splice(at, 0, child);
@@ -513,7 +447,7 @@ export class RokuNode extends Events {
   set rotation(v: number) { this._rotation = num(v, 0); this.markTransform(); }
   get zIndex() { return this._zIndex; }
   set zIndex(v: number) { this._zIndex = num(v, 0); this.markOrder(); }
-  get rtlResolved(): boolean { return this._rtl === null ? (this._parent ? this._parent.rtlResolved : false) : this._rtl; }
+  get rtlResolved(): boolean { this.updateWorld(); return this._worldRtl; }
 
   get clipping() { return this._clipping; }
   set clipping(v: any) {
@@ -528,14 +462,20 @@ export class RokuNode extends Events {
     return { valid: false, x: 0, y: 0, w: 0, h: 0 };
   }
 
-  get absX(): number {
-    const own = this._x - this._mountX * this.boxW;
-    if (!this._parent) return own;
-    let x = this._parent.absX + own;
-    if (this.rtlResolved) x = this._parent.absX + (this._parent.boxW - this._x - this.boxW) - this._mountX * this.boxW;
-    return x;
+  private updateWorld() {
+    if (this._worldEpoch === geometryEpoch) return;
+    const parent = this._parent;
+    if (parent) parent.updateWorld();
+    this._worldRtl = this._rtl ?? parent?._worldRtl ?? false;
+    const width = this.boxW;
+    const localX = parent && this._worldRtl ? parent.boxW - this._x - width : this._x;
+    this._worldX = (parent?._worldX ?? 0) + localX - this._mountX * width;
+    this._worldY = (parent?._worldY ?? 0) + this._y - this._mountY * this.boxH;
+    this._worldEpoch = geometryEpoch;
   }
-  get absY(): number { return (this._parent ? this._parent.absY : 0) + this._y - this._mountY * this.boxH; }
+
+  get absX(): number { this.updateWorld(); return this._worldX; }
+  get absY(): number { this.updateWorld(); return this._worldY; }
 
   get renderState(): number {
     if (this._alpha <= 0) return 0;
@@ -625,6 +565,11 @@ export class RokuNode extends Events {
   }
   markTransform(kind: "position" | "alpha" | "geometry" = "geometry") {
     this._transformDirty = true;
+    if (kind !== "alpha") {
+      this._worldEpoch = -1;
+      // Overlay holders have no logical descendants; their writes stay local.
+      if (!this.detachedVisualHolder || this._parent || this._children.length) geometryEpoch++;
+    }
     (globalThis as any).__viptvMarkNativeSync?.(this, kind);
     if (!this.detachedVisualHolder) this.renderer.markDirty(this);
   }
@@ -749,10 +694,17 @@ export class RokuNode extends Events {
 
   private ensureVisual() {
     if (this._externalVisual) return;
-    if (!this._isText && !this.src && !this._hasColor && !this._shader) {
-      // Plain layout containers are transparent. Painting the default white
-      // rectangle here covered the app background and every overlay that was
-      // ordered before the container.
+    const emptyColor = ((this._colorTL | this._colorTR | this._colorBL | this._colorBR) & 255) === 0;
+    if (!this._isText && !this.src && !this._shader && (!this._hasColor || emptyColor)) {
+      if (this.visual) {
+        tmTransaction.removeNode(this.dom, this.visual);
+        this.visual = null;
+        this._effect = null;
+        this._written = {};
+      }
+      this.clearGradientBands();
+      this.clearGradientOverlay();
+      this.clearShadow();
       return;
     }
     const type = this._isText ? 'label' : this.src ? 'poster' : 'rect';
@@ -842,13 +794,21 @@ export class RokuNode extends Events {
       tx = this._parent.boxW - this._x - this.boxW - this._mountX * this.boxW;
     }
     const ty = this._y - this._mountY * this.boxH;
-    this.writeGroupIf('translation', [tx, ty]);
+    if (this.nativeMotionOwned?.has('x') || this.nativeMotionOwned?.has('y')) {
+      const previous = this._writtenGroup.translation;
+      if (!this.nativeMotionOwned.has('x') && (!previous || previous[0] !== tx))
+        setProp(this.dom, 'xRequest', { serial: -1, action: 'snap', to: tx });
+      if (!this.nativeMotionOwned.has('y') && (!previous || previous[1] !== ty))
+        setProp(this.dom, 'yRequest', { serial: -1, action: 'snap', to: ty });
+      this._writtenGroup.translation = [tx, ty];
+    } else this.writeGroupIf('translation', [tx, ty]);
     this.writeGroupIf('scale', [this._scaleX, this._scaleY]);
     this.writeGroupIf('rotation', this._rotation);
     this.writeGroupIf('scaleRotateCenter', [this._pivotX * this.boxW, this._pivotY * this.boxH]);
     // SceneGraph already multiplies a group's opacity into its children.
     // Writing the cumulative alpha here applied ancestor opacity twice.
-    this.writeGroupIf('opacity', this._alpha);
+    if (this.nativeMotionOwned?.has('alpha')) this._writtenGroup.opacity = this._alpha;
+    else this.writeGroupIf('opacity', this._alpha);
     this.updateShadow();
   }
 
@@ -1352,7 +1312,8 @@ export class RokuNode extends Events {
     // Colour animations restart from the current colour. Retargeting the
     // progress-based colour animation would replace its 0..1 progress target
     // with a colour value.
-    if (!color && existing && existing.settings === settings) {
+    if (!color && existing && existing.settings === settings &&
+      (existing.controller.nativeClock || !(globalThis as any).__viptvCanNativeAnimate?.(this, name, settings))) {
       existing.controller.retarget(value);
       return existing.controller;
     }
@@ -1405,6 +1366,7 @@ export class RokuNode extends Events {
       const i = this._parent._children.indexOf(this);
       if (i >= 0) this._parent._children.splice(i, 1);
       this._parent = null;
+      geometryEpoch++;
     }
     this.removeAllListeners();
   }

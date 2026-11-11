@@ -60,7 +60,7 @@ test('rounded opacity is applied once to rendered pixels',async({page,baseURL})=
   expect(Array.from(png.data.subarray(i,i+3))).toEqual([128,104,39]);
 });
 
-test('profile controls follow server management capabilities and maintain remote focus',async({page,baseURL})=>{
+test('profile controls follow server management capabilities and maintain remote focus',async({page,baseURL},testInfo)=>{
   const fixture=await installRemoteBackend(page,baseURL!,{session:false,pairingApproved:true,pairingProfile:false});
   const management=fixture.bootstrap().profile_management!;
   for(const name of ['create','rename','avatar','delete'])management.capabilities[name]={availability:'Unavailable'} as any;
@@ -71,6 +71,7 @@ test('profile controls follow server management capabilities and maintain remote
   await page.keyboard.press('Enter');
   await expect(state(page)).toHaveAttribute('data-tv-screen','profiles');
   expect((await nodes(page)).some(n=>n.text==='Add profile'||n.text==='Manage profiles')).toBe(false);
+  await page.screenshot({path:testInfo.outputPath('profile-selector.png')});
   const focus=await state(page).getAttribute('data-tv-focus');
   await page.keyboard.press('ArrowDown');
   await expect(state(page)).toHaveAttribute('data-tv-focus',focus!);
@@ -80,21 +81,23 @@ test('profile controls follow server management capabilities and maintain remote
   expect(fixture.requests.filter(r=>r.path==='/api/auth/profile').at(-1)?.body).toEqual({profile_id:'2'});
 });
 
-for(const reduced of [true,false])test(`entry motion ${reduced?'stays still for reduced motion':'drifts and pulses at the reference cadence'}`,async({page,baseURL})=>{
+for(const reduced of [true,false])test(`composed welcome stays stable and pairing respects reduced motion (${reduced})`,async({page,baseURL},testInfo)=>{
   await page.emulateMedia({reducedMotion:reduced?'reduce':'no-preference'});
   await installRemoteBackend(page,baseURL!,{session:false});
+  const artRequests:string[]=[];
+  page.on('request',request=>{if(request.url().includes('/tv-artwork/'))artRequests.push(request.url());});
   await page.goto('/tv/?platform=vizio&focusdebug=1');
   await expect(state(page)).toHaveAttribute('data-tv-ready','true');
-  const wall=()=>page.evaluate(()=>{let x:number|undefined;function visit(n:any){if(n.isRenderable&&n.texture?.state==='loaded'&&n.shader?.shaderKey?.startsWith('tvWelcome')){const start=n.shader.uniforms.single.u_startedAt.value;x=-60-500*(1-Math.abs(((n.time-start)/60000)%2-1));}n.children?.forEach(visit);}visit((window as any).__viptvRenderer.stage.root);return x;});
-  await expect.poll(wall).toBeDefined();const start=(await wall())!;
-  const shaderCount=()=>page.evaluate(()=>{let count=0;function visit(n:any){if(n.shader)count++;n.children?.forEach(visit);}visit((window as any).__viptvRenderer.stage.root);return count;});
-  const cached=await shaderCount();
+  const wall=async()=> (await nodes(page)).filter(n=>n.w===1920&&n.h===1080&&n.alpha===1);
+  await expect.poll(async()=> (await wall()).length).toBeGreaterThan(0);
+  await expect.poll(()=>artRequests.filter(url=>url.endsWith('.webp')).length).toBe(1);
+  await page.evaluate(()=>document.fonts.ready);
+  await page.waitForTimeout(200);
   const before=PNG.sync.read(await page.screenshot({clip:{x:0,y:0,width:500,height:200}})).data;
   await page.waitForTimeout(300);
-  if(reduced)expect(await wall()).toBe(start);else expect((await wall())!).toBeLessThan(start-1.5);
   const after=PNG.sync.read(await page.screenshot({clip:{x:0,y:0,width:500,height:200}})).data;
-  expect(before.equals(after)).toBe(reduced);
-  expect(await shaderCount()).toBe(cached);
+  expect(before.equals(after)).toBe(true);
+  await page.screenshot({path:testInfo.outputPath('composed-welcome.png')});
   await page.keyboard.press('Enter');
   await expect(state(page)).toHaveAttribute('data-tv-screen','pairing');
   await expect(state(page)).toHaveAttribute('data-tv-ready','true');

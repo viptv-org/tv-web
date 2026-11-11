@@ -1,3 +1,15 @@
+# LG webOS and Samsung qualification
+
+| Boundary | Browser / package evidence | Emulator / physical limits |
+| --- | --- | --- |
+| Shared host detection, numeric Back, legacy Search and media lifecycle |33 Chromium/Firefox/WebKit cases pass; explicit API/image origins covered by focused units | No physical LG/Samsung devices available |
+| Samsung local package |43-file/8.6MiB verified local closure; two file-entry/SDK cases pass; signing/API-origin gates retained | No signed WGT, actual Samsung file-origin API transport or AVPlay decoding claim |
+| LG webOS player | Official LG22 / Chromium 87: healthy WebGL, real 160×90 HLS 3.085 s / 77 frames, stable pause/paused seek/resume, WebVTT selection/Off, Back/Stop and all six lease releases pass; CLI3.2.6 IPK built/inspected | Owned software-graphics runner and synthetic media; physical codecs/audio/DRM/remote unqualified; read-only currentSrc retains stale metadata after otherwise complete reset |
+| LG startup graphics | Directly observed context loss is recovered through a fresh Canvas host; visible Home/media plus nine ownership/two real context-loss browser cases pass | No shipped bitmap disable/UA exception; healthy-WebGL cue state and Canvas caption pixels verified separately; no comprehensive caption-paint or hardware claim |
+| Original Live-empty / retired-hint follow-up | Four Live-empty cases land on Anime via stale fixed navigation; two source-hint cases miss the injected label before checking the hint | Failed assertions remain visible and unchanged |
+
+Detailed commands and disposition: [platform qualification](../platform/QUALIFICATION.md).
+
 # Provider-first discovery
 
 Core `1ea4de6`, SDK `4dd3a11`, backend `8b0293d`, design `059b763`.
@@ -538,3 +550,40 @@ Implementation `4cf36237e70b387aacad8a3c5521d5f2ee9eaf9e`;
 | --- | --- | --- | --- |
 | Frame pacing, synchronization and visual ownership | Injected-work/pause/easing regressions; 60 updates per 60 simulated ticks; affected-subtree and shallow motion-group updates; one Poster/URI per artwork primitive | Beta Home/rows/source-drawer smoke on TCL 50S435/C157X, OS 16.0.4 | Render+swap p95 22.04 ms over 758 frames; 16.67 ms target unmet, no sustained-FPS claim |
 | Image decode/readiness and background swaps | Native observer and stale-callback tests, opaque handles, size hints before URI, compact packaged masks, proxy variants, bounded two-frame handover | Home imagery and row-preview changes captured privately | Same-origin network bytes are unchanged; only native decode is resized without a server transformation contract |
+
+
+## Roku-first performance checkpoint
+
+| Area | Headless evidence | Physical evidence / remaining gap |
+|---|---|---|
+| Native ancestor coordinates | Mounted coordinates, 27 direction combinations, reparenting and linear traversal bound pass in both native hosts | Candidate starts and renders Home; one navigation comparison shows no meaningful stall reduction |
+| Vertical scrolling | Native adapter logic is testable without hardware | Timer gaps still reach about 700 ms in the fixed-key run; smooth motion remains unqualified |
+| TypeScript runtime | SDK in-memory component testing is available; native boundary tests pass | Hermes CPU profiling works on the real device; in-memory tests do not establish firmware or GPU parity |
+
+| Home shelf/card reuse | Seven-row reversal plus horizontal slot wrap retain shelf/poster IDs and display changed artwork; all seven polish cases pass | Corrected native background/poster ordering inspected; ten-key timer maximum remains 795 ms, so motion acceptance is open |
+
+
+## Native motion and preview artwork
+
+| Area | Automated evidence | Physical Roku evidence / limits |
+|---|---|---|
+| Scroll and hero fade compositor | Native completion, pause/resume, retarget, stale acknowledgement, disposal and nested geometry cases pass | Positions and opacity continue during a measured 1000 ms JS block; presented FPS and overall input latency remain unqualified |
+| Proxy backdrop blur | URL effect preservation and private-image transport cases pass; live proxy returns processed image | Softened backdrop and sharp poster inspected |
+| Hero portrait placement | Right edge matches profile avatar, at least 48px top clearance, bottom above shelf | Updated 240×360 preview at (1584,144) inspected |
+| Shared browser behavior | Eight polish cases pass, including recycled artwork identity and fixed focus | Physical PS4 follow-up remains separate |
+
+| Home My List preview | Existing coherent-artwork cases pass; shelf reuse now also asserts no Home/Library API reads; decode sizing is bounded separately from display size | No list/card refetch observed. Warm preview readiness about205ms vs453–458ms; first observed visit561ms vs788ms. Overall performance acceptance remains open |
+
+| Home focus isolation | Four regressions pass: remembered row/hero return, top-nav isolation, WebGL/Canvas recycled-row reset; identity refresh/clamp/profile clear covered in units | Roku card5 returns at the same x=-2116 offset and header navigation leaves it fixed; broader focus sweep remains open |
+
+## Shared UI focus and recovery audit
+
+| Area | Browser evidence | Device limits |
+|---|---|---|
+| Catalog/Anime/Library focus | Header and filter navigation keep deep grids stationary; selected identity survives reordered refreshes | Native/browser-TV firmware follow-up pending |
+| Detail and Calendar focus | Independent episode/recommendation selections; season/hero return; Calendar date return, empty focus and withdrawn routes/history | No new physical-device claim |
+| Source cancellation | Retired discovery no longer consumes a later Back; initial admission cancels to the originating page; outgoing replacement lease remains protected | Actual device cancellation timing remains separate |
+| Samsung root Return | Hero, rows, header and signed-out root confirm; Cancel is default; affirmative exit and history/drawer precedence use a simulated application API | Samsung signing/firmware qualification pending |
+| Layout and media preservation | Current browse actions/progress, composed welcome, Library controls, compact recovery, consistent selector gaps, centered managed-seek activity, track/style and playback-authority regressions | Exact reported title/provider sequence and physical caption presentation remain unqualified |
+| Slow artwork | Initial text and mounted preparation; valid delayed completion beyond 2500ms; coherent replacement and canceled-node retirement | Native callback timing and exact first-title follow-up pending |
+| Skip/Playback settings | Intro/Recap range boundaries, visible shortcut/toolbar, paused Select seek, invalid/disabled markers; distinct server settings and device autoplay order/copy | Provider-specific markers and physical shortcut acceptance remain separate |

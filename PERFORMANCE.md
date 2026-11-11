@@ -1,3 +1,39 @@
+# Native compositor and Home readiness — 2026-11-11
+
+Roku build 11128 (TV source 92d3eb7, Solid fork 451dcbcc, Solid 1.9.17) runs shelf
+translations and hero opacity through SceneGraph Animation. The bridge keeps
+ancestor visibility separate from animated opacity and fences retired animation
+callbacks. HTTP uses existing Task workers. The actual device exposes neither
+Worker nor SharedWorker; JSON parsing still runs in the Program context.
+
+During a deliberate 1,000 ms Program-thread block, native shelf translations kept
+advancing across three paint layers: 121.4, 98.7 and 72.8 pixels at the sampled
+450/750/1,050 ms points. Independent opacity samples were 82%, 70% and 59%. The
+original geometry/opacity was restored afterward. This establishes independent
+native motion, not a measured presented frame rate.
+
+Three serialized navigation traces recorded 147, 194 and 197 paired native frames.
+Render+swap p95 was 22.04, 24.04 and 21.92 ms, exceeding the 16.67 ms budget. Render-only
+p95 was 4.73, 4.74 and 4.56 ms; swap waiting dominated. The budget remains failed.
+No sustained 60 FPS or physical-device parity claim follows from these traces.
+Capture requires run_as_process=1 and re-enabling tracing after a device reboot;
+see [Roku tracing prerequisites](https://developer.roku.com/dev/docs/app-tracing).
+
+The reported Home My List delay was measured separately on the prior native
+preview candidate. Repeated row transitions made no list API requests and did
+not replace card-poster URIs. Shortening preview settle 400→120 ms and decoding
+the proxy-blurred backdrop at 960×540 changed warm artwork readiness from about
+454→205 ms (first request 788→561 ms). Sampled key handling was 31–47 ms during rapid
+navigation. These are scoped observations, not a controlled universal latency
+benchmark or a guarantee about upstream providers.
+
+Physical Home focus checks retain each row's selection and scroll position,
+including six top-navigation moves without moving Continue Watching. The app
+keeps three reusable shelves, at most twelve card slots per shelf, and only the
+current/preparing hero presentation. Public proxy blur stays off the TV CPU.
+Later presentation/controller extraction requires final combined-build device
+qualification before treating these measurements as its final acceptance.
+
 # Cited revisions
 
 Sections are reverse-chronological. The 2026-10-23 and 2026-10-24 comparisons

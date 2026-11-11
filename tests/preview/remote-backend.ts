@@ -70,7 +70,9 @@ async function installRendererCompat(page: Page): Promise<void> {
         : srcTexture(node);
       if (texture) props.src = texture.props?.src;
       const compat: any = {
+        id: node.id,
         isRenderable:
+          worldAlpha > 0 &&
           (shader !== null || node.texture !== undefined || node.text !== undefined) &&
           node.width > 0 &&
           node.height > 0,
@@ -413,7 +415,7 @@ export async function installRemoteBackend(page:Page,origin:string,options:{
         actions: {pause:!leaseLive,seek:!leaseLive,restart:!leaseLive,change_source:true,episodes:leaseEpisode,next_episode:leaseEpisode,tracks:options.captionTracks ?? false,subtitle_style:options.captionTracks ?? false,report_progress:!leaseLive,...options.playbackActions},
         // A stalled-renewal lease expires quickly so the test watches the
         // expiry timer fire without waiting; a healthy lease stays valid.
-        expires_at: Math.floor(Date.now()/1000) + (options.stallRenewal ? 3 : 3600),
+        expires_at: options.stallRenewal ? Math.ceil(Date.now()/1000) + 3 : Math.floor(Date.now()/1000) + 3600,
         renew_after_seconds: 1,
         delivery: {
           kind: "gateway",

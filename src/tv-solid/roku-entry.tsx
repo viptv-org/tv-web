@@ -1,3 +1,5 @@
+import { imageDecodeSize } from "./platform/image-decode-size";
+import { runtimeObserver } from "./platform/runtime-observation";
 /**
  * Roku entry for the shared tv-web SolidTV application.
  *
@@ -18,11 +20,17 @@ import QRCode from "qrcode/lib/core/qrcode";
 import { createRokuPlayer } from "./platform/roku-player";
 import { applyCaptionAppearance, playbackStats } from "../../roku/src/roku/video";
 import { NativeSync, motionRoot, modalRoot, opacityWithin } from "./platform/native-sync";
-import { imageSource } from "./remote/image-source";
+import { localNativeClip } from "./platform/native-clipping";
+import { logoLayout } from "./platform/logo-layout";
+import { imageSource, configureImageApiOrigin } from "./remote/image-source";
+import { CompositorAnimation, compositorEasing, type MotionKey, type MotionFeedback } from "../../roku/src/roku/compositor-animation";
+import { motionGroupGeometry } from "./platform/native-motion-geometry";
+import { nativePaintOrder } from "./platform/native-paint-order";
 import { modalPaintStack } from "./platform/modal-paint-stack";
 import { deviceStorage } from "../../roku/src/roku/device-storage";
 
 const API_ORIGIN = "https://beta-viptv.syek.tech";
+configureImageApiOrigin(API_ORIGIN);
 const sessionStorage = deviceStorage("viptv-session", "tokens");
 (globalThis as any).__viptvDevicePlaybackPort = deviceStorage("viptv-playback", "settings-v1");
 
@@ -150,71 +158,165 @@ type NativeRecord = {
   sync: () => void;
 };
 
-type MotionGroup = { root: any; layer: any; holder: any; references: number; key: any; paint?: (kind: string, child: any) => void };
+type MotionGroup = { root: any; layer: any; holder: any; clipper: any; references: number; members: { node: any; holder: any }[]; parent?: MotionGroup; key: any; paint?: (kind: string, child: any) => void };
 
 const nativeRecords = new Map<any, NativeRecord>();
 const nativeNow = () => performance.now();
 const nativeSync = new NativeSync(nativeNow);
 const motionGroups = new Map<any, Map<any, MotionGroup>>();
 
-function syncMotion(group: MotionGroup, inherited = inheritedAlpha(group.root)) {
-  const root = group.root;
-  const holder = group.holder;
-  const x = Number(root.absX) || 0, y = Number(root.absY) || 0;
-  const alpha = inherited * (Number(root.alpha) || 0);
-  if (holder.x === x && holder.y === y && holder.alpha === alpha) return;
-  holder.x = x; holder.y = y; holder.alpha = alpha;
+function applyNativeClip(holder: any, clip: number[] | false) {
+  const previous = holder.clipping;
+  if (clip === previous || (Array.isArray(clip) && Array.isArray(previous) &&
+      clip.every((value, index) => value === previous[index]))) return;
+  holder.clipping = clip;
   holder.flush();
+}
+
+function syncMotion(group: MotionGroup) {
+  const holder = group.holder, clipper = group.clipper;
+  const geometry = motionGroupGeometry(group.root, group.parent?.root);
+  if (clipper.x !== geometry.clipX || clipper.y !== geometry.clipY || clipper.w !== geometry.width || clipper.h !== geometry.height || clipper.alpha !== geometry.inheritedAlpha) {
+    clipper.x = geometry.clipX;clipper.y = geometry.clipY;clipper.w = geometry.width;clipper.h = geometry.height;clipper.alpha = geometry.inheritedAlpha;
+    clipper.flush();
+  }
+  applyNativeClip(clipper, geometry.viewport);
+  applyNativeClip(holder, geometry.localClip);
+  const { x, y, alpha } = geometry;
+  if (holder.x === x && holder.y === y && holder.alpha === alpha) return;
+  holder.x = x;holder.y = y;holder.alpha = alpha;holder.flush();
 }
 
 function registerSync(node: any) {
   nativeSync.register(node, inherited => {
-    motionGroups.get(node)?.forEach(group => syncMotion(group, inherited));
+    motionGroups.get(node)?.forEach(group => syncMotion(group));
     const record = nativeRecords.get(node);
     if (record) syncHolder(record, inherited);
   });
 }
 
-function releaseMotion(record: NativeRecord) {
-  const group = record.motion;
-  record.motion = undefined;
-  if (!group || --group.references > 0) return;
-  group.holder.destroy();
+function insertMotionMember(group: MotionGroup, member: { node: any; holder: any }, kind?: string) {
+  if (group.paint && kind) group.paint(kind, member.holder.dom);
+  else {
+    let index = 0;
+    while (index < group.members.length && nativePaintOrder(group.members[index].node, member.node) <= 0) index++;
+    insertNode(group.holder.dom, member.holder.dom, group.members[index]?.holder.dom);
+    group.members.splice(index, 0, member);
+  }
+}
+
+function releaseGroup(group: MotionGroup) {
+  if (--group.references > 0) return;
+  group.holder.destroy();group.clipper.destroy();
   const layers = motionGroups.get(group.root)!;
   layers.delete(group.key);
   if (!layers.size) {
     motionGroups.delete(group.root);
     if (!nativeRecords.has(group.root)) nativeSync.remove(group.root);
   }
+  if (group.parent) {
+    const index = group.parent.members.findIndex(member => member.holder === group.clipper);
+    if (index >= 0) group.parent.members.splice(index, 1);
+    releaseGroup(group.parent);
+  }
+}
+
+function releaseMotion(record: NativeRecord) {
+  const group = record.motion;record.motion = undefined;
+  if (!group) return;
+  const index = group.members.indexOf(record);
+  if (index >= 0) group.members.splice(index, 1);
+  releaseGroup(group);
+}
+
+function ensureMotionGroup(root: any, layer: any, key: any): MotionGroup {
+  let layers = motionGroups.get(root);
+  if (!layers) motionGroups.set(root, layers = new Map());
+  const existing = layers.get(key);
+  if (existing) return existing;
+  const parentRoot = motionRoot(root.parentNode);
+  const parent = parentRoot ? ensureMotionGroup(parentRoot, layer, key) : undefined;
+  const holder = holderAt(root, Number(root.w) || 1, Number(root.h) || 1, true);
+  const clipper = holderAt(root, 1920, 1080);
+  const group: MotionGroup = { root, layer, key, holder, clipper, parent, references: 0, members: [],
+    paint: layer === modalLayer ? modalPaintStack(holder.dom, () => createElement("group"), insertNode) : undefined };
+  if (parent) { parent.references++;insertMotionMember(parent, {node:root,holder:clipper}); }
+  else insertNode(layer, clipper.dom);
+  insertNode(clipper.dom, holder.dom);
+  layers.set(key, group);registerSync(root);syncMotion(group);
+  return group;
 }
 
 function adoptMotion(record: NativeRecord, root: any, key = record.layer) {
   if (!root && !record.motion) return;
   if (record.motion?.root === root && record.motion?.key === key) return;
-  const previous = record.motion;
   if (root) {
-    let layers = motionGroups.get(root);
-    if (!layers) motionGroups.set(root, layers = new Map());
-    let group = layers.get(key);
-    if (!group) {
-      const holder = holderAt(root, Number(root.w) || 1, Number(root.h) || 1);
-      insertNode(record.layer, holder.dom, previous?.holder.dom ?? record.holder.dom);
-      group = { root, layer: record.layer, key, holder, references: 0,
-        paint: record.layer === modalLayer ? modalPaintStack(holder.dom, () => createElement("group"), insertNode) : undefined };
-      layers.set(key, group);
-      registerSync(root);
-      syncMotion(group);
-    }
-    group.references++;
-    if (group.paint) group.paint(record.kind, record.holder.dom);
-    else insertNode(group.holder.dom, record.holder.dom);
-    releaseMotion(record);
-    record.motion = group;
+    const group = ensureMotionGroup(root, record.layer, key);
+    group.references++;insertMotionMember(group, record, record.kind);
+    releaseMotion(record);record.motion = group;
   } else {
-    insertNode(record.layer, record.holder.dom, previous?.holder.dom);
+    insertNode(record.layer, record.holder.dom, record.motion?.clipper.dom);
     releaseMotion(record);
   }
 }
+
+(globalThis as any).__viptvCanNativeAnimate = (node: any, key: string, settings: any) =>
+  !!compositorEasing(settings) && ['x', 'y', 'alpha'].includes(key) && !!motionGroups.get(node)?.size;
+
+(globalThis as any).__viptvCreateNativeAnimation = (node: any, key: string, target: number, settings: any) => {
+  const easing = compositorEasing(settings);
+  if (!easing || !node.children?.length || !['x', 'y', 'alpha'].includes(key)) return;
+  node.nativeMotionRoot = true;
+  // Adopt before changing the model target so the compositor retains its live start.
+  const walk = (current: any) => {
+    const record = nativeRecords.get(current);
+    if (record) syncHolder(record);
+    for (const child of current.children ?? []) walk(child);
+  };
+  if (!node.nativeCompositorPrepared) { walk(node);node.nativeCompositorPrepared = true; }
+  let groups = [...(motionGroups.get(node)?.values() ?? [])];
+  if (!groups.length) return;
+  const property = key as MotionKey;
+  let alive = true, activeSerial = 0;
+  const unlock = () => { for (const group of groups) group.holder.nativeMotionOwned?.delete(property); };
+  const sink = {
+    prepare() { groups = [...(motionGroups.get(node)?.values() ?? [])];for (const group of groups) { group.holder.nativeMotionOwned ??= new Set();group.holder.nativeMotionOwned.add(property); } },
+    send(action: any, serial: number, _to: number, duration: number, ease: string, reply: (feedback: MotionFeedback) => void) {
+      activeSerial = serial;
+      const waiting = new Set(groups);
+      let answered = false, anyPaused = false;
+      const modelValue = Number(node[property]);
+      groups.forEach(group => {
+        syncMotion(group);
+        const nativeTarget = Number(group.holder[property]);
+        const factor = property === 'x' && node.rtlResolved ? -1 : 1;
+        const event = 'on' + property[0].toUpperCase() + property.slice(1) + 'State';
+        setProp(group.holder.dom, event, (feedback: MotionFeedback) => {
+          if (!alive || answered || serial !== activeSerial || feedback.serial !== serial || group.holder.destroyed) return;
+          if (feedback.state !== 'stopped' && feedback.state !== 'paused') return;
+          if (action !== 'pause' && feedback.state === 'paused') return;
+          anyPaused ||= feedback.state === 'paused';waiting.delete(group);
+          if (waiting.size) return;
+          answered = true;
+          const value = factor ? modelValue + (feedback.value - nativeTarget) / factor : modelValue;
+          const state = anyPaused ? 'paused' : 'stopped';
+          if (state === 'stopped') unlock();
+          reply({ ...feedback, state, value });
+        });
+        setProp(group.holder.dom, property + 'Request', { serial, action, to: nativeTarget, duration: duration / 1000, easing: ease });
+      });
+    },
+    dispose() {
+      alive = false;
+      for (const group of groups) if (!group.holder.destroyed)
+        setProp(group.holder.dom, property + 'Request', {serial:-1,action:'stop'});
+      unlock();
+    },
+  };
+  return new CompositorAnimation(Number(node[property]), target, Math.max(0, settings.duration ?? 0), easing,
+    value => { if (!node.destroyed) { node[property] = value;node.requestRender(); } }, sink);
+};
+
 const nativeFonts = new Map<string, any>();
 let backdropLayer: any = null;
 let backdropScrimLayer: any = null;
@@ -274,9 +376,9 @@ function ensureLayers() {
   return root;
 }
 
-function holderAt(node: any, w: number, h: number): any {
+function holderAt(node: any, w: number, h: number, compositorHolder = false): any {
   const renderer = (globalThis as any).__rokuRenderer || (globalThis as any).__SolidTVRokuRenderer;
-  const holder = renderer.createNode({ x: 0, y: 0, w, h });
+  const holder = renderer.createNode({ x: 0, y: 0, w, h, compositorHolder });
   holder.detachedVisualHolder = true;
   holder.parent = null;
   return holder;
@@ -297,9 +399,12 @@ function syncHolder(record: NativeRecord, inherited?: number) {
   const node = record.node;
   const holder = record.holder;
   if (!holder) return;
+  const rotation=Number(node.rotation)||0;
+  if (holder.rotation !== rotation) {holder.rotation=rotation;holder.flush();}
   const modal = record.layer === modalLayer ? modalRoot(node) : undefined;
   const root = (motionRoot(node) ?? modal) as any;
   adoptMotion(record, root, modal ?? record.layer);
+  applyNativeClip(holder, localNativeClip(node, root));
   const x = Math.round((Number(node.absX || 0) - (root ? Number(root.absX) || 0 : 0)) * 1000) / 1000;
   const y = Math.round((Number(node.absY || 0) - (root ? Number(root.absY) || 0 : 0)) * 1000) / 1000;
   if (holder.x !== x || holder.y !== y) {
@@ -607,6 +712,7 @@ function iconSource(svg: string): { uri: string; color: string } | undefined {
     ensureLayers();
     const width = Math.max(1, Math.ceil(Number(p.w) || 1));
     const height = Math.max(1, Math.ceil(Number(p.h) || 1));
+    const decode = imageDecodeSize(width, height, p.decodeWidth, p.decodeHeight);
     const rawSrc = typeof p.src === "string" ? p.src : p.texture?.src;
     const svg =
       typeof rawSrc === "string" && rawSrc.startsWith("data:image/svg+xml,")
@@ -615,7 +721,7 @@ function iconSource(svg: string): { uri: string; color: string } | undefined {
     const icon = svg ? iconSource(svg) : undefined;
     const effectiveSrc = icon?.uri ?? (
       typeof rawSrc === "string" && /^https?:\/\//.test(rawSrc)
-        ? imageSource(rawSrc, width, height, p.fit === "contain" ? "inside" : "cover")
+        ? imageSource(rawSrc, decode.width, decode.height, p.fit === "contain" ? "inside" : "cover")
         : rawSrc
     );
     const qr = typeof rawSrc === "string" && rawSrc.indexOf("data:image/x-viptv-qr,") === 0;
@@ -642,8 +748,10 @@ function iconSource(svg: string): { uri: string; color: string } | undefined {
       !String(rawSrc).includes("welcome-");
     const layer = modal
       ? modalLayer
-      : chrome
+      : p.focusRing === true
         ? chromeLayer
+      : chrome
+        ? backdropScrimLayer
         : heroScrim
           ? backdropScrimLayer
           : fullScreenBackdrop
@@ -675,23 +783,22 @@ function iconSource(svg: string): { uri: string; color: string } | undefined {
       const key = String(effectiveSrc);
       record.onLoad = p.onLoad;
       if (record.key !== key) {
+        runtimeObserver()?.({phase:"image-start",at:performance.now(),node:node.id,width,height,decodeWidth:decode.width,decodeHeight:decode.height});
         record.key = key;
         record.loadedKey = undefined;
         record.fitWidth = undefined;
         record.fitHeight = undefined;
         record.fitY = undefined;
       }
-      node.loadImage(visual, key, width, height, (poster: any) => {
+      node.loadImage(visual, key, decode.width, decode.height, (poster: any) => {
         if (record!.key !== key) return;
         if (p.logo) {
           const bitmapWidth = Number(poster.bitmapWidth || 0);
           const bitmapHeight = Number(poster.bitmapHeight || 0);
-          if (bitmapWidth > 0 && bitmapHeight > 0) {
-            const fittedWidth = Math.min(width, height * (bitmapWidth / bitmapHeight));
-            const fittedHeight = fittedWidth * (bitmapHeight / bitmapWidth);
-            const fitWidth = Math.max(1, Math.round(fittedWidth));
-            const fitHeight = Math.max(1, Math.round(fittedHeight));
-            const fitY = Math.max(0, Math.round(height - fittedHeight));
+          const geometry = logoLayout(width, height, bitmapWidth, bitmapHeight);
+          if (!geometry) return;
+          {
+            const fitWidth = geometry.width, fitHeight = geometry.height, fitY = geometry.y;
             if (record!.fitWidth !== fitWidth || record!.fitHeight !== fitHeight || record!.fitY !== fitY) {
               record!.fitWidth = fitWidth;
               record!.fitHeight = fitHeight;
@@ -704,6 +811,7 @@ function iconSource(svg: string): { uri: string; color: string } | undefined {
         }
         if (record!.loadedKey !== key) {
           record!.loadedKey = key;
+          runtimeObserver()?.({phase:"image-ready",at:performance.now(),node:node.id,width,height,decodeWidth:decode.width,decodeHeight:decode.height});
           record!.onLoad?.();
         }
       });
@@ -767,7 +875,7 @@ function iconSource(svg: string): { uri: string; color: string } | undefined {
 (globalThis as any).__viptvSyncOverlays = (deadline: number) => nativeSync.flush(deadline);
 
 try {
-  render(() => createComponent(createRemoteTvApp(api, "web", { initialLoading: false }), {}));
+  render(() => createComponent(createRemoteTvApp(api, "web"), {}));
 
 
 // Font faces publish asynchronously after the shared entry mounts. Bump the

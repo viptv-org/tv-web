@@ -1,5 +1,6 @@
 import {test,expect} from '@playwright/test';
 import {installRemoteBackend} from '../preview/remote-backend';
+import {openNavigation} from './navigation-helpers';
 
 const shown=async(page:import('@playwright/test').Page,needle:string)=>
   page.evaluate(value=>{const text:string[]=[];function visit(node:any){if(node.isRenderable&&node.viptvText)text.push(node.viptvText);node.children?.forEach(visit);}visit((window as any).__viptvRenderer.stage.root);return text.some(entry=>entry.includes(value));},needle);
@@ -9,9 +10,7 @@ test('Live names an empty category instead of a missing source and keeps the chi
   const state=page.locator('html');
   await page.goto('/tv/?platform=vizio&focusdebug=1');
   await expect(state).toHaveAttribute('data-tv-ready','true');
-  await page.keyboard.press('ArrowUp');
-  for(let i=0;i<3;i++)await page.keyboard.press('ArrowRight');
-  await page.keyboard.press('Enter');
+  const liveIndex=await openNavigation(page,'live');
   await expect(state).toHaveAttribute('data-tv-live-spread','today');
   await expect(state).toHaveAttribute('data-tv-focus',/^content:0:/);
   // Up from the first channel row is the chip row; Group 2 is the empty one.
@@ -29,7 +28,7 @@ test('Live names an empty category instead of a missing source and keeps the chi
   await expect(state).toHaveAttribute('data-tv-focus',/^live-groups:2:/);
   // And the navigation returns to that same chip rather than to a missing row.
   await page.keyboard.press('ArrowUp');
-  await expect(state).toHaveAttribute('data-tv-focus',/^nav:4:/);
+  await expect(state).toHaveAttribute('data-tv-focus',new RegExp(`^nav:${liveIndex}:`));
   await page.keyboard.press('ArrowDown');
   await expect(state).toHaveAttribute('data-tv-focus',/^live-groups:2:/);
   // Choosing a category that has channels returns the page and its row focus.

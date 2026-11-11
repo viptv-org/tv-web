@@ -1,6 +1,12 @@
 import { test, expect, type Page } from '@playwright/test';
 import { installRemoteBackend } from '../preview/remote-backend';
 
+const visibleTexts=(page:Page)=>page.evaluate(()=>{
+ const values:string[]=[];
+ function walk(node:any){if(node.isRenderable&&node.viptvText)values.push(node.viptvText);node.children?.forEach(walk);}
+ walk((window as any).__viptvRenderer.stage.root);return values;
+});
+
 async function playFirst(page:Page) {
  await page.goto('/tv/?focusdebug=1');
  await expect(page.locator('html')).toHaveAttribute('data-tv-ready','true');
@@ -32,11 +38,14 @@ test('prepares the next episode without admission, Next bypasses Ask and never o
  expect(nextDiscovery).toHaveLength(1);
 });
 
-test('shows the ten-second end countdown, any key cancels and Back dismisses without autoplay',async({page,baseURL})=>{
+test('shows the ten-second end countdown, any key cancels and Back dismisses without autoplay',async({page,baseURL},testInfo)=>{
  const fixture=await installRemoteBackend(page,baseURL!,{media:true,episodeFlow:true});
  await playFirst(page);
  await expect(page.locator('html')).toHaveAttribute('data-tv-overlay','next',{timeout:15000});
  await expect(page.locator('html')).toHaveAttribute('data-tv-autoplay-countdown',/\d+/);
+ await expect.poll(async()=>(await visibleTexts(page)).some(text=>text.startsWith('Next episode in '))).toBe(true);
+ expect(await visibleTexts(page)).toContain('Keep watching credits');
+ await page.screenshot({path:testInfo.outputPath('next-countdown.png')});
  await page.keyboard.press('ArrowRight');
  await expect(page.locator('html')).toHaveAttribute('data-tv-autoplay-countdown','');
  await page.keyboard.press('Escape');
@@ -94,12 +103,14 @@ test('standalone Skip intro remains available with hidden controls and preserves
  await expect(page.locator('html')).toHaveAttribute('data-tv-player-state','paused');
 });
 
-test('autoplay off persists across reloads and keeps the ended panel manual',async({page,baseURL})=>{
+test('autoplay off persists across reloads and keeps the ended panel manual',async({page,baseURL},testInfo)=>{
  const fixture=await installRemoteBackend(page,baseURL!,{media:true,episodeFlow:true});
  await page.addInitScript(()=>localStorage.setItem('viptv-device-playback:v1',JSON.stringify({version:1,autoplay:false,across:[],entries:[]})));
  await playFirst(page);
  await expect(page.locator('html')).toHaveAttribute('data-tv-overlay','next',{timeout:15000});
  await expect(page.locator('html')).toHaveAttribute('data-tv-autoplay-countdown','');
+ for(const label of ['Play next episode','Keep watching credits','Nothing plays on its own.'])expect(await visibleTexts(page)).toContain(label);
+ await page.screenshot({path:testInfo.outputPath('next-manual.png')});
  await page.waitForTimeout(11000);
  expect(fixture.requests.filter(r=>r.path==='/api/playback'&&r.method==='POST')).toHaveLength(1);
  await page.keyboard.press('Enter');
@@ -149,7 +160,10 @@ test('Playback switches persist locally without adding fields to profile prefere
  await page.keyboard.press('ArrowRight');for(let i=0;i<30;i++)await page.keyboard.press('ArrowDown');
  await page.keyboard.press('Enter');await expect(state).toHaveAttribute('data-tv-ready','true');
  await expect.poll(()=>page.evaluate(()=>JSON.parse(localStorage.getItem('viptv-device-playback:v1')||'{}').across?.length)).toBe(1);
- await page.keyboard.press('ArrowUp');await page.keyboard.press('Enter');await expect(state).toHaveAttribute('data-tv-ready','true');
+ const playbackControls=fixture.bootstrap().preferences!.controls!.filter(control=>control.group==='playback');
+ const autoplayIndex=playbackControls.findIndex(control=>control.id==='next_episode_button')+1;
+ for(let index=playbackControls.length+1;index>autoplayIndex;index--)await page.keyboard.press('ArrowUp');
+ await page.keyboard.press('Enter');await expect(state).toHaveAttribute('data-tv-ready','true');
  await expect.poll(()=>page.evaluate(()=>JSON.parse(localStorage.getItem('viptv-device-playback:v1')||'{}').autoplay)).toBe(false);
  expect(fixture.requests.filter(r=>r.path.endsWith('/preferences')&&r.method==='PUT')).toHaveLength(0);
  await page.reload();await expect(state).toHaveAttribute('data-tv-ready','true');

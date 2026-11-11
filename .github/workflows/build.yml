@@ -52,6 +52,7 @@ jobs:
     runs-on: ubuntu-22.04
     timeout-minutes: 25
     env:
+      VIPTV_TIZEN_API_ORIGIN: https://viptv.syek.tech
       TIZEN_AUTHOR_P12: ${{ secrets.TIZEN_AUTHOR_P12 }}
       TIZEN_AUTHOR_PASSWORD: ${{ secrets.TIZEN_AUTHOR_PASSWORD }}
       TIZEN_DISTRIBUTOR_P12: ${{ secrets.TIZEN_DISTRIBUTOR_P12 }}
@@ -68,6 +69,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - run: npm ci
+      - run: npm run build -- --base=./
       - uses: actions/setup-java@v4
         with:
           distribution: temurin

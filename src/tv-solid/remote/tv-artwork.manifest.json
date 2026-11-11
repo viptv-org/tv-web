@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "inputs": {
+    "scripts/build-welcome-wall.py": "a162d689392c510d43f0ef5425114fff891b0d3d809d4bc7f6ff2fdd4eaacfdc",
+    "scripts/build-tv-masks.py": "202e8f2ee456700fb74860f325a0b0af690214831f97e5f0d2eb9d54a0989dba",
+    "scripts/build-tv-artwork.py": "70ea9a8c882808eadc65afaacb23e4e4b4a0fe1f0f5bb46281d0f87b27193060",
+    "src/tv-solid/remote/entry-art.ts": "09f27c83e682cb7f3b0f80cdc2f2ec4db14248b47efcc589e804b7da99bc26c9",
+    "design-contract/viptv-design-system/reference/assets/c5e059aaab8694dc24d6eac5443251d7.jpg": "290439c61708aeabc75e7870f420400884e7a97c5807dac9f76916eadb6ec37e",
+    "design-contract/viptv-design-system/reference/assets/583431e4f79c9c282528008fe0dc55d1.jpg": "c2eadc20da408c649f1a177072dd8d0579114c90fec794be028cf322fac20330",
+    "design-contract/viptv-design-system/reference/assets/b3223e2a084e414007a98927d4dacb2a.jpg": "373aae4586a04b1cadb00bbe0806ee31f65cabe3277048f1a0ac9e36d4907bad",
+    "design-contract/viptv-design-system/reference/assets/4ad1cd0344ed6671f51e0752cec8f76a.jpg": "8ea5b751c8374785f3f7bed184f9a48df6c1d11f236f6fa6ab73622b0f759033",
+    "design-contract/viptv-design-system/reference/assets/77f3ff5fe16cf0addfc249bcf775431c.jpg": "82428992e6c5308629799bb176eeafa4d41b6d1523f4edc1058c2c9728e534c8",
+    "design-contract/viptv-design-system/reference/assets/73769fe97de6261d73028ef33ba3c67c.jpg": "92522afb7ef9c24150016eb05ba21f00d3b7d8695b8d04dc0c2e823007022cee",
+    "design-contract/viptv-design-system/reference/assets/cf9ac68563546726c448b391311deb20.jpg": "ee17b1d74eeee7797287f8f4eaac53c9506fe43e6f7dfde891279f6ff1616976",
+    "design-contract/viptv-design-system/reference/assets/853a629260ff2e6e91c508e50cbc4cfd.jpg": "9780775a42db23722559345d84706082d7365df94339de4be5519d17514a0acb",
+    "design-contract/viptv-design-system/reference/assets/1b8e776fadffacda0429eae19567c9d9.jpg": "95f919531528a948345df9d8c6a2c2e00403ddac74b481d212ee0dde1c37f1e9",
+    "design-contract/viptv-design-system/reference/assets/7a243334ecd247bb9e774aab5e88b96c.jpg": "becc530b8a8570b70c44e83c543eeff41ddba29b0209c408328f0eed1d028027",
+    "design-contract/viptv-design-system/reference/assets/f1317811427e2bdd076d68c8137f0d3a.jpg": "60088e55c2f67a6d9ebf17226e7f91372deab2e4b2255297afa491acc1822e4c",
+    "design-contract/viptv-design-system/reference/assets/6df8de10da7fd21be30c813631b351fd.jpg": "df7a77a5f13bef04a05ab24cc84e3da1ef5e26d89e536e4c8c42f5134305a6c7",
+    "design-contract/viptv-design-system/reference/assets/a58ce52f4693189507a3a209139fb1e8.jpg": "4a15e74384efa882e6904c0200916ab9348fea19b0b55f21c1f58dc8ed62e38a",
+    "design-contract/viptv-design-system/reference/assets/86e41958ebe13339a4428a67a45cf9af.jpg": "815638e152c1be027794ac13bce3b285f217f27317ff029e274ae1927477d5ec",
+    "design-contract/viptv-design-system/reference/assets/73adb3881e6289889a341e90548146a3.jpg": "0b54c71ad9392c604fdeb7521d60d74a3673b2c5dbaab25a9c294a6c09de1137",
+    "design-contract/viptv-design-system/reference/assets/f8d575b124e315021fc7157db89c7315.jpg": "29ff4b747051499ae1efbb5a20733db7b272485537e5cfefd6e03c41fbcac01d",
+    "design-contract/viptv-design-system/reference/assets/138b3e7eec5324db705f886653b91819.jpg": "3e02262a6d092dad1d9fd03aa2338eff08990ef07020a6706b4c464f7a62c70e",
+    "design-contract/viptv-design-system/reference/assets/9655a617b392ac7c81fc6f78c3d48e5d.jpg": "ae2478add9c5c5b24f7a3c236bd49d10176d07571b9f27930989eb888c572d7e",
+    "roku/pkg/assets/welcome-scrim.png": "41f0a725bed74aea778175eba465c32fd677d5dc6aa0ff11b0f360ba65ae7fac",
+    "roku/pkg/assets/welcome-vignette.png": "7d664b2e103f134394a6518b6b22fb2af5d836188cc1626ccfc8574e7714aed9"
+  },
+  "outputs": {
+    "src/tv-solid/remote/tv-artwork.generated.ts": "5a7808dfce1188e3c284b3e7248cca7074037736940d717f0331a3117058373a",
+    "public/tv-artwork/b1e715feceeb80c8ca5f.webp": "b1e715feceeb80c8ca5f7a28a96f55e99b3211b9f9032bf98ce4262ec24e7c9b",
+    "public/tv-artwork/87b1f851442b89b94153.png": "87b1f851442b89b941531155dd1822e6ea8354735a63cfb06ec38841cc6f639f",
+    "public/tv-artwork/c6969dbaed3efaa17faf.png": "c6969dbaed3efaa17fafe57b3f48edd18401226099523a5c5d4ff3a0b3143091",
+    "public/tv-artwork/def1c4a9b28e94569adc.png": "def1c4a9b28e94569adc1466927c20951f5ac56b2b7b2200feb1d4d3be076172",
+    "roku/pkg/assets/welcome-wall.webp": "b1e715feceeb80c8ca5f7a28a96f55e99b3211b9f9032bf98ce4262ec24e7c9b",
+    "roku/pkg/assets/hero-scrim.png": "87b1f851442b89b941531155dd1822e6ea8354735a63cfb06ec38841cc6f639f",
+    "roku/pkg/assets/topbar-scrim.png": "c6969dbaed3efaa17fafe57b3f48edd18401226099523a5c5d4ff3a0b3143091",
+    "roku/pkg/assets/busy-spinner.png": "def1c4a9b28e94569adc1466927c20951f5ac56b2b7b2200feb1d4d3be076172"
+  }
+}

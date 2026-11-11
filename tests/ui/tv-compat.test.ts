@@ -2,9 +2,11 @@ import { afterEach, expect, it } from 'vitest';
 import { installTvCompatibility } from '../../src/tv-solid/platform/tv-compat';
 const at = Object.getOwnPropertyDescriptor(Array.prototype, 'at')!;
 const fromEntries = Object.getOwnPropertyDescriptor(Object, 'fromEntries')!;
+const allSettled = Object.getOwnPropertyDescriptor(Promise, 'allSettled')!;
 afterEach(() => {
   Object.defineProperty(Array.prototype, 'at', at);
   Object.defineProperty(Object, 'fromEntries', fromEntries);
+  Object.defineProperty(Promise, 'allSettled', allSettled);
 });
 it('supports old-engine negative/fractional indices and rejects null receivers', () => {
   Object.defineProperty(Array.prototype, 'at', { ...at, value: undefined });
@@ -29,4 +31,21 @@ it('preserves the host implementations when those APIs already exist', () => {
   installTvCompatibility();
   expect(Array.prototype.at).toBe(at.value);
   expect(Object.fromEntries).toBe(fromEntries.value);
+  expect(Promise.allSettled).toBe(allSettled.value);
+});
+it('settles mixed search providers in input order on engines without Promise.allSettled', async () => {
+  Object.defineProperty(Promise, 'allSettled', { ...allSettled, value: undefined });
+  installTvCompatibility();
+  let complete!: (value: string) => void;
+  const pending = new Promise<string>(resolve => { complete = resolve; });
+  const result = Promise.allSettled([pending, Promise.reject('offline'), 7]);
+  complete('catalog');
+  expect(await result).toEqual([
+    { status: 'fulfilled', value: 'catalog' },
+    { status: 'rejected', reason: 'offline' },
+    { status: 'fulfilled', value: 7 },
+  ]);
+  expect(await Promise.allSettled([])).toEqual([]);
+  await expect(Promise.allSettled(null as never)).rejects.toBeInstanceOf(TypeError);
+  expect(Object.keys(Promise)).not.toContain('allSettled');
 });

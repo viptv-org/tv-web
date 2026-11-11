@@ -1,11 +1,12 @@
 /** @jsxImportSource @solidtv/solid */
-import { createEffect, createSignal, onCleanup, Show } from "solid-js";
-import { KeyedFor, TvView, TvText } from "../runtime";
-import { ReadyArtwork, type ArtworkFrame } from "../platform/ready-artwork";
-import { imageSource, imageVersion } from "./image-source";
-import { getRenderer } from "@solidtv/solid";
+import { createEffect, createMemo, createSignal, onCleanup, untrack, Show } from "solid-js";
+import { TvView, TvText } from "../runtime";
+import { clearlogoSource, imageSource, imageVersion } from "./image-source";
+import { logoLayout } from "../platform/logo-layout";
+import { reducedMotion } from "./motion";
 import { tokens } from "../../theme/viptv-tokens.generated";
 import { buttonShadow } from "./button-shadow";
+import { topbarScrimSource } from "./tv-artwork.generated";
 const [accentColor, setAccentColor] = createSignal<string>(
   tokens["color.accent.default"],
 );
@@ -125,41 +126,6 @@ export function Label(props: Record<string, any>) {
       : props.content;
   return <TvText font="Onest" color={palette.text} {...props} content={content()} lineheight={props.lineheight ?? (props.font === "Onest700" && props.size >= 40 ? 1.15 : undefined)} />;
 }
-/** A hero title is only a fallback: delay it so a late-arriving logo never
- * flashes text first. A card that has no logo still identifies itself. */
-export function DelayedTitle(props: {
-  title: string;
-  y?: number;
-  size: number;
-  font?: string;
-  lineheight?: number;
-  maxwidth?: number;
-  maxheight?: number;
-  maxlines?: number;
-  delay?: number;
-}) {
-  const [shown, setShown] = createSignal(false);
-  createEffect(() => {
-    props.title;
-    setShown(false);
-    const timer = setTimeout(() => setShown(true), props.delay ?? 650);
-    onCleanup(() => clearTimeout(timer));
-  });
-  return (
-    <Show when={shown()}>
-      <Label
-        y={props.y}
-        size={props.size}
-        font={props.font ?? "Onest700"}
-        lineheight={props.lineheight}
-        maxwidth={props.maxwidth}
-        maxheight={props.maxheight}
-        maxlines={props.maxlines}
-        content={props.title}
-      />
-    </Show>
-  );
-}
 export function Button(props: {
   x: number;
   y: number;
@@ -206,165 +172,8 @@ export function Button(props: {
     </TvView>
   );
 }
-/** Shared native art plane: one poster, the packaged scrim and an optional
- * dim. Browser paths use their shader/canvas artwork instead. */
-export function NativeBackdrop(props: {
-  src?: string | null;
-  dim?: number;
-  children?: any;
-}) {
-  const [frames, setFrames] = createSignal<ArtworkFrame[]>([]);
-  const views = new Map<number, any>();
-  const buffer = new ReadyArtwork(setFrames, async id => {
-    const view = views.get(id);
-    if (!view) return;
-    const duration = matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 300;
-    const animation = view.animate({ alpha: 1 }, { duration, easing: "ease-out" });
-    animation.start();
-    await animation.waitUntilStopped();
-  });
-  createEffect(() => buffer.request(props.src ? imageSource(props.src, 1920) : undefined));
-  onCleanup(() => buffer.dispose());
-  return (
-    <TvView w={1920} h={1080} color={palette.bg}>
-      <KeyedFor each={frames()} keyOf={frame => frame.id}>
-        {frame => {
-          const id = frame().id;
-          onCleanup(() => views.delete(id));
-          return <TvView w={1920} h={1080} src={frame().src} alpha={frame().alpha}
-            fit="cover" nodeRef={(view: any) => views.set(id, view)}
-            onLoad={() => buffer.ready(id)} onError={() => buffer.failed(id)} />;
-        }}
-      </KeyedFor>
-      <TvView w={1920} h={1080} src="pkg:/assets/hero-scrim.png" />
-      <TvView w={1920} h={1080} color="#000000" alpha={props.dim ?? 0} />
-      {props.children}
-    </TvView>
-  );
-}
-
-/** One small cached gradient mask replaces five full-screen blend passes.
- * Artwork retains its own texture; focus changes never read back 1080p pixels. */
-export function Backdrop(props: { src?: string | null; dim?: boolean }) {
-  if (typeof (globalThis as any).__SolidTVRokuRenderer !== "undefined") {
-    return <NativeBackdrop src={props.src} dim={props.dim ? 0.35 : 0} />;
-  }
-  const [current, setCurrent] = createSignal<string>(),
-    [previous, setPrevious] = createSignal<string>(),
-    [opacity, setOpacity] = createSignal(1);
-  const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
-  const pixels = new ImageData(512, 288);
-  for (let y = 0; y < 288; y++)
-    for (let x = 0; x < 512; x++) {
-      const px = ((x + 0.5) / 512) * 1920,
-        py = ((y + 0.5) / 288) * 1080;
-      const left =
-        px < 652.8
-          ? 0.85 - (0.3 * px) / 652.8
-          : px < 1190.4
-            ? 0.55 * (1 - (px - 652.8) / 537.6)
-            : 0;
-      const bottom =
-        py < 560
-          ? 0
-          : py < 846
-            ? (0.92 * (py - 560)) / 286
-            : 0.92 + (0.08 * (py - 846)) / 234;
-      const top = py < 200 ? 0.7 * (1 - py / 200) : 0;
-      const i = (y * 512 + x) * 4;
-      pixels.data[i] = 11;
-      pixels.data[i + 1] = 11;
-      pixels.data[i + 2] = 12;
-      pixels.data[i + 3] = Math.round(
-        (1 - (1 - left) * (1 - bottom) * (1 - top)) * 255,
-      );
-    }
-  const mask = getRenderer().createTexture("ImageTexture", {
-    src: pixels,
-    premultiplyAlpha: true,
-    key: "tv3-backdrop-mask-v1",
-  });
-  createEffect(() => {
-    const src = props.src;
-    let cancelled = false,
-      frame = 0;
-    let cleanupTimer: ReturnType<typeof setTimeout> | undefined;
-    const image = new Image();
-    image.crossOrigin = "anonymous";
-    image.onload = () => {
-      if (cancelled) return;
-      setPrevious(reduced ? undefined : current());
-      setOpacity(reduced ? 1 : 0);
-      setCurrent(src ? imageSource(src, 1920) : undefined);
-      if (!reduced) {
-        frame = requestAnimationFrame(() => setOpacity(1));
-        cleanupTimer = setTimeout(() => setPrevious(undefined), 350);
-      }
-    };
-    if (src) image.src = imageSource(src, 1920);
-    else {
-      setCurrent(undefined);
-      setPrevious(undefined);
-    }
-    onCleanup(() => {
-      cancelled = true;
-      image.onload = null;
-      cancelAnimationFrame(frame);
-      clearTimeout(cleanupTimer);
-    });
-  });
-  return (
-    <TvView w={1920} h={1080}>
-      <TvView w={1920} h={1080} show={!current()} color={palette.bg} />
-      <TvView
-        w={1920}
-        h={1080}
-        show={!!previous()}
-        color="#ffffff"
-        src={previous()}
-        fit="cover"
-      />
-      <TvView
-        w={1920}
-        h={1080}
-        show={!!current()}
-        color="#ffffff"
-        src={current()}
-        fit="cover"
-        alpha={opacity()}
-        transition={{
-          alpha: { duration: 300, timingFunction: "cubic-bezier(.2,0,0,1)" },
-        }}
-      />
-      <TvView w={1920} h={1080} color="#ffffff" texture={mask} />
-      <TvView w={1920} h={1080} color="#000000" alpha={props.dim ? 0.5 : 0} />
-    </TvView>
-  );
-}
-
-let topBar: ImageData | undefined;
-/** Scrim.tvTopBar from the Android TV client: ground .94 at the top, .82 at
- * 72%, transparent at the bar's bottom edge. Kept at the bar's exact aspect so
- * the texture scales 1:1 with no cropping. */
 export function topBarGradient() {
-  if (!topBar) {
-    topBar = new ImageData(480, 33);
-    for (let y = 0; y < 33; y++) {
-      const t = y / 32,
-        alpha =
-          t < 0.72
-            ? 0.94 + ((0.82 - 0.94) * t) / 0.72
-            : 0.82 * (1 - (t - 0.72) / 0.28);
-      for (let x = 0; x < 480; x++) {
-        const i = (y * 480 + x) * 4;
-        topBar.data[i] = 11;
-        topBar.data[i + 1] = 11;
-        topBar.data[i + 2] = 12;
-        topBar.data[i + 3] = Math.round(alpha * 255);
-      }
-    }
-  }
-  return topBar;
+  return topbarScrimSource();
 }
 
 let browseWideScrim: ImageData | undefined;
@@ -462,15 +271,6 @@ type LogoLoad = {
   width?: number;
   maxWidth: number;
 };
-const LOGO_GLOW_SVG =
-  "data:image/svg+xml," +
-  encodeURIComponent(
-    `<svg xmlns="http://www.w3.org/2000/svg" width="600" height="200"><defs><radialGradient id="g" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#FFFFFF" stop-opacity=".36"/><stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/></radialGradient></defs><ellipse cx="300" cy="100" rx="240" ry="55" fill="url(#g)"/></svg>`,
-  );
-const logoGlow = () =>
-  typeof (globalThis as any).__SolidTVRokuRenderer !== "undefined"
-    ? "pkg:/assets/logo-glow.png"
-    : LOGO_GLOW_SVG;
 
 function convertLogo(image: HTMLImageElement, load: LogoLoad): LogoPixels {
   const aspect = image.width / image.height;
@@ -532,15 +332,46 @@ export function Logo(props: {
   size?: number;
   /** Bottom-align the logo in a fixed box, as the Android TV hero does. */
   boxH?: number;
+  alpha?: number;
+  fade?: boolean;
+  onReady?: () => void;
+  onError?: () => void;
 }) {
-  const showGlow = () => props.h >= 120;
+  const prepared = createMemo(() => clearlogoSource(props.src));
+  if (typeof (globalThis as any).__SolidTVRokuRenderer === "undefined" && prepared()) {
+    const width = () => Math.max(1, props.w ?? props.maxWidth ?? 800);
+    const [bitmap, setBitmap] = createSignal<{width:number;height:number}>();
+    const geometry=createMemo(() => bitmap() ? logoLayout(width(),props.h,bitmap()!.width,bitmap()!.height) : undefined);
+    const [ready, setReady] = createSignal(false), [failed, setFailed] = createSignal(false);
+    createEffect(() => {
+      const src = prepared();setBitmap(undefined);setReady(false);setFailed(false);
+      if (!src) { setFailed(true);props.onError?.();return; }
+      const image = new Image();
+      image.onload = () => setBitmap({width:image.naturalWidth,height:image.naturalHeight});
+      image.onerror = () => { setFailed(true);props.onError?.(); };
+      image.src = src;
+      onCleanup(() => { image.onload = image.onerror = null; });
+    });
+    return <TvView w={width()} h={props.boxH ?? props.h} alpha={props.alpha ?? 1}>
+      <Show when={!failed() && geometry()}>{box => <TvView w={box().width} h={box().height} preload
+        y={Math.max(0, (props.boxH ?? props.h) - box().height)} src={prepared()}
+        alpha={ready() ? 1 : 0} transition={props.fade === false ? undefined : { alpha: { duration: reducedMotion() ? 0 : 150, easing: "ease-out" } }}
+        onLoad={() => { setReady(true);untrack(() => props.onReady?.()); }}
+        onError={() => { setFailed(true);props.onError?.(); }} />}</Show>
+      <Show when={failed()}><Label size={props.size ?? 56} font="Onest700" maxwidth={width()}
+        maxlines={2} content={props.title ?? ""} /></Show>
+    </TvView>;
+  }
   if (typeof (globalThis as any).__SolidTVRokuRenderer !== "undefined") {
     // SceneGraph can load the transparent wordmark directly. The browser
     // loader below needs canvas pixels, which Roku cannot provide.
     const width = () => Math.max(1, props.w ?? props.maxWidth ?? 800);
+    const src = createMemo(() => prepared() ?? imageSource(props.src, width(), Math.max(1, props.h), "inside"));
+    const [ready, setReady] = createSignal(false), [failed, setFailed] = createSignal(false);
+    createEffect(() => { src();setReady(false);setFailed(false); });
     return (
       <Show
-        when={props.src}
+        when={props.src && !failed()}
         fallback={
           <Label
             size={props.size ?? 56}
@@ -548,23 +379,22 @@ export function Logo(props: {
             maxwidth={width()}
             maxlines={2}
             content={props.title ?? ""}
+            alpha={props.alpha ?? 1}
           />
         }
       >
-        <TvView w={width()} h={Math.max(1, props.h)}>
-          <Show when={showGlow()}>
-            <TvView
-              w={width()}
-              h={Math.max(1, props.h)}
-              src={logoGlow()}
-              fit="cover"
-            />
-          </Show>
+        <TvView w={width()} h={Math.max(1, props.h)} alpha={props.alpha ?? 1}>
+
           <TvView
             w={width()}
             h={Math.max(1, props.h)}
-            src={imageSource(props.src, width(), Math.max(1, props.h), "inside")}
+            src={src()}
             fit="contain"
+            preload
+            alpha={ready() ? 1 : 0}
+            transition={props.fade === false ? undefined : { alpha: { duration: reducedMotion() ? 0 : 150, easing: "ease-out" } }}
+            onLoad={() => { setReady(true);untrack(() => props.onReady?.()); }}
+            onError={() => { setFailed(true);props.onError?.(); }}
             logo
           />
         </TvView>
@@ -596,6 +426,7 @@ export function Logo(props: {
     if (cached) {
       setArt(cached);
       setFailed(false);
+      untrack(() => props.onReady?.());
       return;
     }
     // A logo that is still loading draws nothing: the title fallback only
@@ -604,22 +435,23 @@ export function Logo(props: {
     setFailed(false);
     let cancelled = false;
     const proxied = imageSource(src, 800);
-    const urls = proxied && proxied !== src ? [src, proxied] : [src];
+    const urls = proxied && proxied !== src ? [proxied, src] : [src];
     void (async () => {
       for (const url of urls) {
         try {
           const value = convertLogo(await loadLogo(url), load);
           if (cancelled) return;
-          if (logoCache.size >= 64) logoCache.clear();
+          if (logoCache.size >= 4) logoCache.delete(logoCache.keys().next().value!);
           logoCache.set(cacheKey, value);
           setArt(value);
           setFailed(false);
+          untrack(() => props.onReady?.());
           return;
         } catch {
           /* try the proxy, then fall back to the title */
         }
       }
-      if (!cancelled && !art()) setFailed(true);
+      if (!cancelled && !art()) { setFailed(true);props.onError?.(); }
     })();
     onCleanup(() => {
       cancelled = true;
@@ -636,6 +468,7 @@ export function Logo(props: {
             maxwidth={props.maxWidth ?? 800}
             maxlines={2}
             content={props.title ?? ""}
+            alpha={props.alpha ?? 1}
           />
         </Show>
       }
@@ -644,15 +477,9 @@ export function Logo(props: {
         <TvView
           w={props.maxWidth ?? props.w ?? 800}
           h={props.boxH ?? props.h}
+          alpha={props.alpha ?? 1}
         >
-          <Show when={showGlow()}>
-            <TvView
-              w={props.maxWidth ?? props.w ?? 800}
-              h={props.boxH ?? props.h}
-              src={logoGlow()}
-              fit="cover"
-            />
-          </Show>
+
           <TvView
             y={props.boxH ? Math.max(0, props.boxH - data().h) : 0}
             w={data().w}

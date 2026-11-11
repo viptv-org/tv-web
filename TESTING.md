@@ -1,3 +1,79 @@
+# Combined Roku and browser acceptance — 2026-11-11
+
+TV source 052a255 uses the final feature composition, fixed hero paint bands and
+pinned contrast mask. The isolated locked dependency graphs pass 336 shared and
+34 native tests, application/native typechecks, integrity and production builds.
+The combined Chromium gate passes 37 cases spanning Home focus, hero pixels,
+delayed artwork, context-loss recovery, session storage, Skip/Recap, playback
+authority, Calendar and Samsung Return. An authenticated real-beta API sweep
+also reaches all navigation screens without a startup fullscreen request.
+
+Roku package 11130 is installed and version-checked. HLS/H.264/AAC playback
+advances, pause holds, a managed ten-second seek retains paused intent, resume
+advances, controls hide and Back restores Home. Both opening/seek leases were
+released with HTTP 200; native media closes without an error. An expired access
+token renewed through the real device grant, and normal exit/relaunch reaches
+signed-in Home again. Private UI captures verify hero readability, undimmed
+foreground art and the aligned portrait spacing. Decoder telemetry, not a black
+video-plane screenshot, supplies the media evidence.
+
+An earlier first selection from a four-row partial discovery did not start.
+Its original admission/native error was not captured. Later discovery produced
+267 rows and a successful selection; the two source identities were not the
+same. This is an unclassified source failure, not evidence of a diagnosed or
+fixed native regression. The successful delivery exposed no caption tracks;
+physical caption selection, audible output/lip sync and sustained 60 FPS remain
+unqualified. Browser/simulator marker and track checks are documented separately.
+
+Backend main 3703d03 matches the release-tested tree: 940 default/952 live-runtime
+checks, canonical source integrity and optimized build pass, as does edge CI.
+Core main 7921f313 and video main ffa11e26 are merged; their immutable consumer pins
+remain eee3d90 and f0fff094. Beta served-artifact and dedicated-account setup
+checks follow deployment; production is unchanged.
+
+# LG webOS and Samsung package boundaries
+
+Host changes `6e64769` and native packaging `393598d` preserve the shared TV
+application. Samsung defaults to a local relative-base asset closure and an
+explicit HTTPS API origin; the redirect alternative is `tizen-hosted`. The
+unsigned local closure is43 files/8.6MiB; two file-entry browser/SDK cases pass.
+LG's hosted IPK is built/inspected with official CLI3.2.6. Missing signing
+profile/API origin and insecure API origin fail closed; no signed WGT is claimed.
+
+Grouped typecheck and hosted/relative production builds pass. Thirty-eight
+focused unit cases pass. The final hosted build passes33 host/media/SDK/lifecycle
+cases across Chromium, Firefox and WebKit; each webOS/Tizen query also passes17
+Chromium authority/recovery cases. Owned HLS video decodes with active WebVTT;
+SDK fixtures establish API/state contracts without native Samsung decoding.
+
+Official LG22 simulator 1.4.1 / Chromium 87 passes the extended player run with
+healthy WebGL and unchanged native APIs: owned 160×90 H.264/AAC HLS advances
+3.085 seconds / 77 frames with zero reported drops and a positive AAC byte counter.
+Pause holds its clock for 700 ms; paused rewind holds position 0 for 500 ms; resume,
+English WebVTT selection/Off, numeric Back 461 and MediaStop 413 pass. Both exits
+restore Home/focus, reset media to NETWORK_EMPTY/HAVE_NOTHING with no source
+attribute or buffers, and release all six admitted leases. The SDK retains a
+stale read-only currentSrc blob string after reset; it is recorded rather than
+artificially cleared.
+
+The owned Xvfb runner uses --disable-gpu, --disable-dev-shm-usage and a bounded
+1.5 GiB memory-headroom preflight in this 5 GiB container. Those are simulator
+settings, not product defaults or a hardware/performance qualification. Earlier
+constrained runs directly observed context loss with valid decoded font atlases
+waiting on a stopped loop. Startup recovery now retires that renderer and uses a
+fresh Canvas host; ordinary Canvas Home/media and nine ownership/two real
+context-loss browser regressions pass. No global bitmap disable or UA rule ships.
+
+Actual simulator-window captures show video and controls; a Canvas capture also
+shows the caption. The reviewed healthy-WebGL paused window also shows the active
+English cue. Track modes, active cue contents and that visible cue are verified;
+this is not a complete caption-style pixel sweep. Physical LG/Samsung
+codecs, audible output, DRM, firmware lifecycle and remote behavior remain
+unqualified. Earlier LG26/bitmap-disable diagnostics are not current LG22 passes.
+Live-empty and source-hint fixtures now navigate by route identity and use the
+canonical provider fields; their focused acceptance cases pass. Commands, limits and official sources:
+[platform qualification](platform/QUALIFICATION.md).
+
 # Core-owned provider-first discovery
 
 Canonical Core `1ea4de65493b9c3036d51ab46040d8ff69d1b999` owns preference
@@ -3700,3 +3776,310 @@ This is not a clean run of the entire remote suite; previously documented
 source-hint baseline failures remain separate. No hosted frontend deployment,
 Samsung/LG emulator execution, native Tizen release or physical TV qualification
 is included in this delivery.
+
+## TV polish implementation checkpoint (2026-11-09)
+
+Tracked by tv-web #103 and backend #308. This checkpoint implements coordinated
+hero fades, stable bounded Home rails, native clipping and logo geometry,
+compact dialogs, a shared player busy indicator, welcome/profile spacing,
+Specials and the compact season chooser, and physical-size image delivery.
+Backend implementation 2fcdc54 adds shared persistent public Cinemeta metadata
+and bounded prepared clearlogos; default/live-runtime suites pass 936/948 tests
+and the engine pin check passes. Production is unchanged.
+
+Client typecheck, 238 shared unit tests, 15 native-host tests, production browser
+build and native Roku build pass. The current native payload is 711721 JS bytes.
+The twelve focused browser artwork/season/motion scenarios pass, including
+coordinated loads, stale refreshes, cancellation, normal/reduced static artwork,
+explicit Specials and intermediate horizontal/vertical group positions. These
+animation checks use controlled browser time; physical frame timing is separate.
+
+The older viewing suite has thirteen failures reproduced against the served beta
+baseline, primarily stale navigation assumptions, plus a three-second lease
+fixture race. The fixture now rounds its short expiry upward so the one-second
+renewal has a real scheduling margin; expiry/release assertions remain intact.
+The baseline failure list remains separate from the new acceptance scenarios.
+The test renderer inspection now respects ancestor opacity instead of counting
+hidden prepared nodes as painted content.
+
+Physical Roku final-package acceptance, real-beta shared-cache/clearlogo checks,
+repeated frame traces and the final account handoff remain pending at this
+implementation checkpoint. Normal exit/relaunch and the preceding cold update
+retained sign-in. The owner confirmed audible, synchronized audio during the
+preceding real playback checkpoint; final media telemetry is recorded separately.
+
+Native follow-up: empty layout containers no longer allocate transparent painted
+rectangles, and animation ticks do not queue a redundant immediate flush. Host
+coverage is now 18 tests (256 unit tests total). On the same Home row state,
+transparent rectangles fell from 71 to 9; posters and labels remained 33/42.
+The three fixed 32-key navigation traces after this change report render+swap
+p95 of 22.04/21.89/21.83 ms. The unchanged 16.67 ms qualification gate fails;
+these results do not establish 60 FPS. The first trace includes more initial
+work; subsequent traces are warm. Earlier system-Home and minimal native-scene
+diagnostics on this device reported approximately 48 FPS as well. This is an
+observed environment result, not a universal hardware limit. Compositor and SDK scheduling work remain required under the Roku-first
+performance scope.
+
+
+## Roku-first performance investigation
+
+Physical Home navigation still has severe JavaScript stalls. A 16 ms timer probe
+observed a maximum gap of 1,281 ms during vertical input; its overall p95 was
+19.5 ms, illustrating why averages do not qualify motion. A separate Hermes CPU
+profile recorded 6,227 samples, including 3,651 under the key-event callback.
+Repeated ancestor-coordinate/direction reads, node construction and young-generation
+collection appear in the profile. This is CPU evidence, not presented-frame data.
+
+The native coordinate getter now walks ancestors once, including mixed inherited
+RTL overrides and mounts. The regression's 12-level RTL tree previously required
+10,236 width reads per lookup; the bound is now 24. Native tests cover all 27
+three-level direction combinations, geometry updates, reparenting and deep LTR/RTL.
+The same change and tests are applied in the SolidTV demo native host.
+
+Validation: application typecheck, native package build, 22 VIPTV native tests and
+6 SolidTV native-node tests pass. The candidate was cold-installed on the physical
+Roku, starts signed in and renders Home after repeated vertical navigation.
+A ten-key Down/Up comparison from relaunched Home measured timer p95/max of
+70.24/693.73 ms for the preceding package and 71.49/714.36 ms for the candidate.
+These single exploratory runs show no meaningful Home-scroll improvement; the
+scaling fix does not establish performance acceptance. Visible intermediate-frame
+cadence, blur, render-thread animation and bounded node reuse remain unqualified.
+No beta server rollout or new playback qualification is included in this check.
+
+The SDK testing library can execute TypeScript components against an in-memory
+SceneGraph under Jest without a Roku. Existing native-adapter tests mock the SDK
+boundary; neither approach emulates Hermes scheduling or the physical compositor.
+
+
+## Bounded Home shelf reuse
+
+Home keeps three reusable shelf slots and at most twelve card slots per shelf.
+One parent owns vertical translation; recycled rows change their local position
+without animating across the viewport. Derived selection, dimensions and offsets
+use equality-filtered memos. The full bounded card window remains mounted so a
+slot is available when its index wraps; this avoids retiring it just before reuse.
+Native moving groups insert visuals in logical tree order, retaining backgrounds
+below posters and overlays above them, independently of the order of adoption.
+
+Validation: application typecheck, browser production build and native package
+build pass; 242 shared unit tests and 22 native tests pass. All seven polish browser
+cases pass, including intermediate scrolling, the fixed focus anchor, prepared
+logos, seven-row vertical reversal and horizontal scrolling through a card-slot
+cycle. The reuse test rotates artwork as identities change and asserts both the
+same node IDs and the correct visible replacement image.
+
+The physical Roku candidate renders poster images above their backgrounds after
+vertical recycling. An initial shared-layer prototype exposed incorrect paint
+order; that candidate was replaced and the corrected rendering inspected on the
+device. The ten-key timer probe reports p95 64.29 ms, maximum 795.02 ms and seven
+gaps over 100 ms. These exploratory runs do not prove improved worst-case latency
+or smooth presentation. A subsequent Hermes profile still shows ancestor position
+and clipping work prominently. Render-thread animation, rapid-input latency and
+physical intermediate-frame cadence remain open; this is not performance acceptance.
+
+
+## Render-thread motion and proxy artwork
+
+The owner reported continued choppiness after the earlier pooling/cache builds.
+Those builds do not satisfy motion acceptance. Scroll positions and hero fades
+now use native SceneGraph Animation nodes through a small motion-group adapter;
+JavaScript does not advance these animations frame by frame. Nested groups retain
+local clipping and opacity, callbacks are fenced by run serial, and replaced runs
+are disposed before their delayed acknowledgements can publish. Initial view
+mounting prepares motion layers before navigation. A native fade acknowledgement
+retires its outgoing artwork frame.
+
+Physical proof deliberately blocked the Program/JavaScript thread for 1000 ms.
+During that interval, native scene queries showed the three shelf layers advancing
+in lockstep through y≈122,98,73. A separate opacity run continued through roughly
+82%,70%,59%. Both restored their original values. This proves independence from
+the blocked JavaScript thread; it does not measure presented FPS or certify all
+input latency. A focus-normalized navigation probe still measured about 60.53 ms
+p95 and 938.47 ms maximum timer delay. Earlier exploratory probes did not record
+initial focus and are not controlled before/after comparisons. Rapid reversals
+from confirmed Home hero focus settle with all native controllers stopped.
+Overall responsiveness and the remaining physical playback/platform scenarios
+remain open.
+
+The owner explicitly selected proxy blur. Focused shelf backdrops request
+`blur=16`; posters and logos retain their normal image requests. Existing sizing
+passes preserve the effect without nesting proxy URLs. Authenticated image URLs
+retain their direct transport. A live public proxy request returned HTTP 200 and
+the processed image. This follows the [proxy blur API](https://wsrv.nl/docs/adjustment#blur-blur).
+The physical Roku shows the softened backdrop with a sharp portrait preview.
+The preview's right edge aligns with the profile avatar; its 50px top clearance
+and bottom above the shelf are checked in browser geometry and inspected on Roku.
+
+Validation: browser production build, application typecheck, native VIPTV package
+build, 245 shared tests, 33 native tests and all eight polish browser cases pass.
+The SolidTV demo native host has the common coordinate cache, native lifecycle
+support and motion-group component mirrored locally; its build and all 93 native
+host unit tests pass. The demo's own UI still needs compositor wiring and physical
+qualification. No production/beta server rollout or new playback qualification is
+included in this checkpoint.
+
+
+## Home My List investigation
+
+The owner clarified that the slow area is the My List row on Home. A real-device
+trace of repeated Continue Watching ↔ My List navigation recorded no API requests
+and no card-poster URI replacements. My List had 12 cards and Home was complete.
+The work was in hero artwork: a 400ms settle delay preceded replacement image
+requests, with another roughly 340ms on the first measured backdrop/logo load.
+Warm replacement readiness was about 450ms after the key event.
+
+The settle delay is now 120ms. Blurred previews request 960×540 pixels with blur=8
+while their display rectangle remains 1920×1080. Explicit decode hints pass through
+the native image bridge, so a later sizing pass cannot silently restore a full-size
+decode. Sharp featured backdrops and foreground artwork retain their sizing.
+The same five-key device workload measured first My List artwork readiness at
+561ms (previously 788ms) and warm revisits at about 205ms (previously 453–458ms).
+Key-handler work remained about 43–76ms. A rapid alternating-key run settled back
+on the intended My List row; its only API request was the normal revision poll.
+These are scoped observations, not universal latency/FPS guarantees.
+
+Opt-in local runtime observations separate key handling, API read/parse/normalization
+and image readiness. They capture no headers or response bodies and send/store
+nothing themselves. The device reports Worker and SharedWorker as unavailable.
+The installed SDK and [current Roku overview](https://developer.roku.com/dev/docs/rsg-sdk-standing-docs-getting-started-overview)
+describe separate Program/Render contexts and future Web Workers. Existing HTTP
+transport already executes in real Task threads; additional threads are not the
+measured missing piece for this Home row.
+
+The separate top-level My List tab also clears/refetches on entry. That finding is
+not the user's Home-row report; its retention experiment is deferred rather than
+presented as the fix. Full UI cleanup, remaining input latency, shared native-host
+integration and LG/webOS/Tizen qualification remain active work.
+
+
+## Home row focus isolation
+
+Both owner-reported index defects reproduced before the fix: vertical return from
+My List reset Continue Watching from card5 to card0; top navigation changed the
+rail offset from -2116 to -346.4. Home now owns one row-focus store, keyed by row
+and card identity. Only row interaction updates it; the renderer uses the shared
+column only while that shelf has focus. Refresh/reordering resolves the saved
+identity, removed cards clamp to a valid index, and profile changes clear the store.
+
+A further fast-recycling regression showed a returning shelf sliding horizontally
+through unrelated indices. Recycled rails/focus frames now reset after prop updates
+before painting. The pinned Canvas patch stops a replaced property-animation
+controller so an old transition cannot overwrite that reset.
+
+All four new focus cases pass (including WebGL and Canvas recycling), along with
+the existing eight polish cases. Full unit/native checks pass (251+33). On the real
+Roku, row0 card5 restored at x=-2116 after visiting My List; all six top-nav moves
+kept x=-2116, and returning through the hero retained card5. The final native build
+was installed and that physical check passed again. Broader screen/overlay focus
+isolation is included in the remaining functionality sweep.
+
+## Browser session persistence under storage failures
+
+Focused API regressions reproduce a successful refresh whose credential write
+throws, followed by another expired access token. The active grant retains the
+consumed rotation's successor, skips the obsolete durable value and retries
+persistence on the next authenticated request. The browser store retains its
+active value when storage access is denied, removes obsolete durable credentials
+best-effort after a failed write, and keeps local sign-out effective when removal
+is denied. Only the small device credential record is persisted.
+
+`tests/remote/session-persistence.spec.ts` exercises HTTPS browser refresh without
+Web Locks, a second access expiry, normal reload persistence and failed writes.
+These are browser simulations, not physical PlayStation qualification. Permanently
+denied storage cannot retain sign-in after the document closes. Browsers without
+Web Locks still lack cross-context rotation coordination; a lost server rotation
+response remains unrecoverable under the current replay-revocation contract.
+
+## Shared TV functionality audit
+
+Isolated HTTPS fixtures and short decoded HLS media cover catalog/Anime/Library
+header isolation, reordered-card restoration, independent detail rails, season/hero
+return, Calendar empty/navigation/history states and source Back cancellation.
+Samsung root Return confirms with Cancel selected; drawer, pairing, player and
+history behavior retain precedence. This exercises a simulated Samsung exit API.
+
+Current Browse/Welcome/Library tests preserve card progress and server actions,
+one composed welcome image, Type/Sort/default/draft controls and confirmed writes.
+Reviewed captures cover welcome, profiles, detail, selector spacing, playback
+settings, Intro/Recap, centered seek, recovery and the Next panel. Recovery also
+has a pixel regression for late screen text leaking through its opaque surface.
+
+Waiting images are not failures: first title text appears while prepared nodes
+wait, delayed valid completion beyond 2500ms remains eligible, replacements retain
+the current coherent presentation and canceled scopes retire staged nodes. Detail,
+card, settings, browse and overlay presentation use focused components; policy
+and effect ownership remain in the controller.
+
+Intro/Recap shortcuts respect server marker ranges, seek capability and the profile
+switch. Tests cover toolbar/standalone visibility, inclusive start/exclusive end,
+invalid/credits/disabled ranges, Select-to-end and paused intent. Device Autoplay
+follows Next episode button with pinned copy, separately from server Next/skip/source
+preferences. Countdown, cancellation, prepared handoff, manual mode and persistent
+switches are exercised. Shared units: 272 pass; production integrity/type/build
+checks pass. Final combined integration checks remain a separate gate.
+
+Exact Collision Course/provider sequences, actual provider marker availability,
+long-title continuity and physical caption/input/paint acceptance remain separate.
+Native performance and sign-in evidence retain their own limits. No deployment
+or new physical-TV qualification is implied.
+
+## TV composition cleanup
+
+`App.tsx` now creates state, binds typed feature ports and sequences cross-feature
+transactions. Focused modules own the screen/panel views, household settings and
+forms, library/catalog controls, generation-owned collection and channel paging,
+Search debounce/media fan-out, source intent/discovery/startup, prepared episode
+sources, track/season pickers, revision transport and feature refreshes, menus,
+remote navigation, keyboard/media input and host listener/caption effects.
+
+Root scope reset, profile switching, Back/history, playback UI rollback and bootstrap
+application keep their original statement order. Feature ports are constructed
+once; input handlers add no backend or Core projections. Revision adapters commit
+in the original synchronous phase, and listener/style disposers retain their root
+effect owners. This is a module extraction, with no new application state model or
+untyped application context. The root is about 3.4k lines, down from about 8.9k.
+
+After rebasing onto the current hero-layer/mask and playback handoff fixes,
+production integrity/type/build checks and all 336 shared units pass. The final
+rebased browser gate passes 15 cases, including bright WebGL/Canvas hero layers,
+slow-art recovery, source controls and one-Back replacement cancellation. Ownership
+regressions cover stale page/rank replies, remembered-choice cancellation, polling
+retirement and detached host listeners. Permission-sensitive settings tests retain
+the exact confirmed-write/close/reload order.
+
+Focused HTTPS browser batches cover settings/capabilities, query drafts and late
+reads, source/seek/skip/Next actions, profile dialogs, paired sign-in, screen saver,
+renderer recovery and window focus/visibility. Both Live and Search traverse 241
+channels across seven pages and reverse with bounded payloads, exact server
+requests, retained focus, retries and snapshot replacement. Source replacement
+retains the parent’s one-Back cancellation contract. Navigation helpers resolve
+server route IDs; playback return distinguishes hiding controls from leaving the
+player, while preserving the original lease/window/card assertions.
+
+Reviewed private captures cover episode focus, profiles, source picker, both Next
+modes, bright hero/portrait layers and Cancel-default exit confirmation. This is
+browser fixture and short decoded-media evidence. Combined physical-device
+qualification remains a separate gate.
+
+## Hero artwork paint order
+
+The hero keeps dynamic backdrop frames and foreground artwork in fixed sibling
+containers, with one permanent scrim between them. Flat-white artwork browser
+regression coverage verifies the live backdrop/scrim/logo order, retained prepared
+node identities, dark synopsis/shelf backgrounds, and undimmed green clearlogos
+and portrait previews in WebGL and Canvas. The previous scene painted white (255)
+at (80,550); the corrected scene paints below 65 at that point. Existing focused
+browser cases cover coordinated replacement, synopsis authority, prepared logos,
+first/replacement artwork after the former deadline, and abandoned callbacks.
+Production integrity/type/build checks and 29 targeted unit cases pass. Native
+retirement units verify both opacity completion orders and cancellation; no new
+physical-device or native pixel qualification is implied.
+
+The procedural hero mask now matches the pinned TV wide and tall contrast stops.
+Regeneration uses `scripts/build-tv-artwork.py`, updating both packaged/browser
+PNGs and their source/output hashes. Additional WebGL/Canvas pixels verify the
+right edge of the 800px synopsis column over white artwork stays below 45 per
+channel. Mask composition at (850,550) changes from approximately 170 with the
+former stops to 31 with the pinned stops; (80,550) is approximately 22. Both bright
+hero browser cases and the full production integrity/type/build checks pass with
+the regenerated assets. Logo and portrait pixels remain undimmed in both renderers.

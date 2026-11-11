@@ -1,5 +1,6 @@
 import {test,expect,type Page} from '@playwright/test';
 import {installRemoteBackend} from '../preview/remote-backend';
+import {openNavigation} from './navigation-helpers';
 const state=(page:Page)=>page.locator('html');
 const metrics=(page:Page)=>page.evaluate(()=>(window as any).__viptvRemoteMetrics());
 const canvasTexts=(page:Page)=>page.evaluate(()=>{
@@ -11,9 +12,7 @@ const canvasTexts=(page:Page)=>page.evaluate(()=>{
 const errorShown=async(page:Page)=>(await canvasTexts(page)).some(text=>text==='Couldn’t continue'||text==='The server took too long. Try again.');
 async function open(page:Page,searching:boolean){
  await page.goto('/tv/?platform=vizio&focusdebug=1&perfdebug=1');await expect(state(page)).toHaveAttribute('data-tv-ready','true');
- await page.keyboard.press('ArrowUp');
- if(searching)await page.keyboard.press('ArrowLeft');else for(let i=0;i<3;i++)await page.keyboard.press('ArrowRight');
- await page.keyboard.press('Enter');
+ await openNavigation(page, searching ? 'search' : 'live');
  if(searching){await page.keyboard.press('a');await expect(state(page)).toHaveAttribute('data-tv-ready','true');for(let i=0;i<6;i++)await page.keyboard.press('ArrowRight');}
  await expect(state(page)).toHaveAttribute('data-tv-channel-id','channel-0');
 }
@@ -36,6 +35,7 @@ for(const searching of [false,true]){
   expect(fixture.requests.some(r=>r.path.endsWith('/live/channel-240/sources'))).toBe(true);
   await page.keyboard.press('Enter');await expect(state(page)).toHaveAttribute('data-tv-screen','player');
   await expect.poll(()=>page.locator('video').evaluate(v=>(v as HTMLVideoElement).currentTime)).toBeGreaterThan(.2);
+  await page.keyboard.press('Escape');await expect(state(page)).toHaveAttribute('data-tv-player-controls','false');
   await page.keyboard.press('Escape');await expect(state(page)).toHaveAttribute('data-tv-channel-id','channel-240');
   await walk(page,searching,240,0);
   expect(requests.map(r=>r.offset)).toEqual(['0','40','80','120','160','200','240','160','120','80','40','0']);

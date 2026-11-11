@@ -7,7 +7,8 @@
   "scripts": {
     "postinstall": "patch-package",
     "dev": "vite --host 0.0.0.0",
-    "build": "npm run design:check && npm run core:check && npm run video:check && npm run typecheck && vite build",
+    "build": "npm run design:check && npm run artwork:check && npm run core:check && npm run video:check && npm run typecheck && vite build",
+    "artwork:check": "node scripts/check-tv-artwork.mjs",
     "test": "vitest run --pool=forks --poolOptions.forks.singleFork && npm run test:native",
     "test:watch": "vitest",
     "test:e2e": "playwright test --config=playwright.remote.config.ts",
@@ -30,14 +31,14 @@
     "@solidjs/router": "0.16.3",
     "@solidtv/renderer": "2.0.7",
     "@solidtv/renderer-canvas": "npm:@solidtv/renderer@1.10.2",
-    "@solidtv/solid": "github:vynxc/solid#de6c0454d092c62ec093aff31a2398fd2ad2faab",
+    "@solidtv/solid": "github:vynxc/solid#451dcbcc9fb16e83b3d6239952c027fa20232a28",
     "@tauri-apps/api": "^2.11.1",
     "@tauri-apps/plugin-http": "^2.6.0",
     "@tauri-apps/plugin-opener": "2.5.5",
     "hls.js": "1.7.3",
     "mediabunny": "1.56.2",
     "qrcode": "1.5.4",
-    "solid-js": "1.9.15"
+    "solid-js": "1.9.17"
   },
   "devDependencies": {
     "@playwright/test": "1.63.0",

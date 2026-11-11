@@ -135,13 +135,19 @@ describe("The shipped TV entry runs this code (#34)", () => {
     "utf8",
   );
 
+  const footer = readFileSync(resolve(root, "src/tv-solid/remote/source-picker/SourceFooter.tsx"), "utf8");
+  const startup = readFileSync(resolve(root, "src/tv-solid/remote/source-picker/start-candidate.ts"), "utf8");
+  const projection = readFileSync(resolve(root, "src/tv-solid/remote/source-picker/presentation.ts"), "utf8");
+
   it("renders the contract's states from the shared module", () => {
     expect(entry).toContain('from "./sourceStatus"');
-    expect(entry).toContain("pickSourceSpread({");
-    expect(entry).toContain('open: overlay()?.kind === "sources"');
+    expect(entry).toContain("createSourcePresentation({");
+    expect(projection).toContain("pickSourceSpread({");
+    expect(entry).toContain('open: () => overlay()?.kind === "sources"');
     expect(entry).toContain("sourceStatusCopy(sourceSpread())");
     expect(entry).toContain("sourceEmptyCopy(sourceSpread())");
-    expect(entry).toContain("sourceSpinnerSrc(palette.accent)");
+    expect(entry).toContain("<SourceFooter");
+    expect(footer).toContain("<BusySpinner x={64} y={964} size={SOURCE_SPINNER_SIZE}");
   });
 
   it("no longer invents a source-drawer status line", () => {
@@ -161,8 +167,10 @@ describe("The shipped TV entry runs this code (#34)", () => {
     expect(entry).toContain("[openingSource, setOpeningSource]");
     expect(entry).toContain("setOpeningSource(source);");
     expect(entry.indexOf("setOpeningSource(source);")).toBeLessThan(
-      entry.indexOf("await player.start("),
+      entry.indexOf("await startSourceCandidate("),
     );
-    expect(entry).toContain("opening: !!openingSource()");
+    expect(startup).toContain("await player.start(");
+    expect(entry).toContain("opening: () => !!openingSource()");
+    expect(projection).toContain("opening: !!options.opening()");
   });
 });

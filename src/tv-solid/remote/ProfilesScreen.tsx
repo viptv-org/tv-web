@@ -13,7 +13,6 @@ type Item = Pick<
 function ProfileTile(props: {
   profile: Item;
   x: number;
-  delay: number;
   focused: boolean;
 }) {
   const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -37,20 +36,14 @@ function ProfileTile(props: {
   return (
     <TvView
       x={props.x}
-      y={entered() ? 380 : 396}
+      y={380}
       alpha={entered() ? 1 : 0}
       transition={
         reduced
           ? undefined
           : {
-              y: {
-                duration: 450,
-                delay: props.delay,
-                timingFunction: "cubic-bezier(.2,0,0,1)",
-              },
               alpha: {
-                duration: 450,
-                delay: props.delay,
+                duration: 150,
                 timingFunction: "cubic-bezier(.2,0,0,1)",
               },
             }
@@ -160,6 +153,7 @@ export function ProfilesScreen(props: {
   manage: boolean;
   index: number;
   zone: string;
+  loading?: boolean;
 }) {
   const items = createMemo<Item[]>(() => [
     ...props.profiles,
@@ -191,9 +185,9 @@ export function ProfilesScreen(props: {
           align="center"
           size={28}
           color={palette.muted}
-          content="No profiles available"
+            content={props.loading ? "Loading profiles…" : "No profiles available"}
         />
-        <TvView
+        <TvView show={!props.loading}
           x={810}
           y={780}
           w={300}
@@ -216,7 +210,6 @@ export function ProfilesScreen(props: {
           <ProfileTile
             profile={profile()}
             x={960 - (visible().length * 256 - 56) / 2 + i() * 256}
-            delay={i() * 60}
             focused={props.zone === "profiles" && props.index - start() === i()}
           />
         )}
@@ -224,7 +217,7 @@ export function ProfilesScreen(props: {
       <Show when={props.manage}>
         <TvView
           x={810}
-          y={780}
+          y={720}
           w={300}
           h={72}
           color={

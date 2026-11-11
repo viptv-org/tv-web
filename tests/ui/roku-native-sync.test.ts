@@ -43,7 +43,8 @@ it("moves a container as one layer group without multiplying its opacity into ea
   const root = { alpha: 0.5, nativeMotionRoot: true };
   const parent = { alpha: 0.4, nativeMotionRoot: true, parentNode: root };
   const node = { alpha: 0.5, parentNode: parent };
-  expect(motionRoot(node)).toBe(root);
+  expect(motionRoot(node)).toBe(parent);
+  expect(motionRoot(parent.parentNode!)).toBe(root);
   expect(opacityWithin(node, root)).toBeCloseTo(0.2);
   expect(opacityWithin(root, root)).toBe(1);
 });
