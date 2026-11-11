@@ -278,12 +278,21 @@ export async function installRemoteBackend(page:Page,origin:string,options:{
   await route.fulfill({body:readFileSync(resolve('tests/fixtures/hls',file)),contentType:file==='index.m3u8'?'application/vnd.apple.mpegurl':'video/mp2t'});
  });
  await page.route('**/api/**',async route=>{
-  const request=route.request(),url=new URL(request.url()),path=url.pathname;const body=request.postDataJSON();requests.push({method:request.method(),path,body});
+  const request=route.request(),url=new URL(request.url()),path=url.pathname;
+  let body:any=null,invalidLogoutJson=false;
+  if(path==='/api/auth/logout'){
+   try{body=JSON.parse(request.postData()??'');}catch{invalidLogoutJson=true;}
+  }else body=request.postDataJSON();
+  requests.push({method:request.method(),path,body});
   const send=(value:unknown,status=200)=>route.fulfill({status,json:value});
   if(options.fail)return send({error:'unavailable'},503);
   if(path==='/api/bootstrap')return send(bootstrap());
   if(path==='/api/auth/profile'){profile=String(body.profile_id);return send({});}
-  if(path==='/api/auth/logout')return send({});
+  if(path==='/api/auth/logout'){
+   if(request.headers()['content-type']?.split(';')[0].trim().toLowerCase()!=='application/json')return send({error:'json_required'},415);
+   if(invalidLogoutJson)return send({error:'invalid_json'},400);
+   return send({ok:true});
+  }
   if(path==='/api/auth/device/code')return send({device_code:'fixture-code',user_code:'ABCD-EFGH',verification_uri:`${origin}/device`,verification_uri_complete:`${origin}/device?code=ABCD-EFGH`,expires_in:300,interval:1});
   if(path==='/api/auth/device/token'){
       if(!options.pairingApproved)return send({error:'authorization_pending'},400);
