@@ -3989,3 +3989,29 @@ Exact Collision Course/provider sequences, actual provider marker availability,
 long-title continuity and physical caption/input/paint acceptance remain separate.
 Native performance and sign-in evidence retain their own limits. No deployment
 or new physical-TV qualification is implied.
+
+## TV composition cleanup
+
+The shared canvas app now composes focused screen/panel views, feature navigation,
+held-input and overlay lifecycles, detail/source presentation, profile edits,
+revisioned preference controls and bounded Live guide requests. Feature ports are
+constructed once; key handlers retain their existing routing order and do not add
+backend or Core projections. Profile switching and source admission keep their
+existing root cleanup/cancellation sequence.
+
+After integration with the current playback handoff changes, production integrity,
+type and build checks pass, as do all 324 shared unit tests. Focused HTTPS browser
+batches cover Home/header and recycled WebGL/Canvas focus, detail seasons and
+recommendations, Search/media/channel retry, source filters, track and profile
+focus, Display writes and late confirmations, guide failures/delays, Next countdown
+and manual panels, Samsung Return precedence and admitted-replacement cancellation.
+The final rebased acceptance batch passes 13 cases; the Home/billboard/detail batch
+passes 17, including bounded shelf/poster reuse. Reviewed captures cover profiles,
+episode focus, source picker, both Next modes and Cancel-default exit confirmation.
+These are browser fixtures and short decoded-media checks, not new device evidence.
+
+`App.tsx` is reduced from about 8.9k to 5.6k lines. It still owns coupled source
+discovery/admission, session/bootstrap/history, catalog/channel paging, household
+settings loading and root activation routing. Those workflows need further scoped
+controller design; this pass does not claim complete separation of the application.
+Combined hardware qualification remains a separate gate.
