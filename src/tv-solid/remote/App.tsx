@@ -4395,12 +4395,16 @@ export function createRemoteTvApp(
         const local = (id: string, label: string, description: string, on: boolean, save: () => Promise<void>): Item => ({
           id, label, description, toggle: on, value: "", run: async () => { await save();await loadSettings(settingsTabIndex("Playback"), scope.signal); },
         });
-        setSettingsItems(items => [...items,
-          local("device-autoplay", "Autoplay next episode", "Starts the next episode after a ten-second countdown on this device.", devicePlayback.autoplay,
-            () => devicePlayback.setAutoplay(!devicePlayback.autoplay)),
-          local("device-source-across", "Use source choice across shows", "Try your last source choice for new shows and movies on this device.", devicePlayback.across(deviceScope()),
-            () => devicePlayback.setAcross(deviceScope(), !devicePlayback.across(deviceScope()))),
-        ]);
+        setSettingsItems(items => {
+          const index = items.findIndex(item => item.id === "next_episode_button") + 1;
+          return [...items.slice(0, index),
+            local("device-autoplay", "Autoplay next episode", "Plays the next episode after a 10-second countdown. Applies to this device.", devicePlayback.autoplay,
+              () => devicePlayback.setAutoplay(!devicePlayback.autoplay)),
+            ...items.slice(index),
+            local("device-source-across", "Use source choice across shows", "Try your last source choice for new shows and movies on this device.", devicePlayback.across(deviceScope()),
+              () => devicePlayback.setAcross(deviceScope(), !devicePlayback.across(deviceScope()))),
+          ];
+        });
       }
       if (tab === 6)
         setSettingsItems(

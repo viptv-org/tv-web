@@ -149,7 +149,10 @@ test('Playback switches persist locally without adding fields to profile prefere
  await page.keyboard.press('ArrowRight');for(let i=0;i<30;i++)await page.keyboard.press('ArrowDown');
  await page.keyboard.press('Enter');await expect(state).toHaveAttribute('data-tv-ready','true');
  await expect.poll(()=>page.evaluate(()=>JSON.parse(localStorage.getItem('viptv-device-playback:v1')||'{}').across?.length)).toBe(1);
- await page.keyboard.press('ArrowUp');await page.keyboard.press('Enter');await expect(state).toHaveAttribute('data-tv-ready','true');
+ const playbackControls=fixture.bootstrap().preferences!.controls!.filter(control=>control.group==='playback');
+ const autoplayIndex=playbackControls.findIndex(control=>control.id==='next_episode_button')+1;
+ for(let index=playbackControls.length+1;index>autoplayIndex;index--)await page.keyboard.press('ArrowUp');
+ await page.keyboard.press('Enter');await expect(state).toHaveAttribute('data-tv-ready','true');
  await expect.poll(()=>page.evaluate(()=>JSON.parse(localStorage.getItem('viptv-device-playback:v1')||'{}').autoplay)).toBe(false);
  expect(fixture.requests.filter(r=>r.path.endsWith('/preferences')&&r.method==='PUT')).toHaveLength(0);
  await page.reload();await expect(state).toHaveAttribute('data-tv-ready','true');
