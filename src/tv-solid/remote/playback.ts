@@ -537,18 +537,17 @@ export class RemotePlayback {
     this.card = undefined;
     this.source = undefined;
     this.selection = {};
-    try {
-      await this.player.stop();
-    } finally {
-      const cleanup = async () => {
-        if (lease) await this.api.release(`/api/playback/${segment(lease.id)}`);
-        await this.events.catch(() => {});
-      };
-      // Back stops the decoder immediately; control cleanup has its own deadline.
-      // A replacement waits for the outgoing record/release before admission.
-      if (waitForControl) await cleanup();
-      else void cleanup();
-    }
+    let stopping: Promise<void>;
+    try { stopping = this.player.stop(); }
+    catch (error) { stopping = Promise.reject(error); }
+    const cleanup = async () => {
+      if (lease) await this.api.release(`/api/playback/${segment(lease.id)}`);
+      await this.events.catch(() => {});
+    };
+    const complete = Promise.all([stopping, cleanup()]);
+    // Native Stop may wait for a pending seek; Back must still retire its lease and view.
+    if (waitForControl) await complete;
+    else void complete.catch(() => {});
   }
   async dispose() {
     document.removeEventListener("visibilitychange", this.foreground);
