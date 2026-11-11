@@ -22,7 +22,7 @@ import { applyCaptionAppearance, playbackStats } from "../../roku/src/roku/video
 import { NativeSync, motionRoot, modalRoot, opacityWithin } from "./platform/native-sync";
 import { localNativeClip } from "./platform/native-clipping";
 import { logoLayout } from "./platform/logo-layout";
-import { imageSource } from "./remote/image-source";
+import { imageSource, configureImageApiOrigin } from "./remote/image-source";
 import { CompositorAnimation, compositorEasing, type MotionKey, type MotionFeedback } from "../../roku/src/roku/compositor-animation";
 import { motionGroupGeometry } from "./platform/native-motion-geometry";
 import { nativePaintOrder } from "./platform/native-paint-order";
@@ -30,6 +30,7 @@ import { modalPaintStack } from "./platform/modal-paint-stack";
 import { deviceStorage } from "../../roku/src/roku/device-storage";
 
 const API_ORIGIN = "https://beta-viptv.syek.tech";
+configureImageApiOrigin(API_ORIGIN);
 const sessionStorage = deviceStorage("viptv-session", "tokens");
 (globalThis as any).__viptvDevicePlaybackPort = deviceStorage("viptv-playback", "settings-v1");
 
