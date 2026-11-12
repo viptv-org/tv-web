@@ -55,7 +55,8 @@ describe('pause chrome intent', () => {
   });
   it('the independently visible skip chip retains explicit skip intent', async () => {
     const f = fixture();
-    const options = {...f.options, segments: {...f.options.segments, active: () => ({kind:'intro', start_ms:0, end_ms:2000})}};
+    const options = {...f.options, timeline: {...f.options.timeline, value: () => 0},
+      segments: {...f.options.segments, active: () => ({kind:'intro', start_ms:0, end_ms:2000})}};
     await createPlayerActivation(options as unknown as Parameters<typeof createPlayerActivation>[0])();
     expect(f.seek).toHaveBeenCalledWith(2); expect(f.pause).not.toHaveBeenCalled();
   });
@@ -65,6 +66,7 @@ describe('pause chrome intent', () => {
       revealEnded:()=>false, chrome:{show:f.options.chrome.set,hide:vi.fn()}, fail:vi.fn()};
     createPlayerMediaKeys(options as unknown as Parameters<typeof createPlayerMediaKeys>[0])(new KeyboardEvent('keydown',{key}));
     expect(f.setPlaying).toHaveBeenCalledWith(false); expect(f.visible()).toBe(true);
+    expect(f.seek).not.toHaveBeenCalled();
   });
 });
 

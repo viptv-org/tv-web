@@ -4681,3 +4681,18 @@ source request shape. Final observation passively clones bounded native fetch
 responses without modifying requests or application responses, and handles the
 current typed-card request exactly. No failed attempt is counted as a pass.
 This is live browser evidence, not physical PS4, Samsung, LG or Roku certification.
+## Hidden pause and pending seek preview
+
+Hidden Select discards an invisible scrub preview before selecting Pause or an
+independently visible Skip shortcut. A visible preview still commits its exact
+target, including zero. MediaPause retains its direct transport path.
+
+The hosted regression at
+https://github.com/viptv-org/tv-web/actions/runs/43308420877 reproduces the hidden
+preview selecting a seek instead of Pause. `tests/ui/player-pause.test.ts` covers
+that case, visible zero seeks, Skip priority and media pause keys. Fixed-branch
+hosted validation is recorded in TV-web issue #140. No local build or test run
+was used. Physical PS4 playback and native-clock behavior remain unverified;
+this reproduction does not establish the cause of the owner's physical-device
+report. Playwright acceptance is not part of the package workflow.
+
