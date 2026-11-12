@@ -1,5 +1,7 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createTrackPicker } from '../../src/tv-solid/remote/player/tracks';
+import { createOverlayController, type OverlayFocus } from '../../src/tv-solid/remote/overlay-controller';
+afterEach(() => vi.unstubAllGlobals());
 function fixture(roku = false) {
   let modal: any;
   const player = { tracks: { audio: [], text: [], subtitlesSupported: false }, leaseId: 'lease', providerSubtitleSupport: true,
@@ -7,7 +9,7 @@ function fixture(roku = false) {
     providerSubtitleDelay: 0, providerSubtitleTiming: 'Automatic timing unavailable', adjustProviderSubtitle: vi.fn(async () => {}), resetProviderSubtitle: vi.fn(async () => {}), selectTrack: vi.fn(async () => {}) };
   const column=vi.fn();
   const close = vi.fn(() => { modal = undefined; });
-  const open = createTrackPicker({ player: player as any, roku, selection: { column, row: vi.fn() }, dialogs: { current: () => modal, open: value => { modal = value; }, close },
+  const open = createTrackPicker({ player: player as any, roku, selection: { column, row: vi.fn() }, dialogs: { current: () => modal, open: value => { modal = value; }, replace: value => { modal = value; }, close },
     subtitle: { enabled: () => false, current: () => undefined, adopt: vi.fn(), request: vi.fn() as any, path: () => '', override: vi.fn() } });
   return { open, player, close, column, modal: () => modal };
 }
@@ -39,4 +41,19 @@ describe('provider subtitle picker', () => {
     expect(f.modal()).toBeUndefined();
     const roku = fixture(true); roku.open(); expect(roku.modal().columns).toEqual([]);
   });
+});
+
+for (const submenu of ['provider', 'timing']) it(`Back from ${submenu} preserves the original player tool focus`, async () => {
+  vi.stubGlobal('matchMedia', () => ({matches:true}));vi.stubGlobal('cancelAnimationFrame',vi.fn());
+  const focus:OverlayFocus={zone:'hero',column:3,row:1,choice:4};
+  const overlays=createOverlayController({focus:{screen:()=> 'player',capture:()=>({...focus}),selection:()=>focus.choice,select:index=>{focus.choice=index;},restore:value=>Object.assign(focus,value)},text:{begin:vi.fn(),clear:vi.fn()},errors:{clear:vi.fn(),restore:vi.fn()}});
+  const f=fixture();(f.player as any).providerSubtitleSelected=submenu==='timing'?'scoped':undefined;
+  const open=createTrackPicker({player:f.player as any,roku:false,selection:{column:vi.fn(),row:(index:any)=>{focus.choice=typeof index==='function'?index(focus.choice):index;return focus.choice;}},dialogs:{current:overlays.current,open:overlays.open,replace:overlays.replace,close:overlays.close},subtitle:{enabled:()=>false,current:()=>undefined,adopt:vi.fn(),request:vi.fn() as any,path:()=>'',override:vi.fn()}});
+  open();
+  const picker=overlays.current()!;if(picker.kind!=='tracks')throw new Error('tracks missing');
+  await picker.columns[0].items.find(item=>item.id===(submenu==='provider'?'provider-subtitles':'provider-timing'))!.run();
+  focus.choice=submenu==='provider'?1:2;
+  expect(overlays.restoreParent()).toBe(false);overlays.close();
+  expect(overlays.current()).toBeUndefined();expect(focus.choice).toBe(4);expect(focus.column).toBe(3);expect(focus.row).toBe(1);
+  overlays.dispose();
 });

@@ -4185,22 +4185,25 @@ the regenerated assets. Logo and portrait pixels remain undimmed in both rendere
 
 ### Provider subtitle timing prototype
 
-Focused provider picker/playback tests: 31 passing, including provider-only
-capability, native-host exclusion, discovery completion after Back, manual freeze,
-reset/disposal, native-track reuse and unchanged media commands. Full isolated
-production build/typecheck and pinned video integrity pass; video's complete
-206-test suite and library build pass.
+Focused provider/playback/overlay tests: 36 passing, including provider-only
+capability, legacy-backend/native-host exclusion, discovery after Back, manual
+freeze, reset/disposal, native-track reuse and unchanged media commands. The
+actual picker+overlay controller restores original player tool 4 after Back from
+nonzero rows in provider and timing submenus. Full isolated production
+build/typecheck, pinned video integrity and video's complete 206-test suite/build
+pass. This focus evidence is controller state, not rendered-device acceptance.
 
 `node scripts/check-subtitle-sync-browser.mjs` exercises real native TextTrack
 active cues with an owned silent WAV and mocked authenticated transport.
-Chromium 153.0.8010.12 passes correction/manual timing, dense-window deferral,
-source stability, zero extra load events and cue cleanup. Firefox cannot launch
-without GTK3; WebKit cannot launch without GTK4/GStreamer and related libraries.
-`--allow-unavailable` records an explicitly incomplete matrix while testing
-available engines. It never marks missing engines passed. No host packages were
-changed. This is browser mechanism evidence, not rendered-TV, real gateway HLS,
-Safari/native-HLS, startup/rebuffer or held-out subtitle accuracy qualification.
+Chromium 153.0.8010.12, Firefox 155.0 and WebKit 26.6 pass correction/manual timing,
+dense-window deferral, source stability, zero extra load events and cue cleanup.
+Existing userspace GTK/GStreamer dependencies and the bundled Firefox NSS libs
+are supplied through per-browser launch overrides; WebKit uses an owned Xvfb.
+No host package was installed. Optional `SUBTITLE_BROWSER_LIBRARY_PATH` and
+`SUBTITLE_WEBKIT_EXECUTABLE` configure those local test dependencies.
 
-The current renderer follows adapter snapshot cadence. Initial bounded VTT
-parsing and short-cue/high-speed presentation need frame-time and media-timing
-qualification before enabling automatic timing beyond the isolated prototype.
+This is browser mechanism evidence, not rendered-TV, actual gateway HLS,
+Safari/native-HLS, paired startup/rebuffer or held-out subtitle accuracy
+qualification. Initial bounded VTT parsing and short-cue/high-speed presentation
+follow adapter snapshot cadence and need frame-time/media-timing qualification
+before enabling automatic timing beyond the isolated prototype.

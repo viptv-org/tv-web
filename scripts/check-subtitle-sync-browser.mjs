@@ -1,6 +1,7 @@
 import { createServer } from 'node:http';
 import { readFileSync } from 'node:fs';
 import { performance } from 'node:perf_hooks';
+import { dirname } from 'node:path';
 import ts from 'typescript';
 import { chromium, firefox, webkit } from '@playwright/test';
 const modules = new Map([
@@ -27,7 +28,13 @@ try {
   for (const [name, engine] of Object.entries({ chromium, firefox, webkit })) {
     const started = performance.now();
     let browser;
-    try { browser = await engine.launch({ headless: true }); }
+    try {
+      const dependencies = process.env.SUBTITLE_BROWSER_LIBRARY_PATH;
+      const wrapper = name === 'webkit' ? process.env.SUBTITLE_WEBKIT_EXECUTABLE : undefined;
+      const executable = wrapper ?? (name === 'firefox' && dependencies ? engine.executablePath() : undefined);
+      const libraries = name === 'firefox' && dependencies ? `${dirname(engine.executablePath())}:${dependencies}` : dependencies;
+      browser = await engine.launch({ headless: !wrapper, ...(executable ? { executablePath: executable } : {}), ...(dependencies ? { env: { ...process.env, LD_LIBRARY_PATH: libraries, GIO_MODULE_DIR: `${dependencies}/gio/modules`, LIBGL_ALWAYS_SOFTWARE: '1' } } : {}) });
+    }
     catch (error) { results.push({ browser: name, status: 'unavailable', reason: String(error.message).slice(0, 1200) }); continue; }
     try {
       const page = await browser.newPage();

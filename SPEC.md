@@ -85,3 +85,12 @@ require qualification. Native HLS Safari and physical TV behavior are separate
 acceptance gates. The standalone browser mechanism script uses an owned silent
 WAV with mocked authenticated transport; it does not qualify gateway audio or
 full playback timing.
+
+The canonical provider-caption flow is advertised by delivery field
+`provider_subtitles_version: 1`; older backends keep the new browser controls
+hidden. External SRT attachment responses remain compatible with existing clients.
+
+Subtitle interaction adoption follows the immutable
+[subtitle synchronization contract](https://github.com/viptv-org/design/blob/3eb55db3fd248621bbf56dc30e8718450280c767/specs/behavior/subtitle-synchronization.md).
+The authorized narrow behavior adoption retains the pinned visual baseline in
+DESIGN_REF; unrelated design assets and upstream behavior are outside this change.

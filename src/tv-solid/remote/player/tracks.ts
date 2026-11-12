@@ -9,13 +9,13 @@ interface CaptionOverride {leaseId: string; appearance: {font_scale: number; tex
 export function createTrackPicker(options: {
   player: Pick<RemotePlayback, "tracks" | "selectTrack" | "leaseId" | "providerSubtitleSupport" | "providerSubtitles" | "selectProviderSubtitle" | "providerSubtitleSelected" | "providerSubtitleTiming" | "providerSubtitleDelay" | "adjustProviderSubtitle" | "resetProviderSubtitle">; roku: boolean;
   selection: {column: Setter<number>; row: Setter<number>};
-  dialogs: {current: Accessor<Overlay | undefined>; open: (value: Overlay) => void; close: () => void};
+  dialogs: {current: Accessor<Overlay | undefined>; open: (value: Overlay) => void; replace: (value: Overlay) => void; close: () => void};
   subtitle: {enabled: Accessor<boolean>; current: Accessor<Preferences | undefined>; adopt: (value: Preferences | undefined) => void;
     request: ScopedRequest; path: Accessor<string>; override: (value: CaptionOverride) => void};
 }) {
   const {player, roku: isRokuUi} = options;
   const {column: setTrackColumn, row: setChoice} = options.selection;
-  const {current: overlay, open: openOverlay, close: closeOverlay} = options.dialogs;
+  const {current: overlay, open: openOverlay, replace: replaceOverlay, close: closeOverlay} = options.dialogs;
   const {current: preferences, adopt: setPreferences, request: call, override: setCaptionOverride} = options.subtitle;
   async function scopedChoice(work: () => Promise<unknown>) {
     const current = overlay(), lease = player.leaseId;
@@ -54,7 +54,7 @@ export function createTrackPicker(options: {
                 const current = overlay(), lease = player.leaseId;
                 const candidates = await player.providerSubtitles();
                 if (overlay() !== current || player.leaseId !== lease) return;
-                openOverlay({ kind: "tracks", title: "Provider subtitles", columns: [{ title: "Subtitles", items: [
+                replaceOverlay({ kind: "tracks", title: "Provider subtitles", columns: [{ title: "Subtitles", items: [
                   { id: "provider-off", label: "Off", value: player.providerSubtitleSelected ? "" : "✓", run: () => scopedChoice(() => player.selectProviderSubtitle(null)) },
                   ...candidates.map(candidate => ({ id: candidate.id, label: candidate.label, value: player.providerSubtitleSelected === candidate.id ? "✓" : "", run: () => scopedChoice(() => player.selectProviderSubtitle(candidate)) })),
                 ] }] }); setTrackColumn(0); setChoice(0);
@@ -63,7 +63,7 @@ export function createTrackPicker(options: {
             ...(!isRokuUi && player.providerSubtitleSelected ? [{
               id: "provider-timing", label: `Subtitle timing (${player.providerSubtitleDelay.toFixed(1)} s)`, value: "",
               run: async () => {
-                openOverlay({ kind: "tracks", title: "Subtitle timing", columns: [{ title: player.providerSubtitleTiming ?? "Subtitle timing", items: [
+                replaceOverlay({ kind: "tracks", title: "Subtitle timing", columns: [{ title: player.providerSubtitleTiming ?? "Subtitle timing", items: [
                   { id: "subtitle-earlier", label: "Earlier by 0.5 s", value: "", run: () => scopedChoice(() => player.adjustProviderSubtitle(player.providerSubtitleDelay - 0.5)) },
                   { id: "subtitle-later", label: "Later by 0.5 s", value: "", run: () => scopedChoice(() => player.adjustProviderSubtitle(player.providerSubtitleDelay + 0.5)) },
                   { id: "subtitle-reset", label: "Reset automatic timing", value: "", run: () => scopedChoice(() => player.resetProviderSubtitle()) },

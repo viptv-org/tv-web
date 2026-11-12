@@ -300,7 +300,7 @@ it("releases the outgoing seek lease before admission without stopping its decod
 describe('provider-only subtitle capability', () => {
   it('exposes browser provider selection independently of embedded subtitle availability', async () => {
     const { controller, api } = setup();
-    api.admit.mockResolvedValueOnce({ ...lease('provider-only'), delivery: { ...lease('provider-only').delivery!, external_subtitles_supported: true, subtitles_supported: false } });
+    api.admit.mockResolvedValueOnce({ ...lease('provider-only'), delivery: { ...lease('provider-only').delivery!, external_subtitles_supported: true, provider_subtitles_version: 1, subtitles_supported: false } });
     await controller.start(card, { id: 'source' }, false);
     vi.stubGlobal('__viptvCreatePlayer', undefined);
     expect(controller.tracks.subtitlesSupported).toBe(false);
@@ -309,9 +309,15 @@ describe('provider-only subtitle capability', () => {
     expect(await controller.providerSubtitles()).toEqual([{ id: 'scoped-id', label: 'English', language: 'eng' }]);
     expect(api.call).toHaveBeenCalledWith('/api/subtitles/movie/title?metadata_provider_id=stremio');
   });
+  it('does not advertise new provider controls against a backend without the canonical-caption version', async () => {
+    const {controller,api}=setup();
+    api.admit.mockResolvedValueOnce({...lease('old-backend'),delivery:{...lease('old-backend').delivery!,external_subtitles_supported:true}});
+    await controller.start(card,{id:'source'},false);vi.stubGlobal('__viptvCreatePlayer',undefined);
+    expect(controller.providerSubtitleSupport).toBe(false);
+  });
   it('does not advertise browser timing on unsupported native hosts or deliveries', async () => {
     const { controller, api } = setup();
-    api.admit.mockResolvedValueOnce({ ...lease('native'), delivery: { ...lease('native').delivery!, external_subtitles_supported: true } });
+    api.admit.mockResolvedValueOnce({ ...lease('native'), delivery: { ...lease('native').delivery!, external_subtitles_supported: true, provider_subtitles_version: 1 } });
     await controller.start(card, { id: 'source' }, false);
     expect(controller.providerSubtitleSupport).toBe(false);
     vi.stubGlobal('__viptvCreatePlayer', undefined);

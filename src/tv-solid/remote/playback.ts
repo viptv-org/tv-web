@@ -217,7 +217,7 @@ export class RemotePlayback {
       throw error;
     }
   }
-  get providerSubtitleSupport() { return !!this.lease?.delivery?.external_subtitles_supported && typeof this.video.addTextTrack === "function" && this.player.capabilities.platform !== "tizen" && !(globalThis as any).__viptvCreatePlayer; }
+  get providerSubtitleSupport() { return this.lease?.delivery?.provider_subtitles_version === 1 && !!this.lease?.delivery?.external_subtitles_supported && typeof this.video.addTextTrack === "function" && this.player.capabilities.platform !== "tizen" && !(globalThis as any).__viptvCreatePlayer; }
   get providerSubtitleSelected() { return this.providerCaption?.ready ? this.providerCaption.selected.id : undefined; }
   get providerSubtitleTiming() { return this.providerCaption?.state; }
   get providerSubtitleDelay() { return this.providerCaption?.manualSeconds ?? 0; }
