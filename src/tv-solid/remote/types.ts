@@ -278,6 +278,8 @@ export interface ServerTrack {
   supported?: boolean;
 }
 export interface Delivery {
+  external_subtitles_supported?: boolean;
+  provider_subtitles_version?: number;
   subtitle_appearance?: {
     font_scale: number;
     text_color: string;

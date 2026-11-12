@@ -643,3 +643,9 @@ above only for these observed states.
 | Detail/source preparation | Loaded detail and real title/artwork/spinner/cancel presentation inspected; source discovery canceled back to Home | Native skeleton transition and source clearlogo phase not isolated; browser states verified separately |
 | Back and native cleanup | Tracks menu closes while playing; first Back clears settled pixels, removes native holders/control labels, and HLS time advances; next Back closes media with one successful lease DELETE | Physical held-key and audibility/caption behavior unqualified |
 | Installation/return | Cold no-auto-launch install, explicit launch, existing sign-in, installed11145, final ready Home with player stopped and owned observers removed | No new reboot/sign-out/pairing qualification |
+
+### Authored player gradients (#124)
+
+| Contract and states | Implementation/evidence | Device limits |
+|---|---|---|
+| DESIGN_REF `059b76344f4fed0639bedf8f89e0bd6e2b22cecd`, TV shade tokens; Tv3PlayerControls/Tv3PlayerScrub and controls hidden/exit | Shared packaged top/bottom mask; inspected WebGL/Canvas bright-video pixel captures at 1920×1080; one mask on reveal and none after hide/Stop, unchanged video bounds/source; full shared/native units and production build pass | Native explicit scrim band verified by host unit; new native bundle and physical TV gradient appearance unverified |

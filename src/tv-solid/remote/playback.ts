@@ -1,6 +1,7 @@
 import { TizenAvplayAdapter } from "../../../vendor/video/src/tizen-avplay";
 import type { Player, PlayerSnapshot } from "../../../vendor/video/src/types";
-import { RemoteTvApi, RemoteError, segment } from "./api";
+import { RemoteTvApi, RemoteError, segment, query, originFields } from "./api";
+import { ProviderSubtitles, type ProviderSubtitle, type ProviderSubtitleIntent } from "./player/provider-subtitles";
 import { DeferredPlayer } from "./deferred-player";
 import { inScope } from "./operation-scope";
 import { ensureTizenSurface } from "../platform/tizen-host";
@@ -41,6 +42,10 @@ function observedVideoEvidence(snapshot: PlayerSnapshot, platform: string, start
  * episode, resume position and output; this class never chooses a fallback. */
 export class RemotePlayback {
   readonly player: Player;
+  private providerCaption?: ProviderSubtitles;
+  private providerOperation = 0;
+  private providerIntentGeneration = 0;
+  private embeddedCaptionSuppressed = false;
   private lease?: Lease;
   private card?: Card;
   private source?: Source;
@@ -74,7 +79,7 @@ export class RemotePlayback {
   constructor(
     private api: RemoteTvApi,
     platform: string,
-    video: HTMLVideoElement,
+    private readonly video: HTMLVideoElement,
     private publish: (snapshot: PlayerSnapshot) => void,
     private failure: (error: Error, position?: number) => void,
     private presented?: (leaseId: string, card: Card, source: Source) => void,
@@ -155,6 +160,7 @@ export class RemotePlayback {
     window.addEventListener("pointerdown", this.interaction, true);
   }
   private present(snapshot: PlayerSnapshot) {
+    this.providerCaption?.tick(snapshot.time.positionSeconds);
     let held = this.seekView;
     if (held && held.opened &&
         ["ready", "playing", "paused"].includes(snapshot.state) &&
@@ -235,11 +241,49 @@ export class RemotePlayback {
       throw error;
     }
   }
+  get providerSubtitleSupport() { return this.lease?.delivery?.provider_subtitles_version === 1 && !!this.lease?.delivery?.external_subtitles_supported && typeof this.video.addTextTrack === "function" && this.player.capabilities.platform !== "tizen" && !(globalThis as any).__viptvCreatePlayer; }
+  get providerSubtitleSelected() { return this.providerCaption?.ready ? this.providerCaption.selected.id : undefined; }
+  get providerSubtitleTiming() { return this.providerCaption?.state; }
+  get providerSubtitleDelay() { return this.providerCaption?.manualSeconds ?? 0; }
+  async providerSubtitles(): Promise<ProviderSubtitle[]> {
+    const lease = this.lease, card = this.card;
+    if (!lease || !card || !this.providerSubtitleSupport) return [];
+    const result = await this.api.call<{ candidates: ProviderSubtitle[] }>(`/api/subtitles/${segment(card.identity.kind)}/${segment(card.identity.id)}?${query(originFields(card))}`);
+    return this.lease?.id === lease.id ? result.candidates.slice(0, 80) : [];
+  }
+  async selectProviderSubtitle(candidate: ProviderSubtitle | null): Promise<void> {
+    const intent = ++this.providerIntentGeneration;
+    await this.applyProviderSubtitle(candidate, intent);
+  }
+  private async applyProviderSubtitle(candidate: ProviderSubtitle | null, intent: number, retained?: ProviderSubtitleIntent): Promise<void> {
+    if (intent !== this.providerIntentGeneration) return;
+    const token = ++this.providerOperation, lease = this.lease;
+    this.providerCaption?.dispose(); this.providerCaption = undefined;
+    if (!candidate || !lease || !this.providerSubtitleSupport) return;
+    await this.player.selectTextTrack(null);
+    if (intent !== this.providerIntentGeneration || token !== this.providerOperation || this.lease?.id !== lease.id) return;
+    this.embeddedCaptionSuppressed = true;
+    const captions = new ProviderSubtitles(this.video, this.api.call.bind(this.api), `/api/playback/${segment(lease.id)}`, candidate);
+    this.providerCaption = captions;
+    try {
+      await captions.attach(retained);
+      if (intent === this.providerIntentGeneration && token === this.providerOperation && this.lease?.id === lease.id) captions.tick(this.player.snapshot.time.positionSeconds);
+    }
+    catch (error) { if (this.providerCaption === captions) { captions.dispose(); this.providerCaption = undefined; } throw error; }
+  }
+  private providerContext(card = this.card, source = this.source, lease = this.lease): string | undefined {
+    const audio = lease?.delivery?.audio_tracks?.filter(track => track.selected);
+    if (!card || !source || !audio || audio.length !== 1) return undefined;
+    return JSON.stringify([card.identity, card.metadata_origin ?? null, source.id,
+      audio.map(track => [track.input_index, track.language ?? null, track.title ?? null])]);
+  }
+  async adjustProviderSubtitle(seconds: number): Promise<void> { await this.providerCaption?.manual(seconds); }
+  async resetProviderSubtitle(): Promise<void> { await this.providerCaption?.reset(); }
   get tracks() {
     const lease = this.lease ?? this.seekView?.lease;
     return {
       audio: lease?.delivery?.audio_tracks ?? [],
-      text: lease?.delivery?.subtitle_tracks ?? [],
+      text: this.embeddedCaptionSuppressed ? (lease?.delivery?.subtitle_tracks ?? []).map(track => ({ ...track, selected: false })) : lease?.delivery?.subtitle_tracks ?? [],
       subtitlesSupported: lease?.delivery?.subtitles_supported === true,
     };
   }
@@ -247,6 +291,11 @@ export class RemotePlayback {
     if (!this.card || !this.source) return;
     if (!this.actions.tracks)
       throw new Error("Track selection is unavailable for this playback.");
+    if (kind === "text") this.providerIntentGeneration++;
+    if (kind === "text" && this.providerCaption) {
+      this.providerOperation++; this.providerCaption.dispose(); this.providerCaption = undefined;
+      if (index === null) return;
+    }
     const tracks = kind === "audio" ? this.tracks.audio : this.tracks.text;
     if (tracks.some(track => track.selected && track.input_index === index) ||
         (kind === "text" && index === null && this.tracks.subtitlesSupported &&
@@ -421,6 +470,8 @@ export class RemotePlayback {
     retireForSeek = false,
   ) {
     this.seekView = undefined;
+    const previousProviderContext = retireForSeek ? this.providerContext() : undefined;
+    if (!retireForSeek) this.providerIntentGeneration++;
     const directMode = direct || (replacement ? this.directMode : false);
     const intent = ++this.intentGeneration;
     if (!replacement) this.sourceRetry = undefined;
@@ -455,6 +506,8 @@ export class RemotePlayback {
       void this.api.release(`/api/playback/${segment(lease.id)}`);
       throw new DOMException("Playback cancelled", "AbortError");
     }
+    const retainedProvider = previousProviderContext ? this.providerCaption?.intent : undefined;
+    const retainedProviderGeneration = this.providerIntentGeneration;
     const retiring = this.stopCurrent(true);
     const handoff = new AbortController();
     this.operation = handoff;
@@ -512,6 +565,9 @@ export class RemotePlayback {
       else await this.player.play();
       if (generation !== this.generation)
         throw new DOMException("Playback cancelled", "AbortError");
+      if (retainedProvider && retainedProviderGeneration === this.providerIntentGeneration && previousProviderContext === this.providerContext()) {
+        void this.applyProviderSubtitle(retainedProvider.selected, retainedProviderGeneration, retainedProvider).catch(() => {});
+      }
     } catch (error) {
       if (generation === this.generation) await this.stopCurrent(false);
       throw error;
@@ -544,6 +600,7 @@ export class RemotePlayback {
   }
 
   async stop() {
+    this.providerIntentGeneration++;
     this.seekView = undefined;
     this.intentGeneration++;
     this.sourceRetry = undefined;
@@ -558,6 +615,7 @@ export class RemotePlayback {
     return true;
   }
   private async stopCurrent(waitForControl: boolean) {
+    this.providerOperation++; this.providerCaption?.dispose(); this.providerCaption = undefined; this.embeddedCaptionSuppressed = false;
     this.generation++;
     this.operation?.abort();
     clearTimeout(this.heartbeat);

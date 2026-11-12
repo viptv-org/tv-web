@@ -4,6 +4,7 @@ import { TvView } from "../runtime";
 import { Button, Label, palette } from "./visuals";
 import { bufferedSegments } from "./playerTimeline";
 import { clockTime as clock } from "./time";
+import { playerScrimSource } from "./tv-artwork.generated";
 import type { Card } from "./types";
 import type { PlayerSnapshot } from "../../../vendor/video/src/types";
 
@@ -20,7 +21,7 @@ export function PlayerControlsView(props: { playback: PlaybackChrome; focus: Pla
   const timelineFraction = () => Math.max(0, Math.min(1,
     (props.focus.preview() ?? props.playback.snapshot()?.time.positionSeconds ?? 0) / (props.playback.snapshot()?.time.durationSeconds || 1)));
   return <>
-    <TvView w={1920} h={1080} color="rgba(0,0,0,.35)" />
+    <TvView nativePaintBand="scrim" w={1920} h={1080} src={playerScrimSource()} preload />
     <Label
       x={96}
       y={64}

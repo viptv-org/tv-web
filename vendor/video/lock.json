@@ -1,12 +1,12 @@
 {
   "repository": "viptv-org/video",
-  "revision": "7f0062159614cc84db99e418dccd94347c6f2756",
+  "revision": "aeb7b6549a7f9e0a412f7e979d2a45364e16dbc8",
   "files": {
     "vendor/video/src/browser-capabilities.ts": "1ee5a80e09c5a72d891877f270c9846ac97629974d94da93cfb1082b1e7587a7",
     "vendor/video/src/browser-policy.ts": "463891c85e85cf6b9b09083f99f671e882976171f07307a4d5d9569939ac311a",
     "vendor/video/src/captions.ts": "2ac7d350531f101ba8577ebe66c640db1dae047e378addb647cd701977270df5",
     "vendor/video/src/html5-fallback.ts": "38433522faec31345552f57e2b902d57d400cb9ebf619755280933cbfe13b2bf",
-    "vendor/video/src/index.ts": "91fa501f52cdb542e79e896cacc576bfe12f6efebacc4edf7651ad6cbf6877cd",
+    "vendor/video/src/index.ts": "1666d8a156625b5a1690fa05332a5891ceb78f577a94c41cb4b6b927bdeebcbd",
     "vendor/video/src/media-tracks.ts": "eb825e0810d89dbb30497d7a8454c1a9be3a7d030990269a876cad376ce86f74",
     "vendor/video/src/mediabunny-mse.ts": "9910839d92fe5ff9ce41d95cd8284f7f6b15d98d7b00c685fc832d26edeb3396",
     "vendor/video/src/mediabunny.ts": "655fa8ab4694fd75ea86bb54c9f24ebf88a70134084da5eafb7870251899f039",
@@ -18,6 +18,7 @@
     "vendor/video/src/session.ts": "e0f6efeda124690e6d944ac901d2cfce77637bc65fef5ab683af9302ecfd8a17",
     "vendor/video/src/source-authorization.ts": "5bf2e33a9eedbf9ce253153dcefd44d0a1dcbcafa73e6fd8e459592b6c4c30f9",
     "vendor/video/src/subtitle-intent.ts": "f5e47b483e44d3c2aaa50da1e41efacd4ca8e36a8e980ebf41e811e778c3aa2a",
+    "vendor/video/src/subtitle-sync.ts": "e9ea5bdecf1388befd7cba70136cf19fe56d22c56d683c00f18296e4ecea5216",
     "vendor/video/src/tauri-native.ts": "5a0d0c58e900aa7304a962de16d5f68b6b3a60f105bad5673f5956a9be83840d",
     "vendor/video/src/tauri-native/aperture.ts": "860a4c36aaaf16a47ff0c97e0dc8d6326beefd86178a257664145136e6ad07d1",
     "vendor/video/src/tauri-native/capabilities.ts": "40a8b6a8070bdc51f095842818fac69c8694f02beec72b22af3d86c5ea9f9702",

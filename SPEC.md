@@ -61,6 +61,15 @@ heights, 22px icons and 12px gaps. Back dismisses menus, then visible controls,
 then exits playback; busy activity can remain without forcing the controls open.
 The native `Back` key and browser aliases share that order.
 
+Player controls use the existing pinned TV shade ramps: a 260px top fade from
+80% ink to transparent and a 700px bottom fade from transparent through 82% at
+45% to 95% at the edge. A single generated mask replaces the flat full-screen
+veil, leaving the middle of the video unchanged. Canvas, WebGL and native hosts
+share the packaged mask; native rendering assigns it explicitly to the scrim
+paint band. The mask mounts with the controls and retires when they hide or
+playback exits, without changing the video surface or controls geometry.
+Implementation scope: [TV-web #124](https://github.com/viptv-org/tv-web/issues/124).
+
 Public Cinemeta metadata caching and optional prepared clearlogos are provided by
 the companion backend change. Authenticated metadata responses retain their
 private cache policy; image and metadata preparation stay off constrained clients
@@ -108,3 +117,54 @@ Compositor callbacks take priority over playback-quality counters. Valid quality
 counters require non-dropped output before source learning or Next preparation;
 a decoded counter alone cannot override all-dropped output. Decoded-only evidence
 is labeled `decoded-counter` when usable quality counters are unavailable.
+
+## Provider subtitle timing prototype
+
+On browser HTML video hosts with gateway external-caption support, Audio &
+subtitles includes Find provider subtitles. Discovery uses server-scoped title
+and metadata-origin selectors; selection sends only the opaque provider ID to
+this playback's authenticated subtitle attachment API. Roku and AVPlay hosts do
+not advertise this browser path.
+
+Provider captions retain canonical VTT times and render through one reusable
+native TextTrack, with at most one bounded active text cue. Original timing is
+visible while optional gateway analysis runs. Accepted matching-generation
+corrections apply at an observed cue gap or after at most five content seconds
+through the shared bounded inverse projection. Pauses do not advance this wait;
+backward seeks reanchor an unapplied wait and forward content jumps may satisfy
+it. Coalesced revisions retain the initial deadline. Malformed accepted records
+cannot advance identity/revision state.
+The player adapter already reports title time, so caption lookup adds no second
+origin. Caption selection/correction never reloads or replaces media.
+
+Subtitle timing offers Earlier by 0.5 s, Later by 0.5 s, and Reset automatic
+timing. Manual delay is separately additive and freezes automatic changes,
+including late results. Reset removes manual delay and starts a fresh correction
+generation; unsupported analysis reports Automatic timing unavailable. Stopping,
+provider replacement and Off remove the cue, abort pending work and stop the
+matching server generation. Same-source managed seeks preserve only explicit
+provider/manual intent, reattach on the new lease after video opens, and validate
+the subtitle hash and selected audio identity before restoring it. Automatic
+mapping/confidence is never copied. Changed source/audio/content, Off, exit or a
+new selection reject stale reattachment. Stale responses cannot alter a
+replacement selection.
+
+Automatic timing is a disabled-by-default gateway prototype. Its speech/offset
+confidence, timestamp mapping, added resource cost and paired playback impact
+require qualification. Native HLS Safari and physical TV behavior are separate
+acceptance gates. The standalone browser mechanism script uses an owned silent
+WAV with mocked authenticated transport; it does not qualify gateway audio or
+full playback timing.
+
+The canonical provider-caption flow is advertised by delivery field
+`provider_subtitles_version: 1`; older backends keep the new browser controls
+hidden. External SRT attachment responses remain compatible with existing clients.
+
+Subtitle interaction adoption follows the immutable
+[subtitle synchronization contract](https://github.com/viptv-org/design/blob/3eb55db3fd248621bbf56dc30e8718450280c767/specs/behavior/subtitle-synchronization.md).
+The authorized narrow behavior adoption retains the pinned visual baseline in
+DESIGN_REF; unrelated design assets and upstream behavior are outside this change.
+
+Missing or unavailable optional synchronization retains the revalidated canonical
+provider/manual view across a seek. Returned audio/hash mismatches and authority
+failures still reject restoration.
