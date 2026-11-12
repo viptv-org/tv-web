@@ -27,23 +27,25 @@ import { CompositorAnimation, compositorEasing, type MotionKey, type MotionFeedb
 import { motionGroupGeometry } from "./platform/native-motion-geometry";
 import { nativePaintOrder } from "./platform/native-paint-order";
 import { modalPaintStack } from "./platform/modal-paint-stack";
-import { deviceStorage } from "../../roku/src/roku/device-storage";
+import { jsonDeviceStorage, jsonStringPort } from "../../roku/src/roku/device-storage";
 
 const API_ORIGIN = "https://beta-viptv.syek.tech";
 configureImageApiOrigin(API_ORIGIN);
-const sessionStorage = deviceStorage("viptv-session", "tokens");
-(globalThis as any).__viptvDevicePlaybackPort = deviceStorage("viptv-playback", "settings-v1");
+const sessionStorage = jsonDeviceStorage<Tokens>("viptv-session", "tokens");
+(globalThis as any).__viptvDevicePlaybackPort = jsonStringPort(
+  jsonDeviceStorage<unknown>("viptv-playback", "settings-v1"),
+);
 
 const store: SessionStore = {
   async load() {
     try {
-      return JSON.parse(await sessionStorage.load() || "null") as Tokens | null;
+      return await sessionStorage.load();
     } catch {
       return null;
     }
   },
   async save(tokens) {
-    await sessionStorage.save(JSON.stringify(tokens));
+    await sessionStorage.save(tokens);
   },
   async clear() {
     await sessionStorage.clear();

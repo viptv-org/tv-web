@@ -117,28 +117,16 @@ function storageOperation(request as Object) as Object
         if not section.Write(key, request.value) then
             return { ok: false, error: "Device settings could not be saved." }
         end if
-    else if action = "clear" then
-        ' Keep a neutral record: removing the final key restored old credentials
-        ' on the qualified device after reboot. Overwrites survived that boundary.
-        if not section.Write(key, "null") then
-            return { ok: false, error: "Device settings could not be removed." }
-        end if
     else
         return { ok: false, error: "Invalid device storage operation." }
     end if
 
-    ' Every clear, including a repeated clear, must persist its neutral record.
+    ' A successful response verifies this Task's write and explicit section flush.
     if not section.Flush() then
         return { ok: false, error: "Device settings could not be saved." }
     end if
-    if action = "save" then
-        if not section.Exists(key) or section.Read(key) <> request.value then
-            return { ok: false, error: "Device settings could not be verified." }
-        end if
-    else
-        if not section.Exists(key) or section.Read(key) <> "null" then
-            return { ok: false, error: "Device settings could not be removed." }
-        end if
+    if not section.Exists(key) or section.Read(key) <> request.value then
+        return { ok: false, error: "Device settings could not be verified." }
     end if
     return { ok: true, result: invalid }
 end function
