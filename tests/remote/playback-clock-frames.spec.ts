@@ -23,6 +23,8 @@ for(const canvas of [false,true])test(`sparse PS4 media clocks stay authoritativ
     }
   },canvas);
   const fixture=await installRemoteBackend(page,baseURL!,{media:true,episodeFlow:true});
+  const introEnd=3;
+  await page.route('**/api/playback/*/segments',route=>route.fulfill({json:{segments:[{kind:'intro',start_ms:0,end_ms:introEnd*1000}]}}));
   const state=page.locator('html');await page.goto('/tv/?platform=web&focusdebug=1');
   await expect(state).toHaveAttribute('data-renderer-backend',canvas?'canvas':'webgl');
   await expect(state).toHaveAttribute('data-tv-ready','true');await page.keyboard.press('Enter');
@@ -35,10 +37,12 @@ for(const canvas of [false,true])test(`sparse PS4 media clocks stay authoritativ
   const paused=await clocks(page);await page.waitForTimeout(350);const held=await clocks(page);
   expect(held.paused).toBe(true);expect(Math.abs(held.position-paused.position)).toBeLessThan(.08);
   expect(Math.abs(held.snapshot-held.position)).toBeLessThan(.08);
-  await page.keyboard.press('ArrowUp');await page.keyboard.press('Enter');
-  await expect.poll(()=>fixture.requests.filter(r=>r.path==='/api/playback'&&r.method==='POST').some(r=>r.body.position===2)).toBe(true);
+  expect(held.position,'owned intro must remain actionable after pause').toBeLessThan(introEnd);
+  await expect.poll(()=>page.evaluate(()=>{const labels:string[]=[];function walk(node:any){if(node.isRenderable&&node.viptvText)labels.push(node.viptvText);node.children?.forEach(walk);}walk((window as any).__viptvRenderer.stage.root);return labels;})).toContain('Skip intro');
+  await page.keyboard.press('ArrowUp');await expect(state).toHaveAttribute('data-tv-player-timeline-focus','false');await expect(state).toHaveAttribute('data-tv-source-choice','1');await page.keyboard.press('Enter');
+  await expect.poll(()=>fixture.requests.filter(r=>r.path==='/api/playback'&&r.method==='POST').some(r=>r.body.position===introEnd)).toBe(true);
   await expect(state).toHaveAttribute('data-tv-player-state','paused');
-  await expect.poll(async()=>(await clocks(page)).position).toBeCloseTo(2,1);
+  await expect.poll(async()=>(await clocks(page)).position).toBeCloseTo(introEnd,1);
   await mediaKey(page,'MediaPlay');await expect.poll(async()=>(await clocks(page)).presented).toBeGreaterThan(2.3);
   await expect(state).toHaveAttribute('data-tv-next-prepared','true');
   await page.keyboard.press('ArrowUp');for(let i=0;i<8;i++)await page.keyboard.press('ArrowRight');await page.keyboard.press('Enter');

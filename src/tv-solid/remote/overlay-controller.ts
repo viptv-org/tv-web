@@ -26,11 +26,12 @@ export function createOverlayController(options: { focus: OverlayUi; text: Overl
     setClosing(false); setSettled(false); setEntered(false);
   }
   const captureOrigin = () => { origin = options.focus.capture(); };
-  function open(value: Overlay, child = false) {
+  function open(value: Overlay, child = false, preserveOrigin = false) {
     dispose(); setClosing(false);
     if (child && current()) parents.push({value: current()!, choice: options.focus.selection()});
     else parents.length = 0;
-    captureOrigin(); options.focus.select(0); options.errors.clear();
+    if (!preserveOrigin) captureOrigin();
+    options.focus.select(0); options.errors.clear();
     const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
     setEntered(reduced); setSettled(reduced); setCurrent(value);
     if (!reduced) frame = requestAnimationFrame(() => {
@@ -38,6 +39,7 @@ export function createOverlayController(options: { focus: OverlayUi; text: Overl
     });
     if (value.kind === "text") options.text.begin(value.initial ?? "");
   }
+  const replace = (value: Overlay) => open(value, false, true);
   function close(restoreFocus = true) {
     parents.length = 0; dispose();
     const focus = origin, layer = current();
@@ -65,6 +67,6 @@ export function createOverlayController(options: { focus: OverlayUi; text: Overl
     options.text.clear(); options.errors.clear();
     return true;
   }
-  return { current, entered, closing, settled, open, close, restoreParent, captureOrigin,
+  return { current, entered, closing, settled, open, replace, close, restoreParent, captureOrigin,
     origin: () => origin, hide: () => setCurrent(undefined), retireAnimations, dispose };
 }
