@@ -71,9 +71,20 @@ try {
         await seek(3.6); restored.tick(3.6); await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
         const oldAutoSlot = Array.from(video.textTracks[0].activeCues ?? []).map(cue => cue.text);
         restored.dispose();
-        return { originalSlot, corrected, manual, afterSeek, oldAutoSlot, deferred, loads, sameSource: video.currentSrc === url, nativeTrackCount: video.textTracks.length, nativeCueCount: video.textTracks[0].cues?.length ?? 0, denseLookupP95Ms: timings[1900], denseLookupMaxMs: timings[1999] };
+        const clock = second => `00:00:${String(second).padStart(2, '0')}.000`;
+        const loopVtt = 'WEBVTT\n\n' + Array.from({ length: 10 }, (_, index) => `${clock(index)} --> ${clock(index + 1)}\nLoop ${index}\n`).join('\n');
+        const loopRecord = { ...record, playback_generation: 'continuous-cues', correction: { anchorUs: 0, offsetUs: 1000000, scale: 1 } };
+        const loopRequest = async path => path.endsWith('/subtitles') ? { canonical_vtt: loopVtt, subtitle_hash: record.subtitle_hash } : loopRecord;
+        const loop = new ProviderSubtitles(video, loopRequest, '/api/playback/continuous', { id: 'loop', label: 'English', language: 'en' });
+        await loop.attach(); await Promise.resolve(); loop.tick(0);
+        await seek(4.9); loop.tick(4.9); await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+        const continuousBefore = Array.from(video.textTracks[0].activeCues ?? []).map(cue => cue.text);
+        await seek(5.1); loop.tick(5.1); await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+        const continuousAfter = Array.from(video.textTracks[0].activeCues ?? []).map(cue => cue.text);
+        loop.dispose();
+        return { originalSlot, corrected, manual, afterSeek, oldAutoSlot, continuousBefore, continuousAfter, deferred, loads, sameSource: video.currentSrc === url, nativeTrackCount: video.textTracks.length, nativeCueCount: video.textTracks[0].cues?.length ?? 0, denseLookupP95Ms: timings[1900], denseLookupMaxMs: timings[1999] };
       });
-      if (result.originalSlot.length || result.corrected.join() !== 'Fixture dialogue' || result.manual.join() !== 'Fixture dialogue' || result.afterSeek.join() !== 'Fixture dialogue' || result.oldAutoSlot.length || result.nativeTrackCount !== 1 || !result.deferred || result.loads || !result.sameSource || result.nativeCueCount) throw new Error(`${name}: ${JSON.stringify(result)}`);
+      if (result.originalSlot.length || result.corrected.join() !== 'Fixture dialogue' || result.manual.join() !== 'Fixture dialogue' || result.afterSeek.join() !== 'Fixture dialogue' || result.oldAutoSlot.length || result.continuousBefore.join() !== 'Loop 4' || result.continuousAfter.join() !== 'Loop 4' || result.nativeTrackCount !== 1 || !result.deferred || result.loads || !result.sameSource || result.nativeCueCount) throw new Error(`${name}: ${JSON.stringify(result)}`);
       results.push({ browser: name, status: 'passed', version: browser.version(), wallMs: performance.now() - started, ...result });
     } finally { await browser.close(); }
   }

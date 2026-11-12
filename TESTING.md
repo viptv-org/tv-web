@@ -4217,3 +4217,14 @@ before enabling automatic timing beyond the isolated prototype.
 Optional-sync review regressions verify an old gateway 404 preserves canonical
 provider/manual timing after managed seek, while known audio/hash/authority
 fences are retained. Focused tests and full production type/build pass.
+
+
+The pinned video projection bounds pending accepted swaps to five content
+seconds when continuous/overlapping captions hide every observed gap. Ten
+projection regressions cover that bound, pause/origin rebasing, seek, coalescing,
+manual/disposal and malformed-record watermark protection. The combined video
+head retains canonical main's PS4 clock/frame changes; 46 affected video tests,
+46 TV lifecycle tests, type/build and Chromium/Firefox/WebKit native TextTrack
+mechanisms pass. Browser mechanisms include a continuous-cue swap with the
+media source unchanged and zero extra load events. Default automatic timing
+remains off and this is not physical-device or native-HLS qualification.

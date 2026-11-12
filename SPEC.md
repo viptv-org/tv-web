@@ -67,7 +67,11 @@ not advertise this browser path.
 Provider captions retain canonical VTT times and render through one reusable
 native TextTrack, with at most one bounded active text cue. Original timing is
 visible while optional gateway analysis runs. Accepted matching-generation
-corrections apply at a cue gap through the shared bounded inverse projection.
+corrections apply at an observed cue gap or after at most five content seconds
+through the shared bounded inverse projection. Pauses do not advance this wait;
+backward seeks reanchor an unapplied wait and forward content jumps may satisfy
+it. Coalesced revisions retain the initial deadline. Malformed accepted records
+cannot advance identity/revision state.
 The player adapter already reports title time, so caption lookup adds no second
 origin. Caption selection/correction never reloads or replaces media.
 
