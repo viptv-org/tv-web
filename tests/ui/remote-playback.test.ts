@@ -48,6 +48,18 @@ function setup(presented = vi.fn()) {
 }
 
 describe("remote playback lease transitions", () => {
+  it("publishes newly admitted actions before decoder open resolves", async () => {
+    const {controller,player,publish}=setup();
+    let finish!:()=>void;
+    player.open.mockImplementationOnce(()=>new Promise<void>(resolve=>{finish=resolve;}));
+    const actions: boolean[]=[];
+    publish.mockImplementation(()=>{actions.push(controller.actions.seek);});
+    const starting=controller.start(card,{id:"source"},false);
+    await vi.waitFor(()=>expect(finish).toBeDefined());
+    expect(actions).toContain(true);
+    finish();await starting;
+  });
+
   it("returns from Back and releases its lease while native Stop is pending", async () => {
     const { controller, api, player } = setup();
     await controller.start(card, { id: "source" }, false);
@@ -295,4 +307,53 @@ it("keeps the seek presentation after open resolves until real position metadata
 
 it("releases the outgoing seek lease before admission without stopping its decoder picture",async()=>{
  const {controller,player,api,emit,failure}=setup();await controller.start(card,{id:"source"},false);player.stop.mockClear();api.admit.mockImplementationOnce(async()=>{expect(api.release).toHaveBeenCalledWith("/api/playback/1");expect(player.pause).toHaveBeenCalledOnce();expect(player.stop).not.toHaveBeenCalled();player.snapshot={...player.snapshot,state:"error",error:{code:"connection-failed",message:"Retired stream closed"}};emit();expect(failure).not.toHaveBeenCalled();return lease("seek");});await controller.seek(60,false);expect(player.stop).toHaveBeenCalledOnce();
+});
+
+
+it("does not acknowledge an all-dropped video total as first-frame evidence", async () => {
+  const {controller,player,api,emit,presented}=setup();await controller.start(card,{id:"source"},false);
+  player.snapshot={...player.snapshot,diagnostics:{engine:"native-html",transport:"hls",videoFrames:3,droppedFrames:3}};emit();
+  expect(presented).not.toHaveBeenCalled();expect(api.call.mock.calls.some(([path])=>String(path).endsWith('/first-frame'))).toBe(false);
+  player.snapshot={...player.snapshot,diagnostics:{engine:"native-html",transport:"hls",videoFrames:3,droppedFrames:2}};emit();
+  expect(presented).toHaveBeenCalledOnce();
+});
+
+
+it("keeps clock-only startup usable without verifying a source while acknowledging the legacy transport", async () => {
+  const {controller,player,api,emit,presented}=setup();await controller.start(card,{id:"source"},false);
+  player.snapshot={...player.snapshot,diagnostics:{engine:"native-html",transport:"hls",presentationEvidence:"media-progress"},time:{positionSeconds:2,durationSeconds:100}};emit();
+  expect(controller.hasPlaybackProgress).toBe(true);expect(controller.hasPresentedFrame).toBe(false);
+  expect(presented).not.toHaveBeenCalled();expect(api.call.mock.calls.filter(([path])=>String(path).endsWith('/first-frame'))).toHaveLength(1);
+  player.snapshot={...player.snapshot,diagnostics:{engine:"native-html",transport:"hls",presentedFrames:2,presentedPositionSeconds:2}};emit();emit();
+  expect(controller.hasPresentedFrame).toBe(true);expect(presented).toHaveBeenCalledOnce();
+  expect(api.call.mock.calls.filter(([path])=>String(path).endsWith('/first-frame'))).toHaveLength(1);
+  await controller.start(card,{id:"next"},false);
+  player.snapshot={...player.snapshot,diagnostics:{engine:"native-html",transport:"hls",presentationEvidence:"media-progress"}};emit();
+  expect(controller.hasPlaybackProgress).toBe(true);expect(controller.hasPresentedFrame).toBe(false);
+  expect(presented).toHaveBeenCalledOnce();
+});
+
+it.each([0,3])("does not promote decoded-only progress over valid all-dropped quality counters (total=%s)",async total=>{
+  const {controller,player,api,emit,presented}=setup();await controller.start(card,{id:"source"},false);
+  player.snapshot={...player.snapshot,diagnostics:{engine:"native-html",transport:"hls",decodedFrames:3,videoFrames:total,droppedFrames:total}};emit();emit();
+  expect(controller.hasPlaybackProgress).toBe(true);expect(controller.hasPresentedFrame).toBe(false);expect(controller.firstVideoEvidence).toBeUndefined();
+  expect(presented).not.toHaveBeenCalled();expect(api.call.mock.calls.filter(([path])=>String(path).endsWith('/first-frame'))).toHaveLength(1);
+  player.snapshot={...player.snapshot,diagnostics:{engine:"native-html",transport:"hls",decodedFrames:3,videoFrames:3,droppedFrames:2}};emit();emit();
+  expect(controller.hasPresentedFrame).toBe(true);expect(controller.firstVideoEvidence).toBe("playback-quality");expect(presented).toHaveBeenCalledOnce();
+  expect(api.call.mock.calls.filter(([path])=>String(path).endsWith('/first-frame'))).toHaveLength(1);
+});
+
+
+it("prioritizes compositor evidence over conflicting quality counters",async()=>{
+  const {controller,player,emit,presented}=setup();await controller.start(card,{id:"source"},false);
+  player.snapshot={...player.snapshot,diagnostics:{engine:"native-html",transport:"hls",presentedFrames:1,decodedFrames:3,videoFrames:3,droppedFrames:3}};emit();emit();
+  expect(controller.hasPresentedFrame).toBe(true);expect(controller.firstVideoEvidence).toBe("compositor");expect(presented).toHaveBeenCalledOnce();
+});
+
+it("labels decoded-only fallback without claiming compositor evidence when quality is unavailable",async()=>{
+  const {controller,player,emit,presented}=setup();await controller.start(card,{id:"source"},false);
+  player.snapshot={...player.snapshot,diagnostics:{engine:"native-html",transport:"hls",decodedFrames:3}};emit();emit();
+  expect(controller.hasPresentedFrame).toBe(true);expect(controller.firstVideoEvidence).toBe("decoded-counter");expect(presented).toHaveBeenCalledOnce();
+  expect(player.snapshot.diagnostics?.presentedFrames).toBeUndefined();
+  await controller.start(card,{id:"next"},false);expect(controller.hasPresentedFrame).toBe(false);expect(controller.firstVideoEvidence).toBeUndefined();
 });

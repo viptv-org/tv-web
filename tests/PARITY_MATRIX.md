@@ -613,6 +613,8 @@ Implementation `4cf36237e70b387aacad8a3c5521d5f2ee9eaf9e`;
 | Slow artwork | Initial text and mounted preparation; valid delayed completion beyond 2500ms; coherent replacement and canceled-node retirement | Native callback timing and exact first-title follow-up pending |
 | Skip/Playback settings | Intro/Recap range boundaries, visible shortcut/toolbar, paused Select seek, invalid/disabled markers; distinct server settings and device autoplay order/copy | Provider-specific markers and physical shortcut acceptance remain separate |
 
+
+| HTML sparse clocks and frame evidence | Actual HLS in Canvas/WebGL covers pause, explicit paused seek, resume and controlled Next; shared adapter covers two source replacements and cleanup across Chromium/Firefox/WebKit | Physical PS4 decoded-video freeze remains unqualified; silent frame APIs report unavailable evidence |
 ## Owner-scoped TV presentation refinement
 
 Contract: TV-web #114 and SPEC.md, scoped design amendment

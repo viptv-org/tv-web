@@ -1,6 +1,6 @@
 {
   "repository": "viptv-org/video",
-  "revision": "f0fff0946c3fdd947cba46c2e57b9bd5bce610c4",
+  "revision": "7f0062159614cc84db99e418dccd94347c6f2756",
   "files": {
     "vendor/video/src/browser-capabilities.ts": "1ee5a80e09c5a72d891877f270c9846ac97629974d94da93cfb1082b1e7587a7",
     "vendor/video/src/browser-policy.ts": "463891c85e85cf6b9b09083f99f671e882976171f07307a4d5d9569939ac311a",
@@ -31,8 +31,8 @@
     "vendor/video/src/tauri-native/types.ts": "b65847a6e2931ac8fb81db420961333a6897d63735a0c995fc220feb1d7fbebc",
     "vendor/video/src/tauri-native/wire.ts": "5e1ec3d9a19b01c5a2bc8ad1065151254fdbf82c61223943729976e3e8566f3b",
     "vendor/video/src/tizen-avplay.ts": "96f5f4198ac0a622e894f68ac32383275c84491eca29dba398ad38d5afd0239d",
-    "vendor/video/src/types.ts": "3011a15ede22e5d4f76491e35134c02b2e34523d0638af5201791ae4dc2f08fd",
+    "vendor/video/src/types.ts": "c14c9ef4083adbdbdccb3d35921fe1f550b355c8f9f33c40da9ccf9bcfe97a3e",
     "vendor/video/src/vizio-evidence.ts": "3f6135c3a6b99677d84fce70d393a6cb43ced88397cb2098ed3e0f1bcbea42e0",
-    "vendor/video/src/vizio-html5.ts": "f8c1ba38071771c05c45b08b99c5287df068f381c0dd6037ba5ae65cd4f566f3"
+    "vendor/video/src/vizio-html5.ts": "4c87cdabe43f68ab0536f05ea68314a8b20ab45dceb21ed8953ea961d0273988"
   }
 }

@@ -4233,6 +4233,53 @@ former stops to 31 with the pinned stops; (80,550) is approximately 22. Both bri
 hero browser cases and the full production integrity/type/build checks pass with
 the regenerated assets. Logo and portrait pixels remain undimmed in both renderers.
 
+
+# HTML clock and frame qualification
+
+The frozen hosted-source d559dbb bundle reproduces stale published clocks with
+actual HLS and suppressed `timeupdate` delivery in both Canvas and WebGL:
+published positions stop near0.26–0.28s while the real media continues. The
+candidate passes `playback-clock-frames.spec.ts` in both renderers, asserting
+independent decoded/displayed counters and compositor positions, paused clock
+hold, paused explicit Skip seek, resume, controlled Next and decoder cleanup.
+The fixture changes event delivery and external API/media boundaries only.
+
+The shared adapter's210 unit/integration tests, typecheck and build pass. Six
+actual HLS adapter cases pass in Chromium153,Firefox155 and Playwright WebKit26.6:
+normal/sparse events, pause, manual paused seek, resume, two replacements and
+retirement. This WebKit advertises silent compositor callbacks; its independent
+video evidence is the playback-quality displayed counter. Native-HLS-first and
+hls.js/MSE cleanup remain covered by adapter tests.
+
+Physical PS4 is unavailable. These results reproduce timeline/control bugs and
+provide separate video/media observations; they do not establish the cause or
+resolution of the reported physical decoded-video freeze. No automatic decoder
+restart, seek or server conversion is introduced. Browser results do not qualify
+PS4 firmware, actual Safari or other physical TVs.
+
+TV production integrity/type/build checks,341 shared and50 native tests pass.
+Nineteen focused browser cases cover clocks, frame observations, subtitle output,
+platform lifecycle, seek preview, paused replacement and source recovery.
+
+A separate real-HLS case hides every frame API from the application while retaining
+an independent native frame-counter observer. Clock-only startup remains usable,
+while source-choice persistence and automatic Next preparation remain absent.
+The legacy startup acknowledgement remains present because torrent runtime
+startup deadlines remain active independently of ordinary viewer heartbeats. Real video evidence may promote that lease once; a
+replacement starts with no carried video-success marker.
+
+On-screen Play/Pause is exercised through normal remote focus in Canvas and
+WebGL. Native currentTime writes are observed without changing their behavior:
+Pause/Resume and canceling a timeline preview write no seek target or replacement
+admission; paused media position holds. The legacy startup ACK fires once from
+clock-only progress, and later actual video evidence promotes strict consumers
+once without another ACK. Gateway contract review confirms torrent startup has
+an independent120s deadline until that ACK, regardless of ordinary lease renewal.
+
+Playback evidence precedence covers simultaneous decoded/all-dropped counters,
+zero output totals, later non-dropped promotion, compositor precedence and an
+explicit decoded-only fallback label. Transport startup acknowledgement remains
+usable and fires once while strict video consumers wait for output evidence.
 ## Sharp Home artwork and dismissible player controls
 
 Source: `77d6f4b544de3cd785805a49e0a67cd52791f58b`, owner-scoped TV-web

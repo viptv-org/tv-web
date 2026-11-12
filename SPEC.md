@@ -83,3 +83,28 @@ Home stores each row's focused card separately from the navigation bar. Vertical
 return resolves that card's identity against the current row; missing cards clamp
 to a valid position. Header navigation cannot move an inactive rail. Reused rendering
 slots reset to their new row's position before painting.
+
+
+## HTML playback observations
+
+Sparse-event console engines publish their media clock throughout playback,
+including after pause/resume, explicit seek and episode replacement. Decoded
+counters, playback-quality frame counts and compositor callback positions retain
+their distinct meanings. Video progress is unavailable when native frame APIs
+supply no usable evidence. Observed frame stalls never trigger an automatic seek,
+restart, conversion or engine replacement. Admitted server actions reach the UI
+before decoder preparation completes; paused and seek-preview ownership remain
+independent of startup and superseded Play acknowledgements.
+
+Usable media-clock progress permits startup without asserting a video frame.
+Source-choice persistence and automatic Next preparation require the existing
+adapter video/native evidence authority; clock-only HTML evidence does not
+satisfy them. The legacy first-frame endpoint also acknowledges usable transport
+startup: torrent sessions require that handshake to clear their independent
+startup deadline. Its compatibility acknowledgement is not a verified-video flag. Playback-quality totals exclude
+dropped frames when accepted as video output evidence.
+
+Compositor callbacks take priority over playback-quality counters. Valid quality
+counters require non-dropped output before source learning or Next preparation;
+a decoded counter alone cannot override all-dropped output. Decoded-only evidence
+is labeled `decoded-counter` when usable quality counters are unavailable.
