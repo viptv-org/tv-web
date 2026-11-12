@@ -25,6 +25,7 @@ import { logoLayout } from "./platform/logo-layout";
 import { imageSource, configureImageApiOrigin } from "./remote/image-source";
 import { CompositorAnimation, compositorEasing, type MotionKey, type MotionFeedback } from "../../roku/src/roku/compositor-animation";
 import { motionGroupGeometry } from "./platform/native-motion-geometry";
+import { nativeVisualLayer } from "./platform/native-visual-layer";
 import { nativePaintOrder } from "./platform/native-paint-order";
 import { modalPaintStack } from "./platform/modal-paint-stack";
 import { jsonDeviceStorage, jsonStringPort } from "../../roku/src/roku/device-storage";
@@ -742,28 +743,10 @@ function iconSource(svg: string): { uri: string; color: string } | undefined {
       return;
     }
     let record = nativeRecords.get(node);
-    const chrome = rawSrc === "pkg:/assets/topbar-scrim.png";
-    const heroScrim = rawSrc === "pkg:/assets/hero-scrim.png";
-    const fullScreenBackdrop =
-      kind === "poster" &&
-      width >= 1900 &&
-      height >= 1000 &&
-      !String(rawSrc).includes("welcome-");
-    const layer = modal
-      ? modalLayer
-      : p.focusRing === true
-        ? chromeLayer
-      : chrome
-        ? backdropScrimLayer
-        : heroScrim
-          ? backdropScrimLayer
-          : fullScreenBackdrop
-            ? backdropLayer
-            : fullScreenRect
-              ? backdropScrimLayer
-              : kind === "qr"
-                ? qrLayer
-                : visualLayer;
+    const band = nativeVisualLayer({kind, width, height, src: rawSrc, modal, focusRing: p.focusRing, paintBand: p.paintBand});
+    const layer = band === "modal" ? modalLayer : band === "chrome" ? chromeLayer
+      : band === "scrim" ? backdropScrimLayer : band === "backdrop" ? backdropLayer
+      : band === "qr" ? qrLayer : visualLayer;
     if (!record || record.kind !== kind) {
       removeRecord(node);
       const holder = holderAt(node, width, height);
