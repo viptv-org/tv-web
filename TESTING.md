@@ -11,14 +11,18 @@ The grouped endpoint supplies bounded cross-catalog results without continuation
 cursors. Catalog-specific discovery and independently paged channel Search retain
 their existing endpoints. This client does not invent grouped-search pagination.
 
-Validation: production build and grouped TypeScript checks; 343 shared units and
-52 native-host units; Search and navigation browser acceptance, including WebGL
+Validation: production build and grouped TypeScript checks; 347 shared units and
+52 native-host units; 20 affected Search/Canvas browser cases, including WebGL
 and forced Canvas catalog fixtures with duplicate titles across providers and
 media types, failed Simkl, horizontal scrolling, empty catalogs, retry failure,
 Details return focus, query cancellation and channel paging/auth retirement.
-WebGL shelf geometry and both renderer captures are inspected privately. Canvas
-focus/caption paint still requires the coordinated renderer correction. Physical
-PS4 input/rendering, native Roku Search and other TV firmware remain unverified for this change.
+WebGL and patched Canvas captures are inspected privately. At 1920×1080 all five
+Canvas shelf captions paint 713–737 bright pixels each; the focused outline adds
+1590 bright pixels over identical unfocused artwork. Shared Canvas paint tests
+also cover 1540×754 and occupied artwork decode slots. The isolated Canvas graph
+matches the committed patch; the primary shared dependency graph is unchanged.
+Physical PS4 input/rendering, native Roku Search and other TV firmware remain
+unverified for this change.
 
 # Canvas presentation candidate
 

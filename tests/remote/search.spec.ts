@@ -206,6 +206,22 @@ for(const canvas of [false,true]) test(`server catalog/provider/type rows keep d
   await expect(state(page)).toHaveAttribute('data-tv-search-row','addon:101:movie:top');
   for(let i=0;i<7;i++)await page.keyboard.press('ArrowRight');
   await expect(state(page)).toHaveAttribute('data-tv-focus',/^content:7:/);
+  if(canvas) {
+    await expect(state(page)).toHaveAttribute('data-renderer-backend','canvas');
+    const paint=()=>page.evaluate(()=>{
+      const canvas=document.querySelector('#app canvas') as HTMLCanvasElement;
+      const context=canvas.getContext('2d')!,scale=canvas.width/1920;
+      const bright=(x:number,y:number,w:number,h:number)=>{
+        const data=context.getImageData(Math.round(x*scale),Math.round(y*scale),Math.round(w*scale),Math.round(h*scale)).data;
+        let count=0;for(let i=0;i<data.length;i+=4)if(data[i]>220&&data[i+1]>220&&data[i+2]>220)count++;
+        return count/(scale*scale);
+      };
+      const edge=(x:number)=>bright(x,196,212,3)+bright(x,196,3,318);
+      return {captions:Array.from({length:5},(_,i)=>bright(700+i*228,528,212,34)),focus:edge(1612)-edge(1384)};
+    });
+    await expect.poll(async()=>{const facts=await paint();return facts.captions.every(count=>count>40)&&facts.focus>500;}).toBe(true);
+    await testInfo.attach('grouped-search-pixels',{body:JSON.stringify(await paint()),contentType:'application/json'});
+  }
   await page.screenshot({path:testInfo.outputPath('grouped-search-movies-and-series.png')});
   await page.keyboard.press('ArrowDown');
   await expect(state(page)).toHaveAttribute('data-tv-search-row','addon:101:series:top');
