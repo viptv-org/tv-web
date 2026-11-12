@@ -1,0 +1,15 @@
+{
+  "package": "@solidtv/renderer-canvas",
+  "version": "1.10.2",
+  "upstream_integrity": "sha512-F8FVEszPkeSLn1ndtHodOzVFQl54HhSyBzWj6OEsHm0N+wWMh/tO8/hRU2Zj8VtvZj4VPmfSqYWQijAkk854lQ==",
+  "patch_file": "patches/@solidtv+renderer-canvas+1.10.2.patch",
+  "patch_sha256": "17fd440d9082e088c4d5ce86ea326022a0ccfe5c3e4f9936b330c89cf2d2cc79",
+  "patched_files": {
+    "dist/src/core/CoreTextNode.js": "a0751a7ca59c6b86f1367bd3739aeb08969aa611a52e5bcbb9bfeee293173888",
+    "src/core/CoreTextNode.ts": "c895564aa822fbdee1ecf08fbf7ff34bd67c4ed5e572801e4fe45205333ebfe1",
+    "src/core/CoreNode.ts": "747b2561e62f4b90442460b5b3086f815abeeab2ad35b988329343fc2a98d5b0",
+    "dist/src/core/CoreNode.js": "74c3c7e7f980424db501144c1a55f87ef03cda76b64697c06122b93c8f0888ea",
+    "dist/src/core/CoreTextureManager.js": "1c8105f13600dc9d513cd9d44aa06c04b87df04c44c3cf6f23d4baa70648c00c",
+    "src/core/CoreTextureManager.ts": "b2e597038f35b47666decf12699377de20e7cfc5ed36141791cacb93ad261e6a"
+  }
+}

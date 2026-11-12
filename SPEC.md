@@ -61,6 +61,10 @@ heights, 22px icons and 12px gaps. Back dismisses menus, then visible controls,
 then exits playback; busy activity can remain without forcing the controls open.
 The native `Back` key and browser aliases share that order.
 
+Canvas focus changes paint the authored button fill and glyph color in the same
+frame. Already-decoded glyph pixels upload during the tree update through the
+existing memory guard, with one text node and one bounded pending replacement.
+
 Player controls use the existing pinned TV shade ramps: a 260px top fade from
 80% ink to transparent and a 700px bottom fade from transparent through 82% at
 45% to 95% at the edge. A single generated mask replaces the flat full-screen
