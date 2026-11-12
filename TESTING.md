@@ -4592,3 +4592,30 @@ The committed patch reapplies through patch-package to the pinned package and
 reproduces all 674 files in the isolated Canvas copy. Its source/distribution
 manifest is verified by a unit; shared dependencies remain unchanged. This is
 browser and native-host unit evidence, with physical TV appearance unqualified.
+
+## Resume-clock rendered measurement
+
+The reviewed `e0734d5` application bundle passes eight resume browser cases and
+three temporal focus cases with one worker and the existing dependency graph.
+Admission carries the exact 1.25 seconds while the label floors to `0:01`.
+Normal and Large hour/167-hour labels fit in both renderers. WebGL reads actual
+TextNode font properties and loaded SDF metrics; its Large 167-hour label needs
+319.8975px in 334px, with all 17 glyphs drawn. Canvas observes delegated real
+`fillText` calls: the full label needs 318px in 332px. Both draw at 32.5px Onest700.
+Private normal/Large captures are inspected. The changed test also passes its
+targeted TypeScript check.
+
+Separate synthetic narrow-width controls deliberately constrain the corrected
+bundle to 278px. Both fail as intended: SDF draws 14 of 17 glyphs, and Canvas
+paints `Resume at 167:5…`. These validate the assertions; they are not reruns of
+the original old-product red. Original clipped captures remain private and
+unchanged. Earlier DOM fallback measurements underestimated SDF width, and the
+compatibility-node attempt returned null; neither established label fit.
+Canvas `hasRemainingText` can be true for a fully painted single line, so it is
+retained only as diagnostic data rather than used as a clipping assertion.
+
+The CPU6 occupied-Canvas fixture passes 22 painted frames with zero invisible
+text frames, minimum 2536 contrasting pixels, no pending replacement at paint
+and complete owned-node disposal. This follow-up reruns no broad unit suite or
+application build; the product bundle is unchanged. No account, provider,
+physical-device or deployment operation is part of this qualification.
