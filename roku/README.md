@@ -18,6 +18,14 @@ The pinned Git dependency needs its `prepare` build, allowed explicitly in
 Set `ROKU_DEV_CONFIG_PATH` to the local device store for `rk dev`. The host
 requires Roku OS 16.0 or later.
 
+The manual **Build beta Roku ZIP** Actions workflow builds main on a hosted
+runner and retains the developer ZIP, source/file-hash provenance and checksums
+for30days. It runs native tests and integrity checks without installing on a
+device. The ZIP contains the channel manifest and runtime directories at its
+root, targets the existing beta API and requires normal device pairing.
+Its manifest-only build number is20000 plus the workflow run number, above the
+retained11145 build. Hosted checks do not establish physical-TV qualification.
+
 ## Device update and qualification
 
 Wake the device, then exit the running development app before sideloading. A Home
