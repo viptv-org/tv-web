@@ -32,7 +32,7 @@ it("a rank reply must still own both the source operation and filter generation"
 
 it("cancelled direct startup never stops or retries through the gateway", async () => {
   const cancelled = new DOMException("Cancelled", "AbortError");
-  const player = {start: vi.fn(async () => {throw cancelled;}), stop: vi.fn(), replaceSource: vi.fn(), hasPresentedFrame: false, leaseId: undefined};
+  const player = {start: vi.fn(async () => {throw cancelled;}), stop: vi.fn(), replaceSource: vi.fn(), hasPlaybackProgress: false, leaseId: undefined};
   const notify = vi.fn();
   await expect(startSourceCandidate({player, source: {id: "fixture"}, action: {
     card: {identity: {kind: "movie", id: "fixture", ids: []}, provider_id: "fixture", title: "Fixture", badges: []}, resume: false, label: "Play", source_selection: "ask",
@@ -40,4 +40,12 @@ it("cancelled direct startup never stops or retries through the gateway", async 
   expect(player.start).toHaveBeenCalledOnce();
   expect(player.stop).not.toHaveBeenCalled();
   expect(notify).not.toHaveBeenCalled();
+});
+
+it("accepts usable playback progress without promoting it to video evidence", async () => {
+  const player={start:vi.fn(async()=>{}),stop:vi.fn(),replaceSource:vi.fn(),hasPlaybackProgress:true,hasPresentedFrame:false,leaseId:"fixture"};
+  await expect(startSourceCandidate({player,source:{id:"fixture"},action:{
+    card:{identity:{kind:"movie",id:"fixture",ids:[]},provider_id:"fixture",title:"Fixture",badges:[]},resume:false,label:"Play",source_selection:"ask",
+  },direct:false,manual:false,replacing:false,position:()=>0,current:()=>true,notify:vi.fn()})).resolves.toBeUndefined();
+  expect(player.hasPresentedFrame).toBe(false);
 });

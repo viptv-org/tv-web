@@ -4194,7 +4194,7 @@ independent decoded/displayed counters and compositor positions, paused clock
 hold, paused explicit Skip seek, resume, controlled Next and decoder cleanup.
 The fixture changes event delivery and external API/media boundaries only.
 
-The shared adapter's208 unit/integration tests, typecheck and build pass. Six
+The shared adapter's210 unit/integration tests, typecheck and build pass. Six
 actual HLS adapter cases pass in Chromium153,Firefox155 and Playwright WebKit26.6:
 normal/sparse events, pause, manual paused seek, resume, two replacements and
 retirement. This WebKit advertises silent compositor callbacks; its independent
@@ -4206,3 +4206,13 @@ provide separate video/media observations; they do not establish the cause or
 resolution of the reported physical decoded-video freeze. No automatic decoder
 restart, seek or server conversion is introduced. Browser results do not qualify
 PS4 firmware, actual Safari or other physical TVs.
+
+TV production integrity/type/build checks,341 shared and50 native tests pass.
+Seventeen focused browser cases cover clocks, frame observations, subtitle output,
+platform lifecycle, seek preview, paused replacement and source recovery.
+
+A separate real-HLS case hides every frame API from the application while retaining
+an independent native frame-counter observer. Clock-only startup remains usable,
+while first-frame acknowledgement, source-choice persistence and automatic Next
+preparation remain absent. Real video evidence may promote that lease once; a
+replacement starts with no carried video-success marker.

@@ -51,3 +51,25 @@ for(const canvas of [false,true])test(`sparse PS4 media clocks stay authoritativ
   expect(fixture.requests.filter(r=>r.path==='/api/playback'&&r.method==='POST')).toHaveLength(3);
   await mediaKey(page,'MediaStop');await expect(state).toHaveAttribute('data-tv-screen','home');
 });
+
+test('clock-only console startup stays usable without persisting or acknowledging video evidence',async({page,baseURL})=>{
+  await page.addInitScript(()=>{
+    Object.defineProperty(navigator,'userAgent',{configurable:true,get:()=> 'Mozilla/5.0 (PlayStation 4 12.00) AppleWebKit/605.1.15'});
+    const quality=HTMLVideoElement.prototype.getVideoPlaybackQuality;
+    (window as any).__actualVideoFrames=(video:HTMLVideoElement)=>quality.call(video).totalVideoFrames;
+    Object.defineProperty(HTMLVideoElement.prototype,'getVideoPlaybackQuality',{configurable:true,value:()=>({totalVideoFrames:0,droppedVideoFrames:0})});
+    for(const property of ['webkitDecodedFrameCount','mozDecodedFrames'])Object.defineProperty(HTMLVideoElement.prototype,property,{configurable:true,get:()=>0});
+    Object.defineProperty(HTMLVideoElement.prototype,'requestVideoFrameCallback',{configurable:true,value:undefined});
+  });
+  const fixture=await installRemoteBackend(page,baseURL!,{media:true,episodeFlow:true});
+  const state=page.locator('html');await page.goto('/tv/?platform=web&focusdebug=1');
+  await expect(state).toHaveAttribute('data-tv-ready','true');await page.keyboard.press('Enter');
+  await expect(state).toHaveAttribute('data-tv-sources','8');await expect(state).toHaveAttribute('data-tv-ready','true');await page.keyboard.press('Enter');
+  await expect.poll(async()=>Number(await state.getAttribute('data-tv-player-position'))).toBeGreaterThan(1.2);
+  await expect.poll(()=>page.locator('video').evaluate(video=>(window as any).__actualVideoFrames(video))).toBeGreaterThan(10);
+  await expect(state).toHaveAttribute('data-tv-player-state','playing');await expect(state).toHaveAttribute('data-tv-player-busy','false');
+  expect(fixture.requests.filter(request=>request.path.endsWith('/first-frame'))).toHaveLength(0);
+  expect(await page.evaluate(()=>localStorage.getItem('viptv-device-playback:v1')??'')).not.toContain('Supplier A');
+  await expect(state).toHaveAttribute('data-tv-next-prepared','false');
+  await mediaKey(page,'MediaStop');await expect(state).toHaveAttribute('data-tv-screen','home');
+});

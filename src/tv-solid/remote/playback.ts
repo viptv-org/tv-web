@@ -42,7 +42,8 @@ export class RemotePlayback {
   private sequence = 0;
   private events: Promise<unknown> = Promise.resolve();
   private pendingEvents = 0;
-  private first = false;
+  private started = false;
+  private firstVideo = false;
   private failing = false;
   private lastProgress = 0;
   private startPosition = 0;
@@ -83,27 +84,22 @@ export class RemotePlayback {
       this.present(snapshot);
       const lease = this.lease;
       if (snapshot.state === "playing" && lease) {
-        // HTML supplies measured decoded-frame evidence. AVPlay exposes an
-        // advancing SDK media clock; physical video presentation is a device gate.
-        const decoded =
+        const videoObserved =
           snapshot.diagnostics?.firstFrameMs !== undefined ||
-          snapshot.diagnostics?.presentationEvidence === "media-progress" ||
           (snapshot.diagnostics?.presentedFrames ?? 0) > 0 ||
           (snapshot.diagnostics?.decodedFrames ?? 0) > 0 ||
-          (snapshot.diagnostics?.videoFrames ?? 0) > 0 ||
+          Math.max(0, (snapshot.diagnostics?.videoFrames ?? 0) - (snapshot.diagnostics?.droppedFrames ?? 0)) > 0 ||
+          (this.player.capabilities.platform === "tizen" && snapshot.time.positionSeconds > this.startPosition);
+        const playbackObserved = videoObserved ||
+          snapshot.diagnostics?.presentationEvidence === "media-progress" ||
           (snapshot.diagnostics?.presentedFrames === undefined &&
             snapshot.diagnostics?.decodedFrames === undefined &&
             snapshot.diagnostics?.videoFrames === undefined &&
             this.player.capabilities.platform !== "tizen" &&
-            video.readyState >= 2 &&
-            video.videoWidth > 0 &&
-            snapshot.time.positionSeconds > this.startPosition) ||
-          (this.player.capabilities.platform === "tizen" &&
+            video.readyState >= 2 && video.videoWidth > 0 &&
             snapshot.time.positionSeconds > this.startPosition);
-        if (!this.first && decoded) {
-          this.first = true;
-          this.sourceRetry = undefined;
-          this.lastProgress = Date.now();
+        if (!this.firstVideo && videoObserved) {
+          this.firstVideo = true;
           if (this.card && this.source) {
             try { this.presented?.(lease.id, this.card, this.source); } catch { /* persistence never interrupts video */ }
           }
@@ -112,11 +108,16 @@ export class RemotePlayback {
             .catch((error) => {
               if (this.lease?.id === lease.id && this.player.snapshot.state !== "ended") this.fail(error);
             });
-          this.event("start");
-        } else if (this.first && previous !== "playing") {
+        }
+        if (!this.started && playbackObserved) {
+          this.started = true;
+          this.sourceRetry = undefined;
           this.lastProgress = Date.now();
           this.event("start");
-        } else if (this.first && Date.now() - this.lastProgress > 15000) {
+        } else if (this.started && previous !== "playing") {
+          this.lastProgress = Date.now();
+          this.event("start");
+        } else if (this.started && Date.now() - this.lastProgress > 15000) {
           this.lastProgress = Date.now();
           // Do not accumulate periodic observations behind a stalled request.
           if (!this.pendingEvents) this.event("start");
@@ -159,7 +160,8 @@ export class RemotePlayback {
   get leaseId() {
     return this.lease?.id;
   }
-  get hasPresentedFrame() { return this.first && !!this.lease; }
+  get hasPresentedFrame() { return this.firstVideo && !!this.lease; }
+  get hasPlaybackProgress() { return this.started && !!this.lease; }
   get actions(): PlaybackActions {
     return this.lease?.actions ?? this.seekView?.actions ?? noActions;
   }
@@ -170,7 +172,7 @@ export class RemotePlayback {
       card: this.card,
       request: {
         playback_id: this.lease.id,
-        observed_position: this.first
+        observed_position: this.started
           ? this.player.snapshot.time.positionSeconds
           : this.startPosition,
       },
@@ -247,7 +249,7 @@ export class RemotePlayback {
         card: this.card,
         request: {
           playback_id: this.lease!.id,
-          observed_position: this.first
+          observed_position: this.started
             ? this.player.snapshot.time.positionSeconds
             : this.startPosition,
         },
@@ -338,7 +340,7 @@ export class RemotePlayback {
     if (
       !this.lease ||
       !this.card ||
-      !this.first ||
+      !this.started ||
       !this.api.profile ||
       !this.actions.report_progress
     )
@@ -459,7 +461,8 @@ export class RemotePlayback {
     this.selection = selection;
     this.directMode = directMode;
     this.sequence = 0;
-    this.first = false;
+    this.started = false;
+    this.firstVideo = false;
     const delivery = lease.delivery!;
     this.startPosition =
       (delivery.position ?? 0) + (delivery.timeline_offset_seconds ?? 0);

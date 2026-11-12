@@ -67,3 +67,9 @@ supply no usable evidence. Observed frame stalls never trigger an automatic seek
 restart, conversion or engine replacement. Admitted server actions reach the UI
 before decoder preparation completes; paused and seek-preview ownership remain
 independent of startup and superseded Play acknowledgements.
+
+Usable media-clock progress permits startup without asserting a video frame.
+First-frame acknowledgement, source-choice persistence and automatic Next
+preparation require the existing adapter video/native evidence authority;
+clock-only HTML evidence does not satisfy them. Playback-quality totals exclude
+dropped frames when accepted as video output evidence.

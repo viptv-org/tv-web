@@ -308,3 +308,27 @@ it("keeps the seek presentation after open resolves until real position metadata
 it("releases the outgoing seek lease before admission without stopping its decoder picture",async()=>{
  const {controller,player,api,emit,failure}=setup();await controller.start(card,{id:"source"},false);player.stop.mockClear();api.admit.mockImplementationOnce(async()=>{expect(api.release).toHaveBeenCalledWith("/api/playback/1");expect(player.pause).toHaveBeenCalledOnce();expect(player.stop).not.toHaveBeenCalled();player.snapshot={...player.snapshot,state:"error",error:{code:"connection-failed",message:"Retired stream closed"}};emit();expect(failure).not.toHaveBeenCalled();return lease("seek");});await controller.seek(60,false);expect(player.stop).toHaveBeenCalledOnce();
 });
+
+
+it("does not acknowledge an all-dropped video total as first-frame evidence", async () => {
+  const {controller,player,api,emit,presented}=setup();await controller.start(card,{id:"source"},false);
+  player.snapshot={...player.snapshot,diagnostics:{engine:"native-html",transport:"hls",videoFrames:3,droppedFrames:3}};emit();
+  expect(presented).not.toHaveBeenCalled();expect(api.call.mock.calls.some(([path])=>String(path).endsWith('/first-frame'))).toBe(false);
+  player.snapshot={...player.snapshot,diagnostics:{engine:"native-html",transport:"hls",videoFrames:3,droppedFrames:2}};emit();
+  expect(presented).toHaveBeenCalledOnce();
+});
+
+
+it("keeps clock-only startup usable without verifying a source or reporting a first video frame", async () => {
+  const {controller,player,api,emit,presented}=setup();await controller.start(card,{id:"source"},false);
+  player.snapshot={...player.snapshot,diagnostics:{engine:"native-html",transport:"hls",presentationEvidence:"media-progress"},time:{positionSeconds:2,durationSeconds:100}};emit();
+  expect(controller.hasPlaybackProgress).toBe(true);expect(controller.hasPresentedFrame).toBe(false);
+  expect(presented).not.toHaveBeenCalled();expect(api.call.mock.calls.some(([path])=>String(path).endsWith('/first-frame'))).toBe(false);
+  player.snapshot={...player.snapshot,diagnostics:{engine:"native-html",transport:"hls",presentedFrames:2,presentedPositionSeconds:2}};emit();emit();
+  expect(controller.hasPresentedFrame).toBe(true);expect(presented).toHaveBeenCalledOnce();
+  expect(api.call.mock.calls.filter(([path])=>String(path).endsWith('/first-frame'))).toHaveLength(1);
+  await controller.start(card,{id:"next"},false);
+  player.snapshot={...player.snapshot,diagnostics:{engine:"native-html",transport:"hls",presentationEvidence:"media-progress"}};emit();
+  expect(controller.hasPlaybackProgress).toBe(true);expect(controller.hasPresentedFrame).toBe(false);
+  expect(presented).toHaveBeenCalledOnce();
+});

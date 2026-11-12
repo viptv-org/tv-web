@@ -330,7 +330,12 @@ export class VizioHtml5Adapter extends SessionPlayer {
             this.nativeHlsFallback = (stalled = false) => {
               if (!this.isCurrent(sessionId) || !stalled && ![3, 4].includes(this.media.error?.code ?? 0)) return false;
               this.nativeHlsFallback = null;
+              this.controlGeneration++;
+              this.stopMediaObservation();
               this.clearFirstFrameWatchdog();
+              this.resetProgressObservation();
+              this.frameProgressVerified = false;
+              this.presentedFrame = undefined;
               attempt++;
               if (request.kind !== 'live' && Number.isFinite(this.media.currentTime) && this.media.currentTime > 0)
                 targetPosition = this.media.currentTime;
@@ -581,7 +586,8 @@ export class VizioHtml5Adapter extends SessionPlayer {
     };
   }
   private hasVideoFrame(): boolean {
-    const frames = this.media.getVideoPlaybackQuality?.().totalVideoFrames;
+    const quality = this.media.getVideoPlaybackQuality?.();
+    const frames = quality ? Math.max(0, quality.totalVideoFrames - (quality.droppedVideoFrames ?? 0)) : undefined;
     return this.presentedFrame !== undefined || ((this.media.videoWidth ?? 0) > 0 && (frames === undefined || frames > 0)) ||
       (this.options.unreliableFrameReporting === true && this.frameProgressVerified);
   }
