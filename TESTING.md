@@ -4182,3 +4182,25 @@ channel. Mask composition at (850,550) changes from approximately 170 with the
 former stops to 31 with the pinned stops; (80,550) is approximately 22. Both bright
 hero browser cases and the full production integrity/type/build checks pass with
 the regenerated assets. Logo and portrait pixels remain undimmed in both renderers.
+
+### Provider subtitle timing prototype
+
+Focused provider picker/playback tests: 31 passing, including provider-only
+capability, native-host exclusion, discovery completion after Back, manual freeze,
+reset/disposal, native-track reuse and unchanged media commands. Full isolated
+production build/typecheck and pinned video integrity pass; video's complete
+206-test suite and library build pass.
+
+`node scripts/check-subtitle-sync-browser.mjs` exercises real native TextTrack
+active cues with an owned silent WAV and mocked authenticated transport.
+Chromium 153.0.8010.12 passes correction/manual timing, dense-window deferral,
+source stability, zero extra load events and cue cleanup. Firefox cannot launch
+without GTK3; WebKit cannot launch without GTK4/GStreamer and related libraries.
+`--allow-unavailable` records an explicitly incomplete matrix while testing
+available engines. It never marks missing engines passed. No host packages were
+changed. This is browser mechanism evidence, not rendered-TV, real gateway HLS,
+Safari/native-HLS, startup/rebuffer or held-out subtitle accuracy qualification.
+
+The current renderer follows adapter snapshot cadence. Initial bounded VTT
+parsing and short-cue/high-speed presentation need frame-time and media-timing
+qualification before enabling automatic timing beyond the isolated prototype.

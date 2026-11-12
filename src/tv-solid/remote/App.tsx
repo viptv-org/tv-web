@@ -828,7 +828,7 @@ export function createRemoteTvApp(
       // These controls replace the server lease; native track APIs are not
       // required. Only expose tracks the current server delivery can select.
       const canTracks = player.tracks.audio.some(track => track.selectable && track.supported !== false)
-        || player.tracks.subtitlesSupported;
+        || player.tracks.subtitlesSupported || player.providerSubtitleSupport;
       return [
         {
           id:

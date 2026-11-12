@@ -296,3 +296,26 @@ it("keeps the seek presentation after open resolves until real position metadata
 it("releases the outgoing seek lease before admission without stopping its decoder picture",async()=>{
  const {controller,player,api,emit,failure}=setup();await controller.start(card,{id:"source"},false);player.stop.mockClear();api.admit.mockImplementationOnce(async()=>{expect(api.release).toHaveBeenCalledWith("/api/playback/1");expect(player.pause).toHaveBeenCalledOnce();expect(player.stop).not.toHaveBeenCalled();player.snapshot={...player.snapshot,state:"error",error:{code:"connection-failed",message:"Retired stream closed"}};emit();expect(failure).not.toHaveBeenCalled();return lease("seek");});await controller.seek(60,false);expect(player.stop).toHaveBeenCalledOnce();
 });
+
+describe('provider-only subtitle capability', () => {
+  it('exposes browser provider selection independently of embedded subtitle availability', async () => {
+    const { controller, api } = setup();
+    api.admit.mockResolvedValueOnce({ ...lease('provider-only'), delivery: { ...lease('provider-only').delivery!, external_subtitles_supported: true, subtitles_supported: false } });
+    await controller.start(card, { id: 'source' }, false);
+    vi.stubGlobal('__viptvCreatePlayer', undefined);
+    expect(controller.tracks.subtitlesSupported).toBe(false);
+    expect(controller.providerSubtitleSupport).toBe(true);
+    api.call.mockResolvedValueOnce({ candidates: [{ id: 'scoped-id', label: 'English', language: 'eng' }] });
+    expect(await controller.providerSubtitles()).toEqual([{ id: 'scoped-id', label: 'English', language: 'eng' }]);
+    expect(api.call).toHaveBeenCalledWith('/api/subtitles/movie/title?metadata_provider_id=stremio');
+  });
+  it('does not advertise browser timing on unsupported native hosts or deliveries', async () => {
+    const { controller, api } = setup();
+    api.admit.mockResolvedValueOnce({ ...lease('native'), delivery: { ...lease('native').delivery!, external_subtitles_supported: true } });
+    await controller.start(card, { id: 'source' }, false);
+    expect(controller.providerSubtitleSupport).toBe(false);
+    vi.stubGlobal('__viptvCreatePlayer', undefined);
+    await controller.start(card, { id: 'other' }, false);
+    expect(controller.providerSubtitleSupport).toBe(false);
+  });
+});

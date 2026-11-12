@@ -55,3 +55,33 @@ Home stores each row's focused card separately from the navigation bar. Vertical
 return resolves that card's identity against the current row; missing cards clamp
 to a valid position. Header navigation cannot move an inactive rail. Reused rendering
 slots reset to their new row's position before painting.
+
+## Provider subtitle timing prototype
+
+On browser HTML video hosts with gateway external-caption support, Audio &
+subtitles includes Find provider subtitles. Discovery uses server-scoped title
+and metadata-origin selectors; selection sends only the opaque provider ID to
+this playback's authenticated subtitle attachment API. Roku and AVPlay hosts do
+not advertise this browser path.
+
+Provider captions retain canonical VTT times and render through one reusable
+native TextTrack, with at most one bounded active text cue. Original timing is
+visible while optional gateway analysis runs. Accepted matching-generation
+corrections apply at a cue gap through the shared bounded inverse projection.
+The player adapter already reports title time, so caption lookup adds no second
+origin. Caption selection/correction never reloads or replaces media.
+
+Subtitle timing offers Earlier by 0.5 s, Later by 0.5 s, and Reset automatic
+timing. Manual delay is separately additive and freezes automatic changes,
+including late results. Reset removes manual delay and starts a fresh correction
+generation; unsupported analysis reports Automatic timing unavailable. Stopping,
+lease replacement, provider replacement and Off remove the cue, abort pending
+work and stop the matching server generation. Stale responses cannot alter a
+replacement selection.
+
+Automatic timing is a disabled-by-default gateway prototype. Its speech/offset
+confidence, timestamp mapping, added resource cost and paired playback impact
+require qualification. Native HLS Safari and physical TV behavior are separate
+acceptance gates. The standalone browser mechanism script uses an owned silent
+WAV with mocked authenticated transport; it does not qualify gateway audio or
+full playback timing.
