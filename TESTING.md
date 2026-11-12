@@ -5,7 +5,8 @@ remains `d559dbb`. Canvas text pixels bypass artwork fetch/decode slots. Choice
 rows reserve bounded label/value columns with 24px right padding. Browser hero
 artwork waits for its packaged scrim. The seek thumb is visible only while the
 timeline has focus. This presentation intent supersedes the always-visible thumb.
-Native artwork and scrim paint bands remain unchanged.
+Native artwork and scrim paint bands remain unchanged. The isolated local Roku
+release build and its typechecks pass; its package is not installed.
 
 Production build, grouped typechecks, 344 shared units (including four
 source/distribution texture tests) and 52 native-host units pass. Nine final
