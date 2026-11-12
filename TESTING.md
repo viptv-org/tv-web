@@ -4542,9 +4542,9 @@ no deployment, account mutation or device operation is part of this validation.
 ### Combined beta qualification
 
 The integrated product code at `46d499eac54102f9b272a417d59c01f34196903f`
-passes389 shared units,52 native host units, the production integrity/type/build
+passes 389 shared units, 52 native host units, the production integrity/type/build
 and a fresh local native bundle build. The isolated dependency inventory verifies
-674 private Canvas files,674 unchanged shared Canvas files and26 package manifests.
+674 private Canvas files, 674 unchanged shared Canvas files and 26 package manifests.
 
 Eighty-three focused browser cases cover visible Continue selection and playback
 identity, horizontal/vertical focus, top navigation, loading recovery, source
@@ -4557,12 +4557,12 @@ are separate qualifications.
 
 The poster-alignment test initially sampled the renderer before its prepared
 poster became renderable. It now waits for both actual geometry nodes before
-checking the unchanged alignment,clearance and sharp-proxy assertions. The
+checking the unchanged alignment, clearance and sharp-proxy assertions. The
 failed sample is retained in private evidence; the focused rerun and remaining
 cases pass. No product behavior was changed to satisfy that test.
 
 Source-preservation checks verify the deployed TV/backend revisions are ancestors
 of the candidate. Gateway qualification must also include the retained deployed
 HLS/cache lineage; ancestry and live binary markers are checked independently of
-image labels. Runtime,served-asset and authenticated live acceptance are recorded
+image labels. Runtime, served-asset and authenticated live acceptance are recorded
 in the rollout issue rather than inferred from build or deployment status.
