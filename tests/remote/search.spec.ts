@@ -1,5 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 import { installRemoteBackend } from '../preview/remote-backend';
+const media = (cards: any[], complete = true) => ({rows:[{id:'addon:1:movie:popular',title:'Popular Movies',provider_id:'stremio',addon_id:1,state:'Ready',cards,message:complete?null:'Some search results are unavailable. Try again.'}],complete});
 const state = (page: Page) => page.locator('html');
 async function search(page: Page) {
   await page.goto('/tv/?platform=vizio&focusdebug=1');
@@ -17,20 +18,20 @@ async function texts(page: Page) {
 
 test('Search typing and navigation stay available while a query is pending',async({page,baseURL})=>{
   await installRemoteBackend(page,baseURL!);
-  const queries:{term:string;kind:string}[]=[];
+  const queries:string[]=[];
   let release!:()=>void;
   const held=new Promise<void>(resolve=>{release=resolve;});
-  await page.route('**/api/discover?**',async route=>{
+  await page.route('**/api/search?**',async route=>{
     const parameters=new URL(route.request().url()).searchParams;
-    queries.push({term:parameters.get('search')!,kind:parameters.get('type')!});
+    queries.push(parameters.get('query')!);
     await held;await route.fulfill({status:503,json:{error:'Retired search failure'}}).catch(()=>{});
   });
   await search(page);
   await page.keyboard.press('Enter');
-  await expect.poll(()=>queries.map(query=>`${query.term}:${query.kind}`).sort()).toEqual(['a:movie','a:series']);
+  await expect.poll(()=>queries).toEqual(['a']);
   await expect(state(page)).toHaveAttribute('data-tv-ready','false');
   await page.keyboard.press('ArrowRight');await page.keyboard.press('Enter');
-  await expect.poll(()=>queries.map(query=>`${query.term}:${query.kind}`).sort()).toEqual(['a:movie','a:series','ab:movie','ab:series']);
+  await expect.poll(()=>queries).toEqual(['a','ab']);
   for(const key of ['ArrowUp','ArrowUp','ArrowRight','Enter'])await page.keyboard.press(key);
   await expect(state(page)).toHaveAttribute('data-tv-screen','home');
   await expect(state(page)).toHaveAttribute('data-tv-ready','true');
@@ -43,10 +44,10 @@ test('a late failed query cannot replace or block the current Search results',as
   const fixture=await installRemoteBackend(page,baseURL!);
   let release!:()=>void;let started=false;
   const held=new Promise<void>(resolve=>{release=resolve;});
-  await page.route('**/api/discover?**',async route=>{
-    const query=new URL(route.request().url()).searchParams.get('search');
+  await page.route('**/api/search?**',async route=>{
+    const query=new URL(route.request().url()).searchParams.get('query');
     if(query==='a'){started=true;await held;return route.fulfill({status:503,json:{error:'Old failure'}}).catch(()=>{});}
-    return route.fulfill({json:{cards:[{...fixture.card,title:'Current result'}],complete:true}});
+    return route.fulfill({json:media([{...fixture.card,title:'Current result'}])});
   });
   await search(page);await page.keyboard.press('a');await expect.poll(()=>started).toBe(true);
   await page.keyboard.press('b');await expect(state(page)).toHaveAttribute('data-tv-ready','true');
@@ -60,9 +61,9 @@ test('a late failed query cannot replace or block the current Search results',as
 test('Search errors remain editable and the query limit cannot strand loading',async({page,baseURL})=>{
   const fixture=await installRemoteBackend(page,baseURL!);
   const queries:string[]=[];
-  await page.route('**/api/discover?**',route=>{
-    const query=new URL(route.request().url()).searchParams.get('search')!;queries.push(query);
-    return query==='a'?route.fulfill({status:503,json:{error:'Search failed'}}):route.fulfill({json:{cards:fixture.cards,complete:true}});
+  await page.route('**/api/search?**',route=>{
+    const query=new URL(route.request().url()).searchParams.get('query')!;queries.push(query);
+    return query==='a'?route.fulfill({status:503,json:{error:'Search failed'}}):route.fulfill({json:media(fixture.cards)});
   });
   await search(page);await page.keyboard.press('Enter');
   await expect.poll(()=>texts(page)).toContain('Couldn’t connect. Try again.');
@@ -87,8 +88,8 @@ test('Search uses reference keyboard and five-column artwork bounds with one foc
     await expect.poll(async()=> (await bounds()).some(actual=>Object.keys(expected).every(key=>Math.abs(actual[key as keyof typeof actual]-expected[key as keyof typeof expected])<.5)),{message:JSON.stringify(expected)}).toBe(true);
   for(let i=0;i<6;i++)await page.keyboard.press('ArrowRight');
   await expect(state(page)).toHaveAttribute('data-tv-focus',/^content:0:/);
-  await page.keyboard.press('ArrowDown');await expect(state(page)).toHaveAttribute('data-tv-focus',/^content:5:/);
-  await page.keyboard.press('ArrowLeft');await expect(state(page)).toHaveAttribute('data-tv-focus',/^keyboard:/);
+  for(let i=0;i<5;i++)await page.keyboard.press('ArrowRight');await expect(state(page)).toHaveAttribute('data-tv-focus',/^content:5:/);
+  for(let i=0;i<6;i++)await page.keyboard.press('ArrowLeft');await expect(state(page)).toHaveAttribute('data-tv-focus',/^keyboard:/);
 });
 
 test('channel-only Search pages server results and plays through the channel source contract',async({page,baseURL})=>{
@@ -97,7 +98,7 @@ test('channel-only Search pages server results and plays through the channel sou
   page.on('request',r=>{const u=new URL(r.url());if(u.pathname.endsWith('/live/channels'))queries.push(u.searchParams.get('search')!);});
   await search(page);await page.keyboard.press('a');
   await expect(state(page)).toHaveAttribute('data-tv-ready','true');
-  expect(fixture.requests.some(r=>r.path==='/api/discover')).toBe(false);
+  expect(fixture.requests.some(r=>r.path==='/api/search')).toBe(false);
   expect(await texts(page)).not.toContain('Top results');
   for(let i=0;i<6;i++)await page.keyboard.press('ArrowRight');
   await expect(state(page)).toHaveAttribute('data-tv-focus',/^search-channels:0:/);
@@ -121,7 +122,7 @@ test('channel-only Search pages server results and plays through the channel sou
 
 test('usable channel results remain actionable when media search fails',async({page,baseURL})=>{
   const fixture=await installRemoteBackend(page,baseURL!,{channelSearch:true,searchChannelCount:3});
-  await page.route('**/api/discover?**',route=>route.fulfill({status:503,json:{error:'Failed media provider'}}));
+  await page.route('**/api/search?**',route=>route.fulfill({status:503,json:{error:'Failed media provider'}}));
   await search(page);await page.keyboard.press('a');
   await expect(state(page)).toHaveAttribute('data-tv-ready','true');
   await expect.poll(()=>texts(page)).toContain('Couldn’t connect. Try again.');
@@ -145,16 +146,16 @@ test('channel search is not inferred from the Live navigation entry',async({page
 
 test('partial media results retain a reachable retry and adopt the confirmed replacement',async({page,baseURL})=>{
   const fixture=await installRemoteBackend(page,baseURL!);let calls=0;
-  await page.route('**/api/discover?**',route=>{calls++;return route.fulfill({json:{cards:fixture.cards.slice(0,calls===1?1:2),complete:calls>1}});});
+  await page.route('**/api/search?**',route=>{calls++;return route.fulfill({json:media(fixture.cards.slice(0,calls===1?1:2),calls>1)});});
   await search(page);await page.keyboard.press('a');
-  await expect.poll(()=>texts(page)).toContain('Partial results');
+  await expect.poll(()=>texts(page)).toContain('Some search results are unavailable. Try again.');
   for(let i=0;i<6;i++)await page.keyboard.press('ArrowRight');
   await page.keyboard.press('ArrowUp');
   await expect(state(page)).toHaveAttribute('data-tv-focus',/^search-retry:/);
   await page.keyboard.press('Enter');
   await expect.poll(()=>calls).toBe(2);
   await expect(state(page)).toHaveAttribute('data-tv-ready','true');
-  await expect.poll(()=>texts(page)).not.toContain('Partial results');
+  await expect.poll(()=>texts(page)).not.toContain('Some search results are unavailable. Try again.');
 });
 
 test('Search remains usable when the platform lacks native canvas letter spacing',async({page,baseURL})=>{
@@ -179,4 +180,46 @@ test('authentication loss during channel paging retires the Search profile',asyn
   await expect(state(page)).toHaveAttribute('data-tv-focus',/^search-channels:0:/);
   for(let i=0;i<35;i++)await page.keyboard.press('ArrowRight');
   await expect(state(page)).toHaveAttribute('data-tv-screen','welcome');
+});
+
+for(const canvas of [false,true]) test(`server catalog/provider/type rows keep duplicate titles, order, failure isolation and per-row return focus (${canvas?'Canvas':'WebGL'})`,async({page,baseURL},testInfo)=>{
+  if(canvas)await page.addInitScript(()=>{Object.defineProperty(window,'Worker',{configurable:true,value:undefined});const original=HTMLCanvasElement.prototype.getContext;HTMLCanvasElement.prototype.getContext=function(this:HTMLCanvasElement,type:string,...args:any[]){return type.includes('webgl')?null:original.apply(this,[type,...args] as any);} as typeof original;});
+  const fixture=await installRemoteBackend(page,baseURL!);
+  const card=(kind:string,provider:string,id:string,title:string)=>({...fixture.card,provider_id:provider,identity:{kind,id,ids:[]},title});
+  const rows=[
+    {id:'simkl:movie',title:'Movies · Simkl',provider_id:'simkl',state:'Failed',cards:[],message:'Some search results are unavailable. Try again.'},
+    {id:'addon:101:movie:top',title:'Popular Movies · Fixture 101',provider_id:'stremio',addon_id:101,state:'Ready',cards:Array.from({length:9},(_,i)=>card('movie','addon:101',`same-${i}`,`Shared title ${i}`))},
+    {id:'addon:101:series:top',title:'Popular Series · Fixture 101',provider_id:'stremio',addon_id:101,state:'Ready',cards:[card('series','addon:101','same-0','Shared title 0')]},
+    {id:'addon:101:movie:year',title:'New Movies',provider_id:'stremio',addon_id:101,state:'Empty',cards:[]},
+    {id:'addon:102:movie:top',title:'Popular Movies · Fixture 102',provider_id:'stremio',addon_id:102,state:'Ready',cards:[card('movie','addon:102','same-0','Shared title 0')]},
+  ];
+  let calls=0;
+  await page.route('**/api/search?**',route=>{calls++;return route.fulfill({json:{rows,complete:false}});});
+  await search(page);await page.keyboard.press('a');
+  await expect.poll(()=>texts(page)).toContain('Popular Movies · Fixture 101');
+  await expect(state(page)).toHaveAttribute('data-tv-search-rows','5');
+  await page.screenshot({path:testInfo.outputPath('grouped-search-failed-provider.png')});
+  await expect(state(page)).toHaveAttribute('data-tv-search-row','simkl:movie');
+  for(let i=0;i<6;i++)await page.keyboard.press('ArrowRight');
+  await expect(state(page)).toHaveAttribute('data-tv-focus',/^search-retry:/);
+  await page.keyboard.press('ArrowDown');
+  await expect(state(page)).toHaveAttribute('data-tv-search-row','addon:101:movie:top');
+  for(let i=0;i<7;i++)await page.keyboard.press('ArrowRight');
+  await expect(state(page)).toHaveAttribute('data-tv-focus',/^content:7:/);
+  await page.screenshot({path:testInfo.outputPath('grouped-search-movies-and-series.png')});
+  await page.keyboard.press('ArrowDown');
+  await expect(state(page)).toHaveAttribute('data-tv-search-row','addon:101:series:top');
+  await expect.poll(()=>texts(page)).toContain('Shared title 0');
+  await page.keyboard.press('ArrowUp');
+  await expect(state(page)).toHaveAttribute('data-tv-focus',/^content:7:/);
+  for(let i=0;i<3;i++)await page.keyboard.press('ArrowDown');
+  await expect(state(page)).toHaveAttribute('data-tv-search-row','addon:102:movie:top');
+  await page.keyboard.press('Enter');
+  await expect(state(page)).toHaveAttribute('data-tv-screen','detail');
+  const metadata=fixture.requests.find(r=>r.path==='/api/meta/movie/same-0');
+  expect(metadata).toBeTruthy();
+  await page.keyboard.press('Escape');
+  await expect(state(page)).toHaveAttribute('data-tv-search-row','addon:102:movie:top');
+  await expect(state(page)).toHaveAttribute('data-tv-focus',/^content:0:/);
+  expect(calls).toBe(1);
 });
