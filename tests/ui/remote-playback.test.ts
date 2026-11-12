@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { RemotePlayback } from "../../src/tv-solid/remote/playback";
-import type { RemoteTvApi } from "../../src/tv-solid/remote/api";
+import { RemoteError, type RemoteTvApi } from "../../src/tv-solid/remote/api";
 import type { Card, Lease } from "../../src/tv-solid/remote/types";
 import { IDLE_SNAPSHOT, type Player } from "../../vendor/video/src/types";
 
@@ -473,4 +473,30 @@ it("labels decoded-only fallback without claiming compositor evidence when quali
   expect(controller.hasPresentedFrame).toBe(true);expect(controller.firstVideoEvidence).toBe("decoded-counter");expect(presented).toHaveBeenCalledOnce();
   expect(player.snapshot.diagnostics?.presentedFrames).toBeUndefined();
   await controller.start(card,{id:"next"},false);expect(controller.hasPresentedFrame).toBe(false);expect(controller.firstVideoEvidence).toBeUndefined();
+});
+
+
+it("keeps a valid lease through a transient heartbeat timeout and renews before expiry", async () => {
+  vi.useFakeTimers();
+  vi.setSystemTime(0);
+  const { controller, api, player, failure } = setup();
+  Object.defineProperty(api, "serverNow", { get: () => Date.now() });
+  const authorized = { ...lease("heartbeat"), expires_at: 60, renew_after_seconds: 20 };
+  api.admit.mockResolvedValueOnce(authorized);
+  api.call.mockRejectedValueOnce(new RemoteError(502, "gateway_unavailable", "Temporary gateway timeout"));
+  api.call.mockResolvedValueOnce({ ...authorized, expires_at: 90 });
+  await controller.start(card, { id: "source" }, false);
+  player.stop.mockClear();
+  await vi.advanceTimersByTimeAsync(20_000);
+  expect(api.call).toHaveBeenCalledTimes(1);
+  expect(failure).not.toHaveBeenCalled();
+  expect(player.stop).not.toHaveBeenCalled();
+  expect(api.release).not.toHaveBeenCalled();
+  expect(controller.leaseId).toBe("heartbeat");
+  await vi.advanceTimersByTimeAsync(1_000);
+  expect(api.call).toHaveBeenCalledTimes(2);
+  expect(failure).not.toHaveBeenCalled();
+  expect(api.release).not.toHaveBeenCalled();
+  await vi.advanceTimersByTimeAsync(38_000);
+  expect(controller.leaseId).toBe("heartbeat");
 });
