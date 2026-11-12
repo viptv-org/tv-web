@@ -77,7 +77,9 @@ export function PlayerControlsView(props: { playback: PlaybackChrome; focus: Pla
         h={8}
         color={palette.accent}
       />
-      <TvView x={96 + 1728 * timelineFraction() - 6} y={930} w={12} h={20} color={palette.text} />
+      <Show when={props.focus.timeline()}>
+        <TvView x={96 + 1728 * timelineFraction() - 6} y={930} w={12} h={20} color={palette.text} />
+      </Show>
       <Show when={props.focus.preview() !== undefined}>
         <TvView x={Math.max(96, Math.min(1704, 96 + 1728 * timelineFraction() - 60))} y={878} w={120} h={44} color={palette.surface}>
           <Label centerY={22} w={120} align="center" size={22} font="Onest700" content={clock(props.focus.preview() ?? 0)} />

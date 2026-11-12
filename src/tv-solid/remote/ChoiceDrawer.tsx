@@ -51,7 +51,7 @@ export function ChoiceDrawer(props: { dialog: Extract<Overlay, { kind: "choices"
               centerY={44}
               size={26}
               font="Onest600"
-              maxwidth={570}
+              maxwidth={item.value ? 400 : 644}
               maxlines={1}
               content={item.label}
               color={
@@ -61,9 +61,12 @@ export function ChoiceDrawer(props: { dialog: Extract<Overlay, { kind: "choices"
               }
             />
             <Label
-              x={600}
+              x={448}
               centerY={44}
               size={22}
+              maxwidth={220}
+              maxlines={1}
+              align="right"
               content={item.value ?? ""}
               color={
                 i() + Math.max(0, props.selected - 5) === props.selected

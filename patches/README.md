@@ -15,3 +15,7 @@ bounded wait with object URL cleanup. The browser's global API remains intact.
 Source, distributed JavaScript and internal decoder declarations are patched
 together; focused tests exercise source and distribution, including the serialized
 image-worker decoder.
+
+Already-decoded ImageData bypasses image fetch/decode slots. Canvas uploads
+those pixels directly so text color changes remain responsive while artwork
+requests are pending. URL images retain their existing decode and upload bounds.

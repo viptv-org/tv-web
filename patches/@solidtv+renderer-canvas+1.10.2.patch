@@ -228,3 +228,65 @@ diff --git a/node_modules/@solidtv/renderer-canvas/dist/src/core/CoreNode.js b/n
          }
          else {
              animations = this._animations = {};
+diff --git a/node_modules/@solidtv/renderer-canvas/dist/src/core/CoreTextureManager.js b/node_modules/@solidtv/renderer-canvas/dist/src/core/CoreTextureManager.js
+index 1653cbf..13c8d97 100644
+--- a/node_modules/@solidtv/renderer-canvas/dist/src/core/CoreTextureManager.js
++++ b/node_modules/@solidtv/renderer-canvas/dist/src/core/CoreTextureManager.js
+@@ -346,7 +346,8 @@ export class CoreTextureManager extends EventEmitter {
+         // them behind an async capability probe only delays the first frame. The
+         // default texture, which backs every plain-colour node, is one of them.
+         const isImage = texture.type === TextureType.image;
+-        if (isImage === true && this.initialized === false) {
++        const localPixels = isImage && typeof ImageData !== 'undefined' && texture.props.src instanceof ImageData;
++        if (isImage === true && !localPixels && this.initialized === false) {
+             this.uploadTextureQueue.add(texture);
+             return;
+         }
+@@ -364,7 +365,7 @@ export class CoreTextureManager extends EventEmitter {
+             // synchronously, so gating them would only park them behind image
+             // decodes. `decodeGate` is null when image workers handle decoding
+             // off-thread.
+-            const gate = isImage === true ? this.decodeGate : null;
++            const gate = isImage === true && !localPixels ? this.decodeGate : null;
+             if (gate !== null) {
+                 await gate.acquire();
+             }
+@@ -387,7 +388,7 @@ export class CoreTextureManager extends EventEmitter {
+                 return;
+             }
+             // Handle non-image textures: upload immediately
+-            if (isImage === false) {
++            if (isImage === false || (localPixels && this.renderer.mode === 'canvas')) {
+                 // `uploadTexture` records failure on the texture's state rather than
+                 // throwing, so there is nothing to catch here.
+                 this.uploadTexture(texture);
+diff --git a/node_modules/@solidtv/renderer-canvas/src/core/CoreTextureManager.ts b/node_modules/@solidtv/renderer-canvas/src/core/CoreTextureManager.ts
+index 4f378d3..08902e2 100644
+--- a/node_modules/@solidtv/renderer-canvas/src/core/CoreTextureManager.ts
++++ b/node_modules/@solidtv/renderer-canvas/src/core/CoreTextureManager.ts
+@@ -611,7 +611,8 @@ export class CoreTextureManager extends EventEmitter {
+     // them behind an async capability probe only delays the first frame. The
+     // default texture, which backs every plain-colour node, is one of them.
+     const isImage = texture.type === TextureType.image;
+-    if (isImage === true && this.initialized === false) {
++    const localPixels = isImage && typeof ImageData !== 'undefined' && (texture as ImageTexture).props.src instanceof ImageData;
++    if (isImage === true && !localPixels && this.initialized === false) {
+       this.uploadTextureQueue.add(texture);
+       return;
+     }
+@@ -631,7 +632,7 @@ export class CoreTextureManager extends EventEmitter {
+       // synchronously, so gating them would only park them behind image
+       // decodes. `decodeGate` is null when image workers handle decoding
+       // off-thread.
+-      const gate = isImage === true ? this.decodeGate : null;
++      const gate = isImage === true && !localPixels ? this.decodeGate : null;
+       if (gate !== null) {
+         await gate.acquire();
+       }
+@@ -661,5 +662,5 @@ export class CoreTextureManager extends EventEmitter {
+       // Handle non-image textures: upload immediately
+-      if (isImage === false) {
++      if (isImage === false || (localPixels && this.renderer.mode === 'canvas')) {
+         // `uploadTexture` records failure on the texture's state rather than
+         // throwing, so there is nothing to catch here.
+         this.uploadTexture(texture);
