@@ -25,13 +25,36 @@ The compact season chooser labels season zero “Specials”, initially focuses 
 regular season, and retains explicit or resumed specials. Android TV's current
 reference uses a strip; its phone/desktop surfaces use a picker. This TV-web
 chooser is an owner-scoped refinement, not a claim that Android TV uses a dropdown.
-Focused shelf backdrops use Gaussian blur through the existing public image proxy.
-Their 960×540 decode target is independent of the 1920×1080 display rectangle;
-blur sigma scales with source width (8 at 960px). Focus settles for 120ms before
-preparing a replacement, and the displayed artwork remains until readiness.
-The portrait preview is 240×360 at (1584,144), aligned to the 96px right inset with
-50px clearance below the profile avatar. Roku uses packaged scrims. Recovery dialogs
-and player busy indicators share compact, consistently padded layouts.
+Home and focused shelf backdrops stay sharp and occupy the right-hand 1440×810
+rectangle at (480,0). A packaged smooth scrim keeps the title/logo area mostly
+black and fades the artwork into the shelf below. Preview decoding stays bounded
+at 960×540; the prepared nodes are reused through replacement. Focus settles for
+120ms before preparing a replacement, and the displayed artwork remains until
+readiness. The portrait preview remains 240×360 at (1584,144).
+
+The owner-scoped presentation contract in [TV-web #114](https://github.com/viptv-org/tv-web/issues/114)
+supersedes this client's earlier blurred/full-width Home composition and loading
+copy, without claiming adoption by other clients or moving DESIGN_REF. The
+supplied owner image is a composition reference only. The generated Home mask
+lives in `scripts/build-tv-masks.py`; `scripts/build-tv-artwork.py` owns packaged
+textures and provenance hashes. Detail retains the pinned backdrop composition.
+
+Selected hero indicators use ordinary off-white geometry during running and
+parked states across WebGL, Canvas and native SceneGraph; the featured rotation
+still runs once and parks. The vertical row indicator occupies the gutter at
+x=1848, outside the clipped card viewport ending at x=1824; its 220px height
+clamps to y=806 so the bottom remains inside the 54px safe inset.
+
+Details prepare with title, metadata, synopsis, action and recommendation shapes
+at their final positions. A restrained opacity shimmer runs on one parent only;
+reduced motion keeps it static. Source discovery and a selected source's opening
+show the title/logo, sharp right artwork and a centered indeterminate progress
+indicator, with “Press Back to cancel”. The underlying source list retains its
+focus and errors; actual admission and first-frame state determine completion.
+Recovery dialogs retain their real error/retry behavior. Player tools use 56px
+heights, 22px icons and 12px gaps. Back dismisses menus, then visible controls,
+then exits playback; busy activity can remain without forcing the controls open.
+The native `Back` key and browser aliases share that order.
 
 Public Cinemeta metadata caching and optional prepared clearlogos are provided by
 the companion backend change. Authenticated metadata responses retain their

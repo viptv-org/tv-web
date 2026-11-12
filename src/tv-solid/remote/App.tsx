@@ -37,6 +37,8 @@ import { RowFocus } from "./row-focus";
 import { HomeContent } from "./HomeContent";
 
 import { DetailContent } from "./DetailContent";
+import { PlaybackPreparation } from "./PlaybackPreparation";
+import { BusyIndicator } from "./BusyIndicator";
 import { PlayerControlsView } from "./PlayerControlsView";
 import { SettingsView } from "./SettingsView";
 import { BrowseControls } from "./BrowseControls";
@@ -771,6 +773,11 @@ export function createRemoteTvApp(
         overlay()?.kind === "next" && !advancing() && episodeState().status === "ready" && !!episodeState().item && episodeKey(episodeState().item!) === target,
         () => { void advanceEpisode().catch(fail); });
     });
+    const endedPresentation = createMemo(() => screen() === "player" && snapshot()?.state === "ended" ? endScope() : "");
+    createEffect(() => {
+      const ended = endedPresentation();
+      if (ended && dismissedEnd !== ended) setShowControls(true);
+    });
     const continuationPoll = setInterval(() => {
       const time = snapshot()?.time;
       const due = snapshot()?.state === "ended" || time?.durationSeconds && time.durationSeconds - time.positionSeconds <= 180;
@@ -863,7 +870,7 @@ export function createRemoteTvApp(
       ];
     }, undefined, { equals: (a, b) => a.length === b.length && a.every((button, index) => button.id === b[index].id && button.label === b[index].label) });
     const playerTools = createMemo(() => {
-      let left = 280;
+      let left = 268;
       return playerButtons().slice(1).map(button => {
         const width = button.id === "tracks" ? 304 : button.id === "next" ? 240 : 228;
         const x = button.id === "next" ? 1584 : left;
@@ -1888,12 +1895,17 @@ export function createRemoteTvApp(
         return;
       }
       if (screen() === "player") {
-        if (seeking()) return;
+        if (seeking()) {
+          if (showControls()) setShowControls(false);
+          return;
+        }
         if (seek() !== undefined) {
           setSeek(undefined);
+          setShowControls(false);
           return;
         }
         if (showControls()) {
+          if (snapshot()?.state === "ended") dismissedEnd = endScope();
           setShowControls(false);
           return;
         }
@@ -2104,7 +2116,7 @@ export function createRemoteTvApp(
         replace: operation => {sourceScope = operation;}, aborted: () => scope.signal.aborted},
       position: () => sourceStartPosition, manual: () => manualSourceSelection, playerScreen: () => screen() === "player", memory: sourceMemory,
       presentation: {capture: overlays.captureOrigin, hide: overlays.hide, show: () => openOverlay({kind: "sources", title: "Choose a source"})},
-      resolve: action => {setAction(action);setPickerCard(action.card);}, retry: work => {retry = work;},
+      resolve: action => {setAction(action);setPickerCard(previous => presentationCard(previous, action.card));}, retry: work => {retry = work;},
       page: setSourcePage, ids: setAllSourceIds, loading: setLoading, discovering: setSourceLoading,
       failure: {current: sourceFailure, set: setSourceFailure}, rows: sources, reconcile: reconcileSources, publish: publishSources,
       play: playSource, notify, fail});
@@ -2912,6 +2924,7 @@ export function createRemoteTvApp(
       );
       document.documentElement.dataset.tvPlaybackError = playbackError();
       document.documentElement.dataset.tvPlayerControls = String(showControls());
+      document.documentElement.dataset.tvHeroCycle = heroCycle.active() ? String(heroCycle.started()) : "";
       document.documentElement.dataset.tvPlayerSeeking = String(seeking());
       document.documentElement.dataset.tvPlayerPosition = String(snapshot()?.time.positionSeconds ?? "");
       document.documentElement.dataset.tvPlayerDuration = String(snapshot()?.time.durationSeconds ?? "");
@@ -3150,7 +3163,7 @@ export function createRemoteTvApp(
                 shelfTop={shelfTitleY()} columnForRow={shelf => homeRowFocus.resolve(shelf)} isSaved={isSaved} />
             </Show>
             <Show when={screen() === "detail"}>
-              <DetailContent detail={detailForDisplay()} selectedTitle={selected()?.title}
+              <DetailContent detail={detailForDisplay()} selectedKind={selected()?.identity.kind}
                 hasEpisodes={detailHasEpisodes()} episodes={detailEpisodes()} zone={zone()} column={column()}
                 heroAction={heroAction()} seasonIndex={seasonIndex()} episodeColumn={detailColumn("episodes")}
                 recommendationColumn={detailColumn("recommendations")} actionLabel={detailActionLabel()}
@@ -3281,23 +3294,21 @@ export function createRemoteTvApp(
             <Show when={screen() === "player" && !overlay() && !showControls() && !loading() && !seeking() && !error() && activeSegment() && playerActions().seek && preferences()?.preferences.skip_intros !== false}>
               <Button x={1596} y={746} w={228} h={56} label={activeSegment()?.kind === "recap" ? "Skip recap" : "Skip intro"} focused={false} />
             </Show>
+            <Show when={screen() === "player" && !overlay() && !openingSource() && (loading() || seeking() || snapshot()?.state === "buffering")}>
+              <BusyIndicator label={seeking() ? "Seeking…" : "Buffering…"} />
+            </Show>
             <Show
               when={
                 screen() === "player" &&
                 !overlay() &&
-                (showControls() ||
-                  seeking() ||
-                  loading() ||
-                  snapshot()?.state === "buffering" ||
-                  (snapshot()?.state === "ended" && dismissedEnd !== endScope()) ||
-                  error())
+                showControls() && !openingSource()
               }
             >
               <PlayerControlsView playback={{snapshot, card: () => activeAction()?.card, canSeek: () => playerActions().seek, tools: playerTools}}
-                focus={{selected: choice, timeline: timelineFocused, preview: seek}} activity={{loading, seeking}} />
+                focus={{selected: choice, timeline: timelineFocused, preview: seek}} />
             </Show>
           </TvView>
-          <Show when={overlay()}>
+          <Show when={!openingSource() ? overlay() : undefined}>
             {(modal) => (
               <OverlayViewport order={10} shade={modal().kind !== "next" ? "rgba(0,0,0,.6)" : undefined} shadeWidth={sceneWidth()}>
                 <Show when={modal().kind === "next"}>
@@ -3347,12 +3358,9 @@ export function createRemoteTvApp(
               </OverlayViewport>
             )}
           </Show>
-          <Show when={sourceLoading() && !overlay() && screen() !== "player" && !error()}>
-            <OverlayViewport order={15}>
-              <TvView x={480} y={864} w={960} h={144} zIndex={1} color={palette.surface}>
-                <Label x={32} y={24} size={28} font="Onest700" content="Finding a matching source…" />
-                <Label x={32} y={76} size={22} color={palette.muted} content="Press Back to cancel" />
-              </TvView>
+          <Show when={(openingSource() || sourceLoading() && !overlay() && screen() !== "player") && !error()}>
+            <OverlayViewport order={15} shade={palette.bg} shadeWidth={1920}>
+              <PlaybackPreparation card={pickerCard()} discovering={!openingSource()} />
             </OverlayViewport>
           </Show>
           <Show when={error()}>

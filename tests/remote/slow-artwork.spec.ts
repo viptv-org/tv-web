@@ -44,7 +44,7 @@ for (const first of [true, false]) test(`slow ${first ? 'first' : 'replacement'}
   if (!first) {
     await expect.poll(() => page.evaluate(src => {
       let painted = false;
-      function walk(node:any) { if (node.isRenderable && node.props.w === 1920 && node.props.h === 1080 && node.texture?.props?.src === src) painted = true; node.children?.forEach(walk); }
+      function walk(node:any) { if (node.isRenderable && ((node.props.w === 1440 && node.props.h === 810) || (node.props.w === 1920 && node.props.h === 1080)) && node.texture?.props?.src === src) painted = true; node.children?.forEach(walk); }
       walk((window as any).__viptvRenderer.stage.root); return painted;
     }, initial.landscape)).toBe(true);
     await page.clock.fastForward(9100);
