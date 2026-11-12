@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { createRequire } from 'node:module';
+import { paintedProgress, progressPaint } from '../preview/progress-paint';
 import { installRemoteBackend } from '../preview/remote-backend';
 const { PNG } = createRequire(import.meta.url)('pngjs');
 const rendered = (page: Page) => page.evaluate(() => {
@@ -72,7 +73,9 @@ test('delayed detail uses layout skeleton and source opening uses centered title
   await expect.poll(async()=>(await rendered(page)).boxes.some(box=>box.x===480 && box.w===1440 && box.h===810)).toBe(true);
   await page.waitForTimeout(100);
   await expect.poll(async()=>(await rendered(page)).boxes.some(box=>box.x===932 && box.y===512 && box.w===56 && box.h===56)).toBe(true);
-  await page.screenshot({path:testInfo.outputPath('source-opening.png')});
+  await expect.poll(async()=>(await paintedProgress(page)).brightPixels).toBeGreaterThan(80);
+  const openingFrame=await page.screenshot({path:testInfo.outputPath('source-opening.png')});
+  expect(progressPaint(openingFrame,true).brightPixels).toBeGreaterThan(80);
   await page.keyboard.press('Escape');releasePlayback();
   await expect(state).toHaveAttribute('data-tv-screen','home');
   expect(fixture.requests.some(request=>request.path.endsWith('/first-frame'))).toBe(false);

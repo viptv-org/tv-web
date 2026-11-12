@@ -4230,6 +4230,15 @@ does not delay first-frame presentation. Both native Back and Escape ignore repe
 keydowns after menu dismissal and chrome dismissal, then the next distinct press
 exits normally. Preparation has no redundant opening/discovery status line.
 SPEC.md references the immutable scoped design amendment
-`3eb55db3fd248621bbf56dc30e8718450280c767`; unrelated upstream changes remain
+`1f50bdc2e95b73562307f49d36f61851720bf2c7`; unrelated upstream changes remain
 intentionally outside the `059b763` asset snapshot. Physical-device qualification
 remains pending.
+
+Progress paint verification reuses the exact runtime artifact from
+`7c8c0ecdd15ce621ad96b2dcde0a8af8e6fdcac6`; no runtime change or rebuild was
+needed. Eleven focused WebGL/Canvas cases wait for painted progress, then assert
+more than 80 near-exact fixture-accent pixels in each saved full-frame spinner
+region. All frames contain 123–127 such pixels, including normal/reduced motion
+and available/absent/failed logos. Separate region captures were inspected.
+Original reports remain intact; the apparent missing ring was a full-frame visual
+read, not a reproduced paint failure.

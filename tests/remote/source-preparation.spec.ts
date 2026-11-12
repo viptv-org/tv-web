@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { paintedProgress, progressClip, progressPaint } from '../preview/progress-paint';
 import { installRemoteBackend, referenceRoot } from '../preview/remote-backend';
 
 const preparation = (page: Page) => page.evaluate(() => {
@@ -19,13 +20,15 @@ const preparation = (page: Page) => page.evaluate(() => {
 });
 
 for (const canvas of [false,true]) for (const logo of ['available','absent','failed'] as const)
-  test(`source preparation prefers ${logo} clearlogo (${canvas?'Canvas':'WebGL'})`,async({page,baseURL},testInfo)=>{
+  for (const reduced of logo==='absent'?[true]:[true,false])
+  test(`source preparation prefers ${logo} clearlogo (${canvas?'Canvas':'WebGL'}, ${reduced?'reduced':'normal'} motion)`,async({page,baseURL},testInfo)=>{
     if (canvas) await page.addInitScript(()=>{
       const original=HTMLCanvasElement.prototype.getContext;
       HTMLCanvasElement.prototype.getContext=function(this:HTMLCanvasElement,type:string,...args:any[]){
         return type.includes('webgl')?null:original.apply(this,[type,...args] as any);
       } as typeof original;
     });
+    await page.emulateMedia({reducedMotion:reduced?'reduce':'no-preference'});
     const fixture=await installRemoteBackend(page,baseURL!,{media:true});
     if (logo==='absent') fixture.card.logo=null;
     if (logo==='failed') {
@@ -56,8 +59,12 @@ for (const canvas of [false,true]) for (const logo of ['available','absent','fai
     expect(view.texts).toContain('Press Back to cancel');
     expect(view.texts).not.toContain('Opening stream…');
     expect(view.texts).not.toContain('Choose a source');
-    await page.waitForTimeout(100);
-    await page.screenshot({path:testInfo.outputPath(`source-${logo}.png`)});
+    await expect.poll(async()=>(await paintedProgress(page)).brightPixels).toBeGreaterThan(80);
+    const frame=await page.screenshot({path:testInfo.outputPath(`source-${logo}.png`)});
+    const paint=progressPaint(frame,true);
+    expect(paint.brightPixels).toBeGreaterThan(80);
+    await page.screenshot({clip:progressClip,path:testInfo.outputPath('progress-region.png')});
+    await testInfo.attach('progress-pixels',{body:JSON.stringify({...paint,clip:progressClip,canvas,reduced,logo}),contentType:'application/json'});
     await page.keyboard.press('Escape');release();
     await expect(state).toHaveAttribute('data-tv-screen','home');
     expect(fixture.requests.some(request=>request.path.endsWith('/first-frame'))).toBe(false);

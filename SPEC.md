@@ -36,8 +36,8 @@ The owner-scoped presentation contract in [TV-web #114](https://github.com/viptv
 supersedes this client's earlier blurred/full-width Home composition and loading
 copy, without claiming adoption by other clients or moving DESIGN_REF. The
 supplied owner image is a composition reference only. Canonical scoped authority is
-[TV-PRESENTATION-114](https://github.com/viptv-org/design/blob/3eb55db3fd248621bbf56dc30e8718450280c767/docs/platforms/TV_PRESENTATION_REFINEMENT.md)
-and its [copy catalog](https://github.com/viptv-org/design/blob/3eb55db3fd248621bbf56dc30e8718450280c767/viptv-design-system/copy.md).
+[TV-PRESENTATION-114](https://github.com/viptv-org/design/blob/1f50bdc2e95b73562307f49d36f61851720bf2c7/docs/platforms/TV_PRESENTATION_REFINEMENT.md)
+and its [copy catalog](https://github.com/viptv-org/design/blob/1f50bdc2e95b73562307f49d36f61851720bf2c7/viptv-design-system/copy.md).
 DESIGN_REF deliberately remains at `059b76344f4fed0639bedf8f89e0bd6e2b22cecd`;
 unrelated upstream design changes are intentionally not adopted in this scope.
 The generated Home mask
