@@ -4571,3 +4571,24 @@ marker actions, plus nullable-source persistence under both renderers, pass.
 These are simulated PS4/browser checks; physical PS4 and other TV firmware remain
 unverified. HTTPS fixtures and private patched Canvas dependencies are isolated;
 no deployment, account mutation or device operation is part of this validation.
+
+## Temporal focus paint
+
+Production-renderer probes sample every painted frame with real Onest glyphs,
+using a PS4 user-agent. Each probe covers cold text, warm focus/unfocus, rapid
+reversals and disposal. Canvas runs with free and occupied artwork decode slots;
+WebGL provides the comparison. The baseline records 11 zero-contrast frames out
+of 22 for each Canvas case, with one replacement still pending at paint. The
+corrected bundle records zero invisible frames out of 22 in every case; minimum
+contrasting-pixel counts are 2536 on Canvas and 2574 on WebGL. Each probe retains
+one text child, reaches zero pending replacements at paint and removes all owned
+children on disposal. Private failing and corrected frame captures are inspected.
+
+All 394 shared tests, 52 native host tests, strict type checks and production
+integrity/build checks pass. The ten browser cases include the three temporal
+probes and seven existing Canvas regressions covering focus under decode load,
+scaled season choices, artwork gradients and buffering/timeline controls.
+The committed patch reapplies through patch-package to the pinned package and
+reproduces all 674 files in the isolated Canvas copy. Its source/distribution
+manifest is verified by a unit; shared dependencies remain unchanged. This is
+browser and native-host unit evidence, with physical TV appearance unqualified.

@@ -663,3 +663,9 @@ above only for these observed states.
 | Contract and states | Implementation/evidence | Device limits |
 |---|---|---|
 | DESIGN_REF `059b76344f4fed0639bedf8f89e0bd6e2b22cecd`, TV shade tokens; Tv3PlayerControls/Tv3PlayerScrub and controls hidden/exit | Shared packaged top/bottom mask; inspected WebGL/Canvas bright-video pixel captures at 1920×1080; one mask on reveal and none after hide/Stop, unchanged video bounds/source; full shared/native units and production build pass | Native explicit scrim band verified by host unit; new native bundle and physical TV gradient appearance unverified |
+
+### Temporal focus paint
+
+| Contract and states | Implementation/evidence | Device limits |
+|---|---|---|
+| Pinned TV focus fill and dark ink; focus/unfocus, cold/warm text, rapid reversals and disposal | Ready Canvas glyph pixels upload within the tree update; zero invisible frames in each 22-frame Canvas/WebGL probe, including occupied Canvas artwork slots; one text child and no pending replacement at paint; existing Canvas regressions and shared/native units pass | PS4 user-agent is simulated; physical TV color timing and performance unqualified |
