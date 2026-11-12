@@ -1,6 +1,6 @@
 /** @jsxImportSource @solidtv/solid */
 import { DetailSkeleton } from "./DetailSkeleton";
-import { Show } from "solid-js";
+import { Show, createMemo } from "solid-js";
 import { KeyedFor, TvView } from "../runtime";
 import { MediaTile as Tile } from "./MediaTile";
 import { TitleMetadata as Metadata } from "./TitleMetadata";
@@ -8,6 +8,7 @@ import { bottomTitleY } from "./title-layout";
 import { seasonLabel } from "./seasons";
 import { Button, icon, Label, palette } from "./visuals";
 import { cardKey, type Card, type Detail } from "./types";
+import { sdfTextMetrics } from "./text-measure";
 
 type DetailContentProps = {
   detail?: Detail;
@@ -22,11 +23,12 @@ type DetailContentProps = {
   recommendationColumn: number;
   actionLabel: string;
   progress: number;
-  remaining: string;
   saved: boolean;
 };
 
 export function DetailContent(props: DetailContentProps) {
+  const actionWidth = createMemo(() => Math.min(520, Math.max(props.actionLabel.startsWith("Resume") ? 360 : 260,
+    Math.ceil(sdfTextMetrics("26px Onest700").measureText(props.actionLabel).width) + 96)));
   return <>
     <Show when={!props.detail}>
       <DetailSkeleton series={props.selectedKind === "series"} />
@@ -104,26 +106,16 @@ export function DetailContent(props: DetailContentProps) {
             <Button
               x={0}
               y={props.hasEpisodes ? 648 : 668}
-              w={260}
+              w={actionWidth()}
               icon="play"
               label={props.actionLabel}
               focused={props.zone === "hero" && props.heroAction === 0}
             />
             <Show when={props.progress > 0}>
-              <Label
-                x={276}
-                y={props.hasEpisodes ? 670 : 690}
-                size={22}
-                font="Onest600"
-                maxwidth={150}
-                maxlines={1}
-                color={palette.muted}
-                content={props.remaining}
-              />
               <TvView
                 x={0}
                 y={(props.hasEpisodes ? 648 : 668) + 80}
-                w={260}
+                w={actionWidth()}
                 h={4}
                 color="rgba(244,242,238,.2)"
               />
@@ -131,7 +123,7 @@ export function DetailContent(props: DetailContentProps) {
                 x={0}
                 y={(props.hasEpisodes ? 648 : 668) + 80}
                 w={
-                  260 *
+                  actionWidth() *
                   Math.max(
                     0,
                     Math.min(
@@ -145,7 +137,7 @@ export function DetailContent(props: DetailContentProps) {
               />
             </Show>
             <Button
-              x={props.progress > 0 ? 440 : 280}
+              x={actionWidth() + 20}
               y={props.hasEpisodes ? 648 : 668}
               icon={props.saved ? "check" : "plus"}
               focused={props.zone === "hero" && props.heroAction === 1}

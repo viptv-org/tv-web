@@ -1,5 +1,6 @@
 import { createMemo, type Accessor } from "solid-js";
 import { episodeActionLabel, seasonEpisodes } from "./seasons";
+import { hasSavedPosition, savedPositionLabel } from "./resume-position";
 import type { Card, Detail, Home, TitleAction } from "./types";
 
 export function createDetailPresentation(options: {
@@ -9,8 +10,7 @@ export function createDetailPresentation(options: {
   const continuingCard = (item: Card) => {
     const row = options.home()?.rows?.find((value) => value.id === "continue");
     return (row?.cards ?? []).find((card) => {
-      const progress = card.progress ?? 0;
-      if (progress <= 0 || progress >= 1) return false;
+      if (!hasSavedPosition(card)) return false;
       if (item.identity.kind === "movie")
         return (
           card.identity.kind === "movie" &&
@@ -26,13 +26,6 @@ export function createDetailPresentation(options: {
       return false;
     });
   };
-  const remainingLabel = (card: Card) => {
-    const progress = card.progress ?? 0,
-      runtime = card.metadata?.runtime_minutes ?? 0;
-    if (runtime > 0)
-      return `${Math.max(1, Math.round((1 - progress) * runtime))}m left`;
-    return "";
-  };
   const detailHasEpisodes = () => !!(options.detail()?.seasons.length || options.detail()?.episodes.length);
   const detailEpisodes = createMemo(() => seasonEpisodes(options.detail(), options.season()));
   const detailCursor = () => {
@@ -46,7 +39,9 @@ export function createDetailPresentation(options: {
     const regular = (card: Card | undefined) =>
       card?.identity.episode != null &&
       (card.identity.episode.season ?? 1) > 0;
-    let card: Card | undefined = action?.card.identity.episode && (action.resume || options.selected()?.identity.episode)
+    let card: Card | undefined = action && action.card.identity.kind !== "series"
+      ? action.card
+      : action?.card.identity.episode && (action.resume || options.selected()?.identity.episode)
       ? action.card
       : regular(action?.card)
         ? action!.card
@@ -67,29 +62,22 @@ export function createDetailPresentation(options: {
     if (!card && action?.card.identity.episode && !value.seasons.some(season => season.season > 0)) card = action.card;
     if (!card) return undefined;
     const resume = !!action?.resume && action.card === card;
-    const verb = resume ? "Resume" : "Play";
-    const label = episodeActionLabel(card, verb);
-    // The app's detail screen resumes from the Continue Watching rows even
-    // when the title was opened from My List, whose cards carry no progress.
-    // The continue card is also the right play target: it holds the exact
-    // episode and provider fields.
-    if (!options.selected()?.identity.episode && !value.item.identity.episode) {
+    const label = action?.card === card ? action.label : episodeActionLabel(card, "Play");
+    if (!action && !options.selected()?.identity.episode && !value.item.identity.episode) {
       const continuing = continuingCard(value.item);
       if (continuing) {
         const progress = continuing.progress ?? 0;
         return {
           card: continuing,
-          label: episodeActionLabel(continuing, "Resume"),
+          label: savedPositionLabel(continuing),
           progress,
-          remaining: remainingLabel(continuing),
         };
       }
     }
     return {
       card,
       label,
-      progress: action?.resume ? (action.progress ?? 0) : 0,
-      remaining: action?.remaining_label ?? "",
+      progress: resume ? (action?.progress ?? 0) : 0,
     };
   });
   const detailActionLabel = () =>
@@ -97,9 +85,6 @@ export function createDetailPresentation(options: {
   const detailPlayProgress = () =>
     detailTarget()?.progress ??
     (options.action()?.resume ? (options.action()?.progress ?? 0) : 0);
-  const detailPlayRemaining = () =>
-    detailTarget()?.remaining ||
-    (options.action()?.resume ? (options.action()?.remaining_label ?? "") : "");
   return {hasEpisodes: detailHasEpisodes, episodes: detailEpisodes, cursor: detailCursor,
-    target: detailTarget, label: detailActionLabel, progress: detailPlayProgress, remaining: detailPlayRemaining};
+    target: detailTarget, label: detailActionLabel, progress: detailPlayProgress};
 }

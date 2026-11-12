@@ -52,6 +52,7 @@ export function createSourceIntent(options: {
       let resolved = prepared?.action ?? (channel
         ? undefined
         : await options.api.titleAction(card, restart, operation.signal));
+      if (intent !== options.owner.intent() || epoch !== options.owner.epoch() || operation.signal.aborted) return;
       if (resolved) {
         options.resolve(resolved);
       }
