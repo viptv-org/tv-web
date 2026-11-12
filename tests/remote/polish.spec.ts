@@ -205,7 +205,7 @@ test("focused hero poster aligns to the profile edge with clearance and uses a b
   });
   await page.goto('/tv/?focusdebug=1');await expect(state(page)).toHaveAttribute('data-tv-ready','true');
   await page.keyboard.press('ArrowDown');await expect.poll(()=>texts(page)).toContain(card.description);
-  const boxes=await page.evaluate(()=>{
+  const geometry=()=>page.evaluate(()=>{
     let poster:any,avatar:any;
     function walk(n:any){
       if(n.isRenderable&&n.props.w===240&&n.props.h===360)poster={x:n.absX,y:n.absY,w:240,h:360};
@@ -214,7 +214,8 @@ test("focused hero poster aligns to the profile edge with clearance and uses a b
     }
     walk((window as any).__viptvRenderer.stage.root);return{poster,avatar};
   });
-  expect(boxes.poster).toBeDefined();expect(boxes.avatar).toBeDefined();
+  await expect.poll(async()=>{const boxes=await geometry();return !!boxes.poster&&!!boxes.avatar;}).toBe(true);
+  const boxes=await geometry();
   expect(boxes.poster.x+boxes.poster.w).toBe(boxes.avatar.x+boxes.avatar.w);
   expect(boxes.poster.y-boxes.avatar.y-boxes.avatar.h).toBeGreaterThanOrEqual(48);
   expect(boxes.poster.y+boxes.poster.h).toBeLessThan(530);

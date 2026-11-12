@@ -4572,6 +4572,34 @@ These are simulated PS4/browser checks; physical PS4 and other TV firmware remai
 unverified. HTTPS fixtures and private patched Canvas dependencies are isolated;
 no deployment, account mutation or device operation is part of this validation.
 
+### Combined beta qualification
+
+The integrated product code at `46d499eac54102f9b272a417d59c01f34196903f`
+passes 389 shared units, 52 native host units, the production integrity/type/build
+and a fresh local native bundle build. The isolated dependency inventory verifies
+674 private Canvas files, 674 unchanged shared Canvas files and 26 package manifests.
+
+Eighty-three focused browser cases cover visible Continue selection and playback
+identity, horizontal/vertical focus, top navigation, loading recovery, source
+presentation, source-memory null handling, legacy session rotation, grouped
+Search, authored gradients, timeline-only thumbs, Back, delayed pause/resume,
+skip and Next. Five additional decoded-HLS/WebVTT cases pass for web, webOS,
+legacy webOS, Vizio and Tizen host modes. These are desktop browser/platform
+simulations; physical PS4 decoder behavior and vendor-firmware compatibility
+are separate qualifications.
+
+The poster-alignment test initially sampled the renderer before its prepared
+poster became renderable. It now waits for both actual geometry nodes before
+checking the unchanged alignment, clearance and sharp-proxy assertions. The
+failed sample is retained in private evidence; the focused rerun and remaining
+cases pass. No product behavior was changed to satisfy that test.
+
+Source-preservation checks verify the deployed TV/backend revisions are ancestors
+of the candidate. Gateway qualification must also include the retained deployed
+HLS/cache lineage; ancestry and live binary markers are checked independently of
+image labels. Runtime, served-asset and authenticated live acceptance are recorded
+in the rollout issue rather than inferred from build or deployment status.
+
 ## Temporal focus paint
 
 Production-renderer probes sample every painted frame with real Onest glyphs,
@@ -4619,3 +4647,37 @@ text frames, minimum 2536 contrasting pixels, no pending replacement at paint
 and complete owned-node disposal. This follow-up reruns no broad unit suite or
 application build; the product bundle is unchanged. No account, provider,
 physical-device or deployment operation is part of this qualification.
+
+### Final beta follow-up qualification
+
+The integrated TV source `8c5e06ada67d08217cd6d8bc4f9af4cc44b804b3`
+passes 427 shared tests, 52 native-host tests, production integrity/type/build
+checks and a local native-host bundle build. Twenty-one focused browser cases
+cover repeated Continue entries, row restoration, top-navigation isolation,
+paused controls, precise resume admission, large text and nullable source memory.
+Five real-HLS/WebVTT browser host cases also pass. Earlier temporal paint evidence
+includes a 6x CPU-throttled Canvas case with occupied artwork decode slots.
+
+Managed beta deployment pairs that TV source with backend
+`166769f1f4742294f88b70ad6c8c7b3e03bab66d`; the retained gateway remains
+`8c1cd89374f2e3b1d359425c429006d154c30497`. Online SQLite backup, healthy runtime,
+binary and both entry hashes, 41 bundle assets and six artwork assets verify.
+Environment, mounts and root frontend are preserved; production backend,
+gateway and WARP retain their container IDs, images and start times. Automatic
+subtitle analysis remains off.
+
+Authenticated live beta acceptance passes in WebGL and Canvas with actual
+Interstellar video progress. Focused card, resolved action and source discovery
+identities agree; the exact admitted playback lease is released. Hidden Select,
+retained paused controls, Back hiding, focus-only seek thumb, Details and five
+Search rows pass without page/API errors. Fresh Continue data has no duplicate
+typed identities. The temporary QA device grant is revoked, with all existing
+session families preserved. Screenshots and private account data stay outside
+the repository.
+
+The harness's failed attempts are retained separately: a stale screen-read wait,
+Chromium CDP response-body lookup failures, and an assertion expecting the older
+source request shape. Final observation passively clones bounded native fetch
+responses without modifying requests or application responses, and handles the
+current typed-card request exactly. No failed attempt is counted as a pass.
+This is live browser evidence, not physical PS4, Samsung, LG or Roku certification.
