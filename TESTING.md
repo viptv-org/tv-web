@@ -77,10 +77,18 @@ All recorded storage operations finish in order, without failed or pending work
 or recorder overflow. Positive acknowledgements alone were insufficient in the
 earlier single-write, identical-repeat and extra-Flush experiments; those failures
 remain separate from the final package's reboot evidence. Firmware internals and
-other Roku hardware/OS versions are unproven. Private harness type, output-parsing
-and cleanup-route checks were corrected using retained evidence without repeating
+other Roku hardware/OS versions are unproven. Private harness type, output-parsing,
+idle-state and cleanup-route checks were corrected using retained evidence without repeating
 completed reboots or media playback. Root's known-private-value scan passes on all
 278 changed-source/package files, and the final Home capture was reviewed directly.
+
+The final ordinary exit/relaunch also retains the current server-matched family
+and settings. The real app is left at signed-in Home with temporary observers
+removed and playback inactive. Five abandoned QA device families were revoked
+through the normal owner API; the final family and unrelated devices remain.
+Fresh checks confirm the dedicated account is the sole owner, its predecessor
+remains a member, and only the requested three integrations are assigned with no
+Simkl link. Temporary local fixture servers are stopped.
 
 Prepared clearlogos follow validated public redirects while preserving the existing
 URL/DNS, downgrade, deadline and byte limits. Interstellar, Heart of the Beast and
@@ -102,7 +110,7 @@ claim is made that Simkl itself caused it.
 Fresh root npm and independent frozen Roku pnpm installs reproduce the pinned
 Solid 1.9.17/fork 451dcbc and committed renderer patches. A task-local npm cache
 avoids this host's pre-existing global-cache permission error. Hosting and webOS CI
-pass on d559dbb; Tizen stops at its unchanged Samsung-certificate requirement.
+pass on 188dbc5; Tizen stops at its unchanged Samsung-certificate requirement.
 The Solid fork main 9ab7982 passes 745 tests with 13 skips. Its test-only rAF clock
 normalization preserves real scheduling; no production clock or timeout changed.
 
