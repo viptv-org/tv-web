@@ -11,6 +11,7 @@ export function createPlayerActivation(options: {
   timeline: {value: Accessor<number | undefined>; set: Setter<number | undefined>; seeking: Setter<boolean>};
   chrome: {visible: Accessor<boolean>; set: Setter<boolean>; hide: () => void};
   segments: {active: Accessor<PlaybackSegment | undefined>; clear: () => void; refresh: () => Promise<void>};
+  setPlaying: (playing: boolean) => Promise<void>;
   skipEnabled: Accessor<boolean>; next: () => Promise<void>; tracks: () => void; play: PlayIntent;
   details: (card: Card) => Promise<Detail>; dialogs: Pick<DialogActions, "open">;
 }) {
@@ -45,8 +46,9 @@ export function createPlayerActivation(options: {
       }
       return;
     }
-    const control = !showControls() && activeSegment() && playerActions().seek && options.skipEnabled()
-      ? "skip" : playerButtons()[choice()]?.id;
+    const control = !showControls()
+      ? activeSegment() && playerActions().seek && options.skipEnabled() ? "skip" : "timeline"
+      : playerButtons()[choice()]?.id;
     if (snapshot()?.state === "ended" && control === "timeline") {
       await playIntent(activeAction()!.card, false, true);
       return;
@@ -89,8 +91,7 @@ export function createPlayerActivation(options: {
         })),
       });
     } else if (control === "timeline" && playerActions().pause) {
-      if (snapshot()?.state === "playing") await player.player.pause();
-      else await player.player.play();
+      await options.setPlaying(snapshot()?.state !== "playing");
     }
   };
 }

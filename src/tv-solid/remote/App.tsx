@@ -499,6 +499,7 @@ export function createRemoteTvApp(
     const sourceMenuOptions = () => openSourceMenuOptions();
     const [snapshot, setSnapshot] = createSignal<PlayerSnapshot>(),
       [showControls, setShowControls] = createSignal(true),
+      [pauseRequested, setPauseRequested] = createSignal(false),
       [seek, setSeek] = createSignal<number>(),
       [seeking, setSeeking] = createSignal(false),
       [playbackSegments, setPlaybackSegments] = createSignal<PlaybackSegment[]>([]),
@@ -1850,6 +1851,8 @@ export function createRemoteTvApp(
       if (!overlays.restoreParent()) closeOverlay();
     }
     async function leavePlayer() {
+      playbackTransportIntent++;
+      setPauseRequested(false);
       clearTimeout(controlsTimer);
       resetScope();
       setSeek(undefined);
@@ -2260,6 +2263,24 @@ export function createRemoteTvApp(
       }
       return started;
     }
+    let playbackTransportIntent = 0;
+    async function setPlaybackPlaying(playing: boolean) {
+      const intent = ++playbackTransportIntent;
+      setPauseRequested(!playing);
+      if (!playing) { setShowControls(true); setChoice(0); }
+      try {
+        if (playing) await player.player.play();
+        else await player.player.pause();
+      } catch (error) {
+        if (intent === playbackTransportIntent) setPauseRequested(false);
+        throw error;
+      } finally {
+        if (intent === playbackTransportIntent && screen() === "player") hideControls();
+      }
+    }
+    createEffect(() => {
+      if (screen() !== "player" || ["paused", "ended", "error"].includes(snapshot()?.state ?? "")) setPauseRequested(false);
+    });
     let controlsHideAt = 0;
     function hideControls(activity = true) {
       if (activity || !controlsHideAt) controlsHideAt = Date.now() + 5000;
@@ -2267,7 +2288,7 @@ export function createRemoteTvApp(
       controlsTimer = setTimeout(() => {
         if (
           !error() && !overlay() &&
-          !seeking() &&
+          !seeking() && !pauseRequested() &&
           !loading() &&
           snapshot()?.state === "playing"
         )
@@ -2278,7 +2299,7 @@ export function createRemoteTvApp(
     // on every transition back to playing so chrome always clears itself.
     const controlsCanAutoHide = createMemo(() =>
       screen() === "player" && !overlay() && snapshot()?.state === "playing" &&
-      !seeking() && !loading() && !error(),
+      !seeking() && !pauseRequested() && !loading() && !error(),
     );
     createEffect(() => {
       // Memo equality keeps position/buffer snapshots from rearming this timer.
@@ -2667,7 +2688,7 @@ export function createRemoteTvApp(
       filtering: {value: sourceFiltering, set: setSourceFiltering}, manual: () => {manualSourceSelection = true;},
       generation: {next: () => ++sourceFilterGeneration, current: () => sourceFilterGeneration}, operation: () => sourceScope,
       signal: () => sourceScope?.signal ?? scope.signal, rank: (ids, height, signal, reuse) => api.rankSources(ids, height, signal, reuse), play: playSource});
-    const activatePlayer = createPlayerActivation({player, snapshot, actions: playerActions, action: activeAction, channel: activeChannel, choice, buttons: playerButtons,
+    const activatePlayer = createPlayerActivation({player, snapshot, setPlaying: setPlaybackPlaying, actions: playerActions, action: activeAction, channel: activeChannel, choice, buttons: playerButtons,
       timeline: {value: seek, set: setSeek, seeking: setSeeking}, chrome: {visible: showControls, set: setShowControls, hide: hideControls},
       segments: {active: activeSegment, clear: () => {setPlaybackSegments([]);}, refresh: refreshPlaybackSegments},
       skipEnabled: () => preferences()?.preferences.skip_intros !== false, next: advanceEpisode, tracks: openTracks, play: playIntent,
@@ -3060,7 +3081,7 @@ export function createRemoteTvApp(
       inputRequested = true;
       const input = createKeyboardInput({screen, overlay, zone, cancelCountdown: () => countdown.cancel(), hideControls,
         pair: beginPairing, stop: leavePlayer, text: setText, query: search, search: updateSearch, fail,
-        media: createPlayerMediaKeys({player, snapshot, actions: playerActions, active: activeAction, seeking: {current: seeking, set: setSeeking},
+        media: createPlayerMediaKeys({player, snapshot, setPlaying: setPlaybackPlaying, actions: playerActions, active: activeAction, seeking: {current: seeking, set: setSeeking},
           revealEnded: revealEndedControls, play: playIntent, chrome: {show: setShowControls, hide: hideControls},
           segments: {clear: () => {setPlaybackSegments([]);}, refresh: refreshPlaybackSegments}, fail})});
       onCleanup(installWindowInputs({keyboard: input, screen, overlay, loading, error, pair: beginPairing, stop: leavePlayer,

@@ -7,6 +7,7 @@ import type { PlayIntent } from "../source-picker/intent-types";
 export function createPlayerMediaKeys(options: {
   player: Pick<RemotePlayback, "player" | "seek">; snapshot: Accessor<PlayerSnapshot | undefined>; actions: Accessor<RemotePlayback["actions"]>;
   active: Accessor<TitleAction | undefined>; seeking: {current: Accessor<boolean>; set: Setter<boolean>}; revealEnded: () => boolean; play: PlayIntent;
+  setPlaying: (playing: boolean) => Promise<void>;
   chrome: {show: Setter<boolean>; hide: () => void}; segments: {clear: () => void; refresh: () => Promise<void>}; fail: (error: unknown) => void;
 }) {
   const {player, snapshot, actions: playerActions, active: activeAction, revealEnded: revealEndedControls, play: playIntent, fail} = options;
@@ -35,9 +36,7 @@ export function createPlayerMediaKeys(options: {
         event.keyCode === 415 ||
         (!(["MediaPause"].includes(event.key) || event.keyCode === 19) &&
           snapshot()?.state !== "playing");
-      void (play ? player.player.play() : player.player.pause()).catch(
-        fail,
-      );
+      void options.setPlaying(play).catch(fail);
       return true;
     }
     if (
