@@ -4681,6 +4681,7 @@ source request shape. Final observation passively clones bounded native fetch
 responses without modifying requests or application responses, and handles the
 current typed-card request exactly. No failed attempt is counted as a pass.
 This is live browser evidence, not physical PS4, Samsung, LG or Roku certification.
+
 ## Hidden pause and pending seek preview
 
 Hidden Select discards an invisible scrub preview before selecting Pause or an
@@ -4695,4 +4696,3 @@ hosted validation is recorded in TV-web issue #140. No local build or test run
 was used. Physical PS4 playback and native-clock behavior remain unverified;
 this reproduction does not establish the cause of the owner's physical-device
 report. Playwright acceptance is not part of the package workflow.
-
