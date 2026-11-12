@@ -1,25 +1,24 @@
 import { batch, type Accessor, type Setter } from "solid-js";
 import { RemoteError, type RemoteTvApi } from "../api";
 import type { Screen } from "../app-types";
-import type { Channel, LivePage, Page } from "../types";
+import type { Channel, LivePage, Page, SearchPage } from "../types";
 import type { NavigationFocus } from "../navigation/focus";
-import { searchStremio } from "./media";
 
 export interface SearchRequests {scope?: AbortController; timer?: ReturnType<typeof setTimeout>}
 interface PendingSearch {current: Accessor<boolean>; set: Setter<boolean>}
 export function createSearchController(options: {
   requests: SearchRequests; parent: Accessor<AbortController>; screen: Accessor<Screen>; focus: NavigationFocus;
   query: {current: Accessor<string>; set: Setter<string>}; capabilities: Accessor<{media: boolean; channels: boolean}>;
-  media: {page: Accessor<Page>; set: Setter<Page>; replace: (page: Page) => void; error: Setter<string>; pending: PendingSearch; remember: (index: number) => void};
+  media: {page: Accessor<Page>; set: Setter<Page>; error: Setter<string>; pending: PendingSearch; remember: (index: number) => void};
   channels: {current: Accessor<Channel[]>; set: Setter<Channel[]>; pages: Setter<LivePage[]>; error: Setter<string>; pending: PendingSearch; paging: Setter<boolean>;
     remembered: Accessor<number>; remember: (index: number) => void; read: (signal: AbortSignal) => Promise<LivePage>; adopt: (page: LivePage) => void};
-  discover: RemoteTvApi["discover"]; restart: () => AbortSignal; loading: Setter<boolean>; error: Setter<string>;
+  search: RemoteTvApi["search"]; rows: {clear: () => void; replace: (page: SearchPage) => void}; restart: () => AbortSignal; loading: Setter<boolean>; error: Setter<string>;
   retry: (work: () => void) => void; fail: (error: unknown) => void;
 }) {
   const {requests, restart: restartPaging, loading: setLoading, error: setError, fail} = options;
   const {current: search, set: setSearch} = options.query;
   const {zone, column, setZone, setColumn} = options.focus;
-  const {page, set: setPage, replace: replacePage, error: setSearchError} = options.media;
+  const {page, set: setPage, error: setSearchError} = options.media;
   const {current: searchMediaPending, set: setSearchMediaPending} = options.media.pending;
   const {current: searchChannels, set: setSearchChannels, pages: setSearchChannelPages, error: setSearchChannelError, paging: setSearchChannelPaging} = options.channels;
   const {current: searchChannelsPending, set: setSearchChannelsPending} = options.channels.pending;
@@ -41,8 +40,6 @@ export function createSearchController(options: {
     }
     return requests.scope.signal;
   }
-  /** Media search through Stremio only. The server's `all` search fans out
-   * to Simkl, whose rejected request used to hide every Stremio result. */
   function updateSearch(value: string, retain = false) {
     value = Array.from(value).slice(0, 256).join("");
     retain = retain && value === search();
@@ -64,8 +61,10 @@ export function createSearchController(options: {
       );
     batch(() => {
       setSearch(value);
-      if (!retain || !capabilities.media)
+      if (!retain || !capabilities.media) {
         setPage({ cards: [], complete: !value });
+        options.rows.clear();
+      }
       if (!retain || !capabilities.channels) {
         setSearchChannels([]);
         setSearchChannelPages([]);
@@ -93,9 +92,9 @@ export function createSearchController(options: {
     requests.timer = setTimeout(() => {
       if (!value || !current()) return;
       if (capabilities.media)
-        void searchStremio(options.discover, value, signal)
+        void options.search(value, signal)
           .then((result) => {
-            if (current()) replacePage(result);
+            if (current()) options.rows.replace(result);
           })
           .catch((error) => {
             if (!current()) return;

@@ -37,6 +37,8 @@ import { RowFocus } from "./row-focus";
 import { HomeContent } from "./HomeContent";
 
 import { DetailContent } from "./DetailContent";
+import { PlaybackPreparation } from "./PlaybackPreparation";
+import { BusyIndicator } from "./BusyIndicator";
 import { PlayerControlsView } from "./PlayerControlsView";
 import { SettingsView } from "./SettingsView";
 import { BrowseControls } from "./BrowseControls";
@@ -45,6 +47,9 @@ import { createLiveGuideController } from "./live/guide-controller";
 import { LiveGuideGrid } from "./live/LiveGuideGrid";
 import { LiveGroupSelector } from "./live/LiveGroupSelector";
 import { LiveHero } from "./live/LiveHero";
+import { SearchRows } from "./SearchRows";
+import { searchRowFocus } from "./search/media";
+import type { SearchPage } from "./types";
 import { SearchHeader } from "./SearchHeader";
 import { CatalogGrid } from "./CatalogGrid";
 import { SlidingDrawer } from "./SlidingDrawer";
@@ -365,6 +370,8 @@ export function createRemoteTvApp(
         : base;
     });
     const [search, setSearch] = createSignal(""),
+      [searchResults, setSearchResults] = createSignal<SearchPage>({rows: [], complete: true}),
+      [searchRowIndex, setSearchRowIndex] = createSignal(0),
       [searchError, setSearchError] = createSignal(""),
       [searchChannelError, setSearchChannelError] = createSignal(""),
       [searchMediaPending, setSearchMediaPending] = createSignal(false),
@@ -771,6 +778,11 @@ export function createRemoteTvApp(
         overlay()?.kind === "next" && !advancing() && episodeState().status === "ready" && !!episodeState().item && episodeKey(episodeState().item!) === target,
         () => { void advanceEpisode().catch(fail); });
     });
+    const endedPresentation = createMemo(() => screen() === "player" && snapshot()?.state === "ended" ? endScope() : "");
+    createEffect(() => {
+      const ended = endedPresentation();
+      if (ended && dismissedEnd !== ended) setShowControls(true);
+    });
     const continuationPoll = setInterval(() => {
       const time = snapshot()?.time;
       const due = snapshot()?.state === "ended" || time?.durationSeconds && time.durationSeconds - time.positionSeconds <= 180;
@@ -863,7 +875,7 @@ export function createRemoteTvApp(
       ];
     }, undefined, { equals: (a, b) => a.length === b.length && a.every((button, index) => button.id === b[index].id && button.label === b[index].label) });
     const playerTools = createMemo(() => {
-      let left = 280;
+      let left = 268;
       return playerButtons().slice(1).map(button => {
         const width = button.id === "tracks" ? 304 : button.id === "next" ? 240 : 228;
         const x = button.id === "next" ? 1584 : left;
@@ -975,6 +987,7 @@ export function createRemoteTvApp(
         setPlaybackError("");
         setPage({ cards: [], complete: true });
         setSearch("");
+        clearSearchRows();
         setSearchChannels([]);
         setSearchChannelPages([]);
         setSearchChannelError("");
@@ -1192,6 +1205,47 @@ export function createRemoteTvApp(
         detailFocus.remember(detailRow(region), column());
     }
     createEffect(() => detailFocus.retain([detailRow("episodes"), detailRow("recommendations")]));
+    const searchRowPositions = new RowFocus<Card>(cardKey);
+    const activeSearchRow = () => searchResults().rows[searchRowIndex()];
+    function rememberSearchRow(index: number) {
+      searchMediaFocus = index;
+      const shelf = activeSearchRow();
+      if (shelf) searchRowPositions.remember(shelf, index);
+    }
+    function clearSearchRows() {
+      setSearchResults({rows: [], complete: true});
+      setSearchRowIndex(0);
+      searchRowPositions.clear();
+    }
+    function replaceSearchRows(value: SearchPage) {
+      const previous = activeSearchRow();
+      const focused = zone() === "content" ? column() : searchMediaFocus;
+      const next = searchRowFocus(value.rows, previous, focused);
+      batch(() => {
+        searchRowPositions.retain(value.rows);
+        setSearchResults(value);
+        setSearchRowIndex(next.row);
+        rememberSearchRow(next.column);
+        replacePage({cards: value.rows[next.row]?.cards ?? [], complete: value.complete,
+          next_cursor: value.rows[next.row]?.next_cursor});
+        if (zone() === "content") setColumn(next.column);
+      });
+    }
+    function moveSearchRow(step: number) {
+      const next = searchRowIndex() + step;
+      if (next < 0 || next >= searchResults().rows.length) return false;
+      rememberSearchRow(zone() === "content" ? column() : searchMediaFocus);
+      const shelf = searchResults().rows[next];
+      const index = Math.max(0, Math.min(searchRowPositions.resolve(shelf), shelf.cards.length - 1));
+      batch(() => {
+        setSearchRowIndex(next);
+        setPage({cards: shelf.cards, complete: searchResults().complete, next_cursor: shelf.next_cursor});
+        rememberSearchRow(index);
+        setColumn(index);
+        setZone(!shelf.cards.length && (shelf.message || shelf.state === "Failed") ? "search-retry" : "content");
+      });
+      return true;
+    }
     const gridColumns = () => (screen() === "search" ? 5 : 7);
     const gridStart = () => {
       const index =
@@ -1219,7 +1273,7 @@ export function createRemoteTvApp(
       searchCapabilities().media &&
       !!search() &&
       !searchMediaPending() &&
-      (!!searchError() || !page().complete);
+      (!!searchError() || activeSearchRow()?.state === "Failed" || !!activeSearchRow()?.message);
     const heroCycle = createHeroCycle({
       count: () => home()?.featured.length ?? 0,
       enabled: () => screen() === "home" && zone() !== "rows" && !overlay() && !pending() && !loading() && !error(),
@@ -1888,12 +1942,17 @@ export function createRemoteTvApp(
         return;
       }
       if (screen() === "player") {
-        if (seeking()) return;
+        if (seeking()) {
+          if (showControls()) setShowControls(false);
+          return;
+        }
         if (seek() !== undefined) {
           setSeek(undefined);
+          setShowControls(false);
           return;
         }
         if (showControls()) {
+          if (snapshot()?.state === "ended") dismissedEnd = endScope();
           setShowControls(false);
           return;
         }
@@ -2050,11 +2109,11 @@ export function createRemoteTvApp(
     }
     const {signal: searchSignal, update: updateSearch} = createSearchController({requests: searchRequests, parent: () => scope, screen,
       focus: {zone, column, setZone, setColumn}, query: {current: search, set: setSearch}, capabilities: searchCapabilities,
-      media: {page, set: setPage, replace: replacePage, error: setSearchError, pending: {current: searchMediaPending, set: setSearchMediaPending}, remember: index => {searchMediaFocus = index;}},
+      media: {page, set: setPage, error: setSearchError, pending: {current: searchMediaPending, set: setSearchMediaPending}, remember: index => {searchMediaFocus = index;}},
       channels: {current: searchChannels, set: setSearchChannels, pages: setSearchChannelPages, error: setSearchChannelError, paging: setSearchChannelPaging,
         pending: {current: searchChannelsPending, set: setSearchChannelsPending}, remembered: () => searchChannelFocus, remember: index => {searchChannelFocus = index;},
         read: signal => refreshChannelPage(true, signal), adopt: page => adoptChannelWindow([page], true)},
-      discover: (query, signal) => api.discover(query, signal), restart: restartPaging, loading: setLoading, error: setError, retry: work => {retry = work;}, fail});
+      search: (value, signal) => api.search(value, signal), rows: {clear: clearSearchRows, replace: replaceSearchRows}, restart: restartPaging, loading: setLoading, error: setError, retry: work => {retry = work;}, fail});
     const {reconcile: reconcileSources, focusBest: focusBestMatch} = createSourceRows({rows: sources, adopt: setSources,
       visible: visibleSources, focused: focusedSource, manual: () => manualSourceSelection, selection: {current: choice, set: setChoice}});
     const publishSources = createSourcePublisher({api, owns: operation => sourceScope === operation,
@@ -2104,7 +2163,7 @@ export function createRemoteTvApp(
         replace: operation => {sourceScope = operation;}, aborted: () => scope.signal.aborted},
       position: () => sourceStartPosition, manual: () => manualSourceSelection, playerScreen: () => screen() === "player", memory: sourceMemory,
       presentation: {capture: overlays.captureOrigin, hide: overlays.hide, show: () => openOverlay({kind: "sources", title: "Choose a source"})},
-      resolve: action => {setAction(action);setPickerCard(action.card);}, retry: work => {retry = work;},
+      resolve: action => {setAction(action);setPickerCard(previous => presentationCard(previous, action.card));}, retry: work => {retry = work;},
       page: setSourcePage, ids: setAllSourceIds, loading: setLoading, discovering: setSourceLoading,
       failure: {current: sourceFailure, set: setSourceFailure}, rows: sources, reconcile: reconcileSources, publish: publishSources,
       play: playSource, notify, fail});
@@ -2468,9 +2527,9 @@ export function createRemoteTvApp(
     const navigateOverlay = createOverlayNavigation({selection: {index: choice, set: setChoice}, tracks: {index: trackColumn, set: setTrackColumn},
       calibration: {value: calibrationValue, set: setCalibrationValue, preview: applyScreenInset}, keyboard: setKey, sources: navigateSources});
     const navigateSearch = createSearchNavigation({focus: navigationFocus, keyboard: {index: key, set: setKey}, navIndex: () => navIndex("search"),
-      media: {count: () => page().cards.length, error: searchError, needsRetry: searchNeedsRetry,
-        remembered: () => searchMediaFocus, remember: index => {searchMediaFocus = index;}, move: index => moveToItem(index, page().cards.length)},
-      channels: {count: () => searchChannels().length, error: searchChannelError, enabled: () => searchCapabilities().channels,
+      media: {count: () => page().cards.length, available: () => searchResults().rows.length > 0, moveRow: moveSearchRow, error: () => searchError() || activeSearchRow()?.message || (activeSearchRow()?.state === "Failed" ? "This search provider could not respond. Try again." : ""), needsRetry: searchNeedsRetry,
+        remembered: () => searchMediaFocus, remember: rememberSearchRow, move: index => {setColumn(Math.max(0, Math.min(index, page().cards.length - 1))); rememberSearchRow(column());}},
+      channels: {count: () => searchChannels().length, error: searchChannelError,
         remembered: () => searchChannelFocus, remember: index => {searchChannelFocus = index;}, move: step => moveChannel(step, true)}});
     const navigateLive = createLiveNavigation({focus: navigationFocus,
       emptyActions: () => liveSpread() === "no-source" ? liveNoSourceActions(liveViewer()).length : liveRecovery().length,
@@ -2912,9 +2971,15 @@ export function createRemoteTvApp(
       );
       document.documentElement.dataset.tvPlaybackError = playbackError();
       document.documentElement.dataset.tvPlayerControls = String(showControls());
+      document.documentElement.dataset.tvHeroCycle = heroCycle.active() ? String(heroCycle.started()) : "";
       document.documentElement.dataset.tvPlayerSeeking = String(seeking());
       document.documentElement.dataset.tvPlayerPosition = String(snapshot()?.time.positionSeconds ?? "");
       document.documentElement.dataset.tvPlayerDuration = String(snapshot()?.time.durationSeconds ?? "");
+      document.documentElement.dataset.tvPlayerVideoFrames = String(snapshot()?.diagnostics?.videoFrames ?? "");
+      document.documentElement.dataset.tvPlayerDecodedFrames = String(snapshot()?.diagnostics?.decodedFrames ?? "");
+      document.documentElement.dataset.tvPlayerPresentedFrames = String(snapshot()?.diagnostics?.presentedFrames ?? "");
+      document.documentElement.dataset.tvPlayerPresentedPosition = String(snapshot()?.diagnostics?.presentedPositionSeconds ?? "");
+      document.documentElement.dataset.tvPlayerVideoProgress = snapshot()?.diagnostics?.videoFrameProgress ?? "";
       document.documentElement.dataset.tvPlayerTimelineFocus = String(timelineFocused());
       document.documentElement.dataset.tvSourcePhase = sourcePage()?.discovery_phase ?? "";
       document.documentElement.dataset.tvSourcePreparing = String(sourceLoading() && !overlay());
@@ -2954,6 +3019,8 @@ export function createRemoteTvApp(
             ? searchChannels()[column()]
             : undefined
         )?.id ?? "";
+      document.documentElement.dataset.tvSearchRow = state === "search" ? activeSearchRow()?.id ?? "" : "";
+      document.documentElement.dataset.tvSearchRows = state === "search" ? String(searchResults().rows.length) : "0";
       document.documentElement.dataset.tvFocus =
         zone() === "confirmation"
           ? `confirmation:${row()}:${column()}`
@@ -3039,7 +3106,8 @@ export function createRemoteTvApp(
           if (dismissScreenSaver()) return;
           move(0, 1);
         },
-        back() {
+        back(event?: KeyboardEvent) {
+          if (event?.repeat) return;
           countdown.cancel();
           if (dismissScreenSaver()) return;
           void back().catch(fail);
@@ -3150,7 +3218,7 @@ export function createRemoteTvApp(
                 shelfTop={shelfTitleY()} columnForRow={shelf => homeRowFocus.resolve(shelf)} isSaved={isSaved} />
             </Show>
             <Show when={screen() === "detail"}>
-              <DetailContent detail={detailForDisplay()} selectedTitle={selected()?.title}
+              <DetailContent detail={detailForDisplay()} selectedKind={selected()?.identity.kind}
                 hasEpisodes={detailHasEpisodes()} episodes={detailEpisodes()} zone={zone()} column={column()}
                 heroAction={heroAction()} seasonIndex={seasonIndex()} episodeColumn={detailColumn("episodes")}
                 recommendationColumn={detailColumn("recommendations")} actionLabel={detailActionLabel()}
@@ -3176,12 +3244,12 @@ export function createRemoteTvApp(
                   focused={zone() === "filters"} index={column()} />
               </Show>
               <Show when={screen() === "search"}>
-                <SearchHeader query={search()} selected={key()} keyboardFocused={zone() === "keyboard"} media={searchCapabilities().media}
-                  retry={searchNeedsRetry()} resultCount={page().cards.length} error={searchError()} retryFocused={zone() === "search-retry"} />
+                <SearchHeader query={search()} selected={key()} keyboardFocused={zone() === "keyboard"} media={searchCapabilities().media && !searchResults().rows.length}
+                  retry={!!searchError() && !searchResults().rows.length} resultCount={page().cards.length} error={searchError()} retryFocused={zone() === "search-retry"} />
               </Show>
               <Show
                 when={
-                  ["movie", "series", "anime", "library", "search"].includes(
+                  ["movie", "series", "anime", "library"].includes(
                     screen(),
                   ) &&
                   (screen() !== "search" || searchCapabilities().media)
@@ -3190,6 +3258,11 @@ export function createRemoteTvApp(
                 <CatalogGrid screen={screen()} cards={page().cards} window={{start: gridStart, count: gridCount, columns: gridColumns, offset: gridOffset}}
                   focus={{active: () => zone() === "content", index: column}} loading={loading()}
                   search={{channels: () => searchCapabilities().channels, pending: searchMediaPending, retry: searchNeedsRetry, query: search}} />
+              </Show>
+              <Show when={screen() === "search" && searchCapabilities().media}>
+                <SearchRows rows={searchResults().rows} row={searchRowIndex()} column={zone() === "content" ? column() : searchMediaFocus}
+                  focused={zone() === "content"} retryFocused={zone() === "search-retry"} pending={searchMediaPending()} error={searchError()}
+                  query={search()} channels={searchCapabilities().channels} remembered={id => searchRowPositions.resolve(searchResults().rows.find(shelf => shelf.id === id))} />
               </Show>
               <Show
                 when={
@@ -3281,23 +3354,21 @@ export function createRemoteTvApp(
             <Show when={screen() === "player" && !overlay() && !showControls() && !loading() && !seeking() && !error() && activeSegment() && playerActions().seek && preferences()?.preferences.skip_intros !== false}>
               <Button x={1596} y={746} w={228} h={56} label={activeSegment()?.kind === "recap" ? "Skip recap" : "Skip intro"} focused={false} />
             </Show>
+            <Show when={screen() === "player" && !overlay() && !openingSource() && (loading() || seeking() || snapshot()?.state === "buffering")}>
+              <BusyIndicator label={seeking() ? "Seeking…" : "Buffering…"} />
+            </Show>
             <Show
               when={
                 screen() === "player" &&
                 !overlay() &&
-                (showControls() ||
-                  seeking() ||
-                  loading() ||
-                  snapshot()?.state === "buffering" ||
-                  (snapshot()?.state === "ended" && dismissedEnd !== endScope()) ||
-                  error())
+                showControls() && !openingSource()
               }
             >
               <PlayerControlsView playback={{snapshot, card: () => activeAction()?.card, canSeek: () => playerActions().seek, tools: playerTools}}
-                focus={{selected: choice, timeline: timelineFocused, preview: seek}} activity={{loading, seeking}} />
+                focus={{selected: choice, timeline: timelineFocused, preview: seek}} />
             </Show>
           </TvView>
-          <Show when={overlay()}>
+          <Show when={!openingSource() ? overlay() : undefined}>
             {(modal) => (
               <OverlayViewport order={10} shade={modal().kind !== "next" ? "rgba(0,0,0,.6)" : undefined} shadeWidth={sceneWidth()}>
                 <Show when={modal().kind === "next"}>
@@ -3347,12 +3418,9 @@ export function createRemoteTvApp(
               </OverlayViewport>
             )}
           </Show>
-          <Show when={sourceLoading() && !overlay() && screen() !== "player" && !error()}>
-            <OverlayViewport order={15}>
-              <TvView x={480} y={864} w={960} h={144} zIndex={1} color={palette.surface}>
-                <Label x={32} y={24} size={28} font="Onest700" content="Finding a matching source…" />
-                <Label x={32} y={76} size={22} color={palette.muted} content="Press Back to cancel" />
-              </TvView>
+          <Show when={(openingSource() || sourceLoading() && !overlay() && screen() !== "player") && !error()}>
+            <OverlayViewport order={15} shade={palette.bg} shadeWidth={1920}>
+              <PlaybackPreparation card={pickerCard()} />
             </OverlayViewport>
           </Show>
           <Show when={error()}>

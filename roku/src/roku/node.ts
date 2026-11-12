@@ -1340,6 +1340,8 @@ export class RokuNode extends Events {
   destroy() {
     if (this._destroyed) return;
     this._destroyed = true;
+    // Raw removals alone do not open the SDK transaction that commits them.
+    setProp(this.dom, "visible", false);
     this._claimedVisual = null;
     if (this.renderer.animator) this.renderer.animator.removeFor(this);
     const kids = this._children.slice();

@@ -25,13 +25,41 @@ The compact season chooser labels season zero “Specials”, initially focuses 
 regular season, and retains explicit or resumed specials. Android TV's current
 reference uses a strip; its phone/desktop surfaces use a picker. This TV-web
 chooser is an owner-scoped refinement, not a claim that Android TV uses a dropdown.
-Focused shelf backdrops use Gaussian blur through the existing public image proxy.
-Their 960×540 decode target is independent of the 1920×1080 display rectangle;
-blur sigma scales with source width (8 at 960px). Focus settles for 120ms before
-preparing a replacement, and the displayed artwork remains until readiness.
-The portrait preview is 240×360 at (1584,144), aligned to the 96px right inset with
-50px clearance below the profile avatar. Roku uses packaged scrims. Recovery dialogs
-and player busy indicators share compact, consistently padded layouts.
+Home and focused shelf backdrops stay sharp and occupy the right-hand 1440×810
+rectangle at (480,0). A packaged smooth scrim keeps the title/logo area mostly
+black and fades the artwork into the shelf below. Preview decoding stays bounded
+at 960×540; the prepared nodes are reused through replacement. Focus settles for
+120ms before preparing a replacement, and the displayed artwork remains until
+readiness. The portrait preview remains 240×360 at (1584,144).
+
+The owner-scoped presentation contract in [TV-web #114](https://github.com/viptv-org/tv-web/issues/114)
+supersedes this client's earlier blurred/full-width Home composition and loading
+copy, without claiming adoption by other clients or moving DESIGN_REF. The
+supplied owner image is a composition reference only. Canonical scoped authority is
+[TV-PRESENTATION-114](https://github.com/viptv-org/design/blob/1f50bdc2e95b73562307f49d36f61851720bf2c7/docs/platforms/TV_PRESENTATION_REFINEMENT.md)
+and its [copy catalog](https://github.com/viptv-org/design/blob/1f50bdc2e95b73562307f49d36f61851720bf2c7/viptv-design-system/copy.md).
+DESIGN_REF deliberately remains at `059b76344f4fed0639bedf8f89e0bd6e2b22cecd`;
+unrelated upstream design changes are intentionally not adopted in this scope.
+The generated Home mask
+lives in `scripts/build-tv-masks.py`; `scripts/build-tv-artwork.py` owns packaged
+textures and provenance hashes. Detail retains the pinned backdrop composition.
+
+Selected hero indicators use ordinary off-white geometry during running and
+parked states across WebGL, Canvas and native SceneGraph; the featured rotation
+still runs once and parks. The vertical row indicator occupies the gutter at
+x=1848, outside the clipped card viewport ending at x=1824; its 220px height
+clamps to y=806 so the bottom remains inside the 54px safe inset.
+
+Details prepare with title, metadata, synopsis, action and recommendation shapes
+at their final positions. A restrained opacity shimmer runs on one parent only;
+reduced motion keeps it static. Source discovery and a selected source's opening
+show the title/logo, sharp right artwork and a centered indeterminate progress
+indicator, with “Press Back to cancel”. The underlying source list retains its
+focus and errors; actual admission and first-frame state determine completion.
+Recovery dialogs retain their real error/retry behavior. Player tools use 56px
+heights, 22px icons and 12px gaps. Back dismisses menus, then visible controls,
+then exits playback; busy activity can remain without forcing the controls open.
+The native `Back` key and browser aliases share that order.
 
 Public Cinemeta metadata caching and optional prepared clearlogos are provided by
 the companion backend change. Authenticated metadata responses retain their
@@ -55,6 +83,31 @@ Home stores each row's focused card separately from the navigation bar. Vertical
 return resolves that card's identity against the current row; missing cards clamp
 to a valid position. Header navigation cannot move an inactive rail. Reused rendering
 slots reset to their new row's position before painting.
+
+
+## HTML playback observations
+
+Sparse-event console engines publish their media clock throughout playback,
+including after pause/resume, explicit seek and episode replacement. Decoded
+counters, playback-quality frame counts and compositor callback positions retain
+their distinct meanings. Video progress is unavailable when native frame APIs
+supply no usable evidence. Observed frame stalls never trigger an automatic seek,
+restart, conversion or engine replacement. Admitted server actions reach the UI
+before decoder preparation completes; paused and seek-preview ownership remain
+independent of startup and superseded Play acknowledgements.
+
+Usable media-clock progress permits startup without asserting a video frame.
+Source-choice persistence and automatic Next preparation require the existing
+adapter video/native evidence authority; clock-only HTML evidence does not
+satisfy them. The legacy first-frame endpoint also acknowledges usable transport
+startup: torrent sessions require that handshake to clear their independent
+startup deadline. Its compatibility acknowledgement is not a verified-video flag. Playback-quality totals exclude
+dropped frames when accepted as video output evidence.
+
+Compositor callbacks take priority over playback-quality counters. Valid quality
+counters require non-dropped output before source learning or Next preparation;
+a decoded counter alone cannot override all-dropped output. Decoded-only evidence
+is labeled `decoded-counter` when usable quality counters are unavailable.
 
 ## Provider subtitle timing prototype
 

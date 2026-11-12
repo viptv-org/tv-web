@@ -2,7 +2,6 @@
 import { For, Show, type Accessor } from "solid-js";
 import { TvView } from "../runtime";
 import { Button, Label, palette } from "./visuals";
-import { BusyIndicator } from "./BusyIndicator";
 import { bufferedSegments } from "./playerTimeline";
 import { clockTime as clock } from "./time";
 import type { Card } from "./types";
@@ -16,17 +15,12 @@ interface PlaybackChrome {
   tools: Accessor<readonly PlayerTool[]>;
 }
 interface PlayerFocus { selected: Accessor<number>; timeline: Accessor<boolean>; preview: Accessor<number | undefined> }
-interface PlayerActivity { loading: Accessor<boolean>; seeking: Accessor<boolean> }
 
-export function PlayerControlsView(props: { playback: PlaybackChrome; focus: PlayerFocus; activity: PlayerActivity }) {
+export function PlayerControlsView(props: { playback: PlaybackChrome; focus: PlayerFocus }) {
   const timelineFraction = () => Math.max(0, Math.min(1,
     (props.focus.preview() ?? props.playback.snapshot()?.time.positionSeconds ?? 0) / (props.playback.snapshot()?.time.durationSeconds || 1)));
   return <>
     <TvView w={1920} h={1080} color="rgba(0,0,0,.35)" />
-    <Show when={props.activity.seeking() || props.activity.loading() || props.playback.snapshot()?.state === "buffering"}>
-      <TvView w={1920} h={1080} color="rgba(0,0,0,.55)" />
-      <BusyIndicator label={props.activity.seeking() ? "Seeking…" : "Buffering…"} />
-    </Show>
     <Label
       x={96}
       y={64}
@@ -83,7 +77,9 @@ export function PlayerControlsView(props: { playback: PlaybackChrome; focus: Pla
         h={8}
         color={palette.accent}
       />
-      <TvView x={96 + 1728 * timelineFraction() - 6} y={930} w={12} h={20} color={palette.text} />
+      <Show when={props.focus.timeline()}>
+        <TvView x={96 + 1728 * timelineFraction() - 6} y={930} w={12} h={20} color={palette.text} />
+      </Show>
       <Show when={props.focus.preview() !== undefined}>
         <TvView x={Math.max(96, Math.min(1704, 96 + 1728 * timelineFraction() - 60))} y={878} w={120} h={44} color={palette.surface}>
           <Label centerY={22} w={120} align="center" size={22} font="Onest700" content={clock(props.focus.preview() ?? 0)} />
@@ -111,6 +107,7 @@ export function PlayerControlsView(props: { playback: PlaybackChrome; focus: Pla
       w={160}
       h={56}
       icon={props.playback.snapshot()?.state === "playing" ? "pause" : "play"}
+      iconSize={22}
       label={props.playback.snapshot()?.state === "playing" ? "Pause" : "Play"}
       focused={props.focus.selected() === 0 && !props.focus.timeline()}
     />
