@@ -17,5 +17,8 @@ together; focused tests exercise source and distribution, including the serializ
 image-worker decoder.
 
 Already-decoded ImageData bypasses image fetch/decode slots. Canvas uploads
-those pixels directly so text color changes remain responsive while artwork
-requests are pending. URL images retain their existing decode and upload bounds.
+those pixels synchronously during the tree update so focus backgrounds and baked
+glyph colors reach the same painted frame. The upload retains memory guards and
+source alpha; URL images retain their existing decode and upload bounds.
+`canvas-manifest.json` records the pinned package integrity and patched source/
+distribution hashes, checked by the local dependency integrity test.
