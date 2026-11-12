@@ -28,7 +28,10 @@ or installer response does not establish either condition.
 Sideload with `--no-launch`, launch explicitly after installation completes, and
 verify the installed build number plus visible ready UI. Wait for application
 readiness before inspecting JavaScript; an active development-app ID alone is not
-a startup pass. Qualify normal exit/relaunch and retained sign-in separately.
+a startup pass. Qualify normal exit/relaunch and OS reboot persistence separately.
+For reboot checks, confirm an uptime reset and inspect stored credentials before
+launch can read, clear or replace them. Verify refresh, sign-out and fresh login
+with playback settings; a successful Write/Flush acknowledgement alone is insufficient.
 Do not loop hot replacements when the native runtime stalls before JavaScript.
 
 Release builds drop console calls by default. Use `--no-drop-console` when

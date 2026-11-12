@@ -103,9 +103,9 @@ image loading; a unit-test pass or high average FPS is insufficient.
       special season or an actual resume target in it; keep those episodes accessible.
 - [x] Verify Roku sign-in and selected profile survive normal app exit/relaunch;
       distinguish registry persistence from expired/revoked server credentials.
-- [ ] Retain the latest credential generation and signed-out state across an OS
-      reboot. Positive native Write/Flush acknowledgements and ordinary relaunch
-      did not establish durability; current diagnostics are recorded in TESTING.md.
+- [x] Retain the latest credential generation and signed-out state across an OS
+      reboot. Package 11142 passes three verified restart boundaries, including
+      exact prelaunch credentials and playback settings; see TESTING.md.
 - [ ] Exercise real playback, source reuse, paused/playing seek, track controls,
       intro/next/autoplay, controls hiding, source failures and Back recovery.
       Real Roku playback/seek/Back and earlier episode handoff are qualified; the

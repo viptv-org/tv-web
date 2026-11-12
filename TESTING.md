@@ -6,8 +6,11 @@ configuration, mounts and the root frontend are preserved; production is unchang
 One asset read timed out; a bounded retry verified its exact bytes. The known
 Cloudflare Insights script is checked separately from application HTML.
 
-The shared client passes 337 units, 34 native-host units, grouped browser/native
-typechecks and both builds. Six focused browser session/sign-out cases pass. The
+Native package 11142 is built from `66753cc`, merged in TV main `188dbc5`. Its
+storage adapter changes require no hosted-beta rollout. The shared client passes
+337 units, 50 native-host units, grouped browser/native typechecks and both builds.
+Two focused browser session cases pass on this revision; six session/sign-out
+cases passed on the preceding hosted revision. The
 preceding combined gate passed 37 cases for focus, hero pixels, late artwork,
 context loss, storage, Skip/Recap, playback authority, Calendar and Samsung Return.
 An authenticated real-API sweep reached every navigation screen without requesting
@@ -50,16 +53,34 @@ restored an older record. This is a native persistence failure, not ordinary
 expiry; server replay rejection remains intact. Other account sessions and data
 were preserved.
 
-The unmerged storage candidate serializes fresh BrightScript Task operations and
-checks native Write, section Flush and readback acknowledgements. Those positive
-acknowledgements alone did not establish durability: natural Task completion and
-an additional root Flush also failed. Nonsecret, fixed-size marker tests isolated
-a distinction between two changed writes, which survived, and a single write,
-an extra Flush-only Task or two identical writes, which did not. The latest matrix
-verifies fresh prelaunch snapshots and an actual before/after uptime decrease.
-Two byte-distinct encodings of an identical JSON marker also retained exact final
-bytes and semantics after reboot. This is not yet a qualified product correction; sign-in,
-credential rotation and sign-out must each survive the real reboot boundary.
+The native JSON adapter serializes each complete read/write operation and stores
+two byte-distinct encodings of the same new value in separate, naturally completed
+BrightScript Tasks. Each Task checks Write, section Flush and readback. Retrying
+an interrupted write chooses a preparation encoding different from the current
+record; an unconfirmed Task blocks later storage work until relaunch. Clear writes
+JSON null through the same path. Playback settings are canonicalized before their
+16 KiB limit is checked. Authentication and replay protection are unchanged.
+
+Package 11142 passes three real-device OS reboot boundaries. Every run verifies an
+actual uptime reset and reads the registry before launching the app:
+
+- Controlled access expiry produces an ordinary 401 → refresh200 → successful
+  retry. The exact updated generation matches the server after exit and before
+  post-reboot launch, then restores visible signed-in Home.
+- Normal this-TV logout200 stores exact JSON null with no credentials. That state
+  remains after exit and reboot, then restores visible Welcome.
+- Fresh normal pairing and real HLS play/pause/resume/Back cleanup retain the exact
+  current credentials and existing playback settings after exit and reboot, then
+  restore visible signed-in Home. Both raw and canonical settings match.
+
+All recorded storage operations finish in order, without failed or pending work
+or recorder overflow. Positive acknowledgements alone were insufficient in the
+earlier single-write, identical-repeat and extra-Flush experiments; those failures
+remain separate from the final package's reboot evidence. Firmware internals and
+other Roku hardware/OS versions are unproven. Private harness type, output-parsing
+and cleanup-route checks were corrected using retained evidence without repeating
+completed reboots or media playback. Root's known-private-value scan passes on all
+278 changed-source/package files, and the final Home capture was reviewed directly.
 
 Prepared clearlogos follow validated public redirects while preserving the existing
 URL/DNS, downgrade, deadline and byte limits. Interstellar, Heart of the Beast and
