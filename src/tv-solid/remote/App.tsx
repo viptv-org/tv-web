@@ -840,7 +840,7 @@ export function createRemoteTvApp(
       // These controls replace the server lease; native track APIs are not
       // required. Only expose tracks the current server delivery can select.
       const canTracks = player.tracks.audio.some(track => track.selectable && track.supported !== false)
-        || player.tracks.subtitlesSupported;
+        || player.tracks.subtitlesSupported || player.providerSubtitleSupport;
       return [
         {
           id:
@@ -891,7 +891,7 @@ export function createRemoteTvApp(
       if (!playerActions().seek) setSeek(undefined);
     });
     const openTracks = createTrackPicker({player, roku: isRokuUi, selection: {column: setTrackColumn, row: setChoice},
-      dialogs: {current: overlay, open: openOverlay, close: closeOverlay},
+      dialogs: {current: overlay, open: openOverlay, replace: overlays.replace, close: closeOverlay},
       subtitle: {enabled: () => playerActions().subtitle_style, current: preferences, adopt: setPreferences, request: call,
         path: () => api.scoped("/preferences"), override: setCaptionOverride}});
     const [fontsReady, setFontsReady] = createSignal(false);

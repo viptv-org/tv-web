@@ -4384,6 +4384,78 @@ acceptance and App SHA-256
 `668f067d1bfb897ff55b0e616f789cfad2db809add6e2eb97587e533291e72bd`.
 Private captures and complete manifests stay outside the repository.
 
+### Provider subtitle timing prototype
+
+Focused provider/playback/overlay tests: 46 passing, including provider-only
+capability, legacy-backend/native-host exclusion, discovery after Back, manual
+freeze, reset/disposal, native-track reuse and unchanged media commands. Same-source
+managed seeks preserve explicit provider/manual intent without blocking video;
+changed hash/audio/source and Off/newer selection reject stale reattachment.
+Late request failures cannot overwrite reset/manual state, and Reset restores
+original cues before a delayed worker reply. The
+actual picker+overlay controller restores original player tool 4 after Back from
+nonzero rows in provider and timing submenus. Full isolated production
+build/typecheck, pinned video integrity and video's complete 206-test suite/build
+pass. This focus evidence is controller state, not rendered-device acceptance.
+
+`node scripts/check-subtitle-sync-browser.mjs` exercises real native TextTrack
+active cues with an owned silent WAV and mocked authenticated transport.
+Chromium 153.0.8010.12, Firefox 155.0 and WebKit 26.6 pass correction/manual timing,
+dense-window deferral, source stability, zero extra load events and cue cleanup. The browser mechanisms
+also restore manual-only timing on a replacement and verify that the previous
+automatic cue slot remains empty; one native track is reused.
+Existing userspace GTK/GStreamer dependencies and the bundled Firefox NSS libs
+are supplied through per-browser launch overrides; WebKit uses an owned Xvfb.
+No host package was installed. Optional `SUBTITLE_BROWSER_LIBRARY_PATH` and
+`SUBTITLE_WEBKIT_EXECUTABLE` configure those local test dependencies.
+
+This is browser mechanism evidence, not rendered-TV, actual gateway HLS,
+Safari/native-HLS, paired startup/rebuffer or held-out subtitle accuracy
+qualification. Initial bounded VTT parsing and short-cue/high-speed presentation
+follow adapter snapshot cadence and need frame-time/media-timing qualification
+before enabling automatic timing beyond the isolated prototype.
+
+Optional-sync review regressions verify an old gateway 404 preserves canonical
+provider/manual timing after managed seek, while known audio/hash/authority
+fences are retained. Focused tests and full production type/build pass.
+
+
+The pinned video projection bounds pending accepted swaps to five content
+seconds when continuous/overlapping captions hide every observed gap. Ten
+projection regressions cover that bound, pause/origin rebasing, seek, coalescing,
+manual/disposal and malformed-record watermark protection. The combined video
+head retains canonical main's PS4 clock/frame changes; 46 affected video tests,
+46 TV lifecycle tests, type/build and Chromium/Firefox/WebKit native TextTrack
+mechanisms pass. Browser mechanisms include a continuous-cue swap with the
+media source unchanged and zero extra load events. Default automatic timing
+remains off and this is not physical-device or native-HLS qualification.
+
+## Combined subtitle, playback-observation and Search/Canvas integration
+
+Main `e9591e1767a11a61c5fe39857c73e02777264684` is merged with the subtitle
+lifecycle. Video inventory is regenerated from canonical
+`aeb7b6549a7f9e0a412f7e979d2a45364e16dbc8`, present on video main `1e879410`.
+The strict playback-progress/verified-video distinction and legacy transport
+acknowledgement retain main's implementation. Search grouping, native paint and
+disposal retain their canonical source.
+
+The isolated dependency overlay verifies all 674 private Canvas files and 26
+direct packages against the Search120 inventory. Vite/test caches are task-owned;
+shared and private package trees are read-only. A temporary test config permits
+those verified dependency roots, and fixtures use the existing read-only design
+reference. Full shared units (376), native units (52), typecheck and production
+build pass. Seven Canvas, eighteen clock/Search and five real-HLS caption cases
+pass, plus Chromium/Firefox/WebKit subtitle mechanisms.
+
+The original two-second intro test had one ambiguous timeout after seven Canvas
+cases. Two instrumented replays paused at 1.630288/1.664435 seconds, retained Skip
+intro, selected the intended tool and completed the expected admission. No
+application regression was established. The test now supplies a three-second
+intro, asserts the held position remains inside it and checks visible action and
+focus before activation. Exact paused seek target, clock hold, admission count,
+resume, controlled Next and cleanup assertions remain. This fixture robustness
+change does not alter application playback behavior or physical qualification.
+
 ## Authored player gradients (#124)
 
 Based on `e9591e1767a11a61c5fe39857c73e02777264684`, with DESIGN_REF retained at
