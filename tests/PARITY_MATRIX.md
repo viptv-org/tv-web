@@ -618,3 +618,16 @@ blurred Home-preview row above for this client.
 | Detail preparation | Movie/series layout shapes, restrained parent shimmer and static reduced motion; Back rejects abandoned metadata | Browser reviewed; native compile only |
 | Source preparation and recovery | Centered clearlogo or title fallback, artwork/progress/cancel, no retained drawer text, guarded artwork preservation; full-frame progress pixels verified in both motion modes; real admission failure/retry, Back cancel and replacement lease cleanup | Browser fixture/decoded-media evidence; physical cancellation timing pending |
 | Player controls | Uniform icon size and 12px gaps; menu-first Back, rendered chrome dismissal during playback/seek/buffering/end, continued media, ignored Back repeats and eventual cleanup | Browser/native-key translation verified; physical Roku reproduction remains to be retested |
+
+### Physical Roku candidate 11145
+
+Source `a81754d100863dbfcdce7dda68dbf2cc804a80fa`; Roku TV 50S435/C157X,
+OS 16.0.4 build 853. This record supersedes the physical-pending disposition
+above only for these observed states.
+
+| Scope | Physical evidence | Remaining limits |
+|---|---|---|
+| Home/CW composition | Explicit native paint bands; 11144 bright same-title gradient/nav comparison and 11145 sharp Nocturne/Interstellar preview, readable logo/copy and gutter | Other firmware and timing/performance unqualified |
+| Detail/source preparation | Loaded detail and real title/artwork/spinner/cancel presentation inspected; source discovery canceled back to Home | Native skeleton transition and source clearlogo phase not isolated; browser states verified separately |
+| Back and native cleanup | Tracks menu closes while playing; first Back clears settled pixels, removes native holders/control labels, and HLS time advances; next Back closes media with one successful lease DELETE | Physical held-key and audibility/caption behavior unqualified |
+| Installation/return | Cold no-auto-launch install, explicit launch, existing sign-in, installed11145, final ready Home with player stopped and owned observers removed | No new reboot/sign-out/pairing qualification |

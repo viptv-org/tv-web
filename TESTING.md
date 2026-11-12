@@ -4240,3 +4240,49 @@ needed. Eleven focused WebGL/Canvas cases wait for painted progress, then assert
 more than 80 near-exact fixture-accent pixels in each saved full-frame spinner
 region. All frames contain 123–127 such pixels, including normal/reduced motion
 and available/absent/failed logos. Separate region captures were inspected.
+
+## Scoped physical Roku presentation and Back acceptance
+
+Runtime source: `a81754d100863dbfcdce7dda68dbf2cc804a80fa`, with native paint-band
+classification from `a77e2b9511f317d8874707887f02e2cfb370ba8b`. Owner-approved
+candidate 1.0.11145 runs on Roku TV 50S435 / C157X, OS 16.0.4 build 853, at
+1920×1080. Cold installation verifies OS Home and prior ExitComplete, uploads
+without auto-launch, verifies the installed version and launches explicitly.
+Existing sign-in is retained; no sign-out, pairing or reboot operation is invoked.
+
+Home/CW backdrop and scrim roles cross the native bridge explicitly. Packaged
+Home, hero and navbar masks share the scrim band above backdrop art and below
+foreground. The same bright Heart of the Beast composition is inspected on
+11144 with restored gradients/nav cover; 11145 Nocturne and Interstellar CW
+captures retain sharp right art, readable copy, clearlogos and the gutter marker.
+Running/parked hero marker captures are scoped to 11144. The detail page and
+source preparation title/artwork/progress/cancel are inspected; an isolated native
+detail-skeleton transition and native source-clearlogo loading state remain
+unmeasured. Their browser and native-build evidence remains separate.
+
+An idle-removal regression fails without a real SDK transaction, then all 52
+native tests and the native local build pass. RokuNode destruction opens the SDK
+transaction before raw removals, so a removal-only change commits while the
+renderer is idle. The physical Audio & subtitles panel closes on one Back while
+playback continues. After chrome is revealed, one Back clears the settled
+physical image without another UI mutation. The actual OS tree exports invisible
+SDK subtrees in both states, but SDK groups shrink 75→21, labels 22→13,
+rectangles 16→6 and posters 41→36; matching control labels shrink 4→0. Native
+node rcid values are zero, so per-ID matching is unavailable.
+
+Native HLS remains in play without error and advances 842900→847517ms after the
+first Back. The next distinct Back returns Home, native media reports close, and
+exactly one playback DELETE completes with HTTP 200. Final Home is ready with no
+overlay/preparation or active player; owned observers are removed. This qualifies
+the stated device/UI/control flow, not audibility, caption timing, performance or
+other firmware. Physical repeated-key behavior is not promoted beyond the
+existing browser repeat checks.
+
+The immutable 11145 compiled JavaScript SHA-256 is
+`93ee4eb8f73d80ccbfd5fba5c3884dbe602e8331d01993ae9779f324c0b3263c`;
+the manifest-only patched package tree is
+`104414357e7eb29e7674db2b8a293110b1bbd571fbbfe12094217dbaa9d0d2c6`.
+An independent browser artifact from a77e2b9 retains WebGL/Canvas bright-mask pixel
+acceptance and App SHA-256
+`668f067d1bfb897ff55b0e616f789cfad2db809add6e2eb97587e533291e72bd`.
+Private captures and complete manifests stay outside the repository.
