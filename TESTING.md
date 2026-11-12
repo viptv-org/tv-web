@@ -4240,5 +4240,3 @@ needed. Eleven focused WebGL/Canvas cases wait for painted progress, then assert
 more than 80 near-exact fixture-accent pixels in each saved full-frame spinner
 region. All frames contain 123–127 such pixels, including normal/reduced motion
 and available/absent/failed logos. Separate region captures were inspected.
-Original reports remain intact; the apparent missing ring was a full-frame visual
-read, not a reproduced paint failure.
