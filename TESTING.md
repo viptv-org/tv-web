@@ -4220,3 +4220,16 @@ The native local release build and its type checks pass, with the generated Home
 scrim packaged. This is compile/host evidence. Physical Roku, PS4, Tizen, webOS and
 Vizio firmware acceptance remain pending; no device install or deployment is part
 of this validation.
+
+Clearlogo/input follow-up source: `7c8c0ecdd15ce621ad96b2dcde0a8af8e6fdcac6`.
+Three focused logo-layout units, the production integrity/type/build, ten focused
+browser cases and the native local release compile pass. Matched WebGL/Canvas
+captures show the fixture's actual clearlogo centered above progress and cancel;
+missing/failed logos show the title in the same reserved slot. A held logo response
+does not delay first-frame presentation. Both native Back and Escape ignore repeat
+keydowns after menu dismissal and chrome dismissal, then the next distinct press
+exits normally. Preparation has no redundant opening/discovery status line.
+SPEC.md references the immutable scoped design amendment
+`3eb55db3fd248621bbf56dc30e8718450280c767`; unrelated upstream changes remain
+intentionally outside the `059b763` asset snapshot. Physical-device qualification
+remains pending.
