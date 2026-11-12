@@ -46,6 +46,8 @@ sub runWorker()
         end if
         body = transfer.GetToString()
         response = { ok: true, error: "", result: body }
+    else if op = "storage" then
+        response = storageOperation(request)
     else if op = "http" then
         transfer = CreateObject("roUrlTransfer")
         transfer.SetCertificatesFile("common:/certs/ca-bundle.crt")
@@ -97,3 +99,34 @@ sub runWorker()
 
     m.top.response = response
 end sub
+
+' Keep every mutation and its durability acknowledgement in the same Task.
+' Never put registry values in errors or logs.
+function storageOperation(request as Object) as Object
+    section = CreateObject("roRegistrySection", request.section)
+    key = request.key
+    action = request.action
+    if action = "load" then
+        value = invalid
+        if section.Exists(key) then value = section.Read(key)
+        if value <> invalid then
+            if value = "null" then value = invalid
+        end if
+        return { ok: true, result: value }
+    else if action = "save" then
+        if not section.Write(key, request.value) then
+            return { ok: false, error: "Device settings could not be saved." }
+        end if
+    else
+        return { ok: false, error: "Invalid device storage operation." }
+    end if
+
+    ' A successful response verifies this Task's write and explicit section flush.
+    if not section.Flush() then
+        return { ok: false, error: "Device settings could not be saved." }
+    end if
+    if not section.Exists(key) or section.Read(key) <> request.value then
+        return { ok: false, error: "Device settings could not be verified." }
+    end if
+    return { ok: true, result: invalid }
+end function
