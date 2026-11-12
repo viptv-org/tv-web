@@ -4429,3 +4429,29 @@ head retains canonical main's PS4 clock/frame changes; 46 affected video tests,
 mechanisms pass. Browser mechanisms include a continuous-cue swap with the
 media source unchanged and zero extra load events. Default automatic timing
 remains off and this is not physical-device or native-HLS qualification.
+
+## Combined subtitle, playback-observation and Search/Canvas integration
+
+Main `e9591e1767a11a61c5fe39857c73e02777264684` is merged with the subtitle
+lifecycle. Video inventory is regenerated from canonical
+`aeb7b6549a7f9e0a412f7e979d2a45364e16dbc8`, present on video main `1e879410`.
+The strict playback-progress/verified-video distinction and legacy transport
+acknowledgement retain main's implementation. Search grouping, native paint and
+disposal retain their canonical source.
+
+The isolated dependency overlay verifies all 674 private Canvas files and 26
+direct packages against the Search120 inventory. Vite/test caches are task-owned;
+shared and private package trees are read-only. A temporary test config permits
+those verified dependency roots, and fixtures use the existing read-only design
+reference. Full shared units (376), native units (52), typecheck and production
+build pass. Seven Canvas, eighteen clock/Search and five real-HLS caption cases
+pass, plus Chromium/Firefox/WebKit subtitle mechanisms.
+
+The original two-second intro test had one ambiguous timeout after seven Canvas
+cases. Two instrumented replays paused at 1.630288/1.664435 seconds, retained Skip
+intro, selected the intended tool and completed the expected admission. No
+application regression was established. The test now supplies a three-second
+intro, asserts the held position remains inside it and checks visible action and
+focus before activation. Exact paused seek target, clock hold, admission count,
+resume, controlled Next and cleanup assertions remain. This fixture robustness
+change does not alter application playback behavior or physical qualification.
