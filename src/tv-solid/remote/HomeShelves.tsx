@@ -66,8 +66,7 @@ export function HomeShelves(props: {
       <TvView y={origin()} transition={motion}>
       <KeyedFor each={window()} keyOf={model => model.slot}>
         {model => {
-          // Focus, previews and activation address the producer's row by index.
-          // Keep those same positions, including repeated media identities.
+          // Rendering must preserve the producer indices used by previews and playback.
           const cards = createMemo(() => model().row.cards);
           const selected = createMemo(() => model().index === props.row);
           const portrait = createMemo(() => model().row.id !== "continue");

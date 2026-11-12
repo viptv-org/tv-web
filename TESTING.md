@@ -15,7 +15,9 @@ first entry and three distinct titles, actual card pixels, rendered synopsis,
 prepared logos/backdrops, delayed artwork, cached traversal in both directions,
 and `viewing-action` plus source-discovery identities before and after preview
 settlement. Production build/typechecks, 22 focused row/artwork unit tests and
-17 Home/preview browser cases pass. Private captures and logs:
+17 Home/preview browser cases pass. A subsequent four-case WebGL/Canvas matrix
+also passes the three-distinct control and repeated-first-entry cases.
+Private captures and logs:
 `/tmp/viptv-priority-private/tv-polish/issue125/`.
 These are fixture browser results; no live account, actual media or physical
 PS4/Roku/TV qualification is claimed. The affected physical session's original
