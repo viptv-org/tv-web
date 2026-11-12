@@ -194,3 +194,12 @@ stay visible while pause is pending or playback is paused. Back may hide paused
 controls without stopping playback. Resume restores the ordinary idle timeout.
 New source admissions, including Next, retire pending transport chrome ownership;
 late completion or failure from the outgoing command cannot change the new chrome.
+
+Resume-time presentation follows the scoped owner-approved
+[TV-RESUME-135 contract](https://github.com/viptv-org/design/blob/4e730bb2d4e0898b0c899b70575622ae152d7998/docs/platforms/TV_PRESENTATION_REFINEMENT.md#tv-resume-135--authoritative-saved-time).
+Continue Watching omits remaining-time copy. Resume labels use authoritative
+saved milliseconds, displaying M:SS or H:MM:SS without reducing playback precision.
+Fresh action results supersede stale Home clocks; explicit zero, restart and
+manual seek positions retain ownership. Controls accommodate large text while
+preserving the existing progress bar, adjacent spacing and focus behavior.
+The scoped amendment retains DESIGN_REF and does not import unrelated changes.

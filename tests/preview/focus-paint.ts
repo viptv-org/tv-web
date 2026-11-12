@@ -1,6 +1,10 @@
 import type { Page } from '@playwright/test';
 
 export async function temporalFocusPaint(page: Page, occupied: boolean) {
+  if (occupied) await page.waitForFunction(() => {
+    const exposed = (window as any).__viptvRenderer;
+    return (exposed?.rawRenderer ?? exposed)?.stage.txManager.decodeGate != null;
+  });
   return page.evaluate(async occupied => {
     const exposed = (window as any).__viptvRenderer;
     const renderer = exposed.rawRenderer ?? exposed;

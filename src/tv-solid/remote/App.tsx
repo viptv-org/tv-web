@@ -3,6 +3,7 @@ import type { Screen, Item, Overlay } from "./app-types";
 import { runtimeObserver } from "../platform/runtime-observation";
 import { exitTizen } from "../platform/tizen-host";
 import { DevicePlayback, deviceProfileKey, deviceTitleKey } from "./device-playback";
+import { createSourceStartPosition } from "./resume-position";
 import { EpisodePreparation, episodeKey, type EpisodePreparationState } from "./episode-preparation";
 import { AutoplayCountdown, type CountdownState } from "./autoplay-countdown";
 import { Show, batch, createEffect, createMemo, createSignal, onCleanup, untrack, onMount } from "solid-js";
@@ -295,7 +296,7 @@ export function createRemoteTvApp(
       [catalog, setCatalog] = createSignal<Catalog>(),
       [filters, setFilters] = createSignal<Record<string, string[]>>({});
     const {hasEpisodes: detailHasEpisodes, episodes: detailEpisodes, cursor: detailCursor, target: detailTarget,
-      label: detailActionLabel, progress: detailPlayProgress, remaining: detailPlayRemaining} = createDetailPresentation({
+      label: detailActionLabel, progress: detailPlayProgress} = createDetailPresentation({
         home, detail, action: detailAction, selected, season: seasonIndex,
       });
     const [, setLiveFavorites] = createSignal<Set<string>>();
@@ -429,8 +430,8 @@ export function createRemoteTvApp(
     });
     const [sourceHeight, setSourceHeight] = createSignal<number>(),
       [sourceFiltering, setSourceFiltering] = createSignal(false);
+    const sourceStartPosition = createSourceStartPosition();
     let manualSourceSelection = false,
-      sourceStartPosition = 0,
       sourceFilterGeneration = 0;
     const heldSelect = createHeldSelect({
       target: pressTarget, layer: overlay,
@@ -2120,23 +2121,12 @@ export function createRemoteTvApp(
     const publishSources = createSourcePublisher({api, owns: operation => sourceScope === operation,
       generation: {next: () => ++sourceFilterGeneration, current: () => sourceFilterGeneration}, height: sourceHeight,
       ids: setAllSourceIds, page: setSourcePage, filtering: setSourceFiltering, reconcile: reconcileSources, focusBest: focusBestMatch, fail});
-    /** The app resumes from the card's own progress, and the server may key
-     * that progress to a different metadata provider than the stream. Sending
-     * the position explicitly makes the button and the decoder agree. */
-    function cardResumePosition(card: Card) {
-      const progress = card.progress ?? card.view?.progress ?? 0;
-      if (progress <= 0 || progress >= 1) return 0;
-      const runtime = card.metadata?.runtime_minutes ?? 0;
-      return runtime > 0 ? progress * runtime * 60 : 0;
-    }
     const playIntent = createSourceIntent({api,
       begin: (card, restart, channel, replaceCurrent, position) => {
         const id = ++sourceIntent, epoch = api.scopeEpoch;
         manualPresentation = undefined;
         countdown.cancel();
-        sourceStartPosition = restart
-          ? 0
-          : Math.max(0, position ?? cardResumePosition(card));
+        sourceStartPosition.begin(card, restart, position);
         sourceScope?.abort();
         const operation = new AbortController();
         sourceScope = operation;
@@ -2162,9 +2152,9 @@ export function createRemoteTvApp(
         return {id, epoch, operation};
       }, owner: {intent: () => sourceIntent, epoch: () => api.scopeEpoch, operation: () => sourceScope,
         replace: operation => {sourceScope = operation;}, aborted: () => scope.signal.aborted},
-      position: () => sourceStartPosition, manual: () => manualSourceSelection, playerScreen: () => screen() === "player", memory: sourceMemory,
+      position: sourceStartPosition.current, manual: () => manualSourceSelection, playerScreen: () => screen() === "player", memory: sourceMemory,
       presentation: {capture: overlays.captureOrigin, hide: overlays.hide, show: () => openOverlay({kind: "sources", title: "Choose a source"})},
-      resolve: action => {setAction(action);setPickerCard(previous => presentationCard(previous, action.card));}, retry: work => {retry = work;},
+      resolve: action => {sourceStartPosition.adopt(action);setAction(action);setPickerCard(previous => presentationCard(previous, action.card));}, retry: work => {retry = work;},
       page: setSourcePage, ids: setAllSourceIds, loading: setLoading, discovering: setSourceLoading,
       failure: {current: sourceFailure, set: setSourceFailure}, rows: sources, reconcile: reconcileSources, publish: publishSources,
       play: playSource, notify, fail});
@@ -2219,7 +2209,8 @@ export function createRemoteTvApp(
       document.getElementById("video-layer")!.style.display = "block";
       let started = false;
       try {
-        await startSourceCandidate({player, source, action: current, direct, manual, replacing: replacingSource(), position: () => sourceStartPosition,
+        await startSourceCandidate({player, source, action: current, direct, manual, replacing: replacingSource(), position: sourceStartPosition.current,
+          positionIsAuthoritative: sourceStartPosition.authoritative,
           current: () => attempt === sourceAttempt, notify});
         started = true;
         setLoading(false);
@@ -3228,7 +3219,7 @@ export function createRemoteTvApp(
                 hasEpisodes={detailHasEpisodes()} episodes={detailEpisodes()} zone={zone()} column={column()}
                 heroAction={heroAction()} seasonIndex={seasonIndex()} episodeColumn={detailColumn("episodes")}
                 recommendationColumn={detailColumn("recommendations")} actionLabel={detailActionLabel()}
-                progress={detailPlayProgress()} remaining={detailPlayRemaining()}
+                progress={detailPlayProgress()}
                 saved={!!detailForDisplay() && isSaved(detailForDisplay()!.item)} />
             </Show>
             <Show

@@ -20,6 +20,7 @@ export interface Card {
       caption: string | null;
       progress: number | null;
       action: "play" | "details";
+      resume_position_millis?: number | null;
     };
   };
   identity: Identity;
@@ -330,6 +331,7 @@ export interface TitleAction {
   card: Card;
   label: string;
   resume: boolean;
+  resume_position_millis?: number | null;
   source_selection: "best" | "ask";
   progress?: number | null;
   remaining_label?: string | null;
