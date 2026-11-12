@@ -20,6 +20,7 @@ import type {
   Preferences,
   Source,
   SourcePage,
+  SearchPage,
   SourceReplacement,
   TitleAction,
   Tokens,
@@ -558,6 +559,11 @@ export class RemoteTvApi {
       "GET",
       undefined,
       signal,
+    );
+  }
+  search(value: string, signal?: AbortSignal) {
+    return this.call<SearchPage>(
+      `/api/search?${query({ query: value })}`, "GET", undefined, signal,
     );
   }
   library(cursor = "0", signal?: AbortSignal, values: LibraryQuery = {}) {

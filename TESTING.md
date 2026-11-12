@@ -1,3 +1,29 @@
+# Grouped Search
+
+Search consumes the authenticated `/api/search` rows in server order. Provider,
+catalog and media-type identity, card origins, successful rows, empty rows and
+failed rows remain separate. Rows remember card identity and position; Up/Down
+changes shelves, Right scrolls within a shelf, Left returns to the keyboard,
+and Back from Details restores the originating shelf. Retry retains the current
+query and usable results. New queries and profile retirement cancel obsolete work.
+
+The grouped endpoint supplies bounded cross-catalog results without continuation
+cursors. Catalog-specific discovery and independently paged channel Search retain
+their existing endpoints. This client does not invent grouped-search pagination.
+
+Validation: production build and grouped TypeScript checks; 347 shared units and
+52 native-host units; 20 affected Search/Canvas browser cases, including WebGL
+and forced Canvas catalog fixtures with duplicate titles across providers and
+media types, failed Simkl, horizontal scrolling, empty catalogs, retry failure,
+Details return focus, query cancellation and channel paging/auth retirement.
+WebGL and patched Canvas captures are inspected privately. At 1920×1080 all five
+Canvas shelf captions paint 713–737 bright pixels each; the focused outline adds
+1590 bright pixels over identical unfocused artwork. Shared Canvas paint tests
+also cover 1540×754 and occupied artwork decode slots. The isolated Canvas graph
+matches the committed patch; the primary shared dependency graph is unchanged.
+Physical PS4 input/rendering, native Roku Search and other TV firmware remain
+unverified for this change.
+
 # Canvas presentation candidate
 
 The candidate retains the UI presentation branch at `a73e0d0`; hosted beta

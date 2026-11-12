@@ -1,38 +1,9 @@
-import type { RemoteTvApi } from "../api";
-import { cardKey, type Card } from "../types";
+import { cardKey, type SearchRow } from "../types";
 
-export async function searchStremio(discover: RemoteTvApi["discover"], value: string, signal: AbortSignal) {
-  const results = await Promise.allSettled([
-    discover(
-      { type: "movie", provider_id: "stremio", search: value },
-      signal,
-    ),
-    discover(
-      { type: "series", provider_id: "stremio", search: value },
-      signal,
-    ),
-  ]);
-  const pages = results.flatMap((result) =>
-    result.status === "fulfilled" ? [result.value] : [],
-  );
-  if (!pages.length) {
-    const failure = results.find((result) => result.status === "rejected");
-    throw failure && failure.status === "rejected"
-      ? failure.reason
-      : new Error("Search is unavailable. Try again.");
-  }
-  const cards: Card[] = [],
-    seen = new Set<string>();
-  for (const page of pages)
-    for (const card of page.cards) {
-      const key = cardKey(card);
-      if (seen.has(key)) continue;
-      seen.add(key);
-      cards.push(card);
-    }
-  return {
-    cards,
-    complete: pages.every((page) => page.complete),
-    next_cursor: null,
-  };
+export function searchRowFocus(rows: readonly SearchRow[], previous: SearchRow | undefined, column: number) {
+  const row = Math.max(0, rows.findIndex(value => value.id === previous?.id));
+  const cards = rows[row]?.cards ?? [];
+  const key = previous?.cards[column] && cardKey(previous.cards[column]);
+  const index = key ? cards.findIndex(card => cardKey(card) === key) : -1;
+  return {row, column: index >= 0 ? index : Math.max(0, Math.min(column, cards.length - 1))};
 }

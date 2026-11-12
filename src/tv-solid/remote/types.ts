@@ -66,6 +66,16 @@ export interface Row {
   message?: string | null;
   browse?: { target: string; query: { id: string; values: string[] }[] } | null;
 }
+export interface SearchRow extends Omit<Row, "state"> {
+  provider_id: string;
+  addon_id?: number | null;
+  state: Row["state"] | "Loading";
+  error_code?: string | null;
+}
+export interface SearchPage {
+  rows: SearchRow[];
+  complete: boolean;
+}
 export interface Home {
   hero?: Card | null;
   featured: Card[];
