@@ -4696,3 +4696,9 @@ hosted validation is recorded in TV-web issue #140. No local build or test run
 was used. Physical PS4 playback and native-clock behavior remain unverified;
 this reproduction does not establish the cause of the owner's physical-device
 report. Playwright acceptance is not part of the package workflow.
+
+## Bounded playback heartbeat renewal (#142)
+
+Scheduled and foreground heartbeats share one renewal flight. A typed gateway timeout/unavailability response can retry twice (1s,2s), bounded by the existing server expiry with the retained1s safety margin. Only a valid same-lease ready server response can replace that deadline. Invalid responses, terminal authority/errors, API-scope changes, Stop/replacement/ended/disposal retire or fail closed; a foreground return waits for renewal and retains newer user intent.
+
+Actions43309717938 at6b49025 reproduced the valid-lease502 failure before the fix. Hosted43310725146 atd45e19d passed450 shared and52 native unit cases, including59 RemotePlayback cases, type/integrity checks and production hosting packaging. The final queued-foreground-pause fence has an additional controller regression; final head Actions result is recorded in the PR. Tizen signing is unavailable and is separate from the hosting gate. No local tests/builds, live account changes, decoder playback or physical PS4 qualification were performed for this change.

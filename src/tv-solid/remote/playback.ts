@@ -4,6 +4,7 @@ import { RemoteTvApi, RemoteError, segment, query, originFields } from "./api";
 import { ProviderSubtitles, type ProviderSubtitle, type ProviderSubtitleIntent } from "./player/provider-subtitles";
 import { DeferredPlayer } from "./deferred-player";
 import { inScope } from "./operation-scope";
+import { renewWithinLease } from "./lease-renewal";
 import { ensureTizenSurface } from "../platform/tizen-host";
 import type {
   Card,
@@ -54,6 +55,10 @@ export class RemotePlayback {
   private sourceRetry?: { card: Card; request: SourceReplacement };
   private heartbeat?: ReturnType<typeof setTimeout>;
   private expiry?: ReturnType<typeof setTimeout>;
+  private leaseDeadline = 0;
+  private leaseScopeEpoch?: number;
+  private renewal?: { id: string; generation: number; controller: AbortController; promise: Promise<boolean> };
+  private foregroundFlight?: Promise<void>;
   private operation?: AbortController;
   private admitting = false;
   private generation = 0;
@@ -147,8 +152,7 @@ export class RemotePlayback {
       if (snapshot.state === "paused" && previous !== "paused")
         this.event("pause");
       if (snapshot.state === "ended" && previous !== "ended") {
-        clearTimeout(this.heartbeat);
-        clearTimeout(this.expiry);
+        this.retireHeartbeat();
         this.event("stop", true);
       }
       // Once a seek retires its lease, late decoder/network errors belong
@@ -324,37 +328,58 @@ export class RemotePlayback {
     );
   }
   private foreground = () => {
-    if (document.visibilityState !== "visible" || !this.lease || this.player.snapshot.state === "ended") return;
-    const lease = this.lease,
-      activity = this.activity,
-      playing = this.player.snapshot.state === "playing";
-    void this.player
-      .pause()
-      .then(() =>
-        this.api.call<Lease>(
-          `/api/playback/${segment(lease.id)}/heartbeat`,
-          "POST",
-        ),
-      )
-      .then(async (value) => {
-        if (this.lease?.id !== lease.id) return;
-        if (value.status !== "ready")
-          throw new Error("Playback authorization ended.");
-        this.lease = value;
-        this.present({ ...this.player.snapshot });
-        this.schedule();
-        if (
-          this.lease?.id === lease.id &&
-          playing &&
-          activity === this.activity &&
-          document.visibilityState === "visible"
-        )
+    if (this.foregroundFlight || document.visibilityState !== "visible" || !this.lease || this.player.snapshot.state === "ended") return;
+    const lease = this.lease, generation = this.generation, intent = this.intentGeneration,
+      activity = this.activity, playing = this.player.snapshot.state === "playing";
+    const current = () => this.generation === generation && this.lease?.id === lease.id && this.player.snapshot.state !== "ended";
+    const completion = Promise.all([Promise.resolve().then(() => { if (current()) return this.player.pause(); }), this.renew(lease, generation)])
+      .then(async ([, renewed]) => {
+        if (renewed && current() && intent === this.intentGeneration && playing && activity === this.activity && document.visibilityState === "visible")
           await this.player.play();
       })
-      .catch((error) => {
-        if (this.lease?.id === lease.id && this.player.snapshot.state !== "ended") this.fail(error);
-      });
+      .catch(error => { if (current()) this.fail(error); })
+      .finally(() => { if (this.foregroundFlight === completion) this.foregroundFlight = undefined; });
+    this.foregroundFlight = completion;
   };
+  private retireHeartbeat() {
+    clearTimeout(this.heartbeat);
+    clearTimeout(this.expiry);
+    this.renewal?.controller.abort();
+    this.renewal = undefined;
+    this.foregroundFlight = undefined;
+    this.leaseDeadline = 0;
+  }
+  private renew(lease: Lease, generation: number): Promise<boolean> {
+    const current = () => this.generation === generation && this.lease?.id === lease.id && this.player.snapshot.state !== "ended";
+    if (!current()) return Promise.resolve(false);
+    if (this.api.scopeEpoch !== this.leaseScopeEpoch) {
+      this.fail(new Error("Playback authorization changed."));
+      return Promise.resolve(false);
+    }
+    if (this.renewal?.id === lease.id && this.renewal.generation === generation) return this.renewal.promise;
+    clearTimeout(this.heartbeat);
+    const controller = new AbortController(), epoch = this.leaseScopeEpoch;
+    const remaining = () => Math.min(this.leaseDeadline - Date.now(), Number(lease.expires_at) * 1000 - this.api.serverNow - 1000);
+    const promise = renewWithinLease({
+      request: signal => this.api.call<Lease>(`/api/playback/${segment(lease.id)}/heartbeat`, "POST", undefined, signal),
+      remaining, current: () => current() && this.api.scopeEpoch === epoch, signal: controller.signal,
+    }).then(value => {
+      if (!current() || controller.signal.aborted) return false;
+      if (this.api.scopeEpoch !== epoch) throw new Error("Playback authorization changed.");
+      if (!value || value.id !== lease.id || value.status !== "ready") throw new Error("Playback authorization ended.");
+      if (!Number.isFinite(Number(value.expires_at)) || Number(value.expires_at) * 1000 - this.api.serverNow <= 1000 || !Number.isFinite(value.renew_after_seconds))
+        throw new Error("Playback authorization expired.");
+      this.lease = value;
+      this.present({ ...this.player.snapshot });
+      this.schedule();
+      return current();
+    }).catch(error => {
+      if (current() && !controller.signal.aborted) this.fail(error);
+      return false;
+    }).finally(() => { if (this.renewal?.controller === controller) this.renewal = undefined; });
+    this.renewal = { id: lease.id, generation, controller, promise };
+    return promise;
+  }
   private fail(error: Error) {
     if (this.failing) return;
     this.failing = true;
@@ -370,37 +395,20 @@ export class RemotePlayback {
     clearTimeout(this.heartbeat);
     if (this.player.snapshot.state === "ended") return;
     clearTimeout(this.expiry);
-    const lease = this.lease;
+    const lease = this.lease, generation = this.generation;
     if (!lease) return;
-    const remaining =
-      Number(lease.expires_at) * 1000 - this.api.serverNow - 1000;
-    if (!Number.isFinite(remaining) || remaining <= 0) {
+    const remaining = Number(lease.expires_at) * 1000 - this.api.serverNow - 1000;
+    if (!Number.isFinite(remaining) || remaining <= 0 || !Number.isFinite(lease.renew_after_seconds)) {
       this.fail(new Error("Playback authorization expired."));
       return;
     }
-    // Expiry is independent of a heartbeat request, including a stalled network.
+    this.leaseDeadline = Date.now() + remaining;
+    // A failed renewal cannot move this independent authorization deadline.
     this.expiry = setTimeout(() => {
-      if (this.lease?.id === lease.id)
+      if (this.generation === generation && this.lease?.id === lease.id)
         this.fail(new Error("Playback authorization expired."));
     }, remaining);
-    this.heartbeat = setTimeout(
-      () => {
-        void this.api
-          .call<Lease>(`/api/playback/${segment(lease.id)}/heartbeat`, "POST")
-          .then((value) => {
-            if (this.lease?.id !== lease.id) return;
-            if (value.status !== "ready")
-              throw new Error("Playback authorization ended.");
-            this.lease = value;
-            this.present({ ...this.player.snapshot });
-            this.schedule();
-          })
-          .catch((error) => {
-            if (this.lease?.id === lease.id && this.player.snapshot.state !== "ended") this.fail(error);
-          });
-      },
-      Math.max(1, lease.renew_after_seconds) * 1000,
-    );
+    this.heartbeat = setTimeout(() => { void this.renew(lease, generation); }, Math.max(1, lease.renew_after_seconds) * 1000);
   }
   private event(event: string, ended = false) {
     if (
@@ -488,7 +496,7 @@ export class RemotePlayback {
       if (intent !== this.intentGeneration) throw new DOMException("Playback cancelled", "AbortError");
       const outgoing = this.lease;
       this.event("stop");
-      clearTimeout(this.heartbeat);clearTimeout(this.expiry);
+      this.retireHeartbeat();
       this.lease = undefined;
       if (outgoing) await this.api.release(`/api/playback/${segment(outgoing.id)}`);
       if (intent !== this.intentGeneration) throw new DOMException("Playback cancelled", "AbortError");
@@ -526,6 +534,7 @@ export class RemotePlayback {
       scope = new AbortController();
     this.operation = scope;
     this.lease = lease;
+    this.leaseScopeEpoch = this.api.scopeEpoch;
     this.card = card;
     this.source = source;
     this.selection = selection;
@@ -618,8 +627,7 @@ export class RemotePlayback {
     this.providerOperation++; this.providerCaption?.dispose(); this.providerCaption = undefined; this.embeddedCaptionSuppressed = false;
     this.generation++;
     this.operation?.abort();
-    clearTimeout(this.heartbeat);
-    clearTimeout(this.expiry);
+    this.retireHeartbeat();
     // Observation bookkeeping must never prevent the platform decoder stopping.
     try {
       if (this.player.snapshot.state !== "ended") this.event("stop");
@@ -628,6 +636,7 @@ export class RemotePlayback {
     }
     const lease = this.lease;
     this.lease = undefined;
+    this.leaseScopeEpoch = undefined;
     this.card = undefined;
     this.source = undefined;
     this.selection = {};

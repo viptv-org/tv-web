@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { RemotePlayback } from "../../src/tv-solid/remote/playback";
-import type { RemoteTvApi } from "../../src/tv-solid/remote/api";
+import { RemoteError, type RemoteTvApi } from "../../src/tv-solid/remote/api";
 import type { Card, Lease } from "../../src/tv-solid/remote/types";
 import { IDLE_SNAPSHOT, type Player } from "../../vendor/video/src/types";
 
@@ -473,4 +473,253 @@ it("labels decoded-only fallback without claiming compositor evidence when quali
   expect(controller.hasPresentedFrame).toBe(true);expect(controller.firstVideoEvidence).toBe("decoded-counter");expect(presented).toHaveBeenCalledOnce();
   expect(player.snapshot.diagnostics?.presentedFrames).toBeUndefined();
   await controller.start(card,{id:"next"},false);expect(controller.hasPresentedFrame).toBe(false);expect(controller.firstVideoEvidence).toBeUndefined();
+});
+
+
+it("keeps a valid lease through a transient heartbeat timeout and renews before expiry", async () => {
+  vi.useFakeTimers();
+  vi.setSystemTime(0);
+  const { controller, api, player, failure } = setup();
+  Object.defineProperty(api, "serverNow", { get: () => Date.now() });
+  const authorized = { ...lease("heartbeat"), expires_at: 60, renew_after_seconds: 20 };
+  api.admit.mockResolvedValueOnce(authorized);
+  api.call.mockRejectedValueOnce(new RemoteError(502, "gateway_unavailable", "Temporary gateway timeout"));
+  api.call.mockResolvedValue({ ...authorized, expires_at: 90 });
+  await controller.start(card, { id: "source" }, false);
+  player.stop.mockClear();
+  await vi.advanceTimersByTimeAsync(20_000);
+  expect(api.call).toHaveBeenCalledTimes(1);
+  expect(failure).not.toHaveBeenCalled();
+  expect(player.stop).not.toHaveBeenCalled();
+  expect(api.release).not.toHaveBeenCalled();
+  expect(controller.leaseId).toBe("heartbeat");
+  await vi.advanceTimersByTimeAsync(1_000);
+  expect(api.call).toHaveBeenCalledTimes(2);
+  expect(failure).not.toHaveBeenCalled();
+  expect(api.release).not.toHaveBeenCalled();
+  await vi.advanceTimersByTimeAsync(38_000);
+  expect(controller.leaseId).toBe("heartbeat");
+});
+
+function heartbeatSetup(expires = 60, renew = 20) {
+  vi.useFakeTimers();
+  vi.setSystemTime(0);
+  const result = setup();
+  Object.defineProperty(result.api, "serverNow", { get: () => Date.now() });
+  const authorized = { ...lease("heartbeat"), expires_at: expires, renew_after_seconds: renew };
+  result.api.admit.mockResolvedValueOnce(authorized);
+  result.api.call.mockResolvedValue(authorized);
+  return { ...result, authorized };
+}
+
+it("fails closed after exactly two transient heartbeat retries", async () => {
+  const { controller, api, failure } = heartbeatSetup();
+  api.call.mockRejectedValue(new RemoteError(502, "gateway_unavailable", "Temporary gateway timeout"));
+  await controller.start(card, { id: "source" }, false);
+  await vi.advanceTimersByTimeAsync(20_000);
+  expect(api.call).toHaveBeenCalledTimes(1);
+  expect(failure).not.toHaveBeenCalled();
+  await vi.advanceTimersByTimeAsync(1_000);
+  expect(api.call).toHaveBeenCalledTimes(2);
+  expect(failure).not.toHaveBeenCalled();
+  await vi.advanceTimersByTimeAsync(2_000);
+  expect(api.call).toHaveBeenCalledTimes(3);
+  expect(failure).toHaveBeenCalledOnce();
+  expect(api.release).toHaveBeenCalledWith("/api/playback/heartbeat");
+  await vi.advanceTimersByTimeAsync(60_000);
+  expect(api.call).toHaveBeenCalledTimes(3);
+});
+
+it("expires at the original server deadline while a heartbeat request is stalled", async () => {
+  const { controller, api, failure, player, authorized } = heartbeatSetup(24, 20);
+  let finish!: (value: Lease) => void;
+  let signal: AbortSignal | undefined;
+  api.call.mockImplementationOnce((_path, _method, _body, scope) => {
+    signal = scope;
+    return new Promise(resolve => { finish = resolve; });
+  });
+  await controller.start(card, { id: "source" }, false);
+  player.stop.mockClear();
+  await vi.advanceTimersByTimeAsync(20_000);
+  expect(failure).not.toHaveBeenCalled();
+  await vi.advanceTimersByTimeAsync(2_999);
+  expect(failure).not.toHaveBeenCalled();
+  await vi.advanceTimersByTimeAsync(1);
+  expect(failure).toHaveBeenCalledOnce();
+  expect(signal?.aborted).toBe(true);
+  expect(player.stop).toHaveBeenCalledOnce();
+  expect(api.release).toHaveBeenCalledWith("/api/playback/heartbeat");
+  finish({ ...authorized, expires_at: 200 });
+  await vi.advanceTimersByTimeAsync(40_000);
+  expect(controller.leaseId).toBeUndefined();
+  expect(api.call).toHaveBeenCalledTimes(1);
+});
+
+it("does not schedule a transient retry past the known expiry", async () => {
+  const { controller, api, failure } = heartbeatSetup(21.5, 20);
+  api.call.mockRejectedValue(new RemoteError(503, "service_unavailable", "Temporary failure"));
+  await controller.start(card, { id: "source" }, false);
+  await vi.advanceTimersByTimeAsync(20_000);
+  expect(api.release).not.toHaveBeenCalled();
+  await vi.advanceTimersByTimeAsync(500);
+  expect(failure).toHaveBeenCalledOnce();
+  expect(api.call).toHaveBeenCalledTimes(1);
+  expect(controller.leaseId).toBeUndefined();
+});
+
+it.each([401, 403, 410, 500])("never retries terminal heartbeat HTTP%s", async status => {
+  const { controller, api, failure } = heartbeatSetup();
+  api.call.mockRejectedValue(new RemoteError(status, "authorization_expired", "Ended"));
+  await controller.start(card, { id: "source" }, false);
+  await vi.advanceTimersByTimeAsync(20_000);
+  expect(failure).toHaveBeenCalledOnce();
+  expect(api.release).toHaveBeenCalledWith("/api/playback/heartbeat");
+  await vi.advanceTimersByTimeAsync(10_000);
+  expect(api.call).toHaveBeenCalledTimes(1);
+});
+
+it.each([new Error("Unexpected failure"), new TypeError("Unknown type failure"), new RemoteError(502, "invalid_response", "Malformed")])(
+  "does not retry unclassified heartbeat error %s", async error => {
+    const { controller, api, failure } = heartbeatSetup();
+    api.call.mockRejectedValue(error);
+    await controller.start(card, { id: "source" }, false);
+    await vi.advanceTimersByTimeAsync(20_000);
+    expect(failure).toHaveBeenCalledOnce();
+    expect(api.release).toHaveBeenCalledWith("/api/playback/heartbeat");
+    await vi.advanceTimersByTimeAsync(10_000);
+    expect(api.call).toHaveBeenCalledTimes(1);
+  },
+);
+
+it.each(["expired", "released", "preparing"])("does not retry non-ready heartbeat authority %s", async status => {
+  const { controller, api, failure, authorized } = heartbeatSetup();
+  api.call.mockResolvedValue({ ...authorized, status });
+  await controller.start(card, { id: "source" }, false);
+  await vi.advanceTimersByTimeAsync(20_000);
+  expect(failure).toHaveBeenCalledOnce();
+  expect(api.release).toHaveBeenCalledWith("/api/playback/heartbeat");
+  expect(api.call).toHaveBeenCalledTimes(1);
+});
+
+it("cancels a scheduled retry immediately when the user stops", async () => {
+  const { controller, api, failure } = heartbeatSetup();
+  api.call.mockRejectedValueOnce(new RemoteError(504, "timeout", "Timeout"));
+  await controller.start(card, { id: "source" }, false);
+  await vi.advanceTimersByTimeAsync(20_000);
+  await controller.stop();
+  await vi.advanceTimersByTimeAsync(60_000);
+  expect(api.call).toHaveBeenCalledTimes(1);
+  expect(api.release).toHaveBeenCalledOnce();
+  expect(failure).not.toHaveBeenCalled();
+});
+
+it("fences a late renewal when a new playback reuses the same lease ID", async () => {
+  const { controller, api, failure, authorized } = heartbeatSetup();
+  let finish!: (value: Lease) => void;
+  api.call.mockImplementationOnce(() => new Promise(resolve => { finish = resolve; }));
+  await controller.start(card, { id: "source" }, false);
+  await vi.advanceTimersByTimeAsync(20_000);
+  api.admit.mockResolvedValueOnce({ ...authorized, expires_at: 120, renew_after_seconds: 60 });
+  await controller.start(card, { id: "replacement" }, false);
+  finish({ ...authorized, expires_at: 21 });
+  await vi.advanceTimersByTimeAsync(2_000);
+  expect(controller.leaseId).toBe("heartbeat");
+  expect(api.call).toHaveBeenCalledTimes(1);
+  expect(failure).not.toHaveBeenCalled();
+});
+
+it("coalesces foreground events with an in-flight scheduled renewal and respects manual pause", async () => {
+  const { controller, api, player, failure, authorized } = heartbeatSetup();
+  let finish!: (value: Lease) => void;
+  api.call.mockImplementationOnce(() => new Promise(resolve => { finish = resolve; }));
+  await controller.start(card, { id: "source" }, false);
+  await vi.advanceTimersByTimeAsync(20_000);
+  const visibility = vi.spyOn(document, "visibilityState", "get").mockReturnValue("visible");
+  try {
+    player.pause.mockClear(); player.play.mockClear();
+    document.dispatchEvent(new Event("visibilitychange"));
+    document.dispatchEvent(new Event("visibilitychange"));
+    await vi.advanceTimersByTimeAsync(0);
+    expect(api.call).toHaveBeenCalledTimes(1);
+    expect(player.pause).toHaveBeenCalledOnce();
+    window.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter" }));
+    finish({ ...authorized, expires_at: 90 });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(player.play).not.toHaveBeenCalled();
+    expect(failure).not.toHaveBeenCalled();
+  } finally { visibility.mockRestore(); }
+});
+
+it("keeps foreground playback paused until a transient renewal succeeds", async () => {
+  const { controller, api, player, authorized } = heartbeatSetup();
+  await controller.start(card, { id: "source" }, false);
+  api.call.mockRejectedValueOnce(new RemoteError(502, "gateway_unavailable", "Temporary failure"));
+  api.call.mockResolvedValue({ ...authorized, expires_at: 90 });
+  const visibility = vi.spyOn(document, "visibilityState", "get").mockReturnValue("visible");
+  try {
+    player.play.mockClear();
+    document.dispatchEvent(new Event("visibilitychange"));
+    await vi.advanceTimersByTimeAsync(0);
+    expect(player.snapshot.state).toBe("paused");
+    expect(player.play).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(1_000);
+    expect(api.call).toHaveBeenCalledTimes(2);
+    expect(player.play).toHaveBeenCalledOnce();
+  } finally { visibility.mockRestore(); }
+});
+
+it("does not retry an outgoing lease after the API authorization scope changes", async () => {
+  const { controller, api, failure } = heartbeatSetup();
+  Object.assign(api, { scopeEpoch: 0 });
+  api.call.mockRejectedValueOnce(new RemoteError(502, "gateway_unavailable", "Temporary failure"));
+  await controller.start(card, { id: "source" }, false);
+  await vi.advanceTimersByTimeAsync(20_000);
+  Object.assign(api, { scopeEpoch: 1 });
+  await vi.advanceTimersByTimeAsync(1_000);
+  expect(api.call).toHaveBeenCalledTimes(1);
+  expect(failure).toHaveBeenCalledOnce();
+  expect(api.release).toHaveBeenCalledWith("/api/playback/heartbeat");
+});
+
+it("does not renew an existing lease under a replacement API scope", async () => {
+  const { controller, api, failure } = heartbeatSetup();
+  Object.assign(api, { scopeEpoch: 0 });
+  await controller.start(card, { id: "source" }, false);
+  Object.assign(api, { scopeEpoch: 1 });
+  await vi.advanceTimersByTimeAsync(20_000);
+  expect(api.call).not.toHaveBeenCalled();
+  expect(failure).toHaveBeenCalledOnce();
+  expect(controller.leaseId).toBeUndefined();
+});
+
+it("never reschedules a late heartbeat after the decoder ended", async () => {
+  const { controller, api, player, failure, emit, authorized } = heartbeatSetup();
+  let finish!: (value: Lease) => void;
+  api.call.mockImplementationOnce(() => new Promise(resolve => { finish = resolve; }));
+  await controller.start(card, { id: "source" }, false);
+  await vi.advanceTimersByTimeAsync(20_000);
+  player.snapshot = { ...player.snapshot, state: "ended" };
+  emit();
+  finish({ ...authorized, expires_at: 200 });
+  await vi.advanceTimersByTimeAsync(200_000);
+  expect(api.call).toHaveBeenCalledTimes(1);
+  expect(failure).not.toHaveBeenCalled();
+  expect(api.release).not.toHaveBeenCalled();
+  expect(controller.leaseId).toBe("heartbeat");
+});
+
+it("does not apply a queued foreground pause after the user stopped", async () => {
+  const { controller, api, player, failure } = heartbeatSetup();
+  await controller.start(card, { id: "source" }, false);
+  const visibility = vi.spyOn(document, "visibilityState", "get").mockReturnValue("visible");
+  try {
+    player.pause.mockClear(); player.play.mockClear();
+    document.dispatchEvent(new Event("visibilitychange"));
+    await controller.stop();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(player.pause).not.toHaveBeenCalled();
+    expect(player.play).not.toHaveBeenCalled();
+    expect(api.release).toHaveBeenCalledOnce();
+    expect(failure).not.toHaveBeenCalled();
+  } finally { visibility.mockRestore(); }
 });
