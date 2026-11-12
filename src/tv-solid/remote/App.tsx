@@ -713,12 +713,8 @@ export function createRemoteTvApp(
         manualPresentation = undefined;
         batch(() => { setSourceMemoryPending(v => v + 1);setPresentationRevision(v => v + 1); });
         const language = player.tracks.audio.find(track => track.selected && track.language)?.language;
-        void devicePlayback.remember(observation.scope, observation.title, {
-          provider_id: source.source_addon_id!,
-          source_id: source.presentation?.source_id,
-          provider_name: source.presentation?.provider_name,
-          audio_languages: language ? [language] : source.audio_languages?.length === 1 ? source.audio_languages : [],
-        }).catch(() => notify("Couldn’t save this source choice on this device.")).finally(() => setSourceMemoryPending(v => Math.max(0, v - 1)));
+        void devicePlayback.rememberSource(observation.scope, observation.title, source, language)
+          .catch(() => notify("Couldn’t save this source choice on this device.")).finally(() => setSourceMemoryPending(v => Math.max(0, v - 1)));
       },
     );
     const discoverEpisode = createEpisodeDiscovery({api, memory: sourceMemory});

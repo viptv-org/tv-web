@@ -4384,6 +4384,20 @@ acceptance and App SHA-256
 `668f067d1bfb897ff55b0e616f789cfad2db809add6e2eb97587e533291e72bd`.
 Private captures and complete manifests stay outside the repository.
 
+### Nullable source-memory observations
+
+Presented source metadata may encode absent optional supplier IDs/names as JSON
+null. The wire-to-device-memory adapter omits those optional values before strict
+persistence validation; invalid provider/URL identities and actual storage-write
+failures still reject without replacing confirmed settings.
+
+Nine device-playback units pass, including a null-metadata regression that failed
+before normalization. Production integrity/type/build and two real-media browser
+cases (Canvas/WebGL with a PS4 user-agent) pass: a manually selected source with
+null optional metadata persists the provider/language observation without the
+save-warning toast, then releases playback. This is browser evidence, not proof
+that a physical PS4 storage quota or security policy cannot reject writes.
+
 ### Provider subtitle timing prototype
 
 Focused provider/playback/overlay tests: 46 passing, including provider-only

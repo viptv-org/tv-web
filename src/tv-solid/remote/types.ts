@@ -204,8 +204,8 @@ export interface Source {
     delivery_format?: string | null;
     video_codec?: string;
     audio_codecs?: string[];
-    provider_name?: string;
-    source_id?: string;
+    provider_name?: string | null;
+    source_id?: string | null;
     size_label?: string;
     size_bytes?: number | null;
     [key: string]: unknown;
