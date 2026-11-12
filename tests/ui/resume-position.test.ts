@@ -11,21 +11,27 @@ it('replaces cached Home time with the fresh saved position, not metadata runtim
   const position = createSourceStartPosition(); position.begin(card, false);
   expect(position.current()).toBe(20);
   position.adopt(action); expect(position.current()).toBe(30);
+  expect(position.authoritative()).toBe(true);
 });
 it('keeps explicit seeks and restart at their requested positions', () => {
   const position = createSourceStartPosition(); position.begin(card, false, 12.75);
   position.adopt(action); expect(position.current()).toBe(12.75);
   position.begin(card, true); position.adopt(action); expect(position.current()).toBe(0);
+  expect(position.authoritative()).toBe(true);
+  position.begin(card, false, 0); position.adopt(action);
+  expect(position.current()).toBe(0); expect(position.authoritative()).toBe(true);
 });
 it('clears cached resume when the fresh server action is Play or has no position', () => {
   const position = createSourceStartPosition(); position.begin(card, false);
   position.adopt({ ...action, resume: false }); expect(position.current()).toBe(0);
   position.begin(card, false); position.adopt({ ...action, resume_position_millis: null }); expect(position.current()).toBe(0);
+  expect(position.authoritative()).toBe(true);
 });
 it('keeps the old admission fallback only when the server lacks the new clock field', () => {
   const position = createSourceStartPosition(); position.begin({ ...card, view: undefined }, false);
   expect(position.current()).toBe(36);
   position.adopt({ ...action, resume_position_millis: undefined }); expect(position.current()).toBe(36);
+  expect(position.authoritative()).toBe(false);
 });
 it.each([null, undefined, -1, NaN, Infinity, 1.5, 9007199254740992])('rejects an invalid saved millisecond clock (%s)', value => {
   expect(savedPosition(value)).toBeUndefined();

@@ -1,7 +1,7 @@
 /** @jsxImportSource @solidtv/solid */
 import { DetailSkeleton } from "./DetailSkeleton";
 import { Show, createMemo } from "solid-js";
-import { KeyedFor, TvView } from "../runtime";
+import { KeyedFor, TvView, textScale } from "../runtime";
 import { MediaTile as Tile } from "./MediaTile";
 import { TitleMetadata as Metadata } from "./TitleMetadata";
 import { bottomTitleY } from "./title-layout";
@@ -30,7 +30,7 @@ type DetailContentProps = {
 
 export function DetailContent(props: DetailContentProps) {
   const actionWidth = createMemo(() => Math.min(520, Math.max(props.actionLabel.startsWith("Resume") ? 360 : 260,
-    Math.ceil(sdfTextMetrics("26px Onest700").measureText(props.actionLabel).width) + 96)));
+    Math.ceil(sdfTextMetrics(`${26 * textScale()}px Onest700`).measureText(props.actionLabel).width) + 96)));
   const compact = () => compactDetail(props.zone);
   const logoBox = () => detailLogoBox(props.hasEpisodes, compact());
   const motion = reducedMotion() ? undefined : BRANDING_MOTION;

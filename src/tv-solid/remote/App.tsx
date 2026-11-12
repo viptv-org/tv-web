@@ -2210,6 +2210,7 @@ export function createRemoteTvApp(
       let started = false;
       try {
         await startSourceCandidate({player, source, action: current, direct, manual, replacing: replacingSource(), position: sourceStartPosition.current,
+          positionIsAuthoritative: sourceStartPosition.authoritative,
           current: () => attempt === sourceAttempt, notify});
         started = true;
         setLoading(false);

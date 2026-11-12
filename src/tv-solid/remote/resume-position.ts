@@ -26,15 +26,18 @@ function initialPosition(card: Card): number {
   return Number.isFinite(position) ? position : 0;
 }
 export function createSourceStartPosition() {
-  let position = 0, pinned = false;
+  let position = 0, pinned = false, authoritative = false;
   return {
     current: () => position,
+    authoritative: () => authoritative,
     begin(card: Card, restart: boolean, explicit?: number) {
       pinned = restart || explicit !== undefined;
+      authoritative = pinned || card.view?.preview?.resume_position_millis !== undefined;
       position = restart ? 0 : explicit === undefined ? initialPosition(card) : Number.isFinite(explicit) ? Math.max(0, explicit) : 0;
     },
     adopt(action: TitleAction) {
       if (pinned) return;
+      authoritative = !action.resume || action.resume_position_millis !== undefined;
       if (!action.resume) position = 0;
       else if (action.resume_position_millis !== undefined) position = savedPosition(action.resume_position_millis) ?? 0;
     },
