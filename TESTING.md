@@ -1,3 +1,26 @@
+# Continue Watching selection identity — issue #125
+
+Home shelves preserve the server's card order and positions. The former
+render-only `cardKey` filter removed repeated kind/ID pairs while navigation,
+preview and Play still indexed the original row. A repeated first card therefore
+made the second visible card show one title while its preview and Play addressed
+the preceding title. The filter also ignored provider and episode distinctions.
+Removing that local filter keeps the visible selection, summary and requested
+title aligned without adding an index offset or changing source selection.
+
+The regression fails on the unmodified `e9591e1` production bundle in WebGL and
+Canvas: column 1 displays Bravo inside the focus ring while Alpha remains the
+preview. The corrected candidate passes both renderer cases with a repeated
+first entry and three distinct titles, actual card pixels, rendered synopsis,
+prepared logos/backdrops, delayed artwork, cached traversal in both directions,
+and `viewing-action` plus source-discovery identities before and after preview
+settlement. Production build/typechecks, 22 focused row/artwork unit tests and
+17 Home/preview browser cases pass. Private captures and logs:
+`/tmp/viptv-priority-private/tv-polish/issue125/`.
+These are fixture browser results; no live account, actual media or physical
+PS4/Roku/TV qualification is claimed. The affected physical session's original
+row payload has not been captured.
+
 # Grouped Search
 
 Search consumes the authenticated `/api/search` rows in server order. Provider,

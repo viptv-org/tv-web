@@ -82,7 +82,9 @@ when shared views mount, and coordinate caches invalidate on geometry changes.
 Home stores each row's focused card separately from the navigation bar. Vertical
 return resolves that card's identity against the current row; missing cards clamp
 to a valid position. Header navigation cannot move an inactive rail. Reused rendering
-slots reset to their new row's position before painting.
+slots reset to their new row's position before painting. Rendering preserves the
+server's card positions, including repeated media identities, so the visible focus,
+preview and activation address the same card.
 
 
 ## HTML playback observations
