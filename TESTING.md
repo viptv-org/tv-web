@@ -4185,7 +4185,7 @@ the regenerated assets. Logo and portrait pixels remain undimmed in both rendere
 
 ### Provider subtitle timing prototype
 
-Focused provider/playback/overlay tests: 44 passing, including provider-only
+Focused provider/playback/overlay tests: 46 passing, including provider-only
 capability, legacy-backend/native-host exclusion, discovery after Back, manual
 freeze, reset/disposal, native-track reuse and unchanged media commands. Same-source
 managed seeks preserve explicit provider/manual intent without blocking video;
@@ -4213,3 +4213,7 @@ Safari/native-HLS, paired startup/rebuffer or held-out subtitle accuracy
 qualification. Initial bounded VTT parsing and short-cue/high-speed presentation
 follow adapter snapshot cadence and need frame-time/media-timing qualification
 before enabling automatic timing beyond the isolated prototype.
+
+Optional-sync review regressions verify an old gateway 404 preserves canonical
+provider/manual timing after managed seek, while known audio/hash/authority
+fences are retained. Focused tests and full production type/build pass.

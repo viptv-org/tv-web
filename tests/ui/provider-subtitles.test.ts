@@ -89,3 +89,17 @@ it('reset restores original cue view before a delayed worker response',async()=>
   expect(f.captions.state).toBe('Original timing');expect(f.track.removeCue.mock.calls.length).toBe(removed+1);
   resolveStart({...correction,playback_generation:'fresh-reset',state:'observing',correction:null});await reset;f.captions.dispose();
 });
+
+it('optional sync failure retains canonical/manual cues but known identities still fence restoration',async()=> {
+  const f=fixture();await f.captions.attach();await Promise.resolve();await f.captions.manual(1);
+  const intent=f.captions.intent!;f.captions.dispose();
+  f.request.mockImplementation((async(path:string)=> {
+    if(path.endsWith('/subtitles'))return {canonical_vtt:'WEBVTT\n\n00:10:50.000 --> 00:10:51.000\nDialogue\n',subtitle_hash:hash};
+    throw new Error('optional sync unavailable');
+  }) as any);
+  const restored=new ProviderSubtitles(f.video,f.request as any,'/api/playback/new-lease',candidate);await restored.attach(intent);
+  f.video.currentTime=591.5;restored.tick(651.5);expect(f.track.addCue.mock.calls.at(-1)?.[0].text).toBe('Dialogue');
+  expect(restored.ready).toBe(true);expect(restored.manualSeconds).toBe(1);expect(restored.state).toBe('Manual timing');restored.dispose();
+  const wrongHash=new ProviderSubtitles(f.video,f.request as any,'/api/playback/wrong-content',candidate);
+  await expect(wrongHash.attach({...intent,subtitleHash:'b'.repeat(64)})).rejects.toThrow('selection changed');wrongHash.dispose();
+});

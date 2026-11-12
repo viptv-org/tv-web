@@ -398,3 +398,18 @@ it('a newer explicit provider selection wins over a pending seek reattachment',a
   resolveAsset(f.asset);await new Promise(resolve=>setTimeout(resolve,10));
   expect(f.controller.providerSubtitleSelected).toBe(newer.id);expect(f.controller.providerSubtitleDelay).toBe(0);
 });
+
+it('old gateway without sync preserves provider/manual intent across a managed seek',async()=> {
+  const f=providerSeekFixture();const previous=f.api.call.getMockImplementation()!;
+  f.api.call.mockImplementation(async(path:string,method?:string,body?:any)=> {
+    if(path.endsWith('/subtitle-sync'))throw new Error('404: optional subtitle sync unavailable');
+    return previous(path,method,body);
+  });
+  await f.controller.start(card,{id:'same-source'},false);vi.stubGlobal('__viptvCreatePlayer',undefined);
+  await f.controller.selectProviderSubtitle(selectedProvider);await f.controller.adjustProviderSubtitle(1.5);
+  expect(f.controller.providerSubtitleTiming).toBe('Manual timing');
+  await f.controller.seek(70,false);
+  await vi.waitFor(()=>expect(f.controller.providerSubtitleSelected).toBe(selectedProvider.id));
+  expect(f.controller.providerSubtitleDelay).toBe(1.5);expect(f.controller.providerSubtitleTiming).toBe('Manual timing');
+  expect(f.player.open).toHaveBeenCalledTimes(2);expect(f.controller.leaseId).toBe('2');
+});

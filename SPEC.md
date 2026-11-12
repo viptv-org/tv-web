@@ -98,3 +98,7 @@ Subtitle interaction adoption follows the immutable
 [subtitle synchronization contract](https://github.com/viptv-org/design/blob/3eb55db3fd248621bbf56dc30e8718450280c767/specs/behavior/subtitle-synchronization.md).
 The authorized narrow behavior adoption retains the pinned visual baseline in
 DESIGN_REF; unrelated design assets and upstream behavior are outside this change.
+
+Missing or unavailable optional synchronization retains the revalidated canonical
+provider/manual view across a seek. Returned audio/hash mismatches and authority
+failures still reject restoration.

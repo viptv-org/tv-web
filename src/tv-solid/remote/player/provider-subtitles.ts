@@ -9,6 +9,7 @@ export interface ProviderSubtitleIntent {
   audioIdentity?: string;
 }
 type Request = <T>(path: string, method?: string, body?: unknown, signal?: AbortSignal) => Promise<T>;
+class SubtitleIdentityMismatch extends Error {}
 const providerTracks = new WeakMap<HTMLVideoElement, TextTrack>();
 export class ProviderSubtitles {
   private abort = new AbortController();
@@ -31,19 +32,25 @@ export class ProviderSubtitles {
     const asset = await this.request<{ canonical_vtt: string; subtitle_hash: string }>(`${this.path}/subtitles`, "POST", { subtitle_id: this.selected.id }, this.abort.signal);
     if (this.retired) return;
     if (typeof asset.canonical_vtt !== "string" || asset.canonical_vtt.length > 2 * 1024 * 1024 || (asset.canonical_vtt.match(/-->/g)?.length ?? 0) > 4096 || !/^[a-f0-9]{64}$/.test(asset.subtitle_hash)) throw new Error("Subtitle file exceeds browser limits.");
-    if (retained && asset.subtitle_hash !== retained.subtitleHash) throw new Error("Subtitle selection changed.");
+    if (retained && asset.subtitle_hash !== retained.subtitleHash) throw new SubtitleIdentityMismatch("Subtitle selection changed.");
     this.canonical = parseWebVtt(asset.canonical_vtt).sort((a, b) => a.start - b.start);
     this.hash = asset.subtitle_hash;
-    if (retained) {
-      this.manualMode = retained.manual; this.delay = retained.delaySeconds;
-      await this.start(retained.audioIdentity);
-      if (this.retired) return;
-    } else this.view = new SubtitleSyncView(this.canonical, "original", this.hash);
+    this.manualMode = retained?.manual ?? false; this.delay = retained?.delaySeconds ?? 0;
+    this.view = new SubtitleSyncView(this.canonical, "original", this.hash);
+    if (this.manualMode) this.view.manualDelay(this.delay);
+    this.state = this.manualMode ? "Manual timing" : "Original timing";
     this.track = providerTracks.get(this.video);
     if (!this.track) { this.track = this.video.addTextTrack("subtitles", "Provider subtitles", ""); providerTracks.set(this.video, this.track); }
     this.track.mode = "showing";
     this.tick(this.lastTitle);
-    if (!retained) void this.start().catch(() => { if (!this.retired && !this.manualMode) this.state = "Automatic timing unavailable"; });
+    if (retained) {
+      try { await this.start(retained.audioIdentity); }
+      catch (error) {
+        const status = (error as { status?: number } | null)?.status;
+        if (error instanceof SubtitleIdentityMismatch || [401, 403, 410].includes(status ?? 0) || (error as Error)?.name === "AbortError") throw error;
+        if (!this.retired) this.state = this.manualMode ? "Manual timing" : "Automatic timing unavailable";
+      }
+    } else void this.start().catch(() => { if (!this.retired && !this.manualMode) this.state = "Automatic timing unavailable"; });
   }
   private async start(expectedAudioIdentity?: string): Promise<void> {
     const generation = ++this.generation;
@@ -51,10 +58,11 @@ export class ProviderSubtitles {
     try { record = await this.request<SubtitleSyncRecord>(`${this.path}/subtitle-sync`, "POST", { subtitle_id: this.selected.id }, this.abort.signal); }
     catch (error) { if (this.retired || generation !== this.generation) return; throw error; }
     if (this.retired || generation !== this.generation) return;
-    if (!this.canonical || record.subtitle_hash !== this.hash || typeof record.playback_generation !== "string" || record.version !== 1 || !Number.isSafeInteger(record.revision)) throw new Error("Subtitle timing unavailable.");
+    if (record.subtitle_hash !== this.hash) throw new SubtitleIdentityMismatch("Subtitle selection changed.");
+    if (!this.canonical || typeof record.playback_generation !== "string" || record.version !== 1 || !Number.isSafeInteger(record.revision)) throw new Error("Subtitle timing unavailable.");
     if (expectedAudioIdentity && record.audio_identity !== expectedAudioIdentity) {
       this.record = record;
-      throw new Error("Subtitle audio selection changed.");
+      throw new SubtitleIdentityMismatch("Subtitle audio selection changed.");
     }
     const view = new SubtitleSyncView(this.canonical, record.playback_generation, this.hash);
     if (this.manualMode) view.manualDelay(this.delay);
