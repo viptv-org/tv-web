@@ -90,8 +90,10 @@ export class RemotePlayback {
           snapshot.diagnostics?.presentationEvidence === "media-progress" ||
           (snapshot.diagnostics?.presentedFrames ?? 0) > 0 ||
           (snapshot.diagnostics?.decodedFrames ?? 0) > 0 ||
+          (snapshot.diagnostics?.videoFrames ?? 0) > 0 ||
           (snapshot.diagnostics?.presentedFrames === undefined &&
             snapshot.diagnostics?.decodedFrames === undefined &&
+            snapshot.diagnostics?.videoFrames === undefined &&
             this.player.capabilities.platform !== "tizen" &&
             video.readyState >= 2 &&
             video.videoWidth > 0 &&

@@ -55,3 +55,15 @@ Home stores each row's focused card separately from the navigation bar. Vertical
 return resolves that card's identity against the current row; missing cards clamp
 to a valid position. Header navigation cannot move an inactive rail. Reused rendering
 slots reset to their new row's position before painting.
+
+
+## HTML playback observations
+
+Sparse-event console engines publish their media clock throughout playback,
+including after pause/resume, explicit seek and episode replacement. Decoded
+counters, playback-quality frame counts and compositor callback positions retain
+their distinct meanings. Video progress is unavailable when native frame APIs
+supply no usable evidence. Observed frame stalls never trigger an automatic seek,
+restart, conversion or engine replacement. Admitted server actions reach the UI
+before decoder preparation completes; paused and seek-preview ownership remain
+independent of startup and superseded Play acknowledgements.

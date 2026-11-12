@@ -4182,3 +4182,27 @@ channel. Mask composition at (850,550) changes from approximately 170 with the
 former stops to 31 with the pinned stops; (80,550) is approximately 22. Both bright
 hero browser cases and the full production integrity/type/build checks pass with
 the regenerated assets. Logo and portrait pixels remain undimmed in both renderers.
+
+
+# HTML clock and frame qualification
+
+The frozen hosted-source d559dbb bundle reproduces stale published clocks with
+actual HLS and suppressed `timeupdate` delivery in both Canvas and WebGL:
+published positions stop near0.26–0.28s while the real media continues. The
+candidate passes `playback-clock-frames.spec.ts` in both renderers, asserting
+independent decoded/displayed counters and compositor positions, paused clock
+hold, paused explicit Skip seek, resume, controlled Next and decoder cleanup.
+The fixture changes event delivery and external API/media boundaries only.
+
+The shared adapter's208 unit/integration tests, typecheck and build pass. Six
+actual HLS adapter cases pass in Chromium153,Firefox155 and Playwright WebKit26.6:
+normal/sparse events, pause, manual paused seek, resume, two replacements and
+retirement. This WebKit advertises silent compositor callbacks; its independent
+video evidence is the playback-quality displayed counter. Native-HLS-first and
+hls.js/MSE cleanup remain covered by adapter tests.
+
+Physical PS4 is unavailable. These results reproduce timeline/control bugs and
+provide separate video/media observations; they do not establish the cause or
+resolution of the reported physical decoded-video freeze. No automatic decoder
+restart, seek or server conversion is introduced. Browser results do not qualify
+PS4 firmware, actual Safari or other physical TVs.

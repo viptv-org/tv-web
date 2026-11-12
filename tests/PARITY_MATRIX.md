@@ -602,3 +602,6 @@ Implementation `4cf36237e70b387aacad8a3c5521d5f2ee9eaf9e`;
 | Layout and media preservation | Current browse actions/progress, composed welcome, Library controls, compact recovery, consistent selector gaps, centered managed-seek activity, track/style and playback-authority regressions | Exact reported title/provider sequence and physical caption presentation remain unqualified |
 | Slow artwork | Initial text and mounted preparation; valid delayed completion beyond 2500ms; coherent replacement and canceled-node retirement | Native callback timing and exact first-title follow-up pending |
 | Skip/Playback settings | Intro/Recap range boundaries, visible shortcut/toolbar, paused Select seek, invalid/disabled markers; distinct server settings and device autoplay order/copy | Provider-specific markers and physical shortcut acceptance remain separate |
+
+
+| HTML sparse clocks and frame evidence | Actual HLS in Canvas/WebGL covers pause, explicit paused seek, resume and controlled Next; shared adapter covers two source replacements and cleanup across Chromium/Firefox/WebKit | Physical PS4 decoded-video freeze remains unqualified; silent frame APIs report unavailable evidence |
