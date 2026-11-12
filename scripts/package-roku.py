@@ -61,8 +61,10 @@ def main():
             archive.writestr(name, content)
     with zipfile.ZipFile(out / filename) as archive:
         assert 'manifest' in archive.namelist() and archive.testzip() is None
+    sdk = json.loads((ROOT / 'roku/package.json').read_text())['dependencies']['@roku-sdk/tooling']
+    assert re.fullmatch(r'\d+\.\d+\.\d+', sdk), 'pinned_sdk_version_required'
     proof = {'source_revision': revision, 'source_tree': git('rev-parse', 'HEAD^{tree}'),
-             'api_origin': BETA, 'sdk_version': '2.19.0', 'minimum_roku_os': '16.0',
+             'api_origin': BETA, 'sdk_version': sdk, 'minimum_roku_os': '16.0',
              'version': '1.0.' + str(build), 'manifest_only_patch': 'build_version',
              'zip': filename, 'zip_sha256': sha((out / filename).read_bytes()),
              'compiled_js_sha256': sha(compiled), 'files': {name: sha(content) for name, content in sorted(files.items())},
