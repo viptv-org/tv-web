@@ -22,7 +22,9 @@ export function createPlayerActivation(options: {
   const {active: activeSegment, clear: clearSegments, refresh: refreshPlaybackSegments} = options.segments;
   const openOverlay = options.dialogs.open;
   return async () => {
-    if (seek() !== undefined) {
+    if (!showControls()) {
+      setSeek(undefined);
+    } else if (seek() !== undefined) {
       const position = seek()!;
       if (!playerActions().seek) return;
       if (
