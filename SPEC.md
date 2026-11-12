@@ -61,6 +61,15 @@ heights, 22px icons and 12px gaps. Back dismisses menus, then visible controls,
 then exits playback; busy activity can remain without forcing the controls open.
 The native `Back` key and browser aliases share that order.
 
+Player controls use the existing pinned TV shade ramps: a 260px top fade from
+80% ink to transparent and a 700px bottom fade from transparent through 82% at
+45% to 95% at the edge. A single generated mask replaces the flat full-screen
+veil, leaving the middle of the video unchanged. Canvas, WebGL and native hosts
+share the packaged mask; native rendering assigns it explicitly to the scrim
+paint band. The mask mounts with the controls and retires when they hide or
+playback exits, without changing the video surface or controls geometry.
+Implementation scope: [TV-web #124](https://github.com/viptv-org/tv-web/issues/124).
+
 Public Cinemeta metadata caching and optional prepared clearlogos are provided by
 the companion backend change. Authenticated metadata responses retain their
 private cache policy; image and metadata preparation stay off constrained clients

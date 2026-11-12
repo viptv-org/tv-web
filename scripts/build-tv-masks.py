@@ -2,6 +2,8 @@
 """Rasterize the shared TV scrim formulas once, rather than on the device."""
 from pathlib import Path
 from PIL import Image, ImageDraw
+import json
+import re
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -44,6 +46,27 @@ for y in range(top.height):
     for x in range(top.width):
         top.putpixel((x, y), (11, 11, 12, round(alpha * 255)))
 save("topbar-scrim.png", top)
+
+# The authored player ramps leave the middle of the video untouched. Package
+# one mask for the browser and native paint bands instead of dimming all video.
+tokens_path = ROOT / "design-contract/viptv-design-system/tokens/tokens.json"
+tokens = json.loads(tokens_path.read_text())
+player_colors, player_sizes = tokens["color"]["player"], tokens["size"]["player"]
+def rgba(name):
+    return tuple(float(value) for value in re.findall(r"[\d.]+", player_colors[name]["$value"]))
+top_color, middle_color, end_color = rgba("shade"), rgba("shade-mid-tv"), rgba("shade-end-tv")
+top_height = float(player_sizes["shade-top-tv"]["$value"].removesuffix("px"))
+bottom_height = float(player_sizes["shade-bottom-tv"]["$value"].removesuffix("px"))
+player = Image.new("RGBA", (480, 270))
+for y in range(player.height):
+    py = (y + .5) / player.height * 1080
+    top_alpha = top_color[3] * max(0, 1 - py / top_height)
+    t = max(0, min(1, (py - (1080 - bottom_height)) / bottom_height))
+    bottom_alpha = (middle_color[3] * t / .45 if t < .45 else
+                    middle_color[3] + (end_color[3] - middle_color[3]) * (t - .45) / .55)
+    for x in range(player.width):
+        player.putpixel((x, y), (*map(round, top_color[:3]), round(max(top_alpha, bottom_alpha) * 255)))
+save("player-scrim.png", player)
 
 spinner = Image.new("RGBA", (224, 224))
 draw = ImageDraw.Draw(spinner)
