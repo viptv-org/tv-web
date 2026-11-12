@@ -57,7 +57,7 @@ for (const canvas of [false, true]) test(`hidden Select and MediaPause reveal re
   await mediaKey(page,'MediaStop'); await expect(state).toHaveAttribute('data-tv-screen','home');
 });
 
-test('source admission retires pending pause chrome and ignores the old acknowledgement', async ({page,baseURL}) => {
+test('replacement preserves pending paused intent and resumes ordinary chrome hiding', async ({page,baseURL}) => {
   await page.addInitScript(() => {
     Object.defineProperty(navigator,'userAgent',{configurable:true,get:()=> 'Mozilla/5.0 (PlayStation 4 12.00) AppleWebKit/605.1.15'});
     const pause=HTMLMediaElement.prototype.pause;
@@ -82,8 +82,9 @@ test('source admission retires pending pause chrome and ignores the old acknowle
   await expect(state).toHaveAttribute('data-tv-overlay','sources'); await expect(state).toHaveAttribute('data-tv-ready','true');
   await page.keyboard.press('ArrowDown'); await page.keyboard.press('Enter');
   await expect.poll(()=>fixture.requests.filter(r=>r.path==='/api/playback'&&r.method==='POST').length).toBe(2);
-  await expect(state).toHaveAttribute('data-tv-overlay',''); await expect(state).toHaveAttribute('data-tv-player-state','playing',{timeout:15000});
+  await expect(state).toHaveAttribute('data-tv-overlay',''); await expect(state).toHaveAttribute('data-tv-player-state','paused',{timeout:15000});
   await page.locator('video').evaluate(video=>(video as HTMLVideoElement).loop=true);
+  await mediaKey(page,'MediaPlay'); await expect(state).toHaveAttribute('data-tv-player-state','playing');
   await expect(state).toHaveAttribute('data-tv-player-controls','false',{timeout:7000});
   await mediaKey(page,'MediaStop'); await expect(state).toHaveAttribute('data-tv-screen','home');
 });

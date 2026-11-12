@@ -4494,3 +4494,20 @@ certificate accepted only by the test client. No production TLS setting changes.
 The focused native paint-band check places the new packaged mask in the explicit
 scrim band. A fresh native bundle/device run is not part of this change's evidence;
 physical PS4, Roku, Tizen, webOS and Vizio appearance remains unqualified here.
+
+# Pause controls
+
+Full validation on the merged subtitle/source-memory baseline passes 388 shared
+and 52 native-host units, all TypeScript groups and the production build.
+Ten focused input/transport cases cover hidden stale selections, visible tools,
+explicit Skip, media pause keys, admission retirement and stale success/failure.
+
+Nine owned real-HLS browser cases pass: WebGL and Canvas hold controls through
+6.2-second pause/resume acknowledgements and waits beyond the five-second idle
+timeout; Back hides paused chrome, MediaPause reveals it, resume restores idle
+hiding, and pause writes no seek or replacement admission. Replacement retains
+paused intent and then resumes normal hiding. Existing intro/recap and invalid
+marker actions, plus nullable-source persistence under both renderers, pass.
+These are simulated PS4/browser checks; physical PS4 and other TV firmware remain
+unverified. HTTPS fixtures and private patched Canvas dependencies are isolated;
+no deployment, account mutation or device operation is part of this validation.
