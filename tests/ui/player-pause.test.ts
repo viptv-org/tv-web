@@ -75,6 +75,13 @@ describe('transport admission retirement', () => {
     expect(pending).toHaveBeenLastCalledWith(true); expect(activity).not.toHaveBeenCalled();
     newCommand.resolve(); await current; expect(activity).toHaveBeenCalledOnce();
   });
+  it('a rejection after leaving the player cannot fail the new screen without explicit retirement', async () => {
+    const command=deferred(), pending=vi.fn(), activity=vi.fn(); let active=true;
+    const transport=createPlayerTransport({pause:()=>command.promise,play:vi.fn(),pending,reveal:vi.fn(),activity,active:()=>active});
+    const old=transport.setPlaying(false); active=false; command.reject(new Error('late pause'));
+    await expect(old).resolves.toBeUndefined(); expect(activity).not.toHaveBeenCalled();
+    expect(pending).toHaveBeenCalledTimes(1);
+  });
   it('current command failure releases pending chrome ownership and remains visible to its caller', async () => {
     const pending=vi.fn(); const error=new Error('pause failed');
     const transport=createPlayerTransport({pause:async()=>{throw error;},play:vi.fn(),pending,reveal:vi.fn(),activity:vi.fn(),active:()=>true});

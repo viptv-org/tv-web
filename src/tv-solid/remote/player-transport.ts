@@ -12,7 +12,7 @@ export function createPlayerTransport(options: {
       try {
         await (playing ? options.play() : options.pause());
       } catch (error) {
-        if (intent !== generation) return;
+        if (intent !== generation || !options.active()) return;
         options.pending(false);
         throw error;
       } finally {
