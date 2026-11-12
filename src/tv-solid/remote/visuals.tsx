@@ -335,7 +335,7 @@ export function Logo(props: {
   centered?: boolean;
   alpha?: number;
   fade?: boolean;
-  onReady?: () => void;
+  onReady?: (geometry?: {width:number;height:number}) => void;
   onError?: () => void;
 }) {
   const prepared = createMemo(() => clearlogoSource(props.src));
@@ -357,7 +357,7 @@ export function Logo(props: {
       <Show when={!failed() && geometry()}>{box => <TvView x={box().x ?? 0} w={box().width} h={box().height} preload
         y={props.centered ? box().y : Math.max(0, (props.boxH ?? props.h) - box().height)} src={prepared()}
         alpha={ready() ? 1 : 0} transition={props.fade === false ? undefined : { alpha: { duration: reducedMotion() ? 0 : 150, easing: "ease-out" } }}
-        onLoad={() => { setReady(true);untrack(() => props.onReady?.()); }}
+        onLoad={() => { setReady(true);untrack(() => props.onReady?.(geometry())); }}
         onError={() => { setFailed(true);props.onError?.(); }} />}</Show>
       <Show when={failed()}><Label size={props.size ?? 56} font="Onest700" maxwidth={width()}
         maxlines={2} content={props.title ?? ""} /></Show>
@@ -427,7 +427,7 @@ export function Logo(props: {
     if (cached) {
       setArt(cached);
       setFailed(false);
-      untrack(() => props.onReady?.());
+      untrack(() => props.onReady?.({width:cached.w,height:cached.h}));
       return;
     }
     // A logo that is still loading draws nothing: the title fallback only
@@ -446,7 +446,7 @@ export function Logo(props: {
           logoCache.set(cacheKey, value);
           setArt(value);
           setFailed(false);
-          untrack(() => props.onReady?.());
+          untrack(() => props.onReady?.({width:value.w,height:value.h}));
           return;
         } catch {
           /* try the proxy, then fall back to the title */

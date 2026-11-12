@@ -1,3 +1,36 @@
+# Coherent branding and preview composition — issue #133
+
+Movie and series Details both compact their branding on entry to lower lists.
+Home logos share one animated bottom anchor with their summary geometry, so
+current, incoming and retiring artwork cannot use different motion phases.
+Layout changes fit the loader's existing prepared dimensions rather than
+fetching or rasterizing new logo sizes. Known pending logos retain their slot;
+absent/failed logos retain title fallback. Detail skeleton/shimmer is unchanged.
+
+The unmodified `46d499e` bundle fails three intended browser probes: movie logo
+pixels end at y410 over a synopsis at y326; Continue→portrait logo pixels end
+at y356 over metadata near y307; a supplied pending Detail logo exposes title
+fallback text. The corrected production build/typechecks, 394 shared units,
+52 native-host units and 47 browser cases pass. The 16 new cases cover Canvas
+and WebGL at 1920×1080/1540×754, movie/series motion, reduced motion, delayed
+and cached shelf reversals, and pending/failed/absent logos. The 31 related cases
+retain prepared-node reuse, bounded shelf/card pools, identity-safe activation,
+hero cycling, skeleton/source preparation, stale artwork and Back behavior.
+
+Poster previews request full-width proxy blur 8 with 960×540 decode bounds and
+a separate sharp poster. Single-image content grows by 4/3 inside the existing
+right clip, with 1280×720 preview and 1440×810 hero decode bounds; the black
+copy/lower mask stays unchanged. Request assertions verify cover fitting, blur
+selection and scaled bounds using fixture JPEGs. Real transparent-wordmark/JPEG
+captures are inspected in all four renderer/viewport combinations: branding
+remains clear of copy and the black text area is preserved. Private captures/logs:
+`/tmp/viptv-priority-private/tv-polish/issue133/`. These are browser/fixture and
+native-host unit results, not live-proxy blur-quality or physical TV qualification.
+
+Canonical scoped amendment: design `a24d507c6f1bdd0b86e4565c4a39922aa2999f9d`
+([design PR #219](https://github.com/viptv-org/design/pull/219)); its validator
+passes. DESIGN_REF stays unchanged, with no unrelated import or asset changes.
+
 # Continue Watching selection identity — issue #125
 
 Home shelves preserve the server's card order and positions. The former
