@@ -1,4 +1,5 @@
 /** @jsxImportSource @solidtv/solid */
+import { DetailSkeleton } from "./DetailSkeleton";
 import { Show } from "solid-js";
 import { KeyedFor, TvView } from "../runtime";
 import { MediaTile as Tile } from "./MediaTile";
@@ -10,7 +11,7 @@ import { cardKey, type Card, type Detail } from "./types";
 
 type DetailContentProps = {
   detail?: Detail;
-  selectedTitle?: string;
+  selectedKind?: string;
   hasEpisodes: boolean;
   episodes: Card[];
   zone: string;
@@ -28,22 +29,7 @@ type DetailContentProps = {
 export function DetailContent(props: DetailContentProps) {
   return <>
     <Show when={!props.detail}>
-      <Label
-        x={96}
-        y={300}
-        size={48}
-        font="Onest700"
-        maxwidth={800}
-        maxlines={2}
-        content={props.selectedTitle ?? ""}
-      />
-      <Label
-        x={96}
-        y={370}
-        size={26}
-        color={palette.muted}
-        content="Loading title…"
-      />
+      <DetailSkeleton series={props.selectedKind === "series"} />
     </Show>
     <Show when={props.detail}>
       {(value) => (

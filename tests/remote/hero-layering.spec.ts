@@ -63,8 +63,11 @@ for (const canvas of [false, true]) test(`bright hero keeps its scrim below prep
   expect(masks).toHaveLength(1);
   expect(paint.findIndex(n => n.src === background)).toBeLessThan(paint.findIndex(n => n.mask));
   expect(paint.findIndex(n => n.mask)).toBeLessThan(paint.findIndex(n => n.src === logo));
+  const backdrop=(await images()).find(node=>node.src===background)!;
+  expect({x:backdrop.x,y:backdrop.y,w:backdrop.w,h:backdrop.h}).toEqual({x:480,y:0,w:1440,h:810});
   // Flat white deliberately exercises the brightest possible artwork behind synopsis and shelf labels.
   expect(Math.max(...await pixel(page, 80, 550))).toBeLessThan(45);
+  expect(Math.min(...await pixel(page, 1700, 250))).toBeGreaterThan(245);
   // The full 800px synopsis column must stay dark, including its right edge.
   expect(Math.max(...await pixel(page, 850, 550))).toBeLessThan(45);
   expect(Math.max(...await pixel(page, 80, 750))).toBeLessThan(65);

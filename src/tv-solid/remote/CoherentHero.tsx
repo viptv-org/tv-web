@@ -5,7 +5,7 @@ import { KeyedFor, TvView } from "../runtime";
 import { Logo, palette } from "./visuals";
 import { imagePixels, imageSource } from "./image-source";
 import { presentationCard, presentationKey } from "./presentation-card";
-import { backdropScrimSource } from "./tv-artwork.generated";
+import { backdropScrimSource, homeScrimSource } from "./tv-artwork.generated";
 import { reducedMotion } from "./motion";
 import { retireAfterHeroAnimations } from "./hero-retirement";
 import type { Card } from "./types";
@@ -85,8 +85,8 @@ function ArtworkFrame(props: ArtworkProps & { frame: Accessor<Frame>; foreground
   const frame=props.frame;
   const box=() => frame().kind === "detail" ? props.logoBox : frame().logoBox;
   const preview=() => frame().kind === "portrait" || frame().kind === "landscape";
-  const backdropWidth=() => imagePixels(preview() ? 960 : 1920);
-  const backdropHeight=() => imagePixels(preview() ? 540 : 1080);
+  const backdropWidth=() => imagePixels(preview() ? 960 : frame().kind === "detail" ? 1920 : 1440);
+  const backdropHeight=() => imagePixels(preview() ? 540 : frame().kind === "detail" ? 1080 : 810);
   const done=(name:string,failed=false) => {void Promise.resolve().then(() => props.presentation.settled(id,name,failed));};
   return <TvView nodeRef={(node:any) => props.register(id,props.foreground,node)} w={1920} h={1080} alpha={props.presentation.current() === id ? 1 : 0}
     transition={frame().staged ? undefined : {alpha:{duration:reducedMotion() ? 0 : 150,easing:"ease-out"}}}>
@@ -102,8 +102,8 @@ function ArtworkFrame(props: ArtworkProps & { frame: Accessor<Frame>; foreground
         </Show>
       </TvView>
     </> : <Show when={frame().background && !frame().failed.has("background")}>
-      <TvView w={1920} h={1080} decodeWidth={backdropWidth()} decodeHeight={backdropHeight()} fit="cover" preload
-        src={imageSource(frame().background,backdropWidth(),backdropHeight(),"cover",preview() ? backdropWidth() / 120 : undefined)}
+      <TvView nativePaintBand="backdrop" x={frame().kind === "detail" ? 0 : 480} w={frame().kind === "detail" ? 1920 : 1440} h={frame().kind === "detail" ? 1080 : 810} decodeWidth={backdropWidth()} decodeHeight={backdropHeight()} fit="cover" preload
+        src={imageSource(frame().background,backdropWidth(),backdropHeight(),"cover",frame().kind === "detail" ? undefined : 0)}
         onLoad={() => done("background")} onError={() => done("background",true)} />
     </Show>}
   </TvView>;
@@ -135,7 +135,7 @@ export function HeroArtwork(props: ArtworkProps) {
         <ArtworkFrame {...props} frame={frame} foreground={false} register={register} />
       }</KeyedFor>
     </TvView>
-    <TvView w={1920} h={1080} src={backdropScrimSource()} />
+    <TvView nativePaintBand="scrim" w={1920} h={1080} src={props.presentation.mode() === "detail" ? backdropScrimSource() : homeScrimSource()} />
     <TvView w={1920} h={1080} color={palette.bg} alpha={props.dim} />
     <TvView w={1920} h={1080}>
       <KeyedFor each={props.presentation.frames()} keyOf={frame => frame.id}>{frame =>

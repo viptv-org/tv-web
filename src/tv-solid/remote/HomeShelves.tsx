@@ -61,7 +61,7 @@ export function HomeShelves(props: {
       const marker = { index, y, height };y += height + gap;return marker;
     });
   });
-  return (
+  return <>
     <TvView x={96} y={530} w={1728} h={550} clipping>
       <TvView y={origin()} transition={motion}>
       <KeyedFor each={window()} keyOf={model => model.slot}>
@@ -138,13 +138,13 @@ export function HomeShelves(props: {
         }}
       </KeyedFor>
       </TvView>
+    </TvView>
       <Show when={props.rows.length > 1}>
-        <TvView x={1708} y={props.top - 530 + 90} w={4} h={220} transition={motion}>
+        <TvView x={1848} y={Math.min(806, props.top + 90)} w={4} h={220} transition={motion}>
           <KeyedFor each={markers()} keyOf={marker => marker.index}>
             {marker => <TvView y={marker().y} w={4} h={marker().height} color={marker().index === props.row ? palette.text : "rgba(255,255,255,.3)"} />}
           </KeyedFor>
         </TvView>
       </Show>
-    </TvView>
-  );
+  </>;
 }

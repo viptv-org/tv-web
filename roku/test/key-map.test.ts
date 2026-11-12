@@ -12,3 +12,7 @@ it("preserves ordinary selection and media keys", () => {
   expect(nativeKeySpec("select")).toEqual({ key: "Enter", keyCode: 13 });
   expect(nativeKeySpec("fwd")).toEqual({ key: "FastForward", keyCode: 417 });
 });
+
+it("preserves the native Back name and legacy key code for shared navigation", () => {
+  expect(nativeKeySpec("back")).toEqual({ key: "Back", keyCode: 8 });
+});

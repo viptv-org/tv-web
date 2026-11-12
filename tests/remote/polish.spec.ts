@@ -8,7 +8,7 @@ const texts=(page:Page)=>page.evaluate(()=>{
   walk((window as any).__viptvRenderer.stage.root);return result;
 });
 const backdrops=(page:Page)=>page.evaluate(()=>{
-  const src:string[]=[];function walk(n:any){if(n.isRenderable&&n.props.w===1920&&n.props.h===1080&&typeof n.texture?.props?.src==='string'&&n.texture.props.src.includes('/fixture/'))src.push(n.texture.props.src);n.children?.forEach(walk);}
+  const src:string[]=[];function walk(n:any){if(n.isRenderable&&((n.props.w===1440&&n.props.h===810)||(n.props.w===1920&&n.props.h===1080))&&typeof n.texture?.props?.src==='string'&&n.texture.props.src.includes('/fixture/'))src.push(n.texture.props.src);n.children?.forEach(walk);}
   walk((window as any).__viptvRenderer.stage.root);return src;
 });
 
@@ -121,7 +121,7 @@ test("entering Continue Watching fades from the displayed featured image directl
   const target={...fixture.cards[4],logo:null,description:"Continue target synopsis"};
   home.hero=first;home.featured=[first,second];home.rows=[{...home.rows[0],id:"continue",cards:[target]}];
   const photos=()=>page.evaluate(()=>{
-    const src:string[]=[];function walk(n:any){if(n.isRenderable&&n.props.w===1920&&n.props.h===1080&&typeof n.texture?.props?.src==='string'&&n.texture.props.src.includes('/fixture/'))src.push(n.texture.props.src);n.children?.forEach(walk);}
+    const src:string[]=[];function walk(n:any){if(n.isRenderable&&((n.props.w===1440&&n.props.h===810)||(n.props.w===1920&&n.props.h===1080))&&typeof n.texture?.props?.src==='string'&&n.texture.props.src.includes('/fixture/'))src.push(n.texture.props.src);n.children?.forEach(walk);}
     walk((window as any).__viptvRenderer.stage.root);return src;
   });
   await page.goto('/tv/?focusdebug=1');await expect.poll(()=>texts(page)).toContain(first.description);
@@ -192,7 +192,7 @@ test("Home reuses bounded shelf and poster nodes across vertical reversals",asyn
   expect(fixture.requests.filter(request=>request.path.endsWith('/home')||request.path.endsWith('/library'))).toHaveLength(0);
 });
 
-test("focused hero poster aligns to the profile edge with clearance and uses a blurred proxy backdrop",async({page,baseURL})=>{
+test("focused hero poster aligns to the profile edge with clearance and uses a sharp proxy backdrop",async({page,baseURL})=>{
   const fixture=await installRemoteBackend(page,baseURL!),home=fixture.bootstrap().home!;
   const card={...fixture.card,identity:{...fixture.card.identity,id:'proxy-preview'},logo:null,
     description:'Proxy backdrop and aligned portrait preview',poster:'https://image.tmdb.org/t/p/original/preview-poster.jpg',
@@ -218,6 +218,6 @@ test("focused hero poster aligns to the profile edge with clearance and uses a b
   expect(boxes.poster.x+boxes.poster.w).toBe(boxes.avatar.x+boxes.avatar.w);
   expect(boxes.poster.y-boxes.avatar.y-boxes.avatar.h).toBeGreaterThanOrEqual(48);
   expect(boxes.poster.y+boxes.poster.h).toBeLessThan(530);
-  expect(requests.some(url=>url.searchParams.get('blur')==='8'&&url.searchParams.get('w')==='960')).toBe(true);
+  expect(requests.some(url=>!url.searchParams.has('blur')&&url.searchParams.get('w')==='960')).toBe(true);
   expect(requests.some(url=>url.searchParams.get('w')==='240'&&!url.searchParams.has('blur'))).toBe(true);
 });

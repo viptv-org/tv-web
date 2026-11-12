@@ -9,6 +9,11 @@ export function backdropScrimSource() {
     ? "pkg:/assets/hero-scrim.png"
     : `${import.meta.env.BASE_URL}tv-artwork/87b1f851442b89b94153.png`;
 }
+export function homeScrimSource() {
+  return typeof (globalThis as any).__SolidTVRokuRenderer !== "undefined"
+    ? "pkg:/assets/home-scrim.png"
+    : `${import.meta.env.BASE_URL}tv-artwork/0d32b8d11062a035ae12.png`;
+}
 export function topbarScrimSource() {
   return typeof (globalThis as any).__SolidTVRokuRenderer !== "undefined"
     ? "pkg:/assets/topbar-scrim.png"

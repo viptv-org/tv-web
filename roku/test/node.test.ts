@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
-const graphics = vi.hoisted(() => ({ nodes: [] as any[], writes: [] as { node: any; name: string; value: any }[] }));
+const graphics = vi.hoisted(() => ({ nodes: [] as any[], writes: [] as { node: any; name: string; value: any }[], deferRemovals: false, transactionOpen: false, removals: [] as {parent:any;node:any}[] }));
 vi.mock("@roku-sdk/solid", () => ({
   createElement: (type: string) => {
     const node = { type, children: [] as any[], parent: null as any };
@@ -8,10 +8,12 @@ vi.mock("@roku-sdk/solid", () => ({
   },
   insertNode: (parent: any, node: any) => { parent.children.push(node); node.parent = parent; },
   setProp: (node: any, name: string, value: any) => {
+    graphics.transactionOpen = true;
     graphics.writes.push({ node, name, value }); node[name] = value;
   },
   tmTransaction: { removeNode: (parent: any, node: any) => {
-    parent.children = parent.children.filter((child: any) => child !== node); node.parent = null;
+    if (graphics.deferRemovals) graphics.removals.push({parent,node});
+    else { parent.children = parent.children.filter((child: any) => child !== node); node.parent = null; }
   } },
 }));
 vi.mock("../src/roku/fonts", () => ({
@@ -23,7 +25,7 @@ vi.mock("../src/roku/fonts", () => ({
 import { RokuNode } from "../src/roku/node";
 
 const renderer = { markDirty: vi.fn(), animator: { removeFor: vi.fn() } };
-beforeEach(() => { graphics.nodes.length = 0; graphics.writes.length = 0; });
+beforeEach(() => { graphics.nodes.length = 0; graphics.writes.length = 0; graphics.deferRemovals=false;graphics.transactionOpen=false;graphics.removals.length=0; });
 afterEach(() => vi.useRealTimers());
 
 it("keeps transparent layout containers as groups without allocating painted rectangles", () => {
@@ -153,4 +155,22 @@ it('keeps renderer flushes from overwriting a compositor-owned axis or opacity',
   expect(graphics.writes.find(write=>write.name==='xRequest')?.value).toMatchObject({action:'snap',to:30});
   node.nativeMotionOwned.clear();node.y=250;node.flush();
   expect(graphics.writes.find(write=>write.name==='translation')?.value).toEqual([30,250]);node.destroy();
+});
+
+
+it("commits an idle holder removal without waiting for another visual mutation", () => {
+  const layer=new RokuNode(renderer,{w:1920,h:1080,color:0});
+  const holder=new RokuNode(renderer,{w:160,h:56,color:0xf4f2eeff});
+  holder.parent=layer;holder.flush();
+  expect(layer.dom.children).toContain(holder.dom);
+  graphics.deferRemovals=true;graphics.transactionOpen=false;
+  holder.destroy();
+  if(graphics.transactionOpen) {
+    for(const {parent,node} of graphics.removals) { parent.children=parent.children.filter((child:any)=>child!==node);node.parent=null; }
+    graphics.removals.length=0;graphics.transactionOpen=false;
+  }
+  expect(holder.destroyed).toBe(true);
+  expect(layer.dom.children).not.toContain(holder.dom);
+  expect(graphics.removals).toHaveLength(0);
+  layer.destroy();
 });
