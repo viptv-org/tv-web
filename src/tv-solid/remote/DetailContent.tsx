@@ -9,6 +9,8 @@ import { seasonLabel } from "./seasons";
 import { Button, icon, Label, palette } from "./visuals";
 import { cardKey, type Card, type Detail } from "./types";
 import { sdfTextMetrics } from "./text-measure";
+import { BRANDING_MOTION, compactDetail, detailBodyOffset, detailListTop, detailLogoBox } from "./hero-layout";
+import { reducedMotion } from "./motion";
 
 type DetailContentProps = {
   detail?: Detail;
@@ -29,6 +31,9 @@ type DetailContentProps = {
 export function DetailContent(props: DetailContentProps) {
   const actionWidth = createMemo(() => Math.min(520, Math.max(props.actionLabel.startsWith("Resume") ? 360 : 260,
     Math.ceil(sdfTextMetrics("26px Onest700").measureText(props.actionLabel).width) + 96)));
+  const compact = () => compactDetail(props.zone);
+  const logoBox = () => detailLogoBox(props.hasEpisodes, compact());
+  const motion = reducedMotion() ? undefined : BRANDING_MOTION;
   return <>
     <Show when={!props.detail}>
       <DetailSkeleton series={props.selectedKind === "series"} />
@@ -36,59 +41,18 @@ export function DetailContent(props: DetailContentProps) {
     <Show when={props.detail}>
       {(value) => (
         <>
-          <Show
-            when={
-              !value().item.logo &&
-              props.hasEpisodes &&
-              ["episodes", "seasons", "recommendations"].includes(
-                props.zone,
-              )
-            }
-          >
-            <Label
-              x={96}
-              y={54}
-              size={56}
-              font="Onest700"
-              maxwidth={760}
-              maxlines={1}
-              content={value().item.title}
-            />
+          <Show when={!value().item.logo}>
+            <TvView x={96} y={logoBox().y + (compact() ? 0 : bottomTitleY(value().item.title, 56, 640, logoBox().height))} transition={motion}>
+              <Label size={56} font="Onest700" lineheight={1.2}
+                maxwidth={compact() ? 760 : 850} maxlines={compact() ? 1 : 2} content={value().item.title} />
+            </TvView>
           </Show>
           <TvView
-            show={
-              !props.hasEpisodes ||
-              !["episodes", "seasons", "recommendations"].includes(
-                props.zone,
-              )
-            }
+            show={!props.hasEpisodes || !compact()}
             x={96}
-            y={
-              ["episodes", "seasons", "recommendations"].includes(
-                props.zone,
-              )
-                ? props.hasEpisodes
-                  ? -480
-                  : -156
-                : 0
-            }
+            y={detailBodyOffset(props.hasEpisodes, compact())}
+            transition={motion}
           >
-            <TvView y={props.hasEpisodes ? 250 : 220}>
-              <Show when={!value().item.logo}><Label
-                    content={value().item.title}
-                    font="Onest700"
-                    y={bottomTitleY(
-                      value().item.title,
-                      56,
-                      640,
-                      props.hasEpisodes ? 134 : 190,
-                    )}
-                    size={56}
-                    lineheight={1.2}
-                    maxwidth={850}
-                    maxlines={2}
-                  /></Show>
-            </TvView>
             <Metadata
               card={value().item}
               y={props.hasEpisodes ? 410 : 432}
@@ -146,19 +110,8 @@ export function DetailContent(props: DetailContentProps) {
           </TvView>
           <TvView
             x={96}
-            y={
-              ["episodes", "seasons", "recommendations"].includes(
-                props.zone,
-              )
-                ? props.hasEpisodes
-                  ? value().seasons.length
-                    ? 154
-                    : 184
-                  : 680
-                : value().seasons.length
-                  ? 816
-                  : 836
-            }
+            y={detailListTop(props.hasEpisodes, !!value().seasons.length, compact())}
+            transition={motion}
             w={1824}
             h={850}
             clipping={true}

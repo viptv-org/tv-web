@@ -39,6 +39,18 @@ it('fences an obsolete completion and cancels a timer before native runs are rea
   } finally { vi.useRealTimers(); }
 });
 
+it('retains retiring branding until background, poster and logo opacity runs all stop', async () => {
+  vi.useFakeTimers();
+  try {
+    const background = run(), poster = run(), branding = run(), retire = vi.fn();
+    retireAfterHeroAnimations([background.node, poster.node, branding.node], retire);
+    await vi.runAllTimersAsync(); background.stop(); poster.stop();
+    await Promise.resolve(); await Promise.resolve();
+    expect(retire).not.toHaveBeenCalled(); branding.stop();
+    await Promise.resolve(); await Promise.resolve(); expect(retire).toHaveBeenCalledOnce();
+  } finally { vi.useRealTimers(); }
+});
+
 it('retires on the native scheduling turn when no opacity run exists', async () => {
   vi.useFakeTimers();
   try {

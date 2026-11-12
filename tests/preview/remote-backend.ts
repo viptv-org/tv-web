@@ -127,6 +127,7 @@ async function installRendererCompat(page: Page): Promise<void> {
     });
 
     const compatRenderer = (renderer: any) => renderer.getCapabilities?.().renderMode === "canvas" ? renderer : ({
+      rawRenderer: renderer,
       get stage() {
         return compatStage(renderer);
       },

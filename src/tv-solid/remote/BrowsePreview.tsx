@@ -4,16 +4,14 @@ import { TvView } from "../runtime";
 import { Label, Logo, palette } from "./visuals";
 import { TitleMetadata } from "./TitleMetadata";
 import { sdfTextMetrics } from "./text-measure";
+import { BRANDING_MOTION, homePreviewTop } from "./hero-layout";
+import { reducedMotion } from "./motion";
 import type { Card } from "./types";
 
 export function BrowsePreview(props: { card: Card; summaryBottom?: number; externalLogo?: boolean }) {
   /** The summary sits in the space between the navigation and the focused
    * row's shelf, not pinned to the top of a full-screen backdrop. */
-  const summaryY = () => {
-    const bottom = props.summaryBottom ?? 690,
-      body = 310;
-    return Math.max(96, 132 + Math.max(0, bottom - 40 - 132 - body) / 2);
-  };
+  const summaryY = () => homePreviewTop(props.summaryBottom);
   const titleY = () => {
     const width = sdfTextMetrics("48px Onest700").measureText(
       props.card.title ?? "",
@@ -22,7 +20,7 @@ export function BrowsePreview(props: { card: Card; summaryBottom?: number; exter
     return 120 - lines * 57.6;
   };
   return (
-    <TvView x={96} y={summaryY()}>
+    <TvView x={96} y={summaryY()} transition={reducedMotion() ? undefined : BRANDING_MOTION}>
       <Show
         when={props.card.logo}
         fallback={

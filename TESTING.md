@@ -1,3 +1,36 @@
+# Coherent branding and preview composition — issue #133
+
+Movie and series Details both compact their branding on entry to lower lists.
+Home logos share one animated bottom anchor with their summary geometry, so
+current, incoming and retiring artwork cannot use different motion phases.
+Layout changes fit the loader's existing prepared dimensions rather than
+fetching or rasterizing new logo sizes. Known pending logos retain their slot;
+absent/failed logos retain title fallback. Detail skeleton/shimmer is unchanged.
+
+The unmodified `46d499e` bundle fails three intended browser probes: movie logo
+pixels end at y410 over a synopsis at y326; Continue→portrait logo pixels end
+at y356 over metadata near y307; a supplied pending Detail logo exposes title
+fallback text. The corrected production build/typechecks, 394 shared units,
+52 native-host units and 47 browser cases pass. The 16 new cases cover Canvas
+and WebGL at 1920×1080/1540×754, movie/series motion, reduced motion, delayed
+and cached shelf reversals, and pending/failed/absent logos. The 31 related cases
+retain prepared-node reuse, bounded shelf/card pools, identity-safe activation,
+hero cycling, skeleton/source preparation, stale artwork and Back behavior.
+
+Poster previews request full-width proxy blur 8 with 960×540 decode bounds and
+a separate sharp poster. Single-image content grows by 4/3 inside the existing
+right clip, with 1280×720 preview and 1440×810 hero decode bounds; the black
+copy/lower mask stays unchanged. Request assertions verify cover fitting, blur
+selection and scaled bounds using fixture JPEGs. Real transparent-wordmark/JPEG
+captures are inspected in all four renderer/viewport combinations: branding
+remains clear of copy and the black text area is preserved. Private captures/logs:
+`/tmp/viptv-priority-private/tv-polish/issue133/`. These are browser/fixture and
+native-host unit results, not live-proxy blur-quality or physical TV qualification.
+
+Canonical scoped amendment: design `a24d507c6f1bdd0b86e4565c4a39922aa2999f9d`
+([design PR #219](https://github.com/viptv-org/design/pull/219)); its validator
+passes. DESIGN_REF stays unchanged, with no unrelated import or asset changes.
+
 # Continue Watching selection identity — issue #125
 
 Home shelves preserve the server's card order and positions. The former
@@ -4538,3 +4571,24 @@ marker actions, plus nullable-source persistence under both renderers, pass.
 These are simulated PS4/browser checks; physical PS4 and other TV firmware remain
 unverified. HTTPS fixtures and private patched Canvas dependencies are isolated;
 no deployment, account mutation or device operation is part of this validation.
+
+## Temporal focus paint
+
+Production-renderer probes sample every painted frame with real Onest glyphs,
+using a PS4 user-agent. Each probe covers cold text, warm focus/unfocus, rapid
+reversals and disposal. Canvas runs with free and occupied artwork decode slots;
+WebGL provides the comparison. The baseline records 11 zero-contrast frames out
+of 22 for each Canvas case, with one replacement still pending at paint. The
+corrected bundle records zero invisible frames out of 22 in every case; minimum
+contrasting-pixel counts are 2536 on Canvas and 2574 on WebGL. Each probe retains
+one text child, reaches zero pending replacements at paint and removes all owned
+children on disposal. Private failing and corrected frame captures are inspected.
+
+All 394 shared tests, 52 native host tests, strict type checks and production
+integrity/build checks pass. The ten browser cases include the three temporal
+probes and seven existing Canvas regressions covering focus under decode load,
+scaled season choices, artwork gradients and buffering/timeline controls.
+The committed patch reapplies through patch-package to the pinned package and
+reproduces all 674 files in the isolated Canvas copy. Its source/distribution
+manifest is verified by a unit; shared dependencies remain unchanged. This is
+browser and native-host unit evidence, with physical TV appearance unqualified.

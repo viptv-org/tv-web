@@ -88,6 +88,7 @@ import { CalibrationPanel } from "./CalibrationPanel";
 import { TracksDrawer } from "./TracksDrawer";
 import { ChoiceDrawer } from "./ChoiceDrawer";
 import { createCoherentHero, HeroArtwork } from "./CoherentHero";
+import { compactDetail, detailLogoBox, homeLogoBox } from "./hero-layout";
 import { presentationCard, presentationKey } from "./presentation-card";
 import {
   channelKey,
@@ -1339,11 +1340,8 @@ export function createRemoteTvApp(
       return value;
     });
     const heroLogoBox = () => screen() === "detail"
-      ? detailHasEpisodes() && ["episodes","seasons","recommendations"].includes(zone())
-        ? {x:96,y:54,width:220,height:68}
-        : {x:96,y:detailHasEpisodes() ? 250 : 220,width:640,height:detailHasEpisodes() ? 134 : 190}
-      : zone() === "rows" ? {x:96,y:Math.max(96,132+Math.max(0,shelfTitleY()-40-132-310)/2),width:640,height:120}
-      : {x:96,y:330,width:640,height:160};
+      ? detailLogoBox(detailHasEpisodes(), compactDetail(zone()))
+      : homeLogoBox(zone() === "rows" ? shelfTitleY() : undefined);
     const heroPresentation = createCoherentHero(
       () => screen() === "home" || screen() === "detail" ? hero() ?? undefined : undefined,
       () => `${deviceScope()}:${screen()}`,

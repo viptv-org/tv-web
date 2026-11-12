@@ -9,7 +9,7 @@ const inspect=(page:Page)=>page.evaluate(()=>{
  function visit(n:any){
   if(n.isRenderable){
    if(n.viptvText)texts.push(n.viptvText);
-   if(n.props.w===1440&&n.props.h===810&&n.texture?.state==='loaded'&&typeof n.texture.props.src==='string'&&n.texture.props.src.includes('/fixture/'))photos.push({key:'static',zoom:1,src:n.texture.props.src,alpha:n.worldAlpha});
+   if(((n.props.w===1440&&n.props.h===810)||(n.props.w===1920&&n.props.h===1080))&&n.texture?.state==='loaded'&&typeof n.texture.props.src==='string'&&n.texture.props.src.includes('/fixture/'))photos.push({key:'static',zoom:1,src:n.texture.props.src,alpha:n.worldAlpha});
   }
   n.children?.forEach(visit);
  }

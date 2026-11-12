@@ -30,7 +30,7 @@ for (const canvas of [false,true]) test(`sharp right artwork, selected indicator
   home.hero=home.featured[0];
   await page.goto('/tv/?focusdebug=1');
   await expect(page.locator('html')).toHaveAttribute('data-tv-ready','true');
-  await expect.poll(async() => (await rendered(page)).boxes.some(box=>box.x===480 && box.w===1440 && box.h===810)).toBe(true);
+  await expect.poll(async() => (await rendered(page)).boxes.some(box=>box.x===240 && box.w===1920 && box.h===1080)).toBe(true);
   const pixels=PNG.sync.read(await page.screenshot({clip:{x:96,y:780,width:6,height:4}})).data;
   expect(Math.max(...pixels.filter((_:number,index:number)=>index%4!==3))).toBeGreaterThan(220);
   const homeMarker=(await rendered(page)).boxes.filter(box=>box.x===1848 && box.w===4);
