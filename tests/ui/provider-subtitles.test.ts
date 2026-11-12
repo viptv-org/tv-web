@@ -46,3 +46,46 @@ describe('provider subtitle playback adapter', () => {
     expect(captions.state).toBe('Automatic timing unavailable'); captions.dispose();
   });
 });
+
+it('seek restoration keeps only manual intent and verifies hash/audio identity',async()=> {
+  const f=fixture();await f.captions.attach();await Promise.resolve();f.captions.tick(640);await f.captions.manual(1);
+  const intent=f.captions.intent!;expect(intent).not.toHaveProperty('correction');f.captions.dispose();
+  f.request.mockImplementation(async(path:string,method?:string)=>path.endsWith('/subtitles')?{canonical_vtt:'WEBVTT\n\n00:10:50.000 --> 00:10:51.000\nDialogue\n',subtitle_hash:hash}:{...correction,playback_generation:'fresh-generation',state:'unavailable',correction:null,manual:method==='PUT',revision:method==='PUT'?2:1} as any);
+  const restored=new ProviderSubtitles(f.video,f.request as any,'/api/playback/new-lease',candidate);await restored.attach(intent);
+  f.video.currentTime=591.5;restored.tick(651.5);expect(f.track.addCue.mock.calls.at(-1)?.[0].text).toBe('Dialogue');expect(restored.manualSeconds).toBe(1);expect(restored.state).toBe('Manual timing');restored.dispose();
+  const mismatch=new ProviderSubtitles(f.video,f.request as any,'/api/playback/newer-lease',candidate);
+  await expect(mismatch.attach({...intent,audioIdentity:'other-audio'})).rejects.toThrow('audio selection changed');mismatch.dispose();
+});
+
+it('late start failure cannot overwrite a reset generation',async()=> {
+  const f=fixture();let starts=0;let rejectStart!: (reason?:unknown)=>void;
+  f.request.mockImplementation((async(path:string,method?:string)=> {
+    if(path.endsWith('/subtitles'))return {canonical_vtt:'WEBVTT\n\n00:10:50.000 --> 00:10:51.000\nDialogue\n',subtitle_hash:hash};
+    if(method==='POST' && ++starts===1)return new Promise<typeof correction>((_,reject)=>{rejectStart=reject;});
+    return {...correction,playback_generation:'after-reset'};
+  }) as any);
+  await f.captions.attach();await f.captions.reset();expect(f.captions.state).toBe('Automatic timing (prototype)');
+  rejectStart(new Error('old request failed'));await Promise.resolve();await Promise.resolve();
+  expect(f.captions.state).toBe('Automatic timing (prototype)');f.captions.dispose();
+});
+it('a pending poll failure cannot overwrite manual freeze',async()=> {
+  vi.useFakeTimers();const f=fixture();let rejectPoll!: (reason?:unknown)=>void;
+  f.request.mockImplementation((async(path:string,method?:string)=> {
+    if(path.endsWith('/subtitles'))return {canonical_vtt:'WEBVTT\n\n00:10:50.000 --> 00:10:51.000\nDialogue\n',subtitle_hash:hash};
+    if(method==='GET')return new Promise<typeof correction>((_,reject)=>{rejectPoll=reject;});
+    return {...correction,state:'observing',correction:null,revision:method==='PUT'?3:2,manual:method==='PUT'};
+  }) as any);
+  await f.captions.attach();await Promise.resolve();await vi.advanceTimersByTimeAsync(2000);
+  await f.captions.manual(1);rejectPoll(new Error('old poll failed'));await Promise.resolve();await Promise.resolve();
+  expect(f.captions.state).toBe('Manual timing');f.captions.dispose();
+});
+
+it('reset restores original cue view before a delayed worker response',async()=> {
+  const f=fixture();await f.captions.attach();await Promise.resolve();f.captions.tick(640);await f.captions.manual(1);
+  f.video.currentTime=593.5;f.captions.tick(653.5);const removed=f.track.removeCue.mock.calls.length;
+  let resolveStart!: (value:any)=>void;
+  f.request.mockImplementationOnce((async()=>new Promise(resolve=>{resolveStart=resolve;})) as any);
+  const reset=f.captions.reset();
+  expect(f.captions.state).toBe('Original timing');expect(f.track.removeCue.mock.calls.length).toBe(removed+1);
+  resolveStart({...correction,playback_generation:'fresh-reset',state:'observing',correction:null});await reset;f.captions.dispose();
+});

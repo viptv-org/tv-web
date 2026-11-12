@@ -61,7 +61,7 @@ export function createTrackPicker(options: {
               },
             }] : []),
             ...(!isRokuUi && player.providerSubtitleSelected ? [{
-              id: "provider-timing", label: `Subtitle timing (${player.providerSubtitleDelay.toFixed(1)} s)`, value: "",
+              id: "provider-timing", label: `Subtitle timing (${player.providerSubtitleDelay > 0 ? "+" : ""}${player.providerSubtitleDelay.toFixed(1)} s)`, value: "",
               run: async () => {
                 replaceOverlay({ kind: "tracks", title: "Subtitle timing", columns: [{ title: player.providerSubtitleTiming ?? "Subtitle timing", items: [
                   { id: "subtitle-earlier", label: "Earlier by 0.5 s", value: "", run: () => scopedChoice(() => player.adjustProviderSubtitle(player.providerSubtitleDelay - 0.5)) },

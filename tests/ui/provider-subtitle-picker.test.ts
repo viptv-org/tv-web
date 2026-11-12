@@ -24,14 +24,14 @@ describe('provider subtitle picker', () => {
     expect(f.player.selectProviderSubtitle).toHaveBeenCalledWith({ id: 'scoped', label: 'English', language: 'en' });
   });
   it('keeps timing actions in an existing single-column drawer', async () => {
-    const f=fixture(); (f.player as any).providerSubtitleSelected='scoped'; f.open();
+    const f=fixture(); (f.player as any).providerSubtitleSelected='scoped'; f.player.providerSubtitleDelay=1.5; f.open();
     expect(f.modal().columns).toHaveLength(1);
     const timing=f.modal().columns[0].items.find((item:any)=>item.id==='provider-timing');
-    expect(timing).toBeDefined(); await timing.run();
+    expect(timing).toBeDefined(); expect(timing.label).toBe("Subtitle timing (+1.5 s)"); await timing.run();
     expect(f.modal().columns).toHaveLength(1);
     expect(f.modal().columns[0].title).toBe('Automatic timing unavailable');
     await f.modal().columns[0].items[0].run();
-    expect(f.player.adjustProviderSubtitle).toHaveBeenCalledWith(-0.5);
+    expect(f.player.adjustProviderSubtitle).toHaveBeenCalledWith(1);
   });
   it('does not reopen discovery after Back or expose browser controls on Roku', async () => {
     const f = fixture(); let resolve!: (value: any[]) => void;

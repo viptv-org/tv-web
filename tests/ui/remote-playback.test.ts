@@ -32,6 +32,7 @@ function setup(presented = vi.fn()) {
     subscribe: vi.fn((listener: any) => { snapshotListener = listener; return () => {}; }), open: vi.fn(async () => {}),
     play: vi.fn(async () => { player.snapshot = { ...player.snapshot, state: "playing" }; }),
     pause: vi.fn(async () => { player.snapshot = { ...player.snapshot, state: "paused" }; }),
+    selectTextTrack: vi.fn(async () => {}),
     stop: vi.fn(async () => {}), dispose: vi.fn(async () => {}),
   };
   vi.stubGlobal("__viptvCreatePlayer", () => player as unknown as Player);
@@ -324,4 +325,76 @@ describe('provider-only subtitle capability', () => {
     await controller.start(card, { id: 'other' }, false);
     expect(controller.providerSubtitleSupport).toBe(false);
   });
+});
+
+function providerSeekFixture(changedHash = false, changedAudio = false) {
+  const f=setup();
+  let number=0;
+  f.api.admit.mockImplementation(async()=> {
+    const id=String(++number), value=lease(id);
+    value.delivery={...value.delivery!,external_subtitles_supported:true,provider_subtitles_version:1,
+      audio_tracks:[{input_index:changedAudio && number>1?2:1,language:'en',title:'English',selected:true}],timeline_offset_seconds:number>1?70:0};
+    return value;
+  });
+  const track={mode:'disabled',addCue:vi.fn(),removeCue:vi.fn()};
+  vi.spyOn(HTMLMediaElement.prototype,'addTextTrack').mockReturnValue(track as any);
+  vi.stubGlobal('VTTCue',class {constructor(public startTime:number,public endTime:number,public text:string){}});
+  const asset={canonical_vtt:'WEBVTT\n\n00:00:10.000 --> 00:00:11.000\nDialogue\n',subtitle_hash:'a'.repeat(64)};
+  const record=(id:string,manual=false)=>({version:1,playback_generation:`generation-${id}`,media_identity:`session-${id}`,audio_identity:'same-audio',subtitle_hash:asset.subtitle_hash,algorithm_version:'activity-offset-affine-v1',revision:manual?2:1,state:'unavailable',manual,correction:null});
+  f.api.call.mockImplementation(async(path:string,method?:string)=> {
+    const id=/playback\/(\d+)/.exec(path)?.[1] ?? '1';
+    if(path.endsWith('/subtitles'))return {...asset,subtitle_hash:changedHash && id==='2'?'b'.repeat(64):asset.subtitle_hash};
+    return record(id,method==='PUT');
+  });
+  return {...f,asset,record,track};
+}
+const selectedProvider={id:'scoped-provider',label:'English',language:'en'};
+it('same-source managed seek preserves provider/manual intent after playback starts and revalidation',async()=> {
+  const f=providerSeekFixture();await f.controller.start(card,{id:'same-source'},false);vi.stubGlobal('__viptvCreatePlayer',undefined);
+  await f.controller.selectProviderSubtitle(selectedProvider);await f.controller.adjustProviderSubtitle(1.5);
+  let resolveAsset!: (value:typeof f.asset)=>void;
+  const previous=f.api.call.getMockImplementation()!;
+  f.api.call.mockImplementation(async(path:string,method?:string)=>path==='/api/playback/2/subtitles'?new Promise(resolve=>{resolveAsset=resolve;}):previous(path,method));
+  await f.controller.seek(70,false);
+  expect(f.player.open).toHaveBeenCalledTimes(2);expect(f.controller.leaseId).toBe('2');
+  await vi.waitFor(()=>expect(resolveAsset).toBeTypeOf('function'));
+  expect(f.controller.providerSubtitleSelected).toBeUndefined();
+  resolveAsset(f.asset);
+  await vi.waitFor(()=>expect(f.controller.providerSubtitleSelected).toBe(selectedProvider.id));
+  expect(f.controller.providerSubtitleDelay).toBe(1.5);expect(f.controller.providerSubtitleTiming).toBe('Manual timing');
+  expect(f.api.call).toHaveBeenCalledWith('/api/playback/2/subtitle-sync','PUT',{revision:1,manual:true},expect.any(AbortSignal));
+});
+it('changed subtitle hash or selected audio invalidates managed-seek retention',async()=> {
+  for(const [changedHash,changedAudio] of [[true,false],[false,true]]) {
+    const f=providerSeekFixture(changedHash,changedAudio);await f.controller.start(card,{id:'same-source'},false);vi.stubGlobal('__viptvCreatePlayer',undefined);
+    await f.controller.selectProviderSubtitle(selectedProvider);await f.controller.adjustProviderSubtitle(1);
+    await f.controller.seek(70,false);await new Promise(resolve=>setTimeout(resolve,10));
+    expect(f.controller.providerSubtitleSelected).toBeUndefined();expect(f.controller.providerSubtitleDelay).toBe(0);
+    expect(f.api.call.mock.calls.some(([path,method])=>path==='/api/playback/2/subtitle-sync' && method==='PUT')).toBe(false);
+  }
+});
+it('new source and Off retire pending seek reattachment without reviving old captions',async()=> {
+  const f=providerSeekFixture();await f.controller.start(card,{id:'same-source'},false);vi.stubGlobal('__viptvCreatePlayer',undefined);
+  await f.controller.selectProviderSubtitle(selectedProvider);await f.controller.adjustProviderSubtitle(1);
+  let resolveAsset!: (value:typeof f.asset)=>void;const previous=f.api.call.getMockImplementation()!;
+  f.api.call.mockImplementation(async(path:string,method?:string)=>path==='/api/playback/2/subtitles'?new Promise(resolve=>{resolveAsset=resolve;}):previous(path,method));
+  await f.controller.seek(70,false);await vi.waitFor(()=>expect(resolveAsset).toBeTypeOf('function'));
+  await f.controller.selectProviderSubtitle(null);resolveAsset(f.asset);await new Promise(resolve=>setTimeout(resolve,10));
+  expect(f.controller.providerSubtitleSelected).toBeUndefined();expect(f.controller.providerSubtitleDelay).toBe(0);
+  f.api.call.mockImplementation(previous);
+  await f.controller.selectProviderSubtitle(selectedProvider);
+  await f.controller.start(card,{id:'different-source'},false);await new Promise(resolve=>setTimeout(resolve,10));
+  expect(f.controller.providerSubtitleSelected).toBeUndefined();
+  expect(f.api.call.mock.calls.some(([path])=>path==='/api/playback/3/subtitles')).toBe(false);
+});
+
+it('a newer explicit provider selection wins over a pending seek reattachment',async()=> {
+  const f=providerSeekFixture();await f.controller.start(card,{id:'same-source'},false);vi.stubGlobal('__viptvCreatePlayer',undefined);
+  await f.controller.selectProviderSubtitle(selectedProvider);await f.controller.adjustProviderSubtitle(1);
+  let resolveAsset!: (value:typeof f.asset)=>void;const previous=f.api.call.getMockImplementation()!;
+  f.api.call.mockImplementation(async(path:string,method?:string,body?:any)=>path==='/api/playback/2/subtitles' && body?.subtitle_id===selectedProvider.id?new Promise(resolve=>{resolveAsset=resolve;}):previous(path,method,body));
+  await f.controller.seek(70,false);await vi.waitFor(()=>expect(resolveAsset).toBeTypeOf('function'));
+  const newer={...selectedProvider,id:'newer-provider'};await f.controller.selectProviderSubtitle(newer);
+  resolveAsset(f.asset);await new Promise(resolve=>setTimeout(resolve,10));
+  expect(f.controller.providerSubtitleSelected).toBe(newer.id);expect(f.controller.providerSubtitleDelay).toBe(0);
 });

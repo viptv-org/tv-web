@@ -1,6 +1,13 @@
 import { parseWebVtt } from "../../../../vendor/video/src/captions";
 import { SubtitleSyncView, type SubtitleSyncRecord } from "../../../../vendor/video/src/subtitle-sync";
 export interface ProviderSubtitle { id: string; label: string; language: string }
+export interface ProviderSubtitleIntent {
+  selected: ProviderSubtitle;
+  subtitleHash: string;
+  manual: boolean;
+  delaySeconds: number;
+  audioIdentity?: string;
+}
 type Request = <T>(path: string, method?: string, body?: unknown, signal?: AbortSignal) => Promise<T>;
 const providerTracks = new WeakMap<HTMLVideoElement, TextTrack>();
 export class ProviderSubtitles {
@@ -20,23 +27,35 @@ export class ProviderSubtitles {
   private generation = 0;
   state = "Original timing";
   constructor(private readonly video: HTMLVideoElement, private readonly request: Request, private readonly path: string, readonly selected: ProviderSubtitle) {}
-  async attach(): Promise<void> {
+  async attach(retained?: ProviderSubtitleIntent): Promise<void> {
     const asset = await this.request<{ canonical_vtt: string; subtitle_hash: string }>(`${this.path}/subtitles`, "POST", { subtitle_id: this.selected.id }, this.abort.signal);
     if (this.retired) return;
     if (typeof asset.canonical_vtt !== "string" || asset.canonical_vtt.length > 2 * 1024 * 1024 || (asset.canonical_vtt.match(/-->/g)?.length ?? 0) > 4096 || !/^[a-f0-9]{64}$/.test(asset.subtitle_hash)) throw new Error("Subtitle file exceeds browser limits.");
+    if (retained && asset.subtitle_hash !== retained.subtitleHash) throw new Error("Subtitle selection changed.");
     this.canonical = parseWebVtt(asset.canonical_vtt).sort((a, b) => a.start - b.start);
     this.hash = asset.subtitle_hash;
-    this.view = new SubtitleSyncView(this.canonical, "original", this.hash);
+    if (retained) {
+      this.manualMode = retained.manual; this.delay = retained.delaySeconds;
+      await this.start(retained.audioIdentity);
+      if (this.retired) return;
+    } else this.view = new SubtitleSyncView(this.canonical, "original", this.hash);
     this.track = providerTracks.get(this.video);
     if (!this.track) { this.track = this.video.addTextTrack("subtitles", "Provider subtitles", ""); providerTracks.set(this.video, this.track); }
     this.track.mode = "showing";
     this.tick(this.lastTitle);
-    void this.start().catch(() => { if (!this.retired) this.state = "Automatic timing unavailable"; });
+    if (!retained) void this.start().catch(() => { if (!this.retired && !this.manualMode) this.state = "Automatic timing unavailable"; });
   }
-  private async start(): Promise<void> {
+  private async start(expectedAudioIdentity?: string): Promise<void> {
     const generation = ++this.generation;
-    const record = await this.request<SubtitleSyncRecord>(`${this.path}/subtitle-sync`, "POST", { subtitle_id: this.selected.id }, this.abort.signal);
-    if (this.retired || generation !== this.generation || !this.canonical || record.subtitle_hash !== this.hash || typeof record.playback_generation !== "string") return;
+    let record: SubtitleSyncRecord;
+    try { record = await this.request<SubtitleSyncRecord>(`${this.path}/subtitle-sync`, "POST", { subtitle_id: this.selected.id }, this.abort.signal); }
+    catch (error) { if (this.retired || generation !== this.generation) return; throw error; }
+    if (this.retired || generation !== this.generation) return;
+    if (!this.canonical || record.subtitle_hash !== this.hash || typeof record.playback_generation !== "string" || record.version !== 1 || !Number.isSafeInteger(record.revision)) throw new Error("Subtitle timing unavailable.");
+    if (expectedAudioIdentity && record.audio_identity !== expectedAudioIdentity) {
+      this.record = record;
+      throw new Error("Subtitle audio selection changed.");
+    }
     const view = new SubtitleSyncView(this.canonical, record.playback_generation, this.hash);
     if (this.manualMode) view.manualDelay(this.delay);
     this.view?.dispose(); this.view = view;
@@ -45,11 +64,12 @@ export class ProviderSubtitles {
     if (!this.retired && generation === this.generation && !this.manualMode && !record.manual && record.state === "observing") this.schedule();
   }
   private schedule(): void {
+    const generation = this.generation;
     clearTimeout(this.timer);
     this.timer = setTimeout(() => {
       void this.request<SubtitleSyncRecord>(`${this.path}/subtitle-sync`, "GET", undefined, this.abort.signal)
-        .then(record => { if (!this.retired && record.playback_generation === this.record?.playback_generation) { this.adopt(record); if (record.state === "observing" && !this.manualMode && !record.manual) this.schedule(); } })
-        .catch(() => { if (!this.retired) this.state = "Automatic timing unavailable"; });
+        .then(record => { if (!this.retired && generation === this.generation && record.playback_generation === this.record?.playback_generation) { this.adopt(record); if (record.state === "observing" && !this.manualMode && !record.manual) this.schedule(); } })
+        .catch(() => { if (!this.retired && generation === this.generation && !this.manualMode && !this.record?.manual) this.state = "Automatic timing unavailable"; });
     }, 2000);
   }
   private adopt(record: SubtitleSyncRecord): void {
@@ -81,11 +101,16 @@ export class ProviderSubtitles {
       }
     }
   }
-  get ready(): boolean { return !!this.canonical && !this.retired; }
+  get ready(): boolean { return !!this.track && !this.retired; }
+  get intent(): ProviderSubtitleIntent | undefined {
+    return this.ready ? { selected: { ...this.selected }, subtitleHash: this.hash, manual: this.manualMode,
+      delaySeconds: this.delay, audioIdentity: this.record?.audio_identity } : undefined;
+  }
   get manualSeconds(): number { return this.delay; }
   async reset(): Promise<void> {
     clearTimeout(this.timer); this.manualMode = false; this.delay = 0; this.record = undefined; this.state = "Original timing";
     if (this.canonical) { this.view?.dispose(); this.view = new SubtitleSyncView(this.canonical, "original", this.hash); }
+    this.tick(this.lastTitle);
     if (this.canonical) await this.start();
   }
   tick(titleSeconds: number): void {

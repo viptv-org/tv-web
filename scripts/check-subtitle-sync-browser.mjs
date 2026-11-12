@@ -62,10 +62,18 @@ try {
         for (let i = 0; i < 2000; i++) { const start = performance.now(); dense.at(4500, 0); timings.push(performance.now() - start); }
         timings.sort((a, b) => a - b);
         const deferred = dense.at(4500, 0).deferred;
-        captions.dispose();
-        return { originalSlot, corrected, manual, deferred, loads, sameSource: video.currentSrc === url, nativeCueCount: video.textTracks[0].cues?.length ?? 0, denseLookupP95Ms: timings[1900], denseLookupMaxMs: timings[1999] };
+        const intent = captions.intent; captions.dispose();
+        const renewed = async (path, method) => path.endsWith('/subtitles') ? { canonical_vtt: 'WEBVTT\n\n00:00:02.000 --> 00:00:02.200\nFixture dialogue\n', subtitle_hash: record.subtitle_hash } : { ...record, playback_generation: 'after-seek', state: 'unavailable', correction: null, manual: method === 'PUT', revision: method === 'PUT' ? 3 : 2 };
+        const restored = new ProviderSubtitles(video, renewed, '/api/playback/replacement', { id: 'selected', label: 'English', language: 'en' });
+        await restored.attach(intent); await seek(2.6); restored.tick(2.6);
+        await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+        const afterSeek = Array.from(video.textTracks[0].activeCues ?? []).map(cue => cue.text);
+        await seek(3.6); restored.tick(3.6); await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+        const oldAutoSlot = Array.from(video.textTracks[0].activeCues ?? []).map(cue => cue.text);
+        restored.dispose();
+        return { originalSlot, corrected, manual, afterSeek, oldAutoSlot, deferred, loads, sameSource: video.currentSrc === url, nativeTrackCount: video.textTracks.length, nativeCueCount: video.textTracks[0].cues?.length ?? 0, denseLookupP95Ms: timings[1900], denseLookupMaxMs: timings[1999] };
       });
-      if (result.originalSlot.length || result.corrected.join() !== 'Fixture dialogue' || result.manual.join() !== 'Fixture dialogue' || !result.deferred || result.loads || !result.sameSource || result.nativeCueCount) throw new Error(`${name}: ${JSON.stringify(result)}`);
+      if (result.originalSlot.length || result.corrected.join() !== 'Fixture dialogue' || result.manual.join() !== 'Fixture dialogue' || result.afterSeek.join() !== 'Fixture dialogue' || result.oldAutoSlot.length || result.nativeTrackCount !== 1 || !result.deferred || result.loads || !result.sameSource || result.nativeCueCount) throw new Error(`${name}: ${JSON.stringify(result)}`);
       results.push({ browser: name, status: 'passed', version: browser.version(), wallMs: performance.now() - started, ...result });
     } finally { await browser.close(); }
   }

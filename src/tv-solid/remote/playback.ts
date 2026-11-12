@@ -1,7 +1,7 @@
 import { TizenAvplayAdapter } from "../../../vendor/video/src/tizen-avplay";
 import type { Player, PlayerSnapshot } from "../../../vendor/video/src/types";
 import { RemoteTvApi, RemoteError, segment, query, originFields } from "./api";
-import { ProviderSubtitles, type ProviderSubtitle } from "./player/provider-subtitles";
+import { ProviderSubtitles, type ProviderSubtitle, type ProviderSubtitleIntent } from "./player/provider-subtitles";
 import { DeferredPlayer } from "./deferred-player";
 import { inScope } from "./operation-scope";
 import { ensureTizenSurface } from "../platform/tizen-host";
@@ -30,6 +30,7 @@ export class RemotePlayback {
   readonly player: Player;
   private providerCaption?: ProviderSubtitles;
   private providerOperation = 0;
+  private providerIntentGeneration = 0;
   private embeddedCaptionSuppressed = false;
   private lease?: Lease;
   private card?: Card;
@@ -228,16 +229,30 @@ export class RemotePlayback {
     return this.lease?.id === lease.id ? result.candidates.slice(0, 80) : [];
   }
   async selectProviderSubtitle(candidate: ProviderSubtitle | null): Promise<void> {
+    const intent = ++this.providerIntentGeneration;
+    await this.applyProviderSubtitle(candidate, intent);
+  }
+  private async applyProviderSubtitle(candidate: ProviderSubtitle | null, intent: number, retained?: ProviderSubtitleIntent): Promise<void> {
+    if (intent !== this.providerIntentGeneration) return;
     const token = ++this.providerOperation, lease = this.lease;
     this.providerCaption?.dispose(); this.providerCaption = undefined;
     if (!candidate || !lease || !this.providerSubtitleSupport) return;
     await this.player.selectTextTrack(null);
-    if (token !== this.providerOperation || this.lease?.id !== lease.id) return;
+    if (intent !== this.providerIntentGeneration || token !== this.providerOperation || this.lease?.id !== lease.id) return;
     this.embeddedCaptionSuppressed = true;
     const captions = new ProviderSubtitles(this.video, this.api.call.bind(this.api), `/api/playback/${segment(lease.id)}`, candidate);
     this.providerCaption = captions;
-    try { await captions.attach(); }
+    try {
+      await captions.attach(retained);
+      if (intent === this.providerIntentGeneration && token === this.providerOperation && this.lease?.id === lease.id) captions.tick(this.player.snapshot.time.positionSeconds);
+    }
     catch (error) { if (this.providerCaption === captions) { captions.dispose(); this.providerCaption = undefined; } throw error; }
+  }
+  private providerContext(card = this.card, source = this.source, lease = this.lease): string | undefined {
+    const audio = lease?.delivery?.audio_tracks?.filter(track => track.selected);
+    if (!card || !source || !audio || audio.length !== 1) return undefined;
+    return JSON.stringify([card.identity, card.metadata_origin ?? null, source.id,
+      audio.map(track => [track.input_index, track.language ?? null, track.title ?? null])]);
   }
   async adjustProviderSubtitle(seconds: number): Promise<void> { await this.providerCaption?.manual(seconds); }
   async resetProviderSubtitle(): Promise<void> { await this.providerCaption?.reset(); }
@@ -253,6 +268,7 @@ export class RemotePlayback {
     if (!this.card || !this.source) return;
     if (!this.actions.tracks)
       throw new Error("Track selection is unavailable for this playback.");
+    if (kind === "text") this.providerIntentGeneration++;
     if (kind === "text" && this.providerCaption) {
       this.providerOperation++; this.providerCaption.dispose(); this.providerCaption = undefined;
       if (index === null) return;
@@ -431,6 +447,8 @@ export class RemotePlayback {
     retireForSeek = false,
   ) {
     this.seekView = undefined;
+    const previousProviderContext = retireForSeek ? this.providerContext() : undefined;
+    if (!retireForSeek) this.providerIntentGeneration++;
     const directMode = direct || (replacement ? this.directMode : false);
     const intent = ++this.intentGeneration;
     if (!replacement) this.sourceRetry = undefined;
@@ -465,6 +483,8 @@ export class RemotePlayback {
       void this.api.release(`/api/playback/${segment(lease.id)}`);
       throw new DOMException("Playback cancelled", "AbortError");
     }
+    const retainedProvider = previousProviderContext ? this.providerCaption?.intent : undefined;
+    const retainedProviderGeneration = this.providerIntentGeneration;
     const retiring = this.stopCurrent(true);
     const handoff = new AbortController();
     this.operation = handoff;
@@ -519,6 +539,9 @@ export class RemotePlayback {
       else await this.player.play();
       if (generation !== this.generation)
         throw new DOMException("Playback cancelled", "AbortError");
+      if (retainedProvider && retainedProviderGeneration === this.providerIntentGeneration && previousProviderContext === this.providerContext()) {
+        void this.applyProviderSubtitle(retainedProvider.selected, retainedProviderGeneration, retainedProvider).catch(() => {});
+      }
     } catch (error) {
       if (generation === this.generation) await this.stopCurrent(false);
       throw error;
@@ -551,6 +574,7 @@ export class RemotePlayback {
   }
 
   async stop() {
+    this.providerIntentGeneration++;
     this.seekView = undefined;
     this.intentGeneration++;
     this.sourceRetry = undefined;

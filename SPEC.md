@@ -75,8 +75,12 @@ Subtitle timing offers Earlier by 0.5 s, Later by 0.5 s, and Reset automatic
 timing. Manual delay is separately additive and freezes automatic changes,
 including late results. Reset removes manual delay and starts a fresh correction
 generation; unsupported analysis reports Automatic timing unavailable. Stopping,
-lease replacement, provider replacement and Off remove the cue, abort pending
-work and stop the matching server generation. Stale responses cannot alter a
+provider replacement and Off remove the cue, abort pending work and stop the
+matching server generation. Same-source managed seeks preserve only explicit
+provider/manual intent, reattach on the new lease after video opens, and validate
+the subtitle hash and selected audio identity before restoring it. Automatic
+mapping/confidence is never copied. Changed source/audio/content, Off, exit or a
+new selection reject stale reattachment. Stale responses cannot alter a
 replacement selection.
 
 Automatic timing is a disabled-by-default gateway prototype. Its speech/offset

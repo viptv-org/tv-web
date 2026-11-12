@@ -4185,9 +4185,13 @@ the regenerated assets. Logo and portrait pixels remain undimmed in both rendere
 
 ### Provider subtitle timing prototype
 
-Focused provider/playback/overlay tests: 36 passing, including provider-only
+Focused provider/playback/overlay tests: 44 passing, including provider-only
 capability, legacy-backend/native-host exclusion, discovery after Back, manual
-freeze, reset/disposal, native-track reuse and unchanged media commands. The
+freeze, reset/disposal, native-track reuse and unchanged media commands. Same-source
+managed seeks preserve explicit provider/manual intent without blocking video;
+changed hash/audio/source and Off/newer selection reject stale reattachment.
+Late request failures cannot overwrite reset/manual state, and Reset restores
+original cues before a delayed worker reply. The
 actual picker+overlay controller restores original player tool 4 after Back from
 nonzero rows in provider and timing submenus. Full isolated production
 build/typecheck, pinned video integrity and video's complete 206-test suite/build
@@ -4196,7 +4200,9 @@ pass. This focus evidence is controller state, not rendered-device acceptance.
 `node scripts/check-subtitle-sync-browser.mjs` exercises real native TextTrack
 active cues with an owned silent WAV and mocked authenticated transport.
 Chromium 153.0.8010.12, Firefox 155.0 and WebKit 26.6 pass correction/manual timing,
-dense-window deferral, source stability, zero extra load events and cue cleanup.
+dense-window deferral, source stability, zero extra load events and cue cleanup. The browser mechanisms
+also restore manual-only timing on a replacement and verify that the previous
+automatic cue slot remains empty; one native track is reused.
 Existing userspace GTK/GStreamer dependencies and the bundled Firefox NSS libs
 are supplied through per-browser launch overrides; WebKit uses an owned Xvfb.
 No host package was installed. Optional `SUBTITLE_BROWSER_LIBRARY_PATH` and
