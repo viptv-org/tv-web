@@ -1,35 +1,134 @@
-# Combined Roku and browser acceptance — 2026-11-11
+# Current TV delivery and qualification
 
-TV source 052a255 uses the final feature composition, fixed hero paint bands and
-pinned contrast mask. The isolated locked dependency graphs pass 336 shared and
-34 native tests, application/native typechecks, integrity and production builds.
-The combined Chromium gate passes 37 cases spanning Home focus, hero pixels,
-delayed artwork, context-loss recovery, session storage, Skip/Recap, playback
-authority, Calendar and Samsung Return. An authenticated real-beta API sweep
-also reaches all navigation screens without a startup fullscreen request.
+Beta serves TV `d559dbb` and backend `8d995a5`. Managed rollout, container health,
+running binary, both TV entry pages and all 41 served assets are verified. Runtime
+configuration, mounts and the root frontend are preserved; production is unchanged.
+One asset read timed out; a bounded retry verified its exact bytes. The known
+Cloudflare Insights script is checked separately from application HTML.
 
-Roku package 11130 is installed and version-checked. HLS/H.264/AAC playback
-advances, pause holds, a managed ten-second seek retains paused intent, resume
-advances, controls hide and Back restores Home. Both opening/seek leases were
-released with HTTP 200; native media closes without an error. An expired access
-token renewed through the real device grant, and normal exit/relaunch reaches
-signed-in Home again. Private UI captures verify hero readability, undimmed
-foreground art and the aligned portrait spacing. Decoder telemetry, not a black
-video-plane screenshot, supplies the media evidence.
+Native package 11142 is built from `66753cc`, merged in TV main `188dbc5`. Its
+storage adapter changes require no hosted-beta rollout. The shared client passes
+337 units, 50 native-host units, grouped browser/native typechecks and both builds.
+Two focused browser session cases pass on this revision; six session/sign-out
+cases passed on the preceding hosted revision. The
+preceding combined gate passed 37 cases for focus, hero pixels, late artwork,
+context loss, storage, Skip/Recap, playback authority, Calendar and Samsung Return.
+An authenticated real-API sweep reached every navigation screen without requesting
+fullscreen on startup. Native SDK mocks and browser fixtures are separate from
+physical decoding evidence.
 
-An earlier first selection from a four-row partial discovery did not start.
-Its original admission/native error was not captured. Later discovery produced
-267 rows and a successful selection; the two source identities were not the
-same. This is an unclassified source failure, not evidence of a diagnosed or
-fixed native regression. The successful delivery exposed no caption tracks;
-physical caption selection, audible output/lip sync and sustained 60 FPS remain
-unqualified. Browser/simulator marker and track checks are documented separately.
+The final sign-out request sends the JSON body required by the real auth endpoint.
+The regression holds server acknowledgement and verifies that the grant remains
+until success, then checks Welcome, durable removal and signed-out reload. Actual
+Roku acceptance found the preceding HTTP 415; the fixture now enforces the same
+content-type and JSON boundary. Native package 11131 is exactly package 11130's
+compiled JavaScript plus the three-character JSON argument; all packaged assets
+and launch settings match apart from the build number. Both use run_as_process=1.
 
-Backend main 3703d03 matches the release-tested tree: 940 default/952 live-runtime
-checks, canonical source integrity and optimized build pass, as does edge CI.
-Core main 7921f313 and video main ffa11e26 are merged; their immutable consumer pins
-remain eee3d90 and f0fff094. Beta served-artifact and dedicated-account setup
-checks follow deployment; production is unchanged.
+Package 11131 physically qualifies row-index/scroll restoration on the first
+populated fresh-profile rail and top-navigation isolation. During a deliberate
+1,000 ms Program-thread block, a native motion group's y position still advances
+at the sampled points; temporary geometry and diagnostic globals are restored.
+That is independent native animation evidence, not a presented-FPS measurement.
+
+The dedicated account uses only the requested Cinemeta, VIPTV Sources and Torrentio
+TB connections, with no Simkl link. Real Search uses its discovered addon/catalog
+IDs and opens Interstellar. HLS/H.264/AAC playback advances 73→75 seconds; pause holds
+75, a managed ten-second seek holds paused at 85, resume advances to 87, and controls
+hide. Authoritative title duration is 10144.256 seconds. Back restores Detail, both
+leases return DELETE 200, and the native player closes without error. Normal
+this-TV sign-out returns 200 and removes its in-session registry entry; pairing
+again and normal exit/relaunch retain the new account/profile and show only its
+new viewing progress. These checks do not establish persistence across an OS reboot.
+
+A development replacement stalled the SDK before JavaScript started. Normal system
+restart restored the runtime. A Home key can only wake the OS screensaver, so device
+qualification verifies actual settled OS Home and prior exit completion before
+launch. The old test grant was then replay-rejected by the server and the client
+cleared its credentials as designed; family/timestamp correlation establishes that
+sequence. Subsequent controlled tests reproduced a prior credential generation
+after an OS reboot, before the app was launched. Freshly paired or refreshed
+credentials matched the server and registry after normal exit, but the reboot
+restored an older record. This is a native persistence failure, not ordinary
+expiry; server replay rejection remains intact. Other account sessions and data
+were preserved.
+
+The native JSON adapter serializes each complete read/write operation and stores
+two byte-distinct encodings of the same new value in separate, naturally completed
+BrightScript Tasks. Each Task checks Write, section Flush and readback. Retrying
+an interrupted write chooses a preparation encoding different from the current
+record; an unconfirmed Task blocks later storage work until relaunch. Clear writes
+JSON null through the same path. Playback settings are canonicalized before their
+16 KiB limit is checked. Authentication and replay protection are unchanged.
+
+Package 11142 passes three real-device OS reboot boundaries. Every run verifies an
+actual uptime reset and reads the registry before launching the app:
+
+- Controlled access expiry produces an ordinary 401 → refresh200 → successful
+  retry. The exact updated generation matches the server after exit and before
+  post-reboot launch, then restores visible signed-in Home.
+- Normal this-TV logout200 stores exact JSON null with no credentials. That state
+  remains after exit and reboot, then restores visible Welcome.
+- Fresh normal pairing and real HLS play/pause/resume/Back cleanup retain the exact
+  current credentials and existing playback settings after exit and reboot, then
+  restore visible signed-in Home. Both raw and canonical settings match.
+
+All recorded storage operations finish in order, without failed or pending work
+or recorder overflow. Positive acknowledgements alone were insufficient in the
+earlier single-write, identical-repeat and extra-Flush experiments; those failures
+remain separate from the final package's reboot evidence. Firmware internals and
+other Roku hardware/OS versions are unproven. Private harness type, output-parsing,
+idle-state and cleanup-route checks were corrected using retained evidence without repeating
+completed reboots or media playback. Root's known-private-value scan passes on all
+278 changed-source/package files, and the final Home capture was reviewed directly.
+
+The final ordinary exit/relaunch also retains the current server-matched family
+and settings. The real app is left at signed-in Home with temporary observers
+removed and playback inactive. Five abandoned QA device families were revoked
+through the normal owner API; the final family and unrelated devices remain.
+Fresh checks confirm the dedicated account is the sole owner, its predecessor
+remains a member, and only the requested three integrations are assigned with no
+Simkl link. Temporary local fixture servers are stopped.
+
+Prepared clearlogos follow validated public redirects while preserving the existing
+URL/DNS, downgrade, deadline and byte limits. Interstellar, Heart of the Beast and
+Nocturne return PNG with matching ETags/304 responses. Nocturne's formerly dark
+letters are white without added glow, and its hero/card logos were inspected on the
+real Roku. Public cache headers and a Cloudflare HIT are observed. The live metadata
+check measured one title at 2650 ms cold, 160 ms warm and 417 ms through a different
+account/addon registration. The raw public cache entry remained unchanged; personal
+responses remain no-store/DYNAMIC and cross-account profile reads return 403 in both
+directions. These samples are not a universal latency guarantee.
+
+Collision Course (2026), IMDb tt38793125, currently has no Cinemeta synopsis. Its
+Simkl catalogue card also omits text while full metadata supplies 151 characters.
+Replaying those real payloads through the presentation merger retains all 151
+characters after a sparse refresh and during preparation, without borrowing from
+the other metadata authority. The original visual race was not recaptured, and no
+claim is made that Simkl itself caused it.
+
+Fresh root npm and independent frozen Roku pnpm installs reproduce the pinned
+Solid 1.9.17/fork 451dcbc and committed renderer patches. A task-local npm cache
+avoids this host's pre-existing global-cache permission error. Hosting and webOS CI
+pass on 188dbc5; Tizen stops at its unchanged Samsung-certificate requirement.
+The Solid fork main 9ab7982 passes 745 tests with 13 skips. Its test-only rAF clock
+normalization preserves real scheduling; no production clock or timeout changed.
+
+Backend validation passes 941 default/953 live-runtime tests with 12/13 existing
+ignores, canonical integrity, optimized build and release CI. Backend/app native
+Core pin eee3d90 is on Core main 7921f313. TV's existing WASM helpers remain b6ee054;
+its video pin f0fff094 is on video main ffa11e26. App autoplay parity is merged and
+promoted at 2c579a7e with full release CI: 2437 tests pass, five specified cases skip,
+and Android, Wasm and iOS compile gates pass. The primary app's existing user work
+is preserved.
+
+An earlier first selection from partial discovery failed without captured original
+admission/native diagnostics; a later successful selection was a different source.
+That failure remains unclassified. Physical captions, audibility/lip sync, broad
+codec/DRM coverage and sustained 60 FPS are not certified. LG/Samsung/PlayStation
+hardware limits and current browser/simulator evidence are recorded below and in
+[the parity matrix](tests/PARITY_MATRIX.md). Private captures and credentials remain
+outside Git.
 
 # LG webOS and Samsung package boundaries
 

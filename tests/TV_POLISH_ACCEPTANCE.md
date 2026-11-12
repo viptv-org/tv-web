@@ -1,4 +1,4 @@
-# TV polish acceptance — 2026-11-09
+# TV polish acceptance
 
 Owner-requested refinement of the existing shared TV app, without a redesign or
 framework migration. Roku performance work covers both the SolidTV fork/native
@@ -41,11 +41,9 @@ image loading; a unit-test pass or high average FPS is insufficient.
 - [x] Split large application and native-adapter modules into small focused files
       after behavior/performance is verified; remove fragile build-time patches
       where a proper pinned framework fix can replace them.
-- [ ] Complete the whole-app UI and functionality sweep after performance work.
-      Browser coverage now includes catalog/detail/Calendar focus, source Back,
-      Samsung exit confirmation, browse spacing, welcome/profile/recovery layouts
-      and decoded-media player authority. Physical follow-up and remaining exact
-      title/provider sequences stay open; see TESTING.md.
+- [x] Complete the whole-app UI and functionality sweep after performance work.
+      Browser, real-API and physical Roku coverage is recorded in TESTING.md;
+      unavailable hardware and exact historical sequences remain explicit limits.
 - [x] Investigate early PlayStation logout, including refresh rotation, cross-window
       coordination, storage and suspended-browser recovery; preserve revocation safety.
 - [x] Support LG webOS and Samsung Tizen packaging, remote input, playback and recovery;
@@ -65,10 +63,12 @@ image loading; a unit-test pass or high average FPS is insufficient.
 - [x] Coordinate backdrop, transparent logo and metadata as one stable presentation;
       prevent independently arriving art and repeated description disappearance.
 - [ ] Reproduce the reported Collision Course (2026) metadata flash and distinguish
-      stale callbacks, incomplete updates and mixed provider origins.
+      stale callbacks, incomplete updates and mixed provider origins. Current real
+      catalogue/detail payloads confirm sparse versus full metadata; replay retains
+      the synopsis within one authority. The original visual timing was not recaptured.
 - [x] Remove the unwanted white/gray hero band and keep navigation gradients beneath
       navigation labels, icons and focus treatment.
-- [ ] Improve transparent-logo sizing within a stable layout slot, preserving aspect
+- [x] Improve transparent-logo sizing within a stable layout slot, preserving aspect
       ratio and avoiding layout displacement or ad hoc scaling.
 - [x] Use the owner-selected public image proxy for focused-backdrop blur; verify
       the processed image and keep filtering off the Roku client.
@@ -76,11 +76,11 @@ image loading; a unit-test pass or high average FPS is insufficient.
       spacing below the avatar; verify browser geometry and the physical Roku.
 - [x] Preserve the Home rows' fixed focus anchor while replacing card teleportation
       with smooth group motion. Check vertical transitions and fast repeated input.
-- [ ] Compare implementation and device traces with the Solid TV demo's examples.
+- [x] Compare implementation and device traces with the Solid TV demo's examples.
 
 ## Spacing, loading and screens
 
-- [ ] Review all screens and overlays, beyond the examples explicitly reported.
+- [x] Review all screens and overlays, beyond the examples explicitly reported.
 - [x] Reduce excessive separation between browse filters and their catalog/trending
       control; apply consistent padding and gaps on Movies, Series and Anime.
 - [x] Center and coordinate player buffering text/spinner without overlapping labels.
@@ -90,20 +90,26 @@ image loading; a unit-test pass or high average FPS is insufficient.
 - [x] Check a single composed welcome background instead of many independently loaded
       poster images, retaining the existing visual direction.
 - [x] Refine profile-selection and pre-profile loading spacing and transitions.
-- [ ] Recheck captions, focus, drawers, empty/error states, calendar and player layout
+- [x] Recheck captions, focus, drawers, empty/error states, calendar and player layout
       for clipping, inconsistent alignment, unnecessary motion and layout shifts.
+      Caption paint is browser/LG-simulator evidence; physical Roku captions remain unqualified.
 
 ## Episodes and session behavior
 
-- [ ] Compare app's Android TV season strip and phone/desktop picker; verify the compact TV-web chooser's remote behavior.
+- [x] Compare app's Android TV season strip and phone/desktop picker; verify the compact TV-web chooser's remote behavior.
 - [x] Use the supplied special-season name, or an appropriate Special(s) label, rather
       than exposing the implementation value “Season 0”.
 - [x] Default to a regular season when one is available. Preserve an explicitly chosen
       special season or an actual resume target in it; keep those episodes accessible.
 - [x] Verify Roku sign-in and selected profile survive normal app exit/relaunch;
       distinguish registry persistence from expired/revoked server credentials.
+- [x] Retain the latest credential generation and signed-out state across an OS
+      reboot. Package 11142 passes three verified restart boundaries, including
+      exact prelaunch credentials and playback settings; see TESTING.md.
 - [ ] Exercise real playback, source reuse, paused/playing seek, track controls,
       intro/next/autoplay, controls hiding, source failures and Back recovery.
+      Real Roku playback/seek/Back and earlier episode handoff are qualified; the
+      complete physical marker/track matrix and audible/lip-sync checks remain open.
 
 ## Latency, images and shared metadata caching
 
@@ -111,7 +117,7 @@ image loading; a unit-test pass or high average FPS is insufficient.
       separately; do not label a network delay as a rendering fix or vice versa.
 - [x] Reuse existing image proxy facilities such as wsrv with appropriate decode sizes,
       transparent-image handling and caching; avoid duplicate artwork work.
-- [ ] Use aggressive shared caching for public Cinemeta metadata, with a documented
+- [x] Use aggressive shared caching for public Cinemeta metadata, with a documented
       refresh/invalidation policy suitable for movies versus changing series/episodes.
 - [x] Inspect actual API response personalization before considering Cloudflare caching.
       Auth/profile/watch-state/source-credential data must remain correctly isolated.
@@ -121,28 +127,30 @@ image loading; a unit-test pass or high average FPS is insufficient.
       keep decoded images and temporary presentation state bounded on weak devices.
 - [ ] Record before/after native frame timing, input/navigation latency, artwork readiness
       and memory across repeated navigation; leave unsupported targets explicit.
+      Repeated frame traces and input/art readiness are recorded. Shelf/decode bounds
+      are verified, but they are not a full process/GPU memory measurement.
 
 ## Deferred account handoff
 
-- [ ] After testing, create the requested dedicated beta account using the privately
+- [x] After testing, create the requested dedicated beta account using the privately
       supplied credentials. Configure Cinemeta, VIPTV Sources and TorrentioTB, with
       no Simkl connection. Do not repurpose the existing test account or change global
       provider behavior to accomplish this. Never place account credentials in Git.
 
-## Initial physical-device findings
+## Initial physical-device findings (historical)
 
 The first hot sideload was accepted but did not initialize the UI. An unminified
 diagnostic and an older working package also stalled. A device restart followed by
 stopping the diagnostic app, installing the current package without auto-launch and
 launching it explicitly restored startup. This suggests a stuck device/runtime state;
-the exact hot-replacement cause remains unproven. The current native package contains
+the exact hot-replacement cause remains unproven. That early native package contained
 718945 JavaScript bytes and no browser Canvas renderer modules.
 
-The current build reaches beta sign-in, profile selection and Home. Private native
+That early build reached beta sign-in, profile selection and Home. Private native
 captures also cover Movies, Series, Anime, Calendar, My List, Live and movie details.
 These initial observations are not completion of the checklist above. Evidence and
 final disposition belong in TESTING.md and tests/PARITY_MATRIX.md after verification.
 
 Implementation is tracked in tv-web #103 with backend caching in backend #308.
-The focused browser artwork, season and motion scenarios pass; final physical
-acceptance and the account handoff are still pending. See TESTING.md.
+The focused browser artwork, season and motion scenarios pass. Current delivery,
+account handoff and remaining qualification limits are recorded in TESTING.md.

@@ -31,8 +31,11 @@ Physical Home focus checks retain each row's selection and scroll position,
 including six top-navigation moves without moving Continue Watching. The app
 keeps three reusable shelves, at most twelve card slots per shelf, and only the
 current/preparing hero presentation. Public proxy blur stays off the TV CPU.
-Later presentation/controller extraction requires final combined-build device
-qualification before treating these measurements as its final acceptance.
+Packages 11130/11131 repeat the focus and independent native-motion checks,
+including fresh-profile rail restoration on 11131. The quantitative traces above
+remain measurements of 11128; later builds
+do not inherit a new frame-rate measurement. See TESTING.md for delivery and
+playback qualification.
 
 # Cited revisions
 
@@ -53,8 +56,8 @@ file hashes to
 `dd498823558f6a77c39da086bff820f8ab125a86ce94383662425bfb6d147f69`.
 
 Current anchors: [DESIGN_REF](DESIGN_REF)
-`1f68aa8280a4152f687013cf8246a5fbebebc902`, [VIDEO_REF](VIDEO_REF)
-`f89e094ef5974a34aa803f93f96cc611607f7e1e` and [CORE_REF](CORE_REF)
+`059b76344f4fed0639bedf8f89e0bd6e2b22cecd`, [VIDEO_REF](VIDEO_REF)
+`f0fff0946c3fdd947cba46c2e57b9bd5bce610c4` and [CORE_REF](CORE_REF)
 `b6ee0548753483c9627cb1c73e7761b62f936933`.
 
 ---

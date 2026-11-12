@@ -1,3 +1,18 @@
+# Current delivery boundaries
+
+| Area | Verified evidence | Limit |
+| --- | --- | --- |
+| Hosted beta | TV d559dbb/backend 8d995a5, healthy container, exact running binary and 41 served assets; configuration and root frontend preserved | One asset read needed a bounded retry; production unchanged |
+| Home navigation and art | Remembered row index/scroll, isolated top navigation, recycled shelves, proxy blur, portrait spacing and prepared-logo paint pass; Nocturne inspected on physical Roku | Quantitative frame traces remain scoped to build 11128 and fail the 16.67 ms target |
+| Sign-out and fresh-account handoff | 337 shared/50 native units; 11142 passes refreshed credentials, signed-out null and fresh login/media across three verified OS reboots, with exact prelaunch credential/settings checks; earlier 11131 covers real Search, paused seek and navigation | Physical Roku evidence is scoped to the tested device/OS; audible/lip-sync and physical caption presentation remain unqualified |
+| Provider metadata | Live cold/warm/cross-account reuse; personal responses no-store and cross-profile requests refused | Samples do not establish universal upstream latency |
+| Collision Course synopsis | Exact 2026 title's real Simkl payloads replay sparse catalogue → full detail → sparse refresh without losing text; other authority stays separate | Historical visual race not recaptured; no attribution to Simkl |
+| PS4 session reliability | Rotated credentials adopted before persistence, durable-write retry and missing Web Locks/storage failure covered | Physical PlayStation logout retest unavailable; lost network responses and cross-window replay remain separate limits |
+| Reproducible installation | Root npm and independent pinned Roku pnpm installs, committed renderer patches, hosting/webOS CI pass | Samsung signing certificates unavailable; no signed WGT claim |
+
+Earlier source-specific records follow; their old hardware availability and deployment
+statements do not replace the current qualification above.
+
 # LG webOS and Samsung qualification
 
 | Boundary | Browser / package evidence | Emulator / physical limits |
@@ -6,7 +21,7 @@
 | Samsung local package |43-file/8.6MiB verified local closure; two file-entry/SDK cases pass; signing/API-origin gates retained | No signed WGT, actual Samsung file-origin API transport or AVPlay decoding claim |
 | LG webOS player | Official LG22 / Chromium 87: healthy WebGL, real 160×90 HLS 3.085 s / 77 frames, stable pause/paused seek/resume, WebVTT selection/Off, Back/Stop and all six lease releases pass; CLI3.2.6 IPK built/inspected | Owned software-graphics runner and synthetic media; physical codecs/audio/DRM/remote unqualified; read-only currentSrc retains stale metadata after otherwise complete reset |
 | LG startup graphics | Directly observed context loss is recovered through a fresh Canvas host; visible Home/media plus nine ownership/two real context-loss browser cases pass | No shipped bitmap disable/UA exception; healthy-WebGL cue state and Canvas caption pixels verified separately; no comprehensive caption-paint or hardware claim |
-| Original Live-empty / retired-hint follow-up | Four Live-empty cases land on Anime via stale fixed navigation; two source-hint cases miss the injected label before checking the hint | Failed assertions remain visible and unchanged |
+| Live-empty / source-hint contracts | Focused cases pass with navigation by route identity and canonical provider fields; product assertions are retained | Browser evidence, not physical firmware qualification |
 
 Detailed commands and disposition: [platform qualification](../platform/QUALIFICATION.md).
 
