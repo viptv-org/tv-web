@@ -1,4 +1,4 @@
-import type { Card } from './types';
+import type { Card, Source } from './types';
 
 export interface SourceChoice {
   provider_id: string;
@@ -95,6 +95,14 @@ export class DevicePlayback {
         state.across.push(scope);state.across = state.across.slice(-32);
         if (!entries.has(`global:${scope}`) && entries.has(`last:${scope}`)) entries.set(`global:${scope}`, entries.get(`last:${scope}`)!);
       }
+    });
+  }
+  rememberSource(scope: string, title: string, source: Source, language?: string) {
+    return this.remember(scope, title, {
+      provider_id: source.source_addon_id ?? '',
+      source_id: source.presentation?.source_id ?? undefined,
+      provider_name: source.presentation?.provider_name ?? undefined,
+      audio_languages: language ? [language] : source.audio_languages?.length === 1 ? source.audio_languages : [],
     });
   }
   remember(scope: string, title: string, observation: SourceChoice) {

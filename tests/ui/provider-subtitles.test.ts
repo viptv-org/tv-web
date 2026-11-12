@@ -1,0 +1,105 @@
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { ProviderSubtitles } from '../../src/tv-solid/remote/player/provider-subtitles';
+class Cue { constructor(public startTime: number, public endTime: number, public text: string) {} }
+const hash = 'a'.repeat(64);
+const candidate = { id: 'subtitle', label: 'English', language: 'en' };
+const correction = { version: 1, playback_generation: 'generation', subtitle_hash: hash, media_identity: 'session', audio_identity: 'audio', algorithm_version: 'activity-offset-affine-v1', revision: 2, state: 'accepted', manual: false, correction: { anchorUs: 600e6, offsetUs: 2e6, scale: 1.001 } };
+afterEach(() => { vi.unstubAllGlobals(); vi.useRealTimers(); });
+function fixture() {
+  vi.stubGlobal('VTTCue', Cue);
+  const track = { mode: 'disabled', addCue: vi.fn(), removeCue: vi.fn() };
+  const video = { currentTime: 590, addTextTrack: vi.fn(() => track), load: vi.fn(), play: vi.fn(), pause: vi.fn() } as unknown as HTMLVideoElement;
+  const request = vi.fn(async (path: string, method?: string) => path.endsWith('/subtitles') ? { canonical_vtt: 'WEBVTT\n\n00:10:50.000 --> 00:10:51.000\nDialogue\n', subtitle_hash: hash } : method === 'PUT' ? { ...correction, manual: true, revision: 3 } : correction);
+  const captions = new ProviderSubtitles(video, request as any, '/api/playback/lease', candidate);
+  return { captions, video, track, request };
+}
+describe('provider subtitle playback adapter', () => {
+  it('applies a live affine update through one text cue without touching playback', async () => {
+    const { captions, video, track } = fixture();
+    await captions.attach(); await Promise.resolve();
+    captions.tick(640);
+    video.currentTime = 592.05; captions.tick(652.05);
+    expect(track.addCue).toHaveBeenCalledTimes(1);
+    expect(track.addCue.mock.calls[0][0].text).toBe('Dialogue');
+    expect(track.addCue.mock.calls[0][0].startTime).toBe(592.05);
+    expect(video.load).not.toHaveBeenCalled(); expect(video.play).not.toHaveBeenCalled();
+    expect(video.pause).not.toHaveBeenCalled();
+    await captions.manual(1);
+    video.currentTime = 593.05; captions.tick(653.05);
+    expect(captions.state).toBe('Manual timing');
+    captions.dispose(); expect(track.mode).toBe('disabled');
+  });
+  it('rejects callbacks after disposal and reuses one native track for repeated selections', async () => {
+    const { captions, video, request, track } = fixture();
+    await captions.attach(); await Promise.resolve(); captions.dispose();
+    const next = new ProviderSubtitles(video, request as any, '/api/playback/lease', candidate);
+    await next.attach(); await Promise.resolve();
+    expect(video.addTextTrack).toHaveBeenCalledTimes(1);
+    next.dispose(); expect(track.mode).toBe('disabled');
+  });
+  it('keeps canonical timing when gateway automatic analysis is unavailable', async () => {
+    const { captions, request, video, track } = fixture();
+    request.mockImplementation(async (path: string) => path.endsWith('/subtitles') ? { canonical_vtt: 'WEBVTT\n\n00:10:50.000 --> 00:10:51.000\nDialogue\n', subtitle_hash: hash } : { ...correction, state: 'unavailable', correction: null } as any);
+    await captions.attach(); await Promise.resolve();
+    video.currentTime = 590.5; captions.tick(650.5);
+    expect(track.addCue.mock.calls.at(-1)?.[0].text).toBe('Dialogue');
+    expect(captions.state).toBe('Automatic timing unavailable'); captions.dispose();
+  });
+});
+
+it('seek restoration keeps only manual intent and verifies hash/audio identity',async()=> {
+  const f=fixture();await f.captions.attach();await Promise.resolve();f.captions.tick(640);await f.captions.manual(1);
+  const intent=f.captions.intent!;expect(intent).not.toHaveProperty('correction');f.captions.dispose();
+  f.request.mockImplementation(async(path:string,method?:string)=>path.endsWith('/subtitles')?{canonical_vtt:'WEBVTT\n\n00:10:50.000 --> 00:10:51.000\nDialogue\n',subtitle_hash:hash}:{...correction,playback_generation:'fresh-generation',state:'unavailable',correction:null,manual:method==='PUT',revision:method==='PUT'?2:1} as any);
+  const restored=new ProviderSubtitles(f.video,f.request as any,'/api/playback/new-lease',candidate);await restored.attach(intent);
+  f.video.currentTime=591.5;restored.tick(651.5);expect(f.track.addCue.mock.calls.at(-1)?.[0].text).toBe('Dialogue');expect(restored.manualSeconds).toBe(1);expect(restored.state).toBe('Manual timing');restored.dispose();
+  const mismatch=new ProviderSubtitles(f.video,f.request as any,'/api/playback/newer-lease',candidate);
+  await expect(mismatch.attach({...intent,audioIdentity:'other-audio'})).rejects.toThrow('audio selection changed');mismatch.dispose();
+});
+
+it('late start failure cannot overwrite a reset generation',async()=> {
+  const f=fixture();let starts=0;let rejectStart!: (reason?:unknown)=>void;
+  f.request.mockImplementation((async(path:string,method?:string)=> {
+    if(path.endsWith('/subtitles'))return {canonical_vtt:'WEBVTT\n\n00:10:50.000 --> 00:10:51.000\nDialogue\n',subtitle_hash:hash};
+    if(method==='POST' && ++starts===1)return new Promise<typeof correction>((_,reject)=>{rejectStart=reject;});
+    return {...correction,playback_generation:'after-reset'};
+  }) as any);
+  await f.captions.attach();await f.captions.reset();expect(f.captions.state).toBe('Automatic timing (prototype)');
+  rejectStart(new Error('old request failed'));await Promise.resolve();await Promise.resolve();
+  expect(f.captions.state).toBe('Automatic timing (prototype)');f.captions.dispose();
+});
+it('a pending poll failure cannot overwrite manual freeze',async()=> {
+  vi.useFakeTimers();const f=fixture();let rejectPoll!: (reason?:unknown)=>void;
+  f.request.mockImplementation((async(path:string,method?:string)=> {
+    if(path.endsWith('/subtitles'))return {canonical_vtt:'WEBVTT\n\n00:10:50.000 --> 00:10:51.000\nDialogue\n',subtitle_hash:hash};
+    if(method==='GET')return new Promise<typeof correction>((_,reject)=>{rejectPoll=reject;});
+    return {...correction,state:'observing',correction:null,revision:method==='PUT'?3:2,manual:method==='PUT'};
+  }) as any);
+  await f.captions.attach();await Promise.resolve();await vi.advanceTimersByTimeAsync(2000);
+  await f.captions.manual(1);rejectPoll(new Error('old poll failed'));await Promise.resolve();await Promise.resolve();
+  expect(f.captions.state).toBe('Manual timing');f.captions.dispose();
+});
+
+it('reset restores original cue view before a delayed worker response',async()=> {
+  const f=fixture();await f.captions.attach();await Promise.resolve();f.captions.tick(640);await f.captions.manual(1);
+  f.video.currentTime=593.5;f.captions.tick(653.5);const removed=f.track.removeCue.mock.calls.length;
+  let resolveStart!: (value:any)=>void;
+  f.request.mockImplementationOnce((async()=>new Promise(resolve=>{resolveStart=resolve;})) as any);
+  const reset=f.captions.reset();
+  expect(f.captions.state).toBe('Original timing');expect(f.track.removeCue.mock.calls.length).toBe(removed+1);
+  resolveStart({...correction,playback_generation:'fresh-reset',state:'observing',correction:null});await reset;f.captions.dispose();
+});
+
+it('optional sync failure retains canonical/manual cues but known identities still fence restoration',async()=> {
+  const f=fixture();await f.captions.attach();await Promise.resolve();await f.captions.manual(1);
+  const intent=f.captions.intent!;f.captions.dispose();
+  f.request.mockImplementation((async(path:string)=> {
+    if(path.endsWith('/subtitles'))return {canonical_vtt:'WEBVTT\n\n00:10:50.000 --> 00:10:51.000\nDialogue\n',subtitle_hash:hash};
+    throw new Error('optional sync unavailable');
+  }) as any);
+  const restored=new ProviderSubtitles(f.video,f.request as any,'/api/playback/new-lease',candidate);await restored.attach(intent);
+  f.video.currentTime=591.5;restored.tick(651.5);expect(f.track.addCue.mock.calls.at(-1)?.[0].text).toBe('Dialogue');
+  expect(restored.ready).toBe(true);expect(restored.manualSeconds).toBe(1);expect(restored.state).toBe('Manual timing');restored.dispose();
+  const wrongHash=new ProviderSubtitles(f.video,f.request as any,'/api/playback/wrong-content',candidate);
+  await expect(wrongHash.attach({...intent,subtitleHash:'b'.repeat(64)})).rejects.toThrow('selection changed');wrongHash.dispose();
+});

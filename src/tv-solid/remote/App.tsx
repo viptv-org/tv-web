@@ -715,12 +715,8 @@ export function createRemoteTvApp(
         manualPresentation = undefined;
         batch(() => { setSourceMemoryPending(v => v + 1);setPresentationRevision(v => v + 1); });
         const language = player.tracks.audio.find(track => track.selected && track.language)?.language;
-        void devicePlayback.remember(observation.scope, observation.title, {
-          provider_id: source.source_addon_id!,
-          source_id: source.presentation?.source_id,
-          provider_name: source.presentation?.provider_name,
-          audio_languages: language ? [language] : source.audio_languages?.length === 1 ? source.audio_languages : [],
-        }).catch(() => notify("Couldn’t save this source choice on this device.")).finally(() => setSourceMemoryPending(v => Math.max(0, v - 1)));
+        void devicePlayback.rememberSource(observation.scope, observation.title, source, language)
+          .catch(() => notify("Couldn’t save this source choice on this device.")).finally(() => setSourceMemoryPending(v => Math.max(0, v - 1)));
       },
     );
     const playerTransport = createPlayerTransport({
@@ -846,7 +842,7 @@ export function createRemoteTvApp(
       // These controls replace the server lease; native track APIs are not
       // required. Only expose tracks the current server delivery can select.
       const canTracks = player.tracks.audio.some(track => track.selectable && track.supported !== false)
-        || player.tracks.subtitlesSupported;
+        || player.tracks.subtitlesSupported || player.providerSubtitleSupport;
       return [
         {
           id:
@@ -897,7 +893,7 @@ export function createRemoteTvApp(
       if (!playerActions().seek) setSeek(undefined);
     });
     const openTracks = createTrackPicker({player, roku: isRokuUi, selection: {column: setTrackColumn, row: setChoice},
-      dialogs: {current: overlay, open: openOverlay, close: closeOverlay},
+      dialogs: {current: overlay, open: openOverlay, replace: overlays.replace, close: closeOverlay},
       subtitle: {enabled: () => playerActions().subtitle_style, current: preferences, adopt: setPreferences, request: call,
         path: () => api.scoped("/preferences"), override: setCaptionOverride}});
     const [fontsReady, setFontsReady] = createSignal(false);

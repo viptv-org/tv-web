@@ -204,8 +204,8 @@ export interface Source {
     delivery_format?: string | null;
     video_codec?: string;
     audio_codecs?: string[];
-    provider_name?: string;
-    source_id?: string;
+    provider_name?: string | null;
+    source_id?: string | null;
     size_label?: string;
     size_bytes?: number | null;
     [key: string]: unknown;
@@ -278,6 +278,8 @@ export interface ServerTrack {
   supported?: boolean;
 }
 export interface Delivery {
+  external_subtitles_supported?: boolean;
+  provider_subtitles_version?: number;
   subtitle_appearance?: {
     font_scale: number;
     text_color: string;

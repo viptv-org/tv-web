@@ -151,6 +151,7 @@ async function installRendererCompat(page: Page): Promise<void> {
 export async function installRemoteBackend(page:Page,origin:string,options:{
     episodeFlow?: boolean;
     sourceAudioLanguages?: string[];
+    sourcePresentation?: {source_id: string | null; provider_name: string | null};
     selectedAudioLanguage?: string;
     pendingContinuation?: boolean;
     reuseMatch?: boolean;
@@ -354,7 +355,7 @@ export async function installRemoteBackend(page:Page,origin:string,options:{
     return send({id:'job-1'});
   }
     if(/\/live\/[^/]+\/sources$/.test(path))return send({streams:[{id:"live-stream-0",name:"Live source A"},{id:"live-stream-1",name:"Live source B"}],live:true,action:{card:{identity:{kind:"live",id:path.split('/').at(-2)!,ids:[]},provider_id:"m3u:1",title:"Server live channel",badges:[],poster:null,landscape:null,logo:null},label:"Watch live",resume:false,source_selection:options.best?"best":"ask"}});
-  const streams=Array.from({length:8},(_,i)=>{const h=i<2?2160:i<5?1080:720;const name=i%2?'[Provider 2]':'LordStreams';const quality=h>=2160?'4K':`${h}p`;return {id:`stream-${i}`,source_addon_id:'addon:fixture',audio_languages:options.sourceAudioLanguages ?? ['en'],presentation:{source_id:i%2?'supplier-b':'supplier-a',provider_name:i%2?'Supplier B':'Supplier A'},name,detail:'WEB-DL · HEVC · 5.1 · 18.4 GB',quality_height:h,view:{title:name,body:'WEB-DL · HEVC · 5.1 · 18.4 GB',quality_label:quality,format_label:i===0?'HDR10 · Dolby Atmos':'HEVC',addon_label:`[Add-on ${i%2?'B':'A'}]`,provider_label:name}};});
+  const streams=Array.from({length:8},(_,i)=>{const h=i<2?2160:i<5?1080:720;const name=i%2?'[Provider 2]':'LordStreams';const quality=h>=2160?'4K':`${h}p`;return {id:`stream-${i}`,source_addon_id:'addon:fixture',audio_languages:options.sourceAudioLanguages ?? ['en'],presentation:options.sourcePresentation ?? {source_id:i%2?'supplier-b':'supplier-a',provider_name:i%2?'Supplier B':'Supplier A'},name,detail:'WEB-DL · HEVC · 5.1 · 18.4 GB',quality_height:h,view:{title:name,body:'WEB-DL · HEVC · 5.1 · 18.4 GB',quality_label:quality,format_label:i===0?'HDR10 · Dolby Atmos':'HEVC',addon_label:`[Add-on ${i%2?'B':'A'}]`,provider_label:name}};});
   if(path==='/api/streams/job-1'){
       const publishDiscovery=(events:any[],done:boolean)=>send({events:events.map(event=>({...event,streams:event.streams.filter((source:any)=>(!preferredSupplier||source.presentation?.source_id===preferredSupplier)&&(!excludedSupplier||source.presentation?.source_id!==excludedSupplier)).slice(0,preferredSupplier?1:undefined)})),done,...(options.preferredDiscovery?{phase:discoveryPhase}:{})});
       const after=Number(url.searchParams.get('after')??0);
