@@ -79,7 +79,7 @@ export function createCoherentHero(source: Accessor<Card | undefined>, scope: Ac
 type ArtworkProps = { presentation: ReturnType<typeof createCoherentHero>; logoBox: HeroLogoBox; dim: number };
 
 /** Both halves retain their prepared nodes and share the same opacity target. */
-function ArtworkFrame(props: ArtworkProps & { frame: Accessor<Frame>; foreground: boolean; register: (id: number, foreground: boolean, node?: any) => void }) {
+function ArtworkFrame(props: ArtworkProps & { frame: Accessor<Frame>; foreground: boolean; scrimReady: boolean; register: (id: number, foreground: boolean, node?: any) => void }) {
   const id=props.frame().id;
   onCleanup(() => props.register(id,props.foreground));
   const frame=props.frame;
@@ -88,7 +88,7 @@ function ArtworkFrame(props: ArtworkProps & { frame: Accessor<Frame>; foreground
   const backdropWidth=() => imagePixels(preview() ? 960 : frame().kind === "detail" ? 1920 : 1440);
   const backdropHeight=() => imagePixels(preview() ? 540 : frame().kind === "detail" ? 1080 : 810);
   const done=(name:string,failed=false) => {void Promise.resolve().then(() => props.presentation.settled(id,name,failed));};
-  return <TvView nodeRef={(node:any) => props.register(id,props.foreground,node)} w={1920} h={1080} alpha={props.presentation.current() === id ? 1 : 0}
+  return <TvView nodeRef={(node:any) => props.register(id,props.foreground,node)} w={1920} h={1080} alpha={props.presentation.current() === id && (props.foreground || props.scrimReady) ? 1 : 0}
     transition={frame().staged ? undefined : {alpha:{duration:reducedMotion() ? 0 : 150,easing:"ease-out"}}}>
     {props.foreground ? <>
       <Show when={frame().poster && !frame().failed.has("poster")}>
@@ -111,6 +111,9 @@ function ArtworkFrame(props: ArtworkProps & { frame: Accessor<Frame>; foreground
 
 /** Prepared nodes become the visible nodes; no second fetch or decode on commit. */
 export function HeroArtwork(props: ArtworkProps) {
+  const native = typeof (globalThis as any).__SolidTVRokuRenderer !== "undefined";
+  const scrim = createMemo(() => props.presentation.mode() === "detail" ? backdropScrimSource() : homeScrimSource());
+  const [loadedScrim, setLoadedScrim] = createSignal<string>();
   const [roots,setRoots]=createSignal(new Map<number, [any?, any?]>());
   const register=(id:number,foreground:boolean,node?:any) => setRoots(previous => {
     const next=new Map(previous), pair: [any?,any?]=[...(previous.get(id) ?? [])];
@@ -132,14 +135,18 @@ export function HeroArtwork(props: ArtworkProps) {
   return <TvView w={1920} h={1080}>
     <TvView w={1920} h={1080}>
       <KeyedFor each={props.presentation.frames()} keyOf={frame => frame.id}>{frame =>
-        <ArtworkFrame {...props} frame={frame} foreground={false} register={register} />
+        <ArtworkFrame {...props} frame={frame} foreground={false} scrimReady={native || loadedScrim() === scrim()} register={register} />
       }</KeyedFor>
     </TvView>
-    <TvView nativePaintBand="scrim" w={1920} h={1080} src={props.presentation.mode() === "detail" ? backdropScrimSource() : homeScrimSource()} />
+    {native ? <TvView nativePaintBand="scrim" w={1920} h={1080} src={scrim()} /> : <TvView w={1920} h={1080}>
+      <Show when={scrim()} keyed>{source =>
+        <TvView nativePaintBand="scrim" w={1920} h={1080} src={source} preload onLoad={() => setLoadedScrim(source)} />
+      }</Show>
+    </TvView>}
     <TvView w={1920} h={1080} color={palette.bg} alpha={props.dim} />
     <TvView w={1920} h={1080}>
       <KeyedFor each={props.presentation.frames()} keyOf={frame => frame.id}>{frame =>
-        <ArtworkFrame {...props} frame={frame} foreground={true} register={register} />
+        <ArtworkFrame {...props} frame={frame} foreground={true} scrimReady register={register} />
       }</KeyedFor>
     </TvView>
   </TvView>;

@@ -1,3 +1,12 @@
+# Canvas presentation candidate
+
+| State | Browser evidence | Device limit |
+| --- | --- | --- |
+| Focus colors | Actual Canvas pixels during occupied image decode slots and 1100ms later; full/scaled TV viewports | Physical PS4 unverified |
+| Season choices | Bounded label/value columns; actual pixels remain inside rows at 1920×1080 and 1540×754 | Native-host smoke only |
+| Hero gradients | Delayed scrim blocks bright artwork; bright-background contrast and sharp right artwork preserved | Physical firmware unverified |
+| Player chrome | Buffering retains lease tools; thumb pixels appear only with timeline focus | Early admission publication belongs to playback lifecycle validation |
+
 # Current delivery boundaries
 
 | Area | Verified evidence | Limit |
