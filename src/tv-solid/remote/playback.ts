@@ -332,7 +332,7 @@ export class RemotePlayback {
     const lease = this.lease, generation = this.generation, intent = this.intentGeneration,
       activity = this.activity, playing = this.player.snapshot.state === "playing";
     const current = () => this.generation === generation && this.lease?.id === lease.id && this.player.snapshot.state !== "ended";
-    const completion = Promise.all([Promise.resolve().then(() => this.player.pause()), this.renew(lease, generation)])
+    const completion = Promise.all([Promise.resolve().then(() => { if (current()) return this.player.pause(); }), this.renew(lease, generation)])
       .then(async ([, renewed]) => {
         if (renewed && current() && intent === this.intentGeneration && playing && activity === this.activity && document.visibilityState === "visible")
           await this.player.play();

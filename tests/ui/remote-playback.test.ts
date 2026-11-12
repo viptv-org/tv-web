@@ -707,3 +707,19 @@ it("never reschedules a late heartbeat after the decoder ended", async () => {
   expect(api.release).not.toHaveBeenCalled();
   expect(controller.leaseId).toBe("heartbeat");
 });
+
+it("does not apply a queued foreground pause after the user stopped", async () => {
+  const { controller, api, player, failure } = heartbeatSetup();
+  await controller.start(card, { id: "source" }, false);
+  const visibility = vi.spyOn(document, "visibilityState", "get").mockReturnValue("visible");
+  try {
+    player.pause.mockClear(); player.play.mockClear();
+    document.dispatchEvent(new Event("visibilitychange"));
+    await controller.stop();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(player.pause).not.toHaveBeenCalled();
+    expect(player.play).not.toHaveBeenCalled();
+    expect(api.release).toHaveBeenCalledOnce();
+    expect(failure).not.toHaveBeenCalled();
+  } finally { visibility.mockRestore(); }
+});
