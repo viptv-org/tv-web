@@ -1,3 +1,26 @@
+# Canvas presentation candidate
+
+The candidate retains the UI presentation branch at `a73e0d0`; hosted beta
+remains `d559dbb`. Canvas text pixels bypass artwork fetch/decode slots. Choice
+rows reserve bounded label/value columns with 24px right padding. Browser hero
+artwork waits for its packaged scrim. The seek thumb is visible only while the
+timeline has focus. This presentation intent supersedes the always-visible thumb.
+Native artwork and scrim paint bands remain unchanged.
+
+Production build, grouped typechecks, 344 shared units (including four
+source/distribution texture tests) and 52 native-host units pass. Nine final
+Canvas/hero checks pass; 29 existing Canvas, preparation and player checks pass. Canvas pixel checks at 1920×1080 and 1540×754 cover
+focus colors during occupied artwork decode slots, unchanged correct colors
+1100ms later, season option containment and delayed scrims. Buffering controls
+retain the server lease's tools; a separate admission snapshot fix publishes
+those capabilities before decoder open finishes. Existing WebGL/Canvas hero
+contrast, preparation, source progress, Back and disposal checks remain covered.
+
+Private before/after captures and logs are under
+`/tmp/viptv-priority-private/agents/canvas117/`. These are fixture browser and
+native-host results. Physical PS4, Roku and Samsung acceptance remains unverified
+for this candidate; no deployment or physical-device operation is included.
+
 # Current TV delivery and qualification
 
 Beta serves TV `d559dbb` and backend `8d995a5`. Managed rollout, container health,
