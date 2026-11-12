@@ -602,3 +602,18 @@ Implementation `4cf36237e70b387aacad8a3c5521d5f2ee9eaf9e`;
 | Layout and media preservation | Current browse actions/progress, composed welcome, Library controls, compact recovery, consistent selector gaps, centered managed-seek activity, track/style and playback-authority regressions | Exact reported title/provider sequence and physical caption presentation remain unqualified |
 | Slow artwork | Initial text and mounted preparation; valid delayed completion beyond 2500ms; coherent replacement and canceled-node retirement | Native callback timing and exact first-title follow-up pending |
 | Skip/Playback settings | Intro/Recap range boundaries, visible shortcut/toolbar, paused Select seek, invalid/disabled markers; distinct server settings and device autoplay order/copy | Provider-specific markers and physical shortcut acceptance remain separate |
+
+## Owner-scoped TV presentation refinement
+
+Contract: TV-web #114 and SPEC.md, pinned snapshot
+`059b76344f4fed0639bedf8f89e0bd6e2b22cecd`. Implementation source:
+`77d6f4b544de3cd785805a49e0a67cd52791f58b`. This scope supersedes the older
+blurred Home-preview row above for this client.
+
+| State | Functional and visual browser evidence | Device evidence / disposition |
+|---|---|---|
+| Home hero and Continue Watching | WebGL/Canvas sharp right artwork, black copy region, generated bottom fade, untouched foreground art, prepared-node reuse and bounded preview decoding; exact-baseline private captures inspected | Native package/type checks pass; physical Roku and other TV firmware unverified |
+| Hero and shelf indicators | Running/parked off-white geometry, once-through cycle and interruptions; shelf marker outside card clip with safe bottom bounds | Native Back mapping unit passes; native indicator pixels unqualified |
+| Detail preparation | Movie/series layout shapes, restrained parent shimmer and static reduced motion; Back rejects abandoned metadata | Browser reviewed; native compile only |
+| Source preparation and recovery | Centered title/artwork/progress/cancel, no retained drawer text, guarded artwork preservation; real admission failure/retry, Back cancel and replacement lease cleanup | Browser fixture/decoded-media evidence; physical cancellation timing pending |
+| Player controls | Uniform icon size and 12px gaps; menu-first Back, rendered chrome dismissal during playback/seek/buffering/end, continued media and eventual cleanup | Browser/native-key translation verified; physical Roku reproduction remains to be retested |

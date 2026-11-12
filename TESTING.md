@@ -4182,3 +4182,41 @@ channel. Mask composition at (850,550) changes from approximately 170 with the
 former stops to 31 with the pinned stops; (80,550) is approximately 22. Both bright
 hero browser cases and the full production integrity/type/build checks pass with
 the regenerated assets. Logo and portrait pixels remain undimmed in both renderers.
+
+## Sharp Home artwork and dismissible player controls
+
+Source: `77d6f4b544de3cd785805a49e0a67cd52791f58b`, owner-scoped TV-web
+presentation contract in [#114](https://github.com/viptv-org/tv-web/issues/114).
+The pinned design snapshot stays at `059b76344f4fed0639bedf8f89e0bd6e2b22cecd`;
+SPEC.md records this client's deliberate presentation refinement.
+
+Production integrity/artwork/type/build checks pass, as do 337 shared unit tests
+and 51 native host tests. The final production browser batches pass 17
+hero/presentation scenarios, four end/proxy/replacement scenarios, and four
+source-opening/failure/cancellation scenarios after the source paint correction.
+Earlier targeted cases also pass for delayed navigation, coherent prepared-node
+identity, bounded shelf reversal, and late/failed artwork. Tests use one worker
+and the shared validation lock. Local TLS fixtures accept their test certificate;
+they do not establish production authentication or device qualification.
+
+Private 1920×1080 WebGL and Canvas captures compare the exact `03cb663` baseline
+with the implemented composition. Sharp artwork occupies (480,0,1440,810),
+preview decoding remains 960×540, and proxy requests contain no blur. Flat-white
+artwork leaves the synopsis edge at (850,550) below 45 per channel while the right
+artwork at (1700,250) exceeds 245. Prepared foreground logos/posters remain
+undimmed. The row marker is at x=1848 outside the card viewport ending at1824;
+its 220px column stays above the 54px bottom inset.
+
+Reviewed states include running/parked hero markers, the geometry-matched detail
+skeleton, and centered source preparation with artwork/title and cancel copy.
+Preparation suppresses the retained source drawer's visual tree, preventing text
+bleed; failures restore the picker, focus and real source error. Existing guarded
+presentation merging preserves artwork when a selector response is lean.
+Rendered-title/tool assertions cover Escape and native Back, continued media,
+managed seek/preview cancellation, persistent decoder buffering, ended controls,
+and subsequent playback cleanup.
+
+The native local release build and its type checks pass, with the generated Home
+scrim packaged. This is compile/host evidence. Physical Roku, PS4, Tizen, webOS and
+Vizio firmware acceptance remain pending; no device install or deployment is part
+of this validation.
