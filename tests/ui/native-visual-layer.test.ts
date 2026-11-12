@@ -6,6 +6,7 @@ it("keeps explicit right-side artwork below both packaged scrims and foreground"
   for (const name of ["home-scrim.png","hero-scrim.png","topbar-scrim.png"])
     expect(nativeVisualLayer({kind:"poster",width:1920,height:name.startsWith("topbar")?132:1080,src:`pkg:/assets/${name}`})).toBe("scrim");
   expect(nativeVisualLayer({kind:"poster",width:1920,height:1080,src:"pkg:/assets/replacement-mask.png",paintBand:"scrim"})).toBe("scrim");
+  expect(nativeVisualLayer({kind:"poster",width:1920,height:1080,src:"pkg:/assets/player-scrim.png",paintBand:"scrim"})).toBe("scrim");
   expect(nativeVisualLayer({kind:"poster",width:640,height:180,src:"https://art.example/logo.png"})).toBe("visual");
 });
 
