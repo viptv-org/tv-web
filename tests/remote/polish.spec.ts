@@ -192,7 +192,7 @@ test("Home reuses bounded shelf and poster nodes across vertical reversals",asyn
   expect(fixture.requests.filter(request=>request.path.endsWith('/home')||request.path.endsWith('/library'))).toHaveLength(0);
 });
 
-test("focused hero poster aligns to the profile edge with clearance and uses a sharp proxy backdrop",async({page,baseURL})=>{
+test("focused hero poster aligns to the profile edge with clearance and uses a blurred full-width proxy backdrop",async({page,baseURL})=>{
   const fixture=await installRemoteBackend(page,baseURL!),home=fixture.bootstrap().home!;
   const card={...fixture.card,identity:{...fixture.card.identity,id:'proxy-preview'},logo:null,
     description:'Proxy backdrop and aligned portrait preview',poster:'https://image.tmdb.org/t/p/original/preview-poster.jpg',
@@ -218,6 +218,6 @@ test("focused hero poster aligns to the profile edge with clearance and uses a s
   expect(boxes.poster.x+boxes.poster.w).toBe(boxes.avatar.x+boxes.avatar.w);
   expect(boxes.poster.y-boxes.avatar.y-boxes.avatar.h).toBeGreaterThanOrEqual(48);
   expect(boxes.poster.y+boxes.poster.h).toBeLessThan(530);
-  expect(requests.some(url=>!url.searchParams.has('blur')&&url.searchParams.get('w')==='960')).toBe(true);
+  expect(requests.some(url=>url.searchParams.get('blur')==='8'&&url.searchParams.get('w')==='960')).toBe(true);
   expect(requests.some(url=>url.searchParams.get('w')==='240'&&!url.searchParams.has('blur'))).toBe(true);
 });

@@ -1,3 +1,11 @@
+# Coherent branding and preview composition
+
+| State | Browser evidence | Device limit |
+| --- | --- | --- |
+| Movie/series Details and Home shelf branding | Issue #133 red probes reproduce overlap; actual logo pixels, midpoint/reduced motion, cached/delayed reversals and shared prepared geometry pass in Canvas/WebGL at 1920×1080 and 1540×754 | Native-host units only; physical firmware unverified |
+| Known logo readiness | Pending logo reserves space; missing/failed logo uses title; existing detail skeleton/shimmer and prepared-node reuse remain covered | Fixture API/image boundaries |
+| Preview composition | Portrait proxy blur 8/full-width/cover requests and sharp poster; single-image 4/3 zoom remains in its right clip with bounded decode sizes and black copy mask | Fixture JPEG captures; live proxy and hardware unqualified |
+
 # Continue Watching selection identity
 
 | State | Browser evidence | Device limit |

@@ -25,19 +25,31 @@ The compact season chooser labels season zero “Specials”, initially focuses 
 regular season, and retains explicit or resumed specials. Android TV's current
 reference uses a strip; its phone/desktop surfaces use a picker. This TV-web
 chooser is an owner-scoped refinement, not a claim that Android TV uses a dropdown.
-Home and focused shelf backdrops stay sharp and occupy the right-hand 1440×810
-rectangle at (480,0). A packaged smooth scrim keeps the title/logo area mostly
-black and fades the artwork into the shelf below. Preview decoding stays bounded
-at 960×540; the prepared nodes are reused through replacement. Focus settles for
-120ms before preparing a replacement, and the displayed artwork remains until
-readiness. The portrait preview remains 240×360 at (1584,144).
+Featured and Continue/single-image artwork stays sharp inside the right-hand
+1440×810 clip at (480,0). Its image content grows by 4/3, centered at local
+(-240,-135) with a 1920×1080 image; hero decoding remains bounded at 1440×810,
+and focused single-image decoding at 1280×720. Other portrait shelf previews use
+a full-width 1920×1080 backdrop, proxy blur 8 and bounded 960×540 decoding, with
+the separate sharp 240×360 poster at (1584,144). The packaged black copy/lower
+mask stays unchanged. No client-side blur or per-frame image work is added.
+Focus settles for 120ms before preparing a replacement, and the displayed
+artwork remains until readiness; prepared image nodes are reused.
 
-The owner-scoped presentation contract in [TV-web #114](https://github.com/viptv-org/tv-web/issues/114)
-supersedes this client's earlier blurred/full-width Home composition and loading
-copy, without claiming adoption by other clients or moving DESIGN_REF. The
-supplied owner image is a composition reference only. Canonical scoped authority is
-[TV-PRESENTATION-114](https://github.com/viptv-org/design/blob/1f50bdc2e95b73562307f49d36f61851720bf2c7/docs/platforms/TV_PRESENTATION_REFINEMENT.md)
-and its [copy catalog](https://github.com/viptv-org/design/blob/1f50bdc2e95b73562307f49d36f61851720bf2c7/viptv-design-system/copy.md).
+Home logos share one animated bottom anchor, so current, incoming and retiring
+branding follows the summary through cached or delayed shelf changes. Movie and
+series Details both compact branding at (96,54), fitting 220×68, when focus enters
+their lower lists. Summary/list geometry uses the same 220ms ease-out motion;
+reduced motion applies final positions immediately. Layout changes scale the
+loader's existing prepared logo dimensions without fetching or rasterizing a
+replacement. Known pending logos reserve their space without a title flash;
+absent/failed logos retain the title fallback. Detail skeleton/shimmer is unchanged.
+
+The owner-scoped contracts in [TV-web #114](https://github.com/viptv-org/tv-web/issues/114)
+and [TV-web #133](https://github.com/viptv-org/tv-web/issues/133) supersede the
+named earlier composition/loading rules without claiming adoption by other clients
+or moving DESIGN_REF. Canonical scoped authority is
+[TV-PRESENTATION-114/133](https://github.com/viptv-org/design/blob/a24d507c6f1bdd0b86e4565c4a39922aa2999f9d/docs/platforms/TV_PRESENTATION_REFINEMENT.md)
+and its [copy catalog](https://github.com/viptv-org/design/blob/a24d507c6f1bdd0b86e4565c4a39922aa2999f9d/viptv-design-system/copy.md).
 DESIGN_REF deliberately remains at `059b76344f4fed0639bedf8f89e0bd6e2b22cecd`;
 unrelated upstream design changes are intentionally not adopted in this scope.
 The generated Home mask
