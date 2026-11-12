@@ -67,6 +67,7 @@ import { createRevisionPoller } from "./session/revisions";
 import { createLiveMenu } from "./menus/live";
 import { createCardMenu } from "./menus/card";
 import { createPlayerActivation } from "./activation/player";
+import { createPlayerTransport } from "./player-transport";
 import { createSeasonPicker } from "./activation/seasons";
 import { createSourceRows } from "./source-picker/rows";
 import { createSourcePublisher } from "./source-picker/publisher";
@@ -722,6 +723,10 @@ export function createRemoteTvApp(
         }).catch(() => notify("Couldn’t save this source choice on this device.")).finally(() => setSourceMemoryPending(v => Math.max(0, v - 1)));
       },
     );
+    const playerTransport = createPlayerTransport({
+      play: () => player.player.play(), pause: () => player.player.pause(), pending: setPauseRequested,
+      reveal: () => { setShowControls(true); setChoice(0); }, activity: () => hideControls(), active: () => screen() === "player",
+    });
     const discoverEpisode = createEpisodeDiscovery({api, memory: sourceMemory});
     const episodes = new EpisodePreparation(
       (card, signal) => api.next(card, signal),
@@ -1851,8 +1856,7 @@ export function createRemoteTvApp(
       if (!overlays.restoreParent()) closeOverlay();
     }
     async function leavePlayer() {
-      playbackTransportIntent++;
-      setPauseRequested(false);
+      playerTransport.retire();
       clearTimeout(controlsTimer);
       resetScope();
       setSeek(undefined);
@@ -2173,6 +2177,7 @@ export function createRemoteTvApp(
     async function playSource(source: Source, direct = false, manual = true): Promise<boolean> {
       const current = action();
       if (!current) return false;
+      playerTransport.retire();
       const attempt = ++sourceAttempt;
       if (manual) sourceIntent++;
       const outgoing = { lease: player.leaseId, action: activeAction(), source: activeSource(), channel: activeChannel() };
@@ -2262,21 +2267,6 @@ export function createRemoteTvApp(
         if (started && overlay()?.kind === "sources") overlays.hide();
       }
       return started;
-    }
-    let playbackTransportIntent = 0;
-    async function setPlaybackPlaying(playing: boolean) {
-      const intent = ++playbackTransportIntent;
-      setPauseRequested(!playing);
-      if (!playing) { setShowControls(true); setChoice(0); }
-      try {
-        if (playing) await player.player.play();
-        else await player.player.pause();
-      } catch (error) {
-        if (intent === playbackTransportIntent) setPauseRequested(false);
-        throw error;
-      } finally {
-        if (intent === playbackTransportIntent && screen() === "player") hideControls();
-      }
     }
     createEffect(() => {
       if (screen() !== "player" || ["paused", "ended", "error"].includes(snapshot()?.state ?? "")) setPauseRequested(false);
@@ -2688,7 +2678,7 @@ export function createRemoteTvApp(
       filtering: {value: sourceFiltering, set: setSourceFiltering}, manual: () => {manualSourceSelection = true;},
       generation: {next: () => ++sourceFilterGeneration, current: () => sourceFilterGeneration}, operation: () => sourceScope,
       signal: () => sourceScope?.signal ?? scope.signal, rank: (ids, height, signal, reuse) => api.rankSources(ids, height, signal, reuse), play: playSource});
-    const activatePlayer = createPlayerActivation({player, snapshot, setPlaying: setPlaybackPlaying, actions: playerActions, action: activeAction, channel: activeChannel, choice, buttons: playerButtons,
+    const activatePlayer = createPlayerActivation({player, snapshot, setPlaying: playerTransport.setPlaying, actions: playerActions, action: activeAction, channel: activeChannel, choice, buttons: playerButtons,
       timeline: {value: seek, set: setSeek, seeking: setSeeking}, chrome: {visible: showControls, set: setShowControls, hide: hideControls},
       segments: {active: activeSegment, clear: () => {setPlaybackSegments([]);}, refresh: refreshPlaybackSegments},
       skipEnabled: () => preferences()?.preferences.skip_intros !== false, next: advanceEpisode, tracks: openTracks, play: playIntent,
@@ -3081,7 +3071,7 @@ export function createRemoteTvApp(
       inputRequested = true;
       const input = createKeyboardInput({screen, overlay, zone, cancelCountdown: () => countdown.cancel(), hideControls,
         pair: beginPairing, stop: leavePlayer, text: setText, query: search, search: updateSearch, fail,
-        media: createPlayerMediaKeys({player, snapshot, setPlaying: setPlaybackPlaying, actions: playerActions, active: activeAction, seeking: {current: seeking, set: setSeeking},
+        media: createPlayerMediaKeys({player, snapshot, setPlaying: playerTransport.setPlaying, actions: playerActions, active: activeAction, seeking: {current: seeking, set: setSeeking},
           revealEnded: revealEndedControls, play: playIntent, chrome: {show: setShowControls, hide: hideControls},
           segments: {clear: () => {setPlaybackSegments([]);}, refresh: refreshPlaybackSegments}, fail})});
       onCleanup(installWindowInputs({keyboard: input, screen, overlay, loading, error, pair: beginPairing, stop: leavePlayer,
@@ -3090,6 +3080,7 @@ export function createRemoteTvApp(
     });
     onCleanup(() => {
       alive = false;
+      playerTransport.retire();
       heldSelect.cancel();
       overlays.dispose();
       scope.abort();

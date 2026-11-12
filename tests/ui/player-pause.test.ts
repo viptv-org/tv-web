@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createPlayerActivation } from '../../src/tv-solid/remote/activation/player';
+import { createPlayerTransport } from '../../src/tv-solid/remote/player-transport';
 import { createPlayerMediaKeys } from '../../src/tv-solid/remote/input/player-media';
 
 function fixture() {
@@ -43,5 +44,40 @@ describe('pause chrome intent', () => {
       revealEnded:()=>false, chrome:{show:f.options.chrome.set,hide:vi.fn()}, fail:vi.fn()};
     createPlayerMediaKeys(options as unknown as Parameters<typeof createPlayerMediaKeys>[0])(new KeyboardEvent('keydown',{key}));
     expect(f.setPlaying).toHaveBeenCalledWith(false); expect(f.visible()).toBe(true);
+  });
+});
+
+function deferred() {
+  let resolve!: () => void, reject!: (error: Error) => void;
+  const promise = new Promise<void>((yes,no)=>{resolve=yes;reject=no;});
+  return {promise,resolve,reject};
+}
+describe('transport admission retirement', () => {
+  it('a replacement retires delayed pause intent and its old completion cannot rearm new chrome', async () => {
+    const command=deferred(), pending=vi.fn(), activity=vi.fn(), reveal=vi.fn();
+    const transport=createPlayerTransport({pause:()=>command.promise,play:vi.fn(),pending,reveal,activity,active:()=>true});
+    const old=transport.setPlaying(false); expect(pending).toHaveBeenLastCalledWith(true); expect(reveal).toHaveBeenCalledOnce();
+    transport.retire(); expect(pending).toHaveBeenLastCalledWith(false);
+    command.resolve(); await old; expect(activity).not.toHaveBeenCalled(); expect(pending).toHaveBeenCalledTimes(2);
+  });
+  it('a rejected old pause cannot report a failure into a replacement session', async () => {
+    const command=deferred(), activity=vi.fn();
+    const transport=createPlayerTransport({pause:()=>command.promise,play:vi.fn(),pending:vi.fn(),reveal:vi.fn(),activity,active:()=>true});
+    const old=transport.setPlaying(false); transport.retire(); command.reject(new Error('old adapter'));
+    await expect(old).resolves.toBeUndefined(); expect(activity).not.toHaveBeenCalled();
+  });
+  it('an older pause completion leaves a new pause intent owned by the replacement', async () => {
+    const oldCommand=deferred(), newCommand=deferred(), pending=vi.fn(), activity=vi.fn();
+    let command=oldCommand;
+    const transport=createPlayerTransport({pause:()=>command.promise,play:vi.fn(),pending,reveal:vi.fn(),activity,active:()=>true});
+    const old=transport.setPlaying(false); transport.retire(); command=newCommand;
+    const current=transport.setPlaying(false); oldCommand.resolve(); await old;
+    expect(pending).toHaveBeenLastCalledWith(true); expect(activity).not.toHaveBeenCalled();
+    newCommand.resolve(); await current; expect(activity).toHaveBeenCalledOnce();
+  });
+  it('current command failure releases pending chrome ownership and remains visible to its caller', async () => {
+    const pending=vi.fn(); const error=new Error('pause failed');
+    const transport=createPlayerTransport({pause:async()=>{throw error;},play:vi.fn(),pending,reveal:vi.fn(),activity:vi.fn(),active:()=>true});
+    await expect(transport.setPlaying(false)).rejects.toBe(error); expect(pending).toHaveBeenLastCalledWith(false);
   });
 });
