@@ -9,7 +9,7 @@ Native artwork and scrim paint bands remain unchanged.
 
 Production build, grouped typechecks, 344 shared units (including four
 source/distribution texture tests) and 52 native-host units pass. Nine final
-Canvas/hero checks pass; 29 existing Canvas, preparation and player checks pass. Canvas pixel checks at 1920×1080 and 1540×754 cover
+Canvas/hero checks pass; 30 existing Canvas, preparation and player checks pass. Canvas pixel checks at 1920×1080 and 1540×754 cover
 focus colors during occupied artwork decode slots, unchanged correct colors
 1100ms later, season option containment and delayed scrims. Buffering controls
 retain the server lease's tools; a separate admission snapshot fix publishes
