@@ -170,3 +170,11 @@ DESIGN_REF; unrelated design assets and upstream behavior are outside this chang
 Missing or unavailable optional synchronization retains the revalidated canonical
 provider/manual view across a seek. Returned audio/hash mismatches and authority
 failures still reject restoration.
+
+Hidden player Select pauses and reveals Play controls unless an independently
+visible Skip intro/recap shortcut owns that press. Visible controls retain their
+selected action. MediaPause and pause toggles reveal controls immediately; they
+stay visible while pause is pending or playback is paused. Back may hide paused
+controls without stopping playback. Resume restores the ordinary idle timeout.
+New source admissions, including Next, retire pending transport chrome ownership;
+late completion or failure from the outgoing command cannot change the new chrome.
