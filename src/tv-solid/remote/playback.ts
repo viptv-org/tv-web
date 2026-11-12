@@ -23,6 +23,20 @@ const noActions: PlaybackActions = {
   report_progress: false,
 };
 
+type VideoEvidence = "compositor" | "playback-quality" | "decoded-counter" | "adapter-first-frame" | "native-progress";
+
+function observedVideoEvidence(snapshot: PlayerSnapshot, platform: string, startPosition: number): VideoEvidence | undefined {
+  const facts = snapshot.diagnostics;
+  if (Number.isFinite(facts?.presentedFrames) && (facts?.presentedFrames ?? 0) > 0) return "compositor";
+  const total = facts?.videoFrames, dropped = facts?.droppedFrames;
+  if (typeof total === "number" && Number.isFinite(total) && total >= 0 &&
+      typeof dropped === "number" && Number.isFinite(dropped) && dropped >= 0 && dropped <= total)
+    return total > dropped ? "playback-quality" : undefined;
+  if (Number.isFinite(facts?.decodedFrames) && (facts?.decodedFrames ?? 0) > 0) return "decoded-counter";
+  if (typeof facts?.firstFrameMs === "number" && Number.isFinite(facts.firstFrameMs) && facts.firstFrameMs >= 0) return "adapter-first-frame";
+  if (platform === "tizen" && snapshot.time.positionSeconds > startPosition) return "native-progress";
+}
+
 /** Decoder effects and lease lifetimes only. The server selects every source,
  * episode, resume position and output; this class never chooses a fallback. */
 export class RemotePlayback {
@@ -44,6 +58,7 @@ export class RemotePlayback {
   private pendingEvents = 0;
   private started = false;
   private firstVideo = false;
+  private videoEvidence?: VideoEvidence;
   private failing = false;
   private lastProgress = 0;
   private startPosition = 0;
@@ -84,13 +99,12 @@ export class RemotePlayback {
       this.present(snapshot);
       const lease = this.lease;
       if (snapshot.state === "playing" && lease) {
-        const videoObserved =
+        const evidence = observedVideoEvidence(snapshot, this.player.capabilities.platform, this.startPosition);
+        const videoObserved = evidence !== undefined;
+        const playbackObserved = videoObserved ||
           snapshot.diagnostics?.firstFrameMs !== undefined ||
-          (snapshot.diagnostics?.presentedFrames ?? 0) > 0 ||
           (snapshot.diagnostics?.decodedFrames ?? 0) > 0 ||
           Math.max(0, (snapshot.diagnostics?.videoFrames ?? 0) - (snapshot.diagnostics?.droppedFrames ?? 0)) > 0 ||
-          (this.player.capabilities.platform === "tizen" && snapshot.time.positionSeconds > this.startPosition);
-        const playbackObserved = videoObserved ||
           snapshot.diagnostics?.presentationEvidence === "media-progress" ||
           (snapshot.diagnostics?.presentedFrames === undefined &&
             snapshot.diagnostics?.decodedFrames === undefined &&
@@ -100,6 +114,7 @@ export class RemotePlayback {
             snapshot.time.positionSeconds > this.startPosition);
         if (!this.firstVideo && videoObserved) {
           this.firstVideo = true;
+          this.videoEvidence = evidence;
           if (this.card && this.source) {
             try { this.presented?.(lease.id, this.card, this.source); } catch { /* persistence never interrupts video */ }
           }
@@ -162,6 +177,7 @@ export class RemotePlayback {
     return this.lease?.id;
   }
   get hasPresentedFrame() { return this.firstVideo && !!this.lease; }
+  get firstVideoEvidence() { return this.lease ? this.videoEvidence : undefined; }
   get hasPlaybackProgress() { return this.started && !!this.lease; }
   get actions(): PlaybackActions {
     return this.lease?.actions ?? this.seekView?.actions ?? noActions;
@@ -464,6 +480,7 @@ export class RemotePlayback {
     this.sequence = 0;
     this.started = false;
     this.firstVideo = false;
+    this.videoEvidence = undefined;
     const delivery = lease.delivery!;
     this.startPosition =
       (delivery.position ?? 0) + (delivery.timeline_offset_seconds ?? 0);

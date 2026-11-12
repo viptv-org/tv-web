@@ -332,3 +332,28 @@ it("keeps clock-only startup usable without verifying a source while acknowledgi
   expect(controller.hasPlaybackProgress).toBe(true);expect(controller.hasPresentedFrame).toBe(false);
   expect(presented).toHaveBeenCalledOnce();
 });
+
+it.each([0,3])("does not promote decoded-only progress over valid all-dropped quality counters (total=%s)",async total=>{
+  const {controller,player,api,emit,presented}=setup();await controller.start(card,{id:"source"},false);
+  player.snapshot={...player.snapshot,diagnostics:{engine:"native-html",transport:"hls",decodedFrames:3,videoFrames:total,droppedFrames:total}};emit();emit();
+  expect(controller.hasPlaybackProgress).toBe(true);expect(controller.hasPresentedFrame).toBe(false);expect(controller.firstVideoEvidence).toBeUndefined();
+  expect(presented).not.toHaveBeenCalled();expect(api.call.mock.calls.filter(([path])=>String(path).endsWith('/first-frame'))).toHaveLength(1);
+  player.snapshot={...player.snapshot,diagnostics:{engine:"native-html",transport:"hls",decodedFrames:3,videoFrames:3,droppedFrames:2}};emit();emit();
+  expect(controller.hasPresentedFrame).toBe(true);expect(controller.firstVideoEvidence).toBe("playback-quality");expect(presented).toHaveBeenCalledOnce();
+  expect(api.call.mock.calls.filter(([path])=>String(path).endsWith('/first-frame'))).toHaveLength(1);
+});
+
+
+it("prioritizes compositor evidence over conflicting quality counters",async()=>{
+  const {controller,player,emit,presented}=setup();await controller.start(card,{id:"source"},false);
+  player.snapshot={...player.snapshot,diagnostics:{engine:"native-html",transport:"hls",presentedFrames:1,decodedFrames:3,videoFrames:3,droppedFrames:3}};emit();emit();
+  expect(controller.hasPresentedFrame).toBe(true);expect(controller.firstVideoEvidence).toBe("compositor");expect(presented).toHaveBeenCalledOnce();
+});
+
+it("labels decoded-only fallback without claiming compositor evidence when quality is unavailable",async()=>{
+  const {controller,player,emit,presented}=setup();await controller.start(card,{id:"source"},false);
+  player.snapshot={...player.snapshot,diagnostics:{engine:"native-html",transport:"hls",decodedFrames:3}};emit();emit();
+  expect(controller.hasPresentedFrame).toBe(true);expect(controller.firstVideoEvidence).toBe("decoded-counter");expect(presented).toHaveBeenCalledOnce();
+  expect(player.snapshot.diagnostics?.presentedFrames).toBeUndefined();
+  await controller.start(card,{id:"next"},false);expect(controller.hasPresentedFrame).toBe(false);expect(controller.firstVideoEvidence).toBeUndefined();
+});

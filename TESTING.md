@@ -4225,3 +4225,8 @@ admission; paused media position holds. The legacy startup ACK fires once from
 clock-only progress, and later actual video evidence promotes strict consumers
 once without another ACK. Gateway contract review confirms torrent startup has
 an independent120s deadline until that ACK, regardless of ordinary lease renewal.
+
+Playback evidence precedence covers simultaneous decoded/all-dropped counters,
+zero output totals, later non-dropped promotion, compositor precedence and an
+explicit decoded-only fallback label. Transport startup acknowledgement remains
+usable and fires once while strict video consumers wait for output evidence.

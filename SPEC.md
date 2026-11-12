@@ -75,3 +75,8 @@ satisfy them. The legacy first-frame endpoint also acknowledges usable transport
 startup: torrent sessions require that handshake to clear their independent
 startup deadline. Its compatibility acknowledgement is not a verified-video flag. Playback-quality totals exclude
 dropped frames when accepted as video output evidence.
+
+Compositor callbacks take priority over playback-quality counters. Valid quality
+counters require non-dropped output before source learning or Next preparation;
+a decoded counter alone cannot override all-dropped output. Decoded-only evidence
+is labeled `decoded-counter` when usable quality counters are unavailable.
