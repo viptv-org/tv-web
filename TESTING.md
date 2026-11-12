@@ -4524,8 +4524,10 @@ physical PS4, Roku, Tizen, webOS and Vizio appearance remains unqualified here.
 
 Full validation on the merged subtitle/source-memory baseline passes 388 shared
 and 52 native-host units, all TypeScript groups and the production build.
-Ten focused input/transport cases cover hidden stale selections, visible tools,
-explicit Skip, media pause keys, admission retirement and stale success/failure.
+Eleven focused input/transport cases cover hidden stale selections, visible tools,
+explicit Skip, media pause keys, admission retirement, stale success/failure and
+late rejection after leaving the player without explicit transport retirement.
+Active current failures remain visible to the caller.
 
 Nine owned real-HLS browser cases pass: WebGL and Canvas hold controls through
 6.2-second pause/resume acknowledgements and waits beyond the five-second idle
