@@ -4538,3 +4538,31 @@ marker actions, plus nullable-source persistence under both renderers, pass.
 These are simulated PS4/browser checks; physical PS4 and other TV firmware remain
 unverified. HTTPS fixtures and private patched Canvas dependencies are isolated;
 no deployment, account mutation or device operation is part of this validation.
+
+### Combined beta qualification
+
+The integrated product code at `46d499eac54102f9b272a417d59c01f34196903f`
+passes389 shared units,52 native host units, the production integrity/type/build
+and a fresh local native bundle build. The isolated dependency inventory verifies
+674 private Canvas files,674 unchanged shared Canvas files and26 package manifests.
+
+Eighty-three focused browser cases cover visible Continue selection and playback
+identity, horizontal/vertical focus, top navigation, loading recovery, source
+presentation, source-memory null handling, legacy session rotation, grouped
+Search, authored gradients, timeline-only thumbs, Back, delayed pause/resume,
+skip and Next. Five additional decoded-HLS/WebVTT cases pass for web, webOS,
+legacy webOS, Vizio and Tizen host modes. These are desktop browser/platform
+simulations; physical PS4 decoder behavior and vendor-firmware compatibility
+are separate qualifications.
+
+The poster-alignment test initially sampled the renderer before its prepared
+poster became renderable. It now waits for both actual geometry nodes before
+checking the unchanged alignment,clearance and sharp-proxy assertions. The
+failed sample is retained in private evidence; the focused rerun and remaining
+cases pass. No product behavior was changed to satisfy that test.
+
+Source-preservation checks verify the deployed TV/backend revisions are ancestors
+of the candidate. Gateway qualification must also include the retained deployed
+HLS/cache lineage; ancestry and live binary markers are checked independently of
+image labels. Runtime,served-asset and authenticated live acceptance are recorded
+in the rollout issue rather than inferred from build or deployment status.
