@@ -13,7 +13,7 @@ const scene = (page: Page) => page.evaluate(() => {
       if (node.props.text) paintedTexts.push(node.props.text);
       const src = node.texture?.props?.src;
       if (typeof src === 'string' && src.includes('/api/images/clearlogo/v1/tt125') && node.absY < 500) logos.push(src);
-      if (node.props.w === 1440 && node.props.h === 810 && typeof src === 'string' && src.includes('/continue-125-')) backgrounds.push(src);
+      if (((node.props.w === 1440 && node.props.h === 810) || (node.props.w === 1920 && node.props.h === 1080)) && typeof src === 'string' && src.includes('/continue-125-')) backgrounds.push(src);
       if (node.props.w === 424 && node.props.h === 238 && typeof node.texture?.props?.src === 'string')
         cards.push({ src: node.texture.props.src, x: node.absX, y: node.absY });
       if (node.props.w === 424 && node.props.h === 4 && node.absY > 500 && (!ring || node.absY < ring.y)) ring = { x: node.absX, y: node.absY };

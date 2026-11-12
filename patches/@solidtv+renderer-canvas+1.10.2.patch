@@ -229,7 +229,7 @@ diff --git a/node_modules/@solidtv/renderer-canvas/dist/src/core/CoreNode.js b/n
          else {
              animations = this._animations = {};
 diff --git a/node_modules/@solidtv/renderer-canvas/dist/src/core/CoreTextureManager.js b/node_modules/@solidtv/renderer-canvas/dist/src/core/CoreTextureManager.js
-index 1653cbf..13c8d97 100644
+index 1653cbf..2571b68 100644
 --- a/node_modules/@solidtv/renderer-canvas/dist/src/core/CoreTextureManager.js
 +++ b/node_modules/@solidtv/renderer-canvas/dist/src/core/CoreTextureManager.js
 @@ -346,7 +346,8 @@ export class CoreTextureManager extends EventEmitter {
@@ -242,7 +242,20 @@ index 1653cbf..13c8d97 100644
              this.uploadTextureQueue.add(texture);
              return;
          }
-@@ -364,7 +365,7 @@ export class CoreTextureManager extends EventEmitter {
+@@ -359,12 +360,20 @@ export class CoreTextureManager extends EventEmitter {
+         // hits in bursts.
+         this.pendingLoads++;
+         try {
++            // Focus colors need decoded Canvas pixels before this frame is painted.
++            if (localPixels && this.renderer.mode === 'canvas' && texture.props.type !== 'compressed') {
++                const image = texture;
++                texture.textureData = { data: image.props.src,
++                    premultiplyAlpha: image.props.premultiplyAlpha ?? true };
++                this.uploadTexture(texture);
++                return;
++            }
+             // Bound concurrent main-thread fetch+decode. Only image textures have a
+             // fetch+decode to bound: colour and noise textures generate their bytes
              // synchronously, so gating them would only park them behind image
              // decodes. `decodeGate` is null when image workers handle decoding
              // off-thread.
@@ -251,7 +264,7 @@ index 1653cbf..13c8d97 100644
              if (gate !== null) {
                  await gate.acquire();
              }
-@@ -387,7 +388,7 @@ export class CoreTextureManager extends EventEmitter {
+@@ -387,7 +396,7 @@ export class CoreTextureManager extends EventEmitter {
                  return;
              }
              // Handle non-image textures: upload immediately
@@ -261,7 +274,7 @@ index 1653cbf..13c8d97 100644
                  // throwing, so there is nothing to catch here.
                  this.uploadTexture(texture);
 diff --git a/node_modules/@solidtv/renderer-canvas/src/core/CoreTextureManager.ts b/node_modules/@solidtv/renderer-canvas/src/core/CoreTextureManager.ts
-index 4f378d3..08902e2 100644
+index 4f378d3..addcb1d 100644
 --- a/node_modules/@solidtv/renderer-canvas/src/core/CoreTextureManager.ts
 +++ b/node_modules/@solidtv/renderer-canvas/src/core/CoreTextureManager.ts
 @@ -611,7 +611,8 @@ export class CoreTextureManager extends EventEmitter {
@@ -274,7 +287,20 @@ index 4f378d3..08902e2 100644
        this.uploadTextureQueue.add(texture);
        return;
      }
-@@ -631,7 +632,7 @@ export class CoreTextureManager extends EventEmitter {
+@@ -626,12 +627,20 @@ export class CoreTextureManager extends EventEmitter {
+     // hits in bursts.
+     this.pendingLoads++;
+     try {
++      // Focus colors need decoded Canvas pixels before this frame is painted.
++      if (localPixels && this.renderer.mode === 'canvas' && (texture as ImageTexture).props.type !== 'compressed') {
++        const image = texture as ImageTexture;
++        texture.textureData = { data: image.props.src as ImageData,
++          premultiplyAlpha: image.props.premultiplyAlpha ?? true };
++        this.uploadTexture(texture);
++        return;
++      }
+       // Bound concurrent main-thread fetch+decode. Only image textures have a
+       // fetch+decode to bound: colour and noise textures generate their bytes
        // synchronously, so gating them would only park them behind image
        // decodes. `decodeGate` is null when image workers handle decoding
        // off-thread.
@@ -283,7 +309,9 @@ index 4f378d3..08902e2 100644
        if (gate !== null) {
          await gate.acquire();
        }
-@@ -661,5 +662,5 @@ export class CoreTextureManager extends EventEmitter {
+@@ -659,7 +668,7 @@ export class CoreTextureManager extends EventEmitter {
+       }
+
        // Handle non-image textures: upload immediately
 -      if (isImage === false) {
 +      if (isImage === false || (localPixels && this.renderer.mode === 'canvas')) {
