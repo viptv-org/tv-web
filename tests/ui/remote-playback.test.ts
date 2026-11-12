@@ -48,6 +48,18 @@ function setup(presented = vi.fn()) {
 }
 
 describe("remote playback lease transitions", () => {
+  it("publishes newly admitted actions before decoder open resolves", async () => {
+    const {controller,player,publish}=setup();
+    let finish!:()=>void;
+    player.open.mockImplementationOnce(()=>new Promise<void>(resolve=>{finish=resolve;}));
+    const actions: boolean[]=[];
+    publish.mockImplementation(()=>{actions.push(controller.actions.seek);});
+    const starting=controller.start(card,{id:"source"},false);
+    await vi.waitFor(()=>expect(finish).toBeDefined());
+    expect(actions).toContain(true);
+    finish();await starting;
+  });
+
   it("returns from Back and releases its lease while native Stop is pending", async () => {
     const { controller, api, player } = setup();
     await controller.start(card, { id: "source" }, false);

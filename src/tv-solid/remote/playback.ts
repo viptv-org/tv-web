@@ -89,7 +89,9 @@ export class RemotePlayback {
           snapshot.diagnostics?.firstFrameMs !== undefined ||
           snapshot.diagnostics?.presentationEvidence === "media-progress" ||
           (snapshot.diagnostics?.presentedFrames ?? 0) > 0 ||
+          (snapshot.diagnostics?.decodedFrames ?? 0) > 0 ||
           (snapshot.diagnostics?.presentedFrames === undefined &&
+            snapshot.diagnostics?.decodedFrames === undefined &&
             this.player.capabilities.platform !== "tizen" &&
             video.readyState >= 2 &&
             video.videoWidth > 0 &&
@@ -460,6 +462,7 @@ export class RemotePlayback {
     this.startPosition =
       (delivery.position ?? 0) + (delivery.timeline_offset_seconds ?? 0);
     this.schedule();
+    this.present({ ...this.player.snapshot });
     try {
       if (generation !== this.generation)
         throw new DOMException("Playback cancelled", "AbortError");
