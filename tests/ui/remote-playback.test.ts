@@ -319,11 +319,11 @@ it("does not acknowledge an all-dropped video total as first-frame evidence", as
 });
 
 
-it("keeps clock-only startup usable without verifying a source or reporting a first video frame", async () => {
+it("keeps clock-only startup usable without verifying a source while acknowledging the legacy transport", async () => {
   const {controller,player,api,emit,presented}=setup();await controller.start(card,{id:"source"},false);
   player.snapshot={...player.snapshot,diagnostics:{engine:"native-html",transport:"hls",presentationEvidence:"media-progress"},time:{positionSeconds:2,durationSeconds:100}};emit();
   expect(controller.hasPlaybackProgress).toBe(true);expect(controller.hasPresentedFrame).toBe(false);
-  expect(presented).not.toHaveBeenCalled();expect(api.call.mock.calls.some(([path])=>String(path).endsWith('/first-frame'))).toBe(false);
+  expect(presented).not.toHaveBeenCalled();expect(api.call.mock.calls.filter(([path])=>String(path).endsWith('/first-frame'))).toHaveLength(1);
   player.snapshot={...player.snapshot,diagnostics:{engine:"native-html",transport:"hls",presentedFrames:2,presentedPositionSeconds:2}};emit();emit();
   expect(controller.hasPresentedFrame).toBe(true);expect(presented).toHaveBeenCalledOnce();
   expect(api.call.mock.calls.filter(([path])=>String(path).endsWith('/first-frame'))).toHaveLength(1);

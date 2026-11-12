@@ -103,16 +103,17 @@ export class RemotePlayback {
           if (this.card && this.source) {
             try { this.presented?.(lease.id, this.card, this.source); } catch { /* persistence never interrupts video */ }
           }
-          void api
-            .call(`/api/playback/${segment(lease.id)}/first-frame`, "POST", {})
-            .catch((error) => {
-              if (this.lease?.id === lease.id && this.player.snapshot.state !== "ended") this.fail(error);
-            });
         }
         if (!this.started && playbackObserved) {
           this.started = true;
           this.sourceRetry = undefined;
           this.lastProgress = Date.now();
+          // The legacy torrent startup budget requires this ACK even without frame APIs.
+          void api
+            .call(`/api/playback/${segment(lease.id)}/first-frame`, "POST", {})
+            .catch((error) => {
+              if (this.lease?.id === lease.id && this.player.snapshot.state !== "ended") this.fail(error);
+            });
           this.event("start");
         } else if (this.started && previous !== "playing") {
           this.lastProgress = Date.now();

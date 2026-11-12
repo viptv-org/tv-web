@@ -4208,11 +4208,20 @@ restart, seek or server conversion is introduced. Browser results do not qualify
 PS4 firmware, actual Safari or other physical TVs.
 
 TV production integrity/type/build checks,341 shared and50 native tests pass.
-Seventeen focused browser cases cover clocks, frame observations, subtitle output,
+Nineteen focused browser cases cover clocks, frame observations, subtitle output,
 platform lifecycle, seek preview, paused replacement and source recovery.
 
 A separate real-HLS case hides every frame API from the application while retaining
 an independent native frame-counter observer. Clock-only startup remains usable,
-while first-frame acknowledgement, source-choice persistence and automatic Next
-preparation remain absent. Real video evidence may promote that lease once; a
+while source-choice persistence and automatic Next preparation remain absent.
+The legacy startup acknowledgement remains present because torrent runtime
+startup deadlines remain active independently of ordinary viewer heartbeats. Real video evidence may promote that lease once; a
 replacement starts with no carried video-success marker.
+
+On-screen Play/Pause is exercised through normal remote focus in Canvas and
+WebGL. Native currentTime writes are observed without changing their behavior:
+Pause/Resume and canceling a timeline preview write no seek target or replacement
+admission; paused media position holds. The legacy startup ACK fires once from
+clock-only progress, and later actual video evidence promotes strict consumers
+once without another ACK. Gateway contract review confirms torrent startup has
+an independent120s deadline until that ACK, regardless of ordinary lease renewal.

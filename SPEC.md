@@ -69,7 +69,9 @@ before decoder preparation completes; paused and seek-preview ownership remain
 independent of startup and superseded Play acknowledgements.
 
 Usable media-clock progress permits startup without asserting a video frame.
-First-frame acknowledgement, source-choice persistence and automatic Next
-preparation require the existing adapter video/native evidence authority;
-clock-only HTML evidence does not satisfy them. Playback-quality totals exclude
+Source-choice persistence and automatic Next preparation require the existing
+adapter video/native evidence authority; clock-only HTML evidence does not
+satisfy them. The legacy first-frame endpoint also acknowledges usable transport
+startup: torrent sessions require that handshake to clear their independent
+startup deadline. Its compatibility acknowledgement is not a verified-video flag. Playback-quality totals exclude
 dropped frames when accepted as video output evidence.
