@@ -4,16 +4,18 @@ import type { Source, TitleAction } from "../types";
 export async function startSourceCandidate(options: {
   player: Pick<RemotePlayback, "replaceSource" | "start" | "stop" | "hasPlaybackProgress" | "leaseId">;
   source: Source; action: TitleAction; direct: boolean; manual: boolean; replacing: boolean; position: () => number;
+  positionIsAuthoritative?: () => boolean;
   current: () => boolean; notify: (message: string) => void;
 }) {
   const {player, source, action: current, direct, manual, notify} = options;
+  const resume = () => options.position() > 0 || (!options.positionIsAuthoritative?.() && current.resume);
   if (options.replacing) await player.replaceSource(source);
   else if (direct) {
     try {
       await player.start(
         current.card,
         source,
-        current.resume || options.position() > 0,
+        resume(),
         options.position(),
         {},
         undefined,
@@ -22,12 +24,14 @@ export async function startSourceCandidate(options: {
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError")
         throw error;
+      if (!options.current()) throw new DOMException("Playback cancelled", "AbortError");
       await player.stop().catch(() => {});
+      if (!options.current()) throw new DOMException("Playback cancelled", "AbortError");
       notify("Direct play didn't start; trying the gateway.");
       await player.start(
         current.card,
         source,
-        current.resume || options.position() > 0,
+        resume(),
         options.position(),
       );
     }
@@ -35,7 +39,7 @@ export async function startSourceCandidate(options: {
     await player.start(
       current.card,
       source,
-      current.resume || options.position() > 0,
+      resume(),
       options.position(),
     );
   const progressDeadline = Date.now() + 20000;

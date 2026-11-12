@@ -49,3 +49,31 @@ it("accepts usable playback progress without promoting it to video evidence", as
   },direct:false,manual:false,replacing:false,position:()=>0,current:()=>true,notify:vi.fn()})).resolves.toBeUndefined();
   expect(player.hasPresentedFrame).toBe(false);
 });
+
+it.each([false, true])('an authoritative zero position never asks the backend to restore an older bookmark (direct=%s)', async direct => {
+  const effective: number[] = [];
+  let attempts = 0;
+  const player = {start: vi.fn(async (_card, _source, resume: boolean, position: number) => {
+    attempts++;
+    if (direct && attempts === 1) throw new Error('direct unavailable');
+    effective.push(resume && position === 0 ? 87 : position);
+  }), stop: vi.fn(async () => {}), replaceSource: vi.fn(), hasPlaybackProgress: true, leaseId: 'fixture'};
+  const options = {player, source: {id: 'fixture'}, action: {
+    card: {identity: {kind: 'movie', id: 'fixture', ids: []}, provider_id: 'fixture', title: 'Fixture', badges: []}, resume: true, label: 'Resume at 1:27', source_selection: 'ask' as const,
+  }, direct, manual: true, replacing: false, position: () => 0, positionIsAuthoritative: () => true, current: () => true, notify: vi.fn()};
+  await startSourceCandidate(options);
+  expect(effective).toEqual([0]);
+  expect(player.start.mock.calls.every(call => call[2] === false && call[3] === 0)).toBe(true);
+});
+
+it.each(['start', 'cleanup'])('an obsolete direct fallback cannot stop or start a newer intent after %s', async cancelledAt => {
+  let owned = true;
+  const player = {start: vi.fn(async () => { if (cancelledAt === 'start') owned = false; throw new Error('direct unavailable'); }),
+    stop: vi.fn(async () => { owned = false; }), replaceSource: vi.fn(), hasPlaybackProgress: false, leaseId: undefined};
+  const notify = vi.fn();
+  await expect(startSourceCandidate({player, source: {id: 'fixture'}, action: {
+    card: {identity: {kind: 'movie', id: 'fixture', ids: []}, provider_id: 'fixture', title: 'Fixture', badges: []}, resume: false, label: 'Play', source_selection: 'ask',
+  }, direct: true, manual: true, replacing: false, position: () => 0, current: () => owned, notify})).rejects.toMatchObject({name: 'AbortError'});
+  expect(player.start).toHaveBeenCalledOnce(); expect(notify).not.toHaveBeenCalled();
+  expect(player.stop).toHaveBeenCalledTimes(cancelledAt === 'start' ? 0 : 1);
+});
