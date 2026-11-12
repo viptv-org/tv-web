@@ -1,3 +1,25 @@
+# Grouped Search
+
+Search consumes the authenticated `/api/search` rows in server order. Provider,
+catalog and media-type identity, card origins, successful rows, empty rows and
+failed rows remain separate. Rows remember card identity and position; Up/Down
+changes shelves, Right scrolls within a shelf, Left returns to the keyboard,
+and Back from Details restores the originating shelf. Retry retains the current
+query and usable results. New queries and profile retirement cancel obsolete work.
+
+The grouped endpoint supplies bounded cross-catalog results without continuation
+cursors. Catalog-specific discovery and independently paged channel Search retain
+their existing endpoints. This client does not invent grouped-search pagination.
+
+Validation: production build and grouped TypeScript checks; 343 shared units and
+52 native-host units; Search and navigation browser acceptance, including WebGL
+and forced Canvas catalog fixtures with duplicate titles across providers and
+media types, failed Simkl, horizontal scrolling, empty catalogs, retry failure,
+Details return focus, query cancellation and channel paging/auth retirement.
+WebGL shelf geometry and both renderer captures are inspected privately. Canvas
+focus/caption paint still requires the coordinated renderer correction. Physical
+PS4 input/rendering, native Roku Search and other TV firmware remain unverified for this change.
+
 # Current TV delivery and qualification
 
 Beta serves TV `d559dbb` and backend `8d995a5`. Managed rollout, container health,

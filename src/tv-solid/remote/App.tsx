@@ -3240,7 +3240,7 @@ export function createRemoteTvApp(
               </Show>
               <Show when={screen() === "search"}>
                 <SearchHeader query={search()} selected={key()} keyboardFocused={zone() === "keyboard"} media={searchCapabilities().media && !searchResults().rows.length}
-                  retry={!!searchError()} resultCount={page().cards.length} error={searchError()} retryFocused={zone() === "search-retry"} />
+                  retry={!!searchError() && !searchResults().rows.length} resultCount={page().cards.length} error={searchError()} retryFocused={zone() === "search-retry"} />
               </Show>
               <Show
                 when={

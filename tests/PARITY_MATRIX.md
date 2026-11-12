@@ -8,6 +8,7 @@
 | Provider metadata | Live cold/warm/cross-account reuse; personal responses no-store and cross-profile requests refused | Samples do not establish universal upstream latency |
 | Collision Course synopsis | Exact 2026 title's real Simkl payloads replay sparse catalogue → full detail → sparse refresh without losing text; other authority stays separate | Historical visual race not recaptured; no attribution to Simkl |
 | PS4 session reliability | Rotated credentials adopted before persistence, durable-write retry and missing Web Locks/storage failure covered | Physical PlayStation logout retest unavailable; lost network responses and cross-window replay remain separate limits |
+| Search catalog shelves | Authenticated server grouping, catalog/provider/type IDs and card origins retained; WebGL/Canvas multi-catalog fixtures, failure isolation, row/card return focus, retry, cancellation and independent channel paging pass | Bounded grouped API has no continuation cursor; physical PS4 and native Roku Search remain unverified |
 | Reproducible installation | Root npm and independent pinned Roku pnpm installs, committed renderer patches, hosting/webOS CI pass | Samsung signing certificates unavailable; no signed WGT claim |
 
 Earlier source-specific records follow; their old hardware availability and deployment

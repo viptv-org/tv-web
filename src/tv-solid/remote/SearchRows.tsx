@@ -18,13 +18,13 @@ export function SearchRows(props: {
     <For each={visible()}>{(shelf, index) => {
       const selected = () => index() === 0 ? props.column : props.remembered(shelf.id);
       const start = () => Math.max(0, selected() - 4);
-      const retry = () => shelf.state === "Failed" || !!shelf.message;
+      const retry = () => shelf.state === "Failed" || !!shelf.message || (index() === 0 && !!props.error);
       return <TvView y={index() ? (props.rows[props.row]?.cards.length ? 500 : 180) : 0} w={1128} h={shelf.cards.length ? 500 : 180}>
         <Label y={12} size={30} font="Onest600" maxwidth={retry() ? 900 : 1124} maxlines={1} content={shelf.title} />
         <Show when={retry()}>
           <Button x={924} y={0} w={200} h={56} label="Try again" focused={index() === 0 && props.retryFocused} />
           <Label y={shelf.cards.length ? 470 : 86} size={22} maxwidth={1100} maxlines={1}
-            content={shelf.message ?? "This search provider could not respond. Try again."} />
+            content={(index() === 0 && props.error) || shelf.message || "This search provider could not respond. Try again."} />
         </Show>
         <Show when={!shelf.cards.length && !retry()}>
           <Label y={86} size={26} color={palette.muted}

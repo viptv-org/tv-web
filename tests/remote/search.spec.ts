@@ -214,7 +214,11 @@ for(const canvas of [false,true]) test(`server catalog/provider/type rows keep d
   await expect(state(page)).toHaveAttribute('data-tv-focus',/^content:7:/);
   for(let i=0;i<3;i++)await page.keyboard.press('ArrowDown');
   await expect(state(page)).toHaveAttribute('data-tv-search-row','addon:102:movie:top');
+  const detailRequest=page.waitForRequest(request=>new URL(request.url()).pathname==='/api/meta/movie/same-0');
   await page.keyboard.press('Enter');
+  const detailParameters=new URL((await detailRequest).url()).searchParams;
+  expect(detailParameters.get('provider_id')).toBe('stremio');
+  expect(detailParameters.get('addon_id')).toBe('102');
   await expect(state(page)).toHaveAttribute('data-tv-screen','detail');
   const metadata=fixture.requests.find(r=>r.path==='/api/meta/movie/same-0');
   expect(metadata).toBeTruthy();
@@ -222,4 +226,21 @@ for(const canvas of [false,true]) test(`server catalog/provider/type rows keep d
   await expect(state(page)).toHaveAttribute('data-tv-search-row','addon:102:movie:top');
   await expect(state(page)).toHaveAttribute('data-tv-focus',/^content:0:/);
   expect(calls).toBe(1);
+});
+
+test('a failed retry retains the current catalog and reports the failure beneath its heading',async({page,baseURL})=>{
+  const fixture=await installRemoteBackend(page,baseURL!);let calls=0;
+  await page.route('**/api/search?**',route=>++calls===1
+    ?route.fulfill({json:media([{...fixture.card,title:'Retained catalog result'}],false)})
+    :route.fulfill({status:503,json:{error:'unavailable'}}));
+  await search(page);await page.keyboard.press('a');
+  await expect(state(page)).toHaveAttribute('data-tv-ready','true');
+  for(let i=0;i<6;i++)await page.keyboard.press('ArrowRight');
+  await page.keyboard.press('ArrowUp');await page.keyboard.press('Enter');
+  await expect.poll(()=>calls).toBe(2);
+  await expect.poll(()=>texts(page)).toContain('Couldn’t connect. Try again.');
+  await expect.poll(()=>texts(page)).toContain('Retained catalog result');
+  await expect(state(page)).toHaveAttribute('data-tv-search-row','addon:1:movie:popular');
+  for(let i=0;i<6;i++)await page.keyboard.press('ArrowRight');
+  await expect(state(page)).toHaveAttribute('data-tv-focus',/^content:0:/);
 });
