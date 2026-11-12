@@ -17,7 +17,7 @@ export function SearchHeader(props: { query: string; selected: number; keyboardF
         size={30}
         font="Onest600"
         letterspacing={-0.3}
-        content="Top results"
+        content="Search results"
       />
     </Show>
     <Show when={props.retry}>

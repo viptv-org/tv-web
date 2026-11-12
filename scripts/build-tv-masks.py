@@ -25,6 +25,18 @@ for y in range(mask.height):
         mask.putpixel((x, y), (11, 11, 12, round((1 - (1-left) * (1-vertical)) * 255)))
 save("hero-scrim.png", mask)
 
+home = Image.new("RGBA", (512, 288))
+for y in range(home.height):
+    for x in range(home.width):
+        px, py = (x + .5) / 512 * 1920, (y + .5) / 288 * 1080
+        t = max(0, min(1, (px - 760) / 760))
+        left = 1 - t * t * (3 - 2 * t)
+        t = max(0, min(1, (py - 350) / 460))
+        bottom = t * t * (3 - 2 * t)
+        home.putpixel((x, y), (11, 11, 12, round((1 - (1-left) * (1-bottom)) * 255)))
+save("home-scrim.png", home)
+
+
 top = Image.new("RGBA", (480, 33))
 for y in range(top.height):
     t = y / 32

@@ -33,7 +33,7 @@ try {
   await reference.screenshot({path:`${out}/reference.png`});
   const page=await context.newPage();const errors=[];page.on('pageerror',e=>errors.push(e.message));
   const fixture=await installRemoteBackend(page,origin,{channelSearch:true});
-  await page.route('**/api/discover?**',route=>route.fulfill({json:{cards:source.posters.map((p,i)=>({...fixture.card,identity:{kind:'movie',id:`search-${i}`,ids:[]},title:p.title,poster:`${origin}/fixture/${p.src}`,view:{saved:false}})),complete:true}}));
+  await page.route('**/api/search?**',route=>route.fulfill({json:{rows:[{id:'addon:1:movie:search',title:'Popular Movies',provider_id:'stremio',addon_id:1,state:'Ready',cards:source.posters.map((p,i)=>({...fixture.card,identity:{kind:'movie',id:`search-${i}`,ids:[]},title:p.title,poster:`${origin}/fixture/${p.src}`,view:{saved:false}}))}],complete:true}}));
   await page.route('**/api/profiles/*/live/channels?**',route=>route.fulfill({json:{snapshot_id:'matched-search-reference',paging:{origin:'0',limit:40,page_size:40,previous:null,next:null},channels:source.names.map((name,i)=>({id:`channel-${i}`,connection_id:'m3u:1',card:{identity:{kind:'live',id:`channel-${i}`,ids:[]},provider_id:'m3u:1',title:name,badges:[]}})),groups:[],complete:true,availability:'Available'}}));
   await page.goto(`${origin}/tv/?platform=vizio&focusdebug=1`);await page.waitForFunction(()=>document.documentElement.dataset.tvReady==='true');
   for(const key of ['ArrowUp','ArrowLeft','Enter'])await page.keyboard.press(key);

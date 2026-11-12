@@ -5,13 +5,11 @@ const {PNG}=createRequire(import.meta.url)('pngjs');
 type RemoteFixture=Awaited<ReturnType<typeof installRemoteBackend>>;
 const state=(page:Page)=>page.locator('html');
 const inspect=(page:Page)=>page.evaluate(()=>{
- const photos:{key:string;zoom:number;src:string;alpha:number}[]=[],texts:string[]=[];let cycle:number|undefined;
+ const photos:{key:string;zoom:number;src:string;alpha:number}[]=[],texts:string[]=[];let cycle:number|undefined = document.documentElement.dataset.tvHeroCycle ? Number(document.documentElement.dataset.tvHeroCycle) : undefined;
  function visit(n:any){
   if(n.isRenderable){
    if(n.viptvText)texts.push(n.viptvText);
-   const key=n.shader?.shaderKey;
-   if(n.props.w===1920&&n.props.h===1080&&n.texture?.state==='loaded'&&typeof n.texture.props.src==='string'&&n.texture.props.src.includes('/fixture/'))photos.push({key:'static',zoom:1,src:n.texture.props.src,alpha:n.worldAlpha});
-   if(key==='tvHeroProgress')cycle=n.shader.uniforms.single.u_startedAt.value+(window as any).__viptvRenderer.stage.startTime;
+   if(n.props.w===1440&&n.props.h===810&&n.texture?.state==='loaded'&&typeof n.texture.props.src==='string'&&n.texture.props.src.includes('/fixture/'))photos.push({key:'static',zoom:1,src:n.texture.props.src,alpha:n.worldAlpha});
   }
   n.children?.forEach(visit);
  }
@@ -32,7 +30,7 @@ async function open(page:Page,baseURL:string,reduced:boolean,count=2){
 async function beforeCycle(page:Page){const view=await inspect(page);expect(view.cycle).toBeDefined();await page.clock.fastForward(Math.max(1,Math.floor(9000-(view.now-view.cycle!)-20)));}
 async function advanceSlide(page:Page,current:string,next:string){
  await beforeCycle(page);expect((await inspect(page)).texts).toContain(current);
- await page.clock.fastForward(40);await expect.poll(async()=>(await inspect(page)).texts).toContain(next);
+ await page.clock.fastForward(40);await expect.poll(async()=>{await page.clock.runFor(32);return (await inspect(page)).texts;}).toContain(next);
 }
 async function expectParked(page:Page,title:string){
  await expect.poll(async()=>(await inspect(page)).cycle).toBeUndefined();

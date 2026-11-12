@@ -322,6 +322,7 @@ export async function installRemoteBackend(page:Page,origin:string,options:{
       });
     }
   if(path==='/api/discovery-controls')return send({catalogs:[{id:'popular',name:'Popular',type:url.searchParams.get('type'),controls:[{id:'genre',label:'Genres',kind:'SingleChoice',choices:[{value:'action',label:'Action'}],required:false}]}],controls:[],discovery:{availability:'Available'},search:{availability:'Available'}});
+  if(path==='/api/search')return send({rows:[{id:'addon:1:movie:popular',title:'Popular Movies',provider_id:'stremio',addon_id:1,state:'Ready',cards:options.empty?[]:catalogView}],complete:true});
   if(path==='/api/discover')return send({cards:options.empty?[]:catalogView,complete:true});
   if(path.startsWith('/api/meta/')){
       if(options.seasonPages && isSeriesRequest(path, url)){

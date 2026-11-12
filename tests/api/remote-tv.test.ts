@@ -1067,3 +1067,20 @@ it('carries the Core-selected spoken language into playback without overriding e
  await api.admit(source,false,signal,0,{audio_track:2});expect(bodies[1]).not.toHaveProperty('audio_language');
  await api.admit(source,false,signal,0,{},undefined,true);expect(bodies[2]).not.toHaveProperty('audio_language');
 });
+
+it('reads grouped catalog Search without flattening provider rows or losing failed rows', async () => {
+  const rows = [
+    {id:'simkl:movie',title:'Movies',provider_id:'simkl',state:'Failed',cards:[],message:'Some search results are unavailable. Try again.'},
+    {id:'addon:101:movie:top',title:'Popular Movies · Fixture 101',provider_id:'stremio',addon_id:101,state:'Ready',cards:[card]},
+    {id:'addon:101:series:top',title:'Popular Series · Fixture 101',provider_id:'stremio',addon_id:101,state:'Ready',cards:[{...card,identity:{kind:'series',id:'title',ids:[]}}]},
+    {id:'addon:102:movie:top',title:'Popular Movies · Fixture 102',provider_id:'stremio',addon_id:102,state:'Ready',cards:[card]},
+  ];
+  const fetcher = vi.fn(async () => response({rows,complete:false}));
+  const api = new RemoteTvApi('https://example.test',store(),fetcher);
+  await api.restore();
+  expect(await api.search('a & b')).toEqual({rows,complete:false});
+  const [url,request] = fetcher.mock.calls[0] as unknown as [string,RequestInit];
+  expect(new URL(url).pathname).toBe('/api/search');
+  expect(new URL(url).searchParams.get('query')).toBe('a & b');
+  expect(request.headers).toMatchObject({Authorization:'Bearer old'});
+});

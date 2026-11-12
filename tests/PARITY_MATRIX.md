@@ -1,3 +1,12 @@
+# Canvas presentation candidate
+
+| State | Browser evidence | Device limit |
+| --- | --- | --- |
+| Focus colors | Actual Canvas pixels during occupied image decode slots and 1100ms later; full/scaled TV viewports | Physical PS4 unverified |
+| Season choices | Bounded label/value columns; actual pixels remain inside rows at 1920×1080 and 1540×754 | Native-host smoke only |
+| Hero gradients | Delayed scrim blocks bright artwork; bright-background contrast and sharp right artwork preserved | Physical firmware unverified |
+| Player chrome | Buffering retains lease tools; thumb pixels appear only with timeline focus | Early admission publication belongs to playback lifecycle validation |
+
 # Current delivery boundaries
 
 | Area | Verified evidence | Limit |
@@ -8,6 +17,7 @@
 | Provider metadata | Live cold/warm/cross-account reuse; personal responses no-store and cross-profile requests refused | Samples do not establish universal upstream latency |
 | Collision Course synopsis | Exact 2026 title's real Simkl payloads replay sparse catalogue → full detail → sparse refresh without losing text; other authority stays separate | Historical visual race not recaptured; no attribution to Simkl |
 | PS4 session reliability | Rotated credentials adopted before persistence, durable-write retry and missing Web Locks/storage failure covered | Physical PlayStation logout retest unavailable; lost network responses and cross-window replay remain separate limits |
+| Search catalog shelves | Authenticated server grouping, catalog/provider/type IDs and card origins retained; WebGL/patched Canvas multi-catalog fixtures and inspected captures, caption/focus pixels, failure isolation, row/card return focus, retry, cancellation and independent channel paging pass | Bounded grouped API has no continuation cursor; physical PS4 and native Roku Search remain unverified |
 | Reproducible installation | Root npm and independent pinned Roku pnpm installs, committed renderer patches, hosting/webOS CI pass | Samsung signing certificates unavailable; no signed WGT claim |
 
 Earlier source-specific records follow; their old hardware availability and deployment
@@ -605,3 +615,31 @@ Implementation `4cf36237e70b387aacad8a3c5521d5f2ee9eaf9e`;
 
 
 | HTML sparse clocks and frame evidence | Actual HLS in Canvas/WebGL covers pause, explicit paused seek, resume and controlled Next; shared adapter covers two source replacements and cleanup across Chromium/Firefox/WebKit | Physical PS4 decoded-video freeze remains unqualified; silent frame APIs report unavailable evidence |
+## Owner-scoped TV presentation refinement
+
+Contract: TV-web #114 and SPEC.md, scoped design amendment
+`1f50bdc2e95b73562307f49d36f61851720bf2c7`, pinned asset snapshot
+`059b76344f4fed0639bedf8f89e0bd6e2b22cecd`. Implementation source:
+`7c8c0ecdd15ce621ad96b2dcde0a8af8e6fdcac6`. This scope supersedes the older
+blurred Home-preview row above for this client.
+
+| State | Functional and visual browser evidence | Device evidence / disposition |
+|---|---|---|
+| Home hero and Continue Watching | WebGL/Canvas sharp right artwork, black copy region, generated bottom fade, untouched foreground art, prepared-node reuse and bounded preview decoding; exact-baseline private captures inspected | Native package/type checks pass; physical Roku and other TV firmware unverified |
+| Hero and shelf indicators | Running/parked off-white geometry, once-through cycle and interruptions; shelf marker outside card clip with safe bottom bounds | Native Back mapping unit passes; native indicator pixels unqualified |
+| Detail preparation | Movie/series layout shapes, restrained parent shimmer and static reduced motion; Back rejects abandoned metadata | Browser reviewed; native compile only |
+| Source preparation and recovery | Centered clearlogo or title fallback, artwork/progress/cancel, no retained drawer text, guarded artwork preservation; full-frame progress pixels verified in both motion modes; real admission failure/retry, Back cancel and replacement lease cleanup | Browser fixture/decoded-media evidence; physical cancellation timing pending |
+| Player controls | Uniform icon size and 12px gaps; menu-first Back, rendered chrome dismissal during playback/seek/buffering/end, continued media, ignored Back repeats and eventual cleanup | Browser/native-key translation verified; physical Roku reproduction remains to be retested |
+
+### Physical Roku candidate 11145
+
+Source `a81754d100863dbfcdce7dda68dbf2cc804a80fa`; Roku TV 50S435/C157X,
+OS 16.0.4 build 853. This record supersedes the physical-pending disposition
+above only for these observed states.
+
+| Scope | Physical evidence | Remaining limits |
+|---|---|---|
+| Home/CW composition | Explicit native paint bands; 11144 bright same-title gradient/nav comparison and 11145 sharp Nocturne/Interstellar preview, readable logo/copy and gutter | Other firmware and timing/performance unqualified |
+| Detail/source preparation | Loaded detail and real title/artwork/spinner/cancel presentation inspected; source discovery canceled back to Home | Native skeleton transition and source clearlogo phase not isolated; browser states verified separately |
+| Back and native cleanup | Tracks menu closes while playing; first Back clears settled pixels, removes native holders/control labels, and HLS time advances; next Back closes media with one successful lease DELETE | Physical held-key and audibility/caption behavior unqualified |
+| Installation/return | Cold no-auto-launch install, explicit launch, existing sign-in, installed11145, final ready Home with player stopped and owned observers removed | No new reboot/sign-out/pairing qualification |

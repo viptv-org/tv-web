@@ -1,3 +1,53 @@
+# Grouped Search
+
+Search consumes the authenticated `/api/search` rows in server order. Provider,
+catalog and media-type identity, card origins, successful rows, empty rows and
+failed rows remain separate. Rows remember card identity and position; Up/Down
+changes shelves, Right scrolls within a shelf, Left returns to the keyboard,
+and Back from Details restores the originating shelf. Retry retains the current
+query and usable results. New queries and profile retirement cancel obsolete work.
+
+The grouped endpoint supplies bounded cross-catalog results without continuation
+cursors. Catalog-specific discovery and independently paged channel Search retain
+their existing endpoints. This client does not invent grouped-search pagination.
+
+Validation: production build and grouped TypeScript checks; 347 shared units and
+52 native-host units; 20 affected Search/Canvas browser cases, including WebGL
+and forced Canvas catalog fixtures with duplicate titles across providers and
+media types, failed Simkl, horizontal scrolling, empty catalogs, retry failure,
+Details return focus, query cancellation and channel paging/auth retirement.
+WebGL and patched Canvas captures are inspected privately. At 1920×1080 all five
+Canvas shelf captions paint 713–737 bright pixels each; the focused outline adds
+1590 bright pixels over identical unfocused artwork. Shared Canvas paint tests
+also cover 1540×754 and occupied artwork decode slots. The isolated Canvas graph
+matches the committed patch; the primary shared dependency graph is unchanged.
+Physical PS4 input/rendering, native Roku Search and other TV firmware remain
+unverified for this change.
+
+# Canvas presentation candidate
+
+The candidate retains the UI presentation branch at `a73e0d0`; hosted beta
+remains `d559dbb`. Canvas text pixels bypass artwork fetch/decode slots. Choice
+rows reserve bounded label/value columns with 24px right padding. Browser hero
+artwork waits for its packaged scrim. The seek thumb is visible only while the
+timeline has focus. This presentation intent supersedes the always-visible thumb.
+Native artwork and scrim paint bands remain unchanged. The isolated local Roku
+release build and its typechecks pass; its package is not installed.
+
+Production build, grouped typechecks, 344 shared units (including four
+source/distribution texture tests) and 52 native-host units pass. Nine final
+Canvas/hero checks pass; 30 existing Canvas, preparation and player checks pass. Canvas pixel checks at 1920×1080 and 1540×754 cover
+focus colors during occupied artwork decode slots, unchanged correct colors
+1100ms later, season option containment and delayed scrims. Buffering controls
+retain the server lease's tools; a separate admission snapshot fix publishes
+those capabilities before decoder open finishes. Existing WebGL/Canvas hero
+contrast, preparation, source progress, Back and disposal checks remain covered.
+
+Private before/after captures and logs are under
+`/tmp/viptv-priority-private/agents/canvas117/`. These are fixture browser and
+native-host results. Physical PS4, Roku and Samsung acceptance remains unverified
+for this candidate; no deployment or physical-device operation is included.
+
 # Current TV delivery and qualification
 
 Beta serves TV `d559dbb` and backend `8d995a5`. Managed rollout, container health,
@@ -4230,3 +4280,106 @@ Playback evidence precedence covers simultaneous decoded/all-dropped counters,
 zero output totals, later non-dropped promotion, compositor precedence and an
 explicit decoded-only fallback label. Transport startup acknowledgement remains
 usable and fires once while strict video consumers wait for output evidence.
+## Sharp Home artwork and dismissible player controls
+
+Source: `77d6f4b544de3cd785805a49e0a67cd52791f58b`, owner-scoped TV-web
+presentation contract in [#114](https://github.com/viptv-org/tv-web/issues/114).
+The pinned design snapshot stays at `059b76344f4fed0639bedf8f89e0bd6e2b22cecd`;
+SPEC.md records this client's deliberate presentation refinement.
+
+Production integrity/artwork/type/build checks pass, as do 337 shared unit tests
+and 51 native host tests. The final production browser batches pass 17
+hero/presentation scenarios, four end/proxy/replacement scenarios, and four
+source-opening/failure/cancellation scenarios after the source paint correction.
+Earlier targeted cases also pass for delayed navigation, coherent prepared-node
+identity, bounded shelf reversal, and late/failed artwork. Tests use one worker
+and the shared validation lock. Local TLS fixtures accept their test certificate;
+they do not establish production authentication or device qualification.
+
+Private 1920×1080 WebGL and Canvas captures compare the exact `03cb663` baseline
+with the implemented composition. Sharp artwork occupies (480,0,1440,810),
+preview decoding remains 960×540, and proxy requests contain no blur. Flat-white
+artwork leaves the synopsis edge at (850,550) below 45 per channel while the right
+artwork at (1700,250) exceeds 245. Prepared foreground logos/posters remain
+undimmed. The row marker is at x=1848 outside the card viewport ending at1824;
+its 220px column stays above the 54px bottom inset.
+
+Reviewed states include running/parked hero markers, the geometry-matched detail
+skeleton, and centered source preparation with artwork/title and cancel copy.
+Preparation suppresses the retained source drawer's visual tree, preventing text
+bleed; failures restore the picker, focus and real source error. Existing guarded
+presentation merging preserves artwork when a selector response is lean.
+Rendered-title/tool assertions cover Escape and native Back, continued media,
+managed seek/preview cancellation, persistent decoder buffering, ended controls,
+and subsequent playback cleanup.
+
+The native local release build and its type checks pass, with the generated Home
+scrim packaged. This is compile/host evidence. Physical Roku, PS4, Tizen, webOS and
+Vizio firmware acceptance remain pending; no device install or deployment is part
+of this validation.
+
+Clearlogo/input follow-up source: `7c8c0ecdd15ce621ad96b2dcde0a8af8e6fdcac6`.
+Three focused logo-layout units, the production integrity/type/build, ten focused
+browser cases and the native local release compile pass. Matched WebGL/Canvas
+captures show the fixture's actual clearlogo centered above progress and cancel;
+missing/failed logos show the title in the same reserved slot. A held logo response
+does not delay first-frame presentation. Both native Back and Escape ignore repeat
+keydowns after menu dismissal and chrome dismissal, then the next distinct press
+exits normally. Preparation has no redundant opening/discovery status line.
+SPEC.md references the immutable scoped design amendment
+`1f50bdc2e95b73562307f49d36f61851720bf2c7`; unrelated upstream changes remain
+intentionally outside the `059b763` asset snapshot. Physical-device qualification
+remains pending.
+
+Progress paint verification reuses the exact runtime artifact from
+`7c8c0ecdd15ce621ad96b2dcde0a8af8e6fdcac6`; no runtime change or rebuild was
+needed. Eleven focused WebGL/Canvas cases wait for painted progress, then assert
+more than 80 near-exact fixture-accent pixels in each saved full-frame spinner
+region. All frames contain 123–127 such pixels, including normal/reduced motion
+and available/absent/failed logos. Separate region captures were inspected.
+
+## Scoped physical Roku presentation and Back acceptance
+
+Runtime source: `a81754d100863dbfcdce7dda68dbf2cc804a80fa`, with native paint-band
+classification from `a77e2b9511f317d8874707887f02e2cfb370ba8b`. Owner-approved
+candidate 1.0.11145 runs on Roku TV 50S435 / C157X, OS 16.0.4 build 853, at
+1920×1080. Cold installation verifies OS Home and prior ExitComplete, uploads
+without auto-launch, verifies the installed version and launches explicitly.
+Existing sign-in is retained; no sign-out, pairing or reboot operation is invoked.
+
+Home/CW backdrop and scrim roles cross the native bridge explicitly. Packaged
+Home, hero and navbar masks share the scrim band above backdrop art and below
+foreground. The same bright Heart of the Beast composition is inspected on
+11144 with restored gradients/nav cover; 11145 Nocturne and Interstellar CW
+captures retain sharp right art, readable copy, clearlogos and the gutter marker.
+Running/parked hero marker captures are scoped to 11144. The detail page and
+source preparation title/artwork/progress/cancel are inspected; an isolated native
+detail-skeleton transition and native source-clearlogo loading state remain
+unmeasured. Their browser and native-build evidence remains separate.
+
+An idle-removal regression fails without a real SDK transaction, then all 52
+native tests and the native local build pass. RokuNode destruction opens the SDK
+transaction before raw removals, so a removal-only change commits while the
+renderer is idle. The physical Audio & subtitles panel closes on one Back while
+playback continues. After chrome is revealed, one Back clears the settled
+physical image without another UI mutation. The actual OS tree exports invisible
+SDK subtrees in both states, but SDK groups shrink 75→21, labels 22→13,
+rectangles 16→6 and posters 41→36; matching control labels shrink 4→0. Native
+node rcid values are zero, so per-ID matching is unavailable.
+
+Native HLS remains in play without error and advances 842900→847517ms after the
+first Back. The next distinct Back returns Home, native media reports close, and
+exactly one playback DELETE completes with HTTP 200. Final Home is ready with no
+overlay/preparation or active player; owned observers are removed. This qualifies
+the stated device/UI/control flow, not audibility, caption timing, performance or
+other firmware. Physical repeated-key behavior is not promoted beyond the
+existing browser repeat checks.
+
+The immutable 11145 compiled JavaScript SHA-256 is
+`93ee4eb8f73d80ccbfd5fba5c3884dbe602e8331d01993ae9779f324c0b3263c`;
+the manifest-only patched package tree is
+`104414357e7eb29e7674db2b8a293110b1bbd571fbbfe12094217dbaa9d0d2c6`.
+An independent browser artifact from a77e2b9 retains WebGL/Canvas bright-mask pixel
+acceptance and App SHA-256
+`668f067d1bfb897ff55b0e616f789cfad2db809add6e2eb97587e533291e72bd`.
+Private captures and complete manifests stay outside the repository.
