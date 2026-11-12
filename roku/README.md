@@ -18,6 +18,23 @@ The pinned Git dependency needs its `prepare` build, allowed explicitly in
 Set `ROKU_DEV_CONFIG_PATH` to the local device store for `rk dev`. The host
 requires Roku OS 16.0 or later.
 
+## Device update and qualification
+
+Wake the device, then exit the running development app before sideloading. A Home
+key can be consumed only by the OS screensaver; wait until repeated active-app
+queries show Roku Home and the prior app has completed its exit. An accepted key
+or installer response does not establish either condition.
+
+Sideload with `--no-launch`, launch explicitly after installation completes, and
+verify the installed build number plus visible ready UI. Wait for application
+readiness before inspecting JavaScript; an active development-app ID alone is not
+a startup pass. Qualify normal exit/relaunch and retained sign-in separately.
+Do not loop hot replacements when the native runtime stalls before JavaScript.
+
+Release builds drop console calls by default. Use `--no-drop-console` when
+reproducing qualification that retained console output, and record that flag with
+the source revision and compiled-payload hash.
+
 ## Boundaries
 
 - `src/roku/renderer.ts`, `node.ts`, `fonts.ts`, `effects.ts` — the native
@@ -26,8 +43,8 @@ requires Roku OS 16.0 or later.
   compatibility for the shared entry.
 - `src/roku/video.ts` — native Video adapter.
 - `src/tv-solid/platform/roku-shims.ts` and `platform/roku-playback.ts` in the
-  parent app are the shared platform boundary. Canvas image effects are being
-  migrated to native/pre-rendered implementations there.
+  parent app are the shared platform boundary. Native artwork uses public proxy
+  derivatives and packaged masks; the browser Canvas renderer is not shipped.
 
 ## Dependency and execution boundaries
 
