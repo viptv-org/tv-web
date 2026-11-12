@@ -19,6 +19,11 @@ export function topbarScrimSource() {
     ? "pkg:/assets/topbar-scrim.png"
     : `${import.meta.env.BASE_URL}tv-artwork/c6969dbaed3efaa17faf.png`;
 }
+export function playerScrimSource() {
+  return typeof (globalThis as any).__SolidTVRokuRenderer !== "undefined"
+    ? "pkg:/assets/player-scrim.png"
+    : `${import.meta.env.BASE_URL}tv-artwork/9fc14022189e3bfd05dd.png`;
+}
 export function busySpinnerSource() {
   return typeof (globalThis as any).__SolidTVRokuRenderer !== "undefined"
     ? "pkg:/assets/busy-spinner.png"

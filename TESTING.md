@@ -4455,3 +4455,28 @@ intro, asserts the held position remains inside it and checks visible action and
 focus before activation. Exact paused seek target, clock hold, admission count,
 resume, controlled Next and cleanup assertions remain. This fixture robustness
 change does not alter application playback behavior or physical qualification.
+
+## Authored player gradients (#124)
+
+Based on `e9591e1767a11a61c5fe39857c73e02777264684`, with DESIGN_REF retained at
+`059b76344f4fed0639bedf8f89e0bd6e2b22cecd`. The packaged player mask is generated
+directly from the pinned TV shade tokens and replaces the flat full-screen veil.
+Production integrity/type/build checks, all 355 shared tests and all 52 native
+host tests pass using an isolated cache overlay over the verified Search120
+dependency graph. Shared validation/build locks serialize these checks.
+
+Two production-browser cases pass at 1920×1080, one WebGL and one forced Canvas,
+using the owned decoded HLS color-bar fixture. With controls shown, maximum RGB
+channels at x1850 and y40/320/700/1030 are 91/255/54–55/28; after hiding controls,
+the same paused-frame pixels are 255/255/255/255. These measurements establish
+top/bottom protection and the untouched middle without double dimming. Private
+full-frame captures of visible/hidden controls and playback exit are inspected.
+The cases also verify one mask on reveal, zero after hide/exit, unchanged video
+source/bounds, and the video layer hidden after Stop.
+
+An initial local browser attempt used HTTP and hit the existing HTTPS image-origin
+guard before startup. The successful fixture uses local TLS with its test
+certificate accepted only by the test client. No production TLS setting changes.
+The focused native paint-band check places the new packaged mask in the explicit
+scrim band. A fresh native bundle/device run is not part of this change's evidence;
+physical PS4, Roku, Tizen, webOS and Vizio appearance remains unqualified here.
