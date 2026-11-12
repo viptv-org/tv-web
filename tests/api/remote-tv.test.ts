@@ -255,6 +255,37 @@ describe("server-only TV transport", () => {
     });
     expect(storage.clear).toHaveBeenCalledTimes(1);
   });
+  it("signs out only this TV with the auth endpoint's required JSON request", async () => {
+    const storage = store();
+    const requests: Request[] = [];
+    let acknowledge!: (response: Response) => void;
+    const acknowledged = new Promise<Response>((resolve) => { acknowledge = resolve; });
+    const api = new RemoteTvApi("https://example.test", storage, async (url, init) => {
+      const request = new Request(url, {
+        method: init?.method,
+        headers: init?.headers,
+        body: init?.body,
+      });
+      requests.push(request);
+      if (request.headers.get("Content-Type") !== "application/json")
+        return response({ error_code: "json_required" }, 415);
+      expect(await request.json()).toEqual({});
+      return acknowledged;
+    });
+    await api.restore();
+    api.profile = "3";
+    const pending = api.signOut();
+    expect(storage.clear).not.toHaveBeenCalled();
+    expect(api.profile).toBe("3");
+    acknowledge(response({ ok: true }));
+    await pending;
+    expect(requests).toHaveLength(1);
+    expect(new URL(requests[0].url).pathname).toBe("/api/auth/logout");
+    expect(requests[0].method).toBe("POST");
+    expect(requests[0].headers.get("Authorization")).toBe("Bearer old");
+    expect(storage.clear).toHaveBeenCalledTimes(1);
+    expect(api.profile).toBe("");
+  });
   it("passes explicit intent to the server without deriving an episode or resume offset", async () => {
     const fetcher = vi.fn(
       async (_url: RequestInfo | URL, _init?: RequestInit) =>

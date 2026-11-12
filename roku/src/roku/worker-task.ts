@@ -14,7 +14,12 @@ export type WorkerRequest =
   | { op: "sleep"; ms: number }
   | { op: "json"; text: string }
   | { op: "fetch"; url: string; headers?: Record<string, string> }
+  | { op: "storage"; action: "load"; section: string; key: string }
+  | { op: "storage"; action: "save"; section: string; key: string; value: string }
   | { op: "http"; url: string; method: string; headers?: Record<string, string>; payload?: any };
+
+/** A response acknowledges that the worker has finished its requested effects. */
+export class RokuTaskResponseError extends Error {}
 
 interface WorkerResponse<T = any> {
   ok: boolean;
@@ -25,6 +30,8 @@ interface WorkerResponse<T = any> {
 export interface RokuTaskOptions {
   timeoutMs?: number;
   parent?: any;
+  /** Storage acknowledgement waits for the Task's observed natural completion. */
+  waitForCompletion?: boolean;
 }
 
 export interface RokuTaskHandle<T> {
@@ -40,6 +47,11 @@ export function postRokuTask<T = any>(
   let settled = false;
   let task: any = null;
   let timer: any = null;
+  const natural = request.op === "storage" && options.waitForCompletion === true;
+  let runObserved = false,
+    terminalAfterRun = false;
+  let responseReceived = false,
+    pendingResponse: WorkerResponse<T> | undefined;
 
   let resolveResult!: (value: T) => void;
   let rejectResult!: (reason?: any) => void;
@@ -48,14 +60,14 @@ export function postRokuTask<T = any>(
     rejectResult = reject;
   });
 
-  const cleanup = () => {
+  const cleanup = (stop = true) => {
     if (timer !== null) {
       clearTimeout(timer);
       timer = null;
     }
     if (task && parent) {
       try {
-        setProp(task, "control", "STOP");
+        if (stop) setProp(task, "control", "STOP");
         tmTransaction.removeNode(parent, task);
       } catch (error) {
         // The task may already have been removed by a route teardown.
@@ -64,10 +76,10 @@ export function postRokuTask<T = any>(
     task = null;
   };
 
-  const finish = (fn: () => void) => {
+  const finish = (fn: () => void, stop = true) => {
     if (settled) return;
     settled = true;
-    cleanup();
+    cleanup(stop);
     fn();
   };
 
@@ -78,13 +90,36 @@ export function postRokuTask<T = any>(
 
   try {
     task = createElement("WorkerTask");
+    const completeResponse = () => {
+      if (!responseReceived || (natural && !terminalAfterRun)) return;
+      const response = pendingResponse;
+      if (response?.ok === false) {
+        finish(
+          () => rejectResult(new RokuTaskResponseError(response.error || "WorkerTask failed")),
+          !natural,
+        );
+      } else {
+        finish(() => resolveResult(response?.result as T), !natural);
+      }
+    };
     setProp(task, "request", request);
+    if (natural)
+      setProp(task, "onState", (value: string) => {
+        const state = String(value).toLowerCase();
+        if (state === "run") {
+          runObserved = true;
+          terminalAfterRun = false;
+        } else if (runObserved && (state === "stop" || state === "done")) terminalAfterRun = true;
+        completeResponse();
+      });
     setProp(task, "onResponse", (response: WorkerResponse<T>) => {
-      if (!response || response.ok !== true) {
-        finish(() => rejectResult(new Error(response?.error || "WorkerTask failed")));
+      if (!response || (response.ok !== true && response.ok !== false)) {
+        finish(() => rejectResult(new Error("WorkerTask failed")));
         return;
       }
-      finish(() => resolveResult(response.result as T));
+      responseReceived = true;
+      pendingResponse = response;
+      completeResponse();
     });
     insertNode(parent, task);
     setProp(task, "control", "RUN");
@@ -94,9 +129,10 @@ export function postRokuTask<T = any>(
   }
 
   const timeoutMs = Math.max(1, options.timeoutMs ?? 10000);
-  timer = setTimeout(() => {
-    finish(() => rejectResult(new Error(`WorkerTask timed out after ${timeoutMs}ms`)));
-  }, timeoutMs);
+  if (!settled)
+    timer = setTimeout(() => {
+      finish(() => rejectResult(new Error(`WorkerTask timed out after ${timeoutMs}ms`)));
+    }, timeoutMs);
 
   return {
     result,
