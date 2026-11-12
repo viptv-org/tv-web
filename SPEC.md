@@ -35,7 +35,12 @@ readiness. The portrait preview remains 240×360 at (1584,144).
 The owner-scoped presentation contract in [TV-web #114](https://github.com/viptv-org/tv-web/issues/114)
 supersedes this client's earlier blurred/full-width Home composition and loading
 copy, without claiming adoption by other clients or moving DESIGN_REF. The
-supplied owner image is a composition reference only. The generated Home mask
+supplied owner image is a composition reference only. Canonical scoped authority is
+[TV-PRESENTATION-114](https://github.com/viptv-org/design/blob/3eb55db3fd248621bbf56dc30e8718450280c767/docs/platforms/TV_PRESENTATION_REFINEMENT.md)
+and its [copy catalog](https://github.com/viptv-org/design/blob/3eb55db3fd248621bbf56dc30e8718450280c767/viptv-design-system/copy.md).
+DESIGN_REF deliberately remains at `059b76344f4fed0639bedf8f89e0bd6e2b22cecd`;
+unrelated upstream design changes are intentionally not adopted in this scope.
+The generated Home mask
 lives in `scripts/build-tv-masks.py`; `scripts/build-tv-artwork.py` owns packaged
 textures and provenance hashes. Detail retains the pinned backdrop composition.
 

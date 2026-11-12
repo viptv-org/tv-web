@@ -342,7 +342,7 @@ export function Logo(props: {
   if (typeof (globalThis as any).__SolidTVRokuRenderer === "undefined" && prepared()) {
     const width = () => Math.max(1, props.w ?? props.maxWidth ?? 800);
     const [bitmap, setBitmap] = createSignal<{width:number;height:number}>();
-    const geometry=createMemo(() => bitmap() ? logoLayout(width(),props.h,bitmap()!.width,bitmap()!.height) : undefined);
+    const geometry=createMemo(() => bitmap() ? logoLayout(width(),props.h,bitmap()!.width,bitmap()!.height,props.centered) : undefined);
     const [ready, setReady] = createSignal(false), [failed, setFailed] = createSignal(false);
     createEffect(() => {
       const src = prepared();setBitmap(undefined);setReady(false);setFailed(false);
@@ -354,8 +354,8 @@ export function Logo(props: {
       onCleanup(() => { image.onload = image.onerror = null; });
     });
     return <TvView w={width()} h={props.boxH ?? props.h} alpha={props.alpha ?? 1}>
-      <Show when={!failed() && geometry()}>{box => <TvView x={props.centered ? (width() - box().width) / 2 : 0} w={box().width} h={box().height} preload
-        y={Math.max(0, (props.boxH ?? props.h) - box().height)} src={prepared()}
+      <Show when={!failed() && geometry()}>{box => <TvView x={box().x ?? 0} w={box().width} h={box().height} preload
+        y={props.centered ? box().y : Math.max(0, (props.boxH ?? props.h) - box().height)} src={prepared()}
         alpha={ready() ? 1 : 0} transition={props.fade === false ? undefined : { alpha: { duration: reducedMotion() ? 0 : 150, easing: "ease-out" } }}
         onLoad={() => { setReady(true);untrack(() => props.onReady?.()); }}
         onError={() => { setFailed(true);props.onError?.(); }} />}</Show>
@@ -396,7 +396,7 @@ export function Logo(props: {
             transition={props.fade === false ? undefined : { alpha: { duration: reducedMotion() ? 0 : 150, easing: "ease-out" } }}
             onLoad={() => { setReady(true);untrack(() => props.onReady?.()); }}
             onError={() => { setFailed(true);props.onError?.(); }}
-            logo
+            logo centeredLogo={props.centered}
           />
         </TvView>
       </Show>
@@ -483,7 +483,7 @@ export function Logo(props: {
 
           <TvView
             x={props.centered ? ((props.maxWidth ?? props.w ?? 800) - data().w) / 2 : 0}
-            y={props.boxH ? Math.max(0, props.boxH - data().h) : 0}
+            y={props.boxH ? Math.max(0, props.boxH - data().h) / (props.centered ? 2 : 1) : 0}
             w={data().w}
             h={data().h}
             src={data().pixels}

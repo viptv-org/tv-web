@@ -3052,7 +3052,8 @@ export function createRemoteTvApp(
           if (dismissScreenSaver()) return;
           move(0, 1);
         },
-        back() {
+        back(event?: KeyboardEvent) {
+          if (event?.repeat) return;
           countdown.cancel();
           if (dismissScreenSaver()) return;
           void back().catch(fail);
@@ -3360,7 +3361,7 @@ export function createRemoteTvApp(
           </Show>
           <Show when={(openingSource() || sourceLoading() && !overlay() && screen() !== "player") && !error()}>
             <OverlayViewport order={15} shade={palette.bg} shadeWidth={1920}>
-              <PlaybackPreparation card={pickerCard()} discovering={!openingSource()} />
+              <PlaybackPreparation card={pickerCard()} />
             </OverlayViewport>
           </Show>
           <Show when={error()}>

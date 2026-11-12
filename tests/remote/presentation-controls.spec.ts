@@ -65,7 +65,8 @@ test('delayed detail uses layout skeleton and source opening uses centered title
   const heldPlayback=new Promise<void>(resolve=>releasePlayback=resolve);
   await page.route('**/api/playback',async route=>{if(route.request().method()!=='POST')return route.fallback();await heldPlayback;await route.fallback().catch(()=>{});});
   await page.keyboard.press('Enter');
-  await expect.poll(async()=>(await rendered(page)).texts).toContain('Opening stream…');
+  await expect.poll(async()=>(await rendered(page)).texts).toContain('Press Back to cancel');
+  expect((await rendered(page)).texts).not.toContain('Opening stream…');
   expect((await rendered(page)).texts).toContain(fixture.card.title);
   expect((await rendered(page)).texts).not.toContain('Choose a source');
   await expect.poll(async()=>(await rendered(page)).boxes.some(box=>box.x===480 && box.w===1440 && box.h===810)).toBe(true);
@@ -92,10 +93,14 @@ for (const key of ['Escape','Back']) test(`${key} dismisses player menu, hides c
   await page.keyboard.press('ArrowUp');await page.keyboard.press('Enter');
   await expect(state).toHaveAttribute('data-tv-overlay','tracks');
   await back();await expect(state).toHaveAttribute('data-tv-overlay','');await expect(state).toHaveAttribute('data-tv-screen','player');
+  await page.evaluate(key=>document.dispatchEvent(new KeyboardEvent('keydown',{key,keyCode:key==='Back'?8:27,repeat:true,bubbles:true,cancelable:true})),key);
+  await expect(state).toHaveAttribute('data-tv-player-controls','true');
   await page.keyboard.press('ArrowUp');await expect(state).toHaveAttribute('data-tv-player-controls','true');
   await back();await expect(state).toHaveAttribute('data-tv-player-controls','false');await expect(state).toHaveAttribute('data-tv-screen','player');
   expect((await rendered(page)).texts).not.toContain('Audio & subtitles');
   expect(await page.locator('video').evaluate(video=>(video as HTMLVideoElement).paused)).toBe(false);
+  await page.evaluate(key=>document.dispatchEvent(new KeyboardEvent('keydown',{key,keyCode:key==='Back'?8:27,repeat:true,bubbles:true,cancelable:true})),key);
+  await expect(state).toHaveAttribute('data-tv-screen','player');
   await back();await expect(state).not.toHaveAttribute('data-tv-screen','player');
   await expect.poll(()=>page.locator('video').evaluate(video=>(video as HTMLVideoElement).paused)).toBe(true);
 });

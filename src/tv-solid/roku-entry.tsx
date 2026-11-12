@@ -153,6 +153,7 @@ type NativeRecord = {
   fitWidth?: number;
   fitHeight?: number;
   fitY?: number;
+  fitX?: number;
   ownAlpha?: number;
   loadedKey?: string;
   onLoad?: () => void;
@@ -791,23 +792,25 @@ function iconSource(svg: string): { uri: string; color: string } | undefined {
         record.fitWidth = undefined;
         record.fitHeight = undefined;
         record.fitY = undefined;
+        record.fitX = undefined;
       }
       node.loadImage(visual, key, decode.width, decode.height, (poster: any) => {
         if (record!.key !== key) return;
         if (p.logo) {
           const bitmapWidth = Number(poster.bitmapWidth || 0);
           const bitmapHeight = Number(poster.bitmapHeight || 0);
-          const geometry = logoLayout(width, height, bitmapWidth, bitmapHeight);
+          const geometry = logoLayout(width, height, bitmapWidth, bitmapHeight, p.centeredLogo);
           if (!geometry) return;
           {
-            const fitWidth = geometry.width, fitHeight = geometry.height, fitY = geometry.y;
-            if (record!.fitWidth !== fitWidth || record!.fitHeight !== fitHeight || record!.fitY !== fitY) {
+            const fitWidth = geometry.width, fitHeight = geometry.height, fitY = geometry.y, fitX = geometry.x ?? 0;
+            if (record!.fitWidth !== fitWidth || record!.fitHeight !== fitHeight || record!.fitY !== fitY || record!.fitX !== fitX) {
               record!.fitWidth = fitWidth;
               record!.fitHeight = fitHeight;
               record!.fitY = fitY;
+              record!.fitX = fitX;
               setProp(visual, "width", fitWidth);
               setProp(visual, "height", fitHeight);
-              setProp(visual, "translation", [0, fitY]);
+              setProp(visual, "translation", [fitX, fitY]);
             }
           }
         }
@@ -820,7 +823,7 @@ function iconSource(svg: string): { uri: string; color: string } | undefined {
       setProp(visual, "width", record.fitWidth ?? width);
       setProp(visual, "height", record.fitHeight ?? height);
       if (p.logo)
-        setProp(visual, "translation", [0, record.fitY ?? 0]);
+        setProp(visual, "translation", [record.fitX ?? 0, record.fitY ?? 0]);
       setProp(visual, "blendColor", rokuColor(icon?.color ?? "#FFFFFF"));
     } else if (kind === "rect") {
       let borderWidth = 0;
@@ -839,7 +842,7 @@ function iconSource(svg: string): { uri: string; color: string } | undefined {
       setProp(visual, "width", record.fitWidth ?? width);
       setProp(visual, "height", record.fitHeight ?? height);
       if (p.logo)
-        setProp(visual, "translation", [0, record.fitY ?? 0]);
+        setProp(visual, "translation", [record.fitX ?? 0, record.fitY ?? 0]);
       if (borderWidth > 0) {
         if (!record.effect) {
           record.effect = createElement("effect");
