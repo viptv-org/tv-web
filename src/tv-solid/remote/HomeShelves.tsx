@@ -6,7 +6,7 @@ import { Button, icon, Label, palette } from "./visuals";
 import { reducedMotion } from "./motion";
 import { railLayout } from "./rail-layout";
 import { homeCardSize, focusFrameEdges } from "./focus-frame";
-import { cardKey, type Card, type Row } from "./types";
+import type { Card, Row } from "./types";
 
 const CARD_SLOTS = 12;
 
@@ -66,11 +66,8 @@ export function HomeShelves(props: {
       <TvView y={origin()} transition={motion}>
       <KeyedFor each={window()} keyOf={model => model.slot}>
         {model => {
-          const source = createMemo(() => model().row.cards);
-          const cards = createMemo(() => {
-            const seen = new Set<string>();
-            return source().filter(card => { const key = cardKey(card);if (seen.has(key)) return false;seen.add(key);return true; });
-          });
+          // Rendering must preserve the producer indices used by previews and playback.
+          const cards = createMemo(() => model().row.cards);
           const selected = createMemo(() => model().index === props.row);
           const portrait = createMemo(() => model().row.id !== "continue");
           const width = createMemo(() => homeCardSize(portrait()).width);

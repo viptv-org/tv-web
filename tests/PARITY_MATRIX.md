@@ -1,3 +1,9 @@
+# Continue Watching selection identity
+
+| State | Browser evidence | Device limit |
+| --- | --- | --- |
+| Visible card, preview and Play after repeated server identities | Issue #125 fails before and passes after in WebGL/Canvas; three distinct titles plus a repeated first entry, actual focus/card pixels, rendered synopsis, prepared artwork, delayed/cached traversal and immediate/settled request identities | Fixture APIs only; actual media and physical firmware unverified |
+
 # Canvas presentation candidate
 
 | State | Browser evidence | Device limit |
