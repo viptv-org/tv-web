@@ -4,15 +4,16 @@ import { createPlayerNavigation } from "../../src/tv-solid/remote/navigation/pla
 afterEach(() => { vi.useRealTimers(); vi.restoreAllMocks(); });
 
 function fixture(position = 100, duration = 1000) {
-  let preview: number | undefined, focused = true, scope: string | undefined = "lease-one";
+  let preview: number | undefined, focused = true, allowed = true, scope: string | undefined = "lease-one";
   const options = {
     selection: {index: () => 0, set: vi.fn(), timeline: () => focused, setTimeline: (value: boolean) => {focused = value;}},
-    timeline: {seeking: () => false, allowed: () => true, duration: () => duration, position: () => position,
+    timeline: {seeking: () => false, allowed: () => allowed, duration: () => duration, position: () => position,
       preview: () => preview, setPreview: (value: number | undefined) => {preview = value;}},
     controls: {count: () => 4, show: vi.fn(), activity: vi.fn()}, scope: () => scope,
   };
   const navigation = createPlayerNavigation(options as unknown as Parameters<typeof createPlayerNavigation>[0]);
-  return {navigation, preview: () => preview, scope: (value: string | undefined) => {scope = value;}};
+  return {navigation, preview: () => preview, scope: (value: string | undefined) => {scope = value;},
+    allowed: (value: boolean) => {allowed = value;}, focused: (value: boolean) => {focused = value;}};
 }
 
 it("continues a single native Right press smoothly after its tap step and releases without seeking media", () => {
@@ -55,4 +56,16 @@ it("cancels on session retirement and discards a suspended timer without a catch
   f.scope("lease-two"); f.navigation.move(1, 0);
   const at = performance.now(); vi.spyOn(performance, "now").mockReturnValue(at + 10000);
   vi.advanceTimersByTime(1000); expect(f.preview()).toBe(120);
+});
+
+it("retains a ten-second short tap and never starts a hold outside an admitted focused timeline", () => {
+  vi.useFakeTimers(); const f = fixture();
+  const release = f.navigation.move(1, 0); vi.advanceTimersByTime(200);
+  if (typeof release === "function") release();
+  vi.advanceTimersByTime(5000); expect(f.preview()).toBe(110);
+  for (const disable of [(f: ReturnType<typeof fixture>) => f.scope(undefined),
+    (f: ReturnType<typeof fixture>) => f.allowed(false), (f: ReturnType<typeof fixture>) => f.focused(false)]) {
+    const inactive = fixture(); disable(inactive); inactive.navigation.move(1, 0);
+    vi.advanceTimersByTime(5000); expect(inactive.preview()).toBeUndefined();
+  }
 });

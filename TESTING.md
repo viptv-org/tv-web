@@ -4697,6 +4697,21 @@ was used. Physical PS4 playback and native-clock behavior remain unverified;
 this reproduction does not establish the cause of the owner's physical-device
 report. Playwright acceptance is not part of the package workflow.
 
+## Held timeline seek
+
+Hosted regression run
+https://github.com/viptv-org/tv-web/actions/runs/43338366381 reproduces a single
+Right press leaving the preview at its ten-second tap target throughout a hold.
+`tests/ui/player-held-seek.test.ts` checks the approved elapsed-time ramp, rate
+cap, title bounds, release, direction replacement, disabled/unfocused timelines,
+source retirement and suspended timers. The existing input runtime delivers a
+release callback and suppresses repeat keydowns until release. Back, panels,
+blur and teardown cancel the held navigation. Only Select commits a seek.
+
+Tests and builds run in GitHub Actions. Physical Roku and browser acceptance for
+held seeking remain unverified; the native artifact build runs separately after
+integration on main.
+
 ## Bounded playback heartbeat renewal (#142)
 
 Scheduled and foreground heartbeats share one renewal flight. A typed gateway timeout/unavailability response can retry twice (1s,2s), bounded by the existing server expiry with the retained1s safety margin. Only a valid same-lease ready server response can replace that deadline. Invalid responses, terminal authority/errors, API-scope changes, Stop/replacement/ended/disposal retire or fail closed; a foreground return waits for renewal and retains newer user intent.

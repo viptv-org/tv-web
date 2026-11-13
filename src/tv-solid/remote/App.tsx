@@ -1885,6 +1885,7 @@ export function createRemoteTvApp(
       });
     }
     async function back() {
+      playerNavigation.cancel();
       rememberHomeRow();
       rememberContentFocus();
       rememberDetailFocus();
@@ -2506,10 +2507,15 @@ export function createRemoteTvApp(
       recommendations: () => detail()?.recommendations.length ?? 0, remembered: region => detailFocus.resolve(detailRow(region)),
       paging: {move: moveToItem, more: () => { void more(); }} });
     const playerNavigation = createPlayerNavigation({
+      scope: () => screen() === "player" && !overlay() && !loading() && !error() &&
+        ["ready", "playing", "paused"].includes(snapshot()?.state ?? "") ? snapshot()?.sessionId : undefined,
       selection: {index: choice, set: setChoice, timeline: timelineFocused, setTimeline: setTimelineFocused},
       timeline: {seeking, allowed: () => playerActions().seek, duration: () => snapshot()?.time.durationSeconds,
         position: () => snapshot()?.time.positionSeconds ?? 0, preview: seek, setPreview: setSeek},
       controls: {count: () => playerButtons().length, show: () => { setShowControls(true); }, activity: hideControls} });
+    createEffect(() => {
+      if (screen() !== "player" || overlay() || loading() || error() || seeking() || !timelineFocused()) playerNavigation.cancel();
+    });
     const navigateHero = createHeroNavigation({focus: navigationFocus, action: setHeroAction, row: setRow, homeNavIndex: () => navIndex("home"),
       home: {rows: () => home()?.rows ?? [], resolve: index => homeRowFocus.resolve(home()?.rows[index]), remember: rememberHomeRow},
       detail: {hasEpisodes: detailHasEpisodes, recommendations: () => detail()?.recommendations.length ?? 0, seasons: () => detail()?.seasons.length ?? 0}});
@@ -2561,7 +2567,7 @@ export function createRemoteTvApp(
       restartHeroCycling();
       if (loading() && screen() === "welcome") return;
       if (overlay()) { navigateOverlay(overlay()!, dx, dy); return; }
-      if (screen() === "player") { playerNavigation.move(dx, dy); return; }
+      if (screen() === "player") return playerNavigation.move(dx, dy);
       if (screen() === "profiles") { navigateProfiles(dx, dy); return; }
       if (zone() === "nav") {
         setColumn((i) => Math.max(0, Math.min(navs().length - 1, i + dx)));
@@ -3060,13 +3066,14 @@ export function createRemoteTvApp(
           revealEnded: revealEndedControls, play: playIntent, chrome: {show: setShowControls, hide: hideControls},
           segments: {clear: () => {setPlaybackSegments([]);}, refresh: refreshPlaybackSegments}, fail})});
       onCleanup(installWindowInputs({keyboard: input, screen, overlay, loading, error, pair: beginPairing, stop: leavePlayer,
-        next: {advance: advanceEpisode, dismiss: dismissNext}, cancelHold: () => heldSelect.cancel(), cancelCountdown: () => countdown.cancel(),
+        next: {advance: advanceEpisode, dismiss: dismissNext}, cancelHold: () => {heldSelect.cancel(); playerNavigation.cancel();}, cancelCountdown: () => countdown.cancel(),
         visible: setHeroVisible, wake: reloadIdleImages, fail}));
     });
     onCleanup(() => {
       alive = false;
       playerTransport.retire();
       heldSelect.cancel();
+      playerNavigation.cancel();
       overlays.dispose();
       scope.abort();
       settingsScope?.abort();
@@ -3086,12 +3093,12 @@ export function createRemoteTvApp(
         left() {
           countdown.cancel();
           if (dismissScreenSaver()) return;
-          move(-1, 0);
+          return move(-1, 0);
         },
         right() {
           countdown.cancel();
           if (dismissScreenSaver()) return;
-          move(1, 0);
+          return move(1, 0);
         },
         up() {
           countdown.cancel();
@@ -3110,11 +3117,13 @@ export function createRemoteTvApp(
           void back().catch(fail);
         },
         menu() {
+          playerNavigation.cancel();
           countdown.cancel();
           if (dismissScreenSaver()) return;
           menu();
         },
         enter(event?: KeyboardEvent) {
+          playerNavigation.cancel();
           countdown.cancel();
           if (revealEndedControls()) return undefined;
           if (dismissScreenSaver()) return;
