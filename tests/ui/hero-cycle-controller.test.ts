@@ -41,8 +41,19 @@ it("cancels hidden/noneligible timers and restarts a full idle deadline on retur
 it("keeps title timing under effective reduced motion without an animated indicator", () => {
   setMotionOverride(true);
   const {cycle} = setup(2);
+  expect(cycle.animated()).toBe(false);
   vi.advanceTimersByTime(9000); expect(cycle.slide()).toBe(1);
   vi.advanceTimersByTime(9000); expect(cycle.slide()).toBe(0);
+});
+
+it("waits for committed artwork and gives interrupted visible content a full new deadline", () => {
+  const {cycle} = setup();
+  cycle.setReady(false); expect(vi.getTimerCount()).toBe(0);
+  vi.advanceTimersByTime(60000); expect(cycle.slide()).toBe(0);
+  cycle.setReady(true); vi.advanceTimersByTime(9000); expect(cycle.slide()).toBe(1);
+  cycle.interrupt(0); expect(cycle.slide()).toBe(0);
+  vi.advanceTimersByTime(8999); expect(cycle.slide()).toBe(0);
+  vi.advanceTimersByTime(1); expect(cycle.slide()).toBe(1);
 });
 
 it("releases its only deadline when disposed", () => {

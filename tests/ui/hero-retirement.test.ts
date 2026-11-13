@@ -58,3 +58,15 @@ it('retires on the native scheduling turn when no opacity run exists', async () 
     expect(retire).not.toHaveBeenCalled(); await vi.runAllTimersAsync(); expect(retire).toHaveBeenCalledOnce();
   } finally { vi.useRealTimers(); }
 });
+
+it('retains the outgoing frame until its native horizontal run also stops', async () => {
+  vi.useFakeTimers();
+  try {
+    let finish!: () => void;
+    const moving = new Promise<void>(resolve => { finish = resolve; }), retire = vi.fn();
+    const node = {lng: {animation: (property: string) => ({waitUntilStopped: () => property === 'x' ? moving : Promise.resolve()})}};
+    retireAfterHeroAnimations([node], retire); await vi.runAllTimersAsync();
+    expect(retire).not.toHaveBeenCalled(); finish();
+    await Promise.resolve(); await Promise.resolve(); expect(retire).toHaveBeenCalledOnce();
+  } finally { vi.useRealTimers(); }
+});
