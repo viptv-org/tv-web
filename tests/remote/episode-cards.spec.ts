@@ -87,7 +87,7 @@ async function episodePaint({title, frames, mark}: {title: string; frames: numbe
     else { data = new Uint8Array(w * h * 4); ctx.readPixels(px, canvas.height - py - h, w, h, ctx.RGBA, ctx.UNSIGNED_BYTE, data); }
     let white = 0, accent = 0;
     for (let yy = 0; yy < h; yy++) for (let xx = 0; xx < w; xx++) {
-      const i = (yy * w + xx) * 4;
+      const i = ((canvasMode ? yy : h - 1 - yy) * w + xx) * 4;
       if ((xx < 4 * scale || xx >= w - 4 * scale || yy < 4 * scale || yy >= h - 4 * scale) &&
         Math.min(data[i], data[i + 1], data[i + 2]) > 200) white++;
       if (yy >= h - 8 * scale && yy < h - 3 * scale && data[i] > 180 && data[i + 1] > 110 && data[i + 2] < 130) accent++;
@@ -129,6 +129,7 @@ for (const canvas of [false, true]) {
       const before = await paint(page, titles[0]);
       expect(before.canvasMode).toBe(canvas);
       expect(before.samples[0].captionInk).toBeGreaterThan(100);
+      expect(before.samples[0].accent).toBeGreaterThan(6);
       const recording = paint(page, titles[0], 90, "late-failure");
       await page.waitForFunction(() => (window as any).__viptvEpisodeCaptureReady === "late-failure");
       const response = page.waitForResponse(response => response.url().endsWith("episode-art-failed.jpg") && response.status() === 404);

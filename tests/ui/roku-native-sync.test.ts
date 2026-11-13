@@ -39,6 +39,17 @@ it("does not enqueue detached holders or synchronize removed records", () => {
   expect(sync.pending).toBe(false);
 });
 
+it("hides detached chrome records through their unchanged logical visibility parent", () => {
+  const sync = new NativeSync(() => 0), group = {alpha: 1, children: [] as any[]};
+  const ring = {alpha: 1, parentNode: group}, chromeHolder = {alpha: 1};
+  group.children.push(ring);
+  sync.register(ring, inherited => { chromeHolder.alpha = inherited * ring.alpha; });
+  for (const alpha of [1, 0, 1, 0]) {
+    group.alpha = alpha; sync.mark(group); sync.flush(1);
+    expect(chromeHolder.alpha).toBe(alpha);
+  }
+});
+
 it("moves a container as one layer group without multiplying its opacity into each child", () => {
   const root = { alpha: 0.5, nativeMotionRoot: true };
   const parent = { alpha: 0.4, nativeMotionRoot: true, parentNode: root };

@@ -28,6 +28,11 @@ export function detailBodyOffset(episodes: boolean, compact: boolean): number {
 export function detailListTop(episodes: boolean, seasons: boolean, compact: boolean): number {
   return compact ? episodes ? seasons ? 154 : 184 : 680 : seasons ? 816 : 836;
 }
+export const detailEpisodeLayout = (() => {
+  const columns = 4, gap = 24, left = 96, right = 1824;
+  const width = Math.floor((right - left - gap * (columns - 1)) / columns);
+  return {columns, width, height: Math.round(width * 9 / 16), step: width + gap};
+})();
 /** Fit the actual prepared pixels, including logos that do not fill their raster slot. */
 export function logoScale(box: HeroLogoBox, width: number, height: number) {
   return Math.min(box.width / Math.max(1, width), box.height / Math.max(1, height));

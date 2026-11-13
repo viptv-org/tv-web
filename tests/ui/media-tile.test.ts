@@ -50,16 +50,18 @@ const episode = (extra: Partial<Card> = {}): Card => ({
   provider_id: "addon:10", title: "The Quietly Approaching Threat", badges: [],
   poster: null, logo: null, landscape: null, progress: null, view: {saved: false, progress: null}, ...extra,
 });
-function mount(card: Card, focused = false) {
+function mount(card: Card, focused = false, poster = false, fallbackArtwork?: string) {
   const [value, setCard] = createSignal(card), [focus, setFocus] = createSignal(focused);
+  const [fallback, setFallback] = createSignal(fallbackArtwork);
   let root!: SceneNode;
   createRoot(dispose => {
     cleanups.push(dispose);
     root = createComponent(MediaTile, {
-      get card() { return value(); }, get focused() { return focus(); }, x: 0, y: 0, w: 414, h: 233,
+      get card() { return value(); }, get focused() { return focus(); }, poster, x: 0, y: 0, w: 414, h: 233,
+      get fallbackArtwork() { return fallback(); },
     }) as unknown as SceneNode;
   });
-  return { root, setCard, setFocus };
+  return { root, setCard, setFocus, setFallback };
 }
 function visible(node: SceneNode | SceneNode[] | (() => SceneNode)): SceneNode[] {
   if (typeof node === "function") return visible(node());
@@ -114,5 +116,54 @@ it("renders only authoritative positive progress independently from focus and fa
     expect(visible(scene.root).filter(node => node.props.focusRing)).toHaveLength(4);
     scene.setFocus(false);
     expect(bars()).toHaveLength(progress ? 1 : 0);
+    expect(visible(scene.root).filter(node => node.props.focusRing)).toHaveLength(0);
+    scene.setFocus(true);
+    expect(visible(scene.root).filter(node => node.props.focusRing)).toHaveLength(4);
   }
+});
+
+it("retains one missing-poster title when focus moves its caption below the artwork", () => {
+  for (const landscape of [null, "/episode-art/missing.jpg"]) {
+    const card = episode({landscape}), scene = mount(card, false, true);
+    if (landscape) latestImage().props.onError();
+    expect(titles(scene.root, card.title)).toHaveLength(1);
+    scene.setFocus(true);
+    expect(titles(scene.root, card.title)).toHaveLength(1);
+    scene.setFocus(false);
+    expect(titles(scene.root, card.title)).toHaveLength(1);
+  }
+});
+
+it("tries one distinct parent artwork after failure and retains the failed primary when only the parent changes", () => {
+  const card = episode({landscape: "/episode-art/primary.jpg"});
+  const scene = mount(card, true, false, "/episode-art/parent.jpg");
+  const count = (url: string) => imageNodes().filter(node => node.props.src === url).length;
+  latestImage().props.onError();
+  expect(latestImage().props.src).toBe("/episode-art/parent.jpg");
+  expect(count("/episode-art/primary.jpg")).toBe(1);
+  expect(count("/episode-art/parent.jpg")).toBe(1);
+  latestImage().props.onError();
+  const attempts = imageNodes().length;
+  scene.setCard({...card, subtitle: "Updated metadata"}); scene.setFocus(false); scene.setFocus(true);
+  expect(imageNodes()).toHaveLength(attempts);
+  expect(titles(scene.root, card.title)).toHaveLength(1);
+  scene.setFallback("/episode-art/parent-replacement.jpg");
+  expect(latestImage().props.src).toBe("/episode-art/parent-replacement.jpg");
+  expect(count("/episode-art/primary.jpg")).toBe(1);
+  scene.setCard({...card, identity: {...card.identity, id: "tt0988824:4:2"}});
+  expect(latestImage().props.src).toBe("/episode-art/primary.jpg");
+  expect(count("/episode-art/primary.jpg")).toBe(2);
+});
+
+it("does not retry an identical parent URI and uses the parent directly when episode artwork is absent", () => {
+  const uri = "/episode-art/shared.jpg";
+  const scene = mount(episode({landscape: uri}), false, false, uri);
+  latestImage().props.onError();
+  expect(imageNodes()).toHaveLength(1);
+  scene.setCard(episode({landscape: null}));
+  expect(latestImage().props.src).toBe(uri);
+  expect(imageNodes()).toHaveLength(2);
+  latestImage().props.onError();
+  scene.setCard(episode({landscape: null, subtitle: "Metadata refresh"}));
+  expect(imageNodes()).toHaveLength(2);
 });
