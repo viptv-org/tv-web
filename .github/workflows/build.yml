@@ -8,6 +8,10 @@ on:
         description: Run focused startup authentication recovery browser checks
         type: boolean
         default: false
+      episode_card_ui:
+        description: Run focused episode artwork, focus and progress browser checks
+        type: boolean
+        default: false
 permissions:
   contents: read
 concurrency:
@@ -33,10 +37,15 @@ jobs:
         working-directory: roku
         run: pnpm install --frozen-lockfile
       - run: npm test
+        if: github.event_name != 'workflow_dispatch' || !inputs.episode_card_ui
       - run: npm run build
-      - name: Qualify startup authority recovery over disposable HTTPS
-        if: github.event_name == 'workflow_dispatch' && inputs.auth_recovery_ui
+        id: build
+      - name: Qualify requested UI regressions over disposable HTTPS
+        if: github.event_name == 'workflow_dispatch' && (inputs.auth_recovery_ui || inputs.episode_card_ui)
         timeout-minutes: 8
+        env:
+          AUTH_RECOVERY_UI: ${{ inputs.auth_recovery_ui }}
+          EPISODE_CARD_UI: ${{ inputs.episode_card_ui }}
         run: |
           npx playwright install --with-deps chromium
           mkdir -p "$RUNNER_TEMP/auth-tls"
@@ -45,7 +54,19 @@ jobs:
           fixture_pid=$!
           trap 'kill "$fixture_pid" 2>/dev/null || true' EXIT
           for attempt in $(seq 1 30); do curl --insecure --silent --fail https://127.0.0.1:18562/tv/solid.html >/dev/null && break; sleep 1; done
-          npx playwright test --config playwright.auth-recovery.config.ts --reporter=line
+          if [ "$AUTH_RECOVERY_UI" = true ]; then npx playwright test --config playwright.auth-recovery.config.ts --reporter=line; fi
+          if [ "$EPISODE_CARD_UI" = true ]; then npx playwright test --config playwright.episode-cards.config.ts --reporter=line; fi
+      - name: Run unit regressions after the requested browser capture
+        if: always() && github.event_name == 'workflow_dispatch' && inputs.episode_card_ui && steps.build.outcome == 'success'
+        run: npm test
+      - name: Retain episode-card browser evidence
+        if: always() && github.event_name == 'workflow_dispatch' && inputs.episode_card_ui
+        uses: actions/upload-artifact@v4
+        with:
+          name: episode-card-ui-${{ github.sha }}
+          path: /tmp/viptv-tv-remote-tests
+          if-no-files-found: ignore
+          retention-days: 7
       - run: node scripts/package-tv.mjs hosting
       - uses: actions/upload-artifact@v4
         with:

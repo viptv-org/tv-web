@@ -9,7 +9,7 @@ import { seasonLabel } from "./seasons";
 import { Button, icon, Label, palette } from "./visuals";
 import { cardKey, type Card, type Detail } from "./types";
 import { sdfTextMetrics } from "./text-measure";
-import { BRANDING_MOTION, compactDetail, detailBodyOffset, detailListTop, detailLogoBox } from "./hero-layout";
+import { BRANDING_MOTION, compactDetail, detailBodyOffset, detailEpisodeLayout, detailListTop, detailLogoBox } from "./hero-layout";
 import { reducedMotion } from "./motion";
 
 type DetailContentProps = {
@@ -146,15 +146,15 @@ export function DetailContent(props: DetailContentProps) {
                 ? props.episodes
                 : value().recommendations
               ).slice(
-                Math.floor(props.episodeColumn / (props.hasEpisodes ? 4 : 7)) * (props.hasEpisodes ? 4 : 7),
-                Math.floor(props.episodeColumn / (props.hasEpisodes ? 4 : 7)) * (props.hasEpisodes ? 4 : 7) + 8,
+                Math.floor(props.episodeColumn / (props.hasEpisodes ? detailEpisodeLayout.columns : 7)) * (props.hasEpisodes ? detailEpisodeLayout.columns : 7),
+                Math.floor(props.episodeColumn / (props.hasEpisodes ? detailEpisodeLayout.columns : 7)) * (props.hasEpisodes ? detailEpisodeLayout.columns : 7) + 8,
               )}
               keyOf={cardKey}
             >
               {(card, i) => (
                 <Tile
                   card={card()}
-                  x={i() * (props.hasEpisodes ? 472 : 248)}
+                  x={i() * (props.hasEpisodes ? detailEpisodeLayout.step : 248)}
                   y={
                     value().seasons.length
                       ? props.zone === "hero"
@@ -162,13 +162,14 @@ export function DetailContent(props: DetailContentProps) {
                         : 82
                       : 52
                   }
-                  w={props.hasEpisodes ? 448 : 232}
-                  h={props.hasEpisodes ? 252 : 348}
+                  w={props.hasEpisodes ? detailEpisodeLayout.width : 232}
+                  h={props.hasEpisodes ? detailEpisodeLayout.height : 348}
                   poster={!props.hasEpisodes}
+                  fallbackArtwork={props.hasEpisodes ? value().item.landscape : undefined}
                   focused={
                     props.zone === "episodes" &&
                     i() ===
-                      props.column % (props.hasEpisodes ? 4 : 7)
+                      props.column % (props.hasEpisodes ? detailEpisodeLayout.columns : 7)
                   }
                 />
               )}

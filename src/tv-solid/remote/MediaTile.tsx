@@ -5,7 +5,7 @@ import { focusFrameEdges } from "./focus-frame";
 import { imagePixels, imageSource } from "./image-source";
 import { sdfTextMetrics } from "./text-measure";
 import { cardOutline, icon, Label, Logo, palette } from "./visuals";
-import type { Card } from "./types";
+import { cardKey, type Card } from "./types";
 
 const isRokuUi = typeof (globalThis as any).__SolidTVRokuRenderer !== "undefined";
 
@@ -20,20 +20,33 @@ export function MediaTile(props: {
   focusedCaptions?: boolean;
   focusBorder?: boolean;
   preload?: boolean;
+  fallbackArtwork?: string | null;
 }) {
   const edges = createMemo(() => focusFrameEdges(props.w,props.h));
   const progress = () =>
     props.card.progress ?? props.card.view?.progress ?? null;
-  const source = () =>
+  const source = createMemo(() =>
     props.poster
       ? (props.card.poster ?? props.card.landscape)
       : (props.card.view?.preview?.background ??
         props.card.landscape ??
-        props.card.poster);
-  const [failed, setFailed] = createSignal(false);
+        props.card.poster));
+  const identity = createMemo(() => cardKey(props.card));
+  const primary = createMemo(() => imageSource(source(), imagePixels(props.w), imagePixels(props.h)));
+  const alternative = createMemo(() => imageSource(props.fallbackArtwork, imagePixels(props.w), imagePixels(props.h)));
+  const captionVisible = () => !props.poster || props.focused || props.focusedCaptions;
+  const [primaryFailed, setPrimaryFailed] = createSignal(false);
+  const [alternativeFailed, setAlternativeFailed] = createSignal(false);
   createEffect(() => {
-    source();
-    setFailed(false);
+    identity(); primary(); setPrimaryFailed(false);
+  });
+  createEffect(() => {
+    identity(); alternative(); setAlternativeFailed(false);
+  });
+  const request = createMemo(() => {
+    if (primary() && !primaryFailed()) return primary();
+    const fallback = alternative();
+    return fallback && fallback !== primary() && !alternativeFailed() ? fallback : "";
   });
   const label = () =>
     props.card.view?.tile_badge?.label ??
@@ -60,10 +73,12 @@ export function MediaTile(props: {
         color={palette.surface}
         clipping
       >
-        <Show
-          when={!failed() && source()}
-          fallback={
-            <TvView w={props.w} h={props.h} color="#1A1A1C">
+        <TvView w={props.w} h={props.h} color="#1A1A1C">
+          <Show
+            when={request()}
+            keyed
+            fallback={
+              <Show when={props.poster}>
               <Label
                 x={14}
                 y={props.h - 70}
@@ -75,18 +90,26 @@ export function MediaTile(props: {
                 content={props.card.title}
                 color="rgba(244,242,238,.9)"
               />
-            </TvView>
-          }
-        >
-          <TvView
+              </Show>
+            }
+          >
+          {uri => <TvView
             w={props.w}
             h={props.h}
-            src={imageSource(source(), imagePixels(props.w), imagePixels(props.h))}
+            src={uri}
             preload={props.preload}
             fit="cover"
-            onError={() => setFailed(true)}
-          />
-        </Show>
+            onError={() => {
+              if (request() !== uri) return;
+              if (uri === primary()) setPrimaryFailed(true);
+              else setAlternativeFailed(true);
+            }}
+          />}
+          </Show>
+          <Show when={!request() && !props.poster && props.card.identity.episode}>
+            <TvView x={(props.w - 48) / 2} y={(props.h - 48) / 2} w={48} h={48} alpha={.45} src={icon("episodes")} />
+          </Show>
+        </TvView>
         <Show when={!props.poster && props.card.logo}>
           <TvView
             x={18}
@@ -134,12 +157,14 @@ export function MediaTile(props: {
             />
           </TvView>
         </Show>
-        <Show when={props.focused && props.focusBorder !== false && isRokuUi}>
+        <Show when={isRokuUi}>
+        <TvView w={props.w} h={props.h} show={props.focused && props.focusBorder !== false}>
           <KeyedFor each={edges()} keyOf={edge => edge.id}>
             {edge => <TvView x={edge().x} y={edge().y} w={edge().w} h={edge().h} color={palette.text} focusRing />}
           </KeyedFor>
+        </TvView>
         </Show>
-        <Show when={(progress() ?? 0) > 0}>
+        <TvView w={props.w} h={props.h} show={(progress() ?? 0) > 0}>
           <TvView
             x={3}
             y={props.h - 8}
@@ -153,8 +178,9 @@ export function MediaTile(props: {
               color={palette.accent}
             />
           </TvView>
-        </Show>
-        <Show when={props.focused && props.focusBorder !== false && !isRokuUi}>
+        </TvView>
+        <Show when={!isRokuUi}>
+        <TvView w={props.w} h={props.h} show={props.focused && props.focusBorder !== false}>
           <TvView
             w={props.w}
             h={props.h}
@@ -175,10 +201,12 @@ export function MediaTile(props: {
               src={icon("play", false, 0, "#F4F2EE")}
             />
           </TvView>
+        </TvView>
         </Show>
       </TvView>
-      <Show when={!props.poster || props.focused || props.focusedCaptions}>
+      <Show when={captionVisible()}>
         <TvView y={props.h + 14} w={props.w} h={66} clipping>
+          <Show when={!props.poster || request()}>
           <Label
             y={0}
             size={24}
@@ -189,6 +217,7 @@ export function MediaTile(props: {
             content={props.card.title}
             color={palette.text}
           />
+          </Show>
           <Label
             y={33}
             size={20}

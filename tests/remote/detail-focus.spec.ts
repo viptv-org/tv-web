@@ -1,20 +1,21 @@
 import { expect, test, type Page } from '@playwright/test';
 import { installRemoteBackend } from '../preview/remote-backend';
+import { detailEpisodeLayout } from '../../src/tv-solid/remote/hero-layout';
 
 const state = (page: Page) => page.locator('html');
 async function press(page: Page, ...keys: string[]) {
   for (const key of keys) await page.keyboard.press(key);
 }
-const episodes = (page: Page) => page.evaluate(() => {
+const episodes = (page: Page) => page.evaluate(({width, height}) => {
   const result: { src: string; x: number; y: number }[] = [];
   function walk(node: any) {
-    if (node.isRenderable && node.props.w === 448 && node.props.h === 252 && node.texture?.props?.src?.includes('/fixture/'))
+    if (node.isRenderable && node.props.w === width && node.props.h === height && node.texture?.props?.src?.includes('/fixture/'))
       result.push({ src: node.texture.props.src, x: node.absX, y: node.absY });
     node.children?.forEach(walk);
   }
   walk((window as any).__viptvRenderer.stage.root);
   return result;
-});
+}, detailEpisodeLayout);
 
 test('detail seasons, episodes and recommendations retain independent selections and episode geometry', async ({ page, baseURL }, testInfo) => {
   const fixture = await installRemoteBackend(page, baseURL!);
