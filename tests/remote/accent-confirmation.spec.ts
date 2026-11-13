@@ -37,10 +37,19 @@ for (const canvas of [false, true]) test(`Select keeps the persisted last accent
   expect(await state(page).getAttribute("data-renderer-backend")).toBe(canvas ? "canvas" : "webgl");
   await openDisplay(page);
   const writes = () => f.requests.filter(request => request.method === "PUT" && request.path.endsWith("/preferences"));
-  for (const color of ["#FF8B5C", "#62D9BC", "#A3BCFF"]) {
+  const selectedSwatch = () => page.evaluate(() => {
+    let x: number | undefined;
+    const walk = (node: any) => {
+      if (node.isRenderable && node.props.w === 56 && node.props.h === 56 && node.absY === 240 && node.absX >= 1560) x = node.absX;
+      node.children?.forEach(walk);
+    };
+    walk((window as any).__viptvRenderer.stage.root); return x;
+  });
+  for (const [color, x] of [["#FF8B5C", 1622], ["#62D9BC", 1684], ["#A3BCFF", 1746]] as const) {
     await page.keyboard.press("ArrowRight");
     await expect.poll(() => writes().at(-1)?.body?.display?.accent_color).toBe(color);
     await expect(state(page)).toHaveAttribute("data-tv-ready", "true");
+    await expect.poll(selectedSwatch).toBe(x);
   }
   expect(writes()).toHaveLength(3);
   await page.keyboard.press("Enter");
