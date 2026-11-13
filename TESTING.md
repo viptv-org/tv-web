@@ -4810,3 +4810,13 @@ and focused title, and rejected stale Detail responses. Final integrated hosted
 evidence is recorded in the PR. No local build, authenticated account playback,
 browser acceptance or physical TV qualification was performed for this change;
 the unrelated Tizen signing gate requires unavailable Samsung secrets.
+# Accent confirmation (#161)
+
+Display Left/Right changes use the existing revisioned server save. Select
+confirms that saved swatch without advancing or issuing another write. Hosted
+red run43406103862 reproduces a saved Periwinkle changing to Amber on Select in
+both Canvas and WebGL, including the wrong value after reload. Six controller
+cases cover every saved colour, repeat confirmation, directional wrapping and a
+rejected directional write. Final qualified evidence is recorded in the PR.
+No local tests/builds, live account edits, deployment or physical TV checks are
+claimed for this change.

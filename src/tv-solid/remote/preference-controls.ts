@@ -81,7 +81,8 @@ export function createPreferenceControls(options: {
         description: control.description,
         swatches: colors,
         value: String(current),
-        run: () => step(1),
+        // Directional picks are already persisted; Select only confirms.
+        run: () => {},
         cycle: step,
       };
     }
