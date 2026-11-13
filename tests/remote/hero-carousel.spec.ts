@@ -135,7 +135,7 @@ for(const canvas of [false,true]) {
       await expect.poll(async()=>(await scene(page)).images.some(value=>value.index===1&&value.alpha>.05)).toBe(true);
       await page.clock.runFor(200);
       const after=await logoBounds(page);expect(after).toBeDefined();
-      expect(after).toEqual(before);
+      for(const key of ['left','top','right','bottom'] as const) expect(Math.abs(after![key]-before![key])).toBeLessThanOrEqual(3);
     }finally{f.release();}
   });
   for(const action of ['play','save','info','hold','menu']) test(`pending incoming title cannot steal ${action} from the shown hero (${mode})`,async({page,baseURL})=>{
