@@ -399,9 +399,13 @@ export function createRemoteTvApp(
       clearLogoCache();
       reloadImages();
     }
-    const { active: screenSaver, dismiss: dismissScreenSaver } = createIdleScreenSaver({
+    const { active: screenSaver, dismiss: dismissIdleSaver } = createIdleScreenSaver({
       minutes: screenSaverMinutes, playing: () => screen() === "player", onWake: reloadIdleImages,
     });
+    function dismissScreenSaver() {
+      interruptHero();
+      return dismissIdleSaver();
+    }
     const [choice, setChoice] = createSignal(0);
     const { text, setText, key, setKey, upper: keyboardUpper, setUpper: setKeyboardUpper,
       symbols: keyboardSymbols, setSymbols: setKeyboardSymbols, characters: keyboardCharacters } = createTextKeyboard();
@@ -442,7 +446,7 @@ export function createRemoteTvApp(
       blocked: () => pending() || loading(),
       onTimer: () => { (window as any).__holdPending = pending(); (window as any).__holdLoading = loading(); },
       hold: () => {
-        if (!overlay() && zone() === "hero" && heroAction() === 0 && hero()) void playIntent(hero()!, true).catch(fail);
+        if (!overlay() && zone() === "hero" && heroAction() === 0 && heroIntentCard()) void playIntent(heroIntentCard()!, true).catch(fail);
         else menu();
       },
       activate: () => { void activate().catch(fail); },
@@ -1326,7 +1330,7 @@ export function createRemoteTvApp(
       (!!searchError() || activeSearchRow()?.state === "Failed" || !!activeSearchRow()?.message);
     const heroCycle = createHeroCycle({
       count: () => home()?.featured.length ?? 0,
-      enabled: () => screen() === "home" && zone() !== "rows" && !overlay() && !pending() && !loading() && !error(),
+      enabled: () => screenSaver() ? screen() !== "player" : screen() === "home" && zone() !== "rows" && !overlay() && !pending() && !loading() && !error(),
     });
     const { slide: heroSlide,
       reset: resetHeroCycle, restart: restartHeroCycling, setVisible: setHeroVisible } = heroCycle;
@@ -1360,12 +1364,12 @@ export function createRemoteTvApp(
     };
     const hero = createMemo(() => {
       const value =
-        screen() === "home"
+        screenSaver() ? (home()?.featured[heroSlide()] ?? home()?.hero) : screen() === "home"
           ? zone() === "rows"
             ? (previewCard() ?? home()?.hero)
             : (home()?.featured[heroSlide()] ?? home()?.hero)
           : detail()?.item;
-      if (!value || value.logo || screen() !== "home") return value;
+      if (!value || value.logo || screen() !== "home" && !screenSaver()) return value;
       // The featured carousel's cards can be summary-only while the same title
       // in a row carries the logo. Borrow that artwork so Home never shows the
       // title fallback for a title that already has one.
@@ -1385,19 +1389,38 @@ export function createRemoteTvApp(
         return { ...value, logo: fallback.logo };
       return value;
     });
-    const heroLogoBox = () => screen() === "detail"
+    const heroLogoBox = () => screenSaver() ? homeLogoBox() : screen() === "detail"
       ? detailLogoBox(detailHasEpisodes(), compactDetail(zone()))
       : homeLogoBox(zone() === "rows" ? shelfTitleY() : undefined);
     const heroPresentation = createCoherentHero(
-      () => screen() === "home" || screen() === "detail" ? hero() ?? undefined : undefined,
-      () => `${deviceScope()}:${screen()}`,
-      () => screen() === "detail" ? "detail" : zone() !== "rows" ? "hero"
+      () => screenSaver() || screen() === "home" || screen() === "detail" ? hero() ?? undefined : undefined,
+      () => `${deviceScope()}:${screenSaver() ? "idle" : screen()}`,
+      () => screenSaver() ? "hero" : screen() === "detail" ? "detail" : zone() !== "rows" ? "hero"
         : home()?.rows[row()]?.id === "continue" ? "landscape" : "portrait",
       heroLogoBox,
-      () => screen() !== "home" || zone() !== "rows" || !!previewCard() && !!focusedCard() &&
-        presentationKey(previewCard()!) === presentationKey(focusedCard()!),
+      () => heroCycle.visible() && (screenSaver() || screen() !== "home" || zone() !== "rows" || !!previewCard() && !!focusedCard() &&
+        presentationKey(previewCard()!) === presentationKey(focusedCard()!)),
+      heroCycle.movement,
     );
     const displayHero = heroPresentation.card;
+    const displayedFeatured = createMemo(() => {
+      const card = displayHero();
+      return card ? (home()?.featured ?? []).findIndex(value => cardKey(value) === cardKey(card)) : -1;
+    });
+    function heroIntentCard() { return screen() === "home" ? displayHero() : hero(); }
+    function interruptHero() {
+      if (screen() !== "home" && !screenSaver()) return;
+      heroCycle.interrupt(displayedFeatured());
+      heroPresentation.stopMotion();
+    }
+    createEffect(() => {
+      const shown = displayHero(), requested = hero();
+      heroCycle.setReady(!!shown && !!requested && presentationKey(shown) === presentationKey(requested) && !heroPresentation.frames().some(frame => frame.staged));
+    });
+    createEffect(() => {
+      const eligible = heroCycle.eligible(); heroPresentation.current();
+      if (!eligible || !heroCycle.animated()) untrack(() => heroPresentation.stopMotion());
+    });
     const detailForDisplay = createMemo(() => detail() && displayHero() && presentationKey(detail()!.item) === presentationKey(displayHero()!)
       ? { ...detail()!, item: displayHero()! } : undefined);
     const billboardKey = createMemo(() =>
@@ -2895,7 +2918,7 @@ export function createRemoteTvApp(
       }
       if (zone() === "hero") {
         const card =
-          screen() === "detail" ? detailTarget()?.card : hero();
+          screen() === "detail" ? detailTarget()?.card : displayHero();
         if (!card) {
           if (screen() === "home" && home()?.complete)
             await navigate("settings");
@@ -2961,7 +2984,7 @@ export function createRemoteTvApp(
       // The hero term identifies the billboard only while the billboard is the
       // focused element. On a rows card the hero is the delayed preview, which
       // changes 400ms into a hold and would otherwise defeat the 700ms timer.
-      return JSON.stringify([screen(),screen() === "player" ? choice() : null,zone(),column(),row(),heroAction(),zone()==="hero"?(hero()?cardKey(hero()!):null):null,focusedCard()?cardKey(focusedCard()!):null,heroAction()===1&&hero()?isSaved(hero()!):null]);
+      return JSON.stringify([screen(),screen() === "player" ? choice() : null,zone(),column(),row(),heroAction(),zone()==="hero"?(heroIntentCard()?cardKey(heroIntentCard()!):null):null,focusedCard()?cardKey(focusedCard()!):null,heroAction()===1&&heroIntentCard()?isSaved(heroIntentCard()!):null]);
     }
     const showLiveMenu = createLiveMenu({request: call, path: path => api.scoped(path), favorites: setLiveFavorites,
       dialogs: {open: openOverlay, close: closeOverlay}, play: playIntent, fail});
@@ -3011,7 +3034,7 @@ export function createRemoteTvApp(
         return;
       }
       if (["nav", "filters", "keyboard", "seasons"].includes(zone())) return;
-      const card = zone() === "hero" ? hero() : focusedCard();
+      const card = zone() === "hero" ? heroIntentCard() : focusedCard();
       if (card) showCardMenu(card);
     }
     createEffect(() => {
@@ -3228,6 +3251,14 @@ export function createRemoteTvApp(
               : palette.bg
           }
         >
+          <TvView w={screenSaver() ? 1920 : sceneWidth()} h={1080}
+            clipping={!screenSaver() && sceneWidth() < 1920}
+            show={screen() !== "player" && (screenSaver() || !profileEditor() && overlay()?.kind !== "text")}>
+            <HeroArtwork presentation={heroPresentation} logoBox={heroLogoBox()}
+              dim={!screenSaver() && screen() === "detail" && ["episodes","seasons","recommendations"].includes(zone())
+                ? typeof (globalThis as any).__SolidTVRokuRenderer !== "undefined" ? .35 : .5 : 0} />
+          </TvView>
+          <TvView w={1920} h={1080} show={!screenSaver()}>
           <TvView
             w={sceneWidth()}
             h={1080}
@@ -3238,10 +3269,6 @@ export function createRemoteTvApp(
                 native text/visual layers. Hide the page behind it so stale
                 artwork cannot cover the video. */}
             <TvView w={1920} h={1080} show={screen() !== "player" && !screenSaver()}>
-            <HeroArtwork presentation={heroPresentation}
-              logoBox={heroLogoBox()}
-              dim={screen() === "detail" && ["episodes","seasons","recommendations"].includes(zone())
-                ? typeof (globalThis as any).__SolidTVRokuRenderer !== "undefined" ? .35 : .5 : 0} />
             <Show
               when={
                 ![
@@ -3302,7 +3329,7 @@ export function createRemoteTvApp(
             </Show>
             <Show when={screen() === "home"}>
               <HomeContent home={home()} hasHero={!!hero()} presentation={{card: displayHero, mode: heroPresentation.mode}}
-                focus={{zone, row, column, action: heroAction}} billboard={heroCycle}
+                focus={{zone, row, column, action: heroAction}} billboard={{slide: () => Math.max(0, displayedFeatured()), started: heroCycle.started, active: () => heroCycle.active() && heroCycle.animated()}}
                 shelfTop={shelfTitleY()} columnForRow={shelf => homeRowFocus.resolve(shelf)} isSaved={isSaved} />
             </Show>
             <Show when={screen() === "detail"}>
@@ -3537,12 +3564,18 @@ export function createRemoteTvApp(
               />
             </TvView>
           </Show>
+          </TvView>
           <Show when={screenSaver()}>
             <OverlayViewport order={40}>
+              <Show when={!home()?.featured.length}>
               <TvView w={1920} h={1080} zIndex={-1} color="#0B0B0C">
                 <PosterWall />
               </TvView>
               <TvView w={1920} h={1080} color="rgba(11,11,12,.72)" />
+              </Show>
+              <Show when={home()?.featured.length && !displayHero()?.logo}>
+                <Label x={96} y={330} w={800} size={48} font="Onest700" maxlines={2} content={displayHero()?.title ?? ""} />
+              </Show>
             </OverlayViewport>
           </Show>
         </TvView>
