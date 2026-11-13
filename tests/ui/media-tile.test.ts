@@ -75,7 +75,7 @@ function visible(node: SceneNode | SceneNode[] | (() => SceneNode)): SceneNode[]
   if (Array.isArray(node)) return node.flatMap(visible);
   return node.props.show === false || node.props.alpha === 0 ? [] : [node, ...node.children.flatMap(visible)];
 }
-const titles = (root: SceneNode, value: string) => visible(root).filter(node => node.kind === "label" && node.props.content === value);
+const titles = (root: SceneNode | (() => SceneNode), value: string) => visible(root).filter(node => node.kind === "label" && node.props.content === value);
 const imageNodes = () => graphics.nodes.filter(node => typeof node.props.src === "string" && node.props.src.includes("/episode-art/"));
 const latestImage = () => { const nodes = imageNodes(); return nodes[nodes.length - 1]!; };
 
@@ -136,9 +136,11 @@ it("retains the same missing-poster title node through focus and blur", () => {
     expect(titles(scene.root, card.title)).toHaveLength(1);
     const title = titles(scene.root, card.title)[0];
     scene.setFocus(true);
-    expect(titles(scene.root, card.title)).toEqual([title]);
+    expect(titles(scene.root, card.title)).toHaveLength(1);
+    expect(titles(scene.root, card.title)[0]).toBe(title);
     scene.setFocus(false);
-    expect(titles(scene.root, card.title)).toEqual([title]);
+    expect(titles(scene.root, card.title)).toHaveLength(1);
+    expect(titles(scene.root, card.title)[0]).toBe(title);
   }
 });
 
