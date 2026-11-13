@@ -6,26 +6,35 @@ import type { Card } from '../../src/tv-solid/remote/types';
 
 const {PNG} = createRequire(import.meta.url)('pngjs');
 const colors = [[180,40,50],[50,160,60],[40,70,180],[160,90,20],[130,50,170]];
-function png(rgb: number[]) {
-  const value = new PNG({width:192,height:108});
+function png(rgb: number[], width=192, height=108) {
+  const value = new PNG({width,height});
   for (let i=0;i<value.data.length;i+=4) value.data.set([...rgb,255],i);
   return PNG.sync.write(value);
 }
 const html = (page: Page) => page.locator('html');
 const scene = (page: Page) => page.evaluate(() => {
   const images: {id:number;index:number;x:number;y:number;alpha:number}[] = [], titles: string[] = [];
+  const tiles: {index:number;x:number;y:number;w:number;h:number}[] = [];
+  const walls: {x:number;y:number;w:number;h:number}[] = [];
+  const logos: {x:number;y:number;scale:number;alpha:number}[] = [];
   function walk(node: any) {
     const src = node.texture?.props?.src;
     if (typeof src === 'string' && /\/carousel\/\d+\.png/.test(src) && node.props.w===1920 && node.props.h===1080)
       images.push({id:node.id,index:Number(/\/carousel\/(\d+)\.png/.exec(src)![1]),x:node.absX,y:node.absY,alpha:node.worldAlpha});
+    if (typeof src === 'string' && /\/carousel\/\d+\.png/.test(src) && node.props.w===181 && node.props.h===271)
+      tiles.push({index:Number(/\/carousel\/(\d+)\.png/.exec(src)![1]),x:node.absX,y:node.absY,w:node.props.w,h:node.props.h});
+    if (typeof src === 'string' && src.includes('/tv-artwork/') && node.props.w===1920 && node.props.h===1080 && node.worldAlpha>.5)
+      walls.push({x:node.absX,y:node.absY,w:node.props.w,h:node.props.h});
+    if (node.props.w===640 && node.props.h===160 && node.props.scale !== undefined)
+      logos.push({x:node.absX,y:node.absY,scale:typeof node.props.scale==='number'?node.props.scale:node.props.scale?.x??1,alpha:node.worldAlpha});
     const text = node.viptvText ?? node.props?.text;
     if (node.worldAlpha>.99 && /^Featured \d$/.test(text??'')) titles.push(text);
     node.children?.forEach(walk);
   }
   walk((window as any).__viptvRenderer.stage.root);
-  return {images,titles,started:document.documentElement.dataset.tvHeroCycle,now:performance.now(),saver:document.documentElement.dataset.tvSaver};
+  return {images,tiles,walls,logos,titles,started:document.documentElement.dataset.tvHeroCycle,now:performance.now(),saver:document.documentElement.dataset.tvSaver};
 });
-async function setup(page: Page, origin: string, canvas: boolean, saver=false, reduced=false) {
+async function setup(page: Page, origin: string, canvas: boolean, saver=false, reduced=false, logos=false) {
   await page.emulateMedia({reducedMotion:'no-preference'}); await page.clock.install();
   if (canvas) await page.addInitScript(() => {
     const original=HTMLCanvasElement.prototype.getContext;
@@ -35,12 +44,16 @@ async function setup(page: Page, origin: string, canvas: boolean, saver=false, r
   await page.route('**/fixture/*',route=>route.fulfill({body:png([20,30,50]),contentType:'image/png'}));
   const bootstrap=fixture.bootstrap();
   const cards:Card[]=colors.map((_,index)=>({...fixture.card,identity:{kind:'movie',id:`carousel-${index}`,ids:[]},
-    title:`Featured ${index}`,logo:null,poster:null,landscape:`${origin}/carousel/${index}.png`,progress:null,
+    title:`Featured ${index}`,logo:logos?`${origin}/fixture/logo/${index}.png`:null,poster:null,landscape:`${origin}/carousel/${index}.png`,progress:null,
     view:{saved:false,progress:null},badges:[]}));
   bootstrap.home!.hero=cards[0];bootstrap.home!.featured=cards;bootstrap.home!.rows=[];
   bootstrap.preferences!.display!.screen_saver_minutes=saver?1:0;
   bootstrap.preferences!.display!.reduce_motion=reduced?'on':'follow';
   await page.route('**/api/bootstrap',route=>route.fulfill({json:bootstrap}));
+  await page.route('**/fixture/logo/*.png',route=>{
+    const index=Number(/logo\/(\d+)\.png/.exec(route.request().url())![1]);
+    return route.fulfill({body:png(colors[index],192+index*24,108),contentType:'image/png'});
+  });
   const gates=new Map<number,{promise:Promise<void>;release:()=>void}>(),waiting=new Set<number>();
   await page.route('**/carousel/*.png',async route=>{
     const index=Number(/\/carousel\/(\d+)\.png/.exec(route.request().url())![1]);
@@ -80,7 +93,7 @@ async function title(page: Page,index: number) {
 }
 for(const canvas of [false,true]) {
   const mode=canvas?'Canvas':'WebGL';
-  test(`featured wraps with real horizontal motion and input/visibility interruption (${mode})`,async({page,baseURL},info)=>{
+  test(`featured wraps without moving hero artwork (${mode})`,async({page,baseURL},info)=>{
     const f=await setup(page,baseURL!,canvas);
     try {
       await page.keyboard.press('ArrowRight');await page.keyboard.press('ArrowRight');
@@ -89,7 +102,7 @@ for(const canvas of [false,true]) {
         await tick(page);await title(page,index%5);await page.clock.runFor(60);
         const moving=await scene(page),incoming=moving.images.find(image=>image.index===index%5&&image.alpha>0)!;
         frames.push(moving);writeFileSync(info.outputPath('scroll-frames.json'),JSON.stringify(frames,null,2));
-        expect(incoming).toBeTruthy();expect(incoming.x).toBeGreaterThan(240);expect(incoming.x).toBeLessThan(1680);
+        expect(incoming).toBeTruthy();expect(incoming.x).toBeCloseTo(240,0);
         expect(moving.images).toHaveLength(2);
         if(index===1){await page.keyboard.press('ArrowRight');await page.clock.runFor(16);expect((await scene(page)).images.find(image=>image.index===1&&image.alpha>.99)?.x).toBeCloseTo(240,0);}
         await page.clock.runFor(450);expect((await scene(page)).images).toHaveLength(1);
@@ -103,6 +116,25 @@ for(const canvas of [false,true]) {
       expect((await scene(page)).started).toBe('');expect((await scene(page)).titles).toContain('Featured 0');
       expect(f.actions).toEqual([]);writeFileSync(info.outputPath('scroll-frames.json'),JSON.stringify(frames,null,2));
       await page.screenshot({path:info.outputPath('wrapped-hero.png')});
+    }finally{f.release();}
+  });
+  test(`Home clearlogo stays anchored and does not scale between titles (${mode})`,async({page,baseURL})=>{
+    const f=await setup(page,baseURL!,canvas,false,false,true);
+    try {
+      await page.keyboard.press('ArrowRight');await page.keyboard.press('ArrowRight');
+      await expect.poll(async()=>(await scene(page)).logos.some(value=>value.alpha>.99)).toBe(true);
+      const before=await scene(page),visibleLogo=before.logos.find(value=>value.alpha>.99)!;
+      expect(visibleLogo).toBeTruthy();
+      const beforeScales=before.logos.filter(value=>value.alpha>.05).map(value=>value.scale);
+      await tick(page);
+      await expect.poll(async()=>(await scene(page)).images.some(value=>value.index===1&&value.alpha>.05)).toBe(true);
+      await page.clock.runFor(60);
+      const during=await scene(page);
+      expect(during.logos.filter(value=>value.alpha>.05).every(value=>value.x===visibleLogo.x&&value.y===visibleLogo.y)).toBe(true);
+      await page.clock.runFor(220);
+      const after=await scene(page),afterScales=after.logos.filter(value=>value.alpha>.05).map(value=>value.scale);
+      const stableScales=[...beforeScales,...afterScales];
+      expect(during.logos.filter(value=>value.alpha>.05).every(value=>stableScales.some(scale=>Math.abs(scale-value.scale)<.001))).toBe(true);
     }finally{f.release();}
   });
   for(const action of ['play','save','info','hold','menu']) test(`pending incoming title cannot steal ${action} from the shown hero (${mode})`,async({page,baseURL})=>{
@@ -122,16 +154,20 @@ for(const canvas of [false,true]) {
       release();await page.clock.runFor(500);expect(f.actions.some(value=>value.id==='carousel-1')).toBe(false);expect(f.details).not.toContain('carousel-1');expect(f.saved).not.toContain('carousel-1');
     }finally{f.release();}
   });
-  for(const reduced of [false,true]) test(`visible saver cycles and consumes wake input, reduced=${reduced} (${mode})`,async({page,baseURL},info)=>{
+  for(const reduced of [false,true]) test(`poster-wall saver rotates images in fixed cells and consumes wake input, reduced=${reduced} (${mode})`,async({page,baseURL},info)=>{
     const f=await setup(page,baseURL!,canvas,true,reduced);
     try {
       await page.clock.fastForward(60000);await expect(html(page)).toHaveAttribute('data-tv-saver','true');
       await expect.poll(async()=>{await page.clock.runFor(32);return (await scene(page)).started;}).not.toBe('');
-      const current=Number((await scene(page)).titles.find(value=>/^Featured \d$/.test(value))!.slice(-1));
-      await tick(page);await title(page,(current+1)%5);await page.clock.runFor(60);
-      const image=(await scene(page)).images.find(value=>value.index===(current+1)%5&&value.alpha>0)!;
-      expect(image).toBeTruthy();if(reduced)expect(image.x).toBeCloseTo(240,0);else expect(image.x).toBeGreaterThan(240);
-      await page.clock.runFor(450);await page.screenshot({path:info.outputPath('idle-featured.png')});
+      await expect.poll(async()=>(await scene(page)).tiles.length).toBe(5);
+      const before=await scene(page),positions=before.tiles.map(({x,y,w,h})=>({x,y,w,h}));
+      expect(before.walls).toHaveLength(1);expect(before.images).toHaveLength(0);expect(before.titles).toHaveLength(0);
+      await tick(page);await page.clock.runFor(60);
+      const after=await scene(page);
+      expect(after.walls).toHaveLength(1);expect(after.titles).toHaveLength(0);
+      expect(after.tiles.map(({x,y,w,h})=>({x,y,w,h}))).toEqual(positions);
+      expect(after.tiles.map(({index})=>index)).not.toEqual(before.tiles.map(({index})=>index));
+      await page.clock.runFor(450);await page.screenshot({path:info.outputPath('idle-poster-wall.png')});
       if(reduced)expect(await page.evaluate(()=>{
         const event=Object.assign(new Event('viptvtextinput',{cancelable:true}),{inputType:'insertText',data:'q'});
         window.dispatchEvent(event);return event.defaultPrevented;
