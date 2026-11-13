@@ -27,6 +27,11 @@ export function createCoherentHero(source: Accessor<Card | undefined>, scope: Ac
   const [pending, setPending] = createSignal<ArtworkRequest<Presentation>>();
   const [interruption, setInterruption] = createSignal(0);
   let retireTimer: ReturnType<typeof setTimeout> | undefined;
+  const retire = (id: number) => batch(() => {
+    if (untrack(retiring)?.id !== id) return;
+    setRetiring(undefined);
+    setCurrent(value => value?.scrolling ? {...value, scrolling: false} : value);
+  });
   const gate = new ArtworkGate<Presentation>((value, failed) => batch(() => {
     if (!value) {
       clearTimeout(retireTimer);setShown(undefined);setCurrent(undefined);setRetiring(undefined);setPending(undefined);return;
@@ -34,10 +39,10 @@ export function createCoherentHero(source: Accessor<Card | undefined>, scope: Ac
     const request=untrack(pending);
     if (request?.value === value) {
       const old=untrack(current);
-      setRetiring(old && value.scrolling ? {...old, scrolling: true} : old);setCurrent({...value,id:request.id,failed:new Set(failed)});setPending(undefined);
+      setRetiring(old ? {...old, scrolling: value.scrolling} : undefined);setCurrent({...value,id:request.id,failed:new Set(failed)});setPending(undefined);
       clearTimeout(retireTimer);
       if (typeof (globalThis as any).__SolidTVRokuRenderer === "undefined")
-        retireTimer=setTimeout(() => setRetiring(undefined),reducedMotion() ? 0 : value.scrolling ? HERO_SCROLL_MS + 16 : 160);
+        retireTimer=setTimeout(() => {if (old) retire(old.id);},reducedMotion() ? 0 : value.scrolling ? HERO_SCROLL_MS + 16 : 160);
     }
     setShown(previous => {
       const card=presentationCard(previous,value.card);
@@ -79,12 +84,13 @@ export function createCoherentHero(source: Accessor<Card | undefined>, scope: Ac
   });
   return {card:displayCard,frames,scope,current:() => current()?.id,mode:() => current()?.kind ?? pending()?.value.kind, interruption,
     stopMotion: () => {
+      if (!untrack(current)?.scrolling && !untrack(retiring)?.scrolling) return;
       clearTimeout(retireTimer); setRetiring(undefined);
       const value = untrack(current);
       if (value?.scrolling) setCurrent({...value, scrolling: false});
       setInterruption(value => (value + 1) % 1000000);
     },
-    retiring:() => retiring()?.id, retire:(id:number) => { if (untrack(retiring)?.id === id) setRetiring(undefined); },
+    retiring:() => retiring()?.id, retire,
     settled:(id:number,resource:string,failed=false) => gate.settled(id,resource,failed)};
 }
 
