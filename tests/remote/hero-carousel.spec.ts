@@ -58,13 +58,17 @@ async function setup(page: Page, origin: string, canvas: boolean, saver=false, r
   bootstrap.home!.hero=cards[0];bootstrap.home!.featured=cards;bootstrap.home!.rows=[];
   bootstrap.preferences!.display!.screen_saver_minutes=saver?1:0;
   bootstrap.preferences!.display!.reduce_motion=reduced?'on':'follow';
+  const logoRequests:string[]=[];
+  const artworkRequests:string[]=[];
   await page.route('**/api/bootstrap',route=>route.fulfill({json:bootstrap}));
   await page.route('**/fixture/logo/*.png',route=>{
+    logoRequests.push(route.request().url());
     return route.fulfill({body:png([255,0,255],192,108),contentType:'image/png'});
   });
   const gates=new Map<number,{promise:Promise<void>;release:()=>void}>(),waiting=new Set<number>();
   await page.route('**/carousel/*.png',async route=>{
     const index=Number(/\/carousel\/(\d+)\.png/.exec(route.request().url())![1]);
+    artworkRequests.push(route.request().url());
     const gate=gates.get(index);if(gate){waiting.add(index);await gate.promise;}
     await route.fulfill({body:png(colors[index]),contentType:'image/png'}).catch(()=>{});
   });
@@ -88,7 +92,7 @@ async function setup(page: Page, origin: string, canvas: boolean, saver=false, r
   if(logos) await expect.poll(async()=>(await logoBounds(page))!==undefined).toBe(true);
   else await expect.poll(async()=>(await scene(page)).titles).toContain('Featured 0');
   await page.clock.pauseAt(new Date(await page.evaluate(()=>Date.now()+1000)));await page.clock.runFor(400);
-  return {cards,actions,details,saved,waiting,requests:fixture.requests,
+  return {cards,actions,details,saved,waiting,logoRequests,artworkRequests,requests:fixture.requests,
     hold(index:number){let release!:()=>void;const promise=new Promise<void>(resolve=>{release=resolve;});gates.set(index,{promise,release});return release;},
     release(){gates.forEach(gate=>gate.release());}};
 }
@@ -134,6 +138,7 @@ for(const canvas of [false,true]) {
       const before=await logoBounds(page);expect(before).toBeDefined();
       const initial=(await scene(page)).started;
       await tick(page);
+      console.log('incoming clearlogo artwork requests',JSON.stringify({initial,started:(await scene(page)).started,logos:f.logoRequests,artwork:f.artworkRequests}));
       await expect.poll(async()=>(await scene(page)).started).not.toBe(initial);
       await expect.poll(async()=>(await scene(page)).copy).toContain('Description 1');
       await page.clock.runFor(200);
