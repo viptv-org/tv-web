@@ -14,7 +14,7 @@ import { createElement, insertNode, setProp, tmTransaction } from "@roku-sdk/sol
 import { createComponent } from "solid-js";
 import { setRendererStart } from "./renderer-clock";
 import { createRemoteTvApp } from "./remote/App";
-import { RemoteTvApi, type SessionStore } from "./remote/api";
+import { RemoteTvApi } from "./remote/api";
 import type { Tokens } from "./remote/types";
 import QRCode from "qrcode/lib/core/qrcode";
 import { createRokuPlayer } from "./platform/roku-player";
@@ -29,6 +29,7 @@ import { nativeVisualLayer } from "./platform/native-visual-layer";
 import { nativePaintOrder } from "./platform/native-paint-order";
 import { modalPaintStack } from "./platform/modal-paint-stack";
 import { jsonDeviceStorage, jsonStringPort } from "../../roku/src/roku/device-storage";
+import { createRokuSessionStore } from "../../roku/src/roku/session-store";
 
 const API_ORIGIN = "https://beta-viptv.syek.tech";
 configureImageApiOrigin(API_ORIGIN);
@@ -37,24 +38,7 @@ const sessionStorage = jsonDeviceStorage<Tokens>("viptv-session", "tokens");
   jsonDeviceStorage<unknown>("viptv-playback", "settings-v1"),
 );
 
-const store: SessionStore = {
-  async load() {
-    try {
-      return await sessionStorage.load();
-    } catch {
-      return null;
-    }
-  },
-  async save(tokens) {
-    await sessionStorage.save(tokens);
-  },
-  async clear() {
-    await sessionStorage.clear();
-  },
-  withLock(work) {
-    return work();
-  },
-};
+const store = createRokuSessionStore(sessionStorage);
 
 const api = new RemoteTvApi(API_ORIGIN, store, undefined, "web");
 
