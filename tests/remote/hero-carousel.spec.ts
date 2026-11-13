@@ -135,6 +135,7 @@ for(const canvas of [false,true]) {
       await expect.poll(async()=>(await scene(page)).images.some(value=>value.index===1&&value.alpha>.05)).toBe(true);
       await page.clock.runFor(200);
       const after=await logoBounds(page);expect(after).toBeDefined();
+      console.log('clearlogo bounds', JSON.stringify({before,after}));
       for(const key of ['left','top','right','bottom'] as const) expect(Math.abs(after![key]-before![key])).toBeLessThanOrEqual(3);
     }finally{f.release();}
   });
