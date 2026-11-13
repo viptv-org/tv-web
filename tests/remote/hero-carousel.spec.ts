@@ -24,7 +24,7 @@ async function logoBounds(page: Page) {
 }
 const html = (page: Page) => page.locator('html');
 const scene = (page: Page) => page.evaluate(() => {
-  const images: {id:number;index:number;x:number;y:number;alpha:number}[] = [], titles: string[] = [];
+  const images: {id:number;index:number;x:number;y:number;alpha:number}[] = [], titles: string[] = [], copy: string[] = [];
   const tiles: {index:number;x:number;y:number;w:number;h:number}[] = [];
   const walls: {x:number;y:number;w:number;h:number}[] = [];
   function walk(node: any) {
@@ -37,10 +37,11 @@ const scene = (page: Page) => page.evaluate(() => {
       walls.push({x:node.absX,y:node.absY,w:node.props.w,h:node.props.h});
     const text = node.viptvText ?? node.props?.text;
     if (node.worldAlpha>.99 && /^Featured \d$/.test(text??'')) titles.push(text);
+    if (node.worldAlpha>.99 && /^Description \d$/.test(text??'')) copy.push(text);
     node.children?.forEach(walk);
   }
   walk((window as any).__viptvRenderer.stage.root);
-  return {images,tiles,walls,titles,started:document.documentElement.dataset.tvHeroCycle,now:performance.now(),saver:document.documentElement.dataset.tvSaver};
+  return {images,tiles,walls,titles,copy,started:document.documentElement.dataset.tvHeroCycle,now:performance.now(),saver:document.documentElement.dataset.tvSaver};
 });
 async function setup(page: Page, origin: string, canvas: boolean, saver=false, reduced=false, logos=false) {
   await page.emulateMedia({reducedMotion:'no-preference'}); await page.clock.install();
@@ -52,7 +53,7 @@ async function setup(page: Page, origin: string, canvas: boolean, saver=false, r
   await page.route('**/fixture/*',route=>route.fulfill({body:png([20,30,50]),contentType:'image/png'}));
   const bootstrap=fixture.bootstrap();
   const cards:Card[]=colors.map((_,index)=>({...fixture.card,identity:{kind:'movie',id:`carousel-${index}`,ids:[]},
-    title:`Featured ${index}`,logo:logos?`${origin}/fixture/logo/${index}.png`:null,poster:null,landscape:`${origin}/carousel/${index}.png`,progress:null,
+    title:`Featured ${index}`,description:logos?`Description ${index}`:fixture.card.description,logo:logos?`${origin}/fixture/logo/${index}.png`:null,poster:null,landscape:`${origin}/carousel/${index}.png`,progress:null,
     view:{saved:false,progress:null},badges:[]}));
   bootstrap.home!.hero=cards[0];bootstrap.home!.featured=cards;bootstrap.home!.rows=[];
   bootstrap.preferences!.display!.screen_saver_minutes=saver?1:0;
@@ -132,8 +133,9 @@ for(const canvas of [false,true]) {
       await page.keyboard.press('ArrowRight');await page.keyboard.press('ArrowRight');
       const before=await logoBounds(page);expect(before).toBeDefined();
       await tick(page);
-      await expect.poll(async()=>(await scene(page)).images.some(value=>value.index===1&&value.alpha>.05)).toBe(true);
+      await expect.poll(async()=>(await scene(page)).copy).toContain('Description 1');
       await page.clock.runFor(200);
+      await expect.poll(async()=>await logoBounds(page)).toBeDefined();
       const after=await logoBounds(page);expect(after).toBeDefined();
       writeFileSync(info.outputPath('clearlogo-bounds.json'),JSON.stringify({before,after},null,2));
       for(const key of ['left','top','right','bottom'] as const) expect(Math.abs(after![key]-before![key])).toBeLessThanOrEqual(3);
