@@ -61,6 +61,7 @@ import { SourceHeading } from "./source-picker/SourceHeading";
 import { SourceFilters } from "./source-picker/SourceFilters";
 import { SourceList } from "./source-picker/SourceList";
 import { createDetailRefresh } from "./detail-refresh";
+import { createProgressFreshness } from "./progress-freshness";
 import { createLiveRefresh } from "./live/revision-refresh";
 import { createSearchController, type SearchRequests } from "./search/controller";
 import { createPairingFlow } from "./session/pairing";
@@ -556,6 +557,12 @@ export function createRemoteTvApp(
       bootstrap: signal => api.bootstrap(signal), playback: checkPlaybackRevision, reset: resetScope, adoptBootstrap: applyBootstrap,
       apply: applyRevision, fail: error => fail(error)});
     const scheduleRevisions = revisions.schedule;
+    const [progressFreshness, setProgressFreshness] = createSignal(0);
+    const progressRefresh = createProgressFreshness({
+      owner: () => JSON.stringify([api.origin, api.profile, api.scopeEpoch]), alive: () => alive,
+      changed: () => setProgressFreshness(value => value + 1),
+      failure: error => { if (error instanceof RemoteError && [401, 403].includes(error.status)) fail(error); },
+    });
     let channelPending: { from: string; direction: PageDirection } | undefined;
     let channelRetry: PageDirection | undefined;
     function adoptChannelWindow(pages: LivePage[], searching = false) {
@@ -1124,6 +1131,25 @@ export function createRemoteTvApp(
       focused: () => focusedCard(), season: {current: seasonIndex, set: setSeasonIndex}, generation: () => pageGeneration,
       current: (signal, profile, generation, card) => !overlay() && !pending() && !signal.aborted && scope.signal === signal && screen() === "detail" && pageGeneration === generation &&
         api.profile === profile && !!selected() && cardKey(selected()!) === cardKey(card), focus: {zone, column, setColumn}, resolve: focusIndex});
+    createEffect(() => {
+      progressFreshness();
+      const view = screen(), signal = scope.signal, profile = api.profile;
+      if (!profile || pending() || overlay()) return;
+      if (view === "home") progressRefresh.refresh("home", signal, false, async current => {
+        const value = await api.home(signal);
+        if (!current() || scope.signal !== signal || screen() !== "home") return false;
+        replaceHome(stremioHome(value));
+        return true;
+      });
+      else if (view === "detail" && selected()) {
+        const key = cardKey(selected()!) + ":" + seasonIndex();
+        progressRefresh.refresh("detail:" + key, signal, true, async current => {
+          let committed = false;
+          await refreshDetail(signal, profile, () => { committed = true; }, current);
+          return committed;
+        });
+      }
+    });
     const refreshLive = createLiveRefresh({channels, index: liveChannelIndex, read: signal => refreshChannelPage(false, signal), snapshot: adoptLiveSnapshot, window: adoptChannelWindow,
       groups: setGroups, failure: setLiveFailure, focus: {zone, column, setZone, setColumn}, clearGuides: () => {setPrograms({});setGuideInfo({});}, loadGuides: () => loadVisibleGuides()});
     async function applyRevision(fresh: Bootstrap, signal: AbortSignal, profile: string, commit: () => void) {
@@ -1860,6 +1886,7 @@ export function createRemoteTvApp(
       setPlaybackSegments([]);
       setShowControls(false);
       await player.stop();
+      const progressSettled = player.flushProgress();
       setPlaybackError("");
       batch(() => {
         setLoading(false);
@@ -1869,6 +1896,7 @@ export function createRemoteTvApp(
         setRow(returnFocus.row);
         setError("");
       });
+      progressRefresh.afterPlayback(progressSettled);
       if (
         returnScreen === "search" &&
         (searchMediaPending() || searchChannelsPending())

@@ -723,3 +723,29 @@ it("does not apply a queued foreground pause after the user stopped", async () =
     expect(failure).not.toHaveBeenCalled();
   } finally { visibility.mockRestore(); }
 });
+
+it("exposes the captured final progress flush without delaying Back on decoder or release", async () => {
+  const { controller, api, player, emit } = setup();
+  Object.assign(api, { profile: "fixture", scopeEpoch: 0, scoped: () => "/api/profiles/fixture" });
+  api.admit.mockResolvedValueOnce({ ...lease("progress"), actions: { ...lease("progress").actions!, report_progress: true } });
+  await controller.start(card, { id: "source" }, false);
+  player.snapshot = { ...player.snapshot, diagnostics: { engine: "native-html", transport: "hls", firstFrameMs: 0 } };
+  emit(); await controller.flushProgress();
+  let finishPut!: () => void;
+  api.call.mockImplementation(async (path: string) => {
+    if (path.endsWith("/progress")) await new Promise<void>(resolve => { finishPut = resolve; });
+    return {};
+  });
+  player.stop.mockImplementationOnce(() => new Promise<void>(() => {}));
+  api.release.mockImplementationOnce(() => new Promise<void>(() => {}));
+  player.snapshot = { ...player.snapshot, time: { positionSeconds: 123, durationSeconds: 600 } };
+  await controller.stop();
+  let flushed = false;
+  const settled = controller.flushProgress().then(() => { flushed = true; });
+  await vi.waitFor(() => expect(finishPut).toBeDefined());
+  expect(flushed).toBe(false);
+  expect(controller.leaseId).toBeUndefined();
+  finishPut(); await settled;
+  expect(flushed).toBe(true);
+  expect(api.call).toHaveBeenCalledWith("/api/profiles/fixture/progress", "PUT", expect.objectContaining({ record: expect.objectContaining({ position_millis: 123000 }) }));
+});
