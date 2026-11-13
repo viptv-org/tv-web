@@ -46,7 +46,7 @@ export function heroArtworkLayout(mode: HeroMode): {
     viewport: full, image: full, clipped: false,
     decodeWidth: mode === 'detail' ? 1920 : 960,
     decodeHeight: mode === 'detail' ? 1080 : 540,
-    blur: mode === 'portrait' ? 8 : undefined,
+    blur: mode === 'portrait' ? 60 : undefined,
   };
   return {
     viewport: { x: 480, y: 0, width: 1440, height: 810 },

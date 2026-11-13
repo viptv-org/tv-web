@@ -1,3 +1,9 @@
+# Poster hero backdrop and avatar overlay — issue #160
+
+The owner-requested portrait variant uses its existing 1920×1080 backdrop, 960×540 proxy decode bounds and sharp 240×360 poster with blur 60. Its prepared hero mask is transparent and does not gate backdrop readiness. Sharp single-image/detail variants keep their masks, geometry and lifecycle. Profile photos omit the monogram; absent-avatar initials remain. This supersedes older portrait blur/mask evidence without changing DESIGN_REF.
+
+Hosted RED 8aa7d91 / [43406567349](https://github.com/viptv-org/tv-web/actions/runs/43406567349) fails in both actual Canvas/WebGL modes on a visible portrait mask and an initial over a supplied avatar; URI units fail on blur 8 versus 60. Product candidate 720455c / [43406860321](https://github.com/viptv-org/tv-web/actions/runs/43406860321) passes four browser cases, 486 shared units, 67 native units, typechecks/build and [native SDK compilation](https://github.com/viptv-org/tv-web/actions/runs/43406864990). Tests cover hero→portrait→hero→portrait, full backdrop bounds/pixels, sharp poster, preserved proxy source/quality, strong blur parameters, photo-without-initial and no-photo fallback. Synthetic uniform image pixels establish coverage/mask behavior; the real proxy blur is requested via the validated URI, not simulated in the fixture. Physical TV and real-media qualification remain separate.
+
 # Episode artwork, focus and progress — issue #158
 
 Episode image failure stays inside a persistent artwork layer. Landscape cards keep one caption below the image; failed posters keep their existing inside title node through focus changes. Progress uses the supplied card/view fact independently of focus. Four 16:9 episode cards fit between x96 and x1824; the detail skeleton shares that geometry and paging remains four columns.

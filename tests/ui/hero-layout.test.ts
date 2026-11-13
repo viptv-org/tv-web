@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { detailBodyOffset, detailLogoBox, heroArtworkLayout, homeLogoBox, logoScale } from '../../src/tv-solid/remote/hero-layout';
+import { imageSource } from '../../src/tv-solid/remote/image-source';
 
 describe('branding clearance throughout shared motion', () => {
   it('movie synopsis never crosses the prepared logo while entering or leaving recommendations', () => {
@@ -30,12 +31,24 @@ describe('branding clearance throughout shared motion', () => {
   });
   it('only portrait backgrounds use full-width proxy blur while single-image zoom stays clipped and bounded', () => {
     const portrait = heroArtworkLayout('portrait'), single = heroArtworkLayout('landscape'), hero = heroArtworkLayout('hero');
-    expect(portrait.blur).toBe(8); expect(portrait.viewport.width).toBe(1920); expect(portrait.clipped).toBe(false);
+    expect(portrait.blur).toBe(60); expect(portrait.viewport).toEqual({x: 0, y: 0, width: 1920, height: 1080}); expect(portrait.clipped).toBe(false);
+    expect(portrait.decodeWidth).toBe(960); expect(portrait.decodeHeight).toBe(540);
     expect(single.image.width / single.viewport.width).toBeCloseTo(4 / 3, 8);
     expect(single.image.height / single.viewport.height).toBeCloseTo(4 / 3, 8);
     expect(single.clipped).toBe(true); expect(single.blur).toBe(0);
     expect(single.decodeWidth * single.decodeHeight).toBeLessThanOrEqual(1280 * 720);
     expect(hero.decodeWidth * hero.decodeHeight).toBeLessThanOrEqual(1440 * 810);
     expect(heroArtworkLayout('detail').blur).toBeUndefined();
+  });
+  it('applies the approved strong proxy blur without changing the trusted source or sharp single-image request', () => {
+    const raw = 'https://wsrv.nl/?url=image.tmdb.org/t/p/original/xJHokMbljvjADYdit5fK5VQsXEG.jpg&w=1280&h=720&fit=cover&blur=60&output=webp&q=75';
+    const portrait = heroArtworkLayout('portrait');
+    const image = new URL(imageSource(raw, portrait.decodeWidth, portrait.decodeHeight, 'cover', portrait.blur));
+    expect(image.searchParams.get('url')).toBe('image.tmdb.org/t/p/original/xJHokMbljvjADYdit5fK5VQsXEG.jpg');
+    expect(image.searchParams.get('blur')).toBe('60');
+    expect(image.searchParams.get('w')).toBe('960'); expect(image.searchParams.get('h')).toBe('540');
+    expect(image.searchParams.get('q')).toBe('75'); expect(image.searchParams.get('output')).toBe('webp');
+    const single = heroArtworkLayout('landscape');
+    expect(new URL(imageSource(raw, single.decodeWidth, single.decodeHeight, 'cover', single.blur)).searchParams.has('blur')).toBe(false);
   });
 });
