@@ -4742,3 +4742,23 @@ black canvas, preserving its aspect ratio, and verifies both manifest paths and
 PNG dimensions before upload. SDK placeholder launcher tiles are removed.
 Hosted native package qualification and physical Roku home-screen rendering
 are separate checks; no physical-device result is claimed for this change.
+
+## Returned progress freshness (#149)
+
+Back restores the cached view immediately. A captured final progress-write tail
+then invalidates active Home and Detail reads in the background, including when
+the final write rejects. Reads adopt server Continue Watching progress and the
+server Resume action without resetting Home focus/paging or the selected Detail
+season/recommendation. Profile, view and playback-generation changes fence late
+responses; duplicate reads coalesce and failed reads do not start a retry loop.
+
+Hosted red run43338452590 demonstrates missing invalidation after final-write
+settlement. First green run43338849647 passed458 shared and52 native cases,
+integrity/type checks and hosting packaging. Tests cover a real RemotePlayback
+stop with pending native cleanup and final HTTP persistence, rejected writes,
+scope changes, coalescing and stale reads. Additional returned-view fixtures
+check actual Home progress and server Detail Resume adoption, retained season
+and focused title, and rejected stale Detail responses. Final integrated hosted
+evidence is recorded in the PR. No local build, authenticated account playback,
+browser acceptance or physical TV qualification was performed for this change;
+the unrelated Tizen signing gate requires unavailable Samsung secrets.
