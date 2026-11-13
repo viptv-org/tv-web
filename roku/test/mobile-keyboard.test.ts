@@ -1,10 +1,12 @@
-import { afterEach, expect, it, vi } from "vitest";
+import { afterAll, afterEach, expect, it, vi } from "vitest";
 vi.mock("../src/roku/worker-task", () => ({ postRokuTask: vi.fn() }));
 import { dispatchNativeKey, installBrowserServices } from "../src/roku/browser-services";
 import { createTextInput } from "../../src/tv-solid/remote/input/text";
 import type { Overlay, Screen } from "../../src/tv-solid/remote/app-types";
 
+vi.stubGlobal("navigator", undefined);
 installBrowserServices();
+afterAll(() => vi.unstubAllGlobals());
 const disposers: (() => void)[] = [];
 afterEach(() => disposers.splice(0).forEach(dispose => dispose()));
 
