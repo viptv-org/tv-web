@@ -61,7 +61,9 @@ function mount(card: Card, focused = false) {
   });
   return { root, setCard, setFocus };
 }
-function visible(node: SceneNode): SceneNode[] {
+function visible(node: SceneNode | SceneNode[] | (() => SceneNode)): SceneNode[] {
+  if (typeof node === "function") return visible(node());
+  if (Array.isArray(node)) return node.flatMap(visible);
   return node.props.show === false || node.props.alpha === 0 ? [] : [node, ...node.children.flatMap(visible)];
 }
 const titles = (root: SceneNode, value: string) => visible(root).filter(node => node.kind === "label" && node.props.content === value);
