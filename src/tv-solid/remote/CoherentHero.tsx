@@ -61,14 +61,17 @@ export function createCoherentHero(source: Accessor<Card | undefined>, scope: Ac
     const next=source(), kind=mode(), box=logoBox();
     const sameScope = currentScope === previousScope;
     const motion = movement();
-    const scrolling = motion !== previousMovement && sameScope && kind === "hero" && untrack(current)?.kind === "hero" && !reducedMotion();
+    const moved = motion !== previousMovement && sameScope && kind === "hero" && untrack(current)?.kind === "hero" && !reducedMotion();
     previousMovement = motion;
     const card=next ? presentationCard(sameScope ? untrack(shown) : undefined, next,
       sameScope ? untrack(pending)?.value.card : undefined) : undefined;
     previousScope=currentScope;
     const background=kind === "landscape" ? card?.view?.preview?.background ?? card?.landscape ?? card?.poster : card?.landscape ?? card?.poster;
     const poster=kind === "portrait" ? card?.poster ?? undefined : undefined;
-    gate.request(currentScope,JSON.stringify([card && presentationKey(card),background,poster,card?.logo,kind]),
+    const key = JSON.stringify([card && presentationKey(card),background,poster,card?.logo,kind]);
+    const preparing = sameScope ? untrack(pending) : undefined;
+    const scrolling = moved || !!(preparing?.key === key && preparing.value.scrolling);
+    gate.request(currentScope,key,
       card ? {card,background:background ?? undefined,poster,kind,logoBox:box,scrolling} : undefined,
       [...(background ? ["background"] : []),...(poster ? ["poster"] : []),...(card?.logo ? ["logo"] : [])]);
   });
