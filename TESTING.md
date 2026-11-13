@@ -4728,6 +4728,26 @@ The event contract is documented at
 https://developer.roku.com/dev/docs/onkeyevent and
 https://developer.roku.com/dev/docs/external-control-api.
 
+## Native Roku text editing
+
+Hosted regression run
+https://github.com/viptv-org/tv-web/actions/runs/43340371207 reproduces four whole-
+value edit failures: paste and replacement append, and an empty native value
+cannot clear the existing text. The native dialog bridge observes complete native
+text/PIN values and native `wasClosed`, retaining OS cursor/selection ownership.
+The shared app writes initial text once per open and rejects stale field events.
+Native text ownership suppresses the legacy literal bridge to prevent duplicate
+edits or submits, including reordered callbacks. Numeric limits and masking use
+the native TextEditBox fields. Unexpected invalid native values fail into the
+existing keyboard without truncating Unicode or submitting a stale value.
+
+Controller and native-boundary tests cover full-value Unicode edits, clear,
+rapid changes, final Done values, cancel restoration, no echo/reopen loop,
+field switches, stale close/edit events, disposal and failure fallback. Hosted
+native SDK packaging is required before merge. These tests do not establish
+physical Roku mobile-app paste, selection, IME or grapheme behavior; those remain
+device acceptance scenarios. The channel sends no ECP or private edit commands.
+
 ## Bounded playback heartbeat renewal (#142)
 
 Scheduled and foreground heartbeats share one renewal flight. A typed gateway timeout/unavailability response can retry twice (1s,2s), bounded by the existing server expiry with the retained1s safety margin. Only a valid same-lease ready server response can replace that deadline. Invalid responses, terminal authority/errors, API-scope changes, Stop/replacement/ended/disposal retire or fail closed; a foreground return waits for renewal and retains newer user intent.

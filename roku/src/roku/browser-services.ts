@@ -338,6 +338,7 @@ export function dispatchNativeKey(key: string, press: boolean): boolean {
     : key.toLowerCase() === 'backspace' ? 'deleteContentBackward'
     : key.toLowerCase() === 'enter' ? 'insertLineBreak' : undefined;
   if (textType) {
+    if ((globalThis as any).__viptvNativeTextEntry?.ownsInput()) return true;
     const repeat = heldKeys.has(key);
     if (press) heldKeys.add(key);
     else heldKeys.delete(key);

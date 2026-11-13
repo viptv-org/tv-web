@@ -75,3 +75,9 @@ frame-rate/input-latency guarantees.
 The manual Roku artifact workflow can validate an issue branch without device
 access. Branch artifacts are validation inputs only. Deliver a ZIP built from
 the final merged `main` revision, with its provenance and checksum verified.
+
+Search and text modals open a native StandardKeyboardDialog or masked
+StandardPinPadDialog. The native TextEditBox owns phone cursor/selection editing;
+the shared app adopts whole values without writing them back on every edit.
+Done commits; Cancel/Back restores the opening value. Native failure releases
+input to the existing keyboard. Phone editing still requires physical acceptance.

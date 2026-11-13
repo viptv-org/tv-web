@@ -203,6 +203,14 @@ Back cancels it. Direction changes start a new tap and ramp. Focus loss, panels,
 source changes, exit and timer stalls over 250ms cancel the hold. No hold commits
 a seek or catches up time spent suspended. Other Select holds retain 700ms.
 
+Roku text entry uses a focused native keyboard or masked PIN dialog. The OS owns
+phone editing, cursor, selection and Unicode deletion; full native text snapshots
+update the shared Search controller or modal draft. Initial text is written once
+per open. Done commits the final native value; Cancel and native dismissal restore
+the opening value. Search remains focused without automatically reopening a closed
+editor; Select reopens it explicitly. Source/field changes and teardown retire old
+callbacks. Native failures retain the draft and enable the existing keyboard.
+
 Resume-time presentation follows the scoped owner-approved
 [TV-RESUME-135 contract](https://github.com/viptv-org/design/blob/4e730bb2d4e0898b0c899b70575622ae152d7998/docs/platforms/TV_PRESENTATION_REFINEMENT.md#tv-resume-135--authoritative-saved-time).
 Continue Watching omits remaining-time copy. Resume labels use authoritative

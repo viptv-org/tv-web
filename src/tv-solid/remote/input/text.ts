@@ -2,7 +2,7 @@ import type { Accessor, Setter } from "solid-js";
 import type { Overlay, Screen } from "../app-types";
 
 export interface TvTextInputEvent {
-  inputType: "insertText" | "deleteContentBackward" | "insertLineBreak";
+  inputType: "insertText" | "insertReplacementText" | "deleteContentBackward" | "insertLineBreak";
   data?: string;
   preventDefault(): void;
 }
@@ -22,6 +22,9 @@ export function createTextInput(options: {
       const inserted = event.data ?? "";
       if (/[\u0000-\u001f\u007f-\u009f]/.test(inserted)) return value;
       if (modal?.kind === "text" && modal.numeric && !/^\d*$/.test(inserted)) return value;
+      if (event.inputType === "insertReplacementText") {
+        return Array.from(inserted).length <= (modal?.kind === "text" && modal.numeric ? 8 : 2048) ? inserted : value;
+      }
       return (value + inserted).slice(0, modal?.kind === "text" && modal.numeric ? 8 : 2048);
     };
     if (modal?.kind === "text") options.text(change);

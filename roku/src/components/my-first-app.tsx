@@ -9,6 +9,7 @@ import { installBrowserServices, dispatchNativeKey } from '../roku/browser-servi
 import { loadBundledFonts, loadFace, measureWrapText, resolveFontUri } from '../roku/fonts';
 import { postRokuTask } from '../roku/worker-task';
 import { installSolidHost } from '../roku/solid-host';
+import { createNativeTextEntry } from '../roku/native-text-entry';
 
 // Replaced by the host build with the shared demo entry point. Keeping it as
 // an identifier lets the host tsconfig stay scoped to this package while the
@@ -36,6 +37,7 @@ export default defineAnchorNode(
   () => {
     const nativeRoot = createElement('group');
     const overlayRoot = createElement('group');
+    let nativeTextEntry: ReturnType<typeof createNativeTextEntry> | undefined;
     (globalThis as any).__solidtvNativeRoot = nativeRoot;
     (globalThis as any).__viptvOverlayRoot = overlayRoot;
     (globalThis as any).__SolidTVRokuRenderer = SceneGraphRenderer;
@@ -85,6 +87,8 @@ export default defineAnchorNode(
     onMount(async () => {
       console.log('SOLIDTV_DEMO onMount');
       installBrowserServices();
+      nativeTextEntry = createNativeTextEntry(nativeRoot);
+      (globalThis as any).__viptvNativeTextEntry = nativeTextEntry;
       try {
         await installSolidHost((settings, rootId) =>
           new SceneGraphRenderer(settings, rootId) as unknown as ReturnType<RendererFactory>);
@@ -116,6 +120,8 @@ export default defineAnchorNode(
     });
 
     onCleanup(() => {
+      nativeTextEntry?.dispose();
+      if ((globalThis as any).__viptvNativeTextEntry === nativeTextEntry) delete (globalThis as any).__viptvNativeTextEntry;
       const renderer = (globalThis as any).__rokuRenderer;
       if (renderer && typeof renderer.destroy === 'function') renderer.destroy();
       (globalThis as any).__rokuRenderer = undefined;
