@@ -5,8 +5,8 @@ const native = vi.hoisted(() => ({nodes: [] as {type: string; fields: Record<str
 vi.mock("@roku-sdk/solid", () => ({
   createElement: (type: string) => {const node = {type, fields: {}}; native.nodes.push(node); return node;},
   setProp: (node: typeof native.nodes[number], key: string, value: unknown) => {node.fields[key] = value;},
-  insertNode: vi.fn(), removeNode: (_parent: unknown, node: unknown) => {native.removed.push(node);},
-  tmTransaction: (execute: () => void) => execute(),
+  insertNode: vi.fn(),
+  tmTransaction: {removeNode: (_parent: unknown, node: unknown) => {native.removed.push(node);}},
 }));
 import { createNativeTextEntry } from "../src/roku/native-text-entry";
 afterEach(() => {native.nodes.length = 0; native.removed.length = 0;});
