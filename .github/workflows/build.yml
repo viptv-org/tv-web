@@ -12,6 +12,10 @@ on:
         description: Run focused episode artwork, focus and progress browser checks
         type: boolean
         default: false
+      accent_confirmation_ui:
+        description: Run focused accent confirmation and persistence checks
+        type: boolean
+        default: false
 permissions:
   contents: read
 concurrency:
@@ -37,15 +41,16 @@ jobs:
         working-directory: roku
         run: pnpm install --frozen-lockfile
       - run: npm test
-        if: github.event_name != 'workflow_dispatch' || !inputs.episode_card_ui
+        if: github.event_name != 'workflow_dispatch' || !(inputs.episode_card_ui || inputs.accent_confirmation_ui)
       - run: npm run build
         id: build
       - name: Qualify requested UI regressions over disposable HTTPS
-        if: github.event_name == 'workflow_dispatch' && (inputs.auth_recovery_ui || inputs.episode_card_ui)
+        if: github.event_name == 'workflow_dispatch' && (inputs.auth_recovery_ui || inputs.episode_card_ui || inputs.accent_confirmation_ui)
         timeout-minutes: 8
         env:
           AUTH_RECOVERY_UI: ${{ inputs.auth_recovery_ui }}
           EPISODE_CARD_UI: ${{ inputs.episode_card_ui }}
+          ACCENT_CONFIRMATION_UI: ${{ inputs.accent_confirmation_ui }}
         run: |
           npx playwright install --with-deps chromium
           mkdir -p "$RUNNER_TEMP/auth-tls"
@@ -56,8 +61,9 @@ jobs:
           for attempt in $(seq 1 30); do curl --insecure --silent --fail https://127.0.0.1:18562/tv/solid.html >/dev/null && break; sleep 1; done
           if [ "$AUTH_RECOVERY_UI" = true ]; then npx playwright test --config playwright.auth-recovery.config.ts --reporter=line; fi
           if [ "$EPISODE_CARD_UI" = true ]; then npx playwright test --config playwright.episode-cards.config.ts --reporter=line; fi
+          if [ "$ACCENT_CONFIRMATION_UI" = true ]; then npx playwright test --config playwright.accent-confirmation.config.ts --reporter=line; fi
       - name: Run unit regressions after the requested browser capture
-        if: always() && github.event_name == 'workflow_dispatch' && inputs.episode_card_ui && steps.build.outcome == 'success'
+        if: always() && github.event_name == 'workflow_dispatch' && (inputs.episode_card_ui || inputs.accent_confirmation_ui) && steps.build.outcome == 'success'
         run: npm test
       - name: Retain episode-card browser evidence
         if: always() && github.event_name == 'workflow_dispatch' && inputs.episode_card_ui
