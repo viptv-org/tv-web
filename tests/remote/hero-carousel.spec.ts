@@ -25,8 +25,9 @@ const scene = (page: Page) => page.evaluate(() => {
       tiles.push({index:Number(/\/carousel\/(\d+)\.png/.exec(src)![1]),x:node.absX,y:node.absY,w:node.props.w,h:node.props.h});
     if (typeof src === 'string' && src.includes('/tv-artwork/') && node.props.w===1920 && node.props.h===1080 && node.worldAlpha>.5)
       walls.push({x:node.absX,y:node.absY,w:node.props.w,h:node.props.h});
-    if (node.props.w===640 && node.props.h===160 && node.props.scale !== undefined)
-      logos.push({x:node.absX,y:node.absY,scale:typeof node.props.scale==='number'?node.props.scale:node.props.scale?.x??1,alpha:node.worldAlpha});
+    if (node.props.w===640 && node.props.h===160)
+      logos.push({x:node.absX,y:node.absY,scale:typeof node.props.scale==='number'?node.props.scale:node.props.scale?.x??1,
+        alpha:node.worldAlpha,scaleTransition:!!node.props.transition?.scale});
     const text = node.viptvText ?? node.props?.text;
     if (node.worldAlpha>.99 && /^Featured \d$/.test(text??'')) titles.push(text);
     node.children?.forEach(walk);
@@ -136,6 +137,7 @@ for(const canvas of [false,true]) {
       const after=await scene(page),afterScales=after.logos.filter(value=>value.alpha>.05).map(value=>value.scale);
       const stableScales=[...beforeScales,...afterScales];
       expect(during.logos.filter(value=>value.alpha>.05).every(value=>stableScales.some(scale=>Math.abs(scale-value.scale)<.001))).toBe(true);
+      expect(during.logos.filter(value=>value.alpha>.05).every(value=>!value.scaleTransition)).toBe(true);
     }finally{f.release();}
   });
   for(const action of ['play','save','info','hold','menu']) test(`pending incoming title cannot steal ${action} from the shown hero (${mode})`,async({page,baseURL})=>{
