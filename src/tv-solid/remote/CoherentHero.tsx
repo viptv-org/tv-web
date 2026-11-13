@@ -9,28 +9,25 @@ import { imagePixels, imageSource } from "./image-source";
 import { presentationCard, presentationKey } from "./presentation-card";
 import { backdropScrimSource, homeScrimSource } from "./tv-artwork.generated";
 import { reducedMotion } from "./motion";
-import { afterPreparedFrame, retireAfterHeroAnimations } from "./hero-retirement";
+import { retireAfterHeroAnimations } from "./hero-retirement";
 import type { Card } from "./types";
-import { HERO_SCROLL_MS } from "./heroCycle";
 
 const POSTER_BOX = { x: 1584, y: 144, width: 240, height: 360 };
 
-type Presentation = { card: Card; background?: string; poster?: string; kind: HeroMode; logoBox: HeroLogoBox; scrolling?: boolean };
+type Presentation = { card: Card; background?: string; poster?: string; kind: HeroMode; logoBox: HeroLogoBox };
 export type Frame = Presentation & { id: number; failed: ReadonlySet<string>; staged?: boolean };
 export type { HeroLogoBox } from "./hero-layout";
 
 export function createCoherentHero(source: Accessor<Card | undefined>, scope: Accessor<string>,
-  mode: Accessor<HeroMode>, logoBox: Accessor<HeroLogoBox>, ready: Accessor<boolean>, movement: Accessor<number> = () => 0) {
+  mode: Accessor<HeroMode>, logoBox: Accessor<HeroLogoBox>, ready: Accessor<boolean>) {
   const [shown, setShown] = createSignal<Card>();
   const [current, setCurrent] = createSignal<Frame>();
   const [retiring, setRetiring] = createSignal<Frame>();
   const [pending, setPending] = createSignal<ArtworkRequest<Presentation>>();
-  const [interruption, setInterruption] = createSignal(0);
   let retireTimer: ReturnType<typeof setTimeout> | undefined;
   const retire = (id: number) => batch(() => {
     if (untrack(retiring)?.id !== id) return;
     setRetiring(undefined);
-    setCurrent(value => value?.scrolling ? {...value, scrolling: false} : value);
   });
   const gate = new ArtworkGate<Presentation>((value, failed) => batch(() => {
     if (!value) {
@@ -39,10 +36,10 @@ export function createCoherentHero(source: Accessor<Card | undefined>, scope: Ac
     const request=untrack(pending);
     if (request?.value === value) {
       const old=untrack(current);
-      setRetiring(old ? {...old, scrolling: value.scrolling} : undefined);setCurrent({...value,id:request.id,failed:new Set(failed)});setPending(undefined);
+      setRetiring(old);setCurrent({...value,id:request.id,failed:new Set(failed)});setPending(undefined);
       clearTimeout(retireTimer);
       if (typeof (globalThis as any).__SolidTVRokuRenderer === "undefined")
-        retireTimer=setTimeout(() => {if (old) retire(old.id);},reducedMotion() ? 0 : value.scrolling ? HERO_SCROLL_MS + 16 : 160);
+        retireTimer=setTimeout(() => {if (old) retire(old.id);},reducedMotion() ? 0 : 160);
     }
     setShown(previous => {
       const card=presentationCard(previous,value.card);
@@ -54,25 +51,20 @@ export function createCoherentHero(source: Accessor<Card | undefined>, scope: Ac
     if (request) {clearTimeout(retireTimer);setRetiring(undefined);}
     setPending(request);
   });
-  let previousScope="", previousMovement=0;
+  let previousScope="";
   createEffect(() => {
     const currentScope=scope();
     if (!ready()) {gate.hold(currentScope);return;}
     const next=source(), kind=mode(), box=logoBox();
     const sameScope = currentScope === previousScope;
-    const motion = movement();
-    const moved = motion !== previousMovement && sameScope && kind === "hero" && untrack(current)?.kind === "hero" && !reducedMotion();
-    previousMovement = motion;
     const card=next ? presentationCard(sameScope ? untrack(shown) : undefined, next,
       sameScope ? untrack(pending)?.value.card : undefined) : undefined;
     previousScope=currentScope;
     const background=kind === "landscape" ? card?.view?.preview?.background ?? card?.landscape ?? card?.poster : card?.landscape ?? card?.poster;
     const poster=kind === "portrait" ? card?.poster ?? undefined : undefined;
     const key = JSON.stringify([card && presentationKey(card),background,poster,card?.logo,kind]);
-    const preparing = sameScope ? untrack(pending) : undefined;
-    const scrolling = moved || !!(preparing?.key === key && preparing.value.scrolling);
     gate.request(currentScope,key,
-      card ? {card,background:background ?? undefined,poster,kind,logoBox:box,scrolling} : undefined,
+      card ? {card,background:background ?? undefined,poster,kind,logoBox:box} : undefined,
       [...(background ? ["background"] : []),...(poster ? ["poster"] : []),...(card?.logo ? ["logo"] : [])]);
   });
   onCleanup(() => {clearTimeout(retireTimer);gate.request("disposed","",undefined,[]);});
@@ -85,14 +77,7 @@ export function createCoherentHero(source: Accessor<Card | undefined>, scope: Ac
     const displayed = shown(), preparing = pending()?.value.card;
     return displayed ?? preparing;
   });
-  return {card:displayCard,frames,scope,current:() => current()?.id,mode:() => current()?.kind ?? pending()?.value.kind, interruption,
-    stopMotion: () => {
-      if (!untrack(current)?.scrolling && !untrack(retiring)?.scrolling) return;
-      clearTimeout(retireTimer); setRetiring(undefined);
-      const value = untrack(current);
-      if (value?.scrolling) setCurrent({...value, scrolling: false});
-      setInterruption(value => (value + 1) % 1000000);
-    },
+  return {card:displayCard,frames,scope,current:() => current()?.id,mode:() => current()?.kind ?? pending()?.value.kind,
     retiring:() => retiring()?.id, retire,
     settled:(id:number,resource:string,failed=false) => gate.settled(id,resource,failed)};
 }
@@ -106,22 +91,12 @@ function ArtworkFrame(props: ArtworkProps & { frame: Accessor<Frame>; foreground
   onCleanup(() => props.register(id,layer));
   const frame=props.frame;
   const layout = () => heroArtworkLayout(frame().kind);
-  const offset = () => !frame().scrolling ? 0 : frame().staged ? layout().viewport.width
-    : props.presentation.current() === id ? 0 : -layout().viewport.width;
   const backdropWidth=() => imagePixels(layout().decodeWidth);
   const backdropHeight=() => imagePixels(layout().decodeHeight);
-  const staging = new Set<() => void>();
-  onCleanup(() => staging.forEach(cancel => cancel()));
-  const done=(name:string,failed=false) => {
-    const commit = () => props.presentation.settled(id,name,failed);
-    if (!frame().scrolling) { void Promise.resolve().then(commit); return; }
-    const cancel = afterPreparedFrame(() => { staging.delete(cancel); commit(); });
-    staging.add(cancel);
-  };
-  return <TvView nodeRef={props.foreground ? (node:any) => props.register(id,layer,node) : undefined}
-    x={props.foreground ? offset() : 0} w={1920} h={1080}
-    alpha={!frame().staged && (props.presentation.current() === id || frame().scrolling) && (props.foreground || props.scrimReady) ? 1 : 0}
-    transition={{x:{duration:reducedMotion() ? 0 : HERO_SCROLL_MS,easing:"ease-out"},alpha:{duration:reducedMotion() || frame().scrolling ? 0 : 150,easing:"ease-out"}}}>
+  const done=(name:string,failed=false) => {void Promise.resolve().then(() => props.presentation.settled(id,name,failed));};
+  return <TvView nodeRef={(node:any) => props.register(id,layer,node)} w={1920} h={1080}
+    alpha={props.presentation.current() === id && (props.foreground || props.scrimReady) ? 1 : 0}
+    transition={frame().staged ? undefined : {alpha:{duration:reducedMotion() ? 0 : 150,easing:"ease-out"}}}>
     {props.foreground ? <>
       <Show when={frame().poster && !frame().failed.has("poster")}>
         <TvView x={POSTER_BOX.x} y={POSTER_BOX.y} w={POSTER_BOX.width} h={POSTER_BOX.height} fit="cover" preload src={imageSource(frame().poster,imagePixels(POSTER_BOX.width),imagePixels(POSTER_BOX.height))}
@@ -129,15 +104,12 @@ function ArtworkFrame(props: ArtworkProps & { frame: Accessor<Frame>; foreground
       </Show>
     </> : <>
       <TvView x={layout().viewport.x} y={layout().viewport.y} w={layout().viewport.width} h={layout().viewport.height} clipping={layout().clipped}>
-        <TvView nodeRef={(node:any) => props.register(id,layer,node)} x={offset()} w={layout().viewport.width} h={layout().viewport.height} clipping={layout().clipped}
-          transition={{x:{duration:reducedMotion() ? 0 : HERO_SCROLL_MS,easing:"ease-out"}}}>
         <Show when={frame().background && !frame().failed.has("background")}>
         <TvView nativePaintBand="backdrop" x={layout().image.x} y={layout().image.y} w={layout().image.width} h={layout().image.height}
           decodeWidth={backdropWidth()} decodeHeight={backdropHeight()} fit="cover" preload
           src={imageSource(frame().background,backdropWidth(),backdropHeight(),"cover",layout().blur)}
           onLoad={() => done("background")} onError={() => done("background",true)} />
         </Show>
-        </TvView>
       </TvView>
     </>}
   </TvView>;
@@ -155,12 +127,6 @@ export function HeroArtwork(props: ArtworkProps) {
     pair[layer]=node;
     if (pair[0] || pair[1] || pair[2]) next.set(id,pair); else next.delete(id);
     return next;
-  });
-  createEffect(() => {
-    props.presentation.interruption();
-    const id = untrack(props.presentation.current);
-    if (id === undefined) return;
-    for (const node of untrack(roots).get(id) ?? []) node?.lng?.animateProp?.("x", 0, {duration: 0});
   });
   createEffect(() => {
     if (typeof (globalThis as any).__SolidTVRokuRenderer === "undefined") return;

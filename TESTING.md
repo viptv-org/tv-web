@@ -4832,3 +4832,19 @@ cases cover every saved colour, repeat confirmation, directional wrapping and a
 rejected directional write. Final qualified evidence is recorded in the PR.
 No local tests/builds, live account edits, deployment or physical TV checks are
 claimed for this change.
+
+## Hero and screensaver restoration (#166)
+
+The Home featured list still wraps on its nine-second idle clock, but Home
+artwork stays in its original fixed viewport and clearlogos keep their fixed
+anchor. The existing 150ms opacity handoff remains; carousel-specific horizontal
+motion and title-change scale interpolation are removed. The screen saver keeps
+the original precomposed 10×4 welcome poster wall and dark overlay. Up to eight
+featured images rotate through a bounded set of positions that match the wall's
+existing cells; the Home hero/title/action composition is not used by the saver.
+
+The hosted acceptance exercises both Canvas and WebGL. Hero checks compare the
+loaded artwork/logo positions during a featured change; saver checks verify the
+full-screen wall remains present, no Home title or hero is rendered, and image
+identities change while tile positions remain fixed. Native SDK build and Roku
+packaging are separate evidence; no physical-device qualification is claimed.

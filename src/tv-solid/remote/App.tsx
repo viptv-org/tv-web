@@ -1364,12 +1364,12 @@ export function createRemoteTvApp(
     };
     const hero = createMemo(() => {
       const value =
-        screenSaver() ? (home()?.featured[heroSlide()] ?? home()?.hero) : screen() === "home"
+        screen() === "home"
           ? zone() === "rows"
             ? (previewCard() ?? home()?.hero)
             : (home()?.featured[heroSlide()] ?? home()?.hero)
           : detail()?.item;
-      if (!value || value.logo || screen() !== "home" && !screenSaver()) return value;
+      if (!value || value.logo || screen() !== "home") return value;
       // The featured carousel's cards can be summary-only while the same title
       // in a row carries the logo. Borrow that artwork so Home never shows the
       // title fallback for a title that already has one.
@@ -1389,18 +1389,17 @@ export function createRemoteTvApp(
         return { ...value, logo: fallback.logo };
       return value;
     });
-    const heroLogoBox = () => screenSaver() ? homeLogoBox() : screen() === "detail"
+    const heroLogoBox = () => screen() === "detail"
       ? detailLogoBox(detailHasEpisodes(), compactDetail(zone()))
       : homeLogoBox(zone() === "rows" ? shelfTitleY() : undefined);
     const heroPresentation = createCoherentHero(
-      () => screenSaver() || screen() === "home" || screen() === "detail" ? hero() ?? undefined : undefined,
-      () => `${deviceScope()}:${screenSaver() ? "idle" : screen()}`,
-      () => screenSaver() ? "hero" : screen() === "detail" ? "detail" : zone() !== "rows" ? "hero"
+      () => !screenSaver() && (screen() === "home" || screen() === "detail") ? hero() ?? undefined : undefined,
+      () => `${deviceScope()}:${screen()}`,
+      () => screen() === "detail" ? "detail" : zone() !== "rows" ? "hero"
         : home()?.rows[row()]?.id === "continue" ? "landscape" : "portrait",
       heroLogoBox,
-      () => heroCycle.visible() && (screenSaver() || screen() !== "home" || zone() !== "rows" || !!previewCard() && !!focusedCard() &&
+      () => heroCycle.visible() && (screen() !== "home" || zone() !== "rows" || !!previewCard() && !!focusedCard() &&
         presentationKey(previewCard()!) === presentationKey(focusedCard()!)),
-      heroCycle.movement,
     );
     const displayHero = heroPresentation.card;
     const displayedFeatured = createMemo(() => {
@@ -1411,20 +1410,21 @@ export function createRemoteTvApp(
     function interruptHero() {
       if (screen() !== "home" && !screenSaver()) return;
       heroCycle.interrupt(displayedFeatured());
-      heroPresentation.stopMotion();
     }
     createEffect(() => {
+      if (screenSaver() || screen() !== "home" || zone() !== "rows") {
+        heroCycle.setReady(heroCycle.visible());
+        return;
+      }
       const shown = displayHero(), requested = hero();
-      heroCycle.setReady(!!shown && !!requested && presentationKey(shown) === presentationKey(requested) && !heroPresentation.frames().some(frame => frame.staged));
-    });
-    createEffect(() => {
-      const eligible = heroCycle.eligible(); heroPresentation.current();
-      if (!eligible || !heroCycle.animated()) untrack(() => heroPresentation.stopMotion());
+      heroCycle.setReady(heroCycle.visible() && !!shown && !!requested &&
+        presentationKey(shown) === presentationKey(requested) &&
+        !heroPresentation.frames().some(frame => frame.staged));
     });
     const detailForDisplay = createMemo(() => detail() && displayHero() && presentationKey(detail()!.item) === presentationKey(displayHero()!)
       ? { ...detail()!, item: displayHero()! } : undefined);
     const billboardKey = createMemo(() =>
-      screen() === "home" && zone() !== "rows" && hero()
+      screen() === "home" && !screenSaver() && zone() !== "rows" && hero()
         ? cardKey(hero()!)
         : undefined,
     );
@@ -3253,13 +3253,6 @@ export function createRemoteTvApp(
               : palette.bg
           }
         >
-          <TvView w={screenSaver() ? 1920 : sceneWidth()} h={1080}
-            clipping={!screenSaver() && sceneWidth() < 1920}
-            show={screen() !== "player" && (screenSaver() || !profileEditor() && overlay()?.kind !== "text")}>
-            <HeroArtwork presentation={heroPresentation} logoBox={heroLogoBox()}
-              dim={!screenSaver() && screen() === "detail" && ["episodes","seasons","recommendations"].includes(zone())
-                ? typeof (globalThis as any).__SolidTVRokuRenderer !== "undefined" ? .35 : .5 : 0} />
-          </TvView>
           <TvView w={1920} h={1080} show={!screenSaver()}>
           <TvView
             w={sceneWidth()}
@@ -3271,6 +3264,10 @@ export function createRemoteTvApp(
                 native text/visual layers. Hide the page behind it so stale
                 artwork cannot cover the video. */}
             <TvView w={1920} h={1080} show={screen() !== "player" && !screenSaver()}>
+            <HeroArtwork presentation={heroPresentation}
+              logoBox={heroLogoBox()}
+              dim={screen() === "detail" && ["episodes","seasons","recommendations"].includes(zone())
+                ? typeof (globalThis as any).__SolidTVRokuRenderer !== "undefined" ? .35 : .5 : 0} />
             <Show
               when={
                 ![
@@ -3569,15 +3566,8 @@ export function createRemoteTvApp(
           </TvView>
           <Show when={screenSaver()}>
             <OverlayViewport order={40}>
-              <Show when={!home()?.featured.length}>
-              <TvView w={1920} h={1080} zIndex={-1} color="#0B0B0C">
-                <PosterWall />
-              </TvView>
+              <PosterWall featured={home()?.featured} slide={heroSlide()} />
               <TvView w={1920} h={1080} color="rgba(11,11,12,.72)" />
-              </Show>
-              <Show when={home()?.featured.length && !displayHero()?.logo}>
-                <Label x={96} y={330} w={800} size={48} font="Onest700" maxlines={2} content={displayHero()?.title ?? ""} />
-              </Show>
             </OverlayViewport>
           </Show>
         </TvView>

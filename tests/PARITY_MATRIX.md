@@ -680,6 +680,12 @@ above only for these observed states.
 |---|---|---|
 | DESIGN_REF `059b76344f4fed0639bedf8f89e0bd6e2b22cecd`, TV shade tokens; Tv3PlayerControls/Tv3PlayerScrub and controls hidden/exit | Shared packaged top/bottom mask; inspected WebGL/Canvas bright-video pixel captures at 1920×1080; one mask on reveal and none after hide/Stop, unchanged video bounds/source; full shared/native units and production build pass | Native explicit scrim band verified by host unit; new native bundle and physical TV gradient appearance unverified |
 
+### Fixed hero and poster-wall screensaver (#166)
+
+| Contract and states | Implementation/evidence | Device limits |
+|---|---|---|
+| Tv3Home, existing poster-wall layout during idle screensaver; #160 portrait artwork/avatar refinements retained | Pending hosted Canvas/WebGL checks for fixed hero/logo geometry and fixed poster-wall cells with rotating featured imagery | Native SDK build and Roku physical appearance pending; no hardware claim |
+
 ### Temporal focus paint
 
 | Contract and states | Implementation/evidence | Device limits |

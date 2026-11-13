@@ -62,9 +62,17 @@ The generated Home mask
 lives in `scripts/build-tv-masks.py`; `scripts/build-tv-artwork.py` owns packaged
 textures and provenance hashes. Detail retains the pinned backdrop composition.
 
-Selected hero indicators use ordinary off-white geometry during running and
-parked states across WebGL, Canvas and native SceneGraph; the featured rotation
-loops the server order on a nine-second idle deadline. Home and the visible featured screensaver share one prepared presentation; empty/single-title lists remain stationary. Eligible visible surfaces scroll prepared artwork/branding horizontally for 360ms, with at most current and outgoing frames retained. Input immediately snaps to the committed title, cancels pending automatic replacement and starts a fresh idle deadline. Hidden pages, playback and noneligible normal screens schedule no carousel advance. Reduced motion retains title cycling with cuts and a static indicator. The vertical row indicator occupies the gutter at
+Selected Home hero indicators use ordinary off-white geometry during the running
+and parked states across WebGL, Canvas and native SceneGraph; the featured
+rotation loops the server order on a nine-second idle deadline. Artwork and
+clearlogos retain their established positions and do not slide or scale when the
+featured title changes. The screensaver retains the original full-screen
+PosterWall mosaic and dark veil; up to eight featured poster images rotate in
+the existing poster cells without adding the Home hero, title or actions. Empty
+and single-title lists remain stationary. Input restarts the Home idle deadline
+or wakes the screensaver; hidden pages, playback and ineligible Home states
+schedule no carousel advance. Reduced motion uses cuts and a static indicator.
+The vertical row indicator occupies the gutter at
 x=1848, outside the clipped card viewport ending at x=1824; its 220px height
 clamps to y=806 so the bottom remains inside the 54px safe inset.
 
