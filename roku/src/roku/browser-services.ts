@@ -333,6 +333,18 @@ function makeKeyEvent(type: string, spec: RokuKeySpec, repeat: boolean): RokKeyb
  */
 export function dispatchNativeKey(key: string, press: boolean): boolean {
   if (!installed) installBrowserServices();
+  const textType = key.startsWith('Lit_') ? 'insertText'
+    : key.toLowerCase() === 'backspace' ? 'deleteContentBackward'
+    : key.toLowerCase() === 'enter' ? 'insertLineBreak' : undefined;
+  if (textType) {
+    const repeat = heldKeys.has(key);
+    if (press) heldKeys.add(key);
+    else heldKeys.delete(key);
+    if (!press || (repeat && textType === 'insertLineBreak')) return true;
+    const text = new RokEvent('viptvtextinput', { inputType: textType, data: textType === 'insertText' ? key.slice(4) : undefined });
+    doc.dispatchEvent(text);
+    return text.defaultPrevented;
+  }
   const spec = nativeKeySpec(key);
   const id = spec.key || String(key);
   const repeat = press && heldKeys.has(id);

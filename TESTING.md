@@ -4697,6 +4697,22 @@ was used. Physical PS4 playback and native-clock behavior remain unverified;
 this reproduction does not establish the cause of the owner's physical-device
 report. Playwright acceptance is not part of the package workflow.
 
+## Roku phone keyboard
+
+Native `Lit_` events insert printable text through the active Search keyboard or
+text modal. Phone Backspace deletes one Unicode code point; physical Back keeps
+its navigation meaning. Phone Enter uses the visible keyboard's completion
+action once per press. Numeric modals retain their digit and length limits.
+
+The native event regression fails against the prior bridge in hosted run
+https://github.com/viptv-org/tv-web/actions/runs/43338404152; the native query stays
+empty. Tests cover actual `dispatchNativeKey` press/release events, text scoping,
+case, spaces, Unicode, deletion, completion and listener disposal. Validation
+uses GitHub Actions; physical Roku phone-app behavior remains unverified.
+The event contract is documented at
+https://developer.roku.com/dev/docs/onkeyevent and
+https://developer.roku.com/dev/docs/external-control-api.
+
 ## Bounded playback heartbeat renewal (#142)
 
 Scheduled and foreground heartbeats share one renewal flight. A typed gateway timeout/unavailability response can retry twice (1s,2s), bounded by the existing server expiry with the retained1s safety margin. Only a valid same-lease ready server response can replace that deadline. Invalid responses, terminal authority/errors, API-scope changes, Stop/replacement/ended/disposal retire or fail closed; a foreground return waits for renewal and retains newer user intent.

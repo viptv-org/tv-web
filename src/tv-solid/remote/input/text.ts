@@ -20,6 +20,7 @@ export function createTextInput(options: {
     const change = (value: string) => {
       if (event.inputType === "deleteContentBackward") return Array.from(value).slice(0, -1).join("");
       const inserted = event.data ?? "";
+      if (/[\u0000-\u001f\u007f-\u009f]/.test(inserted)) return value;
       if (modal?.kind === "text" && modal.numeric && !/^\d*$/.test(inserted)) return value;
       return (value + inserted).slice(0, modal?.kind === "text" && modal.numeric ? 8 : 2048);
     };

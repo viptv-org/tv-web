@@ -30,7 +30,9 @@ it("inserts native phone literal keys once, preserving case, spaces, percent and
   for (const key of ["Lit_A", "Lit_ ", "Lit_%", "Lit_é", "Lit_🦊"]) f.key(key);
   expect(f.query()).toBe("A %é🦊");
   f.key("backspace"); expect(f.query()).toBe("A %é");
-  f.key("enter"); expect(f.done).toHaveBeenCalledOnce();
+  dispatchNativeKey("enter", true); dispatchNativeKey("enter", true); dispatchNativeKey("enter", false);
+  expect(f.done).toHaveBeenCalledOnce();
+  f.key("Lit_\n"); expect(f.query()).toBe("A %é");
   f.key("OK"); expect(f.done).toHaveBeenCalledOnce();
 });
 
