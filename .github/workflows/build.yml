@@ -3,6 +3,11 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      auth_recovery_ui:
+        description: Run focused startup authentication recovery browser checks
+        type: boolean
+        default: false
 permissions:
   contents: read
 concurrency:
@@ -29,6 +34,19 @@ jobs:
         run: pnpm install --frozen-lockfile
       - run: npm test
       - run: npm run build
+      - name: Qualify startup authority recovery over disposable HTTPS
+        if: github.event_name == 'workflow_dispatch' && inputs.auth_recovery_ui
+        timeout-minutes: 8
+        run: |
+          npx playwright install --with-deps chromium
+          mkdir -p "$RUNNER_TEMP/auth-tls"
+          openssl req -x509 -newkey rsa:2048 -nodes -days 1 -subj /CN=127.0.0.1 -keyout "$RUNNER_TEMP/auth-tls/viptv.local.test.key" -out "$RUNNER_TEMP/auth-tls/viptv.local.test.crt"
+          ln -s "$GITHUB_WORKSPACE/design-contract" "$GITHUB_WORKSPACE/../design"
+          node tests/preview/https-static.mjs "$RUNNER_TEMP/auth-tls" 18562 > "$RUNNER_TEMP/auth-server.log" 2>&1 &
+          fixture_pid=$!
+          trap 'kill "$fixture_pid" 2>/dev/null || true' EXIT
+          for attempt in $(seq 1 30); do curl --insecure --silent --fail https://127.0.0.1:18562/tv/solid.html >/dev/null && break; sleep 1; done
+          npx playwright test --config playwright.auth-recovery.config.ts --reporter=line
       - run: node scripts/package-tv.mjs hosting
       - uses: actions/upload-artifact@v4
         with:
