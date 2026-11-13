@@ -25,7 +25,7 @@ const scene = (page: Page) => page.evaluate(() => {
       tiles.push({index:Number(/\/carousel\/(\d+)\.png/.exec(src)![1]),x:node.absX,y:node.absY,w:node.props.w,h:node.props.h});
     if (typeof src === 'string' && src.includes('/tv-artwork/') && node.props.w===1920 && node.props.h===1080 && node.worldAlpha>.5)
       walls.push({x:node.absX,y:node.absY,w:node.props.w,h:node.props.h});
-    if (node.props.w===640 && node.props.h===160)
+    if (node.props.w===640 && node.props.h===160 && node.props.mountY===1)
       logos.push({x:node.absX,y:node.absY,scale:typeof node.props.scale==='number'?node.props.scale:node.props.scale?.x??1,
         alpha:node.worldAlpha,scaleTransition:!!node.props.transition?.scale});
     const text = node.viptvText ?? node.props?.text;
