@@ -38,8 +38,8 @@ async function setup(page: Page, origin: string, canvas: boolean, saver=false, r
     title:`Featured ${index}`,logo:null,poster:null,landscape:`${origin}/carousel/${index}.png`,progress:null,
     view:{saved:false,progress:null},badges:[]}));
   bootstrap.home!.hero=cards[0];bootstrap.home!.featured=cards;bootstrap.home!.rows=[];
-  bootstrap.preferences!.display.screen_saver_minutes=saver?1:0;
-  bootstrap.preferences!.display.reduce_motion=reduced?'on':'follow';
+  bootstrap.preferences!.display!.screen_saver_minutes=saver?1:0;
+  bootstrap.preferences!.display!.reduce_motion=reduced?'on':'follow';
   await page.route('**/api/bootstrap',route=>route.fulfill({json:bootstrap}));
   const gates=new Map<number,{promise:Promise<void>;release:()=>void}>(),waiting=new Set<number>();
   await page.route('**/carousel/*.png',async route=>{
