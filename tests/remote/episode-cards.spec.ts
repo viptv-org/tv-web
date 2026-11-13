@@ -22,8 +22,8 @@ async function fixture(page: Page, origin: string, canvas: boolean, delayed: boo
     identity: {kind: "series", id: `tt0988824:4:${index + 1}`, ids: [], episode: {order: "aired", season: 4, episode: index + 1}},
     parent_identity: series.identity, poster: null, logo: null,
     landscape: index === 2 ? null : `${origin}/fixture/episode-art-${index === 1 ? "success.svg" : "failed.jpg"}`,
-    progress: index === 0 ? .05236978860202954 : index === 1 ? .011362704586639488 : null,
-    view: {saved: false, progress: index === 0 ? .05236978860202954 : index === 1 ? .011362704586639488 : null},
+    progress: index === 0 ? .05 : index === 1 ? .01 : null,
+    view: {saved: false, progress: index === 0 ? .05 : index === 1 ? .01 : null},
   }));
   let fail!: () => void, succeed!: () => void;
   const failed = new Promise<void>(resolve => { fail = resolve; });

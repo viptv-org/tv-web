@@ -80,9 +80,19 @@ it("keeps one landscape caption for absent and failed episode artwork", () => {
 
 it("does not retry a failed image when the same episode is reprojected with the same image URL", () => {
   const card = episode({landscape: "/episode-art/missing.jpg"}), scene = mount(card);
+  const initial = imageNodes().length;
+  expect(initial).toBe(1);
+  for (let i = 0; i < 3; i++) {
+    visible(scene.root); titles(scene.root, card.title);
+    expect(imageNodes()).toHaveLength(initial);
+  }
   latestImage().props.onError();
   const requests = imageNodes().length;
-  scene.setCard({...card, subtitle: "Updated metadata", progress: .05236978860202954});
+  for (let i = 0; i < 3; i++) {
+    visible(scene.root); titles(scene.root, card.title);
+    expect(imageNodes()).toHaveLength(requests);
+  }
+  scene.setCard({...card, subtitle: "Updated metadata", progress: .05});
   expect(imageNodes()).toHaveLength(requests);
   scene.setFocus(true);
   expect(imageNodes()).toHaveLength(requests);
@@ -92,7 +102,7 @@ it("does not retry a failed image when the same episode is reprojected with the 
 });
 
 it("renders only authoritative positive progress independently from focus and failed artwork", () => {
-  for (const progress of [null, 0, .05236978860202954]) {
+  for (const progress of [null, 0, .05]) {
     const card = episode({landscape: "/episode-art/missing.jpg", progress, view: {saved: false, progress}});
     const scene = mount(card);
     const bars = () => visible(scene.root).filter(node => node.props.color === "#F5C542");
