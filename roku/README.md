@@ -71,3 +71,7 @@ CPU work to another thread. `WorkerTask` handles the host's explicit HTTP/task
 operations; SceneGraph animation components run in the Render context. These
 boundaries do not imply browser `Worker` or `SharedWorker` support or establish
 frame-rate/input-latency guarantees.
+
+The manual Roku artifact workflow can validate an issue branch without device
+access. Branch artifacts are validation inputs only. Deliver a ZIP built from
+the final merged `main` revision, with its provenance and checksum verified.
