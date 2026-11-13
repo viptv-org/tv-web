@@ -13,23 +13,23 @@ const texts = (page: Page) => page.evaluate(() => {
   return result;
 });
 
-test('startup recovery Enter and Back never issue pairing while saved authority is unresolved', async ({ page, baseURL }) => {
+for (const firstKey of ['Enter', 'Escape']) test(`startup recovery ${firstKey} never pairs while saved authority is unresolved`, async ({ page, baseURL }) => {
   const fixture = await installRemoteBackend(page, baseURL!);
   await page.route('**/fixture/*', route => route.fulfill({ path: 'roku/pkg/assets/fallback.png', contentType: 'image/png' }));
   let unavailable = true;
   const bootstraps: string[] = [];
   await page.route('**/api/bootstrap', route => {
-    bootstraps.push(route.request().headers().authorization);
+    bootstraps.push(route.request().headers().authorization ?? '');
     return unavailable ? route.fulfill({ status: 503, json: { error_code: 'service_unavailable' } }) : route.fallback();
   });
   await page.goto('/tv/solid.html?focusdebug=1');
   await expect.poll(() => texts(page)).toContain('Try again');
-  await page.keyboard.press('Enter');
+  await page.keyboard.press(firstKey);
   await expect.poll(() => bootstraps.length).toBeGreaterThanOrEqual(2);
   await expect.poll(() => texts(page)).toContain('Try again');
   expect(fixture.requests.filter(r => r.path === '/api/auth/device/code')).toHaveLength(0);
   const beforeBack = bootstraps.length;
-  await page.keyboard.press('Escape');
+  await page.keyboard.press(firstKey === 'Enter' ? 'Escape' : 'Enter');
   await expect.poll(() => bootstraps.length).toBeGreaterThan(beforeBack);
   await expect.poll(() => texts(page)).toContain('Try again');
   expect(fixture.requests.filter(r => r.path === '/api/auth/device/code')).toHaveLength(0);
