@@ -16,14 +16,14 @@ export function createDetailRefresh(options: {
   const {selected, focused: focusedCard, resolve: focusIndex} = options;
   const {current: seasonIndex, set: setSeasonIndex} = options.season;
   const {zone, column, setColumn} = options.focus;
-  return async (signal: AbortSignal, profile: string, commit: () => void) => {
+  return async (signal: AbortSignal, profile: string, commit: () => void, authority: () => boolean = () => true) => {
     const previous = detail(), selectedCard = selected()!, generation = options.generation();
     const season = previous?.seasons[seasonIndex()];
     const [value, intent] = await Promise.all([
       options.api.detail(selectedCard, String(season?.offset ?? 0), signal),
       options.api.titleAction(selected()!, false, signal),
     ]);
-    if (!options.current(signal, profile, generation, selectedCard)) return;
+    if (!authority() || !options.current(signal, profile, generation, selectedCard)) return;
     const key = focusedCard() ? cardKey(focusedCard()!) : undefined;
     const nextSeason = season ? value.seasons.findIndex(item => item.season === season.season) : -1;
     batch(() => {

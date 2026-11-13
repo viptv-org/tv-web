@@ -616,6 +616,10 @@ export class RemotePlayback {
     this.directMode = false;
     await this.stopCurrent(false);
   }
+  flushProgress(): Promise<void> {
+    const captured = this.events;
+    return captured.then(() => {});
+  }
   /** Cancel an incoming admission without stopping its outgoing picture. */
   cancelPendingStart(): boolean {
     if (!this.admitting) return false;
