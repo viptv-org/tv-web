@@ -16,7 +16,7 @@ const scene = (page: Page) => page.evaluate(() => {
   const images: {id:number;index:number;x:number;y:number;alpha:number}[] = [], titles: string[] = [];
   const tiles: {index:number;x:number;y:number;w:number;h:number}[] = [];
   const walls: {x:number;y:number;w:number;h:number}[] = [];
-  const logos: {x:number;y:number;scale:number;alpha:number}[] = [];
+  const logos: {x:number;y:number;scale:number;alpha:number;scaleTransition:boolean}[] = [];
   function walk(node: any) {
     const src = node.texture?.props?.src;
     if (typeof src === 'string' && /\/carousel\/\d+\.png/.test(src) && node.props.w===1920 && node.props.h===1080)
