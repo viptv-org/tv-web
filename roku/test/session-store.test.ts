@@ -72,7 +72,7 @@ it('requires native save acknowledgement before finishing sign-in and survives a
   const native = createRokuSessionStore(disk);
   const api = new RemoteTvApi('https://fixture.example', native, async () => response({ access_token: original.accessToken, refresh_token: original.refreshToken }));
   let finished = false;
-  const paired = api.pollPair('synthetic-code', new AbortController().signal).then(() => { finished = true; });
+  const paired = api.claim('synthetic-code', new AbortController().signal).then(() => { finished = true; });
   await vi.waitFor(() => expect(disk.save).toHaveBeenCalledOnce());
   expect(finished).toBe(false);
   expect(disk.raw()).toBe('null');
