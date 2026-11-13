@@ -1,3 +1,12 @@
+# Episode artwork failure and visible selection
+
+| State | Browser evidence | Device limit |
+| --- | --- | --- |
+| Missing/404/delayed artwork, title and positive/null progress | Issue #158 RED shows unchanged logical/card identity while late opaque fallback covers the painted ring/Canvas progress and duplicates titles. Candidate d1e6dc2 retains one caption and all 90 painted frames in Canvas/WebGL; corrected WebGL positive-progress probe passes. | Fixture image/API boundaries; upstream stills remain unavailable |
+| Episode row bounds and selection | Four derived 414×233 cards fit x96–1824. All 17 fixture identities pass bidirectional traversal, page boundaries, season return and final Play identity. Skeleton shares the derived geometry. | Browser geometry and input evidence only |
+| Parent image and neutral fallback | Only the current parent detail landscape is an optional second distinct URI; both failures stop at a neutral episode glyph. Unit cases cover request counts, metadata/focus stability, parent-only replacement and identity reset. | No provider-policy or backend change; physical image delivery unverified |
+| Native hidden focus/progress | Static platform branches preserve native four-edge chrome and browser SVG/play paths. NativeSync tests propagate logical ancestor opacity to detached holders; SDK build passes. | Logical/native boundary models, not physical SceneGraph pixel evidence |
+
 # Coherent branding and preview composition
 
 | State | Browser evidence | Device limit |

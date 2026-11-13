@@ -146,8 +146,8 @@ export function DetailContent(props: DetailContentProps) {
                 ? props.episodes
                 : value().recommendations
               ).slice(
-                Math.floor(props.episodeColumn / (props.hasEpisodes ? 4 : 7)) * (props.hasEpisodes ? 4 : 7),
-                Math.floor(props.episodeColumn / (props.hasEpisodes ? 4 : 7)) * (props.hasEpisodes ? 4 : 7) + 8,
+                Math.floor(props.episodeColumn / (props.hasEpisodes ? detailEpisodeLayout.columns : 7)) * (props.hasEpisodes ? detailEpisodeLayout.columns : 7),
+                Math.floor(props.episodeColumn / (props.hasEpisodes ? detailEpisodeLayout.columns : 7)) * (props.hasEpisodes ? detailEpisodeLayout.columns : 7) + 8,
               )}
               keyOf={cardKey}
             >
@@ -169,7 +169,7 @@ export function DetailContent(props: DetailContentProps) {
                   focused={
                     props.zone === "episodes" &&
                     i() ===
-                      props.column % (props.hasEpisodes ? 4 : 7)
+                      props.column % (props.hasEpisodes ? detailEpisodeLayout.columns : 7)
                   }
                 />
               )}

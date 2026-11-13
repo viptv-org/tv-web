@@ -3,6 +3,7 @@ import { For, createSignal, onCleanup } from "solid-js";
 import { TvView } from "../runtime";
 import { tokens } from "../../theme/viptv-tokens.generated";
 import { reducedMotion } from "./motion";
+import { detailEpisodeLayout } from "./hero-layout";
 
 export function DetailSkeleton(props: { series?: boolean }) {
   const [alpha, setAlpha] = createSignal(.5);
@@ -17,6 +18,6 @@ export function DetailSkeleton(props: { series?: boolean }) {
     <TvView y={props.series ? 648 : 668} w={260} h={72} color={tokens["color.surface.3"]} />
     <TvView x={280} y={props.series ? 648 : 668} w={72} h={72} color={tokens["color.surface.2"]} />
     <TvView y={props.series ? 816 : 836} w={260} h={30} color={tokens["color.surface.2"]} />
-    <For each={[0,1,2,3,4,5,6]}>{index => <TvView x={index * (props.series ? 472 : 248)} y={888} w={props.series ? 448 : 232} h={props.series ? 252 : 348} color={tokens["color.surface.1"]} />}</For>
+    <For each={[0,1,2,3,4,5,6]}>{index => <TvView x={index * (props.series ? detailEpisodeLayout.step : 248)} y={888} w={props.series ? detailEpisodeLayout.width : 232} h={props.series ? detailEpisodeLayout.height : 348} color={tokens["color.surface.1"]} />}</For>
   </TvView>;
 }
