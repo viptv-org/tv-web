@@ -106,7 +106,7 @@ for(const canvas of [false,true]) {
   for(const action of ['play','save','info','hold','menu']) test(`pending incoming title cannot steal ${action} from the shown hero (${mode})`,async({page,baseURL})=>{
     const f=await setup(page,baseURL!,canvas),release=f.hold(1);
     try {
-      await tick(page);await expect.poll(()=>f.waiting.has(1)).toBe(true);expect((await scene(page)).titles).toContain('Featured 0');
+      await tick(page);await expect.poll(async()=>{await page.clock.runFor(16);return f.waiting.has(1);}).toBe(true);expect((await scene(page)).titles).toContain('Featured 0');
       if(action==='save')await page.keyboard.press('ArrowRight');
       if(action==='info'){await page.keyboard.press('ArrowRight');await page.keyboard.press('ArrowRight');}
       if(action==='menu')await page.keyboard.press('ContextMenu');
