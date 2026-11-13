@@ -1412,9 +1412,14 @@ export function createRemoteTvApp(
       heroCycle.interrupt(displayedFeatured());
     }
     createEffect(() => {
-      if (screenSaver()) { heroCycle.setReady(true); return; }
+      if (screenSaver() || screen() !== "home" || zone() !== "rows") {
+        heroCycle.setReady(heroCycle.visible());
+        return;
+      }
       const shown = displayHero(), requested = hero();
-      heroCycle.setReady(!!shown && !!requested && presentationKey(shown) === presentationKey(requested) && !heroPresentation.frames().some(frame => frame.staged));
+      heroCycle.setReady(heroCycle.visible() && !!shown && !!requested &&
+        presentationKey(shown) === presentationKey(requested) &&
+        !heroPresentation.frames().some(frame => frame.staged));
     });
     const detailForDisplay = createMemo(() => detail() && displayHero() && presentationKey(detail()!.item) === presentationKey(displayHero()!)
       ? { ...detail()!, item: displayHero()! } : undefined);
