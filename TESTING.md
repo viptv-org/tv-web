@@ -4748,6 +4748,12 @@ native SDK packaging is required before merge. These tests do not establish
 physical Roku mobile-app paste, selection, IME or grapheme behavior; those remain
 device acceptance scenarios. The channel sends no ECP or private edit commands.
 
+Native boundary mocks retain the SDK's object-shaped `tmTransaction` contract;
+the real SDK build checks exports, project boundaries and native packaging. A
+reactive overlay/controller regression verifies that a field's nonempty initial
+value is installed before native presentation. Search uses its existing 256-
+character limit; generic text modals use 2048 and numeric PINs use eight.
+
 ## Bounded playback heartbeat renewal (#142)
 
 Scheduled and foreground heartbeats share one renewal flight. A typed gateway timeout/unavailability response can retry twice (1s,2s), bounded by the existing server expiry with the retained1s safety margin. Only a valid same-lease ready server response can replace that deadline. Invalid responses, terminal authority/errors, API-scope changes, Stop/replacement/ended/disposal retire or fail closed; a foreground return waits for renewal and retains newer user intent.

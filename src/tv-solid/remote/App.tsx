@@ -3106,6 +3106,7 @@ export function createRemoteTvApp(
         !overlay() && screen() === "search" && zone() === "keyboard" && api.scopeEpoch === epoch);
       return {key: isModal ? modal : `search:${epoch}`, title: isModal ? modal.title : "Search",
         value: isModal ? text() : search(), numeric: isModal && modal.numeric, secret: isModal && modal.secret,
+        maximumLength: isModal ? modal.numeric ? 8 : 2048 : 256,
         confirm: isModal ? "Done" : "Search",
         write: value => {if (current()) textInput({inputType: "insertReplacementText", data: value, preventDefault() {}});},
         done: () => {if (current()) completeTextInput(isModal);},

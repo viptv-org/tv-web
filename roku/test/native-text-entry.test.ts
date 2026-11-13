@@ -1,15 +1,18 @@
 import { afterEach, expect, it, vi } from "vitest";
 import type { NativeTextRequest } from "../../src/tv-solid/remote/input/native-text";
 
-const native = vi.hoisted(() => ({nodes: [] as {type: string; fields: Record<string, any>}[], removed: [] as unknown[]}));
+const native = vi.hoisted(() => ({nodes: [] as {type: string; fields: Record<string, any>}[], removed: [] as unknown[], failProperty: ""}));
 vi.mock("@roku-sdk/solid", () => ({
   createElement: (type: string) => {const node = {type, fields: {}}; native.nodes.push(node); return node;},
-  setProp: (node: typeof native.nodes[number], key: string, value: unknown) => {node.fields[key] = value;},
+  setProp: (node: typeof native.nodes[number], key: string, value: unknown) => {
+    if (key === native.failProperty) throw new Error("Native field rejected");
+    node.fields[key] = value;
+  },
   insertNode: vi.fn(),
   tmTransaction: {removeNode: (_parent: unknown, node: unknown) => {native.removed.push(node);}},
 }));
 import { createNativeTextEntry } from "../src/roku/native-text-entry";
-afterEach(() => {native.nodes.length = 0; native.removed.length = 0;});
+afterEach(() => {native.nodes.length = 0; native.removed.length = 0; native.failProperty = "";});
 const request = (extra: Partial<NativeTextRequest> = {}): NativeTextRequest => ({title: "Search", initial: "Initial", maximumLength: 2048,
   numeric: false, secret: false, confirm: "Search", change: vi.fn(), done: vi.fn(), cancel: vi.fn(), failed: vi.fn(), ...extra});
 
@@ -49,4 +52,12 @@ it("rejects invalid native PIN snapshots without truncating text or submitting a
     native.nodes[native.nodes.length - 1].fields.onResult({action: "done", text});
     expect(input.done).not.toHaveBeenCalled(); expect(input.failed).toHaveBeenCalledOnce(); expect(host.ownsInput()).toBe(false);
   }
+});
+
+it("attempts close and removal and reports failure once even if observer setup and cleanup throw", () => {
+  const host = createNativeTextEntry({}), input = request(); native.failProperty = "onEdit";
+  expect(() => host.open(input)).not.toThrow();
+  expect(input.failed).toHaveBeenCalledOnce(); expect(host.ownsInput()).toBe(false);
+  expect(native.nodes[0].fields.close).toBe(true); expect(native.removed).toContain(native.nodes[0]);
+  expect(input.done).not.toHaveBeenCalled();
 });

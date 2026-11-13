@@ -1,20 +1,5 @@
-export interface NativeTextRequest {
-  title: string;
-  initial: string;
-  numeric: boolean;
-  secret: boolean;
-  maximumLength: number;
-  confirm: string;
-  change: (value: string) => void;
-  done: (value: string) => void;
-  cancel: () => void;
-  failed: () => void;
-}
-
-export interface NativeTextPort {
-  open(request: NativeTextRequest): { close(): void };
-  ownsInput(): boolean;
-}
+import type { NativeTextPort } from "../../../../roku/src/roku/native-text-types";
+export type { NativeTextPort, NativeTextRequest } from "../../../../roku/src/roku/native-text-types";
 
 export interface NativeTextTarget {
   key: unknown;
@@ -22,6 +7,7 @@ export interface NativeTextTarget {
   value: string;
   numeric?: boolean;
   secret?: boolean;
+  maximumLength?: number;
   confirm: string;
   write: (value: string) => void;
   done: () => void;
@@ -48,7 +34,7 @@ export function createNativeTextEditing(host: NativeTextPort) {
     };
     try {
       const handle = host.open({title: target.title, initial: target.value, numeric: !!target.numeric,
-        secret: !!target.secret, maximumLength: target.numeric ? 8 : 2048, confirm: target.confirm,
+        secret: !!target.secret, maximumLength: target.maximumLength ?? (target.numeric ? 8 : 2048), confirm: target.confirm,
         change: value => {if (current()) target.write(value);}, done: value => finish("done", value),
         cancel: () => finish("cancel"), failed: () => finish("failed")});
       if (current()) close = () => handle.close(); else handle.close();
