@@ -130,7 +130,12 @@ for(const canvas of [false,true]) {
       const image=(await scene(page)).images.find(value=>value.index===(current+1)%5&&value.alpha>0)!;
       expect(image).toBeTruthy();if(reduced)expect(image.x).toBeCloseTo(240,0);else expect(image.x).toBeGreaterThan(240);
       await page.clock.runFor(450);await page.screenshot({path:info.outputPath('idle-featured.png')});
-      await page.keyboard.press('Enter');await expect(html(page)).toHaveAttribute('data-tv-saver','false');await page.clock.runFor(100);
+      if(reduced)expect(await page.evaluate(()=>{
+        const event=Object.assign(new Event('viptvtextinput',{cancelable:true}),{inputType:'insertText',data:'q'});
+        window.dispatchEvent(event);return event.defaultPrevented;
+      })).toBe(true);
+      else await page.keyboard.press('Enter');
+      await expect(html(page)).toHaveAttribute('data-tv-saver','false');await page.clock.runFor(100);
       expect(f.actions).toEqual([]);expect(f.details).toEqual([]);
     }finally{f.release();}
   });
