@@ -32,6 +32,6 @@ export function PosterWall(props: {featured?: Card[]; slide?: number}) {
       {source => <TvView x={(wallSlot(slot) % COLUMNS) * STEP_X} y={Math.round(Math.floor(wallSlot(slot) / COLUMNS) * STEP_Y)}
         w={TILE_WIDTH} h={TILE_HEIGHT} fit="cover" alpha={.72}
         src={imageSource(source(), TILE_WIDTH, TILE_HEIGHT, "cover")} />}
-    }</Show>}</For>
+    </Show>}</For>
   </TvView>;
 }
