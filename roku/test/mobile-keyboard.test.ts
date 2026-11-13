@@ -48,3 +48,16 @@ it("scopes native text and deletion to the active text target without swallowing
   f.key("backspace"); expect(f.text()).toBe("1234567"); expect(f.query()).toBe("c");
   f.overlay({kind: "choices"} as Overlay); f.key("Lit_d"); expect(f.query()).toBe("c");
 });
+
+it("does not duplicate native snapshots with bubbled or reordered literal/deletion/Enter keys", () => {
+  const f = fixture();
+  vi.stubGlobal("__viptvNativeTextEntry", {ownsInput: () => true});
+  try {
+    f.key("Lit_queued"); expect(f.query()).toBe("");
+    (globalThis as any).dispatchEvent(new Event("viptvtextinput", {inputType: "insertReplacementText", data: "Native pasted value"} as any));
+    f.key("Lit_value"); f.key("backspace"); f.key("enter");
+    expect(f.query()).toBe("Native pasted value"); expect(f.done).not.toHaveBeenCalled();
+    vi.stubGlobal("__viptvNativeTextEntry", {ownsInput: () => false});
+    f.key("Lit_!"); expect(f.query()).toBe("Native pasted value!");
+  } finally { vi.stubGlobal("__viptvNativeTextEntry", undefined); }
+});

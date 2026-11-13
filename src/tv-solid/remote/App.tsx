@@ -99,6 +99,7 @@ import {
 import { applyCaptionAppearance } from "./player/caption-appearance";
 import { createKeyboardInput } from "./input/keyboard";
 import { createTextInput } from "./input/text";
+import { createNativeTextEditing, type NativeTextPort, type NativeTextTarget } from "./input/native-text";
 import { createPlayerMediaKeys } from "./input/player-media";
 import { installWindowInputs } from "./input/window-bindings";
 import { createTrackPicker } from "./player/tracks";
@@ -2763,7 +2764,11 @@ export function createRemoteTvApp(
           closeOverlay();
           return;
         }
-        if (modal.kind === "text") keyboardActivate(true);
+        if (modal.kind === "text") {
+          const target = nativeTextTarget();
+          if (target && nativeTextPort?.ownsInput()) nativeTextEditing?.open(target);
+          else keyboardActivate(true);
+        }
         else if (modal.kind === "sources") await activateSources();
         else
           await run(async () => {
@@ -2839,6 +2844,8 @@ export function createRemoteTvApp(
       }
       if (screen() === "detail" && zone() === "seasons") { chooseSeason(); return; }
       if (screen() === "search" && zone() === "keyboard") {
+        const target = nativeTextTarget();
+        if (target && nativeTextPort?.ownsInput()) { nativeTextEditing?.open(target); return; }
         const index = key();
         updateSearch(
           index === 0
@@ -3107,6 +3114,29 @@ export function createRemoteTvApp(
       bootRequested = true;
       if (options.autoStart !== false) void start();
     });
+    const textInput = createTextInput({screen, overlay, zone, text: setText, query: search, search: updateSearch,
+      done: () => completeTextInput(overlay()?.kind === "text")});
+    const nativeTextPort = (globalThis as {__viptvNativeTextEntry?: NativeTextPort}).__viptvNativeTextEntry;
+    const nativeTextEditing = nativeTextPort && createNativeTextEditing(nativeTextPort);
+    function nativeTextTarget(): NativeTextTarget | undefined {
+      const modal = overlay();
+      if (overlayClosing() || (modal && modal.kind !== "text")) return;
+      const isModal = modal?.kind === "text";
+      if (!isModal && (screen() !== "search" || zone() !== "keyboard")) return;
+      const epoch = api.scopeEpoch;
+      const current = () => !overlayClosing() && (isModal ? overlay() === modal :
+        !overlay() && screen() === "search" && zone() === "keyboard" && api.scopeEpoch === epoch);
+      return {key: isModal ? modal : `search:${epoch}`, title: isModal ? modal.title : "Search",
+        value: isModal ? text() : search(), numeric: isModal && modal.numeric, secret: isModal && modal.secret,
+        maximumLength: isModal ? modal.numeric ? 8 : 2048 : 256,
+        confirm: isModal ? "Done" : "Search",
+        write: value => {if (current()) textInput({inputType: "insertReplacementText", data: value, preventDefault() {}});},
+        done: () => {if (current()) completeTextInput(isModal);},
+        cancel: () => {if (current()) {if (isModal) dismissOverlay(); else setZone("keyboard");}},
+        failed: () => {if (current()) notify("Native keyboard unavailable. Use the on-screen keys.");}};
+    }
+    createEffect(() => nativeTextEditing?.sync(nativeTextTarget()));
+    onCleanup(() => nativeTextEditing?.dispose());
     let inputRequested = false;
     createEffect(() => {
       if (inputRequested) return;
@@ -3117,7 +3147,7 @@ export function createRemoteTvApp(
           revealEnded: revealEndedControls, play: playIntent, chrome: {show: setShowControls, hide: hideControls},
           segments: {clear: () => {setPlaybackSegments([]);}, refresh: refreshPlaybackSegments}, fail})});
       onCleanup(installWindowInputs({keyboard: input, screen, overlay, loading, error, pair: beginPairing, stop: leavePlayer,
-        textInput: createTextInput({screen, overlay, zone, text: setText, query: search, search: updateSearch, done: () => completeTextInput(overlay()?.kind === "text")}),
+        textInput,
         next: {advance: advanceEpisode, dismiss: dismissNext}, cancelHold: () => {heldSelect.cancel(); playerNavigation.cancel();}, cancelCountdown: () => countdown.cancel(),
         visible: setHeroVisible, wake: reloadIdleImages, fail}));
     });

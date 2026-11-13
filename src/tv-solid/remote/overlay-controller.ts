@@ -1,4 +1,4 @@
-import { createSignal, type Accessor } from "solid-js";
+import { batch, createSignal, type Accessor } from "solid-js";
 import type { Overlay, Screen } from "./app-types";
 
 export interface OverlayFocus { zone: string; column: number; row: number; choice: number }
@@ -33,11 +33,13 @@ export function createOverlayController(options: { focus: OverlayUi; text: Overl
     if (!preserveOrigin) captureOrigin();
     options.focus.select(0); options.errors.clear();
     const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
-    setEntered(reduced); setSettled(reduced); setCurrent(value);
+    batch(() => {
+      if (value.kind === "text") options.text.begin(value.initial ?? "");
+      setEntered(reduced); setSettled(reduced); setCurrent(value);
+    });
     if (!reduced) frame = requestAnimationFrame(() => {
       setEntered(true); timer = setTimeout(() => setSettled(true), 320);
     });
-    if (value.kind === "text") options.text.begin(value.initial ?? "");
   }
   const replace = (value: Overlay) => open(value, false, true);
   function close(restoreFocus = true) {

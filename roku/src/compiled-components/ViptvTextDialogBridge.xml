@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<component name="ViptvTextDialogBridge" extends="Group">
+  <interface>
+    <field id="request" type="assocarray" onChange="openDialog" />
+    <field id="close" type="boolean" onChange="closeDialog" />
+    <field id="edit" type="assocarray" alwaysNotify="true" />
+    <field id="result" type="assocarray" alwaysNotify="true" />
+  </interface>
+  <script type="text/brightscript" uri="ViptvTextDialogBridge.brs" />
+</component>
