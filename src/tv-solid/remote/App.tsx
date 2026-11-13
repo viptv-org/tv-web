@@ -1064,18 +1064,28 @@ export function createRemoteTvApp(
       });
       scheduleRevisions();
     }
-    async function start() {
-      if (options.initialLoading !== false) setLoading(true);
-      setError("");
-      try {
-        if (await api.restore())
-          applyBootstrap(await api.bootstrap(scope.signal));
-        else setLoading(false);
-      } catch (e) {
-        fail(e);
-      }
+    let startupAuthorityKnown = false;
+    let startupFlight: Promise<void> | undefined;
+    function start(): Promise<void> {
+      if (startupFlight) return startupFlight;
+      startupAuthorityKnown = false;
+      const restore = async () => {
+        if (options.initialLoading !== false) setLoading(true);
+        setError("");
+        try {
+          if (await api.restore())
+            applyBootstrap(await api.bootstrap(scope.signal));
+          else setLoading(false);
+          startupAuthorityKnown = true;
+        } catch (e) {
+          if (e instanceof RemoteError && e.status === 401) startupAuthorityKnown = true;
+          fail(e);
+        }
+      };
+      startupFlight = restore().finally(() => { startupFlight = undefined; });
+      return startupFlight;
     }
-    const beginPairing = createPairingFlow({api, retry: work => {retry = () => void work();}, fail,
+    const pairingFlow = createPairingFlow({api, retry: () => {retry = () => void beginPairing();}, fail,
       begin: () => {
         if (screen() !== "pairing") setPairingFocused(false);
         const signal = resetScope();
@@ -1096,6 +1106,14 @@ export function createRemoteTvApp(
           setRow(0);
         });
       }});
+    async function beginPairing() {
+      if (!startupAuthorityKnown || (screen() === "welcome" && error())) {
+        await start();
+        return;
+      }
+      if (loading() || pending() || !["welcome", "pairing"].includes(screen())) return;
+      await pairingFlow();
+    }
     function finishSignIn() {
       const authenticated = signedIn();
       if (!authenticated || screen() !== "signed-in") return;
@@ -1921,7 +1939,11 @@ export function createRemoteTvApp(
       rememberDetailFocus();
       nextIntent++;setAdvancing(false);
       countdown.cancel();
-      if (error()) { setError("");return; }
+      if (error()) {
+        if (screen() === "welcome" && !startupAuthorityKnown) await start();
+        else setError("");
+        return;
+      }
       if (overlay()?.kind === "next") { dismissNext();return; }
       if (sourceLoading() && !overlay() || openingSource()) {
         const cancelInPlace = screen() !== "player" && !openingSource();
