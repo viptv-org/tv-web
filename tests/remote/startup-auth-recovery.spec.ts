@@ -7,19 +7,22 @@ const texts = (page: Page) => page.evaluate(() => {
     if (node.isRenderable && node.viptvText) result.push(node.viptvText);
     node.children?.forEach(visit);
   }
-  visit((window as any).__viptvRenderer.stage.root);
+  const renderer = (window as any).__viptvRenderer;
+  if (!renderer) return result;
+  visit(renderer.stage.root);
   return result;
 });
 
 test('startup recovery Enter and Back never issue pairing while saved authority is unresolved', async ({ page, baseURL }) => {
   const fixture = await installRemoteBackend(page, baseURL!);
+  await page.route('**/fixture/*', route => route.fulfill({ path: 'roku/pkg/assets/fallback.png', contentType: 'image/png' }));
   let unavailable = true;
   const bootstraps: string[] = [];
   await page.route('**/api/bootstrap', route => {
     bootstraps.push(route.request().headers().authorization);
     return unavailable ? route.fulfill({ status: 503, json: { error_code: 'service_unavailable' } }) : route.fallback();
   });
-  await page.goto('/tv/solid.html');
+  await page.goto('/tv/solid.html?focusdebug=1');
   await expect.poll(() => texts(page)).toContain('Try again');
   await page.keyboard.press('Enter');
   await expect.poll(() => bootstraps.length).toBeGreaterThanOrEqual(2);
@@ -40,11 +43,12 @@ test('startup recovery Enter and Back never issue pairing while saved authority 
 for (const authority of ['absent', 'revoked'] as const) {
   test(`confirmed ${authority} credentials permit one deliberate pairing request`, async ({ page, baseURL }) => {
     const fixture = await installRemoteBackend(page, baseURL!, { session: authority !== 'absent' });
+    await page.route('**/fixture/*', route => route.fulfill({ path: 'roku/pkg/assets/fallback.png', contentType: 'image/png' }));
     if (authority === 'revoked') {
       await page.route('**/api/bootstrap', route => route.fulfill({ status: 401, json: { error: 'unauthorized' } }));
       await page.route('**/api/auth/device/refresh', route => route.fulfill({ status: 401, json: { error: 'unauthorized' } }));
     }
-    await page.goto('/tv/solid.html');
+    await page.goto('/tv/solid.html?focusdebug=1');
     await expect(page.locator('html')).toHaveAttribute('data-tv-ready', 'true');
     if (authority === 'revoked') {
       await expect.poll(() => texts(page)).toContain('Try again');

@@ -13,6 +13,7 @@ for (const canvas of [false, true]) test(`presented sources with nullable metada
   }, canvas);
   const fixture = await installRemoteBackend(page, baseURL!, { media: true, episodeFlow: true,
     sourcePresentation: { source_id: null, provider_name: null } });
+  await page.route('**/fixture/*', route => route.fulfill({ path: 'roku/pkg/assets/fallback.png', contentType: 'image/png' }));
   const state = page.locator('html');
   await page.goto('/tv/?platform=web&focusdebug=1');
   await expect(state).toHaveAttribute('data-tv-ready', 'true');
@@ -38,6 +39,7 @@ for (const canvas of [false, true]) test(`presented sources with nullable metada
 test('disabled remembered-source reuse makes no device save attempt or warning', async ({ page, baseURL }) => {
   const fixture = await installRemoteBackend(page, baseURL!, { media: true, episodeFlow: true,
     sourcePresentation: { source_id: null, provider_name: null } });
+  await page.route('**/fixture/*', route => route.fulfill({ path: 'roku/pkg/assets/fallback.png', contentType: 'image/png' }));
   fixture.bootstrap().preferences!.preferences.remembered_source_reuse = false;
   await page.addInitScript(() => {
     (window as any).__sourceChoiceWrites = 0;
@@ -50,7 +52,7 @@ test('disabled remembered-source reuse makes no device save attempt or warning',
       return original.call(this, key, value);
     };
   });
-  await page.goto('/tv/solid.html');
+  await page.goto('/tv/solid.html?focusdebug=1');
   await expect(page.locator('html')).toHaveAttribute('data-tv-ready', 'true');
   await page.keyboard.press('Enter');
   await expect(page.locator('html')).toHaveAttribute('data-tv-sources', '8');
