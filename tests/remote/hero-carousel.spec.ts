@@ -90,7 +90,7 @@ async function setup(page: Page, origin: string, canvas: boolean, saver=false, r
   if(logos) await expect.poll(async()=>(await logoBounds(page))!==undefined).toBe(true);
   else await expect.poll(async()=>(await scene(page)).titles).toContain('Featured 0');
   await page.clock.pauseAt(new Date(await page.evaluate(()=>Date.now()+1000)));await page.clock.runFor(400);
-  return {cards,actions,details,saved,waiting,logoRequests,artworkRequests,requests:fixture.requests,
+  return {cards,actions,details,saved,waiting,requests:fixture.requests,
     hold(index:number){let release!:()=>void;const promise=new Promise<void>(resolve=>{release=resolve;});gates.set(index,{promise,release});return release;},
     release(){gates.forEach(gate=>gate.release());}};
 }
