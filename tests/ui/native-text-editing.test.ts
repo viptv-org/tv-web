@@ -1,6 +1,10 @@
-import { expect, it, vi } from "vitest";
+import { afterEach, expect, it, vi } from "vitest";
+import { createEffect, createRoot, createSignal } from "solid-js";
 import { createTextInput, type TvTextInputEvent } from "../../src/tv-solid/remote/input/text";
 import { createNativeTextEditing, type NativeTextRequest, type NativeTextTarget } from "../../src/tv-solid/remote/input/native-text";
+import { createOverlayController } from "../../src/tv-solid/remote/overlay-controller";
+
+afterEach(() => vi.unstubAllGlobals());
 
 it.each([
   ["Before", "Pasted several words", "Pasted several words"],
@@ -58,4 +62,30 @@ it("does not reopen a failed native field automatically and preserves the curren
   expect(f.value()).toBe("Draft"); expect(f.target.failed).toHaveBeenCalledOnce();
   f.editor.sync({...f.target, value: f.value()}); expect(f.host.open).toHaveBeenCalledOnce();
   f.requests[0].cancel(); expect(f.value()).toBe("Draft");
+});
+
+it("opens a real reactive text overlay with its initialized draft, including replacement fields", async () => {
+  vi.stubGlobal("matchMedia", () => ({matches: true}));
+  vi.stubGlobal("cancelAnimationFrame", vi.fn());
+  const requests: NativeTextRequest[] = [];
+  const f = createRoot(dispose => {
+    const [text, setText] = createSignal("Stale previous draft");
+    const overlays = createOverlayController({focus: {screen: () => "settings", capture: () => ({zone: "settings-content", column: 0, row: 0, choice: 0}),
+      restore: vi.fn(), select: vi.fn(), selection: () => 0}, text: {begin: setText, clear: () => setText("")}, errors: {clear: vi.fn(), restore: vi.fn()}});
+    const editor = createNativeTextEditing({ownsInput: () => true, open: request => {requests.push(request); return {close: vi.fn()};}});
+    createEffect(() => {
+      const modal = overlays.current();
+      editor.sync(modal?.kind === "text" ? {key: modal, title: modal.title, value: text(), confirm: "Done", write: setText,
+        done: vi.fn(), cancel: () => overlays.close(), failed: vi.fn()} : undefined);
+    });
+    return {overlays, dispose: () => {editor.dispose(); overlays.dispose(); dispose();}};
+  });
+  try {
+    await Promise.resolve();
+    f.overlays.open({kind: "text", title: "Profile name", initial: "Existing profile", submit: async () => {}});
+    expect(requests).toHaveLength(1); expect(requests[0].initial).toBe("Existing profile");
+    requests[0].change("A draft");
+    f.overlays.open({kind: "text", title: "Other profile", initial: "Another name", submit: async () => {}});
+    expect(requests).toHaveLength(2); expect(requests[1].initial).toBe("Another name");
+  } finally {f.dispose();}
 });
