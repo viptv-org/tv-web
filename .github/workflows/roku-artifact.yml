@@ -41,7 +41,9 @@ jobs:
         working-directory: roku
         run: pnpm exec rk build --local --release --no-source-map --out-dir dist-roku
       - name: Verify and package beta developer ZIP
-        run: python3 scripts/package-roku.py
+        run: |
+          python3 -m pip install --disable-pip-version-check Pillow==13.0.0
+          python3 scripts/package-roku.py
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: roku-beta-${{ github.sha }}
