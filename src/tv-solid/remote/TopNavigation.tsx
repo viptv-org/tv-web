@@ -9,6 +9,7 @@ import type { Profile } from "./types";
 import type { Screen } from "./app-types";
 
 export function TopNavigation(props: { items: readonly NavigationItem[]; screen: Screen; selected?: number; profile?: Profile; fontReady: boolean }) {
+  const profileAvatar = createMemo(() => props.profile?.avatar_url ?? avatar(props.profile?.avatar_id));
   const layout = createMemo(() => {
     props.fontReady;
     let x = 300;
@@ -116,7 +117,7 @@ export function TopNavigation(props: { items: readonly NavigationItem[]; screen:
               h={56}
               color="#212124"
             >
-              <Label
+              <Show when={profileAvatar()} fallback={<Label
                 w={56}
                 centerY={28}
                 align="center"
@@ -129,15 +130,7 @@ export function TopNavigation(props: { items: readonly NavigationItem[]; screen:
                     .slice(0, 1)
                     .toUpperCase()
                 }
-              />
-              <Show
-                when={
-                  props.profile?.avatar_url ??
-                  avatar(
-                    props.profile?.avatar_id,
-                  )
-                }
-              >
+              />}>
                 {(src) => (
                   <TvView
                     w={56}

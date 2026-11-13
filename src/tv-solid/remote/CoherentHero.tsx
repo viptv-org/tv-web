@@ -110,6 +110,7 @@ function ArtworkFrame(props: ArtworkProps & { frame: Accessor<Frame>; foreground
 /** Prepared nodes become the visible nodes; no second fetch or decode on commit. */
 export function HeroArtwork(props: ArtworkProps) {
   const native = typeof (globalThis as any).__SolidTVRokuRenderer !== "undefined";
+  const portrait = () => props.presentation.mode() === "portrait";
   const scrim = createMemo(() => props.presentation.mode() === "detail" ? backdropScrimSource() : homeScrimSource());
   const [loadedScrim, setLoadedScrim] = createSignal<string>();
   const [roots,setRoots]=createSignal(new Map<number, [any?, any?, any?]>());
@@ -133,10 +134,10 @@ export function HeroArtwork(props: ArtworkProps) {
   return <TvView w={1920} h={1080}>
     <TvView w={1920} h={1080}>
       <KeyedFor each={props.presentation.frames()} keyOf={frame => frame.id}>{frame =>
-        <ArtworkFrame {...props} frame={frame} foreground={false} scrimReady={native || loadedScrim() === scrim()} register={register} />
+        <ArtworkFrame {...props} frame={frame} foreground={false} scrimReady={portrait() || native || loadedScrim() === scrim()} register={register} />
       }</KeyedFor>
     </TvView>
-    {native ? <TvView nativePaintBand="scrim" w={1920} h={1080} src={scrim()} /> : <TvView w={1920} h={1080}>
+    {native ? <TvView nativePaintBand="scrim" w={1920} h={1080} alpha={portrait() ? 0 : 1} src={scrim()} /> : <TvView w={1920} h={1080} alpha={portrait() ? 0 : 1}>
       <Show when={scrim()} keyed>{source =>
         <TvView nativePaintBand="scrim" w={1920} h={1080} src={source} preload onLoad={() => setLoadedScrim(source)} />
       }</Show>
