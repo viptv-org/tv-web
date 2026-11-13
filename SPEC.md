@@ -195,6 +195,14 @@ controls without stopping playback. Resume restores the ordinary idle timeout.
 New source admissions, including Next, retire pending transport chrome ownership;
 late completion or failure from the outgoing command cannot change the new chrome.
 
+Timeline Left/Right presses move the preview ten seconds immediately. Holding
+continues after 400ms, with 50ms preview updates and a linear speed increase from
+20 to 80 content seconds per wall second over four seconds. The speed then
+remains capped at 80. Release parks the preview for explicit Select confirmation;
+Back cancels it. Direction changes start a new tap and ramp. Focus loss, panels,
+source changes, exit and timer stalls over 250ms cancel the hold. No hold commits
+a seek or catches up time spent suspended. Other Select holds retain 700ms.
+
 Resume-time presentation follows the scoped owner-approved
 [TV-RESUME-135 contract](https://github.com/viptv-org/design/blob/4e730bb2d4e0898b0c899b70575622ae152d7998/docs/platforms/TV_PRESENTATION_REFINEMENT.md#tv-resume-135--authoritative-saved-time).
 Continue Watching omits remaining-time copy. Resume labels use authoritative

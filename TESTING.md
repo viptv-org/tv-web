@@ -4697,6 +4697,21 @@ was used. Physical PS4 playback and native-clock behavior remain unverified;
 this reproduction does not establish the cause of the owner's physical-device
 report. Playwright acceptance is not part of the package workflow.
 
+## Held timeline seek
+
+Hosted regression run
+https://github.com/viptv-org/tv-web/actions/runs/43338366381 reproduces a single
+Right press leaving the preview at its ten-second tap target throughout a hold.
+`tests/ui/player-held-seek.test.ts` checks the approved elapsed-time ramp, rate
+cap, title bounds, release, direction replacement, disabled/unfocused timelines,
+source retirement and suspended timers. The existing input runtime delivers a
+release callback and suppresses repeat keydowns until release. Back, panels,
+blur and teardown cancel the held navigation. Only Select commits a seek.
+
+Tests and builds run in GitHub Actions. Physical Roku and browser acceptance for
+held seeking remain unverified; the native artifact build runs separately after
+integration on main.
+
 ## Roku phone keyboard
 
 Native `Lit_` events insert printable text through the active Search keyboard or
