@@ -9,7 +9,7 @@ import { imagePixels, imageSource } from "./image-source";
 import { presentationCard, presentationKey } from "./presentation-card";
 import { backdropScrimSource, homeScrimSource } from "./tv-artwork.generated";
 import { reducedMotion } from "./motion";
-import { retireAfterHeroAnimations } from "./hero-retirement";
+import { afterPreparedFrame, retireAfterHeroAnimations } from "./hero-retirement";
 import type { Card } from "./types";
 import { HERO_SCROLL_MS } from "./heroCycle";
 
@@ -107,7 +107,14 @@ function ArtworkFrame(props: ArtworkProps & { frame: Accessor<Frame>; foreground
     : props.presentation.current() === id ? 0 : -layout().viewport.width;
   const backdropWidth=() => imagePixels(layout().decodeWidth);
   const backdropHeight=() => imagePixels(layout().decodeHeight);
-  const done=(name:string,failed=false) => {void Promise.resolve().then(() => props.presentation.settled(id,name,failed));};
+  const staging = new Set<() => void>();
+  onCleanup(() => staging.forEach(cancel => cancel()));
+  const done=(name:string,failed=false) => {
+    const commit = () => props.presentation.settled(id,name,failed);
+    if (!frame().scrolling) { void Promise.resolve().then(commit); return; }
+    const cancel = afterPreparedFrame(() => { staging.delete(cancel); commit(); });
+    staging.add(cancel);
+  };
   return <TvView nodeRef={props.foreground ? (node:any) => props.register(id,layer,node) : undefined}
     x={props.foreground ? offset() : 0} w={1920} h={1080}
     alpha={!frame().staged && (props.presentation.current() === id || frame().scrolling) && (props.foreground || props.scrimReady) ? 1 : 0}

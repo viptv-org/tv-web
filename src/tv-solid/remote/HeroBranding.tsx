@@ -7,6 +7,7 @@ import { reducedMotion } from './motion';
 import type { Frame } from './CoherentHero';
 import { HERO_SCROLL_MS } from './heroCycle';
 import { heroArtworkLayout } from './hero-layout';
+import { afterPreparedFrame } from './hero-retirement';
 
 interface BrandingProps {
   frames: Frame[];
@@ -22,7 +23,14 @@ function BrandingFrame(props: Pick<BrandingProps, 'current' | 'settled' | 'regis
   const height = props.frame().logoBox.rasterHeight ?? props.frame().logoBox.height;
   const [pixels, setPixels] = createSignal<{width:number;height:number}>();
   const scale = () => logoScale(props.box, pixels()?.width ?? 640, pixels()?.height ?? height);
-  const done = (failed = false) => { void Promise.resolve().then(() => props.settled(id, 'logo', failed)); };
+  const staging = new Set<() => void>();
+  onCleanup(() => staging.forEach(cancel => cancel()));
+  const done = (failed = false) => {
+    const commit = () => props.settled(id, 'logo', failed);
+    if (!props.frame().scrolling) { void Promise.resolve().then(commit); return; }
+    const cancel = afterPreparedFrame(() => { staging.delete(cancel); commit(); });
+    staging.add(cancel);
+  };
   onCleanup(() => props.register(id));
   return <TvView nodeRef={(node: any) => props.register(id, node)} w={640} h={height}
     x={!props.frame().scrolling ? 0 : props.frame().staged ? heroArtworkLayout(props.frame().kind).viewport.width

@@ -1,5 +1,13 @@
 type AnimatedHeroNode = { lng?: { animation?: (property: string) => { waitUntilStopped(): Promise<unknown> } | undefined } };
 
+export function afterPreparedFrame(commit: () => void): () => void {
+  let cancelled = false;
+  let frame = requestAnimationFrame(() => {
+    frame = requestAnimationFrame(() => { if (!cancelled) commit(); });
+  });
+  return () => { cancelled = true; cancelAnimationFrame(frame); };
+}
+
 /** Let native runs start, then keep both opacity halves until each has stopped. */
 export function retireAfterHeroAnimations(nodes: readonly AnimatedHeroNode[], retire: () => void): () => void {
   let cancelled = false;
