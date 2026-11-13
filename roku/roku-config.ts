@@ -154,6 +154,8 @@ export default {
       major_version: 1,
       minor_version: 0,
       build_version: 1,
+      mm_icon_focus_hd: 'pkg:/images/launcher-hd.png',
+      mm_icon_focus_fhd: 'pkg:/images/launcher-fhd.png',
       ui_resolutions: 'fhd',
       rsg_version: '2.0',
       run_as_process: 1,

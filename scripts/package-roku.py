@@ -4,6 +4,7 @@ import json
 import os
 from pathlib import Path
 import re
+import runpy
 import subprocess
 import zipfile
 import xml.etree.ElementTree as ET
@@ -20,6 +21,7 @@ def main():
     revision = git('rev-parse', 'HEAD')
     assert revision == os.environ['GITHUB_SHA']
     assert not git('status', '--porcelain', '--untracked-files=no')
+    runpy.run_path(str(ROOT / 'scripts/roku-launcher.py'))['render'](ROOT, PACKAGE)
     meta = json.loads((ROOT / 'roku/dist-roku/bundle/metafile.json').read_text())
     assert any(value.get('entryPoint') == 'src/index.ts' for value in meta['outputs'].values())
     assert all(not value.get('imports') for value in meta['outputs'].values()), 'unresolved_module_imports'
@@ -48,6 +50,13 @@ def main():
             assert files[str(path.relative_to(ROOT / 'roku/pkg'))] == path.read_bytes(), 'runtime_asset_changed_or_missing'
     manifest = files['manifest'].decode()
     assert 'ts_path=pkg:/source/compiled/index.js' in manifest and 'run_as_process=1' in manifest
+    from PIL import Image
+    import io
+    for suffix, size in [('hd', (290, 218)), ('fhd', (540, 405))]:
+        name = 'images/launcher-' + suffix + '.png'
+        assert 'mm_icon_focus_' + suffix + '=pkg:/' + name in manifest
+        with Image.open(io.BytesIO(files[name])) as icon:
+            assert icon.format == 'PNG' and icon.size == size
     build = 20000 + int(os.environ['GITHUB_RUN_NUMBER'])
     assert 11145 < build <= 999999
     manifest, replacements = re.subn(r'(?m)^build_version=\d+$', 'build_version=' + str(build), manifest)
