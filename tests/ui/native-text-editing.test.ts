@@ -75,10 +75,11 @@ it("starts a fresh native generation for an explicit external reset without echo
   const f = fixture();
   f.requests[0].change("Native draft"); f.editor.sync({...f.target, value: f.value()});
   expect(f.host.open).toHaveBeenCalledOnce();
-  f.editor.sync({...f.target, value: "External reset"});
+  f.target.write("External reset"); f.editor.sync({...f.target, value: f.value()});
   expect(f.host.open).toHaveBeenCalledTimes(2); expect(f.requests[1].initial).toBe("External reset");
   f.requests[0].cancel(); expect(f.target.cancel).not.toHaveBeenCalled();
-  f.requests[1].cancel(); f.editor.sync({...f.target, value: "External reset"}); expect(f.host.open).toHaveBeenCalledTimes(2);
+  f.requests[1].cancel(); f.editor.sync({...f.target, value: f.value()}); expect(f.host.open).toHaveBeenCalledTimes(2);
+  expect(f.value()).toBe("External reset");
 });
 
 it("opens a real reactive text overlay with its initialized draft, including replacement fields", async () => {

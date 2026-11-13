@@ -4753,6 +4753,9 @@ the real SDK build checks exports, project boundaries and native packaging. A
 reactive overlay/controller regression verifies that a field's nonempty initial
 value is installed before native presentation. Search uses its existing 256-
 character limit; generic text modals use 2048 and numeric PINs use eight.
+Repeated identical snapshots do not restart Search. Repeated characters remain
+distinct edits. An external reset opens a fresh native generation; native-origin
+updates retain the existing field and cursor.
 
 ## Bounded playback heartbeat renewal (#142)
 

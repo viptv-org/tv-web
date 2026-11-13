@@ -210,6 +210,8 @@ per open. Done commits the final native value; Cancel and native dismissal resto
 the opening value. Search remains focused without automatically reopening a closed
 editor; Select reopens it explicitly. Source/field changes and teardown retire old
 callbacks. Native failures retain the draft and enable the existing keyboard.
+Native edits never echo back into the field. An explicit external value reset
+retires the open editor and starts a fresh generation with the new initial value.
 
 Resume-time presentation follows the scoped owner-approved
 [TV-RESUME-135 contract](https://github.com/viptv-org/design/blob/4e730bb2d4e0898b0c899b70575622ae152d7998/docs/platforms/TV_PRESENTATION_REFINEMENT.md#tv-resume-135--authoritative-saved-time).

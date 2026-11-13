@@ -29,7 +29,13 @@ sub openDialog()
     m.dialog.id = "viptv-native-text-entry"
     m.dialog.title = request.title
     m.dialog.buttons = [request.confirm, "Cancel"]
-    if not request.numeric then m.dialog.keyboardDomain = "generic"
+    if not request.numeric then
+        if request.secret then
+            m.dialog.keyboardDomain = "password"
+        else
+            m.dialog.keyboardDomain = "generic"
+        end if
+    end if
     m.dialog.textEditBox.maxTextLength = request.maximumLength
     m.dialog.textEditBox.secureMode = request.secret
     m.dialog.textEditBox.clearOnDownKey = false
