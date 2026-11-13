@@ -126,7 +126,7 @@ for(const canvas of [false,true]) {
       await page.screenshot({path:info.outputPath('wrapped-hero.png')});
     }finally{f.release();}
   });
-  test(`Home clearlogo stays anchored while its featured image changes (${mode})`,async({page,baseURL})=>{
+  test(`Home clearlogo stays anchored while its featured image changes (${mode})`,async({page,baseURL},info)=>{
     const f=await setup(page,baseURL!,canvas,false,false,true);
     try {
       await page.keyboard.press('ArrowRight');await page.keyboard.press('ArrowRight');
@@ -135,7 +135,7 @@ for(const canvas of [false,true]) {
       await expect.poll(async()=>(await scene(page)).images.some(value=>value.index===1&&value.alpha>.05)).toBe(true);
       await page.clock.runFor(200);
       const after=await logoBounds(page);expect(after).toBeDefined();
-      console.log('clearlogo bounds', JSON.stringify({before,after}));
+      writeFileSync(info.outputPath('clearlogo-bounds.json'),JSON.stringify({before,after},null,2));
       for(const key of ['left','top','right','bottom'] as const) expect(Math.abs(after![key]-before![key])).toBeLessThanOrEqual(3);
     }finally{f.release();}
   });
