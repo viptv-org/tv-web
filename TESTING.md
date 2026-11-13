@@ -2,7 +2,13 @@
 
 The owner requests looping Home featured titles and a moving featured saver, superseding the previous once-and-park rule. One visible presentation/clock owns eligible Home or the foreground saver; unsupported/empty data retains the static saver fallback. Prepared frames move horizontally inside the existing clipped composition, remain opaque through interruption, and retire after x/alpha completion. Input returns requested selection to the committed shown title before actions. Home Play/Save/Info/hold/menu/press authority uses that shown card; Detail's existing fresh server target remains unchanged. Profile/OS reduced motion retains nine-second title cuts without x/indicator animation.
 
-Hosted RED021d39b / [43407978156](https://github.com/viptv-org/tv-web/actions/runs/43407978156) reproduces the parked final title/zero remaining advance timer, missing wrap and unbounded prior shown-state after shrinking the order. The first production candidate passes unit/build and actual SDK compilation. The first browser run identified a real input-snap opacity gap, corrected by opaque scrolling frames; five WebGL pending-image probes initially failed because a paused fake clock never pumped the resource frame, so those are fixture failures, not action-authority evidence. Current actual-mode qualification covers five-title wrap/intermediate positions/bounded2→1 nodes, input mid-scroll, hidden/menu pauses, delayed incoming Play/Save/Info/hold/menu, visible saver and consumed key/text wake, and profile reduced-motion cuts. Exact final runs/results are recorded with the PR/delivery evidence. No local compiler/browser or physical-device action is used by this implementation.
+Hosted RED021d39b / [43407978156](https://github.com/viptv-org/tv-web/actions/runs/43407978156) reproduces the parked final title/zero remaining advance timer, missing wrap and prior shown-state remaining outside the reduced count. The first production candidate passes unit/build and actual SDK compilation. The first browser run identified a real input-snap opacity gap, corrected by opaque scrolling frames; five WebGL pending-image probes initially failed because a paused fake clock never pumped the resource frame, so those are fixture failures, not action-authority evidence. Current actual-mode qualification covers five-title wrap/intermediate positions/bounded2→1 nodes, input mid-scroll, hidden/menu pauses, delayed incoming Play/Save/Info/hold/menu, visible saver and consumed key/text wake, and profile reduced-motion cuts. Exact final runs/results are recorded with the PR/delivery evidence. No local compiler/browser or physical-device action is used by this implementation.
+
+# Poster hero backdrop and avatar overlay — issue #160
+
+The owner-requested portrait variant uses its existing 1920×1080 backdrop, 960×540 proxy decode bounds and sharp 240×360 poster with blur 60. Its prepared hero mask is transparent and does not gate backdrop readiness. Sharp single-image/detail variants keep their masks, geometry and lifecycle. Profile photos omit the monogram; absent-avatar initials remain. This supersedes older portrait blur/mask evidence without changing DESIGN_REF.
+
+Hosted RED 8aa7d91 / [43406567349](https://github.com/viptv-org/tv-web/actions/runs/43406567349) fails in both actual Canvas/WebGL modes on a visible portrait mask and an initial over a supplied avatar; URI units fail on blur 8 versus 60. Product candidate 720455c / [43406860321](https://github.com/viptv-org/tv-web/actions/runs/43406860321) passes four browser cases, 486 shared units, 67 native units, typechecks/build and [native SDK compilation](https://github.com/viptv-org/tv-web/actions/runs/43406864990). Tests cover hero→portrait→hero→portrait, full backdrop bounds/pixels, sharp poster, preserved proxy source/quality, strong blur parameters, photo-without-initial and no-photo fallback. Synthetic uniform image pixels establish coverage/mask behavior; the real proxy blur is requested via the validated URI, not simulated in the fixture. Physical TV and real-media qualification remain separate.
 
 # Episode artwork, focus and progress — issue #158
 
@@ -4816,3 +4822,13 @@ and focused title, and rejected stale Detail responses. Final integrated hosted
 evidence is recorded in the PR. No local build, authenticated account playback,
 browser acceptance or physical TV qualification was performed for this change;
 the unrelated Tizen signing gate requires unavailable Samsung secrets.
+# Accent confirmation (#161)
+
+Display Left/Right changes use the existing revisioned server save. Select
+confirms that saved swatch without advancing or issuing another write. Hosted
+red run43406103862 reproduces a saved Periwinkle changing to Amber on Select in
+both Canvas and WebGL, including the wrong value after reload. Six controller
+cases cover every saved colour, repeat confirmation, directional wrapping and a
+rejected directional write. Final qualified evidence is recorded in the PR.
+No local tests/builds, live account edits, deployment or physical TV checks are
+claimed for this change.

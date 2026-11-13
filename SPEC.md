@@ -29,11 +29,17 @@ Featured and Continue/single-image artwork stays sharp inside the right-hand
 1440×810 clip at (480,0). Its image content grows by 4/3, centered at local
 (-240,-135) with a 1920×1080 image; hero decoding remains bounded at 1440×810,
 and focused single-image decoding at 1280×720. Other portrait shelf previews use
-a full-width 1920×1080 backdrop, proxy blur 8 and bounded 960×540 decoding, with
-the separate sharp 240×360 poster at (1584,144). The packaged black copy/lower
-mask stays unchanged. No client-side blur or per-frame image work is added.
+a full-width 1920×1080 backdrop, proxy blur 60 and bounded 960×540 decoding, with
+the separate sharp 240×360 poster at (1584,144). This portrait variant omits the
+hero copy/lower gradient; its height is unchanged. Sharp single-image and detail
+variants retain their masks. No client-side blur or per-frame image work is added.
 Focus settles for 120ms before preparing a replacement, and the displayed
 artwork remains until readiness; prepared image nodes are reused.
+
+The profile avatar displays its image without a monogram overlay. The initial
+remains a fallback only when no avatar URI is available. These owner-requested
+refinements are scoped by [TV-web #160](https://github.com/viptv-org/tv-web/issues/160)
+and supersede the pinned portrait blur/mask composition without moving DESIGN_REF.
 
 Home logos share one animated bottom anchor, so current, incoming and retiring
 branding follows the summary through cached or delayed shelf changes. Movie and
