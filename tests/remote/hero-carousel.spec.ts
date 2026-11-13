@@ -137,7 +137,7 @@ for(const canvas of [false,true]) {
       const initial=(await scene(page)).started;
       await tick(page);
       await expect.poll(async()=>(await scene(page)).started).not.toBe(initial);
-      await expect.poll(async()=>(await scene(page)).copy).toContain('Description 1');
+      await expect.poll(async()=>{await page.clock.runFor(16);return (await scene(page)).copy;}).toContain('Description 1');
       await page.clock.runFor(200);
       await expect.poll(async()=>await logoBounds(page)).toBeDefined();
       const after=await logoBounds(page);expect(after).toBeDefined();
