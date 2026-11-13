@@ -132,7 +132,9 @@ for(const canvas of [false,true]) {
     try {
       await page.keyboard.press('ArrowRight');await page.keyboard.press('ArrowRight');
       const before=await logoBounds(page);expect(before).toBeDefined();
+      const initial=(await scene(page)).started;
       await tick(page);
+      await expect.poll(async()=>(await scene(page)).started).not.toBe(initial);
       await expect.poll(async()=>(await scene(page)).copy).toContain('Description 1');
       await page.clock.runFor(200);
       await expect.poll(async()=>await logoBounds(page)).toBeDefined();
