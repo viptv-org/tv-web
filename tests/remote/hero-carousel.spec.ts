@@ -71,6 +71,7 @@ async function setup(page: Page, origin: string, canvas: boolean, saver=false, r
     release(){gates.forEach(gate=>gate.release());}};
 }
 async function tick(page: Page) {
+  await expect.poll(async()=>{await page.clock.runFor(16);return (await scene(page)).started;}).not.toBe('');
   const state=await scene(page);expect(state.started).not.toBe('');
   await page.clock.fastForward(Math.max(1,Math.ceil(9000-(state.now-Number(state.started)))+1));
 }
@@ -87,8 +88,9 @@ for(const canvas of [false,true]) {
       for(let index=1;index<=5;index++) {
         await tick(page);await title(page,index%5);await page.clock.runFor(60);
         const moving=await scene(page),incoming=moving.images.find(image=>image.index===index%5&&image.alpha>0)!;
+        frames.push(moving);writeFileSync(info.outputPath('scroll-frames.json'),JSON.stringify(frames,null,2));
         expect(incoming).toBeTruthy();expect(incoming.x).toBeGreaterThan(240);expect(incoming.x).toBeLessThan(1680);
-        expect(moving.images).toHaveLength(2);frames.push(moving);
+        expect(moving.images).toHaveLength(2);
         if(index===1){await page.keyboard.press('ArrowRight');await page.clock.runFor(16);expect((await scene(page)).images.find(image=>image.index===1&&image.alpha>.99)?.x).toBeCloseTo(240,0);}
         await page.clock.runFor(450);expect((await scene(page)).images).toHaveLength(1);
         await expect(html(page)).toHaveAttribute('data-tv-focus',/^hero:0:0:2:/);
