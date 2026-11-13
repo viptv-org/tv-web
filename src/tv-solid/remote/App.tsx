@@ -98,7 +98,7 @@ import {
 } from "./channelWindow";
 import { applyCaptionAppearance } from "./player/caption-appearance";
 import { createKeyboardInput } from "./input/keyboard";
-import { createTextInput } from "./input/text";
+import { createTextInput, type TvTextInputEvent } from "./input/text";
 import { createNativeTextEditing, type NativeTextPort, type NativeTextTarget } from "./input/native-text";
 import { createPlayerMediaKeys } from "./input/player-media";
 import { installWindowInputs } from "./input/window-bindings";
@@ -402,7 +402,7 @@ export function createRemoteTvApp(
     const { active: screenSaver, dismiss: dismissIdleSaver } = createIdleScreenSaver({
       minutes: screenSaverMinutes, playing: () => screen() === "player", onWake: reloadIdleImages,
     });
-    function dismissScreenSaver() {
+    function handleIdleInput() {
       interruptHero();
       return dismissIdleSaver();
     }
@@ -3137,17 +3137,21 @@ export function createRemoteTvApp(
       bootRequested = true;
       if (options.autoStart !== false) void start();
     });
-    const textInput = createTextInput({screen, overlay, zone, text: setText, query: search, search: updateSearch,
+    const applyTextInput = createTextInput({screen, overlay, zone, text: setText, query: search, search: updateSearch,
       done: () => completeTextInput(overlay()?.kind === "text")});
+    function textInput(event: TvTextInputEvent) {
+      if (handleIdleInput()) { event.preventDefault(); return; }
+      applyTextInput(event);
+    }
     const nativeTextPort = (globalThis as {__viptvNativeTextEntry?: NativeTextPort}).__viptvNativeTextEntry;
     const nativeTextEditing = nativeTextPort && createNativeTextEditing(nativeTextPort);
     function nativeTextTarget(): NativeTextTarget | undefined {
       const modal = overlay();
-      if (overlayClosing() || (modal && modal.kind !== "text")) return;
+      if (screenSaver() || overlayClosing() || (modal && modal.kind !== "text")) return;
       const isModal = modal?.kind === "text";
       if (!isModal && (screen() !== "search" || zone() !== "keyboard")) return;
       const epoch = api.scopeEpoch;
-      const current = () => !overlayClosing() && (isModal ? overlay() === modal :
+      const current = () => !screenSaver() && !overlayClosing() && (isModal ? overlay() === modal :
         !overlay() && screen() === "search" && zone() === "keyboard" && api.scopeEpoch === epoch);
       return {key: isModal ? modal : `search:${epoch}`, title: isModal ? modal.title : "Search",
         value: isModal ? text() : search(), numeric: isModal && modal.numeric, secret: isModal && modal.secret,
@@ -3169,7 +3173,10 @@ export function createRemoteTvApp(
         media: createPlayerMediaKeys({player, snapshot, setPlaying: playerTransport.setPlaying, actions: playerActions, active: activeAction, seeking: {current: seeking, set: setSeeking},
           revealEnded: revealEndedControls, play: playIntent, chrome: {show: setShowControls, hide: hideControls},
           segments: {clear: () => {setPlaybackSegments([]);}, refresh: refreshPlaybackSegments}, fail})});
-      onCleanup(installWindowInputs({keyboard: input, screen, overlay, loading, error, pair: beginPairing, stop: leavePlayer,
+      onCleanup(installWindowInputs({keyboard: event => {
+        if (event.key.length === 1 && handleIdleInput()) { event.preventDefault(); return; }
+        input(event);
+      }, screen, overlay, loading, error, pair: beginPairing, stop: leavePlayer,
         textInput,
         next: {advance: advanceEpisode, dismiss: dismissNext}, cancelHold: () => {heldSelect.cancel(); playerNavigation.cancel();}, cancelCountdown: () => countdown.cancel(),
         visible: setHeroVisible, wake: reloadIdleImages, fail}));
@@ -3197,41 +3204,41 @@ export function createRemoteTvApp(
       input: {
         left() {
           countdown.cancel();
-          if (dismissScreenSaver()) return;
+          if (handleIdleInput()) return;
           return move(-1, 0);
         },
         right() {
           countdown.cancel();
-          if (dismissScreenSaver()) return;
+          if (handleIdleInput()) return;
           return move(1, 0);
         },
         up() {
           countdown.cancel();
-          if (dismissScreenSaver()) return;
+          if (handleIdleInput()) return;
           move(0, -1);
         },
         down() {
           countdown.cancel();
-          if (dismissScreenSaver()) return;
+          if (handleIdleInput()) return;
           move(0, 1);
         },
         back(event?: KeyboardEvent) {
           if (event?.repeat) return;
           countdown.cancel();
-          if (dismissScreenSaver()) return;
+          if (handleIdleInput()) return;
           void back().catch(fail);
         },
         menu() {
           playerNavigation.cancel();
           countdown.cancel();
-          if (dismissScreenSaver()) return;
+          if (handleIdleInput()) return;
           menu();
         },
         enter(event?: KeyboardEvent) {
           playerNavigation.cancel();
           countdown.cancel();
           if (revealEndedControls()) return undefined;
-          if (dismissScreenSaver()) return;
+          if (handleIdleInput()) return;
           // A held Enter auto-repeats; only the first keydown arms the hold
           // timer, so repeats must not reset it or the 700ms menu never fires.
           if (event?.repeat) return undefined;
