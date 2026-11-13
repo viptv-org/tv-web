@@ -4757,6 +4757,13 @@ Repeated identical snapshots do not restart Search. Repeated characters remain
 distinct edits. An external reset opens a fresh native generation; native-origin
 updates retain the existing field and cursor.
 
+The combined authentication/native-editing SDK build at
+https://github.com/viptv-org/tv-web/actions/runs/43350070283 reproduces the native
+project boundary failure caused by importing shared application SessionStore and
+Tokens types into the native storage adapter. The adapter retains its existing
+load/save/clear/lock behavior through the native JsonDeviceStorage generic and
+does not import the application's runtime graph into the SDK typecheck project.
+
 ## Bounded playback heartbeat renewal (#142)
 
 Scheduled and foreground heartbeats share one renewal flight. A typed gateway timeout/unavailability response can retry twice (1s,2s), bounded by the existing server expiry with the retained1s safety margin. Only a valid same-lease ready server response can replace that deadline. Invalid responses, terminal authority/errors, API-scope changes, Stop/replacement/ended/disposal retire or fail closed; a foreground return waits for renewal and retains newer user intent.
