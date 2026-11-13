@@ -64,7 +64,7 @@ textures and provenance hashes. Detail retains the pinned backdrop composition.
 
 Selected hero indicators use ordinary off-white geometry during running and
 parked states across WebGL, Canvas and native SceneGraph; the featured rotation
-still runs once and parks. The vertical row indicator occupies the gutter at
+loops the server order on a nine-second idle deadline. Home and the visible featured screensaver share one prepared presentation; empty/single-title lists remain stationary. Eligible visible surfaces scroll prepared artwork/branding horizontally for 360ms, with at most current and outgoing frames retained. Input immediately snaps to the committed title, cancels pending automatic replacement and starts a fresh idle deadline. Hidden pages, playback and noneligible normal screens schedule no carousel advance. Reduced motion retains title cycling with cuts and a static indicator. The vertical row indicator occupies the gutter at
 x=1848, outside the clipped card viewport ending at x=1824; its 220px height
 clamps to y=806 so the bottom remains inside the 54px safe inset.
 

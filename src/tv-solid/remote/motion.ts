@@ -1,12 +1,13 @@
 /** null follows the device setting; the profile's server-owned display
  * preference can force reduced motion on or off (Tv3SetDisplay). */
-let motionOverride: boolean | null = null;
+import { createSignal } from "solid-js";
+const [motionOverride, updateMotionOverride] = createSignal<boolean | null>(null);
 export function setMotionOverride(value: boolean | null) {
-  motionOverride = value;
+  updateMotionOverride(value);
 }
 export function reducedMotion(): boolean {
   return (
-    motionOverride ??
+    motionOverride() ??
     (typeof matchMedia === "function" &&
       matchMedia("(prefers-reduced-motion: reduce)").matches)
   );
