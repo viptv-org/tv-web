@@ -111,7 +111,7 @@ function ArtworkFrame(props: ArtworkProps & { frame: Accessor<Frame>; foreground
   return <TvView nodeRef={props.foreground ? (node:any) => props.register(id,layer,node) : undefined}
     x={props.foreground ? offset() : 0} w={1920} h={1080}
     alpha={!frame().staged && (props.presentation.current() === id || frame().scrolling) && (props.foreground || props.scrimReady) ? 1 : 0}
-    transition={{x:{duration:reducedMotion() ? 0 : HERO_SCROLL_MS,easing:"ease-out"},alpha:{duration:reducedMotion() ? 0 : 150,easing:"ease-out"}}}>
+    transition={{x:{duration:reducedMotion() ? 0 : HERO_SCROLL_MS,easing:"ease-out"},alpha:{duration:reducedMotion() || frame().scrolling ? 0 : 150,easing:"ease-out"}}}>
     {props.foreground ? <>
       <Show when={frame().poster && !frame().failed.has("poster")}>
         <TvView x={POSTER_BOX.x} y={POSTER_BOX.y} w={POSTER_BOX.width} h={POSTER_BOX.height} fit="cover" preload src={imageSource(frame().poster,imagePixels(POSTER_BOX.width),imagePixels(POSTER_BOX.height))}

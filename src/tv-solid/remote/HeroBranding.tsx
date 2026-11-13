@@ -29,7 +29,7 @@ function BrandingFrame(props: Pick<BrandingProps, 'current' | 'settled' | 'regis
       : props.current === id ? 0 : -heroArtworkLayout(props.frame().kind).viewport.width}
     scale={scale()} pivotX={0} pivotY={1} mountX={0} mountY={1}
     alpha={!props.frame().staged && (props.current === id || props.frame().scrolling) ? 1 : 0}
-    transition={{x:{duration: reducedMotion() ? 0 : HERO_SCROLL_MS, easing: 'ease-out'}, alpha: { duration: reducedMotion() ? 0 : 150, easing: 'ease-out' }, scale: reducedMotion() ? undefined : BRANDING_MOTION.scale }}>
+    transition={{x:{duration: reducedMotion() ? 0 : HERO_SCROLL_MS, easing: 'ease-out'}, alpha: { duration: reducedMotion() || props.frame().scrolling ? 0 : 150, easing: 'ease-out' }, scale: reducedMotion() ? undefined : BRANDING_MOTION.scale }}>
     <Show when={props.frame().card.logo && !props.frame().failed.has('logo')}>
       <Logo src={props.frame().card.logo!} h={height} maxWidth={640} boxH={height} fade={false}
         onReady={geometry => { if (geometry) setPixels(geometry); done(); }} onError={() => done(true)} />
