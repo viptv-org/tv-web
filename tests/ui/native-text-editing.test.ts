@@ -64,6 +64,23 @@ it("does not reopen a failed native field automatically and preserves the curren
   f.requests[0].cancel(); expect(f.value()).toBe("Draft");
 });
 
+it("deduplicates repeated full snapshots and Done without losing repeated characters", () => {
+  const f = fixture("");
+  for (const value of ["a", "a", "aa", "aa", "aaa"]) f.requests[0].change(value);
+  expect(f.value()).toBe("aaa"); expect(f.target.write).toHaveBeenCalledTimes(3);
+  f.requests[0].done("aaa"); expect(f.target.write).toHaveBeenCalledTimes(3); expect(f.target.done).toHaveBeenCalledOnce();
+});
+
+it("starts a fresh native generation for an explicit external reset without echoing native edits", () => {
+  const f = fixture();
+  f.requests[0].change("Native draft"); f.editor.sync({...f.target, value: f.value()});
+  expect(f.host.open).toHaveBeenCalledOnce();
+  f.editor.sync({...f.target, value: "External reset"});
+  expect(f.host.open).toHaveBeenCalledTimes(2); expect(f.requests[1].initial).toBe("External reset");
+  f.requests[0].cancel(); expect(f.target.cancel).not.toHaveBeenCalled();
+  f.requests[1].cancel(); f.editor.sync({...f.target, value: "External reset"}); expect(f.host.open).toHaveBeenCalledTimes(2);
+});
+
 it("opens a real reactive text overlay with its initialized draft, including replacement fields", async () => {
   vi.stubGlobal("matchMedia", () => ({matches: true}));
   vi.stubGlobal("cancelAnimationFrame", vi.fn());
