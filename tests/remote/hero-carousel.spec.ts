@@ -51,24 +51,22 @@ async function setup(page: Page, origin: string, canvas: boolean, saver=false, r
   });
   const fixture=await installRemoteBackend(page,origin);
   await page.route('**/fixture/*',route=>route.fulfill({body:png([20,30,50]),contentType:'image/png'}));
-  const bootstrap=fixture.bootstrap();
+  const bootstrap={...fixture.bootstrap(),clearlogo_image_supported:logos};
   const cards:Card[]=colors.map((_,index)=>({...fixture.card,identity:{kind:'movie',id:`carousel-${index}`,ids:[]},
-    title:`Featured ${index}`,description:logos?`Description ${index}`:fixture.card.description,logo:logos?`${origin}/fixture/logo/${index}.png`:null,poster:null,landscape:`${origin}/carousel/${index}.png`,progress:null,
+    title:`Featured ${index}`,description:logos?`Description ${index}`:fixture.card.description,
+    logo:logos?`https://images.metahub.space/logo/medium/tt1330${index}/img`:null,poster:null,
+    landscape:`${origin}/carousel/${index}.png`,progress:null,
     view:{saved:false,progress:null},badges:[]}));
   bootstrap.home!.hero=cards[0];bootstrap.home!.featured=cards;bootstrap.home!.rows=[];
   bootstrap.preferences!.display!.screen_saver_minutes=saver?1:0;
   bootstrap.preferences!.display!.reduce_motion=reduced?'on':'follow';
-  const logoRequests:string[]=[];
-  const artworkRequests:string[]=[];
   await page.route('**/api/bootstrap',route=>route.fulfill({json:bootstrap}));
-  await page.route('**/fixture/logo/*.png',route=>{
-    logoRequests.push(route.request().url());
+  await page.route('**/api/images/clearlogo/v1/tt1330*.png',route=>{
     return route.fulfill({body:png([255,0,255],192,108),contentType:'image/png'});
   });
   const gates=new Map<number,{promise:Promise<void>;release:()=>void}>(),waiting=new Set<number>();
   await page.route('**/carousel/*.png',async route=>{
     const index=Number(/\/carousel\/(\d+)\.png/.exec(route.request().url())![1]);
-    artworkRequests.push(route.request().url());
     const gate=gates.get(index);if(gate){waiting.add(index);await gate.promise;}
     await route.fulfill({body:png(colors[index]),contentType:'image/png'}).catch(()=>{});
   });
@@ -138,7 +136,6 @@ for(const canvas of [false,true]) {
       const before=await logoBounds(page);expect(before).toBeDefined();
       const initial=(await scene(page)).started;
       await tick(page);
-      console.log('incoming clearlogo artwork requests',JSON.stringify({initial,started:(await scene(page)).started,logos:f.logoRequests,artwork:f.artworkRequests}));
       await expect.poll(async()=>(await scene(page)).started).not.toBe(initial);
       await expect.poll(async()=>(await scene(page)).copy).toContain('Description 1');
       await page.clock.runFor(200);
