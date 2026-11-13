@@ -28,7 +28,7 @@ export function PosterWall(props: {featured?: Card[]; slide?: number}) {
   const wallSlot = (slot: number) => Math.round((slot + 0.5) * (CELL_COUNT - 1) / items().length);
   return <TvView w={1920} h={1080}>
     <TvView w={1920} h={1080} src={welcomeWallSource()} fit="cover" />
-    <For each={posterSlots}>{slot => <Show when={cardAt(slot) && (cardAt(slot)!.poster ?? cardAt(slot)!.landscape)}>
+    <For each={posterSlots}>{slot => <Show when={slot < items().length && cardAt(slot) && (cardAt(slot)!.poster ?? cardAt(slot)!.landscape)}>
       {source => <TvView x={(wallSlot(slot) % COLUMNS) * STEP_X} y={Math.round(Math.floor(wallSlot(slot) / COLUMNS) * STEP_Y)}
         w={TILE_WIDTH} h={TILE_HEIGHT} fit="cover" alpha={.72}
         src={imageSource(source(), TILE_WIDTH, TILE_HEIGHT, "cover")} />}

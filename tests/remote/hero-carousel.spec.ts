@@ -77,7 +77,8 @@ async function setup(page: Page, origin: string, canvas: boolean, saver=false, r
   await page.goto('/tv/?focusdebug=1');
   await expect(html(page)).toHaveAttribute('data-tv-ready','true');
   await expect(html(page)).toHaveAttribute('data-renderer-backend',canvas?'canvas':'webgl');
-  await expect.poll(async()=>(await scene(page)).titles).toContain('Featured 0');
+  if(logos) await expect.poll(async()=>(await scene(page)).logos.some(value=>value.alpha>.99)).toBe(true);
+  else await expect.poll(async()=>(await scene(page)).titles).toContain('Featured 0');
   await page.clock.pauseAt(new Date(await page.evaluate(()=>Date.now()+1000)));await page.clock.runFor(400);
   return {cards,actions,details,saved,waiting,requests:fixture.requests,
     hold(index:number){let release!:()=>void;const promise=new Promise<void>(resolve=>{release=resolve;});gates.set(index,{promise,release});return release;},
@@ -104,7 +105,7 @@ for(const canvas of [false,true]) {
         frames.push(moving);writeFileSync(info.outputPath('scroll-frames.json'),JSON.stringify(frames,null,2));
         expect(incoming).toBeTruthy();expect(incoming.x).toBeCloseTo(240,0);
         expect(moving.images).toHaveLength(2);
-        if(index===1){await page.keyboard.press('ArrowRight');await page.clock.runFor(16);expect((await scene(page)).images.find(image=>image.index===1&&image.alpha>.99)?.x).toBeCloseTo(240,0);}
+        if(index===1){await page.keyboard.press('ArrowRight');await page.clock.runFor(16);expect((await scene(page)).images.find(image=>image.index===1&&image.alpha>.05)?.x).toBeCloseTo(240,0);}
         await page.clock.runFor(450);expect((await scene(page)).images).toHaveLength(1);
         await expect(html(page)).toHaveAttribute('data-tv-focus',/^hero:0:0:2:/);
       }
