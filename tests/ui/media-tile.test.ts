@@ -1,5 +1,5 @@
 import { afterAll, afterEach, expect, it, vi } from "vitest";
-import { createComponent, createRoot, createSignal } from "solid-js";
+import { createComponent, createRoot, createSignal, getOwner, runWithOwner } from "solid-js";
 import type { Card } from "../../src/tv-solid/remote/types";
 
 type SceneNode = { kind: string; props: Record<string, any>; children: SceneNode[] };
@@ -54,14 +54,21 @@ function mount(card: Card, focused = false, poster = false, fallbackArtwork?: st
   const [value, setCard] = createSignal(card), [focus, setFocus] = createSignal(focused);
   const [fallback, setFallback] = createSignal(fallbackArtwork);
   let root!: SceneNode;
+  let owner: ReturnType<typeof getOwner>;
   createRoot(dispose => {
     cleanups.push(dispose);
+    owner = getOwner();
     root = createComponent(MediaTile, {
       get card() { return value(); }, get focused() { return focus(); }, poster, x: 0, y: 0, w: 414, h: 233,
       get fallbackArtwork() { return fallback(); },
     }) as unknown as SceneNode;
   });
-  return { root, setCard, setFocus, setFallback };
+  const read = () => runWithOwner(owner!, () => {
+    let value: any = root;
+    while (typeof value === "function") value = value();
+    return value as SceneNode;
+  })!;
+  return {root: read, setCard, setFocus, setFallback};
 }
 function visible(node: SceneNode | SceneNode[] | (() => SceneNode)): SceneNode[] {
   if (typeof node === "function") return visible(node());
@@ -122,15 +129,16 @@ it("renders only authoritative positive progress independently from focus and fa
   }
 });
 
-it("retains one missing-poster title when focus moves its caption below the artwork", () => {
+it("retains the same missing-poster title node through focus and blur", () => {
   for (const landscape of [null, "/episode-art/missing.jpg"]) {
     const card = episode({landscape}), scene = mount(card, false, true);
     if (landscape) latestImage().props.onError();
     expect(titles(scene.root, card.title)).toHaveLength(1);
+    const title = titles(scene.root, card.title)[0];
     scene.setFocus(true);
-    expect(titles(scene.root, card.title)).toHaveLength(1);
+    expect(titles(scene.root, card.title)).toEqual([title]);
     scene.setFocus(false);
-    expect(titles(scene.root, card.title)).toHaveLength(1);
+    expect(titles(scene.root, card.title)).toEqual([title]);
   }
 });
 
@@ -150,7 +158,7 @@ it("tries one distinct parent artwork after failure and retains the failed prima
   scene.setFallback("/episode-art/parent-replacement.jpg");
   expect(latestImage().props.src).toBe("/episode-art/parent-replacement.jpg");
   expect(count("/episode-art/primary.jpg")).toBe(1);
-  scene.setCard({...card, identity: {...card.identity, id: "tt0988824:4:2"}});
+  scene.setCard({...card, identity: {...card.identity, id: "tt0988824:4:2", episode: {...card.identity.episode!, episode: 2}}});
   expect(latestImage().props.src).toBe("/episode-art/primary.jpg");
   expect(count("/episode-art/primary.jpg")).toBe(2);
 });

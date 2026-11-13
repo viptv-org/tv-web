@@ -78,7 +78,7 @@ export function MediaTile(props: {
             when={request()}
             keyed
             fallback={
-              <Show when={!captionVisible()}>
+              <Show when={props.poster}>
               <Label
                 x={14}
                 y={props.h - 70}
@@ -206,6 +206,7 @@ export function MediaTile(props: {
       </TvView>
       <Show when={captionVisible()}>
         <TvView y={props.h + 14} w={props.w} h={66} clipping>
+          <Show when={!props.poster || request()}>
           <Label
             y={0}
             size={24}
@@ -216,6 +217,7 @@ export function MediaTile(props: {
             content={props.card.title}
             color={palette.text}
           />
+          </Show>
           <Label
             y={33}
             size={20}
