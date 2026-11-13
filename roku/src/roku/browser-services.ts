@@ -333,6 +333,7 @@ function makeKeyEvent(type: string, spec: RokuKeySpec, repeat: boolean): RokKeyb
  */
 export function dispatchNativeKey(key: string, press: boolean): boolean {
   if (!installed) installBrowserServices();
+  const doc = (globalThis as any).document;
   const textType = key.startsWith('Lit_') ? 'insertText'
     : key.toLowerCase() === 'backspace' ? 'deleteContentBackward'
     : key.toLowerCase() === 'enter' ? 'insertLineBreak' : undefined;
@@ -353,7 +354,6 @@ export function dispatchNativeKey(key: string, press: boolean): boolean {
   const event = makeKeyEvent(press ? 'keydown' : 'keyup', spec, repeat);
   // The focus manager, the demo's debug label and useMouse all listen on
   // document. Dispatching once avoids double-handling.
-  const doc = (globalThis as any).document;
   const observe = (globalThis as any).__solidtvRuntimeObserver;
   if (typeof observe === 'function') { try { observe({phase:'key-start',at:performance.now(),key:spec.key,press}); } catch {} }
   doc.dispatchEvent(event);
