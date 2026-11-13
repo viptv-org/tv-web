@@ -4702,3 +4702,12 @@ report. Playwright acceptance is not part of the package workflow.
 Scheduled and foreground heartbeats share one renewal flight. A typed gateway timeout/unavailability response can retry twice (1s,2s), bounded by the existing server expiry with the retained1s safety margin. Only a valid same-lease ready server response can replace that deadline. Invalid responses, terminal authority/errors, API-scope changes, Stop/replacement/ended/disposal retire or fail closed; a foreground return waits for renewal and retains newer user intent.
 
 Actions43309717938 at6b49025 reproduced the valid-lease502 failure before the fix. Hosted43310725146 atd45e19d passed450 shared and52 native unit cases, including59 RemotePlayback cases, type/integrity checks and production hosting packaging. The final queued-foreground-pause fence has an additional controller regression; final head Actions result is recorded in the PR. Tizen signing is unavailable and is separate from the hosting gate. No local tests/builds, live account changes, decoder playback or physical PS4 qualification were performed for this change.
+
+## Roku launcher artwork
+
+The native channel manifest selects HD 290×218 and FHD 540×405 launcher tiles.
+The artifact packager renders the existing pinned VIPTV launcher master on a
+black canvas, preserving its aspect ratio, and verifies both manifest paths and
+PNG dimensions before upload. SDK placeholder launcher tiles are removed.
+Hosted native package qualification and physical Roku home-screen rendering
+are separate checks; no physical-device result is claimed for this change.
