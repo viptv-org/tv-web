@@ -1,9 +1,11 @@
 import type { Accessor } from "solid-js";
 import type { Overlay, Screen } from "../app-types";
+import type { TvTextInputEvent } from "./text";
 
 /** The root registers this disposer at the same point as its other host effects. */
 export function installWindowInputs(options: {
   keyboard: (event: KeyboardEvent) => void; screen: Accessor<Screen>; overlay: Accessor<Overlay | undefined>;
+  textInput?: (event: TvTextInputEvent) => void;
   loading: Accessor<boolean>; error: Accessor<string>; pair: () => Promise<void>; stop: () => Promise<void>;
   next: {advance: () => Promise<void>; dismiss: () => void};
   cancelHold: () => void; cancelCountdown: () => void; visible: (value: boolean) => void; wake: () => void; fail: (error: unknown) => void;
@@ -11,6 +13,7 @@ export function installWindowInputs(options: {
   const {keyboard: input, screen, overlay, loading, error, pair: beginPairing, stop: leavePlayer, visible: setHeroVisible, wake: reloadIdleImages, fail} = options;
   const {advance: advanceEpisode, dismiss: dismissNext} = options.next;
   const cancelHold = options.cancelHold;
+  const textInput = (event: Event) => options.textInput?.(event as unknown as TvTextInputEvent);
   const pointer = (event: PointerEvent) => {
     options.cancelCountdown();
     if (overlay()?.kind !== "next") return;
@@ -68,6 +71,7 @@ export function installWindowInputs(options: {
   window.addEventListener("blur", away);
   window.addEventListener("focus", back);
   window.addEventListener("keydown", input);
+  window.addEventListener("viptvtextinput", textInput);
   window.addEventListener("pagehide", suspend);
   document.addEventListener("visibilitychange", visibility);
   document.addEventListener("webOSRelaunch", relaunch);
@@ -76,6 +80,7 @@ export function installWindowInputs(options: {
     window.removeEventListener("click", welcomeClick);
     window.removeEventListener("touchstart", cancelCountdown);
     window.removeEventListener("keydown", input);
+    window.removeEventListener("viptvtextinput", textInput);
     window.removeEventListener("blur", cancelHold);
     window.removeEventListener("blur", away);
     window.removeEventListener("focus", back);

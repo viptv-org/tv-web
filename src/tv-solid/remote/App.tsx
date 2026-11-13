@@ -97,6 +97,7 @@ import {
 } from "./channelWindow";
 import { applyCaptionAppearance } from "./player/caption-appearance";
 import { createKeyboardInput } from "./input/keyboard";
+import { createTextInput } from "./input/text";
 import { createPlayerMediaKeys } from "./input/player-media";
 import { installWindowInputs } from "./input/window-bindings";
 import { createTrackPicker } from "./player/tracks";
@@ -2609,6 +2610,11 @@ export function createRemoteTvApp(
       if (screen() === "live" && navigateLive(dx, dy)) return;
       navigateContent(dx, dy);
     }
+    function completeTextInput(isOverlay: boolean) {
+      const modal = overlay();
+      if (isOverlay && modal?.kind === "text") void run(() => modal.submit(text()));
+      else { setZone("content"); setColumn(0); }
+    }
     function keyboardActivate(isOverlay: boolean) {
       const index = key();
       const modal = overlay();
@@ -2630,12 +2636,7 @@ export function createRemoteTvApp(
         return;
       }
       if (index === 46) {
-        if (isOverlay && modal?.kind === "text")
-          void run(() => modal.submit(text()));
-        else {
-          setZone("content");
-          setColumn(0);
-        }
+        completeTextInput(isOverlay);
         return;
       }
       if (index === 47) {
@@ -3060,6 +3061,7 @@ export function createRemoteTvApp(
           revealEnded: revealEndedControls, play: playIntent, chrome: {show: setShowControls, hide: hideControls},
           segments: {clear: () => {setPlaybackSegments([]);}, refresh: refreshPlaybackSegments}, fail})});
       onCleanup(installWindowInputs({keyboard: input, screen, overlay, loading, error, pair: beginPairing, stop: leavePlayer,
+        textInput: createTextInput({screen, overlay, zone, text: setText, query: search, search: updateSearch, done: () => completeTextInput(overlay()?.kind === "text")}),
         next: {advance: advanceEpisode, dismiss: dismissNext}, cancelHold: () => heldSelect.cancel(), cancelCountdown: () => countdown.cancel(),
         visible: setHeroVisible, wake: reloadIdleImages, fail}));
     });
