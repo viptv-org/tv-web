@@ -1,3 +1,10 @@
+# Poster preview and avatar refinement
+
+| State | Browser evidence | Device limit |
+| --- | --- | --- |
+| Portrait backdrop/poster | Issue #160 RED preserves visible unwanted mask; candidate720455c actual Canvas/WebGL cases pass 1920×1080 full-width pixels, no visible hero mask, blur60/960×540 proxy query and sharp poster. Round trips retain sharp-mode masks/readiness. | Synthetic image/API boundaries; no physical firmware claim |
+| Profile photo/initial | Supplied-photo monogram absence and no-photo initial fallback pass in both actual browser modes. | Shared native source/SDK compile; physical text-band painting unverified |
+
 # Episode artwork failure and visible selection
 
 | State | Browser evidence | Device limit |
