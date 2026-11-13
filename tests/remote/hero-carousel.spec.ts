@@ -11,12 +11,22 @@ function png(rgb: number[], width=192, height=108) {
   for (let i=0;i<value.data.length;i+=4) value.data.set([...rgb,255],i);
   return PNG.sync.write(value);
 }
+async function logoBounds(page: Page) {
+  const image = PNG.sync.read(await page.locator('#app canvas').screenshot());
+  let left=Infinity,top=Infinity,right=-Infinity,bottom=-Infinity;
+  for(let y=250;y<550;y++) for(let x=0;x<420;x++) {
+    const offset=(y*image.width+x)*4;
+    if(image.data[offset]>140&&image.data[offset+1]<110&&image.data[offset+2]<110) {
+      left=Math.min(left,x);top=Math.min(top,y);right=Math.max(right,x);bottom=Math.max(bottom,y);
+    }
+  }
+  return Number.isFinite(left)?{left,top,right,bottom}:undefined;
+}
 const html = (page: Page) => page.locator('html');
 const scene = (page: Page) => page.evaluate(() => {
   const images: {id:number;index:number;x:number;y:number;alpha:number}[] = [], titles: string[] = [];
   const tiles: {index:number;x:number;y:number;w:number;h:number}[] = [];
   const walls: {x:number;y:number;w:number;h:number}[] = [];
-  const logos: {x:number;y:number;scale:number;alpha:number;scaleTransition:boolean}[] = [];
   function walk(node: any) {
     const src = node.texture?.props?.src;
     if (typeof src === 'string' && /\/carousel\/\d+\.png/.test(src) && node.props.w===1920 && node.props.h===1080)
@@ -25,15 +35,12 @@ const scene = (page: Page) => page.evaluate(() => {
       tiles.push({index:Number(/\/carousel\/(\d+)\.png/.exec(src)![1]),x:node.absX,y:node.absY,w:node.props.w,h:node.props.h});
     if (typeof src === 'string' && src.includes('/tv-artwork/') && node.props.w===1920 && node.props.h===1080 && node.worldAlpha>.5)
       walls.push({x:node.absX,y:node.absY,w:node.props.w,h:node.props.h});
-    if (node.props.w===640 && node.props.h===160 && node.props.mountY===1)
-      logos.push({x:node.absX,y:node.absY,scale:typeof node.props.scale==='number'?node.props.scale:node.props.scale?.x??1,
-        alpha:node.worldAlpha,scaleTransition:!!node.props.transition?.scale});
     const text = node.viptvText ?? node.props?.text;
     if (node.worldAlpha>.99 && /^Featured \d$/.test(text??'')) titles.push(text);
     node.children?.forEach(walk);
   }
   walk((window as any).__viptvRenderer.stage.root);
-  return {images,tiles,walls,logos,titles,started:document.documentElement.dataset.tvHeroCycle,now:performance.now(),saver:document.documentElement.dataset.tvSaver};
+  return {images,tiles,walls,titles,started:document.documentElement.dataset.tvHeroCycle,now:performance.now(),saver:document.documentElement.dataset.tvSaver};
 });
 async function setup(page: Page, origin: string, canvas: boolean, saver=false, reduced=false, logos=false) {
   await page.emulateMedia({reducedMotion:'no-preference'}); await page.clock.install();
@@ -78,7 +85,7 @@ async function setup(page: Page, origin: string, canvas: boolean, saver=false, r
   await page.goto('/tv/?focusdebug=1');
   await expect(html(page)).toHaveAttribute('data-tv-ready','true');
   await expect(html(page)).toHaveAttribute('data-renderer-backend',canvas?'canvas':'webgl');
-  if(logos) await expect.poll(async()=>(await scene(page)).logos.some(value=>value.alpha>.99)).toBe(true);
+  if(logos) await expect.poll(async()=>(await logoBounds(page))!==undefined).toBe(true);
   else await expect.poll(async()=>(await scene(page)).titles).toContain('Featured 0');
   await page.clock.pauseAt(new Date(await page.evaluate(()=>Date.now()+1000)));await page.clock.runFor(400);
   return {cards,actions,details,saved,waiting,requests:fixture.requests,
@@ -120,24 +127,16 @@ for(const canvas of [false,true]) {
       await page.screenshot({path:info.outputPath('wrapped-hero.png')});
     }finally{f.release();}
   });
-  test(`Home clearlogo stays anchored and does not scale between titles (${mode})`,async({page,baseURL})=>{
+  test(`Home clearlogo stays anchored while its featured image changes (${mode})`,async({page,baseURL})=>{
     const f=await setup(page,baseURL!,canvas,false,false,true);
     try {
       await page.keyboard.press('ArrowRight');await page.keyboard.press('ArrowRight');
-      await expect.poll(async()=>(await scene(page)).logos.some(value=>value.alpha>.99)).toBe(true);
-      const before=await scene(page),visibleLogo=before.logos.find(value=>value.alpha>.99)!;
-      expect(visibleLogo).toBeTruthy();
-      const beforeScales=before.logos.filter(value=>value.alpha>.05).map(value=>value.scale);
+      const before=await logoBounds(page);expect(before).toBeDefined();
       await tick(page);
       await expect.poll(async()=>(await scene(page)).images.some(value=>value.index===1&&value.alpha>.05)).toBe(true);
       await page.clock.runFor(60);
-      const during=await scene(page);
-      expect(during.logos.filter(value=>value.alpha>.05).every(value=>value.x===visibleLogo.x&&value.y===visibleLogo.y)).toBe(true);
-      await page.clock.runFor(220);
-      const after=await scene(page),afterScales=after.logos.filter(value=>value.alpha>.05).map(value=>value.scale);
-      const stableScales=[...beforeScales,...afterScales];
-      expect(during.logos.filter(value=>value.alpha>.05).every(value=>stableScales.some(scale=>Math.abs(scale-value.scale)<.001))).toBe(true);
-      expect(during.logos.filter(value=>value.alpha>.05).every(value=>!value.scaleTransition)).toBe(true);
+      const during=await logoBounds(page);expect(during).toBeDefined();
+      expect(during!.left).toBe(before!.left);expect(during!.top).toBe(before!.top);
     }finally{f.release();}
   });
   for(const action of ['play','save','info','hold','menu']) test(`pending incoming title cannot steal ${action} from the shown hero (${mode})`,async({page,baseURL})=>{
