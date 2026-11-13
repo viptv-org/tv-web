@@ -1,5 +1,10 @@
 import type { NativeTextPort } from "../../../../roku/src/roku/native-text-types";
+import type { Overlay } from "../app-types";
 export type { NativeTextPort, NativeTextRequest } from "../../../../roku/src/roku/native-text-types";
+
+export function nativeTextDialogOverlay(overlay: Overlay | undefined) {
+  return overlay?.kind === "text" ? overlay : undefined;
+}
 
 export interface NativeTextTarget {
   key: unknown;

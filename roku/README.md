@@ -8,8 +8,14 @@ the renderer and browser services on Roku.
 
 ```sh
 corepack pnpm install --frozen-lockfile
-corepack pnpm exec rk build --local --release --no-source-map --out-dir dist-roku
+corepack pnpm run build -- --local --release --no-source-map --out-dir dist-roku
 ```
+
+The Roku build regenerates the monochrome native icon assets from the shared
+SVG path definitions before packaging them. It includes 384×384 textures plus
+18×18, 22×22, 24×24, 28×28, 30×30 and 48×48 variants, plus the 28×30 play
+variant that Roku can draw at their native display sizes.
+Browser and webOS builds continue to render the SVGs directly.
 
 Install this package independently; do not share another app's `node_modules`.
 The pinned Git dependency needs its `prepare` build, allowed explicitly in
