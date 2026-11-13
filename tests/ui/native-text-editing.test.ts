@@ -1,10 +1,17 @@
 import { afterEach, expect, it, vi } from "vitest";
 import { createEffect, createRoot, createSignal } from "solid-js";
 import { createTextInput, type TvTextInputEvent } from "../../src/tv-solid/remote/input/text";
-import { createNativeTextEditing, type NativeTextRequest, type NativeTextTarget } from "../../src/tv-solid/remote/input/native-text";
+import { createNativeTextEditing, nativeTextDialogOverlay, type NativeTextRequest, type NativeTextTarget } from "../../src/tv-solid/remote/input/native-text";
 import { createOverlayController } from "../../src/tv-solid/remote/overlay-controller";
 
 afterEach(() => vi.unstubAllGlobals());
+
+it("uses the Roku native text dialog only for explicit text overlays", () => {
+  expect(nativeTextDialogOverlay(undefined)).toBeUndefined();
+  expect(nativeTextDialogOverlay({kind: "sources", title: "Sources"})).toBeUndefined();
+  const modal = {kind: "text", title: "Profile name", initial: "", submit: async () => {}} as const;
+  expect(nativeTextDialogOverlay(modal)).toBe(modal);
+});
 
 it.each([
   ["Before", "Pasted several words", "Pasted several words"],

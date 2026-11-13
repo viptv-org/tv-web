@@ -99,7 +99,7 @@ import {
 import { applyCaptionAppearance } from "./player/caption-appearance";
 import { createKeyboardInput } from "./input/keyboard";
 import { createTextInput, type TvTextInputEvent } from "./input/text";
-import { createNativeTextEditing, type NativeTextPort, type NativeTextTarget } from "./input/native-text";
+import { createNativeTextEditing, nativeTextDialogOverlay, type NativeTextPort, type NativeTextTarget } from "./input/native-text";
 import { createPlayerMediaKeys } from "./input/player-media";
 import { installWindowInputs } from "./input/window-bindings";
 import { createTrackPicker } from "./player/tracks";
@@ -3146,20 +3146,15 @@ export function createRemoteTvApp(
     const nativeTextPort = (globalThis as {__viptvNativeTextEntry?: NativeTextPort}).__viptvNativeTextEntry;
     const nativeTextEditing = nativeTextPort && createNativeTextEditing(nativeTextPort);
     function nativeTextTarget(): NativeTextTarget | undefined {
-      const modal = overlay();
-      if (screenSaver() || overlayClosing() || (modal && modal.kind !== "text")) return;
-      const isModal = modal?.kind === "text";
-      if (!isModal && (screen() !== "search" || zone() !== "keyboard")) return;
+      const modal = nativeTextDialogOverlay(overlay());
+      if (screenSaver() || overlayClosing() || !modal) return;
       const epoch = api.scopeEpoch;
-      const current = () => !screenSaver() && !overlayClosing() && (isModal ? overlay() === modal :
-        !overlay() && screen() === "search" && zone() === "keyboard" && api.scopeEpoch === epoch);
-      return {key: isModal ? modal : `search:${epoch}`, title: isModal ? modal.title : "Search",
-        value: isModal ? text() : search(), numeric: isModal && modal.numeric, secret: isModal && modal.secret,
-        maximumLength: isModal ? modal.numeric ? 8 : 2048 : 256,
-        confirm: isModal ? "Done" : "Search",
+      const current = () => !screenSaver() && !overlayClosing() && overlay() === modal && api.scopeEpoch === epoch;
+      return {key: modal, title: modal.title, value: text(), numeric: modal.numeric, secret: modal.secret,
+        maximumLength: modal.numeric ? 8 : 2048, confirm: "Done",
         write: value => {if (current()) textInput({inputType: "insertReplacementText", data: value, preventDefault() {}});},
-        done: () => {if (current()) completeTextInput(isModal);},
-        cancel: () => {if (current()) {if (isModal) dismissOverlay(); else setZone("keyboard");}},
+        done: () => {if (current()) completeTextInput(true);},
+        cancel: () => {if (current()) dismissOverlay();},
         failed: () => {if (current()) notify("Native keyboard unavailable. Use the on-screen keys.");}};
     }
     createEffect(() => nativeTextEditing?.sync(nativeTextTarget()));
