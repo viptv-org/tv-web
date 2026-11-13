@@ -675,7 +675,9 @@ function colorAlpha(value: any): number {
   return 1;
 }
 
-function iconSource(svg: string): { uri: string; color: string } | undefined {
+const nativeIconSizes = new Set([18, 22, 24, 28, 30, 48]);
+
+function iconSource(svg: string, width: number, height: number): { uri: string; color: string } | undefined {
   const name = /data-icon="([^"]+)"/.exec(svg)?.[1];
   if (!name) return undefined;
   const slug = name
@@ -690,7 +692,12 @@ function iconSource(svg: string): { uri: string; color: string } | undefined {
       : stroke && stroke !== "none"
         ? stroke
         : "#FFFFFF";
-  return { uri: "pkg:/assets/icons/" + slug + ".png", color };
+  const dimensions = `${width}x${height}`;
+  const sized =
+    (nativeIconSizes.has(width) && height === width) || (width === 28 && height === 30)
+      ? `-${dimensions}`
+      : "";
+  return { uri: "pkg:/assets/icons/" + slug + sized + ".png", color };
 }
 
 (globalThis as any).__viptvNativeVisual = (node: any, p: any) => {
@@ -706,7 +713,7 @@ function iconSource(svg: string): { uri: string; color: string } | undefined {
       typeof rawSrc === "string" && rawSrc.startsWith("data:image/svg+xml,")
         ? decodeURIComponent(rawSrc.slice("data:image/svg+xml,".length))
         : "";
-    const icon = svg ? iconSource(svg) : undefined;
+    const icon = svg ? iconSource(svg, width, height) : undefined;
     const effectiveSrc = icon?.uri ?? (
       typeof rawSrc === "string" && /^https?:\/\//.test(rawSrc)
         ? imageSource(rawSrc, decode.width, decode.height, p.fit === "contain" ? "inside" : "cover")
