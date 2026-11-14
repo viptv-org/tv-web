@@ -19,8 +19,8 @@ export function javascriptReferences(code) {
   const references = new Set();
   // `import"./x.js"`, `from"./x.js"` and `import("./x.js")`.
   for (const match of code.matchAll(/\b(?:from|import)(?:\(\s*)?["']([^"']+)["']/g)) references.add(match[1]);
-  // `__vite__mapDeps` entries and runtime asset paths, e.g. `assets/...`.
-  for (const match of code.matchAll(/["']([^"']*assets\/[^"']+)["']/g)) references.add(match[1]);
+  // `__vite__mapDeps` entries and runtime public-asset paths.
+  for (const match of code.matchAll(/["']([^"']*\/[^"']+\.[A-Za-z0-9]+)["']/g)) references.add(match[1]);
   return references;
 }
 
@@ -86,7 +86,7 @@ export async function scanTvPackage(directory, manifest) {
     const modules = extension === '.js' ? moduleReferences(code) : new Set();
     for (const reference of read(code)) {
       // BASE_URL public paths resolve from the document, unlike module imports.
-      const target = base === './' && extension === '.js' && reference.startsWith('./assets/') && !modules.has(reference)
+      const target = base === './' && extension === '.js' && !modules.has(reference) && (reference.startsWith('./assets/') || reference.startsWith('./tv-artwork/'))
         ? posix.normalize(reference.slice(2))
         : resolveReference(file, reference, base);
       if (target === null || present.has(target)) continue;
