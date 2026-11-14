@@ -224,6 +224,38 @@ describe('TV distribution manifest', () => {
     expect(files).not.toContain('assets/avatar-catalog/clay-1.png');
   });
 
+  it('adds public files named by reachable TV code outside the assets directory', () => {
+    const artwork = 'tv-artwork/87b1f851442b89b94153.png';
+    const { files } = collectTvDistribution(
+      bundleOf(
+        chunk('app.js', { [bootstrap]: 100 }, { dynamicImports: ['main.js'] }),
+        chunk('main.js', { [tv]: 100 }, {
+          code: `const hero="/tv/${artwork}";`,
+        }),
+      ),
+      root,
+      { ...options, isPublicFile: path => path === artwork },
+    );
+
+    expect(files).toContain(artwork);
+  });
+
+  it('adds public files named by a relative-base build outside the assets directory', () => {
+    const artwork = 'tv-artwork/b1e715feceeb80c8ca5f.webp';
+    const { files } = collectTvDistribution(
+      bundleOf(
+        chunk('app.js', { [bootstrap]: 100 }, { dynamicImports: ['main.js'] }),
+        chunk('main.js', { [tv]: 100 }, {
+          code: `const hero="./${artwork}";`,
+        }),
+      ),
+      root,
+      { ...options, base: './', isPublicFile: path => path === artwork },
+    );
+
+    expect(files).toContain(artwork);
+  });
+
   it('requires at least one TV entry in the build', () => {
     expect(() => collectTvDistribution(bundleOf(chunk('react.js', { [react]: 100 })), root, options)).toThrow(
       'The remote TV entry is missing from this build.',
