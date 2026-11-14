@@ -59,7 +59,7 @@ async function listFiles(directory, prefix = '') {
  * Vite writes `__vite__mapDeps` entries base-relative (`assets/x.css`), which
  * has to be distinguished from a module specifier (`./x.js`). */
 export function resolveReference(fromFile, reference, base) {
-  if (!reference || /^(?:[a-z][a-z0-9+.-]*:|\/\/|#)/i.test(reference)) return null;
+  if (!reference || /^(?:[a-z][a-z0-9+.-]*:|\/\/|#)/i.test(reference) || reference.startsWith('$')) return null;
   const path = reference.split(/[?#]/, 1)[0];
   if (!path) return null;
   if (path.startsWith('/')) return path.startsWith(base) ? path.slice(base.length) : null;
