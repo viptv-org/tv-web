@@ -26,8 +26,10 @@ const ON_DEMAND_ONLY = [/^\/node_modules\/hls\.js\//, /^\/node_modules\/qrcode\/
 const HOST_BRIDGE = /^\/node_modules\/@tauri-apps\//;
 /** Runtime asset paths written as string literals by reachable TV code, such as
  * the empty-state photography. Public files are unhashed and addressed at
- * runtime rather than imported, so they are found by scanning emitted code. */
-const RUNTIME_ASSET = /assets\/[\w.@/-]+/g;
+ * runtime rather than imported, so they are found by scanning emitted code.
+ * A public file can sit under any public directory (`assets/`, `tv-artwork/`),
+ * so the scan names any relative path and lets the public directory decide. */
+const RUNTIME_ASSET = /[\w.@/-]*\/[\w.@/-]+\.[A-Za-z0-9]+/g;
 /** The manifest `package-tv.mjs` uses instead of copying all of `dist`. It is
  * kept outside `dist` so the browser/desktop distribution is unchanged. */
 export const TV_MANIFEST_FILE = 'tv-assets.json';
@@ -238,7 +240,12 @@ export function collectTvDistribution(
       if (!chunk || chunk.type !== 'chunk') continue;
       const code = chunk.code ?? '';
       for (const match of code.matchAll(RUNTIME_ASSET)) {
-        if (options.isPublicFile(match[0])) files.add(match[0]);
+        for (const candidate of runtimeAssetCandidates(match[0], options.base)) {
+          if (options.isPublicFile(candidate)) {
+            files.add(candidate);
+            break;
+          }
+        }
       }
     }
   }
@@ -251,6 +258,17 @@ export function collectTvDistribution(
       .map(([file, entry]) => ({ file, reason: entry.reason, module: entry.module }))
       .sort((left, right) => left.file.localeCompare(right.file)),
   };
+}
+
+/** A path a runtime reference can carry: the build's base prefix, a relative
+ * prefix, or neither. The public file itself is relative to the public
+ * directory, so every form is offered to it and only the real one is kept. */
+function runtimeAssetCandidates(path: string, base: string): string[] {
+  const candidates = new Set<string>();
+  const relative = path.replace(/^\.\//, '');
+  candidates.add(relative);
+  if (base.startsWith('/') && relative.startsWith(base)) candidates.add(relative.slice(base.length));
+  return [...candidates];
 }
 
 /** Check the emitted, reachable TV graph, including shared and lazy chunks.
