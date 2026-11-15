@@ -4,15 +4,28 @@ import {
   createMemo,
   createSignal,
   onCleanup,
+  onMount,
   Show,
 } from "solid-js";
+import type { ElementNode } from "@solidtv/solid";
 import { TvView, fontEpochSignal } from "../runtime";
 import { sdfFontFamily, sdfLineHeight } from "../fonts";
 import { getRenderer } from "@solidtv/solid";
 import type { RendererMain } from "@solidtv/renderer";
 import { PosterWall } from "./PosterWall";
 import { Label, palette } from "./visuals";
-import { easeProgress } from "./motion";
+import { animateProp, type AnimationSettings, type RunningAnimation } from "./animate";
+
+/** The splash's two runs, on the renderer's clock.
+ *
+ * The curves are the CSS cubic-beziers the frame loop used, written the way
+ * the renderer resolves them. The sweep loops: it jumps back to its start
+ * every cycle, as it did.
+ */
+const FADE: AnimationSettings = { duration: 600, easing: "cubic-bezier(0,0,0.58,1)" };
+const SWEEP: AnimationSettings = { duration: 1200, easing: "cubic-bezier(0.4,0,0.2,1)", loop: true };
+const SWEEP_START = -96;
+const SWEEP_END = SWEEP_START + 345.6;
 
 let shadow: ImageData | undefined;
 function signInShadow() {
@@ -98,22 +111,33 @@ function Brand(props: { splash: boolean }) {
 }
 export function EntryScreen(props: { loading: boolean; focused: boolean }) {
   const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
-  const [elapsed, setElapsed] = createSignal(0);
+  const [brand, setBrand] = createSignal<ElementNode>();
+  const [bar, setBar] = createSignal<ElementNode>();
+  const [armed, setArmed] = createSignal(false);
+  let fade: RunningAnimation | undefined;
+  let sweep: RunningAnimation | undefined;
+  onMount(() => setArmed(true));
+  // The splash runs on the renderer's clock: the brand fades in and the
+  // indicator sweeps on the renderer's own timeline, so no JavaScript runs
+  // per frame. The curves are the same ones the frame loop used, written as
+  // the CSS cubic-bezier the renderer resolves.
   createEffect(() => {
-    if (reduced || !props.loading) return;
-    setElapsed(0);
-    const start = performance.now();
-    let frame = 0;
-    const tick = (now: number) => {
-      setElapsed(now - start);
-      frame = requestAnimationFrame(tick);
-    };
-    frame = requestAnimationFrame(tick);
-    onCleanup(() => cancelAnimationFrame(frame));
+    const ready = armed();
+    const loading = props.loading;
+    const brandNode = brand();
+    const barNode = bar();
+    fade?.stop();
+    fade = undefined;
+    sweep?.stop();
+    sweep = undefined;
+    if (!ready || !loading || reduced || !brandNode?.rendered || !barNode?.rendered) return;
+    fade = animateProp(brandNode, "alpha", 1, FADE);
+    sweep = animateProp(barNode, "x", SWEEP_END, SWEEP);
   });
-  // CSS cubic-bezier(.4,0,.2,1), evaluated only for the four-pixel indicator.
-  const indicator = () =>
-    -96 + 345.6 * easeProgress((elapsed() % 1200) / 1200, 0.4, 0.2);
+  onCleanup(() => {
+    fade?.stop();
+    sweep?.stop();
+  });
   return (
     <Show
       when={props.loading}
@@ -150,7 +174,7 @@ export function EntryScreen(props: { loading: boolean; focused: boolean }) {
         </>
       }
     >
-      <TvView alpha={!reduced ? easeProgress(elapsed() / 600, 0, 0.58) : 1}>
+      <TvView nodeRef={setBrand} alpha={reduced ? 1 : 0}>
         <Brand splash />
       </TvView>
       <TvView
@@ -162,7 +186,8 @@ export function EntryScreen(props: { loading: boolean; focused: boolean }) {
         color="rgba(255,255,255,.12)"
       >
         <TvView
-          x={reduced ? 0 : indicator()}
+          nodeRef={setBar}
+          x={reduced ? 0 : SWEEP_START}
           w={96}
           h={4}
           color={palette.text}
