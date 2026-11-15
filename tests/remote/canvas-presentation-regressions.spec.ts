@@ -130,7 +130,9 @@ for (const viewport of [{ width: 1920, height: 1080 }, { width: 1540, height: 75
     await page.screenshot({ path: info.outputPath('gradient-preparing.png') });
     release();
     await expect.poll(async () => Math.min(...(await sample())[1])).toBeGreaterThan(150);
-    expect(Math.max(...(await sample())[0])).toBeLessThan(45);
+    // The ambient band's wash keeps the synopsis column at most ~30% of the
+    // artwork's brightness; the old design kept it black.
+    expect(Math.max(...(await sample())[0])).toBeLessThan(80);
     await page.screenshot({ path: info.outputPath('gradient-ready.png') });
   });
 }
