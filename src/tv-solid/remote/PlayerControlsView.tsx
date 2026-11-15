@@ -6,6 +6,7 @@ import { bufferedSegments } from "./playerTimeline";
 import { clockTime as clock } from "./time";
 import { playerScrimSource } from "./tv-artwork.generated";
 import type { Card } from "./types";
+import { SKIP_BUTTON } from "./player/skip-intro";
 import type { PlayerSnapshot } from "../../../vendor/video/src/types";
 
 interface PlayerTool { id: string; label: string; x: number; width: number; icon: string }
@@ -16,6 +17,14 @@ interface PlaybackChrome {
   tools: Accessor<readonly PlayerTool[]>;
 }
 interface PlayerFocus { selected: Accessor<number>; timeline: Accessor<boolean>; preview: Accessor<number | undefined> }
+
+/** The skip affordance, wherever it is drawn: bottom right of the control row,
+ * with the remote's real focus ring. */
+export function SkipIntroButton(props: { label: string; focused: boolean }) {
+  return <TvView x={SKIP_BUTTON.x} y={SKIP_BUTTON.y}>
+    <Button x={0} y={0} w={SKIP_BUTTON.width} h={SKIP_BUTTON.height} label={props.label} focused={props.focused} />
+  </TvView>;
+}
 
 export function PlayerControlsView(props: { playback: PlaybackChrome; focus: PlayerFocus }) {
   const timelineFraction = () => Math.max(0, Math.min(1,
@@ -114,16 +123,18 @@ export function PlayerControlsView(props: { playback: PlaybackChrome; focus: Pla
     />
     <For each={props.playback.tools()}>
       {(button, index) => (
-        <Button
-          x={button.x}
-          y={846}
-          w={button.width}
-          h={56}
-          label={button.label}
-          icon={button.icon}
-          iconSize={22}
-          focused={props.focus.selected() === index() + 1}
-        />
+        button.id === "skip"
+          ? <SkipIntroButton label={button.label} focused={props.focus.selected() === index() + 1} />
+          : <Button
+              x={button.x}
+              y={846}
+              w={button.width}
+              h={56}
+              label={button.label}
+              icon={button.icon}
+              iconSize={22}
+              focused={props.focus.selected() === index() + 1}
+            />
       )}
     </For>
     </Show>

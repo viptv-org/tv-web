@@ -4,6 +4,7 @@ import type { RemotePlayback } from "../playback";
 import type { Card, Detail, PlaybackSegment, TitleAction } from "../types";
 import type { DialogActions } from "../feature-ports";
 import type { PlayIntent } from "../source-picker/intent-types";
+import { skipSegment } from "../player/skip-intro";
 
 export function createPlayerActivation(options: {
   player: Pick<RemotePlayback, "seek" | "player">; snapshot: Accessor<PlayerSnapshot | undefined>; actions: Accessor<RemotePlayback["actions"]>;
@@ -59,18 +60,12 @@ export function createPlayerActivation(options: {
       await advanceEpisode();
     } else if (control === "skip") {
       const segment = activeSegment();
-      if (segment) {
-        setShowControls(true);
-        setSeeking(true);
-        clearSegments();
-        try {
-          await player.seek(segment.end_ms / 1000);
-          void refreshPlaybackSegments();
-        } finally {
-          setSeeking(false);
-          hideControls();
-        }
-      }
+      if (segment)
+        await skipSegment(segment, {
+          seek: player.seek.bind(player),
+          clearSegments, refreshSegments: refreshPlaybackSegments,
+          seeking: setSeeking, showControls: setShowControls, hideControls,
+        });
     } else if (control === "tracks") {
       openTracks();
     } else if (control === "sources") {

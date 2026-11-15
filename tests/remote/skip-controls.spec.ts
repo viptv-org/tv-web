@@ -69,3 +69,40 @@ for (const enabled of [true, false]) test(`invalid, credits and disabled markers
   expect((await texts(page)).some(text => text === 'Skip intro' || text === 'Skip recap')).toBe(false);
   expect(fixture.requests.filter(request => request.path === '/api/playback' && request.method === 'POST')).toHaveLength(1);
 });
+
+test('the offer withdraws after six seconds and returns with the controls', async ({ page, baseURL }) => {
+  await start(page, baseURL!, [{ kind: 'intro', start_ms: 1000, end_ms: 2000 }]);
+  await position(page, 1.25);
+  await expect.poll(() => texts(page)).toContain('Skip intro');
+  await page.waitForTimeout(6400);
+  // Six seconds in, the button is gone from the film but not from the row.
+  expect(await texts(page)).not.toContain('Skip intro');
+  await page.keyboard.press('ArrowUp');
+  await expect(state(page)).toHaveAttribute('data-tv-player-controls', 'true');
+  await expect.poll(() => texts(page)).toContain('Skip intro');
+  await page.keyboard.press('Escape');
+  await expect(state(page)).toHaveAttribute('data-tv-player-controls', 'false');
+  await page.keyboard.press('Enter');
+  await expect.poll(() => page.locator('video').evaluate(video => (video as HTMLVideoElement).currentTime)).toBeGreaterThan(1.9);
+});
+
+test('the remote play key skips while the pause key still pauses', async ({ page, baseURL }) => {
+  const fixture = await start(page, baseURL!, [{ kind: 'intro', start_ms: 1000, end_ms: 2000 }]);
+  await position(page, 1.25);
+  await expect.poll(() => texts(page)).toContain('Skip intro');
+  await page.locator('video').evaluate(video => video.dispatchEvent(new Event('timeupdate')));
+  await page.evaluate(() => {
+    for (const type of ['keydown', 'keyup'])
+      window.dispatchEvent(new KeyboardEvent(type, { key: 'MediaPause', keyCode: 19, bubbles: true, cancelable: true }));
+  });
+  await expect(state(page)).toHaveAttribute('data-tv-player-state', 'paused');
+  const posts = () => fixture.requests.filter(request => request.path === '/api/playback' && request.method === 'POST');
+  expect(posts()).toHaveLength(1);
+  await page.evaluate(() => {
+    for (const type of ['keydown', 'keyup'])
+      window.dispatchEvent(new KeyboardEvent(type, { key: 'MediaPlay', keyCode: 415, bubbles: true, cancelable: true }));
+  });
+  await expect.poll(() => posts().length).toBe(2);
+  expect(posts().at(-1)?.body.position).toBe(2);
+  await expect(state(page)).toHaveAttribute('data-tv-player-state', 'paused');
+});

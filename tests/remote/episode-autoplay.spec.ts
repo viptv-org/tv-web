@@ -1,5 +1,15 @@
 import { test, expect, type Page } from '@playwright/test';
 import { installRemoteBackend } from '../preview/remote-backend';
+/** Reach a control row button by name: the row ends with Skip, so counting
+ * presses stops being true the moment the row gains a button. */
+async function focusTool(page:Page, id:string) {
+  const state = page.locator('html');
+  await page.keyboard.press('ArrowUp');
+  const tools = (await state.getAttribute('data-tv-player-tools'))!.split(',');
+  const index = tools.indexOf(id);
+  expect(index).toBeGreaterThanOrEqual(0);
+  for (let step = 0; step < index; step++) await page.keyboard.press('ArrowRight');
+}
 
 const visibleTexts=(page:Page)=>page.evaluate(()=>{
  const values:string[]=[];
@@ -97,8 +107,12 @@ test('standalone Skip intro remains available with hidden controls and preserves
  await page.locator('video').evaluate(v=>{(v as HTMLVideoElement).currentTime=0.25;});
  await expect.poll(()=>page.locator('video').evaluate(v=>(v as HTMLVideoElement).seeking)).toBe(false);
  await page.locator('video').evaluate(v=>v.dispatchEvent(new Event('timeupdate')));
- // Up focuses the marker shortcut in the toolbar; OK performs a real lease seek.
- await page.keyboard.press('ArrowUp');await page.keyboard.press('Enter');
+ // The standalone button is the hidden-controls shortcut; OK performs a real
+ // lease seek. Skip now sits last in the control row, so it is not the tool Up
+ // lands on first.
+ await page.keyboard.press('Escape');
+ await expect(page.locator('html')).toHaveAttribute('data-tv-player-controls','false');
+ await page.keyboard.press('Enter');
  await expect.poll(()=>fixture.requests.filter(r=>r.path==='/api/playback'&&r.method==='POST').some(r=>r.body.position===2)).toBe(true);
  await expect(page.locator('html')).toHaveAttribute('data-tv-player-state','paused');
 });
@@ -121,7 +135,7 @@ test('configuration changes discard prepared source grants before the handoff',a
  const fixture=await installRemoteBackend(page,baseURL!,{media:true,episodeFlow:true});await playFirst(page);
  await expect(page.locator('html')).toHaveAttribute('data-tv-next-prepared','true');
  fixture.setConfigurationRevision(1);
- await page.keyboard.press('ArrowUp');for(let i=0;i<3;i++)await page.keyboard.press('ArrowRight');await page.keyboard.press('Enter');
+ await focusTool(page,'next');await page.keyboard.press('Enter');
  await expect.poll(()=>fixture.requests.filter(r=>r.path==='/api/playback'&&r.method==='POST').length).toBe(2);
  expect(fixture.requests.filter(r=>r.path==='/api/streams'&&r.body.episode===2)).toHaveLength(2);
 });
@@ -142,7 +156,7 @@ test('holding Next opens the next episode picker without starting it',async({pag
  await expect(page.locator('html')).toHaveAttribute('data-tv-ready','true');
  await page.evaluate(()=>{for(const type of ['keydown','keyup']) window.dispatchEvent(new KeyboardEvent(type,{key:'MediaPause',keyCode:19,bubbles:true}));});
  await expect(page.locator('html')).toHaveAttribute('data-tv-player-state','paused');
- await page.keyboard.press('ArrowUp');for(let i=0;i<3;i++)await page.keyboard.press('ArrowRight');
+ await focusTool(page,'next');
  await page.keyboard.down('Enter');await page.waitForTimeout(800);await page.keyboard.up('Enter');
  await expect(page.locator('html')).toHaveAttribute('data-tv-overlay','sources');
  expect(fixture.requests.filter(r=>r.path==='/api/playback'&&r.method==='POST')).toHaveLength(1);
@@ -186,7 +200,7 @@ test('Back during next-episode admission restores the outgoing episode and its p
  const state=page.locator('html');await expect(state).toHaveAttribute('data-tv-player-state','paused');
  await expect(state).toHaveAttribute('data-tv-next-prepared','true');
  const release=fixture.holdNextAdmission();
- await page.keyboard.press('ArrowUp');for(let i=0;i<3;i++)await page.keyboard.press('ArrowRight');await page.keyboard.press('Enter');
+ await focusTool(page,'next');await page.keyboard.press('Enter');
  await expect.poll(()=>fixture.requests.filter(r=>r.path==='/api/playback'&&r.method==='POST').length).toBe(2);
  await expect(state).toHaveAttribute('data-tv-player-episode','2');
  await page.keyboard.press('Escape');await expect(state).toHaveAttribute('data-tv-player-episode','1');
@@ -205,7 +219,7 @@ test('prepares the preferred source before a slow provider finishes without open
   expect(fixture.requests.filter(r=>r.path==='/api/streams'&&r.body.episode===2)).toHaveLength(1);
   await page.evaluate(()=>{for(const type of ['keydown','keyup'])window.dispatchEvent(new KeyboardEvent(type,{key:'MediaPause',keyCode:19,bubbles:true}));});
   await expect(page.locator('html')).toHaveAttribute('data-tv-player-state','paused');
-  await page.keyboard.press('ArrowUp');for(let i=0;i<3;i++)await page.keyboard.press('ArrowRight');await page.keyboard.press('Enter');
+  await focusTool(page,'next');await page.keyboard.press('Enter');
   await expect.poll(()=>fixture.requests.filter(r=>r.path==='/api/playback'&&r.method==='POST').length).toBe(2);
   await expect(page.locator('html')).toHaveAttribute('data-tv-overlay','');
   expect(fixture.requests.filter(r=>r.path==='/api/streams'&&r.body.episode===2)).toHaveLength(1);

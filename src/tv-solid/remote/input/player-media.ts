@@ -1,14 +1,17 @@
 import type { Accessor, Setter } from "solid-js";
 import type { PlayerSnapshot } from "../../../../vendor/video/src/types";
 import type { RemotePlayback } from "../playback";
-import type { TitleAction } from "../types";
+import type { PlaybackSegment, TitleAction } from "../types";
 import type { PlayIntent } from "../source-picker/intent-types";
+import { skipSegment } from "../player/skip-intro";
 
 export function createPlayerMediaKeys(options: {
   player: Pick<RemotePlayback, "player" | "seek">; snapshot: Accessor<PlayerSnapshot | undefined>; actions: Accessor<RemotePlayback["actions"]>;
   active: Accessor<TitleAction | undefined>; seeking: {current: Accessor<boolean>; set: Setter<boolean>}; revealEnded: () => boolean; play: PlayIntent;
   setPlaying: (playing: boolean) => Promise<void>;
-  chrome: {show: Setter<boolean>; hide: () => void}; segments: {clear: () => void; refresh: () => Promise<void>}; fail: (error: unknown) => void;
+  chrome: {show: Setter<boolean>; hide: () => void};
+  segments: {clear: () => void; refresh: () => Promise<void>; active: Accessor<PlaybackSegment | undefined>; skipEnabled: Accessor<boolean>};
+  fail: (error: unknown) => void;
 }) {
   const {player, snapshot, actions: playerActions, active: activeAction, revealEnded: revealEndedControls, play: playIntent, fail} = options;
   const {current: seeking, set: setSeeking} = options.seeking;
@@ -31,6 +34,18 @@ export function createPlayerMediaKeys(options: {
         return true;
       }
       if (!playerActions().pause) return true;
+      // The remote's play key skips the segment it is offered for; a bare
+      // pause key still pauses, and Space keeps its browser meaning.
+      const skip = options.segments.active();
+      if (skip && options.segments.skipEnabled() && playerActions().seek &&
+        event.key !== "MediaPause" && event.keyCode !== 19 && event.key !== " ") {
+        void skipSegment(skip, {
+          seek: player.seek.bind(player),
+          clearSegments, refreshSegments: refreshPlaybackSegments,
+          seeking: setSeeking, showControls: setShowControls, hideControls,
+        }).catch(fail);
+        return true;
+      }
       const play =
         event.key === "MediaPlay" ||
         event.keyCode === 415 ||

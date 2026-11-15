@@ -40,7 +40,7 @@ import { HomeContent } from "./HomeContent";
 import { DetailContent } from "./DetailContent";
 import { PlaybackPreparation } from "./PlaybackPreparation";
 import { BusySurface } from "./BusySurface";
-import { PlayerControlsView } from "./PlayerControlsView";
+import { PlayerControlsView, SkipIntroButton } from "./PlayerControlsView";
 import { SettingsView } from "./SettingsView";
 import { BrowseControls } from "./BrowseControls";
 import { OverlayViewport } from "./OverlayViewport";
@@ -105,11 +105,12 @@ import { createNativeTextEditing, nativeTextDialogOverlay, type NativeTextPort, 
 import { createPlayerMediaKeys } from "./input/player-media";
 import { installWindowInputs } from "./input/window-bindings";
 import { createTrackPicker } from "./player/tracks";
+import { SKIP_BUTTON, SKIP_FADE, SKIP_OFFER_MS, skipLabel, skipOffer } from "./player/skip-intro";
 import { defineScreen, TvView } from "../runtime";
 import {
  exitWebos 
 } from "../webos";
-import { Button, Label, palette } from "./visuals";
+import { Label, palette } from "./visuals";
 import {
   RemoteTvApi,
   lookupSelector,
@@ -850,8 +851,26 @@ export function createRemoteTvApp(
           position < segment.end_ms,
       );
     });
-    async function refreshPlaybackSegments() {
-      const id = player.leaseId;
+    /** Skip is offered while the server marks a segment and the profile allows
+     * it; the button then withdraws itself into the control row. The clock only
+     * restarts when a different segment becomes current: the player's action
+     * object changes identity on every tick, and re-arming from it would keep
+     * the offer alive for the whole cold open. */
+    const skipEnabled = () => preferences()?.preferences?.skip_intros !== false;
+    const [skipOffered, setSkipOffered] = createSignal(false);
+    let offeredSegment: PlaybackSegment | undefined;
+    let skipTimer: ReturnType<typeof setTimeout> | undefined;
+    createEffect(() => {
+      const segment = activeSegment();
+      if (segment === offeredSegment) return;
+      offeredSegment = segment;
+      clearTimeout(skipTimer);
+      const wanted = !!segment && skipEnabled() && playerActions().seek;
+      setSkipOffered(!!wanted);
+      if (wanted) skipTimer = setTimeout(() => setSkipOffered(false), SKIP_OFFER_MS);
+    });
+    onCleanup(() => clearTimeout(skipTimer));
+    const skipStage = () => skipOffer(activeSegment(), skipEnabled(), playerActions().seek, skipOffered() ? 0 : SKIP_OFFER_MS);    async function refreshPlaybackSegments() {      const id = player.leaseId;
       if (!id) {
         setPlaybackSegments([]);
         return;
@@ -877,17 +896,6 @@ export function createRemoteTvApp(
               : "status",
           label: "",
         },
-        ...(activeSegment() && playerActions().seek && preferences()?.preferences?.skip_intros !== false
-          ? [
-              {
-                id: "skip",
-                label:
-                  activeSegment()?.kind === "recap"
-                    ? "Skip recap"
-                    : "Skip intro",
-              },
-            ]
-          : []),
         ...(playerActions().episodes
           ? [{ id: "episodes", label: "Episodes" }]
           : []),
@@ -900,11 +908,18 @@ export function createRemoteTvApp(
         ...(playerActions().next_episode && episodeState().status !== "none"
           ? [{ id: "next", label: "Next episode" }]
           : []),
+        // Skip is a control-row button like Next episode: last, at the far
+        // right, so it is one button in one place whatever the chrome does.
+        ...(activeSegment() && playerActions().seek && skipEnabled()
+          ? [{ id: "skip", label: skipLabel(activeSegment()) }]
+          : []),
       ];
     }, undefined, { equals: (a, b) => a.length === b.length && a.every((button, index) => button.id === b[index].id && button.label === b[index].label) });
     const playerTools = createMemo(() => {
       let left = 268;
       return playerButtons().slice(1).map(button => {
+        if (button.id === "skip")
+          return { ...button, x: SKIP_BUTTON.x, width: SKIP_BUTTON.width, icon: "" };
         const width = button.id === "tracks" ? 304 : button.id === "next" ? 240 : 228;
         const x = button.id === "next" ? 1584 : left;
         if (button.id !== "next") left += width + 12;
@@ -3070,6 +3085,9 @@ export function createRemoteTvApp(
       document.documentElement.dataset.tvPlayerPresentedPosition = String(snapshot()?.diagnostics?.presentedPositionSeconds ?? "");
       document.documentElement.dataset.tvPlayerVideoProgress = snapshot()?.diagnostics?.videoFrameProgress ?? "";
       document.documentElement.dataset.tvPlayerTimelineFocus = String(timelineFocused());
+      // The row's order, so a session can reach a control by name instead of
+      // by counting presses.
+      document.documentElement.dataset.tvPlayerTools = playerTools().map(tool => tool.id).join(",");
       document.documentElement.dataset.tvSourcePhase = sourcePage()?.discovery_phase ?? "";
       document.documentElement.dataset.tvSourcePreparing = String(sourceLoading() && !overlay());
       document.documentElement.dataset.tvPlayerBusy = String(loading() || seeking() || snapshot()?.state === "buffering");
@@ -3173,7 +3191,8 @@ export function createRemoteTvApp(
         pair: beginPairing, stop: leavePlayer, text: setText, query: search, search: updateSearch, fail,
         media: createPlayerMediaKeys({player, snapshot, setPlaying: playerTransport.setPlaying, actions: playerActions, active: activeAction, seeking: {current: seeking, set: setSeeking},
           revealEnded: revealEndedControls, play: playIntent, chrome: {show: setShowControls, hide: hideControls},
-          segments: {clear: () => {setPlaybackSegments([]);}, refresh: refreshPlaybackSegments}, fail})});
+          segments: {clear: () => {setPlaybackSegments([]);}, refresh: refreshPlaybackSegments,
+            active: activeSegment, skipEnabled: skipEnabled}, fail})});
       onCleanup(installWindowInputs({keyboard: event => {
         if (event.key.length === 1 && handleIdleInput()) { event.preventDefault(); return; }
         input(event);
@@ -3470,8 +3489,13 @@ export function createRemoteTvApp(
             <Show when={screen() === "player" && !overlay() && advancing()}>
               <Label x={96} y={790} size={26} content="Preparing next episode…" />
             </Show>
-            <Show when={screen() === "player" && !overlay() && !showControls() && !loading() && !seeking() && !error() && activeSegment() && playerActions().seek && preferences()?.preferences.skip_intros !== false}>
-              <Button x={1596} y={746} w={228} h={56} label={activeSegment()?.kind === "recap" ? "Skip recap" : "Skip intro"} focused={false} />
+            {/* One button, one rect: the same SkipIntroButton the control row
+                draws. With the chrome hidden it offers itself for six seconds
+                and then fades out, leaving the action in the controls. */}
+            <Show when={screen() === "player" && !overlay() && !showControls() && !loading() && !seeking() && !error() && skipStage() !== "none"}>
+              <TvView alpha={skipStage() === "button" ? 1 : 0} transition={SKIP_FADE}>
+                <SkipIntroButton label={skipLabel(activeSegment())} focused={false} />
+              </TvView>
             </Show>
             <Show when={screen() === "player" && !overlay() && !openingSource() && (loading() || seeking() || snapshot()?.state === "buffering")}>
               <BusySurface label={seeking() ? "Seeking…" : "Buffering…"} />
