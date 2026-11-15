@@ -55,11 +55,30 @@ Each row lists what must be handed over; the shapes are already visible in the
    `playerTransport`, `overlays`, `notify`, `fail`, `retry`, `sources`,
    `activeAction`, `activeChannel`, `devicePlayback`, `preferences`.
 4. **`render/`** (partly done): Live, Browse and the player chrome are out.
-   What remains is the entry trio (`WelcomeScreen`, `PairingView`,
-   `SignedInView`), `ProfilesView`, `CalendarView`, `HomeView`, `DetailView`
-   and `OverlayHost`, each taking only the props its block references. Do **not**
-   extract the whole render tree as one component: it references ~110
-   identifiers, which would be a god object, not a seam.
+   The rest of the tree is *smaller*, measured per screen block:
+
+   | Block | Lines | App bindings it needs |
+   | --- | --- | --- |
+   | welcome | 6 | 2 |
+   | profiles | 10 | 5 |
+   | calendar | 13 | 7 |
+   | home | 5 | 7 |
+   | pairing | 13 | 8 |
+   | detail | 22 | 27 |
+   | overlaid chrome + overlays | ~110 | 36 |
+
+   So: split it, one component per block, as `render/live.tsx` does.
+
+   What not to do is pull the whole `render: () => (…)` body out as a **single**
+   component. That one move needs ~110 bindings, has one call site, and hides
+   nothing — a projection of the closure is indirection without depth, and every
+   screen that later needs a new signal adds another prop to it. It is also
+   quietly unsafe in Solid: props are getters, so passing `screen()` where the
+   receiver wanted `screen` compiles under a loose contract and the screen simply
+   stops updating. Per-screen components make that a type error.
+
+   Render extraction alone cannot take `App.tsx` to ~900 lines either: only
+   ~300 of its lines are JSX. The rest is the state machine in items 1–3 and 5.
 5. **`navigation-scene.ts`** (~330 lines): `navigate`, `back`,
    `restorePrevious`, `settlePendingFocus`, the history stack and the per-screen
    navigation controllers.
