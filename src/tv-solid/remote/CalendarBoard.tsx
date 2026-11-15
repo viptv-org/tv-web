@@ -6,6 +6,7 @@ import { imageSource } from "./image-source";
 import { sdfTextMetrics } from "./text-measure";
 import { timeOfDay } from "./time";
 import type { CalendarEntry } from "./types";
+import { LAYOUT } from "./layout";
 
 export type CalendarDay = { key: string; label: string; date: Date };
 
@@ -121,7 +122,7 @@ export function CalendarBoard(props: {
       </For>
       <Show when={props.error}>
         <Label
-          x={96}
+          x={LAYOUT.inset}
           y={250}
           size={26}
           maxwidth={1100}
@@ -131,7 +132,7 @@ export function CalendarBoard(props: {
       </Show>
       <Show when={!props.error && !visible().length}>
         <Label
-          x={96}
+          x={LAYOUT.inset}
           y={250}
           size={26}
           maxwidth={1100}
@@ -148,7 +149,7 @@ export function CalendarBoard(props: {
           const date = new Date(entry.date);
           return (
             <TvView
-              x={96}
+              x={LAYOUT.inset}
               y={250 + index() * 128}
               w={1100}
               h={112}

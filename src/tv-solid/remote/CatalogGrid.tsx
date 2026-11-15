@@ -10,11 +10,12 @@ interface GridWindow { start: Accessor<number>; count: Accessor<number>; columns
 interface GridFocus { active: Accessor<boolean>; index: Accessor<number> }
 interface GridSearch { channels: Accessor<boolean>; pending: Accessor<boolean>; retry: Accessor<boolean>; query: Accessor<string> }
 import { uniqueCards } from "./card-collection";
+import { CONTENT_WIDTH, LAYOUT } from "./layout";
 
 export function CatalogGrid(props: { screen: Screen; cards: readonly Card[]; window: GridWindow; focus: GridFocus; search: GridSearch; loading: boolean }) {
   return <>
     <TvView
-      x={props.screen === "search" ? 700 : 96}
+      x={props.screen === "search" ? 700 : LAYOUT.inset}
       y={
         props.screen === "search"
           ? 196
@@ -22,7 +23,7 @@ export function CatalogGrid(props: { screen: Screen; cards: readonly Card[]; win
             ? 236
             : 244
       }
-      w={props.screen === "search" ? 1124 : 1720}
+      w={props.screen === "search" ? 1124 : CONTENT_WIDTH - 8}
       h={
         props.screen === "search"
           ? props.search.channels()

@@ -10,6 +10,7 @@ import { cardKey, type Card, type Detail } from "./types";
 import { sdfTextMetrics } from "./text-measure";
 import { BRANDING_MOTION, compactDetail, detailBodyOffset, detailEpisodeLayout, detailListTop, detailLogoBox } from "./hero-layout";
 import { arrive, reducedMotion } from "./motion";
+import { LAYOUT } from "./layout";
 
 type DetailContentProps = {
   detail?: Detail;
@@ -40,14 +41,14 @@ export function DetailContent(props: DetailContentProps) {
       {(value) => (
         <>
           <Show when={!value().item.logo}>
-            <TvView x={96} y={logoBox().y + (compact() ? 0 : bottomTitleY(value().item.title, 56, 640, logoBox().height))} transition={motion}>
+            <TvView x={LAYOUT.inset} y={logoBox().y + (compact() ? 0 : bottomTitleY(value().item.title, 56, 640, logoBox().height))} transition={motion}>
               <Label size={56} font="Onest700" lineheight={1.2}
                 maxwidth={compact() ? 760 : 850} maxlines={compact() ? 1 : 2} content={value().item.title} />
             </TvView>
           </Show>
           <TvView
             show={!props.hasEpisodes || !compact()}
-            x={96}
+            x={LAYOUT.inset}
             y={detailBodyOffset(props.hasEpisodes, compact())}
             transition={motion}
           >
@@ -107,10 +108,10 @@ export function DetailContent(props: DetailContentProps) {
     
           </TvView>
           <TvView
-            x={96}
+            x={LAYOUT.inset}
             y={detailListTop(props.hasEpisodes, !!value().seasons.length, compact())}
             transition={motion}
-            w={1824}
+            w={LAYOUT.rightSpan}
             h={850}
             clipping={true}
           >
@@ -182,7 +183,7 @@ export function DetailContent(props: DetailContentProps) {
               )
             }
           >
-            <TvView x={96} y={676} w={1824} h={404} clipping>
+            <TvView x={LAYOUT.inset} y={676} w={LAYOUT.rightSpan} h={404} clipping>
               <Label
                 size={30}
                 font="Onest600"

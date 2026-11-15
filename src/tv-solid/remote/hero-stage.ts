@@ -7,9 +7,11 @@
  * geometry lives here instead of in the components that draw it.
  */
 
+import { FRAME } from "./layout";
+
 /** The fixed logical frame every TV screen is laid out in. */
-export const FRAME_WIDTH = 1920;
-export const FRAME_HEIGHT = 1080;
+export const FRAME_WIDTH = FRAME.width;
+export const FRAME_HEIGHT = FRAME.height;
 
 /** The share of the band that dissolves into the page ground. */
 export const HERO_FADE_RATIO = 0.35;

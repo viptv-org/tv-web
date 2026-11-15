@@ -4,6 +4,7 @@ import { icon, Label, palette } from "../visuals";
 import { sdfTextMetrics } from "../text-measure";
 import { filterTitleWidth } from "../filter-pill-layout";
 import type { LivePage } from "../types";
+import { LAYOUT } from "../layout";
 
 export function LiveGroupSelector(props: { groups: LivePage["groups"]; group?: string; focused: boolean; selected: number }) {
   return <>
@@ -36,7 +37,7 @@ export function LiveGroupSelector(props: { groups: LivePage["groups"]; group?: s
       };
       return (
         <TvView
-          x={96}
+          x={LAYOUT.inset}
           y={512}
           w={width() + 6}
           h={64}

@@ -1,6 +1,7 @@
 /** @jsxImportSource @solidtv/solid */
 import { For } from "solid-js";
 import { TvView } from "../runtime";
+import { LAYOUT } from "./layout";
 import { Label, palette } from "./visuals";
 
 export function BrowseControls(props: { catalog: string; filters: boolean; focused: boolean; index: number }) {
@@ -18,7 +19,7 @@ export function BrowseControls(props: { catalog: string; filters: boolean; focus
     >
       {(control, index) => (
         <TvView
-          x={index() === 0 ? 96 : 480 + (index() - 1) * 224}
+          x={index() === 0 ? LAYOUT.inset : 480 + (index() - 1) * 224}
           y={140}
           w={index() === 0 ? 360 : 200}
           h={64}

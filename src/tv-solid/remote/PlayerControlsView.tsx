@@ -7,6 +7,7 @@ import { clockTime as clock } from "./time";
 import { playerScrimSource } from "./tv-artwork.generated";
 import type { Card } from "./types";
 import { SKIP_BUTTON } from "./player/skip-intro";
+import { CONTENT_WIDTH, LAYOUT } from "./layout";
 import type { PlayerSnapshot } from "../../../vendor/video/src/types";
 
 interface PlayerTool { id: string; label: string; x: number; width: number; icon: string }
@@ -32,14 +33,14 @@ export function PlayerControlsView(props: { playback: PlaybackChrome; focus: Pla
   return <>
     <TvView nativePaintBand="scrim" w={1920} h={1080} src={playerScrimSource()} preload />
     <Label
-      x={96}
+      x={LAYOUT.inset}
       y={64}
       size={30}
       font="Onest700"
       content={props.playback.card()?.title ?? ""}
     />
     <Label
-      x={96}
+      x={LAYOUT.inset}
       y={110}
       size={24}
       content={props.playback.card()?.subtitle ?? ""}
@@ -47,15 +48,15 @@ export function PlayerControlsView(props: { playback: PlaybackChrome; focus: Pla
     />
     <Show when={props.playback.canSeek()}>
       <TvView
-        x={96}
-        y={936}
-        w={1728}
+        x={LAYOUT.inset}
+        y={LAYOUT.timeline}
+        w={CONTENT_WIDTH}
         h={8}
         color="rgba(255,255,255,.14)"
       />
       {/* The buffer needs its own node: a For created after the played
           fill would append its quads over it. */}
-      <TvView x={96} y={936} w={1728} h={8}>
+      <TvView x={LAYOUT.inset} y={LAYOUT.timeline} w={CONTENT_WIDTH} h={8}>
         <For
           each={bufferedSegments(
             props.playback.snapshot()?.time.bufferedRanges,
@@ -64,9 +65,9 @@ export function PlayerControlsView(props: { playback: PlaybackChrome; focus: Pla
         >
           {(segment) => (
             <TvView
-              x={1728 * segment.left}
+              x={CONTENT_WIDTH * segment.left}
               y={0}
-              w={1728 * segment.width}
+              w={CONTENT_WIDTH * segment.width}
               h={8}
               color="rgba(255,255,255,.42)"
             />
@@ -74,10 +75,10 @@ export function PlayerControlsView(props: { playback: PlaybackChrome; focus: Pla
         </For>
       </TvView>
       <TvView
-        x={96}
-        y={936}
+        x={LAYOUT.inset}
+        y={LAYOUT.timeline}
         w={
-          1728 *
+          CONTENT_WIDTH *
           Math.min(
             1,
             (props.playback.snapshot()?.time.positionSeconds ?? 0) /
@@ -88,15 +89,15 @@ export function PlayerControlsView(props: { playback: PlaybackChrome; focus: Pla
         color={palette.accent}
       />
       <Show when={props.focus.timeline()}>
-        <TvView x={96 + 1728 * timelineFraction() - 6} y={930} w={12} h={20} color={palette.text} />
+        <TvView x={LAYOUT.inset + CONTENT_WIDTH * timelineFraction() - 6} y={930} w={12} h={20} color={palette.text} />
       </Show>
       <Show when={props.focus.preview() !== undefined}>
-        <TvView x={Math.max(96, Math.min(1704, 96 + 1728 * timelineFraction() - 60))} y={878} w={120} h={44} color={palette.surface}>
+        <TvView x={Math.max(LAYOUT.inset, Math.min(LAYOUT.rightEdge - 120, LAYOUT.inset + CONTENT_WIDTH * timelineFraction() - 60))} y={878} w={120} h={44} color={palette.surface}>
           <Label centerY={22} w={120} align="center" size={22} font="Onest700" content={clock(props.focus.preview() ?? 0)} />
         </TvView>
       </Show>
       <Label
-        x={96}
+        x={LAYOUT.inset}
         y={970}
         size={22}
         content={clock(props.playback.snapshot()?.time.positionSeconds ?? 0)}
@@ -112,8 +113,8 @@ export function PlayerControlsView(props: { playback: PlaybackChrome; focus: Pla
     </Show>
     <Show when={props.focus.preview() === undefined}>
     <Button
-      x={96}
-      y={846}
+      x={LAYOUT.inset}
+      y={LAYOUT.controlRow}
       w={160}
       h={56}
       icon={props.playback.snapshot()?.state === "playing" ? "pause" : "play"}
@@ -127,7 +128,7 @@ export function PlayerControlsView(props: { playback: PlaybackChrome; focus: Pla
           ? <SkipIntroButton label={button.label} focused={props.focus.selected() === index() + 1} />
           : <Button
               x={button.x}
-              y={846}
+              y={LAYOUT.controlRow}
               w={button.width}
               h={56}
               label={button.label}

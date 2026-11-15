@@ -2,6 +2,7 @@
 import { For, Show, type JSX } from "solid-js";
 import { TvView } from "../runtime";
 import { icon, Label, palette } from "./visuals";
+import { CONTENT_WIDTH, LAYOUT } from "./layout";
 
 export function TextEntryPanel(props: { title: string; numeric: boolean; secret: boolean; text: string; children: JSX.Element }) {
   return <>
@@ -97,9 +98,9 @@ export function TextEntryPanel(props: { title: string; numeric: boolean; secret:
         show={
           !props.numeric
         }
-        x={96}
+        x={LAYOUT.inset}
         y={195}
-        w={1728}
+        w={CONTENT_WIDTH}
         h={88}
         color={palette.surface}
       >

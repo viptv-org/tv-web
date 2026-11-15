@@ -5,6 +5,7 @@ import { avatar, icon, Label, outline, palette, topBarGradient } from "./visuals
 import { imageSource } from "./image-source";
 import { sdfTextMetrics } from "./text-measure";
 import type { NavigationItem } from "./navigation-model";
+import { FRAME, LAYOUT } from "./layout";
 import type { Profile } from "./types";
 import type { Screen } from "./app-types";
 
@@ -29,9 +30,9 @@ export function TopNavigation(props: { items: readonly NavigationItem[]; screen:
     });
   });
   return <>
-    <TvView w={1920} h={132} src={topBarGradient()} fit="cover" />
+    <TvView w={FRAME.width} h={LAYOUT.topBand} src={topBarGradient()} fit="cover" />
     <TvView
-      x={96}
+      x={LAYOUT.inset}
       y={44}
       w={44}
       h={44}

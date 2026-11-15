@@ -79,7 +79,7 @@ test('rapid focus never commits an intermediate preview and a late image cannot 
     await page.clock.runFor(32);
     for (const node of await nodes(page)) {
       if (node.text?.startsWith('Preview synopsis ')) seen.add(node.text);
-      if (node.w === 1920 && node.h === 1080 && node.src?.includes('/preview/')) seen.add(node.src);
+      if (node.w === 1920 && [824, 690, 545].includes(node.h) && node.src?.includes('/preview/')) seen.add(node.src);
     }
   }
   expect([...seen]).toContain('Preview synopsis 2');
@@ -87,7 +87,7 @@ test('rapid focus never commits an intermediate preview and a late image cannot 
   expect([...seen]).not.toContain(`${baseURL}/preview/1`);
   release();
   await page.clock.runFor(200);
-  await expect.poll(async () => (await nodes(page)).filter(node => node.w === 1920 && node.h === 1080 && node.src?.includes('/preview/')).map(node => node.src)).toEqual([`${baseURL}/preview/2`]);
+  await expect.poll(async () => (await nodes(page)).filter(node => node.w === 1920 && [824, 690, 545].includes(node.h) && node.src?.includes('/preview/')).map(node => node.src)).toEqual([`${baseURL}/preview/2`]);
   expect(fixture.requests.some(request => request.path.startsWith('/api/meta/') || request.path.endsWith('/viewing-action'))).toBe(false);
 });
 

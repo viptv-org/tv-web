@@ -8,6 +8,7 @@ import { HeroProgress } from "./Billboard";
 import { TitleMetadata as Metadata } from "./TitleMetadata";
 import { bottomTitleY } from "./title-layout";
 import { homeCardSize } from "./focus-frame";
+import { LAYOUT } from "./layout";
 import { Button, Label, palette } from "./visuals";
 import type { Card, Home, Row } from "./types";
 
@@ -30,14 +31,14 @@ export function HomeContent(props: HomeContentProps) {
   return <>
     <Show when={props.home?.complete && !props.hasHero}>
       <Label
-        x={96}
+        x={LAYOUT.inset}
         y={300}
         size={44}
         font="Onest700"
         content="Nothing here yet"
       />
       <Label
-        x={96}
+        x={LAYOUT.inset}
         y={375}
         size={28}
         color={palette.muted}
@@ -45,7 +46,7 @@ export function HomeContent(props: HomeContentProps) {
         content="Add an add-on in Settings to find something to watch."
       />
       <Button
-        x={96}
+        x={LAYOUT.inset}
         y={480}
         w={320}
         label="Open Settings"
@@ -55,7 +56,7 @@ export function HomeContent(props: HomeContentProps) {
     <Show when={props.presentation.mode() === "hero" ? props.presentation.card() : undefined}>
       {(card) => (
         <TvView
-          x={96}
+          x={LAYOUT.inset}
           y={props.focus.zone() === "rows" ? -700 : 330}
           w={1100}
           transition={{

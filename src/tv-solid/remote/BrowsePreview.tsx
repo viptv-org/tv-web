@@ -7,6 +7,7 @@ import { sdfTextMetrics } from "./text-measure";
 import { BRANDING_MOTION, homePreviewTop } from "./hero-layout";
 import { reducedMotion } from "./motion";
 import type { Card } from "./types";
+import { LAYOUT } from "./layout";
 
 export function BrowsePreview(props: { card: Card; summaryBottom?: number; externalLogo?: boolean }) {
   /** The summary sits in the space between the navigation and the focused
@@ -20,7 +21,7 @@ export function BrowsePreview(props: { card: Card; summaryBottom?: number; exter
     return 120 - lines * 57.6;
   };
   return (
-    <TvView x={96} y={summaryY()} transition={reducedMotion() ? undefined : BRANDING_MOTION}>
+    <TvView x={LAYOUT.inset} y={summaryY()} transition={reducedMotion() ? undefined : BRANDING_MOTION}>
       <Show
         when={props.card.logo}
         fallback={

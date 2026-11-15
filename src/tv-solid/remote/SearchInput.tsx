@@ -10,6 +10,7 @@ import {
 import { TvView } from "../runtime";
 import { icon, Label, palette } from "./visuals";
 import { sdfTextMetrics } from "./text-measure";
+import { LAYOUT } from "./layout";
 
 export const searchLetters = "abcdefghijklmnopqrstuvwxyz1234567890".split("");
 
@@ -49,7 +50,7 @@ export function SearchInput(props: {
   return (
     <>
       <TvView
-        x={96}
+        x={LAYOUT.inset}
         y={140}
         w={520}
         h={72}
@@ -80,7 +81,7 @@ export function SearchInput(props: {
           </Show>
         </TvView>
       </TvView>
-      <TvView x={96} y={236}>
+      <TvView x={LAYOUT.inset} y={236}>
         <For each={["space", "delete", ...searchLetters]}>
           {(value, index) => {
             const selected = () => props.focused && props.index === index();

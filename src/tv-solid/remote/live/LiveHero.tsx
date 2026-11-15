@@ -6,10 +6,11 @@ import { imageSource } from "../image-source";
 import { timeOfDay } from "../time";
 import { liveTitle } from "./title";
 import type { Channel, Program } from "../types";
+import { LAYOUT } from "../layout";
 
 export function LiveHero(props: { channel?: Channel; program?: Program }) {
   return <>
-    <TvView x={96} y={130} w={64} h={30} color="#FF5A4E">
+    <TvView x={LAYOUT.inset} y={130} w={64} h={30} color="#FF5A4E">
       <Label
         w={64}
         centerY={15}
@@ -34,7 +35,7 @@ export function LiveHero(props: { channel?: Channel; program?: Program }) {
       })()}
     />
     <Label
-      x={96}
+      x={LAYOUT.inset}
       y={174}
       size={56}
       font="Onest700"
@@ -51,7 +52,7 @@ export function LiveHero(props: { channel?: Channel; program?: Program }) {
       {(p) => (
         <>
           <Label
-            x={96}
+            x={LAYOUT.inset}
             y={250}
             size={24}
             font="Onest500"
@@ -69,7 +70,7 @@ export function LiveHero(props: { channel?: Channel; program?: Program }) {
             }`}
           />
           <Label
-            x={96}
+            x={LAYOUT.inset}
             y={316}
             size={28}
             maxwidth={1000}

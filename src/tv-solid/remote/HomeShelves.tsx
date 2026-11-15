@@ -7,6 +7,7 @@ import { reducedMotion } from "./motion";
 import { railLayout } from "./rail-layout";
 import { homeCardSize, focusFrameEdges } from "./focus-frame";
 import type { Card, Row } from "./types";
+import { CONTENT_WIDTH, LAYOUT } from "./layout";
 
 const CARD_SLOTS = 12;
 
@@ -62,7 +63,7 @@ export function HomeShelves(props: {
     });
   });
   return <>
-    <TvView x={96} y={530} w={1728} h={550} clipping>
+    <TvView x={LAYOUT.inset} y={530} w={CONTENT_WIDTH} h={550} clipping>
       <TvView y={origin()} transition={motion}>
       <KeyedFor each={window()} keyOf={model => model.slot}>
         {model => {

@@ -106,6 +106,7 @@ import { createPlayerMediaKeys } from "./input/player-media";
 import { installWindowInputs } from "./input/window-bindings";
 import { createTrackPicker } from "./player/tracks";
 import { SKIP_BUTTON, SKIP_FADE, SKIP_OFFER_MS, skipLabel, skipOffer } from "./player/skip-intro";
+import { LAYOUT } from "./layout";
 import { defineScreen, TvView } from "../runtime";
 import {
  exitWebos 
@@ -921,7 +922,7 @@ export function createRemoteTvApp(
         if (button.id === "skip")
           return { ...button, x: SKIP_BUTTON.x, width: SKIP_BUTTON.width, icon: "" };
         const width = button.id === "tracks" ? 304 : button.id === "next" ? 240 : 228;
-        const x = button.id === "next" ? 1584 : left;
+        const x = button.id === "next" ? LAYOUT.playerRight : left;
         if (button.id !== "next") left += width + 12;
         return { ...button, x, width, icon: button.id === "episodes" ? "episodes" : button.id === "tracks" ? "audio" : button.id === "sources" ? "settings" : "chevron" };
       });
@@ -3427,7 +3428,7 @@ export function createRemoteTvApp(
               {/* LIVE-EMPTY-001A: one broadcast frame, no chips, no preview, no
                   rows. The crop and its scrim are the contract's own. */}
               <Label
-                x={96}
+                x={LAYOUT.inset}
                 y={180}
                 size={26}
                 color={palette.muted}
@@ -3477,7 +3478,7 @@ export function createRemoteTvApp(
                   says so, under the chips that are its focus stop, instead of
                   reading as a missing source. */}
               <Show when={liveSpread() === "filtered"}>
-                <Label x={96} y={640} size={28} content={LIVE_FILTERED_LINE} />
+                <Label x={LAYOUT.inset} y={640} size={28} content={LIVE_FILTERED_LINE} />
               </Show>
               </Show>
             </Show>
@@ -3487,7 +3488,7 @@ export function createRemoteTvApp(
             </Show>
             </TvView>
             <Show when={screen() === "player" && !overlay() && advancing()}>
-              <Label x={96} y={790} size={26} content="Preparing next episode…" />
+              <Label x={LAYOUT.inset} y={790} size={26} content="Preparing next episode…" />
             </Show>
             {/* One button, one rect: the same SkipIntroButton the control row
                 draws. With the chrome hidden it offers itself for six seconds

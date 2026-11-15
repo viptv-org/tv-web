@@ -2,6 +2,7 @@
 import { For, Show } from "solid-js";
 import { TvView } from "../runtime";
 import { icon, Label, navIcon, outline, palette } from "./visuals";
+import { LAYOUT } from "./layout";
 
 interface SettingsRowPresentation {
   label: string;
@@ -25,7 +26,7 @@ export function SettingsView(props: SettingsViewProps) {
   return <>
     <TvView w={560} h={1080} color={palette.surface} />
     <Label
-      x={96}
+      x={LAYOUT.inset}
       y={96}
       size={44}
       font="Onest700"

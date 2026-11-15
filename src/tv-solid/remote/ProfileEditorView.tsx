@@ -4,12 +4,13 @@ import { TvView } from "../runtime";
 import { avatar, Button, Label, palette } from "./visuals";
 import type { Profile } from "./types";
 import type { Item } from "./app-types";
+import { LAYOUT } from "./layout";
 
 export function ProfileEditorView(props: { profile: Profile; items: readonly Item[]; selected: number }) {
   return (
     <TvView w={1920} h={1080} color={palette.bg}>
       <Label
-        x={96}
+        x={LAYOUT.inset}
         y={96}
         size={56}
         font="Onest700"

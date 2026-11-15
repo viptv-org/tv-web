@@ -11,6 +11,7 @@ import { TvView } from "../runtime";
 import { icon, Label, outline, palette } from "./visuals";
 import { sdfTextMetrics } from "./text-measure";
 import type { Pairing } from "./types";
+import { LAYOUT } from "./layout";
 import { easeProgress } from "./motion";
 
 export function PairingScreen(props: {
@@ -71,7 +72,7 @@ export function PairingScreen(props: {
   return (
     <>
       <Label
-        x={96}
+        x={LAYOUT.inset}
         y={96}
         size={56}
         font="Onest700"
@@ -79,7 +80,7 @@ export function PairingScreen(props: {
         content="Sign in to VIPTV"
       />
       <Label
-        x={96}
+        x={LAYOUT.inset}
         y={250}
         size={30}
         font="Onest700"
@@ -87,7 +88,7 @@ export function PairingScreen(props: {
         content="Scan with your phone"
       />
       <Label
-        x={96}
+        x={LAYOUT.inset}
         y={315.5}
         size={26}
         lineheight={1.45}
@@ -95,7 +96,7 @@ export function PairingScreen(props: {
         content="Point your camera at the code."
       />
       <Label
-        x={96}
+        x={LAYOUT.inset}
         y={353.5}
         size={26}
         lineheight={1.45}
@@ -103,7 +104,7 @@ export function PairingScreen(props: {
         content="You’ll finish on your phone and this TV signs in by itself."
       />
       <TvView
-        x={96}
+        x={LAYOUT.inset}
         y={422.9}
         w={340}
         h={340}
@@ -225,7 +226,7 @@ export function PairingScreen(props: {
         </TvView>
       </Show>
       <TvView
-        x={96}
+        x={LAYOUT.inset}
         y={909}
         w={12}
         h={12}

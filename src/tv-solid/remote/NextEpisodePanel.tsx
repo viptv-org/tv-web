@@ -5,6 +5,7 @@ import { Button, Label, palette } from "./visuals";
 import { reducedMotion } from "./motion";
 import type { Card } from "./types";
 import type { CountdownState } from "./autoplay-countdown";
+import { LAYOUT } from "./layout";
 
 const isRokuUi = typeof (globalThis as any).__SolidTVRokuRenderer !== "undefined";
 const nextPanelMotion = {
@@ -15,7 +16,7 @@ const nextPanelMotion = {
 export function NextEpisodePanel(props: { currentTitle: string; episode?: Card; countdown: CountdownState; selected: number; entered: boolean }) {
   return <>
     <TvView w={1920} h={1080} zIndex={-1} src={`${import.meta.env.BASE_URL}assets/player/end-scrim.png`} />
-    <TvView x={96} y={reducedMotion() || props.entered ? 616 : 632} alpha={reducedMotion() || props.entered ? 1 : 0} transition={reducedMotion() ? undefined : nextPanelMotion}>
+    <TvView x={LAYOUT.inset} y={reducedMotion() || props.entered ? 616 : 632} alpha={reducedMotion() || props.entered ? 1 : 0} transition={reducedMotion() ? undefined : nextPanelMotion}>
       <Label w={900} maxlines={1} size={22} content={`${props.currentTitle} · Credits`} color={palette.body} />
     </TvView>
     <TvView x={1040} y={reducedMotion() || props.entered ? 120 : 136} w={784} h={520} alpha={reducedMotion() || props.entered ? 1 : 0} transition={reducedMotion() ? undefined : nextPanelMotion}>

@@ -5,6 +5,7 @@ import { Label, palette } from "../visuals";
 import { timeOfDay } from "../time";
 import { liveTitle } from "./title";
 import type { Channel, Program } from "../types";
+import { CONTENT_WIDTH, LAYOUT } from "../layout";
 
 interface GuideWindow { row: Accessor<number>; start: Accessor<number>; now: Accessor<number> }
 interface GuideSelection { index: Accessor<number>; active: Accessor<boolean>; program: Accessor<string | undefined> }
@@ -34,7 +35,7 @@ export function LiveGuideGrid(props: { channels: readonly Channel[]; programs: R
         )}
       </For>
     </Show>
-    <TvView x={96} y={636} w={1728} h={408} clipping={true}>
+    <TvView x={LAYOUT.inset} y={636} w={CONTENT_WIDTH} h={408} clipping={true}>
       <For
         each={props.channels.slice(
           Math.max(0, props.window.row()),

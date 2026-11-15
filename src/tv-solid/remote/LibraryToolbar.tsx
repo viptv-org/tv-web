@@ -3,6 +3,7 @@ import { createMemo, Show } from "solid-js";
 import { TvView } from "../runtime";
 import { icon, Label, palette } from "./visuals";
 import { sdfTextMetrics } from "./text-measure";
+import { LAYOUT } from "./layout";
 import type { Control, LibraryQuery } from "./types";
 
 const valueLabel = (
@@ -91,7 +92,7 @@ export function LibraryToolbar(props: {
     76 +
     titleWidth(props.type?.label ?? "Type") +
     Math.ceil(sdfTextMetrics("24px Onest600").measureText(typeValue()).width);
-  const sortX = () => 96 + typeWidth() + 12;
+  const sortX = () => LAYOUT.inset + typeWidth() + LAYOUT.controlGap;
   const sortWidth = () =>
     76 +
     titleWidth(props.sort?.label ?? "Sort") +
@@ -102,7 +103,7 @@ export function LibraryToolbar(props: {
     <TvView y={140}>
       <Show when={props.type}>
         <FilterPill
-          x={96}
+          x={LAYOUT.inset}
           title="Type"
           value={typeValue()}
           focused={props.focused && props.index === 0}
