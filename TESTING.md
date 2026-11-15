@@ -1,3 +1,44 @@
+# TV UI polish — `feature/tv-ui-polish` (branch work, no issue)
+
+Systemic motion, hero, loading, skip and layout pass over the SolidTV TV
+screens. Every animated path now runs on the renderer's clock and ends on a
+reported completion: the source drawer (`settled`/`closed` events, no timers),
+the busy surface (one geometry, native spinner), the hero progress bar (a
+countdown that shrinks), the splash, and the detail body (one 200 ms arrive
+fade, replacing the skeleton that pulsed on a 1100 ms interval under a 1000 ms
+transition). Playback is prewarmed when the source drawer opens and once after
+Home's first paint, never between the press and the first frame. The hero is an
+ambient band that ends on the poster carousel's line and dissolves over its
+bottom 35% through one baked scrim that travels with each frame, so a band that
+changes height while its artwork crossfades dissolves instead of snapping.
+Skip intro is Netflix's offer: one button in one rect, offered for six seconds,
+withdrawn into the control row, gone with the segment, and the remote's
+play/pause key skips while a segment is current (`MediaPause` still pauses).
+Layout edges come from one module (`layout.ts`), with the same values as the
+literals they replaced.
+
+Browser evidence: typecheck and `npm run build` pass; 499 shared unit tests,
+including new suites for the band geometry (`hero-stage`), the skip state
+machine (`skip-intro`), the segment/offer window (`playback-segments`) and the
+busy surface. Playwright (actual WebGL and Canvas modes, browser-simulated):
+hero-layering, hero-branding (16), hero-variant, hero-carousel (featured wrap),
+continue-preview, slow-artwork, polish (focused hero backdrop), layout-audit
+(7, including the cross-screen grid and the player's row/timeline lines),
+presentation-controls and source-preparation (18), skip-controls (6, including
+the six-second withdrawal and the play-key skip), episode-autoplay (22),
+episode-cards, detail-focus, navigation, search, library, settings, calendar,
+channel-window, live-guide-window, live-snapshot, home-focus, browse,
+content-focus.
+
+Known-unqualified on this host: the 5 s HLS fixture ends before the 5 s control
+auto-hide, so that transition is unmeasured; the software rasteriser cannot meet
+a 16.8 ms frame-gap budget, so no frame-rate claim is made (see PERFORMANCE.md);
+`billboard` (featured parking), the poster-wall saver, the polish shelf-node
+reuse case and the two heavy `audit` traversals fail identically at the previous
+commit on this host, so they are pre-existing environment failures rather than
+regressions. Physical TV, real media and vendor firmware remain unverified for
+all of the above.
+
 # Idle featured carousel — issue #162
 
 The owner requests looping Home featured titles and a moving featured saver, superseding the previous once-and-park rule. One visible presentation/clock owns eligible Home or the foreground saver; unsupported/empty data retains the static saver fallback. Prepared frames move horizontally inside the existing clipped composition, remain opaque through interruption, and retire after x/alpha completion. Input returns requested selection to the committed shown title before actions. Home Play/Save/Info/hold/menu/press authority uses that shown card; Detail's existing fresh server target remains unchanged. Profile/OS reduced motion retains nine-second title cuts without x/indicator animation.

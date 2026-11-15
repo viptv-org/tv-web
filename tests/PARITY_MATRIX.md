@@ -1,3 +1,14 @@
+# TV UI polish — motion, hero band, skip offer, layout grid
+
+| State | Browser evidence | Device limit |
+| --- | --- | --- |
+| Drawer open/close | Completion-driven renderer-clock run; scene never resizes; browser cases drive open/close and read the settled state | Browser only; physical drawer animation unverified |
+| Busy surface | One rect `800,476,320,132` with a 56×56 native spinner at `932,476`; source-preparation (18 cases) and layout-audit assert it | Native spinner path is a logical model, not SceneGraph pixel evidence |
+| Ambient hero band | Canvas/WebGL cases assert the band ends on the carousel line (824/690/545), the proxy blur, the per-frame scrim paint order, and the synopsis wash bound over pure white | Proxy blur is requested through the validated URI; the fixture does not simulate server blur |
+| Detail arrival | Delayed-title case holds the page ground with no placeholder geometry, then the body arrives | Browser only |
+| Skip offer | Six-second offer, 200 ms withdrawal, row re-attachment, gone with the segment, play-key skip with pause preserved | Browser key events; remote firmware key codes unverified |
+| Layout grid | Cross-screen audit: no text left of the inset, Home/Library/Live anchor on it, player row 846 and timeline 936 at content width | Browser geometry only; the frame is logical and scaled by the renderer |
+
 # Poster preview and avatar refinement
 
 | State | Browser evidence | Device limit |

@@ -1,3 +1,37 @@
+# TV UI polish — 2026-11-15
+
+Motion in this build is owned by the renderer's frame clock, not by timers or by
+the browser's event loop. The changes are structural, so the measurements that
+back them are about *what is animating* rather than about a faster CPU path:
+
+| Path | Before | After |
+| --- | --- | --- |
+| Source drawer open/close | slide driven by `setTimeout`, scene resized twice | renderer-clock run, completion reported by the drawer, scene never resizes |
+| Busy spinner / seek indicator | `setInterval` rotation, two geometries | native `rotation` run, one rect (`800,476,320,132`, spinner `932,476`) |
+| Home featured progress | CSS-style width steps | native `w` run (countdown from full to empty) |
+| Splash brand + indicator | timer-driven fade | native `alpha`/`x` runs on named cubic-bezier easings |
+| Hero artwork | sharp panel + one baked full-screen mask | blurred ambient band with a per-frame scrim that crossfades |
+| Detail load | pulsing skeleton (1100 ms interval under a 1000 ms transition) | page ground, then one 200 ms arrive fade |
+| Playback engine | started after Play | prewarmed when the source drawer opens and once after Home's first paint |
+
+`tests/preview/remote-transitions.mjs` is the harness for the transitions
+(drawer open/close, controls show/hide, hero swap). It installs the browser
+fixture, drives the remote, and samples frame gaps per transition.
+
+**Measurement status on this host: not a frame-rate claim.** The harness runs
+under a software rasteriser (SwiftShader) at 1920×1080 with 4× CPU throttling,
+where a frame-gap p95 ≤ 16.8 ms is not achievable regardless of the code, and
+the 5 s HLS fixture ends before the 5 s control auto-hide completes, so
+`player-controls-hide` is recorded as skipped. The single baseline run
+(`/tmp/tv-transitions-baseline.json`, 2026-11-15) produced no usable per-transition
+samples for that reason. What the work does establish is the mechanism: every
+animated property now advances on the renderer's frame clock, animation settings
+are module constants (so a re-render retargets a run instead of restarting it),
+and no animation completion is inferred from a timer.
+
+A hardware run of the same harness — same fixture, same transitions, real GPU —
+is the remaining measurement, and no such evidence exists yet.
+
 # Native compositor and Home readiness — 2026-11-11
 
 Roku build 11128 (TV source 92d3eb7, Solid fork 451dcbcc, Solid 1.9.17) runs shelf

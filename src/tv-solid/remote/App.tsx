@@ -31,7 +31,8 @@ import {
 } from "./SearchChannels";
 import { reloadImages } from "./image-source";
 import { clearLogoCache } from "./visuals";
-import { CalendarBoard, calendarDayKey, calendarDays } from "./CalendarBoard";
+import { CalendarBoard } from "./CalendarBoard";
+import { createCalendarScene } from "./calendar-scene";
 import { StatusDialog } from "./StatusDialog";
 import { initialSeasonIndex, seasonEpisodes } from "./seasons";
 import { RowFocus } from "./row-focus";
@@ -105,7 +106,8 @@ import { createNativeTextEditing, nativeTextDialogOverlay, type NativeTextPort, 
 import { createPlayerMediaKeys } from "./input/player-media";
 import { installWindowInputs } from "./input/window-bindings";
 import { createTrackPicker } from "./player/tracks";
-import { SKIP_BUTTON, SKIP_FADE, SKIP_OFFER_MS, skipLabel, skipOffer } from "./player/skip-intro";
+import { SKIP_BUTTON, SKIP_FADE, skipLabel } from "./player/skip-intro";
+import { createPlaybackSegments } from "./player/segments";
 import { LAYOUT } from "./layout";
 import { defineScreen, TvView } from "../runtime";
 import {
@@ -203,12 +205,9 @@ import {
   type Preferences,
   type Program,
   type Guide,
-  type CalendarEntry,
-  type CalendarSnapshot,
   type Source,
   type SourcePage,
   type TitleAction,
-  type PlaybackSegment
 } from "./types";
 import type { PlayerSnapshot } from "../../../vendor/video/src/types";
 
@@ -486,23 +485,15 @@ export function createRemoteTvApp(
     const [advancing, setAdvancing] = createSignal(false);
     let nextIntent = 0, sourceAttempt = 0, sourceIntent = 0, dismissedEnd = "", manualPresentation: { source: string; card: string; scope: string; title: string } | undefined;
     const countdown = new AutoplayCountdown(setCountdownState);
-    const [calendar, setCalendar] = createSignal<CalendarSnapshot>();
-    const [calendarDay, setCalendarDay] = createSignal(0);
-    const [calendarEntry, setCalendarEntry] = createSignal(0);
-    const calendarDaysList = createMemo(() =>
-      calendarDays(calendar()?.entries ?? []),
-    );
-    const calendarDayEntries = createMemo(() => {
-      const day = calendarDaysList()[calendarDay()];
-      if (!day) return [];
-      return (calendar()?.entries ?? []).filter((entry: CalendarEntry) => {
-        const date = new Date(entry.date);
-        return (
-          !Number.isNaN(date.getTime()) &&
-          calendarDayKey(date) === day.key
-        );
-      });
-    });
+    const calendarScene = createCalendarScene();
+    const calendar = calendarScene.snapshot;
+    const setCalendar = calendarScene.setSnapshot;
+    const calendarDay = calendarScene.day;
+    const setCalendarDay = calendarScene.setDay;
+    const calendarEntry = calendarScene.entry;
+    const setCalendarEntry = calendarScene.setEntry;
+    const calendarDaysList = calendarScene.days;
+    const calendarDayEntries = calendarScene.entries;
     const {providers: sourceProviders, visible: visibleSources, qualityOptions: qualityMenuOptions, providerOptions: providerMenuOptions,
       quality: sourceQualityValue, provider: sourceProviderValue, focused: focusedSource, addonCount: sourceAddonCount, spread: sourceSpread} = createSourcePresentation({
         sources, page: sourcePage, provider: {current: sourceProviderFilter, clear: () => { setSourceProviderFilter(undefined); }}, height: sourceHeight,
@@ -516,7 +507,6 @@ export function createRemoteTvApp(
       [pauseRequested, setPauseRequested] = createSignal(false),
       [seek, setSeek] = createSignal<number>(),
       [seeking, setSeeking] = createSignal(false),
-      [playbackSegments, setPlaybackSegments] = createSignal<PlaybackSegment[]>([]),
       [settingsTab, setSettingsTab] = createSignal(0),
       [settingsItems, setSettingsItems] = createSignal<Item[]>([]),
       // Household writes need an account session. `/api/bootstrap` omits the
@@ -841,48 +831,18 @@ export function createRemoteTvApp(
       snapshot();
       return player.actions;
     });
-    const activeSegment = createMemo(() => {
-      const position = (snapshot()?.time.positionSeconds ?? 0) * 1000;
-      return playbackSegments().find(
-        (segment) =>
-          segment.kind !== "credits" && Number.isFinite(segment.start_ms) && Number.isFinite(segment.end_ms) &&
-          segment.start_ms >= 0 && segment.end_ms > segment.start_ms &&
-          (!(snapshot()?.time.durationSeconds! > 0) || segment.end_ms <= (snapshot()!.time.durationSeconds ?? 0) * 1000) &&
-          position >= segment.start_ms &&
-          position < segment.end_ms,
-      );
+    const segments = createPlaybackSegments({
+      lease: () => player.leaseId,
+      signal: () => scope.signal,
+      snapshot,
+      fetch: (lease, signal) => api.segments(lease, signal),
+      skipEnabled: () => preferences()?.preferences?.skip_intros !== false,
+      canSeek: () => playerActions().seek,
     });
-    /** Skip is offered while the server marks a segment and the profile allows
-     * it; the button then withdraws itself into the control row. The clock only
-     * restarts when a different segment becomes current: the player's action
-     * object changes identity on every tick, and re-arming from it would keep
-     * the offer alive for the whole cold open. */
+    const activeSegment = segments.active;
     const skipEnabled = () => preferences()?.preferences?.skip_intros !== false;
-    const [skipOffered, setSkipOffered] = createSignal(false);
-    let offeredSegment: PlaybackSegment | undefined;
-    let skipTimer: ReturnType<typeof setTimeout> | undefined;
-    createEffect(() => {
-      const segment = activeSegment();
-      if (segment === offeredSegment) return;
-      offeredSegment = segment;
-      clearTimeout(skipTimer);
-      const wanted = !!segment && skipEnabled() && playerActions().seek;
-      setSkipOffered(!!wanted);
-      if (wanted) skipTimer = setTimeout(() => setSkipOffered(false), SKIP_OFFER_MS);
-    });
-    onCleanup(() => clearTimeout(skipTimer));
-    const skipStage = () => skipOffer(activeSegment(), skipEnabled(), playerActions().seek, skipOffered() ? 0 : SKIP_OFFER_MS);    async function refreshPlaybackSegments() {      const id = player.leaseId;
-      if (!id) {
-        setPlaybackSegments([]);
-        return;
-      }
-      try {
-        const value = await api.segments(id, scope.signal);
-        if (player.leaseId === id) setPlaybackSegments(value.segments ?? []);
-      } catch {
-        if (player.leaseId === id) setPlaybackSegments([]);
-      }
-    }
+    const skipStage = segments.stage;
+    async function refreshPlaybackSegments() { await segments.refresh(); }
     const playerButtons = createMemo(() => {
       snapshot();
       // These controls replace the server lease; native track APIs are not
@@ -1942,7 +1902,7 @@ export function createRemoteTvApp(
       resetScope();
       setSeek(undefined);
       setSeeking(false);
-      setPlaybackSegments([]);
+      segments.clear();
       setShowControls(false);
       await player.stop();
       const progressSettled = player.flushProgress();
@@ -2297,7 +2257,7 @@ export function createRemoteTvApp(
       setShowControls(true);
       setChoice(0);
       setSourceFailure("");
-      setPlaybackSegments([]);
+      segments.clear();
       // The drawer stays up while the chosen stream opens, so its status line
       // reports the contract's `Opening stream…` from the player's real
       // preparation instead of a timer, and a second press cannot start a
@@ -2768,7 +2728,7 @@ export function createRemoteTvApp(
       signal: () => sourceScope?.signal ?? scope.signal, rank: (ids, height, signal, reuse) => api.rankSources(ids, height, signal, reuse), play: playSource});
     const activatePlayer = createPlayerActivation({player, snapshot, setPlaying: playerTransport.setPlaying, actions: playerActions, action: activeAction, channel: activeChannel, choice, buttons: playerButtons,
       timeline: {value: seek, set: setSeek, seeking: setSeeking}, chrome: {visible: showControls, set: setShowControls, hide: hideControls},
-      segments: {active: activeSegment, clear: () => {setPlaybackSegments([]);}, refresh: refreshPlaybackSegments},
+      segments: {active: activeSegment, clear: segments.clear, refresh: refreshPlaybackSegments},
       skipEnabled: () => preferences()?.preferences.skip_intros !== false, next: advanceEpisode, tracks: openTracks, play: playIntent,
       details: card => api.detail(card, "0", scope.signal), dialogs: {open: openOverlay}});
     const chooseSeason = createSeasonPicker({current: detail, adopt: setDetail, season: {current: seasonIndex, set: setSeasonIndex},
@@ -3192,7 +3152,7 @@ export function createRemoteTvApp(
         pair: beginPairing, stop: leavePlayer, text: setText, query: search, search: updateSearch, fail,
         media: createPlayerMediaKeys({player, snapshot, setPlaying: playerTransport.setPlaying, actions: playerActions, active: activeAction, seeking: {current: seeking, set: setSeeking},
           revealEnded: revealEndedControls, play: playIntent, chrome: {show: setShowControls, hide: hideControls},
-          segments: {clear: () => {setPlaybackSegments([]);}, refresh: refreshPlaybackSegments,
+          segments: {clear: segments.clear, refresh: refreshPlaybackSegments,
             active: activeSegment, skipEnabled: skipEnabled}, fail})});
       onCleanup(installWindowInputs({keyboard: event => {
         if (event.key.length === 1 && handleIdleInput()) { event.preventDefault(); return; }
