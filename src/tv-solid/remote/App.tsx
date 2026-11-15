@@ -7,49 +7,27 @@ import { createSourceStartPosition } from "./resume-position";
 import { EpisodePreparation, episodeKey, type EpisodePreparationState } from "./episode-preparation";
 import { AutoplayCountdown, type CountdownState } from "./autoplay-countdown";
 import { Show, batch, createEffect, createMemo, createSignal, onCleanup, untrack, onMount } from "solid-js";
-import {
- EntryScreen 
-} from "./EntryScreens";
-import {
- PairingScreen 
-} from "./PairingScreen";
-import {
- ProfilesScreen 
-} from "./ProfilesScreen";
-import {
- SignedIn 
-} from "./SignedIn";
-import {
- PosterWall 
-} from "./PosterWall";
 import { searchLetters } from "./SearchInput";
 import { reloadImages } from "./image-source";
 import { clearLogoCache } from "./visuals";
-import { CalendarBoard } from "./CalendarBoard";
 import { createCalendarScene } from "./calendar-scene";
 import { createSettingsScene } from "./settings-scene";
 import { LiveScreen } from "./render/live";
 import { PlayerChrome } from "./render/player";
 import { BrowseScreen } from "./render/browse";
-import { StatusDialog } from "./StatusDialog";
+import { EntryScreensView } from "./render/entry";
+import { ProfilesView } from "./render/profiles";
+import { CalendarView } from "./render/calendar";
+import { HomeView } from "./render/home";
+import { DetailView } from "./render/detail";
+import { AppOverlays, IdleSaver } from "./render/overlays";
 import { initialSeasonIndex, seasonEpisodes } from "./seasons";
 import { RowFocus } from "./row-focus";
-import { HomeContent } from "./HomeContent";
 
-import { DetailContent } from "./DetailContent";
-import { PlaybackPreparation } from "./PlaybackPreparation";
 import { SettingsView } from "./SettingsView";
-import { OverlayViewport } from "./OverlayViewport";
 import { createLiveGuideController } from "./live/guide-controller";
 import { searchRowFocus } from "./search/media";
 import type { SearchPage } from "./types";
-import { SlidingDrawer } from "./SlidingDrawer";
-import { SourceFooter } from "./source-picker/SourceFooter";
-import { SourceActionsPanel } from "./source-picker/SourceActionsPanel";
-import { SourceOptionsMenu } from "./source-picker/SourceOptionsMenu";
-import { SourceHeading } from "./source-picker/SourceHeading";
-import { SourceFilters } from "./source-picker/SourceFilters";
-import { SourceList } from "./source-picker/SourceList";
 import { createDetailRefresh } from "./detail-refresh";
 import { whenIdle } from "./idle";
 import { createProgressFreshness } from "./progress-freshness";
@@ -70,15 +48,9 @@ import { createSourceIntent } from "./source-picker/intent";
 import { startSourceCandidate } from "./source-picker/start-candidate";
 import { sourceActionOptions, type SourceMenuOption } from "./source-picker/options";
 import { TopNavigation } from "./TopNavigation";
-import { ProfileEditorView } from "./ProfileEditorView";
 import { availableNavigation } from "./navigation-model";
 
-import { NextEpisodePanel } from "./NextEpisodePanel";
 import { KeyboardView } from "./KeyboardView";
-import { TextEntryPanel } from "./TextEntryPanel";
-import { CalibrationPanel } from "./CalibrationPanel";
-import { TracksDrawer } from "./TracksDrawer";
-import { ChoiceDrawer } from "./ChoiceDrawer";
 import { createCoherentHero, HeroArtwork } from "./CoherentHero";
 import { compactDetail, detailLogoBox, homeLogoBox } from "./hero-layout";
 import { CAROUSEL_TOP } from "./hero-stage";
@@ -102,7 +74,7 @@ import { defineScreen, TvView } from "../runtime";
 import {
  exitWebos 
 } from "../webos";
-import { Label, palette } from "./visuals";
+import { palette } from "./visuals";
 import {
   RemoteTvApi,
   lookupSelector,
@@ -123,8 +95,6 @@ import {
 } from "./liveEmpty";
 import { guideWindowOf } from "./guideWindow";
 import {
-  sourceEmptyCopy,
-  sourceStatusCopy,
 } from "./sourceStatus";
 import {
  RemotePlayback 
@@ -3149,61 +3119,29 @@ export function createRemoteTvApp(
               <TopNavigation items={navs()} screen={screen()} selected={zone() === "nav" ? column() : undefined}
                 profile={management()?.profiles.find(profile => profile.id === api.profile)} fontReady={fontsReady()} />
             </Show>
-            <Show when={screen() === "welcome"}>
-              <EntryScreen
-                loading={loading()}
-                focused={!loading() && !error()}
-              />
-            </Show>
-            <Show when={screen() === "pairing"}>
-              <PairingScreen
-                pairing={pairing()}
-                qr={qr()}
-                deadline={pairingDeadline()}
-                focused={pairingFocused() && !loading() && !error()}
-              />
-            </Show>
-            <Show when={screen() === "signed-in" && signedIn()}>
-              {(value) => (
-                <SignedIn bootstrap={value()} onComplete={finishSignIn} />
-              )}
-            </Show>
-            <Show when={screen() === "profiles"}>
-              <ProfilesScreen
-                profiles={management()?.profiles ?? []}
-                create={available(management()?.capabilities.create)}
-                manage={canManageProfiles()}
-                index={column()}
-                zone={zone()}
-                loading={loading()}
-              />
-            </Show>
-            <Show when={screen() === "calendar"}>
-              <CalendarBoard
-                entries={calendar()?.entries ?? []}
-                days={calendarDaysList()}
-                day={calendarDay()}
-                active={calendarEntry()}
-                dayFocused={zone() === "calendar-days"}
-                listFocused={zone() === "calendar-list"}
-                watchFocused={zone() === "calendar-watch"}
-                loading={loading()}
-                error={error()}
-              />
-            </Show>
-            <Show when={screen() === "home"}>
-              <HomeContent home={home()} hasHero={!!hero()} presentation={{card: displayHero, mode: heroPresentation.mode}}
-                focus={{zone, row, column, action: heroAction}} billboard={{slide: () => Math.max(0, displayedFeatured()), started: heroCycle.started, active: () => heroCycle.active() && heroCycle.animated()}}
-                shelfTop={shelfTitleY()} columnForRow={shelf => homeRowFocus.resolve(shelf)} isSaved={isSaved} />
-            </Show>
-            <Show when={screen() === "detail"}>
-              <DetailContent detail={detailForDisplay()}
-                hasEpisodes={detailHasEpisodes()} episodes={detailEpisodes()} zone={zone()} column={column()}
-                heroAction={heroAction()} seasonIndex={seasonIndex()} episodeColumn={detailColumn("episodes")}
-                recommendationColumn={detailColumn("recommendations")} actionLabel={detailActionLabel()}
-                progress={detailPlayProgress()}
-                saved={!!detailForDisplay() && isSaved(detailForDisplay()!.item)} />
-            </Show>
+            <EntryScreensView screen={screen()} entry={{ loading: loading(), focused: !loading() && !error() }}
+              pairing={pairing()} pairingQr={qr()} pairingDeadline={pairingDeadline()}
+              pairingFocused={pairingFocused() && !loading() && !error()}
+              signedIn={signedIn()} onSignedIn={finishSignIn} />
+            <ProfilesView screen={screen()} profiles={{ profiles: management()?.profiles ?? [],
+              create: available(management()?.capabilities.create), manage: canManageProfiles(),
+              index: column(), zone: zone(), loading: loading() }} />
+            <CalendarView screen={screen()} board={{ entries: calendar()?.entries ?? [], days: calendarDaysList(),
+              day: calendarDay(), active: calendarEntry(), dayFocused: zone() === "calendar-days",
+              listFocused: zone() === "calendar-list", watchFocused: zone() === "calendar-watch",
+              loading: loading(), error: error() }} />
+            <HomeView screen={screen()} content={{ home: home(), hasHero: !!hero(),
+              presentation: {card: displayHero, mode: heroPresentation.mode},
+              focus: {zone, row, column, action: heroAction},
+              billboard: {slide: () => Math.max(0, displayedFeatured()), started: heroCycle.started,
+                active: () => heroCycle.active() && heroCycle.animated()},
+              shelfTop: shelfTitleY(), columnForRow: shelf => homeRowFocus.resolve(shelf), isSaved }} />
+            <DetailView screen={screen()} content={{ detail: detailForDisplay(),
+              hasEpisodes: detailHasEpisodes(), episodes: detailEpisodes(), zone: zone(), column: column(),
+              heroAction: heroAction(), seasonIndex: seasonIndex(), episodeColumn: detailColumn("episodes"),
+              recommendationColumn: detailColumn("recommendations"), actionLabel: detailActionLabel(),
+              progress: detailPlayProgress(),
+              saved: !!detailForDisplay() && isSaved(detailForDisplay()!.item) }} />
             <BrowseScreen screen={screen()} zone={zone} column={column} key={key} search={search}
               searchCapabilities={searchCapabilities()} searchResults={searchResults()} searchError={searchError}
               library={library()} libraryType={libraryType()} librarySort={librarySort()} libraryFilters={libraryFilters()}
@@ -3236,94 +3174,21 @@ export function createRemoteTvApp(
               segment={activeSegment()} snapshot={snapshot} action={activeAction()} canSeek={() => playerActions().seek}
               tools={playerTools} choice={choice} timelineFocused={timelineFocused} preview={seek} />
           </TvView>
-          <Show when={!openingSource() ? overlay() : undefined}>
-            {(modal) => (
-              <OverlayViewport order={10} shade={modal().kind !== "next" ? "rgba(0,0,0,.6)" : undefined} shadeWidth={1920}>
-                <Show when={modal().kind === "next"}>
-                  <NextEpisodePanel currentTitle={activeAction()?.card.title ?? "Episode"} episode={episodeState().item}
-                    countdown={countdownState()} selected={choice()} entered={overlayEntered()} />
-                </Show>
-                <Show when={modal().kind === "calibration"}>
-                  <CalibrationPanel title={modal().title} value={calibrationValue()} />
-                </Show>
-                <Show when={modal().kind === "sources"}>
-                  <SlidingDrawer width={960} entered={overlayEntered()} closing={overlayClosing()} onSettled={reportOverlaySettled}>
-                    <SourceHeading title={pickerCard()?.title ?? ""} checking={sourceLoading() && !sources().length}
-                      count={sourcePage()?.total ?? sources().length} addons={sourceAddonCount()} />
-                    <Show when={!sourceMenu() && !sourceActions()}>
-                    <SourceFilters quality={sourceQualityValue()} provider={sourceProviderValue()} focused={sourceFilterFocus() ? sourceFacet() : undefined} />
-                    <SourceList sources={visibleSources()} selected={choice()} focused={!sourceFilterFocus()}
-                      bestMatch={sourcePage()?.best_match_id ?? undefined} failed={failedSources()} />
-                    </Show>
-                    <Show when={sourceMenu()}>
-                      <SourceOptionsMenu kind={sourceMenu()!} options={sourceMenuOptions()} selected={sourceMenuChoice()}
-                        matches={option => sourceMenu() === "quality" ? option.height === sourceHeight() : option.provider === sourceProviderFilter()} />
-                    </Show>
-                    <Show when={sourceActions()}><SourceActionsPanel source={focusedSource()} selected={sourceActionChoice()} /></Show>
-                    <SourceFooter empty={sourceEmptyCopy(sourceSpread())} status={sourceStatusCopy(sourceSpread())} failure={sourceFailure()}
-                      filtered={!sourceEmptyCopy(sourceSpread()) && sources().length > 0 && visibleSources().length === 0} />
-                  </SlidingDrawer>
-                </Show>
-                <Show
-                  when={
-                    (modal().kind === "choices" ||
-                      modal().kind === "confirm") &&
-                    !profileEditor()
-                  }
-                >
-                  <ChoiceDrawer dialog={modal() as Extract<Overlay, { kind: "choices" | "confirm" }>} selected={choice()} entered={overlayEntered()} closing={overlayClosing()} onSettled={reportOverlaySettled} />
-                </Show>
-                <Show when={profileEditor()}>
-                  {editor => <ProfileEditorView profile={management()?.profiles.find(profile => profile.id === editor().profile!.id) ?? editor().profile!}
-                    items={editor().items} selected={choice()} />}
-                </Show>
-                <Show when={modal().kind === "tracks"}>
-                  <TracksDrawer columns={(modal() as Extract<Overlay, { kind: "tracks" }>).columns} column={trackColumn()} selected={choice()} />
-                </Show>
-                <Show when={modal().kind === "text"}>
-                  <TextEntryPanel title={modal().title} numeric={!!(modal() as Extract<Overlay, { kind: "text" }>).numeric} secret={!!(modal() as Extract<Overlay, { kind: "text" }>).secret} text={text()}>{keyboard(true)}</TextEntryPanel>
-                </Show>
-              </OverlayViewport>
-            )}
-          </Show>
-          <Show when={(openingSource() || sourceLoading() && !overlay() && screen() !== "player") && !error()}>
-            <OverlayViewport order={15} shade={palette.bg} shadeWidth={1920}>
-              <PlaybackPreparation card={pickerCard()} />
-            </OverlayViewport>
-          </Show>
-          <Show when={error()}>
-            <OverlayViewport order={20} shade="rgba(0,0,0,.55)">
-            <StatusDialog
-              title="Couldn’t continue"
-              message={error()}
-              action={screen() === "player" ? "Choose a source" : "Try again"}
-            />
-            </OverlayViewport>
-          </Show>
-          <Show when={notice() || pending()}>
-            <TvView
-              x={560}
-              y={960}
-              w={800}
-              h={72}
-              color={palette.surface}
-            >
-              <Label
-                w={800}
-                centerY={36}
-                align="center"
-                size={24}
-                content={pending() ? (screen() === "settings" || profileEditor() ? "Saving…" : "Loading…") : notice()}
-              />
-            </TvView>
-          </Show>
-          </TvView>
-          <Show when={screenSaver()}>
-            <OverlayViewport order={40}>
-              <PosterWall featured={home()?.featured} slide={heroSlide()} />
-              <TvView w={1920} h={1080} color="rgba(11,11,12,.72)" />
-            </OverlayViewport>
-          </Show>
+          <AppOverlays screen={screen()} openingSource={!!openingSource()} overlay={overlay()}
+            entered={overlayEntered()} closing={overlayClosing()} settled={reportOverlaySettled}
+            sourceLoading={sourceLoading()} pickerCard={pickerCard()} sources={sources()} visibleSources={visibleSources()}
+            sourcePage={sourcePage()} sourceAddonCount={sourceAddonCount()} sourceMenu={sourceMenu()}
+            sourceMenuOptions={sourceMenuOptions()} sourceMenuChoice={sourceMenuChoice()} sourceHeight={sourceHeight()}
+            sourceProviderFilter={sourceProviderFilter()} sourceActions={sourceActions()} sourceActionChoice={sourceActionChoice()}
+            focusedSource={focusedSource()} sourceFilterFocus={sourceFilterFocus()} sourceFacet={sourceFacet()}
+            sourceFailure={sourceFailure()} sourceSpread={sourceSpread()} sourceQualityValue={sourceQualityValue()}
+            sourceProviderValue={sourceProviderValue()} failedSources={failedSources()} choice={choice()}
+            profileEditor={profileEditor()} management={management()} trackColumn={trackColumn()} text={text()}
+            keyboard={keyboard} activeAction={activeAction()} episode={episodeState().item} countdown={countdownState()}
+            calibration={calibrationValue()} error={error()} notice={notice()} pending={pending()}
+            paletteBg={palette.bg} />
+        </TvView>
+        <IdleSaver active={screenSaver()} featured={home()?.featured} slide={heroSlide()} />
         </TvView>
         );
       },

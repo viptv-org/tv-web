@@ -107,13 +107,22 @@ export function SearchInput(props: {
                     />
                   }
                 >
-                  <TvView
-                    x={113}
-                    y={20}
-                    w={28}
-                    h={28}
-                    src={icon(value, selected(), 2.2)}
-                  />
+                  <Show
+                    when={value === "space"}
+                    fallback={<TvView x={113} y={20} w={28} h={28} src={icon(value, selected(), 2.2)} />}
+                  >
+                    {/* The space glyph is a two-pixel line, which reads as an
+                        empty key at TV distance; the word does not. */}
+                    <Label
+                      w={254}
+                      centerY={34}
+                      align="center"
+                      size={22}
+                      font="Onest600"
+                      content="Space"
+                      color={selected() ? "#111113" : palette.text}
+                    />
+                  </Show>
                 </Show>
               </TvView>
             );

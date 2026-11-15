@@ -2,7 +2,7 @@
 
 `src/tv-solid/remote/App.tsx` is the TV application: one `createRemoteTvApp`
 closure that owns every signal and returns the root screen. It started this work
-at **3579 lines** and is **3333** now, with the render tree split into three
+at **3579 lines** and is **3198** now, with the render tree split into three
 screen components and six behaviour modules. This note records what has been extracted, and the exact next
 slices so the remainder can be done mechanically instead of by feel.
 
@@ -16,12 +16,18 @@ slices so the remainder can be done mechanically instead of by feel.
 | `remote/player/segments.ts` | 70 | skip markers, the active window and the offer clock |
 | `remote/calendar-scene.ts` | 22 | calendar snapshot, day and day entries |
 | `remote/settings-scene.ts` | 190 | the nine Settings boards, their reload and profile management |
-| `remote/render/live.tsx` | 81 | the Live screen and its three empty forms |
+| `remote/render/entry.tsx` | 40 | welcome, pairing and the signed-in confirmation |
+| `remote/render/profiles.tsx` | 24 | who is watching |
+| `remote/render/calendar.tsx` | 24 | the calendar board |
+| `remote/render/home.tsx` | 24 | the featured title and its shelves |
+| `remote/render/detail.tsx` | 17 | one title's page |
 | `remote/render/browse.tsx` | 125 | catalog, library and search, with their toolbars |
+| `remote/render/live.tsx` | 81 | the Live screen and its three empty forms |
 | `remote/render/player.tsx` | 59 | the skip offer, the busy surface and the control row |
+| `remote/render/overlays.tsx` | 190 | the drawer, preparation, error card, toast and idle saver |
 | `remote/live/program-line.ts` | 20 | a guide slot that never prints an out-of-range minute count |
 
-`App.tsx` is **3333 lines** after those. Each extraction is a factory that takes
+`App.tsx` is **3198 lines** after those. Each extraction is a factory that takes
 an explicit dependency object; nothing reaches back into the closure.
 
 ## Why this is not one big diff
@@ -54,31 +60,18 @@ Each row lists what must be handed over; the shapes are already visible in the
    `dismissNext`, the countdown and the episode preparation. Needs: `player`,
    `playerTransport`, `overlays`, `notify`, `fail`, `retry`, `sources`,
    `activeAction`, `activeChannel`, `devicePlayback`, `preferences`.
-4. **`render/`** (partly done): Live, Browse and the player chrome are out.
-   The rest of the tree is *smaller*, measured per screen block:
+4. **`render/`** (done): every screen block is its own component. App's render
+   body is now the chrome, a dispatch list and the overlays.
 
-   | Block | Lines | App bindings it needs |
-   | --- | --- | --- |
-   | welcome | 6 | 2 |
-   | profiles | 10 | 5 |
-   | calendar | 13 | 7 |
-   | home | 5 | 7 |
-   | pairing | 13 | 8 |
-   | detail | 22 | 27 |
-   | overlaid chrome + overlays | ~110 | 36 |
+   What was *not* done, deliberately: pulling the whole `render: () => (…)` body
+   out as a **single** component. That move needs ~110 bindings, has one call
+   site and hides nothing, and in Solid it is quietly unsafe — props are getters,
+   so passing `screen()` where the receiver wanted `screen` compiles under a
+   loose contract and the screen silently stops updating. One component per
+   screen makes that a type error instead.
 
-   So: split it, one component per block, as `render/live.tsx` does.
-
-   What not to do is pull the whole `render: () => (…)` body out as a **single**
-   component. That one move needs ~110 bindings, has one call site, and hides
-   nothing — a projection of the closure is indirection without depth, and every
-   screen that later needs a new signal adds another prop to it. It is also
-   quietly unsafe in Solid: props are getters, so passing `screen()` where the
-   receiver wanted `screen` compiles under a loose contract and the screen simply
-   stops updating. Per-screen components make that a type error.
-
-   Render extraction alone cannot take `App.tsx` to ~900 lines either: only
-   ~300 of its lines are JSX. The rest is the state machine in items 1–3 and 5.
+   Render extraction alone cannot take `App.tsx` to ~900 lines: only ~260 of its
+   lines were JSX. The rest is the state machine in items 1–3 and 5.
 5. **`navigation-scene.ts`** (~330 lines): `navigate`, `back`,
    `restorePrevious`, `settlePendingFocus`, the history stack and the per-screen
    navigation controllers.
