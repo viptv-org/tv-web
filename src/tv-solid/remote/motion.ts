@@ -13,6 +13,13 @@ export function reducedMotion(): boolean {
   );
 }
 
+/** Content that waits on the network arrives instead of popping in: one shared
+ * decelerating fade. Module-level so the renderer can compare it by identity. */
+const ARRIVE = { alpha: { duration: 200, easing: "cubic-bezier(0,0,0.58,1)" } };
+export function arrive() {
+  return reducedMotion() ? undefined : ARRIVE;
+}
+
 /** CSS cubic-bezier(x1,0,x2,1), used by the reference progress/fade/pulse. */
 export function easeProgress(value: number, x1: number, x2: number) {
   const x = Math.max(0, Math.min(1, value));

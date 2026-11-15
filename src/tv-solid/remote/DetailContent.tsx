@@ -1,5 +1,4 @@
 /** @jsxImportSource @solidtv/solid */
-import { DetailSkeleton } from "./DetailSkeleton";
 import { Show, createMemo } from "solid-js";
 import { KeyedFor, TvView, textScale } from "../runtime";
 import { MediaTile as Tile } from "./MediaTile";
@@ -10,11 +9,10 @@ import { Button, icon, Label, palette } from "./visuals";
 import { cardKey, type Card, type Detail } from "./types";
 import { sdfTextMetrics } from "./text-measure";
 import { BRANDING_MOTION, compactDetail, detailBodyOffset, detailEpisodeLayout, detailListTop, detailLogoBox } from "./hero-layout";
-import { reducedMotion } from "./motion";
+import { arrive, reducedMotion } from "./motion";
 
 type DetailContentProps = {
   detail?: Detail;
-  selectedKind?: string;
   hasEpisodes: boolean;
   episodes: Card[];
   zone: string;
@@ -35,9 +33,9 @@ export function DetailContent(props: DetailContentProps) {
   const logoBox = () => detailLogoBox(props.hasEpisodes, compact());
   const motion = reducedMotion() ? undefined : BRANDING_MOTION;
   return <>
-    <Show when={!props.detail}>
-      <DetailSkeleton series={props.selectedKind === "series"} />
-    </Show>
+    {/* No placeholder geometry: the screen holds on the page ground until the
+        title answers, then the whole body arrives as one fade. */}
+    <TvView alpha={props.detail ? 1 : 0} transition={arrive()}>
     <Show when={props.detail}>
       {(value) => (
         <>
@@ -217,5 +215,6 @@ export function DetailContent(props: DetailContentProps) {
         </>
       )}
     </Show>
+    </TvView>
   </>;
 }

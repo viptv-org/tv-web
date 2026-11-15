@@ -3337,7 +3337,7 @@ export function createRemoteTvApp(
                 shelfTop={shelfTitleY()} columnForRow={shelf => homeRowFocus.resolve(shelf)} isSaved={isSaved} />
             </Show>
             <Show when={screen() === "detail"}>
-              <DetailContent detail={detailForDisplay()} selectedKind={selected()?.identity.kind}
+              <DetailContent detail={detailForDisplay()}
                 hasEpisodes={detailHasEpisodes()} episodes={detailEpisodes()} zone={zone()} column={column()}
                 heroAction={heroAction()} seasonIndex={seasonIndex()} episodeColumn={detailColumn("episodes")}
                 recommendationColumn={detailColumn("recommendations")} actionLabel={detailActionLabel()}

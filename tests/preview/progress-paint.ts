@@ -2,7 +2,8 @@ import { createRequire } from 'node:module';
 import type { Page } from '@playwright/test';
 import { tokens } from '../../src/theme/viptv-tokens.generated';
 const { PNG } = createRequire(import.meta.url)('pngjs');
-export const progressClip = {x:928,y:508,width:64,height:64};
+/** The busy ring's own box: a 56px spinner at (932,476) inside a 64px clip. */
+export const progressClip = {x:928,y:472,width:64,height:64};
 const accent = [1,3,5].map(offset=>parseInt(tokens['color.accent.default'].slice(offset,offset+2),16));
 
 export function progressPaint(bytes: Buffer, fullFrame=false) {

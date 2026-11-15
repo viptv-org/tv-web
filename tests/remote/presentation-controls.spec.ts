@@ -30,7 +30,8 @@ for (const canvas of [false,true]) test(`sharp right artwork, selected indicator
   home.hero=home.featured[0];
   await page.goto('/tv/?focusdebug=1');
   await expect(page.locator('html')).toHaveAttribute('data-tv-ready','true');
-  await expect.poll(async() => (await rendered(page)).boxes.some(box=>box.x===240 && box.w===1920 && box.h===1080)).toBe(true);
+  // The hero artwork is the ambient band: full width, ending on the carousel line.
+  await expect.poll(async() => (await rendered(page)).boxes.some(box=>box.x===0 && box.y===0 && box.w===1920 && box.h===824)).toBe(true);
   const pixels=PNG.sync.read(await page.screenshot({clip:{x:96,y:780,width:6,height:4}})).data;
   expect(Math.max(...pixels.filter((_:number,index:number)=>index%4!==3))).toBeGreaterThan(220);
   const homeMarker=(await rendered(page)).boxes.filter(box=>box.x===1848 && box.w===4);
@@ -43,7 +44,7 @@ for (const canvas of [false,true]) test(`sharp right artwork, selected indicator
   await page.screenshot({path:testInfo.outputPath('continue-sharp.png')});
 });
 
-test('delayed detail uses layout skeleton and source opening uses centered title progress', async({page,baseURL},testInfo) => {
+test('delayed detail holds the page ground and source opening uses centered title progress', async({page,baseURL},testInfo) => {
   const fixture=await installRemoteBackend(page,baseURL!,{media:true});
   fixture.card.logo=null;
   let releaseDetail!:()=>void;
@@ -54,10 +55,15 @@ test('delayed detail uses layout skeleton and source opening uses centered title
   await expect(state).toHaveAttribute('data-tv-ready','true');
   await page.keyboard.press('ArrowDown');await page.keyboard.press('Enter');
   await expect(state).toHaveAttribute('data-tv-screen','detail');
-  await expect.poll(async()=>(await rendered(page)).boxes.some(box=>box.x===96 && box.y===(fixture.bootstrap().home!.rows[0].cards[0].identity.kind==='series'?648:668) && box.w===260 && box.h===72)).toBe(true);
+  // Nothing is invented while the title loads: no placeholder boxes, no copy.
+  await page.waitForTimeout(400);
+  expect((await rendered(page)).texts).not.toContain(fixture.card.title);
   expect((await rendered(page)).texts).not.toContain('Loading title…');
-  await page.screenshot({path:testInfo.outputPath('detail-skeleton.png')});
-  await page.keyboard.press('Escape');releaseDetail();
+  await page.screenshot({path:testInfo.outputPath('detail-ground.png')});
+  releaseDetail();
+  // The body arrives once, as one fade, after the answer.
+  await expect.poll(async()=>(await rendered(page)).texts).toContain(fixture.card.title);
+  await page.keyboard.press('Escape');
   await expect(state).toHaveAttribute('data-tv-screen','home');
   await page.keyboard.press('ArrowUp');await page.keyboard.press('Enter');
   await expect(state).toHaveAttribute('data-tv-overlay','sources');
