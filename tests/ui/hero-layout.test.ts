@@ -29,26 +29,36 @@ describe('branding clearance throughout shared motion', () => {
       expect(metadataTop - (top + 120)).toBeCloseTo(24, 8);
     }
   });
-  it('only portrait backgrounds use full-width proxy blur while single-image zoom stays clipped and bounded', () => {
-    const portrait = heroArtworkLayout('portrait'), single = heroArtworkLayout('landscape'), hero = heroArtworkLayout('hero');
-    expect(portrait.blur).toBe(60); expect(portrait.viewport).toEqual({x: 0, y: 0, width: 1920, height: 1080}); expect(portrait.clipped).toBe(false);
-    expect(portrait.decodeWidth).toBe(960); expect(portrait.decodeHeight).toBe(540);
-    expect(single.image.width / single.viewport.width).toBeCloseTo(4 / 3, 8);
-    expect(single.image.height / single.viewport.height).toBeCloseTo(4 / 3, 8);
-    expect(single.clipped).toBe(true); expect(single.blur).toBe(0);
-    expect(single.decodeWidth * single.decodeHeight).toBeLessThanOrEqual(1280 * 720);
-    expect(hero.decodeWidth * hero.decodeHeight).toBeLessThanOrEqual(1440 * 810);
-    expect(heroArtworkLayout('detail').blur).toBeUndefined();
+  it('the ambient band ends on the carousel line and every band mode is blurred', () => {
+    // The hero is a blurred band above the poster carousel, so the artwork is
+    // cropped inside the band instead of zoomed into a clipped side panel.
+    for (const [mode, top] of [['hero', 824], ['landscape', 690], ['portrait', 545]] as const) {
+      const layout = heroArtworkLayout(mode);
+      expect(layout.viewport).toEqual({ x: 0, y: 0, width: 1920, height: top });
+      expect(layout.image).toEqual(layout.viewport);
+      expect(layout.clipped).toBe(false);
+      expect(layout.blur).toBe(60);
+      expect(layout.scrim).toBe(true);
+      expect(layout.decodeWidth).toBe(1280);
+      expect(layout.decodeHeight).toBe(Math.round(1280 * top / 1920));
+      expect(layout.decodeWidth * layout.decodeHeight).toBeLessThanOrEqual(1280 * 824);
+    }
+    const detail = heroArtworkLayout('detail');
+    expect(detail.blur).toBeUndefined();
+    expect(detail.scrim).toBe(false);
+    expect(detail.viewport).toEqual({ x: 0, y: 0, width: 1920, height: 1080 });
   });
-  it('applies the approved strong proxy blur without changing the trusted source or sharp single-image request', () => {
+  it('applies the approved strong proxy blur without changing the trusted source', () => {
     const raw = 'https://wsrv.nl/?url=image.tmdb.org/t/p/original/xJHokMbljvjADYdit5fK5VQsXEG.jpg&w=1280&h=720&fit=cover&blur=60&output=webp&q=75';
     const portrait = heroArtworkLayout('portrait');
     const image = new URL(imageSource(raw, portrait.decodeWidth, portrait.decodeHeight, 'cover', portrait.blur));
     expect(image.searchParams.get('url')).toBe('image.tmdb.org/t/p/original/xJHokMbljvjADYdit5fK5VQsXEG.jpg');
     expect(image.searchParams.get('blur')).toBe('60');
-    expect(image.searchParams.get('w')).toBe('960'); expect(image.searchParams.get('h')).toBe('540');
+    expect(image.searchParams.get('w')).toBe('1280'); expect(image.searchParams.get('h')).toBe('363');
     expect(image.searchParams.get('q')).toBe('75'); expect(image.searchParams.get('output')).toBe('webp');
-    const single = heroArtworkLayout('landscape');
-    expect(new URL(imageSource(raw, single.decodeWidth, single.decodeHeight, 'cover', single.blur)).searchParams.has('blur')).toBe(false);
+    const detail = heroArtworkLayout('detail');
+    const plain = 'https://wsrv.nl/?url=image.tmdb.org/t/p/original/xJHokMbljvjADYdit5fK5VQsXEG.jpg&w=1280&h=720&fit=cover&output=webp&q=75';
+    expect(new URL(imageSource(plain, detail.decodeWidth, detail.decodeHeight, 'cover', detail.blur)).searchParams.has('blur')).toBe(false);
+    expect(new URL(imageSource(plain, portrait.decodeWidth, portrait.decodeHeight, 'cover', portrait.blur)).searchParams.get('blur')).toBe('60');
   });
 });

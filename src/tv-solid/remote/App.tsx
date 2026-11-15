@@ -91,6 +91,7 @@ import { TracksDrawer } from "./TracksDrawer";
 import { ChoiceDrawer } from "./ChoiceDrawer";
 import { createCoherentHero, HeroArtwork } from "./CoherentHero";
 import { compactDetail, detailLogoBox, homeLogoBox } from "./hero-layout";
+import { CAROUSEL_TOP } from "./hero-stage";
 import { presentationCard, presentationKey } from "./presentation-card";
 import {
   channelKey,
@@ -1358,8 +1359,8 @@ export function createRemoteTvApp(
       const rows = home()?.rows ?? [];
       const id = rows[Math.min(row(), Math.max(0, rows.length - 1))]?.id;
       return zone() === "rows"
-        ? 545.2 + (510.8 - (128 + (id === "continue" ? 237.6 : 382.8)))
-        : 824;
+        ? id === "continue" ? CAROUSEL_TOP.continue : CAROUSEL_TOP.portrait
+        : CAROUSEL_TOP.hero;
     };
     const hero = createMemo(() => {
       const value =
@@ -1397,6 +1398,7 @@ export function createRemoteTvApp(
       () => screen() === "detail" ? "detail" : zone() !== "rows" ? "hero"
         : home()?.rows[row()]?.id === "continue" ? "landscape" : "portrait",
       heroLogoBox,
+      shelfTitleY,
       () => heroCycle.visible() && (screen() !== "home" || zone() !== "rows" || !!previewCard() && !!focusedCard() &&
         presentationKey(previewCard()!) === presentationKey(focusedCard()!)),
     );

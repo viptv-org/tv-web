@@ -29,11 +29,11 @@ const scene = (page: Page) => page.evaluate(() => {
   const walls: {x:number;y:number;w:number;h:number}[] = [];
   function walk(node: any) {
     const src = node.texture?.props?.src;
-    if (typeof src === 'string' && /\/carousel\/\d+\.png/.test(src) && node.props.w===1920 && node.props.h===1080)
+    if (typeof src === 'string' && /\/carousel\/\d+\.png/.test(src) && node.props.w===1920 && node.props.h===824)
       images.push({id:node.id,index:Number(/\/carousel\/(\d+)\.png/.exec(src)![1]),x:node.absX,y:node.absY,alpha:node.worldAlpha});
     if (typeof src === 'string' && /\/carousel\/\d+\.png/.test(src) && node.props.w===181 && node.props.h===271)
       tiles.push({index:Number(/\/carousel\/(\d+)\.png/.exec(src)![1]),x:node.absX,y:node.absY,w:node.props.w,h:node.props.h});
-    if (typeof src === 'string' && src.includes('/tv-artwork/') && node.props.w===1920 && node.props.h===1080 && node.worldAlpha>.5)
+    if (typeof src === 'string' && src.includes('/tv-artwork/') && node.props.w===1920 && node.props.h===824 && node.worldAlpha>.5)
       walls.push({x:node.absX,y:node.absY,w:node.props.w,h:node.props.h});
     const text = node.viptvText ?? node.props?.text;
     if (node.worldAlpha>.99 && /^Featured \d$/.test(text??'')) titles.push(text);
@@ -113,9 +113,11 @@ for(const canvas of [false,true]) {
         await tick(page);await title(page,index%5);await page.clock.runFor(60);
         const moving=await scene(page),incoming=moving.images.find(image=>image.index===index%5&&image.alpha>0)!;
         frames.push(moving);writeFileSync(info.outputPath('scroll-frames.json'),JSON.stringify(frames,null,2));
-        expect(incoming).toBeTruthy();expect(incoming.x).toBeCloseTo(240,0);
+        // The band artwork spans the frame from x=0; the 240 offset belonged to the
+        // clipped side panel the ambient band replaced.
+        expect(incoming).toBeTruthy();expect(incoming.x).toBeCloseTo(0,0);
         expect(moving.images).toHaveLength(2);
-        if(index===1){await page.keyboard.press('ArrowRight');await page.clock.runFor(16);expect((await scene(page)).images.find(image=>image.index===1&&image.alpha>.05)?.x).toBeCloseTo(240,0);}
+        if(index===1){await page.keyboard.press('ArrowRight');await page.clock.runFor(16);expect((await scene(page)).images.find(image=>image.index===1&&image.alpha>.05)?.x).toBeCloseTo(0,0);}
         await page.clock.runFor(450);expect((await scene(page)).images).toHaveLength(1);
         await expect(html(page)).toHaveAttribute('data-tv-focus',/^hero:0:0:2:/);
       }

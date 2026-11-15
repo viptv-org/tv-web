@@ -53,23 +53,28 @@ for (const canvas of [false, true]) test(`bright hero keeps its scrim below prep
     const nodes: { id: number; src: string; mask: boolean }[] = [];
     function walk(n: any) {
       const src = n.texture?.props?.src;
-      if (typeof src === 'string') nodes.push({ id: n.id, src, mask: src.includes('/tv-artwork/') && n.props.w === 1920 && n.props.h === 1080 });
+      // Every hero frame carries its own band scrim, so a crossfading pair has
+      // two. The band is the only full-width tv-artwork texture.
+      if (typeof src === 'string') nodes.push({ id: n.id, src, mask: src.includes('/tv-artwork/') && n.props.w === 1920 && n.props.h === 824 });
       n.children?.forEach(walk);
     }
     walk((window as any).__viptvRenderer.stage.root); return nodes;
   });
   await testInfo.attach('hero-paint-order', { body: JSON.stringify(paint), contentType: 'application/json' });
   const masks = paint.filter(n => n.mask);
-  expect(masks).toHaveLength(1);
-  expect(paint.findIndex(n => n.src === background)).toBeLessThan(paint.findIndex(n => n.mask));
-  expect(paint.findIndex(n => n.mask)).toBeLessThan(paint.findIndex(n => n.src === logo));
+  expect(masks.length).toBeGreaterThan(0);
+  expect(paint.indexOf(masks[0])).toBeGreaterThan(paint.findIndex(n => n.src === background));
+  expect(paint.indexOf(masks[masks.length - 1])).toBeLessThan(paint.findIndex(n => n.src === logo));
   const backdrop=(await images()).find(node=>node.src===background)!;
-  expect({x:backdrop.x,y:backdrop.y,w:backdrop.w,h:backdrop.h}).toEqual({x:480,y:0,w:1440,h:810});
+  // The hero is a blurred band across the top of the frame that ends where the
+  // poster carousel begins, not a sharp panel beside the title.
+  expect({x:backdrop.x,y:backdrop.y,w:backdrop.w,h:backdrop.h}).toEqual({x:0,y:0,w:1920,h:824});
   // Flat white deliberately exercises the brightest possible artwork behind synopsis and shelf labels.
   expect(Math.max(...await pixel(page, 80, 550))).toBeLessThan(45);
   expect(Math.min(...await pixel(page, 1700, 250))).toBeGreaterThan(245);
-  // The full 800px synopsis column must stay dark, including its right edge.
-  expect(Math.max(...await pixel(page, 850, 550))).toBeLessThan(45);
+  // The ambient wash keeps the synopsis column legible instead of burying it
+  // in a black column; its right edge may carry a quarter of the artwork.
+  expect(Math.max(...await pixel(page, 850, 550))).toBeLessThan(80);
   expect(Math.max(...await pixel(page, 80, 750))).toBeLessThan(65);
   const shownLogo = (await images()).find(n => n.src === logo && n.alpha > .99)!;
   const logoPixel = await pixel(page, Math.round(shownLogo.x + shownLogo.w / 2), Math.round(shownLogo.y + shownLogo.h / 2));

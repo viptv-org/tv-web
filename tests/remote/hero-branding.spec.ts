@@ -49,6 +49,13 @@ async function paintedLogo(page: Page, info: TestInfo, label: string) {
   return Number.isFinite(left) ? { left: left / scale, top: top / scale, right: (right + 1) / scale, bottom: (bottom + 1) / scale } : undefined;
 }
 async function pauseClock(page: Page) { await page.clock.pauseAt(new Date(await page.evaluate(() => Date.now() + 1000))); await page.clock.runFor(300); }
+/** A paused clock freezes the composition; the canvas still needs a frame tick
+ * before the screenshot shows it. Polling waits for the paint, not for motion. */
+async function paintedLogoSoon(page: Page, info: TestInfo, label: string) {
+  let painted: Awaited<ReturnType<typeof paintedLogo>>;
+  await expect.poll(async () => !!((painted = await paintedLogo(page, info, label))), { timeout: 15000 }).toBe(true);
+  return painted!;
+}
 async function loadedLogo(page: Page) { await expect.poll(async () => (await scene(page)).images.some(image => image.src.includes('/api/images/clearlogo/v1/tt133'))).toBe(true); }
 
 for (const canvas of [false, true]) for (const viewport of viewports) {
@@ -99,18 +106,20 @@ for (const canvas of [false, true]) for (const viewport of viewports) {
     await pauseClock(page);
     const before = await paintedLogo(page, info, 'continue-branding'); expect(before).toBeDefined();
     await page.keyboard.press('ArrowDown'); await page.clock.runFor(180);
-    const moving = await paintedLogo(page, info, 'portrait-pending-branding'); expect(moving).toBeDefined();
+    const moving = await paintedLogoSoon(page, info, 'portrait-pending-branding'); expect(moving).toBeDefined();
     const metadata = (await scene(page)).texts.find(text => text.text === 'Movie' && text.y < 600)!;
     expect(moving!.bottom).toBeLessThan(metadata.y - 16);
     const sharp = (await scene(page)).images.find(image => image.src.includes('133-continue') && image.w > 1000)!;
-    expect(sharp).toMatchObject({ w: 1920, h: 1080, rightClip: true });
+    // The continue row's artwork is the ambient band: full width, its bottom on
+    // the carousel title line, and softly blurred like every band mode.
+    expect(sharp).toMatchObject({ w: 1920, h: 690, rightClip: false });
     const sharpUrl = new URL(sharp.src), stageScale = Math.min(viewport.width / 1920, viewport.height / 1080);
-    expect(sharpUrl.searchParams.get('fit')).toBe('cover'); expect(sharpUrl.searchParams.has('blur')).toBe(false);
+    expect(sharpUrl.searchParams.get('fit')).toBe('cover'); expect(sharpUrl.searchParams.get('blur')).toBe('60');
     expect(Number(sharpUrl.searchParams.get('w'))).toBe(Math.ceil(1280 * stageScale));
     release(); await expect.poll(async () => { await page.clock.runFor(32); return (await scene(page)).texts.some(text => text.text === next.description); }).toBe(true); await page.clock.runFor(250);
-    const portrait = (await scene(page)).images.find(image => image.w === 1920 && image.h === 1080 && image.src.includes('133-subject'))!;
-    expect(portrait).toBeDefined(); const url = new URL(portrait.src); expect(url.searchParams.get('blur')).toBe('8'); expect(url.searchParams.get('fit')).toBe('cover');
-    const scale = Math.min(viewport.width / 1920, viewport.height / 1080); expect(Number(url.searchParams.get('w'))).toBe(Math.ceil(960 * scale));
+    const portrait = (await scene(page)).images.find(image => image.w === 1920 && image.h === 545 && image.src.includes('133-subject'))!;
+    expect(portrait).toBeDefined(); const url = new URL(portrait.src); expect(url.searchParams.get('blur')).toBe('60'); expect(url.searchParams.get('fit')).toBe('cover');
+    const scale = Math.min(viewport.width / 1920, viewport.height / 1080); expect(Number(url.searchParams.get('w'))).toBe(Math.ceil(1280 * scale));
     expect(proxy.some(raw => new URL(raw).searchParams.get('url')?.includes('133-poster'))).toBe(true);
     await paintedLogo(page, info, 'portrait-ready-branding');
     await page.keyboard.press('ArrowUp'); await page.clock.runFor(70); await page.keyboard.press('ArrowDown'); await page.clock.runFor(300);

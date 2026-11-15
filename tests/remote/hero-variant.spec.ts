@@ -63,25 +63,29 @@ for (const canvas of [false, true]) {
     await expect(page.locator('html')).toHaveAttribute('data-tv-focus', /^rows:/);
     await expect.poll(async () => (await scene(page)).images.some(image => image.w === 240 && image.h === 360 && image.src.endsWith('/portrait-poster.png'))).toBe(true);
     const portrait = await scene(page);
-    const backdrop = portrait.images.find(image => image.src.startsWith('https://wsrv.nl/') && image.w === 1920 && image.h === 1080)!;
+    // The poster row's band ends on its own title line and keeps its own scrim;
+    // no full-screen mask covers the frame any more.
+    const backdrop = portrait.images.find(image => image.src.startsWith('https://wsrv.nl/') && image.w === 1920 && image.h === 545)!;
     expect(backdrop).toBeTruthy(); expect({x: backdrop.x, y: backdrop.y}).toEqual({x: 0, y: 0});
     expect(portrait.images.filter(image => image.w === 1920 && image.h === 1080 && image.src.includes('/tv-artwork/'))).toHaveLength(0);
-    for (const x of [30, 1400]) {
-      const actual = await pixel(page, x, 260);
-      for (let channel = 0; channel < 3; channel++) expect(Math.abs(actual[channel] - [180, 100, 60][channel])).toBeLessThan(5);
-    }
+    expect(portrait.images.filter(image => image.w === 1920 && image.h === 545 && image.src.includes('/tv-artwork/'))).toHaveLength(1);
+    // The band's wash protects the summary column and leaves the artwork clear
+    // on the right, where the old design kept a gradient across the whole width.
+    expect(Math.max(...await pixel(page, 30, 260))).toBeLessThan(80);
+    const actual = await pixel(page, 1400, 260);
+    for (let channel = 0; channel < 3; channel++) expect(Math.abs(actual[channel] - [180, 100, 60][channel])).toBeLessThan(8);
     expect(await pixel(page, 1704, 324)).toEqual([0, 220, 80]);
     const requested = fixture.requests.map(value => new URL(value));
-    expect(requested.some(value => value.searchParams.get('blur') === '60' && value.searchParams.get('w') === '960' && value.searchParams.get('h') === '540')).toBe(true);
+    expect(requested.some(value => value.searchParams.get('blur') === '60' && value.searchParams.get('w') === '1280' && value.searchParams.get('h') === '363')).toBe(true);
     writeFileSync(info.outputPath('portrait-scene.json'), JSON.stringify({portrait, requests: fixture.requests}, null, 2));
     await page.screenshot({path: info.outputPath('poster-full-width.png')});
     await page.keyboard.press('ArrowUp');
     await expect(page.locator('html')).toHaveAttribute('data-tv-focus', /^hero:/);
-    await expect.poll(async () => (await scene(page)).images.some(image => image.w === 1920 && image.h === 1080 && image.src.includes('/tv-artwork/'))).toBe(true);
+    await expect.poll(async () => (await scene(page)).images.some(image => image.w === 1920 && image.h === 824 && image.src.includes('/tv-artwork/'))).toBe(true);
     await expect.poll(async () => Math.max(...await pixel(page, 30, 260))).toBeLessThan(45);
     await page.keyboard.press('ArrowDown');
     await expect.poll(async () => (await scene(page)).images.some(image => image.w === 240 && image.h === 360 && image.src.endsWith('/portrait-poster.png'))).toBe(true);
-    await expect.poll(async () => (await pixel(page, 30, 260))[0]).toBeGreaterThan(170);
+    await expect.poll(async () => (await pixel(page, 1400, 260))[0]).toBeGreaterThan(170);
   });
 
   test(`actual avatar has no initial overlay while a missing avatar retains its fallback (${mode})`, async ({page, baseURL}, info) => {

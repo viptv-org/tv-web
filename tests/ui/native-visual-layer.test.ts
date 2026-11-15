@@ -3,7 +3,7 @@ import { nativeVisualLayer } from "../../src/tv-solid/platform/native-visual-lay
 
 it("keeps explicit right-side artwork below both packaged scrims and foreground", () => {
   expect(nativeVisualLayer({kind:"poster",width:1440,height:810,src:"https://art.example/backdrop.jpg",paintBand:"backdrop"})).toBe("backdrop");
-  for (const name of ["home-scrim.png","hero-scrim.png","topbar-scrim.png"])
+  for (const name of ["home-scrim.png","hero-scrim.png","band-scrim.png","topbar-scrim.png"])
     expect(nativeVisualLayer({kind:"poster",width:1920,height:name.startsWith("topbar")?132:1080,src:`pkg:/assets/${name}`})).toBe("scrim");
   expect(nativeVisualLayer({kind:"poster",width:1920,height:1080,src:"pkg:/assets/replacement-mask.png",paintBand:"scrim"})).toBe("scrim");
   expect(nativeVisualLayer({kind:"poster",width:1920,height:1080,src:"pkg:/assets/player-scrim.png",paintBand:"scrim"})).toBe("scrim");

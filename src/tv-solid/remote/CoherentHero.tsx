@@ -7,19 +7,20 @@ import { HeroBranding } from "./HeroBranding";
 import { heroArtworkLayout, type HeroLogoBox, type HeroMode } from "./hero-layout";
 import { imagePixels, imageSource } from "./image-source";
 import { presentationCard, presentationKey } from "./presentation-card";
-import { backdropScrimSource, homeScrimSource } from "./tv-artwork.generated";
+import { backdropScrimSource, bandScrimSource } from "./tv-artwork.generated";
 import { reducedMotion } from "./motion";
 import { retireAfterHeroAnimations } from "./hero-retirement";
 import type { Card } from "./types";
 
 const POSTER_BOX = { x: 1584, y: 144, width: 240, height: 360 };
 
-type Presentation = { card: Card; background?: string; poster?: string; kind: HeroMode; logoBox: HeroLogoBox };
+type Presentation = { card: Card; background?: string; poster?: string; kind: HeroMode; logoBox: HeroLogoBox; carouselTop: number };
 export type Frame = Presentation & { id: number; failed: ReadonlySet<string>; staged?: boolean };
 export type { HeroLogoBox } from "./hero-layout";
 
 export function createCoherentHero(source: Accessor<Card | undefined>, scope: Accessor<string>,
-  mode: Accessor<HeroMode>, logoBox: Accessor<HeroLogoBox>, ready: Accessor<boolean>) {
+  mode: Accessor<HeroMode>, logoBox: Accessor<HeroLogoBox>, carouselTop: Accessor<number>,
+  ready: Accessor<boolean>) {
   const [shown, setShown] = createSignal<Card>();
   const [current, setCurrent] = createSignal<Frame>();
   const [retiring, setRetiring] = createSignal<Frame>();
@@ -55,16 +56,16 @@ export function createCoherentHero(source: Accessor<Card | undefined>, scope: Ac
   createEffect(() => {
     const currentScope=scope();
     if (!ready()) {gate.hold(currentScope);return;}
-    const next=source(), kind=mode(), box=logoBox();
+    const next=source(), kind=mode(), box=logoBox(), top=carouselTop();
     const sameScope = currentScope === previousScope;
     const card=next ? presentationCard(sameScope ? untrack(shown) : undefined, next,
       sameScope ? untrack(pending)?.value.card : undefined) : undefined;
     previousScope=currentScope;
     const background=kind === "landscape" ? card?.view?.preview?.background ?? card?.landscape ?? card?.poster : card?.landscape ?? card?.poster;
     const poster=kind === "portrait" ? card?.poster ?? undefined : undefined;
-    const key = JSON.stringify([card && presentationKey(card),background,poster,card?.logo,kind]);
+    const key = JSON.stringify([card && presentationKey(card),background,poster,card?.logo,kind,top]);
     gate.request(currentScope,key,
-      card ? {card,background:background ?? undefined,poster,kind,logoBox:box} : undefined,
+      card ? {card,background:background ?? undefined,poster,kind,logoBox:box,carouselTop:top} : undefined,
       [...(background ? ["background"] : []),...(poster ? ["poster"] : []),...(card?.logo ? ["logo"] : [])]);
   });
   onCleanup(() => {clearTimeout(retireTimer);gate.request("disposed","",undefined,[]);});
@@ -85,12 +86,13 @@ export function createCoherentHero(source: Accessor<Card | undefined>, scope: Ac
 type ArtworkProps = { presentation: ReturnType<typeof createCoherentHero>; logoBox: HeroLogoBox; dim: number };
 
 /** Both halves retain their prepared nodes and share the same opacity target. */
-function ArtworkFrame(props: ArtworkProps & { frame: Accessor<Frame>; foreground: boolean; scrimReady: boolean; register: (id: number, layer: 0 | 1 | 2, node?: any) => void }) {
+function ArtworkFrame(props: ArtworkProps & { frame: Accessor<Frame>; foreground: boolean; scrimReady: boolean;
+  scrimSettled: () => void; register: (id: number, layer: 0 | 1 | 2, node?: any) => void }) {
   const id=props.frame().id;
   const layer = props.foreground ? 1 : 0;
   onCleanup(() => props.register(id,layer));
   const frame=props.frame;
-  const layout = () => heroArtworkLayout(frame().kind);
+  const layout = () => heroArtworkLayout(frame().kind, frame().carouselTop);
   const backdropWidth=() => imagePixels(layout().decodeWidth);
   const backdropHeight=() => imagePixels(layout().decodeHeight);
   const done=(name:string,failed=false) => {void Promise.resolve().then(() => props.presentation.settled(id,name,failed));};
@@ -111,6 +113,12 @@ function ArtworkFrame(props: ArtworkProps & { frame: Accessor<Frame>; foreground
           onLoad={() => done("background")} onError={() => done("background",true)} />
         </Show>
       </TvView>
+      {/* The band's own scrim travels with the frame, so a band that grows or
+          shrinks while the artwork crossfades dissolves instead of snapping. */}
+      <Show when={layout().scrim}>
+        <TvView nativePaintBand="scrim" x={layout().viewport.x} y={layout().viewport.y} w={layout().viewport.width} h={layout().viewport.height}
+          src={bandScrimSource()} preload onLoad={() => props.scrimSettled()} onError={() => props.scrimSettled()} />
+      </Show>
     </>}
   </TvView>;
 }
@@ -118,9 +126,9 @@ function ArtworkFrame(props: ArtworkProps & { frame: Accessor<Frame>; foreground
 /** Prepared nodes become the visible nodes; no second fetch or decode on commit. */
 export function HeroArtwork(props: ArtworkProps) {
   const native = typeof (globalThis as any).__SolidTVRokuRenderer !== "undefined";
-  const portrait = () => props.presentation.mode() === "portrait";
-  const scrim = createMemo(() => props.presentation.mode() === "detail" ? backdropScrimSource() : homeScrimSource());
-  const [loadedScrim, setLoadedScrim] = createSignal<string>();
+  const detail = () => props.presentation.mode() === "detail";
+  const [bandScrimReady, setBandScrimReady] = createSignal(false);
+  const [detailScrimReady, setDetailScrimReady] = createSignal(false);
   const [roots,setRoots]=createSignal(new Map<number, [any?, any?, any?]>());
   const register=(id:number,layer:0|1|2,node?:any) => setRoots(previous => {
     const next=new Map(previous), pair: [any?,any?,any?]=[...(previous.get(id) ?? [])];
@@ -142,18 +150,22 @@ export function HeroArtwork(props: ArtworkProps) {
   return <TvView w={1920} h={1080}>
     <TvView w={1920} h={1080}>
       <KeyedFor each={props.presentation.frames()} keyOf={frame => frame.id}>{frame =>
-        <ArtworkFrame {...props} frame={frame} foreground={false} scrimReady={portrait() || native || loadedScrim() === scrim()} register={register} />
+        <ArtworkFrame {...props} frame={frame} foreground={false}
+          scrimSettled={() => setBandScrimReady(true)}
+          scrimReady={native || (frame().kind === "detail" ? detailScrimReady() : bandScrimReady())} register={register} />
       }</KeyedFor>
     </TvView>
-    {native ? <TvView nativePaintBand="scrim" w={1920} h={1080} alpha={portrait() ? 0 : 1} src={scrim()} /> : <TvView w={1920} h={1080} alpha={portrait() ? 0 : 1}>
-      <Show when={scrim()} keyed>{source =>
-        <TvView nativePaintBand="scrim" w={1920} h={1080} src={source} preload onLoad={() => setLoadedScrim(source)} />
-      }</Show>
+    {/* The detail backdrop stays full bleed behind its own pinned scrim. The
+        scrim is mounted in every mode and only its alpha changes: a node
+        adopted after mount would append above the prepared foreground. */}
+    {native ? <TvView nativePaintBand="scrim" w={1920} h={1080} alpha={detail() ? 1 : 0} src={backdropScrimSource()} /> : <TvView w={1920} h={1080} alpha={detail() ? 1 : 0}>
+      <TvView nativePaintBand="scrim" w={1920} h={1080} src={backdropScrimSource()} preload
+        onLoad={() => setDetailScrimReady(true)} onError={() => setDetailScrimReady(true)} />
     </TvView>}
     <TvView w={1920} h={1080} color={palette.bg} alpha={props.dim} />
     <TvView w={1920} h={1080}>
       <KeyedFor each={props.presentation.frames()} keyOf={frame => frame.id}>{frame =>
-        <ArtworkFrame {...props} frame={frame} foreground={true} scrimReady register={register} />
+        <ArtworkFrame {...props} frame={frame} foreground={true} scrimReady scrimSettled={() => setBandScrimReady(true)} register={register} />
       }</KeyedFor>
       <Show when={props.presentation.scope()} keyed>{(_scope) =>
         <HeroBranding frames={props.presentation.frames()} current={props.presentation.current()} box={props.logoBox}

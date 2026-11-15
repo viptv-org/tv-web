@@ -8,7 +8,7 @@ const texts=(page:Page)=>page.evaluate(()=>{
   walk((window as any).__viptvRenderer.stage.root);return result;
 });
 const backdrops=(page:Page)=>page.evaluate(()=>{
-  const src:string[]=[];function walk(n:any){if(n.isRenderable&&((n.props.w===1440&&n.props.h===810)||(n.props.w===1920&&n.props.h===1080))&&typeof n.texture?.props?.src==='string'&&n.texture.props.src.includes('/fixture/'))src.push(n.texture.props.src);n.children?.forEach(walk);}
+  const src:string[]=[];function walk(n:any){if(n.isRenderable&&n.props.w===1920&&(n.props.h===824||n.props.h===690||n.props.h===545)&&typeof n.texture?.props?.src==='string'&&n.texture.props.src.includes('/fixture/'))src.push(n.texture.props.src);n.children?.forEach(walk);}
   walk((window as any).__viptvRenderer.stage.root);return src;
 });
 
@@ -121,7 +121,7 @@ test("entering Continue Watching fades from the displayed featured image directl
   const target={...fixture.cards[4],logo:null,description:"Continue target synopsis"};
   home.hero=first;home.featured=[first,second];home.rows=[{...home.rows[0],id:"continue",cards:[target]}];
   const photos=()=>page.evaluate(()=>{
-    const src:string[]=[];function walk(n:any){if(n.isRenderable&&((n.props.w===1440&&n.props.h===810)||(n.props.w===1920&&n.props.h===1080))&&typeof n.texture?.props?.src==='string'&&n.texture.props.src.includes('/fixture/'))src.push(n.texture.props.src);n.children?.forEach(walk);}
+    const src:string[]=[];function walk(n:any){if(n.isRenderable&&n.props.w===1920&&(n.props.h===824||n.props.h===690||n.props.h===545)&&typeof n.texture?.props?.src==='string'&&n.texture.props.src.includes('/fixture/'))src.push(n.texture.props.src);n.children?.forEach(walk);}
     walk((window as any).__viptvRenderer.stage.root);return src;
   });
   await page.goto('/tv/?focusdebug=1');await expect.poll(()=>texts(page)).toContain(first.description);
@@ -219,6 +219,8 @@ test("focused hero poster aligns to the profile edge with clearance and uses a b
   expect(boxes.poster.x+boxes.poster.w).toBe(boxes.avatar.x+boxes.avatar.w);
   expect(boxes.poster.y-boxes.avatar.y-boxes.avatar.h).toBeGreaterThanOrEqual(48);
   expect(boxes.poster.y+boxes.poster.h).toBeLessThan(530);
-  expect(requests.some(url=>url.searchParams.get('blur')==='8'&&url.searchParams.get('w')==='960')).toBe(true);
+  // The portrait row's backdrop is the ambient band: a soft proxy blur across
+  // the frame width, decoded once at the band's aspect.
+  expect(requests.some(url=>url.searchParams.get('blur')==='60'&&url.searchParams.get('w')==='1280')).toBe(true);
   expect(requests.some(url=>url.searchParams.get('w')==='240'&&!url.searchParams.has('blur'))).toBe(true);
 });

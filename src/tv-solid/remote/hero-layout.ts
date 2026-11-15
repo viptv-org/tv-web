@@ -1,6 +1,15 @@
+import { heroStage, type HeroStageMode } from "./hero-stage";
+
 export type HeroMode = 'hero' | 'landscape' | 'portrait' | 'detail';
 export interface HeroLogoBox { x: number; y: number; width: number; height: number; rasterHeight?: number }
 interface Rect { x: number; y: number; width: number; height: number }
+
+/** The hero's composition names map onto the band's geometry. */
+export function heroBandMode(mode: HeroMode): HeroStageMode {
+  if (mode === 'detail') return 'detail';
+  if (mode === 'landscape') return 'continue';
+  return mode;
+}
 
 export const BRANDING_MOTION = {
   x: { duration: 220, easing: 'ease-out' },
@@ -38,20 +47,13 @@ export function logoScale(box: HeroLogoBox, width: number, height: number) {
   return Math.min(box.width / Math.max(1, width), box.height / Math.max(1, height));
 }
 /** Decode only the pixels needed by each composition; blur belongs to the proxy. */
-export function heroArtworkLayout(mode: HeroMode): {
-  viewport: Rect; image: Rect; clipped: boolean; decodeWidth: number; decodeHeight: number; blur?: number;
+export function heroArtworkLayout(mode: HeroMode, carouselTop?: number): {
+  viewport: Rect; image: Rect; clipped: boolean; decodeWidth: number; decodeHeight: number; blur?: number; scrim: boolean;
 } {
-  const full = { x: 0, y: 0, width: 1920, height: 1080 };
-  if (mode === 'detail' || mode === 'portrait') return {
-    viewport: full, image: full, clipped: false,
-    decodeWidth: mode === 'detail' ? 1920 : 960,
-    decodeHeight: mode === 'detail' ? 1080 : 540,
-    blur: mode === 'portrait' ? 60 : undefined,
-  };
+  const stage = heroStage(heroBandMode(mode), carouselTop);
   return {
-    viewport: { x: 480, y: 0, width: 1440, height: 810 },
-    image: { x: -240, y: -135, width: 1920, height: 1080 }, clipped: true,
-    decodeWidth: mode === 'hero' ? 1440 : 1280,
-    decodeHeight: mode === 'hero' ? 810 : 720, blur: 0,
+    viewport: stage.band, image: stage.image, clipped: stage.clipped,
+    decodeWidth: stage.decodeWidth, decodeHeight: stage.decodeHeight, blur: stage.blur,
+    scrim: stage.scrim,
   };
 }

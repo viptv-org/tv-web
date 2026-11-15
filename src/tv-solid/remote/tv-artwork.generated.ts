@@ -29,3 +29,8 @@ export function busySpinnerSource() {
     ? "pkg:/assets/busy-spinner.png"
     : `${import.meta.env.BASE_URL}tv-artwork/def1c4a9b28e94569adc.png`;
 }
+export function bandScrimSource() {
+  return typeof (globalThis as any).__SolidTVRokuRenderer !== "undefined"
+    ? "pkg:/assets/band-scrim.png"
+    : `${import.meta.env.BASE_URL}tv-artwork/d708385a3a9967c1153a.png`;
+}
