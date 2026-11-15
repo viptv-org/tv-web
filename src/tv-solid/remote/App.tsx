@@ -1,5 +1,5 @@
 /** @jsxImportSource @solidtv/solid */
-import type { Screen, Item, Overlay } from "./app-types";
+import type { Screen, Overlay } from "./app-types";
 import { runtimeObserver } from "../platform/runtime-observation";
 import { exitTizen } from "../platform/tizen-host";
 import { DevicePlayback, deviceProfileKey, deviceTitleKey } from "./device-playback";
@@ -33,6 +33,7 @@ import { reloadImages } from "./image-source";
 import { clearLogoCache } from "./visuals";
 import { CalendarBoard } from "./CalendarBoard";
 import { createCalendarScene } from "./calendar-scene";
+import { createSettingsScene } from "./settings-scene";
 import { StatusDialog } from "./StatusDialog";
 import { initialSeasonIndex, seasonEpisodes } from "./seasons";
 import { RowFocus } from "./row-focus";
@@ -142,9 +143,6 @@ import {
   sourceStatusCopy,
 } from "./sourceStatus";
 import {
-  offersHouseholdWrite
-} from "./refusals";
-import {
  RemotePlayback 
 } from "./playback";
 import {
@@ -165,14 +163,6 @@ import { createDetailPager } from "./paging/detail";
 import { createCatalogPager } from "./paging/catalog";
 import { createHomePager } from "./paging/home";
 import { createCatalogControls } from "./catalog-controls";
-import { createProfileManagement } from "./profile-management";
-import { createProfilePreferenceRows } from "./settings/profile-preferences";
-import { createDevicePreferenceRows } from "./settings/device-preferences";
-import { accountSettings } from "./settings/account";
-import { createAddonSettings } from "./settings/addons";
-import { createIntegrationSettings } from "./settings/integrations";
-import { createParentSettings } from "./settings/parental";
-import { createPreferenceControls } from "./preference-controls";
 import { createOverlayController } from "./overlay-controller";
 import { createDetailPresentation } from "./detail-presentation";
 import { createSourcePresentation } from "./source-picker/presentation";
@@ -183,7 +173,6 @@ import { createHomeRowsNavigation } from "./navigation/home";
 import { createSourceNavigation } from "./navigation/sources";
 import { createOverlayNavigation } from "./navigation/overlays";
 import { createSearchNavigation } from "./navigation/search";
-import { createSettingsNavigation } from "./navigation/settings";
 import { createProfilesNavigation } from "./navigation/profiles";
 import { createCalendarNavigation } from "./navigation/calendar";
 import { createDetailNavigation } from "./navigation/detail";
@@ -507,8 +496,6 @@ export function createRemoteTvApp(
       [pauseRequested, setPauseRequested] = createSignal(false),
       [seek, setSeek] = createSignal<number>(),
       [seeking, setSeeking] = createSignal(false),
-      [settingsTab, setSettingsTab] = createSignal(0),
-      [settingsItems, setSettingsItems] = createSignal<Item[]>([]),
       // Household writes need an account session. `/api/bootstrap` omits the
       // capability, so it stays unknown until the server answers.
       [canManageAccount, setCanManageAccount] = createSignal<
@@ -536,7 +523,6 @@ export function createRemoteTvApp(
         setZone("profiles");
     });
     let scope = new AbortController(),
-      settingsScope: AbortController | undefined,
       pagingScope: AbortController | undefined,
       sourceScope: AbortController | undefined,
       alive = true,
@@ -950,7 +936,7 @@ export function createRemoteTvApp(
       searchRequests.scope?.abort();
       setSearchChannelPaging(false);
       setSearchError("");
-      settingsScope?.abort();
+      settingsAbort();
       pagingScope?.abort();
       pagingScope = undefined;
       pendingFocus = undefined;
@@ -2374,34 +2360,6 @@ export function createRemoteTvApp(
         true,
       );
     }
-    // The settings boards' canonical order; sign-out lives under Account.
-    const settingsTabs = [
-      "Account",
-      "Profiles",
-      "Playback",
-      "Subtitles & audio",
-      "Add-ons",
-      "Source integrations",
-      "Display",
-      "Parental controls",
-      "About",
-    ];
-    /** The existing Settings section by name, so a copy change moves no code. */
-    const settingsTabIndex = (label: string) =>
-      Math.max(0, settingsTabs.indexOf(label));
-    const {choice: preferenceChoice, displayItem} = createPreferenceControls({current: preferences, adopt: setPreferences,
-      request: call, path: () => api.scoped("/preferences"), reload: () => loadSettings(settingsTab(), scope.signal),
-      dialogs: {open: openOverlay, close: closeOverlay}, calibrate: setCalibrationValue});
-    /** Household writes (add-ons, source integrations, the parent PIN, kids
-     * limits) are refused to a paired device session by the server's owner
-     * guard. `/api/bootstrap` does not project that capability, so it is asked
-     * for once per session; an unknown answer keeps the control and lets the
-     * refusal explain itself. */
-    async function mayWriteHousehold() {
-      if (canManageAccount() === undefined)
-        setCanManageAccount(await api.canManageAccount());
-      return offersHouseholdWrite(canManageAccount());
-    }
     /**
      * LIVE-EMPTY-001 reads the account identity only when its empty or failed
      * form appears, so a working Live page never pays for it. Until it answers
@@ -2419,98 +2377,26 @@ export function createRemoteTvApp(
         if (alive) setLiveIdentity(value);
       });
     });
-    const profilePreferenceRows = createProfilePreferenceRows({current: preferences, adopt: setPreferences, request: call,
-      path: () => api.scoped("/preferences"), reload: () => loadSettings(settingsTab(), scope.signal), choose: preferenceChoice});
-    const devicePreferenceRows = createDevicePreferenceRows({device: devicePlayback, scope: deviceScope,
-      reload: () => loadSettings(settingsTabIndex("Playback"), scope.signal)});
-    const householdSettings = {request: call, path: (path: string) => api.scoped(path), mayWrite: mayWriteHousehold,
-      dialogs: {open: openOverlay, close: closeOverlay, dismiss: dismissOverlay}, prompt: edit, notify};
-    const addonSettings = createAddonSettings({...householdSettings, reload: () => loadSettings(settingsTabIndex("Add-ons"), scope.signal)});
-    const integrationSettings = createIntegrationSettings({...householdSettings, reload: () => loadSettings(settingsTabIndex("Source integrations"), scope.signal)});
-    const parentSettings = createParentSettings({...householdSettings, profiles: management, refreshProfiles,
-      reload: () => loadSettings(settingsTabIndex("Parental controls"), scope.signal)});
-    async function loadSettings(tab: number, signal: AbortSignal) {
-      if (signal.aborted) return;
-      retry = () => void loadSettings(tab, scope.signal).catch(fail);
-      settingsScope?.abort();
-      settingsScope = new AbortController();
-      signal = settingsScope.signal;
-      setSettingsTab(tab);
-      setSettingsItems([]);
-      setLoading(true);
-      if (tab === 0) {
-        // Account: server identity facts plus this device's sign-out. The
-        // boards' Devices row needs account-wide revocation, which the
-        // producer deliberately does not offer — the row stays absent.
-        setSettingsItems(accountSettings({email: accountEmail, dialogs: {open: openOverlay, close: closeOverlay}, signOut: async () => {
-          await player.stop();
-          await api.signOut();
-          resetScope();
-          clearProfileView();
-          setScreen("welcome");
-          setLoading(false);
-        }}));
-
-        setLoading(false);
-        return;
-      }
-      if (tab === 1) {
-        const value = await api.profiles(signal);
-        setManagement(value);
-        setSettingsItems(
-          value.profiles.map((profile, index) => ({
-            id: profile.id,
-            label: profile.name,
-            value: profile.id === api.profile ? "Watching" : "",
-            run: () => manageProfile(index),
-          })),
-        );
-        setLoading(false);
-        return;
-      }
-      const pref = await api.preferences(signal);
-      setPreferences(pref);
-      if (tab === 2 || tab === 3) setSettingsItems(profilePreferenceRows(pref, tab));
-      if (tab === 2) setSettingsItems(await devicePreferenceRows());
-      if (tab === 6)
-        setSettingsItems(
-          (pref.controls ?? [])
-            .filter((control) => control.group === "display")
-            .map((control) => displayItem(control)),
-        );
-      if (tab === 4) setSettingsItems(await addonSettings(signal));
-      if (tab === 5) setSettingsItems(await integrationSettings(signal));
-      if (tab === 7) setSettingsItems(await parentSettings(signal));
-      if (tab === 8)
-        setSettingsItems([
-          {
-            id: "about",
-            label: "VIPTV",
-            value: "TV app",
-            description: api.origin,
-            run: () => {},
-          },
-        ]);
-      setLoading(false);
-    }
-    async function refreshProfiles() {
-      const value = await api.profiles(scope.signal);
-      setManagement(value);
-      if (
-        screen() === "settings" &&
-        (settingsTab() === 0 || settingsTab() === 1)
-      )
-        setSettingsItems(
-          value.profiles.map((profile, index) => ({
-            id: profile.id,
-            label: profile.name,
-            value: profile.id === api.profile ? "Watching" : "",
-            run: () => manageProfile(index),
-          })),
-        );
-    }
-    const manageProfile = createProfileManagement({current: management, request: call, refresh: refreshProfiles,
-      dialogs: {open: openOverlay, close: closeOverlay, dismiss: dismissOverlay}, prompt: edit});
+    const settings = createSettingsScene({
+      api, call, run, fail, retry: work => { retry = work; }, dialogs: { open: openOverlay, close: closeOverlay, dismiss: dismissOverlay },
+      prompt: edit, notify, screen, setScreen, loading: setLoading,
+      preferences, adoptPreferences: setPreferences, accountEmail,
+      management, setManagement, canManageAccount, setCanManageAccount,
+      devicePlayback, deviceScope, scope: () => scope.signal,
+      stopPlayer: () => player.stop(), resetScope, clearProfileView, calibrate: setCalibrationValue,
+      navigation: { zone, column, setZone, setColumn },
+      manageProfile: index => settings.manageProfile(index),
+    });
+    const settingsTabs = settings.tabs;
+    const settingsTab = settings.tab;
+    const settingsItems = settings.items;
+    const setSettingsItems = settings.setItems;
+    const settingsTabIndex = settings.tabIndex;
+    const loadSettings = settings.load;
+    const refreshProfiles = settings.refreshProfiles;
+    const manageProfile = settings.manageProfile;
+    const navigateSettings = settings.navigate;
+    const settingsAbort = settings.abort;
     async function selectProfile(index: number) {
       const profile = management()?.profiles[index];
       if (!profile) {
@@ -2551,8 +2437,6 @@ export function createRemoteTvApp(
       });
     }
     const navigationFocus = { zone, column, setZone, setColumn };
-    const navigateSettings = createSettingsNavigation({ focus: navigationFocus, tab: settingsTab,
-      tabCount: settingsTabs.length, items: settingsItems, load: tab => { void loadSettings(tab, scope.signal).catch(fail); }, fail });
     const navigateProfiles = createProfilesNavigation({ focus: navigationFocus,
       count: () => management()?.profiles.length ?? 0, canCreate: () => available(management()?.capabilities.create), canManage: canManageProfiles });
     const navigateCalendar = createCalendarNavigation({ focus: navigationFocus,
@@ -3169,7 +3053,7 @@ export function createRemoteTvApp(
       playerNavigation.cancel();
       overlays.dispose();
       scope.abort();
-      settingsScope?.abort();
+      settingsAbort();
       sourceScope?.abort();
       revisions.stop();
       clearTimeout(noticeTimer);
