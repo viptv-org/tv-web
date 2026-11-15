@@ -1,13 +1,13 @@
 /** @jsxImportSource @solidtv/solid */
 import { For } from "solid-js";
 import { TvView } from "../runtime";
-import { SlidingDrawer } from "./SlidingDrawer";
+import { SlidingDrawer, type DrawerState } from "./SlidingDrawer";
 import { Label, palette } from "./visuals";
 import type { Overlay } from "./app-types";
 
-export function ChoiceDrawer(props: { dialog: Extract<Overlay, { kind: "choices" | "confirm" }>; selected: number; entered: boolean; closing: boolean }) {
+export function ChoiceDrawer(props: { dialog: Extract<Overlay, { kind: "choices" | "confirm" }>; selected: number; entered: boolean; closing: boolean; onSettled?: (state: DrawerState) => void }) {
   return <>
-    <SlidingDrawer width={820} entered={props.entered} closing={props.closing}>
+    <SlidingDrawer width={820} entered={props.entered} closing={props.closing} onSettled={props.onSettled}>
       <Label
         x={64}
         y={72}

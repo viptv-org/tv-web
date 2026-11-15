@@ -415,7 +415,7 @@ export function createRemoteTvApp(
       text: {clear: () => { setText(""); }, begin: initial => { setKeyboardUpper(false); setKeyboardSymbols(false); setText(initial); setKey(0); }},
       errors: {clear: () => { setError(""); }, restore: () => { setError(screen() === "player" ? playbackError() : ""); }},
     });
-    const {current: overlay, entered: overlayEntered, closing: overlayClosing, settled: overlaySettled, open: openOverlay} = overlays;
+    const {current: overlay, entered: overlayEntered, closing: overlayClosing, open: openOverlay, reportSettled: reportOverlaySettled} = overlays;
     const [sourcePage, setSourcePage] = createSignal<SourcePage>(),
       [allSourceIds, setAllSourceIds] = createSignal<string[]>([]),
       [sourceFacet, setSourceFacet] = createSignal(0),
@@ -914,17 +914,6 @@ export function createRemoteTvApp(
     const [fontsReady, setFontsReady] = createSignal(false);
     onMount(() => {
       void document.fonts.ready.then(() => setFontsReady(true));
-    });
-    const sceneWidth = createMemo(() => {
-      const value = overlay();
-      if (!overlaySettled() || overlayClosing() || !value) return 1920;
-      if (value.kind === "sources") return 960;
-      if (
-        (value.kind === "choices" || value.kind === "confirm") &&
-        !value.profile
-      )
-        return 1100;
-      return 1920;
     });
     const notify = (message: string) => {
       setNotice(message);
@@ -3255,9 +3244,8 @@ export function createRemoteTvApp(
         >
           <TvView w={1920} h={1080} show={!screenSaver()}>
           <TvView
-            w={sceneWidth()}
+            w={1920}
             h={1080}
-            clipping={sceneWidth() < 1920}
             show={!profileEditor() && overlay()?.kind !== "text"}
           >
             {/* The player is a native SceneGraph Video plane under the app's
@@ -3484,7 +3472,7 @@ export function createRemoteTvApp(
           </TvView>
           <Show when={!openingSource() ? overlay() : undefined}>
             {(modal) => (
-              <OverlayViewport order={10} shade={modal().kind !== "next" ? "rgba(0,0,0,.6)" : undefined} shadeWidth={sceneWidth()}>
+              <OverlayViewport order={10} shade={modal().kind !== "next" ? "rgba(0,0,0,.6)" : undefined} shadeWidth={1920}>
                 <Show when={modal().kind === "next"}>
                   <NextEpisodePanel currentTitle={activeAction()?.card.title ?? "Episode"} episode={episodeState().item}
                     countdown={countdownState()} selected={choice()} entered={overlayEntered()} />
@@ -3493,7 +3481,7 @@ export function createRemoteTvApp(
                   <CalibrationPanel title={modal().title} value={calibrationValue()} />
                 </Show>
                 <Show when={modal().kind === "sources"}>
-                  <SlidingDrawer width={960} entered={overlayEntered()} closing={overlayClosing()}>
+                  <SlidingDrawer width={960} entered={overlayEntered()} closing={overlayClosing()} onSettled={reportOverlaySettled}>
                     <SourceHeading title={pickerCard()?.title ?? ""} checking={sourceLoading() && !sources().length}
                       count={sourcePage()?.total ?? sources().length} addons={sourceAddonCount()} />
                     <Show when={!sourceMenu() && !sourceActions()}>
@@ -3517,7 +3505,7 @@ export function createRemoteTvApp(
                     !profileEditor()
                   }
                 >
-                  <ChoiceDrawer dialog={modal() as Extract<Overlay, { kind: "choices" | "confirm" }>} selected={choice()} entered={overlayEntered()} closing={overlayClosing()} />
+                  <ChoiceDrawer dialog={modal() as Extract<Overlay, { kind: "choices" | "confirm" }>} selected={choice()} entered={overlayEntered()} closing={overlayClosing()} onSettled={reportOverlaySettled} />
                 </Show>
                 <Show when={profileEditor()}>
                   {editor => <ProfileEditorView profile={management()?.profiles.find(profile => profile.id === editor().profile!.id) ?? editor().profile!}

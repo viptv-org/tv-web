@@ -20,11 +20,22 @@ it('an animated close cannot restore an origin over a newer focus', () => {
   control.open({kind: 'sources', title: 'Choose a source'});
   vi.advanceTimersByTime(16);
   control.close();
+  // The drawer owns the slide: the overlay stays up until it reports.
+  expect(control.current()).toBeDefined();
   focus.column = 9;
-  vi.advanceTimersByTime(200);
+  control.reportSettled('closed');
   expect(control.current()).toBeUndefined();
   expect(focus.column).toBe(9);
   expect(restore).not.toHaveBeenCalled();
+  control.dispose();
+});
+it('the overlay settles only when the drawer reports the slide', () => {
+  const {control} = setup();
+  control.open({kind: 'sources', title: 'Choose a source'});
+  expect(control.settled()).toBe(false);
+  vi.advanceTimersByTime(16);
+  control.reportSettled('open');
+  expect(control.settled()).toBe(true);
   control.dispose();
 });
 it('disposal retires animation/close callbacks without later UI writes', () => {
@@ -34,6 +45,7 @@ it('disposal retires animation/close callbacks without later UI writes', () => {
   control.dispose();
   expect(vi.getTimerCount()).toBe(0);
   vi.advanceTimersByTime(1000);
+  control.reportSettled('closed');
   expect(restore).not.toHaveBeenCalled();
   expect(text.clear).not.toHaveBeenCalled();
 });
