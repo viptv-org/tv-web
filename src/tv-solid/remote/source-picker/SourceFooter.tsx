@@ -1,7 +1,7 @@
 /** @jsxImportSource @solidtv/solid */
 import { Show } from "solid-js";
 import { Label, palette } from "../visuals";
-import { BusySpinner } from "../BusyIndicator";
+import { BusySpinner } from "../BusySurface";
 import { SOURCE_SPINNER_SIZE } from "../sourceStatus";
 
 export function SourceFooter(props: { empty?: string; status?: string; failure: string; filtered: boolean }) {

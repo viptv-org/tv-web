@@ -52,6 +52,21 @@ export class DeferredPlayer implements Player {
     return this.pending;
   }
 
+  /**
+   * Fetch the engine before a session needs it.
+   *
+   * The engine chunk is the largest thing between pressing Play and the first
+   * frame. Warming it at the first moment the user could plausibly press Play
+   * takes that wait out of the play path. A failed warm is not an error: the
+   * next command retries the load, exactly as a failed `load()` does.
+   */
+  prewarm(): void {
+    if (this.disposed) return;
+    void this.load().catch(() => {
+      /* the next command retries the load */
+    });
+  }
+
   get capabilities(): PlayerCapabilities {
     const engine = this.engine;
     if (!engine)

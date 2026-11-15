@@ -43,6 +43,8 @@ function observedVideoEvidence(snapshot: PlayerSnapshot, platform: string, start
  * episode, resume position and output; this class never chooses a fallback. */
 export class RemotePlayback {
   readonly player: Player;
+  /** The engine holder, when the platform needs one fetched. */
+  private readonly prewarmable?: { prewarm: () => void };
   private providerCaption?: ProviderSubtitles;
   private providerOperation = 0;
   private providerIntentGeneration = 0;
@@ -95,14 +97,18 @@ export class RemotePlayback {
     // from a session, so `playback.ts` fetches it through `import()` in
     // `hls-engine.ts` instead of importing it here.
     const nativePlayer = (globalThis as any).__viptvCreatePlayer;
-    this.player =
-      typeof nativePlayer === "function"
-        ? nativePlayer()
-        : platform === "tizen" && (window as any).webapis?.avplay
-          ? (ensureTizenSurface(), new TizenAvplayAdapter())
-          : new DeferredPlayer(async () =>
-              (await import("./hls-engine")).createHtmlHlsPlayer(video),
-            );
+    if (typeof nativePlayer === "function") {
+      this.player = nativePlayer();
+    } else if (platform === "tizen" && (window as any).webapis?.avplay) {
+      ensureTizenSurface();
+      this.player = new TizenAvplayAdapter();
+    } else {
+      const deferred = new DeferredPlayer(async () =>
+        (await import("./hls-engine")).createHtmlHlsPlayer(video),
+      );
+      this.player = deferred;
+      this.prewarmable = deferred;
+    }
     this.unsubscribe = this.player.subscribe((snapshot) => {
       const previous = this.lastState;
       this.lastState = snapshot.state;
@@ -189,6 +195,16 @@ export class RemotePlayback {
   get hasPresentedFrame() { return this.firstVideo && !!this.lease; }
   get firstVideoEvidence() { return this.lease ? this.videoEvidence : undefined; }
   get hasPlaybackProgress() { return this.started && !!this.lease; }
+  /**
+   * Fetch the playback engine before a session needs it.
+   *
+   * The engine chunk is the biggest part of the path between pressing Play and
+   * the first frame. Warming it takes that wait out of the play path; it
+   * changes nothing about what plays.
+   */
+  prewarm(): void {
+    this.prewarmable?.prewarm();
+  }
   get actions(): PlaybackActions {
     return this.lease?.actions ?? this.seekView?.actions ?? noActions;
   }

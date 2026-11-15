@@ -2,7 +2,7 @@
 import { Show, createEffect, createMemo, createSignal } from "solid-js";
 import { TvView } from "../runtime";
 import { Label, Logo, palette } from "./visuals";
-import { BusySpinner } from "./BusyIndicator";
+import { BusySurface } from "./BusySurface";
 import { imagePixels, imageSource } from "./image-source";
 import { homeScrimSource } from "./tv-artwork.generated";
 import type { Card } from "./types";
@@ -25,7 +25,6 @@ export function PlaybackPreparation(props: { card?: Card }) {
         <Logo src={logo()!} h={180} maxWidth={800} boxH={180} fade={false} centered onReady={() => setLogoReady(true)} onError={() => setLogoReady(false)} />
       </Show>
     </TvView>
-    <BusySpinner x={932} y={512} size={56} />
-    <Label x={560} y={610} w={800} align="center" size={22} color={palette.muted} content="Press Back to cancel" />
+    <BusySurface label="Press Back to cancel" />
   </TvView>;
 }

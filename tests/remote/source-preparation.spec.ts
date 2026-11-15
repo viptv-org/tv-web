@@ -11,7 +11,7 @@ const preparation = (page: Page) => page.evaluate(() => {
       const {w,h} = node.props, x=node.absX, y=node.absY;
       if (node.texture && !node.viptvText && w>80 && h>80 && x>=559 && y>=249 && x+w<=1361 && y+h<=431)
         logos.push({x,y,w,h});
-      if (w===56 && h===56 && x===932 && y===512) spinners.push({x,y});
+      if (w===56 && h===56 && x===932 && y===476) spinners.push({x,y});
     }
     node.children?.forEach(walk);
   }

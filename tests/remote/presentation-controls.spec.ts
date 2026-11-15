@@ -72,7 +72,7 @@ test('delayed detail uses layout skeleton and source opening uses centered title
   expect((await rendered(page)).texts).not.toContain('Choose a source');
   await expect.poll(async()=>(await rendered(page)).boxes.some(box=>box.x===480 && box.w===1440 && box.h===810)).toBe(true);
   await page.waitForTimeout(100);
-  await expect.poll(async()=>(await rendered(page)).boxes.some(box=>box.x===932 && box.y===512 && box.w===56 && box.h===56)).toBe(true);
+  await expect.poll(async()=>(await rendered(page)).boxes.some(box=>box.x===932 && box.y===476 && box.w===56 && box.h===56)).toBe(true);
   await expect.poll(async()=>(await paintedProgress(page)).brightPixels).toBeGreaterThan(80);
   const openingFrame=await page.screenshot({path:testInfo.outputPath('source-opening.png')});
   expect(progressPaint(openingFrame,true).brightPixels).toBeGreaterThan(80);

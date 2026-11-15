@@ -39,7 +39,7 @@ import { HomeContent } from "./HomeContent";
 
 import { DetailContent } from "./DetailContent";
 import { PlaybackPreparation } from "./PlaybackPreparation";
-import { BusyIndicator } from "./BusyIndicator";
+import { BusySurface } from "./BusySurface";
 import { PlayerControlsView } from "./PlayerControlsView";
 import { SettingsView } from "./SettingsView";
 import { BrowseControls } from "./BrowseControls";
@@ -61,6 +61,7 @@ import { SourceHeading } from "./source-picker/SourceHeading";
 import { SourceFilters } from "./source-picker/SourceFilters";
 import { SourceList } from "./source-picker/SourceList";
 import { createDetailRefresh } from "./detail-refresh";
+import { whenIdle } from "./idle";
 import { createProgressFreshness } from "./progress-freshness";
 import { createLiveRefresh } from "./live/revision-refresh";
 import { createSearchController, type SearchRequests } from "./search/controller";
@@ -737,6 +738,15 @@ export function createRemoteTvApp(
     const playerTransport = createPlayerTransport({
       play: () => player.player.play(), pause: () => player.player.pause(), pending: setPauseRequested,
       reveal: () => { setShowControls(true); setChoice(0); }, activity: () => hideControls(), active: () => screen() === "player",
+    });
+    // Warm the playback engine at the first moment the user could plausibly
+    // press Play: Home is on screen and the browser has nothing better to do.
+    // The fetch never sits between that press and the first frame.
+    let engineWarmed = false;
+    createEffect(() => {
+      if (engineWarmed || screen() !== "home" || !home()) return;
+      engineWarmed = true;
+      whenIdle(() => player.prewarm());
     });
     const discoverEpisode = createEpisodeDiscovery({api, memory: sourceMemory});
     const episodes = new EpisodePreparation(
@@ -2218,7 +2228,12 @@ export function createRemoteTvApp(
       }, owner: {intent: () => sourceIntent, epoch: () => api.scopeEpoch, operation: () => sourceScope,
         replace: operation => {sourceScope = operation;}, aborted: () => scope.signal.aborted},
       position: sourceStartPosition.current, manual: () => manualSourceSelection, playerScreen: () => screen() === "player", memory: sourceMemory,
-      presentation: {capture: overlays.captureOrigin, hide: overlays.hide, show: () => openOverlay({kind: "sources", title: "Choose a source"})},
+      presentation: {capture: overlays.captureOrigin, hide: overlays.hide, show: () => {
+        // The user is choosing a source, so the engine can be fetched while
+        // they browse — it is never fetched between their press and the frame.
+        player.prewarm();
+        openOverlay({kind: "sources", title: "Choose a source"});
+      }},
       resolve: action => {sourceStartPosition.adopt(action);setAction(action);setPickerCard(previous => presentationCard(previous, action.card));}, retry: work => {retry = work;},
       page: setSourcePage, ids: setAllSourceIds, loading: setLoading, discovering: setSourceLoading,
       failure: {current: sourceFailure, set: setSourceFailure}, rows: sources, reconcile: reconcileSources, publish: publishSources,
@@ -3457,7 +3472,7 @@ export function createRemoteTvApp(
               <Button x={1596} y={746} w={228} h={56} label={activeSegment()?.kind === "recap" ? "Skip recap" : "Skip intro"} focused={false} />
             </Show>
             <Show when={screen() === "player" && !overlay() && !openingSource() && (loading() || seeking() || snapshot()?.state === "buffering")}>
-              <BusyIndicator label={seeking() ? "Seeking…" : "Buffering…"} />
+              <BusySurface label={seeking() ? "Seeking…" : "Buffering…"} />
             </Show>
             <Show
               when={

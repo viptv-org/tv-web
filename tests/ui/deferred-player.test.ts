@@ -163,4 +163,43 @@ describe('DeferredPlayer', () => {
     expect(create).toHaveBeenCalledTimes(2);
     expect(inner.calls).toEqual(['open']);
   });
+
+  it('warms the engine once and the session reuses it', async () => {
+    const inner = engine();
+    const create = vi.fn(async () => inner);
+    const player = new DeferredPlayer(create);
+
+    player.prewarm();
+    player.prewarm();
+    await player.open(request);
+
+    expect(create).toHaveBeenCalledTimes(1);
+    expect(inner.calls).toEqual(['open']);
+  });
+
+  it('a failed warm does not poison the next load', async () => {
+    const inner = engine();
+    const create = vi
+      .fn<() => Promise<Player>>()
+      .mockRejectedValueOnce(new Error('chunk offline'))
+      .mockResolvedValueOnce(inner);
+    const player = new DeferredPlayer(create);
+
+    player.prewarm();
+    await new Promise(resolve => setTimeout(resolve, 0));
+    await player.open(request);
+
+    expect(create).toHaveBeenCalledTimes(2);
+    expect(inner.calls).toEqual(['open']);
+  });
+
+  it('does not warm a disposed player', async () => {
+    const create = vi.fn(async () => engine());
+    const player = new DeferredPlayer(create);
+
+    await player.dispose();
+    player.prewarm();
+
+    expect(create).not.toHaveBeenCalled();
+  });
 });
