@@ -2,7 +2,8 @@
 
 `src/tv-solid/remote/App.tsx` is the TV application: one `createRemoteTvApp`
 closure that owns every signal and returns the root screen. It started this work
-at **3579 lines**. This note records what has been extracted, and the exact next
+at **3579 lines** and is **3333** now, with the render tree split into three
+screen components and six behaviour modules. This note records what has been extracted, and the exact next
 slices so the remainder can be done mechanically instead of by feel.
 
 ## Extracted so far
@@ -15,8 +16,12 @@ slices so the remainder can be done mechanically instead of by feel.
 | `remote/player/segments.ts` | 70 | skip markers, the active window and the offer clock |
 | `remote/calendar-scene.ts` | 22 | calendar snapshot, day and day entries |
 | `remote/settings-scene.ts` | 190 | the nine Settings boards, their reload and profile management |
+| `remote/render/live.tsx` | 81 | the Live screen and its three empty forms |
+| `remote/render/browse.tsx` | 125 | catalog, library and search, with their toolbars |
+| `remote/render/player.tsx` | 59 | the skip offer, the busy surface and the control row |
+| `remote/live/program-line.ts` | 20 | a guide slot that never prints an out-of-range minute count |
 
-`App.tsx` is **3453 lines** after those. Each extraction is a factory that takes
+`App.tsx` is **3333 lines** after those. Each extraction is a factory that takes
 an explicit dependency object; nothing reaches back into the closure.
 
 ## Why this is not one big diff
@@ -49,12 +54,12 @@ Each row lists what must be handed over; the shapes are already visible in the
    `dismissNext`, the countdown and the episode preparation. Needs: `player`,
    `playerTransport`, `overlays`, `notify`, `fail`, `retry`, `sources`,
    `activeAction`, `activeChannel`, `devicePlayback`, `preferences`.
-4. **`render/`** (~340 lines of JSX): one small component per screen block
-   (`WelcomeScreen`, `PairingView`, `ProfilesView`, `CalendarView`,
-   `HomeView`, `DetailView`, `BrowseSearchView`, `LiveView`, `SettingsView`
-   already exists, `PlayerChrome`, `OverlayHost`), each taking only the props its
-   block references. Do **not** extract the whole render tree as one component:
-   it references ~110 identifiers, which would be a god object, not a seam.
+4. **`render/`** (partly done): Live, Browse and the player chrome are out.
+   What remains is the entry trio (`WelcomeScreen`, `PairingView`,
+   `SignedInView`), `ProfilesView`, `CalendarView`, `HomeView`, `DetailView`
+   and `OverlayHost`, each taking only the props its block references. Do **not**
+   extract the whole render tree as one component: it references ~110
+   identifiers, which would be a god object, not a seam.
 5. **`navigation-scene.ts`** (~330 lines): `navigate`, `back`,
    `restorePrevious`, `settlePendingFocus`, the history stack and the per-screen
    navigation controllers.

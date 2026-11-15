@@ -3,7 +3,7 @@ import { Show } from "solid-js";
 import { TvView } from "../../runtime";
 import { icon, Label, livePreviewScrim, palette } from "../visuals";
 import { imageSource } from "../image-source";
-import { timeOfDay } from "../time";
+import { programLine } from "./program-line";
 import { liveTitle } from "./title";
 import type { Channel, Program } from "../types";
 import { LAYOUT } from "../layout";
@@ -56,18 +56,7 @@ export function LiveHero(props: { channel?: Channel; program?: Program }) {
             y={250}
             size={24}
             font="Onest500"
-            content={`${timeOfDay(p().start_millis)} – ${timeOfDay(
-              p().end_millis,
-            )}${
-              p().end_millis > Date.now()
-                ? ` · ${Math.max(
-                    1,
-                    Math.round(
-                      (p().end_millis - Date.now()) / 60000,
-                    ),
-                  )} min left`
-                : ""
-            }`}
+            content={programLine(p().start_millis, p().end_millis)}
           />
           <Label
             x={LAYOUT.inset}

@@ -22,18 +22,15 @@ import {
 import {
  PosterWall 
 } from "./PosterWall";
-import {
- LibraryToolbar 
-} from "./LibraryToolbar";
 import { searchLetters } from "./SearchInput";
-import {
- SearchChannels 
-} from "./SearchChannels";
 import { reloadImages } from "./image-source";
 import { clearLogoCache } from "./visuals";
 import { CalendarBoard } from "./CalendarBoard";
 import { createCalendarScene } from "./calendar-scene";
 import { createSettingsScene } from "./settings-scene";
+import { LiveScreen } from "./render/live";
+import { PlayerChrome } from "./render/player";
+import { BrowseScreen } from "./render/browse";
 import { StatusDialog } from "./StatusDialog";
 import { initialSeasonIndex, seasonEpisodes } from "./seasons";
 import { RowFocus } from "./row-focus";
@@ -41,20 +38,11 @@ import { HomeContent } from "./HomeContent";
 
 import { DetailContent } from "./DetailContent";
 import { PlaybackPreparation } from "./PlaybackPreparation";
-import { BusySurface } from "./BusySurface";
-import { PlayerControlsView, SkipIntroButton } from "./PlayerControlsView";
 import { SettingsView } from "./SettingsView";
-import { BrowseControls } from "./BrowseControls";
 import { OverlayViewport } from "./OverlayViewport";
 import { createLiveGuideController } from "./live/guide-controller";
-import { LiveGuideGrid } from "./live/LiveGuideGrid";
-import { LiveGroupSelector } from "./live/LiveGroupSelector";
-import { LiveHero } from "./live/LiveHero";
-import { SearchRows } from "./SearchRows";
 import { searchRowFocus } from "./search/media";
 import type { SearchPage } from "./types";
-import { SearchHeader } from "./SearchHeader";
-import { CatalogGrid } from "./CatalogGrid";
 import { SlidingDrawer } from "./SlidingDrawer";
 import { SourceFooter } from "./source-picker/SourceFooter";
 import { SourceActionsPanel } from "./source-picker/SourceActionsPanel";
@@ -107,7 +95,7 @@ import { createNativeTextEditing, nativeTextDialogOverlay, type NativeTextPort, 
 import { createPlayerMediaKeys } from "./input/player-media";
 import { installWindowInputs } from "./input/window-bindings";
 import { createTrackPicker } from "./player/tracks";
-import { SKIP_BUTTON, SKIP_FADE, skipLabel } from "./player/skip-intro";
+import { SKIP_BUTTON, skipLabel } from "./player/skip-intro";
 import { createPlaybackSegments } from "./player/segments";
 import { LAYOUT } from "./layout";
 import { defineScreen, TvView } from "../runtime";
@@ -125,18 +113,14 @@ import {
 } from "./api";
 import {
   LIVE_EMPTY_COPY,
-  LIVE_FILTERED_LINE,
-  liveFailureBody,
   liveFilteredChip,
   liveKeepsToday,
-  liveNoChannelsBody,
   liveNoSourceActions,
   liveRecoveryActions,
   liveViewerOf,
   pickLiveSpread,
   type LiveRecoveryAction,
 } from "./liveEmpty";
-import { LiveAnswer, LiveNoSource } from "./liveEmptyViews";
 import { guideWindowOf } from "./guideWindow";
 import {
   sourceEmptyCopy,
@@ -862,16 +846,28 @@ export function createRemoteTvApp(
           : []),
       ];
     }, undefined, { equals: (a, b) => a.length === b.length && a.every((button, index) => button.id === b[index].id && button.label === b[index].label) });
+    /** The last two controls belong to the same instant, not to the row's flow:
+     * Next episode is offered at the end of an episode and Skip during its
+     * opening, so both are laid out from the right edge. Skip keeps the rect the
+     * hidden-chrome button uses whether or not Next is present. */
     const playerTools = createMemo(() => {
       let left = 268;
-      return playerButtons().slice(1).map(button => {
-        if (button.id === "skip")
-          return { ...button, x: SKIP_BUTTON.x, width: SKIP_BUTTON.width, icon: "" };
-        const width = button.id === "tracks" ? 304 : button.id === "next" ? 240 : 228;
-        const x = button.id === "next" ? LAYOUT.playerRight : left;
-        if (button.id !== "next") left += width + 12;
-        return { ...button, x, width, icon: button.id === "episodes" ? "episodes" : button.id === "tracks" ? "audio" : button.id === "sources" ? "settings" : "chevron" };
+      const tools = playerButtons().slice(1).map(button => {
+        if (button.id === "skip" || button.id === "next")
+          return { ...button, x: 0, width: button.id === "next" ? 240 : SKIP_BUTTON.width, icon: "" };
+        const width = button.id === "tracks" ? 304 : 228;
+        const tool = { ...button, x: left, width, icon: button.id === "episodes" ? "episodes" : button.id === "tracks" ? "audio" : "settings" };
+        left += width + LAYOUT.controlGap;
+        return tool;
       });
+      let edge = LAYOUT.rightEdge;
+      for (let index = tools.length - 1; index >= 0; index--) {
+        if (tools[index].id !== "skip" && tools[index].id !== "next") continue;
+        edge -= tools[index].width;
+        tools[index].x = edge;
+        edge -= LAYOUT.controlGap;
+      }
+      return tools;
     });
     const [timelineFocused, setTimelineFocused] = createSignal(true);
     createEffect(() => {
@@ -3208,153 +3204,37 @@ export function createRemoteTvApp(
                 progress={detailPlayProgress()}
                 saved={!!detailForDisplay() && isSaved(detailForDisplay()!.item)} />
             </Show>
-            <Show
-              when={["movie", "series", "anime", "library", "search"].includes(screen())}
-            >
-              <Show when={screen() === "library"}>
-                <LibraryToolbar
-                  type={libraryType()}
-                  sort={librarySort()}
-                  filters={libraryFilters().length > 0}
-                  query={library()?.query}
-                  defaultQuery={library()?.default_query}
-                  focused={zone() === "library-controls"}
-                  index={column()}
-                />
-              </Show>
-              <Show when={screen() === "movie" || screen() === "series" || screen() === "anime"}>
-                <BrowseControls catalog={catalog()?.name ?? "Choose a catalog"} filters={(catalog()?.controls.length ?? 0) > 0}
-                  focused={zone() === "filters"} index={column()} />
-              </Show>
-              <Show when={screen() === "search"}>
-                <SearchHeader query={search()} selected={key()} keyboardFocused={zone() === "keyboard"} media={searchCapabilities().media && !searchResults().rows.length}
-                  retry={!!searchError() && !searchResults().rows.length} resultCount={page().cards.length} error={searchError()} retryFocused={zone() === "search-retry"} />
-              </Show>
-              <Show
-                when={
-                  ["movie", "series", "anime", "library"].includes(
-                    screen(),
-                  ) &&
-                  (screen() !== "search" || searchCapabilities().media)
-                }
-              >
-                <CatalogGrid screen={screen()} cards={page().cards} window={{start: gridStart, count: gridCount, columns: gridColumns, offset: gridOffset}}
-                  focus={{active: () => zone() === "content", index: column}} loading={loading()}
-                  search={{channels: () => searchCapabilities().channels, pending: searchMediaPending, retry: searchNeedsRetry, query: search}} />
-              </Show>
-              <Show when={screen() === "search" && searchCapabilities().media}>
-                <SearchRows rows={searchResults().rows} row={searchRowIndex()} column={zone() === "content" ? column() : searchMediaFocus}
-                  focused={zone() === "content"} retryFocused={zone() === "search-retry"} pending={searchMediaPending()} error={searchError()}
-                  query={search()} channels={searchCapabilities().channels} remembered={id => searchRowPositions.resolve(searchResults().rows.find(shelf => shelf.id === id))} />
-              </Show>
-              <Show
-                when={
-                  screen() === "search" &&
-                  searchCapabilities().channels &&
-                  search()
-                }
-              >
-                <SearchChannels
-                  channels={searchChannels()}
-                  hasPrevious={!!edgeRequest(searchChannelPages(), "previous")}
-                  index={
-                    zone() === "search-channels" ? column() : searchChannelFocus
-                  }
-                  focused={zone() === "search-channels"}
-                  y={searchCapabilities().media ? 650 : 140}
-                  pending={searchChannelsPending() || searchChannelPaging()}
-                  error={searchChannelError()}
-                  retryFocused={zone() === "search-channel-retry"}
-                />
-              </Show>
-            </Show>
+            <BrowseScreen screen={screen()} zone={zone} column={column} key={key} search={search}
+              searchCapabilities={searchCapabilities()} searchResults={searchResults()} searchError={searchError}
+              library={library()} libraryType={libraryType()} librarySort={librarySort()} libraryFilters={libraryFilters()}
+              catalog={catalog()} page={page()} loading={loading}
+              grid={{start: gridStart, count: gridCount, columns: gridColumns, offset: gridOffset}}
+              gridFocus={{active: () => zone() === "content", index: column}}
+              gridSearch={{channels: () => searchCapabilities().channels, pending: searchMediaPending, retry: searchNeedsRetry, query: search}}
+              searchRowIndex={searchRowIndex()} searchMediaFocus={searchMediaFocus} searchMediaPending={searchMediaPending}
+              searchNeedsRetry={searchNeedsRetry}
+              searchRemembered={id => searchRowPositions.resolve(searchResults().rows.find(shelf => shelf.id === id))}
+              searchChannels={searchChannels()} hasPreviousChannelPage={!!edgeRequest(searchChannelPages(), "previous")}
+              searchChannelFocus={searchChannelFocus}
+              searchChannelsPending={searchChannelsPending()} searchChannelPaging={searchChannelPaging()}
+              searchChannelError={searchChannelError()} />
             <Show when={screen() === "live"}>
-              {/* LIVE-EMPTY-001A: one broadcast frame, no chips, no preview, no
-                  rows. The crop and its scrim are the contract's own. */}
-              <Label
-                x={LAYOUT.inset}
-                y={180}
-                size={26}
-                color={palette.muted}
-                content={
-                  liveSpread() === "loading" ? "Loading Live TV…" : ""
-                }
-              />
-              <Show when={liveSpread() === "no-source"}>
-                <LiveNoSource
-                  viewer={liveViewer()}
-                  focused={liveEmptyFocus()}
-                />
-              </Show>
-              {/* LIVE-EMPTY-001B: the loading form has no copy at all, the
-                  answered form carries the server's reason, and a first request
-                  that failed says so instead of claiming a source is set up. */}
-              <Show
-                when={
-                  liveSpread() === "loading" ||
-                  liveSpread() === "no-channels" ||
-                  liveSpread() === "failed"
-                }
-              >
-                <Show when={liveSpread() === "no-channels"}>
-                  <LiveAnswer
-                    headline={LIVE_EMPTY_COPY.noChannelsHeadline}
-                    body={liveNoChannelsBody(livePages()[0])}
-                    actions={liveRecovery()}
-                    focused={liveEmptyFocus()}
-                  />
-                </Show>
-                <Show when={liveSpread() === "failed"}>
-                  <LiveAnswer
-                    headline={LIVE_EMPTY_COPY.failedHeadline}
-                    body={liveFailureBody(liveFailure())}
-                    actions={liveRecovery()}
-                    focused={liveEmptyFocus()}
-                  />
-                </Show>
-              </Show>
-              <Show when={liveKeepsToday(liveSpread())}>
-              <LiveHero channel={channels()[liveChannelIndex()]} program={currentProgram()} />
-              <Show when={groups().length}><LiveGroupSelector groups={groups()} group={liveGroup()} focused={zone() === "live-groups"} selected={column()} /></Show>
-              <LiveGuideGrid channels={channels()} programs={programs()} window={{row: guideRowStart, start: guideStart, now: () => guideWindow().now}}
-                selection={{index: column, active: () => zone() === "content", program: () => currentProgram()?.id}} />
-              {/* LIVE-EMPTY-11: a page that is empty because of its filter
-                  says so, under the chips that are its focus stop, instead of
-                  reading as a missing source. */}
-              <Show when={liveSpread() === "filtered"}>
-                <Label x={LAYOUT.inset} y={640} size={28} content={LIVE_FILTERED_LINE} />
-              </Show>
-              </Show>
+              <LiveScreen spread={liveSpread()} viewer={liveViewer()} emptyFocus={liveEmptyFocus()}
+                pages={livePages()} recovery={liveRecovery()} failure={liveFailure()}
+                channels={channels()} channelIndex={liveChannelIndex()} program={currentProgram()}
+                groups={groups()} group={liveGroup()} zone={zone()} column={column} programs={programs()}
+                guideRowStart={guideRowStart()} guideStart={guideStart()} guideNow={guideWindow().now} />
             </Show>
             <Show when={screen() === "settings"}>
               <SettingsView tabs={settingsTabs} tab={settingsTab()} items={settingsItems()}
                 zone={zone()} column={column()} loading={loading()} />
             </Show>
             </TvView>
-            <Show when={screen() === "player" && !overlay() && advancing()}>
-              <Label x={LAYOUT.inset} y={790} size={26} content="Preparing next episode…" />
-            </Show>
-            {/* One button, one rect: the same SkipIntroButton the control row
-                draws. With the chrome hidden it offers itself for six seconds
-                and then fades out, leaving the action in the controls. */}
-            <Show when={screen() === "player" && !overlay() && !showControls() && !loading() && !seeking() && !error() && skipStage() !== "none"}>
-              <TvView alpha={skipStage() === "button" ? 1 : 0} transition={SKIP_FADE}>
-                <SkipIntroButton label={skipLabel(activeSegment())} focused={false} />
-              </TvView>
-            </Show>
-            <Show when={screen() === "player" && !overlay() && !openingSource() && (loading() || seeking() || snapshot()?.state === "buffering")}>
-              <BusySurface label={seeking() ? "Seeking…" : "Buffering…"} />
-            </Show>
-            <Show
-              when={
-                screen() === "player" &&
-                !overlay() &&
-                showControls() && !openingSource()
-              }
-            >
-              <PlayerControlsView playback={{snapshot, card: () => activeAction()?.card, canSeek: () => playerActions().seek, tools: playerTools}}
-                focus={{selected: choice, timeline: timelineFocused, preview: seek}} />
-            </Show>
+            <PlayerChrome screen={screen()} overlay={!!overlay()} advancing={advancing()}
+              openingSource={!!openingSource()} showControls={showControls()} loading={loading()}
+              seeking={seeking()} buffering={snapshot()?.state === "buffering"} skipStage={skipStage()}
+              segment={activeSegment()} snapshot={snapshot} action={activeAction()} canSeek={() => playerActions().seek}
+              tools={playerTools} choice={choice} timelineFocused={timelineFocused} preview={seek} />
           </TvView>
           <Show when={!openingSource() ? overlay() : undefined}>
             {(modal) => (
