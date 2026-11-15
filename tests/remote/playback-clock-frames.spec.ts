@@ -39,13 +39,18 @@ for(const canvas of [false,true])test(`sparse PS4 media clocks stay authoritativ
   expect(Math.abs(held.snapshot-held.position)).toBeLessThan(.08);
   expect(held.position,'owned intro must remain actionable after pause').toBeLessThan(introEnd);
   await expect.poll(()=>page.evaluate(()=>{const labels:string[]=[];function walk(node:any){if(node.isRenderable&&node.viptvText)labels.push(node.viptvText);node.children?.forEach(walk);}walk((window as any).__viptvRenderer.stage.root);return labels;})).toContain('Skip intro');
-  await page.keyboard.press('ArrowUp');await expect(state).toHaveAttribute('data-tv-player-timeline-focus','false');await expect(state).toHaveAttribute('data-tv-source-choice','1');await page.keyboard.press('Enter');
+  // Skip is the control row's last button; reach it by name.
+  const firstTools=(await state.getAttribute('data-tv-player-tools'))!.split(',');
+  await page.keyboard.press('ArrowUp');await expect(state).toHaveAttribute('data-tv-player-timeline-focus','false');
+  for(let step=0;step<firstTools.indexOf('skip');step++)await page.keyboard.press('ArrowRight');
+  await page.keyboard.press('Enter');
   await expect.poll(()=>fixture.requests.filter(r=>r.path==='/api/playback'&&r.method==='POST').some(r=>r.body.position===introEnd)).toBe(true);
   await expect(state).toHaveAttribute('data-tv-player-state','paused');
   await expect.poll(async()=>(await clocks(page)).position).toBeCloseTo(introEnd,1);
   await mediaKey(page,'MediaPlay');await expect.poll(async()=>(await clocks(page)).presented).toBeGreaterThan(2.3);
   await expect(state).toHaveAttribute('data-tv-next-prepared','true');
-  await page.keyboard.press('ArrowUp');for(let i=0;i<8;i++)await page.keyboard.press('ArrowRight');await page.keyboard.press('Enter');
+  const nextTools=(await state.getAttribute('data-tv-player-tools'))!.split(',');
+  await page.keyboard.press('ArrowUp');for(let step=0;step<nextTools.indexOf('next');step++)await page.keyboard.press('ArrowRight');await page.keyboard.press('Enter');
   await expect(state).toHaveAttribute('data-tv-player-episode','2');await expect(state).toHaveAttribute('data-tv-player-state','playing');
   await expect.poll(async()=>(await clocks(page)).snapshot).toBeGreaterThan(1.2);
   const next=await clocks(page);expect(next.frames).toBeGreaterThan(10);expect(next.presented).toBeGreaterThan(1);
