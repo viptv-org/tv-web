@@ -54,7 +54,6 @@ import { presentationCard, presentationKey } from "./presentation-card";
 import {
   channelKey,
   edgeRequest,
-  type PageDirection
 } from "./channelWindow";
 import { applyCaptionAppearance } from "./player/caption-appearance";
 import { createKeyboardInput } from "./input/keyboard";
@@ -99,6 +98,7 @@ import { createTextKeyboard } from "./text-keyboard";
 import { createHeldSelect } from "./held-select";
 import { createLibraryControls } from "./library/controls";
 import { createChannelRefresh } from "./paging/channel-refresh";
+import { createPagingScene } from "./paging-scene";
 import { createChannelPager } from "./paging/channel-pages";
 import { createChannelMovement } from "./paging/channel-movement";
 import { createDetailPager } from "./paging/detail";
@@ -402,7 +402,6 @@ export function createRemoteTvApp(
         setZone("profiles");
     });
     let scope = new AbortController(),
-      pagingScope: AbortController | undefined,
       sourceScope: AbortController | undefined,
       alive = true,
       noticeTimer: ReturnType<typeof setTimeout> | undefined,
@@ -413,7 +412,6 @@ export function createRemoteTvApp(
       returnFocus = { zone: "hero", column: 0, row: 0 },
       searchMediaFocus = 0,
       searchChannelFocus = 0,
-      pageBusy = false,
       pageGeneration = 0;
     const revisions = createRevisionPoller({ready: () => !!api.profile && document.visibilityState === "visible" && !(screen() !== "player" && overlay()) && !pending(),
       playing: () => screen() === "player", blocked: () => !!overlay() || pending(), alive: () => alive,
@@ -427,8 +425,6 @@ export function createRemoteTvApp(
       changed: () => setProgressFreshness(value => value + 1),
       failure: error => { if (error instanceof RemoteError && [401, 403].includes(error.status)) fail(error); },
     });
-    let channelPending: { from: string; direction: PageDirection } | undefined;
-    let channelRetry: PageDirection | undefined;
     function adoptChannelWindow(pages: LivePage[], searching = false) {
       const values = pages.flatMap((page) => page.channels);
       if (searching) {
@@ -454,98 +450,26 @@ export function createRemoteTvApp(
         complete: pages.at(-1)?.complete ?? true,
       });
     }
-    let pendingFocus:
-      | {
-          screen: Screen;
-          zone: string;
-          row: number;
-          from: number;
-          index: number;
-          generation: number;
-        }
-      | undefined;
-    function pageSignal() {
-      if (!pagingScope || pagingScope.signal.aborted) {
-        const owner = scope,
-          request = new AbortController();
-        const cancel = () => request.abort();
-        owner.signal.addEventListener("abort", cancel, { once: true });
-        request.signal.addEventListener(
-          "abort",
-          () => owner.signal.removeEventListener("abort", cancel),
-          { once: true },
-        );
-        if (owner.signal.aborted) request.abort();
-        pagingScope = request;
-      }
-      return pagingScope.signal;
-    }
-    function restartPaging() {
-      pagingScope?.abort();
-      pagingScope = undefined;
-      pageGeneration++;
-      pageBusy = false;
-      pendingFocus = undefined;
-      channelPending = undefined;
-      channelRetry = undefined;
-      return pageSignal();
-    }
-    function moveToItem(
-      index: number,
-      length: number,
-      nextCursor?: string | null,
-    ) {
-      if (index >= length && nextCursor) {
-        pendingFocus = {
-          screen: screen(),
-          zone: zone(),
-          row: row(),
-          from: column(),
-          index,
-          generation: pageGeneration,
-        };
-      } else setColumn(Math.max(0, Math.min(length - 1, index)));
-    }
-    function settlePendingFocus() {
-      const pending = pendingFocus;
-      if (
-        !pending ||
-        pending.generation !== pageGeneration ||
-        pending.screen !== screen() ||
-        pending.zone !== zone() ||
-        pending.row !== row() ||
-        pending.from !== column()
-      )
-        return;
-      const shelf = screen() === "home" ? home()?.rows[row()] : undefined;
-      const length =
-        screen() === "search" && zone() === "search-channels"
-          ? searchChannels().length
-          : screen() === "live"
-            ? channels().length
-            : screen() === "detail"
-              ? detailEpisodes().length
-              : shelf
-                ? shelf.cards.length
-                : page().cards.length;
-      const next =
-        screen() === "search" && zone() === "search-channels"
-          ? edgeRequest(searchChannelPages(), "next")?.cursor
-          : screen() === "detail"
-            ? detailCursor()
-            : shelf
-              ? shelf.next_cursor
-              : page().next_cursor;
-      if (pending.index < length || !next) {
-        pendingFocus = undefined;
-        setColumn(Math.max(0, Math.min(length - 1, pending.index)));
-        rememberHomeRow();
-        if (screen() === "live") void liveScene.loadVisibleGuides();
-      } else if (!pageBusy) {
-        if (shelf) void loadHomePage();
-        else void more();
-      }
-    }
+    const paging = createPagingScene({
+      screen, zone, row, column, setColumn, parent: () => scope,
+      length: () => {
+        if (screen() === "search" && zone() === "search-channels") return searchChannels().length;
+        if (screen() === "live") return channels().length;
+        if (screen() === "detail") return detailEpisodes().length;
+        const shelf = screen() === "home" ? home()?.rows[row()] : undefined;
+        return shelf ? shelf.cards.length : page().cards.length;
+      },
+      next: () => {
+        if (screen() === "search" && zone() === "search-channels") return edgeRequest(searchChannelPages(), "next")?.cursor ?? undefined;
+        if (screen() === "detail") return detailCursor() ?? undefined;
+        const shelf = screen() === "home" ? home()?.rows[row()] : undefined;
+        return (shelf ? shelf.next_cursor : page().next_cursor) ?? undefined;
+      },
+      shelf: () => (screen() === "home" ? home()?.rows[row()] : undefined),
+      more: () => more(), loadHomePage: () => loadHomePage(),
+      rememberHomeRow: () => rememberHomeRow(), loadGuides: () => liveScene.loadVisibleGuides(),
+    });
+    const { pageSignal, restart: restartPaging, moveToItem, settle: settlePendingFocus } = paging;
     const history: {
       screen: Screen;
       zone: string;
@@ -777,11 +701,7 @@ export function createRemoteTvApp(
       setSearchChannelPaging(false);
       setSearchError("");
       settingsAbort();
-      pagingScope?.abort();
-      pagingScope = undefined;
-      pendingFocus = undefined;
-      channelPending = undefined;
-      channelRetry = undefined;
+      paging.restart();
       scope = new AbortController();
       sourceScope?.abort();
       sourceScope = undefined;
@@ -789,7 +709,7 @@ export function createRemoteTvApp(
       setError("");
       overlays.hide();
       setText("");
-      pageBusy = false;
+      paging.setBusy(false);
       heldSelect.cancel();
       sourceFilterGeneration++;
       pageGeneration++;
@@ -1641,15 +1561,15 @@ export function createRemoteTvApp(
         await navigate("profiles");
       else await navigate("home");
     }
-    const pageRequestOwner = {generation: () => pageGeneration, busy: () => pageBusy, setBusy: (value: boolean) => {pageBusy = value;},
-      signal: pageSignal, cancelFocus: () => {pendingFocus = undefined;}, settleFocus: settlePendingFocus, fail};
+    const pageRequestOwner = {generation: paging.generation, busy: paging.busy, setBusy: paging.setBusy,
+      signal: pageSignal, cancelFocus: paging.cancelFocus, settleFocus: settlePendingFocus, fail};
     const channelPaging = {owner: pageRequestOwner, focus: {zone, column, setZone, setColumn}, screen, overlay: () => !!overlay(),
       windows: {pages: (searching: boolean) => searching ? searchChannelPages() : livePages(), values: (searching: boolean) => searching ? searchChannels() : channels(), adopt: adoptChannelWindow},
       search: {query: search, remembered: () => searchChannelFocus, remember: (index: number) => {searchChannelFocus = index;}, signal: () => searchSignal(),
         paging: setSearchChannelPaging, error: setSearchChannelError, refresh: (value: string) => updateSearch(value)},
       live: {group: liveGroup, index: liveChannelIndex, retire: () => liveScene.retireGuides(), guides: () => liveScene.loadVisibleGuides(), reload: (group: string | undefined) => liveScene.loadGroup(group)},
-      pending: {current: () => channelPending, set: (value: typeof channelPending) => {channelPending = value;}},
-      retry: (value: PageDirection | undefined) => {channelRetry = value;}, retryAction: (action: () => void) => {retry = action;},
+      pending: paging.channelPending,
+      retry: paging.channelRetry.set, retryAction: (action: () => void) => {retry = action;},
       request: (...args: Parameters<RemoteTvApi["live"]>) => api.live(...args)};
     const refreshChannelPage = createChannelRefresh(channelPaging);
     const moreChannels = createChannelPager(channelPaging);
@@ -2022,7 +1942,7 @@ export function createRemoteTvApp(
       rememberContentFocus();
       rememberDetailFocus();
       countdown.cancel();
-      channelPending = undefined;
+      paging.channelPending.set(undefined);
       if (screen() === "pairing") {
         setPairingFocused(true);
         return;
@@ -2037,7 +1957,7 @@ export function createRemoteTvApp(
       // The picker is terminal while the chosen stream opens.
       if (openingSource()) return;
       if (revealEndedControls()) return;
-      pendingFocus = undefined;
+      paging.cancelFocus();
       restartHeroCycling();
       if (loading() && screen() === "welcome") return;
       if (overlay()) { navigateOverlay(overlay()!, dx, dy); return; }
@@ -2154,7 +2074,7 @@ export function createRemoteTvApp(
     async function activate() {
       countdown.cancel();
       if (revealEndedControls()) return;
-      channelPending = undefined;
+      paging.channelPending.set(undefined);
       restartHeroCycling();
       const canLeaveLoading =
         !overlay() &&
@@ -2282,8 +2202,9 @@ export function createRemoteTvApp(
         screen() === "search" &&
         ["search-retry", "search-channel-retry"].includes(zone())
       ) {
-        if (zone() === "search-channel-retry" && channelRetry) {
-          const direction = channelRetry;
+        const retryChannel = paging.channelRetry.current();
+        if (zone() === "search-channel-retry" && retryChannel) {
+          const direction = retryChannel;
           setZone("search-channels");
           setColumn(searchChannelFocus);
           await moreChannels(direction);
@@ -2347,9 +2268,10 @@ export function createRemoteTvApp(
       if (screen() === "live") {
         // A failed page fetch leaves a pending retry; Enter retries it before
         // it could be mistaken for a play intent on the focused channel.
-        if (channelRetry) {
-          const direction = channelRetry;
-          channelRetry = undefined;
+        const retryChannel = paging.channelRetry.current();
+        if (retryChannel) {
+          const direction = retryChannel;
+          paging.channelRetry.set(undefined);
           await moreChannels(direction);
           return;
         }
