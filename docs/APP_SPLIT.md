@@ -2,7 +2,7 @@
 
 `src/tv-solid/remote/App.tsx` is the TV application: one `createRemoteTvApp`
 closure that owns every signal and returns the root screen. It started this work
-at **3579 lines** and is **3198** now, with the render tree split into three
+at **3579 lines** and is **3085** now, with the render tree split into three
 screen components and six behaviour modules. This note records what has been extracted, and the exact next
 slices so the remainder can be done mechanically instead of by feel.
 
@@ -25,9 +25,10 @@ slices so the remainder can be done mechanically instead of by feel.
 | `remote/render/live.tsx` | 81 | the Live screen and its three empty forms |
 | `remote/render/player.tsx` | 59 | the skip offer, the busy surface and the control row |
 | `remote/render/overlays.tsx` | 190 | the drawer, preparation, error card, toast and idle saver |
+| `remote/hero-scene.ts` | 171 | the featured card, the carousel, the shelf preview and the billboard pass |
 | `remote/live/program-line.ts` | 20 | a guide slot that never prints an out-of-range minute count |
 
-`App.tsx` is **3198 lines** after those. Each extraction is a factory that takes
+`App.tsx` is **3085 lines** after those. Each extraction is a factory that takes
 an explicit dependency object; nothing reaches back into the closure.
 
 ## Why this is not one big diff
@@ -85,3 +86,46 @@ Each row lists what must be handed over; the shapes are already visible in the
   and includes pre-existing environment failures (see TESTING.md).
 - A factory's dependency object is a contract, not a bag: if a slice needs
   fifteen unrelated things, it is probably two slices.
+
+## Bad state machines found on the way
+
+Three of these are worth fixing next, in this order. They are the places where
+the app's state can *disagree with itself*, which is what makes the closure hard
+to reason about:
+
+1. **One focus position kept in two signals.** `timelineFocused` and `choice`
+   both describe where the remote is: when the timeline has focus, `choice`
+   still holds the last tool index (the controller keeps `lastTool` privately).
+   Every place that shows or hides the chrome has to remember that pair, and
+   `move()` has to reset `choice` when the controls close. A single
+   `focus: { kind: "timeline" | "tool" | "none"; index: number }` removes a class
+   of "focus appears to be on a button that is not drawn" bugs.
+2. **Four booleans for one busy player.** `loading`, `openingSource`, `seeking`
+   and `snapshot.state === "buffering"` are combined by hand in three places
+   (`BusySurface` visibility, `data-tv-player-busy`, the control row's own
+   guard). They can disagree; a `playerBusy: "opening" | "seeking" | "buffering" | "none"`
+   union cannot.
+3. **Hero readiness assembled outside the hero.** `heroCycle.setReady(...)`
+   takes a predicate built in App out of the presentation's frames; the scene
+   already owns the frames. Move the predicate in.
+4. **Deleted:** a write-only `Set` of Live favourites, fetched and updated by the
+   menu and read by nothing. A store nobody reads reads like state the UI needs.
+
+## What is left, with sizes
+
+`App.tsx` is 3085 lines; the remaining slices, in dependency order, are roughly:
+
+| Slice | Lines | Notes |
+| --- | --- | --- |
+| live state + loaders | ~330 | `livePages`/`groups`/`programs`/spread/recovery/guide, `adoptLiveSnapshot`, `loadLiveFirstPage`, `loadLiveGroup` |
+| player transport + chrome | ~400 | `player`, `playerTransport`, prewarm, buttons/tools, auto-hide, `leavePlayer` |
+| play → source → player | ~260 | `playIntent`, `playSource`, `advanceEpisode`, countdown |
+| paging | ~120 | `pageSignal`, `restartPaging`, `moveToItem`, `settlePendingFocus`, channel window |
+| navigation + history | ~450 | `navigate`, `back`, `restorePrevious`, `invalidateHistory`, `openDetail` |
+| input + activation | ~330 | `move`, `activate`, `menu`, `keyboardActivate`, text input |
+| session/bootstrap | ~260 | `start`, `applyRevision`, `applyBootstrap`, `resetScope`, `clearProfileView`, pairing |
+| search + sources | ~230 | search rows/paging, source facets/menu/publish |
+
+Each is a factory with an explicit dependency object, like the ones already
+moved. None of them needs more than ~20 dependencies, and each has a spec file
+that can be run alone.
