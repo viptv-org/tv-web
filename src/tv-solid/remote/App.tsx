@@ -27,7 +27,6 @@ import { RowFocus } from "./row-focus";
 import { SettingsView } from "./SettingsView";
 import { searchRowFocus } from "./search/media";
 import type { SearchPage } from "./types";
-import { createDetailRefresh } from "./detail-refresh";
 import { whenIdle } from "./idle";
 import { createProgressFreshness } from "./progress-freshness";
 import { createSearchController, type SearchRequests } from "./search/controller";
@@ -107,7 +106,7 @@ import { createCatalogPager } from "./paging/catalog";
 import { createHomePager } from "./paging/home";
 import { createCatalogControls } from "./catalog-controls";
 import { createOverlayController } from "./overlay-controller";
-import { createDetailPresentation } from "./detail-presentation";
+import { createDetailScene } from "./detail-scene";
 import { createSourcePresentation } from "./source-picker/presentation";
 import { createLiveNavigation } from "./navigation/live";
 import { createContentNavigation } from "./navigation/content";
@@ -181,7 +180,6 @@ export function createRemoteTvApp(
   return () => {
     const homeRowFocus = new RowFocus<Card>(cardKey);
     const contentFocus = new RowFocus<Card>(cardKey);
-    const detailFocus = new RowFocus<Card>(cardKey);
     const [screen, setScreen] = createSignal<Screen>("welcome"),
       [home, setHome] = createSignal<Home>(),
       [management, setManagement] = createSignal<Management>(),
@@ -223,18 +221,11 @@ export function createRemoteTvApp(
       [column, setColumn] = createSignal(1),
       [row, setRow] = createSignal(0),
       [heroAction, setHeroAction] = createSignal(0);
-    const [detailAction, setDetailAction] = createSignal<TitleAction>();
-    const [seasonIndex, setSeasonIndex] = createSignal(0);
-    const [detail, setDetail] = createSignal<Detail>(),
-      [selected, setSelected] = createSignal<Card>(),
+    const [selected, setSelected] = createSignal<Card>(),
       [page, setPage] = createSignal<Page>({ cards: [], complete: true }),
       [controls, setControls] = createSignal<Controls>(),
       [catalog, setCatalog] = createSignal<Catalog>(),
       [filters, setFilters] = createSignal<Record<string, string[]>>({});
-    const {hasEpisodes: detailHasEpisodes, episodes: detailEpisodes, cursor: detailCursor, target: detailTarget,
-      label: detailActionLabel, progress: detailPlayProgress} = createDetailPresentation({
-        home, detail, action: detailAction, selected, season: seasonIndex,
-      });
     const liveScene = createLiveScene({
       api, scope: () => scope, screen, setScreen, setRow, zone, column, setZone, setColumn,
       loading, setLoading, navIndex,
@@ -960,10 +951,8 @@ export function createRemoteTvApp(
         clearTimeout(timer);
       });
     });
-    const refreshDetail = createDetailRefresh({api, detail: {current: detail, set: setDetail, action: setDetailAction}, selected,
-      focused: () => focusedCard(), season: {current: seasonIndex, set: setSeasonIndex}, generation: () => pageGeneration,
-      current: (signal, profile, generation, card) => !overlay() && !pending() && !signal.aborted && scope.signal === signal && screen() === "detail" && pageGeneration === generation &&
-        api.profile === profile && !!selected() && cardKey(selected()!) === cardKey(card), focus: {zone, column, setColumn}, resolve: focusIndex});
+    // The scene is created below; the progress refresh only calls this later.
+    const refreshDetail = (...args: Parameters<typeof detailScene.refresh>) => detailScene.refresh(...args);
     createEffect(() => {
       progressFreshness();
       const view = screen(), signal = scope.signal, profile = api.profile;
@@ -1047,26 +1036,23 @@ export function createRemoteTvApp(
         ? page().cards[column()]
         : undefined;
     });
+    const detailScene = createDetailScene({
+      api, home, selected, screen, zone, column, setColumn,
+      overlayVisible: () => !!overlay(), pending, signal: () => scope.signal, profile: () => api.profile,
+      pageGeneration: () => pageGeneration, focusedCard,
+      resolveFocus: (cards, key, fallback) => focusIndex(cards as Card[], key, fallback),
+    });
+    const { detail, setDetail, detailAction, setDetailAction, seasonIndex, setSeasonIndex } = detailScene;
+    const { hasEpisodes: detailHasEpisodes, episodes: detailEpisodes, cursor: detailCursor, target: detailTarget,
+      label: detailActionLabel, progress: detailPlayProgress } = detailScene.presentation;
     const contentRow = () => ({ id: screen(), cards: page().cards });
     const contentColumn = () => zone() === "content" ? column() : contentFocus.resolve(contentRow());
     function rememberContentFocus() {
       if (["movie", "series", "anime", "library"].includes(screen()) && zone() === "content")
         contentFocus.remember(contentRow(), column());
     }
-    function detailRow(kind: "episodes" | "recommendations") {
-      const value = detail();
-      return {
-        id: JSON.stringify([value && presentationKey(value.item), kind, kind === "episodes" ? seasonIndex() : undefined]),
-        cards: kind === "episodes" && detailHasEpisodes() ? detailEpisodes() : value?.recommendations ?? [],
-      };
-    }
-    const detailColumn = (kind: "episodes" | "recommendations") => zone() === kind ? column() : detailFocus.resolve(detailRow(kind));
-    function rememberDetailFocus() {
-      const region = zone();
-      if (screen() === "detail" && (region === "episodes" || region === "recommendations"))
-        detailFocus.remember(detailRow(region), column());
-    }
-    createEffect(() => detailFocus.retain([detailRow("episodes"), detailRow("recommendations")]));
+    const detailRow = detailScene.row, detailColumn = detailScene.column,
+      rememberDetailFocus = detailScene.rememberFocus, detailFocus = detailScene.focus;
     const searchRowPositions = new RowFocus<Card>(cardKey);
     const activeSearchRow = () => searchResults().rows[searchRowIndex()];
     function rememberSearchRow(index: number) {
