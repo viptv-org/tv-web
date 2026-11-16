@@ -2,7 +2,7 @@
 import type { Overlay } from "./app-types";
 import { runtimeObserver } from "../platform/runtime-observation";
 import { exitTizen } from "../platform/tizen-host";
-import { DevicePlayback, deviceProfileKey, deviceTitleKey } from "./device-playback";
+import { deviceTitleKey } from "./device-playback";
 import { AutoplayCountdown } from "./autoplay-countdown";
 import { Show, batch, createEffect, createMemo, createSignal, onCleanup, onMount } from "solid-js";
 import { searchLetters } from "./SearchInput";
@@ -22,8 +22,6 @@ import { AppOverlays, IdleSaver } from "./render/overlays";
 import { RowFocus } from "./row-focus";
 
 import { SettingsView } from "./SettingsView";
-import { createProgressFreshness } from "./progress-freshness";
-import { createRevisionPoller } from "./session/revisions";
 import { createLiveMenu } from "./menus/live";
 import { createLiveScene } from "./live-scene";
 import { createCardMenu } from "./menus/card";
@@ -55,7 +53,6 @@ import { palette } from "./visuals";
 import {
   RemoteTvApi,
   lookupSelector,
-  RemoteError,
   query,
   segment,
 } from "./api";
@@ -81,13 +78,14 @@ import { createSourcePickerScene } from "./source-picker-scene";
 import { createSourcePlayScene } from "./source-play-scene";
 import { createNavigationScene } from "./navigation-scene";
 import { createBackScene } from "./back-scene";
-import { createSessionScene, playbackRevisionKey } from "./session-scene";
+import { createSessionScene } from "./session-scene";
 import { publishTestSurface } from "./debug-surface";
 import { createMenuScene } from "./menu-scene";
 import { createActivateScene } from "./activate-scene";
 import { createKeyboardScene, createMoveScene } from "./input-scene";
 import { createTvState } from "./state";
 import { createAppEffects } from "./app-effects";
+import { createShell } from "./shell";
 import { createPlayerScene } from "./player-scene";
 import { episodeKey } from "./episode-preparation";
 import { createPagingScene } from "./paging-scene";
@@ -135,7 +133,7 @@ export function createRemoteTvApp(
   return () => {
     const tv = createTvState({ initialLoading: options.initialLoading });
     const {
-      loading, setLoading, error, setError, playbackError, setPlaybackError, pending, setPending,
+      loading, setLoading, error, setError, playbackError, setPlaybackError, pending,
       screen, setScreen, zone, setZone, column, setColumn, row, setRow, heroAction, setHeroAction, choice, setChoice,
       page, setPage, controls, setControls, catalog, setCatalog, filters, setFilters, selected, setSelected,
       pairing, setPairing, pairingDeadline, setPairingDeadline, pairingFocused, setPairingFocused,
@@ -145,8 +143,8 @@ export function createRemoteTvApp(
       activeAction, setActiveAction, activeChannel, setActiveChannel, activeSource, setActiveSource,
       openingSource, setOpeningSource, captionOverride, setCaptionOverride, saved, setSaved,
       episodeState, setEpisodeState, countdownState, setCountdownState, advancing, setAdvancing,
-      playbackRevision, setPlaybackRevision, deviceRevision, setDeviceRevision,
-      sourceMemoryPending, setSourceMemoryPending, notice, setNotice, calibrationValue, setCalibrationValue,
+      playbackRevision, setPlaybackRevision, deviceRevision,
+      sourceMemoryPending, setSourceMemoryPending, notice, calibrationValue, setCalibrationValue,
     } = tv;
     const homeRowFocus = new RowFocus<Card>(cardKey);
     const contentFocus = new RowFocus<Card>(cardKey);
@@ -183,7 +181,7 @@ export function createRemoteTvApp(
       };
     });
     const liveScene = createLiveScene({
-      api, scope: () => scope, screen, setScreen, setRow, zone, column, setZone, setColumn,
+      api, scope: () => shell.controller(), screen, setScreen, setRow, zone, column, setZone, setColumn,
       loading, setLoading, navIndex,
       call: (path, method, body, signal) => call(path, method, body, signal),
       fail: error => fail(error), notify: message => notify(message),
@@ -241,15 +239,7 @@ export function createRemoteTvApp(
       },
       activate: () => { void activate().catch(fail); },
     });
-    async function checkPlaybackRevision() {
-      const value = await call<Record<string, number | string>>(api.scoped("/revisions"));
-      if (playbackRevisionKey(value) === playbackRevision()) return;
-      const fresh = await api.preferences(scope.signal);
-      batch(() => { setPreferences(fresh);setPlaybackRevision(playbackRevisionKey(value)); });
-    }
     const [, setPresentationRevision] = createSignal(0);
-    const devicePlayback = new DevicePlayback(undefined, () => setDeviceRevision(v => v + 1));
-    const deviceScope = () => deviceProfileKey(api.origin, api.profile);
     const countdown = new AutoplayCountdown(setCountdownState);
     const calendarScene = createCalendarScene();
     const calendar = calendarScene.snapshot;
@@ -262,7 +252,7 @@ export function createRemoteTvApp(
     const calendarDayEntries = calendarScene.entries;
     const picker = createSourcePickerScene({
       api, overlays: { open: value => openOverlay(value), hide: () => overlays.hide(), origin: () => overlays.origin() },
-      choice, setChoice, screen, signal: () => scope.signal, fail: error => fail(error), notify: message => notify(message), setLoading,
+      choice, setChoice, screen, signal: () => scopeSignal(), fail: error => fail(error), notify: message => notify(message), setLoading,
       prewarm: () => player.prewarm(), sourceMemory: card => playerScene.sourceMemory(card),
       play: (source, direct, manual) => playSource(source, direct, manual), drawerOpen: () => overlay()?.kind === "sources",
       opening: () => !!openingSource(),
@@ -290,27 +280,24 @@ export function createRemoteTvApp(
       if (zone() === "profile-manage" && !canManageProfiles())
         setZone("profiles");
     });
-    let scope = new AbortController(),
-      alive = true,
-      noticeTimer: ReturnType<typeof setTimeout> | undefined,
-      controlsTimer: ReturnType<typeof setTimeout> | undefined;
+    let controlsTimer: ReturnType<typeof setTimeout> | undefined;
     let retry: () => void = () => void start(),
       searchMediaFocus = 0,
       searchChannelFocus = 0,
       pageGeneration = 0;
-    const revisions = createRevisionPoller({ready: () => !!api.profile && document.visibilityState === "visible" && !(screen() !== "player" && overlay()) && !pending(),
-      playing: () => screen() === "player", blocked: () => !!overlay() || pending(), alive: () => alive,
-      profile: () => api.profile, signal: () => scope.signal, read: signal => call<Record<string, number | string>>(api.scoped("/revisions"), "GET", undefined, signal),
-      bootstrap: signal => api.bootstrap(signal), playback: checkPlaybackRevision,
-      reset: () => session.resetScope(), adoptBootstrap: value => session.applyBootstrap(value),
-      apply: applyRevision, fail: error => fail(error)});
-    const scheduleRevisions = revisions.schedule;
-    const [progressFreshness, setProgressFreshness] = createSignal(0);
-    const progressRefresh = createProgressFreshness({
-      owner: () => JSON.stringify([api.origin, api.profile, api.scopeEpoch]), alive: () => alive,
-      changed: () => setProgressFreshness(value => value + 1),
-      failure: error => { if (error instanceof RemoteError && [401, 403].includes(error.status)) fail(error); },
+    const shell = createShell({
+      api, tv, start: () => start(), resetScope: () => session.resetScope(),
+      clearProfileView: () => session.clearProfileView(), retry: work => { retry = work; },
+      applyRevision: (fresh, signal, profile, commit) => applyRevision(fresh as never, signal, profile, commit),
+      sessionReset: () => session.resetScope(), sessionAdopt: value => session.applyBootstrap(value as never),
+      stopPlayer: () => player.stop(), overlay: () => overlay(), overlayClosing: () => overlayClosing(),
+      adoptPreferences: value => setPreferences(value as never),
     });
+    const scopeSignal = shell.signal, call = shell.call, notify = shell.notify, fail = shell.fail, run = shell.run,
+      checkPlaybackRevision = shell.checkPlaybackRevision, devicePlayback = shell.devicePlayback,
+      deviceScope = shell.deviceScope, progressRefresh = shell.progressRefresh,
+      progressFreshness = shell.progressFreshness, revisions = shell.revisions,
+      scheduleRevisions = shell.scheduleRevisions;
     function adoptChannelWindow(pages: LivePage[], searching = false) {
       const values = pages.flatMap((page) => page.channels);
       if (searching) {
@@ -337,7 +324,7 @@ export function createRemoteTvApp(
       });
     }
     const paging = createPagingScene({
-      screen, zone, row, column, setColumn, parent: () => scope,
+      screen, zone, row, column, setColumn, parent: () => shell.controller(),
       length: () => {
         if (screen() === "search" && zone() === "search-channels") return searchChannels().length;
         if (screen() === "live") return channels().length;
@@ -356,12 +343,6 @@ export function createRemoteTvApp(
       rememberHomeRow: () => rememberHomeRow(), loadGuides: () => liveScene.loadVisibleGuides(),
     });
     const { pageSignal, restart: restartPaging, moveToItem, settle: settlePendingFocus } = paging;
-    const call = <T,>(
-      path: string,
-      method = "GET",
-      body?: unknown,
-      signal: AbortSignal = scope.signal,
-    ) => api.call<T>(path, method, body, signal);
     const playerScene = createPlayerScene({
       api, platform, video: () => document.getElementById("tv-video") as HTMLVideoElement,
       snapshot, setSnapshot, setPauseRequested, screen, home, preferences, deviceScope, devicePlayback,
@@ -371,7 +352,7 @@ export function createRemoteTvApp(
       sourceMemoryPending, setSourceMemoryPending, episodeKey, deviceTitleKey,
       playIntent: (...args) => playIntent(...args), checkPlaybackRevision: () => checkPlaybackRevision(),
       countdown, episodeState, setEpisodeState, advancing, setAdvancing, overlays, openOverlay,
-      playbackRevision, sourceLoading, loading, error, scopeSignal: () => scope.signal, detail: () => detail(),
+      playbackRevision, sourceLoading, loading, error, scopeSignal: () => scopeSignal(), detail: () => detail(),
       activeSource: () => activeSource(), deviceRevision: () => deviceRevision(),
     });
     const player = playerScene.player, playerTransport = playerScene.transport;
@@ -383,7 +364,7 @@ export function createRemoteTvApp(
     });
     const segments = createPlaybackSegments({
       lease: () => player.leaseId,
-      signal: () => scope.signal,
+      signal: () => scopeSignal(),
       snapshot,
       fetch: (lease, signal) => api.segments(lease, signal),
       skipEnabled: () => preferences()?.preferences?.skip_intros !== false,
@@ -413,44 +394,6 @@ export function createRemoteTvApp(
     onMount(() => {
       void document.fonts.ready.then(() => setFontsReady(true));
     });
-    const notify = (message: string) => {
-      setNotice(message);
-      clearTimeout(noticeTimer);
-      noticeTimer = setTimeout(() => setNotice(""), 3500);
-    };
-    const fail = (e: unknown) => {
-      if (!alive || (e instanceof DOMException && e.name === "AbortError"))
-        return;
-      if (e instanceof RemoteError && e.status === 401) {
-        revisions.stop();
-        api.retireProfile();
-        resetScope();
-        void player.stop().catch(() => {});
-        clearProfileView();
-        setScreen("welcome");
-        retry = () => void start();
-      }
-      setError(e instanceof Error ? e.message : "Couldn’t load. Try again.");
-      if (
-        screen() === "player" &&
-        !["playing", "paused"].includes(snapshot()?.state ?? "")
-      )
-        setPlaybackError(error());
-      setLoading(false);
-    };
-    const run = async (work: () => Promise<void>) => {
-      if (pending() || overlayClosing()) return;
-      setPending(true);
-      setError("");
-      retry = () => void run(work);
-      try {
-        await work();
-      } catch (e) {
-        fail(e);
-      } finally {
-        if (alive) setPending(false);
-      }
-    };
     // The scene is created below; the progress refresh only calls this later.
     const refreshDetail = (...args: Parameters<typeof detailScene.refresh>) => detailScene.refresh(...args);
     async function applyRevision(fresh: Bootstrap, signal: AbortSignal, profile: string, commit: () => void) {
@@ -519,7 +462,7 @@ export function createRemoteTvApp(
     });
     const detailScene = createDetailScene({
       api, home, selected, screen, zone, column, setColumn,
-      overlayVisible: () => !!overlay(), pending, signal: () => scope.signal, profile: () => api.profile,
+      overlayVisible: () => !!overlay(), pending, signal: () => scopeSignal(), profile: () => api.profile,
       pageGeneration: () => pageGeneration, focusedCard,
       resolveFocus: (cards, key, fallback) => focusIndex(cards as Card[], key, fallback),
     });
@@ -535,7 +478,7 @@ export function createRemoteTvApp(
     const detailRow = detailScene.row, detailColumn = detailScene.column,
       rememberDetailFocus = detailScene.rememberFocus, detailFocus = detailScene.focus;
     const searchScene = createSearchScene({
-      api, parent: () => scope, screen, zone, column, setZone, setColumn, capabilities: searchCapabilities,
+      api, parent: () => shell.controller(), screen, zone, column, setZone, setColumn, capabilities: searchCapabilities,
       page, setPage, setError, restartPaging, setLoading, retry: work => { retry = work; }, fail,
       mediaFocus: { current: () => searchMediaFocus, set: value => { searchMediaFocus = value; } },
       channelFocus: { current: () => searchChannelFocus, set: value => { searchChannelFocus = value; } },
@@ -559,7 +502,7 @@ export function createRemoteTvApp(
       hero: { reset: () => heroScene.reset() }, settings: { reset: () => settings.reset() },
       overlays: { retireAnimations: () => overlays.retireAnimations(), hide: () => overlays.hide() },
       cancelHold: () => heldSelect.cancel(),
-      abortScope: () => scope.abort(), newScope: () => (scope = new AbortController()).signal,
+      abortScope: () => shell.abort(), newScope: () => shell.restart(),
       clearFocus: () => { homeRowFocus.clear(); contentFocus.clear(); detailFocus.clear(); history.length = 0; },
       setCaptionOverride: value => setCaptionOverride(value as never),
       setPlaybackError, setPage: value => setPage(value as never), setFilters, setCatalog, setControls, setSelected,
@@ -654,7 +597,7 @@ export function createRemoteTvApp(
     }
     async function loadLibrary(
       cursor = "0",
-      signal = scope.signal,
+      signal = scopeSignal(),
       values = library()?.query ?? {},
     ) {
       const value = await api.library(cursor, signal, values);
@@ -714,7 +657,7 @@ export function createRemoteTvApp(
       adoptChannelWindow: (pages, searching) => adoptChannelWindow(pages as never[], searching),
       setPrograms: (value) => setPrograms(value as never), setGuideInfo: (value) => setGuideInfo(value as never),
       loadSettings: (tab, signal) => loadSettings(tab, signal),
-      player: { stop: () => player.stop() }, signal: () => scope.signal,
+      player: { stop: () => player.stop() }, signal: () => scopeSignal(),
       fail: error => fail(error), retry: work => { retry = work; },
     });
     const history = navigationScene.history;
@@ -823,7 +766,7 @@ export function createRemoteTvApp(
       searchRequests: searchScene.requests,
       playerNavigation: { reset: () => playerNavigation.reset() }, setTimelineFocused, setShowControls, setChoice,
       hideControls: () => hideControls(), chrome, countdown, snapshot,
-      deviceScope, deviceTitleKey, sourceChannel, signal: () => scope.signal,
+      deviceScope, deviceTitleKey, sourceChannel, signal: () => scopeSignal(),
     });
     const playIntent = sourcePlay.playIntent, playSource = sourcePlay.playSource;
     const backScene = createBackScene({
@@ -906,7 +849,7 @@ export function createRemoteTvApp(
       )
         return;
       void api.accountIdentity().then((value) => {
-        if (alive) setLiveIdentity(value);
+        setLiveIdentity(value);
       });
     });
     const settings = createSettingsScene({
@@ -914,7 +857,7 @@ export function createRemoteTvApp(
       prompt: edit, notify, screen, setScreen, loading: setLoading,
       preferences, adoptPreferences: setPreferences, accountEmail,
       management, setManagement, canManageAccount, setCanManageAccount,
-      devicePlayback, deviceScope, scope: () => scope.signal,
+      devicePlayback, deviceScope, scope: () => scopeSignal(),
       stopPlayer: () => player.stop(), resetScope, clearProfileView, calibrate: setCalibrationValue,
       navigation: { zone, column, setZone, setColumn },
       manageProfile: index => settings.manageProfile(index),
@@ -964,7 +907,7 @@ export function createRemoteTvApp(
         setPage({ cards: [], complete: true });
         setDetail(undefined);
         setPrograms({});
-        applyBootstrap(await api.selectProfile(profile.id, scope.signal));
+        applyBootstrap(await api.selectProfile(profile.id, scopeSignal()));
       });
     }
     const navigationFocus = { zone, column, setZone, setColumn };
@@ -1047,12 +990,12 @@ export function createRemoteTvApp(
       timeline: {value: seek, set: setSeek, seeking: setSeeking}, chrome: {visible: showControls, set: setShowControls, hide: hideControls},
       segments: {active: activeSegment, clear: segments.clear, refresh: refreshPlaybackSegments},
       skipEnabled: () => preferences()?.preferences.skip_intros !== false, next: advanceEpisode, tracks: openTracks, play: playIntent,
-      details: card => api.detail(card, "0", scope.signal), dialogs: {open: openOverlay}});
+      details: card => api.detail(card, "0", scopeSignal()), dialogs: {open: openOverlay}});
     const chooseSeason = createSeasonPicker({current: detail, adopt: setDetail, season: {current: seasonIndex, set: setSeasonIndex},
       focus: navigationFocus, choice: setChoice, loading: setLoading, rememberedEpisode: () => detailFocus.resolve(detailRow("episodes")), restart: restartPaging,
       request: (card, cursor, signal) => api.detail(card, cursor, signal), open: openOverlay, close: closeOverlay});
     const activateScene = createActivateScene({
-      api, signal: () => scope.signal, screen, zone, column, row, choice, key, heroAction,
+      api, signal: () => scopeSignal(), screen, zone, column, row, choice, key, heroAction,
       overlay: () => overlay(), overlayClosing, pending, loading, error, setError: value => setError(value),
       setZone: value => setZone(value), setColumn: value => setColumn(value), setHome: value => setHome(value),
       home, page, detail, management, navs, groups, channels, searchChannels, search,
@@ -1165,16 +1108,15 @@ export function createRemoteTvApp(
         visible: setHeroVisible, wake: reloadIdleImages, fail}));
     });
     onCleanup(() => {
-      alive = false;
+      shell.dispose();
       playerTransport.retire();
       heldSelect.cancel();
       playerNavigation.cancel();
       overlays.dispose();
-      scope.abort();
+      shell.abort();
       settingsAbort();
       picker.operation.get()?.abort();
       revisions.stop();
-      clearTimeout(noticeTimer);
       clearTimeout(searchScene.requests.timer);
       clearTimeout(controlsTimer);
       void player.dispose();
@@ -1184,7 +1126,7 @@ export function createRemoteTvApp(
         modal={isModal} letters={keyboardCharacters()} upper={keyboardUpper()} symbols={keyboardSymbols()} selected={key()} />;
     }
     createAppEffects({
-      api, signal: () => scope.signal, screen, home, pending, overlay: () => overlay(), selected, seasonIndex,
+      api, signal: () => scopeSignal(), screen, home, pending, overlay: () => overlay(), selected, seasonIndex,
       preferences, snapshot, captionOverride, replaceHome: value => replaceHome(value), fail: error => fail(error),
       progressFreshness, progressRefresh, refreshDetail, player, cardKey,
       start: () => start(), autoStart: options.autoStart !== false,
