@@ -37,9 +37,6 @@ import { createPlaybackSegments } from "./player/segments";
 import { defineScreen } from "../runtime";
 import {
   RemoteTvApi,
-  lookupSelector,
-  query,
-  segment,
 } from "./api";
 import {
   liveNoSourceActions,
@@ -76,6 +73,7 @@ import { createRevisionApply } from "./revision-apply";
 import { createTextEntry } from "./text-entry";
 import { createProfileEntry } from "./profile-entry";
 import { createListLifecycle } from "./list-lifecycle";
+import { createSavedList } from "./saved-list";
 import { installPerfDebug } from "./perf-debug";
 import { createPlayerScene } from "./player-scene";
 import { episodeKey } from "./episode-preparation";
@@ -259,8 +257,6 @@ export function createRemoteTvApp(
     const { providers: sourceProviders, visible: visibleSources, quality: sourceQualityValue,
       provider: sourceProviderValue, focused: focusedSource, addonCount: sourceAddonCount,
       spread: sourceSpread } = picker.presentation;
-    const isSaved = (card: Card) =>
-      saved().get(cardKey(card)) ?? card.view?.saved ?? false;
     createEffect(() => {
       if (screen() !== "profiles") return;
       const count =
@@ -288,6 +284,11 @@ export function createRemoteTvApp(
       deviceScope = shell.deviceScope, progressRefresh = shell.progressRefresh,
       progressFreshness = shell.progressFreshness, revisions = shell.revisions,
       scheduleRevisions = shell.scheduleRevisions;
+    const savedList = createSavedList({
+      api, saved, setSaved: value => setSaved(value), call, notify: message => notify(message),
+      run: work => run(work), cardKey,
+    });
+    const isSaved = savedList.isSaved;
     function adoptChannelWindow(pages: LivePage[], searching = false) {
       const values = pages.flatMap((page) => page.channels);
       if (searching) {
@@ -669,23 +670,7 @@ export function createRemoteTvApp(
       if (screen() !== "player" || ["paused", "ended", "error"].includes(snapshot()?.state ?? "")) setPauseRequested(false);
     });
     const hideControls = hidePlayerControls;
-    async function toggleSaved(card: Card) {
-      await run(async () => {
-        const key = cardKey(card);
-        const receipt = isSaved(card)
-          ? await call<{ saved: boolean }>(
-              api.scoped(
-                `/library/${segment(card.identity.kind)}/${segment(card.identity.id)}?${query(card.metadata_origin ? { metadata_origin: card.metadata_origin, card: lookupSelector(card) } : {})}`,
-              ),
-              "DELETE",
-            )
-          : await call<{ saved: boolean }>(api.scoped("/library"), "PUT", {
-              card,
-            });
-        setSaved((old) => new Map(old).set(key, receipt.saved));
-        notify(receipt.saved ? "Added to My List" : "Removed from My List");
-      });
-    }
+    const toggleSaved = savedList.toggleSaved;
     /**
      * LIVE-EMPTY-001 reads the account identity only when its empty or failed
      * form appears, so a working Live page never pays for it. Until it answers
