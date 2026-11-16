@@ -2,7 +2,7 @@
 
 `src/tv-solid/remote/App.tsx` is the TV application: one `createRemoteTvApp`
 closure that owns every signal and returns the root screen. It started this work
-at **3579 lines** and is **1846** now, with the render tree split into three
+at **3579 lines** and is **1461** now, with the render tree split into three
 screen components and six behaviour modules. This note records what has been extracted, and the exact next
 slices so the remainder can be done mechanically instead of by feel.
 
@@ -38,9 +38,13 @@ slices so the remainder can be done mechanically instead of by feel.
 | `remote/stremio-home.ts` | 31 | the Simkl-off rules for rows, featured and catalogs |
 | `remote/back-scene.ts` | 208 | the Back key's ordered decision tree and leaving the player |
 | `remote/session-scene.ts` | 227 | startup, bootstrap, profile reset, revisions and pairing |
+| `remote/activate-scene.ts` | 290 | the Select key's ordered answer |
+| `remote/menu-scene.ts` | 129 | the menu key and the hold's identity |
+| `remote/debug-surface.ts` | 111 | the facts a browser session reads |
+| `remote/input-scene.ts` | 165 | the D-pad's controller order and the on-screen keyboard |
 | `remote/live/program-line.ts` | 20 | a guide slot that never prints an out-of-range minute count |
 
-`App.tsx` is **1846 lines** after those. Each extraction is a factory that takes
+`App.tsx` is **1461 lines** after those. Each extraction is a factory that takes
 an explicit dependency object; nothing reaches back into the closure.
 
 ## Why this is not one big diff
@@ -125,12 +129,14 @@ to reason about:
 
 ## What is left, with sizes
 
-`App.tsx` is 1846 lines; the remaining slices, in dependency order, are roughly:
+`App.tsx` is 1461 lines; what is left is not a slice but the shell:, in dependency order, are roughly:
 
 | Slice | Lines | Notes |
 | --- | --- | --- |
 | Done | — | live, detail, paging, search, hero, player chrome, player transport + episodes, source picker, play intent → source → player, navigation + history, Back, session/bootstrap |
-| input + activation | ~330 | `move`, `activate`, `menu`, `keyboardActivate`, text input |
+| signal declarations | ~400 | the `createSignal` chain, now the largest single block |
+| render dispatch | ~300 | `Root`/`defineScreen` wiring per screen |
+| effects and helpers | ~700 | boot, caption appearance, idle, held select, misc |
 
 Each is a factory with an explicit dependency object, like the ones already
 moved. None of them needs more than ~20 dependencies, and each has a spec file
