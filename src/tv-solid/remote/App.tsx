@@ -61,7 +61,6 @@ import {
   segment,
 } from "./api";
 import {
-  liveKeepsToday,
   liveNoSourceActions,
 } from "./liveEmpty";
 import {
@@ -87,6 +86,7 @@ import { createSessionScene, playbackRevisionKey } from "./session-scene";
 import { publishTestSurface } from "./debug-surface";
 import { createMenuScene } from "./menu-scene";
 import { createActivateScene } from "./activate-scene";
+import { createKeyboardScene, createMoveScene } from "./input-scene";
 import { createPlayerScene } from "./player-scene";
 import { episodeKey } from "./episode-preparation";
 import type { EpisodePreparationState } from "./episode-preparation";
@@ -1108,123 +1108,33 @@ export function createRemoteTvApp(
         cursor: () => page().next_cursor, remembered: () => contentFocus.resolve(contentRow())},
       search: {needsRetry: searchNeedsRetry, remember: index => {searchMediaFocus = index;}},
       paging: {move: moveToItem, more: () => {void more();}}, loadGuide: index => {void liveScene.guides.load(index);}});
-    function move(dx: number, dy: number) {
-      rememberContentFocus();
-      rememberDetailFocus();
-      countdown.cancel();
-      paging.channelPending.set(undefined);
-      if (screen() === "pairing") {
-        setPairingFocused(true);
-        return;
-      }
-      if (screen() === "signed-in") {
-        // The confirmation exposes a single focusable acknowledgement; Left and
-        // Right still move the reported focus for remote-parity without acting.
-        if (dx) setColumn((i) => Math.max(0, Math.min(1, i + dx)));
-        return;
-      }
-      if (overlayClosing() || error()) return;
-      // The picker is terminal while the chosen stream opens.
-      if (openingSource()) return;
-      if (revealEndedControls()) return;
-      paging.cancelFocus();
-      restartHeroCycling();
-      if (loading() && screen() === "welcome") return;
-      if (overlay()) { navigateOverlay(overlay()!, dx, dy); return; }
-      if (screen() === "player") return playerNavigation.move(dx, dy);
-      if (screen() === "profiles") { navigateProfiles(dx, dy); return; }
-      if (zone() === "nav") {
-        setColumn((i) => Math.max(0, Math.min(navs().length - 1, i + dx)));
-        if (dy > 0) {
-          // The empty and failed Live forms own the whole page: Down enters them
-          // only when there is an action to land on (LIVE-EMPTY-01, -05, -14).
-          if (screen() === "live" && !liveKeepsToday(liveSpread())) {
-            const actions =
-              liveSpread() === "no-source"
-                ? liveNoSourceActions(liveViewer())
-                : liveRecovery();
-            if (actions.length) {
-              setZone("live-empty");
-              setColumn(0);
-            }
-            return;
-          }
-          if (screen() === "live") {
-            liveScene.focusSpread();
-            return;
-          }
-          setColumn(["movie", "series", "anime"].includes(screen()) ? contentFocus.resolve(contentRow()) : 0);
-          setZone(
-            screen() === "home" || screen() === "detail"
-              ? "hero"
-              : screen() === "settings"
-                ? "settings-nav"
-                : screen() === "calendar"
-                  ? "calendar-days"
-                  : screen() === "search"
-                  ? "keyboard"
-                  : screen() === "library" && libraryControlCount()
-                    ? "library-controls"
-                    : "content",
-          );
-        }
-        return;
-      }
-      if (screen() === "settings") { navigateSettings(dx, dy); return; }
-      if (screen() === "detail" && navigateDetail(dx, dy)) return;
-      if (screen() === "calendar") { navigateCalendar(dx, dy); return; }
-      if (zone() === "hero") { navigateHero(dx, dy, screen()); return; }
-      if (screen() === "home" && zone() === "rows") { navigateHomeRows(dx, dy); return; }
-      if (screen() === "search" && navigateSearch(dx, dy)) return;
-      if (screen() === "live" && navigateLive(dx, dy)) return;
-      navigateContent(dx, dy);
-    }
-    function completeTextInput(isOverlay: boolean) {
-      const modal = overlay();
-      if (isOverlay && modal?.kind === "text") void run(() => modal.submit(text()));
-      else { setZone("content"); setColumn(0); }
-    }
-    function keyboardActivate(isOverlay: boolean) {
-      const index = key();
-      const modal = overlay();
-      if (isOverlay && modal?.kind === "text" && modal.numeric) {
-        if (index === 11) void run(() => modal.submit(text()));
-        else if (index === 9) setText((value) => value.slice(0, -1));
-        else
-          setText((value) =>
-            (value + (index === 10 ? "0" : String(index + 1))).slice(0, 8),
-          );
-        return;
-      }
-      if (index === 42) {
-        setKeyboardUpper((value) => !value);
-        return;
-      }
-      if (index === 45) {
-        setKeyboardSymbols((value) => !value);
-        return;
-      }
-      if (index === 46) {
-        completeTextInput(isOverlay);
-        return;
-      }
-      if (index === 47) {
-        if (isOverlay) dismissOverlay();
-        else updateSearch("");
-        return;
-      }
-      const value = isOverlay ? text() : search();
-      const next =
-        index < 42
-          ? value + keyboardCharacters()[index]
-          : index === 43
-            ? value + " "
-            : index === 44
-              ? Array.from(value).slice(0, -1).join("")
-              : value;
-      if (isOverlay) setText(next.slice(0, 2048));
-      else updateSearch(next);
-    }
+    const inputScene = createMoveScene({
+      screen, zone, setZone, setColumn, overlay: () => overlay(), overlayClosing, openingSource: () => openingSource(),
+      error, loading, countdown, paging, liveScene, restartHeroCycling: () => restartHeroCycling(),
+      revealEndedControls: () => revealEndedControls(),
+      rememberContentFocus: () => rememberContentFocus(), rememberDetailFocus: () => rememberDetailFocus(),
+      setPairingFocused: value => setPairingFocused(value), navs,
+      contentFocus: { resolve: row => contentFocus.resolve(row as never) }, contentRow: () => contentRow() as never,
+      libraryControlCount, navigateOverlay: (modal, dx, dy) => navigateOverlay(modal, dx, dy),
+      playerNavigation: { move: (dx, dy) => playerNavigation.move(dx, dy) },
+      navigateProfiles: (dx, dy) => navigateProfiles(dx, dy),
+      navigateSettings: (dx, dy) => navigateSettings(dx, dy),
+      navigateDetail: (dx, dy) => navigateDetail(dx, dy),
+      navigateCalendar: (dx, dy) => navigateCalendar(dx, dy),
+      navigateHero: (dx, dy, at) => navigateHero(dx, dy, at as never),
+      navigateHomeRows: (dx, dy) => navigateHomeRows(dx, dy),
+      navigateSearch: (dx, dy) => navigateSearch(dx, dy),
+      navigateLive: (dx, dy) => navigateLive(dx, dy),
+      navigateContent: (dx, dy) => navigateContent(dx, dy),
+    });
+    const keyboardScene = createKeyboardScene({
+      overlay: () => overlay(), text, setText: value => setText(value as never), key, search, updateSearch,
+      keyboardCharacters, setKeyboardUpper: value => setKeyboardUpper(value), setKeyboardSymbols: value => setKeyboardSymbols(value),
+      setZone: value => setZone(value), setColumn: value => setColumn(value), run: work => run(work),
+      dismissOverlay: () => dismissOverlay(),
+    });
+    const move = inputScene.move, completeTextInput = keyboardScene.completeTextInput,
+      keyboardActivate = keyboardScene.keyboardActivate;
     const activatePlayer = createPlayerActivation({player, snapshot, setPlaying: playerTransport.setPlaying, actions: playerActions, action: activeAction, channel: activeChannel, choice, buttons: playerButtons,
       timeline: {value: seek, set: setSeek, seeking: setSeeking}, chrome: {visible: showControls, set: setShowControls, hide: hideControls},
       segments: {active: activeSegment, clear: segments.clear, refresh: refreshPlaybackSegments},
