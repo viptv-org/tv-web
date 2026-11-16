@@ -163,3 +163,73 @@ export function createKeyboardScene(options: {
 
   return { completeTextInput, keyboardActivate };
 }
+
+/** The screen's raw key bindings.
+ *
+ * Every direction cancels the autoplay countdown and lets the idle saver eat the
+ * press first, so no key can dismiss the saver *and* move underneath it. Enter is
+ * the only handler with a second rule: a key *repeat* must not re-arm the 700 ms
+ * hold timer, which is why the repeat check sits after the saver and before the
+ * hold.
+ */
+export function createRootInput(options: {
+  countdown: { cancel: () => void };
+  handleIdleInput: () => boolean;
+  move: (dx: number, dy: number) => void;
+  back: () => Promise<void>;
+  menu: () => void;
+  fail: (error: unknown) => void;
+  revealEndedControls: () => boolean;
+  restartHeroCycling: () => void;
+  playerNavigation: { cancel: () => void };
+  overlay: () => { kind: string } | undefined;
+  manualSourceSelection: () => void;
+  press: () => unknown;
+}) {
+  return {
+    left() {
+      options.countdown.cancel();
+      if (options.handleIdleInput()) return;
+      return options.move(-1, 0);
+    },
+    right() {
+      options.countdown.cancel();
+      if (options.handleIdleInput()) return;
+      return options.move(1, 0);
+    },
+    up() {
+      options.countdown.cancel();
+      if (options.handleIdleInput()) return;
+      options.move(0, -1);
+    },
+    down() {
+      options.countdown.cancel();
+      if (options.handleIdleInput()) return;
+      options.move(0, 1);
+    },
+    back(event?: KeyboardEvent) {
+      if (event?.repeat) return;
+      options.countdown.cancel();
+      if (options.handleIdleInput()) return;
+      void options.back().catch(options.fail);
+    },
+    menu() {
+      options.playerNavigation.cancel();
+      options.countdown.cancel();
+      if (options.handleIdleInput()) return;
+      options.menu();
+    },
+    enter(event?: KeyboardEvent) {
+      options.playerNavigation.cancel();
+      options.countdown.cancel();
+      if (options.revealEndedControls()) return undefined;
+      if (options.handleIdleInput()) return;
+      // A held Enter auto-repeats; only the first keydown arms the hold timer, so
+      // repeats must not reset it or the 700ms menu never fires.
+      if (event?.repeat) return undefined;
+      options.restartHeroCycling();
+      if (options.overlay()?.kind === "sources") options.manualSourceSelection();
+      return options.press();
+    },
+  };
+}

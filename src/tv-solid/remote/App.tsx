@@ -82,7 +82,7 @@ import { createSessionScene } from "./session-scene";
 import { publishTestSurface } from "./debug-surface";
 import { createMenuScene } from "./menu-scene";
 import { createActivateScene } from "./activate-scene";
-import { createKeyboardScene, createMoveScene } from "./input-scene";
+import { createKeyboardScene, createMoveScene, createRootInput } from "./input-scene";
 import { createTvState } from "./state";
 import { createAppEffects } from "./app-effects";
 import { createShell } from "./shell";
@@ -1132,52 +1132,13 @@ export function createRemoteTvApp(
       start: () => start(), autoStart: options.autoStart !== false,
     });
     const Root = defineScreen({
-      input: {
-        left() {
-          countdown.cancel();
-          if (handleIdleInput()) return;
-          return move(-1, 0);
-        },
-        right() {
-          countdown.cancel();
-          if (handleIdleInput()) return;
-          return move(1, 0);
-        },
-        up() {
-          countdown.cancel();
-          if (handleIdleInput()) return;
-          move(0, -1);
-        },
-        down() {
-          countdown.cancel();
-          if (handleIdleInput()) return;
-          move(0, 1);
-        },
-        back(event?: KeyboardEvent) {
-          if (event?.repeat) return;
-          countdown.cancel();
-          if (handleIdleInput()) return;
-          void back().catch(fail);
-        },
-        menu() {
-          playerNavigation.cancel();
-          countdown.cancel();
-          if (handleIdleInput()) return;
-          menu();
-        },
-        enter(event?: KeyboardEvent) {
-          playerNavigation.cancel();
-          countdown.cancel();
-          if (revealEndedControls()) return undefined;
-          if (handleIdleInput()) return;
-          // A held Enter auto-repeats; only the first keydown arms the hold
-          // timer, so repeats must not reset it or the 700ms menu never fires.
-          if (event?.repeat) return undefined;
-          restartHeroCycling();
-          if (overlay()?.kind === "sources") picker.manual.set(true);
-          return heldSelect.press();
-        },
-      },
+      input: createRootInput({
+        countdown, handleIdleInput: () => handleIdleInput(), move: (dx, dy) => move(dx, dy),
+        back: () => back(), menu: () => menu(), fail: error => fail(error),
+        revealEndedControls: () => revealEndedControls(), restartHeroCycling: () => restartHeroCycling(),
+        playerNavigation: { cancel: () => playerNavigation.cancel() }, overlay: () => overlay(),
+        manualSourceSelection: () => picker.manual.set(true), press: () => heldSelect.press(),
+      }),
       render: () => {
         return (
         <TvView
