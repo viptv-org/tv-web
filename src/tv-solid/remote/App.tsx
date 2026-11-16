@@ -84,6 +84,7 @@ import { createSourcePlayScene } from "./source-play-scene";
 import { createNavigationScene } from "./navigation-scene";
 import { createBackScene } from "./back-scene";
 import { createSessionScene, playbackRevisionKey } from "./session-scene";
+import { publishTestSurface } from "./debug-surface";
 import { createPlayerScene } from "./player-scene";
 import { episodeKey } from "./episode-preparation";
 import type { EpisodePreparationState } from "./episode-preparation";
@@ -1517,90 +1518,34 @@ export function createRemoteTvApp(
       const card = zone() === "hero" ? heroIntentCard() : focusedCard();
       if (card) showCardMenu(card);
     }
-    createEffect(() => {
+    createEffect(() => publishTestSurface(() => {
       const state = screen();
-      document.documentElement.dataset.tvScreen = state;
-      document.documentElement.dataset.tvNavigation = navs()
-        .map((item) => item.id)
-        .join(",");
-      document.documentElement.dataset.tvOverlay = overlay()?.kind ?? "";
-      document.documentElement.dataset.tvSources = String(sources().length);
-      document.documentElement.dataset.tvSourceProviders = sourceProviders()
-        .map(([label]) => label)
-        .join(",");
-      document.documentElement.dataset.tvSourceChoice = String(choice());
-      document.documentElement.dataset.tvPlayerState = String(
-        snapshot()?.state ?? "",
-      );
-      document.documentElement.dataset.tvPlaybackError = playbackError();
-      document.documentElement.dataset.tvPlayerControls = String(showControls());
-      document.documentElement.dataset.tvHeroCycle = heroCycle.active() ? String(heroCycle.started()) : "";
-      document.documentElement.dataset.tvPlayerSeeking = String(seeking());
-      document.documentElement.dataset.tvPlayerPosition = String(snapshot()?.time.positionSeconds ?? "");
-      document.documentElement.dataset.tvPlayerDuration = String(snapshot()?.time.durationSeconds ?? "");
-      document.documentElement.dataset.tvPlayerVideoFrames = String(snapshot()?.diagnostics?.videoFrames ?? "");
-      document.documentElement.dataset.tvPlayerDecodedFrames = String(snapshot()?.diagnostics?.decodedFrames ?? "");
-      document.documentElement.dataset.tvPlayerPresentedFrames = String(snapshot()?.diagnostics?.presentedFrames ?? "");
-      document.documentElement.dataset.tvPlayerPresentedPosition = String(snapshot()?.diagnostics?.presentedPositionSeconds ?? "");
-      document.documentElement.dataset.tvPlayerVideoProgress = snapshot()?.diagnostics?.videoFrameProgress ?? "";
-      document.documentElement.dataset.tvPlayerTimelineFocus = String(timelineFocused());
-      // The row's order, so a session can reach a control by name instead of
-      // by counting presses.
-      document.documentElement.dataset.tvPlayerTools = playerTools().map(tool => tool.id).join(",");
-      document.documentElement.dataset.tvSourcePhase = sourcePage()?.discovery_phase ?? "";
-      document.documentElement.dataset.tvSourcePreparing = String(sourceLoading() && !overlay());
-      document.documentElement.dataset.tvPlayerBusy = String(loading() || seeking() || snapshot()?.state === "buffering");
-      document.documentElement.dataset.tvSourceIdentity = focusedSource()?.id ?? "";
-      document.documentElement.dataset.tvPlayerEpisode = String(activeAction()?.card.identity.episode?.episode ?? "");
-      document.documentElement.dataset.tvNextStatus = episodeState().status;
-      document.documentElement.dataset.tvNextPrepared = String(!!episodeState().prepared);
-      document.documentElement.dataset.tvAutoplayCountdown = String(countdownState().remaining ?? "");
-      document.documentElement.dataset.tvSourceMenu = sourceMenu() ?? "";
-      document.documentElement.dataset.tvSourceFilterFocus = String(
-        sourceFilterFocus(),
-      );
-      document.documentElement.dataset.tvSourceFacet = String(sourceFacet());
-      document.documentElement.dataset.tvSourceMenuChoice = String(
-        sourceMenuChoice(),
-      );
-      document.documentElement.dataset.tvSourceFilter =
-        sourceProviderFilter() ?? "";
-      document.documentElement.dataset.tvSourceFailure = picker.failure();
-      document.documentElement.dataset.tvLibrarySort = String(
-        library()?.query?.sort ?? "",
-      );
-      document.documentElement.dataset.tvCalendarEntries = String(
-        calendar()?.entries.length ?? 0,
-      );
-      // The picker's own state, so a session can be checked without reading the
-      // canvas: the status line and the empty state are drawn, not queried.
-      document.documentElement.dataset.tvSourceStatus = String(sourceSpread());
-      document.documentElement.dataset.tvReady = String(
-        !loading() && !pending(),
-      );
-      document.documentElement.dataset.tvChannelId =
-        (state === "live" && zone() === "content"
-          ? channels()[column()]
-          : state === "search" && zone() === "search-channels"
-            ? searchChannels()[column()]
-            : undefined
-        )?.id ?? "";
-      document.documentElement.dataset.tvSearchRow = state === "search" ? activeSearchRow()?.id ?? "" : "";
-      document.documentElement.dataset.tvSearchRows = state === "search" ? String(searchResults().rows.length) : "0";
-      document.documentElement.dataset.tvFocus =
-        zone() === "confirmation"
-          ? `confirmation:${row()}:${column()}`
-          : `${zone()}:${column()}:${row()}:${heroAction()}:${choice()}`;
-      document.documentElement.dataset.tvSaver = String(screenSaver());
-      // The Live page's own state, so a session can be checked without reading
-      // the canvas: the empty, loading and failed forms are not all visible as
-      // copy on screen.
-      document.documentElement.dataset.tvLiveSpread = String(
-        screen() === "live" ? liveSpread() : "",
-      );
-      if (state !== "player")
-        document.getElementById("video-layer")!.style.display = "none";
-    });
+      return {
+        screen: state, zone: zone(), column: column(), row: row(), heroAction: heroAction(), choice: choice(),
+        navs: navs(), overlayKind: overlay()?.kind, sources: sources().length,
+        sourceProviders: sourceProviders().map(([label]) => label).join(","),
+        playerState: String(snapshot()?.state ?? ""), playbackError: playbackError(),
+        showControls: showControls(), heroStarted: heroCycle.active() ? heroCycle.started() : undefined,
+        seeking: seeking(), snapshot: snapshot(), timelineFocused: timelineFocused(),
+        playerTools: playerTools().map(tool => tool.id).join(","),
+        sourcePhase: sourcePage()?.discovery_phase ?? "",
+        sourcePreparing: sourceLoading() && !overlay(),
+        busy: loading() || seeking() || snapshot()?.state === "buffering",
+        sourceIdentity: focusedSource()?.id ?? "",
+        episode: activeAction()?.card.identity.episode?.episode,
+        nextStatus: episodeState().status, nextPrepared: !!episodeState().prepared,
+        countdownRemaining: countdownState().remaining,
+        sourceMenu: sourceMenu(), sourceFilterFocus: sourceFilterFocus(), sourceFacet: sourceFacet(),
+        sourceMenuChoice: sourceMenuChoice(), sourceFilter: sourceProviderFilter(), sourceFailure: picker.failure(),
+        librarySort: String(library()?.query?.sort ?? ""), calendarEntries: calendar()?.entries.length ?? 0,
+        sourceStatus: String(sourceSpread()), ready: !loading() && !pending(),
+        channelId: (state === "live" && zone() === "content" ? channels()[column()]
+          : state === "search" && zone() === "search-channels" ? searchChannels()[column()] : undefined)?.id ?? "",
+        searchRow: state === "search" ? activeSearchRow()?.id ?? "" : "",
+        searchRows: state === "search" ? searchResults().rows.length : 0,
+        saver: screenSaver(), liveSpread: String(state === "live" ? liveSpread() : ""),
+      };
+    }));
     createEffect(() => {
       snapshot(); // Decoder lease updates trigger the appearance effect.
       const override = captionOverride();
