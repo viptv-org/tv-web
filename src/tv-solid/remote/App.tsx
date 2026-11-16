@@ -23,7 +23,6 @@ import { RowFocus } from "./row-focus";
 
 import { SettingsView } from "./SettingsView";
 import { createProgressFreshness } from "./progress-freshness";
-import { createPairingFlow } from "./session/pairing";
 import { createRevisionPoller } from "./session/revisions";
 import { createLiveMenu } from "./menus/live";
 import { createLiveScene } from "./live-scene";
@@ -84,6 +83,7 @@ import { createSourcePickerScene } from "./source-picker-scene";
 import { createSourcePlayScene } from "./source-play-scene";
 import { createNavigationScene } from "./navigation-scene";
 import { createBackScene } from "./back-scene";
+import { createSessionScene, playbackRevisionKey } from "./session-scene";
 import { createPlayerScene } from "./player-scene";
 import { episodeKey } from "./episode-preparation";
 import type { EpisodePreparationState } from "./episode-preparation";
@@ -201,8 +201,8 @@ export function createRemoteTvApp(
     const { pages: livePages, channels, groups, group: liveGroup, programs, failure: liveFailure, identity: liveIdentity,
       guideInfo, spread: liveSpread, viewer: liveViewer, emptyFocus: liveEmptyFocus, recovery: liveRecovery,
       channelIndex: liveChannelIndex, rowStart: guideRowStart, currentProgram, guideWindow, guideStart } = liveScene;
-    const setLivePages = liveScene.setPages, setChannels = liveScene.setChannels, setGroups = liveScene.setGroups,
-      setPrograms = liveScene.setPrograms, setGuideInfo = liveScene.setGuideInfo, setLiveGroup = liveScene.setGroup,
+    const setLivePages = liveScene.setPages, setChannels = liveScene.setChannels,
+      setPrograms = liveScene.setPrograms, setGuideInfo = liveScene.setGuideInfo,
       setLiveIdentity = liveScene.setIdentity, setProgramIndex = liveScene.setProgramIndex;
     const [pairing, setPairing] = createSignal<Pairing>(),
       [pairingDeadline, setPairingDeadline] = createSignal(0),
@@ -260,7 +260,6 @@ export function createRemoteTvApp(
       // `Opening stream…` state reports.
       [openingSource, setOpeningSource] = createSignal<Source>();
     const [playbackRevision, setPlaybackRevision] = createSignal("");
-    const playbackRevisionKey = (value: Record<string, number | string>) => JSON.stringify([value.configuration, value.addons, value.policy, value.preferences]);
     async function checkPlaybackRevision() {
       const value = await call<Record<string, number | string>>(api.scoped("/revisions"));
       if (playbackRevisionKey(value) === playbackRevision()) return;
@@ -275,7 +274,6 @@ export function createRemoteTvApp(
     const [episodeState, setEpisodeState] = createSignal<EpisodePreparationState>({ status: "idle", preparing: false });
     const [countdownState, setCountdownState] = createSignal<CountdownState>({ running: false, remaining: null, progress: 0 });
     const [advancing, setAdvancing] = createSignal(false);
-    let sourceAttempt = 0, sourceIntent = 0;
     const countdown = new AutoplayCountdown(setCountdownState);
     const calendarScene = createCalendarScene();
     const calendar = calendarScene.snapshot;
@@ -298,7 +296,7 @@ export function createRemoteTvApp(
       menuChoice: sourceMenuChoice, setMenuChoice: setSourceMenuChoice,
       actions: sourceActions, setActions: setSourceActions, actionChoice: sourceActionChoice,
       setActionChoice: setSourceActionChoice, menuOptions: openSourceMenuOptions,
-      page: sourcePage, failed: failedSources, rows: sources, setRows: setSources,
+      page: sourcePage, failed: failedSources, rows: sources,
       loading: sourceLoading, setSourceLoading, pickerCard,
       channel: sourceChannel, activate: activateSources } = picker;
     const sourceMenuOptions = () => openSourceMenuOptions();
@@ -347,7 +345,8 @@ export function createRemoteTvApp(
     const revisions = createRevisionPoller({ready: () => !!api.profile && document.visibilityState === "visible" && !(screen() !== "player" && overlay()) && !pending(),
       playing: () => screen() === "player", blocked: () => !!overlay() || pending(), alive: () => alive,
       profile: () => api.profile, signal: () => scope.signal, read: signal => call<Record<string, number | string>>(api.scoped("/revisions"), "GET", undefined, signal),
-      bootstrap: signal => api.bootstrap(signal), playback: checkPlaybackRevision, reset: resetScope, adoptBootstrap: applyBootstrap,
+      bootstrap: signal => api.bootstrap(signal), playback: checkPlaybackRevision,
+      reset: () => session.resetScope(), adoptBootstrap: value => session.applyBootstrap(value),
       apply: applyRevision, fail: error => fail(error)});
     const scheduleRevisions = revisions.schedule;
     const [progressFreshness, setProgressFreshness] = createSignal(0);
@@ -419,7 +418,7 @@ export function createRemoteTvApp(
       playbackRevision, sourceLoading, loading, error, scopeSignal: () => scope.signal, detail: () => detail(),
       activeSource: () => activeSource(), deviceRevision: () => deviceRevision(),
     });
-    const player = playerScene.player, playerTransport = playerScene.transport, episodes = playerScene.episodes;
+    const player = playerScene.player, playerTransport = playerScene.transport;
     const advanceEpisode = playerScene.advanceEpisode, revealEndedControls = playerScene.revealEndedControls,
       dismissNext = playerScene.dismissNext;
     const playerActions = createMemo(() => {
@@ -496,161 +495,6 @@ export function createRemoteTvApp(
         if (alive) setPending(false);
       }
     };
-    function resetScope() {
-      playerScene.manual.clear();
-      playerScene.next.bump();setAdvancing(false);sourceAttempt++;sourceIntent++;countdown.cancel();episodes.clear();
-      setSignedIn(undefined);
-      setCanManageAccount(undefined);
-      overlays.retireAnimations();
-      scope.abort();
-      searchScene.requests.scope?.abort();
-      setSearchChannelPaging(false);
-      setSearchError("");
-      settingsAbort();
-      paging.restart();
-      scope = new AbortController();
-      picker.operation.get()?.abort();
-      picker.operation.set(undefined);
-      setLoading(false);
-      setError("");
-      overlays.hide();
-      setText("");
-      paging.setBusy(false);
-      heldSelect.cancel();
-      picker.generation.next();
-      pageGeneration++;
-      clearTimeout(searchScene.requests.timer);
-      return scope.signal;
-    }
-    function clearProfileView() {
-      homeRowFocus.clear();
-      contentFocus.clear();
-      detailFocus.clear();
-      history.length = 0;
-      batch(() => {
-        setCaptionOverride(undefined);
-        setPlaybackError("");
-        setPage({ cards: [], complete: true });
-        setSearch("");
-        clearSearchRows();
-        setSearchChannels([]);
-        setSearchChannelPages([]);
-        setSearchChannelError("");
-        setSearchMediaPending(false);
-        setSearchChannelsPending(false);
-        setFilters({});
-        setCatalog(undefined);
-        setControls(undefined);
-        setSources([]);
-        picker.setIds([]);
-        picker.setAction(undefined);
-        setActiveAction(undefined);
-        picker.setPickerCard(undefined);
-        picker.setChannel(undefined);
-        setActiveChannel(undefined);
-        setActiveSource(undefined);
-        setSelected(undefined);
-        setDetail(undefined);
-        setDetailAction(undefined);
-        setPreviewCard(undefined);
-        adoptChannelWindow([]);
-        setPrograms({});
-        setGuideInfo({});
-        setLiveIdentity(undefined);
-        setManagement(undefined);
-        setNavigation(undefined);
-        setAccountEmail("");
-        setPreferences(undefined);
-        setLibrary(undefined);
-        setHome(undefined);
-        setGroups([]);
-        setLiveGroup(undefined);
-        setSettingsItems([]);
-        clearCycle();
-        setHeroAction(0);
-        setSaved(new Map());
-      });
-      liveScene.guides.dispose();
-    }
-    function applyBootstrap(value: Bootstrap) {
-      clearProfileView();
-      batch(() => {
-        setManagement(value.profile_management);
-        setNavigation(value.navigation);
-        setAccountEmail(
-          value.identity.account?.username ??
-            value.identity.account?.name ??
-            "",
-        );
-        setPreferences(value.preferences ?? undefined);
-        setHome(stremioHome(value.home ?? undefined));
-        setSaved(new Map());
-        revisions.adopt(value.revisions ?? {});
-        setPlaybackRevision(playbackRevisionKey(value.revisions ?? {}));
-        setLoading(false);
-        setScreen(api.profile ? "home" : "profiles");
-        setZone(api.profile ? "hero" : "profiles");
-        setColumn(0);
-        setRow(0);
-      });
-      scheduleRevisions();
-    }
-    let startupAuthorityKnown = false;
-    let startupFlight: Promise<void> | undefined;
-    function start(): Promise<void> {
-      if (startupFlight) return startupFlight;
-      startupAuthorityKnown = false;
-      const restore = async () => {
-        if (options.initialLoading !== false) setLoading(true);
-        setError("");
-        try {
-          if (await api.restore())
-            applyBootstrap(await api.bootstrap(scope.signal));
-          else setLoading(false);
-          startupAuthorityKnown = true;
-        } catch (e) {
-          if (e instanceof RemoteError && e.status === 401) startupAuthorityKnown = true;
-          fail(e);
-        }
-      };
-      startupFlight = restore().finally(() => { startupFlight = undefined; });
-      return startupFlight;
-    }
-    const pairingFlow = createPairingFlow({api, retry: () => {retry = () => void beginPairing();}, fail,
-      begin: () => {
-        if (screen() !== "pairing") setPairingFocused(false);
-        const signal = resetScope();
-        setScreen("pairing");
-        setPairing(undefined);
-        setQr("");
-        setLoading(true);
-        return signal;
-      }, issued: setPairing, deadline: setPairingDeadline, qr: setQr, ready: () => {setLoading(false);},
-      complete: authenticated => {
-        batch(() => {
-          setSignedIn(authenticated);
-          setPairing(undefined);
-          setQr("");
-          setScreen("signed-in");
-          setZone("confirmation");
-          setColumn(0);
-          setRow(0);
-        });
-      }});
-    async function beginPairing() {
-      if (!startupAuthorityKnown || (screen() === "welcome" && error())) {
-        await start();
-        return;
-      }
-      if (loading() || pending() || !["welcome", "pairing"].includes(screen())) return;
-      await pairingFlow();
-    }
-    function finishSignIn() {
-      const authenticated = signedIn();
-      if (!authenticated || screen() !== "signed-in") return;
-      setSignedIn(undefined);
-      applyBootstrap(authenticated);
-    }
     createEffect(() => {
       const value = home(),
         active = screen() === "home",
@@ -787,15 +631,35 @@ export function createRemoteTvApp(
       refreshChannelPage: (searching, signal) => refreshChannelPage(searching, signal as AbortSignal),
       adoptChannelWindow: (pages, searching) => adoptChannelWindow(pages, searching),
     });
-    const { query: search, setQuery: setSearch, results: searchResults, rowIndex: searchRowIndex,
+    const { query: search, results: searchResults, rowIndex: searchRowIndex,
       error: searchError, channelError: searchChannelError, mediaPending: searchMediaPending,
       channelsPending: searchChannelsPending, channelPaging: searchChannelPaging, channels: searchChannels,
       channelPages: searchChannelPages, activeRow: activeSearchRow, needsRetry: searchNeedsRetry,
-      rememberRow: rememberSearchRow, clearRows: clearSearchRows,
+      rememberRow: rememberSearchRow,
       moveRow: moveSearchRow, positions: searchRowPositions, signal: searchSignal, update: updateSearch,
-      setChannels: setSearchChannels, setChannelPages: setSearchChannelPages,
-      setChannelPaging: setSearchChannelPaging, setError: setSearchError, setChannelError: setSearchChannelError,
-      setMediaPending: setSearchMediaPending, setChannelsPending: setSearchChannelsPending } = searchScene;
+      setChannels: setSearchChannels, setChannelPages: setSearchChannelPages } = searchScene;
+    const session = createSessionScene({
+      api, initialLoading: options.initialLoading, screen, setScreen, zone, setZone, setColumn, setRow,
+      loading, setLoading, error, pending, setError,
+      picker, search: searchScene, live: liveScene, detail: detailScene, calendar: calendarScene,
+      player: playerScene, paging,
+      // Created later in this closure; the session only resets them on a
+      // profile change, which cannot happen before they exist.
+      hero: { reset: () => heroScene.reset() }, settings: { reset: () => settings.reset() },
+      overlays: { retireAnimations: () => overlays.retireAnimations(), hide: () => overlays.hide() },
+      cancelHold: () => heldSelect.cancel(),
+      abortScope: () => scope.abort(), newScope: () => (scope = new AbortController()).signal,
+      clearFocus: () => { homeRowFocus.clear(); contentFocus.clear(); detailFocus.clear(); history.length = 0; },
+      setCaptionOverride: value => setCaptionOverride(value as never),
+      setPlaybackError, setPage: value => setPage(value as never), setFilters, setCatalog, setControls, setSelected,
+      setActiveAction, setActiveChannel, setActiveSource, setManagement, setNavigation, setPreferences,
+      setHome, setLibrary, setSaved, setAccountEmail, setHeroAction, setPlaybackRevision, setSignedIn, signedIn,
+      setCanManageAccount, setPairing, setPairingDeadline, setPairingFocused, qr: setQr,
+      revisions, scheduleRevisions: () => scheduleRevisions(), fail, retry: work => { retry = work; },
+    });
+    const resetScope = session.resetScope, clearProfileView = session.clearProfileView,
+      applyBootstrap = session.applyBootstrap, start = session.start, beginPairing = session.beginPairing,
+      finishSignIn = session.finishSignIn;
     const gridColumns = () => (screen() === "search" ? 5 : 7);
     const gridStart = () => {
       const index =
@@ -827,7 +691,7 @@ export function createRemoteTvApp(
     });
     const { heroCycle, heroSlide, previewCard, setPreviewCard, shelfTitleY, hero, heroLogoBox,
       heroPresentation, displayHero, displayedFeatured, heroIntentCard, interruptHero, detailForDisplay,
-      clampCycle, rememberHomeRow, restartHeroCycling, setHeroVisible, clearCycle } = heroScene;
+      clampCycle, rememberHomeRow, restartHeroCycling, setHeroVisible } = heroScene;
     function remember() {
       rememberHomeRow();
       rememberContentFocus();
@@ -976,7 +840,7 @@ export function createRemoteTvApp(
     const channelPaging = {owner: pageRequestOwner, focus: {zone, column, setZone, setColumn}, screen, overlay: () => !!overlay(),
       windows: {pages: (searching: boolean) => searching ? searchChannelPages() : livePages(), values: (searching: boolean) => searching ? searchChannels() : channels(), adopt: adoptChannelWindow},
       search: {query: search, remembered: () => searchChannelFocus, remember: (index: number) => {searchChannelFocus = index;}, signal: () => searchSignal(),
-        paging: setSearchChannelPaging, error: setSearchChannelError, refresh: (value: string) => updateSearch(value)},
+        paging: searchScene.setChannelPaging, error: searchScene.setChannelError, refresh: (value: string) => updateSearch(value)},
       live: {group: liveGroup, index: liveChannelIndex, retire: () => liveScene.retireGuides(), guides: () => liveScene.loadVisibleGuides(), reload: (group: string | undefined) => liveScene.loadGroup(group)},
       pending: paging.channelPending,
       retry: paging.channelRetry.set, retryAction: (action: () => void) => {retry = action;},
@@ -1073,7 +937,7 @@ export function createRemoteTvApp(
       closeOverlay: () => closeOverlay(), dismissOverlay: () => dismissOverlay(),
       confirmExit: () => confirmExit(),
       finishSignIn: () => finishSignIn(), start: () => start(),
-      startupAuthorityKnown: () => startupAuthorityKnown,
+      startupAuthorityKnown: session.authorityKnown,
       applyScreenInset: value => applyScreenInset(value),
       resetScope: () => resetScope(), navIndex, hasProfile: () => !!api.profile,
     });
@@ -1147,7 +1011,6 @@ export function createRemoteTvApp(
     const settingsTabs = settings.tabs;
     const settingsTab = settings.tab;
     const settingsItems = settings.items;
-    const setSettingsItems = settings.setItems;
     const settingsTabIndex = settings.tabIndex;
     const loadSettings = settings.load;
     const refreshProfiles = settings.refreshProfiles;

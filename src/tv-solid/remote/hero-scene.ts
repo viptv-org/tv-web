@@ -162,7 +162,13 @@ export function createHeroScene(options: {
   };
   /** A server refresh keeps the pass unless the featured list changed. */
   const clampCycle = () => heroCycle.clamp(options.home()?.featured.length ?? 0);
+  /** A new profile: no preview, no pass, no featured title. */
+  function reset() {
+    setPreviewCard(undefined);
+    heroCycle.clear();
+  }
   return {
+    reset,
     heroCycle, heroSlide: heroCycle.slide, previewCard, setPreviewCard, shelfTitleY, hero, heroLogoBox, heroMode,
     heroPresentation, displayHero, displayedFeatured, heroIntentCard, interruptHero, detailForDisplay,
     clampCycle, rememberHomeRow, restartHeroCycling: heroCycle.restart, resetHeroCycle: heroCycle.reset,

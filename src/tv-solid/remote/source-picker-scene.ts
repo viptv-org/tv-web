@@ -117,7 +117,17 @@ export function createSourcePickerScene(options: {
     setFilterFocus(false);
     setSourceLoading(true);
   }
+  /** A new profile or session: nothing about the old picker survives. */
+  function reset() {
+    setPage(undefined); setIds([]); setFacet(0); setFilterFocus(false); setProvider(undefined);
+    setMenu(undefined); setMenuChoice(0); setMenuOptions([]); setFailure(""); setActions(false);
+    setActionChoice(0); setFailed(new Set<string>()); setHeight(undefined); setFiltering(false);
+    setRows([]); setSourceLoading(false); setAction(undefined); setPickerCard(undefined);
+    setChannel(undefined); setReplacing(false); manual = false; generation++;
+    operation?.abort(); operation = undefined;
+  }
   return {
+    reset,
     page, setPage, ids, setIds, facet, setFacet, filterFocus, setFilterFocus, provider, setProvider,
     menu, setMenu, menuChoice, setMenuChoice, menuOptions, setMenuOptions, failure, setFailure,
     actions, setActions, actionChoice, setActionChoice, failed, setFailed, height, setHeight,

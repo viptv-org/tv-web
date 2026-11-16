@@ -120,7 +120,15 @@ export function createSearchScene(options: {
     rows: { clear: clearRows, replace: replaceRows }, restart: options.restartPaging,
     loading: options.setLoading, error: options.setError, retry: options.retry, fail: options.fail,
   });
+  /** A new profile: the query, its rows and its channel column are gone. */
+  function reset() {
+    requests.scope?.abort();
+    clearTimeout(requests.timer);
+    setQuery(""); clearRows(); setError(""); setChannelError(""); setMediaPending(false);
+    setChannelsPending(false); setChannelPaging(false); setChannels([]); setChannelPages([]);
+  }
   return {
+    reset,
     query, setQuery, results, setResults, rowIndex, setRowIndex, error, setError, channelError, setChannelError,
     mediaPending, setMediaPending, channelsPending, setChannelsPending, channelPaging, setChannelPaging,
     channels, setChannels, channelPages, setChannelPages,

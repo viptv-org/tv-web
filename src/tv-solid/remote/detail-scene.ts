@@ -64,7 +64,12 @@ export function createDetailScene(options: {
     focus: { zone: options.zone, column: options.column, setColumn: options.setColumn },
     resolve: options.resolveFocus,
   });
+  /** A new profile: no title, no season, no remembered lists. */
+  function reset() {
+    setDetail(undefined); setDetailAction(undefined); setSeasonIndex(0); focus.clear();
+  }
   return {
+    reset,
     detail, setDetail, detailAction, setDetailAction, seasonIndex, setSeasonIndex, presentation,
     row, column, rememberFocus, refresh, focus,
   };

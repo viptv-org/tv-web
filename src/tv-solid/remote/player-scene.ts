@@ -212,7 +212,13 @@ export function createPlayerScene(options: {
     }
   }
 
+  /** A new profile: no intent, no countdown, no prepared episode. */
+  function reset() {
+    manual = undefined; nextIntent++; dismissedEnd = "";
+    options.countdown.cancel(); episodes.clear();
+  }
   return {
+    reset,
     player, transport, episodes, discovery, sourceMemory, advanceEpisode, revealEndedControls, dismissNext,
     endedPresentation, endScope,
     next: { bump: () => ++nextIntent, current: () => nextIntent },

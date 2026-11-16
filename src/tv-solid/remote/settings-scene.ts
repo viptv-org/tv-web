@@ -185,6 +185,10 @@ export function createSettingsScene(options: {
     focus: options.navigation, tab, tabCount: tabs.length, items,
     load: value => { void load(value, options.scope()).catch(options.fail); }, fail: options.fail,
   });
-  return { tabs, tab, setTab, items, setItems, tabIndex, load, refreshProfiles, manageProfile: management, navigate,
+  /** A new profile: no tab, no rows, no requests. */
+  function reset() {
+    abort(); setTab(0); setItems([]);
+  }
+  return { reset, tabs, tab, setTab, items, setItems, tabIndex, load, refreshProfiles, manageProfile: management, navigate,
     mayWriteHousehold, abort, preferenceChoice, displayItem };
 }

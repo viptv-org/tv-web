@@ -95,7 +95,13 @@ export function createPagingScene(options: {
     }
   }
 
+  /** A new profile: no traversal, no pending focus, no retry. */
+  function reset() {
+    scope?.abort(); scope = undefined; generation++; busy = false; pending = undefined;
+    channelPending = undefined; channelRetry = undefined;
+  }
   return {
+    reset,
     pageSignal, restart, moveToItem, settle,
     generation: () => generation,
     busy: () => busy,

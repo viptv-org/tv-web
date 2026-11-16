@@ -17,5 +17,8 @@ export function createCalendarScene() {
       return !Number.isNaN(date.getTime()) && calendarDayKey(date) === current.key;
     });
   });
-  return { snapshot, setSnapshot, day, setDay, entry, setEntry, days, entries };
+  function reset() {
+    setSnapshot(undefined); setDay(0); setEntry(0);
+  }
+  return { snapshot, setSnapshot, day, setDay, entry, setEntry, days, entries, reset };
 }

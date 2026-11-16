@@ -268,7 +268,14 @@ export function createLiveScene(options: {
     }
   }
 
+  /** A new profile: the page, its groups, programs and guides are gone. */
+  function reset() {
+    retire();
+    setLivePages([]); setChannels([]); setGroups([]); setLiveGroup(undefined); setPrograms({});
+    setGuideInfo({}); setLiveFailure(""); setLiveIdentity(undefined);
+  }
   return {
+    reset,
     pages: livePages, setPages: setLivePages, channels, setChannels, snapshot: liveSnapshot, groups, setGroups,
     group: liveGroup, setGroup: setLiveGroup, programs, setPrograms, failure: liveFailure, setFailure: setLiveFailure,
     identity: liveIdentity, setIdentity: setLiveIdentity, guideInfo, setGuideInfo, programIndex, setProgramIndex,
