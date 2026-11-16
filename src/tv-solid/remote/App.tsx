@@ -85,6 +85,7 @@ import { createNavigationScene } from "./navigation-scene";
 import { createBackScene } from "./back-scene";
 import { createSessionScene, playbackRevisionKey } from "./session-scene";
 import { publishTestSurface } from "./debug-surface";
+import { createMenuScene } from "./menu-scene";
 import { createPlayerScene } from "./player-scene";
 import { episodeKey } from "./episode-preparation";
 import type { EpisodePreparationState } from "./episode-preparation";
@@ -243,7 +244,7 @@ export function createRemoteTvApp(
         : undefined;
     });
     const heldSelect = createHeldSelect({
-      target: pressTarget, layer: overlay,
+      target: () => menuScene.pressTarget(), layer: overlay,
       allowed: () => !overlay() || overlay()?.kind === "sources" || overlay()?.kind === "next",
       blocked: () => pending() || loading(),
       onTimer: () => { (window as any).__holdPending = pending(); (window as any).__holdLoading = loading(); },
@@ -1458,66 +1459,21 @@ export function createRemoteTvApp(
         else await openDetail(card);
       }
     }
-    function pressTarget(){
-      const modal=overlay();
-      if(modal?.kind==='sources')return JSON.stringify(['sources',sourceFilterFocus()?['filter',sourcePage()?.quality_filters?.[sourceFacet()-1]?.height]:['source',focusedSource()?.id],selected()?cardKey(selected()!):null]);
-      if(modal)return JSON.stringify([modal.kind,modal.kind==='text'?key():choice()]);
-      // The hero term identifies the billboard only while the billboard is the
-      // focused element. On a rows card the hero is the delayed preview, which
-      // changes 400ms into a hold and would otherwise defeat the 700ms timer.
-      return JSON.stringify([screen(),screen() === "player" ? choice() : null,zone(),column(),row(),heroAction(),zone()==="hero"?(heroIntentCard()?cardKey(heroIntentCard()!):null):null,focusedCard()?cardKey(focusedCard()!):null,heroAction()===1&&heroIntentCard()?isSaved(heroIntentCard()!):null]);
-    }
-    const showLiveMenu = createLiveMenu({request: call, path: path => api.scoped(path), 
+    const showLiveMenu = createLiveMenu({request: call, path: path => api.scoped(path),
       dialogs: {open: openOverlay, close: closeOverlay}, play: playIntent, fail});
     const showCardMenu = createCardMenu({dialogs: {open: openOverlay, close: closeOverlay}, details: openDetail,
       play: playIntent, saved: isSaved, toggleSaved});
-    function menu() {
-      countdown.cancel();
-      if (revealEndedControls()) return;
-      if (overlay()?.kind === "next") { if (choice() === 0) void advanceEpisode(true).catch(fail);return; }
-      if (screen() === "player" && !overlay()) {
-        if (playerButtons()[choice()]?.id === "next") void advanceEpisode(true).catch(fail);
-        else if (activeAction()) void playIntent(activeAction()!.card, true, false, activeChannel(), player.canReplaceSource).catch(fail);
-        return;
-      }
-      if (sourceActions()) return;
-      if (
-        overlay()?.kind === "sources" &&
-        !sourceFilterFocus() &&
-        !sourceMenu() &&
-        visibleSources().length
-      ) {
-        setSourceActionChoice(0);
-        setSourceActions(true);
-        return;
-      }
-      if (overlay()) {
-        if (overlay()?.kind === "sources") picker.manual.set(true);
-        return;
-      }
-      if (screen() === "settings") {
-        if (zone() === "settings-content")
-          void Promise.resolve(settingsItems()[column()]?.run()).catch(fail);
-        return;
-      }
-      const channel =
-        screen() === "live" && zone() === "content"
-          ? channels()[column()]
-          : screen() === "search" && zone() === "search-channels"
-            ? searchChannels()[column()]
-            : undefined;
-      if (channel) {
-        showLiveMenu(channel);
-        return;
-      }
-      if (screen() === "profiles") {
-        if (canManageProfiles()) manageProfile(column());
-        return;
-      }
-      if (["nav", "filters", "keyboard", "seasons"].includes(zone())) return;
-      const card = zone() === "hero" ? heroIntentCard() : focusedCard();
-      if (card) showCardMenu(card);
-    }
+    const menuScene = createMenuScene({
+      screen, zone, column, row, choice, key, heroAction, overlay: () => overlay(), focusedSource,
+      sourceFilterFocus, sourceFacet, sourcePage, selected, focusedCard, heroIntentCard, isSaved, cardKey,
+      channels, searchChannels, settingsItems: () => settingsItems(), visibleSources, sourceActions, sourceMenu,
+      setSourceActions: value => setSourceActions(value), setSourceActionChoice: value => setSourceActionChoice(value),
+      picker, player, playerScene, chrome, activeAction, activeChannel, playIntent, advanceEpisode, countdown,
+      showLiveMenu: channel => showLiveMenu(channel), showCardMenu: card => showCardMenu(card),
+      manageProfile: index => manageProfile(index), canManageProfiles: () => canManageProfiles(),
+      fail: error => fail(error),
+    });
+    const menu = menuScene.menu;
     createEffect(() => publishTestSurface(() => {
       const state = screen();
       return {
