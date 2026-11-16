@@ -25,17 +25,16 @@ import { initialSeasonIndex, seasonEpisodes } from "./seasons";
 import { RowFocus } from "./row-focus";
 
 import { SettingsView } from "./SettingsView";
-import { createLiveGuideController } from "./live/guide-controller";
 import { searchRowFocus } from "./search/media";
 import type { SearchPage } from "./types";
 import { createDetailRefresh } from "./detail-refresh";
 import { whenIdle } from "./idle";
 import { createProgressFreshness } from "./progress-freshness";
-import { createLiveRefresh } from "./live/revision-refresh";
 import { createSearchController, type SearchRequests } from "./search/controller";
 import { createPairingFlow } from "./session/pairing";
 import { createRevisionPoller } from "./session/revisions";
 import { createLiveMenu } from "./menus/live";
+import { createLiveScene } from "./live-scene";
 import { createCardMenu } from "./menus/card";
 import { createPlayerActivation } from "./activation/player";
 import { createPlayerTransport } from "./player-transport";
@@ -79,19 +78,11 @@ import {
   RemoteError,
   query,
   segment,
-  type AccountIdentity
 } from "./api";
 import {
-  LIVE_EMPTY_COPY,
-  liveFilteredChip,
   liveKeepsToday,
   liveNoSourceActions,
-  liveRecoveryActions,
-  liveViewerOf,
-  pickLiveSpread,
-  type LiveRecoveryAction,
 } from "./liveEmpty";
-import { guideWindowOf } from "./guideWindow";
 import {
 } from "./sourceStatus";
 import {
@@ -144,8 +135,6 @@ import {
   type Page,
   type Pairing,
   type Preferences,
-  type Program,
-  type Guide,
   type Source,
   type SourcePage,
   type TitleAction,
@@ -246,78 +235,26 @@ export function createRemoteTvApp(
       label: detailActionLabel, progress: detailPlayProgress} = createDetailPresentation({
         home, detail, action: detailAction, selected, season: seasonIndex,
       });
-    const [livePages, setLivePages] = createSignal<LivePage[]>([]),
-      [channels, setChannels] = createSignal<Channel[]>([]),
-      [liveSnapshot, setLiveSnapshot] = createSignal(""),
-      [groups, setGroups] = createSignal<{ id: string; label: string }[]>([]),
-      [liveGroup, setLiveGroup] = createSignal<string>(),
-      [programs, setPrograms] = createSignal<Record<string, Program[]>>({}),
-      // LIVE-EMPTY-001: the message a failed first Live request read, and who is
-      // looking, which decides the action block and the who line.
-      [liveFailure, setLiveFailure] = createSignal(""),
-      [liveIdentity, setLiveIdentity] = createSignal<AccountIdentity>();
-    /** Which form the page draws. Only the page's own facts decide. */
-    const liveSpread = createMemo(() =>
-      pickLiveSpread({
-        channels: channels().length,
-        page: livePages()[0],
-        filtered: !!liveGroup(),
-        pending: loading(),
-        failure: liveFailure(),
-      }),
-    );
-    const liveViewer = createMemo(() => liveViewerOf(liveIdentity()));
-    /** The block's focused action, while the block owns the page. */
-    const liveEmptyFocus = () =>
-      zone() === "live-empty" ? column() : undefined;
-    /**
-     * The answered and failed blocks' recovery, in the contract's order: the
-     * primary is first, so **Try again** leads whenever there is something to
-     * re-request. **Source integrations** needs a proven owner: the server
-     * refuses a source write from a member or a paired TV.
-     */
-    const liveRecovery = createMemo<{ id: LiveRecoveryAction; label: string }[]>(
-      () =>
-        liveRecoveryActions({
-          retry: liveSpread() === "failed" || !!livePages()[0]?.reason,
-          mayChangeSources: liveViewer() === "owner",
-        }).map((id) => ({
-          id,
-          label:
-            id === "retry"
-              ? LIVE_EMPTY_COPY.retry
-              : LIVE_EMPTY_COPY.sourceIntegrations,
-        })),
-    );
-    const [guideInfo, setGuideInfo] = createSignal<
-        Record<string, Guide["view"]>
-      >({}),
-      [programIndex, setProgramIndex] = createSignal(0);
-    const liveChannelIndex = () => (zone() === "live-groups" ? 0 : column());
-    const guideRowStart = () =>
-      edgeRequest(livePages(), "previous")
-        ? liveChannelIndex() - 2
-        : Math.max(0, liveChannelIndex() - 2);
-    const currentProgram = createMemo(
-      () => programs()[channels()[liveChannelIndex()]?.id]?.[programIndex()],
-    );
-    /**
-     * The grid's own window, shared by every row, the header and the Now marker:
-     * the guides that answered decide it, never the focused row (whose own guide
-     * may be pending or failed).
-     */
-    const guideWindow = createMemo(() =>
-      guideWindowOf(Object.values(guideInfo()), Date.now()),
-    );
-    const guideStart = createMemo(() => {
-      const base = guideWindow().start;
-      const selected = currentProgram();
-      return selected &&
-        (selected.start_millis < base ||
-          selected.start_millis >= base + 7200000)
-        ? Math.floor(selected.start_millis / 1800000) * 1800000
-        : base;
+    const liveScene = createLiveScene({
+      api, scope: () => scope, screen, setScreen, setRow, zone, column, setZone, setColumn,
+      loading, setLoading, navIndex,
+      call: (path, method, body, signal) => call(path, method, body, signal),
+      fail: error => fail(error), notify: message => notify(message),
+      settingsTabIndex: label => settingsTabIndex(label),
+      loadSettings: (tab, signal) => loadSettings(tab, signal),
+      remember: () => remember(), history: () => history,
+      resetScope: () => resetScope(), setPage,
+      adoptChannelWindow: (pages, searching) => adoptChannelWindow(pages, searching),
+      restartPaging: () => restartPaging(),
+      edgeRequest: (pages, direction) => edgeRequest(pages, direction),
+      refreshChannelPage: (searching, signal) => refreshChannelPage(searching, signal as AbortSignal),
     });
+    const { pages: livePages, channels, groups, group: liveGroup, programs, failure: liveFailure, identity: liveIdentity,
+      guideInfo, spread: liveSpread, viewer: liveViewer, emptyFocus: liveEmptyFocus, recovery: liveRecovery,
+      channelIndex: liveChannelIndex, rowStart: guideRowStart, currentProgram, guideWindow, guideStart } = liveScene;
+    const setLivePages = liveScene.setPages, setChannels = liveScene.setChannels, setGroups = liveScene.setGroups,
+      setPrograms = liveScene.setPrograms, setGuideInfo = liveScene.setGuideInfo, setLiveGroup = liveScene.setGroup,
+      setLiveIdentity = liveScene.setIdentity, setProgramIndex = liveScene.setProgramIndex;
     const [search, setSearch] = createSignal(""),
       [searchResults, setSearchResults] = createSignal<SearchPage>({rows: [], complete: true}),
       [searchRowIndex, setSearchRowIndex] = createSignal(0),
@@ -612,7 +549,7 @@ export function createRemoteTvApp(
         pendingFocus = undefined;
         setColumn(Math.max(0, Math.min(length - 1, pending.index)));
         rememberHomeRow();
-        if (screen() === "live") void loadVisibleGuides();
+        if (screen() === "live") void liveScene.loadVisibleGuides();
       } else if (!pageBusy) {
         if (shelf) void loadHomePage();
         else void more();
@@ -916,7 +853,7 @@ export function createRemoteTvApp(
         setHeroAction(0);
         setSaved(new Map());
       });
-      liveGuides.dispose();
+      liveScene.guides.dispose();
     }
     function applyBootstrap(value: Bootstrap) {
       clearProfileView();
@@ -1046,8 +983,6 @@ export function createRemoteTvApp(
         });
       }
     });
-    const refreshLive = createLiveRefresh({channels, index: liveChannelIndex, read: signal => refreshChannelPage(false, signal), snapshot: adoptLiveSnapshot, window: adoptChannelWindow,
-      groups: setGroups, failure: setLiveFailure, focus: {zone, column, setZone, setColumn}, clearGuides: () => {setPrograms({});setGuideInfo({});}, loadGuides: () => loadVisibleGuides()});
     async function applyRevision(fresh: Bootstrap, signal: AbortSignal, profile: string, commit: () => void) {
         const focusedNav =
           zone() === "nav" ? navs()[column()]?.id : undefined;
@@ -1087,7 +1022,7 @@ export function createRemoteTvApp(
         } else if (view === "settings")
           await loadSettings(settingsTab(), signal);
         else if (view === "live") {
-          await refreshLive(signal, commit);
+          await liveScene.refresh(signal, commit);
           return;
         }
         // Commit only after the dependent feature reads succeeded, before yielding.
@@ -1385,7 +1320,7 @@ export function createRemoteTvApp(
               );
           });
         } else if (previous.screen === "live") {
-          await loadLiveFirstPage(signal);
+          await liveScene.loadFirstPage(signal);
         } else if (["movie", "series", "anime", "library"].includes(previous.screen)) {
           const value =
             previous.screen === "library"
@@ -1411,124 +1346,6 @@ export function createRemoteTvApp(
      * own recovery), not the app's generic overlay, because nothing on the page
      * has proved a source is configured yet.
      */
-    async function loadLiveFirstPage(signal: AbortSignal) {
-      setLoading(true);
-      setLiveFailure("");
-      // Bound the visible loading state so the page offers retry instead of
-      // sitting on a permanent "Loading Live TV…" when discovery stalls.
-      const liveRequest = new AbortController();
-      const cancel = () => liveRequest.abort();
-      signal.addEventListener("abort", cancel, { once: true });
-      const liveTimer = setTimeout(() => liveRequest.abort(), 12000);
-      try {
-        const result = await api.live("0", undefined, liveRequest.signal);
-        adoptLiveSnapshot(result.snapshot_id);
-        adoptChannelWindow([result]);
-        void call<{ channel_ids: string[] }>(
-          api.scoped("/live/favorites"),
-          "GET",
-          undefined,
-          signal,
-        )
-              .catch(() => {});
-        setGroups(result.groups);
-        setLiveGroup(undefined);
-        setPrograms({});
-        void loadVisibleGuides();
-      } catch (e) {
-        if (signal.aborted) return;
-        if (liveRequest.signal.aborted) {
-          setLiveFailure("Live TV took too long. Try again.");
-          return;
-        }
-        // A 401 retires the session; it is not this page's empty state.
-        if (e instanceof RemoteError && e.status === 401) {
-          fail(e);
-          return;
-        }
-        setLiveFailure(e instanceof Error ? e.message : "");
-      } finally {
-        clearTimeout(liveTimer);
-        signal.removeEventListener("abort", cancel);
-        if (!signal.aborted) setLoading(false);
-      }
-      focusLiveSpread();
-    }
-    /**
-     * Entering Live keeps the row focus a page with channels has today. An empty
-     * or failed page focuses the navigation's own Live tab instead, so the first
-     * Down enters the page on the primary (contract § Focus, input and timing).
-     * A page that is empty only because of its filter keeps the chips, on the
-     * chosen one, because it has no row to hold the focus (LIVE-EMPTY-11).
-     */
-    function focusLiveSpread() {
-      if (screen() !== "live") return;
-      if (liveSpread() === "filtered") {
-        setZone("live-groups");
-        setColumn(liveFilteredChip(groups(), liveGroup()));
-        return;
-      }
-      if (liveKeepsToday(liveSpread())) {
-        setZone("content");
-        setColumn(0);
-        return;
-      }
-      setZone("nav");
-      setColumn(navIndex("live"));
-    }
-    /**
-     * **Try again**: the same query with the same filters, on the loading form.
-     * A failure that leaves no page lands back on the failed form.
-     */
-    function retryLive() {
-      setLiveFailure("");
-      void loadLiveGroup(liveGroup()).catch((e) => {
-        if (
-          e instanceof DOMException ||
-          (e instanceof Error && e.name === "AbortError")
-        )
-          return;
-        if (e instanceof RemoteError && e.status === 401) fail(e);
-        else setLiveFailure(e instanceof Error ? e.message : "");
-      });
-    }
-    /**
-     * Settings on a named section, the existing destinations both empty states
-     * route to. The remembered Live entry is marked stale so Back re-requests
-     * the page and the primary takes focus again (LIVE-EMPTY-02).
-     */
-    async function openLiveSettings(tab: number) {
-      remember();
-      const entry = history[history.length - 1];
-      if (entry) entry.stale = true;
-      const signal = resetScope();
-      setLoading(true);
-      setZone("settings-nav");
-      setColumn(0);
-      setRow(0);
-      try {
-        await loadSettings(tab, signal);
-      } catch (e) {
-        fail(e);
-      }
-      setScreen("settings");
-      if (!signal.aborted) setLoading(false);
-    }
-    /** The focused action of whichever empty or failed block owns the page. */
-    async function activateLiveSpread() {
-      if (liveSpread() === "no-source") {
-        const action = liveNoSourceActions(liveViewer())[column()];
-        if (action === "setup")
-          await openLiveSettings(settingsTabIndex("Source integrations"));
-        else if (action === "add-ons")
-          await openLiveSettings(settingsTabIndex("Add-ons"));
-        return;
-      }
-      const action = liveRecovery()[column()]?.id;
-      if (action === "retry") retryLive();
-      else if (action === "source-integrations")
-        await openLiveSettings(settingsTabIndex("Source integrations"));
-    }
     async function navigate(target: Screen) {
       contentFocus.clear();
       if (screen() === "player") await player.stop();
@@ -1635,7 +1452,7 @@ export function createRemoteTvApp(
             return;
           }
         } else if (target === "live") {
-          await loadLiveFirstPage(signal);
+          await liveScene.loadFirstPage(signal);
         }
         setLoading(false);
       } catch (e) {
@@ -1844,7 +1661,7 @@ export function createRemoteTvApp(
       windows: {pages: (searching: boolean) => searching ? searchChannelPages() : livePages(), values: (searching: boolean) => searching ? searchChannels() : channels(), adopt: adoptChannelWindow},
       search: {query: search, remembered: () => searchChannelFocus, remember: (index: number) => {searchChannelFocus = index;}, signal: () => searchSignal(),
         paging: setSearchChannelPaging, error: setSearchChannelError, refresh: (value: string) => updateSearch(value)},
-      live: {group: liveGroup, index: liveChannelIndex, retire: () => retireLiveGuides(), guides: () => loadVisibleGuides(), reload: loadLiveGroup},
+      live: {group: liveGroup, index: liveChannelIndex, retire: () => liveScene.retireGuides(), guides: () => liveScene.loadVisibleGuides(), reload: (group: string | undefined) => liveScene.loadGroup(group)},
       pending: {current: () => channelPending, set: (value: typeof channelPending) => {channelPending = value;}},
       retry: (value: PageDirection | undefined) => {channelRetry = value;}, retryAction: (action: () => void) => {retry = action;},
       request: (...args: Parameters<RemoteTvApi["live"]>) => api.live(...args)};
@@ -1871,34 +1688,13 @@ export function createRemoteTvApp(
     const {query: browseQuery, activate: activateCatalog} = createCatalogControls({screen, stremioOnly: STREMIO_ONLY, catalog, controls, selectCatalog: setCatalog, prompt: edit,
       filters: {current: filters, set: setFilters}, page: setPage, loading: setLoading, column: setColumn, restart: restartPaging,
       discover: (values, signal) => api.discover(values, signal), dialogs: {open: openOverlay, close: closeOverlay}});
-    const liveGuides = createLiveGuideController({scope: () => scope, channels, channelIndex: liveChannelIndex,
-      rowStart: guideRowStart, programs: {current: programs, set: setPrograms}, info: {set: setGuideInfo},
-      selection: {current: currentProgram, set: setProgramIndex}, notify,
-      request: (id, signal) => call<Guide>(api.scoped(`/live/${segment(id)}/guide`), "GET", undefined, signal)});
-    const {retire: retireLiveGuides, load: loadGuide, loadVisible: loadVisibleGuides} = liveGuides;
-    function adoptLiveSnapshot(id: string) {
-      if (id !== liveSnapshot()) retireLiveGuides();
-      setLiveSnapshot(id);
-    }
-    onMount(() => {
-      const timer = setInterval(() => {
-        if (
-          screen() === "live" &&
-          !loading() &&
-          !overlay() &&
-          document.visibilityState === "visible"
-        )
-          void loadVisibleGuides(true);
-      }, 30_000);
-      onCleanup(() => clearInterval(timer));
-    });
     if (new URLSearchParams(location.search).has("perfdebug")) {
       const target = window as Window & {
         __viptvRemoteMetrics?: () => Record<string, number>;
       };
       target.__viptvRemoteMetrics = () => ({
         guideSnapshots: Object.keys(programs()).length,
-        guideRequestsInFlight: liveGuides.inFlight(),
+        guideRequestsInFlight: liveScene.guides.inFlight(),
         catalogCards: page().cards.length,
         // The payload metrics measure the bounded retained render window,
         // not the accumulated focus list, which legitimately spans every
@@ -1922,33 +1718,6 @@ export function createRemoteTvApp(
       onCleanup(() => {
         delete target.__viptvRemoteMetrics;
       });
-    }
-    async function loadLiveGroup(group: string | undefined) {
-      const signal = restartPaging();
-      retireLiveGuides();
-      setLiveGroup(group);
-      setLoading(true);
-      adoptChannelWindow([]);
-      setPrograms({});
-      setGuideInfo({});
-      setPage({ cards: [], complete: true });
-      retry = () => void loadLiveGroup(group).catch(fail);
-      try {
-        const value = await api.live("0", group, signal);
-        batch(() => {
-          adoptLiveSnapshot(value.snapshot_id);
-          adoptChannelWindow([value]);
-          setGroups(value.groups);
-          setLiveFailure("");
-          setColumn(0);
-          setZone("content");
-        });
-        // Nothing to focus in the list: the page's own state holds the focus.
-        if (!value.channels.length) focusLiveSpread();
-        void loadVisibleGuides();
-      } finally {
-        if (!signal.aborted) setLoading(false);
-      }
     }
     const {signal: searchSignal, update: updateSearch} = createSearchController({requests: searchRequests, parent: () => scope, screen,
       focus: {zone, column, setZone, setColumn}, query: {current: search, set: setSearch}, capabilities: searchCapabilities,
@@ -2262,7 +2031,7 @@ export function createRemoteTvApp(
         columns: () => screen() === "live" ? 1 : screen() === "search" ? 5 : screen() === "detail" ? 4 : 7,
         cursor: () => page().next_cursor, remembered: () => contentFocus.resolve(contentRow())},
       search: {needsRetry: searchNeedsRetry, remember: index => {searchMediaFocus = index;}},
-      paging: {move: moveToItem, more: () => {void more();}}, loadGuide: index => {void loadGuide(index);}});
+      paging: {move: moveToItem, more: () => {void more();}}, loadGuide: index => {void liveScene.guides.load(index);}});
     function move(dx: number, dy: number) {
       rememberContentFocus();
       rememberDetailFocus();
@@ -2305,7 +2074,7 @@ export function createRemoteTvApp(
             return;
           }
           if (screen() === "live") {
-            focusLiveSpread();
+            liveScene.focusSpread();
             return;
           }
           setColumn(["movie", "series", "anime"].includes(screen()) ? contentFocus.resolve(contentRow()) : 0);
@@ -2581,12 +2350,12 @@ export function createRemoteTvApp(
         return;
       }
       if (screen() === "live" && zone() === "live-empty") {
-        await activateLiveSpread();
+        await liveScene.activateLiveSpread();
         return;
       }
       if (screen() === "live" && zone() === "live-groups") {
         const group = column() ? groups()[column() - 1]?.id : undefined;
-        await loadLiveGroup(group);
+        await liveScene.loadGroup(group);
         return;
       }
       if (screen() === "live") {
