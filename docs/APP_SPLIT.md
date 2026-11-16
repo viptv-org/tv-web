@@ -2,7 +2,7 @@
 
 `src/tv-solid/remote/App.tsx` is the TV application: one `createRemoteTvApp`
 closure that owns every signal and returns the root screen. It started this work
-at **3579 lines** and is **1414** now, with the render tree split into three
+at **3579 lines** and is **1298** now, with the render tree split into three
 screen components and six behaviour modules. This note records what has been extracted, and the exact next
 slices so the remainder can be done mechanically instead of by feel.
 
@@ -43,9 +43,11 @@ slices so the remainder can be done mechanically instead of by feel.
 | `remote/debug-surface.ts` | 111 | the facts a browser session reads |
 | `remote/input-scene.ts` | 165 | the D-pad's controller order and the on-screen keyboard |
 | `remote/state.ts` | 105 | the signals the shell owns (focus, page status, player session, entry) |
+| `remote/app-effects.ts` | 108 | incomplete-Home retry, progress refresh, captions, boot |
+| `remote/shell.ts` | 128 | one AbortController scope, one retry, one 401-aware failure path |
 | `remote/live/program-line.ts` | 20 | a guide slot that never prints an out-of-range minute count |
 
-`App.tsx` is **1414 lines** after those. Each extraction is a factory that takes
+`App.tsx` is **1298 lines** after those. Each extraction is a factory that takes
 an explicit dependency object; nothing reaches back into the closure.
 
 ## Why this is not one big diff
@@ -130,13 +132,13 @@ to reason about:
 
 ## What is left, with sizes
 
-`App.tsx` is 1414 lines; what is left is not a slice but the shell:, in dependency order, are roughly:
+`App.tsx` is 1298 lines; what is left:, in dependency order, are roughly:
 
 | Slice | Lines | Notes |
 | --- | --- | --- |
 | Done | — | live, detail, paging, search, hero, player chrome, player transport + episodes, source picker, play intent → source → player, navigation + history, Back, session/bootstrap |
-| render dispatch | ~300 | `Root`/`defineScreen` wiring per screen |
-| effects and helpers | ~700 | boot, caption appearance, idle, held select, misc |
+| render dispatch | ~162 | `Root`/`defineScreen`: input handlers + render body |
+| remaining helpers | ~300 | `applyRevision`, `replacePage`, `remember*`, held select, idle |
 
 Each is a factory with an explicit dependency object, like the ones already
 moved. None of them needs more than ~20 dependencies, and each has a spec file
