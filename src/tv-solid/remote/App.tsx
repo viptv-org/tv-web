@@ -4,7 +4,6 @@ import { runtimeObserver } from "../platform/runtime-observation";
 import { exitTizen } from "../platform/tizen-host";
 import { DevicePlayback, deviceProfileKey, deviceTitleKey } from "./device-playback";
 import { createSourceStartPosition } from "./resume-position";
-import { EpisodePreparation, episodeKey, type EpisodePreparationState } from "./episode-preparation";
 import { AutoplayCountdown, type CountdownState } from "./autoplay-countdown";
 import { Show, batch, createEffect, createMemo, createSignal, onCleanup, onMount } from "solid-js";
 import { searchLetters } from "./SearchInput";
@@ -25,7 +24,6 @@ import { initialSeasonIndex, seasonEpisodes } from "./seasons";
 import { RowFocus } from "./row-focus";
 
 import { SettingsView } from "./SettingsView";
-import { whenIdle } from "./idle";
 import { createProgressFreshness } from "./progress-freshness";
 import { createPairingFlow } from "./session/pairing";
 import { createRevisionPoller } from "./session/revisions";
@@ -33,12 +31,10 @@ import { createLiveMenu } from "./menus/live";
 import { createLiveScene } from "./live-scene";
 import { createCardMenu } from "./menus/card";
 import { createPlayerActivation } from "./activation/player";
-import { createPlayerTransport } from "./player-transport";
 import { createSeasonPicker } from "./activation/seasons";
 import { createSourceRows } from "./source-picker/rows";
 import { createSourcePublisher } from "./source-picker/publisher";
 import { createSourceActivation } from "./source-picker/activation";
-import { createEpisodeDiscovery } from "./source-picker/prepare-episode";
 import { createSourceIntent } from "./source-picker/intent";
 import { startSourceCandidate } from "./source-picker/start-candidate";
 import { sourceActionOptions, type SourceMenuOption } from "./source-picker/options";
@@ -81,9 +77,6 @@ import {
 import {
 } from "./sourceStatus";
 import {
- RemotePlayback 
-} from "./playback";
-import {
   applyDisplayPreferences,
   applyScreenInset,
   defaultDisplayPreferences,
@@ -96,6 +89,9 @@ import { createHeldSelect } from "./held-select";
 import { createLibraryControls } from "./library/controls";
 import { createChannelRefresh } from "./paging/channel-refresh";
 import { createSearchScene } from "./search-scene";
+import { createPlayerScene } from "./player-scene";
+import { episodeKey } from "./episode-preparation";
+import type { EpisodePreparationState } from "./episode-preparation";
 import { createPagingScene } from "./paging-scene";
 import { createChannelPager } from "./paging/channel-pages";
 import { createChannelMovement } from "./paging/channel-movement";
@@ -329,14 +325,14 @@ export function createRemoteTvApp(
       batch(() => { setPreferences(fresh);setPlaybackRevision(playbackRevisionKey(value)); });
     }
     const [sourceMemoryPending, setSourceMemoryPending] = createSignal(0);
-    const [presentationRevision, setPresentationRevision] = createSignal(0);
+    const [, setPresentationRevision] = createSignal(0);
     const [deviceRevision, setDeviceRevision] = createSignal(0);
     const devicePlayback = new DevicePlayback(undefined, () => setDeviceRevision(v => v + 1));
     const deviceScope = () => deviceProfileKey(api.origin, api.profile);
     const [episodeState, setEpisodeState] = createSignal<EpisodePreparationState>({ status: "idle", preparing: false });
     const [countdownState, setCountdownState] = createSignal<CountdownState>({ running: false, remaining: null, progress: 0 });
     const [advancing, setAdvancing] = createSignal(false);
-    let nextIntent = 0, sourceAttempt = 0, sourceIntent = 0, dismissedEnd = "", manualPresentation: { source: string; card: string; scope: string; title: string } | undefined;
+    let sourceAttempt = 0, sourceIntent = 0;
     const countdown = new AutoplayCountdown(setCountdownState);
     const calendarScene = createCalendarScene();
     const calendar = calendarScene.snapshot;
@@ -474,132 +470,21 @@ export function createRemoteTvApp(
       body?: unknown,
       signal: AbortSignal = scope.signal,
     ) => api.call<T>(path, method, body, signal);
-    const player = new RemotePlayback(
-      api,
-      platform,
-      document.getElementById("tv-video") as HTMLVideoElement,
-      setSnapshot,
-      (e, position) => {
-        // A failed source start belongs to the picker, which stays open and
-        // marks the row. Only a player failure outside that window owns the
-        // full-page recovery card.
-        if (openingSource() || overlay()?.kind === "sources") return;
-        fail(e);
-        const current = activeAction();
-        if (current) retry = () => void playIntent(current.card, true, false, activeChannel(), false, position);
-        setShowControls(true);
-      },
-      (_lease, card, source) => {
-        const observation = manualPresentation;
-        const remember = observation && observation.source === source.id && observation.card === episodeKey(card) && observation.scope === deviceScope()
-          && preferences()?.preferences.remembered_source_reuse !== false && source.source_addon_id;
-        if (!remember) { setPresentationRevision(v => v + 1);return; }
-        manualPresentation = undefined;
-        batch(() => { setSourceMemoryPending(v => v + 1);setPresentationRevision(v => v + 1); });
-        const language = player.tracks.audio.find(track => track.selected && track.language)?.language;
-        void devicePlayback.rememberSource(observation.scope, observation.title, source, language)
-          .catch(() => notify("Couldn’t save this source choice on this device.")).finally(() => setSourceMemoryPending(v => Math.max(0, v - 1)));
-      },
-    );
-    const playerTransport = createPlayerTransport({
-      play: () => player.player.play(), pause: () => player.player.pause(), pending: setPauseRequested,
-      reveal: () => { setShowControls(true); setChoice(0); }, activity: () => hideControls(), active: () => screen() === "player",
+    const playerScene = createPlayerScene({
+      api, platform, video: () => document.getElementById("tv-video") as HTMLVideoElement,
+      snapshot, setSnapshot, setPauseRequested, screen, home, preferences, deviceScope, devicePlayback,
+      notify: message => notify(message), fail: error => fail(error), retry: work => { retry = work; },
+      openingSource: () => openingSource(), overlay: () => overlay(), setShowControls, showControls, setChoice,
+      hideControls: () => hideControls(), activeAction, activeChannel, setPresentationRevision,
+      sourceMemoryPending, setSourceMemoryPending, episodeKey, deviceTitleKey,
+      playIntent: (...args) => playIntent(...args), checkPlaybackRevision: () => checkPlaybackRevision(),
+      countdown, episodeState, setEpisodeState, advancing, setAdvancing, overlays, openOverlay,
+      playbackRevision, sourceLoading, loading, error, scopeSignal: () => scope.signal, detail: () => detail(),
+      activeSource: () => activeSource(), deviceRevision: () => deviceRevision(),
     });
-    // Warm the playback engine at the first moment the user could plausibly
-    // press Play: Home is on screen and the browser has nothing better to do.
-    // The fetch never sits between that press and the first frame.
-    let engineWarmed = false;
-    createEffect(() => {
-      if (engineWarmed || screen() !== "home" || !home()) return;
-      engineWarmed = true;
-      whenIdle(() => player.prewarm());
-    });
-    const discoverEpisode = createEpisodeDiscovery({api, memory: sourceMemory});
-    const episodes = new EpisodePreparation(
-      (card, signal) => api.next(card, signal),
-      discoverEpisode,
-      setEpisodeState,
-    );
-    async function sourceMemory(card: Card) {
-      if (preferences()?.preferences.remembered_source_reuse === false) return {};
-      return devicePlayback.context(deviceScope(), deviceTitleKey(deviceScope(), card));
-    }
-    createEffect(() => {
-      const current = activeAction()?.card;
-      const state = screen();
-      const source = activeSource()?.id;
-      const revision = preferences()?.revision;
-      const device = deviceRevision();
-      if (state !== "player" || activeChannel() || !current?.identity.episode || !current.parent_identity || !source) {
-        episodes.clear();countdown.cancel();return;
-      }
-      const key = JSON.stringify([api.scopeEpoch, api.profile, episodeKey(current), source, revision, device, playbackRevision()]);
-      if (episodes.configure(key, current, scope.signal)) void episodes.refresh();
-    });
-    createEffect(() => {
-      presentationRevision();
-      const time = snapshot()?.time;
-      const next = episodeState();
-      if (screen() === "player" && next.item && time && Number.isFinite(time.durationSeconds) && time.durationSeconds !== null && time.durationSeconds > 0 &&
-          time.durationSeconds - time.positionSeconds <= 180 && player.hasPresentedFrame && !sourceMemoryPending() && !openingSource() && !advancing()) void episodes.prepare();
-    });
-    const endScope = () => `${api.scopeEpoch}:${player.leaseId ?? ""}`;
-    function revealEndedControls(): boolean {
-      if (screen() !== "player" || overlay() || showControls() || error() ||
-          snapshot()?.state !== "ended" || dismissedEnd !== endScope()) return false;
-      setShowControls(true);setChoice(0);
-      return true;
-    }
-    function dismissNext() {
-      nextIntent++;setAdvancing(false);
-      countdown.cancel();dismissedEnd = endScope();
-      overlays.hide();setShowControls(false);
-    }
-    createEffect(() => {
-      deviceRevision();
-      const next = episodeState();
-      if (screen() !== "player" || snapshot()?.state !== "ended" || advancing() || openingSource() || sourceLoading() || loading() || error()) return;
-      if (next.status !== "ready") countdown.cancel();
-      if (!next.item) {
-        if (overlay()?.kind === "next") dismissNext();
-        return;
-      }
-      if (next.status !== "ready" || dismissedEnd === endScope() || overlay() && overlay()?.kind !== "next") return;
-      if (!overlay()) openOverlay({ kind: "next", title: "Up next", items: [] });
-      const target = episodeKey(next.item), ended = endScope();
-      countdown.start(ended, devicePlayback.autoplay, () => screen() === "player" && snapshot()?.state === "ended" &&
-        overlay()?.kind === "next" && !advancing() && episodeState().status === "ready" && !!episodeState().item && episodeKey(episodeState().item!) === target,
-        () => { void advanceEpisode().catch(fail); });
-    });
-    const endedPresentation = createMemo(() => screen() === "player" && snapshot()?.state === "ended" ? endScope() : "");
-    createEffect(() => {
-      const ended = endedPresentation();
-      if (ended && dismissedEnd !== ended) setShowControls(true);
-    });
-    const continuationPoll = setInterval(() => {
-      const time = snapshot()?.time;
-      const due = snapshot()?.state === "ended" || time?.durationSeconds && time.durationSeconds - time.positionSeconds <= 180;
-      const retry = due && ["loading", "error"].includes(episodeState().status);
-      if (screen() === "player" && !advancing() && (overlay()?.kind === "next" || retry)) void episodes.refresh();
-    }, 2000);
-    onCleanup(() => { clearInterval(continuationPoll);countdown.cancel();episodes.clear(); });
-    async function advanceEpisode(forcePicker = false) {
-      if (advancing()) return;
-      const ticket = ++nextIntent;
-      countdown.cancel();setAdvancing(true);
-      try {
-        const expected = episodeState().item;
-        await checkPlaybackRevision();
-        if (ticket !== nextIntent || scope.signal.aborted || screen() !== "player") return;
-        const card = await episodes.refresh();
-        if (ticket !== nextIntent || scope.signal.aborted || screen() !== "player") return;
-        if (!card) { notify("There’s no next episode available.");return; }
-        if (expected && episodeKey(expected) !== episodeKey(card)) { notify("The next episode changed. Press Next to continue.");return; }
-        const prepared = forcePicker ? undefined : episodes.take(card);
-        overlays.hide();
-        await playIntent(card, forcePicker, true, undefined, false, 0, !forcePicker, prepared);
-      } finally { if (ticket === nextIntent) setAdvancing(false); }
-    }
+    const player = playerScene.player, playerTransport = playerScene.transport, episodes = playerScene.episodes;
+    const advanceEpisode = playerScene.advanceEpisode, revealEndedControls = playerScene.revealEndedControls,
+      dismissNext = playerScene.dismissNext;
     const playerActions = createMemo(() => {
       snapshot();
       return player.actions;
@@ -675,8 +560,8 @@ export function createRemoteTvApp(
       }
     };
     function resetScope() {
-      manualPresentation = undefined;
-      nextIntent++;setAdvancing(false);sourceAttempt++;sourceIntent++;countdown.cancel();episodes.clear();
+      playerScene.manual.clear();
+      playerScene.next.bump();setAdvancing(false);sourceAttempt++;sourceIntent++;countdown.cancel();episodes.clear();
       setSignedIn(undefined);
       setCanManageAccount(undefined);
       overlays.retireAnimations();
@@ -1403,7 +1288,7 @@ export function createRemoteTvApp(
       rememberHomeRow();
       rememberContentFocus();
       rememberDetailFocus();
-      nextIntent++;setAdvancing(false);
+      playerScene.next.bump();setAdvancing(false);
       countdown.cancel();
       if (error()) {
         if (screen() === "welcome" && !startupAuthorityKnown) await start();
@@ -1473,7 +1358,7 @@ export function createRemoteTvApp(
           return;
         }
         if (showControls()) {
-          if (snapshot()?.state === "ended") dismissedEnd = endScope();
+          if (snapshot()?.state === "ended") playerScene.dismissedEnd.set(playerScene.endScope());
           setShowControls(false);
           return;
         }
@@ -1588,7 +1473,7 @@ export function createRemoteTvApp(
     const playIntent = createSourceIntent({api,
       begin: (card, restart, channel, replaceCurrent, position) => {
         const id = ++sourceIntent, epoch = api.scopeEpoch;
-        manualPresentation = undefined;
+        playerScene.manual.clear();
         countdown.cancel();
         sourceStartPosition.begin(card, restart, position);
         sourceScope?.abort();
@@ -1616,7 +1501,7 @@ export function createRemoteTvApp(
         return {id, epoch, operation};
       }, owner: {intent: () => sourceIntent, epoch: () => api.scopeEpoch, operation: () => sourceScope,
         replace: operation => {sourceScope = operation;}, aborted: () => scope.signal.aborted},
-      position: sourceStartPosition.current, manual: () => manualSourceSelection, playerScreen: () => screen() === "player", memory: sourceMemory,
+      position: sourceStartPosition.current, manual: () => manualSourceSelection, playerScreen: () => screen() === "player", memory: card => playerScene.sourceMemory(card),
       presentation: {capture: overlays.captureOrigin, hide: overlays.hide, show: () => {
         // The user is choosing a source, so the engine can be fetched while
         // they browse — it is never fetched between their press and the frame.
@@ -1634,7 +1519,8 @@ export function createRemoteTvApp(
       const attempt = ++sourceAttempt;
       if (manual) sourceIntent++;
       const outgoing = { lease: player.leaseId, action: activeAction(), source: activeSource(), channel: activeChannel() };
-      manualPresentation = manual ? { source: source.id, card: episodeKey(current.card), scope: deviceScope(), title: deviceTitleKey(deviceScope(), current.card) } : undefined;
+      if (manual) playerScene.manual.set({ source: source.id, card: episodeKey(current.card), scope: deviceScope(), title: deviceTitleKey(deviceScope(), current.card) });
+      else playerScene.manual.clear();
       const channel = sourceChannel();
       retry = () =>
         void playIntent(
@@ -1695,7 +1581,7 @@ export function createRemoteTvApp(
         if (error instanceof DOMException && error.name === "AbortError") throw error;
         // A replacement admission failure leaves the outgoing lease alive.
         // Keep it (and sourceRetry) so the open picker can try another source.
-        if (attempt === sourceAttempt) manualPresentation = undefined;
+        if (attempt === sourceAttempt) playerScene.manual.clear();
         if (!retained && (!replacingSource() || !player.leaseId))
           await player.stop().catch(() => {});
         setLoading(false);
