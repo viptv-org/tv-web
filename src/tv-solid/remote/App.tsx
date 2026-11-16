@@ -65,9 +65,9 @@ import { createNativeTextEditing, nativeTextDialogOverlay, type NativeTextPort, 
 import { createPlayerMediaKeys } from "./input/player-media";
 import { installWindowInputs } from "./input/window-bindings";
 import { createTrackPicker } from "./player/tracks";
-import { SKIP_BUTTON, skipLabel } from "./player/skip-intro";
+import { skipLabel } from "./player/skip-intro";
+import { createPlayerChrome } from "./player-chrome";
 import { createPlaybackSegments } from "./player/segments";
-import { LAYOUT } from "./layout";
 import { defineScreen, TvView } from "../runtime";
 import {
  exitWebos 
@@ -780,69 +780,18 @@ export function createRemoteTvApp(
     const skipEnabled = () => preferences()?.preferences?.skip_intros !== false;
     const skipStage = segments.stage;
     async function refreshPlaybackSegments() { await segments.refresh(); }
-    const playerButtons = createMemo(() => {
-      snapshot();
-      // These controls replace the server lease; native track APIs are not
-      // required. Only expose tracks the current server delivery can select.
-      const canTracks = player.tracks.audio.some(track => track.selectable && track.supported !== false)
-        || player.tracks.subtitlesSupported || player.providerSubtitleSupport;
-      return [
-        {
-          id:
-            playerActions().pause || playerActions().seek
-              ? "timeline"
-              : "status",
-          label: "",
-        },
-        ...(playerActions().episodes
-          ? [{ id: "episodes", label: "Episodes" }]
-          : []),
-        ...(playerActions().tracks && canTracks
-          ? [{ id: "tracks", label: "Audio & subtitles" }]
-          : []),
-        ...(playerActions().change_source
-          ? [{ id: "sources", label: "Source" }]
-          : []),
-        ...(playerActions().next_episode && episodeState().status !== "none"
-          ? [{ id: "next", label: "Next episode" }]
-          : []),
-        // Skip is a control-row button like Next episode: last, at the far
-        // right, so it is one button in one place whatever the chrome does.
-        ...(activeSegment() && playerActions().seek && skipEnabled()
-          ? [{ id: "skip", label: skipLabel(activeSegment()) }]
-          : []),
-      ];
-    }, undefined, { equals: (a, b) => a.length === b.length && a.every((button, index) => button.id === b[index].id && button.label === b[index].label) });
-    /** The last two controls belong to the same instant, not to the row's flow:
-     * Next episode is offered at the end of an episode and Skip during its
-     * opening, so both are laid out from the right edge. Skip keeps the rect the
-     * hidden-chrome button uses whether or not Next is present. */
-    const playerTools = createMemo(() => {
-      let left = 268;
-      const tools = playerButtons().slice(1).map(button => {
-        if (button.id === "skip" || button.id === "next")
-          return { ...button, x: 0, width: button.id === "next" ? 240 : SKIP_BUTTON.width, icon: "" };
-        const width = button.id === "tracks" ? 304 : 228;
-        const tool = { ...button, x: left, width, icon: button.id === "episodes" ? "episodes" : button.id === "tracks" ? "audio" : "settings" };
-        left += width + LAYOUT.controlGap;
-        return tool;
-      });
-      let edge = LAYOUT.rightEdge;
-      for (let index = tools.length - 1; index >= 0; index--) {
-        if (tools[index].id !== "skip" && tools[index].id !== "next") continue;
-        edge -= tools[index].width;
-        tools[index].x = edge;
-        edge -= LAYOUT.controlGap;
-      }
-      return tools;
+    const chrome = createPlayerChrome({
+      screen, overlay: () => overlay(), choice, setChoice, seek, setSeek, setShowControls,
+      canPause: () => playerActions().pause, canSeek: () => playerActions().seek,
+      canEpisodes: () => playerActions().episodes,
+      canTracks: () => playerActions().tracks && (player.tracks.audio.some(track => track.selectable && track.supported !== false) ||
+        player.tracks.subtitlesSupported || player.providerSubtitleSupport),
+      canChangeSource: () => playerActions().change_source,
+      nextAvailable: () => playerActions().next_episode && episodeState().status !== "none",
+      segment: activeSegment, skipEnabled, skipText: () => skipLabel(activeSegment()),
+      seekBusy: seeking, pauseRequested, loading, error, playing: () => snapshot()?.state === "playing",
     });
-    const [timelineFocused, setTimelineFocused] = createSignal(true);
-    createEffect(() => {
-      const count = playerButtons().length;
-      if (screen() === "player" && !overlay() && choice() >= count)
-        setChoice(Math.max(0, count - 1));
-      if (!playerActions().seek) setSeek(undefined);
-    });
+    const { buttons: playerButtons, tools: playerTools, timelineFocused, setTimelineFocused, hideControls: hidePlayerControls } = chrome;
     const openTracks = createTrackPicker({player, roku: isRokuUi, selection: {column: setTrackColumn, row: setChoice},
       dialogs: {current: overlay, open: openOverlay, replace: overlays.replace, close: closeOverlay},
       subtitle: {enabled: () => playerActions().subtitle_style, current: preferences, adopt: setPreferences, request: call,
@@ -2153,31 +2102,7 @@ export function createRemoteTvApp(
     createEffect(() => {
       if (screen() !== "player" || ["paused", "ended", "error"].includes(snapshot()?.state ?? "")) setPauseRequested(false);
     });
-    let controlsHideAt = 0;
-    function hideControls(activity = true) {
-      if (activity || !controlsHideAt) controlsHideAt = Date.now() + 5000;
-      clearTimeout(controlsTimer);
-      controlsTimer = setTimeout(() => {
-        if (
-          !error() && !overlay() &&
-          !seeking() && !pauseRequested() &&
-          !loading() &&
-          snapshot()?.state === "playing"
-        )
-          setShowControls(false);
-      }, Math.max(0, controlsHideAt - Date.now()));
-    }
-    // A timer armed during buffering used to give up and never re-arm. Re-arm
-    // on every transition back to playing so chrome always clears itself.
-    const controlsCanAutoHide = createMemo(() =>
-      screen() === "player" && !overlay() && snapshot()?.state === "playing" &&
-      !seeking() && !pauseRequested() && !loading() && !error(),
-    );
-    createEffect(() => {
-      // Memo equality keeps position/buffer snapshots from rearming this timer.
-      if (controlsCanAutoHide()) hideControls(false);
-      else clearTimeout(controlsTimer);
-    });
+    const hideControls = hidePlayerControls;
     async function toggleSaved(card: Card) {
       await run(async () => {
         const key = cardKey(card);
