@@ -246,7 +246,6 @@ export function createRemoteTvApp(
       label: detailActionLabel, progress: detailPlayProgress} = createDetailPresentation({
         home, detail, action: detailAction, selected, season: seasonIndex,
       });
-    const [, setLiveFavorites] = createSignal<Set<string>>();
     const [livePages, setLivePages] = createSignal<LivePage[]>([]),
       [channels, setChannels] = createSignal<Channel[]>([]),
       [liveSnapshot, setLiveSnapshot] = createSignal(""),
@@ -954,7 +953,6 @@ export function createRemoteTvApp(
         adoptChannelWindow([]);
         setPrograms({});
         setGuideInfo({});
-        setLiveFavorites(undefined);
         setLiveIdentity(undefined);
         setManagement(undefined);
         setNavigation(undefined);
@@ -1483,8 +1481,7 @@ export function createRemoteTvApp(
           undefined,
           signal,
         )
-          .then((value) => setLiveFavorites(new Set(value.channel_ids)))
-          .catch(() => {});
+              .catch(() => {});
         setGroups(result.groups);
         setLiveGroup(undefined);
         setPrograms({});
@@ -2708,7 +2705,7 @@ export function createRemoteTvApp(
       // changes 400ms into a hold and would otherwise defeat the 700ms timer.
       return JSON.stringify([screen(),screen() === "player" ? choice() : null,zone(),column(),row(),heroAction(),zone()==="hero"?(heroIntentCard()?cardKey(heroIntentCard()!):null):null,focusedCard()?cardKey(focusedCard()!):null,heroAction()===1&&heroIntentCard()?isSaved(heroIntentCard()!):null]);
     }
-    const showLiveMenu = createLiveMenu({request: call, path: path => api.scoped(path), favorites: setLiveFavorites,
+    const showLiveMenu = createLiveMenu({request: call, path: path => api.scoped(path), 
       dialogs: {open: openOverlay, close: closeOverlay}, play: playIntent, fail});
     const showCardMenu = createCardMenu({dialogs: {open: openOverlay, close: closeOverlay}, details: openDetail,
       play: playIntent, saved: isSaved, toggleSaved});
