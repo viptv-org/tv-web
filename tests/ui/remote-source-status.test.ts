@@ -130,22 +130,32 @@ describe("TV source status spinner (components.md § 9 Status line)", () => {
 
 describe("The shipped TV entry runs this code (#34)", () => {
   const root = resolve(import.meta.dirname, "../..");
-  const entry = readFileSync(
-    resolve(root, "src/tv-solid/remote/App.tsx"),
-    "utf8",
-  );
+  // The entry composes its scenes since the split, so a fact is "in the entry"
+  // when it is in the file the entry owns:  the app shell or its scene module.
+  const entry = [
+    readFileSync(resolve(root, "src/tv-solid/remote/App.tsx"), "utf8"),
+    readFileSync(resolve(root, "src/tv-solid/remote/app/scenes.ts"), "utf8"),
+    readFileSync(resolve(root, "src/tv-solid/remote/app/layer.tsx"), "utf8"),
+    readFileSync(resolve(root, "src/tv-solid/remote/state.ts"), "utf8"),
+    readFileSync(resolve(root, "src/tv-solid/remote/render/root.tsx"), "utf8"),
+    readFileSync(resolve(root, "src/tv-solid/remote/render/overlays.tsx"), "utf8"),
+    readFileSync(resolve(root, "src/tv-solid/remote/source-picker-scene.ts"), "utf8"),
+    readFileSync(resolve(root, "src/tv-solid/remote/source-play-scene.ts"), "utf8"),
+  ].join("\n");
 
   const footer = readFileSync(resolve(root, "src/tv-solid/remote/source-picker/SourceFooter.tsx"), "utf8");
   const startup = readFileSync(resolve(root, "src/tv-solid/remote/source-picker/start-candidate.ts"), "utf8");
   const projection = readFileSync(resolve(root, "src/tv-solid/remote/source-picker/presentation.ts"), "utf8");
 
   it("renders the contract's states from the shared module", () => {
-    expect(entry).toContain('from "./sourceStatus"');
+    // The copy is imported by the overlay that draws it (render/overlays.tsx).
+    expect(entry).toMatch(/from "\.\.?\/sourceStatus"/);
     expect(entry).toContain("createSourcePresentation({");
     expect(projection).toContain("pickSourceSpread({");
-    expect(entry).toContain('open: () => overlay()?.kind === "sources"');
-    expect(entry).toContain("sourceStatusCopy(sourceSpread())");
-    expect(entry).toContain("sourceEmptyCopy(sourceSpread())");
+    // The picker only treats itself as open while the drawer is the overlay.
+    expect(entry).toContain('drawerOpen: () => overlay()?.kind === "sources"');
+    expect(entry).toContain("sourceStatusCopy(props.sourceSpread)");
+    expect(entry).toContain("sourceEmptyCopy(props.sourceSpread)");
     expect(entry).toContain("<SourceFooter");
     expect(footer).toContain("<BusySpinner x={64} y={964} size={SOURCE_SPINNER_SIZE}");
   });
@@ -164,7 +174,8 @@ describe("The shipped TV entry runs this code (#34)", () => {
   it("drives Opening stream… from playback preparation, not a timer", () => {
     // `openingSource` is set around the awaited player start, so the state is
     // the real preparation window.
-    expect(entry).toContain("[openingSource, setOpeningSource]");
+    // The signal has one owner since the split: the shell's state module.
+    expect(entry).toContain("const [openingSource, setOpeningSource] = createSignal");
     expect(entry).toContain("setOpeningSource(source);");
     expect(entry.indexOf("setOpeningSource(source);")).toBeLessThan(
       entry.indexOf("await startSourceCandidate("),

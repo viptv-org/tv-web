@@ -470,6 +470,7 @@ export function createAppScenes(options: {
       filters: {current: filters, set: setFilters}, page: setPage, loading: setLoading, column: setColumn, restart: restartPaging,
       discover: (values, signal) => api.discover(values, signal), dialogs: {open: openOverlay, close: closeOverlay}});
   return {
+    setPage, setPreferences, setSaved, setManagement, setNavigation,
     setProgramIndex, revisions, replacePage, loadLibrary, detailFocus,
     searchFocus: {
       media: { get: () => searchMediaFocus, set: (value: number) => { searchMediaFocus = value; } },

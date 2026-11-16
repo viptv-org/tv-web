@@ -1,4 +1,7 @@
 /** @jsxImportSource @solidtv/solid */
+import type { TvState } from "../state";
+import type { AppModel } from "../app/model";
+import type { AppScenes } from "../app/scenes";
 import { Show } from "solid-js";
 import { TvView } from "../../runtime";
 import { HeroArtwork } from "../CoherentHero";
@@ -21,6 +24,145 @@ import { ProfilesView } from "./profiles";
  * (rather than indexing a bag) is what makes a forgotten value a compile error
  * instead of an `undefined` at runtime.
  */
+
+/** The screen's view, assembled from the three objects that own its state.
+ *
+ * `tv` is the shell's signals, `model` what is loaded, `scenes` the pages and the
+ * player; the rest is this component's own furniture. Naming each field is what
+ * keeps a forgotten value a compile error rather than an `undefined` inside a
+ * `Show`.
+ */
+export function appView(input: {
+  tv: TvState;
+  model: AppModel;
+  scenes: AppScenes;
+  extras: Pick<AppView,
+    "screenSaver" | "profileEditor" | "overlay" | "api" | "available" | "palette" | "key" |
+    "edgeRequest" | "settingsTabs" | "settingsTab" | "settingsItems" | "overlayEntered" |
+    "overlayClosing" | "reportOverlaySettled" | "text" | "keyboard" | "searchMediaFocus" | "searchChannelFocus">;
+}): AppView {
+  const { tv, model, scenes, extras } = input;
+  return {
+    screen: tv.screen,
+    zone: tv.zone,
+    heroPresentation: scenes.heroPresentation,
+    heroLogoBox: scenes.heroLogoBox,
+    navs: model.navs,
+    column: tv.column,
+    management: model.management,
+    fontsReady: scenes.fontsReady,
+    loading: tv.loading,
+    error: tv.error,
+    pairing: tv.pairing,
+    qr: tv.qr,
+    pairingDeadline: tv.pairingDeadline,
+    pairingFocused: tv.pairingFocused,
+    signedIn: tv.signedIn,
+    finishSignIn: scenes.finishSignIn,
+    canManageProfiles: model.canManageProfiles,
+    calendar: scenes.calendar,
+    calendarDaysList: scenes.calendarDaysList,
+    calendarDay: scenes.calendarDay,
+    calendarEntry: scenes.calendarEntry,
+    home: model.home,
+    hero: scenes.hero,
+    displayHero: scenes.displayHero,
+    row: tv.row,
+    heroAction: tv.heroAction,
+    displayedFeatured: scenes.displayedFeatured,
+    heroCycle: scenes.heroCycle,
+    shelfTitleY: scenes.shelfTitleY,
+    homeRowFocus: model.homeRowFocus,
+    isSaved: scenes.isSaved,
+    heroSlide: scenes.heroSlide,
+    detailForDisplay: scenes.detailForDisplay,
+    detailHasEpisodes: scenes.detailHasEpisodes,
+    detailEpisodes: scenes.detailEpisodes,
+    seasonIndex: scenes.seasonIndex,
+    detailColumn: scenes.detailColumn,
+    detailActionLabel: scenes.detailActionLabel,
+    detailPlayProgress: scenes.detailPlayProgress,
+    search: scenes.search,
+    searchCapabilities: model.searchCapabilities,
+    searchResults: scenes.searchResults,
+    searchError: scenes.searchError,
+    library: model.library,
+    libraryType: scenes.libraryType,
+    librarySort: scenes.librarySort,
+    libraryFilters: scenes.libraryFilters,
+    catalog: tv.catalog,
+    page: tv.page,
+    gridStart: scenes.gridStart,
+    gridCount: scenes.gridCount,
+    gridColumns: scenes.gridColumns,
+    gridOffset: scenes.gridOffset,
+    searchMediaPending: scenes.searchMediaPending,
+    searchNeedsRetry: scenes.searchNeedsRetry,
+    searchRowIndex: scenes.searchRowIndex,
+    searchRowPositions: scenes.searchRowPositions,
+    searchChannels: scenes.searchChannels,
+    searchChannelPages: scenes.searchChannelPages,
+    searchChannelsPending: scenes.searchChannelsPending,
+    searchChannelPaging: scenes.searchChannelPaging,
+    searchChannelError: scenes.searchChannelError,
+    liveSpread: scenes.liveSpread,
+    liveViewer: scenes.liveViewer,
+    liveEmptyFocus: scenes.liveEmptyFocus,
+    livePages: scenes.livePages,
+    liveRecovery: scenes.liveRecovery,
+    liveFailure: scenes.liveFailure,
+    channels: scenes.channels,
+    liveChannelIndex: scenes.liveChannelIndex,
+    currentProgram: scenes.currentProgram,
+    groups: scenes.groups,
+    liveGroup: scenes.liveGroup,
+    programs: scenes.programs,
+    guideRowStart: scenes.guideRowStart,
+    guideStart: scenes.guideStart,
+    guideWindow: scenes.guideWindow,
+    advancing: tv.advancing,
+    openingSource: tv.openingSource,
+    showControls: tv.showControls,
+    seeking: tv.seeking,
+    snapshot: tv.snapshot,
+    skipStage: scenes.skipStage,
+    activeSegment: scenes.activeSegment,
+    activeAction: tv.activeAction,
+    playerActions: scenes.playerActions,
+    playerTools: scenes.playerTools,
+    choice: tv.choice,
+    timelineFocused: tv.timelineFocused,
+    seek: tv.seek,
+    sourceLoading: scenes.sourceLoading,
+    pickerCard: scenes.pickerCard,
+    sources: scenes.sources,
+    visibleSources: scenes.visibleSources,
+    sourcePage: scenes.sourcePage,
+    sourceAddonCount: scenes.sourceAddonCount,
+    sourceMenu: scenes.sourceMenu,
+    sourceMenuOptions: scenes.sourceMenuOptions,
+    sourceMenuChoice: scenes.sourceMenuChoice,
+    picker: scenes.picker,
+    sourceProviderFilter: scenes.sourceProviderFilter,
+    sourceActions: scenes.sourceActions,
+    sourceActionChoice: scenes.sourceActionChoice,
+    focusedSource: scenes.focusedSource,
+    sourceFilterFocus: scenes.sourceFilterFocus,
+    sourceFacet: scenes.sourceFacet,
+    sourceSpread: scenes.sourceSpread,
+    sourceQualityValue: scenes.sourceQualityValue,
+    sourceProviderValue: scenes.sourceProviderValue,
+    failedSources: scenes.failedSources,
+    trackColumn: tv.trackColumn,
+    episodeState: tv.episodeState,
+    countdownState: tv.countdownState,
+    calibrationValue: tv.calibrationValue,
+    notice: tv.notice,
+    pending: tv.pending,
+    ...extras,
+  };
+}
+
 export interface AppView {
   screen: any; screenSaver: any; profileEditor: any; overlay: any; zone: any;
   heroPresentation: any; heroLogoBox: any; navs: any; column: any; management: any; api: any;
