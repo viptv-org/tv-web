@@ -224,3 +224,5 @@ export function createPlayerScene(options: {
     },
   };
 }
+
+export type PlayerScene = ReturnType<typeof createPlayerScene>;

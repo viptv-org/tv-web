@@ -31,15 +31,13 @@ import { createLiveScene } from "./live-scene";
 import { createCardMenu } from "./menus/card";
 import { createPlayerActivation } from "./activation/player";
 import { createSeasonPicker } from "./activation/seasons";
-import { createSourceIntent } from "./source-picker/intent";
-import { startSourceCandidate } from "./source-picker/start-candidate";
 import { sourceActionOptions } from "./source-picker/options";
 import { TopNavigation } from "./TopNavigation";
 import { availableNavigation } from "./navigation-model";
 
 import { KeyboardView } from "./KeyboardView";
 import { HeroArtwork } from "./CoherentHero";
-import { presentationCard, presentationKey } from "./presentation-card";
+import { presentationKey } from "./presentation-card";
 import {
   channelKey,
   edgeRequest,
@@ -86,6 +84,7 @@ import { createLibraryControls } from "./library/controls";
 import { createChannelRefresh } from "./paging/channel-refresh";
 import { createSearchScene } from "./search-scene";
 import { createSourcePickerScene } from "./source-picker-scene";
+import { createSourcePlayScene } from "./source-play-scene";
 import { createPlayerScene } from "./player-scene";
 import { episodeKey } from "./episode-preparation";
 import type { EpisodePreparationState } from "./episode-preparation";
@@ -320,18 +319,17 @@ export function createRemoteTvApp(
       api, overlays: { open: value => openOverlay(value), hide: () => overlays.hide(), origin: () => overlays.origin() },
       choice, setChoice, screen, signal: () => scope.signal, fail: error => fail(error), notify: message => notify(message), setLoading,
       prewarm: () => player.prewarm(), sourceMemory: card => playerScene.sourceMemory(card),
-      play: (source, direct) => playSource(source, direct), drawerOpen: () => overlay()?.kind === "sources",
+      play: (source, direct, manual) => playSource(source, direct, manual), drawerOpen: () => overlay()?.kind === "sources",
       opening: () => !!openingSource(),
     });
     const { facet: sourceFacet, setFacet: setSourceFacet, filterFocus: sourceFilterFocus,
       setFilterFocus: setSourceFilterFocus, provider: sourceProviderFilter, menu: sourceMenu, setMenu: setSourceMenu,
-      menuChoice: sourceMenuChoice, setMenuChoice: setSourceMenuChoice, failure: sourceFailure, setFailure: setSourceFailure,
+      menuChoice: sourceMenuChoice, setMenuChoice: setSourceMenuChoice,
       actions: sourceActions, setActions: setSourceActions, actionChoice: sourceActionChoice,
       setActionChoice: setSourceActionChoice, menuOptions: openSourceMenuOptions,
-      page: sourcePage, failed: failedSources, setFailed: setFailedSources, rows: sources, setRows: setSources,
-      loading: sourceLoading, setSourceLoading, action, setAction, pickerCard, setPickerCard,
-      channel: sourceChannel, setChannel: setSourceChannel, replacing: replacingSource,
-      startPosition: sourceStartPosition, activate: activateSources } = picker;
+      page: sourcePage, failed: failedSources, rows: sources, setRows: setSources,
+      loading: sourceLoading, setSourceLoading, pickerCard,
+      channel: sourceChannel, activate: activateSources } = picker;
     const sourceMenuOptions = () => openSourceMenuOptions();
     const { providers: sourceProviders, visible: visibleSources, quality: sourceQualityValue,
       provider: sourceProviderValue, focused: focusedSource, addonCount: sourceAddonCount,
@@ -590,10 +588,10 @@ export function createRemoteTvApp(
         setControls(undefined);
         setSources([]);
         picker.setIds([]);
-        setAction(undefined);
+        picker.setAction(undefined);
         setActiveAction(undefined);
-        setPickerCard(undefined);
-        setSourceChannel(undefined);
+        picker.setPickerCard(undefined);
+        picker.setChannel(undefined);
         setActiveChannel(undefined);
         setActiveSource(undefined);
         setSelected(undefined);
@@ -1449,122 +1447,22 @@ export function createRemoteTvApp(
         delete target.__viptvRemoteMetrics;
       });
     }
-    const playIntent = createSourceIntent({api,
-      begin: (card, restart, channel, replaceCurrent, position) => {
-        const id = ++sourceIntent, epoch = api.scopeEpoch;
-        playerScene.manual.clear();
-        countdown.cancel();
-        picker.startPosition.begin(card, restart, position);
-        picker.operation.get()?.abort();
-        const operation = new AbortController();
-        picker.beginSession(card, channel, replaceCurrent, operation);
-        return {id, epoch, operation};
-      }, owner: {intent: () => sourceIntent, epoch: () => api.scopeEpoch, operation: () => picker.operation.get(),
-        replace: operation => {picker.operation.set(operation);}, aborted: () => scope.signal.aborted},
-      position: picker.startPosition.current, manual: () => picker.manual.get(), playerScreen: () => screen() === "player", memory: card => playerScene.sourceMemory(card),
-      presentation: {capture: overlays.captureOrigin, hide: overlays.hide, show: () => picker.open()},
-      resolve: action => {picker.startPosition.adopt(action);setAction(action);setPickerCard(previous => presentationCard(previous, action.card));},
-      retry: work => {retry = work;},
-      page: picker.setPage, ids: picker.setIds, loading: setLoading, discovering: picker.setSourceLoading,
-      failure: {current: picker.failure, set: picker.setFailure}, rows: picker.rows,
-      reconcile: picker.sourceRows.reconcile, publish: picker.publish,
-      play: playSource, notify, fail});
-    async function playSource(source: Source, direct = false, manual = true): Promise<boolean> {
-      const current = action();
-      if (!current) return false;
-      playerTransport.retire();
-      const attempt = ++sourceAttempt;
-      if (manual) sourceIntent++;
-      const outgoing = { lease: player.leaseId, action: activeAction(), source: activeSource(), channel: activeChannel() };
-      if (manual) playerScene.manual.set({ source: source.id, card: episodeKey(current.card), scope: deviceScope(), title: deviceTitleKey(deviceScope(), current.card) });
-      else playerScene.manual.clear();
-      const channel = sourceChannel();
-      retry = () =>
-        void playIntent(
-          current.card,
-          true,
-          false,
-          channel,
-          player.canReplaceSource,
-        );
-      if (screen() !== "player") {
-        returnScreen = screen();
-        returnFocus = {
-          zone: overlays.origin().zone,
-          column: overlays.origin().column,
-          row: overlays.origin().row,
-        };
-      }
-      picker.operation.get()?.abort();
-      if (screen() === "search") {
-        searchScene.requests.scope?.abort();
-        clearTimeout(searchScene.requests.timer);
-      }
-      setScreen("player");
-      setError("");
-      setPlaybackError("");
-      setTimelineFocused(true);
-      playerNavigation.reset();
-      setActiveSource(source);
-      setActiveAction(current);
-      setActiveChannel(sourceChannel());
-      setShowControls(true);
-      setChoice(0);
-      setSourceFailure("");
-      segments.clear();
-      // The drawer stays up while the chosen stream opens, so its status line
-      // reports the contract's `Opening stream…` from the player's real
-      // preparation instead of a timer, and a second press cannot start a
-      // duplicate stream.
-      setOpeningSource(source);
-      setLoading(true);
-      document.getElementById("video-layer")!.style.display = "block";
-      let started = false;
-      try {
-        await startSourceCandidate({player, source, action: current, direct, manual, replacing: replacingSource(), position: sourceStartPosition.current,
-          positionIsAuthoritative: sourceStartPosition.authoritative,
-          current: () => attempt === sourceAttempt, notify});
-        started = true;
-        setLoading(false);
-        void refreshPlaybackSegments();
-        hideControls();
-      } catch (error) {
-        // Cancellation can leave the outgoing lease alive too. Restore its UI
-        // only while this attempt still owns it; never rewind a newer attempt.
-        const retained = outgoing.lease && player.leaseId === outgoing.lease;
-        if (retained && activeAction() === current && activeSource() === source) {
-          setActiveAction(outgoing.action);setActiveSource(outgoing.source);setActiveChannel(outgoing.channel);
-        }
-        if (error instanceof DOMException && error.name === "AbortError") throw error;
-        // A replacement admission failure leaves the outgoing lease alive.
-        // Keep it (and sourceRetry) so the open picker can try another source.
-        if (attempt === sourceAttempt) playerScene.manual.clear();
-        if (!retained && (!replacingSource() || !player.leaseId))
-          await player.stop().catch(() => {});
-        setLoading(false);
-        setError("");
-        setPlaybackError("");
-        setFailedSources((previous) => new Set(previous).add(source.id));
-        // Keep the picker over the page that requested the stream, exactly as
-        // the TV drawer does, and mark the row instead of dead-ending in the
-        // player's full-screen failure card.
-        if (returnScreen && !player.leaseId) {
-          setScreen(returnScreen);
-          setZone(returnFocus.zone);
-          setColumn(returnFocus.column);
-          setRow(returnFocus.row);
-        }
-        setSourceFailure(
-          "This source couldn't start. Choose another source.",
-        );
-      } finally {
-        if (attempt === sourceAttempt) setOpeningSource(undefined);
-        // Only the drawer this stream was successfully chosen from. A failed
-        // start stays open so the next source is one press away.
-        if (started && overlay()?.kind === "sources") overlays.hide();
-      }
-      return started;
-    }
+    const sourcePlay = createSourcePlayScene({
+      api, picker, player, playerScene, transport: playerTransport,
+      segments: { clear: segments.clear, refresh: refreshPlaybackSegments },
+      screen, setScreen, zone, setZone, column, setColumn, row, setRow,
+      setPlaybackError, setError, setLoading, activeAction, setActiveAction,
+      activeChannel, setActiveChannel, activeSource, setActiveSource,
+      openingSource: () => openingSource(), setOpeningSource,
+      overlays: { captureOrigin: () => overlays.captureOrigin(), hide: () => overlays.hide(), origin: () => overlays.origin() },
+      overlay: () => overlay(), notify: message => notify(message), fail: error => fail(error),
+      retry: work => { retry = work; },
+      searchRequests: searchScene.requests,
+      playerNavigation: { reset: () => playerNavigation.reset() }, setTimelineFocused, setShowControls, setChoice,
+      hideControls: () => hideControls(), chrome, countdown, snapshot,
+      deviceScope, deviceTitleKey, sourceChannel, signal: () => scope.signal,
+    });
+    const playIntent = sourcePlay.playIntent, playSource = sourcePlay.playSource;
     createEffect(() => {
       if (screen() !== "player" || ["paused", "ended", "error"].includes(snapshot()?.state ?? "")) setPauseRequested(false);
     });
@@ -2189,7 +2087,7 @@ export function createRemoteTvApp(
       );
       document.documentElement.dataset.tvSourceFilter =
         sourceProviderFilter() ?? "";
-      document.documentElement.dataset.tvSourceFailure = sourceFailure();
+      document.documentElement.dataset.tvSourceFailure = picker.failure();
       document.documentElement.dataset.tvLibrarySort = String(
         library()?.query?.sort ?? "",
       );
@@ -2453,7 +2351,7 @@ export function createRemoteTvApp(
             sourceMenuOptions={sourceMenuOptions()} sourceMenuChoice={sourceMenuChoice()} sourceHeight={picker.height()}
             sourceProviderFilter={sourceProviderFilter()} sourceActions={sourceActions()} sourceActionChoice={sourceActionChoice()}
             focusedSource={focusedSource()} sourceFilterFocus={sourceFilterFocus()} sourceFacet={sourceFacet()}
-            sourceFailure={sourceFailure()} sourceSpread={sourceSpread()} sourceQualityValue={sourceQualityValue()}
+            sourceFailure={picker.failure()} sourceSpread={sourceSpread()} sourceQualityValue={sourceQualityValue()}
             sourceProviderValue={sourceProviderValue()} failedSources={failedSources()} choice={choice()}
             profileEditor={profileEditor()} management={management()} trackColumn={trackColumn()} text={text()}
             keyboard={keyboard} activeAction={activeAction()} episode={episodeState().item} countdown={countdownState()}

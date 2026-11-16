@@ -33,7 +33,7 @@ export function createSourcePickerScene(options: {
   setLoading: Setter<boolean>;
   prewarm: () => void;
   sourceMemory: (card: Card) => Promise<unknown>;
-  play: (source: Source, direct?: boolean) => Promise<boolean>;
+  play: (source: Source, direct?: boolean, manual?: boolean) => Promise<boolean>;
   drawerOpen: () => boolean;
   opening: () => boolean;
 }) {
@@ -135,3 +135,5 @@ export function createSourcePickerScene(options: {
     },
   };
 }
+
+export type SourcePickerScene = ReturnType<typeof createSourcePickerScene>;

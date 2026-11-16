@@ -102,3 +102,5 @@ export function createPlayerChrome(options: {
   const cancelHide = () => clearTimeout(timer);
   return { buttons, tools, timelineFocused, setTimelineFocused, hideControls, canAutoHide, cancelHide };
 }
+
+export type PlayerChrome = ReturnType<typeof createPlayerChrome>;
