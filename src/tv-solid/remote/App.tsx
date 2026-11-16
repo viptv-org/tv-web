@@ -3,7 +3,6 @@ import type { Screen, Overlay } from "./app-types";
 import { runtimeObserver } from "../platform/runtime-observation";
 import { exitTizen } from "../platform/tizen-host";
 import { DevicePlayback, deviceProfileKey, deviceTitleKey } from "./device-playback";
-import { createSourceStartPosition } from "./resume-position";
 import { AutoplayCountdown, type CountdownState } from "./autoplay-countdown";
 import { Show, batch, createEffect, createMemo, createSignal, onCleanup, onMount } from "solid-js";
 import { searchLetters } from "./SearchInput";
@@ -32,12 +31,9 @@ import { createLiveScene } from "./live-scene";
 import { createCardMenu } from "./menus/card";
 import { createPlayerActivation } from "./activation/player";
 import { createSeasonPicker } from "./activation/seasons";
-import { createSourceRows } from "./source-picker/rows";
-import { createSourcePublisher } from "./source-picker/publisher";
-import { createSourceActivation } from "./source-picker/activation";
 import { createSourceIntent } from "./source-picker/intent";
 import { startSourceCandidate } from "./source-picker/start-candidate";
-import { sourceActionOptions, type SourceMenuOption } from "./source-picker/options";
+import { sourceActionOptions } from "./source-picker/options";
 import { TopNavigation } from "./TopNavigation";
 import { availableNavigation } from "./navigation-model";
 
@@ -89,6 +85,7 @@ import { createHeldSelect } from "./held-select";
 import { createLibraryControls } from "./library/controls";
 import { createChannelRefresh } from "./paging/channel-refresh";
 import { createSearchScene } from "./search-scene";
+import { createSourcePickerScene } from "./source-picker-scene";
 import { createPlayerScene } from "./player-scene";
 import { episodeKey } from "./episode-preparation";
 import type { EpisodePreparationState } from "./episode-preparation";
@@ -101,7 +98,6 @@ import { createHomePager } from "./paging/home";
 import { createCatalogControls } from "./catalog-controls";
 import { createOverlayController } from "./overlay-controller";
 import { createDetailScene } from "./detail-scene";
-import { createSourcePresentation } from "./source-picker/presentation";
 import { createLiveNavigation } from "./navigation/live";
 import { createContentNavigation } from "./navigation/content";
 import { createHeroNavigation } from "./navigation/hero";
@@ -128,7 +124,6 @@ import {
   type Pairing,
   type Preferences,
   type Source,
-  type SourcePage,
   type TitleAction,
 } from "./types";
 import type { PlayerSnapshot } from "../../../vendor/video/src/types";
@@ -268,17 +263,6 @@ export function createRemoteTvApp(
       errors: {clear: () => { setError(""); }, restore: () => { setError(screen() === "player" ? playbackError() : ""); }},
     });
     const {current: overlay, entered: overlayEntered, closing: overlayClosing, open: openOverlay, reportSettled: reportOverlaySettled} = overlays;
-    const [sourcePage, setSourcePage] = createSignal<SourcePage>(),
-      [allSourceIds, setAllSourceIds] = createSignal<string[]>([]),
-      [sourceFacet, setSourceFacet] = createSignal(0),
-      [sourceFilterFocus, setSourceFilterFocus] = createSignal(false),
-      [sourceProviderFilter, setSourceProviderFilter] = createSignal<string>(),
-      [sourceMenu, setSourceMenu] = createSignal<"quality" | "provider">(),
-      [sourceMenuChoice, setSourceMenuChoice] = createSignal(0),
-      [sourceFailure, setSourceFailure] = createSignal(""),
-      [sourceActions, setSourceActions] = createSignal(false),
-      [sourceActionChoice, setSourceActionChoice] = createSignal(0),
-      [failedSources, setFailedSources] = createSignal<Set<string>>(new Set());
     const profileEditor = createMemo(() => {
       const value = overlay();
       return value &&
@@ -287,11 +271,6 @@ export function createRemoteTvApp(
         ? value
         : undefined;
     });
-    const [sourceHeight, setSourceHeight] = createSignal<number>(),
-      [sourceFiltering, setSourceFiltering] = createSignal(false);
-    const sourceStartPosition = createSourceStartPosition();
-    let manualSourceSelection = false,
-      sourceFilterGeneration = 0;
     const heldSelect = createHeldSelect({
       target: pressTarget, layer: overlay,
       allowed: () => !overlay() || overlay()?.kind === "sources" || overlay()?.kind === "next",
@@ -303,13 +282,7 @@ export function createRemoteTvApp(
       },
       activate: () => { void activate().catch(fail); },
     });
-    const [sources, setSources] = createSignal<Source[]>([]),
-      [sourceLoading, setSourceLoading] = createSignal(false),
-      [action, setAction] = createSignal<TitleAction>(),
-      [activeAction, setActiveAction] = createSignal<TitleAction>(),
-      [pickerCard, setPickerCard] = createSignal<Card>(),
-      [sourceChannel, setSourceChannel] = createSignal<string>(),
-      [replacingSource, setReplacingSource] = createSignal(false),
+    const [activeAction, setActiveAction] = createSignal<TitleAction>(),
       [activeChannel, setActiveChannel] = createSignal<string>(),
       [activeSource, setActiveSource] = createSignal<Source>(),
       // The source the picker handed to playback. It stays set for exactly as
@@ -343,14 +316,26 @@ export function createRemoteTvApp(
     const setCalendarEntry = calendarScene.setEntry;
     const calendarDaysList = calendarScene.days;
     const calendarDayEntries = calendarScene.entries;
-    const {providers: sourceProviders, visible: visibleSources, qualityOptions: qualityMenuOptions, providerOptions: providerMenuOptions,
-      quality: sourceQualityValue, provider: sourceProviderValue, focused: focusedSource, addonCount: sourceAddonCount, spread: sourceSpread} = createSourcePresentation({
-        sources, page: sourcePage, provider: {current: sourceProviderFilter, clear: () => { setSourceProviderFilter(undefined); }}, height: sourceHeight,
-        open: () => overlay()?.kind === "sources", opening: () => !!openingSource(), loading: sourceLoading,
-        selection: {index: choice, select: index => { setChoice(index); }},
-      });
-    const [openSourceMenuOptions, setOpenSourceMenuOptions] = createSignal<SourceMenuOption[]>([]);
+    const picker = createSourcePickerScene({
+      api, overlays: { open: value => openOverlay(value), hide: () => overlays.hide(), origin: () => overlays.origin() },
+      choice, setChoice, screen, signal: () => scope.signal, fail: error => fail(error), notify: message => notify(message), setLoading,
+      prewarm: () => player.prewarm(), sourceMemory: card => playerScene.sourceMemory(card),
+      play: (source, direct) => playSource(source, direct), drawerOpen: () => overlay()?.kind === "sources",
+      opening: () => !!openingSource(),
+    });
+    const { facet: sourceFacet, setFacet: setSourceFacet, filterFocus: sourceFilterFocus,
+      setFilterFocus: setSourceFilterFocus, provider: sourceProviderFilter, menu: sourceMenu, setMenu: setSourceMenu,
+      menuChoice: sourceMenuChoice, setMenuChoice: setSourceMenuChoice, failure: sourceFailure, setFailure: setSourceFailure,
+      actions: sourceActions, setActions: setSourceActions, actionChoice: sourceActionChoice,
+      setActionChoice: setSourceActionChoice, menuOptions: openSourceMenuOptions,
+      page: sourcePage, failed: failedSources, setFailed: setFailedSources, rows: sources, setRows: setSources,
+      loading: sourceLoading, setSourceLoading, action, setAction, pickerCard, setPickerCard,
+      channel: sourceChannel, setChannel: setSourceChannel, replacing: replacingSource,
+      startPosition: sourceStartPosition, activate: activateSources } = picker;
     const sourceMenuOptions = () => openSourceMenuOptions();
+    const { providers: sourceProviders, visible: visibleSources, quality: sourceQualityValue,
+      provider: sourceProviderValue, focused: focusedSource, addonCount: sourceAddonCount,
+      spread: sourceSpread } = picker.presentation;
     const [snapshot, setSnapshot] = createSignal<PlayerSnapshot>(),
       [showControls, setShowControls] = createSignal(true),
       [pauseRequested, setPauseRequested] = createSignal(false),
@@ -383,7 +368,6 @@ export function createRemoteTvApp(
         setZone("profiles");
     });
     let scope = new AbortController(),
-      sourceScope: AbortController | undefined,
       alive = true,
       noticeTimer: ReturnType<typeof setTimeout> | undefined,
       controlsTimer: ReturnType<typeof setTimeout> | undefined;
@@ -572,15 +556,15 @@ export function createRemoteTvApp(
       settingsAbort();
       paging.restart();
       scope = new AbortController();
-      sourceScope?.abort();
-      sourceScope = undefined;
+      picker.operation.get()?.abort();
+      picker.operation.set(undefined);
       setLoading(false);
       setError("");
       overlays.hide();
       setText("");
       paging.setBusy(false);
       heldSelect.cancel();
-      sourceFilterGeneration++;
+      picker.generation.next();
       pageGeneration++;
       clearTimeout(searchScene.requests.timer);
       return scope.signal;
@@ -605,7 +589,7 @@ export function createRemoteTvApp(
         setCatalog(undefined);
         setControls(undefined);
         setSources([]);
-        setAllSourceIds([]);
+        picker.setIds([]);
         setAction(undefined);
         setActiveAction(undefined);
         setPickerCard(undefined);
@@ -1235,10 +1219,10 @@ export function createRemoteTvApp(
     }
     function closeOverlay(restoreFocus = true) {
       sourceIntent++;
-      sourceScope?.abort();
-      sourceScope = undefined;
+      picker.operation.get()?.abort();
+      picker.operation.set(undefined);
       setSourceLoading(false);
-      setSourceFiltering(false);
+      picker.setFiltering(false);
       overlays.close(restoreFocus);
     }
     function dismissOverlay() {
@@ -1298,7 +1282,7 @@ export function createRemoteTvApp(
       if (overlay()?.kind === "next") { dismissNext();return; }
       if (sourceLoading() && !overlay() || openingSource()) {
         const cancelInPlace = screen() !== "player" && !openingSource();
-        sourceAttempt++;sourceIntent++;sourceScope?.abort();setSourceLoading(false);setLoading(false);
+        sourceAttempt++;sourceIntent++;picker.operation.get()?.abort();setSourceLoading(false);setLoading(false);
         if (player.cancelPendingStart()) {
           setOpeningSource(undefined);
           if (!player.leaseId && screen() === "player") {
@@ -1465,52 +1449,25 @@ export function createRemoteTvApp(
         delete target.__viptvRemoteMetrics;
       });
     }
-    const {reconcile: reconcileSources, focusBest: focusBestMatch} = createSourceRows({rows: sources, adopt: setSources,
-      visible: visibleSources, focused: focusedSource, manual: () => manualSourceSelection, selection: {current: choice, set: setChoice}});
-    const publishSources = createSourcePublisher({api, owns: operation => sourceScope === operation,
-      generation: {next: () => ++sourceFilterGeneration, current: () => sourceFilterGeneration}, height: sourceHeight,
-      ids: setAllSourceIds, page: setSourcePage, filtering: setSourceFiltering, reconcile: reconcileSources, focusBest: focusBestMatch, fail});
     const playIntent = createSourceIntent({api,
       begin: (card, restart, channel, replaceCurrent, position) => {
         const id = ++sourceIntent, epoch = api.scopeEpoch;
         playerScene.manual.clear();
         countdown.cancel();
-        sourceStartPosition.begin(card, restart, position);
-        sourceScope?.abort();
+        picker.startPosition.begin(card, restart, position);
+        picker.operation.get()?.abort();
         const operation = new AbortController();
-        sourceScope = operation;
-        setPickerCard(card);
-        setSourceChannel(channel);
-        setReplacingSource(replaceCurrent);
-        setAction(undefined);
-        setSources([]);
-        setAllSourceIds([]);
-        setSourcePage(undefined);
-        setSourceFacet(0);
-        setSourceHeight(undefined);
-        setSourceFiltering(false);
-        setSourceProviderFilter(undefined);
-        setSourceMenu(undefined);
-        setSourceActions(false);
-        setSourceFailure("");
-        setFailedSources(new Set<string>());
-        manualSourceSelection = false;
-        sourceFilterGeneration++;
-        setSourceFilterFocus(false);
-        setSourceLoading(true);
+        picker.beginSession(card, channel, replaceCurrent, operation);
         return {id, epoch, operation};
-      }, owner: {intent: () => sourceIntent, epoch: () => api.scopeEpoch, operation: () => sourceScope,
-        replace: operation => {sourceScope = operation;}, aborted: () => scope.signal.aborted},
-      position: sourceStartPosition.current, manual: () => manualSourceSelection, playerScreen: () => screen() === "player", memory: card => playerScene.sourceMemory(card),
-      presentation: {capture: overlays.captureOrigin, hide: overlays.hide, show: () => {
-        // The user is choosing a source, so the engine can be fetched while
-        // they browse — it is never fetched between their press and the frame.
-        player.prewarm();
-        openOverlay({kind: "sources", title: "Choose a source"});
-      }},
-      resolve: action => {sourceStartPosition.adopt(action);setAction(action);setPickerCard(previous => presentationCard(previous, action.card));}, retry: work => {retry = work;},
-      page: setSourcePage, ids: setAllSourceIds, loading: setLoading, discovering: setSourceLoading,
-      failure: {current: sourceFailure, set: setSourceFailure}, rows: sources, reconcile: reconcileSources, publish: publishSources,
+      }, owner: {intent: () => sourceIntent, epoch: () => api.scopeEpoch, operation: () => picker.operation.get(),
+        replace: operation => {picker.operation.set(operation);}, aborted: () => scope.signal.aborted},
+      position: picker.startPosition.current, manual: () => picker.manual.get(), playerScreen: () => screen() === "player", memory: card => playerScene.sourceMemory(card),
+      presentation: {capture: overlays.captureOrigin, hide: overlays.hide, show: () => picker.open()},
+      resolve: action => {picker.startPosition.adopt(action);setAction(action);setPickerCard(previous => presentationCard(previous, action.card));},
+      retry: work => {retry = work;},
+      page: picker.setPage, ids: picker.setIds, loading: setLoading, discovering: picker.setSourceLoading,
+      failure: {current: picker.failure, set: picker.setFailure}, rows: picker.rows,
+      reconcile: picker.sourceRows.reconcile, publish: picker.publish,
       play: playSource, notify, fail});
     async function playSource(source: Source, direct = false, manual = true): Promise<boolean> {
       const current = action();
@@ -1538,7 +1495,7 @@ export function createRemoteTvApp(
           row: overlays.origin().row,
         };
       }
-      sourceScope?.abort();
+      picker.operation.get()?.abort();
       if (screen() === "search") {
         searchScene.requests.scope?.abort();
         clearTimeout(searchScene.requests.timer);
@@ -1749,7 +1706,7 @@ export function createRemoteTvApp(
       detail: {hasEpisodes: detailHasEpisodes, recommendations: () => detail()?.recommendations.length ?? 0, seasons: () => detail()?.seasons.length ?? 0}});
     const navigateHomeRows = createHomeRowsNavigation({focus: navigationFocus, row: {index: row, set: setRow},
       rows: () => home()?.rows ?? [], resolve: shelf => homeRowFocus.resolve(shelf), remember: rememberHomeRow, load: loadHomePage, move: moveToItem});
-    const navigateSources = createSourceNavigation({manual: () => { manualSourceSelection = true; },
+    const navigateSources = createSourceNavigation({manual: () => { picker.manual.set(true); },
       actions: {open: () => !!sourceActions(), set: setSourceActionChoice, count: () => sourceActionOptions.length},
       menu: {open: () => !!sourceMenu(), set: setSourceMenuChoice, count: () => sourceMenuOptions().length},
       filters: {focused: sourceFilterFocus, focus: setSourceFilterFocus, facet: setSourceFacet},
@@ -1889,14 +1846,6 @@ export function createRemoteTvApp(
       if (isOverlay) setText(next.slice(0, 2048));
       else updateSearch(next);
     }
-    const activateSources = createSourceActivation({rows: {all: sources, visible: visibleSources, set: setSources, ids: allSourceIds, page: setSourcePage},
-      selection: {value: choice, set: setChoice}, actions: {open: sourceActions, set: setSourceActions, choice: sourceActionChoice},
-      menu: {kind: sourceMenu, set: setSourceMenu, choices: sourceMenuOptions, remember: setOpenSourceMenuOptions, choice: sourceMenuChoice, select: setSourceMenuChoice},
-      filters: {focused: sourceFilterFocus, facet: sourceFacet, quality: {value: sourceHeight, set: setSourceHeight, choices: qualityMenuOptions},
-        provider: {value: sourceProviderFilter, set: setSourceProviderFilter, choices: providerMenuOptions}}, loading: sourceLoading,
-      filtering: {value: sourceFiltering, set: setSourceFiltering}, manual: () => {manualSourceSelection = true;},
-      generation: {next: () => ++sourceFilterGeneration, current: () => sourceFilterGeneration}, operation: () => sourceScope,
-      signal: () => sourceScope?.signal ?? scope.signal, rank: (ids, height, signal, reuse) => api.rankSources(ids, height, signal, reuse), play: playSource});
     const activatePlayer = createPlayerActivation({player, snapshot, setPlaying: playerTransport.setPlaying, actions: playerActions, action: activeAction, channel: activeChannel, choice, buttons: playerButtons,
       timeline: {value: seek, set: setSeek, seeking: setSeeking}, chrome: {visible: showControls, set: setShowControls, hide: hideControls},
       segments: {active: activeSegment, clear: segments.clear, refresh: refreshPlaybackSegments},
@@ -2166,7 +2115,7 @@ export function createRemoteTvApp(
         return;
       }
       if (overlay()) {
-        if (overlay()?.kind === "sources") manualSourceSelection = true;
+        if (overlay()?.kind === "sources") picker.manual.set(true);
         return;
       }
       if (screen() === "settings") {
@@ -2343,7 +2292,7 @@ export function createRemoteTvApp(
       overlays.dispose();
       scope.abort();
       settingsAbort();
-      sourceScope?.abort();
+      picker.operation.get()?.abort();
       revisions.stop();
       clearTimeout(noticeTimer);
       clearTimeout(searchScene.requests.timer);
@@ -2397,7 +2346,7 @@ export function createRemoteTvApp(
           // timer, so repeats must not reset it or the 700ms menu never fires.
           if (event?.repeat) return undefined;
           restartHeroCycling();
-          if (overlay()?.kind === "sources") manualSourceSelection = true;
+          if (overlay()?.kind === "sources") picker.manual.set(true);
           return heldSelect.press();
         },
       },
@@ -2501,7 +2450,7 @@ export function createRemoteTvApp(
             entered={overlayEntered()} closing={overlayClosing()} settled={reportOverlaySettled}
             sourceLoading={sourceLoading()} pickerCard={pickerCard()} sources={sources()} visibleSources={visibleSources()}
             sourcePage={sourcePage()} sourceAddonCount={sourceAddonCount()} sourceMenu={sourceMenu()}
-            sourceMenuOptions={sourceMenuOptions()} sourceMenuChoice={sourceMenuChoice()} sourceHeight={sourceHeight()}
+            sourceMenuOptions={sourceMenuOptions()} sourceMenuChoice={sourceMenuChoice()} sourceHeight={picker.height()}
             sourceProviderFilter={sourceProviderFilter()} sourceActions={sourceActions()} sourceActionChoice={sourceActionChoice()}
             focusedSource={focusedSource()} sourceFilterFocus={sourceFilterFocus()} sourceFacet={sourceFacet()}
             sourceFailure={sourceFailure()} sourceSpread={sourceSpread()} sourceQualityValue={sourceQualityValue()}
