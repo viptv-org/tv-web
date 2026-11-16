@@ -86,6 +86,7 @@ import { createBackScene } from "./back-scene";
 import { createSessionScene, playbackRevisionKey } from "./session-scene";
 import { publishTestSurface } from "./debug-surface";
 import { createMenuScene } from "./menu-scene";
+import { createActivateScene } from "./activate-scene";
 import { createPlayerScene } from "./player-scene";
 import { episodeKey } from "./episode-preparation";
 import type { EpisodePreparationState } from "./episode-preparation";
@@ -1232,233 +1233,36 @@ export function createRemoteTvApp(
     const chooseSeason = createSeasonPicker({current: detail, adopt: setDetail, season: {current: seasonIndex, set: setSeasonIndex},
       focus: navigationFocus, choice: setChoice, loading: setLoading, rememberedEpisode: () => detailFocus.resolve(detailRow("episodes")), restart: restartPaging,
       request: (card, cursor, signal) => api.detail(card, cursor, signal), open: openOverlay, close: closeOverlay});
-    async function activate() {
-      countdown.cancel();
-      if (revealEndedControls()) return;
-      paging.channelPending.set(undefined);
-      restartHeroCycling();
-      const canLeaveLoading =
-        !overlay() &&
-        ((zone() === "nav" && !["welcome", "pairing"].includes(screen())) ||
-          (screen() === "search" && zone() === "keyboard"));
-      if (pending() || overlayClosing() || (loading() && !canLeaveLoading))
-        return;
-      if (error()) {
-        setError("");
-        retry();
-        return;
-      }
-      const modal = overlay();
-      if (modal) {
-        if (modal.kind === "next") {
-          if (choice() === 0) await advanceEpisode();else dismissNext();
-          return;
-        }
-        if (modal.kind === "tracks") {
-          await run(async () => {
-            await modal.columns[trackColumn()]?.items[choice()]?.run();
-          });
-          return;
-        }
-        if (modal.kind === "calibration") {
-          await run(async () => {
-            await modal.save(calibrationValue());
-          });
-          closeOverlay();
-          return;
-        }
-        if (modal.kind === "text") {
-          const target = nativeTextTarget();
-          if (target && nativeTextPort?.ownsInput()) nativeTextEditing?.open(target);
-          else keyboardActivate(true);
-        }
-        else if (modal.kind === "sources") await activateSources();
-        else
-          await run(async () => {
-            await modal.items[choice()]?.run();
-          });
-        return;
-      }
-      if (screen() === "calendar") {
-        if (zone() === "calendar-list" || zone() === "calendar-watch") {
-          const entry = calendarDayEntries()[calendarEntry()];
-          if (entry) await openDetail(entry.card);
-          return;
-        }
-        if (zone() === "calendar-days") return;
-      }
-      if (screen() === "welcome" || screen() === "pairing") {
-        await beginPairing();
-        return;
-      }
-      if (screen() === "signed-in") {
-        finishSignIn();
-        return;
-      }
-      if (screen() === "profiles") {
-        if (zone() === "profile-manage") {
-          manageProfile(
-            Math.min(column(), (management()?.profiles.length ?? 1) - 1),
-          );
-          return;
-        }
-        await selectProfile(column());
-        return;
-      }
-      if (screen() === "player") { await activatePlayer(); return; }
-      if (zone() === "nav") {
-        const nav = navs()[column()];
-        if (!nav) return;
-        if (nav.id === "profiles")
-          openOverlay({
-            kind: "choices",
-            title: "Your profile",
-            items: [
-              {
-                id: "profiles",
-                label: "Switch profile",
-                run: async () => {
-                  closeOverlay();
-                  await navigate("profiles");
-                },
-              },
-              {
-                id: "settings",
-                label: "Settings",
-                run: async () => {
-                  closeOverlay();
-                  await navigate("settings");
-                },
-              },
-            ],
-          });
-        else await navigate(nav.id);
-        return;
-      }
-      if (screen() === "settings") {
-        if (zone() === "settings-nav") {
-          setZone("settings-content");
-          setColumn(0);
-        } else
-          await run(async () => {
-            await settingsItems()[column()]?.run();
-          });
-        return;
-      }
-      if (screen() === "detail" && zone() === "seasons") { chooseSeason(); return; }
-      if (screen() === "search" && zone() === "keyboard") {
-        const target = nativeTextTarget();
-        if (target && nativeTextPort?.ownsInput()) { nativeTextEditing?.open(target); return; }
-        const index = key();
-        updateSearch(
-          index === 0
-            ? search() + " "
-            : index === 1
-              ? Array.from(search()).slice(0, -1).join("")
-              : search() + searchLetters[index - 2],
-        );
-        return;
-      }
-      if (
-        screen() === "search" &&
-        ["search-retry", "search-channel-retry"].includes(zone())
-      ) {
-        const retryChannel = paging.channelRetry.current();
-        if (zone() === "search-channel-retry" && retryChannel) {
-          const direction = retryChannel;
-          setZone("search-channels");
-          setColumn(searchChannelFocus);
-          await moreChannels(direction);
-          return;
-        }
-        setZone("keyboard");
-        updateSearch(search(), true);
-        return;
-      }
-      if (screen() === "search" && zone() === "search-channels") {
-        const channel = searchChannels()[column()];
-        if (channel) await playIntent(channel.card, false, false, channel.id);
-        return;
-      }
-      if (zone() === "library-controls") {
-        if (column() === 0 && libraryType()) chooseLibrary(libraryType()!);
-        else if (column() === 1 && librarySort())
-          chooseLibrary(librarySort()!);
-        else
-          await run(() => applyLibrary(libraryDefaultQuery()));
-        return;
-      }
-      if (zone() === "filters") { activateCatalog(column()); return; }
-      if (
-        screen() === "home" &&
-        zone() === "rows" &&
-        home()?.rows[row()]?.state === "Failed"
-      ) {
-        setHome(stremioHome(await api.home(scope.signal)));
-        return;
-      }
-      if (zone() === "hero") {
-        const card =
-          screen() === "detail" ? detailTarget()?.card : displayHero();
-        if (!card) {
-          if (screen() === "home" && home()?.complete)
-            await navigate("settings");
-          return;
-        }
-        if (heroAction() === 0) await playIntent(card);
-        else if (heroAction() === 1)
-          await toggleSaved(screen() === "detail" ? detail()?.item ?? card : card);
-        else if (heroAction() === 2) {
-          if (screen() === "home") await openDetail(card);
-          else {
-            setZone("episodes");
-            setColumn(0);
-          }
-        } else await playIntent(card, true);
-        return;
-      }
-      if (screen() === "live" && zone() === "live-empty") {
-        await liveScene.activateLiveSpread();
-        return;
-      }
-      if (screen() === "live" && zone() === "live-groups") {
-        const group = column() ? groups()[column() - 1]?.id : undefined;
-        await liveScene.loadGroup(group);
-        return;
-      }
-      if (screen() === "live") {
-        // A failed page fetch leaves a pending retry; Enter retries it before
-        // it could be mistaken for a play intent on the focused channel.
-        const retryChannel = paging.channelRetry.current();
-        if (retryChannel) {
-          const direction = retryChannel;
-          paging.channelRetry.set(undefined);
-          await moreChannels(direction);
-          return;
-        }
-        const channel = channels()[column()];
-        if (channel) await playIntent(channel.card, false, false, channel.id);
-        return;
-      }
-      const card =
-        screen() === "detail"
-          ? zone() === "recommendations"
-            ? detail()?.recommendations[column()]
-            : detailHasEpisodes()
-              ? detailEpisodes()[column()]
-              : detail()?.recommendations[column()]
-          : screen() === "home"
-            ? home()?.rows[row()]?.cards[column()]
-            : page().cards[column()];
-      if (card) {
-        if (
-          (screen() === "detail" && card.identity.episode) ||
-          (screen() === "home" && card.view?.preview?.action === "play")
-        )
-          await playIntent(card);
-        else await openDetail(card);
-      }
-    }
+    const activateScene = createActivateScene({
+      api, signal: () => scope.signal, screen, zone, column, row, choice, key, heroAction,
+      overlay: () => overlay(), overlayClosing, pending, loading, error, setError: value => setError(value),
+      setZone: value => setZone(value), setColumn: value => setColumn(value), setHome: value => setHome(value),
+      home, page, detail, management, navs, groups, channels, searchChannels, search,
+      searchChannelFocus: () => searchChannelFocus, settingsItems: () => settingsItems(),
+      libraryType, librarySort, calendarDayEntries, calendarEntry, detailTarget, displayHero,
+      detailHasEpisodes, detailEpisodes, trackColumn, calibrationValue, searchLetters,
+      countdown, revealEndedControls: () => revealEndedControls(), restartHeroCycling: () => restartHeroCycling(),
+      retry: () => retry(), run: work => run(work), paging, liveScene,
+      closeOverlay: () => closeOverlay(), openOverlay: value => openOverlay(value),
+      navigate: target => navigate(target), openDetail: card => openDetail(card),
+      beginPairing: () => beginPairing(), finishSignIn: () => finishSignIn(),
+      manageProfile: index => manageProfile(index), selectProfile: index => selectProfile(index),
+      chooseSeason: () => chooseSeason(), advanceEpisode: () => advanceEpisode(),
+      dismissNext: () => dismissNext(), activateSources: () => activateSources(),
+      activatePlayer: () => activatePlayer(), playIntent, toggleSaved: card => toggleSaved(card),
+      updateSearch: (value, immediate) => updateSearch(value, immediate),
+      moreChannels: direction => moreChannels(direction),
+      chooseLibrary: control => chooseLibrary(control as never),
+      applyLibrary: query => applyLibrary(query as never),
+      libraryDefaultQuery: () => libraryDefaultQuery() as unknown as Record<string, unknown>,
+      activateCatalog: index => activateCatalog(index),
+      keyboardActivate: overlay => keyboardActivate(overlay),
+      nativeTextTarget: () => nativeTextTarget() as unknown,
+      nativeTextPort: () => nativeTextPort,
+      nativeTextEditing: () => nativeTextEditing ? { open: (target: unknown) => nativeTextEditing!.open(target as never) } : undefined,
+      chrome,
+    });
+    const activate = activateScene.activate;
     const showLiveMenu = createLiveMenu({request: call, path: path => api.scoped(path),
       dialogs: {open: openOverlay, close: closeOverlay}, play: playIntent, fail});
     const showCardMenu = createCardMenu({dialogs: {open: openOverlay, close: closeOverlay}, details: openDetail,

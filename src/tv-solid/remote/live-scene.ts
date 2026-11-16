@@ -289,3 +289,5 @@ function isUnauthorized(error: unknown): error is RemoteError {
   return typeof error === "object" && error !== null && "status" in error && (error as { status?: number }).status === 401;
 }
 
+
+export type LiveScene = ReturnType<typeof createLiveScene>;

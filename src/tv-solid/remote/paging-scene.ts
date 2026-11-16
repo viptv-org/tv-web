@@ -117,3 +117,5 @@ export function createPagingScene(options: {
     },
   };
 }
+
+export type PagingScene = ReturnType<typeof createPagingScene>;
