@@ -41,7 +41,6 @@ import {
   channelKey,
   edgeRequest,
 } from "./channelWindow";
-import { applyCaptionAppearance } from "./player/caption-appearance";
 import { createKeyboardInput } from "./input/keyboard";
 import { createTextInput, type TvTextInputEvent } from "./input/text";
 import { createNativeTextEditing, nativeTextDialogOverlay, type NativeTextPort, type NativeTextTarget } from "./input/native-text";
@@ -88,6 +87,7 @@ import { createMenuScene } from "./menu-scene";
 import { createActivateScene } from "./activate-scene";
 import { createKeyboardScene, createMoveScene } from "./input-scene";
 import { createTvState } from "./state";
+import { createAppEffects } from "./app-effects";
 import { createPlayerScene } from "./player-scene";
 import { episodeKey } from "./episode-preparation";
 import { createPagingScene } from "./paging-scene";
@@ -451,53 +451,8 @@ export function createRemoteTvApp(
         if (alive) setPending(false);
       }
     };
-    createEffect(() => {
-      const value = home(),
-        active = screen() === "home",
-        signal = scope.signal;
-      let timer: ReturnType<typeof setTimeout> | undefined,
-        cancelled = false;
-      if (value && !value.complete && active) {
-        const refresh = async () => {
-          try {
-            const next = await api.home(signal);
-            if (!cancelled) replaceHome(stremioHome(next));
-          } catch (error) {
-            if (!cancelled && !(error instanceof DOMException)) {
-              if (error instanceof RemoteError && error.status === 401)
-                fail(error);
-              else timer = setTimeout(refresh, 5000);
-            }
-          }
-        };
-        timer = setTimeout(refresh, 2000);
-      }
-      onCleanup(() => {
-        cancelled = true;
-        clearTimeout(timer);
-      });
-    });
     // The scene is created below; the progress refresh only calls this later.
     const refreshDetail = (...args: Parameters<typeof detailScene.refresh>) => detailScene.refresh(...args);
-    createEffect(() => {
-      progressFreshness();
-      const view = screen(), signal = scope.signal, profile = api.profile;
-      if (!profile || pending() || overlay()) return;
-      if (view === "home") progressRefresh.refresh("home", signal, false, async current => {
-        const value = await api.home(signal);
-        if (!current() || scope.signal !== signal || screen() !== "home") return false;
-        replaceHome(stremioHome(value));
-        return true;
-      });
-      else if (view === "detail" && selected()) {
-        const key = cardKey(selected()!) + ":" + seasonIndex();
-        progressRefresh.refresh("detail:" + key, signal, true, async current => {
-          let committed = false;
-          await refreshDetail(signal, profile, () => { committed = true; }, current);
-          return committed;
-        });
-      }
-    });
     async function applyRevision(fresh: Bootstrap, signal: AbortSignal, profile: string, commit: () => void) {
         const focusedNav =
           zone() === "nav" ? navs()[column()]?.id : undefined;
@@ -1169,25 +1124,6 @@ export function createRemoteTvApp(
         saver: screenSaver(), liveSpread: String(state === "live" ? liveSpread() : ""),
       };
     }));
-    createEffect(() => {
-      snapshot(); // Decoder lease updates trigger the appearance effect.
-      const override = captionOverride();
-      const appearance =
-        override?.leaseId === player.leaseId
-          ? override?.appearance
-          : player.subtitleAppearance;
-      const preferencesValue = preferences()?.preferences;
-      applyCaptionAppearance(appearance, preferencesValue);
-    });
-    // Roku's native host mounts the shared root without running the app
-    // component's onMount in some launch paths. Start boot from a one-shot
-    // effect so the same component drives web and Roku.
-    let bootRequested = false;
-    createEffect(() => {
-      if (bootRequested) return;
-      bootRequested = true;
-      if (options.autoStart !== false) void start();
-    });
     const applyTextInput = createTextInput({screen, overlay, zone, text: setText, query: search, search: updateSearch,
       done: () => completeTextInput(overlay()?.kind === "text")});
     function textInput(event: TvTextInputEvent) {
@@ -1247,6 +1183,12 @@ export function createRemoteTvApp(
       return <KeyboardView numeric={!!(isModal && overlay()?.kind === "text" && (overlay() as Extract<Overlay, { kind: "text" }>).numeric)}
         modal={isModal} letters={keyboardCharacters()} upper={keyboardUpper()} symbols={keyboardSymbols()} selected={key()} />;
     }
+    createAppEffects({
+      api, signal: () => scope.signal, screen, home, pending, overlay: () => overlay(), selected, seasonIndex,
+      preferences, snapshot, captionOverride, replaceHome: value => replaceHome(value), fail: error => fail(error),
+      progressFreshness, progressRefresh, refreshDetail, player, cardKey,
+      start: () => start(), autoStart: options.autoStart !== false,
+    });
     const Root = defineScreen({
       input: {
         left() {
