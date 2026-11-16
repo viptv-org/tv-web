@@ -2,7 +2,7 @@
 
 `src/tv-solid/remote/App.tsx` is the TV application: one `createRemoteTvApp`
 closure that owns every signal and returns the root screen. It started this work
-at **3579 lines** and is **2635** now, with the render tree split into three
+at **3579 lines** and is **2521** now, with the render tree split into three
 screen components and six behaviour modules. This note records what has been extracted, and the exact next
 slices so the remainder can be done mechanically instead of by feel.
 
@@ -31,9 +31,10 @@ slices so the remainder can be done mechanically instead of by feel.
 | `remote/detail-scene.ts` | 71 | one title's page and its two remembered lists |
 | `remote/paging-scene.ts` | 121 | one machine for a page request and the focus it asked for |
 | `remote/search-scene.ts` | 130 | the query, its per-provider rows and its channel column |
+| `remote/player-scene.ts` | 225 | the engine, transport keys, episode preparation, Up-next and its countdown |
 | `remote/live/program-line.ts` | 20 | a guide slot that never prints an out-of-range minute count |
 
-`App.tsx` is **2635 lines** after those. Each extraction is a factory that takes
+`App.tsx` is **2521 lines** after those. Each extraction is a factory that takes
 an explicit dependency object; nothing reaches back into the closure.
 
 ## Why this is not one big diff
@@ -118,12 +119,11 @@ to reason about:
 
 ## What is left, with sizes
 
-`App.tsx` is 2635 lines; the remaining slices, in dependency order, are roughly:
+`App.tsx` is 2521 lines; the remaining slices, in dependency order, are roughly:
 
 | Slice | Lines | Notes |
 | --- | --- | --- |
-| Done | — | live, detail, paging, search, hero, player chrome |
-| player transport + episodes | ~400 | `player`, `playerTransport`, prewarm, the episode preparation, `advanceEpisode` |
+| Done | — | live, detail, paging, search, hero, player chrome, player transport + episodes |
 | play → source → player | ~260 | `playIntent`, `playSource`, countdown, `leavePlayer` |
 | navigation + history | ~450 | `navigate`, `back`, `restorePrevious`, `invalidateHistory`, `openDetail` |
 | input + activation | ~330 | `move`, `activate`, `menu`, `keyboardActivate`, text input |
