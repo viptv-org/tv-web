@@ -6,7 +6,7 @@ import { DevicePlayback, deviceProfileKey, deviceTitleKey } from "./device-playb
 import { createSourceStartPosition } from "./resume-position";
 import { EpisodePreparation, episodeKey, type EpisodePreparationState } from "./episode-preparation";
 import { AutoplayCountdown, type CountdownState } from "./autoplay-countdown";
-import { Show, batch, createEffect, createMemo, createSignal, onCleanup, untrack, onMount } from "solid-js";
+import { Show, batch, createEffect, createMemo, createSignal, onCleanup, onMount } from "solid-js";
 import { searchLetters } from "./SearchInput";
 import { reloadImages } from "./image-source";
 import { clearLogoCache } from "./visuals";
@@ -51,9 +51,7 @@ import { TopNavigation } from "./TopNavigation";
 import { availableNavigation } from "./navigation-model";
 
 import { KeyboardView } from "./KeyboardView";
-import { createCoherentHero, HeroArtwork } from "./CoherentHero";
-import { compactDetail, detailLogoBox, homeLogoBox } from "./hero-layout";
-import { CAROUSEL_TOP } from "./hero-stage";
+import { HeroArtwork } from "./CoherentHero";
 import { presentationCard, presentationKey } from "./presentation-card";
 import {
   channelKey,
@@ -105,7 +103,7 @@ import {
   defaultDisplayPreferences,
   screenSaverMinutes
 } from "./display";
-import { createHeroCycle } from "./hero-cycle-controller";
+import { createHeroScene } from "./hero-scene";
 import { createIdleScreenSaver } from "./idle-screen-saver";
 import { createTextKeyboard } from "./text-keyboard";
 import { createHeldSelect } from "./held-select";
@@ -967,7 +965,7 @@ export function createRemoteTvApp(
         setGroups([]);
         setLiveGroup(undefined);
         setSettingsItems([]);
-        heroCycle.clear();
+        clearCycle();
         setHeroAction(0);
         setSaved(new Map());
       });
@@ -1256,123 +1254,15 @@ export function createRemoteTvApp(
       !!search() &&
       !searchMediaPending() &&
       (!!searchError() || activeSearchRow()?.state === "Failed" || !!activeSearchRow()?.message);
-    const heroCycle = createHeroCycle({
-      count: () => home()?.featured.length ?? 0,
-      enabled: () => screenSaver() ? screen() !== "player" : screen() === "home" && zone() !== "rows" && !overlay() && !pending() && !loading() && !error(),
+    const heroScene = createHeroScene({
+      home, detail, screen, zone, row, column, screenSaver,
+      overlayVisible: () => !!overlay(), pending, loading, error,
+      deviceScope, focusedCard, detailHasEpisodes,
+      rowFocus: homeRowFocus, observer: runtimeObserver() as ((event: Record<string, unknown>) => void) | undefined,
     });
-    const { slide: heroSlide,
-      reset: resetHeroCycle, restart: restartHeroCycling, setVisible: setHeroVisible } = heroCycle;
-    const [previewCard, setPreviewCard] = createSignal<Card>();
-    let previewGeneration = 0, previewScope = "";
-    let previewCandidate: Card | undefined;
-    createEffect(() => {
-      const focused = focusedCard(), active = zone() === "rows", currentScope = deviceScope();
-      runtimeObserver()?.({phase:"home-focus",at:performance.now(),row:row(),rowId:home()?.rows[row()]?.id,
-        cards:home()?.rows[row()]?.cards.length,complete:home()?.complete,active});
-      const previous = previewScope === currentScope ? previewCandidate ?? untrack(previewCard) : undefined;
-      previewScope = currentScope;
-      const card = focused && active ? presentationCard(previous, focused) : undefined;
-      previewCandidate = card;
-      // A stale settle can still fire if the cleanup's clearTimeout loses a
-      // race against the fake clock's fast-forward; the generation guard makes
-      // such a fire a no-op so a skipped-over card never flashes its preview.
-      const generation = ++previewGeneration;
-      const timer = setTimeout(() => {
-        if (generation === previewGeneration)
-          setPreviewCard(active ? card : undefined);
-      }, 120);
-      onCleanup(() => clearTimeout(timer));
-    });
-    const shelfTitleY = () => {
-      const rows = home()?.rows ?? [];
-      const id = rows[Math.min(row(), Math.max(0, rows.length - 1))]?.id;
-      return zone() === "rows"
-        ? id === "continue" ? CAROUSEL_TOP.continue : CAROUSEL_TOP.portrait
-        : CAROUSEL_TOP.hero;
-    };
-    const hero = createMemo(() => {
-      const value =
-        screen() === "home"
-          ? zone() === "rows"
-            ? (previewCard() ?? home()?.hero)
-            : (home()?.featured[heroSlide()] ?? home()?.hero)
-          : detail()?.item;
-      if (!value || value.logo || screen() !== "home") return value;
-      // The featured carousel's cards can be summary-only while the same title
-      // in a row carries the logo. Borrow that artwork so Home never shows the
-      // title fallback for a title that already has one.
-      const identity = presentationKey(value);
-      for (const row of home()?.rows ?? []) {
-        const match = row.cards.find((card) => presentationKey(card) === identity);
-        if (match?.logo)
-          return {
-            ...value,
-            logo: match.logo,
-            landscape: value.landscape ?? match.landscape,
-            poster: value.poster ?? match.poster,
-          };
-      }
-      const fallback = home()?.hero;
-      if (fallback && presentationKey(fallback) === identity && fallback.logo)
-        return { ...value, logo: fallback.logo };
-      return value;
-    });
-    const heroLogoBox = () => screen() === "detail"
-      ? detailLogoBox(detailHasEpisodes(), compactDetail(zone()))
-      : homeLogoBox(zone() === "rows" ? shelfTitleY() : undefined);
-    const heroPresentation = createCoherentHero(
-      () => !screenSaver() && (screen() === "home" || screen() === "detail") ? hero() ?? undefined : undefined,
-      () => `${deviceScope()}:${screen()}`,
-      () => screen() === "detail" ? "detail" : zone() !== "rows" ? "hero"
-        : home()?.rows[row()]?.id === "continue" ? "landscape" : "portrait",
-      heroLogoBox,
-      shelfTitleY,
-      () => heroCycle.visible() && (screen() !== "home" || zone() !== "rows" || !!previewCard() && !!focusedCard() &&
-        presentationKey(previewCard()!) === presentationKey(focusedCard()!)),
-    );
-    const displayHero = heroPresentation.card;
-    const displayedFeatured = createMemo(() => {
-      const card = displayHero();
-      return card ? (home()?.featured ?? []).findIndex(value => cardKey(value) === cardKey(card)) : -1;
-    });
-    function heroIntentCard() { return screen() === "home" ? displayHero() : hero(); }
-    function interruptHero() {
-      if (screen() !== "home" && !screenSaver()) return;
-      heroCycle.interrupt(displayedFeatured());
-    }
-    createEffect(() => {
-      if (screenSaver() || screen() !== "home" || zone() !== "rows") {
-        heroCycle.setReady(heroCycle.visible());
-        return;
-      }
-      const shown = displayHero(), requested = hero();
-      heroCycle.setReady(heroCycle.visible() && !!shown && !!requested &&
-        presentationKey(shown) === presentationKey(requested) &&
-        !heroPresentation.frames().some(frame => frame.staged));
-    });
-    const detailForDisplay = createMemo(() => detail() && displayHero() && presentationKey(detail()!.item) === presentationKey(displayHero()!)
-      ? { ...detail()!, item: displayHero()! } : undefined);
-    const billboardKey = createMemo(() =>
-      screen() === "home" && !screenSaver() && zone() !== "rows" && hero()
-        ? cardKey(hero()!)
-        : undefined,
-    );
-    createEffect(() => {
-      billboardKey();
-      resetHeroCycle();
-    });
-    let heroOrder = "";
-    createEffect(() => {
-      // A new featured order is new presentation: present it as a fresh pass. A
-      // server refresh that repeats the same order must not restart anything.
-      const order = (home()?.featured ?? []).map(cardKey).join("|");
-      if (!order || order === heroOrder) return;
-      heroOrder = order;
-      restartHeroCycling();
-    });
-    function rememberHomeRow() {
-      if (screen() === "home" && zone() === "rows") homeRowFocus.remember(home()?.rows[row()], column());
-    }
+    const { heroCycle, heroSlide, previewCard, setPreviewCard, shelfTitleY, hero, heroLogoBox,
+      heroPresentation, displayHero, displayedFeatured, heroIntentCard, interruptHero, detailForDisplay,
+      clampCycle, rememberHomeRow, restartHeroCycling, setHeroVisible, clearCycle } = heroScene;
     function remember() {
       rememberHomeRow();
       rememberContentFocus();
@@ -1454,7 +1344,7 @@ export function createRemoteTvApp(
         const nextFocused = value?.rows[nextRow]?.cards[nextColumn];
         if (zone() !== "rows" || !nextFocused || !previewCard() || presentationKey(previewCard()!) !== presentationKey(nextFocused))
           setPreviewCard(undefined);
-        heroCycle.clamp(value?.featured.length ?? 0);
+        clampCycle();
         if (screen() === "home" && zone() === "rows") {
           setRow(nextRow);
           setColumn(nextColumn);
