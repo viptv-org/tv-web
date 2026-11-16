@@ -2,7 +2,7 @@
 
 `src/tv-solid/remote/App.tsx` is the TV application: one `createRemoteTvApp`
 closure that owns every signal and returns the root screen. It started this work
-at **3579 lines** and is **3010** now, with the render tree split into three
+at **3579 lines** and is **2635** now, with the render tree split into three
 screen components and six behaviour modules. This note records what has been extracted, and the exact next
 slices so the remainder can be done mechanically instead of by feel.
 
@@ -27,9 +27,13 @@ slices so the remainder can be done mechanically instead of by feel.
 | `remote/render/overlays.tsx` | 190 | the drawer, preparation, error card, toast and idle saver |
 | `remote/hero-scene.ts` | 171 | the featured card, the carousel, the shelf preview and the billboard pass |
 | `remote/player-chrome.ts` | 104 | the control row's buttons, their two layout groups, the selection clamp and the auto-hide clock |
+| `remote/live-scene.ts` | 284 | the Live page: four forms, guide window, group loader, first-request timeout |
+| `remote/detail-scene.ts` | 71 | one title's page and its two remembered lists |
+| `remote/paging-scene.ts` | 121 | one machine for a page request and the focus it asked for |
+| `remote/search-scene.ts` | 130 | the query, its per-provider rows and its channel column |
 | `remote/live/program-line.ts` | 20 | a guide slot that never prints an out-of-range minute count |
 
-`App.tsx` is **3010 lines** after those. Each extraction is a factory that takes
+`App.tsx` is **2635 lines** after those. Each extraction is a factory that takes
 an explicit dependency object; nothing reaches back into the closure.
 
 ## Why this is not one big diff
@@ -114,18 +118,17 @@ to reason about:
 
 ## What is left, with sizes
 
-`App.tsx` is 3010 lines; the remaining slices, in dependency order, are roughly:
+`App.tsx` is 2635 lines; the remaining slices, in dependency order, are roughly:
 
 | Slice | Lines | Notes |
 | --- | --- | --- |
-| live state + loaders | ~330 | `livePages`/`groups`/`programs`/spread/recovery/guide, `adoptLiveSnapshot`, `loadLiveFirstPage`, `loadLiveGroup` |
-| player transport + chrome | ~400 | `player`, `playerTransport`, prewarm, buttons/tools, auto-hide, `leavePlayer` |
-| play → source → player | ~260 | `playIntent`, `playSource`, `advanceEpisode`, countdown |
-| paging | ~120 | `pageSignal`, `restartPaging`, `moveToItem`, `settlePendingFocus`, channel window |
+| Done | — | live, detail, paging, search, hero, player chrome |
+| player transport + episodes | ~400 | `player`, `playerTransport`, prewarm, the episode preparation, `advanceEpisode` |
+| play → source → player | ~260 | `playIntent`, `playSource`, countdown, `leavePlayer` |
 | navigation + history | ~450 | `navigate`, `back`, `restorePrevious`, `invalidateHistory`, `openDetail` |
 | input + activation | ~330 | `move`, `activate`, `menu`, `keyboardActivate`, text input |
 | session/bootstrap | ~260 | `start`, `applyRevision`, `applyBootstrap`, `resetScope`, `clearProfileView`, pairing |
-| search + sources | ~230 | search rows/paging, source facets/menu/publish |
+| source picker state | ~120 | facets, filters, menu, actions, publisher |
 
 Each is a factory with an explicit dependency object, like the ones already
 moved. None of them needs more than ~20 dependencies, and each has a spec file
