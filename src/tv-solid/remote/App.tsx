@@ -19,7 +19,6 @@ import { CalendarView } from "./render/calendar";
 import { HomeView } from "./render/home";
 import { DetailView } from "./render/detail";
 import { AppOverlays, IdleSaver } from "./render/overlays";
-import { initialSeasonIndex, seasonEpisodes } from "./seasons";
 import { RowFocus } from "./row-focus";
 
 import { SettingsView } from "./SettingsView";
@@ -38,6 +37,7 @@ import { availableNavigation } from "./navigation-model";
 import { KeyboardView } from "./KeyboardView";
 import { HeroArtwork } from "./CoherentHero";
 import { presentationKey } from "./presentation-card";
+import { STREMIO_ONLY, stremioHome } from "./stremio-home";
 import {
   channelKey,
   edgeRequest,
@@ -85,6 +85,7 @@ import { createChannelRefresh } from "./paging/channel-refresh";
 import { createSearchScene } from "./search-scene";
 import { createSourcePickerScene } from "./source-picker-scene";
 import { createSourcePlayScene } from "./source-play-scene";
+import { createNavigationScene } from "./navigation-scene";
 import { createPlayerScene } from "./player-scene";
 import { episodeKey } from "./episode-preparation";
 import type { EpisodePreparationState } from "./episode-preparation";
@@ -114,7 +115,6 @@ import {
   type Card,
   type Catalog,
   type Controls,
-  type Detail,
   type Home,
   type LibraryPage,
   type LivePage,
@@ -131,33 +131,6 @@ const available = (value?: { availability: string }) =>
   value?.availability === "Available";
 const isRokuUi =
   typeof (globalThis as any).__SolidTVRokuRenderer !== "undefined";
-
-/** Simkl is temporarily off: its search endpoint rejects this account's
- * requests. Configured Stremio providers supply catalogs and media search until the
- * Simkl integration is re-authorized. User-owned Continue/My List rows stay
- * visible because their metadata is already in the bootstrap. */
-const STREMIO_ONLY = true;
-const isSimklCard = (card?: Card | null) =>
-  !!card &&
-  (card.provider_id === "simkl" ||
-    card.metadata_origin?.provider_id === "simkl");
-function stremioHome(value: Home | undefined): Home | undefined {
-  if (!STREMIO_ONLY || !value) return value;
-  const rows = value.rows.filter((row) => !String(row.id ?? "").startsWith("simkl:"));
-  const streamCards = rows
-    .flatMap((row) => row.cards)
-    .filter((card) => !isSimklCard(card));
-  const featured = value.featured.filter((card) => !isSimklCard(card));
-  const carousel = featured.length ? featured : streamCards.slice(0, 5);
-  return {
-    ...value,
-    rows,
-    featured: carousel,
-    hero: isSimklCard(value.hero)
-      ? (carousel[0] ?? streamCards[0] ?? null)
-      : value.hero,
-  };
-}
 
 export function createRemoteTvApp(
   api: RemoteTvApi,
@@ -432,20 +405,6 @@ export function createRemoteTvApp(
       rememberHomeRow: () => rememberHomeRow(), loadGuides: () => liveScene.loadVisibleGuides(),
     });
     const { pageSignal, restart: restartPaging, moveToItem, settle: settlePendingFocus } = paging;
-    const history: {
-      screen: Screen;
-      zone: string;
-      column: number;
-      row: number;
-      selected?: Card;
-      detail?: Detail;
-      detailAction?: TitleAction;
-      seasonIndex: number;
-      page?: Page;
-      focusKey?: string;
-      rowId?: string;
-      stale?: boolean;
-    }[] = [];
     const call = <T,>(
       path: string,
       method = "GET",
@@ -963,258 +922,35 @@ export function createRemoteTvApp(
       const modal = overlay();
       if (modal?.kind === "tracks") setChoice(Math.max(0,modal.columns[0]?.items.findIndex(item=>item.value==="✓") ?? 0));
     }
-    function invalidateHistory() {
-      for (const entry of history) {
-        entry.stale = true;
-        entry.page = undefined;
-        entry.detail = undefined;
-        entry.detailAction = undefined;
-        if (entry.selected) entry.selected = lookupSelector(entry.selected);
-      }
-    }
-    async function restorePrevious(previous: (typeof history)[number]) {
-      if (
-        ["movie", "series", "anime", "search", "live", "calendar", "library"].includes(
-          previous.screen,
-        ) &&
-        !navs().some((item) => item.id === previous.screen)
-      ) {
-        history.length = 0;
-        await navigate("home");
-        return;
-      }
-      const signal = resetScope();
-      batch(() => {
-        setScreen(previous.screen);
-        setZone(previous.zone);
-        setColumn(previous.column);
-        setRow(previous.row);
-        setSelected(previous.selected);
-        setDetail(previous.detail);
-        setDetailAction(previous.detailAction);
-        setSeasonIndex(previous.seasonIndex);
-        setPage(previous.page ?? { cards: [], complete: true });
-        setLoading(!!previous.stale);
-      });
-      if (previous.screen === "search") {
-        if (previous.stale || searchMediaPending() || searchChannelsPending())
-          updateSearch(search(), true);
-        return;
-      }
-      if (!previous.stale) return;
-      retry = () => void restorePrevious(previous);
-      try {
-        if (previous.screen === "home") {
-          const rows = home()?.rows ?? [];
-          const nextRow = Math.max(
-            0,
-            rows.findIndex((row) => row.id === previous.rowId),
-          );
-          setRow(nextRow);
-          if (previous.zone === "rows")
-            setColumn(
-              focusIndex(
-                rows[nextRow]?.cards ?? [],
-                previous.focusKey,
-                previous.column,
-              ),
-            );
-        } else if (previous.screen === "detail" && previous.selected) {
-          let [value, intent] = await Promise.all([
-            api.detail(previous.selected, "0", signal),
-            api.titleAction(previous.selected, false, signal),
-          ]);
-          const index = previous.seasonIndex < value.seasons.length ? previous.seasonIndex : initialSeasonIndex(value, previous.selected, intent);
-          const season = value.seasons[index];
-          if (season && season.offset !== 0 && !value.episodes.some(card => card.identity.episode?.season === season.season))
-            value = await api.detail(previous.selected, String(season.offset), signal);
-          if (signal.aborted) return;
-          batch(() => {
-            setDetail(value);
-            setDetailAction(intent);
-            setSeasonIndex(index);
-            if (
-              previous.zone === "episodes" ||
-              previous.zone === "recommendations"
-            )
-              setColumn(
-                focusIndex(
-                  previous.zone === "recommendations" || !(value.seasons.length || value.episodes.length)
-                    ? value.recommendations
-                    : seasonEpisodes(value, index),
-                  previous.focusKey,
-                  previous.column,
-                ),
-              );
-          });
-        } else if (previous.screen === "live") {
-          await liveScene.loadFirstPage(signal);
-        } else if (["movie", "series", "anime", "library"].includes(previous.screen)) {
-          const value =
-            previous.screen === "library"
-              ? await loadLibrary("0", signal)
-              : await api.discover(browseQuery(), signal);
-          batch(() => {
-            setPage(value);
-            if (previous.zone === "content")
-              setColumn(
-                focusIndex(value.cards, previous.focusKey, previous.column),
-              );
-          });
-        }
-      } catch (error) {
-        fail(error);
-      } finally {
-        if (!signal.aborted) setLoading(false);
-      }
-    }
-    /**
-     * LIVE-EMPTY-001: the Live page's first request. A failure with no page in
-     * hand is the contract's failed form (**Could not load Live TV.** with its
-     * own recovery), not the app's generic overlay, because nothing on the page
-     * has proved a source is configured yet.
-     */
-    async function navigate(target: Screen) {
-      contentFocus.clear();
-      if (screen() === "player") await player.stop();
-      const signal = resetScope();
-      if (target === "settings") {
-        // Load the first settings group before the screen reports itself so a
-        // caller that waits for the screen sees ready content, not an empty
-        // column that swallows the first confirm.
-        setLoading(true);
-        setZone("settings-nav");
-        setColumn(0);
-        setRow(0);
-        try {
-          await loadSettings(2, signal);
-        } catch (e) {
-          fail(e);
-        }
-        setScreen(target);
-        setLoading(false);
-        return;
-      }
-      setScreen(target);
-      if (["movie", "series", "anime", "calendar", "library", "search", "live"].includes(target))
-        setPage({ cards: [], complete: true });
-      if (target === "live") {
-        adoptChannelWindow([]);
-        setPrograms({});
-        setGuideInfo({});
-      }
-      setColumn(0);
-      setRow(0);
-      setZone(
-        target === "home" ? "hero" : target === "profiles" ? "profiles" : "content",
-      );
-      setHeroAction(0);
-      retry = () => void navigate(target);
-      try {
-        if (target === "home") {
-          if (!home()) setLoading(true);
-          setHome(stremioHome(await api.home(signal)));
-        } else if (target === "profiles") {
-          setManagement(await api.profiles(signal));
-        } else if (target === "movie" || target === "series" || target === "anime") {
-          setLoading(true);
-          setPage({ cards: [], complete: true });
-          const anime = STREMIO_ONLY && target === "anime";
-          const requestType = anime ? "series" : target;
-          const result = await api.controls(requestType, signal);
-          setControls(result);
-          const catalogs = STREMIO_ONLY
-            ? result.catalogs.filter((catalog) => catalog.addon_id != null)
-            : result.catalogs;
-          const first = catalogs[0] ?? result.catalogs[0];
-          setCatalog(first);
-          setFilters(anime ? { genre: ["Animation"] } : {});
-          setPage(
-            await api.discover(
-              {
-                type: requestType,
-                ...(first
-                  ? { catalog: first.id, addon_id: first.addon_id }
-                  : {}),
-                ...(anime ? { genre: "Animation" } : {}),
-              },
-              signal,
-            ),
-          );
-          setZone("filters");
-        } else if (target === "library") {
-          setLoading(true);
-          const firstLibrary = await loadLibrary("0", signal);
-          setPage(firstLibrary);
-          const sortControl = firstLibrary.controls?.find(
-            (control) => control.id === "sort",
-          );
-          const lastWatched = sortControl?.choices.find(
-            (choice) => choice.value === "last_watched",
-          );
-          if (lastWatched && firstLibrary.query?.sort !== "last_watched") {
-            setPage(
-              await loadLibrary("0", signal, {
-                ...firstLibrary.default_query,
-                sort: lastWatched.value,
-              }),
-            );
-          }
-          if (libraryControlCount()) setZone("library-controls");
-        } else if (target === "calendar") {
-          setLoading(true);
-          setCalendarDay(0);
-          setCalendarEntry(0);
-          setZone("calendar-days");
-          try {
-            setCalendar(await api.calendar(signal));
-          } finally {
-            setLoading(false);
-          }
-        } else if (target === "search") {
-          setPage({ cards: [], complete: true });
-          setZone("keyboard");
-          setKey(2);
-          if (search()) {
-            updateSearch(search());
-            return;
-          }
-        } else if (target === "live") {
-          await liveScene.loadFirstPage(signal);
-        }
-        setLoading(false);
-      } catch (e) {
-        fail(e);
-      }
-    }
-    async function openDetail(card: Card) {
-      remember();
-      const signal = resetScope();
-      setSelected(card);
-      setScreen("detail");
-      setZone("hero");
-      setHeroAction(0);
-      setLoading(true);
-      setDetail(undefined);
-      setDetailAction(undefined);
-      setSeasonIndex(0);
-      retry = () => void openDetail(card);
-      try {
-        let [value, intent] = await Promise.all([
-          api.detail(card, "0", signal),
-          api.titleAction(card, false, signal),
-        ]);
-        if (signal.aborted) return;
-        const index = initialSeasonIndex(value, card, intent);
-        const season = value.seasons[index];
-        if (season && season.offset !== 0 && !value.episodes.some(episode => episode.identity.episode?.season === season.season))
-          value = await api.detail(card, String(season.offset), signal);
-        if (signal.aborted) return;
-        batch(() => { setDetail(value);setDetailAction(intent);setSeasonIndex(index);setLoading(false); });
-      } catch (e) {
-        fail(e);
-      }
-    }
+    const navigationScene = createNavigationScene({
+      api, platform, screen, setScreen, zone, setZone, column, setColumn, row, setRow, setHeroAction,
+      loading, setLoading, home, setHome, page, setPage, setDetail, setSelected, setDetailAction, setSeasonIndex,
+      setControls, setCatalog, setFilters, setManagement, setCalendarDay, setCalendarEntry, setCalendar,
+      navs, resetScope: () => resetScope(), remember: () => remember(),
+      rememberHomeRow: () => rememberHomeRow(), contentFocus,
+      focusIndex: (cards, key, fallback) => focusIndex(cards as Card[], key, fallback),
+      browseQuery: () => browseQuery() as unknown as Record<string, unknown>,
+      loadLibraryFirst: async signal => {
+        const first = await loadLibrary("0", signal);
+        const sortControl = first.controls?.find(control => control.id === "sort");
+        const lastWatched = sortControl?.choices.find(choice => choice.value === "last_watched");
+        if (lastWatched && first.query?.sort !== "last_watched")
+          return await loadLibrary("0", signal, { ...first.default_query, sort: lastWatched.value });
+        return first;
+      },
+      libraryControlCount, search, updateSearch, searchMediaPending, searchChannelsPending,
+      liveScene: { loadFirstPage: signal => liveScene.loadFirstPage(signal) },
+      adoptChannelWindow: (pages, searching) => adoptChannelWindow(pages as never[], searching),
+      setPrograms: (value) => setPrograms(value as never), setGuideInfo: (value) => setGuideInfo(value as never),
+      loadSettings: (tab, signal) => loadSettings(tab, signal),
+      player: { stop: () => player.stop() }, signal: () => scope.signal,
+      fail: error => fail(error), retry: work => { retry = work; },
+    });
+    const history = navigationScene.history;
+    const invalidateHistory = navigationScene.invalidate;
+    const restorePrevious = navigationScene.restore;
+    const navigate = navigationScene.navigate;
+    const openDetail = navigationScene.openDetail;
     function closeOverlay(restoreFocus = true) {
       sourceIntent++;
       picker.operation.get()?.abort();
