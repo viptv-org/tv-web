@@ -53,9 +53,6 @@ import { skipLabel } from "./player/skip-intro";
 import { createPlayerChrome } from "./player-chrome";
 import { createPlaybackSegments } from "./player/segments";
 import { defineScreen, TvView } from "../runtime";
-import {
- exitWebos 
-} from "../webos";
 import { palette } from "./visuals";
 import {
   RemoteTvApi,
@@ -86,6 +83,7 @@ import { createSearchScene } from "./search-scene";
 import { createSourcePickerScene } from "./source-picker-scene";
 import { createSourcePlayScene } from "./source-play-scene";
 import { createNavigationScene } from "./navigation-scene";
+import { createBackScene } from "./back-scene";
 import { createPlayerScene } from "./player-scene";
 import { episodeKey } from "./episode-preparation";
 import type { EpisodePreparationState } from "./episode-preparation";
@@ -343,8 +341,6 @@ export function createRemoteTvApp(
       noticeTimer: ReturnType<typeof setTimeout> | undefined,
       controlsTimer: ReturnType<typeof setTimeout> | undefined;
     let retry: () => void = () => void start(),
-      returnScreen: Screen = "home",
-      returnFocus = { zone: "hero", column: 0, row: 0 },
       searchMediaFocus = 0,
       searchChannelFocus = 0,
       pageGeneration = 0;
@@ -952,44 +948,12 @@ export function createRemoteTvApp(
     const navigate = navigationScene.navigate;
     const openDetail = navigationScene.openDetail;
     function closeOverlay(restoreFocus = true) {
-      sourceIntent++;
+      sourcePlay.intents.next();
       picker.operation.get()?.abort();
       picker.operation.set(undefined);
       setSourceLoading(false);
       picker.setFiltering(false);
       overlays.close(restoreFocus);
-    }
-    function dismissOverlay() {
-      if (sourceActions()) { setSourceActions(false); return; }
-      if (sourceMenu()) { setSourceMenu(undefined); return; }
-      if (libraryApplying()) restartPaging();
-      if (!overlays.restoreParent()) closeOverlay();
-    }
-    async function leavePlayer() {
-      playerTransport.retire();
-      clearTimeout(controlsTimer);
-      resetScope();
-      setSeek(undefined);
-      setSeeking(false);
-      segments.clear();
-      setShowControls(false);
-      await player.stop();
-      const progressSettled = player.flushProgress();
-      setPlaybackError("");
-      batch(() => {
-        setLoading(false);
-        setScreen(returnScreen);
-        setZone(returnFocus.zone);
-        setColumn(returnFocus.column);
-        setRow(returnFocus.row);
-        setError("");
-      });
-      progressRefresh.afterPlayback(progressSettled);
-      if (
-        returnScreen === "search" &&
-        (searchMediaPending() || searchChannelsPending())
-      )
-        updateSearch(search(), true);
     }
     function confirmExit() {
       openOverlay({
@@ -1001,123 +965,11 @@ export function createRemoteTvApp(
         ],
       });
     }
-    async function back() {
-      playerNavigation.cancel();
-      rememberHomeRow();
-      rememberContentFocus();
-      rememberDetailFocus();
-      playerScene.next.bump();setAdvancing(false);
-      countdown.cancel();
-      if (error()) {
-        if (screen() === "welcome" && !startupAuthorityKnown) await start();
-        else setError("");
-        return;
-      }
-      if (overlay()?.kind === "next") { dismissNext();return; }
-      if (sourceLoading() && !overlay() || openingSource()) {
-        const cancelInPlace = screen() !== "player" && !openingSource();
-        sourceAttempt++;sourceIntent++;picker.operation.get()?.abort();setSourceLoading(false);setLoading(false);
-        if (player.cancelPendingStart()) {
-          setOpeningSource(undefined);
-          if (!player.leaseId && screen() === "player") {
-            closeOverlay(false);
-            await leavePlayer();
-          }
-          return;
-        }
-        if (cancelInPlace) return;
-      }
-      if (sourceActions()) {
-        setSourceActions(false);
-        return;
-      }
-      if (sourceMenu()) {
-        setSourceMenu(undefined);
-        return;
-      }
-      if (screen() === "signed-in") {
-        finishSignIn();
-        return;
-      }
-      // A stream the drawer is opening is cancelled the way it always was:
-      // Back leaves the player and returns to the page that asked for it.
-      if (openingSource()) {
-        setOpeningSource(undefined);
-        await leavePlayer();
-        return;
-      }
-      if (
-        !overlay() &&
-        (screen() === "welcome" || (screen() === "profiles" && !api.profile))
-      ) {
-        if (platform === "webos") exitWebos();
-        else if (platform === "tizen") confirmExit();
-        return;
-      }
-      if (overlay()) {
-        const current = overlay()!;
-        if (current.kind === "calibration") {
-          // Cancel restores the server-saved inset opened with the overlay.
-          applyScreenInset(current.value);
-          closeOverlay();
-          return;
-        }
-        dismissOverlay();
-        return;
-      }
-      if (screen() === "player") {
-        if (seeking()) {
-          if (showControls()) setShowControls(false);
-          return;
-        }
-        if (seek() !== undefined) {
-          setSeek(undefined);
-          setShowControls(false);
-          return;
-        }
-        if (showControls()) {
-          if (snapshot()?.state === "ended") playerScene.dismissedEnd.set(playerScene.endScope());
-          setShowControls(false);
-          return;
-        }
-        await leavePlayer();
-        return;
-      }
-      if (screen() === "pairing") {
-        resetScope();
-        setScreen("welcome");
-        return;
-      }
-      if (screen() === "settings") {
-        if (zone() !== "settings-nav") {
-          setZone("settings-nav");
-          return;
-        }
-        if (!history.length) {
-          await navigate("home");
-          return;
-        }
-      }
-      const previous = history.pop();
-      if (previous) {
-        await restorePrevious(previous);
-      } else if (platform === "tizen" && screen() === "home") {
-        confirmExit();
-      } else if (
-        zone() !== "nav" &&
-        !["welcome", "profiles"].includes(screen())
-      ) {
-        setZone("nav");
-        setColumn(
-          Math.max(
-            0,
-            navs().findIndex((n) => n.id === screen()),
-          ),
-        );
-      } else if (platform === "webos" && screen() === "profiles") exitWebos();
-      else if (platform === "webos" && screen() === "home")
-        await navigate("profiles");
-      else await navigate("home");
+    function dismissOverlay() {
+      if (sourceActions()) { setSourceActions(false); return; }
+      if (sourceMenu()) { setSourceMenu(undefined); return; }
+      if (libraryApplying()) restartPaging();
+      if (!overlays.restoreParent()) closeOverlay();
     }
     const pageRequestOwner = {generation: paging.generation, busy: paging.busy, setBusy: paging.setBusy,
       signal: pageSignal, cancelFocus: paging.cancelFocus, settleFocus: settlePendingFocus, fail};
@@ -1199,6 +1051,33 @@ export function createRemoteTvApp(
       deviceScope, deviceTitleKey, sourceChannel, signal: () => scope.signal,
     });
     const playIntent = sourcePlay.playIntent, playSource = sourcePlay.playSource;
+    const backScene = createBackScene({
+      platform, screen, zone, setZone, setColumn, history,
+      restorePrevious, navigate, navs, error, setError, loading, setLoading,
+      overlay: () => overlay(),
+      overlays: { close: focus => overlays.close(focus), restoreParent: () => overlays.restoreParent() },
+      picker, sourceLoading, sourceActions, setSourceActions, sourceMenu, setSourceMenu,
+      openingSource: () => openingSource(), setOpeningSource: value => setOpeningSource(value), sourcePlay,
+      libraryApplying, restartPaging: () => restartPaging(),
+      player: { stop: () => player.stop(), cancelPendingStart: () => player.cancelPendingStart(),
+        get leaseId() { return player.leaseId; }, flushProgress: () => player.flushProgress() },
+      transport: { retire: () => playerTransport.retire() },
+      playerScene, playerNavigation: { cancel: () => playerNavigation.cancel() },
+      segments: { clear: segments.clear },
+      seeking, setSeeking, seek, setSeek, showControls, setShowControls, snapshot,
+      countdown, setAdvancing, progressRefresh,
+      setPlaybackError, setScreen, setRow,
+      rememberHomeRow: () => rememberHomeRow(), rememberContentFocus: () => rememberContentFocus(),
+      rememberDetailFocus: () => rememberDetailFocus(),
+      search, updateSearch, searchMediaPending, searchChannelsPending,
+      closeOverlay: () => closeOverlay(), dismissOverlay: () => dismissOverlay(),
+      confirmExit: () => confirmExit(),
+      finishSignIn: () => finishSignIn(), start: () => start(),
+      startupAuthorityKnown: () => startupAuthorityKnown,
+      applyScreenInset: value => applyScreenInset(value),
+      resetScope: () => resetScope(), navIndex, hasProfile: () => !!api.profile,
+    });
+    const back = backScene.back, leavePlayer = backScene.leavePlayer;
     createEffect(() => {
       if (screen() !== "player" || ["paused", "ended", "error"].includes(snapshot()?.state ?? "")) setPauseRequested(false);
     });
