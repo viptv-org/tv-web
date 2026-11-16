@@ -4,7 +4,7 @@ import { runtimeObserver } from "../platform/runtime-observation";
 import { exitTizen } from "../platform/tizen-host";
 import { deviceTitleKey } from "./device-playback";
 import { AutoplayCountdown } from "./autoplay-countdown";
-import { batch, createEffect, createMemo, createSignal, onCleanup, onMount } from "solid-js";
+import { createEffect, createMemo, createSignal, onCleanup, onMount } from "solid-js";
 import { searchLetters } from "./SearchInput";
 import { reloadImages } from "./image-source";
 import { clearLogoCache, palette } from "./visuals";
@@ -22,14 +22,12 @@ import { availableNavigation } from "./navigation-model";
 
 import { KeyboardView } from "./KeyboardView";
 import { presentationKey } from "./presentation-card";
-import { STREMIO_ONLY, stremioHome } from "./stremio-home";
+import { STREMIO_ONLY } from "./stremio-home";
 import {
   channelKey,
   edgeRequest,
 } from "./channelWindow";
 import { createKeyboardInput } from "./input/keyboard";
-import { createTextInput, type TvTextInputEvent } from "./input/text";
-import { createNativeTextEditing, nativeTextDialogOverlay, type NativeTextPort, type NativeTextTarget } from "./input/native-text";
 import { createPlayerMediaKeys } from "./input/player-media";
 import { installWindowInputs } from "./input/window-bindings";
 import { createTrackPicker } from "./player/tracks";
@@ -74,6 +72,11 @@ import { RootScreen } from "./render/root";
 import { createTvState } from "./state";
 import { createAppEffects } from "./app-effects";
 import { createShell } from "./shell";
+import { createRevisionApply } from "./revision-apply";
+import { createTextEntry } from "./text-entry";
+import { createProfileEntry } from "./profile-entry";
+import { createListLifecycle } from "./list-lifecycle";
+import { installPerfDebug } from "./perf-debug";
 import { createPlayerScene } from "./player-scene";
 import { episodeKey } from "./episode-preparation";
 import { createPagingScene } from "./paging-scene";
@@ -104,7 +107,6 @@ import {
   type LibraryPage,
   type LivePage,
   type Management,
-  type Page,
   type Preferences,
 } from "./types";
 
@@ -384,51 +386,11 @@ export function createRemoteTvApp(
     });
     // The scene is created below; the progress refresh only calls this later.
     const refreshDetail = (...args: Parameters<typeof detailScene.refresh>) => detailScene.refresh(...args);
-    async function applyRevision(fresh: Bootstrap, signal: AbortSignal, profile: string, commit: () => void) {
-        const focusedNav =
-          zone() === "nav" ? navs()[column()]?.id : undefined;
-        setNavigation(fresh.navigation);
-        if (
-          ["movie", "series", "anime", "search", "live", "calendar", "library"].includes(
-            screen(),
-          ) &&
-          !navs().some((item) => item.id === screen())
-        ) {
-          resetScope();
-          applyBootstrap(fresh);
-          return;
-        }
-        if (focusedNav)
-          setColumn(
-            navIndex(
-              navs().some((item) => item.id === focusedNav)
-                ? focusedNav
-                : "home",
-            ),
-          );
-        restartPaging();
-        invalidateHistory();
-        setManagement(fresh.profile_management);
-        setPreferences(fresh.preferences ?? undefined);
-        replaceHome(stremioHome(fresh.home ?? undefined));
-        setSaved(new Map());
-        const view = screen();
-        if (view === "library") replacePage(await loadLibrary("0", signal));
-        else if (view === "movie" || view === "series" || view === "anime")
-          replacePage(await api.discover(browseQuery(), signal));
-        else if (view === "search" && search()) updateSearch(search(), true);
-        else if (view === "detail" && selected()) {
-          await refreshDetail(signal, profile, commit);
-          return;
-        } else if (view === "settings")
-          await loadSettings(settingsTab(), signal);
-        else if (view === "live") {
-          await liveScene.refresh(signal, commit);
-          return;
-        }
-        // Commit only after the dependent feature reads succeeded, before yielding.
-        commit();
-    }
+    // Created near the end of the closure, where the things a revision
+    // re-requests all exist; the shell only holds a reference to it.
+    let revisionApply: ReturnType<typeof createRevisionApply> | undefined;
+    const applyRevision = (fresh: Bootstrap, signal: AbortSignal, profile: string, commit: () => void) =>
+      revisionApply!.applyRevision(fresh, signal, profile, commit);
     const focusedCard = createMemo(() => {
       if (screen() === "search" && zone() === "search-channels")
         return searchChannels()[column()]?.card;
@@ -553,77 +515,21 @@ export function createRemoteTvApp(
       });
       if (history.length > 12) history.shift();
     }
-    function focusIndex(
-      cards: Card[],
-      key: string | undefined,
-      fallback: number,
-    ) {
-      const index =
-        key === undefined
-          ? -1
-          : cards.findIndex((card) => cardKey(card) === key);
-      return index >= 0
-        ? index
-        : Math.max(0, Math.min(fallback, cards.length - 1));
-    }
-    function replacePage(value: Page) {
-      rememberContentFocus();
-      const previousColumn = screen() === "search" ? column() : contentColumn();
-      const focused = page().cards[previousColumn];
-      const index = focusIndex(
-        value.cards,
-        focused ? cardKey(focused) : undefined,
-        previousColumn,
-      );
-      batch(() => {
-        setPage(value);
-        contentFocus.remember(contentRow(), index);
-        if (zone() === "content") setColumn(index);
-      });
-      const modal = overlay();
-      if (modal?.kind === "tracks") setChoice(Math.max(0,modal.columns[0]?.items.findIndex(item=>item.value==="✓") ?? 0));
-    }
-    async function loadLibrary(
-      cursor = "0",
-      signal = scopeSignal(),
-      values = library()?.query ?? {},
-    ) {
-      const value = await api.library(cursor, signal, values);
-      setLibrary(value);
-      return value;
-    }
+    const list = createListLifecycle({
+      api, screen, zone, column, row, setColumn, setRow, page, setPage, home, setHome, library, setLibrary,
+      overlay: () => overlay(), setChoice, cardKey, rememberContentFocus: () => rememberContentFocus(),
+      rememberHomeRow: () => rememberHomeRow(), contentRow, contentFocus: contentFocus as never,
+      previewCard, setPreviewCard: value => setPreviewCard(value),
+      presentationKey, clampCycle,
+      scopeSignal: () => scopeSignal(), restartPaging: () => restartPaging(),
+    });
+    const focusIndex = list.focusIndex, replacePage = list.replacePage, loadLibrary = list.loadLibrary,
+      replaceHome = list.replaceHome;
     const {type: libraryType, sort: librarySort, filters: libraryFilters, defaults: libraryDefaultQuery,
       count: libraryControlCount, applying: libraryApplying, apply: applyLibrary, choose: chooseLibrary} = createLibraryControls({
         current: library, selection: {current: choice, set: setChoice}, dialogs: {open: openOverlay, close: closeOverlay},
         apply: async values => { const value = await loadLibrary("0", restartPaging(), values); replacePage(value); },
       });
-    function replaceHome(value: Home | undefined) {
-      rememberHomeRow();
-      const shelf = home()?.rows[row()],
-        focused = shelf?.cards[column()];
-      const nextRow = Math.max(
-        0,
-        value?.rows.findIndex((row) => row.id === shelf?.id) ?? 0,
-      );
-      const nextColumn = focusIndex(
-        value?.rows[nextRow]?.cards ?? [],
-        focused ? cardKey(focused) : undefined,
-        column(),
-      );
-      batch(() => {
-        setHome(value);
-        const nextFocused = value?.rows[nextRow]?.cards[nextColumn];
-        if (zone() !== "rows" || !nextFocused || !previewCard() || presentationKey(previewCard()!) !== presentationKey(nextFocused))
-          setPreviewCard(undefined);
-        clampCycle();
-        if (screen() === "home" && zone() === "rows") {
-          setRow(nextRow);
-          setColumn(nextColumn);
-        }
-      });
-      const modal = overlay();
-      if (modal?.kind === "tracks") setChoice(Math.max(0,modal.columns[0]?.items.findIndex(item=>item.value==="✓") ?? 0));
-    }
     const navigationScene = createNavigationScene({
       api, platform, screen, setScreen, zone, setZone, column, setColumn, row, setRow, setHeroAction,
       loading, setLoading, home, setHome, page, setPage, setDetail, setSelected, setDetailAction, setSeasonIndex,
@@ -707,40 +613,15 @@ export function createRemoteTvApp(
       if (screen() === "detail") { await detailPager(); return; }
       await catalogPager();
     }
-    const {query: browseQuery, activate: activateCatalog} = createCatalogControls({screen, stremioOnly: STREMIO_ONLY, catalog, controls, selectCatalog: setCatalog, prompt: edit,
+    const {query: browseQuery, activate: activateCatalog} = createCatalogControls({screen, stremioOnly: STREMIO_ONLY, catalog, controls, selectCatalog: setCatalog,
+      prompt: (title, submit, initial, secret) => edit(title, submit, initial, secret),
       filters: {current: filters, set: setFilters}, page: setPage, loading: setLoading, column: setColumn, restart: restartPaging,
       discover: (values, signal) => api.discover(values, signal), dialogs: {open: openOverlay, close: closeOverlay}});
-    if (new URLSearchParams(location.search).has("perfdebug")) {
-      const target = window as Window & {
-        __viptvRemoteMetrics?: () => Record<string, number>;
-      };
-      target.__viptvRemoteMetrics = () => ({
-        guideSnapshots: Object.keys(programs()).length,
-        guideRequestsInFlight: liveScene.guides.inFlight(),
-        catalogCards: page().cards.length,
-        // The payload metrics measure the bounded retained render window,
-        // not the accumulated focus list, which legitimately spans every
-        // traversed channel.
-        livePayloadPages: livePages().length,
-        livePayloadChannels: livePages().reduce(
-          (sum, page) => sum + page.channels.length,
-          0,
-        ),
-        searchPayloadPages: searchChannelPages().length,
-        searchPayloadChannels: searchChannelPages().reduce(
-          (sum, page) => sum + page.channels.length,
-          0,
-        ),
-        homeCards: (home()?.rows ?? []).reduce(
-          (sum, row) => sum + row.cards.length,
-          0,
-        ),
-        historyEntries: history.length,
+    if (new URLSearchParams(location.search).has("perfdebug"))
+      installPerfDebug({
+        programs, guideRequestsInFlight: () => liveScene.guides.inFlight(), page, livePages,
+        searchChannelPages, home, historyEntries: history.length,
       });
-      onCleanup(() => {
-        delete target.__viptvRemoteMetrics;
-      });
-    }
     const sourcePlay = createSourcePlayScene({
       api, picker, player, playerScene, transport: playerTransport,
       segments: { clear: segments.clear, refresh: refreshPlaybackSegments },
@@ -805,24 +686,6 @@ export function createRemoteTvApp(
         notify(receipt.saved ? "Added to My List" : "Removed from My List");
       });
     }
-    function edit(
-      title: string,
-      submit: (value: string) => Promise<void>,
-      initial = "",
-      secret = false,
-    ) {
-      openOverlay(
-        {
-          kind: "text",
-          title,
-          initial,
-          secret,
-          numeric: secret && title.endsWith("PIN"),
-          submit,
-        },
-        true,
-      );
-    }
     /**
      * LIVE-EMPTY-001 reads the account identity only when its empty or failed
      * form appears, so a working Live page never pays for it. Until it answers
@@ -840,6 +703,17 @@ export function createRemoteTvApp(
         setLiveIdentity(value);
       });
     });
+    const profileEntry = createProfileEntry({
+      api, call, signal: () => scopeSignal(), management, available, run, refreshProfiles: () => refreshProfiles(),
+      closeOverlay: () => closeOverlay(), openOverlay: value => openOverlay(value),
+      clear: {
+        stopPlayer: () => player.stop(), resetScope: () => resetScope(), history,
+        setHome: value => setHome(value), setPage: value => setPage(value), setDetail: value => setDetail(value),
+        setPrograms: value => setPrograms(value),
+      },
+      applyBootstrap: value => applyBootstrap(value as never),
+    });
+    const edit = profileEntry.edit, selectProfile = profileEntry.selectProfile;
     const settings = createSettingsScene({
       api, call, run, fail, retry: work => { retry = work; }, dialogs: { open: openOverlay, close: closeOverlay, dismiss: dismissOverlay },
       prompt: edit, notify, screen, setScreen, loading: setLoading,
@@ -859,45 +733,6 @@ export function createRemoteTvApp(
     const manageProfile = settings.manageProfile;
     const navigateSettings = settings.navigate;
     const settingsAbort = settings.abort;
-    async function selectProfile(index: number) {
-      const profile = management()?.profiles[index];
-      if (!profile) {
-        if (!available(management()?.capabilities.create)) {
-          await run(refreshProfiles);
-          return;
-        }
-        edit("Profile name", async (name) => {
-          await call("/api/profiles", "POST", { name });
-          await refreshProfiles();
-          closeOverlay();
-        });
-        return;
-      }
-      if (profile.selection_requires_parent) {
-        edit(
-          "Parent PIN",
-          async (pin) => {
-            await call("/api/parent/unlock", "POST", { pin });
-            await refreshProfiles();
-            closeOverlay();
-            await selectProfile(index);
-          },
-          "",
-          true,
-        );
-        return;
-      }
-      await run(async () => {
-        await player.stop();
-        resetScope();
-        history.length = 0;
-        setHome(undefined);
-        setPage({ cards: [], complete: true });
-        setDetail(undefined);
-        setPrograms({});
-        applyBootstrap(await api.selectProfile(profile.id, scopeSignal()));
-      });
-    }
     const navigationFocus = { zone, column, setZone, setColumn };
     const navigateProfiles = createProfilesNavigation({ focus: navigationFocus,
       count: () => management()?.profiles.length ?? 0, canCreate: () => available(management()?.capabilities.create), canManage: canManageProfiles });
@@ -1007,8 +842,8 @@ export function createRemoteTvApp(
       activateCatalog: index => activateCatalog(index),
       keyboardActivate: overlay => keyboardActivate(overlay),
       nativeTextTarget: () => nativeTextTarget() as unknown,
-      nativeTextPort: () => nativeTextPort,
-      nativeTextEditing: () => nativeTextEditing ? { open: (target: unknown) => nativeTextEditing!.open(target as never) } : undefined,
+      nativeTextPort: () => textEntry.editing ? (globalThis as { __viptvNativeTextEntry?: { ownsInput: () => boolean } }).__viptvNativeTextEntry : undefined,
+      nativeTextEditing: () => textEntry.editing ? { open: (target: unknown) => textEntry.editing!.open(target as never) } : undefined,
       chrome,
     });
     const activate = activateScene.activate;
@@ -1055,28 +890,13 @@ export function createRemoteTvApp(
         saver: screenSaver(), liveSpread: String(state === "live" ? liveSpread() : ""),
       };
     }));
-    const applyTextInput = createTextInput({screen, overlay, zone, text: setText, query: search, search: updateSearch,
-      done: () => completeTextInput(overlay()?.kind === "text")});
-    function textInput(event: TvTextInputEvent) {
-      if (handleIdleInput()) { event.preventDefault(); return; }
-      applyTextInput(event);
-    }
-    const nativeTextPort = (globalThis as {__viptvNativeTextEntry?: NativeTextPort}).__viptvNativeTextEntry;
-    const nativeTextEditing = nativeTextPort && createNativeTextEditing(nativeTextPort);
-    function nativeTextTarget(): NativeTextTarget | undefined {
-      const modal = nativeTextDialogOverlay(overlay());
-      if (screenSaver() || overlayClosing() || !modal) return;
-      const epoch = api.scopeEpoch;
-      const current = () => !screenSaver() && !overlayClosing() && overlay() === modal && api.scopeEpoch === epoch;
-      return {key: modal, title: modal.title, value: text(), numeric: modal.numeric, secret: modal.secret,
-        maximumLength: modal.numeric ? 8 : 2048, confirm: "Done",
-        write: value => {if (current()) textInput({inputType: "insertReplacementText", data: value, preventDefault() {}});},
-        done: () => {if (current()) completeTextInput(true);},
-        cancel: () => {if (current()) dismissOverlay();},
-        failed: () => {if (current()) notify("Native keyboard unavailable. Use the on-screen keys.");}};
-    }
-    createEffect(() => nativeTextEditing?.sync(nativeTextTarget()));
-    onCleanup(() => nativeTextEditing?.dispose());
+    const textEntry = createTextEntry({
+      api, screen, overlay: () => overlay(), overlayClosing, screenSaver, zone,
+      text, setText: value => setText(value), search, updateSearch,
+      complete: isOverlay => completeTextInput(isOverlay), dismissOverlay: () => dismissOverlay(),
+      handleIdleInput: () => handleIdleInput(), notify: message => notify(message),
+    });
+    const textInput = textEntry.textInput, nativeTextTarget = textEntry.nativeTarget;
     let inputRequested = false;
     createEffect(() => {
       if (inputRequested) return;
@@ -1118,6 +938,19 @@ export function createRemoteTvApp(
       preferences, snapshot, captionOverride, replaceHome: value => replaceHome(value), fail: error => fail(error),
       progressFreshness, progressRefresh, refreshDetail, player, cardKey,
       start: () => start(), autoStart: options.autoStart !== false,
+    });
+    revisionApply = createRevisionApply({
+      api, screen, zone, column, setColumn, navs, navIndex, setNavigation, selected, search, updateSearch,
+      resetScope: () => resetScope(), applyBootstrap: value => applyBootstrap(value),
+      restartPaging: () => restartPaging(), invalidateHistory, setManagement,
+      setPreferences: value => setPreferences(value ?? undefined),
+      setSaved: value => setSaved(value), replaceHome: value => replaceHome(value ?? undefined),
+      replacePage: value => replacePage(value), browseQuery: () => browseQuery(),
+      loadLibrary: (cursor, signal) => loadLibrary(cursor, signal),
+      loadSettings: (tab, signal) => loadSettings(tab, signal), settingsTab,
+      refreshDetail: (signal, profile, cb) => refreshDetail(signal, profile, cb, () => true),
+      refreshLive: (signal, cb) => liveScene.refresh(signal, cb),
+      fail: error => fail(error),
     });
     const Root = defineScreen({
       input: createRootInput({
