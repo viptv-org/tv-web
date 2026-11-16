@@ -2,7 +2,7 @@
 
 `src/tv-solid/remote/App.tsx` is the TV application: one `createRemoteTvApp`
 closure that owns every signal and returns the root screen. It started this work
-at **3579 lines** and is **3085** now, with the render tree split into three
+at **3579 lines** and is **3010** now, with the render tree split into three
 screen components and six behaviour modules. This note records what has been extracted, and the exact next
 slices so the remainder can be done mechanically instead of by feel.
 
@@ -26,9 +26,10 @@ slices so the remainder can be done mechanically instead of by feel.
 | `remote/render/player.tsx` | 59 | the skip offer, the busy surface and the control row |
 | `remote/render/overlays.tsx` | 190 | the drawer, preparation, error card, toast and idle saver |
 | `remote/hero-scene.ts` | 171 | the featured card, the carousel, the shelf preview and the billboard pass |
+| `remote/player-chrome.ts` | 104 | the control row's buttons, their two layout groups, the selection clamp and the auto-hide clock |
 | `remote/live/program-line.ts` | 20 | a guide slot that never prints an out-of-range minute count |
 
-`App.tsx` is **3085 lines** after those. Each extraction is a factory that takes
+`App.tsx` is **3010 lines** after those. Each extraction is a factory that takes
 an explicit dependency object; nothing reaches back into the closure.
 
 ## Why this is not one big diff
@@ -113,7 +114,7 @@ to reason about:
 
 ## What is left, with sizes
 
-`App.tsx` is 3085 lines; the remaining slices, in dependency order, are roughly:
+`App.tsx` is 3010 lines; the remaining slices, in dependency order, are roughly:
 
 | Slice | Lines | Notes |
 | --- | --- | --- |
