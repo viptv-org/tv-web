@@ -25,11 +25,8 @@ import { initialSeasonIndex, seasonEpisodes } from "./seasons";
 import { RowFocus } from "./row-focus";
 
 import { SettingsView } from "./SettingsView";
-import { searchRowFocus } from "./search/media";
-import type { SearchPage } from "./types";
 import { whenIdle } from "./idle";
 import { createProgressFreshness } from "./progress-freshness";
-import { createSearchController, type SearchRequests } from "./search/controller";
 import { createPairingFlow } from "./session/pairing";
 import { createRevisionPoller } from "./session/revisions";
 import { createLiveMenu } from "./menus/live";
@@ -98,6 +95,7 @@ import { createTextKeyboard } from "./text-keyboard";
 import { createHeldSelect } from "./held-select";
 import { createLibraryControls } from "./library/controls";
 import { createChannelRefresh } from "./paging/channel-refresh";
+import { createSearchScene } from "./search-scene";
 import { createPagingScene } from "./paging-scene";
 import { createChannelPager } from "./paging/channel-pages";
 import { createChannelMovement } from "./paging/channel-movement";
@@ -124,7 +122,6 @@ import {
   type Bootstrap,
   type Card,
   type Catalog,
-  type Channel,
   type Controls,
   type Detail,
   type Home,
@@ -246,19 +243,7 @@ export function createRemoteTvApp(
     const setLivePages = liveScene.setPages, setChannels = liveScene.setChannels, setGroups = liveScene.setGroups,
       setPrograms = liveScene.setPrograms, setGuideInfo = liveScene.setGuideInfo, setLiveGroup = liveScene.setGroup,
       setLiveIdentity = liveScene.setIdentity, setProgramIndex = liveScene.setProgramIndex;
-    const [search, setSearch] = createSignal(""),
-      [searchResults, setSearchResults] = createSignal<SearchPage>({rows: [], complete: true}),
-      [searchRowIndex, setSearchRowIndex] = createSignal(0),
-      [searchError, setSearchError] = createSignal(""),
-      [searchChannelError, setSearchChannelError] = createSignal(""),
-      [searchMediaPending, setSearchMediaPending] = createSignal(false),
-      [searchChannelsPending, setSearchChannelsPending] = createSignal(false),
-      [searchChannelPaging, setSearchChannelPaging] = createSignal(false),
-      [searchChannels, setSearchChannels] = createSignal<Channel[]>([]),
-      [searchChannelPages, setSearchChannelPages] = createSignal<LivePage[]>(
-        [],
-      ),
-      [pairing, setPairing] = createSignal<Pairing>(),
+    const [pairing, setPairing] = createSignal<Pairing>(),
       [pairingDeadline, setPairingDeadline] = createSignal(0),
       [pairingFocused, setPairingFocused] = createSignal(false),
       [signedIn, setSignedIn] = createSignal<Bootstrap>(),
@@ -406,7 +391,6 @@ export function createRemoteTvApp(
       alive = true,
       noticeTimer: ReturnType<typeof setTimeout> | undefined,
       controlsTimer: ReturnType<typeof setTimeout> | undefined;
-    const searchRequests: SearchRequests = {};
     let retry: () => void = () => void start(),
       returnScreen: Screen = "home",
       returnFocus = { zone: "hero", column: 0, row: 0 },
@@ -697,7 +681,7 @@ export function createRemoteTvApp(
       setCanManageAccount(undefined);
       overlays.retireAnimations();
       scope.abort();
-      searchRequests.scope?.abort();
+      searchScene.requests.scope?.abort();
       setSearchChannelPaging(false);
       setSearchError("");
       settingsAbort();
@@ -713,7 +697,7 @@ export function createRemoteTvApp(
       heldSelect.cancel();
       sourceFilterGeneration++;
       pageGeneration++;
-      clearTimeout(searchRequests.timer);
+      clearTimeout(searchScene.requests.timer);
       return scope.signal;
     }
     function clearProfileView() {
@@ -973,47 +957,23 @@ export function createRemoteTvApp(
     }
     const detailRow = detailScene.row, detailColumn = detailScene.column,
       rememberDetailFocus = detailScene.rememberFocus, detailFocus = detailScene.focus;
-    const searchRowPositions = new RowFocus<Card>(cardKey);
-    const activeSearchRow = () => searchResults().rows[searchRowIndex()];
-    function rememberSearchRow(index: number) {
-      searchMediaFocus = index;
-      const shelf = activeSearchRow();
-      if (shelf) searchRowPositions.remember(shelf, index);
-    }
-    function clearSearchRows() {
-      setSearchResults({rows: [], complete: true});
-      setSearchRowIndex(0);
-      searchRowPositions.clear();
-    }
-    function replaceSearchRows(value: SearchPage) {
-      const previous = activeSearchRow();
-      const focused = zone() === "content" ? column() : searchMediaFocus;
-      const next = searchRowFocus(value.rows, previous, focused);
-      batch(() => {
-        searchRowPositions.retain(value.rows);
-        setSearchResults(value);
-        setSearchRowIndex(next.row);
-        rememberSearchRow(next.column);
-        replacePage({cards: value.rows[next.row]?.cards ?? [], complete: value.complete,
-          next_cursor: value.rows[next.row]?.next_cursor});
-        if (zone() === "content") setColumn(next.column);
-      });
-    }
-    function moveSearchRow(step: number) {
-      const next = searchRowIndex() + step;
-      if (next < 0 || next >= searchResults().rows.length) return false;
-      rememberSearchRow(zone() === "content" ? column() : searchMediaFocus);
-      const shelf = searchResults().rows[next];
-      const index = Math.max(0, Math.min(searchRowPositions.resolve(shelf), shelf.cards.length - 1));
-      batch(() => {
-        setSearchRowIndex(next);
-        setPage({cards: shelf.cards, complete: searchResults().complete, next_cursor: shelf.next_cursor});
-        rememberSearchRow(index);
-        setColumn(index);
-        setZone(!shelf.cards.length && (shelf.message || shelf.state === "Failed") ? "search-retry" : "content");
-      });
-      return true;
-    }
+    const searchScene = createSearchScene({
+      api, parent: () => scope, screen, zone, column, setZone, setColumn, capabilities: searchCapabilities,
+      page, setPage, setError, restartPaging, setLoading, retry: work => { retry = work; }, fail,
+      mediaFocus: { current: () => searchMediaFocus, set: value => { searchMediaFocus = value; } },
+      channelFocus: { current: () => searchChannelFocus, set: value => { searchChannelFocus = value; } },
+      refreshChannelPage: (searching, signal) => refreshChannelPage(searching, signal as AbortSignal),
+      adoptChannelWindow: (pages, searching) => adoptChannelWindow(pages, searching),
+    });
+    const { query: search, setQuery: setSearch, results: searchResults, rowIndex: searchRowIndex,
+      error: searchError, channelError: searchChannelError, mediaPending: searchMediaPending,
+      channelsPending: searchChannelsPending, channelPaging: searchChannelPaging, channels: searchChannels,
+      channelPages: searchChannelPages, activeRow: activeSearchRow, needsRetry: searchNeedsRetry,
+      rememberRow: rememberSearchRow, clearRows: clearSearchRows,
+      moveRow: moveSearchRow, positions: searchRowPositions, signal: searchSignal, update: updateSearch,
+      setChannels: setSearchChannels, setChannelPages: setSearchChannelPages,
+      setChannelPaging: setSearchChannelPaging, setError: setSearchError, setChannelError: setSearchChannelError,
+      setMediaPending: setSearchMediaPending, setChannelsPending: setSearchChannelsPending } = searchScene;
     const gridColumns = () => (screen() === "search" ? 5 : 7);
     const gridStart = () => {
       const index =
@@ -1037,11 +997,6 @@ export function createRemoteTvApp(
     // under the 236px page offset. The container clips the row above.
     const gridOffset = () =>
       screen() !== "search" && contentColumn() >= gridColumns() ? 26 : 0;
-    const searchNeedsRetry = () =>
-      searchCapabilities().media &&
-      !!search() &&
-      !searchMediaPending() &&
-      (!!searchError() || activeSearchRow()?.state === "Failed" || !!activeSearchRow()?.message);
     const heroScene = createHeroScene({
       home, detail, screen, zone, row, column, screenSaver,
       overlayVisible: () => !!overlay(), pending, loading, error,
@@ -1625,13 +1580,6 @@ export function createRemoteTvApp(
         delete target.__viptvRemoteMetrics;
       });
     }
-    const {signal: searchSignal, update: updateSearch} = createSearchController({requests: searchRequests, parent: () => scope, screen,
-      focus: {zone, column, setZone, setColumn}, query: {current: search, set: setSearch}, capabilities: searchCapabilities,
-      media: {page, set: setPage, error: setSearchError, pending: {current: searchMediaPending, set: setSearchMediaPending}, remember: index => {searchMediaFocus = index;}},
-      channels: {current: searchChannels, set: setSearchChannels, pages: setSearchChannelPages, error: setSearchChannelError, paging: setSearchChannelPaging,
-        pending: {current: searchChannelsPending, set: setSearchChannelsPending}, remembered: () => searchChannelFocus, remember: index => {searchChannelFocus = index;},
-        read: signal => refreshChannelPage(true, signal), adopt: page => adoptChannelWindow([page], true)},
-      search: (value, signal) => api.search(value, signal), rows: {clear: clearSearchRows, replace: replaceSearchRows}, restart: restartPaging, loading: setLoading, error: setError, retry: work => {retry = work;}, fail});
     const {reconcile: reconcileSources, focusBest: focusBestMatch} = createSourceRows({rows: sources, adopt: setSources,
       visible: visibleSources, focused: focusedSource, manual: () => manualSourceSelection, selection: {current: choice, set: setChoice}});
     const publishSources = createSourcePublisher({api, owns: operation => sourceScope === operation,
@@ -1706,8 +1654,8 @@ export function createRemoteTvApp(
       }
       sourceScope?.abort();
       if (screen() === "search") {
-        searchRequests.scope?.abort();
-        clearTimeout(searchRequests.timer);
+        searchScene.requests.scope?.abort();
+        clearTimeout(searchScene.requests.timer);
       }
       setScreen("player");
       setError("");
@@ -2512,7 +2460,7 @@ export function createRemoteTvApp(
       sourceScope?.abort();
       revisions.stop();
       clearTimeout(noticeTimer);
-      clearTimeout(searchRequests.timer);
+      clearTimeout(searchScene.requests.timer);
       clearTimeout(controlsTimer);
       void player.dispose();
     });
