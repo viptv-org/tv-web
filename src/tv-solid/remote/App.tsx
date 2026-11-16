@@ -1,9 +1,9 @@
 /** @jsxImportSource @solidtv/solid */
-import type { Screen, Overlay } from "./app-types";
+import type { Overlay } from "./app-types";
 import { runtimeObserver } from "../platform/runtime-observation";
 import { exitTizen } from "../platform/tizen-host";
 import { DevicePlayback, deviceProfileKey, deviceTitleKey } from "./device-playback";
-import { AutoplayCountdown, type CountdownState } from "./autoplay-countdown";
+import { AutoplayCountdown } from "./autoplay-countdown";
 import { Show, batch, createEffect, createMemo, createSignal, onCleanup, onMount } from "solid-js";
 import { searchLetters } from "./SearchInput";
 import { reloadImages } from "./image-source";
@@ -87,9 +87,9 @@ import { publishTestSurface } from "./debug-surface";
 import { createMenuScene } from "./menu-scene";
 import { createActivateScene } from "./activate-scene";
 import { createKeyboardScene, createMoveScene } from "./input-scene";
+import { createTvState } from "./state";
 import { createPlayerScene } from "./player-scene";
 import { episodeKey } from "./episode-preparation";
-import type { EpisodePreparationState } from "./episode-preparation";
 import { createPagingScene } from "./paging-scene";
 import { createChannelPager } from "./paging/channel-pages";
 import { createChannelMovement } from "./paging/channel-movement";
@@ -114,19 +114,13 @@ import {
   cardKey,
   type Bootstrap,
   type Card,
-  type Catalog,
-  type Controls,
   type Home,
   type LibraryPage,
   type LivePage,
   type Management,
   type Page,
-  type Pairing,
   type Preferences,
-  type Source,
-  type TitleAction,
 } from "./types";
-import type { PlayerSnapshot } from "../../../vendor/video/src/types";
 
 const available = (value?: { availability: string }) =>
   value?.availability === "Available";
@@ -139,10 +133,24 @@ export function createRemoteTvApp(
   options: { autoStart?: boolean; initialLoading?: boolean } = {},
 ) {
   return () => {
+    const tv = createTvState({ initialLoading: options.initialLoading });
+    const {
+      loading, setLoading, error, setError, playbackError, setPlaybackError, pending, setPending,
+      screen, setScreen, zone, setZone, column, setColumn, row, setRow, heroAction, setHeroAction, choice, setChoice,
+      page, setPage, controls, setControls, catalog, setCatalog, filters, setFilters, selected, setSelected,
+      pairing, setPairing, pairingDeadline, setPairingDeadline, pairingFocused, setPairingFocused,
+      signedIn, setSignedIn, qr, setQr, accountEmail, setAccountEmail, canManageAccount, setCanManageAccount,
+      snapshot, setSnapshot, showControls, setShowControls, pauseRequested, setPauseRequested,
+      seek, setSeek, seeking, setSeeking, trackColumn, setTrackColumn,
+      activeAction, setActiveAction, activeChannel, setActiveChannel, activeSource, setActiveSource,
+      openingSource, setOpeningSource, captionOverride, setCaptionOverride, saved, setSaved,
+      episodeState, setEpisodeState, countdownState, setCountdownState, advancing, setAdvancing,
+      playbackRevision, setPlaybackRevision, deviceRevision, setDeviceRevision,
+      sourceMemoryPending, setSourceMemoryPending, notice, setNotice, calibrationValue, setCalibrationValue,
+    } = tv;
     const homeRowFocus = new RowFocus<Card>(cardKey);
     const contentFocus = new RowFocus<Card>(cardKey);
-    const [screen, setScreen] = createSignal<Screen>("welcome"),
-      [home, setHome] = createSignal<Home>(),
+    const [home, setHome] = createSignal<Home>(),
       [management, setManagement] = createSignal<Management>(),
       [navigation, setNavigation] = createSignal<Bootstrap["navigation"]>(),
       [library, setLibrary] = createSignal<LibraryPage>(),
@@ -174,19 +182,6 @@ export function createRemoteTvApp(
         channels: entry?.channel_search === true,
       };
     });
-    const [loading, setLoading] = createSignal(options.initialLoading ?? true),
-      [error, setError] = createSignal(""),
-      [playbackError, setPlaybackError] = createSignal(""),
-      [pending, setPending] = createSignal(false);
-    const [zone, setZone] = createSignal("nav"),
-      [column, setColumn] = createSignal(1),
-      [row, setRow] = createSignal(0),
-      [heroAction, setHeroAction] = createSignal(0);
-    const [selected, setSelected] = createSignal<Card>(),
-      [page, setPage] = createSignal<Page>({ cards: [], complete: true }),
-      [controls, setControls] = createSignal<Controls>(),
-      [catalog, setCatalog] = createSignal<Catalog>(),
-      [filters, setFilters] = createSignal<Record<string, string[]>>({});
     const liveScene = createLiveScene({
       api, scope: () => scope, screen, setScreen, setRow, zone, column, setZone, setColumn,
       loading, setLoading, navIndex,
@@ -207,14 +202,6 @@ export function createRemoteTvApp(
     const setLivePages = liveScene.setPages, setChannels = liveScene.setChannels,
       setPrograms = liveScene.setPrograms, setGuideInfo = liveScene.setGuideInfo,
       setLiveIdentity = liveScene.setIdentity, setProgramIndex = liveScene.setProgramIndex;
-    const [pairing, setPairing] = createSignal<Pairing>(),
-      [pairingDeadline, setPairingDeadline] = createSignal(0),
-      [pairingFocused, setPairingFocused] = createSignal(false),
-      [signedIn, setSignedIn] = createSignal<Bootstrap>(),
-      [qr, setQr] = createSignal("");
-    const [trackColumn, setTrackColumn] = createSignal(0);
-    const [accountEmail, setAccountEmail] = createSignal("");
-    const [calibrationValue, setCalibrationValue] = createSignal(0);
     function reloadIdleImages() {
       clearLogoCache();
       reloadImages();
@@ -226,7 +213,6 @@ export function createRemoteTvApp(
       interruptHero();
       return dismissIdleSaver();
     }
-    const [choice, setChoice] = createSignal(0);
     const { text, setText, key, setKey, upper: keyboardUpper, setUpper: setKeyboardUpper,
       symbols: keyboardSymbols, setSymbols: setKeyboardSymbols, characters: keyboardCharacters } = createTextKeyboard();
     const overlays = createOverlayController({
@@ -255,28 +241,15 @@ export function createRemoteTvApp(
       },
       activate: () => { void activate().catch(fail); },
     });
-    const [activeAction, setActiveAction] = createSignal<TitleAction>(),
-      [activeChannel, setActiveChannel] = createSignal<string>(),
-      [activeSource, setActiveSource] = createSignal<Source>(),
-      // The source the picker handed to playback. It stays set for exactly as
-      // long as the player is preparing it, which is what the contract's
-      // `Opening stream…` state reports.
-      [openingSource, setOpeningSource] = createSignal<Source>();
-    const [playbackRevision, setPlaybackRevision] = createSignal("");
     async function checkPlaybackRevision() {
       const value = await call<Record<string, number | string>>(api.scoped("/revisions"));
       if (playbackRevisionKey(value) === playbackRevision()) return;
       const fresh = await api.preferences(scope.signal);
       batch(() => { setPreferences(fresh);setPlaybackRevision(playbackRevisionKey(value)); });
     }
-    const [sourceMemoryPending, setSourceMemoryPending] = createSignal(0);
     const [, setPresentationRevision] = createSignal(0);
-    const [deviceRevision, setDeviceRevision] = createSignal(0);
     const devicePlayback = new DevicePlayback(undefined, () => setDeviceRevision(v => v + 1));
     const deviceScope = () => deviceProfileKey(api.origin, api.profile);
-    const [episodeState, setEpisodeState] = createSignal<EpisodePreparationState>({ status: "idle", preparing: false });
-    const [countdownState, setCountdownState] = createSignal<CountdownState>({ running: false, remaining: null, progress: 0 });
-    const [advancing, setAdvancing] = createSignal(false);
     const countdown = new AutoplayCountdown(setCountdownState);
     const calendarScene = createCalendarScene();
     const calendar = calendarScene.snapshot;
@@ -306,26 +279,6 @@ export function createRemoteTvApp(
     const { providers: sourceProviders, visible: visibleSources, quality: sourceQualityValue,
       provider: sourceProviderValue, focused: focusedSource, addonCount: sourceAddonCount,
       spread: sourceSpread } = picker.presentation;
-    const [snapshot, setSnapshot] = createSignal<PlayerSnapshot>(),
-      [showControls, setShowControls] = createSignal(true),
-      [pauseRequested, setPauseRequested] = createSignal(false),
-      [seek, setSeek] = createSignal<number>(),
-      [seeking, setSeeking] = createSignal(false),
-      // Household writes need an account session. `/api/bootstrap` omits the
-      // capability, so it stays unknown until the server answers.
-      [canManageAccount, setCanManageAccount] = createSignal<
-        boolean | undefined
-      >(undefined),
-      [notice, setNotice] = createSignal("");
-    const [captionOverride, setCaptionOverride] = createSignal<{
-      leaseId: string;
-      appearance: {
-        font_scale: number;
-        text_color: string;
-        background_color: string;
-      };
-    }>();
-    const [saved, setSaved] = createSignal<Map<string, boolean>>(new Map());
     const isSaved = (card: Card) =>
       saved().get(cardKey(card)) ?? card.view?.saved ?? false;
     createEffect(() => {
