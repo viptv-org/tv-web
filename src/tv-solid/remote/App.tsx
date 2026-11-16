@@ -4,35 +4,23 @@ import { runtimeObserver } from "../platform/runtime-observation";
 import { exitTizen } from "../platform/tizen-host";
 import { deviceTitleKey } from "./device-playback";
 import { AutoplayCountdown } from "./autoplay-countdown";
-import { Show, batch, createEffect, createMemo, createSignal, onCleanup, onMount } from "solid-js";
+import { batch, createEffect, createMemo, createSignal, onCleanup, onMount } from "solid-js";
 import { searchLetters } from "./SearchInput";
 import { reloadImages } from "./image-source";
-import { clearLogoCache } from "./visuals";
+import { clearLogoCache, palette } from "./visuals";
 import { createCalendarScene } from "./calendar-scene";
 import { createSettingsScene } from "./settings-scene";
-import { LiveScreen } from "./render/live";
-import { PlayerChrome } from "./render/player";
-import { BrowseScreen } from "./render/browse";
-import { EntryScreensView } from "./render/entry";
-import { ProfilesView } from "./render/profiles";
-import { CalendarView } from "./render/calendar";
-import { HomeView } from "./render/home";
-import { DetailView } from "./render/detail";
-import { AppOverlays, IdleSaver } from "./render/overlays";
 import { RowFocus } from "./row-focus";
 
-import { SettingsView } from "./SettingsView";
 import { createLiveMenu } from "./menus/live";
 import { createLiveScene } from "./live-scene";
 import { createCardMenu } from "./menus/card";
 import { createPlayerActivation } from "./activation/player";
 import { createSeasonPicker } from "./activation/seasons";
 import { sourceActionOptions } from "./source-picker/options";
-import { TopNavigation } from "./TopNavigation";
 import { availableNavigation } from "./navigation-model";
 
 import { KeyboardView } from "./KeyboardView";
-import { HeroArtwork } from "./CoherentHero";
 import { presentationKey } from "./presentation-card";
 import { STREMIO_ONLY, stremioHome } from "./stremio-home";
 import {
@@ -48,8 +36,7 @@ import { createTrackPicker } from "./player/tracks";
 import { skipLabel } from "./player/skip-intro";
 import { createPlayerChrome } from "./player-chrome";
 import { createPlaybackSegments } from "./player/segments";
-import { defineScreen, TvView } from "../runtime";
-import { palette } from "./visuals";
+import { defineScreen } from "../runtime";
 import {
   RemoteTvApi,
   lookupSelector,
@@ -83,6 +70,7 @@ import { publishTestSurface } from "./debug-surface";
 import { createMenuScene } from "./menu-scene";
 import { createActivateScene } from "./activate-scene";
 import { createKeyboardScene, createMoveScene, createRootInput } from "./input-scene";
+import { RootScreen } from "./render/root";
 import { createTvState } from "./state";
 import { createAppEffects } from "./app-effects";
 import { createShell } from "./shell";
@@ -1139,120 +1127,27 @@ export function createRemoteTvApp(
         playerNavigation: { cancel: () => playerNavigation.cancel() }, overlay: () => overlay(),
         manualSourceSelection: () => picker.manual.set(true), press: () => heldSelect.press(),
       }),
-      render: () => {
-        return (
-        <TvView
-          w={1920}
-          h={1080}
-          color={
-            ["player", "home", "detail"].includes(screen())
-              ? "rgba(0,0,0,0)"
-              : palette.bg
-          }
-        >
-          <TvView w={1920} h={1080} show={!screenSaver()}>
-          <TvView
-            w={1920}
-            h={1080}
-            show={!profileEditor() && overlay()?.kind !== "text"}
-          >
-            {/* The player is a native SceneGraph Video plane under the app's
-                native text/visual layers. Hide the page behind it so stale
-                artwork cannot cover the video. */}
-            <TvView w={1920} h={1080} show={screen() !== "player" && !screenSaver()}>
-            <HeroArtwork presentation={heroPresentation}
-              logoBox={heroLogoBox()}
-              dim={screen() === "detail" && ["episodes","seasons","recommendations"].includes(zone())
-                ? typeof (globalThis as any).__SolidTVRokuRenderer !== "undefined" ? .35 : .5 : 0} />
-            <Show
-              when={
-                ![
-                  "welcome",
-                  "pairing",
-                  "signed-in",
-                  "profiles",
-                  "player",
-                  "settings",
-                ].includes(screen()) &&
-                screen() !== "detail"
-              }
-            >
-              <TopNavigation items={navs()} screen={screen()} selected={zone() === "nav" ? column() : undefined}
-                profile={management()?.profiles.find(profile => profile.id === api.profile)} fontReady={fontsReady()} />
-            </Show>
-            <EntryScreensView screen={screen()} entry={{ loading: loading(), focused: !loading() && !error() }}
-              pairing={pairing()} pairingQr={qr()} pairingDeadline={pairingDeadline()}
-              pairingFocused={pairingFocused() && !loading() && !error()}
-              signedIn={signedIn()} onSignedIn={finishSignIn} />
-            <ProfilesView screen={screen()} profiles={{ profiles: management()?.profiles ?? [],
-              create: available(management()?.capabilities.create), manage: canManageProfiles(),
-              index: column(), zone: zone(), loading: loading() }} />
-            <CalendarView screen={screen()} board={{ entries: calendar()?.entries ?? [], days: calendarDaysList(),
-              day: calendarDay(), active: calendarEntry(), dayFocused: zone() === "calendar-days",
-              listFocused: zone() === "calendar-list", watchFocused: zone() === "calendar-watch",
-              loading: loading(), error: error() }} />
-            <HomeView screen={screen()} content={{ home: home(), hasHero: !!hero(),
-              presentation: {card: displayHero, mode: heroPresentation.mode},
-              focus: {zone, row, column, action: heroAction},
-              billboard: {slide: () => Math.max(0, displayedFeatured()), started: heroCycle.started,
-                active: () => heroCycle.active() && heroCycle.animated()},
-              shelfTop: shelfTitleY(), columnForRow: shelf => homeRowFocus.resolve(shelf), isSaved }} />
-            <DetailView screen={screen()} content={{ detail: detailForDisplay(),
-              hasEpisodes: detailHasEpisodes(), episodes: detailEpisodes(), zone: zone(), column: column(),
-              heroAction: heroAction(), seasonIndex: seasonIndex(), episodeColumn: detailColumn("episodes"),
-              recommendationColumn: detailColumn("recommendations"), actionLabel: detailActionLabel(),
-              progress: detailPlayProgress(),
-              saved: !!detailForDisplay() && isSaved(detailForDisplay()!.item) }} />
-            <BrowseScreen screen={screen()} zone={zone} column={column} key={key} search={search}
-              searchCapabilities={searchCapabilities()} searchResults={searchResults()} searchError={searchError}
-              library={library()} libraryType={libraryType()} librarySort={librarySort()} libraryFilters={libraryFilters()}
-              catalog={catalog()} page={page()} loading={loading}
-              grid={{start: gridStart, count: gridCount, columns: gridColumns, offset: gridOffset}}
-              gridFocus={{active: () => zone() === "content", index: column}}
-              gridSearch={{channels: () => searchCapabilities().channels, pending: searchMediaPending, retry: searchNeedsRetry, query: search}}
-              searchRowIndex={searchRowIndex()} searchMediaFocus={searchMediaFocus} searchMediaPending={searchMediaPending}
-              searchNeedsRetry={searchNeedsRetry}
-              searchRemembered={id => searchRowPositions.resolve(searchResults().rows.find(shelf => shelf.id === id))}
-              searchChannels={searchChannels()} hasPreviousChannelPage={!!edgeRequest(searchChannelPages(), "previous")}
-              searchChannelFocus={searchChannelFocus}
-              searchChannelsPending={searchChannelsPending()} searchChannelPaging={searchChannelPaging()}
-              searchChannelError={searchChannelError()} />
-            <Show when={screen() === "live"}>
-              <LiveScreen spread={liveSpread()} viewer={liveViewer()} emptyFocus={liveEmptyFocus()}
-                pages={livePages()} recovery={liveRecovery()} failure={liveFailure()}
-                channels={channels()} channelIndex={liveChannelIndex()} program={currentProgram()}
-                groups={groups()} group={liveGroup()} zone={zone()} column={column} programs={programs()}
-                guideRowStart={guideRowStart()} guideStart={guideStart()} guideNow={guideWindow().now} />
-            </Show>
-            <Show when={screen() === "settings"}>
-              <SettingsView tabs={settingsTabs} tab={settingsTab()} items={settingsItems()}
-                zone={zone()} column={column()} loading={loading()} />
-            </Show>
-            </TvView>
-            <PlayerChrome screen={screen()} overlay={!!overlay()} advancing={advancing()}
-              openingSource={!!openingSource()} showControls={showControls()} loading={loading()}
-              seeking={seeking()} buffering={snapshot()?.state === "buffering"} skipStage={skipStage()}
-              segment={activeSegment()} snapshot={snapshot} action={activeAction()} canSeek={() => playerActions().seek}
-              tools={playerTools} choice={choice} timelineFocused={timelineFocused} preview={seek} />
-          </TvView>
-          <AppOverlays screen={screen()} openingSource={!!openingSource()} overlay={overlay()}
-            entered={overlayEntered()} closing={overlayClosing()} settled={reportOverlaySettled}
-            sourceLoading={sourceLoading()} pickerCard={pickerCard()} sources={sources()} visibleSources={visibleSources()}
-            sourcePage={sourcePage()} sourceAddonCount={sourceAddonCount()} sourceMenu={sourceMenu()}
-            sourceMenuOptions={sourceMenuOptions()} sourceMenuChoice={sourceMenuChoice()} sourceHeight={picker.height()}
-            sourceProviderFilter={sourceProviderFilter()} sourceActions={sourceActions()} sourceActionChoice={sourceActionChoice()}
-            focusedSource={focusedSource()} sourceFilterFocus={sourceFilterFocus()} sourceFacet={sourceFacet()}
-            sourceFailure={picker.failure()} sourceSpread={sourceSpread()} sourceQualityValue={sourceQualityValue()}
-            sourceProviderValue={sourceProviderValue()} failedSources={failedSources()} choice={choice()}
-            profileEditor={profileEditor()} management={management()} trackColumn={trackColumn()} text={text()}
-            keyboard={keyboard} activeAction={activeAction()} episode={episodeState().item} countdown={countdownState()}
-            calibration={calibrationValue()} error={error()} notice={notice()} pending={pending()}
-            paletteBg={palette.bg} />
-        </TvView>
-        <IdleSaver active={screenSaver()} featured={home()?.featured} slide={heroSlide()} />
-        </TvView>
-        );
-      },
+      render: () => <RootScreen view={{
+        screen, screenSaver, profileEditor, overlay, zone, heroPresentation, heroLogoBox, navs, column,
+      management, api, fontsReady, loading, error, pairing, qr, pairingDeadline, pairingFocused, signedIn,
+      finishSignIn, available, canManageProfiles, calendar, calendarDaysList, calendarDay, calendarEntry,
+      home, hero, displayHero, row, heroAction, displayedFeatured, heroCycle, shelfTitleY, homeRowFocus,
+      isSaved, heroSlide, palette, detailForDisplay, detailHasEpisodes, detailEpisodes, seasonIndex,
+      detailColumn, detailActionLabel, detailPlayProgress, key, search, searchCapabilities, searchResults,
+      searchError, library, libraryType, librarySort, libraryFilters, catalog, page, gridStart, gridCount,
+      gridColumns, gridOffset, searchMediaPending, searchNeedsRetry, searchRowIndex, searchMediaFocus,
+      searchRowPositions, searchChannels, edgeRequest, searchChannelPages, searchChannelFocus,
+      searchChannelsPending, searchChannelPaging, searchChannelError, liveSpread, liveViewer, liveEmptyFocus,
+      livePages, liveRecovery, liveFailure, channels, liveChannelIndex, currentProgram, groups, liveGroup,
+      programs, guideRowStart, guideStart, guideWindow, settingsTabs, settingsTab, settingsItems, advancing,
+      openingSource, showControls, seeking, snapshot, skipStage, activeSegment, activeAction, playerActions,
+      playerTools, choice, timelineFocused, seek, overlayEntered, overlayClosing, reportOverlaySettled,
+      sourceLoading, pickerCard, sources, visibleSources, sourcePage, sourceAddonCount, sourceMenu,
+      sourceMenuOptions, sourceMenuChoice, picker, sourceProviderFilter, sourceActions, sourceActionChoice,
+      focusedSource, sourceFilterFocus, sourceFacet, sourceSpread, sourceQualityValue, sourceProviderValue,
+      failedSources, trackColumn, text, keyboard, episodeState, countdownState, calibrationValue, notice,
+      pending,
+      }} />,
     });
     return <Root />;
   };
