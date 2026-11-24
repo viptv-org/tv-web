@@ -76,3 +76,23 @@ That entry is server-authoritative and renders the unversioned TV API's cards,
 rows, controls, descriptors and preferences. Preserve the pinned geometry and
 the remote contract when changing the adapter. Current TV acceptance is
 `playwright.remote.config.ts` plus the `tests/preview/remote-*.mjs` harnesses.
+
+## Samsung Tizen (native package)
+
+- Build: hosted TV uses base `/tv/`; a packaged Tizen app requires
+  `npm run build -- --base=./` so the closure/manifest have `base: "./"`.
+- Stage/sign/package/install: see `platform/tizen/README.md` (stage with
+  `scripts/stage-tizen.mjs`, sign with `tizen package -t wgt -s <profile>` or
+  `VIPTV_TIZEN_API_ORIGIN=... TIZEN_PROFILE=... node scripts/package-tv.mjs tizen`,
+  install/launch via `sdb`). Dev package id: `VPTV000001.VIPTV`.
+- `$WEBAPIS/webapis/webapis.js` is a Tizen runtime resource (not packaged); the
+  package verifier ignores `$`-prefixed runtime refs. Public runtime files
+  outside `assets/` (e.g. `tv-artwork/`) must appear in the TV closure
+  (`artifacts/tv-assets.json`).
+- A packaged `file:` app calling the API cross-origin may send `Origin: null`;
+  device-auth flows must be accepted by the backend for native-app login (the
+  hosted same-origin `/tv/?platform=tizen` entry does not have this constraint).
+  Physical device details and cert material stay in private, untracked workspace
+  notes (`.local-device-testing.md`, root `.env`) — never in the repo. Hardware
+  playback/AVPlay qualification remains separate from packaging (see
+  `platform/QUALIFICATION.md`).

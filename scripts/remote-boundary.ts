@@ -24,10 +24,7 @@ const ON_DEMAND_ONLY = [/^\/node_modules\/hls\.js\//, /^\/node_modules\/qrcode\/
  * `'__TAURI_INTERNALS__' in window`, so a TV never fetches it, and a lazy edge
  * into it must not pull the React desktop entry into the TV graph. */
 const HOST_BRIDGE = /^\/node_modules\/@tauri-apps\//;
-/** Runtime asset paths written as string literals by reachable TV code, such as
- * the empty-state photography. Public files are unhashed and addressed at
- * runtime rather than imported, so they are found by scanning emitted code. */
-const RUNTIME_ASSET = /assets\/[\w.@/-]+/g;
+const RUNTIME_ASSET = /[\w.@/-]*\/[\w.@/-]+\.[A-Za-z0-9]+/g;
 /** The manifest `package-tv.mjs` uses instead of copying all of `dist`. It is
  * kept outside `dist` so the browser/desktop distribution is unchanged. */
 export const TV_MANIFEST_FILE = 'tv-assets.json';
@@ -238,7 +235,12 @@ export function collectTvDistribution(
       if (!chunk || chunk.type !== 'chunk') continue;
       const code = chunk.code ?? '';
       for (const match of code.matchAll(RUNTIME_ASSET)) {
-        if (options.isPublicFile(match[0])) files.add(match[0]);
+        for (const candidate of runtimeAssetCandidates(match[0], options.base)) {
+          if (options.isPublicFile(candidate)) {
+            files.add(candidate);
+            break;
+          }
+        }
       }
     }
   }
@@ -251,6 +253,18 @@ export function collectTvDistribution(
       .map(([file, entry]) => ({ file, reason: entry.reason, module: entry.module }))
       .sort((left, right) => left.file.localeCompare(right.file)),
   };
+}
+
+function runtimeAssetCandidates(path: string, base: string): string[] {
+  const candidates = new Set<string>();
+  const relative = path.replace(/^\.\//, '');
+  const stripped = base.startsWith('/') && relative.startsWith(base) ? relative.slice(base.length) : relative;
+  for (const candidate of [relative, stripped]) {
+    const normalised = candidate.replace(/^\/+/, '');
+    if (!normalised || normalised.startsWith('../') || normalised.includes('/../')) continue;
+    candidates.add(normalised);
+  }
+  return [...candidates];
 }
 
 /** Check the emitted, reachable TV graph, including shared and lazy chunks.
